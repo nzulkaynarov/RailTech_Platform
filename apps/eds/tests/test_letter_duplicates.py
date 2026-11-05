@@ -210,7 +210,7 @@ async def test_mark_duplicate_closes_letter_and_cancels_its_work(
     # Ни задач, ни контроля, ни «Ждёт резолюции».
     for who in (executor, staff["engineer"], staff["nobody"]):
         tasks = (await client.get("/api/v1/letter-tasks", headers=who.headers)).json()
-        assert tasks == {"instructions": [], "extensions": [], "acquaintances": []}
+        assert tasks == {"instructions": [], "extensions": [], "acquaintances": [], "registrations": []}
     director_tasks = (await client.get("/api/v1/letter-tasks", headers=director.headers)).json()
     assert director_tasks["extensions"] == []
     for params in ({"on_control": "true"}, {"status": "awaiting_resolution"}):

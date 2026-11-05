@@ -214,3 +214,17 @@ def user_snapshot(crm_user_id: int = 7, **changes: Any) -> dict[str, Any]:
     }
     user.update(changes)
     return user
+
+
+@pytest.fixture
+def deferred(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """Хеши PDF, которые API поставило бы в очередь рендера после коммита (у приложения тестов свой контейнер)."""
+    from app.container import Container
+
+    found: list[str] = []
+
+    async def record(self: Container, hashes: list[str]) -> None:
+        found.extend(hashes)
+
+    monkeypatch.setattr(Container, "defer_render", record)
+    return found

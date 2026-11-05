@@ -7,6 +7,7 @@ import { companyToday } from "../../../shared/lib/dates";
 import { fillDate } from "../../../test/fields";
 import { server } from "../../../test/server";
 import { readEds } from "../../../mocks/fixtures/edsDocuments";
+import { readLetters, writeLetters } from "../../../mocks/fixtures/letters";
 import { renderAt, setupEdsTests, signIn } from "../../../test/edsKit";
 
 // pdf.js в jsdom не рисует: просмотр страниц проверяют e2e, здесь — состояния блока PDF.
@@ -90,6 +91,65 @@ describe("EDS · Создать документ: форма", () => {
     expect(saved?.status).toBe("draft");
     expect(saved?.letter?.registration_requested).not.toBeNull();
     expect(saved?.replyTo).toBe("ВХ-112/26");
+  });
+
+  it("«Подготовить ответ»: форма заполнена из входящего — корреспондент, ИНН, почта, тема; можно поправить (EDS-REPLY-1)", async () => {
+    const letter = readLetters().find((l) => l.number === "ВХ-108/26");
+    if (!letter) throw new Error("нет письма в моках");
+    writeLetters(
+      readLetters().map((l) =>
+        l.number === "ВХ-108/26"
+          ? {
+              ...l,
+              sender: {
+                name: "ГНИ Демо-района",
+                inn: "300111222",
+                contact: "gni@demo-inspection.example",
+              },
+            }
+          : l,
+      ),
+    );
+    const { router } = await openForm(
+      "manager@demo.example",
+      `?type=letter&reply_to=${encodeURIComponent("ВХ-108/26")}&reply_id=${letter.id}`,
+    );
+
+    expect(await screen.findByLabelText("Адресат (организация)")).toHaveValue("ГНИ Демо-района");
+    expect(screen.getByLabelText("ИНН адресата")).toHaveValue("300111222");
+    expect(screen.getByLabelText("Почта адресата")).toHaveValue("gni@demo-inspection.example");
+    expect(screen.getByLabelText("Тема")).toHaveValue(
+      `На ВХ-108/26 от 29.10.2026: ${letter.subject}`,
+    );
+    expect(screen.getByLabelText("В ответ на входящее")).toHaveValue("ВХ-108/26");
+    expect(
+      screen.getByText(/Заполнено из ВХ-108\/26: проверьте корреспондента, почту и тему/),
+    ).toBeVisible();
+
+    type("Тема", "Пояснения по требованию");
+    type("Текст", "Направляем пояснения.");
+    fireEvent.click(screen.getByRole("button", { name: "Передать на регистрацию" }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/eds/documents");
+    });
+    const saved = readEds().documents.find((d) => d.subject === "Пояснения по требованию");
+    expect(saved?.recipient).toEqual({ name: "ГНИ Демо-района", inn: "300111222" });
+    expect(saved?.letter?.recipient_email).toBe("gni@demo-inspection.example");
+    expect(saved?.replyTo).toBe("ВХ-108/26");
+  });
+
+  it("письмо не прочиталось: форма открывается с одним номером ВХ, путь не обрывается", async () => {
+    server.use(
+      http.get("*/eds/letters/:ref", () =>
+        HttpResponse.json({ code: "NOT_FOUND", message: "x", source: "eds" }, { status: 404 }),
+      ),
+    );
+    await openForm(
+      "manager@demo.example",
+      `?type=letter&reply_to=${encodeURIComponent("ВХ-108/26")}&reply_id=20000000-0000-4000-8000-000000000108`,
+    );
+    expect(await screen.findByLabelText("В ответ на входящее")).toHaveValue("ВХ-108/26");
+    expect(screen.getByLabelText("Адресат (организация)")).toHaveValue("");
   });
 
   it("«Показать PDF»: черновик сохраняется, PDF готовится в фоне и показывается со страницами", async () => {

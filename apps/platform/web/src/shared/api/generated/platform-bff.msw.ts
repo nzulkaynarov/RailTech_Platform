@@ -167,6 +167,7 @@ import type {
   EdsMoney,
   EdsPerson,
   EdsRecipient,
+  EdsReplyTo,
   EdsStaffList,
   EmailTemplate,
   EmailTemplateList,
@@ -1959,6 +1960,17 @@ export const getCreateEdsDocumentResponseEdsRecipientMock = (
   ...overrideResponse,
 });
 
+export const getCreateEdsDocumentResponseEdsReplyToMock = (
+  overrideResponse: Partial<EdsReplyTo> = {},
+): EdsReplyTo => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getCreateEdsDocumentResponseEdsDocumentBodyMock = (
   overrideResponse: Partial<EdsDocumentBody> = {},
 ): EdsDocumentBody => ({
@@ -2136,6 +2148,10 @@ export const getCreateEdsDocumentResponseMock = (
   can_edit: faker.datatype.boolean(),
   created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  in_reply_to: faker.helpers.arrayElement([
+    { ...getCreateEdsDocumentResponseEdsReplyToMock() },
+    null,
+  ]),
   letter: faker.helpers.arrayElement([{ ...getCreateEdsDocumentResponseEdsLetterMock() }, null]),
   can_register: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   can_request_registration: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
@@ -2181,6 +2197,17 @@ export const getGetEdsDocumentResponseEdsRecipientMock = (
   ...{
     name: faker.string.alpha({ length: { min: 1, max: 255 } }),
     inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 32 } }), null]),
+  },
+  ...overrideResponse,
+});
+
+export const getGetEdsDocumentResponseEdsReplyToMock = (
+  overrideResponse: Partial<EdsReplyTo> = {},
+): EdsReplyTo => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   },
   ...overrideResponse,
 });
@@ -2350,6 +2377,7 @@ export const getGetEdsDocumentResponseMock = (
   can_edit: faker.datatype.boolean(),
   created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  in_reply_to: faker.helpers.arrayElement([{ ...getGetEdsDocumentResponseEdsReplyToMock() }, null]),
   letter: faker.helpers.arrayElement([{ ...getGetEdsDocumentResponseEdsLetterMock() }, null]),
   can_register: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   can_request_registration: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
@@ -2395,6 +2423,17 @@ export const getUpdateEdsDocumentResponseEdsRecipientMock = (
   ...{
     name: faker.string.alpha({ length: { min: 1, max: 255 } }),
     inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 32 } }), null]),
+  },
+  ...overrideResponse,
+});
+
+export const getUpdateEdsDocumentResponseEdsReplyToMock = (
+  overrideResponse: Partial<EdsReplyTo> = {},
+): EdsReplyTo => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   },
   ...overrideResponse,
 });
@@ -2576,6 +2615,10 @@ export const getUpdateEdsDocumentResponseMock = (
   can_edit: faker.datatype.boolean(),
   created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  in_reply_to: faker.helpers.arrayElement([
+    { ...getUpdateEdsDocumentResponseEdsReplyToMock() },
+    null,
+  ]),
   letter: faker.helpers.arrayElement([{ ...getUpdateEdsDocumentResponseEdsLetterMock() }, null]),
   can_register: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   can_request_registration: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
@@ -5745,6 +5788,17 @@ export const getRequestEdsDocumentRegistrationResponseEdsRecipientMock = (
   ...overrideResponse,
 });
 
+export const getRequestEdsDocumentRegistrationResponseEdsReplyToMock = (
+  overrideResponse: Partial<EdsReplyTo> = {},
+): EdsReplyTo => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getRequestEdsDocumentRegistrationResponseEdsDocumentBodyMock = (
   overrideResponse: Partial<EdsDocumentBody> = {},
 ): EdsDocumentBody => ({
@@ -5931,6 +5985,10 @@ export const getRequestEdsDocumentRegistrationResponseMock = (
   can_edit: faker.datatype.boolean(),
   created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  in_reply_to: faker.helpers.arrayElement([
+    { ...getRequestEdsDocumentRegistrationResponseEdsReplyToMock() },
+    null,
+  ]),
   letter: faker.helpers.arrayElement([
     { ...getRequestEdsDocumentRegistrationResponseEdsLetterMock() },
     null,
@@ -5979,6 +6037,17 @@ export const getSendEdsDocumentResponseEdsRecipientMock = (
   ...{
     name: faker.string.alpha({ length: { min: 1, max: 255 } }),
     inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 32 } }), null]),
+  },
+  ...overrideResponse,
+});
+
+export const getSendEdsDocumentResponseEdsReplyToMock = (
+  overrideResponse: Partial<EdsReplyTo> = {},
+): EdsReplyTo => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   },
   ...overrideResponse,
 });
@@ -6157,6 +6226,10 @@ export const getSendEdsDocumentResponseMock = (
   can_edit: faker.datatype.boolean(),
   created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  in_reply_to: faker.helpers.arrayElement([
+    { ...getSendEdsDocumentResponseEdsReplyToMock() },
+    null,
+  ]),
   letter: faker.helpers.arrayElement([{ ...getSendEdsDocumentResponseEdsLetterMock() }, null]),
   can_register: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   can_request_registration: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
@@ -13144,6 +13217,30 @@ export const getRegisterLetterResponseMock = (
     { ...getRegisterLetterResponseLetterDuplicateOfMock() },
     null,
   ]),
+  replies: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      document_id: faker.string.uuid(),
+      number: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      state: faker.helpers.arrayElement(["draft", "registration_requested", "registered"] as const),
+      author: {
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      },
+      mail: faker.helpers.arrayElement(["none", "sending", "sent", "failed"] as const),
+      mail_reason: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    })),
+    undefined,
+  ]),
   ...overrideResponse,
 });
 
@@ -13722,6 +13819,30 @@ export const getGetLetterResponseMock = (
     { ...getGetLetterResponseLetterDuplicateOfMock() },
     null,
   ]),
+  replies: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      document_id: faker.string.uuid(),
+      number: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      state: faker.helpers.arrayElement(["draft", "registration_requested", "registered"] as const),
+      author: {
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      },
+      mail: faker.helpers.arrayElement(["none", "sending", "sent", "failed"] as const),
+      mail_reason: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    })),
+    undefined,
+  ]),
   ...overrideResponse,
 });
 
@@ -14069,6 +14190,30 @@ export const getResolveLetterResponseMock = (
   duplicate_of: faker.helpers.arrayElement([
     { ...getResolveLetterResponseLetterDuplicateOfMock() },
     null,
+  ]),
+  replies: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      document_id: faker.string.uuid(),
+      number: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      state: faker.helpers.arrayElement(["draft", "registration_requested", "registered"] as const),
+      author: {
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      },
+      mail: faker.helpers.arrayElement(["none", "sending", "sent", "failed"] as const),
+      mail_reason: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    })),
+    undefined,
   ]),
   ...overrideResponse,
 });
@@ -14418,6 +14563,30 @@ export const getReturnLetterResponseMock = (
     { ...getReturnLetterResponseLetterDuplicateOfMock() },
     null,
   ]),
+  replies: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      document_id: faker.string.uuid(),
+      number: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      state: faker.helpers.arrayElement(["draft", "registration_requested", "registered"] as const),
+      author: {
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      },
+      mail: faker.helpers.arrayElement(["none", "sending", "sent", "failed"] as const),
+      mail_reason: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    })),
+    undefined,
+  ]),
   ...overrideResponse,
 });
 
@@ -14765,6 +14934,30 @@ export const getRejectLetterResponseMock = (
   duplicate_of: faker.helpers.arrayElement([
     { ...getRejectLetterResponseLetterDuplicateOfMock() },
     null,
+  ]),
+  replies: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      document_id: faker.string.uuid(),
+      number: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      state: faker.helpers.arrayElement(["draft", "registration_requested", "registered"] as const),
+      author: {
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      },
+      mail: faker.helpers.arrayElement(["none", "sending", "sent", "failed"] as const),
+      mail_reason: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    })),
+    undefined,
   ]),
   ...overrideResponse,
 });
@@ -15156,6 +15349,30 @@ export const getMarkLetterDuplicateResponseMock = (
     { ...getMarkLetterDuplicateResponseLetterDuplicateOfMock() },
     null,
   ]),
+  replies: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      document_id: faker.string.uuid(),
+      number: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      state: faker.helpers.arrayElement(["draft", "registration_requested", "registered"] as const),
+      author: {
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      },
+      mail: faker.helpers.arrayElement(["none", "sending", "sent", "failed"] as const),
+      mail_reason: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    })),
+    undefined,
+  ]),
   ...overrideResponse,
 });
 
@@ -15521,6 +15738,30 @@ export const getSaveResolutionDraftResponseMock = (
   duplicate_of: faker.helpers.arrayElement([
     { ...getSaveResolutionDraftResponseLetterDuplicateOfMock() },
     null,
+  ]),
+  replies: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      document_id: faker.string.uuid(),
+      number: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      state: faker.helpers.arrayElement(["draft", "registration_requested", "registered"] as const),
+      author: {
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      },
+      mail: faker.helpers.arrayElement(["none", "sending", "sent", "failed"] as const),
+      mail_reason: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    })),
+    undefined,
   ]),
   ...overrideResponse,
 });
@@ -15888,6 +16129,30 @@ export const getResolveOfficeLetterResponseMock = (
     { ...getResolveOfficeLetterResponseLetterDuplicateOfMock() },
     null,
   ]),
+  replies: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      document_id: faker.string.uuid(),
+      number: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      state: faker.helpers.arrayElement(["draft", "registration_requested", "registered"] as const),
+      author: {
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      },
+      mail: faker.helpers.arrayElement(["none", "sending", "sent", "failed"] as const),
+      mail_reason: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    })),
+    undefined,
+  ]),
   ...overrideResponse,
 });
 
@@ -16250,6 +16515,30 @@ export const getAcknowledgeLetterResponseMock = (
   duplicate_of: faker.helpers.arrayElement([
     { ...getAcknowledgeLetterResponseLetterDuplicateOfMock() },
     null,
+  ]),
+  replies: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      document_id: faker.string.uuid(),
+      number: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      state: faker.helpers.arrayElement(["draft", "registration_requested", "registered"] as const),
+      author: {
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      },
+      mail: faker.helpers.arrayElement(["none", "sending", "sent", "failed"] as const),
+      mail_reason: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    })),
+    undefined,
   ]),
   ...overrideResponse,
 });
@@ -16616,6 +16905,30 @@ export const getCompleteInstructionResponseMock = (
   duplicate_of: faker.helpers.arrayElement([
     { ...getCompleteInstructionResponseLetterDuplicateOfMock() },
     null,
+  ]),
+  replies: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      document_id: faker.string.uuid(),
+      number: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      state: faker.helpers.arrayElement(["draft", "registration_requested", "registered"] as const),
+      author: {
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      },
+      mail: faker.helpers.arrayElement(["none", "sending", "sent", "failed"] as const),
+      mail_reason: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    })),
+    undefined,
   ]),
   ...overrideResponse,
 });
@@ -16989,6 +17302,30 @@ export const getRequestInstructionExtensionResponseMock = (
     { ...getRequestInstructionExtensionResponseLetterDuplicateOfMock() },
     null,
   ]),
+  replies: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      document_id: faker.string.uuid(),
+      number: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      state: faker.helpers.arrayElement(["draft", "registration_requested", "registered"] as const),
+      author: {
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      },
+      mail: faker.helpers.arrayElement(["none", "sending", "sent", "failed"] as const),
+      mail_reason: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    })),
+    undefined,
+  ]),
   ...overrideResponse,
 });
 
@@ -17360,6 +17697,30 @@ export const getDecideInstructionExtensionResponseMock = (
   duplicate_of: faker.helpers.arrayElement([
     { ...getDecideInstructionExtensionResponseLetterDuplicateOfMock() },
     null,
+  ]),
+  replies: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      document_id: faker.string.uuid(),
+      number: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      state: faker.helpers.arrayElement(["draft", "registration_requested", "registered"] as const),
+      author: {
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      },
+      mail: faker.helpers.arrayElement(["none", "sending", "sent", "failed"] as const),
+      mail_reason: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    })),
+    undefined,
   ]),
   ...overrideResponse,
 });

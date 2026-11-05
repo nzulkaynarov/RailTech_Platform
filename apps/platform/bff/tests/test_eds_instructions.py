@@ -492,3 +492,90 @@ async def test_registration_passes_the_addressee_and_the_draft(web: Web, eds: Ed
         "co_executor_ids": [],
         "acquaint_ids": [],
     }
+
+
+# --- EDS-REPLY-1: ответ на входящее --------------------------------------------------------
+
+REPLY_DOC = "70000000-0000-4000-8000-000000000071"
+
+
+def reply_entry(**over: Any) -> dict[str, Any]:
+    return {
+        "document_id": REPLY_DOC,
+        "number": None,
+        "subject": "Пояснения по требованию",
+        "state": "draft",
+        "author": person(7, "Иван Исполнитель"),
+        "mail": "none",
+        "mail_reason": None,
+        "created_at": "2026-11-01T05:00:00Z",
+        **over,
+    }
+
+
+async def test_letter_card_shows_replies_with_state_mail_and_link(
+    web: Web, eds: EdsFake, check: ContractChecker
+) -> None:
+    sent = reply_entry(
+        document_id="70000000-0000-4000-8000-000000000072",
+        number="ИСХ-014/26",
+        state="registered",
+        mail="failed",
+        mail_reason="Почта не настроена — Настройки · Подключения · Почта",
+    )
+    eds.answer(
+        "GET",
+        f"letters/{LETTER_ID}",
+        httpx.Response(200, json=office_letter(replies=[sent, reply_entry()])),
+    )
+    assert (await web.login(["SUPPLY"])).status_code == 200
+
+    response = await web.client.get(CARD)
+
+    assert response.status_code == 200, response.text
+    check(response, "/eds/letters/{ref}", "get")
+    first, second = response.json()["replies"]
+    assert (first["number"], first["state"], first["mail"]) == (
+        "ИСХ-014/26",
+        "registered",
+        "failed",
+    )
+    assert first["mail_reason"].startswith("Почта не настроена")
+    assert first["path"] == (
+        "/eds/documents?scope=all&doc=70000000-0000-4000-8000-000000000072&panel=open"
+    )
+    assert first["author"]["id"] == "7"
+    assert (second["state"], second["mail"], second["number"]) == ("draft", "none", None)
+
+
+async def test_letter_card_without_replies_from_old_eds(web: Web, eds: EdsFake) -> None:
+    eds.answer("GET", f"letters/{LETTER_ID}", httpx.Response(200, json=office_letter()))
+    assert (await web.login(["SUPPLY"])).status_code == 200
+
+    response = await web.client.get(CARD)
+
+    assert response.json()["replies"] == []
+
+
+async def test_outgoing_of_another_letter_is_refused_with_a_reason(web: Web, eds: EdsFake) -> None:
+    path = f"instructions/{INSTRUCTION_ID}"
+    eds.answer(
+        "POST",
+        f"{path}/complete",
+        httpx.Response(
+            409,
+            json=eds_error_body(
+                "CONFLICT",
+                "ИСХ-014/26 уже отвечает на ВХ-90/26.",
+                reason="outgoing_linked_elsewhere",
+            ),
+        ),
+    )
+    assert (await web.login(["SUPPLY"])).status_code == 200
+
+    response = await web.send(
+        "POST", f"{BASE}/{path}/complete", json={"outgoing_number": "ИСХ-014/26"}
+    )
+
+    assert response.status_code == 409
+    assert response.json()["details"]["reason"] == "outgoing_linked_elsewhere"

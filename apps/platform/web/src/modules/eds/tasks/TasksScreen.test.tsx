@@ -1,7 +1,17 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import type { LetterCard, LetterInstruction } from "../../../shared/api/generated/model";
+import type {
+  EdsDocumentMailing,
+  LetterCard,
+  LetterInstruction,
+} from "../../../shared/api/generated/model";
+import {
+  type MockDocument,
+  documentId,
+  readEds,
+  writeEds,
+} from "../../../mocks/fixtures/edsDocuments";
 import { findLetter, readLetters, writeLetters } from "../../../mocks/fixtures/letters";
 import { letterTaskQueueItems } from "../../../mocks/edsInstructions";
 import { sessionRoles, readSession } from "../../../mocks/mockSession";
@@ -189,5 +199,146 @@ describe("Рабочий экран поручения (P8b, SPEC-v3 §3.2a п. 
     expect(
       completeBody("Готово", [{ key: "a", name: "a.pdf", size: 1, status: "done", id: "f1" }], ""),
     ).toEqual({ report: "Готово", file_ids: ["f1"], outgoing_number: null });
+  });
+
+  describe("EDS-REPLY-1: ответ на входящее", () => {
+    function seedReply(patch: Partial<MockDocument> = {}, mailing?: EdsDocumentMailing): void {
+      const state = readEds();
+      state.documents.push({
+        id: documentId(950),
+        kind: "letter_out",
+        number: null,
+        status: "draft",
+        version: 1,
+        subject: "Пояснения по НДС",
+        text: "Пояснения.",
+        ownerId: "u-demo-universal",
+        amount: null,
+        due_date: null,
+        file_ids: [],
+        erp_deal_id: null,
+        recipient: { name: "ГНИ Демо-района", inn: null },
+        decisions: [],
+        created_at: "2026-11-02T05:00:00Z",
+        updated_at: "2026-11-02T05:00:00Z",
+        replyTo: "ВХ-108/26",
+        letter: {
+          body: null,
+          recipient_attention: null,
+          recipient_email: "gni@example.uz",
+          signatory_name: null,
+          signatory_position: null,
+          pdf: null,
+          pdfPolls: 0,
+          mailings: mailing ? [mailing] : [],
+          registration_requested: null,
+        },
+        ...patch,
+      });
+      writeEds(state);
+    }
+    const replyInstruction = () => instruction({ kind: "reply", text: "Подготовить ответ" });
+
+    it("ответа нет: «Подготовить ответ» передаёт форме id письма, чтобы она заполнилась из него", async () => {
+      inExecution({ instructions: [replyInstruction()] });
+      signIn("universal@demo.example");
+      renderAt(PATH);
+      const link = await screen.findByRole("link", { name: "Подготовить ответ" });
+      expect(link).toHaveAttribute(
+        "href",
+        `/eds/new?type=letter&reply_to=${encodeURIComponent("ВХ-108/26")}&reply_id=${LETTER_ID}`,
+      );
+      expect(screen.queryByRole("heading", { name: "Ответ на письмо" })).toBeNull();
+    });
+
+    it("свой черновик уже есть: «Продолжить ответ» вместо второго черновика, блок «Ответ» говорит, где он", async () => {
+      inExecution({ instructions: [replyInstruction()] });
+      seedReply();
+      signIn("universal@demo.example");
+      renderAt(PATH);
+      const block = await screen.findByRole("heading", { level: 2, name: "Ответ на письмо" });
+      expect(screen.queryByRole("link", { name: "Подготовить ответ" })).toBeNull();
+      const card = block.closest(".ant-card") as HTMLElement;
+      expect(within(card).getByText(/Черновик ответа/)).toBeVisible();
+      const links = screen.getAllByRole("link", { name: /Продолжить ответ/ });
+      expect(links.length).toBeGreaterThan(0);
+      for (const link of links) {
+        expect(link).toHaveAttribute("href", `/eds/new?draft=${documentId(950)}`);
+      }
+    });
+
+    it("зарегистрирован, но не ушёл адресату: метка «Не отправлено» и причина словами; ссылка на карточку ИСХ", async () => {
+      inExecution({ instructions: [replyInstruction()] });
+      seedReply(
+        { status: "sent", number: "ИСХ-014/26" },
+        {
+          id: "m-1",
+          to: ["gni@example.uz"],
+          status: "failed",
+          reason: "Почта не настроена — Настройки · Подключения · Почта",
+          requested_by: { crm_user_id: 4, full_name: "Демо Канцелярова" },
+          requested_at: "2026-11-02T06:00:00Z",
+          finished_at: "2026-11-02T06:01:00Z",
+        },
+      );
+      signIn("universal@demo.example");
+      renderAt(PATH);
+      const block = await screen.findByRole("heading", { level: 2, name: "Ответ на письмо" });
+      const card = block.closest(".ant-card") as HTMLElement;
+      expect(within(card).getByText("Не отправлено")).toBeVisible();
+      expect(
+        within(card).getByText(/ИСХ-014\/26 не ушёл адресату: Почта не настроена/),
+      ).toBeVisible();
+      expect(within(card).getByRole("link", { name: /Открыть/ })).toHaveAttribute(
+        "href",
+        `/eds/documents?scope=all&doc=${documentId(950)}&panel=open`,
+      );
+    });
+
+    it("«Исполнено» с ИСХ другого письма — понятный отказ, поручение остаётся в работе", async () => {
+      inExecution({ instructions: [replyInstruction()] });
+      seedReply({ status: "sent", number: "ИСХ-014/26", replyTo: "ВХ-90/26" });
+      signIn("universal@demo.example");
+      renderAt(PATH);
+      const form = await screen.findByRole("form", { name: "Отметить исполнение" });
+      fireEvent.change(within(form).getByLabelText(/Ответ — номер нашего ИСХ/), {
+        target: { value: "ИСХ-014/26" },
+      });
+      fireEvent.click(within(form).getByRole("button", { name: "Исполнено" }));
+      expect(await within(form).findByText(/уже отвечает на другое входящее письмо/)).toBeVisible();
+      expect(findLetter("ВХ-108/26")?.instructions?.[0]?.status).toBe("in_work");
+    });
+
+    it("«Мои задачи» делопроизводителя: «Зарегистрировать ИСХ» — пока ответ передан и не зарегистрирован", () => {
+      inExecution({ instructions: [replyInstruction()] });
+      seedReply({
+        letter: {
+          body: null,
+          recipient_attention: null,
+          recipient_email: null,
+          signatory_name: null,
+          signatory_position: null,
+          pdf: null,
+          pdfPolls: 0,
+          mailings: [],
+          registration_requested: { ownerId: "u-demo-universal", at: "2026-11-02T05:30:00Z" },
+        },
+      });
+      const rows = (email: string) => {
+        signIn(email);
+        const session = readSession();
+        const roles = session ? sessionRoles(session) : undefined;
+        return letterTaskQueueItems(roles?.view ?? []);
+      };
+      const [row] = rows("registrar@demo.example").filter((r) => r.kind === "register_reply");
+      expect(row?.title).toBe("Зарегистрировать ИСХ: ответ на ВХ-108/26");
+      expect(row?.object.path).toBe(`/eds/documents?scope=all&doc=${documentId(950)}&panel=open`);
+      expect(rows("universal@demo.example").filter((r) => r.kind === "register_reply")).toEqual([]);
+      const state = readEds();
+      const doc = state.documents.find((d) => d.id === documentId(950));
+      if (doc) doc.status = "sent";
+      writeEds(state);
+      expect(rows("registrar@demo.example").filter((r) => r.kind === "register_reply")).toEqual([]);
+    });
   });
 });

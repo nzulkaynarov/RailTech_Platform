@@ -97,6 +97,7 @@ const EDS_KINDS: readonly QueueItem["kind"][] = [
   "instruction",
   "instruction_extension",
   "acquaint",
+  "register_reply",
 ];
 
 const sources = (): Sources => ({

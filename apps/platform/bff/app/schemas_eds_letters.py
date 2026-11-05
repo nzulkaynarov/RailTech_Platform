@@ -24,7 +24,7 @@ from pydantic import (
 
 from app.errors import backend_unavailable
 from app.feeds.models import PersonRef, Sources, StepCode
-from app.feeds.numbers import deal_kind, deal_step, request_path
+from app.feeds.numbers import deal_kind, deal_step, outgoing_document_path, request_path
 from app.schemas import initials_of
 
 LetterStatus = Literal[
@@ -45,6 +45,9 @@ ResolutionKind = Literal["execute", "reply", "info"]
 InstructionRole = Literal["responsible", "co_executor"]
 InstructionStatus = Literal["in_work", "executed", "cancelled"]
 ExtensionStatus = Literal["pending", "approved", "rejected"]
+# EDS-REPLY-1: где ответ на входящее и итог его отправки адресату.
+ReplyState = Literal["draft", "registration_requested", "registered"]
+ReplyMail = Literal["none", "sending", "sent", "failed"]
 _USER_ID = r"^[1-9][0-9]*$"
 LetterZone = Literal["goods", "services", "payment_terms"]
 # P8 (SPEC-v3 §3.2a п. 1): способ получения входящего.
@@ -253,6 +256,20 @@ class LetterCard(BaseModel):
     acquaintances: list[LetterAcquaintance] = []
     executed_at: dt.datetime | None = None
     duplicate_of: "LetterDuplicateOf | None" = None
+    # EDS-REPLY-1: ответы на это входящее — черновик, передан на регистрацию, ИСХ и итог отправки.
+    replies: "list[LetterReply]" = []
+
+
+class LetterReply(BaseModel):
+    document_id: str
+    number: str | None
+    subject: str
+    state: ReplyState
+    author: PersonRef
+    mail: ReplyMail
+    mail_reason: str | None
+    path: str
+    created_at: dt.datetime
 
 
 class LetterDuplicateOf(BaseModel):
@@ -758,6 +775,19 @@ class _DuplicateRef(BaseModel):
     number: str
 
 
+class _Reply(BaseModel):
+    """`LetterReply` EDS: ответ на входящее (EDS-REPLY-1)."""
+
+    document_id: str
+    number: str | None = None
+    subject: str
+    state: ReplyState
+    author: _Person
+    mail: ReplyMail = "none"
+    mail_reason: str | None = None
+    created_at: dt.datetime
+
+
 class EdsLetter(BaseModel):
     """`Letter` EDS: карточка с резолюцией и журналом."""
 
@@ -794,6 +824,7 @@ class EdsLetter(BaseModel):
     acquaintances: list[_Acquaintance] = []
     executed_at: dt.datetime | None = None
     duplicate_of: _DuplicateRef | None = None
+    replies: list[_Reply] = []
 
 
 class _EdsRow(BaseModel):
@@ -873,7 +904,7 @@ def letter_path(number: str) -> str:
 
 def outgoing_path(document_id: str) -> str:
     """Наш ИСХ в реестре «Все документы» с открытой карточкой."""
-    return f"/eds/documents?scope=all&doc={quote(document_id, safe='')}&panel=open"
+    return outgoing_document_path(document_id)
 
 
 def _related(related: _Related | None) -> LetterRelated | None:
@@ -968,6 +999,20 @@ def _office(r: _OfficeResolution | None) -> LetterOfficeResolution | None:
         acquaint=_people(r.acquaint),
         decided_by=person(r.decided_by),
         decided_at=r.decided_at,
+    )
+
+
+def _reply(r: _Reply) -> LetterReply:
+    return LetterReply(
+        document_id=r.document_id,
+        number=r.number,
+        subject=r.subject,
+        state=r.state,
+        author=person(r.author),
+        mail=r.mail,
+        mail_reason=r.mail_reason,
+        path=outgoing_path(r.document_id),
+        created_at=r.created_at,
     )
 
 
@@ -1110,6 +1155,7 @@ def to_card(
             if letter.duplicate_of is not None
             else None
         ),
+        replies=[_reply(r) for r in letter.replies],
     )
 
 

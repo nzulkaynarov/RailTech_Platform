@@ -23,6 +23,7 @@ from app.feeds.feed import Feed
 from app.feeds.models import (
     DueLabel,
     MenuCounter,
+    ObjectRef,
     QueueCard,
     QueueItem,
     QueueItemKind,
@@ -36,6 +37,7 @@ from app.feeds.numbers import (
     letter_task_ref,
     mail_ref,
     memo_ref,
+    outgoing_document_path,
     quote_number,
     quote_ref,
     supplier_order_ref,
@@ -455,7 +457,44 @@ def letter_task_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
                     parse_dt(entry.get("created_at")),
                 )
             )
+    if view.wants("register_reply"):
+        role_id = _role_id(view, "register_reply")
+        for entry in tasks.get("registrations", []):
+            row = _registration_row(entry, role_id)
+            if row is not None:
+                add(row)
     return out
+
+
+def _registration_row(entry: dict[str, Any], role_id: str) -> Row | None:
+    """«Зарегистрировать ИСХ» (EDS-REPLY-1): исполнитель передал черновик ответа на регистрацию;
+    строка уходит сама, когда ИСХ зарегистрирован. Ведёт в карточку черновика."""
+    document_id = entry.get("document_id")
+    if not isinstance(document_id, str) or not document_id:
+        return None
+    reply_to = _dict(entry.get("in_reply_to"))
+    letter_number = _text(reply_to.get("number"))
+    subject = short(entry.get("subject"), 80)
+    by = _text(_dict(entry.get("requested_by")).get("full_name"))
+    return Row(
+        QueueItem(
+            id=f"register_reply:{document_id}",
+            role_id=role_id,
+            kind="register_reply",
+            title=f"Зарегистрировать ИСХ: ответ на {letter_number}"
+            if letter_number
+            else "Зарегистрировать ИСХ",
+            subtitle=join(subject, by),
+            due_label="today",
+            object=ObjectRef(
+                kind="memo",
+                number=letter_number or subject or "ИСХ",
+                title=subject or None,
+                path=outgoing_document_path(document_id),
+            ),
+        ),
+        parse_dt(entry.get("requested_at")),
+    )
 
 
 _MEMO_TITLES = {"approve_memo": "Согласовать", "pay_memo": "Принять к оплате"}

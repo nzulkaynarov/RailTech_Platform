@@ -507,7 +507,9 @@ export interface paths {
      * Поручение исполнено (P8b)
      * @description Исполнитель поручения отмечает «Исполнено» (SPEC-v3 §3.2a п. 3): нужен отчёт (`report`, `file_ids`) или ссылка на
      *     отправленный ИСХ (`outgoing_number`), иначе 422 `details.fields.report = report_required`; ИСХ не найден или не
-     *     отправлен — 422 `details.fields.outgoing_number = not_found`. Только сам исполнитель (иначе 403,
+     *     отправлен — 422 `details.fields.outgoing_number = not_found`. ИСХ принимается, если он «в ответ на» это письмо или ни на
+     *     что не отвечает (тогда EDS записывает связь `in_reply_to`, EDS-REPLY-1); ИСХ в ответ на другое входящее — 409
+     *     `details.reason = outgoing_linked_elsewhere`. Только сам исполнитель (иначе 403,
      *     `details.reason = not_executor`), только поручение `in_work` (иначе 409 `invalid_state`). Когда исполнены все
      *     поручения письма — письмо `executed`, `on_control = false`, `notice.requested` автору резолюции и регистратору.
      *     Журнал `instruction.executed` (и `letter.executed`).
@@ -861,7 +863,8 @@ export interface paths {
      * Мои поручения, переносы на решение и ознакомления (P8b)
      * @description Строки «Моих задач» сотрудника по входящим (SPEC-v3 §3.2a п. 3–5): поручения в работе, где он исполнитель (со
      *     сроком и признаком просрочки); запросы переноса без решения, где он автор резолюции; ознакомления без отметки.
-     *     Не больше 100 строк каждого вида, раньше — ближайший срок.
+     *     Не больше 100 строк каждого вида, раньше — ближайший срок. Держателю `letters.register` — ещё `registrations`:
+     *     черновики ИСХ, переданные на регистрацию (EDS-REPLY-1).
      */
     get: operations["listMyLetterTasks"];
     put?: never;
@@ -1079,7 +1082,9 @@ export interface paths {
      *     делопроизводителю: `letter.registration_requested` = кто и когда, журнал `document.registration_requested`. Черновик
      *     становится виден держателям `letters.register` (реестр «Все документы», карточка), они строят PDF и регистрируют его
      *     (`POST …/submit`). Автор может продолжать править черновик. Повтор — без изменений. Не черновик — 409 (`invalid_state`),
-     *     не автор — 403 (`not_author`), у письма нет тела — 409 (`no_body`).
+     *     не автор — 403 (`not_author`), у письма нет тела — 409 (`no_body`). Делопроизводитель узнаёт сразу (EDS-REPLY-1):
+     *     `notice.requested` держателям `letters.register` (если письмо «в ответ на ВХ») и задача в `GET /letter-tasks`
+     *     (`registrations`); задача уходит при регистрации.
      */
     post: operations["requestDocumentRegistration"];
     delete?: never;
@@ -1103,7 +1108,8 @@ export interface paths {
      *     (событие `mail.requested`, вложение — итоговый PDF по подписанной ссылке): например, после настройки почты. Новая строка
      *     журнала отправки `letter.mailings` (`awaiting_pdf` → `requested` → `sent`/`failed` по итогу CRM `crm.mail.sent|failed`).
      *     Право `letters.register`. Нет адреса — 422 (`recipient_email`), не зарегистрировано — 409 (`invalid_state`), отправка
-     *     уже идёт — 409 (`mail_in_progress`).
+     *     уже идёт — 409 (`mail_in_progress`). Если письмо не ушло (`crm.mail.failed`, «почта не настроена»), автору и держателям
+     *     `letters.register` приходит `notice.requested` (EDS-REPLY-1); этим же вызовом отправляют ещё раз.
      */
     post: operations["sendDocument"];
     delete?: never;
@@ -2012,6 +2018,11 @@ export interface components {
       executed_at?: string | null;
       /** @description Оригинал, если письмо закрыто как дубль (`status = duplicate`, EDS-DUP) */
       duplicate_of?: components["schemas"]["LetterDuplicateRef"] | null;
+      /**
+       * @description Ответы на это входящее (EDS-REPLY-1), новейший первым: черновик, «передан на регистрацию», ИСХ и итог его отправки.
+       *     Поля может не быть у старого ответа — это «ответов нет».
+       */
+      replies?: components["schemas"]["LetterReply"][];
     };
     /**
      * @description Путь резолюции (P8b, SPEC-v3 §3.2a). `calc` — письмо по заявке клиента: есть `links.erp_request_id`, или вид
@@ -2364,6 +2375,41 @@ export interface components {
     InstructionStatus: "in_work" | "executed" | "cancelled";
     /** @enum {string} */
     InstructionRole: "responsible" | "co_executor";
+    /** @description Входящее письмо, на которое отвечает ИСХ (EDS-REPLY-1) */
+    ReplyToLetter: {
+      id: components["schemas"]["Uuid"];
+      number: components["schemas"]["LetterNumber"];
+      subject: string;
+    };
+    /**
+     * @description Где ответ на входящее: `draft` — черновик автора, `registration_requested` — передан делопроизводителю на регистрацию,
+     *     `registered` — ИСХ зарегистрирован (`Document.status = sent`)
+     * @enum {string}
+     */
+    LetterReplyState: "draft" | "registration_requested" | "registered";
+    /**
+     * @description Отправка ИСХ адресату почтой по последней попытке: `none` — не отправлялось (черновик или регистрация без отправки,
+     *     например бумагой или курьером), `sending` — идёт, `sent` — отправлено, `failed` — не ушло (причина — `mail_reason`)
+     * @enum {string}
+     */
+    LetterReplyMail: "none" | "sending" | "sent" | "failed";
+    /**
+     * @description Ответ на входящее письмо (EDS-REPLY-1): исходящее письмо с `in_reply_to` на это ВХ. В список попадают только ответы,
+     *     видимые смотрящему (чужой черновик не виден — правило видимости документов).
+     */
+    LetterReply: {
+      document_id: components["schemas"]["Uuid"];
+      /** @description ИСХ-NNN/ГГ после регистрации, у черновика null */
+      number: components["schemas"]["OutgoingNumber"] | null;
+      subject: string;
+      state: components["schemas"]["LetterReplyState"];
+      author: components["schemas"]["PersonRef"];
+      mail: components["schemas"]["LetterReplyMail"];
+      /** @description Причина словами, если `mail = failed` */
+      mail_reason: string | null;
+      /** Format: date-time */
+      created_at: string;
+    };
     OutgoingRef: {
       id: components["schemas"]["Uuid"];
       number: components["schemas"]["OutgoingNumber"];
@@ -2469,7 +2515,21 @@ export interface components {
       /** Format: date-time */
       created_at: string;
     };
+    /** @description Черновик ИСХ, переданный на регистрацию (EDS-REPLY-1), — задача делопроизводителю «Зарегистрировать ИСХ» */
+    RegistrationTask: {
+      document_id: components["schemas"]["Uuid"];
+      subject: string;
+      in_reply_to: components["schemas"]["ReplyToLetter"] | null;
+      requested_by: components["schemas"]["PersonRef"];
+      /** Format: date-time */
+      requested_at: string;
+    };
     LetterTasks: {
+      /**
+       * @description Только держателю `letters.register` (EDS-REPLY-1): черновики ИСХ, переданные на регистрацию и ещё не
+       *     зарегистрированные, раньше — давнее. Строка уходит сама при регистрации. Поля может не быть у старого ответа.
+       */
+      registrations?: components["schemas"]["RegistrationTask"][];
       instructions: components["schemas"]["InstructionTask"][];
       extensions: components["schemas"]["ExtensionTask"][];
       acquaintances: components["schemas"]["AcquaintanceTask"][];
@@ -2743,6 +2803,11 @@ export interface components {
       deal_number: string | null;
       recipient?: components["schemas"]["LetterSender"] | null;
       in_reply_to?: components["schemas"]["Uuid"] | null;
+      /**
+       * @description Только `letter_out` «в ответ на ВХ» (EDS-REPLY-1): номер и тема входящего, на которое отвечаем (для ссылки «В ответ
+       *     на ВХ-…» в карточке ИСХ); `null` — письмо ни на что не отвечает. Поля может не быть у старого ответа.
+       */
+      reply_to?: components["schemas"]["ReplyToLetter"] | null;
       /** @description Только `letter_out` — письмо на бланке (P4); у остальных типов `null` */
       letter: components["schemas"]["OutgoingLetter"] | null;
       /** @description Маршрут текущего круга; `null` — не отправлялся */

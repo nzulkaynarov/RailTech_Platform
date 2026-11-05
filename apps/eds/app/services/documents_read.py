@@ -22,7 +22,7 @@ from app.schemas.documents import (
 )
 from app.schemas.documents import DocumentPayment as PaymentOut
 from app.schemas.pagination import decode_cursor
-from app.services import access, files, journal, letter_mail, paging, renders
+from app.services import access, files, journal, letter_mail, paging, renders, reply
 from app.services.people import Directory, load_directory
 
 _DECISION = {"approved": Decision.APPROVE, "returned": Decision.RETURN, "rejected": Decision.REJECT}
@@ -156,6 +156,7 @@ async def present(session: AsyncSession, document: Document) -> DocumentOut:
         deal_number=document.deal_number,
         recipient=recipient,
         in_reply_to=document.in_reply_to,
+        reply_to=await reply.reply_to_ref(session, document.in_reply_to),
         letter=await letter_of(session, document),
         approval_id=route_id,
         payment=await payment_of(session, document),

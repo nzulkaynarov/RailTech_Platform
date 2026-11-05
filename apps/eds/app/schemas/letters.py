@@ -254,6 +254,7 @@ class Letter(BaseModel):
     acquaintances: "list[AcquaintanceOut]" = Field(default_factory=list)
     executed_at: dt.datetime | None = None
     duplicate_of: LetterDuplicateRef | None = None
+    replies: "list[LetterReply]" = Field(default_factory=list)
 
 
 # --- Путь делопроизводства: резолюция трёх типов, поручения, переносы, ознакомление (P8b, SPEC-v3 §3.2a) ---------
@@ -323,6 +324,40 @@ class ExtensionStatus(StrEnum):
 class OutgoingRef(BaseModel):
     id: uuid.UUID
     number: str
+
+
+class ReplyToLetter(BaseModel):
+    """Входящее письмо, на которое отвечает ИСХ (EDS-REPLY-1)."""
+
+    id: uuid.UUID
+    number: str
+    subject: str
+
+
+class LetterReplyState(StrEnum):
+    DRAFT = "draft"
+    REGISTRATION_REQUESTED = "registration_requested"
+    REGISTERED = "registered"
+
+
+class LetterReplyMail(StrEnum):
+    NONE = "none"
+    SENDING = "sending"
+    SENT = "sent"
+    FAILED = "failed"
+
+
+class LetterReply(BaseModel):
+    """Ответ на входящее: исходящее письмо «в ответ на» это ВХ, его место на пути и итог отправки (EDS-REPLY-1)."""
+
+    document_id: uuid.UUID
+    number: str | None
+    subject: str
+    state: LetterReplyState
+    author: PersonRef
+    mail: LetterReplyMail
+    mail_reason: str | None
+    created_at: dt.datetime
 
 
 class InstructionExtensionOut(BaseModel):
@@ -415,10 +450,21 @@ class AcquaintanceTask(BaseModel):
     created_at: dt.datetime
 
 
+class RegistrationTask(BaseModel):
+    """Черновик ИСХ, переданный на регистрацию: задача делопроизводителю (EDS-REPLY-1)."""
+
+    document_id: uuid.UUID
+    subject: str
+    in_reply_to: ReplyToLetter | None
+    requested_by: PersonRef
+    requested_at: dt.datetime
+
+
 class LetterTasks(BaseModel):
     instructions: list[InstructionTask]
     extensions: list[ExtensionTask]
     acquaintances: list[AcquaintanceTask]
+    registrations: list[RegistrationTask] = Field(default_factory=list)
 
 
 class EmployeeChoice(BaseModel):

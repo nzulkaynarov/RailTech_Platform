@@ -8,6 +8,7 @@ import {
   useCompleteInstruction,
   useRequestInstructionExtension,
 } from "../../../shared/api/generated/platform-bff";
+import { useAuth } from "../../../app/auth/useAuth";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DateField } from "../../../shared/ui/DateField";
 import { ErrorNote } from "../../../shared/ui/FormParts";
@@ -16,6 +17,7 @@ import { useResolutionKindName } from "../dictionaries";
 import { fieldsOf, reasonOf, useRefreshLetters } from "../inbox/api";
 import { AttachmentsField } from "../new/AttachmentsField";
 import type { Attachment } from "../new/formModel";
+import { ownDraftReply } from "./replyModel";
 import { completeBody } from "./taskModel";
 
 function Field({
@@ -273,6 +275,7 @@ export function MyInstruction({
 }) {
   const { t } = useTranslation("letters");
   const { date } = useFormat();
+  const { me } = useAuth();
   const kindName = useResolutionKindName();
   return (
     <Card size="small" title={<h2 className="pf-letters-title">{t("tasks.mine")}</h2>}>
@@ -284,10 +287,19 @@ export function MyInstruction({
       <p className="pf-letters-summary">{instruction.text}</p>
       {instruction.kind === "reply" ? (
         <div className="pf-instr-reply">
-          {/* P4 (B-P8B-4): письмо-ответ готовит любой исполнитель; без права регистрировать — передаёт делопроизводителю */}
-          <LinkButton to={`/eds/new?type=letter&reply_to=${encodeURIComponent(letter.number)}`}>
-            {t("tasks.reply.prepare")}
-          </LinkButton>
+          {/* P4 (B-P8B-4): письмо-ответ готовит любой исполнитель; без права регистрировать — передаёт делопроизводителю.
+              EDS-REPLY-1: форма берёт корреспондента, ИНН, почту и тему из письма; начатый ответ продолжается, а не дублируется. */}
+          {ownDraftReply(letter, me.id) ? (
+            <LinkButton to={`/eds/new?draft=${ownDraftReply(letter, me.id)?.document_id ?? ""}`}>
+              {t("reply.continue")}
+            </LinkButton>
+          ) : (letter.replies ?? []).some((r) => r.state === "registration_requested") ? null : (
+            <LinkButton
+              to={`/eds/new?type=letter&reply_to=${encodeURIComponent(letter.number)}&reply_id=${encodeURIComponent(letter.id)}`}
+            >
+              {t("tasks.reply.prepare")}
+            </LinkButton>
+          )}
           <p className="pf-hint">{t("tasks.reply.hint", { number: letter.number })}</p>
         </div>
       ) : null}

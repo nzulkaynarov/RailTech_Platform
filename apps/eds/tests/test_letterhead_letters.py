@@ -104,18 +104,6 @@ class StubRenderer:
             self.active -= 1
 
 
-@pytest.fixture
-def deferred(monkeypatch: pytest.MonkeyPatch) -> list[str]:
-    """Хеши, которые API поставило бы в очередь после коммита (у приложения тестов свой контейнер)."""
-    found: list[str] = []
-
-    async def record(self: Container, hashes: list[str]) -> None:
-        found.extend(hashes)
-
-    monkeypatch.setattr(Container, "defer_render", record)
-    return found
-
-
 async def deliver_letterhead(client: httpx.AsyncClient, container: Container, **changes: Any) -> dict[str, Any]:
     envelope = example("erp/letterhead.updated.v1")
     envelope["data"]["letterhead"].update(changes)

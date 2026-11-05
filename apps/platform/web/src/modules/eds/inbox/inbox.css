@@ -342,6 +342,20 @@
 .pf-instr-reply {
   margin-bottom: 12px;
 }
+/* EDS-REPLY-1: блок «Ответ на письмо» — черновик, передан на регистрацию, ИСХ и итог отправки */
+.pf-reply-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pf-reply-item + .pf-reply-item {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f0;
+}
+.pf-reply-text {
+  margin: 0 0 8px;
+}
 .pf-letters-due--overdue {
   color: #cf1322;
 }

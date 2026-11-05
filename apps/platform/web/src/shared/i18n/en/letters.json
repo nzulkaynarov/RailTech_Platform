@@ -291,7 +291,8 @@
       "not_resolution_author": "the resolution author decides on extensions",
       "no_pending_extension": "there is no extension request any more, refresh the card",
       "report_required": "a report, a file or an outgoing number is required",
-      "not_found": "no document with this number"
+      "not_found": "no document with this number",
+      "outgoing_linked_elsewhere": "this outgoing letter already answers another incoming letter — enter the outgoing number of this one or write a report"
     },
     "done": {
       "resolve": "Resolution added: the task went to the assignees",
@@ -1180,5 +1181,21 @@
   "listKind": {
     "label": "Document type",
     "all": "All types"
+  },
+  "reply": {
+    "title": "Reply to the letter",
+    "draft": "Reply draft, not yet handed over for registration.",
+    "handed": "Draft handed over to the records clerk for registration.",
+    "registered": "{{number}} registered.",
+    "noMail": "Sent outside the system or not sent by email.",
+    "sending": "{{number}} registered, the letter is on its way to the addressee.",
+    "sent": "{{number}} sent to the addressee.",
+    "failedTag": "Not sent",
+    "failed": "{{number}} did not reach the addressee: {{reason}}.",
+    "failedNoReason": "{{number}} did not reach the addressee.",
+    "failedHint": "The records clerk will send it again from the outgoing letter card.",
+    "open": "Open",
+    "prefilled": "Filled in from {{number}}: check the correspondent, email and subject.",
+    "continue": "Continue the reply"
   }
 }

@@ -969,7 +969,9 @@ paths:
       description: |
         Исполнитель поручения отмечает «Исполнено» (SPEC-v3 §3.2a п. 3): нужен отчёт (`report`, `file_ids`) или ссылка на
         отправленный ИСХ (`outgoing_number`), иначе 422 `details.fields.report = report_required`; ИСХ не найден или не
-        отправлен — 422 `details.fields.outgoing_number = not_found`. Только сам исполнитель (иначе 403,
+        отправлен — 422 `details.fields.outgoing_number = not_found`. ИСХ принимается, если он «в ответ на» это письмо или ни на
+        что не отвечает (тогда EDS записывает связь `in_reply_to`, EDS-REPLY-1); ИСХ в ответ на другое входящее — 409
+        `details.reason = outgoing_linked_elsewhere`. Только сам исполнитель (иначе 403,
         `details.reason = not_executor`), только поручение `in_work` (иначе 409 `invalid_state`). Когда исполнены все
         поручения письма — письмо `executed`, `on_control = false`, `notice.requested` автору резолюции и регистратору.
         Журнал `instruction.executed` (и `letter.executed`).
@@ -1620,7 +1622,8 @@ paths:
       description: |
         Строки «Моих задач» сотрудника по входящим (SPEC-v3 §3.2a п. 3–5): поручения в работе, где он исполнитель (со
         сроком и признаком просрочки); запросы переноса без решения, где он автор резолюции; ознакомления без отметки.
-        Не больше 100 строк каждого вида, раньше — ближайший срок.
+        Не больше 100 строк каждого вида, раньше — ближайший срок. Держателю `letters.register` — ещё `registrations`:
+        черновики ИСХ, переданные на регистрацию (EDS-REPLY-1).
       x-rt-permissions: []
       responses:
         '200':
@@ -1992,7 +1995,9 @@ paths:
         делопроизводителю: `letter.registration_requested` = кто и когда, журнал `document.registration_requested`. Черновик
         становится виден держателям `letters.register` (реестр «Все документы», карточка), они строят PDF и регистрируют его
         (`POST …/submit`). Автор может продолжать править черновик. Повтор — без изменений. Не черновик — 409 (`invalid_state`),
-        не автор — 403 (`not_author`), у письма нет тела — 409 (`no_body`).
+        не автор — 403 (`not_author`), у письма нет тела — 409 (`no_body`). Делопроизводитель узнаёт сразу (EDS-REPLY-1):
+        `notice.requested` держателям `letters.register` (если письмо «в ответ на ВХ») и задача в `GET /letter-tasks`
+        (`registrations`); задача уходит при регистрации.
       x-rt-permissions: [memos.create, letters.register]
       parameters:
         - $ref: '#/components/parameters/DocumentId'
@@ -2022,7 +2027,8 @@ paths:
         (событие `mail.requested`, вложение — итоговый PDF по подписанной ссылке): например, после настройки почты. Новая строка
         журнала отправки `letter.mailings` (`awaiting_pdf` → `requested` → `sent`/`failed` по итогу CRM `crm.mail.sent|failed`).
         Право `letters.register`. Нет адреса — 422 (`recipient_email`), не зарегистрировано — 409 (`invalid_state`), отправка
-        уже идёт — 409 (`mail_in_progress`).
+        уже идёт — 409 (`mail_in_progress`). Если письмо не ушло (`crm.mail.failed`, «почта не настроена»), автору и держателям
+        `letters.register` приходит `notice.requested` (EDS-REPLY-1); этим же вызовом отправляют ещё раз.
       x-rt-permissions: [letters.register]
       parameters:
         - $ref: '#/components/parameters/DocumentId'
@@ -3918,6 +3924,14 @@ components:
             - $ref: '#/components/schemas/LetterDuplicateRef'
             - type: 'null'
           description: Оригинал, если письмо закрыто как дубль (`status = duplicate`, EDS-DUP)
+        replies:
+          type: array
+          maxItems: 10
+          items:
+            $ref: '#/components/schemas/LetterReply'
+          description: |
+            Ответы на это входящее (EDS-REPLY-1), новейший первым: черновик, «передан на регистрацию», ИСХ и итог его отправки.
+            Поля может не быть у старого ответа — это «ответов нет».
 
     LetterTrack:
       type: string
@@ -4460,6 +4474,59 @@ components:
     InstructionRole:
       type: string
       enum: [responsible, co_executor]
+    ReplyToLetter:
+      type: object
+      additionalProperties: false
+      required: [id, number, subject]
+      description: Входящее письмо, на которое отвечает ИСХ (EDS-REPLY-1)
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        number:
+          $ref: '#/components/schemas/LetterNumber'
+        subject:
+          type: string
+    LetterReplyState:
+      type: string
+      enum: [draft, registration_requested, registered]
+      description: |
+        Где ответ на входящее: `draft` — черновик автора, `registration_requested` — передан делопроизводителю на регистрацию,
+        `registered` — ИСХ зарегистрирован (`Document.status = sent`)
+    LetterReplyMail:
+      type: string
+      enum: [none, sending, sent, failed]
+      description: |
+        Отправка ИСХ адресату почтой по последней попытке: `none` — не отправлялось (черновик или регистрация без отправки,
+        например бумагой или курьером), `sending` — идёт, `sent` — отправлено, `failed` — не ушло (причина — `mail_reason`)
+    LetterReply:
+      type: object
+      additionalProperties: false
+      required: [document_id, number, subject, state, author, mail, mail_reason, created_at]
+      description: |
+        Ответ на входящее письмо (EDS-REPLY-1): исходящее письмо с `in_reply_to` на это ВХ. В список попадают только ответы,
+        видимые смотрящему (чужой черновик не виден — правило видимости документов).
+      properties:
+        document_id:
+          $ref: '#/components/schemas/Uuid'
+        number:
+          oneOf:
+            - $ref: '#/components/schemas/OutgoingNumber'
+            - type: 'null'
+          description: ИСХ-NNN/ГГ после регистрации, у черновика null
+        subject:
+          type: string
+        state:
+          $ref: '#/components/schemas/LetterReplyState'
+        author:
+          $ref: '#/components/schemas/PersonRef'
+        mail:
+          $ref: '#/components/schemas/LetterReplyMail'
+        mail_reason:
+          type: [string, 'null']
+          description: Причина словами, если `mail = failed`
+        created_at:
+          type: string
+          format: date-time
     OutgoingRef:
       type: object
       additionalProperties: false
@@ -4684,11 +4751,37 @@ components:
         created_at:
           type: string
           format: date-time
+    RegistrationTask:
+      type: object
+      additionalProperties: false
+      required: [document_id, subject, in_reply_to, requested_by, requested_at]
+      description: Черновик ИСХ, переданный на регистрацию (EDS-REPLY-1), — задача делопроизводителю «Зарегистрировать ИСХ»
+      properties:
+        document_id:
+          $ref: '#/components/schemas/Uuid'
+        subject:
+          type: string
+        in_reply_to:
+          oneOf:
+            - $ref: '#/components/schemas/ReplyToLetter'
+            - type: 'null'
+        requested_by:
+          $ref: '#/components/schemas/PersonRef'
+        requested_at:
+          type: string
+          format: date-time
     LetterTasks:
       type: object
       additionalProperties: false
       required: [instructions, extensions, acquaintances]
       properties:
+        registrations:
+          type: array
+          items:
+            $ref: '#/components/schemas/RegistrationTask'
+          description: |
+            Только держателю `letters.register` (EDS-REPLY-1): черновики ИСХ, переданные на регистрацию и ещё не
+            зарегистрированные, раньше — давнее. Строка уходит сама при регистрации. Поля может не быть у старого ответа.
         instructions:
           type: array
           items:
@@ -5232,6 +5325,13 @@ components:
           oneOf:
             - $ref: '#/components/schemas/Uuid'
             - type: 'null'
+        reply_to:
+          oneOf:
+            - $ref: '#/components/schemas/ReplyToLetter'
+            - type: 'null'
+          description: |
+            Только `letter_out` «в ответ на ВХ» (EDS-REPLY-1): номер и тема входящего, на которое отвечаем (для ссылки «В ответ
+            на ВХ-…» в карточке ИСХ); `null` — письмо ни на что не отвечает. Поля может не быть у старого ответа.
         letter:
           oneOf:
             - $ref: '#/components/schemas/OutgoingLetter'

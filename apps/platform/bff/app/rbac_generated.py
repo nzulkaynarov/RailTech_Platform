@@ -368,6 +368,10 @@ QUEUE: Final[dict[str, tuple[str, Level]]] = {
         "dashboard.queue",
         "full",
     ),
+    "register_reply": (
+        "eds.inbox.register",
+        "full",
+    ),
 }
 
 # Системные роли (неизменны): название, матрица, поля с ограничением.

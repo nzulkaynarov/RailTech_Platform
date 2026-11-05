@@ -22,7 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import clock
 from app.errors import conflict, invalid_fields
 from app.models import Document, DocumentMailing, DocumentRender
-from app.services import journal, letterhead
+from app.services import journal, letterhead, reply
 from app.services.mail_out import LinkedAttachment, MailRequestError, request_mail
 from app.services.storage import ObjectStorage
 
@@ -94,12 +94,22 @@ async def start(
     if render.status == "ready":
         await _request(session, bus, storage, mailing, document, render)
     elif render.status == "failed":
-        _finish(mailing, "failed", NO_PDF + (render.error or ""))
+        await _fail(session, bus, mailing, document, NO_PDF + (render.error or ""))
     return mailing
 
 
 def _finish(mailing: DocumentMailing, status: str, reason: str | None) -> None:
     mailing.status, mailing.reason, mailing.finished_at = status, reason, clock.now()
+
+
+async def _fail(
+    session: AsyncSession, bus: AsyncBus | None, mailing: DocumentMailing, document: Document, reason: str
+) -> None:
+    """Письмо не ушло: итог попытки, строка журнала и уведомление автору и делопроизводителям (EDS-REPLY-1)."""
+    _finish(mailing, "failed", reason)
+    await journal.record(session, "document.mail_failed", by=None, document_id=document.id, comment=reason)
+    if bus is not None:
+        await reply.notify_mail_failed(session, bus, document, mailing_id=mailing.id, reason=reason)
 
 
 def _letter_text(document: Document, company: str) -> tuple[str, str]:
@@ -156,8 +166,7 @@ async def _request(
             attachments=[attachment],
         )
     except MailRequestError:
-        _finish(mailing, "failed", NO_PAIR)
-        await journal.record(session, "document.mail_failed", by=None, document_id=document.id, comment=NO_PAIR)
+        await _fail(session, bus, mailing, document, NO_PAIR)
         return
     mailing.status = "requested"
     await session.flush()
@@ -181,9 +190,7 @@ def on_render_finished(bus: AsyncBus, storage: ObjectStorage) -> Any:
             if render.status == "ready":
                 await _request(session, bus, storage, mailing, document, render)
             else:
-                reason = NO_PDF + (render.error or "")
-                _finish(mailing, "failed", reason)
-                await journal.record(session, "document.mail_failed", by=None, document_id=document.id, comment=reason)
+                await _fail(session, bus, mailing, document, NO_PDF + (render.error or ""))
 
     return handle
 
@@ -204,7 +211,7 @@ class MailResult(BaseModel):
     reason: str | None = None
 
 
-async def apply_result(session: AsyncSession, data: MailResult, *, sent: bool) -> bool:
+async def apply_result(session: AsyncSession, data: MailResult, *, sent: bool, bus: AsyncBus | None = None) -> bool:
     """Применить итог письма EDS: `False` — чужой, неизвестный или уже применённый («ошибка» после «отправлено» —
     нет)."""
     if data.requester != "eds":
@@ -226,9 +233,9 @@ async def apply_result(session: AsyncSession, data: MailResult, *, sent: bool) -
             comment=", ".join(mailing.recipients),
         )
     else:
-        reason = reason_text(data.reason or "unknown")
-        _finish(mailing, "failed", reason)
-        await journal.record(session, "document.mail_failed", by=None, document_id=mailing.document_id, comment=reason)
+        document = await session.get(Document, mailing.document_id)
+        if document is not None:
+            await _fail(session, bus, mailing, document, reason_text(data.reason or "unknown"))
     await session.flush()
     return True
 

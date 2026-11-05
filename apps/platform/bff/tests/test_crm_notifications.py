@@ -296,6 +296,40 @@ async def test_letter_notice_opens_the_work_screen_of_the_letter(
     }
 
 
+async def test_reply_notice_opens_the_outgoing_document(
+    web: Web, fb: FeedBackends, check: ContractChecker
+) -> None:
+    """EDS-REPLY-1: «Зарегистрируйте ответ» и «Не отправлено» ведут в карточку исходящего письма."""
+    doc_id = "70000000-0000-4000-8000-000000000071"
+    fb.state["crm_notifications"] = {
+        "items": [
+            crm_note(
+                10,
+                "eds.instruction_assigned",
+                fb.m.ago(minutes=1),
+                tab="decisions",
+                title="Не отправлено: ИСХ-014/26",
+                subtitle="Почта не настроена — Настройки · Подключения · Почта",
+                object_kind="document",
+                object_id=doc_id,
+                object_number="ИСХ-014/26",
+            )
+        ],
+        "unread_count": 1,
+    }
+    await web.login(["REGISTRAR"])
+
+    response = await web.client.get("/api/v1/notifications")
+
+    check(response, "/notifications", "get")
+    [note] = response.json()["items"]
+    assert note["object"] == {
+        "kind": "memo",
+        "number": "ИСХ-014/26",
+        "path": f"/eds/documents?scope=all&doc={doc_id}&panel=open",
+    }
+
+
 async def test_quote_not_sent_notification_opens_the_quote_card(
     web: Web, fb: FeedBackends, check: ContractChecker
 ) -> None:

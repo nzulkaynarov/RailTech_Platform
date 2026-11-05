@@ -221,6 +221,37 @@
       },
       "additionalProperties": false
     },
+    "NoticeDocumentRef": {
+      "type": "object",
+      "description": "Исходящее письмо EDS в уведомлении (EDS-REPLY-1): черновик без номера или ИСХ; ведёт к карточке документа",
+      "required": [
+        "eds_document_id",
+        "number",
+        "subject"
+      ],
+      "properties": {
+        "eds_document_id": {
+          "$ref": "#/$defs/Uuid"
+        },
+        "number": {
+          "description": "`ИСХ-NNN/ГГ` после регистрации; у черновика null",
+          "oneOf": [
+            {
+              "$ref": "#/$defs/RegistryNumber"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        }
+      },
+      "additionalProperties": false
+    },
     "ApprovalTemplate": {
       "type": "string",
       "enum": [

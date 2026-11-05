@@ -15,7 +15,7 @@ EDS через шину процесса в той же транзакции, ч
 """
 
 import uuid
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 
 import structlog
 from rt_bus import Event, HandlerRegistry
@@ -90,11 +90,18 @@ async def on_letterhead(event: Event, session: AsyncSession) -> None:
     log.info("letterhead_projection", erp_company_id=data.erp_company_id, applied=applied, event_id=event.id)
 
 
-async def on_mail_result(event: Event, session: AsyncSession) -> None:
-    """Итог письма адресату от почтового сервиса CRM (P4, B-W18AP1-1): строка журнала отправки; чужие итоги — мимо."""
-    data = letter_mail.MailResult.model_validate(event.data)
-    applied = await letter_mail.apply_result(session, data, sent=event.type == MAIL_SENT)
-    log.info("mail_result", event_type=event.type, request_key=data.request_key, applied=applied, event_id=event.id)
+def mail_result_handler(get_bus: Callable[[], AsyncBus] | None) -> Callable[[Event, AsyncSession], Awaitable[None]]:
+    """Итог письма адресату от почтового сервиса CRM (P4, B-W18AP1-1): строка журнала отправки; чужие итоги — мимо.
+    «Не ушло» — ещё и уведомление автору и делопроизводителям (EDS-REPLY-1; шина процесса — через `get_bus`)."""
+
+    async def on_mail_result(event: Event, session: AsyncSession) -> None:
+        data = letter_mail.MailResult.model_validate(event.data)
+        applied = await letter_mail.apply_result(
+            session, data, sent=event.type == MAIL_SENT, bus=get_bus() if get_bus is not None else None
+        )
+        log.info("mail_result", event_type=event.type, request_key=data.request_key, applied=applied, event_id=event.id)
+
+    return on_mail_result
 
 
 async def on_ai_policy(event: Event, session: AsyncSession) -> None:
@@ -119,6 +126,7 @@ def build_registry(get_bus: Callable[[], AsyncBus] | None = None) -> HandlerRegi
     for event_type in project_documents.EVENT_STATUS:
         registry.add(event_type, on_project_document)
     registry.add(LETTERHEAD_UPDATED, on_letterhead)
+    on_mail_result = mail_result_handler(get_bus)
     registry.add(MAIL_SENT, on_mail_result)
     registry.add(MAIL_FAILED, on_mail_result)
     registry.add(AI_POLICY_CHANGED, on_ai_policy)

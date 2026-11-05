@@ -188,6 +188,14 @@ class EdsLetterhead(BaseModel):
     updated_at: datetime | None
 
 
+class EdsReplyTo(BaseModel):
+    """Входящее, на которое отвечает ИСХ (EDS-REPLY-1)."""
+
+    number: str
+    subject: str
+    path: str
+
+
 class EdsDocument(BaseModel):
     id: str
     kind: DocumentKind
@@ -208,6 +216,7 @@ class EdsDocument(BaseModel):
     can_edit: bool
     created_at: datetime
     updated_at: datetime
+    in_reply_to: EdsReplyTo | None = None
     letter: EdsLetter | None = None
     can_register: bool = False
     can_request_registration: bool = False

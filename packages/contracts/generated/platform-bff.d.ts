@@ -4807,7 +4807,7 @@ export interface paths {
     put?: never;
     /**
      * EDS · Поручение исполнено (P8b)
-     * @description EDS `POST /instructions/{id}/complete`. Любой сотрудник; отмечает только исполнитель поручения (решает EDS: чужое — 403, `details.reason = not_executor`; не в работе — 409 `invalid_state`). Нужен отчёт (текст или файлы — загрузка `POST /eds/document-files`) или номер отправленного ИСХ (`outgoing_number`); иначе 422, `details.fields = [report]`; ИСХ не найден — `details.fields = [outgoing_number]`. Все поручения письма исполнены — письмо «Исполнено», контроль снят, директор и делопроизводитель получают уведомление. Ответ — карточка.
+     * @description EDS `POST /instructions/{id}/complete`. Любой сотрудник; отмечает только исполнитель поручения (решает EDS: чужое — 403, `details.reason = not_executor`; не в работе — 409 `invalid_state`). Нужен отчёт (текст или файлы — загрузка `POST /eds/document-files`) или номер отправленного ИСХ (`outgoing_number`); иначе 422, `details.fields = [report]`; ИСХ не найден — `details.fields = [outgoing_number]`. ИСХ «в ответ на» это письмо принимается; ИСХ без связи — тоже, и EDS записывает связь (EDS-REPLY-1); ИСХ в ответ на другое входящее — 409, `details.reason = outgoing_linked_elsewhere`. Все поручения письма исполнены — письмо «Исполнено», контроль снят, директор и делопроизводитель получают уведомление. Ответ — карточка.
      */
     post: operations["completeInstruction"];
     delete?: never;
@@ -8739,7 +8739,8 @@ export interface components {
       | "instruction_extension"
       | "acquaint"
       | "inbound_mail"
-      | "inbound_mail_mine";
+      | "inbound_mail_mine"
+      | "register_reply";
     /**
      * @description Бейдж срока — red «просрочено», red «срок сегодня», gold «завтра», default — дата, purple «служебка»
      * @enum {string}
@@ -9389,12 +9390,22 @@ export interface components {
       created_at: string;
       /** Format: date-time */
       updated_at: string;
+      /** @description Только `letter_out` «в ответ на ВХ» (EDS-REPLY-1): номер, тема и ссылка входящего; `null` — ни на что не отвечает */
+      in_reply_to?: components["schemas"]["EdsReplyTo"] | null;
       /** @description Только `letter_out` — письмо на бланке (P4) */
       letter?: components["schemas"]["EdsLetter"] | null;
       /** @description Письмо-черновик можно зарегистрировать как ИСХ: у сотрудника раздел `eds.inbox.register` (полный), и он автор или черновик передан ему на регистрацию (P4, B-P8B-4) */
       can_register?: boolean;
       /** @description Автор черновика письма без права регистрировать — может «Передать на регистрацию» делопроизводителю */
       can_request_registration?: boolean;
+    };
+    /** @description Входящее письмо, на которое отвечает ИСХ (EDS-REPLY-1) */
+    EdsReplyTo: {
+      /** @example ВХ-104/26 */
+      number: string;
+      subject: string;
+      /** @description Карточка ВХ в SPA, `/eds/inbox/{номер}` (если нет раздела «Входящие» — рабочий экран `/eds/tasks/{id}`) */
+      path: string;
     };
     /** @description Тело документа на бланке — контракт `packages/contracts/documents/body.schema.json` (D-DOC1): абзацы, заголовки, списки, таблицы; без цветов, шрифтов и HTML. Проверяет EDS (422, `details.fields = [body]`). */
     EdsDocumentBody: {
@@ -11292,6 +11303,36 @@ export interface components {
       executed_at?: string | null;
       /** @description Оригинал, если письмо закрыто как дубль (EDS-DUP) */
       duplicate_of?: components["schemas"]["LetterDuplicateOf"] | null;
+      /** @description Ответы на это входящее (EDS-REPLY-1), новейший первым: черновик, «передан на регистрацию», ИСХ и итог его отправки. Чужой черновик не виден (правило видимости документов EDS). */
+      replies?: components["schemas"]["LetterReply"][];
+    };
+    /** @description Ответ на входящее письмо — исходящее письмо «в ответ на» это ВХ (EDS-REPLY-1) */
+    LetterReply: {
+      /** Format: uuid */
+      document_id: string;
+      /**
+       * @description `ИСХ-NNN/ГГ` после регистрации; у черновика `null`
+       * @example ИСХ-014/26
+       */
+      number: string | null;
+      subject: string;
+      /**
+       * @description `draft` — черновик автора; `registration_requested` — передан делопроизводителю; `registered` — ИСХ зарегистрирован
+       * @enum {string}
+       */
+      state: "draft" | "registration_requested" | "registered";
+      author: components["schemas"]["PersonRef"];
+      /**
+       * @description Отправка адресату почтой по последней попытке: `none` — не отправлялось (черновик или ответ ушёл вне системы), `sending` — идёт, `sent` — отправлено, `failed` — не ушло (повтор — «Отправить адресату ещё раз», `POST /eds/documents/{id}/send`)
+       * @enum {string}
+       */
+      mail: "none" | "sending" | "sent" | "failed";
+      /** @description Причина словами, если `mail = failed` */
+      mail_reason: string | null;
+      /** @description Карточка ИСХ: `/eds/documents?scope=all&doc={id}&panel=open` (черновик автора экран открывает формой «Продолжить» — `/eds/new?draft={id}`) */
+      path: string;
+      /** Format: date-time */
+      created_at: string;
     };
     LetterDuplicateOf: {
       /** @example ВХ-104/26 */

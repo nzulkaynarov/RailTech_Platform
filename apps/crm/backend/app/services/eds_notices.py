@@ -66,10 +66,14 @@ class EdsNoticeService:
         """Страница Настроек «Права подписи»."""
         return None if self._platform_url is None else f"{self._platform_url}/admin/signing"
 
-    def _link(self, letter_id: str) -> str | None:
-        """Рабочий экран письма по UUID: реестра (поиск по номеру) у исполнителя может не быть."""
+    def _link(self, letter_id: str, document_id: str | None = None) -> str | None:
+        """Рабочий экран письма по UUID: реестра (поиск по номеру) у исполнителя может не быть.
+        Ответ на письмо (EDS-REPLY-1, `document`) — карточка исходящего."""
         if self._platform_url is None:
             return None
+        if document_id is not None:
+            doc = quote(document_id, safe="")
+            return f"{self._platform_url}/eds/documents?doc={doc}&panel=open"
         return f"{self._platform_url}/eds/tasks/{quote(letter_id, safe='')}"
 
     @staticmethod
@@ -98,6 +102,11 @@ class EdsNoticeService:
         if not recipients:
             logger.info("eds_notice_no_recipients", kind=kind, number=number, skipped=skipped)
             return 0
+        document = data.get("document")
+        document_id = str(document["eds_document_id"]) if isinstance(document, dict) else None
+        object_number = (
+            str(document.get("number") or number) if isinstance(document, dict) else number
+        )
         staff_notifications.add_in(
             session,
             recipients,
@@ -105,11 +114,11 @@ class EdsNoticeService:
             tab=tab_of(kind),
             title=title,
             subtitle=subtitle,
-            object_kind="letter",
-            object_id=str(letter["eds_letter_id"]),
-            object_number=number,
+            object_kind="document" if document_id else "letter",
+            object_id=document_id or str(letter["eds_letter_id"]),
+            object_number=object_number,
         )
-        text = telegram_text(title, subtitle, self._link(str(letter["eds_letter_id"])))
+        text = telegram_text(title, subtitle, self._link(str(letter["eds_letter_id"]), document_id))
         self._notices.add(
             session,
             str(event.id),

@@ -13,9 +13,11 @@ import {
   requestEdsDocumentRegistration,
   useGetEdsDocument,
   useGetEdsLetterhead,
+  useGetLetter,
   useUpdateEdsDocument,
 } from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
+import { useFormat } from "../../../shared/lib/useFormat";
 import { BodyEditor } from "../../../shared/ui/BodyEditor/BodyEditor";
 import { bodyLang } from "../../../shared/ui/BodyEditor/bodyModel";
 import { Consequence } from "../../../shared/ui/Consequence";
@@ -46,6 +48,7 @@ import {
   fromDocument,
   isLetter,
   kindFromParam,
+  replyPrefill,
   routeKind,
   type SubmitMode,
   todayInCompanyZone,
@@ -121,7 +124,16 @@ type Action = "draft" | "submit" | "handover";
  * адресату, остальные передают черновик на регистрацию делопроизводителю (B-P8B-4). Ошибка сервера — «Не отправлено:
  * причина», введённое остаётся; если документ уже создан, а отправка отклонена, следующая попытка идёт по тому же черновику.
  */
-function DocumentForm({ initial, draft }: { initial: FormValues; draft: EdsDocument | null }) {
+function DocumentForm({
+  initial,
+  draft,
+  prefilledFrom = null,
+}: {
+  initial: FormValues;
+  draft: EdsDocument | null;
+  /** Номер ВХ, из которого заполнены корреспондент, почта и тема (EDS-REPLY-1) */
+  prefilledFrom?: string | null;
+}) {
   const { t, i18n } = useTranslation(["documents", "modules"]);
   const { me } = useAuth();
   const { message } = App.useApp();
@@ -496,6 +508,11 @@ function DocumentForm({ initial, draft }: { initial: FormValues; draft: EdsDocum
                   }}
                 />
               </Field>
+              {prefilledFrom ? (
+                <p className="pf-hint" role="status">
+                  {t("documents:form.replyPrefilled", { number: prefilledFrom })}
+                </p>
+              ) : null}
               {draft ? null : (
                 <Field
                   id={ids.replyTo}
@@ -706,6 +723,51 @@ function DocumentForm({ initial, draft }: { initial: FormValues; draft: EdsDocum
   );
 }
 
+/**
+ * «Подготовить ответ» с рабочего экрана поручения (EDS-REPLY-1): форма письма уже заполнена из входящего — корреспондент,
+ * ИНН, почта (если она есть в письме) и тема «На ВХ-… от …: тема»; всё можно поправить. Письмо не прочиталось — форма с одним
+ * номером ВХ, как раньше: путь не обрывается.
+ */
+function ReplyDraft({ id, number }: { id: string; number: string }) {
+  const { t } = useTranslation(["documents", "modules"]);
+  const { date } = useFormat();
+  const query = useGetLetter(id);
+  if (query.isPending) {
+    const title = t("modules:eds.sections.new");
+    return (
+      <div className="pf-newdoc">
+        <PageHeader title={title} subtitle={t("documents:form.loadDraft")} />
+        <Card>
+          <Skeleton active paragraph={{ rows: 6 }} title={false} />
+        </Card>
+      </div>
+    );
+  }
+  const letter = query.data;
+  const initial: FormValues = {
+    ...EMPTY_FORM,
+    kind: "letter_out",
+    inReplyTo: letter?.number ?? number,
+    ...(letter
+      ? replyPrefill(
+          letter,
+          t("documents:form.replySubject", {
+            number: letter.number,
+            date: date(letter.received_at),
+          }),
+        )
+      : {}),
+  };
+  return (
+    <DocumentForm
+      key={id}
+      initial={initial}
+      draft={null}
+      prefilledFrom={letter ? letter.number : null}
+    />
+  );
+}
+
 function ContinueDraft({ id }: { id: string }) {
   const { t } = useTranslation(["documents", "modules"]);
   const query = useGetEdsDocument(id);
@@ -763,6 +825,10 @@ export function NewDocumentPage() {
   const [params] = useSearchParams();
   const draft = parseDocumentId(params.get("draft"));
   if (draft) return <ContinueDraft id={draft} />;
+  const replyId = parseDocumentId(params.get("reply_id"));
+  if (replyId && kindFromParam(params.get("type")) === "letter_out") {
+    return <ReplyDraft id={replyId} number={params.get("reply_to")?.trim().slice(0, 32) ?? ""} />;
+  }
   return (
     <DocumentForm
       key={params.get("type") ?? "memo"}

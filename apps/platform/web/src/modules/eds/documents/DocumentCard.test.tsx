@@ -149,4 +149,34 @@ describe("EDS · карточка письма: текст блоками, бе�
     expect(card.getByText("Сумма")).toBeVisible();
     expect(screen.getByText("1 500 000 сум")).toBeVisible();
   });
+
+  it("ответ на входящее: «В ответ на ВХ-…» со ссылкой; не ушло адресату — метка «Не отправлено» и «Отправить адресату ещё раз» (EDS-REPLY-1)", async () => {
+    seed({ status: "sent", number: "ИСХ-045/26", replyTo: "ВХ-108/26" });
+    const state = readEds();
+    const doc = state.documents.find((d) => d.id === ID);
+    if (doc?.letter) {
+      doc.letter.recipient_email = "office@nosmtp.example";
+      doc.letter.mailings = [
+        {
+          id: "m-1",
+          to: ["office@nosmtp.example"],
+          status: "failed",
+          reason: "Почта не настроена — Настройки · Подключения · Почта",
+          requested_by: null,
+          requested_at: "2026-11-01T09:05:00Z",
+          finished_at: "2026-11-01T09:06:00Z",
+        },
+      ];
+    }
+    writeEds(state);
+    signIn("registrar@demo.example");
+    renderAt(`/eds/documents?scope=all&doc=${ID}&panel=open`);
+    const panel = within(await panelEl());
+
+    const link = await panel.findByRole("link", { name: /ВХ-108\/26/ });
+    expect(link).toHaveAttribute("href", `/eds/inbox/${encodeURIComponent("ВХ-108/26")}`);
+    expect(panel.getByText("В ответ на")).toBeVisible();
+    expect(panel.getByText("Не отправлено")).toBeVisible();
+    expect(panel.getByRole("button", { name: "Отправить адресату ещё раз" })).toBeVisible();
+  });
 });

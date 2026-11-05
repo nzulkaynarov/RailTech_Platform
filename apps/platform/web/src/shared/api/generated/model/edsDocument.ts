@@ -11,6 +11,7 @@ import type { EdsLetter } from "./edsLetter";
 import type { EdsMoney } from "./edsMoney";
 import type { EdsPerson } from "./edsPerson";
 import type { EdsRecipient } from "./edsRecipient";
+import type { EdsReplyTo } from "./edsReplyTo";
 import type { EdsRouteStep } from "./edsRouteStep";
 
 export interface EdsDocument {
@@ -41,6 +42,8 @@ export interface EdsDocument {
   can_edit: boolean;
   created_at: string;
   updated_at: string;
+  /** Только `letter_out` «в ответ на ВХ» (EDS-REPLY-1): номер, тема и ссылка входящего; `null` — ни на что не отвечает */
+  in_reply_to?: EdsReplyTo | null;
   /** Только `letter_out` — письмо на бланке (P4) */
   letter?: EdsLetter | null;
   /** Письмо-черновик можно зарегистрировать как ИСХ: у сотрудника раздел `eds.inbox.register` (полный), и он автор или черновик передан ему на регистрацию (P4, B-P8B-4) */

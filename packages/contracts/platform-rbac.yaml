@@ -482,3 +482,6 @@ queue:
   # W18A-P2-3: письмо «в работе» у сотрудника или адресованное ему лично — строка в «Моих задачах» у любого сотрудника (CRM
   # отдаёт только его письма); первая линия видит и новые (`inbound_mail`).
   inbound_mail_mine: { resource: dashboard.queue, level: full }
+  # EDS-REPLY-1: «Зарегистрировать ИСХ» — исполнитель передал ответ на входящее на регистрацию; регистрирует держатель
+  # раздела регистрации (`letters.register` в EDS).
+  register_reply: { resource: eds.inbox.register, level: full }

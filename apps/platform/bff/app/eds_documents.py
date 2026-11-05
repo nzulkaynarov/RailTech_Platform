@@ -16,6 +16,7 @@ from pydantic import BaseModel, ValidationError
 
 from app.clients.base import Backend
 from app.errors import PlatformError, backend_unavailable
+from app.feeds.numbers import letter_task_path
 from app.schemas_eds_documents import (
     DOCUMENT_KINDS,
     EdsDealRef,
@@ -28,8 +29,10 @@ from app.schemas_eds_documents import (
     EdsMoney,
     EdsPerson,
     EdsRecipient,
+    EdsReplyTo,
     EdsRouteStep,
 )
+from app.schemas_eds_letters import letter_path
 
 log = structlog.get_logger()
 
@@ -202,6 +205,12 @@ class _RawDecision(BaseModel):
     at: Any
 
 
+class _RawReplyTo(BaseModel):
+    id: str
+    number: str
+    subject: str
+
+
 class _RawDocument(BaseModel):
     id: str
     kind: str
@@ -218,6 +227,7 @@ class _RawDocument(BaseModel):
     erp_deal_id: int | None
     deal_number: str | None
     recipient: EdsRecipient | None = None
+    reply_to: _RawReplyTo | None = None
     letter: EdsLetter | None = None
     approval_id: str | None
     decisions: list[_RawDecision]
@@ -268,7 +278,17 @@ def _parse[T: BaseModel](model: type[T], body: Any, path: str) -> T:
         raise backend_unavailable("eds", "bad_response") from exc
 
 
-async def present(proxy: EdsProxy, body: Any, *, me: int, registrar: bool = False) -> EdsDocument:
+def _reply_to(raw: _RawReplyTo | None, *, inbox: bool) -> EdsReplyTo | None:
+    """«В ответ на ВХ-…»: карточка входящего; без раздела «Входящие» — рабочий экран поручения."""
+    if raw is None:
+        return None
+    path = letter_path(raw.number) if inbox else letter_task_path(raw.id)
+    return EdsReplyTo(number=raw.number, subject=raw.subject, path=path)
+
+
+async def present(
+    proxy: EdsProxy, body: Any, *, me: int, registrar: bool = False, inbox: bool = False
+) -> EdsDocument:
     """Карточка документа: ответ EDS и шаги маршрута текущего круга (если документ отправлялся).
 
     Маршрут недоступен (нет права читать маршрут, не найден) — карточка без шагов, решения остаются.
@@ -314,6 +334,7 @@ async def present(proxy: EdsProxy, body: Any, *, me: int, registrar: bool = Fals
             "can_edit": editable,
             "created_at": raw.created_at,
             "updated_at": raw.updated_at,
+            "in_reply_to": _reply_to(raw.reply_to, inbox=inbox),
             **_letter_flags(raw, me=me, registrar=registrar),
         }
     )

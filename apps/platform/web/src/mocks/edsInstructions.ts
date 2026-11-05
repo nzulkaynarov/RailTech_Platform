@@ -7,6 +7,7 @@ import type {
   InstructionExtensionIn,
   LetterCard,
   LetterInstruction,
+  LetterReply,
   LetterResolutionDraft,
   Notification,
   OfficeResolutionIn,
@@ -17,9 +18,14 @@ import type {
 import { QUEUE, allows } from "../app/rbac.generated";
 import { COMPANY_TIME_ZONE } from "../shared/lib/format";
 import { DEMO_USERS } from "./fixtures/users";
+import { type MockDocument, readEds, writeEds } from "./fixtures/edsDocuments";
 import { findLetter, readLetters, writeLetters } from "./fixtures/letters";
 import type { MockRole } from "./fixtures/roles";
 import { buildMe, readSession, sessionRoles } from "./mockSession";
+
+/** Рабочий экран и карточка исходящего: адреса, как их строит BFF (`outgoing_document_path`, `letter_task_path`). */
+const outgoingPath = (documentId: string) =>
+  `/eds/documents?scope=all&doc=${documentId}&panel=open`;
 
 /**
  * Моки поручений по входящим (P8b, SPEC-v3 §3.2a; BFF 0.31.0): путь резолюции (`track`), подсказка срока, резолюция трёх
@@ -117,7 +123,48 @@ export function withOffice(letter: LetterCard): LetterCard {
     instructions,
     acquaintances: letter.acquaintances ?? [],
     executed_at: letter.executed_at ?? null,
+    replies: repliesOf(letter),
   };
+}
+
+/** Итог отправки по последней попытке (как `reply.mail_state` EDS). */
+function mailOf(doc: MockDocument): Pick<LetterReply, "mail" | "mail_reason"> {
+  const last = doc.letter?.mailings.at(-1);
+  if (!last) return { mail: "none", mail_reason: null };
+  if (last.status === "sent") return { mail: "sent", mail_reason: null };
+  if (last.status === "failed") return { mail: "failed", mail_reason: last.reason };
+  return { mail: "sending", mail_reason: null };
+}
+
+/** Ответы на ВХ (EDS-REPLY-1): исходящие «в ответ на» это письмо, видимые смотрящему — свой черновик, зарегистрированное, переданное делопроизводителю. */
+function repliesOf(letter: LetterCard): LetterReply[] {
+  const user = me();
+  if (!user) return [];
+  const register = access().register;
+  return readEds()
+    .documents.filter((d) => d.kind === "letter_out" && d.replyTo === letter.number)
+    .filter(
+      (d) =>
+        d.ownerId === user.id ||
+        d.status === "sent" ||
+        (register && Boolean(d.letter?.registration_requested)),
+    )
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    .map((d) => ({
+      document_id: d.id,
+      number: d.number,
+      subject: d.subject,
+      state:
+        d.status === "sent"
+          ? ("registered" as const)
+          : d.letter?.registration_requested
+            ? ("registration_requested" as const)
+            : ("draft" as const),
+      author: personOf(d.ownerId) ?? user,
+      ...mailOf(d),
+      path: outgoingPath(d.id),
+      created_at: d.created_at,
+    }));
 }
 
 export function rowExtras(letter: LetterCard) {
@@ -155,6 +202,8 @@ interface Note {
   subtitle: string;
   number: string;
   letterId: string;
+  /** Уведомление про исходящее (ответ на ВХ, EDS-REPLY-1): ведёт в его карточку */
+  documentId?: string;
   createdAt: string;
   read: boolean;
 }
@@ -177,6 +226,44 @@ function notify(userIds: readonly string[], title: string, letter: LetterCard, s
   }
 }
 
+function notifyDocument(
+  userIds: readonly string[],
+  title: string,
+  subtitle: string,
+  letter: LetterCard,
+  documentId: string,
+  number: string,
+) {
+  const createdAt = new Date().toISOString();
+  for (const userId of new Set(userIds)) {
+    notes.push({
+      seq: nextNote++,
+      userId,
+      title,
+      subtitle,
+      number,
+      letterId: letter.id,
+      documentId,
+      createdAt,
+      read: false,
+    });
+  }
+}
+
+/** Держатели раздела регистрации (`letters.register` EDS): им уходит «Зарегистрируйте ответ» и «Не отправлено». */
+function registrarIds(): string[] {
+  return DEMO_USERS.filter(
+    (u) =>
+      !u.loginError &&
+      buildMe({
+        userId: u.id,
+        activeRole: null,
+        language: "ru",
+        mustChangePassword: false,
+      })?.resources["eds.inbox.register"] === "full",
+  ).map((u) => u.id);
+}
+
 /** Уведомления CRM по поручениям (`eds.notice.requested` → `staff_notifications`) — лента `crm:<id>` колокольчика. */
 export function letterNotificationsOf(userId: string): Notification[] {
   return notes
@@ -186,11 +273,9 @@ export function letterNotificationsOf(userId: string): Notification[] {
       tab: "decisions",
       title: n.title,
       subtitle: n.subtitle,
-      object: {
-        kind: "letter",
-        number: n.number,
-        path: tasksPath(n.letterId),
-      },
+      object: n.documentId
+        ? { kind: "memo", number: n.number, path: outgoingPath(n.documentId) }
+        : { kind: "letter", number: n.number, path: tasksPath(n.letterId) },
       created_at: n.createdAt,
       read: n.read,
     }));
@@ -223,7 +308,7 @@ function tasksPath(letterId: string): string {
 export function letterTaskQueueItems(view: readonly MockRole[]): QueueItem[] {
   const user = me();
   if (!user) return [];
-  const roleFor = (kind: "instruction" | "instruction_extension" | "acquaint") =>
+  const roleFor = (kind: "instruction" | "instruction_extension" | "acquaint" | "register_reply") =>
     view.find((r) => allows(r.access, QUEUE[kind].resource, QUEUE[kind].level))?.id;
   const items: QueueItem[] = [];
   const now = today();
@@ -279,6 +364,29 @@ export function letterTaskQueueItems(view: readonly MockRole[]): QueueItem[] {
         subtitle: [sender, letter.subject].filter(Boolean).join(" · "),
         due_label: "later",
         object,
+      });
+    }
+  }
+  // EDS-REPLY-1: «Зарегистрировать ИСХ» — ответы, переданные на регистрацию (держателю раздела регистрации)
+  const registerRole = roleFor("register_reply");
+  if (registerRole) {
+    for (const doc of readEds().documents) {
+      const requested = doc.letter?.registration_requested;
+      if (doc.kind !== "letter_out" || doc.status !== "draft" || !requested) continue;
+      const to = doc.replyTo;
+      items.push({
+        id: `register_reply:${doc.id}`,
+        role_id: registerRole,
+        kind: "register_reply",
+        title: to ? `Зарегистрировать ИСХ: ответ на ${to}` : "Зарегистрировать ИСХ",
+        subtitle: [doc.subject, personOf(doc.ownerId)?.name].filter(Boolean).join(" · "),
+        due_label: "today",
+        object: {
+          kind: "memo",
+          number: to ?? doc.subject,
+          title: doc.subject,
+          path: outgoingPath(doc.id),
+        },
       });
     }
   }
@@ -370,16 +478,16 @@ const forbiddenBff = (resource: string) =>
  * Хук регистрации ИСХ «в ответ на ВХ» (как `close_by_outgoing` EDS, P8b/P4): поручения «Подготовить ответ» письма в работе
  * → «Исполнено» со ссылкой на ИСХ; все исполнены — письмо «Исполнено», уведомление автору резолюции и делопроизводителю.
  */
-export function closeReplyInstructions(letterNumber: string, outgoingNumber: string): number {
+export function closeReplyInstructions(letterNumber: string, outgoingNumber: string): string[] {
   const letter = readLetters().find((l) => l.number === letterNumber);
   const user = me();
-  if (!letter || !user) return 0;
+  if (!letter || !user) return [];
   const now = new Date().toISOString();
   let next = letter;
-  let closed = 0;
+  const closed: string[] = [];
   for (const instruction of letter.instructions ?? []) {
     if (instruction.kind !== "reply" || instruction.status !== "in_work") continue;
-    closed += 1;
+    closed.push(instruction.person.id);
     next = replaceInstruction(next, {
       ...instruction,
       status: "executed",
@@ -394,7 +502,7 @@ export function closeReplyInstructions(letterNumber: string, outgoingNumber: str
       journal: [...next.journal, entry("instruction.executed", user, `Ответ ${outgoingNumber}`)],
     };
   }
-  if (closed === 0) return 0;
+  if (closed.length === 0) return [];
   if ((next.instructions ?? []).every((i) => i.status === "executed")) {
     next = {
       ...next,
@@ -412,6 +520,50 @@ export function closeReplyInstructions(letterNumber: string, outgoingNumber: str
   }
   save(next);
   return closed;
+}
+
+/** «Передать на регистрацию»: делопроизводители узнают сразу (кроме того, кто передал). */
+export function noticeRegistrationRequested(doc: MockDocument): void {
+  const letter = doc.replyTo ? readLetters().find((l) => l.number === doc.replyTo) : undefined;
+  if (!letter) return;
+  const author = personOf(doc.ownerId);
+  notifyDocument(
+    registrarIds().filter((id) => id !== doc.ownerId),
+    `Зарегистрируйте ответ на ${letter.number}`,
+    [doc.subject, author?.name].filter(Boolean).join(" · "),
+    letter,
+    doc.id,
+    letter.number,
+  );
+}
+
+/** ИСХ зарегистрирован: исполнителю закрытого поручения и автору ответа (кроме того, кто зарегистрировал). */
+export function noticeReplyRegistered(doc: MockDocument, closedExecutors: readonly string[]): void {
+  const letter = doc.replyTo ? readLetters().find((l) => l.number === doc.replyTo) : undefined;
+  const actor = me()?.id;
+  if (!letter || !doc.number) return;
+  notifyDocument(
+    [...closedExecutors, doc.ownerId].filter((id) => id !== actor),
+    `Ответ зарегистрирован: ${doc.number}`,
+    `На ${letter.number} · ${closedExecutors.length > 0 ? "поручение исполнено" : doc.subject}`,
+    letter,
+    doc.id,
+    doc.number,
+  );
+}
+
+/** Письмо не ушло адресату: автор и делопроизводители узнают сразу (повтор — «Отправить адресату ещё раз»). */
+export function noticeMailFailed(doc: MockDocument, reason: string | null): void {
+  const letter = doc.replyTo ? readLetters().find((l) => l.number === doc.replyTo) : undefined;
+  if (!letter) return;
+  notifyDocument(
+    [doc.ownerId, ...registrarIds()],
+    `Не отправлено: ${doc.number ?? doc.subject}`,
+    reason ?? "Письмо не ушло адресату",
+    letter,
+    doc.id,
+    doc.number ?? letter.number,
+  );
 }
 
 export const edsInstructionsHandlers = [
@@ -575,6 +727,23 @@ export const edsInstructionsHandlers = [
     }
     if (body.outgoing_number && !/^ИСХ-\d{3,}\/\d{2}$/.test(body.outgoing_number.trim())) {
       return invalid("outgoing_number", "not_found", "ИСХ с таким номером не найден.");
+    }
+    // EDS-REPLY-1: ИСХ «в ответ на» это письмо или без связи (связь записывается); чужой ответ — 409
+    if (body.outgoing_number) {
+      const state = readEds();
+      const outgoing = state.documents.find(
+        (d) => d.kind === "letter_out" && d.number === body.outgoing_number?.trim(),
+      );
+      if (outgoing?.replyTo && outgoing.replyTo !== letter.number) {
+        return conflict(
+          "outgoing_linked_elsewhere",
+          `${outgoing.number ?? "ИСХ"} уже отвечает на ${outgoing.replyTo}.`,
+        );
+      }
+      if (outgoing && !outgoing.replyTo) {
+        outgoing.replyTo = letter.number;
+        writeEds(state);
+      }
     }
     const now = new Date().toISOString();
     let next = replaceInstruction(letter, {

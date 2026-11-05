@@ -170,7 +170,8 @@
         "instruction_extension",
         "acquaint",
         "inbound_mail",
-        "inbound_mail_mine"
+        "inbound_mail_mine",
+        "register_reply"
       ]
     },
     "resourceKey": {

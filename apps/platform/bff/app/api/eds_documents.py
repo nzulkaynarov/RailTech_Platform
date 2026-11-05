@@ -143,7 +143,7 @@ async def list_documents(
 async def get_document(id: DocumentId, authed: Reader) -> EdsDocument:
     proxy = _proxy(authed)
     body = await proxy.request("GET", f"{API}/documents/{id}")
-    return await present(proxy, body, me=authed.data.user_id, registrar=_registrar(authed))
+    return await _present(proxy, body, authed)
 
 
 def _with_document(error: PlatformError, document_id: str, *, created: bool) -> PlatformError:
@@ -178,6 +178,25 @@ def _edits(body: EdsDocumentIn | EdsDocumentUpdateIn) -> dict[str, Any]:
 
 def _registrar(authed: Authed) -> bool:
     return allows(authed.access, "eds.inbox.register", "full")
+
+
+async def _present(
+    proxy: EdsProxy, body: Any, authed: Authed, *, registrar: bool | None = None
+) -> EdsDocument:
+    return await present(
+        proxy,
+        body,
+        me=authed.data.user_id,
+        registrar=_registrar(authed) if registrar is None else registrar,
+        inbox=_inbox(authed),
+    )
+
+
+def _inbox(authed: Authed) -> bool:
+    """Есть раздел «Входящие» (чтение или регистрация): «В ответ на ВХ» ведёт в карточку письма."""
+    return allows(authed.access, "eds.inbox", "read") or allows(
+        authed.access, "eds.inbox.register", "read"
+    )
 
 
 def _bad_reply_to(reason: str) -> PlatformError:
@@ -240,7 +259,7 @@ async def create_document(
             result = await _submit(proxy, document_id, send=body.send)
         except PlatformError as exc:
             raise _with_document(exc, document_id, created=True) from exc
-    return await present(proxy, result, me=authed.data.user_id, registrar=_registrar(authed))
+    return await _present(proxy, result, authed)
 
 
 @router.put("/eds/documents/{id}", response_model=EdsDocument, operation_id="updateEdsDocument")
@@ -255,7 +274,7 @@ async def update_document(id: DocumentId, body: EdsDocumentUpdateIn, authed: Wri
             raise _with_document(exc, str(id), created=False) from exc
         # Документ ушёл на согласование — он больше не «Доработать» в очереди автора (D1-6b)
         await drop_returned(Feed(authed))
-    return await present(proxy, result, me=authed.data.user_id, registrar=_registrar(authed))
+    return await _present(proxy, result, authed)
 
 
 # --- письмо на бланке (P4) ------------------------------------------------------------------------
@@ -314,14 +333,14 @@ async def download_pdf(id: DocumentId, authed: Reader) -> Response:
 async def request_registration(id: DocumentId, authed: Writer) -> EdsDocument:
     proxy = _proxy(authed)
     body = await proxy.request("POST", f"{API}/documents/{id}/registration-request")
-    return await present(proxy, body, me=authed.data.user_id, registrar=_registrar(authed))
+    return await _present(proxy, body, authed)
 
 
 @router.post("/eds/documents/{id}/send", response_model=EdsDocument, operation_id="sendEdsDocument")
 async def send_document(id: DocumentId, authed: Registrar) -> EdsDocument:
     proxy = _proxy(authed)
     body = await proxy.request("POST", f"{API}/documents/{id}/send")
-    return await present(proxy, body, me=authed.data.user_id, registrar=True)
+    return await _present(proxy, body, authed, registrar=True)
 
 
 @router.get("/eds/letterhead", response_model=EdsLetterhead, operation_id="getEdsLetterhead")
