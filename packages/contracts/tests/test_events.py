@@ -200,6 +200,8 @@ EDS_EVENTS = {
     "notice.requested",
     # SIGN-2: напоминание об окончании полномочия подписи доставляет CRM тем же путём.
     "signing_authority.expiring",
+    # SIGN-3: подписание официального документа уполномоченным лицом.
+    "document.signed",
 }
 
 
@@ -424,6 +426,7 @@ def test_initial_subscriptions_v1() -> None:
         "uz.railtech.crm.mail.sent.v1",
         "uz.railtech.crm.partner.client_resolved.v1",
         "uz.railtech.eds.approval.decided.v1",
+        "uz.railtech.eds.document.signed.v1",
         "uz.railtech.eds.letter.rejected.v1",
         "uz.railtech.eds.letter.resolved.v1",
     ]

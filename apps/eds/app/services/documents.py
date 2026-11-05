@@ -427,7 +427,7 @@ async def sign(
         raise forbidden_reason(check_result.reason or "no_authority", check_result.message)
 
     candidate = check_result.candidate
-    if authority_id is not None and candidate.authority_id != authority_id:
+    if authority_id is not None and candidate.authority.id != authority_id:
         res = await signing_resolve.resolve(
             session,
             kind=document.kind,
@@ -436,7 +436,7 @@ async def sign(
             on_date=today,
         )
         matched = [
-            c for c in res.candidates if c.authority_id == authority_id and c.signer.crm_user_id == employee.crm_user_id
+            c for c in res.candidates if c.authority.id == authority_id and c.signer.crm_user_id == employee.crm_user_id
         ]
         if not matched:
             raise conflict(
@@ -475,24 +475,21 @@ async def sign(
     document.registered_at = now
     document.updated_at = now
     document.signed_by_crm_user_id = employee.crm_user_id
-    document.signing_authority_id = candidate.authority_id
-    document.signatory_basis = candidate.basis
+    document.signing_authority_id = candidate.authority.id if candidate.authority else None
+    document.signatory_basis = candidate.authority.basis if candidate.authority else None
     document.signatory_basis_text = candidate.basis_text
-    document.acting_for_crm_user_id = candidate.acting_for.crm_user_id if candidate.acting_for else None
+    document.acting_for_crm_user_id = candidate.acting_for[0].crm_user_id if candidate.acting_for else None
     document.verification_code = verification_code
     document.dispatch_method = method
     document.signatory_name = candidate.signer.full_name
-    document.signatory_position = candidate.signer.position
+    document.signatory_position = candidate.position
 
     await journal.record(
         session,
         "document.signed",
         by=employee.crm_user_id,
         document_id=document.id,
-        authority_id=str(candidate.authority_id),
-        verification_code=verification_code,
-        dispatch_method=method,
-        number=document.number,
+        comment=f"Подписан исходящий документ {document.number}. Основание: {document.signatory_basis_text}.",
     )
 
     render = None

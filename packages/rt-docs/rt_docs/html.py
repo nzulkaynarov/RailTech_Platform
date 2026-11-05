@@ -13,8 +13,8 @@ from dataclasses import dataclass
 from html import escape
 from typing import Any
 
-import qrcode
-import qrcode.image.svg
+import qrcode  # type: ignore[import-untyped]
+import qrcode.image.svg  # type: ignore[import-untyped]
 
 from .contracts import clean_text
 from .css import PageSetup, stylesheet
@@ -42,7 +42,10 @@ _BLANK = "_______________"
 def generate_qr_svg(url: str) -> str:
     """Генерация чистого векторного SVG QR-кода для встраивания в HTML печатной формы."""
     img = qrcode.make(url, image_factory=qrcode.image.svg.SvgPathImage, box_size=6)
-    return img.to_string().decode("utf-8")
+    res: Any = img.to_string()
+    if isinstance(res, bytes):
+        return res.decode("utf-8")
+    return str(res)
 
 
 _LAYOUT_CLASS = {

@@ -282,9 +282,7 @@ function letterFields(doc: MockDocument, me: string): Partial<EdsDocument> {
       draft && register && (doc.ownerId === me || Boolean(letter?.registration_requested)),
     can_request_registration: draft && !register && doc.ownerId === me,
     can_sign:
-      doc.can_sign ??
-      (draft &&
-        (me === "u-demo-director" || Boolean(doc.signing_authority_id))),
+      doc.can_sign ?? (draft && (me === "u-demo-director" || Boolean(doc.signing_authority_id))),
   };
 }
 
