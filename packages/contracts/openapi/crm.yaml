@@ -4442,6 +4442,44 @@ components:
       - skipped
       title: InboundMailBulkArchiveOut
       type: object
+    InboundMailCheckOut:
+      description: 'Итог «Проверить почту»: `ok` — ящик прочитан (`created` — сколько новых писем), `off` — приём
+
+        не настроен, `error` — не удалось (`error_kind` — вид без деталей сервера), `checking` —
+
+        проверка уже идёт или продолжается в фоне: письма появятся в списке сами.'
+      properties:
+        checked_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          description: Когда проверка закончилась; у `checking` — пусто
+          title: Checked At
+        created:
+          default: 0
+          description: Новых писем в очереди после проверки
+          minimum: 0.0
+          title: Created
+          type: integer
+        error_kind:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: 'Вид ошибки: auth_failed, unavailable, tls_failed, invalid_host, mailbox_missing, internal'
+          title: Error Kind
+        status:
+          enum:
+          - ok
+          - 'off'
+          - error
+          - checking
+          title: Status
+          type: string
+      required:
+      - status
+      title: InboundMailCheckOut
+      type: object
     InboundMailCounts:
       description: 'Числа вкладок в рамках прав сотрудника: новые (из них «из истории»), мои в работе, все в
 
@@ -12855,6 +12893,36 @@ paths:
       summary: Inbound Mail Handover Targets
       tags:
       - mail-types
+  /api/v1/inbound-mail/poll:
+    post:
+      description: '«Проверить почту»: опрос общего ящика сразу, тем же кодом и под той же блокировкой, что
+
+        плановый (раз в 2 минуты). Право — как на просмотр очереди. Не чаще раза в 20 секунд на
+
+        установку: раньше — 429 `rate_limited` (`Retry-After`, `details.retry_after_s`). Ждёт до 30
+
+        секунд; опрос уже идёт или дольше — `status = checking`, письма появятся в списке сами. Итог:
+
+        `ok` (`created`), `off` (приём не настроен), `error` (`error_kind` без деталей сервера).'
+      operationId: poll_inbound_mail
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboundMailCheckOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Poll Inbound Mail
+      tags:
+      - inbound-mail
   /api/v1/inbound-mail/{mail_id}:
     get:
       description: 'Карточка письма: отправитель, адресаты (сотрудники по адресу), все письма записи, наши

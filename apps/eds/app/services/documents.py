@@ -342,13 +342,20 @@ async def get_for_pdf(session: AsyncSession, *, employee: Employee, document_id:
         raise not_found("Документ не найден.")
     if document.kind != DocumentKind.LETTER_OUT.value:
         raise conflict("no_body", "PDF на бланке строится только для письма.")
+    if not may_open_pdf(employee, document):
+        raise forbidden_reason("not_author", "PDF письма строит его автор или делопроизводитель.")
+    return document
+
+
+def may_open_pdf(employee: Employee, document: Document) -> bool:
+    """Кто строит и скачивает PDF проекта (SIGN-1, ADR-0024 п. 4): автор письма; держатель `letters.register` —
+    переданный ему черновик и зарегистрированное письмо. Маршрута у письма нет; появится — его участники добавляются
+    сюда же. Итоговый PDF открывается по видимости документа."""
     mine = document.author_crm_user_id == employee.crm_user_id
     registrar = access.has(employee, P.LETTERS_REGISTER) and (
         document.status == DocumentStatus.SENT.value or document.registration_requested_at is not None
     )
-    if not (mine or registrar):
-        raise forbidden_reason("not_author", "PDF письма строит его автор или делопроизводитель.")
-    return document
+    return mine or registrar
 
 
 def _storage(storage: ObjectStorage | None) -> ObjectStorage:

@@ -1007,6 +1007,27 @@
         "unverified": "Jo‘natuvchi tasdiqlanmagan: SPF/DKIM/DMARC tekshiruvi o‘tmadi, manzil soxtalashtirilgan bo‘lishi mumkin. Qoida bo‘yicha tur qo‘yilmadi.",
         "unknown": "Jo‘natuvchini tekshirib bo‘lmaydi: xatda pochta serveri belgisi yo‘q. Qoida bo‘yicha tur qo‘yilmadi."
       }
+    },
+    "check": {
+      "button": "Pochtani tekshirish",
+      "busy": "Tekshirilmoqda…",
+      "never": "Hali tekshirilmagan",
+      "justNow": "Hozirgina tekshirildi",
+      "minutes": "{{count}} daqiqa oldin tekshirildi",
+      "hours": "{{count}} soat oldin tekshirildi",
+      "date": "Tekshirilgan sana: {{date}}",
+      "found": "Yangi xatlar: {{count}}",
+      "none": "Yangi xat yo‘q",
+      "off": "Pochta sozlanmagan —",
+      "settings": "Sozlamalar · Pochta",
+      "checking": "Tekshiruv davom etmoqda — xatlar ro‘yxatda o‘zi paydo bo‘ladi",
+      "tooSoon": "Yana {{count}} soniyadan keyin tekshirish mumkin",
+      "error": {
+        "default": "Pochta serveriga ulanib bo‘lmadi",
+        "auth_failed": "Pochta serveri login yoki parolni qabul qilmadi",
+        "mailbox_missing": "Pochta serverida bunday papka yo‘q"
+      },
+      "resultLabel": "Pochta tekshiruvi natijasi"
     }
   },
   "settings": {

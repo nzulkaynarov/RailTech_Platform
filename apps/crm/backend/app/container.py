@@ -63,6 +63,7 @@ if TYPE_CHECKING:
     from app.services.inbound_mail import InboundMailService
     from app.services.inbound_mail_actions import InboundMailActions
     from app.services.inbound_mail_assist import InboundMailAssist
+    from app.services.inbound_mail_check import InboundMailCheck
     from app.services.inbound_mail_history import InboundMailHistory
     from app.services.inbound_mail_ingest import InboundMailIngest
     from app.services.kb.admin import KbAdminService
@@ -696,6 +697,13 @@ class Container:
             self.storage,
             self.settings.s3_bucket_attachments,
         )
+
+    @cached_property
+    def inbound_mail_check(self) -> "InboundMailCheck":
+        """«Проверить почту»: опрос по кнопке под блокировкой плановой задачи."""
+        from app.services.inbound_mail_check import InboundMailCheck
+
+        return InboundMailCheck(self.inbound_mail_ingest)
 
     @cached_property
     def inbound_mail_history(self) -> "InboundMailHistory":

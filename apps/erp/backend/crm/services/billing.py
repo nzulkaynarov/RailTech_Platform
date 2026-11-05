@@ -190,8 +190,17 @@ def _render_invoice_pdf(invoice) -> None:
     from django.template.loader import render_to_string
     from weasyprint import HTML
 
-    from .documents import brand_context_for_pdf, document_brand_context, document_totals
+    from .documents import (
+        brand_context_for_pdf,
+        document_brand_context,
+        document_totals,
+        draft_context,
+        invoice_is_draft,
+        remember_pdf_state,
+    )
 
+    # SIGN-1: счёт в DRAFT — проект («ПРОЕКТ», без номера и даты); выставленный — как прежде.
+    is_draft = invoice_is_draft(invoice)
     supplier = _invoice_seller_company(invoice)
     invoice_brand = document_brand_context(supplier)
     # O3: выставленный счёт печатает ЗАМОРОЖЕННЫЕ реквизиты (снимок момента выставления),
@@ -238,13 +247,16 @@ def _render_invoice_pdf(invoice) -> None:
                     seller=invoice_brand.get("seller"),
                     seller_profile=invoice_brand.get("seller_profile"),
                     body_html=frozen_body or None,
+                    draft=is_draft,
                 ),
                 **brand_context_for_pdf(invoice_brand),
+                **draft_context(is_draft),
             },
         )
         buf = BytesIO()
         HTML(string=html_string).write_pdf(buf)
         save_rendered_pdf(invoice, f"Invoice_{invoice.number}.pdf", ContentFile(buf.getvalue()))
+        remember_pdf_state("invoice", invoice.pk, is_draft)
         return
 
     html_string = render_to_string(
@@ -255,11 +267,13 @@ def _render_invoice_pdf(invoice) -> None:
             "company": invoice.deal.company,
             "totals": totals,
             **brand_context_for_pdf(invoice_brand),
+            **draft_context(is_draft),
         },
     )
     buf = BytesIO()
     HTML(string=html_string).write_pdf(buf)
     save_rendered_pdf(invoice, f"Invoice_{invoice.number}.pdf", ContentFile(buf.getvalue()))
+    remember_pdf_state("invoice", invoice.pk, is_draft)
 
 
 def _as_date(value):
@@ -562,9 +576,18 @@ def _render_act_pdf(act) -> None:
     # Real seller (via the act's contract → КП) so «От Поставщика» names the counterparty,
     # not a blank line. Shared branding bundle, same shape as every other document.
     from ..document_wording import document_wording_context
-    from .documents import brand_context_for_pdf, document_brand_context, document_totals
+    from .documents import (
+        act_is_draft,
+        brand_context_for_pdf,
+        document_brand_context,
+        document_totals,
+        draft_context,
+        remember_pdf_state,
+    )
     from .quotes import _quote_seller_company
 
+    # SIGN-1: акт в DRAFT (возвращён заказчиком, ещё не выпущен заново) — проект; выпущенный — как прежде.
+    is_draft = act_is_draft(act)
     quote = act.contract.quote if (act.contract_id and act.contract.quote_id) else None
     supplier = _quote_seller_company(quote) if quote else None
     if supplier is None and act.invoice_id:
@@ -614,13 +637,16 @@ def _render_act_pdf(act) -> None:
                     seller=act_brand.get("seller"),
                     seller_profile=act_brand.get("seller_profile"),
                     body_html=frozen_body or None,
+                    draft=is_draft,
                 ),
                 **brand_context_for_pdf(act_brand),
+                **draft_context(is_draft),
             },
         )
         buf = BytesIO()
         HTML(string=html_string).write_pdf(buf)
         save_rendered_pdf(act, f"Act_{act.number}.pdf", ContentFile(buf.getvalue()))
+        remember_pdf_state("act", act.pk, is_draft)
         return
 
     html_string = render_to_string(
@@ -632,6 +658,7 @@ def _render_act_pdf(act) -> None:
             "contact": act.deal.contact,
             "totals": totals,
             **brand_context_for_pdf(act_brand),
+            **draft_context(is_draft),
             # Оговорка о приёмке: компании либо платформенная (spec-documents-editable).
             **document_wording_context(act_brand.get("seller_profile")),
         },
@@ -639,6 +666,7 @@ def _render_act_pdf(act) -> None:
     buf = BytesIO()
     HTML(string=html_string).write_pdf(buf)
     save_rendered_pdf(act, f"Act_{act.number}.pdf", ContentFile(buf.getvalue()))
+    remember_pdf_state("act", act.pk, is_draft)
 
 
 @transaction.atomic

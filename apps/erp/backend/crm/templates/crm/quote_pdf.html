@@ -1,5 +1,5 @@
 {% extends "crm/_document_base.html" %}
-{% load document_format %}
+{% load i18n %}{% load document_format %}
 {% comment %}
   Client-facing КП (commercial offer) — CLIENT PROJECTION.
 
@@ -15,14 +15,14 @@
   (buyer) + the brand bundle (seller, seller_profile, seller_logo_url).
 {% endcomment %}
 {% block doc_meta %}
-  <div class="doc-no">{% if quote.number %}КП № {{ quote.number }}{% if quote.version > 1 %}, версия {{ quote.version }}{% endif %}{% else %}КП № {{ quote.deal_id }}-{{ quote.version }}{% endif %}</div>
+  {% if document_draft %}<div class="doc-no-draft">{% translate "КП" %} · {% translate "без номера" %}</div>{% else %}<div class="doc-no">{% if quote.number %}КП № {{ quote.number }}{% if quote.version > 1 %}, версия {{ quote.version }}{% endif %}{% else %}КП № {{ quote.deal_id }}-{{ quote.version }}{% endif %}</div>{% endif %}
   {% comment %}
     Т4 — мета-блок ADZ-класса: label:value с линейками. Менеджер/контакты живут ЗДЕСЬ
     (как «Sales responsible» у ADZ), а не в хвосте документа — клиент видит, кому звонить,
     не листая. Телефон: личный менеджера → общий компании.
   {% endcomment %}
   <table class="meta-grid">
-    <tr><td class="mk">Дата</td><td>{{ quote.created_at|date:"d.m.Y" }}</td></tr>
+    {% if not document_draft %}<tr><td class="mk">Дата</td><td>{{ quote.created_at|date:"d.m.Y" }}</td></tr>{% endif %}
     {% if quote.valid_until %}<tr><td class="mk">Действительно до</td><td>{{ quote.valid_until|date:"d.m.Y" }}</td></tr>{% endif %}
     {% if quote.prepared_by %}
     <tr><td class="mk">Менеджер</td><td>{% firstof quote.prepared_by.get_full_name quote.prepared_by.email %}</td></tr>

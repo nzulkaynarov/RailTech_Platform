@@ -337,6 +337,21 @@ class PayloadTooLargeError(DomainError):
 
 
 class RateLimitedError(DomainError):
-    """Слишком много запросов с одного адреса (429) — публичная форма «Запрос»."""
+    """Слишком много запросов (429): публичная форма «Запрос»; «Проверить почту» — с паузой.
+
+    `retry_after_s` (если задан) уходит в `details.retry_after_s` и заголовок `Retry-After`."""
 
     code = "rate_limited"
+
+    def __init__(
+        self,
+        message: str = "",
+        *,
+        reason: Reason | None = None,
+        retry_after_s: int | None = None,
+        **details: object,
+    ) -> None:
+        if retry_after_s is not None:
+            details["retry_after_s"] = retry_after_s
+        super().__init__(message, reason=reason, **details)
+        self.retry_after_s = retry_after_s

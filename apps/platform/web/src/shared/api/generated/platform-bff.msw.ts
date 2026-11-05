@@ -194,6 +194,7 @@ import type {
   InboundMail,
   InboundMailAssist,
   InboundMailBulkArchiveResult,
+  InboundMailCheck,
   InboundMailHandoverTargets,
   InboundMailLeadResult,
   InboundMailLink,
@@ -9942,6 +9943,23 @@ export const getBulkArchiveInboundMailResponseMock = (
       ]),
     }),
   ),
+  ...overrideResponse,
+});
+
+export const getCheckInboundMailResponseMock = (
+  overrideResponse: Partial<Extract<InboundMailCheck, object>> = {},
+): InboundMailCheck => ({
+  status: faker.helpers.arrayElement(["ok", "off", "error", "checking", "too_soon"] as const),
+  created: faker.number.int({ min: 0 }),
+  error_kind: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  checked_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  retry_after_s: faker.helpers.arrayElement([faker.number.int({ min: 1 }), null]),
   ...overrideResponse,
 });
 
@@ -29179,6 +29197,30 @@ export const getBulkArchiveInboundMailMockHandler = (
   );
 };
 
+export const getCheckInboundMailMockHandler = (
+  overrideResponse?:
+    | InboundMailCheck
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<InboundMailCheck> | InboundMailCheck),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/inbound-mail/poll",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCheckInboundMailResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getDownloadInboundMailAttachmentMockHandler = (
   overrideResponse?:
     Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
@@ -35484,6 +35526,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getTakeInboundMailMockHandler(),
   getReleaseInboundMailMockHandler(),
   getBulkArchiveInboundMailMockHandler(),
+  getCheckInboundMailMockHandler(),
   getDownloadInboundMailAttachmentMockHandler(),
   getCopyInboundMailFilesToEdsMockHandler(),
   getAssistInboundMailMockHandler(),

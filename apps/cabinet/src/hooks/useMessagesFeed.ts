@@ -8,6 +8,7 @@ import {
   POLL_INTERVAL_MS,
   lastManagerId,
   lastMessageId,
+  markErased,
   mergeMessages,
   newClientMessageId,
   unsentPending,
@@ -38,8 +39,10 @@ export function useMessagesFeed({ initialUnread }: { initialUnread: number }) {
         return; // сеть или сервер — следующий опрос попробует снова, лента остаётся как есть
       }
       client.setQueryData<portal.PortalMessagePage>(keys.messages, (old) => ({
-        items: mergeMessages(old?.items ?? [], next.items),
+        // стёртые по запросу автора (CHAT-1b) — заменяются в открытой ленте без перезагрузки
+        items: markErased(mergeMessages(old?.items ?? [], next.items), next.erased_ids),
         has_more: old?.has_more ?? false,
+        erased_ids: [],
       }));
       if (!next.has_more) return;
     }
@@ -61,6 +64,7 @@ export function useMessagesFeed({ initialUnread }: { initialUnread: number }) {
       client.setQueryData<portal.PortalMessagePage>(keys.messages, (old) => ({
         items: mergeMessages(old?.items ?? [], [message]),
         has_more: old?.has_more ?? false,
+        erased_ids: [],
       }));
       setPending((list) => list.filter((entry) => entry.clientMessageId !== item.clientMessageId));
     },

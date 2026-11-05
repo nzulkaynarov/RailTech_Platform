@@ -854,6 +854,28 @@ class InboundMailBulkArchiveOut(BaseModel):
     skipped: Annotated[list[InboundMailSkippedItem], Field(title="Skipped")]
 
 
+class InboundMailCheckOut(BaseModel):
+    """
+    Итог «Проверить почту»: `ok` — ящик прочитан (`created` — сколько новых писем), `off` — приём
+    не настроен, `error` — не удалось (`error_kind` — вид без деталей сервера), `checking` —
+    проверка уже идёт или продолжается в фоне: письма появятся в списке сами.
+    """
+
+    checked_at: Annotated[AwareDatetime | None, Field(title="Checked At")] = None
+    """
+    Когда проверка закончилась; у `checking` — пусто
+    """
+    created: Annotated[int | None, Field(ge=0, title="Created")] = 0
+    """
+    Новых писем в очереди после проверки
+    """
+    error_kind: Annotated[str | None, Field(title="Error Kind")] = None
+    """
+    Вид ошибки: auth_failed, unavailable, tls_failed, invalid_host, mailbox_missing, internal
+    """
+    status: Annotated[Status7, Field(title="Status")]
+
+
 class InboundMailCounts(BaseModel):
     """
     Числа вкладок в рамках прав сотрудника: новые (из них «из истории»), мои в работе, все в
@@ -943,7 +965,7 @@ class InboundMailItem(BaseModel):
     Правило «отправитель → тип» не применено: `unverified` — отправитель не подтверждён (SPF/DKIM/DMARC не прошли), `unknown` — проверить нельзя (нет заголовка `Authentication-Results`)
     """
     sent_at: Annotated[AwareDatetime | None, Field(title="Sent At")]
-    status: Annotated[Status7, Field(title="Status")]
+    status: Annotated[Status8, Field(title="Status")]
     subject: Annotated[str, Field(title="Subject")]
     thread_reply: Annotated[bool | None, Field(title="Thread Reply")] = False
     """
@@ -1084,7 +1106,7 @@ class InboundMailOut(BaseModel):
     """
     sent_at: Annotated[AwareDatetime | None, Field(title="Sent At")]
     skipped: Annotated[list[InboundMailSkipped], Field(title="Skipped")]
-    status: Annotated[Status7, Field(title="Status")]
+    status: Annotated[Status8, Field(title="Status")]
     subject: Annotated[str, Field(title="Subject")]
     text: Annotated[str, Field(title="Text")]
     thread_reply: Annotated[bool | None, Field(title="Thread Reply")] = False
@@ -1238,7 +1260,7 @@ class InvitationOut(BaseModel):
     id: Annotated[int, Field(title="Id")]
     sent_at: Annotated[AwareDatetime | None, Field(title="Sent At")] = None
     sent_via: Annotated[list[SentViaEnum] | None, Field(title="Sent Via")] = None
-    status: Annotated[Status9, Field(title="Status")]
+    status: Annotated[Status10, Field(title="Status")]
     suggested_channel: Annotated[
         SuggestedChannel | None, Field(title="Suggested Channel")
     ] = None
@@ -1557,7 +1579,7 @@ class NoticeOut(BaseModel):
     error_text: Annotated[str | None, Field(title="Error Text")] = None
     id: Annotated[int, Field(title="Id")]
     sent_at: Annotated[AwareDatetime | None, Field(title="Sent At")] = None
-    status: Annotated[Status9, Field(title="Status")]
+    status: Annotated[Status10, Field(title="Status")]
 
 
 class OffsiteCheckOut(BaseModel):
@@ -1810,7 +1832,7 @@ class ServiceCheckOut(BaseModel):
     checked_at: Annotated[AwareDatetime, Field(title="Checked At")]
     error: Annotated[str | None, Field(title="Error")]
     latency_ms: Annotated[int | None, Field(title="Latency Ms")]
-    status: Annotated[Status11, Field(title="Status")]
+    status: Annotated[Status12, Field(title="Status")]
     summary: Annotated[str, Field(title="Summary")]
     tier: Annotated[Tier, Field(title="Tier")]
 
@@ -2064,7 +2086,14 @@ class Status1(StrEnum):
     skipped_no_smtp = "skipped_no_smtp"
 
 
-class Status11(StrEnum):
+class Status10(StrEnum):
+    queued = "queued"
+    sent = "sent"
+    failed = "failed"
+    skipped = "skipped"
+
+
+class Status12(StrEnum):
     ok = "ok"
     warn = "warn"
     fail = "fail"
@@ -2072,7 +2101,7 @@ class Status11(StrEnum):
     off = "off"
 
 
-class Status12(StrEnum):
+class Status13(StrEnum):
     ok = "ok"
     warn = "warn"
     fail = "fail"
@@ -2107,18 +2136,18 @@ class Status6(StrEnum):
 
 
 class Status7(StrEnum):
+    ok = "ok"
+    off = "off"
+    error = "error"
+    checking = "checking"
+
+
+class Status8(StrEnum):
     new = "new"
     in_work = "in_work"
     registering = "registering"
     done = "done"
     spam = "spam"
-
-
-class Status9(StrEnum):
-    queued = "queued"
-    sent = "sent"
-    failed = "failed"
-    skipped = "skipped"
 
 
 class SuggestedChannel(StrEnum):
@@ -2136,7 +2165,7 @@ class System(StrEnum):
 class SystemStatusOut(BaseModel):
     checked_at: Annotated[AwareDatetime, Field(title="Checked At")]
     components: Annotated[list[ComponentStatusOut], Field(title="Components")]
-    status: Annotated[Status12, Field(title="Status")]
+    status: Annotated[Status13, Field(title="Status")]
 
 
 class TeamMember(BaseModel):

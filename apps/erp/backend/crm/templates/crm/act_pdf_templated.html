@@ -11,8 +11,10 @@
   компания правит ТЕКСТ, а не то, что делает документ документом.
 {% endcomment %}
 {% block doc_meta %}
+  {% if document_draft %}<div class="doc-no-draft">{% translate "без номера" %}</div>{% else %}
   <div class="doc-no">{% blocktranslate with number=act.number %}Акт № {{ number }}{% endblocktranslate %}</div>
   {% with issued=act.issued_at|date:"d.m.Y" %}<div>{% blocktranslate %}от {{ issued }}{% endblocktranslate %}</div>{% endwith %}
+  {% endif %}
 {% endblock %}
 
 {% block doc_title %}{% translate "Акт приёма-передачи" %}{% endblock %}

@@ -202,6 +202,8 @@ export * from "./inboundMailAttachment";
 export * from "./inboundMailbox";
 export * from "./inboundMailBulkArchiveIn";
 export * from "./inboundMailBulkArchiveOut";
+export * from "./inboundMailCheckOut";
+export * from "./inboundMailCheckOutStatus";
 export * from "./inboundMailCounts";
 export * from "./inboundMailEvent";
 export * from "./inboundMailHandoverIn";

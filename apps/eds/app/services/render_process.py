@@ -68,6 +68,7 @@ def render_payload(payload: dict[str, Any], logo: bytes | None, logo_mime: str |
                 executor=meta["executor"],
             ),
             highlight_missing=False,
+            draft=bool(payload.get("draft")),  # проект: «ПРОЕКТ», без номера и даты (ADR-0024 п. 4)
             timeout_s=RENDER_TIMEOUT_S,
         )
     except RenderTimeoutError as exc:
