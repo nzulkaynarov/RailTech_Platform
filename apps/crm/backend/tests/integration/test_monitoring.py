@@ -3,6 +3,7 @@
 import random
 from datetime import UTC, datetime, timedelta
 from typing import cast
+from zoneinfo import ZoneInfo
 
 import pytest
 from aiogram import Bot
@@ -19,6 +20,18 @@ from tests.integration.crm_helpers import FakeSender
 
 pytestmark = pytest.mark.integration
 CHANNEL = -100500
+COMPANY_TZ = ZoneInfo("Asia/Tashkent")  # бюджет и итоги дня считаются по суткам компании
+# «Сейчас» для границ суток: обычные часы и самое неудобное время (23:45 по Ташкенту)
+CLOCKS = [
+    pytest.param(None, id="real-clock"),
+    pytest.param(datetime(2026, 11, 4, 18, 45, tzinfo=UTC), id="18:45-utc"),
+]
+
+
+def company_noon(clock: datetime | None = None) -> datetime:
+    """Полдень текущих суток компании: сдвиг на часы не выводит проверку в соседние сутки."""
+    local = (clock or datetime.now(UTC)).astimezone(COMPANY_TZ)
+    return local.replace(hour=12, minute=0, second=0, microsecond=0).astimezone(UTC)
 
 
 async def configure(sessions: async_sessionmaker[AsyncSession], daily_usd: float) -> None:
@@ -27,7 +40,9 @@ async def configure(sessions: async_sessionmaker[AsyncSession], daily_usd: float
     await svc.update("budget", {"daily_usd": daily_usd, "fallback_model_enabled": True}, None)
 
 
-async def spend(sessions: async_sessionmaker[AsyncSession], usd: float) -> None:
+async def spend(
+    sessions: async_sessionmaker[AsyncSession], usd: float, at: datetime | None = None
+) -> None:
     async with sessions() as session, session.begin():
         lead = Lead(display_name="Тест", language="ru")
         session.add(lead)
@@ -54,11 +69,14 @@ async def spend(sessions: async_sessionmaker[AsyncSession], usd: float) -> None:
                 cost_usd=usd,
                 lead_id=lead.id,
                 kind="work",
+                **({"at": at} if at else {}),
             )
         )
 
 
-async def fail_job(sessions: async_sessionmaker[AsyncSession], task: str) -> None:
+async def fail_job(
+    sessions: async_sessionmaker[AsyncSession], task: str, at: datetime | None = None
+) -> None:
     async with sessions() as session, session.begin():
         job = await session.execute(
             text(
@@ -68,8 +86,11 @@ async def fail_job(sessions: async_sessionmaker[AsyncSession], task: str) -> Non
             {"task": task},
         )
         await session.execute(
-            text("INSERT INTO procrastinate_events (job_id, type) VALUES (:id, 'failed')"),
-            {"id": job.scalar_one()},
+            text(
+                "INSERT INTO procrastinate_events (job_id, type, at) "
+                "VALUES (:id, 'failed', coalesce(:at, now()))"
+            ),
+            {"id": job.scalar_one(), "at": at},
         )
 
 
@@ -86,15 +107,18 @@ def monitor(
     return MonitorService(sessions, settings, cast(Bot, bot), probe)
 
 
+@pytest.mark.parametrize("clock", CLOCKS)
 async def test_alerts_fire_once_repeat_and_resolve(
-    sessions: async_sessionmaker[AsyncSession],
+    sessions: async_sessionmaker[AsyncSession], clock: datetime | None
 ) -> None:
+    now = company_noon(
+        clock
+    )  # проверки идут в пределах одних суток компании: +30 мин не за полночь
     await configure(sessions, daily_usd=1.0)
-    await spend(sessions, 0.9)
-    await fail_job(sessions, "ingest_kb_document")
+    await spend(sessions, 0.9, at=now)
+    await fail_job(sessions, "ingest_kb_document", at=now)
     bot, litellm = FakeSender(), [False]
     svc = monitor(sessions, bot, litellm)
-    now = datetime.now(UTC)
 
     first = await svc.check(now)
     assert sorted(first) == [
@@ -113,9 +137,10 @@ async def test_alerts_fire_once_repeat_and_resolve(
 
 async def test_daily_report_and_budget_guard(sessions: async_sessionmaker[AsyncSession]) -> None:
     await configure(sessions, daily_usd=0.5)
-    await spend(sessions, 0.75)
+    now = company_noon()
+    await spend(sessions, 0.75, at=now)
     bot = FakeSender()
-    report = await monitor(sessions, bot, [True]).daily_report(datetime.now(UTC))
+    report = await monitor(sessions, bot, [True]).daily_report(now)
     assert report is not None
     assert "новых лидов: 1" in report
     assert "$" not in report  # стоимость — только админам в личку
@@ -134,14 +159,15 @@ async def test_daily_report_dashboard_link_follows_the_platform_address(
     sessions: async_sessionmaker[AsyncSession],
 ) -> None:
     await configure(sessions, daily_usd=0.5)
-    await spend(sessions, 0.01)
+    now = company_noon()
+    await spend(sessions, 0.01, at=now)
     on_platform = await monitor(
         sessions, FakeSender(), [True], "https://platform.example.com"
-    ).daily_report(datetime.now(UTC))
+    ).daily_report(now)
     assert on_platform is not None
     assert 'href="https://platform.example.com/dashboard/summary"' in on_platform
     # адреса Платформы нет — прежняя ссылка в старую CRM
-    old = await monitor(sessions, FakeSender(), [True]).daily_report(datetime.now(UTC))
+    old = await monitor(sessions, FakeSender(), [True]).daily_report(now)
     assert old is not None
     assert '/dashboard"' in old
     assert "platform.example.com" not in old
@@ -184,7 +210,7 @@ async def test_model_without_credits_is_state_only_and_resolves_only_on_probe(
     svc = MonitorService(
         sessions, SettingsService(sessions, ttl_s=0), cast(Bot, bot), litellm_ok, models
     )
-    hour = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
+    hour = company_noon()  # +60 мин остаются в тех же сутках компании
 
     # Письмо о проблеме пробы — причина провайдера в центре сервисов; монитор хранит состояние
     assert await svc.check(hour) == []
