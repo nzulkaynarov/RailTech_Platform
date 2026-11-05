@@ -41,12 +41,24 @@ def _stream_or_render_pdf(obj):
     Creation schedules the render asynchronously (F1.6), so a download can race ahead
     of the Celery task — or arrive while the worker is down. WeasyPrint never runs
     inline in the request thread: the idempotent render task is (re-)enqueued and the
-    caller polls with the Retry-After hint (lib/download.ts in the SPA)."""
-    if not obj.pdf_file:
+    caller polls with the Retry-After hint (lib/download.ts in the SPA).
+
+    SIGN-1: a cached PDF that does not match the document's state — a draft without the «ПРОЕКТ» mark
+    (rendered earlier) or the mark on an already issued document (issue not re-rendered yet) — is not served:
+    the render is re-enqueued the same way."""
+    if not obj.pdf_file or _pdf_is_stale(obj):
         from crm.views._pdf import pdf_generating_response
 
         return pdf_generating_response(_PDF_DOC_TYPE[type(obj).__name__], obj.id)
     return stream_file_field(obj.pdf_file)
+
+
+def _pdf_is_stale(obj) -> bool:
+    from crm.services.documents import act_is_draft, contract_is_draft, invoice_is_draft, pdf_is_stale
+
+    checks = {"Contract": contract_is_draft, "Invoice": invoice_is_draft, "Act": act_is_draft}
+    is_draft = checks.get(type(obj).__name__)
+    return is_draft is not None and pdf_is_stale(_PDF_DOC_TYPE[type(obj).__name__], obj.pk, obj.pdf_file, is_draft(obj))
 
 
 def _sees_all_billing(user) -> bool:

@@ -13,7 +13,7 @@ import type {
   QueueItem,
 } from "../shared/api/generated/model";
 import { resetDictionariesMock, setMailTypeUsage } from "./dictionaries";
-import { type StoredMail, minutesAgo, seed } from "./inboundMailSeed";
+import { type StoredMail, arrival, minutesAgo, seed } from "./inboundMailSeed";
 import { resetMailTypesMock, resolveType, setRuleApplier } from "./mailTypes";
 import { readSession, sessionRoles } from "./mockSession";
 import type { MockRole } from "./fixtures/roles";
@@ -137,10 +137,15 @@ function historyMails(): StoredMail[] {
 }
 
 let memory: StoredMail[] | null = null;
+/** «Проверить почту» (MAIL-NOW): когда в моках последний раз опрашивали ящик и какие письма это принесло. */
+let polledAt: number | null = null;
+export const MOCK_MAIL_CHECK_KEY = "rt-pf-mock-mail-check";
+const CHECK_PAUSE_MS = 20_000;
 
 /** Тесты: начальные письма заново. */
 export function resetInboundMailMock(): void {
   memory = null;
+  polledAt = null;
   // Типы и правила живут рядом с письмами: сброс почты возвращает стартовый набор.
   resetMailTypesMock();
   resetDictionariesMock();
@@ -543,12 +548,46 @@ export const inboundMailHandlers = [
       counts: countsOf(),
       mailbox: {
         configured: !imapOff(),
-        last_poll_at: imapOff() ? null : minutesAgo(1),
-        last_ok_at: imapOff() ? null : minutesAgo(1),
+        last_poll_at: imapOff()
+          ? null
+          : polledAt
+            ? new Date(polledAt).toISOString()
+            : minutesAgo(2),
+        last_ok_at: imapOff() ? null : polledAt ? new Date(polledAt).toISOString() : minutesAgo(2),
         last_error_kind: null,
         personal_label: imap.personal_label,
       },
     });
+  }),
+  http.post("*/inbound-mail/poll", async () => {
+    // `localStorage["rt-pf-mock-mail-check"]`: none | error | auth | checking — итог без новых писем (тесты и снимки);
+    // без ключа первая проверка приносит одно письмо, повтор раньше 20 секунд — «too_soon», как в CRM.
+    await delay(400);
+    const forced = (() => {
+      try {
+        return window.localStorage.getItem(MOCK_MAIL_CHECK_KEY);
+      } catch {
+        return null;
+      }
+    })();
+    const none = { created: 0, error_kind: null, checked_at: null, retry_after_s: null };
+    if (imapOff()) return HttpResponse.json({ ...none, status: "off" });
+    if (forced === "checking") return HttpResponse.json({ ...none, status: "checking" });
+    const now = Date.now();
+    if (polledAt !== null && now - polledAt < CHECK_PAUSE_MS) {
+      const wait = Math.ceil((CHECK_PAUSE_MS - (now - polledAt)) / 1000);
+      return HttpResponse.json({ ...none, status: "too_soon", retry_after_s: wait });
+    }
+    polledAt = now;
+    const checked_at = new Date(now).toISOString();
+    if (forced === "error" || forced === "auth") {
+      const error_kind = forced === "auth" ? "auth_failed" : "unavailable";
+      return HttpResponse.json({ ...none, status: "error", error_kind, checked_at });
+    }
+    if (forced === "none") return HttpResponse.json({ ...none, status: "ok", checked_at });
+    const mails = read();
+    write([arrival(Math.max(0, ...mails.map((m) => m.id)) + 1), ...mails]);
+    return HttpResponse.json({ ...none, status: "ok", created: 1, checked_at });
   }),
   http.post("*/inbound-mail/bulk-archive", async ({ request }) => {
     const v = viewer();

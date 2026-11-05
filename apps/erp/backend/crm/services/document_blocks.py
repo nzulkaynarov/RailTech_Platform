@@ -166,7 +166,7 @@ def act_block_values(act, invoice, totals, ccy: str, *, seller=None, seller_prof
     }
 
 
-def invoice_block_values(invoice, items, totals, ccy: str, *, seller=None, seller_profile=None) -> dict:
+def invoice_block_values(invoice, items, totals, ccy: str, *, seller=None, seller_profile=None, draft=False) -> dict:
     """HTML блоков для счёта: таблица позиций, итоги, платёжные реквизиты, примечание, подписи."""
     return {
         "doc.items_table": mark_safe(render_to_string("crm/blocks/_items_table.html", {"items": items, "ccy": ccy})),
@@ -174,7 +174,13 @@ def invoice_block_values(invoice, items, totals, ccy: str, *, seller=None, selle
         "doc.payment_requisites": mark_safe(
             render_to_string(
                 "crm/blocks/_payment_requisites.html",
-                {"invoice": invoice, "seller": seller, "seller_profile": seller_profile, "ccy": ccy},
+                {
+                    "invoice": invoice,
+                    "seller": seller,
+                    "seller_profile": seller_profile,
+                    "ccy": ccy,
+                    "document_draft": draft,
+                },
             )
         ),
         "doc.notes": mark_safe(
@@ -287,8 +293,17 @@ def render_document_body(body_html: str, *, blocks: dict, scalars: dict) -> str:
     return PLACEHOLDER_RE.sub(_sub, body_html or "")
 
 
+DRAFT_NUMBER = "без номера"
+DRAFT_DATE = "«__» ________ 20__"  # пустая дата проекта, как в бумажной практике
+
+
+def _draft_scalars(scalars: dict, draft: bool) -> dict:
+    """Проект (SIGN-1, ADR-0024 п. 4): номер и дата самого документа в тексте шаблона не печатаются."""
+    return {**scalars, "doc.number": DRAFT_NUMBER, "doc.date": DRAFT_DATE} if draft else scalars
+
+
 def render_act_body(
-    act, invoice, totals, ccy: str, template, *, seller=None, seller_profile=None, body_html=None
+    act, invoice, totals, ccy: str, template, *, seller=None, seller_profile=None, body_html=None, draft=False
 ) -> str:
     """Тело акта по шаблону компании либо по платформенному образцу.
 
@@ -297,16 +312,19 @@ def render_act_body(
     return render_document_body(
         body_html if body_html else template.body_html,
         blocks=act_block_values(act, invoice, totals, ccy, seller=seller, seller_profile=seller_profile),
-        scalars={
-            "doc.number": act.number,
-            "doc.date": act.issued_at.strftime("%d.%m.%Y") if act.issued_at else "",
-            "doc.total": act.total_amount,
-        },
+        scalars=_draft_scalars(
+            {
+                "doc.number": act.number,
+                "doc.date": act.issued_at.strftime("%d.%m.%Y") if act.issued_at else "",
+                "doc.total": act.total_amount,
+            },
+            draft,
+        ),
     )
 
 
 def render_invoice_body(
-    invoice, items, totals, ccy: str, template, *, seller=None, seller_profile=None, body_html=None
+    invoice, items, totals, ccy: str, template, *, seller=None, seller_profile=None, body_html=None, draft=False
 ) -> str:
     """Тело счёта по шаблону компании либо по платформенному образцу (`body_html` — E3-снапшот)."""
     from crm.templatetags.document_format import money
@@ -314,13 +332,18 @@ def render_invoice_body(
     issued = invoice.issued_at or invoice.created_at
     return render_document_body(
         body_html if body_html else template.body_html,
-        blocks=invoice_block_values(invoice, items, totals, ccy, seller=seller, seller_profile=seller_profile),
-        scalars={
-            "doc.number": invoice.number,
-            "doc.date": format_document_date(issued),
-            "doc.total": money(invoice.total_incl_vat, ccy),
-            "doc.currency": ccy,
-        },
+        blocks=invoice_block_values(
+            invoice, items, totals, ccy, seller=seller, seller_profile=seller_profile, draft=draft
+        ),
+        scalars=_draft_scalars(
+            {
+                "doc.number": invoice.number,
+                "doc.date": format_document_date(issued),
+                "doc.total": money(invoice.total_incl_vat, ccy),
+                "doc.currency": ccy,
+            },
+            draft,
+        ),
     )
 
 
@@ -340,7 +363,7 @@ def _contract_delivery_terms(quote) -> str:
 
 
 def render_contract_body(
-    contract, items, totals, ccy: str, template, *, seller=None, seller_profile=None, body_html=None
+    contract, items, totals, ccy: str, template, *, seller=None, seller_profile=None, body_html=None, draft=False
 ) -> str:
     """Тело договора по шаблону компании либо по платформенному образцу (`body_html` — E3-снапшот)."""
     from crm.templatetags.document_format import money
@@ -360,16 +383,19 @@ def render_contract_body(
     return render_document_body(
         body_html if body_html else template.body_html,
         blocks=contract_block_values(contract, items, totals, ccy, seller=seller, seller_profile=seller_profile),
-        scalars={
-            "doc.number": contract.number,
-            "doc.date": format_document_date(contract.created_at),
-            "doc.total": money(contract.total_amount, ccy),
-            "doc.currency": ccy,
-            "doc.vat_rate": f"{int(round(float(vat_rate)))}" if vat_rate is not None else "",
-            "doc.delivery_terms": _contract_delivery_terms(quote),
-            "doc.valid_from": valid_from,
-            "doc.valid_until": valid_until,
-        },
+        scalars=_draft_scalars(
+            {
+                "doc.number": contract.number,
+                "doc.date": format_document_date(contract.created_at),
+                "doc.total": money(contract.total_amount, ccy),
+                "doc.currency": ccy,
+                "doc.vat_rate": f"{int(round(float(vat_rate)))}" if vat_rate is not None else "",
+                "doc.delivery_terms": _contract_delivery_terms(quote),
+                "doc.valid_from": valid_from,
+                "doc.valid_until": valid_until,
+            },
+            draft,
+        ),
     )
 
 

@@ -83,6 +83,19 @@
     }
   }
   @page:first { @top-right { content: none; } }
+  {% if document_draft %}
+  @page {
+    @top-left {
+      content: "{% translate 'Проект — не является официальным документом' %}";
+      font-family: 'Helvetica', 'Arial', sans-serif;
+      font-size: var(--fs-xs);
+      font-weight: 700;
+      color: #b42318;
+    }
+  }
+  /* Проект: печати нет («М.П.») — её ставит только выпуск. */
+  .seal { display: none; }
+  {% endif %}
   * { box-sizing: border-box; }
   body {
     font-family: var(--font-main);
@@ -209,15 +222,19 @@
   .footer-grid td { vertical-align: top; padding: 0 8pt 0 0; font-size: 6.5pt; color: #9aa0a6; }
   .footer-grid .fk { color: #7a828f; font-weight: 700; }
 
-  /* Governance: a NOT-yet-sent КП (draft / internally-approved-but-unsent) carries a «ЧЕРНОВИК»
-     watermark so a copy handed to a client out-of-band — bypassing the review/send chain — is
-     visibly not a binding offer. Cleared once the КП is frozen on send. */
+  /* SIGN-1 (ADR-0024 п. 4): документ, не выпущенный и не подписанный уполномоченным (КП до заморозки,
+     договор / счёт / акт в черновике), печатается «ПРОЕКТ» по диагонали на КАЖДОЙ странице (fixed
+     повторяется WeasyPrint); номер и дата не печатаются, надпись — в колонтитуле. Копия, выданная в обход
+     регламента, видна как не официальный документ. Выпуск (замороженный КП, выпущенный счёт) — без знака.
+     Единое поле контекста — `document_draft` (crm.services.documents.draft_context). */
   .draft-watermark {
-    position: fixed; top: 45%; left: -5%; right: -5%;
-    text-align: center; transform: rotate(-27deg); transform-origin: center;
-    font-size: 15pt; font-weight: 700; letter-spacing: 1pt;
-    color: rgba(120, 120, 120, 0.16); white-space: nowrap;
+    position: fixed; top: 38%; left: -10%; right: -10%;
+    text-align: center; transform: rotate(-35deg); transform-origin: center;
+    font-size: 96pt; font-weight: 700; letter-spacing: 6pt; line-height: 1;
+    color: #b42318; opacity: 0.13; white-space: nowrap;
   }
+  .draft-watermark .draft-note { display: block; font-size: 22pt; letter-spacing: 1pt; margin-top: 6pt; }
+  .doc-id .doc-no-draft { font-size: var(--fs-lg); font-weight: 700; color: #b42318; letter-spacing: 0.2pt; string-set: doc-ref content(); }
   /* ── D2 layout presets (Odoo Document Layout: Light / Boxed / Bold / Striped) ──────
      `light` is the historical default — zero extra rules. Each preset restyles ONLY the
      shared primitives (brandbar / rule / lines / totals), so every document type inherits
@@ -247,7 +264,7 @@
 </style>
 </head>
 <body class="layout-{{ layout_preset|default:'light' }}">
-  {% block watermark %}{% if is_draft %}<div class="draft-watermark">{% translate "ЧЕРНОВИК · не является офертой" %}</div>{% endif %}{% endblock %}
+  {% block watermark %}{% if document_draft %}<div class="draft-watermark">{% translate "ПРОЕКТ" %}{% if document_draft_offer %}<span class="draft-note">{% translate "не является офертой" %}</span>{% endif %}</div>{% endif %}{% endblock %}
 
   <!-- ── Brand header ── -->
   <table class="brandbar">

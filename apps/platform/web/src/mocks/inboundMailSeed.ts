@@ -143,6 +143,20 @@ const NEWSLETTER =
   '<img data-rt-src="https://track.promo-demo.example/open.gif?u=1" width="1" height="1" alt=""></td></tr></tbody></table>' +
   '<div class="gmail_quote"><blockquote>Вы получили это письмо, потому что подписаны на рассылку.</blockquote></div>';
 
+/** Письмо, которое приносит «Проверить почту» (MAIL-NOW) в моках: свежее, ещё не прочитанное. */
+export function arrival(id: number): StoredMail {
+  return make({
+    id,
+    from_email: "zakaz@klient-demo.example",
+    from_name: "ООО «Демо-Клиент»",
+    subject: "Срочно: подтвердите наличие шпал на этой неделе",
+    received_at: minutesAgo(0),
+    text:
+      "Добрый день! Звонили вам час назад. Подтвердите, пожалуйста, наличие 200 шпал на этой неделе и " +
+      "срок отгрузки.\n\nС уважением,\nснабжение ООО «Демо-Клиент»",
+  });
+}
+
 export function seed(): StoredMail[] {
   return [
     make({

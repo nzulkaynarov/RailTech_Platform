@@ -4351,9 +4351,26 @@ msgstr "A type label cannot be empty"
 msgid "Стр."
 msgstr "Page"
 
-#: crm/templates/crm/_document_base.html:258
-msgid "ЧЕРНОВИК · не является офертой"
-msgstr "DRAFT · not a binding offer"
+#: crm/templates/crm/_document_base.html:272
+msgid "ПРОЕКТ"
+msgstr "DRAFT"
+
+#: crm/templates/crm/_document_base.html:272
+msgid "не является офертой"
+msgstr "not a binding offer"
+
+#: crm/templates/crm/_document_base.html:88
+msgid "Проект — не является официальным документом"
+msgstr "Draft — not an official document"
+
+#: crm/templates/crm/contract_pdf.html:12
+#: crm/templates/crm/invoice_pdf.html:11
+msgid "без номера"
+msgstr "no number"
+
+#: crm/templates/crm/invoice_pdf.html:88
+msgid "Оплата по счёту"
+msgstr "Payment for the invoice"
 
 #: crm/templates/crm/_document_base.html:321
 #: crm/templates/crm/_document_base.html:328

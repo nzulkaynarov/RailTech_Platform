@@ -163,9 +163,14 @@ def render_pdf(
     catalog: Catalog | None = None,
     highlight_missing: bool = True,
     contracts_dir: str | None = None,
+    draft: bool = False,
     timeout_s: float | None = DEFAULT_TIMEOUT_S,
 ) -> RenderResult:
     """Тело документа (контракт documents/body.schema.json) → PDF на бланке со статистикой страниц.
+
+    `draft=True` — проект (ADR-0024 п. 4): диагональный знак «ПРОЕКТ» (uz «LOYIHA», en «DRAFT») на каждой странице,
+    вместо номера и даты «без номера», подпись без «М. П.», в колонтитуле «Проект — не является официальным документом».
+    Любой документ на бланке, не подписанный и не выпущенный, рендерится только так.
 
     `timeout_s` — предел всего рендера; превышен — `RenderTimeoutError` (вызывающий показывает понятную ошибку).
     """
@@ -179,6 +184,7 @@ def render_pdf(
         catalog=catalog,
         highlight_missing=highlight_missing,
         contracts_dir=contracts_dir,
+        draft=draft,
     )
     return render_prepared(prepared, tuning, timeout_s=timeout_s)
 
