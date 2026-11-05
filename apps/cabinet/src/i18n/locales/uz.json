@@ -187,6 +187,9 @@
       "or": "yoki",
       "newClient": "Men yangi mijozman",
       "newClientHint": "Biz bilan hali ishlamaganmisiz? Soʻrov qoldiring — menejer siz bilan bogʻlanadi.",
+      "partnerOnboarding": "Yetkazib beruvchilar va ishlab chiqaruvchilarga",
+      "partnerOnboardingHint": "RailTech Platform orqali mahsulot yetkazib bering va assortimentni kabinetda boshqaring.",
+      "becomePartner": "Hamkor bo‘lish",
       "telegram": "Telegram orqali kirish",
       "telegramHint": "Bot ochiladi, kirish taklifnoma orqali.",
       "demoTitle": "Tezkor demo kirish (1 marta bosish)",
@@ -719,7 +722,75 @@
         "bankDetails": "Bank rekvizitlari",
         "language": "Hujjatlar va xatlar tili"
       },
-      "closeEdit": "Yopish"
+      "closeEdit": "Yopish",
+      "partner": {
+        "cardTitle": "Hamkorlik dasturi",
+        "alreadyPartnerTitle": "Hamkorlik shartnomasi faol",
+        "alreadyPartnerDesc": "Kompaniyangiz vakolatli hamkor hisoblanadi. Katalogingizni boshqarish uchun «Mening mahsulotlarim» boʻlimi mavjud.",
+        "toMyProducts": "«Mening mahsulotlarim»ga oʻtish",
+        "applicationPendingDesc": "Hamkor maqomini olish uchun ariza topshirilgan va RailTech tomonidan koʻrib chiqilmoqda.",
+        "contractSentDesc": "Hamkorlik shartnomasi tayyorlandi va kompaniyangizga kelishish uchun yuborildi.",
+        "status": {
+          "submitted": "Ko‘rib chiqilmoqda",
+          "contract_sent": "Shartnoma yuborildi",
+          "approved": "Maʼqullandi",
+          "rejected": "Rad etildi"
+        },
+        "appliedAt": "{{date}} da topshirilgan",
+        "contractNumber": "Shartnoma",
+        "notPartnerDesc": "RailTech Platform orqali mahsulot yetkazib berishni xohlaysizmi? Hamkorlik shartnomasini tuzish uchun ariza yuboring.",
+        "onlyCanAct": "Faqat tasdiqlash huquqiga ega vakil ariza topshirishi mumkin.",
+        "applyBtn": "Hamkorlikka ariza berish",
+        "dialogTitle": "Hamkor maqomiga ariza",
+        "dialogDesc": "Hamkorlik turi va mahsulot toifalarini koʻrsating. Biz hamkorlik shartnomasini tayyorlaymiz.",
+        "dialogSubmit": "Arizani yuborish",
+        "dialogSuccess": "Ariza muvaffaqiyatli koʻrib chiqishga yuborildi."
+      }
+    },
+    "becomePartner": {
+      "title": "Hamkorlikka ariza",
+      "subtitle": "Yetkazib beruvchi yoki ishlab chiqaruvchi sifatida RailTech platformasiga qo‘shiling",
+      "backToLogin": "Kirish sahifasiga qaytish",
+      "errors": {
+        "companyNameRequired": "Kompaniya nomini koʻrsating.",
+        "contactNameRequired": "Aloqa qiluvchi shaxs ismini koʻrsating.",
+        "emailInvalid": "Toʻgʻri ish e-mailini kiriting.",
+        "categoriesDescriptionTooShort": "Mahsulotlarni batafsilroq tavsiflang (kamida 10 ta belgi)."
+      },
+      "fields": {
+        "companyName": "Kompaniya nomi",
+        "companyNamePlaceholder": "MChJ «Temiryo‘l Texnologiyalari»",
+        "inn": "STIR (mavjud bo‘lsa)",
+        "innPlaceholder": "123456789",
+        "kind": "Hamkor turi",
+        "kinds": {
+          "supplier": "Yetkazib beruvchi / Distribyutor",
+          "manufacturer": "Ishlab chiqaruvchi",
+          "principal": "Bosh pudratchi / Prinsipal",
+          "other": "Boshqa"
+        },
+        "categoriesDescription": "Yetkazib beriladigan mahsulotlar va toifalar",
+        "categoriesDescriptionPlaceholder": "Mahsulot toifalari, nomenklatura, brendlar yoki ishlab chiqarish quvvatlarini tavsiflang...",
+        "contactName": "Aloqa qiluvchi shaxs",
+        "contactNamePlaceholder": "Ivan Smirnov",
+        "email": "Ishchi e-mail",
+        "emailPlaceholder": "partner@example.uz",
+        "phone": "Telefon",
+        "phonePlaceholder": "+998 90 123-45-67",
+        "language": "Muloqot tili",
+        "consent": "Maxfiylik siyosatiga muvofiq shaxsiy maʼlumotlarni qayta ishlashga rozilik bildiraman"
+      },
+      "submit": "Arizani yuborish",
+      "submitting": "Ariza yuborilmoqda…",
+      "successTitle": "Ariza qabul qilindi",
+      "successSubtitle": "RailTech Platform bilan hamkorlikka qiziqish bildirganingiz uchun rahmat!",
+      "nextStepsTitle": "Keyin nima bo‘ladi?",
+      "step1Title": "Maʼlumotlarni tekshirish",
+      "step1Desc": "Bizning taʼminot va komplayens bo‘limimiz kompaniya rekvizitlari va mahsulot nomenklaturasini tekshiradi.",
+      "step2Title": "Hamkorlik shartnomasini imzolash",
+      "step2Desc": "Biz hamkorlik shartnomasini tayyorlab, kelishish va imzolash uchun yuboramiz.",
+      "step3Title": "Hamkor kabinetiga kirish",
+      "step3Desc": "Shartnoma faollashtirilgach, «Mening mahsulotlarim» bo‘limiga va prays-listlarni yuklashga ruxsat ochiladi."
     },
     "team": {
       "title": "Jamoa",
@@ -872,7 +943,12 @@
     "OFFER_VALIDITY_RANGE_INVALID": "“Gacha” muddati “dan” muddatidan oldin boʻlishi mumkin emas.",
     "PRODUCT_NOT_SUBMITTABLE": "Bu kartochkani yuborib boʻlmaydi: u allaqachon tekshiruvda yoki eʼlon qilingan.",
     "OFFER_EXPIRED": "Narx muddati tugagan — uni tasdiqlab boʻlmaydi. Yangi prays-list yuklang.",
-    "IMPORT_FAILED": "Faylni qabul qilib boʻlmadi. Birozdan soʻng qayta urinib koʻring."
+    "IMPORT_FAILED": "Faylni qabul qilib boʻlmadi. Birozdan soʻng qayta urinib koʻring.",
+    "CONSENT_REQUIRED": "Shaxsiy maʼlumotlarni qayta ishlashga rozilik talab qilinadi.",
+    "HONEYPOT_DETECTED": "Shubhali shakl faoliyati aniqlandi.",
+    "ALREADY_PARTNER": "Kompaniyangizda hamkorlik shartnomasi allaqachon tuzilgan va faol.",
+    "APPLICATION_EXISTS": "Hamkor maqomini olish uchun ariza allaqachon koʻrib chiqilmoqda.",
+    "PARTNER_APPLICATION_NOT_FOUND": "Hamkor maqomini olish uchun ariza topilmadi."
   },
   "widgets": {
     "actionRequired": {

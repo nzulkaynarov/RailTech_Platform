@@ -56,3 +56,12 @@ class PortalVerifyRateThrottle(SimpleRateThrottle):
 
     def get_cache_key(self, request, view):
         return self.cache_format % {"scope": self.scope, "ident": self.get_ident(request)}
+
+
+class PortalPartnerAppRateThrottle(SimpleRateThrottle):
+    """Публичная подача заявки «Стать партнёром» (ADR-0022, DECISIONS 2026-11-05, PART-ONBOARD): лимит на IP."""
+
+    scope = "portal_partner_app"
+
+    def get_cache_key(self, request, view):
+        return self.cache_format % {"scope": self.scope, "ident": self.get_ident(request)}

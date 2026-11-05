@@ -1,12 +1,19 @@
 import { useEffect, useId, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Building2, Pencil, UserPlus, Users, X } from 'lucide-react';
+import { Building2, Handshake, Pencil, UserPlus, Users, X } from 'lucide-react';
 import { toast } from '@/lib/toast';
 
 import { apiErrorKey } from '@/api/errors';
-import type { Company, CompanyUpdate, Schemas, TeamInvite, TeamMember } from '@/api/portal';
-import { useCompany, useInviteTeamMember, useTeam, useUpdateCompany } from '@/api/queries';
+import type { Company, CompanyUpdate, PartnerKind, Schemas, TeamInvite, TeamMember } from '@/api/portal';
+import {
+  useCompany,
+  useCompanyPartnerApplication,
+  useInviteTeamMember,
+  useSubmitCompanyPartnerApplication,
+  useTeam,
+  useUpdateCompany,
+} from '@/api/queries';
 import { ActionDialog } from '@/components/ActionDialog';
 import { DetailList } from '@/components/Details';
 import { EmptyState } from '@/components/EmptyState';
@@ -16,7 +23,7 @@ import { DetailSkeleton, ErrorState, ListSkeleton } from '@/components/QueryStat
 import { ToneBadge } from '@/components/StatusBadge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -91,6 +98,7 @@ export function CompanyPage() {
               />
             </CardContent>
           </Card>
+          <PartnerApplicationCard />
           <Button asChild variant="outline" className="self-start">
             <Link to="/team">
               <Users aria-hidden="true" />
@@ -476,5 +484,189 @@ function InviteDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (op
         </div>
       </div>
     </ActionDialog>
+  );
+}
+
+const PARTNER_KINDS: PartnerKind[] = ['supplier', 'manufacturer', 'principal', 'other'];
+
+function PartnerApplicationCard() {
+  const { t } = useTranslation();
+  const partnerQuery = useCompanyPartnerApplication();
+  const submitMutation = useSubmitCompanyPartnerApplication();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [kind, setKind] = useState<PartnerKind>('supplier');
+  const [categories, setCategories] = useState('');
+  const [validationError, setValidationError] = useState<string | null>(null);
+
+  if (partnerQuery.isPending) {
+    return <DetailSkeleton />;
+  }
+
+  const data = partnerQuery.data;
+  const isPartner = Boolean(data?.already_partner);
+  const hasApp = Boolean(data?.has_application);
+  const app = data?.application;
+
+  if (isPartner) {
+    return (
+      <Card className="border-border">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Handshake className="size-5 text-primary" aria-hidden="true" />
+            <CardTitle>
+              <h2 className="text-base">{t('pages.company.partner.alreadyPartnerTitle')}</h2>
+            </CardTitle>
+          </div>
+          <CardDescription>{t('pages.company.partner.alreadyPartnerDesc')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild variant="outline">
+            <Link to="/my-products">{t('pages.company.partner.toMyProducts')}</Link>
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (hasApp && app) {
+    const toneByStatus: Record<string, 'neutral' | 'info' | 'success' | 'warning'> = {
+      submitted: 'info',
+      contract_sent: 'warning',
+      approved: 'success',
+      rejected: 'neutral',
+    };
+    return (
+      <Card className="border-border">
+        <CardHeader>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Handshake className="size-5 text-primary" aria-hidden="true" />
+              <CardTitle>
+                <h2 className="text-base">{t('pages.company.partner.cardTitle')}</h2>
+              </CardTitle>
+            </div>
+            <ToneBadge tone={toneByStatus[app.status] ?? 'neutral'}>
+              {t(`pages.company.partner.status.${app.status}`)}
+            </ToneBadge>
+          </div>
+          <CardDescription>
+            {app.status === 'contract_sent'
+              ? t('pages.company.partner.contractSentDesc')
+              : t('pages.company.partner.applicationPendingDesc')}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <DetailList
+            className="sm:grid-cols-1"
+            items={[
+              { label: t('pages.becomePartner.fields.kind'), value: t(`pages.becomePartner.fields.kinds.${app.kind}`) },
+              { label: t('pages.becomePartner.fields.categoriesDescription'), value: app.categories_description },
+              { label: t('pages.company.partner.appliedAt'), value: formatDateTime(app.created_at) },
+              ...(app.contract_number
+                ? [
+                    {
+                      label: t('pages.company.partner.contractNumber'),
+                      value: `${app.contract_number}${app.contract_date ? ` от ${app.contract_date}` : ''}`,
+                    },
+                  ]
+                : []),
+            ]}
+          />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const handleOpen = () => {
+    setKind('supplier');
+    setCategories('');
+    setValidationError(null);
+    setDialogOpen(true);
+  };
+
+  const handleSubmit = () => {
+    setValidationError(null);
+    if (!categories.trim() || categories.trim().length < 5) {
+      setValidationError(t('pages.becomePartner.errors.categoriesDescriptionTooShort'));
+      return;
+    }
+    submitMutation.mutate(
+      { kind, categories_description: categories.trim() },
+      {
+        onSuccess: () => {
+          setDialogOpen(false);
+          toast.success(t('pages.company.partner.dialogSuccess'));
+        },
+      },
+    );
+  };
+
+  return (
+    <>
+      <Card className="border-border">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Handshake className="size-5 text-primary" aria-hidden="true" />
+            <CardTitle>
+              <h2 className="text-base">{t('pages.company.partner.cardTitle')}</h2>
+            </CardTitle>
+          </div>
+          <CardDescription>{t('pages.company.partner.notPartnerDesc')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <CanAct
+            fallback={<p className="text-xs text-muted-foreground">{t('pages.company.partner.onlyCanAct')}</p>}
+          >
+            <Button variant="outline" onClick={handleOpen}>
+              <Handshake aria-hidden="true" />
+              {t('pages.company.partner.applyBtn')}
+            </Button>
+          </CanAct>
+        </CardContent>
+      </Card>
+
+      <ActionDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        title={t('pages.company.partner.dialogTitle')}
+        description={t('pages.company.partner.dialogDesc')}
+        confirmLabel={t('pages.company.partner.dialogSubmit')}
+        pending={submitMutation.isPending}
+        error={submitMutation.error}
+        message={validationError}
+        onSubmit={handleSubmit}
+      >
+        <div className="flex flex-col gap-4">
+          <div role="group" aria-label={t('pages.becomePartner.fields.kind')} className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium">{t('pages.becomePartner.fields.kind')}</span>
+            <div className="flex flex-wrap gap-2">
+              {PARTNER_KINDS.map((k) => (
+                <Button
+                  key={k}
+                  type="button"
+                  size="sm"
+                  variant={kind === k ? 'default' : 'outline'}
+                  aria-pressed={kind === k}
+                  className="rounded-full"
+                  onClick={() => setKind(k)}
+                >
+                  {t(`pages.becomePartner.fields.kinds.${k}`)}
+                </Button>
+              ))}
+            </div>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="partner-app-categories">{t('pages.becomePartner.fields.categoriesDescription')}</Label>
+            <Textarea
+              id="partner-app-categories"
+              rows={3}
+              placeholder={t('pages.becomePartner.fields.categoriesDescriptionPlaceholder')}
+              value={categories}
+              onChange={(e) => setCategories(e.target.value)}
+            />
+          </div>
+        </div>
+      </ActionDialog>
+    </>
   );
 }

@@ -106,6 +106,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/partner-application": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Подать публичную заявку «Стать партнёром» (вход кандидата)
+         * @description Входная воронка кандидатов в партнёры (поставщики, заводы-изготовители, принципалы) без маскировки под
+         *     покупателей (ADR-0022, DECISIONS 2026-11-05). Заявка маршрутизируется в снабжение Платформы для проверки
+         *     и отправки проекта партнёрского договора. Не требует авторизации. Поле `website` — скрытый honeypot для защиты
+         *     от спам-ботов (должно быть пустым). Лимит частоты — 10 запросов в минуту на IP.
+         */
+        post: operations["submitPartnerApplication"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me": {
         parameters: {
             query?: never;
@@ -903,6 +926,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/company/partner-application": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Статус заявки компании на получение роли партнёра
+         * @description Проверка наличия и текущего статуса заявки «Стать партнёром» для действующего клиента (DECISIONS 2026-11-05).
+         *     Требует модуль `company`.
+         */
+        get: operations["getCompanyPartnerApplication"];
+        put?: never;
+        /**
+         * Подать заявку «Стать партнёром» из кабинета действующего клиента
+         * @description Запрос действующего клиента на добавление роли `partner` к существующей компании без дублирования сущностей.
+         *     Реквизиты компании берутся из сессии; заявка уходит в контур снабжения для согласования партнёрского договора.
+         *     Требует модуль `company` и право действовать `can_act`.
+         */
+        post: operations["submitCompanyPartnerApplication"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/team": {
         parameters: {
             query?: never;
@@ -1003,6 +1053,97 @@ export interface components {
          *     HTTP-статусу (Cabinet — `apiErrorKey`). Поэтому здесь `x-extensible-enum`, а не `enum`.
          */
         ErrorCode: string;
+        /**
+         * @description Вид партнёра (ADR-0022):
+         *     - `manufacturer`: Изготовитель (завод-производитель)
+         *     - `supplier`: Поставщик (дистрибьютор, торговая компания)
+         *     - `principal`: Принципал (производитель, у которого мы региональный дилер)
+         *     - `other`: Другое
+         * @enum {string}
+         */
+        PartnerKind: "manufacturer" | "supplier" | "principal" | "other";
+        /**
+         * @description Статус заявки в договорном шлюзе (DECISIONS 2026-11-05):
+         *     - `submitted`: заявка подана, ожидает проверки снабжением
+         *     - `contract_sent`: проект партнёрского договора отправлен кандидату
+         *     - `approved`: договор подписан, отношение `partner` активировано
+         *     - `rejected`: заявка отклонена
+         * @enum {string}
+         */
+        PartnerApplicationStatus: "submitted" | "contract_sent" | "approved" | "rejected";
+        PartnerApplication: {
+            id: number;
+            status: components["schemas"]["PartnerApplicationStatus"];
+            kind: components["schemas"]["PartnerKind"];
+            /** @description Категории и номенклатура поставляемой продукции */
+            categories_description: string;
+            /** @description Название организации */
+            company_name: string;
+            /** @description ИНН организации или регистрационный номер нерезидента */
+            inn?: string | null;
+            /** @description Контактное лицо */
+            contact_name: string;
+            /** Format: email */
+            email: string;
+            phone?: string | null;
+            /** @description Номер заключённого партнёрского договора */
+            contract_number?: string | null;
+            /**
+             * Format: date
+             * @description Дата партнёрского договора
+             */
+            contract_date?: string | null;
+            /** @description Причина отклонения заявки */
+            rejected_reason?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at?: string;
+        };
+        PartnerApplicationPublicCreate: {
+            /** @description Название организации */
+            company_name: string;
+            /** @description ИНН (для резидентов РУз) или регистрационный номер иностранной компании */
+            inn?: string | null;
+            kind: components["schemas"]["PartnerKind"];
+            /** @description Описание категорий поставляемой продукции и брендов */
+            categories_description: string;
+            /** @description ФИО контактного лица */
+            contact_name: string;
+            /**
+             * Format: email
+             * @description E-mail для связи и отправки проекта договора
+             */
+            email: string;
+            /** @description Телефон контактного лица */
+            phone?: string | null;
+            /**
+             * @description Язык взаимодействия и договора
+             * @default ru
+             * @enum {string}
+             */
+            language: "ru" | "uz" | "en";
+            /** @description Согласие на обработку персональных данных (обязательно true) */
+            consent: boolean;
+            /** @description Скрытое поле-ловушка для спам-ботов (honeypot; должно быть пустым) */
+            website?: string | null;
+        };
+        PartnerApplicationPublicResult: {
+            id: number;
+            status: components["schemas"]["PartnerApplicationStatus"];
+        };
+        PartnerApplicationClientCreate: {
+            kind: components["schemas"]["PartnerKind"];
+            /** @description Описание категорий поставляемой продукции и брендов */
+            categories_description: string;
+        };
+        PartnerApplicationStatusResponse: {
+            /** @description Компания уже обладает активной ролью партнёра */
+            already_partner: boolean;
+            /** @description Имеется поданная или рассматриваемая заявка */
+            has_application: boolean;
+            application?: components["schemas"]["PartnerApplication"] | null;
+        };
         /**
          * @description Статус карточки глазами партнёра: `draft` — черновик, `review` — на проверке, `returned` — возвращена с причиной,
          *     `published` — опубликована; `matched` — «сопоставлено с карточкой каталога»: цена партнёра привязалась к чужой
@@ -2136,6 +2277,41 @@ export interface operations {
             };
             400: components["responses"]["IdempotencyKeyRequired"];
             401: components["responses"]["Unauthorized"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    submitPartnerApplication: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartnerApplicationPublicCreate"];
+            };
+        };
+        responses: {
+            /** @description Заявка успешно зарегистрирована в очереди снабжения */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerApplicationPublicResult"];
+                };
+            };
+            /** @description Некорректный запрос, отсутствие согласия или обнаружен спам-бот (honeypot) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
             429: components["responses"]["TooManyRequests"];
         };
     };
@@ -3680,6 +3856,74 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    getCompanyPartnerApplication: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Текущий статус партнёрства и заявки */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerApplicationStatusResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    submitCompanyPartnerApplication: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartnerApplicationClientCreate"];
+            };
+        };
+        responses: {
+            /** @description Заявка создана */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerApplication"];
+                };
+            };
+            400: components["responses"]["IdempotencyKeyRequired"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description ALREADY_PARTNER — компания уже партнёр; APPLICATION_EXISTS — активная заявка уже на рассмотрении */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             422: components["responses"]["ValidationError"];
             429: components["responses"]["TooManyRequests"];
         };

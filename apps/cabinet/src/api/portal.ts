@@ -447,3 +447,25 @@ export type DocumentVerificationKind = Schemas['DocumentVerificationKind'];
 
 export const verifyDocument = (code: string) =>
   portalRequest<DocumentVerification>(`/verify/${encodeURIComponent(code)}`);
+
+// --- заявки кандидатов в партнёры (ADR-0022, DECISIONS 2026-11-05, PART-ONBOARD-1) --------------
+
+export type PartnerKind = Schemas['PartnerKind'];
+export type PartnerApplicationStatus = Schemas['PartnerApplicationStatus'];
+export type PartnerApplication = Schemas['PartnerApplication'];
+export type PartnerApplicationPublicCreate = Schemas['PartnerApplicationPublicCreate'];
+export type PartnerApplicationPublicResult = Schemas['PartnerApplicationPublicResult'];
+export type PartnerApplicationClientCreate = Schemas['PartnerApplicationClientCreate'];
+export type PartnerApplicationStatusResponse = Schemas['PartnerApplicationStatusResponse'];
+
+/** Публичная подача заявки «Стать партнёром» поставщиком/производителем. */
+export const submitPartnerApplication = (body: PartnerApplicationPublicCreate) =>
+  portalRequest<PartnerApplicationPublicResult>('/auth/partner-application', { method: 'POST', body });
+
+/** Статус заявки действующего клиента на получение роли партнёра. */
+export const getCompanyPartnerApplication = () =>
+  portalRequest<PartnerApplicationStatusResponse>('/company/partner-application');
+
+/** Подача заявки действующим клиентом из личного кабинета. */
+export const submitCompanyPartnerApplication = (body: PartnerApplicationClientCreate) =>
+  portalRequest<PartnerApplication>('/company/partner-application', { method: 'POST', body });

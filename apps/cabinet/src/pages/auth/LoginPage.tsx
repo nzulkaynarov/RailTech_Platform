@@ -2,7 +2,7 @@ import { useId, useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
-import { Eye, Mail, Send, Sparkles, UserCheck, UserPlus } from 'lucide-react';
+import { Eye, Handshake, Mail, Send, Sparkles, UserCheck, UserPlus } from 'lucide-react';
 
 import { loginErrorText } from '@/api/errors';
 import { requestMagicLink } from '@/api/portal';
@@ -117,6 +117,22 @@ export function LoginPage() {
             <Link to="/new-client">
               <UserPlus aria-hidden="true" />
               {t('auth.login.newClient')}
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <h2 className="text-base">{t('auth.login.partnerOnboarding')}</h2>
+          </CardTitle>
+          <CardDescription>{t('auth.login.partnerOnboardingHint')}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild variant="outline" className="w-full">
+            <Link to="/become-partner">
+              <Handshake aria-hidden="true" />
+              {t('auth.login.becomePartner')}
             </Link>
           </Button>
         </CardContent>

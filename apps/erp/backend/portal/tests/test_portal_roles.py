@@ -293,6 +293,8 @@ ANY_ROLE_PATHS |= {"/me/telegram", "/me/telegram/test", "/me/telegram-link"}
 ANY_ROLE_PATHS |= {"/notifications", "/notifications/read"}
 #: Публичная проверка подлинности документов (ADR-0024 §6, SIGN-VERIFY-1): доступна без сессии и модулей.
 ANY_ROLE_PATHS |= {"/verify/{code}"}
+#: Публичная подача заявки «Стать партнёром» (ADR-0022, DECISIONS 2026-11-05, PART-ONBOARD).
+ANY_ROLE_PATHS |= {"/auth/partner-application"}
 
 #: Эндпоинты модуля «Каталог и заявки» (`catalog_requests`): заявки, каталог и загрузка вложений.
 CATALOG_REQUESTS_PATHS = {

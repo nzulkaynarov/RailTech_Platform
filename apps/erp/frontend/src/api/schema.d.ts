@@ -549,6 +549,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/portal/v1/auth/partner-application": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /auth/partner-application — Публичная подача заявки «Стать партнёром» (ADR-0022, DECISIONS 2026-11-05). */
+        post: operations["api_portal_v1_auth_partner_application_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/auth/partner-application/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /auth/partner-application — Публичная подача заявки «Стать партнёром» (ADR-0022, DECISIONS 2026-11-05). */
+        post: operations["api_portal_v1_auth_partner_application_create_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/portal/v1/auth/telegram": {
         parameters: {
             query?: never;
@@ -749,6 +783,42 @@ export interface paths {
         /** @description GET/PUT /company — Профиль компании клиента. */
         put: operations["api_portal_v1_company_update_2"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/company/partner-application": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description GET/POST /company/partner-application — Заявка действующего клиента на получение роли партнёра. */
+        get: operations["api_portal_v1_company_partner_application_retrieve"];
+        put?: never;
+        /** @description GET/POST /company/partner-application — Заявка действующего клиента на получение роли партнёра. */
+        post: operations["api_portal_v1_company_partner_application_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/company/partner-application/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description GET/POST /company/partner-application — Заявка действующего клиента на получение роли партнёра. */
+        get: operations["api_portal_v1_company_partner_application_retrieve_2"];
+        put?: never;
+        /** @description GET/POST /company/partner-application — Заявка действующего клиента на получение роли партнёра. */
+        post: operations["api_portal_v1_company_partner_application_create_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -19899,6 +19969,42 @@ export interface operations {
             };
         };
     };
+    api_portal_v1_auth_partner_application_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_auth_partner_application_create_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     api_portal_v1_auth_telegram_create: {
         parameters: {
             query?: never;
@@ -20144,6 +20250,78 @@ export interface operations {
         };
     };
     api_portal_v1_company_update_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_company_partner_application_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_company_partner_application_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_company_partner_application_retrieve_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_company_partner_application_create_2: {
         parameters: {
             query?: never;
             header?: never;

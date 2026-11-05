@@ -13,6 +13,7 @@ from portal.views import (
     CatalogDetailView,
     CatalogDocumentFileView,
     CatalogListView,
+    CompanyPartnerApplicationView,
     CompanyView,
     ContractListView,
     ContractSignView,
@@ -29,6 +30,7 @@ from portal.views import (
     MagicLinkRequestView,
     MagicLinkTokenExchangeView,
     MeView,
+    PublicPartnerApplicationView,
     QuoteAcceptView,
     QuoteCommentView,
     QuoteDetailView,
@@ -66,6 +68,12 @@ urlpatterns = [
     path("auth/code/", LoginCodeExchangeView.as_view(), name="portal-auth-code-slash"),
     path("auth/logout", LogoutView.as_view(), name="portal-auth-logout"),
     path("auth/logout/", LogoutView.as_view(), name="portal-auth-logout-slash"),
+    path("auth/partner-application", PublicPartnerApplicationView.as_view(), name="portal-auth-partner-application"),
+    path(
+        "auth/partner-application/",
+        PublicPartnerApplicationView.as_view(),
+        name="portal-auth-partner-application-slash",
+    ),
     # Me
     path("me", MeView.as_view(), name="portal-me"),
     path("me/", MeView.as_view(), name="portal-me-slash"),
@@ -171,6 +179,16 @@ urlpatterns = [
     # Company (Профиль компании)
     path("company", CompanyView.as_view(), name="portal-company"),
     path("company/", CompanyView.as_view(), name="portal-company-slash"),
+    path(
+        "company/partner-application",
+        CompanyPartnerApplicationView.as_view(),
+        name="portal-company-partner-application",
+    ),
+    path(
+        "company/partner-application/",
+        CompanyPartnerApplicationView.as_view(),
+        name="portal-company-partner-application-slash",
+    ),
     # Team (Команда клиента)
     path("team", TeamListView.as_view(), name="portal-team"),
     path("team/", TeamListView.as_view(), name="portal-team-slash"),

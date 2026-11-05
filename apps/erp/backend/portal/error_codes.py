@@ -50,6 +50,11 @@ ERROR_CODES = (
     "PRODUCT_NOT_SUBMITTABLE",
     "OFFER_EXPIRED",
     "IMPORT_FAILED",
+    "CONSENT_REQUIRED",
+    "HONEYPOT_DETECTED",
+    "ALREADY_PARTNER",
+    "APPLICATION_EXISTS",
+    "PARTNER_APPLICATION_NOT_FOUND",
 )
 
 #: Код по HTTP-статусу для ошибок, у которых своего кода нет (чужие исключения DRF и Django).
