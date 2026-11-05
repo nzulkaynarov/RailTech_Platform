@@ -291,6 +291,8 @@ ANY_ROLE_PATHS = {
 ANY_ROLE_PATHS |= {"/me/telegram", "/me/telegram/test", "/me/telegram-link"}
 #: Колокольчик (NOTIFY-2) — модуль `profile`, он есть у любой сессии: лента фильтруется по модулям, а не закрывается
 ANY_ROLE_PATHS |= {"/notifications", "/notifications/read"}
+#: Публичная проверка подлинности документов (ADR-0024 §6, SIGN-VERIFY-1): доступна без сессии и модулей.
+ANY_ROLE_PATHS |= {"/verify/{code}"}
 
 #: Эндпоинты модуля «Каталог и заявки» (`catalog_requests`): заявки, каталог и загрузка вложений.
 CATALOG_REQUESTS_PATHS = {
@@ -419,6 +421,13 @@ class TestEndpointsFollowModules:
         assert partner_client.post(PREFIX + "/uploads", {}, format="json").status_code != 403
         _only_my_products(supplier_company)
         assert partner_client.post(PREFIX + "/uploads", {}, format="json").status_code == 403
+
+    def test_verify_document_is_public_and_not_blocked_by_modules(self, partner_client, supplier_company):
+        """SIGN-VERIFY-1 (ADR-0024 §6): проверка подлинности доступна публично и не блокируется модулями партнёра."""
+        _only_my_products(supplier_company)
+        response = partner_client.get(PREFIX + "/verify/NONEXISTENT-CODE")
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.json() == {"detail": "NOT_FOUND"}
 
     def test_can_act_is_the_same_for_partner_and_client(self, partner_client, supplier_contact, readonly_portal_client):
         """Право действовать одинаково у клиента и партнёра: без него — 403 FORBIDDEN на заявке и загрузке, с ним — 201."""
