@@ -31,6 +31,18 @@ DRAFT_FOOTER: dict[Lang, str] = {
 NO_NUMBER: dict[Lang, str] = {"ru": "без номера", "uz": "raqamsiz", "en": "no number"}
 NO_DATE = "—"
 
+#: Проверка подлинности (ADR-0024 п. 5): код в колонтитуле и QR-код на последней странице.
+VERIFY_CODE: dict[Lang, str] = {
+    "ru": "Код проверки: ",
+    "uz": "Tekshirish kodi: ",
+    "en": "Verification code: ",
+}
+VERIFY_QR_NOTE: dict[Lang, str] = {
+    "ru": "Проверка подлинности документа",
+    "uz": "Hujjatning haqiqiyligini tekshirish",
+    "en": "Verify document authenticity",
+}
+
 
 def number_line(lang: Lang, number: str | None, date_text: str | None) -> str:
     """Регистрационный номер и дата письма: «№ ИСХ-015/26 от 28.10.2026»."""

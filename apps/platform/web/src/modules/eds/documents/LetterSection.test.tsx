@@ -7,6 +7,7 @@ import {
   readEds,
   writeEds,
 } from "../../../mocks/fixtures/edsDocuments";
+import { findModal } from "../../../test/catalogKit";
 import { panelEl, renderAt, setupEdsTests, signIn } from "../../../test/edsKit";
 
 setupEdsTests();
@@ -153,5 +154,32 @@ describe("EDS · карточка письма на бланке (P4)", () => {
     expect(
       readEds().documents.find((d) => d.id === ID)?.letter?.registration_requested,
     ).not.toBeNull();
+  });
+
+  it("уполномоченное лицо видит кнопку «Подписать», выбирает способ отправки и подписывает письмо", async () => {
+    seed({
+      can_sign: true,
+    });
+    const state = readEds();
+    const doc = state.documents.find((d) => d.id === ID);
+    if (doc?.letter) doc.letter.registration_requested = null;
+    writeEds(state);
+
+    const card = await openCard("director@demo.example");
+    const signBtn = card.getByRole("button", { name: "Подписать" });
+    expect(signBtn).toBeVisible();
+
+    fireEvent.click(signBtn);
+    const modal = await findModal("Подписание исходящего письма");
+    expect(within(modal).getByText("Способ отправки")).toBeDefined();
+
+    const confirmBtn = within(modal).getByRole("button", { name: "Подписать письмо" });
+    fireEvent.click(confirmBtn);
+
+    expect(await screen.findByText(/Письмо подписано: ИСХ-\d{3}\/26/)).toBeVisible();
+    const saved = readEds().documents.find((d) => d.id === ID);
+    expect(saved?.status).toBe("sent");
+    expect(saved?.signed_at).not.toBeNull();
+    expect(saved?.verification_code).toMatch(/^RT-26-/);
   });
 });

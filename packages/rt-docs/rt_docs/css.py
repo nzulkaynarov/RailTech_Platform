@@ -214,4 +214,19 @@ td.rt-addressee { padding-left: 18pt; }
 .rt-footer { position: running(rtfooter); font-size: 6.5pt; color: #8a909b; line-height: 1.35;
              border-top: 0.5pt solid #e1e5ec; padding-top: 2pt; width: 140mm; }
 .rt-executor { position: running(rtexec); font-size: 7pt; color: #5a6270; line-height: 1.3; width: 120mm; }
+
+/* Основание подписи и проверка подлинности (SIGN-3, ADR-0024 п. 5). */
+.rt-sign-basis { font-size: 0.8em; color: #5a6270; margin-top: 2pt; margin-bottom: 4pt; font-style: italic;
+                 line-height: 1.25; }
+.rt-verify-code-inline { font-size: 0.8em; color: #5a6270; margin-top: 3pt; }
+.rt-verify-code-inline strong { font-family: monospace; font-size: 0.95em; color: #20242b; letter-spacing: 0.5pt; }
+.rt-running-docref { position: absolute; left: -9999px; font-size: 0; string-set: rtdocref content(); }
+.rt-verify-block { display: flex; align-items: center; gap: 12pt; margin-top: 18pt; padding-top: 8pt;
+                   border-top: 0.5pt solid #e1e5ec; break-inside: avoid; }
+.rt-verify-qr svg { width: 22mm; height: 22mm; display: block; }
+.rt-verify-info { font-size: 7.5pt; color: #5a6270; line-height: 1.4; }
+.rt-verify-title { font-weight: 700; color: #20242b; margin-bottom: 2pt; }
+.rt-verify-code { margin-bottom: 2pt; }
+.rt-verify-code strong { font-family: monospace; font-size: 8.5pt; color: #15294d; letter-spacing: 0.5pt; }
+.rt-verify-url { color: #7a828f; font-size: 7pt; word-break: break-all; }
 """

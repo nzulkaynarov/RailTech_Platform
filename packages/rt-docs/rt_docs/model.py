@@ -97,7 +97,7 @@ class Letterhead:
 
 @dataclass(frozen=True)
 class DocumentMeta:
-    """Реквизиты документа вне тела: заголовок, номер, дата, адресат и «на №» письма, исполнитель."""
+    """Реквизиты документа вне тела: заголовок, номер, дата, адресат, исполнитель, основание и проверка."""
 
     title: str | None = None
     number: str | None = None
@@ -105,6 +105,9 @@ class DocumentMeta:
     addressee: Sequence[str] = ()
     reply_to: str | None = None
     executor: str | None = None
+    basis_text: str | None = None
+    verification_code: str | None = None
+    verification_url: str | None = None
 
 
 @dataclass(frozen=True)

@@ -46,6 +46,15 @@ export interface MockDocument {
   letter?: MockLetter;
   /** «В ответ на ВХ» (P8b): регистрация закрывает поручения «Подготовить ответ» */
   replyTo?: string | null;
+  signed_at?: string | null;
+  signed_by_user_id?: string | null;
+  signing_authority_id?: string | null;
+  signatory_basis?: "charter" | "power_of_attorney" | "order" | null;
+  signatory_basis_text?: string | null;
+  acting_for_user_id?: string | null;
+  verification_code?: string | null;
+  dispatch_method?: "email" | "paper" | "courier" | "edo" | "other" | null;
+  can_sign?: boolean;
 }
 
 export interface MockLetter {

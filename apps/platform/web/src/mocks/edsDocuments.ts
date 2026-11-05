@@ -223,6 +223,17 @@ function detail(doc: MockDocument, state: EdsMock, me: string): EdsDocument {
     created_at: doc.created_at,
     updated_at: doc.updated_at,
     in_reply_to: replyToOf(doc),
+    signed_at: doc.signed_at ?? null,
+    signed_by: doc.signed_by_user_id ? personOf(doc.signed_by_user_id) : null,
+    signing_authority_id: doc.signing_authority_id ?? null,
+    signatory_basis: doc.signatory_basis ?? null,
+    signatory_basis_text: doc.signatory_basis_text ?? null,
+    acting_for: doc.acting_for_user_id ? personOf(doc.acting_for_user_id) : null,
+    verification_code: doc.verification_code ?? null,
+    verification_url: doc.verification_code
+      ? `https://cabinet.railtech.uz/v/${doc.verification_code}`
+      : null,
+    dispatch_method: doc.dispatch_method ?? null,
     ...letterFields(doc, me),
   };
 }
@@ -270,6 +281,8 @@ function letterFields(doc: MockDocument, me: string): Partial<EdsDocument> {
     can_register:
       draft && register && (doc.ownerId === me || Boolean(letter?.registration_requested)),
     can_request_registration: draft && !register && doc.ownerId === me,
+    can_sign:
+      doc.can_sign ?? (draft && (me === "u-demo-director" || Boolean(doc.signing_authority_id))),
   };
 }
 
@@ -758,6 +771,49 @@ export const edsDocumentsHandlers = [
     queueMailing(doc.letter);
     writeEds(state);
     return HttpResponse.json(detail(doc, state, ownerId()));
+  }),
+
+  http.post("*/eds/documents/:id/sign", async ({ params, request }) => {
+    const held = resources();
+    if (!held) return sessionExpired();
+    const state = readEds();
+    const doc = state.documents.find((candidate) => candidate.id === params["id"]);
+    if (!doc || doc.kind !== "letter_out") return fail(404, "NOT_FOUND", "Документ не найден.");
+    if (doc.status !== "draft") {
+      return fail(409, "CONFLICT", "Письмо уже зарегистрировано или подписано.", {
+        reason: "invalid_state",
+      });
+    }
+    const body = (await request.json().catch(() => ({}))) as {
+      dispatch_method?: "email" | "paper" | "courier" | "edo" | "other";
+      send?: boolean;
+    };
+    const dispatchMethod = body.dispatch_method ?? "paper";
+    const send = Boolean(body.send);
+    const me = ownerId();
+
+    doc.number = numberFor(state, "letter_out");
+    doc.status = "sent";
+    doc.signed_at = new Date().toISOString();
+    doc.signed_by_user_id = me;
+    doc.signatory_basis = "charter";
+    doc.signatory_basis_text = "на основании Устава";
+    doc.verification_code = `RT-26-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    doc.dispatch_method = dispatchMethod;
+    doc.updated_at = new Date().toISOString();
+
+    if (doc.letter?.body) {
+      requestPdf(doc.letter, true);
+      if (send && doc.letter.recipient_email) {
+        queueMailing(doc.letter);
+      }
+    }
+    if (doc.replyTo) {
+      const closed = closeReplyInstructions(doc.replyTo, doc.number);
+      noticeReplyRegistered(doc, closed);
+    }
+    writeEds(state);
+    return HttpResponse.json(detail(doc, state, me));
   }),
 
   http.post("*/eds/document-files", async ({ request }) => {

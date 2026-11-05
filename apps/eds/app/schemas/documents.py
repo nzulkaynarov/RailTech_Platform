@@ -123,6 +123,7 @@ class DocumentSubmitIn(Strict):
     due_date: dt.date | None = None
     file_ids: FileIds | None = None
     send: bool = False
+    dispatch_method: Literal["email", "paper", "courier", "edo", "other"] | None = "email"
 
     @model_validator(mode="after")
     def _no_null_text(self) -> "DocumentSubmitIn":
@@ -131,6 +132,14 @@ class DocumentSubmitIn(Strict):
             if name in self.model_fields_set and getattr(self, name) is None:
                 raise ValueError(f"{name} must not be null")
         return self
+
+
+class DocumentSignIn(Strict):
+    """Подписание документа уполномоченным лицом (SIGN-3, ADR-0024 п. 1–5)."""
+
+    authority_id: uuid.UUID | None = None
+    dispatch_method: Literal["email", "paper", "courier", "edo", "other"] = "email"
+    send: bool = True
 
 
 class DocumentUpdate(DocumentSubmitIn):
@@ -216,3 +225,12 @@ class Document(BaseModel):
     created_at: dt.datetime
     updated_at: dt.datetime
     archived_at: dt.datetime | None
+    signed_at: dt.datetime | None = None
+    signed_by: PersonRef | None = None
+    signing_authority_id: uuid.UUID | None = None
+    signatory_basis: str | None = None
+    signatory_basis_text: str | None = None
+    acting_for: PersonRef | None = None
+    verification_code: str | None = None
+    verification_url: str | None = None
+    dispatch_method: Literal["email", "paper", "courier", "edo", "other"] | None = None

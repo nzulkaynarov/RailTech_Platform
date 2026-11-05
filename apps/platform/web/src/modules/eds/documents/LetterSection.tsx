@@ -1,4 +1,4 @@
-import { Alert, App, Button } from "antd";
+import { Alert, App, Button, Checkbox, Modal, Radio, Space } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -7,15 +7,17 @@ import { useAuth } from "../../../app/auth/useAuth";
 import type {
   EdsDocument,
   EdsDocumentMailing,
+  EdsDocumentSignInDispatchMethod,
   EdsLetter,
 } from "../../../shared/api/generated/model";
 import {
   requestEdsDocumentRegistration,
   sendEdsDocument,
+  signEdsDocument,
   updateEdsDocument,
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
-import { DefinitionList } from "../../../shared/ui/DefinitionList";
+import { DefinitionList, type DefinitionItem } from "../../../shared/ui/DefinitionList";
 import { History, type HistoryItem } from "../../../shared/ui/History";
 import { reasonText } from "./errors";
 import { LetterPdfPanel } from "./LetterPdfPanel";
@@ -84,8 +86,13 @@ export function LetterSection({ doc }: { doc: EdsDocument }) {
   const { me } = useAuth();
   const { message } = App.useApp();
   const refresh = useRefreshDocuments();
-  const [busy, setBusy] = useState<"register" | "handover" | "send" | null>(null);
+  const [busy, setBusy] = useState<"register" | "handover" | "send" | "sign" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [signModalOpen, setSignModalOpen] = useState(false);
+  const [dispatchMethod, setDispatchMethod] = useState<EdsDocumentSignInDispatchMethod>(
+    doc.letter?.recipient_email ? "email" : "paper",
+  );
+  const [sendEmail, setSendEmail] = useState(Boolean(doc.letter?.recipient_email));
   const letter = doc.letter;
   if (!letter) return null;
   const canRegisterRole = canEdit(me, "eds.inbox.register");
@@ -94,6 +101,24 @@ export function LetterSection({ doc }: { doc: EdsDocument }) {
   const mailBusy = lastMailing?.status === "awaiting_pdf" || lastMailing?.status === "requested";
   const canBuild =
     doc.can_edit || doc.can_register === true || (doc.status === "sent" && canRegisterRole);
+
+  const handleSign = async () => {
+    setError(null);
+    setBusy("sign");
+    try {
+      const result = await signEdsDocument(doc.id, {
+        dispatch_method: dispatchMethod,
+        send: dispatchMethod === "email" ? sendEmail : false,
+      });
+      void message.success(t("panel.letter.signed", { number: result.number ?? "" }));
+      setSignModalOpen(false);
+      refresh();
+    } catch (failure) {
+      setError(t("panel.letter.actionFailed", { reason: reasonText(t, failure) }));
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const act = async (kind: "register" | "handover" | "send") => {
     setError(null);
@@ -117,23 +142,67 @@ export function LetterSection({ doc }: { doc: EdsDocument }) {
     }
   };
 
+  const definitionItems: DefinitionItem[] = [
+    { label: t("panel.letter.attention"), value: letter.recipient_attention },
+    { label: t("panel.letter.email"), value: email },
+    {
+      label: t("panel.letter.signatory"),
+      value:
+        letter.signatory_name || letter.signatory_position
+          ? [letter.signatory_position, letter.signatory_name].filter(Boolean).join(" ")
+          : t("panel.letter.signatoryDefault"),
+    },
+  ];
+
+  if (doc.signed_at) {
+    definitionItems.push({
+      label: t("panel.letter.signedBy"),
+      value: doc.acting_for
+        ? `${doc.signed_by?.full_name ?? ""} (${t("panel.letter.actingFor", { name: doc.acting_for.full_name })})`
+        : doc.signed_by?.full_name,
+    });
+    if (doc.signatory_basis_text) {
+      definitionItems.push({
+        label: t("panel.letter.signatoryBasis"),
+        value: doc.signatory_basis_text,
+      });
+    }
+    definitionItems.push({
+      label: t("panel.letter.signedAt"),
+      value: date(doc.signed_at, "datetime"),
+    });
+    if (doc.verification_code) {
+      definitionItems.push({
+        label: t("panel.letter.verificationCode"),
+        value: doc.verification_url ? (
+          <a
+            href={doc.verification_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ fontFamily: "monospace" }}
+          >
+            {doc.verification_code}
+          </a>
+        ) : (
+          <span style={{ fontFamily: "monospace" }}>{doc.verification_code}</span>
+        ),
+      });
+    }
+    if (doc.dispatch_method) {
+      definitionItems.push({
+        label: t("panel.letter.dispatchMethodLabel"),
+        value: t(`panel.letter.dispatchMethods.${doc.dispatch_method}`, {
+          defaultValue: doc.dispatch_method,
+        }),
+      });
+    }
+  }
+
   return (
     <>
       <div className="pf-fp-block">
         <h4>{t("panel.letter.title")}</h4>
-        <DefinitionList
-          items={[
-            { label: t("panel.letter.attention"), value: letter.recipient_attention },
-            { label: t("panel.letter.email"), value: email },
-            {
-              label: t("panel.letter.signatory"),
-              value:
-                letter.signatory_name || letter.signatory_position
-                  ? [letter.signatory_position, letter.signatory_name].filter(Boolean).join(" ")
-                  : t("panel.letter.signatoryDefault"),
-            },
-          ]}
-        />
+        <DefinitionList items={definitionItems} />
         {letter.registration_requested && doc.status === "draft" ? (
           <Alert
             type="info"
@@ -163,7 +232,19 @@ export function LetterSection({ doc }: { doc: EdsDocument }) {
       </div>
       {error ? <Alert type="error" showIcon role="alert" message={error} /> : null}
       <div className="pf-fp-row">
-        {doc.can_register ? (
+        {doc.can_sign ? (
+          <Button
+            type="primary"
+            loading={busy === "sign"}
+            disabled={busy !== null}
+            onClick={() => {
+              setSignModalOpen(true);
+            }}
+          >
+            {t("panel.letter.sign")}
+          </Button>
+        ) : null}
+        {doc.can_register && !doc.can_sign ? (
           <Button
             type="primary"
             loading={busy === "register"}
@@ -175,7 +256,7 @@ export function LetterSection({ doc }: { doc: EdsDocument }) {
             {t(email ? "panel.letter.register" : "panel.letter.registerOnly")}
           </Button>
         ) : null}
-        {doc.can_request_registration && !letter.registration_requested ? (
+        {doc.can_request_registration && !letter.registration_requested && !doc.can_sign ? (
           <Button
             type="primary"
             loading={busy === "handover"}
@@ -199,6 +280,78 @@ export function LetterSection({ doc }: { doc: EdsDocument }) {
           </Button>
         ) : null}
       </div>
+
+      <Modal
+        open={signModalOpen}
+        onCancel={() => {
+          if (busy !== "sign") setSignModalOpen(false);
+        }}
+        title={t("panel.letter.signModalTitle")}
+        footer={[
+          <Button
+            key="cancel"
+            disabled={busy === "sign"}
+            onClick={() => {
+              setSignModalOpen(false);
+            }}
+          >
+            {t("panel.letter.cancel")}
+          </Button>,
+          <Button
+            key="sign"
+            type="primary"
+            loading={busy === "sign"}
+            onClick={() => {
+              void handleSign();
+            }}
+          >
+            {t("panel.letter.confirmSign")}
+          </Button>,
+        ]}
+        destroyOnHidden
+      >
+        <p className="pf-fp-sub" style={{ marginBottom: 16 }}>
+          {t("panel.letter.signModalDesc")}
+        </p>
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: "block", marginBottom: 8, fontWeight: 500 }}>
+            {t("panel.letter.dispatchMethod")}
+          </label>
+          <Radio.Group
+            value={dispatchMethod}
+            onChange={(e) => {
+              const val = e.target.value as EdsDocumentSignInDispatchMethod;
+              setDispatchMethod(val);
+              if (val === "email") {
+                setSendEmail(Boolean(email));
+              }
+            }}
+          >
+            <Space direction="vertical">
+              <Radio value="email" disabled={!email}>
+                {t("panel.letter.dispatchMethods.email")}
+                {!email ? ` (${t("panel.letter.noEmailWarning")})` : ""}
+              </Radio>
+              <Radio value="paper">{t("panel.letter.dispatchMethods.paper")}</Radio>
+              <Radio value="courier">{t("panel.letter.dispatchMethods.courier")}</Radio>
+              <Radio value="edo">{t("panel.letter.dispatchMethods.edo")}</Radio>
+              <Radio value="other">{t("panel.letter.dispatchMethods.other")}</Radio>
+            </Space>
+          </Radio.Group>
+        </div>
+        {dispatchMethod === "email" && email ? (
+          <div style={{ marginTop: 8 }}>
+            <Checkbox
+              checked={sendEmail}
+              onChange={(e) => {
+                setSendEmail(e.target.checked);
+              }}
+            >
+              {t("panel.letter.sendImmediately")}
+            </Checkbox>
+          </div>
+        ) : null}
+      </Modal>
     </>
   );
 }

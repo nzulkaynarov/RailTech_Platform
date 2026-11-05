@@ -138,6 +138,12 @@ channels:
     messages:
       uz.railtech.eds.document.registered.v1:
         $ref: '#/components/messages/uz.railtech.eds.document.registered.v1'
+  uz.railtech.eds.document.signed.v1:
+    address: uz.railtech.eds.document.signed.v1
+    title: Документ подписан
+    messages:
+      uz.railtech.eds.document.signed.v1:
+        $ref: '#/components/messages/uz.railtech.eds.document.signed.v1'
   uz.railtech.eds.letter.registered.v1:
     address: uz.railtech.eds.letter.registered.v1
     title: Входящее письмо зарегистрировано
@@ -554,6 +560,15 @@ operations:
       $ref: '#/channels/uz.railtech.eds.document.registered.v1'
     messages:
       - $ref: '#/channels/uz.railtech.eds.document.registered.v1/messages/uz.railtech.eds.document.registered.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.eds.document.signed.v1:
+    action: send
+    summary: rt://eds публикует uz.railtech.eds.document.signed.v1
+    channel:
+      $ref: '#/channels/uz.railtech.eds.document.signed.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.eds.document.signed.v1/messages/uz.railtech.eds.document.signed.v1'
     bindings:
       $ref: '#/components/operationBindings/delivery'
   publish.uz.railtech.eds.letter.registered.v1:
@@ -1401,6 +1416,31 @@ components:
                   const: rt://contracts/events/eds/document.registered/v1
                 data:
                   $ref: './eds/document.registered.v1.json'
+    uz.railtech.eds.document.signed.v1:
+      name: uz.railtech.eds.document.signed.v1
+      title: Документ подписан
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://eds
+                type:
+                  const: uz.railtech.eds.document.signed.v1
+                dataschema:
+                  const: rt://contracts/events/eds/document.signed/v1
+                data:
+                  $ref: './eds/document.signed.v1.json'
     uz.railtech.eds.letter.registered.v1:
       name: uz.railtech.eds.letter.registered.v1
       title: Входящее письмо зарегистрировано

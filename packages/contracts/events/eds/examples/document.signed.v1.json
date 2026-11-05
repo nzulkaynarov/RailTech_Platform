@@ -1,0 +1,44 @@
+{
+  "specversion": "1.0",
+  "id": "7a35e4e8-8b7c-47b2-bfbb-41fa9c6c4c31",
+  "source": "rt://eds",
+  "type": "uz.railtech.eds.document.signed.v1",
+  "time": "2026-11-05T09:30:00Z",
+  "subject": "ИСХ-042/26",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/eds/document.signed/v1",
+  "tenant": "railtech",
+  "correlationid": "1ffcf9ea-1cc9-5f3e-88ad-99360435c763",
+  "data": {
+    "document": {
+      "eds_document_id": "7a35e4e8-8b7c-47b2-bfbb-41fa9c6c4c31",
+      "kind": "letter_out",
+      "number": "ИСХ-042/26",
+      "subject": "О согласовании графика поставок рельсовых скреплений",
+      "author": {
+        "crm_user_id": 14,
+        "full_name": "Каримов Б. Х."
+      },
+      "signer": {
+        "crm_user_id": 3,
+        "full_name": "Рахимов А. Т."
+      },
+      "authority_id": "11111111-2222-3333-4444-555555555555",
+      "basis": "power_of_attorney",
+      "basis_text": "Действует по доверенности № Д-14/26 от 15.01.2026 (до 31.12.2026)",
+      "acting_for": null,
+      "signed_at": "2026-11-05T09:30:00Z",
+      "verification_code": "V7K9Q2P4M1",
+      "verification_url": "https://cabinet.railtech.uz/v/V7K9Q2P4M1",
+      "pdf_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "dispatch_method": "email",
+      "in_reply_to": null,
+      "erp_deal_id": null,
+      "deal_number": null
+    },
+    "actor": {
+      "type": "staff",
+      "crm_user_id": 3
+    }
+  }
+}

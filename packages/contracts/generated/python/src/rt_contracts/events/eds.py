@@ -7,7 +7,15 @@ from enum import StrEnum
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, EmailStr, Field, RootModel
+from pydantic import (
+    AnyUrl,
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    RootModel,
+)
 
 
 class Actor(BaseModel):
@@ -183,6 +191,14 @@ class Decision(StrEnum):
     reject = "reject"
 
 
+class DispatchMethod(StrEnum):
+    email = "email"
+    paper = "paper"
+    courier = "courier"
+    edo = "edo"
+    other = "other"
+
+
 class Document(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
@@ -200,6 +216,30 @@ class Document(BaseModel):
     """
     Связь с проектом (заявкой) ERP
     """
+    deal_number: Annotated[str | None, Field(max_length=64)] = None
+
+
+class Document1(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    eds_document_id: Uuid
+    kind: DocumentKind
+    number: RegistryNumber
+    subject: Annotated[str, Field(max_length=300, min_length=1)]
+    author: PersonRef
+    signer: PersonRef
+    authority_id: UUID | None = None
+    basis: Basis
+    basis_text: str | None = None
+    acting_for: PersonRef | None = None
+    signed_at: AwareDatetime
+    verification_code: Annotated[str, Field(pattern="^[A-Za-z0-9_-]{8,32}$")]
+    verification_url: AnyUrl
+    pdf_hash: Annotated[str | None, Field(pattern="^[0-9a-f]{64}$")] = None
+    dispatch_method: DispatchMethod | None = None
+    in_reply_to: UUID | None = None
+    erp_deal_id: int | None = None
     deal_number: Annotated[str | None, Field(max_length=64)] = None
 
 
@@ -247,6 +287,18 @@ class DocumentRegisteredV1(BaseModel):
         extra="ignore",
     )
     document: Document
+    actor: Actor
+
+
+class DocumentSignedV1(BaseModel):
+    """
+    Тип uz.railtech.eds.document.signed.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Официальный документ подписан уполномоченным лицом из реестра полномочий (SIGN-3, ADR-0024): присвоен номер ИСХ, сгенерирован код проверки, снята плашка «ПРОЕКТ». Подписчики: erp (проекция для публичной проверки в кабинете по /v/<код>), crm.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    document: Document1
     actor: Actor
 
 

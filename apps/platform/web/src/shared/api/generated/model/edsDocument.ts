@@ -4,7 +4,9 @@
  */
 import type { EdsDealRef } from "./edsDealRef";
 import type { EdsDecision } from "./edsDecision";
+import type { EdsDocumentDispatchMethod } from "./edsDocumentDispatchMethod";
 import type { EdsDocumentKind } from "./edsDocumentKind";
+import type { EdsDocumentSignatoryBasis } from "./edsDocumentSignatoryBasis";
 import type { EdsDocumentStatus } from "./edsDocumentStatus";
 import type { EdsFile } from "./edsFile";
 import type { EdsLetter } from "./edsLetter";
@@ -50,4 +52,25 @@ export interface EdsDocument {
   can_register?: boolean;
   /** Автор черновика письма без права регистрировать — может «Передать на регистрацию» делопроизводителю */
   can_request_registration?: boolean;
+  /**
+   * Дата и время подписания документа
+   * @nullable
+   */
+  signed_at?: string | null;
+  signed_by?: EdsPerson | null;
+  /** @nullable */
+  signing_authority_id?: string | null;
+  /** @nullable */
+  signatory_basis?: EdsDocumentSignatoryBasis;
+  /** @nullable */
+  signatory_basis_text?: string | null;
+  acting_for?: EdsPerson | null;
+  /** @nullable */
+  verification_code?: string | null;
+  /** @nullable */
+  verification_url?: string | null;
+  /** @nullable */
+  dispatch_method?: EdsDocumentDispatchMethod;
+  /** Пользователь может подписать документ (черновик, уполномоченное лицо) */
+  can_sign?: boolean;
 }

@@ -5,6 +5,7 @@ import uuid
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.errors import not_found
 from app.models import ApprovalRoute, ApprovalStep, Document, DocumentPayment, DocumentRender, Employee, StoredFile
 from app.schemas.approvals import Decision
@@ -130,12 +131,26 @@ async def present(session: AsyncSession, document: Document) -> DocumentOut:
             select(ApprovalStep.decided_by).join(ApprovalRoute).where(ApprovalRoute.document_id == document.id)
         )
     ).scalars()
-    directory = await load_directory(session, [document.author_crm_user_id, document.addressee_crm_user_id, *routes])
+    directory = await load_directory(
+        session,
+        [
+            document.author_crm_user_id,
+            document.addressee_crm_user_id,
+            document.signed_by_crm_user_id,
+            document.acting_for_crm_user_id,
+            *routes,
+        ],
+    )
     decisions = await _decisions(session, document.id, directory)
     entries = await journal.entries(session, "document", document.id)
     recipient = (
         LetterSender(name=document.recipient_name, inn=document.recipient_inn)
         if document.kind == DocumentKind.LETTER_OUT.value
+        else None
+    )
+    verification_url = (
+        f"https://{get_settings().cabinet_domain}/v/{document.verification_code}"
+        if document.verification_code
         else None
     )
     return DocumentOut(
@@ -165,6 +180,15 @@ async def present(session: AsyncSession, document: Document) -> DocumentOut:
         created_at=document.created_at,
         updated_at=document.updated_at,
         archived_at=document.archived_at,
+        signed_at=document.signed_at,
+        signed_by=directory.person_or_none(document.signed_by_crm_user_id),
+        signing_authority_id=document.signing_authority_id,
+        signatory_basis=document.signatory_basis,
+        signatory_basis_text=document.signatory_basis_text,
+        acting_for=directory.person_or_none(document.acting_for_crm_user_id),
+        verification_code=document.verification_code,
+        verification_url=verification_url,
+        dispatch_method=document.dispatch_method,
     )
 
 

@@ -10,6 +10,7 @@
 передан, любой держатель права.
 """
 
+import secrets
 import uuid
 from datetime import datetime
 from decimal import Decimal
@@ -20,6 +21,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import clock
+from app.config import get_settings
 from app.errors import conflict, forbidden, forbidden_reason, invalid_fields, not_found
 from app.models import ApprovalRoute, Document, DocumentVersion, Employee, Letter
 from app.schemas.approvals import ApprovalTemplate
@@ -46,6 +48,7 @@ from app.services import (
     numbering,
     renders,
     reply,
+    signing_resolve,
 )
 from app.services.people import holds_permission, load_directory
 from app.services.storage import ObjectStorage
@@ -165,6 +168,61 @@ async def _publish_registered(
         bus,
         session,
         "document.registered",
+        {"document": body, "actor": events.actor(actor_id)},
+        subject=str(document.number),
+    )
+
+
+def generate_verification_code(length: int = 10) -> str:
+    """Случайный криптографический код проверки подлинности (ADR-0024 п. 5): 10 символов."""
+    alphabet = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"
+    return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
+async def _publish_signed(
+    session: AsyncSession,
+    bus: AsyncBus,
+    document: Document,
+    *,
+    signed_at: datetime,
+    verification_code: str,
+    verification_url: str,
+    actor_id: int,
+) -> None:
+    ids = [
+        document.author_crm_user_id,
+        document.signed_by_crm_user_id,
+        document.acting_for_crm_user_id,
+    ]
+    directory = await load_directory(session, [i for i in ids if i is not None])
+    body: dict[str, Any] = {
+        "eds_document_id": str(document.id),
+        "kind": document.kind,
+        "number": document.number,
+        "subject": document.subject,
+        "author": directory.person(document.author_crm_user_id).model_dump(),
+        "signer": directory.person(document.signed_by_crm_user_id).model_dump()
+        if document.signed_by_crm_user_id
+        else directory.person(actor_id).model_dump(),
+        "authority_id": str(document.signing_authority_id) if document.signing_authority_id else None,
+        "basis": document.signatory_basis or "charter",
+        "basis_text": document.signatory_basis_text,
+        "acting_for": (
+            directory.person(document.acting_for_crm_user_id).model_dump() if document.acting_for_crm_user_id else None
+        ),
+        "signed_at": signed_at.isoformat(),
+        "verification_code": verification_code,
+        "verification_url": verification_url,
+        "pdf_hash": document.pdf_hash,
+        "dispatch_method": document.dispatch_method or "email",
+        "in_reply_to": str(document.in_reply_to) if document.in_reply_to else None,
+        "erp_deal_id": document.erp_deal_id,
+        "deal_number": document.deal_number,
+    }
+    await events.publish(
+        bus,
+        session,
+        "document.signed",
         {"document": body, "actor": events.actor(actor_id)},
         subject=str(document.number),
     )
@@ -326,13 +384,139 @@ async def submit(
             raise invalid_fields("Укажите почту адресата и текст письма на бланке.", recipient_email="required")
         await _send_letter(session, bus, document, employee)
         if document.body is not None:
-            render = await renders.request(session, document)  # итоговый PDF: номер и дата регистрации
+            render = await renders.request(session, document)
             if changes.send:
                 await letter_mail.start(
                     session, bus, _storage(storage), document=document, render=render, actor_id=employee.crm_user_id
                 )
     else:
         await _open_approval(session, bus, document, employee, kind)
+    return document
+
+
+async def sign(
+    session: AsyncSession,
+    bus: AsyncBus,
+    *,
+    employee: Employee,
+    document_id: uuid.UUID,
+    authority_id: uuid.UUID | None = None,
+    dispatch_method: str = "email",
+    send: bool = True,
+    storage: ObjectStorage | None = None,
+) -> Document:
+    """Подписание документа уполномоченным лицом из реестра полномочий (SIGN-3, ADR-0024 п. 1–5)."""
+    document = await get_for_update(session, document_id)
+    if not await access.can_view_document(session, employee, document.id):
+        raise not_found("Документ не найден.")
+    if document.status not in (DocumentStatus.DRAFT.value, DocumentStatus.RETURNED.value):
+        raise conflict("invalid_state", "Документ нельзя подписать в текущем статусе.", status=document.status)
+
+    now = clock.now()
+    today = clock.company_date(now)
+
+    check_result = await signing_resolve.check_signer(
+        session,
+        employee.crm_user_id,
+        kind=document.kind,
+        amount=document.amount,
+        currency=document.currency,
+        on_date=today,
+    )
+    if not check_result.allowed or check_result.candidate is None:
+        raise forbidden_reason(check_result.reason or "no_authority", check_result.message)
+
+    candidate = check_result.candidate
+    if authority_id is not None and candidate.authority.id != authority_id:
+        res = await signing_resolve.resolve(
+            session,
+            kind=document.kind,
+            amount=document.amount,
+            currency=document.currency,
+            on_date=today,
+        )
+        matched = [
+            c for c in res.candidates if c.authority.id == authority_id and c.signer.crm_user_id == employee.crm_user_id
+        ]
+        if not matched:
+            raise conflict(
+                "authority_mismatch", "Выбранное полномочие не действительно или не соответствует документу."
+            )
+        candidate = matched[0]
+
+    # Правило «автор ≠ подписант» (ADR-0024 п. 3):
+    if document.author_crm_user_id == employee.crm_user_id:
+        res = await signing_resolve.resolve(
+            session,
+            kind=document.kind,
+            amount=document.amount,
+            currency=document.currency,
+            on_date=today,
+        )
+        other_candidates = [c for c in res.candidates if c.signer.crm_user_id != employee.crm_user_id]
+        if other_candidates:
+            raise conflict(
+                "author_cannot_sign",
+                "Автор проекта письма не вправе подписывать документ при наличии других лиц с правом подписи.",
+            )
+
+    method = dispatch_method if dispatch_method in ("email", "paper", "courier", "edo", "other") else "email"
+    if method == "email" and send and not (document.recipient_email and document.body is not None):
+        raise invalid_fields("Укажите почту адресата и текст письма на бланке.", recipient_email="required")
+
+    if not document.number:
+        document.number = await numbering.allocate(session, numbering.NumberKind.OUTGOING, now)
+
+    verification_code = generate_verification_code()
+    verification_url = f"https://{get_settings().cabinet_domain}/v/{verification_code}"
+
+    document.status = DocumentStatus.SENT.value
+    document.signed_at = now
+    document.registered_at = now
+    document.updated_at = now
+    document.signed_by_crm_user_id = employee.crm_user_id
+    document.signing_authority_id = candidate.authority.id if candidate.authority else None
+    document.signatory_basis = candidate.authority.basis if candidate.authority else None
+    document.signatory_basis_text = candidate.basis_text
+    document.acting_for_crm_user_id = candidate.acting_for[0].crm_user_id if candidate.acting_for else None
+    document.verification_code = verification_code
+    document.dispatch_method = method
+    document.signatory_name = candidate.signer.full_name
+    document.signatory_position = candidate.position
+
+    await journal.record(
+        session,
+        "document.signed",
+        by=employee.crm_user_id,
+        document_id=document.id,
+        comment=f"Подписан исходящий документ {document.number}. Основание: {document.signatory_basis_text}.",
+    )
+
+    render = None
+    if document.body is not None:
+        render = await renders.request(session, document)
+        document.pdf_hash = render.hash
+
+    await _publish_signed(
+        session,
+        bus,
+        document,
+        signed_at=now,
+        verification_code=verification_code,
+        verification_url=verification_url,
+        actor_id=employee.crm_user_id,
+    )
+    await _publish_registered(session, bus, document, registered_at=now, actor_id=employee.crm_user_id)
+    await document_state.archive(session, bus, document, actor_id=employee.crm_user_id, reason=document.status)
+
+    closed = await instructions.close_by_outgoing(session, bus, document=document, actor_id=employee.crm_user_id)
+    await reply.notify_registered(session, bus, document, closed_executors=closed, actor_id=employee.crm_user_id)
+
+    if method == "email" and send and render is not None:
+        await letter_mail.start(
+            session, bus, _storage(storage), document=document, render=render, actor_id=employee.crm_user_id
+        )
+
     return document
 
 

@@ -20,6 +20,7 @@ from app.schemas.documents import (
     DocumentPage,
     DocumentPaymentIn,
     DocumentPdf,
+    DocumentSignIn,
     DocumentStatus,
     DocumentSubmitIn,
     DocumentUpdate,
@@ -38,6 +39,7 @@ Reader = Annotated[
     Employee, Depends(require_permission(P.MEMOS_CREATE, P.MEMOS_APPROVE, P.APPROVALS_DECIDE, P.REGISTRY_READ))
 ]
 Author = Annotated[Employee, Depends(require_permission(P.MEMOS_CREATE, P.LETTERS_REGISTER))]
+Signer = Annotated[Employee, Depends(require_permission(P.LETTERS_REGISTER, P.MEMOS_APPROVE))]
 Accountant = Annotated[Employee, Depends(require_permission(P.PAYMENTS_CONFIRM))]
 Registrar = Annotated[Employee, Depends(require_permission(P.LETTERS_REGISTER))]
 AnyEmployee = Annotated[Employee, Depends(require_permission())]
@@ -108,6 +110,33 @@ async def submit_document(
     async with session.begin():
         document = await documents.submit(
             session, bus, employee=employee, document_id=document_id, edits=body, storage=storage
+        )
+        result = await documents_read.present(session, document)
+    await box.defer_render(renders.take_pending(session))
+    return result
+
+
+@router.post("/documents/{document_id}/sign", response_model=Document, operation_id="signDocument")
+async def sign_document(
+    document_id: uuid.UUID,
+    employee: Signer,
+    session: Session,
+    bus: Bus,
+    storage: Storage,
+    box: Box,
+    body: Annotated[DocumentSignIn | None, Body()] = None,
+) -> Document:
+    params = body or DocumentSignIn()
+    async with session.begin():
+        document = await documents.sign(
+            session,
+            bus,
+            employee=employee,
+            document_id=document_id,
+            authority_id=params.authority_id,
+            dispatch_method=params.dispatch_method,
+            send=params.send,
+            storage=storage,
         )
         result = await documents_read.present(session, document)
     await box.defer_render(renders.take_pending(session))

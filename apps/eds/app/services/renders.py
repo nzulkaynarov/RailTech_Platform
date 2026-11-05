@@ -25,6 +25,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app import clock
+from app.config import get_settings
 from app.errors import conflict
 from app.models import Document, DocumentRender, Letter, LetterheadLogo
 from app.schemas.documents import DocumentPdf
@@ -67,9 +68,11 @@ def error_text(failure: RenderError) -> str:
     return _ERRORS.get(failure.code, _ERROR_OTHER)
 
 
-def _with_signature(body: dict[str, Any], name: str, position: str) -> dict[str, Any]:
+def _with_signature(body: dict[str, Any], name: str, position: str, basis_text: str | None = None) -> dict[str, Any]:
     """Тело письма + подпись (одна сторона) в конце: подпись ставит система, не редактор."""
-    party = {key: value for key, value in (("position", position), ("name", name)) if value}
+    party: dict[str, Any] = {key: value for key, value in (("position", position), ("name", name)) if value}
+    if basis_text:
+        party["basis"] = basis_text
     if not party:
         return body
     doc = dict(body.get("doc") or {"type": "doc", "content": []})
@@ -111,10 +114,13 @@ async def build_payload(session: AsyncSession, document: Document) -> tuple[dict
     name = (document.signatory_name or head.signatory_name).strip()
     position = (document.signatory_position or head.signatory_position).strip()
     addressee = [line for line in (document.recipient_attention, document.recipient_name) if line and line.strip()]
+    basis_text = document.signatory_basis_text if final else None
+    verification_code = document.verification_code if final else None
+    verification_url = f"https://{get_settings().cabinet_domain}/v/{verification_code}" if verification_code else None
     payload: dict[str, Any] = {
         "renderer": RENDERER_VERSION,
         "layout": LAYOUT,
-        "body": _with_signature(document.body, name, position),
+        "body": _with_signature(document.body, name, position, basis_text=basis_text),
         "meta": {
             "number": document.number if final else None,
             "date": clock.company_date(document.registered_at).isoformat()
@@ -123,6 +129,9 @@ async def build_payload(session: AsyncSession, document: Document) -> tuple[dict
             "addressee": addressee,
             "reply_to": await _reply_to(session, document, lang),
             "executor": directory.name(document.author_crm_user_id),
+            "basis_text": basis_text,
+            "verification_code": verification_code,
+            "verification_url": verification_url,
         },
         "letterhead": {
             "company_name": head.company_name,
