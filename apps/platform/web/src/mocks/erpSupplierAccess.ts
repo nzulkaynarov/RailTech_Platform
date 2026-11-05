@@ -86,6 +86,7 @@ function seed(): Record<string, Entry> {
         role: "partner",
         kind: "supplier",
         modules: ["my_products", "catalog_requests"],
+        catalog_price_visibility: "",
         status: "invited",
         invited_at: "2026-11-04T09:00:00+05:00",
         activated_at: null,

@@ -25841,6 +25841,7 @@ export const getConfirmSupplierCrmClientResponseSupplierCabinetRelationshipMock 
       "other",
     ] as const),
     modules: faker.helpers.arrayElements(["my_products", "catalog_requests"] as const),
+    catalog_price_visibility: faker.helpers.arrayElement(["", "cabinet", "on_request"] as const),
     status: faker.helpers.arrayElement(["invited", "active", "suspended"] as const),
     invited_at: faker.helpers.arrayElement([
       faker.date.past().toISOString().slice(0, 19) + "Z",
@@ -25946,6 +25947,7 @@ export const getRejectSupplierCrmClientResponseSupplierCabinetRelationshipMock =
       "other",
     ] as const),
     modules: faker.helpers.arrayElements(["my_products", "catalog_requests"] as const),
+    catalog_price_visibility: faker.helpers.arrayElement(["", "cabinet", "on_request"] as const),
     status: faker.helpers.arrayElement(["invited", "active", "suspended"] as const),
     invited_at: faker.helpers.arrayElement([
       faker.date.past().toISOString().slice(0, 19) + "Z",
