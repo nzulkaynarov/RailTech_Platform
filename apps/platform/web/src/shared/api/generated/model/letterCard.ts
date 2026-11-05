@@ -11,6 +11,7 @@ import type { LetterJournalEntry } from "./letterJournalEntry";
 import type { LetterOfficeResolution } from "./letterOfficeResolution";
 import type { LetterReceiptMethod } from "./letterReceiptMethod";
 import type { LetterRelated } from "./letterRelated";
+import type { LetterReply } from "./letterReply";
 import type { LetterRequest } from "./letterRequest";
 import type { LetterResolution } from "./letterResolution";
 import type { LetterResolutionDraft } from "./letterResolutionDraft";
@@ -93,4 +94,9 @@ export interface LetterCard {
   executed_at?: string | null;
   /** Оригинал, если письмо закрыто как дубль (EDS-DUP) */
   duplicate_of?: LetterDuplicateOf | null;
+  /**
+   * Ответы на это входящее (EDS-REPLY-1), новейший первым: черновик, «передан на регистрацию», ИСХ и итог его отправки. Чужой черновик не виден (правило видимости документов EDS).
+   * @maxItems 10
+   */
+  replies?: LetterReply[];
 }

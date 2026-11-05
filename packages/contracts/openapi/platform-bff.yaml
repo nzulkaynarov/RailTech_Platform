@@ -1,12 +1,17 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.41.0
+  version: 0.42.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
     сессия, профиль, счётчики меню, «Моя очередь», лента «Сегодня», уведомления, поиск. Экраны фаз P2–P4 добавляются
     в этот файл до кода (`docs/architecture/integration-map.md` §1).
+
+    **0.42.0 (EDS-REPLY-1) — ломающее по oasdiff (до 1.0 допустимо).** Новое значение `QueueItemKind.register_reply` — строка
+    «Зарегистрировать ИСХ» в «Моих задачах» делопроизводителя (ответ на входящее передан на регистрацию). Добавляющее в том же
+    изменении: `EdsDocument.in_reply_to` («В ответ на ВХ-…» в карточке ИСХ), `LetterCard.replies` (блок «Ответ» в карточке ВХ и
+    в «Моём поручении»: черновик, передан на регистрацию, ИСХ, итог отправки), 409 `outgoing_linked_elsewhere` у «Исполнено».
 
     **Версия и журнал (DECISIONS 2026-10-28).** Добавляющее изменение `info.version` не поднимает и строку журнала ниже не
     добавляет — что изменилось, пишется в описании PR. Минор растёт только с ломающим изменением (до 1.0, oasdiff ERR).
@@ -9071,8 +9076,10 @@ paths:
         EDS `POST /instructions/{id}/complete`. Любой сотрудник; отмечает только исполнитель поручения (решает EDS: чужое —
         403, `details.reason = not_executor`; не в работе — 409 `invalid_state`). Нужен отчёт (текст или файлы — загрузка
         `POST /eds/document-files`) или номер отправленного ИСХ (`outgoing_number`); иначе 422, `details.fields = [report]`;
-        ИСХ не найден — `details.fields = [outgoing_number]`. Все поручения письма исполнены — письмо «Исполнено», контроль
-        снят, директор и делопроизводитель получают уведомление. Ответ — карточка.
+        ИСХ не найден — `details.fields = [outgoing_number]`. ИСХ «в ответ на» это письмо принимается; ИСХ без связи — тоже, и
+        EDS записывает связь (EDS-REPLY-1); ИСХ в ответ на другое входящее — 409, `details.reason = outgoing_linked_elsewhere`.
+        Все поручения письма исполнены — письмо «Исполнено», контроль снят, директор и делопроизводитель получают
+        уведомление. Ответ — карточка.
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
         - $ref: '#/components/parameters/InstructionIdPath'
@@ -15597,6 +15604,7 @@ components:
         - acquaint
         - inbound_mail
         - inbound_mail_mine
+        - register_reply
 
     DueLabel:
       type: string
@@ -16696,6 +16704,11 @@ components:
         can_edit: {type: boolean, description: 'Автор, статус `draft` или `returned`: экран открывает форму «Продолжить»'}
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
+        in_reply_to:
+          oneOf:
+            - $ref: '#/components/schemas/EdsReplyTo'
+            - type: 'null'
+          description: 'Только `letter_out` «в ответ на ВХ» (EDS-REPLY-1): номер, тема и ссылка входящего; `null` — ни на что не отвечает'
         letter: {oneOf: [{$ref: '#/components/schemas/EdsLetter'}, {type: 'null'}], description: 'Только `letter_out` — письмо на бланке (P4)'}
         can_register:
           type: boolean
@@ -16705,6 +16718,15 @@ components:
         can_request_registration:
           type: boolean
           description: Автор черновика письма без права регистрировать — может «Передать на регистрацию» делопроизводителю
+    EdsReplyTo:
+      type: object
+      additionalProperties: false
+      required: [number, subject, path]
+      description: Входящее письмо, на которое отвечает ИСХ (EDS-REPLY-1)
+      properties:
+        number: {type: string, examples: [ВХ-104/26]}
+        subject: {type: string}
+        path: {type: string, description: 'Карточка ВХ в SPA, `/eds/inbox/{номер}` (если нет раздела «Входящие» — рабочий экран `/eds/tasks/{id}`)'}
     EdsDocumentBody:
       type: object
       additionalProperties: false
@@ -19629,6 +19651,39 @@ components:
           oneOf:
             - $ref: '#/components/schemas/LetterDuplicateOf'
             - type: 'null'
+        replies:
+          type: array
+          maxItems: 10
+          description: >-
+            Ответы на это входящее (EDS-REPLY-1), новейший первым: черновик, «передан на регистрацию», ИСХ и итог его отправки.
+            Чужой черновик не виден (правило видимости документов EDS).
+          items: {$ref: '#/components/schemas/LetterReply'}
+
+    LetterReply:
+      type: object
+      additionalProperties: false
+      required: [document_id, number, subject, state, author, mail, mail_reason, path, created_at]
+      description: Ответ на входящее письмо — исходящее письмо «в ответ на» это ВХ (EDS-REPLY-1)
+      properties:
+        document_id: {type: string, format: uuid}
+        number: {type: [string, 'null'], description: '`ИСХ-NNN/ГГ` после регистрации; у черновика `null`', examples: [ИСХ-014/26]}
+        subject: {type: string}
+        state:
+          type: string
+          enum: [draft, registration_requested, registered]
+          description: '`draft` — черновик автора; `registration_requested` — передан делопроизводителю; `registered` — ИСХ зарегистрирован'
+        author: {$ref: '#/components/schemas/PersonRef'}
+        mail:
+          type: string
+          enum: [none, sending, sent, failed]
+          description: >-
+            Отправка адресату почтой по последней попытке: `none` — не отправлялось (черновик или ответ ушёл вне системы),
+            `sending` — идёт, `sent` — отправлено, `failed` — не ушло (повтор — «Отправить адресату ещё раз», `POST /eds/documents/{id}/send`)
+        mail_reason: {type: [string, 'null'], description: 'Причина словами, если `mail = failed`'}
+        path:
+          type: string
+          description: 'Карточка ИСХ: `/eds/documents?scope=all&doc={id}`; своя заготовка — `/eds/new?draft={id}`'
+        created_at: {type: string, format: date-time}
 
     LetterDuplicateOf:
       type: object

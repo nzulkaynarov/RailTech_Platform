@@ -33932,7 +33932,7 @@ export const getCompleteInstructionUrl = (id: string) => {
 };
 
 /**
- * EDS `POST /instructions/{id}/complete`. Любой сотрудник; отмечает только исполнитель поручения (решает EDS: чужое — 403, `details.reason = not_executor`; не в работе — 409 `invalid_state`). Нужен отчёт (текст или файлы — загрузка `POST /eds/document-files`) или номер отправленного ИСХ (`outgoing_number`); иначе 422, `details.fields = [report]`; ИСХ не найден — `details.fields = [outgoing_number]`. Все поручения письма исполнены — письмо «Исполнено», контроль снят, директор и делопроизводитель получают уведомление. Ответ — карточка.
+ * EDS `POST /instructions/{id}/complete`. Любой сотрудник; отмечает только исполнитель поручения (решает EDS: чужое — 403, `details.reason = not_executor`; не в работе — 409 `invalid_state`). Нужен отчёт (текст или файлы — загрузка `POST /eds/document-files`) или номер отправленного ИСХ (`outgoing_number`); иначе 422, `details.fields = [report]`; ИСХ не найден — `details.fields = [outgoing_number]`. ИСХ «в ответ на» это письмо принимается; ИСХ без связи — тоже, и EDS записывает связь (EDS-REPLY-1); ИСХ в ответ на другое входящее — 409, `details.reason = outgoing_linked_elsewhere`. Все поручения письма исполнены — письмо «Исполнено», контроль снят, директор и делопроизводитель получают уведомление. Ответ — карточка.
  * @summary EDS · Поручение исполнено (P8b)
  */
 export const completeInstruction = async (
