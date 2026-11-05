@@ -557,6 +557,23 @@ test.describe("Компания: axe и снимки", () => {
       }
     });
 
+    test(`условия КП: переключатель напоминаний о просрочке на ${String(width)}: axe, снимок`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+      await loginAndWait(page, "director@demo.example");
+      await openCompany(page, "quote");
+      const toggle = page.getByRole("switch", {
+        name: "Напоминать клиентам о просроченных счетах",
+      });
+      await toggle.scrollIntoViewIfNeeded();
+      await expect(toggle).not.toBeChecked();
+      await toggle.click();
+      await expect(toggle).toBeChecked();
+      await expectNoViolations(page, `quote remind toggle ${String(width)}`);
+      await settledScreenshot(page, "company-quote-remind-toggle");
+    });
+
     test(`окна и вторые разделы на ${String(width)}: axe без нарушений, снимки`, async ({
       page,
     }) => {

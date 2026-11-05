@@ -9,6 +9,9 @@
   записывается в `client_notices` (D1-9);
 * `uz.railtech.{erp,eds}.mail.requested.v1` — в очереди, в транзакции inbox: письмо, которое ERP или
   EDS просят отправить, — строка журнала доставки; отправка — задачей после коммита (W18A-P1);
+* `uz.railtech.erp.partner.client_requested.v1` — в очереди, в транзакции inbox: партнёр
+  приглашён в кабинет — CRM находит или создаёт клиента и контакты и отвечает
+  `crm.partner.client_resolved` (PART-CRM); `erp.partner.client_rejected` снимает привязку;
 * `uz.railtech.eds.notice.requested.v1` — в очереди, в транзакции inbox: уведомление сотрудникам по
   поручениям входящих (P8b) — строка колокольчика и сообщение Telegram после коммита;
 * `uz.railtech.erp.contact.telegram_test_requested.v1` — inline: проверочное сообщение контакту в
@@ -37,6 +40,8 @@ from app.services.contact_telegram import UNLINK_REQUESTED
 from app.services.eds_notices import NOTICE_TYPE, SIGNING_EXPIRING_TYPE
 from app.services.inbound_mail import LETTER_REGISTERED
 from app.services.mail_requests import MAIL_REQUEST_TYPES
+from app.services.partner_clients import REJECTED_TYPE as PARTNER_CLIENT_REJECTED
+from app.services.partner_clients import REQUESTED_TYPE as PARTNER_CLIENT_REQUESTED
 
 
 async def on_erp_event(event: Event, session: AsyncSession) -> None:
@@ -68,6 +73,16 @@ async def on_mail_requested(event: Event, session: AsyncSession) -> None:
 
 for _mail_type in MAIL_REQUEST_TYPES:
     subscribe(_mail_type)(on_mail_requested)
+
+
+@subscribe(PARTNER_CLIENT_REQUESTED)
+async def on_partner_client_requested(event: Event, session: AsyncSession) -> None:
+    await current_container().partner_clients.accept(session, event)
+
+
+@subscribe(PARTNER_CLIENT_REJECTED)
+async def on_partner_client_rejected(event: Event, session: AsyncSession) -> None:
+    await current_container().partner_clients.release(session, event)
 
 
 @subscribe(NOTICE_TYPE)

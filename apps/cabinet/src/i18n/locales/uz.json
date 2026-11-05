@@ -1146,5 +1146,30 @@
       "NAME": "Nomi koʻrsatilmagan."
     },
     "cardNumber": "{{id}}-raqamli kartochka"
+  },
+  "notifications": {
+    "title": "Bildirishnomalar",
+    "description": "Hujjatlar, toʻlovlar, yetkazib berishlar va menejer javoblari",
+    "markAll": "Hammasini oʻqildi deb belgilash",
+    "more": "Yana koʻrsatish",
+    "listLabel": "Bildirishnomalar roʻyxati",
+    "unread": "Oʻqilmagan",
+    "unreadNote_one": "{{count}} ta oʻqilmagan bildirishnoma",
+    "unreadNote_other": "{{count}} ta oʻqilmagan bildirishnoma",
+    "emptyTitle": "Yangi bildirishnomalar yoʻq",
+    "emptyText": "Bu yerda yangi tijorat takliflari, hisob-fakturalar, dalolatnomalar, yetkazib berish oʻzgarishlari va menejer javoblari paydo boʻladi.",
+    "text": {
+      "quote_sent": "Yangi tijorat taklifi {{number}} qaroringizni kutmoqda",
+      "invoice_issued": "{{amount}} miqdorida {{number}} hisob-fakturasi taqdim etildi",
+      "payment_overdue": "{{number}} hisob-fakturasini toʻlash muddati oʻtdi, toʻlash kerak: {{amount}}",
+      "act_issued": "{{number}} dalolatnomasi qabul qilinishini kutmoqda",
+      "act_issued_reminder": "Eslatma: {{number}} dalolatnomasi qabul qilinishini kutmoqda",
+      "delivery_status_changed": "{{deal}} loyihasi boʻyicha yetkazib berish: {{status}}",
+      "delivery_eta_changed": "{{deal}} loyihasi boʻyicha yetkazib berish muddati oʻzgardi: endi {{eta}}",
+      "manager_replied": "Menejer sizga chatda javob berdi",
+      "partner_card_returned": "«{{number}}» kartochkasi qayta ishlashga qaytarildi",
+      "fallback": "Yangi bildirishnoma {{number}}",
+      "partner_card_published": "«{{number}}» kartochkasi katalogda eʼlon qilindi"
+    }
   }
 }

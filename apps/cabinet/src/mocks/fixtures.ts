@@ -810,6 +810,7 @@ export function meFor(
     company,
     can_act: contact.can_act,
     auth_method: authMethod,
+    notifications_unread: 0,
     roles: access.roles,
     modules: access.modules as Schemas['Me']['modules'],
     unread,
@@ -865,3 +866,73 @@ export function telegramLink(now: Date): Schemas['TelegramLink'] {
     expires_at: new Date(now.getTime() + TELEGRAM_LINK_TTL_MS).toISOString(),
   };
 }
+
+/** Колокольчик (NOTIFY-2): лента контакта по убыванию `id` — три непрочитанных, два прочитанных; ссылки — на объекты фикстур. */
+function notice(
+  id: number,
+  kind: Schemas['NotificationKind'],
+  group: Schemas['NotificationGroup'],
+  object: Schemas['NotificationObject'],
+  action: Schemas['NotificationAction'],
+  params: Record<string, string>,
+  link: string,
+  createdAt: string,
+  readAt: string | null = null,
+): Schemas['PortalNotification'] {
+  return { id, kind, group, object, action, text_key: kind, params, link, created_at: createdAt, read_at: readAt };
+}
+
+export const notifications: Schemas['PortalNotification'][] = [
+  notice(
+    9005,
+    'quote_sent',
+    'documents',
+    { type: 'quote', id: 301, number: 'KP-2026-0042' },
+    'awaiting_decision',
+    { number: 'KP-2026-0042', deal: 'D-42' },
+    '/quotes/301',
+    '2026-10-14T10:20:00+05:00',
+  ),
+  notice(
+    9004,
+    'invoice_issued',
+    'money',
+    { type: 'invoice', id: 603, number: 'S-2026-0124' },
+    'issued',
+    { number: 'S-2026-0124', amount: '9800000.00', currency: 'UZS', due_date: '2026-10-07' },
+    '/invoices?focus=603',
+    '2026-10-13T16:05:00+05:00',
+  ),
+  notice(
+    9003,
+    'delivery_eta_changed',
+    'deliveries',
+    { type: 'delivery', id: 35, number: 'D-35' },
+    'eta_changed',
+    { deal: 'D-35', eta: '2026-10-24', previous_eta: '2026-10-20' },
+    '/deals/35',
+    '2026-10-12T09:40:00+05:00',
+  ),
+  notice(
+    9002,
+    'act_issued',
+    'documents',
+    { type: 'act', id: 701, number: 'A-2026-0090' },
+    'awaiting_acceptance',
+    { number: 'A-2026-0090', reminder: '' },
+    '/acts?focus=701',
+    '2026-10-11T12:00:00+05:00',
+    '2026-10-11T12:30:00+05:00',
+  ),
+  notice(
+    9001,
+    'delivery_status_changed',
+    'deliveries',
+    { type: 'delivery', id: 35, number: 'D-35' },
+    'status_changed',
+    { deal: 'D-35', status: 'shipped' },
+    '/deals/35',
+    '2026-10-09T08:15:00+05:00',
+    '2026-10-09T09:00:00+05:00',
+  ),
+];

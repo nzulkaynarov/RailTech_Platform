@@ -238,10 +238,9 @@ def _render_sample_quote_html(brand: dict, cover_profile=None) -> str:
             vat_amount=sample_quote["vat_amount"],
             total=sample_quote["total_incl_vat"],
         ),
-        # Branding preview, not a real export — no «ЧЕРНОВИК» stamp (it would obscure the very
+        # Branding preview, not a real export — no «ПРОЕКТ» mark (`document_draft` absent; it would obscure the very
         # branding this sample exists to show); keep the lead-time column visible so the seller can
         # see it styled when their profile toggle is on.
-        "is_draft": False,
         "has_line_lead_time": True,
         **brand,
     }

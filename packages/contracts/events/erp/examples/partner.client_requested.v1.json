@@ -1,0 +1,38 @@
+{
+  "specversion": "1.0",
+  "id": "5b0f3a7e-8c1d-5e24-9b6a-3f7d2c1a9e40",
+  "source": "rt://erp",
+  "type": "uz.railtech.erp.partner.client_requested.v1",
+  "time": "2026-11-04T09:15:00Z",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/erp/partner.client_requested/v1",
+  "tenant": "railtech",
+  "correlationid": "0c4b6f1e-2d8a-5f3b-8a77-61e5d9b2c3f4",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+  "data": {
+    "erp_company_id": 214,
+    "company": {
+      "name": "Демо Мануфактуринг ООО",
+      "inn": "301234567",
+      "registration_number": null,
+      "country": "UZ",
+      "address": "г. Ташкент, ул. Образцовая, 1",
+      "website": "https://manufacturing.example",
+      "language": "ru"
+    },
+    "contacts": [
+      {
+        "erp_contact_id": 612,
+        "full_name": "Иванов Пётр",
+        "email": "ivanov@manufacturing.example",
+        "phone": "+998901234567",
+        "language": "ru"
+      }
+    ],
+    "actor": {
+      "type": "staff",
+      "name": "Менеджер Демо"
+    },
+    "invited_by_crm_user_id": 7
+  }
+}

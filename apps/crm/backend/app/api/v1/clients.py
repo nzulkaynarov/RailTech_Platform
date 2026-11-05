@@ -33,6 +33,8 @@ from app.schemas.clients import (
     LinkTelegram,
     MakeCustomer,
     MoneyOut,
+    PartnerRequestContact,
+    PartnerRequestOut,
     ServiceRequestClose,
     ServiceRequestItem,
     ServiceRequestOut,
@@ -94,8 +96,20 @@ async def get_client(client_id: int, _: ClientReader, container: ContainerDep) -
             )
         ).all()
         invitation = await container.portal_invites.current(session, client_id)
+        partner_requests = await container.partner_clients.pending_of(session, client_id)
     return ClientDetail(
         **_client_out(client).model_dump(),
+        partner_requests=[
+            PartnerRequestOut(
+                id=r.id,
+                erp_company_id=r.erp_company_id,
+                company_name=r.company_name,
+                matched_by=r.matched_by,
+                contacts=[PartnerRequestContact(full_name=n, email=e) for n, e in r.contacts],
+                created_at=r.created_at,
+            )
+            for r in partner_requests
+        ],
         invitation=invitation,
         identities=linked,
         candidates=candidates,
@@ -104,6 +118,34 @@ async def get_client(client_id: int, _: ClientReader, container: ContainerDep) -
             ServiceRequestOut.model_validate(r, from_attributes=True) for r in requests
         ],
     )
+
+
+@router.post(
+    "/clients/{client_id}/partner-requests/{request_id}/confirm", response_model=ActionResult
+)
+async def confirm_partner_request(
+    client_id: int, request_id: int, who: ClientWriter, container: ContainerDep
+) -> ActionResult:
+    """«Это та же компания» (PART-CRM): клиент сопоставляется компании ERP партнёра, контакты
+    запроса добавляются, ERP получает `partner.client_resolved` со статусом `linked`.
+
+    404 — заявки нет или она уже решена; 409 — клиент или компания ERP уже сопоставлены.
+    """
+    await container.partner_clients.confirm(who, client_id, request_id)
+    return ActionResult()
+
+
+@router.post(
+    "/clients/{client_id}/partner-requests/{request_id}/decline",
+    response_model=Created,
+    status_code=status.HTTP_201_CREATED,
+)
+async def decline_partner_request(
+    client_id: int, request_id: int, who: ClientWriter, container: ContainerDep
+) -> Created:
+    """«Нет — завести нового клиента» (PART-CRM): найденный клиент не меняется, для партнёра
+    создаётся новый клиент, ERP получает `linked`. Ответ — id нового клиента."""
+    return Created(id=await container.partner_clients.decline(who, client_id, request_id))
 
 
 @router.post("/clients/{client_id}/invitation", response_model=InvitationOut)

@@ -132,6 +132,103 @@ msgstr "Hamkor kabineti"
 msgid "В кабинете — ваши товары и цены: вы заполняете карточки, мы проверяем и публикуем их."
 msgstr "Kabinetda — mahsulotlaringiz va narxlaringiz: kartochkalarni siz to'ldirasiz, biz tekshirib e'lon qilamiz."
 
+# ── emails/portal_notice.* — уведомления кабинета контакту (NOTIFY-2) ──────────────────────────────────────────
+msgid "Новое коммерческое предложение %(number)s"
+msgstr "Yangi tijorat taklifi %(number)s"
+
+msgid "Выставлен счёт %(number)s"
+msgstr "%(number)s hisob-fakturasi taqdim etildi"
+
+msgid "Срок оплаты счёта %(number)s прошёл"
+msgstr "%(number)s hisob-fakturasini toʻlash muddati oʻtdi"
+
+msgid "Напоминание: акт %(number)s ждёт приёмки"
+msgstr "Eslatma: %(number)s dalolatnomasi qabul qilinishini kutmoqda"
+
+msgid "Акт %(number)s ждёт приёмки"
+msgstr "%(number)s dalolatnomasi qabul qilinishini kutmoqda"
+
+msgid "Изменился статус поставки по сделке %(deal)s"
+msgstr "%(deal)s bitimi boʻyicha yetkazib berish holati oʻzgardi"
+
+msgid "Изменился срок поставки по сделке %(deal)s"
+msgstr "%(deal)s bitimi boʻyicha yetkazib berish muddati oʻzgardi"
+
+msgid "Менеджер ответил вам в чате"
+msgstr "Menejer sizga chatda javob berdi"
+
+msgid "Карточка товара %(number)s возвращена на доработку"
+msgstr "%(number)s mahsulot kartochkasi qayta ishlashga qaytarildi"
+
+msgid "Новое уведомление в личном кабинете"
+msgstr "Shaxsiy kabinetda yangi bildirishnoma"
+
+msgid "Вам отправлено коммерческое предложение %(number)s. Откройте его в личном кабинете, чтобы принять или отклонить."
+msgstr "Sizga %(number)s tijorat taklifi yuborildi. Uni qabul qilish yoki rad etish uchun shaxsiy kabinetda oching."
+
+msgid "Выставлен счёт %(number)s на сумму %(amount)s."
+msgstr "%(amount)s miqdorida %(number)s hisob-fakturasi taqdim etildi."
+
+msgid "Срок оплаты — до %(due_date)s."
+msgstr "Toʻlov muddati — %(due_date)s gacha."
+
+msgid "Срок оплаты счёта %(number)s прошёл. Остаток к оплате — %(amount)s."
+msgstr "%(number)s hisob-fakturasini toʻlash muddati oʻtdi. Toʻlanishi kerak boʻlgan qoldiq — %(amount)s."
+
+msgid "Акт %(number)s ждёт вашей приёмки: примите его или верните с причиной."
+msgstr "%(number)s dalolatnomasi qabul qilishingizni kutmoqda: uni qabul qiling yoki sababini koʻrsatib qaytaring."
+
+msgid "Статус поставки по сделке %(deal)s изменился."
+msgstr "%(deal)s bitimi boʻyicha yetkazib berish holati oʻzgardi."
+
+msgid "Ожидаемая дата поставки по сделке %(deal)s — %(eta)s."
+msgstr "%(deal)s bitimi boʻyicha kutilayotgan yetkazib berish sanasi — %(eta)s."
+
+msgid "Прежняя дата — %(previous_eta)s."
+msgstr "Avvalgi sana — %(previous_eta)s."
+
+msgid "Менеджер ответил на ваше сообщение в чате личного кабинета."
+msgstr "Menejer shaxsiy kabinet chatidagi xabaringizga javob berdi."
+
+msgid "Карточка товара %(number)s возвращена на доработку."
+msgstr "%(number)s mahsulot kartochkasi qayta ishlashga qaytarildi."
+
+msgid "Причина: %(reason)s"
+msgstr "Sabab: %(reason)s"
+
+msgid "В личном кабинете есть новое уведомление."
+msgstr "Shaxsiy kabinetda yangi bildirishnoma bor."
+
+msgid "Здравствуйте, %(name)s!"
+msgstr "Assalomu alaykum, %(name)s!"
+
+msgid "Здравствуйте!"
+msgstr "Assalomu alaykum!"
+
+msgid "Открыть в личном кабинете:"
+msgstr "Shaxsiy kabinetda ochish:"
+
+msgid "Вы получили это письмо как контакт компании «%(company)s»."
+msgstr "Siz bu xatni «%(company)s» kompaniyasining kontakti sifatida oldingiz."
+
+msgid "Настроить уведомления:"
+msgstr "Bildirishnomalarni sozlash:"
+
+msgid "Личный кабинет"
+msgstr "Shaxsiy kabinet"
+
+msgid "Открыть в личном кабинете"
+msgstr "Shaxsiy kabinetda ochish"
+
+msgid "Настроить уведомления"
+msgstr "Bildirishnomalarni sozlash"
+
+msgid "Карточка товара %(number)s опубликована"
+msgstr "%(number)s mahsulot kartochkasi eʼlon qilindi"
+
+msgid "Карточка товара %(number)s опубликована в каталоге — клиенты её видят."
+msgstr "%(number)s mahsulot kartochkasi katalogda eʼlon qilindi — mijozlar uni koʻrmoqda."
+
 msgid "Получать мгновенно в Telegram"
 msgstr "Telegram orqali darhol olish"
 

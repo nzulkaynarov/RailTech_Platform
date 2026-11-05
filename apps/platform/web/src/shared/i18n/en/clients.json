@@ -34,6 +34,18 @@
   },
   "retry": "Retry",
   "card": {
+    "partner": {
+      "title": "A partner from the cabinet is waiting for confirmation",
+      "text": "A manufacturer or supplier was invited to the cabinet and its details match this client. We never merge them on our own: if it is the same company, confirm and the partner's requests will arrive in this client's card; if not, we will create a new client for the partner.",
+      "erp": "ERP company #",
+      "matchedBy": {
+        "inn": "tax ID matches",
+        "registration_number": "country and registration number match"
+      },
+      "confirm": "Same company",
+      "decline": "No — create a new client",
+      "readOnly": "A colleague who can manage clients decides."
+    },
     "label": "Client card",
     "close": "Close",
     "inn": "TIN",
@@ -112,6 +124,7 @@
     "erp_request_conflict": "the request data changed after sending — create the request again",
     "handoff_no_consent": "no client consent to data processing",
     "erp_inn_conflict": "this TIN already belongs to another client",
+    "erp_partner_verification": "a cabinet partner has this TIN: the handoff is held. A back-office colleague will check the TIN and invite the partner again, then confirm the link in this card — the handoff will repeat on its own",
     "enqueue_failed": "could not queue the transfer",
     "other": "reason unknown"
   }

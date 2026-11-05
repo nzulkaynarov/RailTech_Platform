@@ -191,6 +191,48 @@ export const crmLeadsHandlers = [
     return HttpResponse.json(invitation);
   }),
 
+  // PART-CRM: решение менеджера по партнёру ERP, похожему на клиента
+  http.post("*/api/v1/crm/clients/:id/partner-requests/:request/confirm", ({ params }) => {
+    const denied = guard("crm.clients", "full");
+    if (denied) return denied;
+    const state = readLeads();
+    const client = state.clients.find((c) => c.id === Number(params["id"]));
+    const found = client?.partner_requests.find((r) => r.id === Number(params["request"]));
+    if (!client || !found) return clientNotFound();
+    client.partner_requests = client.partner_requests.filter((r) => r.id !== found.id);
+    client.in_erp = true;
+    writeLeads(state);
+    return HttpResponse.json({ client_id: client.id });
+  }),
+
+  http.post("*/api/v1/crm/clients/:id/partner-requests/:request/decline", ({ params }) => {
+    const denied = guard("crm.clients", "full");
+    if (denied) return denied;
+    const state = readLeads();
+    const client = state.clients.find((c) => c.id === Number(params["id"]));
+    const found = client?.partner_requests.find((r) => r.id === Number(params["request"]));
+    if (!client || !found) return clientNotFound();
+    client.partner_requests = client.partner_requests.filter((r) => r.id !== found.id);
+    state.nextClient += 1;
+    state.clients.push({
+      id: state.nextClient,
+      name: found.company_name,
+      inn: null,
+      segment: null,
+      in_erp: true,
+      handoff: { status: "done", error: null },
+      contacts: [],
+      leads: [],
+      requests: [],
+      documents: [],
+      invitation: null,
+      partner_requests: [],
+      sources: { contacts: "ok", requests: "ok", documents: "ok" },
+    });
+    writeLeads(state);
+    return HttpResponse.json({ client_id: state.nextClient });
+  }),
+
   http.post("*/api/v1/crm/requests", async ({ request }) => {
     const denied = guard("crm.clients", "full");
     if (denied) return denied;
@@ -235,6 +277,7 @@ export const crmLeadsHandlers = [
         requests: [],
         documents: [],
         invitation: null,
+        partner_requests: [],
         sources: { contacts: "ok", requests: "ok", documents: "ok" },
       };
       state.clients.push(client);

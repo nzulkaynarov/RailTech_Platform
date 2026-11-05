@@ -17,8 +17,10 @@
 {% endblock %}
 
 {% block doc_meta %}
+  {% if document_draft %}<div class="doc-no-draft">{% translate "без номера" %}</div>{% else %}
   <div class="doc-no">{% blocktranslate with number=contract.number %}Договор № {{ number }}{% endblocktranslate %}</div>
   {% with issued=contract.created_at|date:"d.m.Y" %}<div>{% blocktranslate %}от {{ issued }}{% endblocktranslate %}</div>{% endwith %}
+  {% endif %}
 {% endblock %}
 
 {% block doc_title %}{% translate "Договор поставки" %}{% endblock %}

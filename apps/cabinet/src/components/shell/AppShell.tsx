@@ -16,6 +16,7 @@ import { useNav } from '@/session/useNav';
 import { BottomNav } from './BottomNav';
 import { MessagesLink } from './MessagesLink';
 import { BrandMark } from './BrandMark';
+import { NotificationBell } from './NotificationBell';
 import { SetCrumbContext, type PageCrumb } from './crumbs';
 import { SideNav } from './SideNav';
 import { useTelegramBackButton } from './useTelegramBackButton';
@@ -219,8 +220,9 @@ export function AppShell() {
                   </div>
                 </div>
 
-                {/* Правая часть: сообщения (бейдж непрочитанного, CHAT-1) и профиль */}
+                {/* Правая часть: колокольчик (NOTIFY-2), сообщения (бейдж непрочитанного, CHAT-1) и профиль */}
                 <div className="flex items-center gap-2">
+                  <NotificationBell />
                   <MessagesLink />
                   <Link
                     to="/profile"

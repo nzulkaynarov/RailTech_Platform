@@ -492,7 +492,8 @@ class ErpClient(Protocol):
 
 
 def _handoff_conflict(response: httpx.Response) -> ConflictError:
-    """409 передачи: `INN_CONFLICT` — ИНН уже у другого клиента CRM в ERP; повтор не поможет."""
+    """409 передачи, повтор не поможет: `INN_CONFLICT` — ИНН уже у другого клиента CRM в ERP;
+    `PARTNER_VERIFICATION_REQUIRED` — компания партнёра кабинета требует сверки."""
     try:
         detail = str(response.json().get("detail", ""))
     except (ValueError, AttributeError):
@@ -501,6 +502,11 @@ def _handoff_conflict(response: httpx.Response) -> ConflictError:
         return ConflictError(
             "erp: inn belongs to a company linked to another crm client",
             reason=Reason.ERP_INN_CONFLICT,
+        )
+    if detail == "PARTNER_VERIFICATION_REQUIRED":
+        return ConflictError(
+            "erp: the company with this inn is a cabinet partner and needs verification",
+            reason=Reason.ERP_PARTNER_VERIFICATION,
         )
     return ConflictError(
         f"erp conflict: {detail or response.text[:200]}", reason=Reason.ERP_BAD_RESPONSE

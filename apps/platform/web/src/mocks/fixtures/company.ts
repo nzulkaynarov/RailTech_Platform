@@ -131,6 +131,7 @@ function seed(): CompanyMock {
       target_margin_percent: "20.00",
       default_offer_validity_days: 14,
       payment_terms_days: 10,
+      remind_overdue_invoices: false,
       default_payment_terms: "Предоплата 30%, остаток в течение 10 дней после поставки",
       default_warranty_months: 12,
       catalog_price_visibility: "on_request",

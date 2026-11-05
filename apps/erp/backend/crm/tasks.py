@@ -512,6 +512,10 @@ def send_payment_reminders(self, grace_days: int = 3) -> dict:
 
     reminded = failed = 0
     for invoice in overdue_qs:
+        if not reminders_enabled(invoice):
+            # Напоминания включает компания-продавец в Настройках (по умолчанию выключено — DECISIONS 2026-11-04):
+            # счёт не отмечается, событие не публикуется — после включения напоминание уйдёт.
+            continue
         if invoice.balance_due <= 0:
             # Счёт закрыт деньгами, но статус не переключился — напоминать не о чем.
             continue
@@ -526,6 +530,16 @@ def send_payment_reminders(self, grace_days: int = 3) -> dict:
         # Не молча: задача завершается ошибкой (повтор по backoff подберёт необработанные — отмеченные счета не затрагиваются).
         raise RuntimeError(f"send_payment_reminders: не обработано счетов — {failed}, обработано — {reminded}")
     return {"reminded": reminded}
+
+
+def reminders_enabled(invoice) -> bool:
+    """Продавец счёта (нет — своя компания) включил «Напоминать клиентам о просроченных счетах» (NOTIFY-2)."""
+    from core.tenant import own_company
+
+    from .services.billing import _invoice_seller_company
+
+    seller = _invoice_seller_company(invoice) or own_company()
+    return bool(seller is not None and seller.settings.remind_overdue_invoices)
 
 
 def _remind_overdue_invoice(invoice) -> None:

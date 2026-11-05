@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/erp/partner.client_requested.v1.json",
+  "title": "Партнёр приглашён в кабинет, нужен клиент в CRM",
+  "description": "Тип uz.railtech.erp.partner.client_requested.v1, источник rt://erp. Поле data конверта (envelope.v1.json). Сотрудник пригласил партнёра (изготовителя, поставщика) в кабинет, а компания ещё не сопоставлена клиенту CRM (PART-CRM, решение владельца 2026-11-04: «партнёр = клиент + «Мои товары»»). CRM — источник правды по клиентам и контактам: находит клиента по ИНН (иностранную компанию — по паре «страна + регистрационный номер») или по erp_company_id, иначе создаёт; находит контакты по e-mail, иначе создаёт; ставит сопоставление и отвечает событием uz.railtech.crm.partner.client_resolved.v1. Публикуется в транзакции первого приглашения и повторно при каждом следующем, пока сопоставления нет (CRM дедуплицирует по id события и по erp_company_id). Кроме названия и реквизитов компании, а также имени, e-mail, телефона и языка контактов с e-mail, данных нет; секретов и ссылок входа нет.",
+  "type": "object",
+  "required": [
+    "erp_company_id",
+    "company",
+    "contacts",
+    "actor"
+  ],
+  "properties": {
+    "erp_company_id": {
+      "type": "integer",
+      "description": "Компания партнёра в ERP"
+    },
+    "company": {
+      "$ref": "#/$defs/PartnerCompany"
+    },
+    "contacts": {
+      "type": "array",
+      "description": "Активные контакты компании с адресом e-mail (по нему CRM ищет совпадение); приглашённый контакт — среди них",
+      "minItems": 1,
+      "maxItems": 50,
+      "items": {
+        "$ref": "#/$defs/PartnerContact"
+      }
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    },
+    "invited_by_crm_user_id": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "description": "Сотрудник, пригласивший партнёра, — его идентификатор в CRM, если у него есть сопоставление. Если он активный сотрудник CRM, он становится ответственным менеджером нового клиента; иначе ответственного назначает CRM по своим правилам"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "PartnerCompany": {
+      "type": "object",
+      "description": "Реквизиты компании партнёра. Резидент — inn; иностранная компания — registration_number и country (номера разных стран пересекаются, поэтому только парой)",
+      "required": [
+        "name",
+        "inn",
+        "registration_number",
+        "country",
+        "address",
+        "website",
+        "language"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "inn": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 32,
+          "description": "ИНН; null — компания иностранная или ИНН не указан"
+        },
+        "registration_number": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64,
+          "description": "Регистрационный номер в стране регистрации (нерезидент)"
+        },
+        "country": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[A-Z]{2}$",
+          "description": "Страна регистрации, ISO 3166-1 alpha-2"
+        },
+        "address": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 1000
+        },
+        "website": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255
+        },
+        "language": {
+          "type": "string",
+          "enum": [
+            "ru",
+            "uz",
+            "en"
+          ],
+          "description": "Язык документов компании в ERP"
+        }
+      },
+      "additionalProperties": false
+    },
+    "PartnerContact": {
+      "type": "object",
+      "required": [
+        "erp_contact_id",
+        "full_name",
+        "email",
+        "phone",
+        "language"
+      ],
+      "properties": {
+        "erp_contact_id": {
+          "type": "integer"
+        },
+        "full_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 255
+        },
+        "phone": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 50
+        },
+        "language": {
+          "type": "string",
+          "enum": [
+            "ru",
+            "uz",
+            "en"
+          ]
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

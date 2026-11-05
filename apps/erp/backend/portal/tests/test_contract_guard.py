@@ -44,6 +44,7 @@ def pks(items):
 #: `test_every_contract_get_is_covered`: новый эндпоинт нельзя добавить, не заведя для него фикстур.
 GET_CASES = {
     "/me": lambda w: ["/me"],
+    "/notifications": lambda w: ["/notifications", "/notifications?limit=2"],
     "/requests": lambda w: ["/requests"],
     "/requests/{id}": lambda w: [
         f"/requests/{pk}" for pk in pks([w["new_deal"], w["in_progress"], w["closed"], w["main"]])

@@ -289,6 +289,8 @@ ANY_ROLE_PATHS = {
 }
 #: NOTIFY-1: Telegram — личная настройка контакта (модуль `profile` есть у любой сессии).
 ANY_ROLE_PATHS |= {"/me/telegram", "/me/telegram/test", "/me/telegram-link"}
+#: Колокольчик (NOTIFY-2) — модуль `profile`, он есть у любой сессии: лента фильтруется по модулям, а не закрывается
+ANY_ROLE_PATHS |= {"/notifications", "/notifications/read"}
 
 #: Эндпоинты модуля «Каталог и заявки» (`catalog_requests`): заявки, каталог и загрузка вложений.
 CATALOG_REQUESTS_PATHS = {

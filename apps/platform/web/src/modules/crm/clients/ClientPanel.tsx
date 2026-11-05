@@ -2,6 +2,7 @@ import { Alert, Button, Select, Skeleton } from "antd";
 import type { TFunction } from "i18next";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router";
 
 import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
@@ -11,10 +12,13 @@ import type {
   ClientCard,
   ClientContactView,
   ClientInvitation,
+  ClientPartnerRequest,
   ClientRequestRow,
   InvitationResendInChannel,
 } from "../../../shared/api/generated/model";
 import {
+  useConfirmCrmPartnerRequest,
+  useDeclineCrmPartnerRequest,
   useGetCrmClient,
   useResendCrmClientInvitation,
   useRetryCrmRequest,
@@ -237,6 +241,107 @@ function Invitation({ card, canWrite }: { card: ClientCard; canWrite: boolean })
   );
 }
 
+/**
+ * Партнёр из кабинета ERP, похожий на этого клиента (PART-CRM): совпал ИНН или пара «страна + рег. номер», а клиент ничей.
+ * Привязывать сам нельзя: опечатка в ИНН отдала бы партнёру чужие заявки, КП и документы. Менеджер подтверждает («Это та же
+ * компания») или заводит нового клиента («Нет»). Правила дублей Salesforce и HubSpot: совпадение по ключу — предложение
+ * слияния человеку.
+ */
+function PartnerRequest({
+  clientId,
+  row,
+  canWrite,
+}: {
+  clientId: number;
+  row: ClientPartnerRequest;
+  canWrite: boolean;
+}) {
+  const { t } = useTranslation(["clients", "request"]);
+  const refresh = useRefreshCrm();
+  const navigate = useNavigate();
+  const confirm = useConfirmCrmPartnerRequest();
+  const decline = useDeclineCrmPartnerRequest();
+  const [failure, setFailure] = useState<string | null>(null);
+  const busy = confirm.isPending || decline.isPending;
+  const fail = (error: unknown) => {
+    setFailure(reasonError(t, "request:errors", error));
+  };
+  return (
+    <li className="pf-crm-entry">
+      <strong>{row.company_name}</strong>
+      <span className="pf-hint">
+        {t(`clients:card.partner.matchedBy.${row.matched_by}`)} · {t("clients:card.partner.erp")}
+        {String(row.erp_company_id)}
+      </span>
+      {row.contacts.length ? (
+        <ul className="pf-crm-plain">
+          {row.contacts.map((contact) => (
+            <li key={contact.email}>
+              {contact.full_name} · {contact.email}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {canWrite ? (
+        <div className="pf-fp-row">
+          <Button
+            type="primary"
+            loading={confirm.isPending}
+            disabled={busy}
+            onClick={() => {
+              setFailure(null);
+              confirm.mutate(
+                { id: clientId, requestId: row.id },
+                { onSuccess: refresh, onError: fail },
+              );
+            }}
+          >
+            {t("clients:card.partner.confirm")}
+          </Button>
+          <Button
+            loading={decline.isPending}
+            disabled={busy}
+            onClick={() => {
+              setFailure(null);
+              decline.mutate(
+                { id: clientId, requestId: row.id },
+                {
+                  onSuccess: (done) => {
+                    refresh();
+                    void navigate(`/crm/clients/${String(done.client_id)}?panel=open&tab=card`);
+                  },
+                  onError: fail,
+                },
+              );
+            }}
+          >
+            {t("clients:card.partner.decline")}
+          </Button>
+        </div>
+      ) : (
+        <span className="pf-hint">{t("clients:card.partner.readOnly")}</span>
+      )}
+      <ErrorNote message={failure} />
+    </li>
+  );
+}
+
+function PartnerRequests({ card, canWrite }: { card: ClientCard; canWrite: boolean }) {
+  const { t } = useTranslation("clients");
+  if (card.partner_requests.length === 0) return null;
+  return (
+    <section className="pf-fp-block" aria-labelledby={`pf-client-${String(card.id)}-partner-h`}>
+      <h4 id={`pf-client-${String(card.id)}-partner-h`}>{t("card.partner.title")}</h4>
+      <p className="pf-fp-sub">{t("card.partner.text")}</p>
+      <ul className="pf-crm-entries">
+        {card.partner_requests.map((row) => (
+          <PartnerRequest key={row.id} clientId={card.id} row={row} canWrite={canWrite} />
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function Partial({ card }: { card: ClientCard }) {
   const { t } = useTranslation("clients");
   const parts = (["contacts", "requests", "documents"] as const).filter(
@@ -268,6 +373,7 @@ function Body({ card, sheet, onClose }: { card: ClientCard; sheet: boolean; onCl
         </span>
       </div>
       <Partial card={card} />
+      <PartnerRequests card={card} canWrite={canWrite} />
       <DefinitionList
         items={[
           { label: t("clients:card.segment"), value: card.segment },

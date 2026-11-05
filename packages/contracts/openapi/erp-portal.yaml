@@ -84,6 +84,8 @@ tags:
     description: Раздел «Мои товары» партнёра — модуль `my_products` (ADR-0022, PART-2)
   - name: messages
     description: Чат кабинета с менеджером (ADR-0023) — лента компании, обновление опросом
+  - name: notifications
+    description: Колокольчик кабинета — лента уведомлений контакта (ADR-0023 п. 2, NOTIFY-2)
 
 paths:
   /auth/telegram:
@@ -465,6 +467,87 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /notifications:
+    get:
+      tags: [notifications]
+      operationId: listNotifications
+      summary: Лента уведомлений контакта (колокольчик)
+      description: |
+        Уведомления контакта сессии по убыванию `id` (новые сверху): без `before_id` — последние `limit`, с ним — более
+        ранние (кнопка «Показать ещё»). Строка ленты — на контакт: прочитанность у каждого контакта своя. В ленте только
+        уведомления, чей объект открыт модулям сессии (счёт — `invoices`, акт — `acts`, КП — `quotes`, поставка —
+        `deliveries`, ответ менеджера — `messages`, карточка партнёра — `my_products`); выключили модуль — его уведомления
+        пропадают из ленты и из `Me.notifications_unread`. Текст рендерит Cabinet на языке контакта по `text_key` и `params`.
+        Эндпоинт открыт любой сессии кабинета (модуль `profile`). Компания и контакт — только из сессии.
+      parameters:
+        - name: before_id
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        '200':
+          description: Страница ленты
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /notifications/read:
+    post:
+      tags: [notifications]
+      operationId: markNotificationsRead
+      summary: Отметить уведомления прочитанными
+      description: |
+        `ids` — отметить эти уведомления контакта сессии; `all: true` — «Прочитать все» (всё видимое модулям сессии).
+        Ровно одно из двух, иначе 422 `VALIDATION_ERROR`. Чужие и несуществующие `id` не отмечаются и не раскрываются:
+        ответ тот же, что без них. Повторная отметка ничего не меняет. Прочтение гасит отложенное письмо по уведомлению
+        (ответ менеджера в чате). `can_act` не нужен (чтение).
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationReadMark'
+      responses:
+        '200':
+          description: Отметка сохранена, число непрочитанных после неё
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationUnread'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
   /requests:
     get:
       tags: [requests]
@@ -2634,6 +2717,10 @@ components:
         auth_method:
           type: string
           enum: [telegram, magic_link]
+        notifications_unread:
+          type: integer
+          minimum: 0
+          description: Непрочитанные контактом уведомления колокольчика (только видимые модулям сессии); 0 — нет
         roles:
           type: array
           description: Роли компании сессии в кабинете. Клиент — по типу компании CLIENT, партнёр — по действующему отношению `partner`; роли складываются.
@@ -2648,7 +2735,7 @@ components:
           type: integer
           minimum: 0
           description: Непрочитанные контактом ответы менеджера в чате кабинета (бейдж «Сообщения»); 0 — нет или модуля нет
-      required: [contact, company, can_act, auth_method, roles, modules, unread]
+      required: [contact, company, can_act, auth_method, roles, modules, unread, notifications_unread]
       x-role-modules:
         client: [catalog_requests, quotes, documents, contracts, invoices, acts, deliveries, messages, company, team, profile]
         partner: [my_products, catalog_requests, messages, profile]
@@ -2701,6 +2788,129 @@ components:
         Раздел кабинета. `catalog_requests` — каталог и заявки (два пункта меню). Cabinet рисует только известные ему коды,
         незнакомый пропускает.
       enum: [catalog_requests, quotes, documents, contracts, invoices, acts, deliveries, company, team, profile, my_products, messages]
+
+    NotificationKind:
+      type: string
+      description: |
+        Вид уведомления (событие для контрагента): `quote_sent` — КП ждёт решения, `invoice_issued` — выставлен счёт,
+        `payment_overdue` — срок оплаты счёта прошёл, `act_issued` — акт ждёт приёмки, `delivery_status_changed` — статус
+        поставки, `delivery_eta_changed` — сдвиг срока поставки, `manager_replied` — ответ менеджера в чате кабинета,
+        `partner_card_returned` — карточка партнёра возвращена на доработку, `partner_card_published` — опубликована.
+        Незнакомый вид Cabinet показывает общим текстом.
+      enum:
+        - quote_sent
+        - invoice_issued
+        - payment_overdue
+        - act_issued
+        - delivery_status_changed
+        - delivery_eta_changed
+        - manager_replied
+        - partner_card_returned
+        - partner_card_published
+
+    NotificationGroup:
+      type: string
+      description: Группа событий — основа настройки «группа × канал» в профиле контакта (J3)
+      enum: [documents, money, deliveries, messages, partner_products]
+
+    NotificationObjectType:
+      type: string
+      enum: [quote, invoice, act, delivery, chat, partner_product]
+
+    NotificationAction:
+      type: string
+      description: Что произошло с объектом или чего ждут от контакта
+      enum: [awaiting_decision, issued, overdue, awaiting_acceptance, status_changed, eta_changed, replied, returned, published]
+
+    NotificationObject:
+      type: object
+      description: |
+        Объект уведомления — тип, id в ERP и номер для человека (`null` — номера нет, например у чата). У поставки `id` —
+        id сделки (поставка одна на сделку и открывается в кабинете внутри проекта; тот же id в `start_param=delivery_<id>`).
+      required: [type, id, number]
+      properties:
+        type:
+          $ref: '#/components/schemas/NotificationObjectType'
+        id:
+          type: integer
+          format: int64
+        number:
+          type: [string, 'null']
+      additionalProperties: false
+
+    PortalNotification:
+      type: object
+      required: [id, kind, group, object, action, text_key, params, link, created_at, read_at]
+      properties:
+        id:
+          type: integer
+          format: int64
+        kind:
+          $ref: '#/components/schemas/NotificationKind'
+        group:
+          $ref: '#/components/schemas/NotificationGroup'
+        object:
+          $ref: '#/components/schemas/NotificationObject'
+        action:
+          $ref: '#/components/schemas/NotificationAction'
+        text_key:
+          type: string
+          description: Ключ текста в словарях Cabinet (`notifications.text.<text_key>`); текст на языке контакта рендерит Cabinet
+        params:
+          type: object
+          description: Параметры текста (номер, сумма, дата, статус) — строки
+          additionalProperties:
+            type: string
+        link:
+          type: string
+          pattern: '^/'
+          description: Адрес объекта в кабинете (путь от корня Cabinet, например `/quotes/42`)
+        created_at:
+          type: string
+          format: date-time
+        read_at:
+          type: [string, 'null']
+          format: date-time
+          description: Когда контакт прочитал; `null` — не прочитано
+      additionalProperties: false
+
+    NotificationPage:
+      type: object
+      required: [items, has_more]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PortalNotification'
+        has_more:
+          type: boolean
+          description: Есть более ранние уведомления — следующая страница с `before_id` = `id` последнего элемента
+      additionalProperties: false
+
+    NotificationReadMark:
+      type: object
+      description: 'Ровно одно из двух — `ids` или `all: true`'
+      properties:
+        ids:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            type: integer
+            format: int64
+            minimum: 1
+        all:
+          type: boolean
+      additionalProperties: false
+
+    NotificationUnread:
+      type: object
+      required: [unread]
+      properties:
+        unread:
+          type: integer
+          minimum: 0
+      additionalProperties: false
 
     RequestStatus:
       type: string

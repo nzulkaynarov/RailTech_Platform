@@ -1,0 +1,11 @@
+{% load i18n %}{% if contact_name %}{% blocktranslate with name=contact_name %}Здравствуйте, {{ name }}!{% endblocktranslate %}{% else %}{% translate "Здравствуйте!" %}{% endif %}
+
+{% include "emails/_portal_notice_body.txt" %}
+
+{% translate "Открыть в личном кабинете:" %}
+{{ open_url }}
+
+—
+{% blocktranslate with company=company_name %}Вы получили это письмо как контакт компании «{{ company }}».{% endblocktranslate %}
+{% translate "Настроить уведомления:" %} {{ settings_url }}
+— {{ platform_name|default:'ERP' }}
