@@ -129,7 +129,7 @@ class CabinetChatService:
             found = await repo.anchor_lead(session, client.id)
             if found is not None:
                 return found
-        return await _new_lead(session, client, company_name)
+        return await new_lead(session, client, company_name)
 
     async def _escalate(
         self, session: AsyncSession, lead: Lead, event_id: str, now: datetime
@@ -169,7 +169,7 @@ def _adopt(lead: Lead, client: Client) -> None:
         lead.assigned_user_id = client.owner_user_id
 
 
-async def _new_lead(session: AsyncSession, client: Client | None, company_name: str) -> Lead:
+async def new_lead(session: AsyncSession, client: Client | None, company_name: str) -> Lead:
     name = (client.name if client is not None else company_name).strip()[:255]
     lead = Lead(
         display_name=name,
@@ -260,28 +260,3 @@ async def send_reply(
         )
         lead.last_human_msg_at = datetime.now(UTC)
         return message.id, True
-
-
-async def erase_for_lead(session: AsyncSession, lead: Lead) -> dict[str, Any] | None:
-    """Обезличивание лида (/delete): в кабинете стираются только сообщения этого человека (его
-    контакты клиента). Беседа кабинета живёт на клиенте: якорь переходит на другой лид клиента или
-    новый лид по правилу якоря. Возвращает `cabinet` для `lead.erased` (или None — стирать нечего).
-    Вызывать в транзакции обезличивания до `erase_lead` (иначе беседа ушла бы вместе с лидом)."""
-    conversations = await repo.cabinet_conversations_of(session, lead)
-    contacts = await repo.person_contacts(session, lead.id)
-    erp_contacts = await repo.erase_authors(session, [c.id for c in conversations], contacts)
-    for conversation in conversations:
-        if conversation.lead_id != lead.id:
-            continue
-        client = (
-            await session.get(Client, conversation.client_id) if conversation.client_id else None
-        )
-        anchor = await repo.anchor_lead(session, client.id, exclude=lead.id) if client else None
-        if anchor is None:
-            anchor = await _new_lead(session, client, lead.company_name or "")
-        conversation.lead_id = anchor.id
-    await session.flush()
-    companies = {c.erp_company_id for c in conversations if c.erp_company_id is not None}
-    if not erp_contacts or len(companies) != 1:
-        return None
-    return {"erp_company_id": companies.pop(), "scope": "authors", "erp_contact_ids": erp_contacts}

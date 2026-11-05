@@ -1636,6 +1636,8 @@ export interface components {
             items: components["schemas"]["PortalMessage"][];
             /** @description С `after_id` — после последнего сообщения страницы есть ещё; без него — есть более ранние */
             has_more: boolean;
+            /** @description С `after_id` — сообщения ленты не новее `after_id`, стёртые по запросу автора (CHAT-1b): опрос приносит только новые сообщения, по этому списку Cabinet заменяет уже показанные на «Удалённый пользователь» без перезагрузки. Без `after_id` — пусто (стёртые и так приходят с `erased: true`) */
+            erased_ids: number[];
         };
         PortalMessageReadMark: {
             /** Format: int64 */
