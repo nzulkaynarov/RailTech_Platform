@@ -29,6 +29,7 @@ from app.schemas.inbound_mail import (
     InboundMailAssist,
     InboundMailBulkArchiveIn,
     InboundMailBulkArchiveOut,
+    InboundMailCheckOut,
     InboundMailLeadOut,
     InboundMailOut,
     InboundMailPage,
@@ -87,6 +88,16 @@ async def list_inbound_mail(
     `type` — только письма этого типа (код справочника «Типы входящих писем»);
     `counts` — числа вкладок в рамках прав сотрудника."""
     return await container.inbound_mail.page(access, view, history, q, type)
+
+
+@router.post("/inbound-mail/poll", response_model=InboundMailCheckOut)
+async def poll_inbound_mail(_: Access, container: ContainerDep) -> InboundMailCheckOut:
+    """«Проверить почту»: опрос общего ящика сразу, тем же кодом и под той же блокировкой, что
+    плановый (раз в 2 минуты). Право — как на просмотр очереди. Не чаще раза в 20 секунд на
+    установку: раньше — 429 `rate_limited` (`Retry-After`, `details.retry_after_s`). Ждёт до 30
+    секунд; опрос уже идёт или дольше — `status = checking`, письма появятся в списке сами. Итог:
+    `ok` (`created`), `off` (приём не настроен), `error` (`error_kind` без деталей сервера)."""
+    return await container.inbound_mail_check.check()
 
 
 @router.get("/inbound-mail/{mail_id}", response_model=InboundMailOut)

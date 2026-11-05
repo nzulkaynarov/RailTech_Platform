@@ -52,7 +52,12 @@ def body(code: str, message: str, details: dict[str, Any] | None = None) -> dict
 
 async def domain_error_handler(_: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, e.DomainError)  # noqa: S101 — зарегистрирован только для DomainError
-    return JSONResponse(body(exc.code, exc.message, exc.details), status_code=status_for(exc))
+    headers = None
+    if isinstance(exc, e.RateLimitedError) and exc.retry_after_s is not None:
+        headers = {"Retry-After": str(exc.retry_after_s)}
+    return JSONResponse(
+        body(exc.code, exc.message, exc.details), status_code=status_for(exc), headers=headers
+    )
 
 
 def field_of(loc: tuple[int | str, ...] | list[int | str]) -> str | None:

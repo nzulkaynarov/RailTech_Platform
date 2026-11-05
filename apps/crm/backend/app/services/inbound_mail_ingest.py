@@ -19,13 +19,15 @@
 """
 
 import asyncio
+import math
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Literal, Protocol
 
 import structlog
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.inbound_folders import FolderSetting, is_history
@@ -59,6 +61,8 @@ from app.services.settings import SettingsService
 logger = structlog.get_logger(__name__)
 
 STORAGE_PREFIX = "mail/"
+#: Общая блокировка опроса: плановая задача и «Проверить почту» не читают ящик одновременно.
+POLL_LOCK = "inbound_mail_poll"
 
 
 class Storage(Protocol):
@@ -74,6 +78,18 @@ class PollOutcome:
     fetched: int = 0
     created: int = 0
     error_kind: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class PollBusy:
+    """Опрос уже идёт (плановый или по кнопке): второй не запускается."""
+
+
+@dataclass(frozen=True, slots=True)
+class PollTooSoon:
+    """Ящик опрашивали меньше `min_interval` назад: ждать `retry_after_s` секунд."""
+
+    retry_after_s: int
 
 
 class InboundMailIngest:
@@ -94,6 +110,28 @@ class InboundMailIngest:
         self._storage = storage
         self._bucket = bucket
         self._on_new = on_new
+
+    async def poll_exclusive(
+        self, min_interval: timedelta | None = None
+    ) -> PollOutcome | PollBusy | PollTooSoon:
+        """Опрос под блокировкой `POLL_LOCK` (advisory, на время транзакции — отпускается и при
+        сбое процесса). Занята — `PollBusy`, ящик не трогаем. `min_interval` (кнопка «Проверить
+        почту»): последний опрос — плановый или ручной — был позже, чем `min_interval` назад, —
+        `PollTooSoon`; проверка под той же блокировкой, поэтому два нажатия подряд не дают второго
+        чтения ящика."""
+        async with self._sessions() as session:
+            lock = func.pg_try_advisory_xact_lock(func.hashtext(POLL_LOCK))
+            got = await session.scalar(select(lock))
+            if not got:
+                return PollBusy()
+            if min_interval is not None:
+                state = await repo.last_mailbox(session)
+                last = state.last_poll_at if state is not None else None
+                if last is not None:
+                    wait = min_interval - (datetime.now(UTC) - last)
+                    if wait > timedelta(0):
+                        return PollTooSoon(max(math.ceil(wait.total_seconds()), 1))
+            return await self.poll()
 
     async def poll(self) -> PollOutcome:
         resolved = await resolve_imap(self._store, self._settings)

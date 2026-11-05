@@ -20,6 +20,7 @@ import { PageHeader } from "../../../shared/ui/PageHeader";
 import { TabsBar } from "../../../shared/ui/TabsBar";
 import { localName } from "../dictionaries";
 import { BulkBar } from "./BulkArchive";
+import { MailCheck } from "./MailCheck";
 import { MailRow } from "./MailRow";
 import { MailView } from "./MailView";
 import {
@@ -37,6 +38,7 @@ import "./mail.css";
 
 type Show = "all" | "history";
 const SEARCH_DELAY_MS = 300;
+const LIST_REFRESH_MS = 60_000;
 
 /** Задержка поиска: запрос уходит, когда человек перестал печатать. */
 function useDebounced(value: string): string {
@@ -80,7 +82,15 @@ function MailList({ own }: { own: boolean }) {
       ...(q ? { q } : {}),
       ...(typeCode ? { type: typeCode } : {}),
     },
-    { query: { placeholderData: keepPreviousData } },
+    {
+      query: {
+        placeholderData: keepPreviousData,
+        // Новые письма приходят от планового опроса (раз в 2 минуты) без подсказки по потоку: раз в минуту, пока
+        // вкладка видна (в фоне TanStack Query не опрашивает), и при возврате на вкладку.
+        refetchInterval: LIST_REFRESH_MS,
+        refetchOnWindowFocus: true,
+      },
+    },
   );
   const title = t("modules:eds.sections.mail");
   useDocumentTitle(title);
@@ -172,7 +182,18 @@ function MailList({ own }: { own: boolean }) {
   }
   return (
     <div className="pf-mail">
-      <PageHeader title={title} subtitle={t("letters:mail.subtitle")} />
+      <PageHeader
+        title={title}
+        subtitle={t("letters:mail.subtitle")}
+        extra={
+          !own && data ? (
+            <MailCheck
+              lastPollAt={data.mailbox.last_poll_at}
+              configured={data.mailbox.configured}
+            />
+          ) : undefined
+        }
+      />
       <Card styles={{ body: { padding: 0 } }}>
         <TabsBar
           id="pf-mail-tabs"

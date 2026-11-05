@@ -403,6 +403,8 @@ export * from "./inboundMailBulkArchiveIn";
 export * from "./inboundMailBulkArchiveResult";
 export * from "./inboundMailBulkArchiveResultSkippedItem";
 export * from "./inboundMailBulkArchiveResultSkippedItemReason";
+export * from "./inboundMailCheck";
+export * from "./inboundMailCheckStatus";
 export * from "./inboundMailConflictResponse";
 export * from "./inboundMailCounts";
 export * from "./inboundMailEvent";
