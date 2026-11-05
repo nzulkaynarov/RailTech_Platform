@@ -52,3 +52,10 @@ def _mask_celery_handlers(logger=None, **_kwargs):
 
 after_setup_logger.connect(_mask_celery_handlers, weak=False)
 after_setup_task_logger.connect(_mask_celery_handlers, weak=False)
+
+
+# NOTIFY-2 (ADR-0023 п. 2): письма уведомлений кабинета, чей срок наступил (отложенные и недошедшие), — раз в минуту.
+app.conf.beat_schedule = {
+    **(app.conf.beat_schedule or {}),
+    "portal.send_due_notice_emails": {"task": "portal.send_due_notice_emails", "schedule": 60.0},
+}

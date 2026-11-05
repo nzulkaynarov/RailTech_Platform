@@ -5,6 +5,7 @@ const TRANSFER_ERRORS = new Set([
   "erp_request_conflict",
   "handoff_no_consent",
   "erp_inn_conflict",
+  "erp_partner_verification",
   "enqueue_failed",
 ]);
 

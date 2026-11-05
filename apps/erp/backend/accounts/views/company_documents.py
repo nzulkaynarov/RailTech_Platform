@@ -200,14 +200,15 @@ class CompanyDocumentsMixin:
             "маржа, срок действия) and its document-numbering prefix. GET returns the settings "
             "(auto-created); PATCH updates them. delivery_basis / cost_currency are sent as "
             "master-data CODES (e.g. 'USD', 'FCA'). OWNER of THIS company (or platform admin) only. "
-            "`payment_terms_days` is the invoice payment term in days (0..32767, null = platform default)."
+            "`payment_terms_days` is the invoice payment term in days (0..32767, null = platform default). "
+            "`remind_overdue_invoices` turns on daily overdue-invoice reminders to client contacts (default off)."
         ),
         request=CompanySettingsUpdateSerializer,
         responses={
             200: CompanySettingsSerializer,
             400: OpenApiResponse(
                 description="BAD_CURRENCY / BAD_DELIVERY_BASIS / BAD_NUMBER / BAD_PRICE_VISIBILITY / "
-                "BAD_PUBLISH_THRESHOLD / BAD_FX_RATE_MAX_AGE_DAYS / DOC_PREFIX_TAKEN"
+                "BAD_PUBLISH_THRESHOLD / BAD_FX_RATE_MAX_AGE_DAYS / BAD_BOOLEAN / DOC_PREFIX_TAKEN"
             ),
             403: OpenApiResponse(description="NOT_COMPANY_OWNER: only the company OWNER may read/update the settings"),
         },

@@ -301,6 +301,7 @@ import type {
   OffsiteBackup,
   OffsiteBackupIn,
   OffsiteCheck,
+  PartnerRequestDecision,
   PasswordConfirm,
   PaymentBoard,
   PaymentCard,
@@ -42827,6 +42828,210 @@ export function useGetCrmClient<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export const getConfirmCrmPartnerRequestUrl = (id: number, requestId: number) => {
+  return `/api/v1/crm/clients/${id}/partner-requests/${requestId}/confirm`;
+};
+
+/**
+ * CRM `POST /clients/{id}/partner-requests/{request_id}/confirm` (PART-CRM). Раздел `crm.clients` полный. Совпадение по ИНН или паре «страна + рег. номер» не привязывает клиента само: менеджер подтверждает. Клиент сопоставляется компании ERP партнёра, контакты партнёра добавляются, ERP получает ответ, заявки партнёра уходят менеджеру. 404 — заявки нет или она уже решена; 409 — клиент или компания ERP уже сопоставлены.
+ * @summary «Это та же компания»: партнёр ERP, похожий на клиента, привязывается к найденному клиенту
+ */
+export const confirmCrmPartnerRequest = async (
+  id: number,
+  requestId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<PartnerRequestDecision> => {
+  return http<PartnerRequestDecision>(getConfirmCrmPartnerRequestUrl(id, requestId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getConfirmCrmPartnerRequestMutationKey = () => ["confirmCrmPartnerRequest"] as const;
+
+export const getConfirmCrmPartnerRequestMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | RequestConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof confirmCrmPartnerRequest>>,
+    TError,
+    ConfirmCrmPartnerRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof confirmCrmPartnerRequest>>,
+  TError,
+  ConfirmCrmPartnerRequestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getConfirmCrmPartnerRequestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof confirmCrmPartnerRequest>>,
+    ConfirmCrmPartnerRequestMutationVariables
+  > = (props) => {
+    const { id, requestId } = props ?? {};
+
+    return confirmCrmPartnerRequest(id, requestId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ConfirmCrmPartnerRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof confirmCrmPartnerRequest>>
+>;
+
+export type ConfirmCrmPartnerRequestMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | RequestConflictResponse
+  | BackendUnavailableResponse
+>;
+export type ConfirmCrmPartnerRequestMutationVariables = { id: number; requestId: number };
+
+/**
+ * @summary «Это та же компания»: партнёр ERP, похожий на клиента, привязывается к найденному клиенту
+ */
+export const useConfirmCrmPartnerRequest = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | RequestConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof confirmCrmPartnerRequest>>,
+      TError,
+      ConfirmCrmPartnerRequestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof confirmCrmPartnerRequest>>,
+  TError,
+  ConfirmCrmPartnerRequestMutationVariables,
+  TContext
+> => {
+  return useMutation(getConfirmCrmPartnerRequestMutationOptions(options), queryClient);
+};
+
+export const getDeclineCrmPartnerRequestUrl = (id: number, requestId: number) => {
+  return `/api/v1/crm/clients/${id}/partner-requests/${requestId}/decline`;
+};
+
+/**
+ * CRM `POST /clients/{id}/partner-requests/{request_id}/decline` (PART-CRM). Раздел `crm.clients` полный. Найденный клиент не меняется; новый клиент сопоставляется компании ERP партнёра. 404 — заявки нет или она уже решена.
+ * @summary «Нет — завести нового клиента»: для партнёра ERP создаётся новый клиент CRM
+ */
+export const declineCrmPartnerRequest = async (
+  id: number,
+  requestId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<PartnerRequestDecision> => {
+  return http<PartnerRequestDecision>(getDeclineCrmPartnerRequestUrl(id, requestId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getDeclineCrmPartnerRequestMutationKey = () => ["declineCrmPartnerRequest"] as const;
+
+export const getDeclineCrmPartnerRequestMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof declineCrmPartnerRequest>>,
+    TError,
+    DeclineCrmPartnerRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof declineCrmPartnerRequest>>,
+  TError,
+  DeclineCrmPartnerRequestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeclineCrmPartnerRequestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof declineCrmPartnerRequest>>,
+    DeclineCrmPartnerRequestMutationVariables
+  > = (props) => {
+    const { id, requestId } = props ?? {};
+
+    return declineCrmPartnerRequest(id, requestId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeclineCrmPartnerRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof declineCrmPartnerRequest>>
+>;
+
+export type DeclineCrmPartnerRequestMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+export type DeclineCrmPartnerRequestMutationVariables = { id: number; requestId: number };
+
+/**
+ * @summary «Нет — завести нового клиента»: для партнёра ERP создаётся новый клиент CRM
+ */
+export const useDeclineCrmPartnerRequest = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof declineCrmPartnerRequest>>,
+      TError,
+      DeclineCrmPartnerRequestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof declineCrmPartnerRequest>>,
+  TError,
+  DeclineCrmPartnerRequestMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeclineCrmPartnerRequestMutationOptions(options), queryClient);
+};
+
 export const getResendCrmClientInvitationUrl = (id: number) => {
   return `/api/v1/crm/clients/${id}/invitation`;
 };
@@ -46808,6 +47013,220 @@ export const useSuspendSupplierCabinetAccess = <
   TContext
 > => {
   return useMutation(getSuspendSupplierCabinetAccessMutationOptions(options), queryClient);
+};
+
+export const getConfirmSupplierCrmClientUrl = (id: CompanyItemRef) => {
+  return `/api/v1/erp/catalog/suppliers/${id}/cabinet-access/crm-client/confirm`;
+};
+
+/**
+ * ERP `POST catalog/supplier-access/{id}/crm-client/confirm/` — право `supply.manage`. Сопоставление, созданное передачей из CRM по совпадению ИНН, становится проверенным: компании открываются клиентские модули кабинета, отложенные заявки партнёра уходят менеджеру. Проверять нечего — 409 `NOTHING_TO_VERIFY`. Раздел `erp.stock` — полный.
+ * @summary Расчёт · Поставщик: найден клиент CRM по ИНН — «Да, это та же компания»
+ */
+export const confirmSupplierCrmClient = async (
+  id: CompanyItemRef,
+  options?: Parameters<typeof http>[1],
+): Promise<SupplierCabinetAccess> => {
+  return http<SupplierCabinetAccess>(getConfirmSupplierCrmClientUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getConfirmSupplierCrmClientMutationKey = () => ["confirmSupplierCrmClient"] as const;
+
+export const getConfirmSupplierCrmClientMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | RequestConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof confirmSupplierCrmClient>>,
+    TError,
+    ConfirmSupplierCrmClientMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof confirmSupplierCrmClient>>,
+  TError,
+  ConfirmSupplierCrmClientMutationVariables,
+  TContext
+> => {
+  const mutationKey = getConfirmSupplierCrmClientMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof confirmSupplierCrmClient>>,
+    ConfirmSupplierCrmClientMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return confirmSupplierCrmClient(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ConfirmSupplierCrmClientMutationResult = NonNullable<
+  Awaited<ReturnType<typeof confirmSupplierCrmClient>>
+>;
+
+export type ConfirmSupplierCrmClientMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | RequestConflictResponse
+  | BackendUnavailableResponse
+>;
+export type ConfirmSupplierCrmClientMutationVariables = { id: CompanyItemRef };
+
+/**
+ * @summary Расчёт · Поставщик: найден клиент CRM по ИНН — «Да, это та же компания»
+ */
+export const useConfirmSupplierCrmClient = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | RequestConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof confirmSupplierCrmClient>>,
+      TError,
+      ConfirmSupplierCrmClientMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof confirmSupplierCrmClient>>,
+  TError,
+  ConfirmSupplierCrmClientMutationVariables,
+  TContext
+> => {
+  return useMutation(getConfirmSupplierCrmClientMutationOptions(options), queryClient);
+};
+
+export const getRejectSupplierCrmClientUrl = (id: CompanyItemRef) => {
+  return `/api/v1/erp/catalog/suppliers/${id}/cabinet-access/crm-client/reject`;
+};
+
+/**
+ * ERP `POST catalog/supplier-access/{id}/crm-client/reject/` — право `supply.manage`. Сопоставление снимается, контакты, пришедшие с передачей клиента, уходят в архив, CRM снимает привязку у клиента, партнёр запрашивается в CRM заново. Проверять нечего — 409 `NOTHING_TO_VERIFY`. Раздел `erp.stock` — полный.
+ * @summary Расчёт · Поставщик: найден клиент CRM по ИНН — «Нет, другая компания»
+ */
+export const rejectSupplierCrmClient = async (
+  id: CompanyItemRef,
+  options?: Parameters<typeof http>[1],
+): Promise<SupplierCabinetAccess> => {
+  return http<SupplierCabinetAccess>(getRejectSupplierCrmClientUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getRejectSupplierCrmClientMutationKey = () => ["rejectSupplierCrmClient"] as const;
+
+export const getRejectSupplierCrmClientMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | RequestConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rejectSupplierCrmClient>>,
+    TError,
+    RejectSupplierCrmClientMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof rejectSupplierCrmClient>>,
+  TError,
+  RejectSupplierCrmClientMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRejectSupplierCrmClientMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof rejectSupplierCrmClient>>,
+    RejectSupplierCrmClientMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return rejectSupplierCrmClient(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RejectSupplierCrmClientMutationResult = NonNullable<
+  Awaited<ReturnType<typeof rejectSupplierCrmClient>>
+>;
+
+export type RejectSupplierCrmClientMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | RequestConflictResponse
+  | BackendUnavailableResponse
+>;
+export type RejectSupplierCrmClientMutationVariables = { id: CompanyItemRef };
+
+/**
+ * @summary Расчёт · Поставщик: найден клиент CRM по ИНН — «Нет, другая компания»
+ */
+export const useRejectSupplierCrmClient = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | RequestConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof rejectSupplierCrmClient>>,
+      TError,
+      RejectSupplierCrmClientMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof rejectSupplierCrmClient>>,
+  TError,
+  RejectSupplierCrmClientMutationVariables,
+  TContext
+> => {
+  return useMutation(getRejectSupplierCrmClientMutationOptions(options), queryClient);
 };
 
 export const getUpdateSupplierOfferUrl = (id: CompanyItemRef, offerId: CompanyItemRef) => {

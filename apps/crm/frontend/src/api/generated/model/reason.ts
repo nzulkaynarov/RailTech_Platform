@@ -68,6 +68,7 @@ export const Reason = {
   erp_rate_limited: "erp_rate_limited",
   client_not_in_erp: "client_not_in_erp",
   erp_inn_conflict: "erp_inn_conflict",
+  erp_partner_verification: "erp_partner_verification",
   erp_pairing_code_invalid: "erp_pairing_code_invalid",
   erp_pairing_code_expired: "erp_pairing_code_expired",
   erp_pairing_code_used: "erp_pairing_code_used",

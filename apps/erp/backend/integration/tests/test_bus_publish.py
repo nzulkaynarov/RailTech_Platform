@@ -2,7 +2,7 @@
 
 * золотой путь заявка → КП → договор → счёт → оплата → поставка на настоящих сервисах публикует цепочку событий, и каждое
   проходит схему контракта;
-* каждый из 25 типов `uz.railtech.erp.*.v1` рождается в своём сервисе (`test_every_event_type_is_published_by_its_service`);
+* каждый из 29 типов `uz.railtech.erp.*.v1` рождается в своём сервисе (`test_every_event_type_is_published_by_its_service`);
 * откат транзакции — нет события (в обе стороны: событие не переживает откат, откат не прячет событие другого действия);
 * ошибка публикации (в том числе `data` не по схеме) откатывает само изменение;
 * в ERP нет `except Exception` вокруг публикации, сигналов Django и вебхуков.
@@ -260,7 +260,12 @@ def test_every_event_type_is_published_by_its_service(deal, buyer, manager, mapp
     invoice, _ = crm_services.generate_invoice_from_contract(contract.id, actor=manager)
     invoice, _ = crm_services.issue_invoice(invoice, manager)
     Invoice.objects.filter(pk=invoice.pk).update(due_date=timezone.localdate() - datetime.timedelta(days=30))
-    assert send_payment_reminders(grace_days=3) == {"reminded": 1}
+    from unittest.mock import patch
+
+    import crm.tasks
+
+    with patch.object(crm.tasks, "reminders_enabled", return_value=True):  # напоминания включает продавец (NOTIFY-2)
+        assert send_payment_reminders(grace_days=3) == {"reminded": 1}
     assert len(bus_support.published("invoice.overdue")) == 1
     invoice.refresh_from_db()
     _, error = crm_services.record_payment(
@@ -322,7 +327,11 @@ def test_every_event_type_is_published_by_its_service(deal, buyer, manager, mapp
 
     published = bus_support.published()
     seen = {e["type"] for e in published}
-    expected = {events.event_type_name(short) for short in events.VALID_EVENT_TYPES}
+    # partner.client_requested (PART-CRM) — приглашение партнёра в кабинет, отдельный путь: test_partner_client.py
+    expected = {
+        events.event_type_name(short)
+        for short in events.VALID_EVENT_TYPES - {"partner.client_requested", "partner.client_rejected"}
+    }
     assert seen == expected, f"не опубликованы: {sorted(expected - seen)}; лишние: {sorted(seen - expected)}"
     for envelope in published:
         bus_support.assert_matches_contract(

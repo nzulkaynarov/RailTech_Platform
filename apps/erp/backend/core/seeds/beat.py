@@ -78,3 +78,36 @@ def seed_beat_tasks(apps=None, schema_editor=None):
             "description": "Warn managers about fulfillments past expected_delivery_date",
         },
     )
+
+    # 5. Напоминания клиентам о просроченных счетах: 10:00 по Ташкенту (NOTIFY-2, DECISIONS 2026-11-04). Сама отправка — под
+    # настройкой компании-продавца «Напоминать клиентам о просроченных счетах» (по умолчанию выключено).
+    seed_payment_reminders_task(apps)
+
+
+#: Имя задачи Beat напоминаний о просрочке — его же создаёт миграция `parties/0012` в существующих базах.
+PAYMENT_REMINDERS_TASK = "crm.send_payment_reminders (daily 10:00 Tashkent)"
+
+
+def seed_payment_reminders_task(apps) -> None:
+    try:
+        CrontabSchedule = apps.get_model("django_celery_beat", "CrontabSchedule")
+        PeriodicTask = apps.get_model("django_celery_beat", "PeriodicTask")
+    except LookupError:
+        return
+    schedule, _ = CrontabSchedule.objects.get_or_create(
+        minute="0",
+        hour="10",
+        day_of_week="*",
+        day_of_month="*",
+        month_of_year="*",
+        timezone="Asia/Tashkent",
+    )
+    PeriodicTask.objects.update_or_create(
+        name=PAYMENT_REMINDERS_TASK,
+        defaults={
+            "crontab": schedule,
+            "task": "crm.send_payment_reminders",
+            "enabled": True,
+            "description": "Одно напоминание по каждому просроченному счёту контактам клиента (если включено в настройках компании)",
+        },
+    )

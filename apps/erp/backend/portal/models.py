@@ -9,6 +9,8 @@ from django.utils.translation import gettext_lazy as _
 
 from core.storage import get_private_storage
 
+from .models_notices import NoticeChannel, NoticeEmailState, PortalNotice  # noqa: F401 — лента колокольчика (NOTIFY-2)
+
 
 class PortalSession(models.Model):
     """Изолированная сессия клиента в портале (Cabinet → ERP).

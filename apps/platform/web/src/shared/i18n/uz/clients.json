@@ -34,6 +34,18 @@
   },
   "retry": "Qayta urinish",
   "card": {
+    "partner": {
+      "title": "Kabinetdagi hamkor tasdiqlashni kutmoqda",
+      "text": "Ishlab chiqaruvchi yoki yetkazib beruvchi kabinetga taklif qilindi va uning rekvizitlari shu mijozga mos keldi. Biz ularni o'zimiz birlashtirmaymiz: agar bu bir kompaniya bo'lsa, tasdiqlang — hamkor so'rovlari shu mijoz kartochkasiga keladi; aks holda hamkor uchun yangi mijoz yaratamiz.",
+      "erp": "ERP kompaniyasi №",
+      "matchedBy": {
+        "inn": "STIR mos keldi",
+        "registration_number": "davlat va ro'yxatdan o'tish raqami mos keldi"
+      },
+      "confirm": "Bu bir xil kompaniya",
+      "decline": "Yo'q — yangi mijoz yaratish",
+      "readOnly": "Qaror qilish mijozlarni yurituvchi xodimning vazifasi."
+    },
     "label": "Mijoz kartasi",
     "close": "Yopish",
     "inn": "STIR",
@@ -112,6 +124,7 @@
     "erp_request_conflict": "yuborilgandan keyin ariza ma’lumotlari o‘zgardi — arizani qayta yarating",
     "handoff_no_consent": "mijozning ma’lumotlarga roziligi yo‘q",
     "erp_inn_conflict": "bu STIR boshqa mijozga tegishli",
+    "erp_partner_verification": "bu STIRdagi kompaniya kabinet hamkori: topshirish ushlab turildi. Orqa ofis xodimi STIRni tekshirib hamkorni qayta taklif qiladi, so'ng shu kartochkada bog'lanishni tasdiqlang — topshirish o'zi takrorlanadi",
     "enqueue_failed": "navbatga qo‘yib bo‘lmadi",
     "other": "sababi aniqlanmadi"
   }

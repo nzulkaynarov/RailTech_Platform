@@ -199,6 +199,28 @@ class ClientSources(BaseModel):
     documents: SourceState
 
 
+class ClientPartnerContact(BaseModel):
+    full_name: str
+    email: str
+
+
+class ClientPartnerRequest(BaseModel):
+    """Партнёр из ERP, похожий на клиента: ждёт решения менеджера (PART-CRM)."""
+
+    id: int
+    erp_company_id: int
+    company_name: str
+    matched_by: Literal["inn", "registration_number"]
+    contacts: list[ClientPartnerContact]
+    created_at: datetime
+
+
+class PartnerRequestDecision(BaseModel):
+    """Итог решения: клиент партнёра (подтверждён найденный или заведён новый)."""
+
+    client_id: int
+
+
 class ClientCard(BaseModel):
     id: int
     name: str
@@ -211,6 +233,7 @@ class ClientCard(BaseModel):
     requests: list[ClientRequestRow]
     documents: list[ClientDocumentRow]
     invitation: ClientInvitation | None
+    partner_requests: list[ClientPartnerRequest]
     sources: ClientSources
 
 

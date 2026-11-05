@@ -28,7 +28,13 @@ from app.crm_clients_view import (
 from app.crm_leads_view import invitation_of
 from app.deps import Authed, require
 from app.errors import PlatformError
-from app.schemas_crm_leads import ClientCard, ClientInvitation, ClientList, InvitationResendIn
+from app.schemas_crm_leads import (
+    ClientCard,
+    ClientInvitation,
+    ClientList,
+    InvitationResendIn,
+    PartnerRequestDecision,
+)
 
 router = APIRouter(tags=["clients"])
 
@@ -66,6 +72,42 @@ async def get_client(id: ClientId, authed: Reader) -> ClientCard:
         _part(proxy, TypeAdapter(list[CrmDocument]), f"{API}/documents", client_id=id),
     )
     return client_card(detail, contacts, deals, documents)
+
+
+RequestId = Annotated[int, Path(ge=1)]
+
+
+@router.post(
+    "/crm/clients/{id}/partner-requests/{request_id}/confirm",
+    response_model=PartnerRequestDecision,
+    operation_id="confirmCrmPartnerRequest",
+)
+async def confirm_partner_request(
+    id: ClientId, request_id: RequestId, authed: Writer
+) -> PartnerRequestDecision:
+    """«Это та же компания» (PART-CRM): найденный клиент сопоставляется компании ERP партнёра."""
+    await CrmProxy(authed.call).get_model(
+        crm.ActionResult, "POST", f"{API}/clients/{id}/partner-requests/{request_id}/confirm"
+    )
+    return PartnerRequestDecision(client_id=id)
+
+
+@router.post(
+    "/crm/clients/{id}/partner-requests/{request_id}/decline",
+    response_model=PartnerRequestDecision,
+    operation_id="declineCrmPartnerRequest",
+)
+async def decline_partner_request(
+    id: ClientId, request_id: RequestId, authed: Writer
+) -> PartnerRequestDecision:
+    """«Нет — завести нового клиента» (PART-CRM): для партнёра создаётся новый клиент CRM."""
+    created = await CrmProxy(authed.call).get_model(
+        crm.Created,
+        "POST",
+        f"{API}/clients/{id}/partner-requests/{request_id}/decline",
+        expected=201,
+    )
+    return PartnerRequestDecision(client_id=created.id)
 
 
 @router.post(

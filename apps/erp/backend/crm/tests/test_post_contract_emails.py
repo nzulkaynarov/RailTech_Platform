@@ -88,6 +88,10 @@ def world(lookups):
     buyer_user = _member(buyer_co, "buyer@g3.test")
     seller_co = _company("Seller G3", "S100", "SUPPLIER")
     seller_user = _member(seller_co, "seller@g3.test", can_sell=True)
+    # Напоминания о просрочке включает компания-продавец (по умолчанию выключено — DECISIONS 2026-11-04)
+    seller_settings = seller_co.settings
+    seller_settings.remind_overdue_invoices = True
+    seller_settings.save(update_fields=["remind_overdue_invoices"])
 
     deal = Deal.objects.create(title="G3 deal", company=buyer_co, stage=DealStage.objects.get(code="CLOSED_WON"))
     quote = Quote.objects.create(
@@ -318,3 +322,160 @@ def test_no_email_escapes_a_rolled_back_transaction(world):
         issue_invoice(invoice, world["seller_user"])
 
     assert _sent(mail) == []
+
+
+# ── 7. Контактам компании-клиента (NOTIFY-2, ADR-0023 п. 2) ─────────────────────────────────────────────────
+#
+# Прежде письма о счёте, акте и просрочке адресовались только `buyer_team_user_ids` — пользователям ERP компании-покупателя.
+# У клиентов кабинета пользователей ERP нет (FIX-13), поэтому контакты клиента этих писем не получали никогда. Теперь
+# маршрутизатор уведомлений шлёт письмо `portal_notice` каждому действующему контакту без Telegram (с Telegram — пишет бот
+# CRM), а пользователям покупателя — как прежде.
+
+
+@pytest.fixture
+def contacts(world):
+    from django.utils import timezone as tz
+    from parties.models import Contact
+
+    # Приглашённые в кабинет: письмо-уведомление получают контакт документа и приглашённые (решение лида по #402)
+    plain = Contact.objects.create(
+        company=world["buyer_co"],
+        name="Plain Contact",
+        email="plain@buyer-g3.example",
+        can_act=True,
+        language="en",
+        invited_at=tz.now(),
+    )
+    telegram = Contact.objects.create(
+        company=world["buyer_co"],
+        name="Telegram Contact",
+        email="tg@buyer-g3.example",
+        telegram_user_id=4242,
+        can_act=True,
+        invited_at=tz.now(),
+    )
+    # Не приглашён и не контакт документа: только колокольчик, первым письмом ему придёт приглашение
+    Contact.objects.create(company=world["buyer_co"], name="Stranger", email="stranger@buyer-g3.example")
+    # Компания сопоставлена клиенту CRM: события доходят до бота, контакт с Telegram получает сообщение бота
+    from integration.models import CrmClientMapping
+
+    CrmClientMapping.objects.create(crm_client_id=99001, company=world["buyer_co"])
+    return {"plain": plain, "telegram": telegram}
+
+
+def _contact_mail(mock) -> list:
+    """Адресаты писем уведомлений кабинета, поставленных в очередь (id строки ленты → адрес контакта)."""
+    from portal.models import PortalNotice
+
+    ids = [call.args[0] for call in mock.delay.call_args_list]
+    return sorted(PortalNotice.objects.get(pk=pk).contact.email for pk in ids)
+
+
+def test_issuing_an_invoice_emails_contacts_without_telegram(world, contacts, django_capture_on_commit_callbacks):
+    from crm.services.invoice_lifecycle import issue_invoice
+
+    invoice = _invoice(world, "DRAFT")
+    with (
+        patch("notifications.tasks.send_transactional_email") as users_mail,
+        patch("portal.tasks.send_notice_email") as contact_mail,
+    ):
+        with django_capture_on_commit_callbacks(execute=True):
+            issue_invoice(invoice, world["seller_user"])
+
+    assert _sent(users_mail)[0][1] == [world["buyer_user"].email], "пользователям покупателя — как прежде"
+    assert _contact_mail(contact_mail) == ["plain@buyer-g3.example"], "контакту без Telegram — письмо, с Telegram — бот"
+
+
+def test_issuing_an_act_emails_contacts_without_telegram(world, contacts, django_capture_on_commit_callbacks):
+    from crm.services.billing import generate_act
+
+    invoice = _invoice(world, "PAID", paid=Decimal("112"))
+    with patch("notifications.tasks.send_transactional_email"), patch("portal.tasks.send_notice_email") as contact_mail:
+        with django_capture_on_commit_callbacks(execute=True):
+            act, error = generate_act(invoice.id, actor=world["seller_user"])
+
+    assert error is None, error
+    assert _contact_mail(contact_mail) == ["plain@buyer-g3.example"]
+
+
+def test_payment_reminder_reaches_every_contact(world, contacts, django_capture_on_commit_callbacks):
+    """Бот о просрочке не пишет — письмо получает и контакт с Telegram (уведомление не теряется)."""
+    from crm.tasks import send_payment_reminders
+
+    _invoice(world, "ISSUED", due_date=timezone.localdate() - timedelta(days=10))
+    with patch("notifications.tasks.send_transactional_email"), patch("portal.tasks.send_notice_email") as contact_mail:
+        with django_capture_on_commit_callbacks(execute=True):
+            send_payment_reminders()
+
+    assert _contact_mail(contact_mail) == ["plain@buyer-g3.example", "tg@buyer-g3.example"]
+
+
+def test_contact_with_the_buyer_user_address_gets_one_invoice_email(
+    world, contacts, django_capture_on_commit_callbacks
+):
+    """Пользователю ERP покупателя письмо о счёте шлёт `deal_emails`; контакт с тем же адресом второго не получает."""
+    from parties.models import Contact
+    from portal.models import NoticeChannel, PortalNotice
+
+    from crm.services.invoice_lifecycle import issue_invoice
+
+    same = Contact.objects.create(
+        company=world["buyer_co"],
+        name="Same Person",
+        email=world["buyer_user"].email.upper(),
+        invited_at=timezone.now(),
+    )
+    invoice = _invoice(world, "DRAFT")
+    with (
+        patch("notifications.tasks.send_transactional_email") as users_mail,
+        patch("portal.tasks.send_notice_email") as contact_mail,
+    ):
+        with django_capture_on_commit_callbacks(execute=True):
+            issue_invoice(invoice, world["seller_user"])
+
+    assert _sent(users_mail)[0][1] == [world["buyer_user"].email]
+    assert PortalNotice.objects.get(contact=same, kind="invoice_issued").channel == NoticeChannel.SOURCE
+    assert world["buyer_user"].email not in _contact_mail(contact_mail)
+    assert same.email not in _contact_mail(contact_mail)
+
+
+def test_reminders_are_off_by_default(world, contacts, django_capture_on_commit_callbacks):
+    """Выключено в настройках продавца — ни письма пользователям, ни уведомления контактам, счёт не отмечен (Stripe,
+    QuickBooks: напоминания включает продавец)."""
+    from portal.models import PortalNotice
+
+    from crm.tasks import send_payment_reminders
+
+    settings_row = world["seller_co"].settings
+    settings_row.remind_overdue_invoices = False
+    settings_row.save(update_fields=["remind_overdue_invoices"])
+    invoice = _invoice(world, "ISSUED", due_date=timezone.localdate() - timedelta(days=10))
+    with (
+        patch("notifications.tasks.send_transactional_email") as users_mail,
+        patch("portal.tasks.send_notice_email") as contact_mail,
+    ):
+        with django_capture_on_commit_callbacks(execute=True):
+            assert send_payment_reminders()["reminded"] == 0
+
+    assert _sent(users_mail) == [] and _contact_mail(contact_mail) == []
+    assert not PortalNotice.objects.filter(kind="payment_overdue").exists()
+    invoice.refresh_from_db()
+    assert invoice.payment_reminder_sent_at is None, "после включения напоминание уйдёт"
+
+
+def test_reminders_schedule_is_daily_at_ten_tashkent(db):
+    from django_celery_beat.models import PeriodicTask
+
+    task = PeriodicTask.objects.get(task="crm.send_payment_reminders")
+    assert task.enabled
+    assert (task.crontab.hour, task.crontab.minute, str(task.crontab.timezone)) == ("10", "0", "Asia/Tashkent")
+
+
+def test_reminder_switch_in_company_settings(world):
+    from accounts.services.company_settings import update_company_settings
+
+    owner = CustomUser.objects.create_superuser(email="root@g3.test", username="root@g3.test", password="x")
+    row, error = update_company_settings(owner, world["seller_co"], {"remind_overdue_invoices": False})
+    assert error is None and row.remind_overdue_invoices is False
+    _row, error = update_company_settings(owner, world["seller_co"], {"remind_overdue_invoices": "yes"})
+    assert error == "BAD_BOOLEAN"

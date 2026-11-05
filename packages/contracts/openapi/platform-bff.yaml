@@ -10967,6 +10967,66 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /crm/clients/{id}/partner-requests/{request_id}/confirm:
+    post:
+      tags: [clients]
+      operationId: confirmCrmPartnerRequest
+      summary: '«Это та же компания»: партнёр ERP, похожий на клиента, привязывается к найденному клиенту'
+      description: >-
+        CRM `POST /clients/{id}/partner-requests/{request_id}/confirm` (PART-CRM). Раздел `crm.clients` полный. Совпадение по
+        ИНН или паре «страна + рег. номер» не привязывает клиента само: менеджер подтверждает. Клиент сопоставляется компании
+        ERP партнёра, контакты партнёра добавляются, ERP получает ответ, заявки партнёра уходят менеджеру. 404 — заявки нет или
+        она уже решена; 409 — клиент или компания ERP уже сопоставлены.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/ClientIdPath'
+        - $ref: '#/components/parameters/PartnerRequestIdPath'
+      responses:
+        '200':
+          description: Клиент партнёра
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerRequestDecision'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RequestConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /crm/clients/{id}/partner-requests/{request_id}/decline:
+    post:
+      tags: [clients]
+      operationId: declineCrmPartnerRequest
+      summary: '«Нет — завести нового клиента»: для партнёра ERP создаётся новый клиент CRM'
+      description: >-
+        CRM `POST /clients/{id}/partner-requests/{request_id}/decline` (PART-CRM). Раздел `crm.clients` полный. Найденный клиент
+        не меняется; новый клиент сопоставляется компании ERP партнёра. 404 — заявки нет или она уже решена.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/ClientIdPath'
+        - $ref: '#/components/parameters/PartnerRequestIdPath'
+      responses:
+        '200':
+          description: Новый клиент партнёра
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerRequestDecision'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
   /crm/clients/{id}/invitation:
     post:
       tags: [clients]
@@ -11922,6 +11982,60 @@ paths:
           $ref: '#/components/responses/ValidationFailed'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/suppliers/{id}/cabinet-access/crm-client/confirm:
+    post:
+      tags: [erp-catalog]
+      operationId: confirmSupplierCrmClient
+      summary: 'Расчёт · Поставщик: найден клиент CRM по ИНН — «Да, это та же компания»'
+      description: >-
+        ERP `POST catalog/supplier-access/{id}/crm-client/confirm/` — право `supply.manage`. Сопоставление, созданное передачей из CRM по совпадению ИНН, становится проверенным: компании открываются клиентские модули кабинета, отложенные заявки партнёра уходят менеджеру. Проверять нечего — 409 `NOTHING_TO_VERIFY`. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, description: Id поставщика, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierCabinetAccess'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RequestConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/suppliers/{id}/cabinet-access/crm-client/reject:
+    post:
+      tags: [erp-catalog]
+      operationId: rejectSupplierCrmClient
+      summary: 'Расчёт · Поставщик: найден клиент CRM по ИНН — «Нет, другая компания»'
+      description: >-
+        ERP `POST catalog/supplier-access/{id}/crm-client/reject/` — право `supply.manage`. Сопоставление снимается, контакты, пришедшие с передачей клиента, уходят в архив, CRM снимает привязку у клиента, партнёр запрашивается в CRM заново. Проверять нечего — 409 `NOTHING_TO_VERIFY`. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, description: Id поставщика, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierCabinetAccess'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RequestConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /erp/catalog/suppliers/{id}/offers/{offer_id}:
     patch:
       tags: [erp-catalog]
@@ -12727,6 +12841,14 @@ components:
       in: path
       required: true
       description: Клиент CRM (id)
+      schema:
+        type: integer
+        minimum: 1
+    PartnerRequestIdPath:
+      name: request_id
+      in: path
+      required: true
+      description: Заявка партнёра ERP на подтверждение (id)
       schema:
         type: integer
         minimum: 1
@@ -18093,6 +18215,7 @@ components:
         - default_vat_rate
         - default_offer_validity_days
         - payment_terms_days
+        - remind_overdue_invoices
         - default_payment_terms
         - default_warranty_months
         - catalog_price_visibility
@@ -18137,6 +18260,11 @@ components:
             - 'null'
           minimum: 0
           description: Отсрочка платежа, дней
+        remind_overdue_invoices:
+          type: boolean
+          description: >-
+            Напоминать клиентам о просроченных счетах — раз в сутки в 10:00 по Ташкенту, одно напоминание на счёт контактам
+            клиента (колокольчик кабинета и письмо); по умолчанию выключено (NOTIFY-2, DECISIONS 2026-11-04)
         default_payment_terms:
           type: string
           description: Условия оплаты текстом
@@ -18206,6 +18334,11 @@ components:
             - 'null'
           minimum: 0
           description: Отсрочка платежа, дней
+        remind_overdue_invoices:
+          type: boolean
+          description: >-
+            Напоминать клиентам о просроченных счетах — раз в сутки в 10:00 по Ташкенту, одно напоминание на счёт контактам
+            клиента (колокольчик кабинета и письмо); по умолчанию выключено (NOTIFY-2, DECISIONS 2026-11-04)
         default_payment_terms:
           type: string
           description: Условия оплаты текстом
@@ -22935,7 +23068,7 @@ components:
     ClientCard:
       type: object
       additionalProperties: false
-      required: [id, name, inn, segment, in_erp, handoff, contacts, leads, requests, documents, invitation, sources]
+      required: [id, name, inn, segment, in_erp, handoff, contacts, leads, requests, documents, invitation, partner_requests, sources]
       properties:
         id: {type: integer}
         name: {type: string}
@@ -22957,6 +23090,12 @@ components:
           oneOf:
             - $ref: '#/components/schemas/ClientInvitation'
             - type: 'null'
+        partner_requests:
+          type: array
+          items: {$ref: '#/components/schemas/ClientPartnerRequest'}
+          description: >-
+            Партнёры из ERP, похожие на этого клиента по ИНН или паре «страна + рег. номер» и ждущие решения менеджера (PART-CRM);
+            пусто — решать нечего
         sources:
           type: object
           additionalProperties: false
@@ -22967,6 +23106,34 @@ components:
             requests: {$ref: '#/components/schemas/SourceState'}
             documents: {$ref: '#/components/schemas/SourceState'}
 
+    ClientPartnerRequest:
+      type: object
+      additionalProperties: false
+      required: [id, erp_company_id, company_name, matched_by, contacts, created_at]
+      description: >-
+        Партнёр из ERP (PART-CRM), приглашённый в кабинет: по ключу совпал с этим клиентом, но клиент ничей — привязка только
+        с подтверждения менеджера
+      properties:
+        id: {type: integer}
+        erp_company_id: {type: integer, description: Компания партнёра в ERP}
+        company_name: {type: string}
+        matched_by: {type: string, enum: [inn, registration_number], description: По чему найден клиент}
+        contacts:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [full_name, email]
+            properties:
+              full_name: {type: string}
+              email: {type: string}
+        created_at: {type: string, format: date-time}
+    PartnerRequestDecision:
+      type: object
+      additionalProperties: false
+      required: [client_id]
+      properties:
+        client_id: {type: integer, description: Клиент партнёра в CRM — подтверждённый найденный или новый}
     InvitationResendIn:
       type: object
       additionalProperties: false
@@ -23489,10 +23656,11 @@ components:
     SupplierCabinetAccess:
       type: object
       additionalProperties: false
-      required: [company_id, company_name, relationship, contacts, partner_modules, cabinet_roles, cabinet_modules, can_manage]
+      required: [company_id, company_name, relationship, contacts, partner_modules, cabinet_roles, cabinet_modules, crm_client, can_manage]
       properties:
         company_id: {$ref: '#/components/schemas/CompanyItemRef'}
         company_name: {type: string}
+        crm_client: {$ref: '#/components/schemas/SupplierCabinetCrmClient'}
         relationship:
           oneOf: [{$ref: '#/components/schemas/SupplierCabinetRelationship'}, {type: 'null'}]
           description: '`null` — кабинет поставщику ещё не открывали'
@@ -23507,6 +23675,31 @@ components:
           items: {type: string}
           description: Разделы, которые откроются сессии компании
         can_manage: {type: boolean, description: 'У сотрудника есть `supply.manage` в ERP: контакты, приглашение, права, приостановка'}
+    SupplierCabinetCrmClient:
+      type: object
+      additionalProperties: false
+      required: [status, crm_client_id]
+      description: >-
+        Клиент партнёра в CRM (PART-CRM): при приглашении партнёр становится клиентом CRM (CRM — источник правды по клиентам),
+        заявки партнёра идут менеджеру как заявки клиента. Платформа показывает состояние и ссылку на клиента CRM.
+      properties:
+        status:
+          type: string
+          enum: [none, requested, pending_confirmation, held, unverified, linked, conflict]
+          description: >-
+            `none` — партнёра ещё не приглашали; `requested` — ждём ответ CRM; `pending_confirmation` — CRM нашла похожего
+            клиента без сопоставления и ждёт решения менеджера CRM («Это та же компания» или «Нет — завести нового»), ничего не
+            привязано, заявки партнёра отложены; `held` — передача клиента из CRM нашла компанию партнёра по ИНН: сопоставление не
+            создано, заявки удержаны, сотрудник сверяет ИНН и жмёт «Пригласить ещё раз»; `unverified` — сопоставление создала
+            передача по совпадению ИНН до приглашения партнёра, оно не проверено: «Найден клиент CRM «X», ИНН …. Это та же
+            компания?» — «Да» (проверено, заявки уходят, открывается кабинет клиента) или «Нет» (сопоставление снято, CRM
+            получает отказ и обычный запрос); `linked` — клиент заведён (новый, найденный по сопоставлению или подтверждённый)
+            и сопоставлен; `conflict` — найденный клиент CRM уже сопоставлен другой компании ERP, ничего не изменено
+        crm_client_name: {type: [string, 'null'], description: '`unverified`: как клиент назван в передаче из CRM'}
+        inn: {type: [string, 'null'], description: '`unverified`: ИНН, по которому компания связана с клиентом'}
+        crm_client_id:
+          oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}]
+          description: 'Клиент CRM (`pending_confirmation`, `held`, `linked`, `conflict`): ссылка «открыть клиента» ведёт на его карточку'
     SupplierCabinetContactCreate:
       type: object
       additionalProperties: false

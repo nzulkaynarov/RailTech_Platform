@@ -50,7 +50,7 @@ from app.models.deals import Deal
 from app.models.leads import Lead, TelegramIdentity
 from app.security import audit
 from app.services import deals as deals_service
-from app.services import portal_invites
+from app.services import partner_clients, portal_invites
 
 logger = structlog.get_logger(__name__)
 
@@ -133,6 +133,8 @@ class ErpHandoffService:
         self, client_id: int, lead_id: int, create_request: bool, result: HandoffResult
     ) -> None:
         async with self._sessions() as session, session.begin():
+            # Общий порядок блокировок (`partner_clients.lock_company`): компания ERP, затем строки.
+            await partner_clients.lock_company(session, result.erp_company_id)
             client = await session.get(Client, client_id, with_for_update=True)
             lead = await session.get(Lead, lead_id)
             if client is None:
@@ -148,6 +150,8 @@ class ErpHandoffService:
                 await bus_events.client_updated(
                     session, client, audit.Actor.system(), ["erp_company_id"]
                 )
+                # Компания получила клиента этим путём: ждущие заявки партнёра по ней закрываются.
+                await partner_clients.close_pending(session, result.erp_company_id, client_id)
             erp_deal_id = None
             if create_request and result.erp_request_id and lead is not None:
                 await _mirror_request(session, client, lead, result.erp_request_id)
