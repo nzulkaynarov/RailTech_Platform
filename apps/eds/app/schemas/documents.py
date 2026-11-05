@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from app.schemas.approvals import Decision
 from app.schemas.common import FileRef, JournalEntry, LetterSender, Money, PersonRef, Strict
-from app.schemas.letters import FileIds, Subject
+from app.schemas.letters import FileIds, ReplyToLetter, Subject
 
 DocText = Annotated[str, Field(min_length=1, max_length=20000)]
 # Почта адресата письма: один адрес без пробелов (формат `email` контракта; доставку проверяет почтовый сервис CRM).
@@ -207,6 +207,7 @@ class Document(BaseModel):
     deal_number: str | None
     recipient: LetterSender | None
     in_reply_to: uuid.UUID | None
+    reply_to: ReplyToLetter | None = None
     letter: OutgoingLetter | None
     approval_id: uuid.UUID | None
     payment: DocumentPayment | None

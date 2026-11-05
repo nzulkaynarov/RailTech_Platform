@@ -34,7 +34,7 @@ from app.schemas.letters import (
 )
 from app.schemas.pagination import Cursor, Limit
 from app.security.permissions import EdsPermission as P
-from app.services import dictionaries, idempotency, instructions, letter_dedup, letters, letters_read
+from app.services import dictionaries, idempotency, instructions, letter_dedup, letters, letters_read, reply
 
 router = APIRouter(prefix="/api/v1", tags=["letters"])
 
@@ -134,7 +134,7 @@ async def register_letter(
         async def create() -> Letter:
             nonlocal created
             letter, created = await letters.register_once(session, bus, actor_id=employee.crm_user_id, data=body)
-            return await letters_read.present(session, letter)
+            return await letters_read.present(session, letter, employee)
 
         result = await idempotency.run(
             session,
@@ -154,7 +154,7 @@ async def register_letter(
 async def get_letter(letter_id: uuid.UUID, employee: Anyone, session: Session) -> Letter:
     letter = await letters_read.get_letter(session, letter_id)
     await instructions.require_readable(session, employee, letter)
-    return await letters_read.present(session, letter)
+    return await letters_read.present(session, letter, employee)
 
 
 @router.post("/letters/{letter_id}/resolution", response_model=Letter, operation_id="resolveLetter")
@@ -163,7 +163,7 @@ async def resolve_letter(
 ) -> Letter:
     async with session.begin():
         letter = await letters.resolve(session, bus, actor_id=employee.crm_user_id, letter_id=letter_id, data=body)
-        return await letters_read.present(session, letter)
+        return await letters_read.present(session, letter, employee)
 
 
 @router.post("/letters/{letter_id}/return", response_model=Letter, operation_id="returnLetter")
@@ -174,7 +174,7 @@ async def return_letter(
         letter = await letters.return_letter(
             session, bus, actor_id=employee.crm_user_id, letter_id=letter_id, comment=body.comment
         )
-        return await letters_read.present(session, letter)
+        return await letters_read.present(session, letter, employee)
 
 
 @router.post("/letters/{letter_id}/reject", response_model=Letter, operation_id="rejectLetter")
@@ -185,7 +185,7 @@ async def reject_letter(
         letter = await letters.reject(
             session, bus, actor_id=employee.crm_user_id, letter_id=letter_id, reason=body.reason
         )
-        return await letters_read.present(session, letter)
+        return await letters_read.present(session, letter, employee)
 
 
 @router.post("/letters/{letter_id}/submit", response_model=Letter, operation_id="resubmitLetter")
@@ -197,7 +197,7 @@ async def resubmit_letter(
 ) -> Letter:
     async with session.begin():
         letter = await letters.resubmit(session, actor_id=employee.crm_user_id, letter_id=letter_id, data=body)
-        return await letters_read.present(session, letter)
+        return await letters_read.present(session, letter, employee)
 
 
 @router.post("/letters/{letter_id}/duplicate", response_model=Letter, operation_id="markLetterDuplicate")
@@ -209,7 +209,7 @@ async def mark_letter_duplicate(
         letter = await letter_dedup.mark_duplicate(
             session, actor_id=employee.crm_user_id, letter_id=letter_id, data=body
         )
-        return await letters_read.present(session, letter)
+        return await letters_read.present(session, letter, employee)
 
 
 # --- путь делопроизводства (P8b, SPEC-v3 §3.2a) -------------------------------------------------------------------
@@ -221,7 +221,7 @@ async def save_resolution_draft(
 ) -> Letter:
     async with session.begin():
         letter = await instructions.save_draft(session, actor_id=employee.crm_user_id, letter_id=letter_id, data=body)
-        return await letters_read.present(session, letter)
+        return await letters_read.present(session, letter, employee)
 
 
 @router.post("/letters/{letter_id}/office-resolution", response_model=Letter, operation_id="resolveOfficeLetter")
@@ -232,14 +232,14 @@ async def resolve_office_letter(
         letter = await instructions.resolve_office(
             session, bus, actor_id=employee.crm_user_id, letter_id=letter_id, data=body
         )
-        return await letters_read.present(session, letter)
+        return await letters_read.present(session, letter, employee)
 
 
 @router.post("/letters/{letter_id}/acquaint", response_model=Letter, operation_id="acknowledgeLetter")
 async def acknowledge_letter(letter_id: uuid.UUID, employee: Anyone, session: Session) -> Letter:
     async with session.begin():
         letter = await instructions.acknowledge(session, actor_id=employee.crm_user_id, letter_id=letter_id)
-        return await letters_read.present(session, letter)
+        return await letters_read.present(session, letter, employee)
 
 
 @router.post("/instructions/{instruction_id}/complete", response_model=Letter, operation_id="completeInstruction")
@@ -250,7 +250,7 @@ async def complete_instruction(
         letter = await instructions.complete(
             session, bus, actor_id=employee.crm_user_id, instruction_id=instruction_id, data=body
         )
-        return await letters_read.present(session, letter)
+        return await letters_read.present(session, letter, employee)
 
 
 @router.post(
@@ -263,7 +263,7 @@ async def request_instruction_extension(
         letter = await instructions.request_extension(
             session, bus, actor_id=employee.crm_user_id, instruction_id=instruction_id, data=body
         )
-        return await letters_read.present(session, letter)
+        return await letters_read.present(session, letter, employee)
 
 
 @router.post(
@@ -278,12 +278,14 @@ async def decide_instruction_extension(
         letter = await instructions.decide_extension(
             session, bus, actor_id=employee.crm_user_id, instruction_id=instruction_id, data=body
         )
-        return await letters_read.present(session, letter)
+        return await letters_read.present(session, letter, employee)
 
 
 @router.get("/letter-tasks", response_model=LetterTasks, operation_id="listMyLetterTasks")
 async def list_my_letter_tasks(employee: Anyone, session: Session) -> LetterTasks:
-    return await instructions.my_tasks(session, crm_user_id=employee.crm_user_id)
+    tasks = await instructions.my_tasks(session, crm_user_id=employee.crm_user_id)
+    tasks.registrations = await reply.registration_tasks(session, employee)  # EDS-REPLY-1: «Зарегистрировать ИСХ»
+    return tasks
 
 
 # Администратору (`bus.manage`) — для людей общих шаблонов резолюций (EDS-REG).

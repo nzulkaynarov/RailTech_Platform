@@ -204,8 +204,10 @@ async def notify(
     subtitle: str | None = None,
     due: date | None = None,
     actor_id: int | None = None,
+    document: Document | None = None,
 ) -> None:
-    """`notice.requested` получателям (без повторов и пустых); никого — события нет."""
+    """`notice.requested` получателям (без повторов и пустых); никого — события нет. `document` — исходящее письмо, к
+    которому ведёт уведомление (ответ на ВХ, EDS-REPLY-1)."""
     people = list(dict.fromkeys(uid for uid in recipients if uid is not None))
     if not people:
         return
@@ -219,6 +221,12 @@ async def notify(
         "due": due.isoformat() if due else None,
         "actor": events.actor(actor_id),
     }
+    if document is not None:
+        data["document"] = {
+            "eds_document_id": str(document.id),
+            "number": document.number,
+            "subject": document.subject[:300],
+        }
     await events.publish(bus, session, "notice.requested", data, subject=letter.number)
 
 
@@ -442,6 +450,26 @@ async def _outgoing_by_number(session: AsyncSession, number: str) -> Document:
     return document
 
 
+async def _link_outgoing(session: AsyncSession, outgoing: Document, letter: Letter, actor_id: int) -> None:
+    """«Исполнено» с номером ИСХ (EDS-REPLY-1): ИСХ «в ответ на» это письмо принимается; ИСХ без связи — тоже, связь
+    записывается; ИСХ в ответ на другое входящее — 409 (Directum, ELMA «В ответ на»: ответ — одному письму)."""
+    if outgoing.in_reply_to == letter.id:
+        return
+    if outgoing.in_reply_to is not None:
+        other = await session.get(Letter, outgoing.in_reply_to)
+        raise conflict(
+            "outgoing_linked_elsewhere",
+            f"{outgoing.number} уже отвечает на {other.number if other else 'другое входящее письмо'}: "
+            "укажите ИСХ этого письма или напишите отчёт.",
+            outgoing_number=outgoing.number,
+        )
+    outgoing.in_reply_to = letter.id
+    outgoing.updated_at = clock.now()
+    await journal.record(
+        session, "document.reply_linked", by=actor_id, document_id=outgoing.id, comment=f"В ответ на {letter.number}"
+    )
+
+
 async def complete(
     session: AsyncSession, bus: AsyncBus, *, actor_id: int, instruction_id: uuid.UUID, data: InstructionCompleteIn
 ) -> Letter:
@@ -453,6 +481,8 @@ async def complete(
         raise conflict("invalid_state", "Поручение уже исполнено.", status=instruction.status, expected=IN_WORK)
     report = (data.report or "").strip() or None
     outgoing = await _outgoing_by_number(session, data.outgoing_number) if data.outgoing_number else None
+    if outgoing is not None:
+        await _link_outgoing(session, outgoing, letter, actor_id)
     if report is None and not data.file_ids and outgoing is None:
         raise invalid_fields("Напишите отчёт, приложите файл или укажите ИСХ.", report="report_required")
     await files.attach(session, data.file_ids, actor_id=actor_id, instruction_id=instruction.id)
@@ -470,11 +500,12 @@ async def complete(
     return letter
 
 
-async def close_by_outgoing(session: AsyncSession, bus: AsyncBus, *, document: Document, actor_id: int) -> int:
+async def close_by_outgoing(session: AsyncSession, bus: AsyncBus, *, document: Document, actor_id: int) -> list[int]:
     """Хук регистрации ИСХ «в ответ на ВХ» (`documents._send_letter`; P4 — тот же вызов): поручения «Подготовить
-    ответ» этого письма в работе → «Исполнено» со ссылкой на ИСХ. Возвращает число закрытых."""
+    ответ» этого письма в работе → «Исполнено» со ссылкой на ИСХ. Возвращает исполнителей закрытых поручений: им и
+    автору ответа `documents._send_letter` шлёт уведомление о регистрации (`reply.notify_registered`)."""
     if document.in_reply_to is None or document.kind != "letter_out":
-        return 0
+        return []
     letter = await _letter_for_update(session, document.in_reply_to)
     rows = list(
         (
@@ -500,9 +531,10 @@ async def close_by_outgoing(session: AsyncSession, bus: AsyncBus, *, document: D
             letter_id=letter.id,
             comment=f"Ответ {document.number}",
         )
+    executors = [r.crm_user_id for r in rows]
     if rows:
         await _finish_if_done(session, bus, letter, actor_id)
-    return len(rows)
+    return executors
 
 
 # --- перенос срока ------------------------------------------------------------------------------------------------

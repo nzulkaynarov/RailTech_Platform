@@ -172,9 +172,11 @@ async def download_document_pdf(
     response_model=Document,
     operation_id="requestDocumentRegistration",
 )
-async def request_document_registration(document_id: uuid.UUID, employee: Author, session: Session) -> Document:
+async def request_document_registration(
+    document_id: uuid.UUID, employee: Author, session: Session, bus: Bus
+) -> Document:
     async with session.begin():
-        document = await documents.request_registration(session, employee=employee, document_id=document_id)
+        document = await documents.request_registration(session, bus, employee=employee, document_id=document_id)
         return await documents_read.present(session, document)
 
 

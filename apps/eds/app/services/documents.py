@@ -45,6 +45,7 @@ from app.services import (
     letter_mail,
     numbering,
     renders,
+    reply,
 )
 from app.services.people import holds_permission, load_directory
 from app.services.storage import ObjectStorage
@@ -359,7 +360,9 @@ def _storage(storage: ObjectStorage | None) -> ObjectStorage:
     return storage
 
 
-async def request_registration(session: AsyncSession, *, employee: Employee, document_id: uuid.UUID) -> Document:
+async def request_registration(
+    session: AsyncSession, bus: AsyncBus, *, employee: Employee, document_id: uuid.UUID
+) -> Document:
     """«Передать на регистрацию» (B-P8B-4): автор черновика письма просит делопроизводителя зарегистрировать ИСХ."""
     document = await get_for_update(session, document_id)
     if not await access.can_view_document(session, employee, document.id):
@@ -380,6 +383,7 @@ async def request_registration(session: AsyncSession, *, employee: Employee, doc
         await journal.record(
             session, "document.registration_requested", by=employee.crm_user_id, document_id=document.id
         )
+        await reply.notify_registration_requested(session, bus, document, actor_id=employee.crm_user_id)
     return document
 
 
@@ -407,7 +411,8 @@ async def _send_letter(session: AsyncSession, bus: AsyncBus, document: Document,
     await _publish_registered(session, bus, document, registered_at=now, actor_id=employee.crm_user_id)
     await document_state.archive(session, bus, document, actor_id=employee.crm_user_id, reason=document.status)
     # P8b: ИСХ «в ответ на ВХ» закрывает поручения «Подготовить ответ» этого письма (тот же хук — письмо на бланке P4).
-    await instructions.close_by_outgoing(session, bus, document=document, actor_id=employee.crm_user_id)
+    closed = await instructions.close_by_outgoing(session, bus, document=document, actor_id=employee.crm_user_id)
+    await reply.notify_registered(session, bus, document, closed_executors=closed, actor_id=employee.crm_user_id)
 
 
 async def _open_approval(

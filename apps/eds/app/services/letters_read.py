@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import clock
 from app.errors import not_found
-from app.models import Acquaintance, Document, Instruction, InstructionExtension, Letter
+from app.models import Acquaintance, Document, Employee, Instruction, InstructionExtension, Letter
 from app.schemas.common import ErpLinks, IncomingLetterSender, SenderRef
 from app.schemas.letters import (
     AcquaintanceOut,
@@ -29,7 +29,7 @@ from app.schemas.letters import (
 )
 from app.schemas.letters import Letter as LetterOut
 from app.schemas.pagination import decode_cursor
-from app.services import dictionaries, files, instructions, journal, paging
+from app.services import dictionaries, files, instructions, journal, paging, reply
 from app.services.letters import fmt_pct
 from app.services.people import Directory, default_director, load_directory
 
@@ -179,8 +179,8 @@ async def _kind_due_days(session: AsyncSession, letter: Letter) -> int | None:
     return days if isinstance(days, int) and not isinstance(days, bool) else None
 
 
-async def present(session: AsyncSession, letter: Letter) -> LetterOut:
-    """Карточка письма: резолюция, поручения, вложения (последние версии) и журнал."""
+async def present(session: AsyncSession, letter: Letter, viewer: Employee | None = None) -> LetterOut:
+    """Карточка письма: резолюция, поручения, вложения (последние версии), журнал и ответы, видимые `viewer`."""
     rows, extensions, acquaint, numbers = await _work(session, letter)
     ext_people = [p for exts in extensions.values() for e in exts for p in (e.requested_by, e.decided_by)]
     ids = [
@@ -272,6 +272,7 @@ async def present(session: AsyncSession, letter: Letter) -> LetterOut:
         ],
         executed_at=letter.executed_at,
         duplicate_of=await _duplicate_of(session, letter),
+        replies=await reply.replies_for(session, viewer, letter),
     )
 
 
