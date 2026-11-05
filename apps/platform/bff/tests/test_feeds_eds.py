@@ -710,6 +710,7 @@ async def test_register_reply_row_without_letter_and_old_eds_without_the_key(
     assert row["object"]["number"] == "Пояснения по требованию"
 
     # EDS прежней версии ключа `registrations` не присылает — очередь собирается без этих строк
+    web.clock.advance(10)
     fb.state["letter_tasks"] = {"instructions": [], "extensions": [], "acquaintances": []}
     items = (await web.client.get("/api/v1/queue")).json()["items"]
     assert [i for i in items if i["kind"] == "register_reply"] == []
