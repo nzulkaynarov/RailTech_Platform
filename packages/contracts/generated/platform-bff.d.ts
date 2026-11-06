@@ -27605,7 +27605,7 @@ export interface operations {
   listPartnerApplications: {
     parameters: {
       query?: {
-        status?: "" | "submitted" | "contract_sent" | "approved" | "rejected";
+        status?: "" | "submitted" | "contract_sent" | "candidate_agreed" | "approved" | "rejected";
       };
       header?: never;
       path?: never;
