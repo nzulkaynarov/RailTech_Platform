@@ -12418,7 +12418,7 @@ paths:
         - name: status
           in: query
           required: false
-          schema: {type: string, enum: ['', submitted, contract_sent, approved, rejected]}
+          schema: {type: string, enum: ['', submitted, contract_sent, candidate_agreed, approved, rejected]}
       responses:
         '200':
           description: Список заявок

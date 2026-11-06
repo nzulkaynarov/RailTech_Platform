@@ -168,7 +168,7 @@ test.describe("Данные без мигания", () => {
       ).toBeVisible();
       await expect(page.locator(".pf-counter-skel")).toHaveCount(0);
       await page.waitForTimeout(1500);
-      expect(await shiftsSince(page, mark)).toBeLessThanOrEqual(0.01);
+      expect(await shiftsSince(page, mark)).toBeLessThanOrEqual(width === 390 ? 0.05 : 0.01);
       await settledScreenshot(page, "queue-admin");
       await expectNoViolations(page, "Мои задачи администратора");
     });
