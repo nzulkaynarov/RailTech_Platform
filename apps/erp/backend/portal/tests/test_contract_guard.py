@@ -64,6 +64,7 @@ GET_CASES = {
         f"/catalog/{w['product'].pk}/documents/{w['certificate'].pk}/file"
     ],
     "/company": lambda w: ["/company"],
+    "/company/partner-application": lambda w: ["/company/partner-application"],
     "/team": lambda w: ["/team"],
     "/me/telegram": lambda w: ["/me/telegram"],  # NOTIFY-1: статус привязки по проекции CRM
     "/messages": lambda w: ["/messages"],

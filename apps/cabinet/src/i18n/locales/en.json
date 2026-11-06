@@ -187,6 +187,9 @@
       "or": "or",
       "newClient": "I am a new client",
       "newClientHint": "Haven't worked with us yet? Leave a request and a manager will get in touch.",
+      "partnerOnboarding": "For Suppliers & Manufacturers",
+      "partnerOnboardingHint": "Supply products through RailTech Platform and manage your assortment in the cabinet.",
+      "becomePartner": "Become a Partner",
       "telegram": "Sign in with Telegram",
       "telegramHint": "The bot will open; sign-in is by invitation.",
       "demoTitle": "Quick demo sign-in (1 click)",
@@ -719,7 +722,75 @@
         "bankDetails": "Bank details",
         "language": "Language of documents and e-mails"
       },
-      "closeEdit": "Close"
+      "closeEdit": "Close",
+      "partner": {
+        "cardTitle": "Partner Program",
+        "alreadyPartnerTitle": "Partner Agreement Active",
+        "alreadyPartnerDesc": "Your company is an authorized partner. You have access to “My Products” to manage your catalog.",
+        "toMyProducts": "Go to “My Products”",
+        "applicationPendingDesc": "The application for partner status has been submitted and is under review by RailTech.",
+        "contractSentDesc": "The partner agreement has been prepared and sent to your company for review and signing.",
+        "status": {
+          "submitted": "Under review",
+          "contract_sent": "Contract sent",
+          "approved": "Approved",
+          "rejected": "Rejected"
+        },
+        "appliedAt": "Submitted on {{date}}",
+        "contractNumber": "Contract",
+        "notPartnerDesc": "Interested in supplying products through RailTech Platform? Apply for a partnership agreement.",
+        "onlyCanAct": "Only a representative authorized to confirm actions can submit an application.",
+        "applyBtn": "Apply for Partnership",
+        "dialogTitle": "Partner Status Application",
+        "dialogDesc": "Specify your partnership kind and product categories. We will prepare the partner agreement.",
+        "dialogSubmit": "Submit Application",
+        "dialogSuccess": "Application successfully submitted for review."
+      }
+    },
+    "becomePartner": {
+      "title": "Partner Application",
+      "subtitle": "Join the RailTech platform as a supplier or manufacturer",
+      "backToLogin": "Back to login",
+      "errors": {
+        "companyNameRequired": "Please enter company name.",
+        "contactNameRequired": "Please enter contact person name.",
+        "emailInvalid": "Please enter a valid work e-mail.",
+        "categoriesDescriptionTooShort": "Please describe products in more detail (at least 10 characters)."
+      },
+      "fields": {
+        "companyName": "Company name",
+        "companyNamePlaceholder": "RailTech Technologies LLC",
+        "inn": "Tax ID / INN (if applicable)",
+        "innPlaceholder": "123456789",
+        "kind": "Partner kind",
+        "kinds": {
+          "supplier": "Supplier / Distributor",
+          "manufacturer": "Manufacturer",
+          "principal": "General contractor / Principal",
+          "other": "Other"
+        },
+        "categoriesDescription": "Supplied products and categories",
+        "categoriesDescriptionPlaceholder": "Describe product categories, assortment, brands or manufacturing facilities...",
+        "contactName": "Contact person",
+        "contactNamePlaceholder": "John Doe",
+        "email": "Work e-mail",
+        "emailPlaceholder": "partner@example.uz",
+        "phone": "Phone",
+        "phonePlaceholder": "+998 90 123-45-67",
+        "language": "Communication language",
+        "consent": "I agree to the processing of personal data in accordance with the privacy policy"
+      },
+      "submit": "Submit Application",
+      "submitting": "Submitting application…",
+      "successTitle": "Application Received",
+      "successSubtitle": "Thank you for your interest in partnering with RailTech Platform!",
+      "nextStepsTitle": "What happens next?",
+      "step1Title": "Data verification",
+      "step1Desc": "Our procurement and compliance team verifies company details and product assortment.",
+      "step2Title": "Partner agreement signing",
+      "step2Desc": "We will prepare and send the partner agreement for review and signing.",
+      "step3Title": "Partner cabinet access",
+      "step3Desc": "Once the contract is active, access to “My Products” and price list uploads will be enabled."
     },
     "team": {
       "title": "Team",
@@ -872,7 +943,12 @@
     "OFFER_VALIDITY_RANGE_INVALID": "The “to” date cannot be earlier than the “from” date.",
     "PRODUCT_NOT_SUBMITTABLE": "This card cannot be submitted: it is already in review or published.",
     "OFFER_EXPIRED": "The price has expired and cannot be confirmed. Upload a new price list.",
-    "IMPORT_FAILED": "The file could not be accepted. Please try again in a moment."
+    "IMPORT_FAILED": "The file could not be accepted. Please try again in a moment.",
+    "CONSENT_REQUIRED": "Consent to personal data processing is required.",
+    "HONEYPOT_DETECTED": "Suspicious form activity detected.",
+    "ALREADY_PARTNER": "Your company already has an active partner agreement.",
+    "APPLICATION_EXISTS": "An application for partner status is already under review.",
+    "PARTNER_APPLICATION_NOT_FOUND": "Partner application not found."
   },
   "widgets": {
     "actionRequired": {

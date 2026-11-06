@@ -105,6 +105,7 @@ function createDb(dataset: Dataset = 'demo') {
     /** «Мои товары» партнёра (PART-2): карточки с ценой компании и задачи загрузки прайса. */
     partnerProducts: empty ? [] : partner.partnerProducts(),
     priceTasks: new Map<string, ReturnType<typeof partner.newTask>>(),
+    partnerApplication: null as Schemas['PartnerApplication'] | null,
   };
 }
 
@@ -121,6 +122,11 @@ export function resetMockPortal(): void {
 /** Для тестов: состояние Telegram контакта в данных демо-компании (статус, доступность, авто-привязка). */
 export function setMockTelegram(patch: Partial<fixtures.TelegramMock>): void {
   Object.assign(dbs.demo.telegram, patch);
+}
+
+/** Для тестов: заявка на партнерство для компании. */
+export function setMockPartnerApplication(app: Schemas['PartnerApplication'] | null): void {
+  dbs.demo.partnerApplication = app;
 }
 
 function contactFor(role: Role): Schemas['TeamMember'] {
@@ -326,6 +332,16 @@ export const handlers = [
     const session = sessionFromToken(body.email, 'magic_link');
     setMockSession(session);
     return json(me(session));
+  }),
+  // PART-ONBOARD-1: публичная заявка кандидата в партнёры
+  http.post(`${API}/auth/partner-application`, async ({ request }) => {
+    const body = await readJson<Schemas['PartnerApplicationPublicCreate']>(request);
+    if (body.website) return error(400, 'HONEYPOT_DETECTED');
+    if (!body.consent) return error(400, 'CONSENT_REQUIRED');
+    if (!body.company_name?.trim() || !body.email?.trim() || !body.categories_description?.trim()) {
+      return error(422, 'VALIDATION_ERROR');
+    }
+    return json({ id: 101, status: 'submitted' } satisfies Schemas['PartnerApplicationPublicResult'], 201);
   }),
   http.post(
     `${API}/auth/logout`,
@@ -815,6 +831,56 @@ export const handlers = [
         if (body.inn !== undefined && body.inn !== '' && !/^\d{9,14}$/.test(body.inn)) return error(422, 'INN_INVALID');
         db.company = { ...db.company, ...body };
         return json(db.company);
+      },
+      { action: true },
+    ),
+  ),
+  http.get(
+    `${API}/company/partner-application`,
+    withSession(({ db, session }) => {
+      const alreadyPartner = session.access?.roles.includes('partner') ?? false;
+      const app = db.partnerApplication;
+      return json({
+        already_partner: alreadyPartner,
+        has_application: app !== null && (app.status === 'submitted' || app.status === 'contract_sent'),
+        application: app,
+      } satisfies Schemas['PartnerApplicationStatusResponse']);
+    }),
+  ),
+  http.post(
+    `${API}/company/partner-application`,
+    withSession(
+      async ({ db, session, request }) => {
+        const alreadyPartner = session.access?.roles.includes('partner') ?? false;
+        if (alreadyPartner) return error(409, 'ALREADY_PARTNER');
+        if (
+          db.partnerApplication &&
+          (db.partnerApplication.status === 'submitted' || db.partnerApplication.status === 'contract_sent')
+        ) {
+          return error(409, 'APPLICATION_EXISTS');
+        }
+        const body = await readJson<Schemas['PartnerApplicationClientCreate']>(request);
+        if (!body.categories_description || body.categories_description.trim().length < 5) {
+          return error(422, 'VALIDATION_ERROR');
+        }
+        const created: Schemas['PartnerApplication'] = {
+          id: 102,
+          status: 'submitted',
+          kind: body.kind ?? 'supplier',
+          categories_description: body.categories_description.trim(),
+          company_name: db.company.name,
+          inn: db.company.inn ?? null,
+          contact_name: fixtures.contactActor.name,
+          email: fixtures.contactActor.email ?? '',
+          phone: fixtures.contactActor.phone ?? null,
+          contract_number: null,
+          contract_date: null,
+          rejected_reason: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        db.partnerApplication = created;
+        return json(created, 201);
       },
       { action: true },
     ),

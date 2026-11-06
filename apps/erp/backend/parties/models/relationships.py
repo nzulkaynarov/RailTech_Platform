@@ -82,6 +82,17 @@ class CompanyRelationship(models.Model):
         verbose_name=_("Цены товаров партнёра в каталоге"),
         help_text=_("Пусто — как у компании; иначе показывать или «по запросу». Своя политика карточки сильнее."),
     )
+    contract_number = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        verbose_name=_("Номер партнёрского договора"),
+    )
+    contract_date = models.DateField(
+        null=True,
+        blank=True,
+        verbose_name=_("Дата партнёрского договора"),
+    )
     responsible = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

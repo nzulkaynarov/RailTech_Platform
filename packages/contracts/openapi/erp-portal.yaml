@@ -310,6 +310,41 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
+  /auth/partner-application:
+    post:
+      tags: [auth]
+      operationId: submitPartnerApplication
+      summary: Подать публичную заявку «Стать партнёром» (вход кандидата)
+      description: |
+        Входная воронка кандидатов в партнёры (поставщики, заводы-изготовители, принципалы) без маскировки под
+        покупателей (ADR-0022, DECISIONS 2026-11-05). Заявка маршрутизируется в снабжение Платформы для проверки
+        и отправки проекта партнёрского договора. Не требует авторизации. Поле `website` — скрытый honeypot для защиты
+        от спам-ботов (должно быть пустым). Лимит частоты — 10 запросов в минуту на IP.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerApplicationPublicCreate'
+      responses:
+        '201':
+          description: Заявка успешно зарегистрирована в очереди снабжения
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerApplicationPublicResult'
+        '400':
+          description: Некорректный запрос, отсутствие согласия или обнаружен спам-бот (honeypot)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
   /me:
     get:
       tags: [me]
@@ -1788,6 +1823,67 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
+  /company/partner-application:
+    get:
+      tags: [company]
+      operationId: getCompanyPartnerApplication
+      summary: Статус заявки компании на получение роли партнёра
+      description: |
+        Проверка наличия и текущего статуса заявки «Стать партнёром» для действующего клиента (DECISIONS 2026-11-05).
+        Требует модуль `company`.
+      responses:
+        '200':
+          description: Текущий статус партнёрства и заявки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerApplicationStatusResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+    post:
+      tags: [company]
+      operationId: submitCompanyPartnerApplication
+      summary: Подать заявку «Стать партнёром» из кабинета действующего клиента
+      description: |
+        Запрос действующего клиента на добавление роли `partner` к существующей компании без дублирования сущностей.
+        Реквизиты компании берутся из сессии; заявка уходит в контур снабжения для согласования партнёрского договора.
+        Требует модуль `company` и право действовать `can_act`.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerApplicationClientCreate'
+      responses:
+        '201':
+          description: Заявка создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerApplication'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: 'ALREADY_PARTNER — компания уже партнёр; APPLICATION_EXISTS — активная заявка уже на рассмотрении'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
   /team:
     get:
       tags: [company]
@@ -2125,6 +2221,177 @@ components:
         - PRODUCT_NOT_SUBMITTABLE
         - OFFER_EXPIRED
         - IMPORT_FAILED
+        - CONSENT_REQUIRED
+        - HONEYPOT_DETECTED
+        - ALREADY_PARTNER
+        - APPLICATION_EXISTS
+        - PARTNER_APPLICATION_NOT_FOUND
+
+    PartnerKind:
+      type: string
+      enum: [manufacturer, supplier, principal, other]
+      description: |
+        Вид партнёра (ADR-0022):
+        - `manufacturer`: Изготовитель (завод-производитель)
+        - `supplier`: Поставщик (дистрибьютор, торговая компания)
+        - `principal`: Принципал (производитель, у которого мы региональный дилер)
+        - `other`: Другое
+
+    PartnerApplicationStatus:
+      type: string
+      enum: [submitted, contract_sent, approved, rejected]
+      description: |
+        Статус заявки в договорном шлюзе (DECISIONS 2026-11-05):
+        - `submitted`: заявка подана, ожидает проверки снабжением
+        - `contract_sent`: проект партнёрского договора отправлен кандидату
+        - `approved`: договор подписан, отношение `partner` активировано
+        - `rejected`: заявка отклонена
+
+    PartnerApplication:
+      type: object
+      required:
+        - id
+        - status
+        - kind
+        - categories_description
+        - company_name
+        - contact_name
+        - email
+        - created_at
+      properties:
+        id:
+          type: integer
+        status:
+          $ref: '#/components/schemas/PartnerApplicationStatus'
+        kind:
+          $ref: '#/components/schemas/PartnerKind'
+        categories_description:
+          type: string
+          description: Категории и номенклатура поставляемой продукции
+        company_name:
+          type: string
+          description: Название организации
+        inn:
+          type: [string, 'null']
+          description: ИНН организации или регистрационный номер нерезидента
+        contact_name:
+          type: string
+          description: Контактное лицо
+        email:
+          type: string
+          format: email
+        phone:
+          type: [string, 'null']
+        contract_number:
+          type: [string, 'null']
+          description: Номер заключённого партнёрского договора
+        contract_date:
+          type: [string, 'null']
+          format: date
+          description: Дата партнёрского договора
+        rejected_reason:
+          type: [string, 'null']
+          description: Причина отклонения заявки
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    PartnerApplicationPublicCreate:
+      type: object
+      required:
+        - company_name
+        - kind
+        - categories_description
+        - contact_name
+        - email
+        - consent
+      properties:
+        company_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Название организации
+        inn:
+          type: [string, 'null']
+          maxLength: 32
+          description: ИНН (для резидентов РУз) или регистрационный номер иностранной компании
+        kind:
+          $ref: '#/components/schemas/PartnerKind'
+        categories_description:
+          type: string
+          minLength: 5
+          maxLength: 2000
+          description: Описание категорий поставляемой продукции и брендов
+        contact_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: ФИО контактного лица
+        email:
+          type: string
+          format: email
+          maxLength: 254
+          description: E-mail для связи и отправки проекта договора
+        phone:
+          type: [string, 'null']
+          maxLength: 32
+          description: Телефон контактного лица
+        language:
+          type: string
+          enum: [ru, uz, en]
+          default: ru
+          description: Язык взаимодействия и договора
+        consent:
+          type: boolean
+          description: Согласие на обработку персональных данных (обязательно true)
+        website:
+          type: [string, 'null']
+          description: Скрытое поле-ловушка для спам-ботов (honeypot; должно быть пустым)
+
+    PartnerApplicationPublicResult:
+      type: object
+      required:
+        - id
+        - status
+      properties:
+        id:
+          type: integer
+        status:
+          $ref: '#/components/schemas/PartnerApplicationStatus'
+
+    PartnerApplicationClientCreate:
+      type: object
+      required:
+        - kind
+        - categories_description
+      properties:
+        kind:
+          $ref: '#/components/schemas/PartnerKind'
+        categories_description:
+          type: string
+          minLength: 5
+          maxLength: 2000
+          description: Описание категорий поставляемой продукции и брендов
+
+    PartnerApplicationStatusResponse:
+      type: object
+      required:
+        - already_partner
+        - has_application
+      properties:
+        already_partner:
+          type: boolean
+          description: Компания уже обладает активной ролью партнёра
+        has_application:
+          type: boolean
+          description: Имеется поданная или рассматриваемая заявка
+        application:
+          oneOf:
+            - $ref: '#/components/schemas/PartnerApplication'
+            - type: 'null'
 
     PartnerCardStatus:
       type: string

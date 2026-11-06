@@ -13,7 +13,16 @@ from django.db import transaction
 from django.http import Http404
 from django.utils import timezone, translation
 from integration.services.requisites import REQUISITES_MANAGED_BY_CRM, changed_crm_owned_fields
-from parties.models import Contact, active_contact_q
+from parties.models import (
+    CompanyRelationship,
+    Contact,
+    PartnerApplication,
+    PartnerApplicationSource,
+    PartnerApplicationStatus,
+    RelationshipRole,
+    RelationshipStatus,
+    active_contact_q,
+)
 from portal.authentication import PortalAuthentication
 from portal.exceptions import PortalBadRequest, PortalConflict, PortalValidationError, portal_exception_handler
 from portal.models import PortalDocumentVerification, PortalUpload
@@ -44,6 +53,9 @@ from portal.serializers import (
     MagicLinkRequestSerializer,
     MagicLinkTokenSerializer,
     MeSerializer,
+    PartnerApplicationClientCreateSerializer,
+    PartnerApplicationPublicCreateSerializer,
+    PartnerApplicationSerializer,
     PaymentProofCreateSerializer,
     PaymentProofSerializer,
     PortalDocumentSerializer,
@@ -74,6 +86,7 @@ from portal.services.telegram_auth import authenticate_telegram_user
 from portal.throttles import (
     PortalAcceptRateThrottle,
     PortalLoginRateThrottle,
+    PortalPartnerAppRateThrottle,
     PortalSessionRateThrottle,
     PortalVerifyRateThrottle,
 )
@@ -327,6 +340,41 @@ class DocumentVerificationView(APIView):
         if not verification:
             raise exceptions.NotFound(detail="NOT_FOUND")
         return Response(DocumentVerificationSerializer(verification).data, status=status.HTTP_200_OK)
+
+
+class PublicPartnerApplicationView(APIView):
+    """POST /auth/partner-application — Публичная подача заявки «Стать партнёром» (ADR-0022, DECISIONS 2026-11-05)."""
+
+    authentication_classes = []
+    permission_classes = []
+    throttle_classes = [PortalPartnerAppRateThrottle]
+
+    def get_exception_handler(self):
+        return portal_exception_handler
+
+    def post(self, request):
+        serializer = PartnerApplicationPublicCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            if "consent" in serializer.errors:
+                raise PortalBadRequest("CONSENT_REQUIRED")
+            if "website" in serializer.errors:
+                raise PortalBadRequest("HONEYPOT_DETECTED")
+            raise PortalValidationError("VALIDATION_ERROR")
+        data = serializer.validated_data
+        app = PartnerApplication.objects.create(
+            source=PartnerApplicationSource.PUBLIC,
+            company_name=data["company_name"].strip(),
+            inn=(data.get("inn") or "").strip(),
+            kind=data.get("kind") or "supplier",
+            categories_description=data["categories_description"].strip(),
+            contact_name=data["contact_name"].strip(),
+            email=data["email"].strip().lower(),
+            phone=(data.get("phone") or "").strip(),
+            language=data.get("language") or "ru",
+            consent=True,
+            status=PartnerApplicationStatus.SUBMITTED,
+        )
+        return Response({"id": app.id, "status": app.status}, status=status.HTTP_201_CREATED)
 
 
 # ── 2. Me ───────────────────────────────────────────────────────────────────
@@ -1023,6 +1071,68 @@ class CompanyView(BasePortalView):
 
         company.save()
         return Response(CompanySerializer(company).data)
+
+
+class CompanyPartnerApplicationView(BasePortalView):
+    """GET/POST /company/partner-application — Заявка действующего клиента на получение роли партнёра."""
+
+    required_module = "company"
+
+    def get(self, request):
+        already_partner = "partner" in getattr(request, "portal_roles", []) or (
+            CompanyRelationship.objects.filter(
+                company=request.portal_company, role=RelationshipRole.PARTNER, status=RelationshipStatus.ACTIVE
+            ).exists()
+        )
+        app = PartnerApplication.objects.filter(company=request.portal_company).order_by("-created_at").first()
+        return Response(
+            {
+                "already_partner": bool(already_partner),
+                "has_application": app is not None and app.status in ("submitted", "contract_sent"),
+                "application": PartnerApplicationSerializer(app).data if app else None,
+            }
+        )
+
+    def post(self, request):
+        if not getattr(request.portal_contact, "can_act", False):
+            raise exceptions.PermissionDenied(detail="FORBIDDEN")
+        already_partner = "partner" in getattr(request, "portal_roles", []) or (
+            CompanyRelationship.objects.filter(
+                company=request.portal_company, role=RelationshipRole.PARTNER, status=RelationshipStatus.ACTIVE
+            ).exists()
+        )
+        if already_partner:
+            raise PortalConflict("ALREADY_PARTNER")
+
+        existing = PartnerApplication.objects.filter(
+            company=request.portal_company,
+            status__in=[PartnerApplicationStatus.SUBMITTED, PartnerApplicationStatus.CONTRACT_SENT],
+        ).first()
+        if existing:
+            raise PortalConflict("APPLICATION_EXISTS")
+
+        serializer = PartnerApplicationClientCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise PortalValidationError("VALIDATION_ERROR")
+        data = serializer.validated_data
+        contact = request.portal_contact
+        company = request.portal_company
+        app = PartnerApplication.objects.create(
+            source=PartnerApplicationSource.CLIENT_CABINET,
+            company=company,
+            applicant_contact=contact,
+            company_name=company.name,
+            inn=company.inn or "",
+            kind=data.get("kind") or "supplier",
+            categories_description=data["categories_description"].strip(),
+            contact_name=contact.name if contact else "",
+            email=contact.email if contact else "",
+            phone=contact.phone if contact else "",
+            language=contact.language if contact else "ru",
+            consent=True,
+            status=PartnerApplicationStatus.SUBMITTED,
+        )
+        return Response(PartnerApplicationSerializer(app).data, status=status.HTTP_201_CREATED)
 
 
 class TeamListView(BasePortalView):

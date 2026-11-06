@@ -31,6 +31,7 @@ export const keys = {
   partnerProduct: (id: number) => ['partner', 'products', 'item', id] as const,
   priceListTask: (taskId: string) => ['partner', 'price-list', taskId] as const,
   verify: (code: string) => ['verify', code] as const,
+  partnerApplication: ['company', 'partner-application'] as const,
 };
 
 /** Список раздела грузится, только если у сессии есть его модуль (партнёру клиентские разделы закрыты, ADR-0022). */
@@ -223,3 +224,18 @@ export const useVerifyDocument = (code: string, enabled = true) =>
     enabled: Boolean(code) && enabled,
     retry: false,
   });
+
+// --- заявки кандидатов в партнёры (ADR-0022, DECISIONS 2026-11-05, PART-ONBOARD-1) --------------
+
+export const useCompanyPartnerApplication = (options: { enabled?: boolean } = {}) =>
+  useQuery({
+    queryKey: keys.partnerApplication,
+    queryFn: portal.getCompanyPartnerApplication,
+    enabled: options.enabled ?? true,
+  });
+
+export const useSubmitCompanyPartnerApplication = () =>
+  useInvalidatingMutation(portal.submitCompanyPartnerApplication, [keys.partnerApplication]);
+
+export const useSubmitPartnerApplication = () =>
+  useMutation({ mutationFn: portal.submitPartnerApplication });

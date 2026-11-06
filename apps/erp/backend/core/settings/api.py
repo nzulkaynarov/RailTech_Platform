@@ -72,6 +72,9 @@ REST_FRAMEWORK = {
         "portal_verify": os.environ.get(
             "PORTAL_VERIFY_RATE", "30/minute"
         ),  # проверка документа по коду (/verify/<код>, SIGN-VERIFY-1)
+        "portal_partner_app": os.environ.get(
+            "PORTAL_PARTNER_APP_RATE", "10/minute"
+        ),  # подача заявки «Стать партнёром» (ADR-0022, DECISIONS 2026-11-05)
     },
     # SEC-04: number of trusted reverse proxies that set X-Forwarded-For before Django.
     # Prod/staging = 1 (host Caddy OVERWRITES XFF with the client IP — see

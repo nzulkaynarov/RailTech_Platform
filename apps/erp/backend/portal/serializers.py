@@ -716,3 +716,70 @@ class DocumentVerificationSerializer(serializers.ModelSerializer):
             "revoked_at",
             "revocation_reason",
         ]
+
+
+class PartnerApplicationSerializer(serializers.ModelSerializer):
+    """`PartnerApplication` контракта (ADR-0022, DECISIONS 2026-11-05, PART-ONBOARD)."""
+
+    inn = serializers.CharField(allow_null=True, required=False)
+    phone = serializers.CharField(allow_null=True, required=False)
+    contract_number = serializers.CharField(allow_null=True, required=False)
+    contract_date = serializers.DateField(allow_null=True, required=False)
+    rejected_reason = serializers.CharField(allow_null=True, required=False)
+
+    class Meta:
+        from parties.models import PartnerApplication
+
+        model = PartnerApplication
+        fields = [
+            "id",
+            "status",
+            "kind",
+            "categories_description",
+            "company_name",
+            "inn",
+            "contact_name",
+            "email",
+            "phone",
+            "contract_number",
+            "contract_date",
+            "rejected_reason",
+            "created_at",
+            "updated_at",
+        ]
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        # Пустые строки в nullable-полях приводим к None по OpenAPI 3.1 схеме
+        for field in ("inn", "phone", "contract_number", "rejected_reason"):
+            if not ret.get(field):
+                ret[field] = None
+        return ret
+
+
+class PartnerApplicationPublicCreateSerializer(serializers.Serializer):
+    company_name = serializers.CharField(max_length=255, min_length=1)
+    inn = serializers.CharField(max_length=32, allow_blank=True, allow_null=True, required=False, default="")
+    kind = serializers.ChoiceField(choices=["manufacturer", "supplier", "principal", "other"], default="supplier")
+    categories_description = serializers.CharField(max_length=2000, min_length=5)
+    contact_name = serializers.CharField(max_length=255, min_length=1)
+    email = serializers.EmailField(max_length=254)
+    phone = serializers.CharField(max_length=32, allow_blank=True, allow_null=True, required=False, default="")
+    language = serializers.ChoiceField(choices=["ru", "uz", "en"], default="ru")
+    consent = serializers.BooleanField(required=True)
+    website = serializers.CharField(allow_blank=True, allow_null=True, required=False, default="")
+
+    def validate_consent(self, value):
+        if not value:
+            raise serializers.ValidationError("CONSENT_REQUIRED")
+        return value
+
+    def validate_website(self, value):
+        if value:
+            raise serializers.ValidationError("HONEYPOT_DETECTED")
+        return value
+
+
+class PartnerApplicationClientCreateSerializer(serializers.Serializer):
+    kind = serializers.ChoiceField(choices=["manufacturer", "supplier", "principal", "other"], default="supplier")
+    categories_description = serializers.CharField(max_length=2000, min_length=5)
