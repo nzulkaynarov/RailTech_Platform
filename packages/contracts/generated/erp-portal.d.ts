@@ -973,6 +973,47 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/company/partner-application/contract-pdf": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Скачать проект или подписанный партнёрский договор
+     * @description Отдаёт PDF-файл проекта договора или подписанного партнёрского договора для ознакомления и согласования.
+     */
+    get: operations["getCompanyPartnerContractPdf"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/company/partner-application/agree": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Согласовать проект партнёрского договора кандидатом
+     * @description Кандидат подтверждает согласование проекта партнёрского договора. Статус переводится в `candidate_agreed`.
+     *     Требует права действовать `can_act`.
+     */
+    post: operations["agreeCompanyPartnerContract"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/team": {
     parameters: {
       query?: never;
@@ -1086,11 +1127,17 @@ export interface components {
      * @description Статус заявки в договорном шлюзе (DECISIONS 2026-11-05):
      *     - `submitted`: заявка подана, ожидает проверки снабжением
      *     - `contract_sent`: проект партнёрского договора отправлен кандидату
+     *     - `candidate_agreed`: проект договора согласован кандидатом, ожидает утверждения
      *     - `approved`: договор подписан, отношение `partner` активировано
      *     - `rejected`: заявка отклонена
      * @enum {string}
      */
-    PartnerApplicationStatus: "submitted" | "contract_sent" | "approved" | "rejected";
+    PartnerApplicationStatus:
+      | "submitted"
+      | "contract_sent"
+      | "candidate_agreed"
+      | "approved"
+      | "rejected";
     PartnerApplication: {
       id: number;
       status: components["schemas"]["PartnerApplicationStatus"];
@@ -1117,6 +1164,20 @@ export interface components {
        * @description Дата партнёрского договора
        */
       contract_date?: string | null;
+      /**
+       * Format: date-time
+       * @description Дата и время направления проекта договора
+       */
+      contract_draft_sent_at?: string | null;
+      /**
+       * Format: date-time
+       * @description Дата и время согласования договора кандидатом
+       */
+      candidate_agreed_at?: string | null;
+      /** @description Примечания/комментарии кандидата при согласовании */
+      candidate_notes?: string | null;
+      /** @description Наличие прикреплённого PDF-файла договора */
+      has_contract_pdf?: boolean;
       /** @description Причина отклонения заявки */
       rejected_reason?: string | null;
       /** Format: date-time */
@@ -4088,6 +4149,70 @@ export interface operations {
         };
       };
       422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  getCompanyPartnerContractPdf: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description PDF-файл договора */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/pdf": string;
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  agreeCompanyPartnerContract: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json": {
+          /** @description Примечание или комментарий кандидата */
+          notes?: string;
+        };
+      };
+    };
+    responses: {
+      /** @description Договор успешно согласован кандидатом */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerApplication"];
+        };
+      };
+      /** @description Заявка не находится в статусе contract_sent */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
       429: components["responses"]["TooManyRequests"];
     };
   };

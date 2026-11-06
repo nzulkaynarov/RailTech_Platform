@@ -14726,7 +14726,12 @@ export interface components {
     /** @enum {string} */
     PartnerApplicationSource: "public" | "client_cabinet";
     /** @enum {string} */
-    PartnerApplicationStatus: "submitted" | "contract_sent" | "approved" | "rejected";
+    PartnerApplicationStatus:
+      | "submitted"
+      | "contract_sent"
+      | "candidate_agreed"
+      | "approved"
+      | "rejected";
     /** @enum {string} */
     PartnerApplicationKind: "" | "manufacturer" | "supplier" | "principal" | "other";
     PartnerApplicationItem: {

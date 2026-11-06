@@ -132,10 +132,14 @@ class TestSendContract:
         assert data["contract_number"] == "DOG-2026-001"
         assert data["contract_date"] == "2026-11-06"
         assert data["reviewed_by"] is not None
+        assert data["has_contract_pdf"] is True
+        assert data["contract_draft_sent_at"] is not None
 
         app.refresh_from_db()
         assert app.status == PartnerApplicationStatus.CONTRACT_SENT
         assert app.contract_number == "DOG-2026-001"
+        assert app.contract_pdf
+        assert app.contract_draft_sent_at is not None
 
 
 class TestRejectApplication:
@@ -184,9 +188,11 @@ class TestApproveApplicationClientCabinet:
         data = resp.json()
         assert data["status"] == "approved"
         assert data["contract_number"] == "PRT-CLIENT-01"
+        assert data["has_contract_pdf"] is True
 
         app.refresh_from_db()
         assert app.status == PartnerApplicationStatus.APPROVED
+        assert app.contract_pdf
 
         rel = CompanyRelationship.objects.get(company=client_company, role=RelationshipRole.PARTNER)
         assert rel.status == RelationshipStatus.ACTIVE
@@ -216,9 +222,11 @@ class TestApproveApplicationPublic:
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "approved"
+        assert data["has_contract_pdf"] is True
 
         app.refresh_from_db()
         assert app.status == PartnerApplicationStatus.APPROVED
+        assert app.contract_pdf
         assert app.company is not None
         assert app.company.name == "Новый Завод Стрелка"
         assert app.company.inn == "5001234567"

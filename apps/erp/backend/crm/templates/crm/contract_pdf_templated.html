@@ -46,7 +46,8 @@
       <div class="party">
         <h3>{% translate "Покупатель" %}</h3>
         <div class="pname">{{ company.name }}</div>
-        {% if company.inn %}<p>{% translate "ИНН:" %} {{ company.inn }}</p>{% endif %}
+        {% if company.inn %}<p>{% translate "ИНН:" %} {{ company.inn }}</p>
+        {% elif company.registration_number %}<p>{% translate "Рег. номер:" %} {{ company.registration_number }}{% if company.country %} ({{ company.country.name }}){% endif %}</p>{% endif %}
         {% if company.legal_address %}<p>{{ company.legal_address }}</p>{% endif %}
       </div>
     </td>

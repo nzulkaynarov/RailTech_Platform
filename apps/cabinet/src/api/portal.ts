@@ -492,3 +492,10 @@ export const getCompanyPartnerApplication = () =>
 /** Подача заявки действующим клиентом из личного кабинета. */
 export const submitCompanyPartnerApplication = (body: PartnerApplicationClientCreate) =>
   portalRequest<PartnerApplication>('/company/partner-application', { method: 'POST', body });
+
+/** URL для скачивания PDF договора кандидата. */
+export const getPartnerContractPdfUrl = () => portalUrl('/company/partner-application/contract-pdf');
+
+/** Согласование проекта партнёрского договора кандидатом. */
+export const agreeCompanyPartnerContract = (body?: { notes?: string }) =>
+  portalRequest<PartnerApplication>('/company/partner-application/agree', { method: 'POST', body: body ?? {} });

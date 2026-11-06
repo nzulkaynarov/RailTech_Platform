@@ -10,7 +10,7 @@ import logging
 
 from django.conf import settings
 from django.db import transaction
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.utils import timezone, translation
 from integration.services.requisites import REQUISITES_MANAGED_BY_CRM, changed_crm_owned_fields
 from parties.models import (
@@ -1107,7 +1107,7 @@ class CompanyView(BasePortalView):
 class CompanyPartnerApplicationView(BasePortalView):
     """GET/POST /company/partner-application — Заявка действующего клиента на получение роли партнёра."""
 
-    required_module = "company"
+    required_module = ANY_MODULE
 
     def get(self, request):
         already_partner = "partner" in getattr(request, "portal_roles", []) or (
@@ -1116,10 +1116,22 @@ class CompanyPartnerApplicationView(BasePortalView):
             ).exists()
         )
         app = PartnerApplication.objects.filter(company=request.portal_company).order_by("-created_at").first()
+        if not app and getattr(request, "portal_contact", None) and request.portal_contact.email:
+            app = (
+                PartnerApplication.objects.filter(email__iexact=request.portal_contact.email)
+                .order_by("-created_at")
+                .first()
+            )
         return Response(
             {
                 "already_partner": bool(already_partner),
-                "has_application": app is not None and app.status in ("submitted", "contract_sent"),
+                "has_application": app is not None
+                and app.status
+                in (
+                    PartnerApplicationStatus.SUBMITTED,
+                    PartnerApplicationStatus.CONTRACT_SENT,
+                    PartnerApplicationStatus.CANDIDATE_AGREED,
+                ),
                 "application": PartnerApplicationSerializer(app).data if app else None,
             }
         )
@@ -1137,7 +1149,11 @@ class CompanyPartnerApplicationView(BasePortalView):
 
         existing = PartnerApplication.objects.filter(
             company=request.portal_company,
-            status__in=[PartnerApplicationStatus.SUBMITTED, PartnerApplicationStatus.CONTRACT_SENT],
+            status__in=[
+                PartnerApplicationStatus.SUBMITTED,
+                PartnerApplicationStatus.CONTRACT_SENT,
+                PartnerApplicationStatus.CANDIDATE_AGREED,
+            ],
         ).first()
         if existing:
             raise PortalConflict("APPLICATION_EXISTS")
@@ -1153,7 +1169,9 @@ class CompanyPartnerApplicationView(BasePortalView):
             company=company,
             applicant_contact=contact,
             company_name=company.name,
+            country=company.country,
             inn=company.inn or "",
+            registration_number=company.registration_number or "",
             kind=data.get("kind") or "supplier",
             categories_description=data["categories_description"].strip(),
             contact_name=contact.name if contact else "",
@@ -1164,6 +1182,92 @@ class CompanyPartnerApplicationView(BasePortalView):
             status=PartnerApplicationStatus.SUBMITTED,
         )
         return Response(PartnerApplicationSerializer(app).data, status=status.HTTP_201_CREATED)
+
+
+class CompanyPartnerContractPdfView(BasePortalView):
+    """GET /company/partner-application/contract-pdf — Скачать проект или подписанный партнёрский договор."""
+
+    required_module = ANY_MODULE
+
+    def get(self, request):
+        app = PartnerApplication.objects.filter(company=request.portal_company).order_by("-created_at").first()
+        if not app and getattr(request, "portal_contact", None) and request.portal_contact.email:
+            app = (
+                PartnerApplication.objects.filter(email__iexact=request.portal_contact.email)
+                .order_by("-created_at")
+                .first()
+            )
+
+        if not app:
+            raise exceptions.NotFound("NOT_FOUND")
+
+        from django.core.files.base import ContentFile
+        from portal.services.partner_contract import render_partner_contract_pdf
+
+        if not app.contract_pdf:
+            is_draft = app.status != PartnerApplicationStatus.APPROVED
+            pdf_bytes = render_partner_contract_pdf(app, draft=is_draft)
+            filename = f"Partner_Contract_{app.contract_number or app.pk}_{'draft' if is_draft else 'signed'}.pdf"
+            app.contract_pdf.save(filename, ContentFile(pdf_bytes), save=True)
+        else:
+            try:
+                pdf_bytes = app.contract_pdf.read()
+            except Exception:
+                is_draft = app.status != PartnerApplicationStatus.APPROVED
+                pdf_bytes = render_partner_contract_pdf(app, draft=is_draft)
+
+        response = HttpResponse(pdf_bytes, content_type="application/pdf")
+        filename = f"Partner_Contract_{app.contract_number or app.pk}.pdf"
+        response["Content-Disposition"] = f'inline; filename="{filename}"'
+        return response
+
+
+class CompanyPartnerApplicationAgreeView(BasePortalView):
+    """POST /company/partner-application/agree — Согласование проекта договора кандидатом."""
+
+    required_module = ANY_MODULE
+
+    def post(self, request):
+        if not getattr(request.portal_contact, "can_act", False):
+            raise exceptions.PermissionDenied(detail="FORBIDDEN")
+
+        app = (
+            PartnerApplication.objects.filter(
+                company=request.portal_company,
+                status=PartnerApplicationStatus.CONTRACT_SENT,
+            )
+            .order_by("-created_at")
+            .first()
+        )
+        if not app and getattr(request, "portal_contact", None) and request.portal_contact.email:
+            app = (
+                PartnerApplication.objects.filter(
+                    email__iexact=request.portal_contact.email,
+                    status=PartnerApplicationStatus.CONTRACT_SENT,
+                )
+                .order_by("-created_at")
+                .first()
+            )
+
+        if not app:
+            raise PortalBadRequest("NOT_IN_CONTRACT_SENT_STATUS")
+
+        notes = (request.data.get("notes") or "").strip()
+        app.status = PartnerApplicationStatus.CANDIDATE_AGREED
+        app.candidate_agreed_at = timezone.now()
+        if notes:
+            app.candidate_notes = notes
+
+        # Перерендерим проект договора с отметкой о согласовании кандидатом
+        from django.core.files.base import ContentFile
+        from portal.services.partner_contract import render_partner_contract_pdf
+
+        pdf_bytes = render_partner_contract_pdf(app, draft=True)
+        filename = f"Partner_Contract_{app.contract_number or app.pk}_agreed.pdf"
+        app.contract_pdf.save(filename, ContentFile(pdf_bytes), save=False)
+        app.save()
+
+        return Response(PartnerApplicationSerializer(app).data, status=status.HTTP_200_OK)
 
 
 class TeamListView(BasePortalView):

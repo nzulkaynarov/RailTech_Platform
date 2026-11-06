@@ -28414,12 +28414,14 @@ components:
       enum:
       - submitted
       - contract_sent
+      - candidate_agreed
       - approved
       - rejected
       type: string
       description: |-
         * `submitted` - submitted
         * `contract_sent` - contract_sent
+        * `candidate_agreed` - candidate_agreed
         * `approved` - approved
         * `rejected` - rejected
     PartnerPriceVisibilityEnum:

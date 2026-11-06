@@ -77,6 +77,10 @@ def _app_dict(app: PartnerApplication) -> dict:
         "categories_description": app.categories_description,
         "contract_number": app.contract_number,
         "contract_date": app.contract_date,
+        "contract_draft_sent_at": app.contract_draft_sent_at,
+        "candidate_agreed_at": app.candidate_agreed_at,
+        "candidate_notes": app.candidate_notes,
+        "has_contract_pdf": bool(app.contract_pdf),
         "rejected_reason": app.rejected_reason,
         "created_at": app.created_at,
         "reviewed_at": app.reviewed_at,
@@ -108,6 +112,9 @@ def get_application(pk: int) -> dict:
 
 
 def send_contract(pk: int, data: dict, user) -> dict:
+    from django.core.files.base import ContentFile
+    from portal.services.partner_contract import generate_partner_contract_number, render_partner_contract_pdf
+
     with transaction.atomic():
         app = PartnerApplication.objects.select_for_update().filter(pk=pk).first()
         if app is None:
@@ -117,14 +124,93 @@ def send_contract(pk: int, data: dict, user) -> dict:
 
         contract_number = (data.get("contract_number") or "").strip()
         contract_date = data.get("contract_date")
+        if not contract_number and not app.contract_number:
+            contract_number = generate_partner_contract_number(app.pk)
         if contract_number:
             app.contract_number = contract_number
         if contract_date:
             app.contract_date = contract_date
+        elif not app.contract_date:
+            app.contract_date = timezone.now().date()
 
         app.status = PartnerApplicationStatus.CONTRACT_SENT
+        app.contract_draft_sent_at = timezone.now()
         app.reviewed_by = user
         app.reviewed_at = timezone.now()
+
+        # Поиск или создание компании и контакта для заявок из внешнего входа, чтобы кандидат мог войти
+        if app.source == PartnerApplicationSource.PUBLIC and not app.company_id:
+            company = None
+            if app.inn:
+                company = Company.objects.filter(inn=app.inn).first()
+            elif app.registration_number:
+                company = Company.objects.filter(
+                    registration_number__iexact=app.registration_number,
+                    country=app.country,
+                ).first()
+            if company is None:
+                company_inn = app.inn.strip() if app.inn else None
+                company_reg = app.registration_number.strip() if app.registration_number else ""
+                if app.country and app.country.code != "UZ" and company_inn and not company_reg:
+                    company_reg = company_inn
+                    company_inn = None
+                company = Company.objects.create(
+                    name=app.company_name,
+                    country=app.country,
+                    inn=company_inn,
+                    registration_number=company_reg,
+                    is_active=True,
+                )
+                supplier_type = CompanyType.objects.filter(code="SUPPLIER").first()
+                if supplier_type:
+                    company.types.add(supplier_type)
+                if app.kind == PartnerKind.MANUFACTURER:
+                    manuf_type = CompanyType.objects.filter(code="MANUFACTURER").first()
+                    if manuf_type:
+                        company.types.add(manuf_type)
+
+            contact = Contact.objects.filter(active_contact_q(), company=company, email__iexact=app.email).first()
+            if contact is None:
+                contact = Contact.objects.create(
+                    company=company,
+                    name=app.contact_name,
+                    email=app.email.lower().strip(),
+                    phone=app.phone or "",
+                    language=app.language if app.language in LANGUAGES else "ru",
+                    can_act=True,
+                    preferred_channel="email",
+                    created_by=user,
+                )
+            app.company = company
+            app.applicant_contact = contact
+
+            # Создаём отношение с INVITED и пустыми модулями (только вход в ЛК для согласования)
+            rel = CompanyRelationship.objects.filter(company=company, role=ROLE).first()
+            if rel is None:
+                rel = CompanyRelationship.objects.create(
+                    company=company,
+                    role=ROLE,
+                    kind=app.kind,
+                    responsible=user,
+                    invited_by=user,
+                    invited_at=timezone.now(),
+                    modules=[],
+                    contract_number=app.contract_number,
+                    contract_date=app.contract_date,
+                    status=RelationshipStatus.INVITED,
+                )
+            else:
+                rel.contract_number = app.contract_number
+                rel.contract_date = app.contract_date
+                rel.save(update_fields=["contract_number", "contract_date"])
+
+            # Приглашаем контакт (письмо со ссылкой для входа)
+            invite_contact(contact, actor=user, channel="email", language=contact.language)
+
+        # Рендерим PDF проекта договора
+        pdf_bytes = render_partner_contract_pdf(app, draft=True)
+        pdf_filename = f"Partner_Contract_{app.contract_number or app.pk}_draft.pdf"
+        app.contract_pdf.save(pdf_filename, ContentFile(pdf_bytes), save=False)
         app.save()
 
         record(
@@ -249,29 +335,34 @@ def approve_application(pk: int, data: dict, user) -> dict:
                 rel.invited_by = user
                 rel.invited_at = now
                 rel.suspended_at = None
-                if app.source == PartnerApplicationSource.CLIENT_CABINET or rel.activated_at:
-                    rel.status = RelationshipStatus.ACTIVE
-                    if not rel.activated_at:
-                        rel.activated_at = now
-                else:
-                    rel.status = RelationshipStatus.INVITED
+                rel.status = RelationshipStatus.ACTIVE
+                if not rel.activated_at:
+                    rel.activated_at = now
+                rel.modules = list(PARTNER_DEFAULT_TOGGLEABLE)
                 rel.save()
 
             # 4. Приглашение и интеграция с CRM
-            if app.source != PartnerApplicationSource.CLIENT_CABINET:
+            if app.source != PartnerApplicationSource.CLIENT_CABINET and not contact.last_login_at:
                 outcome = invite_contact(contact, actor=user, channel="email", language=contact.language)
-                if outcome.error:
+                if outcome.error and "ALREADY" not in outcome.error:
                     raise _Undo(outcome.error)
 
             request_client_in_crm(company, user)
 
-            # 5. Завершение заявки
+            # 5. Завершение заявки и рендер подписанного договора
             app.company = company
             app.status = PartnerApplicationStatus.APPROVED
             app.contract_number = contract_number
             app.contract_date = contract_date
             app.reviewed_by = user
             app.reviewed_at = now
+
+            from django.core.files.base import ContentFile
+            from portal.services.partner_contract import render_partner_contract_pdf
+
+            signed_pdf = render_partner_contract_pdf(app, draft=False, director_user=user)
+            pdf_filename = f"Partner_Contract_{contract_number}_signed.pdf"
+            app.contract_pdf.save(pdf_filename, ContentFile(signed_pdf), save=False)
             app.save()
 
             record(

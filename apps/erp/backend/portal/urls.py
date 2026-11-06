@@ -13,7 +13,9 @@ from portal.views import (
     CatalogDetailView,
     CatalogDocumentFileView,
     CatalogListView,
+    CompanyPartnerApplicationAgreeView,
     CompanyPartnerApplicationView,
+    CompanyPartnerContractPdfView,
     CompanyView,
     ContractListView,
     ContractSignView,
@@ -192,6 +194,26 @@ urlpatterns = [
         "company/partner-application/",
         CompanyPartnerApplicationView.as_view(),
         name="portal-company-partner-application-slash",
+    ),
+    path(
+        "company/partner-application/contract-pdf",
+        CompanyPartnerContractPdfView.as_view(),
+        name="portal-company-partner-contract-pdf",
+    ),
+    path(
+        "company/partner-application/contract-pdf/",
+        CompanyPartnerContractPdfView.as_view(),
+        name="portal-company-partner-contract-pdf-slash",
+    ),
+    path(
+        "company/partner-application/agree",
+        CompanyPartnerApplicationAgreeView.as_view(),
+        name="portal-company-partner-application-agree",
+    ),
+    path(
+        "company/partner-application/agree/",
+        CompanyPartnerApplicationAgreeView.as_view(),
+        name="portal-company-partner-application-agree-slash",
     ),
     # Team (Команда клиента)
     path("team", TeamListView.as_view(), name="portal-team"),

@@ -31,7 +31,8 @@
         "act",
         "receipt",
         "delivery_note",
-        "specification"
+        "specification",
+        "partner_contract"
       ]
     }
   },

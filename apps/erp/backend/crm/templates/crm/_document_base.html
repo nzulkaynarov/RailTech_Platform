@@ -313,7 +313,8 @@
           {% if seller or seller_profile %}
             <div class="pname">{% firstof seller_profile.legal_name seller.name %}</div>
             {% firstof seller_profile.inn seller.inn as party_seller_inn %}
-            {% if party_seller_inn %}<p>{% translate "ИНН" %}: {{ party_seller_inn }}</p>{% endif %}
+            {% if party_seller_inn %}<p>{% translate "ИНН" %}: {{ party_seller_inn }}</p>
+            {% elif seller.registration_number %}<p>{% translate "Рег. номер" %}: {{ seller.registration_number }}{% if seller.country %} ({{ seller.country.name }}){% endif %}</p>{% endif %}
             {% firstof seller_profile.legal_address seller.legal_address as party_seller_addr %}
             {% if party_seller_addr %}<p>{{ party_seller_addr }}</p>{% endif %}
           {% else %}
@@ -328,7 +329,8 @@
           <h3>{% translate "Покупатель" %}</h3>
           {% if company %}
             <div class="pname">{{ company.name }}</div>
-            {% if company.inn %}<p>{% translate "ИНН" %}: {{ company.inn }}</p>{% endif %}
+            {% if company.inn %}<p>{% translate "ИНН" %}: {{ company.inn }}</p>
+            {% elif company.registration_number %}<p>{% translate "Рег. номер" %}: {{ company.registration_number }}{% if company.country %} ({{ company.country.name }}){% endif %}</p>{% endif %}
             {% if company.legal_address %}<p>{{ company.legal_address }}</p>{% endif %}
             {% if company.contact_person %}<p>{% translate "Контакт" %}: {{ company.contact_person }}</p>{% endif %}
           {% else %}

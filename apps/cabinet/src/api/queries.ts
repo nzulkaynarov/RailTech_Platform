@@ -237,5 +237,8 @@ export const useCompanyPartnerApplication = (options: { enabled?: boolean } = {}
 export const useSubmitCompanyPartnerApplication = () =>
   useInvalidatingMutation(portal.submitCompanyPartnerApplication, [keys.partnerApplication]);
 
+export const useAgreeCompanyPartnerContract = () =>
+  useInvalidatingMutation(portal.agreeCompanyPartnerContract, [keys.partnerApplication]);
+
 export const useSubmitPartnerApplication = () =>
   useMutation({ mutationFn: portal.submitPartnerApplication });

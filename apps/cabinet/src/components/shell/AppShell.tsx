@@ -13,6 +13,8 @@ import { cn } from '@/lib/utils';
 import { useAppMode } from '@/session/mode';
 import { useCanAct, useMe } from '@/session/useMe';
 import { useNav } from '@/session/useNav';
+import { useCompanyPartnerApplication } from '@/api/queries';
+import { PartnerApplicationCard } from '@/pages/company';
 import { BottomNav } from './BottomNav';
 import { MessagesLink } from './MessagesLink';
 import { BrandMark } from './BrandMark';
@@ -281,7 +283,17 @@ export function AppShell() {
  */
 function NoSections() {
   const { t } = useTranslation();
+  const partnerQuery = useCompanyPartnerApplication();
   usePageTitle(t('access.noSections.title'));
+
+  if (partnerQuery.data?.has_application) {
+    return (
+      <div className="mx-auto max-w-2xl py-8">
+        <PartnerApplicationCard />
+      </div>
+    );
+  }
+
   return (
     <section className="mx-auto flex max-w-md flex-col items-center gap-3 py-16 text-center" aria-live="polite">
       <h1 className="text-xl font-semibold">{t('access.noSections.title')}</h1>

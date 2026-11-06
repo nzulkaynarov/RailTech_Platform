@@ -295,6 +295,12 @@ def company_application_partnership_path(instance, filename):
     return f"companies/{instance.company_id}/applications/{instance.pk or 'new'}/partnership/{name}"
 
 
+def partner_application_contract_path(instance, filename):
+    """partner_applications/{pk}/contracts/{uuid}.{ext}"""
+    name = _uuid_filename(instance, filename)
+    return f"partner_applications/{instance.pk or 'new'}/contracts/{name}"
+
+
 def company_document_path(instance, filename):
     """companies/{company_id}/documents/{uuid}.{ext}"""
     name = _uuid_filename(instance, filename)

@@ -725,6 +725,10 @@ class PartnerApplicationSerializer(serializers.ModelSerializer):
     phone = serializers.CharField(allow_null=True, required=False)
     contract_number = serializers.CharField(allow_null=True, required=False)
     contract_date = serializers.DateField(allow_null=True, required=False)
+    contract_draft_sent_at = serializers.DateTimeField(allow_null=True, required=False)
+    candidate_agreed_at = serializers.DateTimeField(allow_null=True, required=False)
+    candidate_notes = serializers.CharField(allow_null=True, required=False)
+    has_contract_pdf = serializers.SerializerMethodField()
     rejected_reason = serializers.CharField(allow_null=True, required=False)
 
     class Meta:
@@ -745,15 +749,22 @@ class PartnerApplicationSerializer(serializers.ModelSerializer):
             "phone",
             "contract_number",
             "contract_date",
+            "contract_draft_sent_at",
+            "candidate_agreed_at",
+            "candidate_notes",
+            "has_contract_pdf",
             "rejected_reason",
             "created_at",
             "updated_at",
         ]
 
+    def get_has_contract_pdf(self, obj) -> bool:
+        return bool(getattr(obj, "contract_pdf", None))
+
     def to_representation(self, instance):
         ret = super().to_representation(instance)
         # Пустые строки в nullable-полях приводим к None по OpenAPI 3.1 схеме
-        for field in ("inn", "registration_number", "phone", "contract_number", "rejected_reason"):
+        for field in ("inn", "registration_number", "phone", "contract_number", "candidate_notes", "rejected_reason"):
             if not ret.get(field):
                 ret[field] = None
         ret["country"] = instance.country.code if instance.country else None

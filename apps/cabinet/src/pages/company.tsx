@@ -1,12 +1,14 @@
 import { useEffect, useId, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Building2, Handshake, Pencil, UserPlus, Users, X } from 'lucide-react';
+import { Building2, CheckCircle2, FileText, Handshake, Pencil, UserPlus, Users, X } from 'lucide-react';
 import { toast } from '@/lib/toast';
 
 import { apiErrorKey } from '@/api/errors';
 import type { Company, CompanyUpdate, PartnerKind, Schemas, TeamInvite, TeamMember } from '@/api/portal';
+import { getPartnerContractPdfUrl } from '@/api/portal';
 import {
+  useAgreeCompanyPartnerContract,
   useCompany,
   useCompanyPartnerApplication,
   useInviteTeamMember,
@@ -489,11 +491,93 @@ function InviteDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (op
 
 const PARTNER_KINDS: PartnerKind[] = ['supplier', 'manufacturer', 'principal', 'other'];
 
-function PartnerApplicationCard() {
+function PartnerStepper({ status }: { status: string }) {
+  const { t } = useTranslation();
+  const steps = [
+    { key: 'application', label: t('pages.company.partner.steps.application') },
+    { key: 'draft', label: t('pages.company.partner.steps.draft') },
+    { key: 'director', label: t('pages.company.partner.steps.director') },
+    { key: 'active', label: t('pages.company.partner.steps.active') },
+  ];
+
+  const getStepState = (index: number): 'completed' | 'current' | 'pending' => {
+    if (status === 'rejected') return index === 0 ? 'completed' : 'pending';
+    if (status === 'approved') return 'completed';
+    if (status === 'candidate_agreed') {
+      if (index < 2) return 'completed';
+      if (index === 2) return 'current';
+      return 'pending';
+    }
+    if (status === 'contract_sent') {
+      if (index < 1) return 'completed';
+      if (index === 1) return 'current';
+      return 'pending';
+    }
+    if (index === 0) return 'current';
+    return 'pending';
+  };
+
+  return (
+    <div className="py-2 mb-4" aria-label="Прогресс партнёрства">
+      <div className="flex items-center justify-between gap-1">
+        {steps.map((step, idx) => {
+          const state = getStepState(idx);
+          return (
+            <div key={step.key} className="flex-1 flex flex-col items-center text-center">
+              <div className="flex items-center w-full">
+                {idx > 0 && (
+                  <div
+                    className={cn(
+                      'flex-1 h-0.5 transition-colors',
+                      state === 'completed' || (state === 'current' && idx > 0)
+                        ? 'bg-primary'
+                        : 'bg-muted',
+                    )}
+                  />
+                )}
+                <div
+                  className={cn(
+                    'size-6 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 transition-colors',
+                    state === 'completed' && 'bg-primary text-primary-foreground',
+                    state === 'current' && 'border-2 border-primary bg-background text-primary',
+                    state === 'pending' && 'border-2 border-muted bg-background text-muted-foreground',
+                  )}
+                >
+                  {state === 'completed' ? <CheckCircle2 className="size-3.5" /> : idx + 1}
+                </div>
+                {idx < steps.length - 1 && (
+                  <div
+                    className={cn(
+                      'flex-1 h-0.5 transition-colors',
+                      state === 'completed' ? 'bg-primary' : 'bg-muted',
+                    )}
+                  />
+                )}
+              </div>
+              <span
+                className={cn(
+                  'text-xs mt-1 font-medium leading-tight',
+                  state === 'current' ? 'text-foreground' : 'text-muted-foreground',
+                )}
+              >
+                {step.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+export function PartnerApplicationCard() {
   const { t } = useTranslation();
   const partnerQuery = useCompanyPartnerApplication();
   const submitMutation = useSubmitCompanyPartnerApplication();
+  const agreeMutation = useAgreeCompanyPartnerContract();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [agreeDialogOpen, setAgreeDialogOpen] = useState(false);
+  const [agreeNotes, setAgreeNotes] = useState('');
   const [kind, setKind] = useState<PartnerKind>('supplier');
   const [categories, setCategories] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -507,7 +591,7 @@ function PartnerApplicationCard() {
   const hasApp = Boolean(data?.has_application);
   const app = data?.application;
 
-  if (isPartner) {
+  if (isPartner && !hasApp) {
     return (
       <Card className="border-border">
         <CardHeader>
@@ -532,48 +616,121 @@ function PartnerApplicationCard() {
     const toneByStatus: Record<string, 'neutral' | 'info' | 'success' | 'warning'> = {
       submitted: 'info',
       contract_sent: 'warning',
+      candidate_agreed: 'info',
       approved: 'success',
       rejected: 'neutral',
     };
+
+    const handleAgree = () => {
+      agreeMutation.mutate(
+        { notes: agreeNotes.trim() || undefined },
+        {
+          onSuccess: () => {
+            setAgreeDialogOpen(false);
+            setAgreeNotes('');
+            toast.success(t('pages.company.partner.agreeSuccess'));
+          },
+        },
+      );
+    };
+
     return (
-      <Card className="border-border">
-        <CardHeader>
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Handshake className="size-5 text-primary" aria-hidden="true" />
-              <CardTitle>
-                <h2 className="text-base">{t('pages.company.partner.cardTitle')}</h2>
-              </CardTitle>
+      <>
+        <Card className="border-border">
+          <CardHeader>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Handshake className="size-5 text-primary" aria-hidden="true" />
+                <CardTitle>
+                  <h2 className="text-base">{t('pages.company.partner.cardTitle')}</h2>
+                </CardTitle>
+              </div>
+              <ToneBadge tone={toneByStatus[app.status] ?? 'neutral'}>
+                {t(`pages.company.partner.status.${app.status}`)}
+              </ToneBadge>
             </div>
-            <ToneBadge tone={toneByStatus[app.status] ?? 'neutral'}>
-              {t(`pages.company.partner.status.${app.status}`)}
-            </ToneBadge>
+            <CardDescription>
+              {app.status === 'contract_sent'
+                ? t('pages.company.partner.contractSentDesc')
+                : app.status === 'candidate_agreed'
+                ? t('pages.company.partner.contractAgreedDesc')
+                : t('pages.company.partner.applicationPendingDesc')}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <PartnerStepper status={app.status} />
+
+            <DetailList
+              className="sm:grid-cols-1"
+              items={[
+                { label: t('pages.becomePartner.fields.kind'), value: t(`pages.becomePartner.fields.kinds.${app.kind}`) },
+                { label: t('pages.becomePartner.fields.categoriesDescription'), value: app.categories_description },
+                { label: t('pages.company.partner.appliedAt'), value: formatDateTime(app.created_at) },
+                ...(app.contract_number
+                  ? [
+                      {
+                        label: t('pages.company.partner.contractNumber'),
+                        value: `${app.contract_number}${app.contract_date ? ` от ${app.contract_date}` : ''}`,
+                      },
+                    ]
+                  : []),
+              ]}
+            />
+
+            {(app.status === 'contract_sent' || app.status === 'candidate_agreed' || app.status === 'approved') && (
+              <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-border">
+                <Button asChild variant="outline">
+                  <a href={getPartnerContractPdfUrl()} target="_blank" rel="noopener noreferrer">
+                    <FileText className="size-4 mr-2" aria-hidden="true" />
+                    {t('pages.company.partner.downloadDraftPdf')}
+                  </a>
+                </Button>
+
+                {app.status === 'contract_sent' && (
+                  <CanAct
+                    fallback={
+                      <p className="text-xs text-muted-foreground">{t('pages.company.partner.onlyCanAct')}</p>
+                    }
+                  >
+                    <Button onClick={() => setAgreeDialogOpen(true)}>
+                      <CheckCircle2 className="size-4 mr-2" aria-hidden="true" />
+                      {t('pages.company.partner.agreeContractBtn')}
+                    </Button>
+                  </CanAct>
+                )}
+
+                {app.status === 'approved' && (
+                  <Button asChild>
+                    <Link to="/my-products">{t('pages.company.partner.toMyProducts')}</Link>
+                  </Button>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <ActionDialog
+          open={agreeDialogOpen}
+          onOpenChange={setAgreeDialogOpen}
+          title={t('pages.company.partner.agreeDialogTitle')}
+          description={t('pages.company.partner.agreeDialogDesc')}
+          confirmLabel={t('pages.company.partner.agreeSubmit')}
+          pending={agreeMutation.isPending}
+          error={agreeMutation.error}
+          onSubmit={handleAgree}
+        >
+          <div className="flex flex-col gap-2 pt-2">
+            <Label htmlFor="agree-notes">{t('pages.company.partner.agreeNotesLabel')}</Label>
+            <Textarea
+              id="agree-notes"
+              value={agreeNotes}
+              onChange={(e) => setAgreeNotes(e.target.value)}
+              placeholder="..."
+              maxLength={1000}
+            />
           </div>
-          <CardDescription>
-            {app.status === 'contract_sent'
-              ? t('pages.company.partner.contractSentDesc')
-              : t('pages.company.partner.applicationPendingDesc')}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <DetailList
-            className="sm:grid-cols-1"
-            items={[
-              { label: t('pages.becomePartner.fields.kind'), value: t(`pages.becomePartner.fields.kinds.${app.kind}`) },
-              { label: t('pages.becomePartner.fields.categoriesDescription'), value: app.categories_description },
-              { label: t('pages.company.partner.appliedAt'), value: formatDateTime(app.created_at) },
-              ...(app.contract_number
-                ? [
-                    {
-                      label: t('pages.company.partner.contractNumber'),
-                      value: `${app.contract_number}${app.contract_date ? ` от ${app.contract_date}` : ''}`,
-                    },
-                  ]
-                : []),
-            ]}
-          />
-        </CardContent>
-      </Card>
+        </ActionDialog>
+      </>
     );
   }
 

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Portal API (Cabinet → ERP)
-  version: 0.6.0
+  version: 0.7.0
   summary: Пространство `/api/portal/v1/` — вызывает Cabinet SPA от имени клиента.
   description: |
     Контракт по `docs/architecture/CONTRACTS.md` §4 и ADR-0004 (Cabinet без бэкенда). Версия 0 (M0-INF-02):
@@ -1905,6 +1905,70 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
+  /company/partner-application/contract-pdf:
+    get:
+      tags: [company]
+      operationId: getCompanyPartnerContractPdf
+      summary: Скачать проект или подписанный партнёрский договор
+      description: |
+        Отдаёт PDF-файл проекта договора или подписанного партнёрского договора для ознакомления и согласования.
+      responses:
+        '200':
+          description: PDF-файл договора
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /company/partner-application/agree:
+    post:
+      tags: [company]
+      operationId: agreeCompanyPartnerContract
+      summary: Согласовать проект партнёрского договора кандидатом
+      description: |
+        Кандидат подтверждает согласование проекта партнёрского договора. Статус переводится в `candidate_agreed`.
+        Требует права действовать `can_act`.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notes:
+                  type: string
+                  description: Примечание или комментарий кандидата
+      responses:
+        '200':
+          description: Договор успешно согласован кандидатом
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerApplication'
+        '400':
+          description: Заявка не находится в статусе contract_sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
   /team:
     get:
       tags: [company]
@@ -2260,11 +2324,12 @@ components:
 
     PartnerApplicationStatus:
       type: string
-      enum: [submitted, contract_sent, approved, rejected]
+      enum: [submitted, contract_sent, candidate_agreed, approved, rejected]
       description: |
         Статус заявки в договорном шлюзе (DECISIONS 2026-11-05):
         - `submitted`: заявка подана, ожидает проверки снабжением
         - `contract_sent`: проект партнёрского договора отправлен кандидату
+        - `candidate_agreed`: проект договора согласован кандидатом, ожидает утверждения
         - `approved`: договор подписан, отношение `partner` активировано
         - `rejected`: заявка отклонена
 
@@ -2316,6 +2381,20 @@ components:
           type: [string, 'null']
           format: date
           description: Дата партнёрского договора
+        contract_draft_sent_at:
+          type: [string, 'null']
+          format: date-time
+          description: Дата и время направления проекта договора
+        candidate_agreed_at:
+          type: [string, 'null']
+          format: date-time
+          description: Дата и время согласования договора кандидатом
+        candidate_notes:
+          type: [string, 'null']
+          description: Примечания/комментарии кандидата при согласовании
+        has_contract_pdf:
+          type: boolean
+          description: Наличие прикреплённого PDF-файла договора
         rejected_reason:
           type: [string, 'null']
           description: Причина отклонения заявки

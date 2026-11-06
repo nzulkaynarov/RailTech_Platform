@@ -854,10 +854,41 @@ export const handlers = [
       const app = db.partnerApplication;
       return json({
         already_partner: alreadyPartner,
-        has_application: app !== null && (app.status === 'submitted' || app.status === 'contract_sent'),
+        has_application:
+          app !== null &&
+          (app.status === 'submitted' || app.status === 'contract_sent' || app.status === 'candidate_agreed'),
         application: app,
       } satisfies Schemas['PartnerApplicationStatusResponse']);
     }),
+  ),
+  http.get(
+    `${API}/company/partner-application/contract-pdf`,
+    withSession(() => {
+      return new HttpResponse(new Uint8Array([37, 80, 68, 70]), {
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': 'inline; filename="Partner_Contract.pdf"',
+        },
+      });
+    }),
+  ),
+  http.post(
+    `${API}/company/partner-application/agree`,
+    withSession(
+      async ({ db, request }) => {
+        if (!db.partnerApplication || db.partnerApplication.status !== 'contract_sent') {
+          return error(400, 'NOT_IN_CONTRACT_SENT_STATUS');
+        }
+        const body = ((await readJson<{ notes?: string }>(request).catch(() => ({}))) || {}) as { notes?: string };
+        db.partnerApplication.status = 'candidate_agreed';
+        db.partnerApplication.candidate_agreed_at = new Date().toISOString();
+        if (body.notes) {
+          db.partnerApplication.candidate_notes = body.notes;
+        }
+        return json(db.partnerApplication);
+      },
+      { action: true },
+    ),
   ),
   http.post(
     `${API}/company/partner-application`,
