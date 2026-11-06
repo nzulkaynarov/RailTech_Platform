@@ -28,6 +28,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useTelegramStep } from '@/onboarding/telegramStep';
 import { dismissChecklist, isChecklistDismissed } from '@/onboarding/checklistState';
+import { isMiniApp } from '@/telegram/webapp';
 import { cn } from '@/lib/utils';
 import { useHasModule, useMe } from '@/session/useMe';
 
@@ -58,10 +59,11 @@ export function OnboardingChecklist() {
 
   const [dismissed, setDismissed] = useState(isChecklistDismissed);
 
-  const companyQuery = useCompany();
-  const telegramStatus = useTelegramStatus({ enabled: !dismissed });
-  const telegramStep = useTelegramStep({ enabled: !dismissed });
-  const teamQuery = useTeam();
+  const inMiniApp = isMiniApp();
+  const companyQuery = useCompany({ enabled: !dismissed });
+  const telegramStatus = useTelegramStatus({ enabled: !dismissed && !inMiniApp });
+  const telegramStep = useTelegramStep({ enabled: !dismissed && !inMiniApp });
+  const teamQuery = useTeam({ enabled: !dismissed });
   const requestsQuery = useRequests({ enabled: !dismissed && hasRequests });
   const partnerProductsQuery = usePartnerProducts(
     { page: 1, page_size: 1 },
@@ -80,7 +82,7 @@ export function OnboardingChecklist() {
     // 1. Реквизиты компании
     const company = companyQuery.data;
     const hasRequisites = Boolean(
-      (company?.inn || company?.registration_number) && company?.phone,
+      (company?.inn || company?.registration_number) && company?.legal_address,
     );
     list.push({
       id: 'company',
@@ -92,7 +94,7 @@ export function OnboardingChecklist() {
     });
 
     // 2. Уведомления Telegram
-    const isTelegramLinked = Boolean(telegramStatus.data?.linked);
+    const isTelegramLinked = inMiniApp || Boolean(telegramStatus.data?.linked);
     list.push({
       id: 'telegram',
       titleKey: 'onboarding.telegramNotif',
@@ -117,8 +119,8 @@ export function OnboardingChecklist() {
       });
     } else if (partnerAppQuery.data?.has_application) {
       const isAgreedOrApproved =
-        partnerAppQuery.data.status === 'candidate_agreed' ||
-        partnerAppQuery.data.status === 'approved';
+        partnerAppQuery.data.application?.status === 'candidate_agreed' ||
+        partnerAppQuery.data.application?.status === 'approved';
       list.push({
         id: 'partner-contract',
         titleKey: 'onboarding.partnerContract',
@@ -154,6 +156,7 @@ export function OnboardingChecklist() {
 
     return list;
   }, [
+    inMiniApp,
     companyQuery.data,
     telegramStatus.data?.linked,
     telegramStep.connect,

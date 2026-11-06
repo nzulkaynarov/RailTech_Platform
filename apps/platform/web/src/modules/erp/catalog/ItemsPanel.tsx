@@ -50,10 +50,10 @@ import { ItemPhotos } from "./ItemPhotos";
 import { queryLabels } from "./labels";
 import {
   CatalogPriceValue,
+  DueCell,
   QueueSwitch,
   ReturnButton,
   ReviewBlock,
-  queueColumns,
 } from "./ReviewQueue";
 
 export function KindTag({ kind }: { kind: CatalogItemKind }) {
@@ -188,7 +188,30 @@ export function ItemsPanel() {
         ),
     },
   ];
-  const shownColumns = waiting ? [nameColumn, ...queueColumns(t, date)] : columns;
+  const queueColumns: Column<CatalogItem>[] = [
+    {
+      key: "partner",
+      title: t("queue.columns.partner"),
+      render: (row) => row.review?.partner?.name ?? "—",
+    },
+    {
+      key: "sent",
+      title: t("queue.columns.sent"),
+      render: (row) => (row.review ? date(row.review.submitted_at, "datetime") : "—"),
+    },
+    {
+      key: "due",
+      title: t("queue.columns.due"),
+      render: (row) => <DueCell item={row} />,
+    },
+    {
+      key: "completeness",
+      title: t("queue.columns.completeness"),
+      num: true,
+      render: (row) => (row.completeness === null ? "—" : `${String(row.completeness)} %`),
+    },
+  ];
+  const shownColumns = waiting ? [nameColumn, ...queueColumns] : columns;
   const setWaiting = (on: boolean) => {
     setParams(
       (prev) => {

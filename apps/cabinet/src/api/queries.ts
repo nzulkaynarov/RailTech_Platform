@@ -39,7 +39,8 @@ interface ListOptions {
   enabled?: boolean;
 }
 
-export const useRequests = () => useQuery({ queryKey: keys.requests, queryFn: portal.listRequests });
+export const useRequests = ({ enabled = true }: ListOptions = {}) =>
+  useQuery({ queryKey: keys.requests, queryFn: portal.listRequests, enabled });
 export const useRequest = (id: number) =>
   useQuery({ queryKey: keys.request(id), queryFn: () => portal.getRequest(id), enabled: Number.isFinite(id) });
 export const useQuotes = ({ enabled = true }: ListOptions = {}) =>
@@ -67,8 +68,10 @@ export const useCatalog = (params: portal.CatalogQuery, enabled = true) =>
   });
 export const useCatalogItem = (id: number) =>
   useQuery({ queryKey: keys.catalogItem(id), queryFn: () => portal.getCatalogItem(id), enabled: Number.isFinite(id) });
-export const useCompany = () => useQuery({ queryKey: keys.company, queryFn: portal.getCompany });
-export const useTeam = () => useQuery({ queryKey: keys.team, queryFn: portal.listTeam });
+export const useCompany = ({ enabled = true }: { enabled?: boolean } = {}) =>
+  useQuery({ queryKey: keys.company, queryFn: portal.getCompany, enabled });
+export const useTeam = ({ enabled = true }: { enabled?: boolean } = {}) =>
+  useQuery({ queryKey: keys.team, queryFn: portal.listTeam, enabled });
 
 /** Шаг опроса статуса Telegram; в тестах короткий, чтобы не ждать секунды реального времени. */
 export const TELEGRAM_POLL_MS = import.meta.env.MODE === 'test' ? 50 : 3000;

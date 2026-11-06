@@ -24122,7 +24122,15 @@ components:
           type: string
         company_name:
           type: string
+        country:
+          type: string
+          nullable: true
+        country_name:
+          type: string
+          nullable: true
         inn:
+          type: string
+        registration_number:
           type: string
         contact_name:
           type: string
@@ -24140,6 +24148,19 @@ components:
           type: string
           format: date
           nullable: true
+        contract_draft_sent_at:
+          type: string
+          format: date-time
+          nullable: true
+        candidate_agreed_at:
+          type: string
+          format: date-time
+          nullable: true
+        candidate_notes:
+          type: string
+        has_contract_pdf:
+          type: boolean
+          default: false
         rejected_reason:
           type: string
         created_at:
@@ -24200,7 +24221,15 @@ components:
           type: string
         company_name:
           type: string
+        country:
+          type: string
+          nullable: true
+        country_name:
+          type: string
+          nullable: true
         inn:
+          type: string
+        registration_number:
           type: string
         contact_name:
           type: string
@@ -24218,6 +24247,19 @@ components:
           type: string
           format: date
           nullable: true
+        contract_draft_sent_at:
+          type: string
+          format: date-time
+          nullable: true
+        candidate_agreed_at:
+          type: string
+          format: date-time
+          nullable: true
+        candidate_notes:
+          type: string
+        has_contract_pdf:
+          type: boolean
+          default: false
         rejected_reason:
           type: string
         created_at:

@@ -55,6 +55,7 @@ ERROR_CODES = (
     "ALREADY_PARTNER",
     "APPLICATION_EXISTS",
     "PARTNER_APPLICATION_NOT_FOUND",
+    "NOT_IN_CONTRACT_SENT_STATUS",
 )
 
 #: Код по HTTP-статусу для ошибок, у которых своего кода нет (чужие исключения DRF и Django).

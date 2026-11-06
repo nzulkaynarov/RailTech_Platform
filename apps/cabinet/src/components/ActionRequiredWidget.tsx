@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   AlertCircle,
@@ -21,7 +21,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useActionRequired } from '@/hooks/useActionRequired';
 import { formatMoney, formatQuantity } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import { useCanAct } from '@/session/useMe';
+import { useCanAct, useHasModule } from '@/session/useMe';
 
 /**
  * Виджет «Требует вашего решения» (M2-CAB-04, бенчмарк Odoo/ERPNext: клиент видит «что от меня ждут»).
@@ -34,14 +34,34 @@ import { useCanAct } from '@/session/useMe';
  * Ошибка загрузки любого из четырёх списков — видимое состояние с повтором: тихое «ничего не требуется» было бы ложью.
  * Наблюдателю (без права действовать) виджет не призывает к действию: «Ждут решения компании» и кто решает.
  */
-export function ActionRequiredWidget({ holdSkeleton = false }: { holdSkeleton?: boolean }) {
+export function ActionRequiredWidget({
+  holdSkeleton = false,
+  scope,
+}: {
+  holdSkeleton?: boolean;
+  scope?: 'client' | 'partner';
+}) {
   const { t } = useTranslation();
   const canAct = useCanAct();
   const actions = useActionRequired();
+  const location = useLocation();
 
-  // `holdSkeleton` — экран ещё грузит свой список: виджет и список появляются в одном кадре, скелетон списка под
-  // виджетом не сдвигается, когда виджет дорисовался раньше (K10).
-  if (!actions.available) return null; // у партнёра нет КП, договоров, счетов и актов — ждать от него решений нечего
+  const currentScope = scope ?? (location.pathname.startsWith('/my-products') ? 'partner' : 'client');
+
+  const hasMyProducts = useHasModule('my_products');
+  const hasQuotes = useHasModule('quotes');
+  const hasContracts = useHasModule('contracts');
+  const hasInvoices = useHasModule('invoices');
+  const hasActs = useHasModule('acts');
+  const hasDeliveries = useHasModule('deliveries');
+
+  const hasClientItems = hasQuotes || hasContracts || hasInvoices || hasActs || hasDeliveries;
+
+  if (currentScope === 'partner') {
+    if (!hasMyProducts || actions.rejectedProducts.length === 0) return null;
+  } else {
+    if (!hasClientItems && !actions.partnerApplicationAwaiting) return null;
+  }
   if (actions.isPending || holdSkeleton) return <ActionRequiredSkeleton />;
   if (actions.error) {
     return (
@@ -51,8 +71,18 @@ export function ActionRequiredWidget({ holdSkeleton = false }: { holdSkeleton?: 
     );
   }
 
-  const total = actions.total;
+  const clientTotal =
+    actions.quotes.length +
+    actions.contracts.length +
+    actions.invoices.length +
+    actions.acts.length +
+    actions.deliveries.length +
+    (actions.partnerApplicationAwaiting ? 1 : 0) +
+    (actions.unread > 0 ? 1 : 0);
+
+  const total = currentScope === 'partner' ? actions.rejectedProducts.length : clientTotal;
   if (total === 0) {
+    if (currentScope === 'partner') return null;
     return (
       <div className="mb-6 flex items-center gap-3 rounded-lg border border-dashed bg-card/60 p-3.5 text-sm text-muted-foreground">
         <CheckCircle2 className="size-4 shrink-0 text-success" aria-hidden="true" />
@@ -72,129 +102,133 @@ export function ActionRequiredWidget({ holdSkeleton = false }: { holdSkeleton?: 
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {actions.partnerApplicationAwaiting ? (
-          <ActionCard
-            key="partner-application-draft"
-            icon={FileSignature}
-            tone="primary"
-            badge={t('widgets.actionRequired.partnerContractBadge')}
-            aside={<AlertCircle className="size-3.5 text-primary" aria-hidden="true" />}
-            to="/company"
-            label={t('widgets.actionRequired.partnerContractLabel')}
-          >
-            {hint('agreePartnerContract')}
-          </ActionCard>
-        ) : null}
-
-        {actions.quotes.map((quote) => (
-          <ActionCard
-            key={`quote-${quote.id}`}
-            icon={FileText}
-            tone="warning"
-            badge={t('widgets.actionRequired.quoteBadge')}
-            aside={<Amount>{formatMoney(quote.total)}</Amount>}
-            to={`/quotes/${quote.id}`}
-            label={t('pages.quotes.numberVersion', { number: quote.number, version: quote.version })}
-          >
-            {hint('reviewQuote')}
-          </ActionCard>
-        ))}
-
-        {actions.contracts.map((contract) => (
-          <ActionCard
-            key={`contract-${contract.id}`}
-            icon={FileSignature}
-            tone="primary"
-            badge={t('widgets.actionRequired.contractBadge')}
-            aside={<AlertCircle className="size-3.5 text-primary" aria-hidden="true" />}
-            to="/contracts"
-            label={contract.number}
-          >
-            {hint('signContract')}
-          </ActionCard>
-        ))}
-
-        {actions.invoices.map((invoice) => {
-          const view = actions.views.get(invoice.id);
-          return (
+        {currentScope === 'partner' ? (
+          actions.rejectedProducts.map((product) => (
             <ActionCard
-              key={`inv-${invoice.id}`}
-              icon={Receipt}
+              key={`product-remark-${product.id}`}
+              icon={PackageOpen}
               tone="warning"
-              badge={t('widgets.actionRequired.invoiceBadge')}
-              aside={<Amount>{formatMoney(view?.remaining)}</Amount>}
-              to="/invoices"
-              label={invoice.number}
+              badge={t('widgets.actionRequired.productRemarkBadge')}
+              aside={<ToneBadge tone="warning">{product.manufacturer_part_number || t('widgets.actionRequired.remarks')}</ToneBadge>}
+              to="/my-products?tab=returned"
+              label={product.name}
             >
-              <span className="flex flex-wrap items-center gap-1.5">
-                {hint('payInvoice')}
-                <ToneBadge tone="danger">
-                  {t('pages.invoices.overdueDays', { count: view?.overdueDays ?? 1 })}
-                </ToneBadge>
-              </span>
+              {hint('fixProductRemarks')}
             </ActionCard>
-          );
-        })}
+          ))
+        ) : (
+          <>
+            {actions.partnerApplicationAwaiting ? (
+              <ActionCard
+                key="partner-application-draft"
+                icon={FileSignature}
+                tone="primary"
+                badge={t('widgets.actionRequired.partnerContractBadge')}
+                aside={<AlertCircle className="size-3.5 text-primary" aria-hidden="true" />}
+                to="/company"
+                label={t('widgets.actionRequired.partnerContractLabel')}
+              >
+                {hint('agreePartnerContract')}
+              </ActionCard>
+            ) : null}
 
-        {actions.acts.map((act) => (
-          <ActionCard
-            key={`act-${act.id}`}
-            icon={ClipboardCheck}
-            tone="primary"
-            badge={t('widgets.actionRequired.actBadge')}
-            aside={<AlertCircle className="size-3.5 text-primary" aria-hidden="true" />}
-            to="/acts"
-            label={act.number}
-          >
-            {hint('acceptAct')}
-          </ActionCard>
-        ))}
+            {actions.quotes.map((quote) => (
+              <ActionCard
+                key={`quote-${quote.id}`}
+                icon={FileText}
+                tone="warning"
+                badge={t('widgets.actionRequired.quoteBadge')}
+                aside={<Amount>{formatMoney(quote.total)}</Amount>}
+                to={`/quotes/${quote.id}`}
+                label={t('pages.quotes.numberVersion', { number: quote.number, version: quote.version })}
+              >
+                {hint('reviewQuote')}
+              </ActionCard>
+            ))}
 
-        {actions.deliveries.map((delivery) => (
-          <ActionCard
-            key={`delivery-${delivery.id}`}
-            icon={Truck}
-            tone="primary"
-            badge={t('widgets.actionRequired.deliveryBadge')}
-            aside={
-              <span className="text-xs font-semibold tabular-nums text-foreground">
-                {formatQuantity(delivery.quantity, delivery.unit)}
-              </span>
-            }
-            to="/deliveries"
-            label={delivery.title}
-          >
-            {hint('acceptDelivery')}
-          </ActionCard>
-        ))}
+            {actions.contracts.map((contract) => (
+              <ActionCard
+                key={`contract-${contract.id}`}
+                icon={FileSignature}
+                tone="primary"
+                badge={t('widgets.actionRequired.contractBadge')}
+                aside={<AlertCircle className="size-3.5 text-primary" aria-hidden="true" />}
+                to="/contracts"
+                label={contract.number}
+              >
+                {hint('signContract')}
+              </ActionCard>
+            ))}
 
-        {actions.rejectedProducts.map((product) => (
-          <ActionCard
-            key={`product-remark-${product.id}`}
-            icon={PackageOpen}
-            tone="warning"
-            badge={t('widgets.actionRequired.productRemarkBadge')}
-            aside={<ToneBadge tone="warning">{product.code || t('widgets.actionRequired.remarks')}</ToneBadge>}
-            to="/my-products?tab=rejected"
-            label={product.title}
-          >
-            {hint('fixProductRemarks')}
-          </ActionCard>
-        ))}
+            {actions.invoices.map((invoice) => {
+              const view = actions.views.get(invoice.id);
+              return (
+                <ActionCard
+                  key={`inv-${invoice.id}`}
+                  icon={Receipt}
+                  tone="warning"
+                  badge={t('widgets.actionRequired.invoiceBadge')}
+                  aside={<Amount>{formatMoney(view?.remaining)}</Amount>}
+                  to="/invoices"
+                  label={invoice.number}
+                >
+                  <span className="flex flex-wrap items-center gap-1.5">
+                    {hint('payInvoice')}
+                    <ToneBadge tone="danger">
+                      {t('pages.invoices.overdueDays', { count: view?.overdueDays ?? 1 })}
+                    </ToneBadge>
+                  </span>
+                </ActionCard>
+              );
+            })}
 
-        {actions.unread > 0 ? (
-          <ActionCard
-            key="unread-chat"
-            icon={MessagesSquare}
-            tone="primary"
-            badge={t('widgets.actionRequired.messagesBadge')}
-            aside={<ToneBadge tone="primary">{actions.unread}</ToneBadge>}
-            to="/messages"
-            label={t('widgets.actionRequired.unreadMessages', { count: actions.unread })}
-          >
-            {hint('replyManager')}
-          </ActionCard>
-        ) : null}
+            {actions.acts.map((act) => (
+              <ActionCard
+                key={`act-${act.id}`}
+                icon={ClipboardCheck}
+                tone="primary"
+                badge={t('widgets.actionRequired.actBadge')}
+                aside={<AlertCircle className="size-3.5 text-primary" aria-hidden="true" />}
+                to="/acts"
+                label={act.number}
+              >
+                {hint('acceptAct')}
+              </ActionCard>
+            ))}
+
+            {actions.deliveries.map((delivery) => (
+              <ActionCard
+                key={`delivery-${delivery.id}`}
+                icon={Truck}
+                tone="primary"
+                badge={t('widgets.actionRequired.deliveryBadge')}
+                aside={
+                  <span className="text-xs font-semibold tabular-nums text-foreground">
+                    {formatQuantity(delivery.quantity, delivery.unit)}
+                  </span>
+                }
+                to="/deliveries"
+                label={delivery.title}
+              >
+                {hint('acceptDelivery')}
+              </ActionCard>
+            ))}
+
+            {actions.unread > 0 ? (
+              <ActionCard
+                key="unread-chat"
+                icon={MessagesSquare}
+                tone="primary"
+                badge={t('widgets.actionRequired.messagesBadge')}
+                aside={<ToneBadge tone="info">{actions.unread}</ToneBadge>}
+                to="/messages"
+                label={t('widgets.actionRequired.unreadMessages', { count: actions.unread })}
+              >
+                {hint('replyManager')}
+              </ActionCard>
+            ) : null}
+          </>
+        )}
       </div>
     </section>
   );

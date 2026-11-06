@@ -45,7 +45,7 @@ export function useActionRequired() {
   ] as const;
   const [quotes, contracts, invoices, acts, deliveries] = queries;
   const partnerProductsQuery = usePartnerProducts(
-    { status: 'rejected', page_size: 20 },
+    { status: 'returned', page_size: 20 },
     { enabled: modules.myProducts },
   );
   const partnerAppQuery = useCompanyPartnerApplication({ enabled: !modules.myProducts });
@@ -68,10 +68,10 @@ export function useActionRequired() {
   const awaitingActs = (acts.data ?? []).filter((act) => act.status === 'issued');
   const awaitingDeliveries = (deliveries.data ?? []).filter((delivery) => delivery.status === 'delivered');
   const partnerApplicationAwaiting = Boolean(
-    partnerAppQuery.data?.has_application && partnerAppQuery.data.status === 'contract_sent',
+    partnerAppQuery.data?.has_application && partnerAppQuery.data.application?.status === 'contract_sent',
   );
   const rejectedProducts = (partnerProductsQuery.data?.items ?? []).filter(
-    (product) => product.status === 'rejected',
+    (product) => product.status === 'returned',
   );
 
   const total =

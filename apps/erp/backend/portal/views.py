@@ -1091,8 +1091,6 @@ class CompanyView(BasePortalView):
         if "country_code" in data:
             code = data["country_code"].strip().upper()
             if code:
-                from parties.models import Country
-
                 country = Country.objects.filter(code=code).first()
                 if country:
                     company.country = country

@@ -2311,6 +2311,7 @@ components:
         - ALREADY_PARTNER
         - APPLICATION_EXISTS
         - PARTNER_APPLICATION_NOT_FOUND
+        - NOT_IN_CONTRACT_SENT_STATUS
 
     PartnerKind:
       type: string

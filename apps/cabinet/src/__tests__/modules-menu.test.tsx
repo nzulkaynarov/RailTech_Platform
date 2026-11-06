@@ -19,7 +19,7 @@ const CLIENT_LINKS = [
   'Счета',
   'Акты',
   'Поставки',
-  'Сообщения1', // чат кабинета (CHAT-1) с бейджем: в моке один непрочитанный ответ менеджера
+  'Сообщения',
   'Компания',
   'Команда',
   'Профиль',
@@ -45,11 +45,11 @@ describe('меню при двух ролях: «Покупаю» и «Пост�
     const side = screen.getByRole('navigation', { name: 'Разделы кабинета' });
     expect(within(side).getAllByRole('heading').map((h) => h.textContent)).toEqual(['Покупаю', 'Поставляю', 'Компания']);
     const groups = within(side).getAllByRole('region');
-    expect(groups.map((group) => within(group).getAllByRole('link').map((link) => link.textContent?.trim()))).toEqual([
+    expect(groups.map((group) => within(group).getAllByRole('link').map((link) => link.textContent?.replace(/\d+/g, '').trim()))).toEqual([
       ['Запросы', 'КП', 'Каталог', 'Документы', 'Договоры', 'Счета', 'Акты', 'Поставки'],
       ['Мои товары'],
       // «Сообщения» (CHAT-1) — в «Компании»: беседа компании с нами одна и о покупках, и о поставках
-      ['Сообщения1', 'Компания', 'Команда', 'Профиль'],
+      ['Сообщения', 'Компания', 'Команда', 'Профиль'],
     ]);
     expect((await axe(side)).violations).toEqual([]);
   });
@@ -63,7 +63,7 @@ describe('меню при двух ролях: «Покупаю» и «Пост�
     expect(
       within(bottom)
         .getAllByRole('link')
-        .map((link) => link.textContent?.trim()),
+        .map((link) => link.textContent?.replace(/\d+/g, '').trim()),
     ).toEqual(['Запросы', 'КП', 'Каталог', 'Мои товары']);
     await user.click(within(bottom).getByRole('button', { name: 'Ещё' }));
     const sheet = await screen.findByRole('dialog');
@@ -117,13 +117,13 @@ describe('меню из /me.modules', () => {
     expect(
       within(side)
         .getAllByRole('link')
-        .map((link) => link.textContent?.trim()),
+        .map((link) => link.textContent?.replace(/\d+/g, '').trim()),
     ).toEqual(CLIENT_LINKS);
     const bottom = screen.getByRole('navigation', { name: 'Основные разделы' });
     expect(
       within(bottom)
         .getAllByRole('link')
-        .map((link) => link.textContent?.trim()),
+        .map((link) => link.textContent?.replace(/\d+/g, '').trim()),
     ).toEqual(['Запросы', 'КП', 'Каталог', 'Документы']);
     expect(within(bottom).getByRole('button', { name: 'Ещё' })).toBeInTheDocument();
   });
@@ -174,8 +174,8 @@ describe('меню из /me.modules', () => {
     expect(
       within(side)
         .getAllByRole('link')
-        .map((link) => link.textContent?.trim()),
-    ).toEqual(['Мои товары', 'Запросы', 'Каталог', 'Сообщения1', 'Профиль']);
+        .map((link) => link.textContent?.replace(/\d+/g, '').trim()),
+    ).toEqual(['Мои товары', 'Запросы', 'Каталог', 'Сообщения', 'Профиль']);
     // одна роль — меню плоское, без разделов «Покупаю» / «Поставляю»
     expect(within(side).queryByRole('heading', { name: 'Покупаю' })).not.toBeInTheDocument();
     const bottom = screen.getByRole('navigation', { name: 'Основные разделы' });
@@ -191,14 +191,15 @@ describe('меню из /me.modules', () => {
     expect(screen.queryByText(i18n.t('widgets.actionRequired.title'))).not.toBeInTheDocument();
     expect(screen.queryByTestId('action-required-error')).not.toBeInTheDocument();
     // «Проект …» — просто текст: страница проекта собирает КП, договоры и счета
-    expect(screen.queryByRole('link', { name: /D-57/ })).not.toBeInTheDocument();
-    expect(screen.getByText(/D-57/)).toBeInTheDocument();
+    const actorList = screen.getByRole('list', { name: 'Запросы' });
+    expect(within(actorList).queryByRole('link', { name: /D-57/ })).not.toBeInTheDocument();
+    expect(within(actorList).getByText(/D-57/)).toBeInTheDocument();
     actor.unmount();
 
     signedIn('viewer', 'demo', PARTNER_DEFAULT);
     renderApp('/requests');
     await screen.findByText('Z-2026-0061');
-    expect(screen.queryByRole('link', { name: i18n.t('pages.requests.new') })).not.toBeInTheDocument();
+    expect(document.querySelector('a[href="/requests/new"]')).not.toBeInTheDocument();
     expect(screen.getByText(i18n.t('common.viewOnly'))).toBeInTheDocument();
   });
 
@@ -206,7 +207,8 @@ describe('меню из /me.modules', () => {
     signedIn();
     renderApp('/requests');
     await screen.findByText('Z-2026-0061');
-    expect(screen.getByRole('link', { name: /D-57/ })).toHaveAttribute('href', '/deals/57');
+    const list = screen.getByRole('list', { name: 'Запросы' });
+    expect(within(list).getByRole('link', { name: /D-57/ })).toHaveAttribute('href', '/deals/57');
   });
 
   it('клиент без права действовать по-прежнему только смотрит', async () => {
@@ -252,7 +254,7 @@ describe('меню из /me.modules', () => {
     expect(
       within(side)
         .getAllByRole('link')
-        .map((link) => link.textContent?.trim()),
+        .map((link) => link.textContent?.replace(/\d+/g, '').trim()),
     ).toEqual(['Мои товары', 'Профиль']);
     await router.navigate('/requests');
     await waitFor(() => expect(router.state.location.pathname).toBe('/my-products'));

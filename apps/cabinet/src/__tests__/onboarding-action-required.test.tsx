@@ -54,21 +54,21 @@ describe('чек-лист «Первые шаги» и расширенный в
       portalServer.use(
         http.get('*/api/portal/v1/company/partner-application', () =>
           HttpResponse.json({
+            already_partner: false,
             has_application: true,
-            status: 'contract_sent',
             application: {
               id: 99,
+              status: 'contract_sent',
+              kind: 'supplier',
+              categories_description: 'Клапаны',
               contact_name: 'Тест',
               phone: '+998901234567',
               email: 'partner@test.uz',
               comment: '',
+              contract_draft_url: '/contract.pdf',
               created_at: '2026-11-06T10:00:00Z',
               decided_at: null,
               rejection_reason: null,
-            },
-            contract_draft: {
-              url: '/contract.pdf',
-              available_for_signing: true,
             },
           }),
         ),
@@ -100,21 +100,21 @@ describe('чек-лист «Первые шаги» и расширенный в
       portalServer.use(
         http.get('*/api/portal/v1/company/partner-application', () =>
           HttpResponse.json({
+            already_partner: false,
             has_application: true,
-            status: 'contract_sent',
             application: {
               id: 99,
+              status: 'contract_sent',
+              kind: 'supplier',
+              categories_description: 'Клапаны',
               contact_name: 'Тест',
               phone: '+998901234567',
               email: 'partner@test.uz',
               comment: '',
+              contract_draft_url: '/contract.pdf',
               created_at: '2026-11-06T10:00:00Z',
               decided_at: null,
               rejection_reason: null,
-            },
-            contract_draft: {
-              url: '/contract.pdf',
-              available_for_signing: true,
             },
           }),
         ),
@@ -131,22 +131,25 @@ describe('чек-лист «Первые шаги» и расширенный в
       expect(within(region).getByText('Согласовать условия')).toBeInTheDocument();
     });
 
-    it('включает товары партнёра с замечаниями снабжения (rejected)', async () => {
+    it('включает товары партнёра с замечаниями снабжения (returned)', async () => {
       signedIn('actor', 'demo', PARTNER_ACCESS);
       portalServer.use(
         http.get('*/api/portal/v1/partner/products', ({ request }) => {
           const url = new URL(request.url);
-          if (url.searchParams.get('status') === 'rejected') {
+          if (url.searchParams.get('status') === 'returned') {
             return HttpResponse.json({
               items: [
                 {
                   id: 501,
-                  title: 'Клапан предохранительный 17с28нж',
-                  code: 'V-17S',
-                  status: 'rejected',
-                  moderation_comment: 'Уточните рабочее давление',
-                  offers_count: 1,
-                  has_active_offer: true,
+                  name: 'Клапан предохранительный 17с28нж',
+                  manufacturer_part_number: 'V-17S',
+                  status: 'returned',
+                  return_reason: 'Уточните рабочее давление',
+                  brand: 'Тест',
+                  category: 'Арматура',
+                  can_submit: true,
+                  offer: null,
+                  completeness: { score: 80, missing: [] },
                   created_at: '2026-11-06T10:00:00Z',
                   updated_at: '2026-11-06T11:00:00Z',
                 },
@@ -159,7 +162,7 @@ describe('чек-лист «Первые шаги» и расширенный в
           return HttpResponse.json({
             items: [],
             total: 0,
-            counts: { all: 0, draft: 0, pending: 0, published: 0, rejected: 1 },
+            counts: { all: 0, draft: 0, review: 0, published: 0, returned: 1, matched: 0 },
             attention: { stale: 0, expiring: 0, expired: 0 },
             page: 1,
             page_size: 20,
@@ -173,7 +176,7 @@ describe('чек-лист «Первые шаги» и расширенный в
       const region = await screen.findByRole('region', { name: 'Требует вашего решения' });
       expect(within(region).getByRole('link', { name: 'Клапан предохранительный 17с28нж' })).toHaveAttribute(
         'href',
-        '/my-products?tab=rejected',
+        '/my-products?tab=returned',
       );
       expect(within(region).getByText('Исправить замечания')).toBeInTheDocument();
     });

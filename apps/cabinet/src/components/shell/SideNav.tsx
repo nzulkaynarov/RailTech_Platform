@@ -156,13 +156,14 @@ function NavList({ items, collapsed, className }: { items: NavItem[]; collapsed:
         const label = t(item.labelKey);
         // Счётчики действий (волна J1): КП, договоры, счета, акты, поставки, товары, заявки, чат
         const badge = badges[item.to] ?? 0;
+        const isMessages = item.to === '/messages';
         return (
           <li key={item.to}>
             <NavLink
               to={item.to}
               // свёрнутый с бейджем: имя — скрытым текстом, а не aria-label (видимое «2» не входит в aria-label, axe)
               aria-label={collapsed && badge === 0 ? label : undefined}
-              aria-describedby={badge > 0 && unreadText ? noteId : undefined}
+              aria-describedby={isMessages && badge > 0 && unreadText ? noteId : undefined}
               title={collapsed ? label : undefined}
               className={({ isActive }) =>
                 cn(
@@ -177,7 +178,7 @@ function NavList({ items, collapsed, className }: { items: NavItem[]; collapsed:
               {collapsed && badge > 0 ? <span className="sr-only">{label}</span> : null}
               <UnreadBadge count={badge} className={collapsed ? 'absolute top-0.5 right-0.5' : 'ml-auto'} />
             </NavLink>
-            {badge > 0 ? <UnreadNote id={noteId} text={unreadText} /> : null}
+            {isMessages && badge > 0 ? <UnreadNote id={noteId} text={unreadText} /> : null}
           </li>
         );
       })}

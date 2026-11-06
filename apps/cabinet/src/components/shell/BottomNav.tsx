@@ -47,22 +47,25 @@ export function BottomNav() {
           gridTemplateColumns: `repeat(${primary.length + (secondary.length > 0 ? 1 : 0)}, minmax(0, 1fr))`,
         }}
       >
-        {primary.map((item) => (
-          <li key={item.to}>
-            <NavLink
-              to={item.to}
-              aria-describedby={badgeOf(item) > 0 && unreadText ? tabNoteId : undefined}
-              className={({ isActive }) =>
-                cn(tabClass, 'relative', isActive ? 'font-medium text-primary' : 'text-muted-foreground')
-              }
-            >
-              <item.icon className="size-5" aria-hidden="true" />
-              <UnreadBadge count={badgeOf(item)} className="absolute top-1 right-1/4" />
-              <span className="max-w-full truncate">{t(item.labelKey)}</span>
-            </NavLink>
-            {badgeOf(item) > 0 ? <UnreadNote id={tabNoteId} text={unreadText} /> : null}
-          </li>
-        ))}
+        {primary.map((item) => {
+          const isMessages = item.to === '/messages';
+          return (
+            <li key={item.to}>
+              <NavLink
+                to={item.to}
+                aria-describedby={isMessages && badgeOf(item) > 0 && unreadText ? tabNoteId : undefined}
+                className={({ isActive }) =>
+                  cn(tabClass, 'relative', isActive ? 'font-medium text-primary' : 'text-muted-foreground')
+                }
+              >
+                <item.icon className="size-5" aria-hidden="true" />
+                <UnreadBadge count={badgeOf(item)} className="absolute top-1 right-1/4" />
+                <span className="max-w-full truncate">{t(item.labelKey)}</span>
+              </NavLink>
+              {isMessages && badgeOf(item) > 0 ? <UnreadNote id={tabNoteId} text={unreadText} /> : null}
+            </li>
+          );
+        })}
         {secondary.length > 0 && (
           <li>
             <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
@@ -141,26 +144,29 @@ function MoreLinks({
   const { t } = useTranslation();
   return (
     <ul className="grid grid-cols-2 gap-2">
-      {items.map((item) => (
-        <li key={item.to}>
-          <NavLink
-            to={item.to}
-            onClick={onNavigate}
-            aria-describedby={badgeOf(item) > 0 && unreadText ? noteId : undefined}
-            className={({ isActive }) =>
-              cn(
-                'flex min-h-12 items-center gap-2 rounded-md border px-3 text-sm outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring',
-                isActive && 'border-primary font-medium text-primary',
-              )
-            }
-          >
-            <item.icon className="size-4" aria-hidden="true" />
-            {t(item.labelKey)}
-            <UnreadBadge count={badgeOf(item)} className="ml-auto" />
-          </NavLink>
-          {badgeOf(item) > 0 ? <UnreadNote id={noteId} text={unreadText} /> : null}
-        </li>
-      ))}
+      {items.map((item) => {
+        const isMessages = item.to === '/messages';
+        return (
+          <li key={item.to}>
+            <NavLink
+              to={item.to}
+              onClick={onNavigate}
+              aria-describedby={isMessages && badgeOf(item) > 0 && unreadText ? noteId : undefined}
+              className={({ isActive }) =>
+                cn(
+                  'flex min-h-12 items-center gap-2 rounded-md border px-3 text-sm outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring',
+                  isActive && 'border-primary font-medium text-primary',
+                )
+              }
+            >
+              <item.icon className="size-4" aria-hidden="true" />
+              {t(item.labelKey)}
+              <UnreadBadge count={badgeOf(item)} className="ml-auto" />
+            </NavLink>
+            {isMessages && badgeOf(item) > 0 ? <UnreadNote id={noteId} text={unreadText} /> : null}
+          </li>
+        );
+      })}
     </ul>
   );
 }

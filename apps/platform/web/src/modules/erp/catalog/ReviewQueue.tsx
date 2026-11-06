@@ -2,8 +2,6 @@ import { App, Button, Input, Segmented, Select } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
-import type { TFunction } from "i18next";
-
 import type {
   CatalogIssueField,
   CatalogItem,
@@ -21,11 +19,11 @@ import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { FormField } from "../../../shared/ui/FormParts";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { StatusTag } from "../../../shared/ui/StatusTag";
-import { type Column, FormModal } from "./common";
+import { FormModal } from "./common";
 import { errorFields } from "./errors";
 
 /** Поля замечаний при возврате карточки: перечень ERP (`catalog.models.reviews.ISSUE_FIELDS`), подписи — `catalog:review.issueFields`. */
-export const ISSUE_FIELDS: readonly CatalogIssueField[] = [
+const ISSUE_FIELDS: readonly CatalogIssueField[] = [
   "name",
   "description",
   "brand",
@@ -40,7 +38,7 @@ export const ISSUE_FIELDS: readonly CatalogIssueField[] = [
 ];
 
 /** Сколько карточек ждут проверки: один запрос на строку счётчика (страница размером 1, берётся `total`). */
-export function useWaitingCount(): number | undefined {
+function useWaitingCount(): number | undefined {
   const query = useListCatalogItems({ review: "waiting", page: 1, page_size: 1 });
   return query.data?.total;
 }
@@ -89,35 +87,6 @@ export function DueCell({ item }: { item: Pick<CatalogItem, "review"> }) {
   );
 }
 
-/** Колонки очереди проверки: партнёр, когда отправлено, срок, полнота. Первую колонку (название-кнопку) даёт панель. */
-export function queueColumns(
-  t: TFunction,
-  date: (value: string, style?: "datetime") => string,
-): Column<CatalogItem>[] {
-  return [
-    {
-      key: "partner",
-      title: t("queue.columns.partner"),
-      render: (row) => row.review?.partner?.name ?? "—",
-    },
-    {
-      key: "sent",
-      title: t("queue.columns.sent"),
-      render: (row) => (row.review ? date(row.review.submitted_at, "datetime") : "—"),
-    },
-    {
-      key: "due",
-      title: t("queue.columns.due"),
-      render: (row) => <DueCell item={row} />,
-    },
-    {
-      key: "completeness",
-      title: t("queue.columns.completeness"),
-      num: true,
-      render: (row) => (row.completeness === null ? "—" : `${String(row.completeness)} %`),
-    },
-  ];
-}
 
 /** «Цена в каталоге»: что покажет каталог клиенту и по чьей настройке (карточка, партнёр, компания). */
 export function CatalogPriceValue({ card }: { card: CatalogItemDetail }) {
