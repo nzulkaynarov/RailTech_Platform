@@ -52,7 +52,8 @@ export const useInvoices = ({ enabled = true }: ListOptions = {}) =>
   useQuery({ queryKey: keys.invoices, queryFn: portal.listInvoices, enabled });
 export const useActs = ({ enabled = true }: ListOptions = {}) =>
   useQuery({ queryKey: keys.acts, queryFn: portal.listActs, enabled });
-export const useDeliveries = () => useQuery({ queryKey: keys.deliveries, queryFn: portal.listDeliveries });
+export const useDeliveries = ({ enabled = true }: ListOptions = {}) =>
+  useQuery({ queryKey: keys.deliveries, queryFn: portal.listDeliveries, enabled });
 export const useDocuments = (params: portal.DocumentsQuery = {}) =>
   useQuery({ queryKey: keys.documents(params), queryFn: () => portal.listDocuments(params) });
 export const useCatalogCategories = () =>
@@ -88,11 +89,15 @@ export const useCreateTelegramLink = () => useMutation({ mutationFn: portal.crea
 export const useSendTelegramTest = () => useMutation({ mutationFn: portal.sendTelegramTest });
 export const useUnlinkTelegram = () =>
   useInvalidatingMutation(portal.unlinkTelegram, [], (status, client) => client.setQueryData(keys.telegram, status));
-export const usePartnerProducts = (params: portal.PartnerProductsQuery) =>
+export const usePartnerProducts = (
+  params: portal.PartnerProductsQuery,
+  options: { enabled?: boolean } = {},
+) =>
   useQuery({
     queryKey: keys.partnerProductList(params),
     queryFn: () => portal.listPartnerProducts(params),
     placeholderData: keepPreviousData,
+    enabled: options.enabled ?? true,
   });
 export const usePartnerProduct = (id: number | null) =>
   useQuery({

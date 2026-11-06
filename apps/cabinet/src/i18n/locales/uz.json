@@ -1002,7 +1002,18 @@
       "actBadge": "Dalolatnoma",
       "acceptAct": "Dalolatnomani qabul qilish",
       "titleViewer": "Kompaniya qarorini kutmoqda",
-      "viewerHint": "Tasdiqlash huquqiga ega kontakt hal qiladi"
+      "viewerHint": "Tasdiqlash huquqiga ega kontakt hal qiladi",
+      "deliveryBadge": "Yetkazib berish",
+      "acceptDelivery": "Qabul qilishni tasdiqlash",
+      "partnerContractBadge": "Shartnoma",
+      "partnerContractLabel": "Hamkorlik shartnomasi loyihasi",
+      "agreePartnerContract": "Shartlarni kelishish",
+      "productRemarkBadge": "Mahsulot",
+      "fixProductRemarks": "Mulohazalarni toʻgʻrilash",
+      "remarks": "Mulohazalar",
+      "messagesBadge": "Chat",
+      "unreadMessages": "Oʻqilmagan xabarlar: {{count}}",
+      "replyManager": "Menejerga javob berish"
     }
   },
   "saveBar": {
@@ -1330,5 +1341,23 @@
       "memo": "Xizmat xati",
       "other": "Rasmiy hujjat"
     }
+  },
+  "onboarding": {
+    "title": "Kabinetdagi dastlabki qadamlar",
+    "progress": "{{done}} / {{total}} bajarildi",
+    "dismiss": "Yashirish",
+    "allDone": "Barcha dastlabki qadamlar muvaffaqiyatli bajarildi!",
+    "companyRequisites": "Kompaniya rekvizitlari",
+    "companyRequisitesDesc": "STIR/roʻyxat raqami, telefon va bankni tekshiring",
+    "telegramNotif": "Telegram bildirishnomalari",
+    "telegramNotifDesc": "Hujjatlar va hisoblar haqida tezkor xabarlar",
+    "firstRequest": "Birinchi soʻrovni yaratish",
+    "firstRequestDesc": "Hisoblash uchun ariza yuboring",
+    "uploadPriceList": "Narxlar roʻyxatini yuklash",
+    "uploadPriceListDesc": "Excel andozasini yuklab, tovarlaringizni kiriting",
+    "partnerContract": "Shartnoma loyihasi",
+    "partnerContractDesc": "Shartlar bilan tanishib, kelishing",
+    "inviteTeam": "Hamkasblarni taklif qilish",
+    "inviteTeamDesc": "Birgalikda ishlash uchun xodimlarni qoʻshing"
   }
 }

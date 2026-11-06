@@ -8,6 +8,7 @@ import { apiErrorKey } from '@/api/errors';
 import type { AttachmentRef, ClientRequest, RequestLineIn } from '@/api/portal';
 import { useCatalog, useCreateRequest, useQuotes, useRequest, useRequests, useUploadFile } from '@/api/queries';
 import { ActionRequiredWidget } from '@/components/ActionRequiredWidget';
+import { OnboardingChecklist } from '@/components/onboarding/OnboardingChecklist';
 import { useActionRequired } from '@/hooks/useActionRequired';
 import { DealLink, DetailList, SectionTitle } from '@/components/Details';
 import { EmptyState } from '@/components/EmptyState';
@@ -62,6 +63,7 @@ export function RequestsPage() {
   return (
     <>
       <PageHeader title={t('pages.requests.title')} icon={Inbox} actions={<NewRequestButton />} />
+      <OnboardingChecklist />
       <ActionRequiredWidget holdSkeleton={requests.isPending} />
       {requests.isPending || actionsPending ? (
         <ListSkeleton />

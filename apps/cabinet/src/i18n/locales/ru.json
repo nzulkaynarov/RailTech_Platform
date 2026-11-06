@@ -1017,7 +1017,18 @@
       "actBadge": "Акт",
       "acceptAct": "Принять акт",
       "titleViewer": "Ждут решения компании",
-      "viewerHint": "Решает контакт с правом подтверждать"
+      "viewerHint": "Решает контакт с правом подтверждать",
+      "deliveryBadge": "Поставка",
+      "acceptDelivery": "Подтвердить приёмку",
+      "partnerContractBadge": "Договор",
+      "partnerContractLabel": "Проект партнёрского договора",
+      "agreePartnerContract": "Согласовать условия",
+      "productRemarkBadge": "Товар",
+      "fixProductRemarks": "Исправить замечания",
+      "remarks": "Замечания",
+      "messagesBadge": "Чат",
+      "unreadMessages": "Непрочитанные сообщения: {{count}}",
+      "replyManager": "Ответить менеджеру"
     }
   },
   "saveBar": {
@@ -1361,5 +1372,23 @@
       "memo": "Служебная записка",
       "other": "Официальный документ"
     }
+  },
+  "onboarding": {
+    "title": "Первые шаги в кабинете",
+    "progress": "{{done}} из {{total}} выполнено",
+    "dismiss": "Скрыть",
+    "allDone": "Все первые шаги успешно выполнены!",
+    "companyRequisites": "Реквизиты компании",
+    "companyRequisitesDesc": "Проверьте ИНН/рег. номер, телефон и банк",
+    "telegramNotif": "Уведомления в Telegram",
+    "telegramNotifDesc": "Мгновенные оповещения о документах и счетах",
+    "firstRequest": "Создать первый запрос",
+    "firstRequestDesc": "Отправьте заявку на расчёт номенклатуры",
+    "uploadPriceList": "Загрузить прайс-лист",
+    "uploadPriceListDesc": "Скачайте шаблон Excel и загрузите свои товары",
+    "partnerContract": "Проект договора",
+    "partnerContractDesc": "Ознакомьтесь с условиями и согласуйте договор",
+    "inviteTeam": "Пригласить коллег",
+    "inviteTeamDesc": "Добавьте сотрудников для совместной работы"
   }
 }

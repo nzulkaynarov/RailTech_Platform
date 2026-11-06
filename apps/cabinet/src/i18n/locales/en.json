@@ -1002,7 +1002,18 @@
       "actBadge": "Act",
       "acceptAct": "Accept act",
       "titleViewer": "Awaiting your company’s decision",
-      "viewerHint": "A contact with approval rights decides"
+      "viewerHint": "A contact with approval rights decides",
+      "deliveryBadge": "Delivery",
+      "acceptDelivery": "Confirm delivery",
+      "partnerContractBadge": "Agreement",
+      "partnerContractLabel": "Partner agreement draft",
+      "agreePartnerContract": "Review & agree terms",
+      "productRemarkBadge": "Product",
+      "fixProductRemarks": "Address supply remarks",
+      "remarks": "Remarks",
+      "messagesBadge": "Chat",
+      "unreadMessages": "Unread messages: {{count}}",
+      "replyManager": "Reply to manager"
     }
   },
   "saveBar": {
@@ -1330,5 +1341,23 @@
       "memo": "Memorandum",
       "other": "Official Document"
     }
+  },
+  "onboarding": {
+    "title": "Getting started",
+    "progress": "{{done}} of {{total}} completed",
+    "dismiss": "Dismiss",
+    "allDone": "All setup steps completed!",
+    "companyRequisites": "Company details",
+    "companyRequisitesDesc": "Verify Tax ID/Reg number, phone and bank",
+    "telegramNotif": "Telegram notifications",
+    "telegramNotifDesc": "Instant alerts about documents and invoices",
+    "firstRequest": "Create first request",
+    "firstRequestDesc": "Submit a request for quotation",
+    "uploadPriceList": "Upload price list",
+    "uploadPriceListDesc": "Download Excel template and upload products",
+    "partnerContract": "Partner contract draft",
+    "partnerContractDesc": "Review conditions and agree to terms",
+    "inviteTeam": "Invite colleagues",
+    "inviteTeamDesc": "Add team members for collaboration"
   }
 }
