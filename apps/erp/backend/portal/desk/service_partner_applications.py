@@ -45,11 +45,20 @@ class _Undo(Exception):
 def _app_dict(app: PartnerApplication) -> dict:
     matching_company_id = app.company_id
     matching_company_name = app.company.name if app.company else None
-    if not matching_company_id and app.inn:
-        matched = Company.objects.filter(inn=app.inn).first()
-        if matched:
-            matching_company_id = matched.pk
-            matching_company_name = matched.name
+    if not matching_company_id:
+        if app.inn:
+            matched = Company.objects.filter(inn=app.inn).first()
+            if matched:
+                matching_company_id = matched.pk
+                matching_company_name = matched.name
+        elif app.registration_number:
+            matched = Company.objects.filter(
+                registration_number__iexact=app.registration_number,
+                country=app.country,
+            ).first()
+            if matched:
+                matching_company_id = matched.pk
+                matching_company_name = matched.name
 
     return {
         "id": app.pk,
@@ -57,7 +66,10 @@ def _app_dict(app: PartnerApplication) -> dict:
         "status": app.status,
         "kind": app.kind,
         "company_name": app.company_name,
+        "country": app.country.code if app.country else None,
+        "country_name": app.country.name if app.country else None,
         "inn": app.inn,
+        "registration_number": app.registration_number,
         "contact_name": app.contact_name,
         "email": app.email,
         "phone": app.phone,
@@ -156,13 +168,27 @@ def approve_application(pk: int, data: dict, user) -> dict:
                 company = app.company
             elif app.inn:
                 company = Company.objects.filter(inn=app.inn).first()
+            elif app.registration_number:
+                company = Company.objects.filter(
+                    registration_number__iexact=app.registration_number,
+                    country=app.country,
+                ).first()
 
             target_kind = kind if kind in PartnerKind.values else app.kind
 
             if company is None:
+                company_inn = app.inn.strip() if app.inn else None
+                company_reg = app.registration_number.strip() if app.registration_number else ""
+                # Если передан не-UZ и указан только ИНН — считаем рег. номером
+                if app.country and app.country.code != "UZ" and company_inn and not company_reg:
+                    company_reg = company_inn
+                    company_inn = None
+
                 company = Company.objects.create(
                     name=app.company_name,
-                    inn=app.inn,
+                    country=app.country,
+                    inn=company_inn,
+                    registration_number=company_reg,
                     is_active=True,
                 )
                 supplier_type = CompanyType.objects.filter(code="SUPPLIER").first()

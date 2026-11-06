@@ -77,11 +77,28 @@ class PartnerApplication(models.Model):
         max_length=255,
         verbose_name=_("Наименование организации"),
     )
+    country = models.ForeignKey(
+        "core.Country",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("Страна регистрации"),
+        help_text=_("Страна регистрации кандидата (справочник ISO 3166-1)"),
+    )
     inn = models.CharField(
         max_length=32,
         blank=True,
         default="",
-        verbose_name=_("ИНН / Рег. номер"),
+        verbose_name=_("ИНН"),
+        help_text=_("ИНН для резидентов Узбекистана"),
+    )
+    registration_number = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        verbose_name=_("Рег. номер (нерезидент)"),
+        help_text=_("Регистрационный номер / Tax ID для нерезидентов"),
     )
     contact_name = models.CharField(
         max_length=255,

@@ -305,7 +305,19 @@ export const handlers = [
     if (body.email.startsWith('throttled')) {
       return HttpResponse.json({ detail: 'TOO_MANY_REQUESTS' }, { status: 429, headers: { 'Retry-After': '45' } });
     }
-    return new HttpResponse(null, { status: 200 });
+    if (body.email.startsWith('unknown') || body.email.startsWith('unregistered')) {
+      return json({ status: 'not_registered', sent: false, email: body.email });
+    }
+    return json({ status: 'ok', sent: true, email: body.email });
+  }),
+  http.get(`${API}/countries`, () => {
+    return json([
+      { code: 'UZ', name: 'Узбекистан', phone_code: '+998', phone_mask: '+998 (99) 999-99-99', phone_placeholder: '+998 90 123-45-67', tax_label: 'ИНН (STIR)', tax_placeholder: '123456789', is_uzbekistan: true },
+      { code: 'KZ', name: 'Казахстан', phone_code: '+7', phone_mask: '+7 (799) 999-99-99', phone_placeholder: '+7 701 123-45-67', tax_label: 'БИН / ИИН', tax_placeholder: '123456789012', is_uzbekistan: false },
+      { code: 'RU', name: 'Россия', phone_code: '+7', phone_mask: '+7 (999) 999-99-99', phone_placeholder: '+7 916 123-45-67', tax_label: 'ИНН', tax_placeholder: '1234567890', is_uzbekistan: false },
+      { code: 'CN', name: 'Китай', phone_code: '+86', phone_mask: '+86 999 9999 9999', phone_placeholder: '+86 138 1234 5678', tax_label: 'USCC', tax_placeholder: '91110000000000000X', is_uzbekistan: false },
+      { code: 'TR', name: 'Турция', phone_code: '+90', phone_mask: '+90 999 999 99 99', phone_placeholder: '+90 532 123 45 67', tax_label: 'VKN', tax_placeholder: '1234567890', is_uzbekistan: false },
+    ]);
   }),
   http.post(`${API}/auth/magic`, async ({ request }) => {
     const { token } = await readJson<{ token: string }>(request);

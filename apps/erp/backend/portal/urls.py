@@ -17,6 +17,7 @@ from portal.views import (
     CompanyView,
     ContractListView,
     ContractSignView,
+    CountriesView,
     DeliveryAcceptView,
     DeliveryDisputeView,
     DeliveryListView,
@@ -74,6 +75,9 @@ urlpatterns = [
         PublicPartnerApplicationView.as_view(),
         name="portal-auth-partner-application-slash",
     ),
+    # Countries (Справочник стран и метаданных для онбординга, COUNTRY-MASK-1)
+    path("countries", CountriesView.as_view(), name="portal-countries"),
+    path("countries/", CountriesView.as_view(), name="portal-countries-slash"),
     # Me
     path("me", MeView.as_view(), name="portal-me"),
     path("me/", MeView.as_view(), name="portal-me-slash"),

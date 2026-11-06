@@ -42,6 +42,27 @@ describe('вход с веба', () => {
     portalServer.events.removeAllListeners();
   });
 
+  it('«Войти»: незарегистрированный адрес показывает плашку с действиями (AUTH-CHECK-1)', async () => {
+    portalServer.use(
+      http.post('*/api/portal/v1/auth/magic-link', () =>
+        HttpResponse.json({ status: 'not_registered', sent: false, email: 'unknown@example.com' }),
+      ),
+    );
+    const user = userEvent.setup();
+    const { router } = renderApp('/login');
+
+    await user.type(await screen.findByLabelText('E-mail'), 'unknown@example.com');
+    await user.click(screen.getByRole('button', { name: 'Войти' }));
+
+    expect(await screen.findByText('Адрес не зарегистрирован')).toBeInTheDocument();
+    expect(screen.getByText(/unknown@example\.com/)).toBeInTheDocument();
+    const newClientLink = screen.getByRole('link', { name: /Я клиент — оставить запрос/ });
+    expect(newClientLink).toHaveAttribute('href', '/new-client?email=unknown%40example.com');
+    const partnerLink = screen.getByRole('link', { name: /Я поставщик — стать партнёром/ });
+    expect(partnerLink).toHaveAttribute('href', '/become-partner?email=unknown%40example.com');
+    expect(router.state.location.pathname).toBe('/login');
+  });
+
   it('ошибка API показывается текстом из словаря по коду detail', async () => {
     portalServer.use(
       http.post('*/api/portal/v1/auth/magic-link', () => HttpResponse.json({ detail: 'VALIDATION_ERROR' }, { status: 422 })),

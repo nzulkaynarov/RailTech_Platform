@@ -99,6 +99,7 @@ from sales.services.delivery_lines import accept_delivery_line, dispute_delivery
 
 from catalog.published import project, project_many, published_products
 from core.i18n import supported_languages
+from core.models import Country
 from crm.constants import ActStatusCode, QuoteStatusCode
 from crm.models import Act, Contract, Deal, Invoice, Quote
 from crm.services.billing import reject_act, sign_act
@@ -239,7 +240,12 @@ class MagicLinkRequestView(APIView):
             raise PortalValidationError("VALIDATION_ERROR")
 
         email = serializer.validated_data["email"]
-        request_magic_link(email)
+        sent = request_magic_link(email)
+        if not sent:
+            return Response(
+                {"status": "not_registered", "sent": False, "email": email},
+                status=status.HTTP_200_OK,
+            )
         return Response({"status": "ok", "sent": True, "email": email}, status=status.HTTP_200_OK)
 
 
@@ -361,10 +367,20 @@ class PublicPartnerApplicationView(APIView):
                 raise PortalBadRequest("HONEYPOT_DETECTED")
             raise PortalValidationError("VALIDATION_ERROR")
         data = serializer.validated_data
+        country_code = (data.get("country") or "UZ").strip().upper()
+        country = Country.objects.filter(code__iexact=country_code).first()
+        inn = (data.get("inn") or "").strip()
+        reg_num = (data.get("registration_number") or "").strip()
+        if country_code != "UZ" and not reg_num and inn:
+            reg_num = inn
+            inn = ""
+
         app = PartnerApplication.objects.create(
             source=PartnerApplicationSource.PUBLIC,
+            country=country,
             company_name=data["company_name"].strip(),
-            inn=(data.get("inn") or "").strip(),
+            inn=inn,
+            registration_number=reg_num,
             kind=data.get("kind") or "supplier",
             categories_description=data["categories_description"].strip(),
             contact_name=data["contact_name"].strip(),
@@ -375,6 +391,21 @@ class PublicPartnerApplicationView(APIView):
             status=PartnerApplicationStatus.SUBMITTED,
         )
         return Response({"id": app.id, "status": app.status}, status=status.HTTP_201_CREATED)
+
+
+class CountriesView(APIView):
+    """GET /countries — Справочник стран с метаданными телефонных кодов и налоговых номеров (COUNTRY-MASK-1)."""
+
+    authentication_classes = []
+    permission_classes = []
+
+    def get_exception_handler(self):
+        return portal_exception_handler
+
+    def get(self, request):
+        from portal.services.countries import list_portal_countries
+
+        return Response(list_portal_countries(), status=status.HTTP_200_OK)
 
 
 # ── 2. Me ───────────────────────────────────────────────────────────────────

@@ -129,6 +129,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/countries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Справочник стран для онбординга (COUNTRY-MASK-1)
+         * @description Список стран с метаданными телефонных масок и налоговых номеров.
+         */
+        get: operations["getCountries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me": {
         parameters: {
             query?: never;
@@ -1079,8 +1099,12 @@ export interface components {
             categories_description: string;
             /** @description Название организации */
             company_name: string;
-            /** @description ИНН организации или регистрационный номер нерезидента */
+            /** @description Код страны ISO 3166-1 alpha-2 */
+            country?: string | null;
+            /** @description ИНН организации (для резидентов РУз) */
             inn?: string | null;
+            /** @description Регистрационный номер компании (для нерезидентов) */
+            registration_number?: string | null;
             /** @description Контактное лицо */
             contact_name: string;
             /** Format: email */
@@ -1103,8 +1127,12 @@ export interface components {
         PartnerApplicationPublicCreate: {
             /** @description Название организации */
             company_name: string;
-            /** @description ИНН (для резидентов РУз) или регистрационный номер иностранной компании */
+            /** @description Код страны ISO 3166-1 alpha-2 (UZ, KZ, RU, CN, DE...) */
+            country?: string | null;
+            /** @description ИНН (для резидентов РУз) */
             inn?: string | null;
+            /** @description Регистрационный номер компании (для нерезидентов) */
+            registration_number?: string | null;
             kind: components["schemas"]["PartnerKind"];
             /** @description Описание категорий поставляемой продукции и брендов */
             categories_description: string;
@@ -1131,6 +1159,39 @@ export interface components {
         PartnerApplicationPublicResult: {
             id: number;
             status: components["schemas"]["PartnerApplicationStatus"];
+        };
+        MagicLinkResult: {
+            /**
+             * @description Статус проверки адреса (ok или not_registered)
+             * @enum {string}
+             */
+            status: "ok" | "not_registered";
+            /** @description Отправлено ли письмо с кодом */
+            sent: boolean;
+            /** @description Проверяемый адрес электронной почты */
+            email: string;
+        };
+        PortalCountry: {
+            /** @description Двухбуквенный код страны ISO 3166-1 alpha-2 (UZ, KZ, RU, CN, DE...) */
+            code: string;
+            /** @description Название страны */
+            name: string;
+            /** @description Трёхбуквенный код страны ISO 3166-1 alpha-3 */
+            alpha3?: string;
+            /** @description Международный телефонный код (+998, +7, +86...) */
+            phone_code?: string;
+            /** @description Маска ввода номера телефона */
+            phone_mask?: string;
+            /** @description Пример номера телефона */
+            phone_placeholder?: string;
+            /** @description Название налогового номера (ИНН, БИН, USCC, Tax ID...) */
+            tax_label?: string;
+            /** @description Пример налогового номера */
+            tax_placeholder?: string;
+            /** @description Регулярное выражение для проверки налогового номера */
+            tax_regex?: string;
+            /** @description Является ли страна Узбекистаном (UZ) */
+            is_uzbekistan: boolean;
         };
         PartnerApplicationClientCreate: {
             kind: components["schemas"]["PartnerKind"];
@@ -2132,12 +2193,14 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Принято */
+            /** @description Ответ запроса ссылки (status=ok или not_registered) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MagicLinkResult"];
+                };
             };
             400: components["responses"]["IdempotencyKeyRequired"];
             415: components["responses"]["UnsupportedMediaType"];
@@ -2313,6 +2376,26 @@ export interface operations {
             };
             422: components["responses"]["ValidationError"];
             429: components["responses"]["TooManyRequests"];
+        };
+    };
+    getCountries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Список стран */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalCountry"][];
+                };
+            };
         };
     };
     getMe: {

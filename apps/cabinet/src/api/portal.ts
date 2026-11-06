@@ -125,9 +125,32 @@ export function authTelegram(initData: string): Promise<Me> {
   return portalRequest<Me>('/auth/telegram', { method: 'POST', body });
 }
 
-export function requestMagicLink(email: string): Promise<void> {
-  const body: JsonBody<paths['/auth/magic-link']['post']> = { email };
-  return portalRequest<void>('/auth/magic-link', { method: 'POST', body });
+export interface MagicLinkResult {
+  status: 'ok' | 'not_registered';
+  sent: boolean;
+  email: string;
+}
+
+export function requestMagicLink(email: string): Promise<MagicLinkResult> {
+  const body = { email };
+  return portalRequest<MagicLinkResult>('/auth/magic-link', { method: 'POST', body });
+}
+
+export interface PortalCountry {
+  code: string;
+  name: string;
+  alpha3?: string;
+  phone_code: string;
+  phone_mask: string;
+  phone_placeholder: string;
+  tax_label: string;
+  tax_placeholder: string;
+  tax_regex?: string;
+  is_uzbekistan: boolean;
+}
+
+export function getPortalCountries(): Promise<PortalCountry[]> {
+  return portalRequest<PortalCountry[]>('/countries');
 }
 
 /** Обмен токена из ссылки входа на сессию; токен — в теле, не в пути (FIX-20: пути попадают в журналы). */

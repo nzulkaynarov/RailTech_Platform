@@ -737,7 +737,9 @@ class PartnerApplicationSerializer(serializers.ModelSerializer):
             "kind",
             "categories_description",
             "company_name",
+            "country",
             "inn",
+            "registration_number",
             "contact_name",
             "email",
             "phone",
@@ -751,15 +753,20 @@ class PartnerApplicationSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         ret = super().to_representation(instance)
         # Пустые строки в nullable-полях приводим к None по OpenAPI 3.1 схеме
-        for field in ("inn", "phone", "contract_number", "rejected_reason"):
+        for field in ("inn", "registration_number", "phone", "contract_number", "rejected_reason"):
             if not ret.get(field):
                 ret[field] = None
+        ret["country"] = instance.country.code if instance.country else None
         return ret
 
 
 class PartnerApplicationPublicCreateSerializer(serializers.Serializer):
     company_name = serializers.CharField(max_length=255, min_length=1)
+    country = serializers.CharField(max_length=2, allow_blank=True, allow_null=True, required=False, default="UZ")
     inn = serializers.CharField(max_length=32, allow_blank=True, allow_null=True, required=False, default="")
+    registration_number = serializers.CharField(
+        max_length=64, allow_blank=True, allow_null=True, required=False, default=""
+    )
     kind = serializers.ChoiceField(choices=["manufacturer", "supplier", "principal", "other"], default="supplier")
     categories_description = serializers.CharField(max_length=2000, min_length=5)
     contact_name = serializers.CharField(max_length=255, min_length=1)

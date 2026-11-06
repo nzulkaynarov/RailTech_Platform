@@ -196,7 +196,11 @@
       "demoHint": "Sinov maʼlumotlari bilan lokal stend. Parol talab qilinmaydi:",
       "demoActor": "Buyurtmachi sifatida kirish (MChJ «Toshkent Logistik»)",
       "demoViewer": "Kuzatuvchi sifatida kirish (faqat oʻqish)",
-      "haveCode": "Xatdagi kod bormi? Kod bilan kirish"
+      "haveCode": "Xatdagi kod bormi? Kod bilan kirish",
+      "unregisteredTitle": "E-mail roʻyxatdan oʻtmagan",
+      "unregisteredText": "{{email}} manzili mijozlar yoki hamkorlar roʻyxatida topilmadi. Manzilni toʻgʻri yozganingizni tekshiring yoki tanlang:",
+      "unregisteredNewClient": "Men mijozman — soʻrov qoldirish",
+      "unregisteredBecomePartner": "Men yetkazib beruvchiman — hamkor bo‘lish"
     },
     "sent": {
       "title": "Sizga xat yubordik",
@@ -242,6 +246,21 @@
       "submit": "Kirish",
       "signingIn": "Kirilmoqda…"
     }
+  },
+  "countryMask": {
+    "country": "Mamlakat",
+    "countryPlaceholder": "Mamlakatni tanlang",
+    "innUz": "STIR (INN)",
+    "binKz": "BIN / IIN",
+    "innRu": "INN",
+    "usccCn": "USCC kodi",
+    "vknTr": "VKN (Soliq raqami)",
+    "unpBy": "UNP",
+    "innKg": "INN",
+    "innTj": "INN",
+    "vatDe": "USt-IdNr. / HRB",
+    "trnAe": "TRN (Soliq raqami)",
+    "taxIdOther": "Roʻyxat raqami / Tax ID"
   },
   "newClient": {
     "title": "Men yangi mijozman",
@@ -758,10 +777,13 @@
         "categoriesDescriptionTooShort": "Mahsulotlarni batafsilroq tavsiflang (kamida 10 ta belgi)."
       },
       "fields": {
+        "country": "Roʻyxatdan oʻtgan mamlakat",
         "companyName": "Kompaniya nomi",
         "companyNamePlaceholder": "MChJ «Temiryo‘l Texnologiyalari»",
         "inn": "STIR (mavjud bo‘lsa)",
         "innPlaceholder": "123456789",
+        "registrationNumber": "Roʻyxat raqami yoki soliq raqami",
+        "registrationNumberPlaceholder": "Tijorat reyestridagi raqam yoki soliq raqami",
         "kind": "Hamkor turi",
         "kinds": {
           "supplier": "Yetkazib beruvchi / Distribyutor",

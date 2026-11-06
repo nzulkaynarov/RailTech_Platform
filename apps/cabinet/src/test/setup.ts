@@ -104,6 +104,20 @@ if (!('ResizeObserver' in window)) {
   Object.defineProperty(globalThis, 'ResizeObserver', { value: ResizeObserverStub, configurable: true, writable: true });
 }
 
+// Radix Select и Tooltip требуют методы указателя и скролла, которых нет в jsdom.
+if (!window.HTMLElement.prototype.hasPointerCapture) {
+  window.HTMLElement.prototype.hasPointerCapture = () => false;
+}
+if (!window.HTMLElement.prototype.setPointerCapture) {
+  window.HTMLElement.prototype.setPointerCapture = () => {};
+}
+if (!window.HTMLElement.prototype.releasePointerCapture) {
+  window.HTMLElement.prototype.releasePointerCapture = () => {};
+}
+if (!window.HTMLElement.prototype.scrollIntoView) {
+  window.HTMLElement.prototype.scrollIntoView = () => {};
+}
+
 // Сохранение файла: в jsdom нет object URL и навигации по ссылке-скачиванию.
 window.URL.createObjectURL = vi.fn(() => 'blob:cabinet-test');
 window.URL.revokeObjectURL = vi.fn();

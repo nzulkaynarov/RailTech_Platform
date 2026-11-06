@@ -196,7 +196,11 @@
       "demoHint": "Local test stand with mock data. No password required:",
       "demoActor": "Sign in as Client (Toshkent Logistik LLC)",
       "demoViewer": "Sign in as Viewer (read-only)",
-      "haveCode": "Already have a code from the email? Log in with the code"
+      "haveCode": "Already have a code from the email? Log in with the code",
+      "unregisteredTitle": "Email not found",
+      "unregisteredText": "The email {{email}} was not found among registered clients or partners. Check spelling or choose an option:",
+      "unregisteredNewClient": "I am a client — submit request",
+      "unregisteredBecomePartner": "I am a supplier — become a partner"
     },
     "sent": {
       "title": "We sent you an email",
@@ -242,6 +246,21 @@
       "submit": "Log in",
       "signingIn": "Logging in…"
     }
+  },
+  "countryMask": {
+    "country": "Country",
+    "countryPlaceholder": "Select country",
+    "innUz": "TIN / STIR",
+    "binKz": "BIN / IIN",
+    "innRu": "INN",
+    "usccCn": "USCC Code",
+    "vknTr": "VKN (Tax ID)",
+    "unpBy": "UNP",
+    "innKg": "TIN",
+    "innTj": "TIN",
+    "vatDe": "VAT / HRB",
+    "trnAe": "TRN (Tax ID)",
+    "taxIdOther": "Reg. Number / Tax ID"
   },
   "newClient": {
     "title": "I am a new client",
@@ -758,10 +777,13 @@
         "categoriesDescriptionTooShort": "Please describe products in more detail (at least 10 characters)."
       },
       "fields": {
+        "country": "Country of registration",
         "companyName": "Company name",
         "companyNamePlaceholder": "RailTech Technologies LLC",
         "inn": "Tax ID / INN (if applicable)",
         "innPlaceholder": "123456789",
+        "registrationNumber": "Registration / Tax number",
+        "registrationNumberPlaceholder": "Commercial registry or tax number",
         "kind": "Partner kind",
         "kinds": {
           "supplier": "Supplier / Distributor",

@@ -111,6 +111,45 @@ describe('Онбординг партнёров (PART-ONBOARD-1)', () => {
       });
     });
 
+    it('поддержка нерезидентов: предзаполнение email из URL и отправка country с registration_number (COUNTRY-MASK-1)', async () => {
+      const user = userEvent.setup();
+      const body = captureBody('/auth/partner-application');
+      renderApp('/become-partner?email=partner%40kazakh-rails.kz');
+      await heading('Заявка на партнёрство');
+
+      // Email предзаполнен из URL query параметра
+      expect(screen.getByLabelText('Рабочий e-mail')).toHaveValue('partner@kazakh-rails.kz');
+
+      // Выбираем страну Казахстан
+      const countrySelect = screen.getByRole('combobox', { name: /Страна/ });
+      await user.click(countrySelect);
+      const kzOption = await screen.findByRole('option', { name: /Казахстан/ });
+      await user.click(kzOption);
+
+      await user.type(screen.getByLabelText('Название компании'), 'ТОО «Казахские Рельсы»');
+      await user.type(screen.getByLabelText(/БИН/), '123456789012');
+      await user.type(
+        screen.getByLabelText('Поставляемая продукция и категории'),
+        'Высокопрочные железнодорожные рельсы Р65',
+      );
+      await user.type(screen.getByLabelText('Контактное лицо'), 'Нурлан Сапаров');
+      await user.type(screen.getByLabelText('Телефон'), '+77011234567');
+      await user.click(screen.getByRole('checkbox', { name: /Я даю согласие/ }));
+
+      await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
+      expect(await heading('Заявка принята')).toBeInTheDocument();
+
+      expect(body.current).toMatchObject({
+        company_name: 'ТОО «Казахские Рельсы»',
+        country: 'KZ',
+        registration_number: '123456789012',
+        kind: 'supplier',
+        email: 'partner@kazakh-rails.kz',
+        phone: '+77011234567',
+        consent: true,
+      });
+    });
+
     it('срабатывание защиты honeypot', async () => {
       portalServer.use(
         http.post('*/api/portal/v1/auth/partner-application', () =>
