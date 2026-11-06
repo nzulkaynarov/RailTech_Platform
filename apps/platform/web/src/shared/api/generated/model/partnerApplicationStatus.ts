@@ -9,6 +9,7 @@ export type PartnerApplicationStatus =
 export const PartnerApplicationStatus = {
   submitted: "submitted",
   contract_sent: "contract_sent",
+  candidate_agreed: "candidate_agreed",
   approved: "approved",
   rejected: "rejected",
 } as const;

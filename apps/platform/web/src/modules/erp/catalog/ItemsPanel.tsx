@@ -48,13 +48,7 @@ import { KINDS } from "./kinds";
 import { ItemDocs } from "./ItemDocs";
 import { ItemPhotos } from "./ItemPhotos";
 import { queryLabels } from "./labels";
-import {
-  CatalogPriceValue,
-  DueCell,
-  QueueSwitch,
-  ReturnButton,
-  ReviewBlock,
-} from "./ReviewQueue";
+import { CatalogPriceValue, DueCell, QueueSwitch, ReturnButton, ReviewBlock } from "./ReviewQueue";
 
 export function KindTag({ kind }: { kind: CatalogItemKind }) {
   const { t } = useTranslation("catalog");

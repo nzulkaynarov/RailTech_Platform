@@ -65,6 +65,8 @@ GET_CASES = {
     ],
     "/company": lambda w: ["/company"],
     "/company/partner-application": lambda w: ["/company/partner-application"],
+    "/company/partner-application/contract-pdf": lambda w: ["/company/partner-application/contract-pdf"],
+    "/countries": lambda w: ["/countries"],
     "/team": lambda w: ["/team"],
     "/me/telegram": lambda w: ["/me/telegram"],  # NOTIFY-1: статус привязки по проекции CRM
     "/messages": lambda w: ["/messages"],
@@ -112,7 +114,7 @@ def api(path: str) -> str:
 
 
 def anonymous_for(path: str) -> bool:
-    return path.startswith("/auth/") or path.startswith("/verify")
+    return path.startswith("/auth/") or path.startswith("/verify") or path.startswith("/countries")
 
 
 def fetch(client, anon_client, contract_path: str, url: str):
@@ -125,7 +127,7 @@ def fetch(client, anon_client, contract_path: str, url: str):
 def test_contract_is_mounted_and_readable():
     path = find_contract_path()
     assert path.name == "erp-portal.yaml"
-    assert load_contract()["info"]["version"] == "0.6.0"
+    assert load_contract()["info"]["version"] == "0.7.0"
 
 
 #: GET раздела «Мои товары» партнёра (PART-2): сессия клиента сюда не допущена (403 `MODULE_REQUIRED`), поэтому их
@@ -184,7 +186,14 @@ def test_every_portal_get_route_is_in_the_contract():
 
 # ── 1. Ответы по схемам ─────────────────────────────────────────────────────────────────────────────
 
-JSON_GET_PATHS = sorted(set(GET_CASES) - {"/documents/{id}/file", "/catalog/{id}/documents/{doc_id}/file"})
+JSON_GET_PATHS = sorted(
+    set(GET_CASES)
+    - {
+        "/documents/{id}/file",
+        "/catalog/{id}/documents/{doc_id}/file",
+        "/company/partner-application/contract-pdf",
+    }
+)
 
 
 @pytest.mark.parametrize("contract_path", JSON_GET_PATHS)

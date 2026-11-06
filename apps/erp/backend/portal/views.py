@@ -1116,7 +1116,7 @@ class CompanyView(BasePortalView):
 class CompanyPartnerApplicationView(BasePortalView):
     """GET/POST /company/partner-application — Заявка действующего клиента на получение роли партнёра."""
 
-    required_module = ANY_MODULE
+    required_module = "company"
 
     def get(self, request):
         already_partner = "partner" in getattr(request, "portal_roles", []) or (
@@ -1196,7 +1196,7 @@ class CompanyPartnerApplicationView(BasePortalView):
 class CompanyPartnerContractPdfView(BasePortalView):
     """GET /company/partner-application/contract-pdf — Скачать проект или подписанный партнёрский договор."""
 
-    required_module = ANY_MODULE
+    required_module = "company"
 
     def get(self, request):
         app = PartnerApplication.objects.filter(company=request.portal_company).order_by("-created_at").first()
@@ -1234,7 +1234,7 @@ class CompanyPartnerContractPdfView(BasePortalView):
 class CompanyPartnerApplicationAgreeView(BasePortalView):
     """POST /company/partner-application/agree — Согласование проекта договора кандидатом."""
 
-    required_module = ANY_MODULE
+    required_module = "company"
 
     def post(self, request):
         if not getattr(request.portal_contact, "can_act", False):

@@ -77,11 +77,19 @@ class CompanySerializer(serializers.ModelSerializer):
         ]
 
     def get_country(self, company):
-        if not company.country:
+        if isinstance(company, dict):
+            c = company.get("country")
+            if not c:
+                return None
+            if isinstance(c, dict):
+                return c
+            return {"code": getattr(c, "code", str(c)), "name": getattr(c, "name", "")}
+        country = getattr(company, "country", None)
+        if not country:
             return None
         return {
-            "code": company.country.code,
-            "name": company.country.name,
+            "code": country.code,
+            "name": country.name,
         }
 
 

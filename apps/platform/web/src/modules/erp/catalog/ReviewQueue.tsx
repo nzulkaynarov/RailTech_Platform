@@ -87,7 +87,6 @@ export function DueCell({ item }: { item: Pick<CatalogItem, "review"> }) {
   );
 }
 
-
 /** «Цена в каталоге»: что покажет каталог клиенту и по чьей настройке (карточка, партнёр, компания). */
 export function CatalogPriceValue({ card }: { card: CatalogItemDetail }) {
   const { t } = useTranslation("catalog");
