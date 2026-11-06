@@ -10,7 +10,7 @@ import logging
 
 from django.conf import settings
 from django.db import transaction
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.utils import timezone, translation
 from integration.services.requisites import REQUISITES_MANAGED_BY_CRM, changed_crm_owned_fields
 from parties.models import (
@@ -99,6 +99,7 @@ from sales.services.delivery_lines import accept_delivery_line, dispute_delivery
 
 from catalog.published import project, project_many, published_products
 from core.i18n import supported_languages
+from core.models import Country
 from crm.constants import ActStatusCode, QuoteStatusCode
 from crm.models import Act, Contract, Deal, Invoice, Quote
 from crm.services.billing import reject_act, sign_act
@@ -239,7 +240,12 @@ class MagicLinkRequestView(APIView):
             raise PortalValidationError("VALIDATION_ERROR")
 
         email = serializer.validated_data["email"]
-        request_magic_link(email)
+        sent = request_magic_link(email)
+        if not sent:
+            return Response(
+                {"status": "not_registered", "sent": False, "email": email},
+                status=status.HTTP_200_OK,
+            )
         return Response({"status": "ok", "sent": True, "email": email}, status=status.HTTP_200_OK)
 
 
@@ -361,10 +367,20 @@ class PublicPartnerApplicationView(APIView):
                 raise PortalBadRequest("HONEYPOT_DETECTED")
             raise PortalValidationError("VALIDATION_ERROR")
         data = serializer.validated_data
+        country_code = (data.get("country") or "UZ").strip().upper()
+        country = Country.objects.filter(code__iexact=country_code).first()
+        inn = (data.get("inn") or "").strip()
+        reg_num = (data.get("registration_number") or "").strip()
+        if country_code != "UZ" and not reg_num and inn:
+            reg_num = inn
+            inn = ""
+
         app = PartnerApplication.objects.create(
             source=PartnerApplicationSource.PUBLIC,
+            country=country,
             company_name=data["company_name"].strip(),
-            inn=(data.get("inn") or "").strip(),
+            inn=inn,
+            registration_number=reg_num,
             kind=data.get("kind") or "supplier",
             categories_description=data["categories_description"].strip(),
             contact_name=data["contact_name"].strip(),
@@ -375,6 +391,21 @@ class PublicPartnerApplicationView(APIView):
             status=PartnerApplicationStatus.SUBMITTED,
         )
         return Response({"id": app.id, "status": app.status}, status=status.HTTP_201_CREATED)
+
+
+class CountriesView(APIView):
+    """GET /countries — Справочник стран с метаданными телефонных кодов и налоговых номеров (COUNTRY-MASK-1)."""
+
+    authentication_classes = []
+    permission_classes = []
+
+    def get_exception_handler(self):
+        return portal_exception_handler
+
+    def get(self, request):
+        from portal.services.countries import list_portal_countries
+
+        return Response(list_portal_countries(), status=status.HTTP_200_OK)
 
 
 # ── 2. Me ───────────────────────────────────────────────────────────────────
@@ -1057,9 +1088,18 @@ class CompanyView(BasePortalView):
 
         if "name" in data and data["name"].strip():
             company.name = data["name"].strip()
+        if "country_code" in data:
+            code = data["country_code"].strip().upper()
+            if code:
+                country = Country.objects.filter(code=code).first()
+                if country:
+                    company.country = country
+        if "registration_number" in data:
+            company.registration_number = data["registration_number"].strip()
         if "inn" in data:
             inn = data["inn"].strip()
-            if inn and len(inn) != 9:
+            is_uz = not company.country or company.country.code == "UZ"
+            if is_uz and inn and len(inn) != 9:
                 raise PortalValidationError("INN_INVALID")
             company.inn = inn or None
         if "legal_address" in data:
@@ -1085,10 +1125,22 @@ class CompanyPartnerApplicationView(BasePortalView):
             ).exists()
         )
         app = PartnerApplication.objects.filter(company=request.portal_company).order_by("-created_at").first()
+        if not app and getattr(request, "portal_contact", None) and request.portal_contact.email:
+            app = (
+                PartnerApplication.objects.filter(email__iexact=request.portal_contact.email)
+                .order_by("-created_at")
+                .first()
+            )
         return Response(
             {
                 "already_partner": bool(already_partner),
-                "has_application": app is not None and app.status in ("submitted", "contract_sent"),
+                "has_application": app is not None
+                and app.status
+                in (
+                    PartnerApplicationStatus.SUBMITTED,
+                    PartnerApplicationStatus.CONTRACT_SENT,
+                    PartnerApplicationStatus.CANDIDATE_AGREED,
+                ),
                 "application": PartnerApplicationSerializer(app).data if app else None,
             }
         )
@@ -1106,7 +1158,11 @@ class CompanyPartnerApplicationView(BasePortalView):
 
         existing = PartnerApplication.objects.filter(
             company=request.portal_company,
-            status__in=[PartnerApplicationStatus.SUBMITTED, PartnerApplicationStatus.CONTRACT_SENT],
+            status__in=[
+                PartnerApplicationStatus.SUBMITTED,
+                PartnerApplicationStatus.CONTRACT_SENT,
+                PartnerApplicationStatus.CANDIDATE_AGREED,
+            ],
         ).first()
         if existing:
             raise PortalConflict("APPLICATION_EXISTS")
@@ -1122,7 +1178,9 @@ class CompanyPartnerApplicationView(BasePortalView):
             company=company,
             applicant_contact=contact,
             company_name=company.name,
+            country=company.country,
             inn=company.inn or "",
+            registration_number=company.registration_number or "",
             kind=data.get("kind") or "supplier",
             categories_description=data["categories_description"].strip(),
             contact_name=contact.name if contact else "",
@@ -1133,6 +1191,92 @@ class CompanyPartnerApplicationView(BasePortalView):
             status=PartnerApplicationStatus.SUBMITTED,
         )
         return Response(PartnerApplicationSerializer(app).data, status=status.HTTP_201_CREATED)
+
+
+class CompanyPartnerContractPdfView(BasePortalView):
+    """GET /company/partner-application/contract-pdf — Скачать проект или подписанный партнёрский договор."""
+
+    required_module = "company"
+
+    def get(self, request):
+        app = PartnerApplication.objects.filter(company=request.portal_company).order_by("-created_at").first()
+        if not app and getattr(request, "portal_contact", None) and request.portal_contact.email:
+            app = (
+                PartnerApplication.objects.filter(email__iexact=request.portal_contact.email)
+                .order_by("-created_at")
+                .first()
+            )
+
+        if not app:
+            raise exceptions.NotFound("NOT_FOUND")
+
+        from django.core.files.base import ContentFile
+        from portal.services.partner_contract import render_partner_contract_pdf
+
+        if not app.contract_pdf:
+            is_draft = app.status != PartnerApplicationStatus.APPROVED
+            pdf_bytes = render_partner_contract_pdf(app, draft=is_draft)
+            filename = f"Partner_Contract_{app.contract_number or app.pk}_{'draft' if is_draft else 'signed'}.pdf"
+            app.contract_pdf.save(filename, ContentFile(pdf_bytes), save=True)
+        else:
+            try:
+                pdf_bytes = app.contract_pdf.read()
+            except Exception:
+                is_draft = app.status != PartnerApplicationStatus.APPROVED
+                pdf_bytes = render_partner_contract_pdf(app, draft=is_draft)
+
+        response = HttpResponse(pdf_bytes, content_type="application/pdf")
+        filename = f"Partner_Contract_{app.contract_number or app.pk}.pdf"
+        response["Content-Disposition"] = f'inline; filename="{filename}"'
+        return response
+
+
+class CompanyPartnerApplicationAgreeView(BasePortalView):
+    """POST /company/partner-application/agree — Согласование проекта договора кандидатом."""
+
+    required_module = "company"
+
+    def post(self, request):
+        if not getattr(request.portal_contact, "can_act", False):
+            raise exceptions.PermissionDenied(detail="FORBIDDEN")
+
+        app = (
+            PartnerApplication.objects.filter(
+                company=request.portal_company,
+                status=PartnerApplicationStatus.CONTRACT_SENT,
+            )
+            .order_by("-created_at")
+            .first()
+        )
+        if not app and getattr(request, "portal_contact", None) and request.portal_contact.email:
+            app = (
+                PartnerApplication.objects.filter(
+                    email__iexact=request.portal_contact.email,
+                    status=PartnerApplicationStatus.CONTRACT_SENT,
+                )
+                .order_by("-created_at")
+                .first()
+            )
+
+        if not app:
+            raise PortalBadRequest("NOT_IN_CONTRACT_SENT_STATUS")
+
+        notes = (request.data.get("notes") or "").strip()
+        app.status = PartnerApplicationStatus.CANDIDATE_AGREED
+        app.candidate_agreed_at = timezone.now()
+        if notes:
+            app.candidate_notes = notes
+
+        # Перерендерим проект договора с отметкой о согласовании кандидатом
+        from django.core.files.base import ContentFile
+        from portal.services.partner_contract import render_partner_contract_pdf
+
+        pdf_bytes = render_partner_contract_pdf(app, draft=True)
+        filename = f"Partner_Contract_{app.contract_number or app.pk}_agreed.pdf"
+        app.contract_pdf.save(filename, ContentFile(pdf_bytes), save=False)
+        app.save()
+
+        return Response(PartnerApplicationSerializer(app).data, status=status.HTTP_200_OK)
 
 
 class TeamListView(BasePortalView):

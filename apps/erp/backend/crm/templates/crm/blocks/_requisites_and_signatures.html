@@ -14,7 +14,8 @@
         <h3>{% translate "Поставщик" %}</h3>
         <div class="pname">{% translate "Поставщик" as fallback_seller_name %}{% firstof seller_profile.legal_name seller.name fallback_seller_name %}</div>
         {% firstof seller_profile.inn seller.inn as req_seller_inn %}
-        {% if req_seller_inn %}<p>{% translate "ИНН:" %} {{ req_seller_inn }}</p>{% endif %}
+        {% if req_seller_inn %}<p>{% translate "ИНН:" %} {{ req_seller_inn }}</p>
+        {% elif seller.registration_number %}<p>{% translate "Рег. номер:" %} {{ seller.registration_number }}{% if seller.country %} ({{ seller.country.name }}){% endif %}</p>{% endif %}
         {% firstof seller_profile.legal_address seller.legal_address as req_seller_addr %}
         {% if req_seller_addr %}<p>{% translate "Адрес:" %} {{ req_seller_addr }}</p>{% endif %}
         {% if seller_profile.bank_details %}<p>{{ seller_profile.bank_details|linebreaksbr }}</p>
@@ -27,7 +28,8 @@
       <div class="party">
         <h3>{% translate "Покупатель" %}</h3>
         <div class="pname">{% translate "Покупатель" as fallback_buyer_name %}{{ company.name|default:fallback_buyer_name }}</div>
-        {% if company.inn %}<p>{% translate "ИНН:" %} {{ company.inn }}</p>{% endif %}
+        {% if company.inn %}<p>{% translate "ИНН:" %} {{ company.inn }}</p>
+        {% elif company.registration_number %}<p>{% translate "Рег. номер:" %} {{ company.registration_number }}{% if company.country %} ({{ company.country.name }}){% endif %}</p>{% endif %}
         {% if company.legal_address %}<p>{% translate "Адрес:" %} {{ company.legal_address }}</p>{% endif %}
         {% if company.bank_account %}<p>{% translate "Р/с:" %} {{ company.bank_account }}{% if company.mfo %} · {% translate "МФО:" %} {{ company.mfo }}{% endif %}</p>{% endif %}
         {% if company.phone %}<p>{% translate "Тел.:" %} {{ company.phone }}</p>{% endif %}

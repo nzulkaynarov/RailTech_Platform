@@ -129,6 +129,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/countries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Справочник стран для онбординга (COUNTRY-MASK-1)
+         * @description Список стран с метаданными телефонных масок и налоговых номеров.
+         */
+        get: operations["getCountries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me": {
         parameters: {
             query?: never;
@@ -953,6 +973,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/company/partner-application/contract-pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Скачать проект или подписанный партнёрский договор
+         * @description Отдаёт PDF-файл проекта договора или подписанного партнёрского договора для ознакомления и согласования.
+         */
+        get: operations["getCompanyPartnerContractPdf"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/company/partner-application/agree": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Согласовать проект партнёрского договора кандидатом
+         * @description Кандидат подтверждает согласование проекта партнёрского договора. Статус переводится в `candidate_agreed`.
+         *     Требует права действовать `can_act`.
+         */
+        post: operations["agreeCompanyPartnerContract"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/team": {
         parameters: {
             query?: never;
@@ -1066,11 +1127,12 @@ export interface components {
          * @description Статус заявки в договорном шлюзе (DECISIONS 2026-11-05):
          *     - `submitted`: заявка подана, ожидает проверки снабжением
          *     - `contract_sent`: проект партнёрского договора отправлен кандидату
+         *     - `candidate_agreed`: проект договора согласован кандидатом, ожидает утверждения
          *     - `approved`: договор подписан, отношение `partner` активировано
          *     - `rejected`: заявка отклонена
          * @enum {string}
          */
-        PartnerApplicationStatus: "submitted" | "contract_sent" | "approved" | "rejected";
+        PartnerApplicationStatus: "submitted" | "contract_sent" | "candidate_agreed" | "approved" | "rejected";
         PartnerApplication: {
             id: number;
             status: components["schemas"]["PartnerApplicationStatus"];
@@ -1079,8 +1141,12 @@ export interface components {
             categories_description: string;
             /** @description Название организации */
             company_name: string;
-            /** @description ИНН организации или регистрационный номер нерезидента */
+            /** @description Код страны ISO 3166-1 alpha-2 */
+            country?: string | null;
+            /** @description ИНН организации (для резидентов РУз) */
             inn?: string | null;
+            /** @description Регистрационный номер компании (для нерезидентов) */
+            registration_number?: string | null;
             /** @description Контактное лицо */
             contact_name: string;
             /** Format: email */
@@ -1093,6 +1159,20 @@ export interface components {
              * @description Дата партнёрского договора
              */
             contract_date?: string | null;
+            /**
+             * Format: date-time
+             * @description Дата и время направления проекта договора
+             */
+            contract_draft_sent_at?: string | null;
+            /**
+             * Format: date-time
+             * @description Дата и время согласования договора кандидатом
+             */
+            candidate_agreed_at?: string | null;
+            /** @description Примечания/комментарии кандидата при согласовании */
+            candidate_notes?: string | null;
+            /** @description Наличие прикреплённого PDF-файла договора */
+            has_contract_pdf?: boolean;
             /** @description Причина отклонения заявки */
             rejected_reason?: string | null;
             /** Format: date-time */
@@ -1103,8 +1183,12 @@ export interface components {
         PartnerApplicationPublicCreate: {
             /** @description Название организации */
             company_name: string;
-            /** @description ИНН (для резидентов РУз) или регистрационный номер иностранной компании */
+            /** @description Код страны ISO 3166-1 alpha-2 (UZ, KZ, RU, CN, DE...) */
+            country?: string | null;
+            /** @description ИНН (для резидентов РУз) */
             inn?: string | null;
+            /** @description Регистрационный номер компании (для нерезидентов) */
+            registration_number?: string | null;
             kind: components["schemas"]["PartnerKind"];
             /** @description Описание категорий поставляемой продукции и брендов */
             categories_description: string;
@@ -1131,6 +1215,39 @@ export interface components {
         PartnerApplicationPublicResult: {
             id: number;
             status: components["schemas"]["PartnerApplicationStatus"];
+        };
+        MagicLinkResult: {
+            /**
+             * @description Статус проверки адреса (ok или not_registered)
+             * @enum {string}
+             */
+            status: "ok" | "not_registered";
+            /** @description Отправлено ли письмо с кодом */
+            sent: boolean;
+            /** @description Проверяемый адрес электронной почты */
+            email: string;
+        };
+        PortalCountry: {
+            /** @description Двухбуквенный код страны ISO 3166-1 alpha-2 (UZ, KZ, RU, CN, DE...) */
+            code: string;
+            /** @description Название страны */
+            name: string;
+            /** @description Трёхбуквенный код страны ISO 3166-1 alpha-3 */
+            alpha3?: string;
+            /** @description Международный телефонный код (+998, +7, +86...) */
+            phone_code?: string;
+            /** @description Маска ввода номера телефона */
+            phone_mask?: string;
+            /** @description Пример номера телефона */
+            phone_placeholder?: string;
+            /** @description Название налогового номера (ИНН, БИН, USCC, Tax ID...) */
+            tax_label?: string;
+            /** @description Пример налогового номера */
+            tax_placeholder?: string;
+            /** @description Регулярное выражение для проверки налогового номера */
+            tax_regex?: string;
+            /** @description Является ли страна Узбекистаном (UZ) */
+            is_uzbekistan: boolean;
         };
         PartnerApplicationClientCreate: {
             kind: components["schemas"]["PartnerKind"];
@@ -1859,6 +1976,15 @@ export interface components {
             id: number;
             name: string;
             inn?: string | null;
+            /** @description Регистрационный номер / Tax ID для компаний-нерезидентов (ОГРН, БИН, CRN и др.) */
+            registration_number?: string | null;
+            /** @description Страна регистрации компании */
+            country?: {
+                /** @example UZ */
+                code?: string;
+                /** @example Узбекистан */
+                name?: string;
+            } | null;
             legal_address?: string | null;
             bank_details?: string | null;
             language: components["schemas"]["Language"];
@@ -1866,6 +1992,10 @@ export interface components {
         CompanyUpdate: {
             name?: string;
             inn?: string;
+            /** @description Регистрационный номер / Tax ID для нерезидентов */
+            registration_number?: string;
+            /** @description Двухбуквенный ISO-код страны */
+            country_code?: string;
             legal_address?: string;
             bank_details?: string;
             language?: components["schemas"]["Language"];
@@ -2132,12 +2262,14 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Принято */
+            /** @description Ответ запроса ссылки (status=ok или not_registered) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["MagicLinkResult"];
+                };
             };
             400: components["responses"]["IdempotencyKeyRequired"];
             415: components["responses"]["UnsupportedMediaType"];
@@ -2313,6 +2445,26 @@ export interface operations {
             };
             422: components["responses"]["ValidationError"];
             429: components["responses"]["TooManyRequests"];
+        };
+    };
+    getCountries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Список стран */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalCountry"][];
+                };
+            };
         };
     };
     getMe: {
@@ -3925,6 +4077,70 @@ export interface operations {
                 };
             };
             422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    getCompanyPartnerContractPdf: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PDF-файл договора */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    agreeCompanyPartnerContract: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @description Примечание или комментарий кандидата */
+                    notes?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Договор успешно согласован кандидатом */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerApplication"];
+                };
+            };
+            /** @description Заявка не находится в статусе contract_sent */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             429: components["responses"]["TooManyRequests"];
         };
     };

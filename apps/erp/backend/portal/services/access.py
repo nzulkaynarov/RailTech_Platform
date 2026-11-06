@@ -138,9 +138,26 @@ def company_roles(company_id: int | None) -> list[str]:
 
 
 def activate_on_first_login(company_id: int | None) -> None:
-    """Первый вход приглашённого партнёра переводит его отношение `invited → active` (приостановленное не трогает)."""
+    """Первый вход приглашённого партнёра переводит его отношение `invited → active` (приостановленное не трогает).
+
+    Если у компании есть открытая заявка кандидата в партнёры (submitted, contract_sent, candidate_agreed),
+    отношение не активируется до финального одобрения директором.
+    """
     if company_id is None:
         return
+    from parties.models import PartnerApplication, PartnerApplicationStatus
+
+    has_pending_app = PartnerApplication.objects.filter(
+        company_id=company_id,
+        status__in=[
+            PartnerApplicationStatus.SUBMITTED,
+            PartnerApplicationStatus.CONTRACT_SENT,
+            PartnerApplicationStatus.CANDIDATE_AGREED,
+        ],
+    ).exists()
+    if has_pending_app:
+        return
+
     CompanyRelationship.objects.filter(
         company_id=company_id, role=RelationshipRole.PARTNER, status=RelationshipStatus.INVITED
     ).update(status=RelationshipStatus.ACTIVE, activated_at=timezone.now(), updated_at=timezone.now())

@@ -12,8 +12,10 @@ import {
 } from '@/api/portal';
 import { usePartnerProducts, useConfirmPartnerOffers, useSubmitPartnerProducts } from '@/api/queries';
 import { ActionDialog } from '@/components/ActionDialog';
+import { ActionRequiredWidget } from '@/components/ActionRequiredWidget';
 import { ConsequenceCallout } from '@/components/ConsequenceCallout';
 import { EmptyState } from '@/components/EmptyState';
+import { OnboardingChecklist } from '@/components/onboarding/OnboardingChecklist';
 import { PageHeader } from '@/components/PageHeader';
 import { EmptySteps } from '@/components/partner/EmptySteps';
 import { OfferCell } from '@/components/partner/OfferCell';
@@ -178,6 +180,8 @@ export function MyProductsPage() {
           </>
         }
       />
+      <OnboardingChecklist />
+      <ActionRequiredWidget />
 
       {notice ? <NoticeBanner notice={notice} names={new Map(items.map((item) => [item.id, item.name]))} onClose={() => setNotice(null)} /> : null}
 

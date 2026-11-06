@@ -196,7 +196,11 @@
       "demoHint": "Локальный стенд с тестовыми данными. Пароль не требуется:",
       "demoActor": "Войти как Заказчик (ООО «Тошкент Логистик»)",
       "demoViewer": "Войти как Наблюдатель (только чтение)",
-      "haveCode": "Уже есть код из письма? Войти по коду"
+      "haveCode": "Уже есть код из письма? Войти по коду",
+      "unregisteredTitle": "Адрес не зарегистрирован",
+      "unregisteredText": "Адрес {{email}} не найден среди зарегистрированных клиентов или партнёров. Проверьте правильность написания или выберите:",
+      "unregisteredNewClient": "Я клиент — оставить запрос",
+      "unregisteredBecomePartner": "Я поставщик — стать партнёром"
     },
     "sent": {
       "title": "Мы отправили письмо",
@@ -242,6 +246,21 @@
       "submit": "Войти",
       "signingIn": "Входим…"
     }
+  },
+  "countryMask": {
+    "country": "Страна",
+    "countryPlaceholder": "Выберите страну",
+    "innUz": "ИНН (STIR)",
+    "binKz": "БИН / ИИН",
+    "innRu": "ИНН",
+    "usccCn": "Единый код (USCC)",
+    "vknTr": "VKN (Налоговый номер)",
+    "unpBy": "УНП",
+    "innKg": "ИНН",
+    "innTj": "ИНН",
+    "vatDe": "USt-IdNr. / HRB",
+    "trnAe": "TRN (Налоговый номер)",
+    "taxIdOther": "Рег. номер / Tax ID"
   },
   "newClient": {
     "title": "Я новый клиент",
@@ -733,6 +752,8 @@
       "fields": {
         "name": "Название",
         "inn": "ИНН",
+        "country": "Страна",
+        "registrationNumber": "Регистрационный номер / Tax ID",
         "legalAddress": "Юридический адрес",
         "bankDetails": "Банковские реквизиты",
         "language": "Язык документов и писем"
@@ -745,14 +766,29 @@
         "toMyProducts": "Перейти в «Мои товары»",
         "applicationPendingDesc": "Заявка на получение статуса партнёра подана и находится на согласовании в RailTech.",
         "contractSentDesc": "Партнёрский договор подготовлен и направлен на согласование вашей компании.",
+        "contractAgreedDesc": "Проект договора согласован вами и ожидает электронной подписи руководства RailTech.",
         "status": {
           "submitted": "На рассмотрении",
           "contract_sent": "Договор отправлен",
+          "candidate_agreed": "Согласован вами",
           "approved": "Одобрена",
           "rejected": "Отклонена"
         },
         "appliedAt": "Подана {{date}}",
         "contractNumber": "Договор",
+        "downloadDraftPdf": "Скачать проект договора (PDF)",
+        "agreeContractBtn": "Согласовать проект договора",
+        "agreeDialogTitle": "Согласование проекта договора",
+        "agreeDialogDesc": "Подтверждая согласование, вы выражаете согласие с условиями партнёрского договора и регламентом платформы RailTech.",
+        "agreeNotesLabel": "Примечание или комментарий к согласованию (необязательно)",
+        "agreeSubmit": "Подтвердить согласие",
+        "agreeSuccess": "Проект договора успешно согласован! Заявка передана директору на утверждение.",
+        "steps": {
+          "application": "Заявка",
+          "draft": "Проект договора",
+          "director": "Утверждение",
+          "active": "Партнёрство"
+        },
         "notPartnerDesc": "Хотите поставлять продукцию через RailTech Platform? Подайте заявку на заключение партнёрского договора.",
         "onlyCanAct": "Подать заявку может только представитель с правом подтверждать действия.",
         "applyBtn": "Подать заявку в партнёры",
@@ -773,10 +809,13 @@
         "categoriesDescriptionTooShort": "Опишите продукцию подробнее (минимум 10 символов)."
       },
       "fields": {
+        "country": "Страна регистрации",
         "companyName": "Название компании",
         "companyNamePlaceholder": "ООО «Железнодорожные технологии»",
         "inn": "ИНН (при наличии)",
         "innPlaceholder": "123456789",
+        "registrationNumber": "Регистрационный или налоговый номер",
+        "registrationNumberPlaceholder": "Номер в торговом реестре или налоговый номер",
         "kind": "Тип партнёра",
         "kinds": {
           "supplier": "Поставщик / Дистрибьютор",
@@ -978,7 +1017,18 @@
       "actBadge": "Акт",
       "acceptAct": "Принять акт",
       "titleViewer": "Ждут решения компании",
-      "viewerHint": "Решает контакт с правом подтверждать"
+      "viewerHint": "Решает контакт с правом подтверждать",
+      "deliveryBadge": "Поставка",
+      "acceptDelivery": "Подтвердить приёмку",
+      "partnerContractBadge": "Договор",
+      "partnerContractLabel": "Проект партнёрского договора",
+      "agreePartnerContract": "Согласовать условия",
+      "productRemarkBadge": "Товар",
+      "fixProductRemarks": "Исправить замечания",
+      "remarks": "Замечания",
+      "messagesBadge": "Чат",
+      "unreadMessages": "Непрочитанные сообщения: {{count}}",
+      "replyManager": "Ответить менеджеру"
     }
   },
   "saveBar": {
@@ -1322,5 +1372,23 @@
       "memo": "Служебная записка",
       "other": "Официальный документ"
     }
+  },
+  "onboarding": {
+    "title": "Первые шаги в кабинете",
+    "progress": "{{done}} из {{total}} выполнено",
+    "dismiss": "Скрыть",
+    "allDone": "Все первые шаги успешно выполнены!",
+    "companyRequisites": "Реквизиты компании",
+    "companyRequisitesDesc": "Проверьте ИНН/рег. номер, телефон и банк",
+    "telegramNotif": "Уведомления в Telegram",
+    "telegramNotifDesc": "Мгновенные оповещения о документах и счетах",
+    "firstRequest": "Создать первый запрос",
+    "firstRequestDesc": "Отправьте заявку на расчёт номенклатуры",
+    "uploadPriceList": "Загрузить прайс-лист",
+    "uploadPriceListDesc": "Скачайте шаблон Excel и загрузите свои товары",
+    "partnerContract": "Проект договора",
+    "partnerContractDesc": "Ознакомьтесь с условиями и согласуйте договор",
+    "inviteTeam": "Пригласить коллег",
+    "inviteTeamDesc": "Добавьте сотрудников для совместной работы"
   }
 }

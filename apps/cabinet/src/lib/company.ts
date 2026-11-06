@@ -1,13 +1,29 @@
 import type { Company, CompanyUpdate, Schemas, TeamInvite } from '@/api/portal';
 
+export interface CompanyFormDraft {
+  name: string;
+  inn?: string;
+  registration_number?: string;
+  country_code?: string;
+  legal_address?: string;
+  bank_details?: string;
+  language: Schemas['Language'];
+}
+
 /** Только изменённые поля профиля — `PUT /company` не перетирает то, что клиент не трогал. */
-export function companyChanges(company: Company, draft: Required<CompanyUpdate>): CompanyUpdate {
+export function companyChanges(company: Company, draft: CompanyFormDraft): CompanyUpdate {
   const changes: CompanyUpdate = {};
   const name = draft.name.trim();
   if (name !== company.name) changes.name = name;
-  if (draft.inn.trim() !== (company.inn ?? '')) changes.inn = draft.inn.trim();
-  if (draft.legal_address.trim() !== (company.legal_address ?? '')) changes.legal_address = draft.legal_address.trim();
-  if (draft.bank_details.trim() !== (company.bank_details ?? '')) changes.bank_details = draft.bank_details.trim();
+  if ((draft.inn ?? '').trim() !== (company.inn ?? '')) changes.inn = draft.inn?.trim();
+  if ((draft.registration_number ?? '').trim() !== (company.registration_number ?? ''))
+    changes.registration_number = draft.registration_number?.trim();
+  if (draft.country_code && draft.country_code !== company.country?.code)
+    changes.country_code = draft.country_code;
+  if ((draft.legal_address ?? '').trim() !== (company.legal_address ?? ''))
+    changes.legal_address = draft.legal_address?.trim();
+  if ((draft.bank_details ?? '').trim() !== (company.bank_details ?? ''))
+    changes.bank_details = draft.bank_details?.trim();
   if (draft.language !== company.language) changes.language = draft.language;
   return changes;
 }

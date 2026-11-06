@@ -16,6 +16,8 @@ from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from core.storage import get_private_storage, partner_application_contract_path
+
 from .relationships import PartnerKind
 
 
@@ -27,6 +29,7 @@ class PartnerApplicationSource(models.TextChoices):
 class PartnerApplicationStatus(models.TextChoices):
     SUBMITTED = "submitted", _("Подана")
     CONTRACT_SENT = "contract_sent", _("Договор отправлен")
+    CANDIDATE_AGREED = "candidate_agreed", _("Согласован кандидатом")
     APPROVED = "approved", _("Одобрена")
     REJECTED = "rejected", _("Отклонена")
 
@@ -77,11 +80,28 @@ class PartnerApplication(models.Model):
         max_length=255,
         verbose_name=_("Наименование организации"),
     )
+    country = models.ForeignKey(
+        "core.Country",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("Страна регистрации"),
+        help_text=_("Страна регистрации кандидата (справочник ISO 3166-1)"),
+    )
     inn = models.CharField(
         max_length=32,
         blank=True,
         default="",
-        verbose_name=_("ИНН / Рег. номер"),
+        verbose_name=_("ИНН"),
+        help_text=_("ИНН для резидентов Узбекистана"),
+    )
+    registration_number = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        verbose_name=_("Рег. номер (нерезидент)"),
+        help_text=_("Регистрационный номер / Tax ID для нерезидентов"),
     )
     contact_name = models.CharField(
         max_length=255,
@@ -115,6 +135,30 @@ class PartnerApplication(models.Model):
         null=True,
         blank=True,
         verbose_name=_("Дата договора"),
+    )
+    contract_pdf = models.FileField(
+        upload_to=partner_application_contract_path,
+        storage=get_private_storage,
+        null=True,
+        blank=True,
+        verbose_name=_("PDF договора"),
+        help_text=_("Файл проекта или согласованного/подписанного договора"),
+    )
+    contract_draft_sent_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Когда отправлен проект договора"),
+    )
+    candidate_agreed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Когда согласован кандидатом"),
+    )
+    candidate_notes = models.TextField(
+        max_length=1000,
+        blank=True,
+        default="",
+        verbose_name=_("Комментарий кандидата"),
     )
     rejected_reason = models.TextField(
         max_length=1000,

@@ -1,0 +1,144 @@
+{% extends "crm/_document_base.html" %}
+{% load i18n %}
+
+{% block extra_head %}
+  .doc-body h2 { font-size: 9.5pt; font-weight: 700; color: var(--ink); margin: 10pt 0 4pt 0; text-transform: none; }
+  .doc-body p { margin: 3pt 0; font-size: 8.8pt; color: var(--ink-soft); line-height: 1.35; text-align: justify; orphans: 3; widows: 3; }
+  .doc-body ul { margin: 3pt 0 3pt 16pt; font-size: 8.8pt; color: var(--ink-soft); }
+  .doc-body li { margin-bottom: 2pt; }
+  .partner-details-grid { width: 100%; border-collapse: collapse; margin-top: 8pt; margin-bottom: 12pt; }
+  .partner-details-grid td { padding: 4pt 8pt; border: 1px solid var(--border); font-size: 8.5pt; }
+  .partner-details-grid td.label { font-weight: 600; width: 30%; background: var(--surface); color: var(--ink); }
+{% endblock %}
+
+{% block doc_meta %}
+  {% if document_draft %}
+    <div class="doc-no-draft">{% translate "ПРОЕКТ ДОГОВОРА" %}</div>
+  {% else %}
+    <div class="doc-no">{% blocktranslate with number=contract_number %}Партнёрский договор № {{ number }}{% endblocktranslate %}</div>
+    {% if contract_date %}<div>{% blocktranslate with date=contract_date|date:"d.m.Y" %}от {{ date }}{% endblocktranslate %}</div>{% endif %}
+  {% endif %}
+{% endblock %}
+
+{% block doc_title %}{% translate "Партнёрский договор о сотрудничестве" %}{% endblock %}
+
+{% block parties %}
+<table class="parties">
+  <tr>
+    <td>
+      <div class="party">
+        <h3>{% translate "Платформа (Оператор)" %}</h3>
+        {% if seller or seller_profile %}
+          <div class="pname">{% firstof seller_profile.legal_name seller.name "ООО «RailTech»" %}</div>
+          {% firstof seller_profile.inn seller.inn as party_seller_inn %}
+          {% if party_seller_inn %}<p>{% translate "ИНН" %}: {{ party_seller_inn }}</p>{% endif %}
+          {% firstof seller_profile.legal_address seller.legal_address as party_seller_addr %}
+          {% if party_seller_addr %}<p>{{ party_seller_addr }}</p>{% endif %}
+          {% if seller_profile.bank_details %}<p>{{ seller_profile.bank_details|linebreaksbr }}</p>{% endif %}
+        {% else %}
+          <div class="pname">{% translate "ООО «RailTech»" %}</div>
+        {% endif %}
+      </div>
+    </td>
+    <td>
+      <div class="party">
+        <h3>{% translate "Партнёр (Кандидат)" %}</h3>
+        <div class="pname">{{ partner_company_name }}</div>
+        {% if partner_inn %}<p>{% translate "ИНН" %}: {{ partner_inn }}</p>
+        {% elif partner_registration_number %}<p>{% translate "Рег. номер" %}: {{ partner_registration_number }}{% if partner_country_name %} ({{ partner_country_name }}){% endif %}</p>
+        {% elif partner_country_name %}<p>{% translate "Страна" %}: {{ partner_country_name }}</p>{% endif %}
+        {% if partner_address %}<p>{{ partner_address }}</p>{% endif %}
+        {% if partner_contact %}<p>{% translate "Представитель" %}: {{ partner_contact }}</p>{% endif %}
+        {% if partner_phone %}<p>{% translate "Тел." %}: {{ partner_phone }}</p>{% endif %}
+        {% if partner_email %}<p>{% translate "E-mail" %}: {{ partner_email }}</p>{% endif %}
+      </div>
+    </td>
+  </tr>
+</table>
+{% endblock %}
+
+{% block content %}
+<div class="doc-body">
+  <h2>1. {% translate "Предмет соглашения" %}</h2>
+  <p>
+    {% blocktranslate with company=partner_company_name kind=partner_kind_label %}
+    Настоящий договор определяет порядок взаимодействия между Платформой и Партнёром ({{ company }}),
+    выступающим в качестве {{ kind }}, в рамках размещения, продвижения и поставок продукции железнодорожного
+    и промышленного назначения через цифровую платформу RailTech.
+    {% endblocktranslate %}
+  </p>
+  {% if categories_description %}
+  <p>
+    {% translate "Категории продукции и заявленная номенклатура:" %}
+    <strong>{{ categories_description }}</strong>
+  </p>
+  {% endif %}
+
+  <h2>2. {% translate "Условия работы через Личный кабинет" %}</h2>
+  <p>
+    {% translate "2.1. Партнёр получает доступ к защищённому Личному кабинету на портале cabinet.railtech.uz для управления номенклатурой продукции, актуализации прайс-листов, отслеживания запросов и документооборота." %}
+  </p>
+  <p>
+    {% translate "2.2. Партнёр обязуется предоставлять достоверную техническую информацию, сертификаты соответствия и паспорта качества на поставляемые изделия." %}
+  </p>
+  <p>
+    {% translate "2.3. Взаимодействие Сторон, согласование условий спецификаций и коммерческих предложений осуществляется в электронном виде с использованием квалифицированной или простой электронной подписи." %}
+  </p>
+
+  <h2>3. {% translate "Конфиденциальность и защита данных" %}</h2>
+  <p>
+    {% translate "3.1. Стороны обязуются соблюдать режим конфиденциальности в отношении коммерческой, технической и персональной информации, полученной в процессе взаимодействия." %}
+  </p>
+
+  <h2>4. {% translate "Срок действия и заключительные положения" %}</h2>
+  <p>
+    {% translate "4.1. Настоящий договор вступает в силу с момента его подписания уполномоченными представителями Сторон и действует бессрочно до направления одной из Сторон уведомления о расторжении." %}
+  </p>
+  <p>
+    {% translate "4.2. Все изменения и дополнения к настоящему договору действительны при их фиксации через систему электронного документооборота Платформы." %}
+  </p>
+
+  <h2>5. {% translate "Подписи и реквизиты Сторон" %}</h2>
+  <table class="signatures">
+    <tr>
+      <td>
+        <div class="sign-box">
+          <div class="role">{% translate "От Платформы:" %}</div>
+          {% if signed_by_director %}
+            <div><strong>{{ director_name|default:"Генеральный директор" }}</strong></div>
+            <div class="sign-line">
+              {% translate "Электронная подпись (ПЭП)" %} · {{ approved_at|date:"d.m.Y H:i" }}<br>
+              {% translate "Идентификация:" %} {{ director_email|default:"director@railtech.uz" }}
+            </div>
+          {% else %}
+            <div class="sign-line">{% translate "Подпись / дата" %}</div>
+          {% endif %}
+          <div class="seal">{% translate "М.П." %}</div>
+        </div>
+      </td>
+      <td>
+        <div class="sign-box">
+          <div class="role">{% translate "От Партнёра:" %}</div>
+          {% if candidate_agreed %}
+            <div><strong>{{ partner_contact }}</strong></div>
+            <div class="sign-line">
+              {% translate "Согласовано в ЛК (ПЭП)" %} · {{ candidate_agreed_at|date:"d.m.Y H:i" }}<br>
+              {% translate "Идентификация:" %} {{ partner_email }}
+            </div>
+          {% else %}
+            <div>{{ partner_contact }}</div>
+            <div class="sign-line">{% translate "Подпись / согласование" %}</div>
+          {% endif %}
+          <div class="seal">{% translate "М.П." %}</div>
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  {% if signed_by_director or candidate_agreed %}
+  <div class="notes-block" style="color:var(--muted);font-size:7.8pt;margin-top:10pt;">
+    {% blocktranslate %}Документ подписан простой электронной подписью (ПЭП) в соответствии с регламентом платформы RailTech и соглашением сторон об электронном документообороте. Подписанты идентифицированы по защищённым учётным записям; факт и время подписания зафиксированы в неизменяемом реестре системы.{% endblocktranslate %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -60,6 +60,8 @@ class TeamMemberSerializer(serializers.ModelSerializer):
 
 class CompanySerializer(serializers.ModelSerializer):
     bank_details = serializers.CharField(source="formatted_bank_details", read_only=True)
+    country = serializers.SerializerMethodField()
+    registration_number = serializers.CharField(read_only=True)
 
     class Meta:
         model = Company
@@ -67,15 +69,35 @@ class CompanySerializer(serializers.ModelSerializer):
             "id",
             "name",
             "inn",
+            "registration_number",
+            "country",
             "legal_address",
             "bank_details",
             "language",
         ]
 
+    def get_country(self, company):
+        if isinstance(company, dict):
+            c = company.get("country")
+            if not c:
+                return None
+            if isinstance(c, dict):
+                return c
+            return {"code": getattr(c, "code", str(c)), "name": getattr(c, "name", "")}
+        country = getattr(company, "country", None)
+        if not country:
+            return None
+        return {
+            "code": country.code,
+            "name": country.name,
+        }
+
 
 class CompanyUpdateSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=300, required=False)
     inn = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    registration_number = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    country_code = serializers.CharField(max_length=2, required=False, allow_blank=True)
     legal_address = serializers.CharField(max_length=500, required=False, allow_blank=True)
     bank_details = serializers.CharField(max_length=1000, required=False, allow_blank=True)
     language = serializers.ChoiceField(choices=["ru", "uz", "en"], required=False)
@@ -725,6 +747,10 @@ class PartnerApplicationSerializer(serializers.ModelSerializer):
     phone = serializers.CharField(allow_null=True, required=False)
     contract_number = serializers.CharField(allow_null=True, required=False)
     contract_date = serializers.DateField(allow_null=True, required=False)
+    contract_draft_sent_at = serializers.DateTimeField(allow_null=True, required=False)
+    candidate_agreed_at = serializers.DateTimeField(allow_null=True, required=False)
+    candidate_notes = serializers.CharField(allow_null=True, required=False)
+    has_contract_pdf = serializers.SerializerMethodField()
     rejected_reason = serializers.CharField(allow_null=True, required=False)
 
     class Meta:
@@ -737,29 +763,43 @@ class PartnerApplicationSerializer(serializers.ModelSerializer):
             "kind",
             "categories_description",
             "company_name",
+            "country",
             "inn",
+            "registration_number",
             "contact_name",
             "email",
             "phone",
             "contract_number",
             "contract_date",
+            "contract_draft_sent_at",
+            "candidate_agreed_at",
+            "candidate_notes",
+            "has_contract_pdf",
             "rejected_reason",
             "created_at",
             "updated_at",
         ]
 
+    def get_has_contract_pdf(self, obj) -> bool:
+        return bool(getattr(obj, "contract_pdf", None))
+
     def to_representation(self, instance):
         ret = super().to_representation(instance)
         # Пустые строки в nullable-полях приводим к None по OpenAPI 3.1 схеме
-        for field in ("inn", "phone", "contract_number", "rejected_reason"):
+        for field in ("inn", "registration_number", "phone", "contract_number", "candidate_notes", "rejected_reason"):
             if not ret.get(field):
                 ret[field] = None
+        ret["country"] = instance.country.code if instance.country else None
         return ret
 
 
 class PartnerApplicationPublicCreateSerializer(serializers.Serializer):
     company_name = serializers.CharField(max_length=255, min_length=1)
+    country = serializers.CharField(max_length=2, allow_blank=True, allow_null=True, required=False, default="UZ")
     inn = serializers.CharField(max_length=32, allow_blank=True, allow_null=True, required=False, default="")
+    registration_number = serializers.CharField(
+        max_length=64, allow_blank=True, allow_null=True, required=False, default=""
+    )
     kind = serializers.ChoiceField(choices=["manufacturer", "supplier", "principal", "other"], default="supplier")
     categories_description = serializers.CharField(max_length=2000, min_length=5)
     contact_name = serializers.CharField(max_length=255, min_length=1)

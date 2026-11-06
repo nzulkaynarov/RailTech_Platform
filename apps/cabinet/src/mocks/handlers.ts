@@ -305,7 +305,19 @@ export const handlers = [
     if (body.email.startsWith('throttled')) {
       return HttpResponse.json({ detail: 'TOO_MANY_REQUESTS' }, { status: 429, headers: { 'Retry-After': '45' } });
     }
-    return new HttpResponse(null, { status: 200 });
+    if (body.email.startsWith('unknown') || body.email.startsWith('unregistered')) {
+      return json({ status: 'not_registered', sent: false, email: body.email });
+    }
+    return json({ status: 'ok', sent: true, email: body.email });
+  }),
+  http.get(`${API}/countries`, () => {
+    return json([
+      { code: 'UZ', name: 'Узбекистан', phone_code: '+998', phone_mask: '+998 (99) 999-99-99', phone_placeholder: '+998 90 123-45-67', tax_label: 'ИНН (STIR)', tax_placeholder: '123456789', is_uzbekistan: true },
+      { code: 'KZ', name: 'Казахстан', phone_code: '+7', phone_mask: '+7 (799) 999-99-99', phone_placeholder: '+7 701 123-45-67', tax_label: 'БИН / ИИН', tax_placeholder: '123456789012', is_uzbekistan: false },
+      { code: 'RU', name: 'Россия', phone_code: '+7', phone_mask: '+7 (999) 999-99-99', phone_placeholder: '+7 916 123-45-67', tax_label: 'ИНН', tax_placeholder: '1234567890', is_uzbekistan: false },
+      { code: 'CN', name: 'Китай', phone_code: '+86', phone_mask: '+86 999 9999 9999', phone_placeholder: '+86 138 1234 5678', tax_label: 'USCC', tax_placeholder: '91110000000000000X', is_uzbekistan: false },
+      { code: 'TR', name: 'Турция', phone_code: '+90', phone_mask: '+90 999 999 99 99', phone_placeholder: '+90 532 123 45 67', tax_label: 'VKN', tax_placeholder: '1234567890', is_uzbekistan: false },
+    ]);
   }),
   http.post(`${API}/auth/magic`, async ({ request }) => {
     const { token } = await readJson<{ token: string }>(request);
@@ -829,7 +841,10 @@ export const handlers = [
         const body = await readJson<Schemas['CompanyUpdate']>(request);
         if (body.name !== undefined && !body.name.trim()) return error(422, 'VALIDATION_ERROR');
         if (body.inn !== undefined && body.inn !== '' && !/^\d{9,14}$/.test(body.inn)) return error(422, 'INN_INVALID');
-        db.company = { ...db.company, ...body };
+        const country = body.country_code
+          ? { code: body.country_code, name: body.country_code === 'UZ' ? 'Узбекистан' : 'Казахстан' }
+          : db.company.country;
+        db.company = { ...db.company, ...body, country };
         return json(db.company);
       },
       { action: true },
@@ -842,10 +857,41 @@ export const handlers = [
       const app = db.partnerApplication;
       return json({
         already_partner: alreadyPartner,
-        has_application: app !== null && (app.status === 'submitted' || app.status === 'contract_sent'),
+        has_application:
+          app !== null &&
+          (app.status === 'submitted' || app.status === 'contract_sent' || app.status === 'candidate_agreed'),
         application: app,
       } satisfies Schemas['PartnerApplicationStatusResponse']);
     }),
+  ),
+  http.get(
+    `${API}/company/partner-application/contract-pdf`,
+    withSession(() => {
+      return new HttpResponse(new Uint8Array([37, 80, 68, 70]), {
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': 'inline; filename="Partner_Contract.pdf"',
+        },
+      });
+    }),
+  ),
+  http.post(
+    `${API}/company/partner-application/agree`,
+    withSession(
+      async ({ db, request }) => {
+        if (!db.partnerApplication || db.partnerApplication.status !== 'contract_sent') {
+          return error(400, 'NOT_IN_CONTRACT_SENT_STATUS');
+        }
+        const body = ((await readJson<{ notes?: string }>(request).catch(() => ({}))) || {}) as { notes?: string };
+        db.partnerApplication.status = 'candidate_agreed';
+        db.partnerApplication.candidate_agreed_at = new Date().toISOString();
+        if (body.notes) {
+          db.partnerApplication.candidate_notes = body.notes;
+        }
+        return json(db.partnerApplication);
+      },
+      { action: true },
+    ),
   ),
   http.post(
     `${API}/company/partner-application`,

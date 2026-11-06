@@ -39,7 +39,8 @@ interface ListOptions {
   enabled?: boolean;
 }
 
-export const useRequests = () => useQuery({ queryKey: keys.requests, queryFn: portal.listRequests });
+export const useRequests = ({ enabled = true }: ListOptions = {}) =>
+  useQuery({ queryKey: keys.requests, queryFn: portal.listRequests, enabled });
 export const useRequest = (id: number) =>
   useQuery({ queryKey: keys.request(id), queryFn: () => portal.getRequest(id), enabled: Number.isFinite(id) });
 export const useQuotes = ({ enabled = true }: ListOptions = {}) =>
@@ -52,7 +53,8 @@ export const useInvoices = ({ enabled = true }: ListOptions = {}) =>
   useQuery({ queryKey: keys.invoices, queryFn: portal.listInvoices, enabled });
 export const useActs = ({ enabled = true }: ListOptions = {}) =>
   useQuery({ queryKey: keys.acts, queryFn: portal.listActs, enabled });
-export const useDeliveries = () => useQuery({ queryKey: keys.deliveries, queryFn: portal.listDeliveries });
+export const useDeliveries = ({ enabled = true }: ListOptions = {}) =>
+  useQuery({ queryKey: keys.deliveries, queryFn: portal.listDeliveries, enabled });
 export const useDocuments = (params: portal.DocumentsQuery = {}) =>
   useQuery({ queryKey: keys.documents(params), queryFn: () => portal.listDocuments(params) });
 export const useCatalogCategories = () =>
@@ -66,8 +68,10 @@ export const useCatalog = (params: portal.CatalogQuery, enabled = true) =>
   });
 export const useCatalogItem = (id: number) =>
   useQuery({ queryKey: keys.catalogItem(id), queryFn: () => portal.getCatalogItem(id), enabled: Number.isFinite(id) });
-export const useCompany = () => useQuery({ queryKey: keys.company, queryFn: portal.getCompany });
-export const useTeam = () => useQuery({ queryKey: keys.team, queryFn: portal.listTeam });
+export const useCompany = ({ enabled = true }: { enabled?: boolean } = {}) =>
+  useQuery({ queryKey: keys.company, queryFn: portal.getCompany, enabled });
+export const useTeam = ({ enabled = true }: { enabled?: boolean } = {}) =>
+  useQuery({ queryKey: keys.team, queryFn: portal.listTeam, enabled });
 
 /** Шаг опроса статуса Telegram; в тестах короткий, чтобы не ждать секунды реального времени. */
 export const TELEGRAM_POLL_MS = import.meta.env.MODE === 'test' ? 50 : 3000;
@@ -88,11 +92,15 @@ export const useCreateTelegramLink = () => useMutation({ mutationFn: portal.crea
 export const useSendTelegramTest = () => useMutation({ mutationFn: portal.sendTelegramTest });
 export const useUnlinkTelegram = () =>
   useInvalidatingMutation(portal.unlinkTelegram, [], (status, client) => client.setQueryData(keys.telegram, status));
-export const usePartnerProducts = (params: portal.PartnerProductsQuery) =>
+export const usePartnerProducts = (
+  params: portal.PartnerProductsQuery,
+  options: { enabled?: boolean } = {},
+) =>
   useQuery({
     queryKey: keys.partnerProductList(params),
     queryFn: () => portal.listPartnerProducts(params),
     placeholderData: keepPreviousData,
+    enabled: options.enabled ?? true,
   });
 export const usePartnerProduct = (id: number | null) =>
   useQuery({
@@ -236,6 +244,9 @@ export const useCompanyPartnerApplication = (options: { enabled?: boolean } = {}
 
 export const useSubmitCompanyPartnerApplication = () =>
   useInvalidatingMutation(portal.submitCompanyPartnerApplication, [keys.partnerApplication]);
+
+export const useAgreeCompanyPartnerContract = () =>
+  useInvalidatingMutation(portal.agreeCompanyPartnerContract, [keys.partnerApplication]);
 
 export const useSubmitPartnerApplication = () =>
   useMutation({ mutationFn: portal.submitPartnerApplication });

@@ -196,7 +196,11 @@
       "demoHint": "Sinov maʼlumotlari bilan lokal stend. Parol talab qilinmaydi:",
       "demoActor": "Buyurtmachi sifatida kirish (MChJ «Toshkent Logistik»)",
       "demoViewer": "Kuzatuvchi sifatida kirish (faqat oʻqish)",
-      "haveCode": "Xatdagi kod bormi? Kod bilan kirish"
+      "haveCode": "Xatdagi kod bormi? Kod bilan kirish",
+      "unregisteredTitle": "E-mail roʻyxatdan oʻtmagan",
+      "unregisteredText": "{{email}} manzili mijozlar yoki hamkorlar roʻyxatida topilmadi. Manzilni toʻgʻri yozganingizni tekshiring yoki tanlang:",
+      "unregisteredNewClient": "Men mijozman — soʻrov qoldirish",
+      "unregisteredBecomePartner": "Men yetkazib beruvchiman — hamkor bo‘lish"
     },
     "sent": {
       "title": "Sizga xat yubordik",
@@ -242,6 +246,21 @@
       "submit": "Kirish",
       "signingIn": "Kirilmoqda…"
     }
+  },
+  "countryMask": {
+    "country": "Mamlakat",
+    "countryPlaceholder": "Mamlakatni tanlang",
+    "innUz": "STIR (INN)",
+    "binKz": "BIN / IIN",
+    "innRu": "INN",
+    "usccCn": "USCC kodi",
+    "vknTr": "VKN (Soliq raqami)",
+    "unpBy": "UNP",
+    "innKg": "INN",
+    "innTj": "INN",
+    "vatDe": "USt-IdNr. / HRB",
+    "trnAe": "TRN (Soliq raqami)",
+    "taxIdOther": "Roʻyxat raqami / Tax ID"
   },
   "newClient": {
     "title": "Men yangi mijozman",
@@ -718,6 +737,8 @@
       "fields": {
         "name": "Nomi",
         "inn": "STIR",
+        "country": "Mamlakat",
+        "registrationNumber": "Roʻyxatdan oʻtish raqami / Tax ID",
         "legalAddress": "Yuridik manzil",
         "bankDetails": "Bank rekvizitlari",
         "language": "Hujjatlar va xatlar tili"
@@ -730,14 +751,29 @@
         "toMyProducts": "«Mening mahsulotlarim»ga oʻtish",
         "applicationPendingDesc": "Hamkor maqomini olish uchun ariza topshirilgan va RailTech tomonidan koʻrib chiqilmoqda.",
         "contractSentDesc": "Hamkorlik shartnomasi tayyorlandi va kompaniyangizga kelishish uchun yuborildi.",
+        "contractAgreedDesc": "Shartnoma loyihasi siz tomoningizdan ma’qullandi va RailTech rahbariyati imzolashini kutmoqda.",
         "status": {
           "submitted": "Ko‘rib chiqilmoqda",
           "contract_sent": "Shartnoma yuborildi",
+          "candidate_agreed": "Kelishilgan",
           "approved": "Maʼqullandi",
           "rejected": "Rad etildi"
         },
         "appliedAt": "{{date}} da topshirilgan",
         "contractNumber": "Shartnoma",
+        "downloadDraftPdf": "Shartnoma loyihasini yuklab olish (PDF)",
+        "agreeContractBtn": "Shartnoma loyihasini ma’qullash",
+        "agreeDialogTitle": "Shartnoma loyihasini ma’qullash",
+        "agreeDialogDesc": "Kelishuvni tasdiqlash orqali siz hamkorlik shartnomasi va RailTech platformasi qoidalariga rozilik bildirasiz.",
+        "agreeNotesLabel": "Kelishuvga izoh yoki fikr (ixtiyoriy)",
+        "agreeSubmit": "Rozilikni tasdiqlash",
+        "agreeSuccess": "Shartnoma loyihasi muvaffaqiyatli ma’qullandi! Ariza tasdiqlash uchun rahbariyatga yuborildi.",
+        "steps": {
+          "application": "Ariza",
+          "draft": "Shartnoma loyihasi",
+          "director": "Tasdiqlash",
+          "active": "Hamkorlik"
+        },
         "notPartnerDesc": "RailTech Platform orqali mahsulot yetkazib berishni xohlaysizmi? Hamkorlik shartnomasini tuzish uchun ariza yuboring.",
         "onlyCanAct": "Faqat tasdiqlash huquqiga ega vakil ariza topshirishi mumkin.",
         "applyBtn": "Hamkorlikka ariza berish",
@@ -758,10 +794,13 @@
         "categoriesDescriptionTooShort": "Mahsulotlarni batafsilroq tavsiflang (kamida 10 ta belgi)."
       },
       "fields": {
+        "country": "Roʻyxatdan oʻtgan mamlakat",
         "companyName": "Kompaniya nomi",
         "companyNamePlaceholder": "MChJ «Temiryo‘l Texnologiyalari»",
         "inn": "STIR (mavjud bo‘lsa)",
         "innPlaceholder": "123456789",
+        "registrationNumber": "Roʻyxat raqami yoki soliq raqami",
+        "registrationNumberPlaceholder": "Tijorat reyestridagi raqam yoki soliq raqami",
         "kind": "Hamkor turi",
         "kinds": {
           "supplier": "Yetkazib beruvchi / Distribyutor",
@@ -963,7 +1002,18 @@
       "actBadge": "Dalolatnoma",
       "acceptAct": "Dalolatnomani qabul qilish",
       "titleViewer": "Kompaniya qarorini kutmoqda",
-      "viewerHint": "Tasdiqlash huquqiga ega kontakt hal qiladi"
+      "viewerHint": "Tasdiqlash huquqiga ega kontakt hal qiladi",
+      "deliveryBadge": "Yetkazib berish",
+      "acceptDelivery": "Qabul qilishni tasdiqlash",
+      "partnerContractBadge": "Shartnoma",
+      "partnerContractLabel": "Hamkorlik shartnomasi loyihasi",
+      "agreePartnerContract": "Shartlarni kelishish",
+      "productRemarkBadge": "Mahsulot",
+      "fixProductRemarks": "Mulohazalarni toʻgʻrilash",
+      "remarks": "Mulohazalar",
+      "messagesBadge": "Chat",
+      "unreadMessages": "Oʻqilmagan xabarlar: {{count}}",
+      "replyManager": "Menejerga javob berish"
     }
   },
   "saveBar": {
@@ -1291,5 +1341,23 @@
       "memo": "Xizmat xati",
       "other": "Rasmiy hujjat"
     }
+  },
+  "onboarding": {
+    "title": "Kabinetdagi dastlabki qadamlar",
+    "progress": "{{done}} / {{total}} bajarildi",
+    "dismiss": "Yashirish",
+    "allDone": "Barcha dastlabki qadamlar muvaffaqiyatli bajarildi!",
+    "companyRequisites": "Kompaniya rekvizitlari",
+    "companyRequisitesDesc": "STIR/roʻyxat raqami, telefon va bankni tekshiring",
+    "telegramNotif": "Telegram bildirishnomalari",
+    "telegramNotifDesc": "Hujjatlar va hisoblar haqida tezkor xabarlar",
+    "firstRequest": "Birinchi soʻrovni yaratish",
+    "firstRequestDesc": "Hisoblash uchun ariza yuboring",
+    "uploadPriceList": "Narxlar roʻyxatini yuklash",
+    "uploadPriceListDesc": "Excel andozasini yuklab, tovarlaringizni kiriting",
+    "partnerContract": "Shartnoma loyihasi",
+    "partnerContractDesc": "Shartlar bilan tanishib, kelishing",
+    "inviteTeam": "Hamkasblarni taklif qilish",
+    "inviteTeamDesc": "Birgalikda ishlash uchun xodimlarni qoʻshing"
   }
 }

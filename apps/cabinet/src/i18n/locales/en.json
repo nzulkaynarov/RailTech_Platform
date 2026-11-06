@@ -196,7 +196,11 @@
       "demoHint": "Local test stand with mock data. No password required:",
       "demoActor": "Sign in as Client (Toshkent Logistik LLC)",
       "demoViewer": "Sign in as Viewer (read-only)",
-      "haveCode": "Already have a code from the email? Log in with the code"
+      "haveCode": "Already have a code from the email? Log in with the code",
+      "unregisteredTitle": "Email not found",
+      "unregisteredText": "The email {{email}} was not found among registered clients or partners. Check spelling or choose an option:",
+      "unregisteredNewClient": "I am a client — submit request",
+      "unregisteredBecomePartner": "I am a supplier — become a partner"
     },
     "sent": {
       "title": "We sent you an email",
@@ -242,6 +246,21 @@
       "submit": "Log in",
       "signingIn": "Logging in…"
     }
+  },
+  "countryMask": {
+    "country": "Country",
+    "countryPlaceholder": "Select country",
+    "innUz": "TIN / STIR",
+    "binKz": "BIN / IIN",
+    "innRu": "INN",
+    "usccCn": "USCC Code",
+    "vknTr": "VKN (Tax ID)",
+    "unpBy": "UNP",
+    "innKg": "TIN",
+    "innTj": "TIN",
+    "vatDe": "VAT / HRB",
+    "trnAe": "TRN (Tax ID)",
+    "taxIdOther": "Reg. Number / Tax ID"
   },
   "newClient": {
     "title": "I am a new client",
@@ -718,6 +737,8 @@
       "fields": {
         "name": "Name",
         "inn": "Tax ID (INN)",
+        "country": "Country",
+        "registrationNumber": "Registration Number / Tax ID",
         "legalAddress": "Legal address",
         "bankDetails": "Bank details",
         "language": "Language of documents and e-mails"
@@ -730,14 +751,29 @@
         "toMyProducts": "Go to “My Products”",
         "applicationPendingDesc": "The application for partner status has been submitted and is under review by RailTech.",
         "contractSentDesc": "The partner agreement has been prepared and sent to your company for review and signing.",
+        "contractAgreedDesc": "The draft contract has been agreed by you and is awaiting digital signature by RailTech management.",
         "status": {
           "submitted": "Under review",
           "contract_sent": "Contract sent",
+          "candidate_agreed": "Agreed by you",
           "approved": "Approved",
           "rejected": "Rejected"
         },
         "appliedAt": "Submitted on {{date}}",
         "contractNumber": "Contract",
+        "downloadDraftPdf": "Download draft contract (PDF)",
+        "agreeContractBtn": "Agree to draft contract",
+        "agreeDialogTitle": "Draft contract agreement",
+        "agreeDialogDesc": "By confirming, you agree to the terms of the partnership contract and RailTech platform rules.",
+        "agreeNotesLabel": "Notes or comments for agreement (optional)",
+        "agreeSubmit": "Confirm agreement",
+        "agreeSuccess": "Draft contract successfully agreed! Application submitted for director approval.",
+        "steps": {
+          "application": "Application",
+          "draft": "Draft contract",
+          "director": "Approval",
+          "active": "Partnership"
+        },
         "notPartnerDesc": "Interested in supplying products through RailTech Platform? Apply for a partnership agreement.",
         "onlyCanAct": "Only a representative authorized to confirm actions can submit an application.",
         "applyBtn": "Apply for Partnership",
@@ -758,10 +794,13 @@
         "categoriesDescriptionTooShort": "Please describe products in more detail (at least 10 characters)."
       },
       "fields": {
+        "country": "Country of registration",
         "companyName": "Company name",
         "companyNamePlaceholder": "RailTech Technologies LLC",
         "inn": "Tax ID / INN (if applicable)",
         "innPlaceholder": "123456789",
+        "registrationNumber": "Registration / Tax number",
+        "registrationNumberPlaceholder": "Commercial registry or tax number",
         "kind": "Partner kind",
         "kinds": {
           "supplier": "Supplier / Distributor",
@@ -963,7 +1002,18 @@
       "actBadge": "Act",
       "acceptAct": "Accept act",
       "titleViewer": "Awaiting your company’s decision",
-      "viewerHint": "A contact with approval rights decides"
+      "viewerHint": "A contact with approval rights decides",
+      "deliveryBadge": "Delivery",
+      "acceptDelivery": "Confirm delivery",
+      "partnerContractBadge": "Agreement",
+      "partnerContractLabel": "Partner agreement draft",
+      "agreePartnerContract": "Review & agree terms",
+      "productRemarkBadge": "Product",
+      "fixProductRemarks": "Address supply remarks",
+      "remarks": "Remarks",
+      "messagesBadge": "Chat",
+      "unreadMessages": "Unread messages: {{count}}",
+      "replyManager": "Reply to manager"
     }
   },
   "saveBar": {
@@ -1291,5 +1341,23 @@
       "memo": "Memorandum",
       "other": "Official Document"
     }
+  },
+  "onboarding": {
+    "title": "Getting started",
+    "progress": "{{done}} of {{total}} completed",
+    "dismiss": "Dismiss",
+    "allDone": "All setup steps completed!",
+    "companyRequisites": "Company details",
+    "companyRequisitesDesc": "Verify Tax ID/Reg number, phone and bank",
+    "telegramNotif": "Telegram notifications",
+    "telegramNotifDesc": "Instant alerts about documents and invoices",
+    "firstRequest": "Create first request",
+    "firstRequestDesc": "Submit a request for quotation",
+    "uploadPriceList": "Upload price list",
+    "uploadPriceListDesc": "Download Excel template and upload products",
+    "partnerContract": "Partner contract draft",
+    "partnerContractDesc": "Review conditions and agree to terms",
+    "inviteTeam": "Invite colleagues",
+    "inviteTeamDesc": "Add team members for collaboration"
   }
 }

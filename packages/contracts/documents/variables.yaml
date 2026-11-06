@@ -22,6 +22,10 @@ kinds:
   receipt: { label: { ru: Квитанция, uz: Kvitansiya, en: Receipt }, layout: commercial, domain: erp }
   delivery_note: { label: { ru: Накладная, uz: Yuk xati, en: Delivery note }, layout: commercial, domain: erp }
   specification: { label: { ru: Спецификация, uz: Spetsifikatsiya, en: Specification }, layout: commercial, domain: erp }
+  partner_contract:
+    label: { ru: Партнёрский договор, uz: Hamkorlik shartnomasi, en: Partnership contract }
+    layout: commercial
+    domain: erp
 
 variables:
   - { code: company.name, type: text, label: { ru: Наша компания — название, uz: Kompaniyamiz — nomi, en: Our company — name } }
@@ -36,11 +40,15 @@ variables:
     label: { ru: Наша компания — должность руководителя, uz: Kompaniyamiz — rahbar lavozimi, en: Our company — director's title }
   - { code: counterparty.name, type: text, label: { ru: Контрагент — название, uz: Kontragent — nomi, en: Counterparty — name } }
   - { code: counterparty.inn, type: text, label: { ru: Контрагент — ИНН, uz: Kontragent — STIR, en: Counterparty — TIN } }
+  - { code: counterparty.country, type: text, label: { ru: Контрагент — страна, uz: Kontragent — mamlakat, en: Counterparty — country } }
+  - { code: counterparty.registration_number, type: text, label: { ru: Контрагент — рег. номер, uz: Kontragent — roʻyxat raqami, en: Counterparty — registration number } }
   - { code: counterparty.address, type: text, label: { ru: Контрагент — адрес, uz: Kontragent — manzili, en: Counterparty — address } }
   - { code: counterparty.director, type: text, label: { ru: Контрагент — руководитель, uz: Kontragent — rahbari, en: Counterparty — director } }
   - code: counterparty.director_position
     type: text
     label: { ru: Контрагент — должность руководителя, uz: Kontragent — rahbar lavozimi, en: Counterparty — director's title }
+  - { code: counterparty.phone, type: text, label: { ru: Контрагент — телефон, uz: Kontragent — telefon, en: Counterparty — phone } }
+  - { code: counterparty.email, type: text, label: { ru: Контрагент — эл. почта, uz: Kontragent — elektron pochta, en: Counterparty — email } }
   - { code: deal.number, type: text, label: { ru: Номер заявки, uz: Buyurtma raqami, en: Request number } }
   - { code: deal.title, type: text, label: { ru: Название заявки, uz: Buyurtma nomi, en: Request title } }
   - { code: quote.number, type: text, label: { ru: Номер КП, uz: Tijorat taklifi raqami, en: Quotation number }, kinds: [quote, contract, invoice] }

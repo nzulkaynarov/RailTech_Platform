@@ -1,5 +1,5 @@
 import { useId, useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
 import { CheckCircle2, Handshake, Loader2, ShieldCheck, FileCheck, Store } from 'lucide-react';
@@ -12,8 +12,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { LOCALES } from '@/i18n/locales';
+import { COUNTRIES, DEFAULT_COUNTRY, adaptPhoneForCountry, findCountry, type CountryInfo } from '@/lib/countries';
 import { AuthLayout } from './AuthLayout';
 
 interface FormValues {
@@ -39,15 +41,18 @@ const KINDS: PartnerKind[] = ['supplier', 'manufacturer', 'principal', 'other'];
 export function BecomePartnerPage() {
   const { t, i18n } = useTranslation();
   const id = useId();
+  const [searchParams] = useSearchParams();
+  const initialEmail = searchParams.get('email') ?? '';
   const defaultLang = (LOCALES.find((l) => l.code === i18n.language)?.code ?? 'ru') as Schemas['Language'];
 
+  const [selectedCountry, setSelectedCountry] = useState<CountryInfo>(DEFAULT_COUNTRY);
   const [values, setValues] = useState<FormValues>({
     company_name: '',
     inn: '',
     kind: 'supplier',
     categories_description: '',
     contact_name: '',
-    email: '',
+    email: initialEmail,
     phone: '',
     language: defaultLang,
     consent: false,
@@ -58,6 +63,16 @@ export function BecomePartnerPage() {
   const mutation = useMutation({
     mutationFn: submitPartnerApplication,
   });
+
+  const handleCountryChange = (newCode: string) => {
+    const nextCountry = findCountry(newCode);
+    const updatedPhone = adaptPhoneForCountry(values.phone, selectedCountry, nextCountry);
+    setSelectedCountry(nextCountry);
+    setValues((prev) => ({
+      ...prev,
+      phone: updatedPhone,
+    }));
+  };
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -84,9 +99,14 @@ export function BecomePartnerPage() {
       return;
     }
 
+    const isUz = selectedCountry.isUzbekistan;
+    const taxValue = values.inn.trim();
+
     mutation.mutate({
       company_name: values.company_name.trim(),
-      inn: values.inn.trim() || undefined,
+      country: selectedCountry.code === 'OTHER' ? undefined : selectedCountry.code,
+      inn: isUz && taxValue ? taxValue : undefined,
+      registration_number: !isUz && taxValue ? taxValue : undefined,
       kind: values.kind,
       categories_description: values.categories_description.trim(),
       contact_name: values.contact_name.trim(),
@@ -173,6 +193,22 @@ export function BecomePartnerPage() {
               </div>
 
               <div className="flex flex-col gap-1.5">
+                <Label htmlFor={`${id}-country`}>{t('pages.becomePartner.fields.country')}</Label>
+                <Select value={selectedCountry.code} onValueChange={handleCountryChange}>
+                  <SelectTrigger id={`${id}-country`} className="w-full">
+                    <SelectValue placeholder={t('countryMask.countryPlaceholder')} />
+                  </SelectTrigger>
+                  <SelectContent position="popper">
+                    {COUNTRIES.map((c) => (
+                      <SelectItem key={c.code} value={c.code}>
+                        {c.name} ({c.phoneCode})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
                 <Label htmlFor={`${id}-company-name`}>{t('pages.becomePartner.fields.companyName')}</Label>
                 <Input
                   id={`${id}-company-name`}
@@ -184,10 +220,14 @@ export function BecomePartnerPage() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor={`${id}-inn`}>{t('pages.becomePartner.fields.inn')}</Label>
+                <Label htmlFor={`${id}-inn`}>
+                  {selectedCountry.isUzbekistan
+                    ? t('pages.becomePartner.fields.inn')
+                    : t(selectedCountry.taxLabelKey, selectedCountry.taxLabelDefault)}
+                </Label>
                 <Input
                   id={`${id}-inn`}
-                  placeholder={t('pages.becomePartner.fields.innPlaceholder')}
+                  placeholder={selectedCountry.taxPlaceholder}
                   value={values.inn}
                   onChange={(e) => setValues({ ...values, inn: e.target.value })}
                 />
@@ -253,7 +293,7 @@ export function BecomePartnerPage() {
                 <Input
                   id={`${id}-phone`}
                   type="tel"
-                  placeholder={t('pages.becomePartner.fields.phonePlaceholder')}
+                  placeholder={selectedCountry.phonePlaceholder}
                   value={values.phone}
                   onChange={(e) => setValues({ ...values, phone: e.target.value })}
                 />

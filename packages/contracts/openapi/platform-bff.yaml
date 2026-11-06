@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.42.0
+  version: 0.43.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -12418,7 +12418,7 @@ paths:
         - name: status
           in: query
           required: false
-          schema: {type: string, enum: ['', submitted, contract_sent, approved, rejected]}
+          schema: {type: string, enum: ['', submitted, contract_sent, candidate_agreed, approved, rejected]}
       responses:
         '200':
           description: Список заявок
@@ -24576,7 +24576,7 @@ components:
       enum: [public, client_cabinet]
     PartnerApplicationStatus:
       type: string
-      enum: [submitted, contract_sent, approved, rejected]
+      enum: [submitted, contract_sent, candidate_agreed, approved, rejected]
     PartnerApplicationKind:
       type: string
       enum: ['', manufacturer, supplier, principal, other]

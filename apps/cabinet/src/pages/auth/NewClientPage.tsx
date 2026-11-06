@@ -1,5 +1,5 @@
 import { useId, useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, Loader2, Send, UserPlus } from 'lucide-react';
@@ -49,13 +49,15 @@ function problemOf(error: unknown): LeadFormProblem {
  */
 export function NewClientPage() {
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
+  const initialEmail = searchParams.get('email') ?? '';
   const telegramLink = botLink('web');
   const [sent, setSent] = useState(false);
   const formAvailable = crmBaseUrl() !== null;
 
   let body;
   if (sent) body = <SentCard telegramLink={telegramLink} />;
-  else if (formAvailable) body = <LeadForm telegramLink={telegramLink} onSent={() => setSent(true)} />;
+  else if (formAvailable) body = <LeadForm telegramLink={telegramLink} onSent={() => setSent(true)} initialEmail={initialEmail} />;
   else {
     body = (
       <>
@@ -82,14 +84,25 @@ export function NewClientPage() {
   );
 }
 
-function LeadForm({ telegramLink, onSent }: { telegramLink: string | null; onSent: () => void }) {
+function LeadForm({
+  telegramLink,
+  onSent,
+  initialEmail = '',
+}: {
+  telegramLink: string | null;
+  onSent: () => void;
+  initialEmail?: string;
+}) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const baseId = useId();
   const id = (field: string) => `${baseId}-${field}`;
   const errorId = id('error');
   const contactHintId = id('contact-hint');
-  const [values, setValues] = useState<LeadFormValues>(EMPTY_LEAD_FORM);
+  const [values, setValues] = useState<LeadFormValues>(() => ({
+    ...EMPTY_LEAD_FORM,
+    email: initialEmail,
+  }));
   const [problem, setProblem] = useState<LeadFormProblem | null>(null);
 
   const token = useQuery({

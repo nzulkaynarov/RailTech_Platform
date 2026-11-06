@@ -206,3 +206,102 @@ def test_company_partner_application_readonly_forbidden(readonly_portal_client):
     resp = readonly_portal_client.post(COMPANY_URL, payload, format="json")
     assert resp.status_code == 403
     assert resp.json()["detail"] == "FORBIDDEN"
+
+
+def test_company_partner_application_contract_pdf_success(portal_client, client_company, client_contact):
+    """Кандидат может скачать проект договора (200 application/pdf)."""
+    from django.core.files.base import ContentFile
+    from portal.services.partner_contract import render_partner_contract_pdf
+
+    app = PartnerApplication.objects.create(
+        source=PartnerApplicationSource.CLIENT_CABINET,
+        company=client_company,
+        applicant_contact=client_contact,
+        company_name=client_company.name,
+        kind="supplier",
+        categories_description="Поставка стрелочных переводов",
+        status=PartnerApplicationStatus.CONTRACT_SENT,
+        contract_number="PRT-TEST-2026-001",
+        consent=True,
+    )
+    pdf_bytes = render_partner_contract_pdf(app, draft=True)
+    app.contract_pdf.save("test_draft.pdf", ContentFile(pdf_bytes), save=True)
+
+    resp = portal_client.get(f"{COMPANY_URL}/contract-pdf")
+    assert resp.status_code == 200
+    assert resp["Content-Type"] == "application/pdf"
+    assert "PRT-TEST-2026-001" in resp["Content-Disposition"]
+    assert len(resp.content) > 0
+
+
+def test_company_partner_application_contract_pdf_not_found(portal_client):
+    """Если у компании нет заявки, возвращается 404 NOT_FOUND."""
+    resp = portal_client.get(f"{COMPANY_URL}/contract-pdf")
+    assert resp.status_code == 404
+
+
+def test_company_partner_application_agree_success(portal_client, client_company, client_contact):
+    """Кандидат согласовывает проект договора: статус становится candidate_agreed."""
+    app = PartnerApplication.objects.create(
+        source=PartnerApplicationSource.CLIENT_CABINET,
+        company=client_company,
+        applicant_contact=client_contact,
+        company_name=client_company.name,
+        kind="supplier",
+        categories_description="Поставка стрелочных переводов",
+        status=PartnerApplicationStatus.CONTRACT_SENT,
+        contract_number="PRT-TEST-2026-002",
+        consent=True,
+    )
+
+    resp = portal_client.post(
+        f"{COMPANY_URL}/agree",
+        {"notes": "Согласовано юристом, замечаний нет"},
+        format="json",
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "candidate_agreed"
+    assert data["candidate_notes"] == "Согласовано юристом, замечаний нет"
+    assert data["candidate_agreed_at"] is not None
+
+    app.refresh_from_db()
+    assert app.status == PartnerApplicationStatus.CANDIDATE_AGREED
+    assert app.candidate_notes == "Согласовано юристом, замечаний нет"
+    assert app.candidate_agreed_at is not None
+    assert app.contract_pdf
+
+
+def test_company_partner_application_agree_invalid_status(portal_client, client_company, client_contact):
+    """Согласование отклоняется (400), если статус не contract_sent."""
+    PartnerApplication.objects.create(
+        source=PartnerApplicationSource.CLIENT_CABINET,
+        company=client_company,
+        applicant_contact=client_contact,
+        company_name=client_company.name,
+        kind="supplier",
+        categories_description="Поставка стрелочных переводов",
+        status=PartnerApplicationStatus.SUBMITTED,
+        consent=True,
+    )
+
+    resp = portal_client.post(f"{COMPANY_URL}/agree", {"notes": ""}, format="json")
+    assert resp.status_code == 400
+    assert resp.json()["detail"] == "NOT_IN_CONTRACT_SENT_STATUS"
+
+
+def test_company_partner_application_agree_readonly_forbidden(readonly_portal_client, client_company):
+    """Контакт без права подписи (can_act=False) получает 403 FORBIDDEN при попытке согласовать договор."""
+    PartnerApplication.objects.create(
+        source=PartnerApplicationSource.CLIENT_CABINET,
+        company=client_company,
+        company_name=client_company.name,
+        kind="supplier",
+        categories_description="Поставка стрелочных переводов",
+        status=PartnerApplicationStatus.CONTRACT_SENT,
+        consent=True,
+    )
+
+    resp = readonly_portal_client.post(f"{COMPANY_URL}/agree", {"notes": ""}, format="json")
+    assert resp.status_code == 403
+    assert resp.json()["detail"] == "FORBIDDEN"

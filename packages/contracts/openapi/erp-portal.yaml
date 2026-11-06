@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Portal API (Cabinet → ERP)
-  version: 0.6.0
+  version: 0.7.0
   summary: Пространство `/api/portal/v1/` — вызывает Cabinet SPA от имени клиента.
   description: |
     Контракт по `docs/architecture/CONTRACTS.md` §4 и ADR-0004 (Cabinet без бэкенда). Версия 0 (M0-INF-02):
@@ -162,7 +162,11 @@ paths:
               additionalProperties: false
       responses:
         '200':
-          description: Принято
+          description: Ответ запроса ссылки (status=ok или not_registered)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MagicLinkResult'
         '422':
           $ref: '#/components/responses/ValidationError'
         '400':
@@ -344,6 +348,23 @@ paths:
           $ref: '#/components/responses/ValidationError'
         '429':
           $ref: '#/components/responses/TooManyRequests'
+
+  /countries:
+    get:
+      tags: [lookups]
+      operationId: getCountries
+      summary: Справочник стран для онбординга (COUNTRY-MASK-1)
+      description: Список стран с метаданными телефонных масок и налоговых номеров.
+      security: []
+      responses:
+        '200':
+          description: Список стран
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PortalCountry'
 
   /me:
     get:
@@ -1884,6 +1905,70 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
+  /company/partner-application/contract-pdf:
+    get:
+      tags: [company]
+      operationId: getCompanyPartnerContractPdf
+      summary: Скачать проект или подписанный партнёрский договор
+      description: |
+        Отдаёт PDF-файл проекта договора или подписанного партнёрского договора для ознакомления и согласования.
+      responses:
+        '200':
+          description: PDF-файл договора
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /company/partner-application/agree:
+    post:
+      tags: [company]
+      operationId: agreeCompanyPartnerContract
+      summary: Согласовать проект партнёрского договора кандидатом
+      description: |
+        Кандидат подтверждает согласование проекта партнёрского договора. Статус переводится в `candidate_agreed`.
+        Требует права действовать `can_act`.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notes:
+                  type: string
+                  description: Примечание или комментарий кандидата
+      responses:
+        '200':
+          description: Договор успешно согласован кандидатом
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerApplication'
+        '400':
+          description: Заявка не находится в статусе contract_sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
   /team:
     get:
       tags: [company]
@@ -2226,6 +2311,7 @@ components:
         - ALREADY_PARTNER
         - APPLICATION_EXISTS
         - PARTNER_APPLICATION_NOT_FOUND
+        - NOT_IN_CONTRACT_SENT_STATUS
 
     PartnerKind:
       type: string
@@ -2239,11 +2325,12 @@ components:
 
     PartnerApplicationStatus:
       type: string
-      enum: [submitted, contract_sent, approved, rejected]
+      enum: [submitted, contract_sent, candidate_agreed, approved, rejected]
       description: |
         Статус заявки в договорном шлюзе (DECISIONS 2026-11-05):
         - `submitted`: заявка подана, ожидает проверки снабжением
         - `contract_sent`: проект партнёрского договора отправлен кандидату
+        - `candidate_agreed`: проект договора согласован кандидатом, ожидает утверждения
         - `approved`: договор подписан, отношение `partner` активировано
         - `rejected`: заявка отклонена
 
@@ -2271,9 +2358,15 @@ components:
         company_name:
           type: string
           description: Название организации
+        country:
+          type: [string, 'null']
+          description: Код страны ISO 3166-1 alpha-2
         inn:
           type: [string, 'null']
-          description: ИНН организации или регистрационный номер нерезидента
+          description: ИНН организации (для резидентов РУз)
+        registration_number:
+          type: [string, 'null']
+          description: Регистрационный номер компании (для нерезидентов)
         contact_name:
           type: string
           description: Контактное лицо
@@ -2289,6 +2382,20 @@ components:
           type: [string, 'null']
           format: date
           description: Дата партнёрского договора
+        contract_draft_sent_at:
+          type: [string, 'null']
+          format: date-time
+          description: Дата и время направления проекта договора
+        candidate_agreed_at:
+          type: [string, 'null']
+          format: date-time
+          description: Дата и время согласования договора кандидатом
+        candidate_notes:
+          type: [string, 'null']
+          description: Примечания/комментарии кандидата при согласовании
+        has_contract_pdf:
+          type: boolean
+          description: Наличие прикреплённого PDF-файла договора
         rejected_reason:
           type: [string, 'null']
           description: Причина отклонения заявки
@@ -2314,10 +2421,18 @@ components:
           minLength: 1
           maxLength: 255
           description: Название организации
+        country:
+          type: [string, 'null']
+          maxLength: 2
+          description: Код страны ISO 3166-1 alpha-2 (UZ, KZ, RU, CN, DE...)
         inn:
           type: [string, 'null']
           maxLength: 32
-          description: ИНН (для резидентов РУз) или регистрационный номер иностранной компании
+          description: ИНН (для резидентов РУз)
+        registration_number:
+          type: [string, 'null']
+          maxLength: 64
+          description: Регистрационный номер компании (для нерезидентов)
         kind:
           $ref: '#/components/schemas/PartnerKind'
         categories_description:
@@ -2361,6 +2476,62 @@ components:
           type: integer
         status:
           $ref: '#/components/schemas/PartnerApplicationStatus'
+
+    MagicLinkResult:
+      type: object
+      required:
+        - status
+        - sent
+        - email
+      properties:
+        status:
+          type: string
+          enum: [ok, not_registered]
+          description: Статус проверки адреса (ok или not_registered)
+        sent:
+          type: boolean
+          description: Отправлено ли письмо с кодом
+        email:
+          type: string
+          description: Проверяемый адрес электронной почты
+
+    PortalCountry:
+      type: object
+      required:
+        - code
+        - name
+        - is_uzbekistan
+      properties:
+        code:
+          type: string
+          description: Двухбуквенный код страны ISO 3166-1 alpha-2 (UZ, KZ, RU, CN, DE...)
+        name:
+          type: string
+          description: Название страны
+        alpha3:
+          type: string
+          description: Трёхбуквенный код страны ISO 3166-1 alpha-3
+        phone_code:
+          type: string
+          description: Международный телефонный код (+998, +7, +86...)
+        phone_mask:
+          type: string
+          description: Маска ввода номера телефона
+        phone_placeholder:
+          type: string
+          description: Пример номера телефона
+        tax_label:
+          type: string
+          description: Название налогового номера (ИНН, БИН, USCC, Tax ID...)
+        tax_placeholder:
+          type: string
+          description: Пример налогового номера
+        tax_regex:
+          type: string
+          description: Регулярное выражение для проверки налогового номера
+        is_uzbekistan:
+          type: boolean
+          description: Является ли страна Узбекистаном (UZ)
 
     PartnerApplicationClientCreate:
       type: object
@@ -3868,6 +4039,19 @@ components:
           type: string
         inn:
           type: [string, 'null']
+        registration_number:
+          type: [string, 'null']
+          description: Регистрационный номер / Tax ID для компаний-нерезидентов (ОГРН, БИН, CRN и др.)
+        country:
+          type: [object, 'null']
+          description: Страна регистрации компании
+          properties:
+            code:
+              type: string
+              example: UZ
+            name:
+              type: string
+              example: Узбекистан
         legal_address:
           type: [string, 'null']
         bank_details:
@@ -3884,6 +4068,14 @@ components:
         inn:
           type: string
           maxLength: 20
+        registration_number:
+          type: string
+          maxLength: 50
+          description: Регистрационный номер / Tax ID для нерезидентов
+        country_code:
+          type: string
+          maxLength: 2
+          description: Двухбуквенный ISO-код страны
         legal_address:
           type: string
           maxLength: 500

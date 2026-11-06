@@ -54,3 +54,9 @@ exceptions:
     operation: POST
     reason: "CAT-CARD-1: у `kind` схема стала строкой (minLength 1 — след DRF-описания); пустой вид и раньше, и сейчас принимается как `other`"
     until: 2026-12-31
+  # PART-PIPELINE-1: добавлен статус candidate_agreed в воронку согласования партнёрских договоров
+  - file: erp-internal.yaml
+    id: response-property-enum-value-added
+    text: "candidate_agreed"
+    reason: "PART-PIPELINE-1: добавлен статус candidate_agreed в PartnerApplication; потребители — BFF Платформы и Cabinet"
+    until: 2026-12-31

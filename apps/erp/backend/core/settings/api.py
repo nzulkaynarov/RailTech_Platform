@@ -218,7 +218,7 @@ SPECTACULAR_SETTINGS = {
         "TraceStatusEnum": "inventory.serializers.TRACE_STATUSES",
         # PART-ONBOARD-2: заявки кандидатов в партнёры
         "PartnerApplicationSourceEnum": ["public", "client_cabinet"],
-        "PartnerApplicationStatusEnum": ["submitted", "contract_sent", "approved", "rejected"],
+        "PartnerApplicationStatusEnum": ["submitted", "contract_sent", "candidate_agreed", "approved", "rejected"],
     },
     "TAGS": [
         {"name": "Auth", "description": "Login, password setup by invitation, JWT tokens"},

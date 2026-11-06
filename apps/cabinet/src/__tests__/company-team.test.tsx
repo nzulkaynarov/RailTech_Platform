@@ -1,6 +1,8 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 
+import { portalServer } from '@/mocks/server';
 import { renderApp, signedIn } from '@/test/render';
 import { captureBody, expectNoAxeViolations, failWith, heading } from '@/test/screens';
 
@@ -50,6 +52,29 @@ describe('Компания', () => {
     renderApp('/company');
     await screen.findByText('305123456');
     expect(screen.queryByRole('button', { name: 'Изменить' })).not.toBeInTheDocument();
+  });
+
+  it('профиль компании-нерезидента: отображение страны и регистрационного номера вместо ИНН', async () => {
+    signedIn();
+    const foreignCompany = {
+      id: 99,
+      name: 'ТОО «Казахстан Детали»',
+      inn: null,
+      registration_number: '120540012345',
+      country: { code: 'KZ', name: 'Казахстан' },
+      legal_address: 'г. Алматы, пр. Достык, 45',
+      bank_details: 'KZ123456789012345678',
+      language: 'ru',
+    };
+    portalServer.use(
+      http.get('*/api/portal/v1/company', () => HttpResponse.json(foreignCompany)),
+    );
+    renderApp('/company');
+    await heading('Компания');
+    expect(await screen.findByText('Казахстан')).toBeInTheDocument();
+    expect(screen.getByText('Регистрационный номер / Tax ID')).toBeInTheDocument();
+    expect(screen.getByText('120540012345')).toBeInTheDocument();
+    expect(screen.queryByText('ИНН')).not.toBeInTheDocument();
   });
 });
 

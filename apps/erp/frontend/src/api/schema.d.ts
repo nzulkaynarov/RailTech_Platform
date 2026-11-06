@@ -825,6 +825,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/portal/v1/company/partner-application/agree": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /company/partner-application/agree — Согласование проекта договора кандидатом. */
+        post: operations["api_portal_v1_company_partner_application_agree_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/company/partner-application/agree/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /company/partner-application/agree — Согласование проекта договора кандидатом. */
+        post: operations["api_portal_v1_company_partner_application_agree_create_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/company/partner-application/contract-pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description GET /company/partner-application/contract-pdf — Скачать проект или подписанный партнёрский договор. */
+        get: operations["api_portal_v1_company_partner_application_contract_pdf_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/company/partner-application/contract-pdf/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description GET /company/partner-application/contract-pdf — Скачать проект или подписанный партнёрский договор. */
+        get: operations["api_portal_v1_company_partner_application_contract_pdf_retrieve_2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/portal/v1/contracts": {
         parameters: {
             query?: never;
@@ -887,6 +955,40 @@ export interface paths {
         put?: never;
         /** @description POST /contracts/{id}/sign — Подписание договора клиентом (`sign_contract_by_client`). */
         post: operations["api_portal_v1_contracts_sign_create_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/countries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description GET /countries — Справочник стран с метаданными телефонных кодов и налоговых номеров (COUNTRY-MASK-1). */
+        get: operations["api_portal_v1_countries_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/countries/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description GET /countries — Справочник стран с метаданными телефонных кодов и налоговых номеров (COUNTRY-MASK-1). */
+        get: operations["api_portal_v1_countries_retrieve_2"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -12901,7 +13003,10 @@ export interface components {
             status: components["schemas"]["PartnerApplicationStatusEnum"];
             kind: string;
             company_name: string;
+            country?: string | null;
+            country_name?: string | null;
             inn: string;
+            registration_number?: string;
             contact_name: string;
             email: string;
             phone: string;
@@ -12910,6 +13015,13 @@ export interface components {
             contract_number: string;
             /** Format: date */
             contract_date: string | null;
+            /** Format: date-time */
+            contract_draft_sent_at?: string | null;
+            /** Format: date-time */
+            candidate_agreed_at?: string | null;
+            candidate_notes?: string;
+            /** @default false */
+            has_contract_pdf: boolean;
             rejected_reason: string;
             /** Format: date-time */
             created_at: string;
@@ -12927,7 +13039,10 @@ export interface components {
             status: components["schemas"]["PartnerApplicationStatusEnum"];
             kind: string;
             company_name: string;
+            country?: string | null;
+            country_name?: string | null;
             inn: string;
+            registration_number?: string;
             contact_name: string;
             email: string;
             phone: string;
@@ -12936,6 +13051,13 @@ export interface components {
             contract_number: string;
             /** Format: date */
             contract_date: string | null;
+            /** Format: date-time */
+            contract_draft_sent_at?: string | null;
+            /** Format: date-time */
+            candidate_agreed_at?: string | null;
+            candidate_notes?: string;
+            /** @default false */
+            has_contract_pdf: boolean;
             rejected_reason: string;
             /** Format: date-time */
             created_at: string;
@@ -15142,11 +15264,12 @@ export interface components {
         /**
          * @description * `submitted` - submitted
          *     * `contract_sent` - contract_sent
+         *     * `candidate_agreed` - candidate_agreed
          *     * `approved` - approved
          *     * `rejected` - rejected
          * @enum {string}
          */
-        PartnerApplicationStatusEnum: "submitted" | "contract_sent" | "approved" | "rejected";
+        PartnerApplicationStatusEnum: "submitted" | "contract_sent" | "candidate_agreed" | "approved" | "rejected";
         /**
          * @description * `` -
          *     * `cabinet` - cabinet
@@ -20555,6 +20678,78 @@ export interface operations {
             };
         };
     };
+    api_portal_v1_company_partner_application_agree_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_company_partner_application_agree_create_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_company_partner_application_contract_pdf_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_company_partner_application_contract_pdf_retrieve_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     api_portal_v1_contracts_retrieve: {
         parameters: {
             query?: never;
@@ -20618,6 +20813,42 @@ export interface operations {
             path: {
                 id: number;
             };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_countries_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_countries_retrieve_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;

@@ -915,6 +915,62 @@
                 }
             }
         },
+        "/api/portal/v1/company/partner-application/agree": {
+            "post": {
+                "operationId": "api_portal_v1_company_partner_application_agree_create",
+                "description": "POST /company/partner-application/agree — Согласование проекта договора кандидатом.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/company/partner-application/agree/": {
+            "post": {
+                "operationId": "api_portal_v1_company_partner_application_agree_create_2",
+                "description": "POST /company/partner-application/agree — Согласование проекта договора кандидатом.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/company/partner-application/contract-pdf": {
+            "get": {
+                "operationId": "api_portal_v1_company_partner_application_contract_pdf_retrieve",
+                "description": "GET /company/partner-application/contract-pdf — Скачать проект или подписанный партнёрский договор.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/company/partner-application/contract-pdf/": {
+            "get": {
+                "operationId": "api_portal_v1_company_partner_application_contract_pdf_retrieve_2",
+                "description": "GET /company/partner-application/contract-pdf — Скачать проект или подписанный партнёрский договор.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/portal/v1/contracts": {
             "get": {
                 "operationId": "api_portal_v1_contracts_retrieve",
@@ -981,6 +1037,34 @@
                         "required": true
                     }
                 ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/countries": {
+            "get": {
+                "operationId": "api_portal_v1_countries_retrieve",
+                "description": "GET /countries — Справочник стран с метаданными телефонных кодов и налоговых номеров (COUNTRY-MASK-1).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/countries/": {
+            "get": {
+                "operationId": "api_portal_v1_countries_retrieve_2",
+                "description": "GET /countries — Справочник стран с метаданными телефонных кодов и налоговых номеров (COUNTRY-MASK-1).",
                 "tags": [
                     "api"
                 ],
@@ -38549,7 +38633,18 @@
                     "company_name": {
                         "type": "string"
                     },
+                    "country": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "country_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
                     "inn": {
+                        "type": "string"
+                    },
+                    "registration_number": {
                         "type": "string"
                     },
                     "contact_name": {
@@ -38574,6 +38669,23 @@
                         "type": "string",
                         "format": "date",
                         "nullable": true
+                    },
+                    "contract_draft_sent_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "candidate_agreed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "candidate_notes": {
+                        "type": "string"
+                    },
+                    "has_contract_pdf": {
+                        "type": "boolean",
+                        "default": false
                     },
                     "rejected_reason": {
                         "type": "string"
@@ -38654,7 +38766,18 @@
                     "company_name": {
                         "type": "string"
                     },
+                    "country": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "country_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
                     "inn": {
+                        "type": "string"
+                    },
+                    "registration_number": {
                         "type": "string"
                     },
                     "contact_name": {
@@ -38679,6 +38802,23 @@
                         "type": "string",
                         "format": "date",
                         "nullable": true
+                    },
+                    "contract_draft_sent_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "candidate_agreed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "candidate_notes": {
+                        "type": "string"
+                    },
+                    "has_contract_pdf": {
+                        "type": "boolean",
+                        "default": false
                     },
                     "rejected_reason": {
                         "type": "string"
@@ -44074,11 +44214,12 @@
                 "enum": [
                     "submitted",
                     "contract_sent",
+                    "candidate_agreed",
                     "approved",
                     "rejected"
                 ],
                 "type": "string",
-                "description": "* `submitted` - submitted\n* `contract_sent` - contract_sent\n* `approved` - approved\n* `rejected` - rejected"
+                "description": "* `submitted` - submitted\n* `contract_sent` - contract_sent\n* `candidate_agreed` - candidate_agreed\n* `approved` - approved\n* `rejected` - rejected"
             },
             "PartnerPriceVisibilityEnum": {
                 "enum": [

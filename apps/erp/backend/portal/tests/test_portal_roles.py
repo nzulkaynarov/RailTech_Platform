@@ -295,6 +295,8 @@ ANY_ROLE_PATHS |= {"/notifications", "/notifications/read"}
 ANY_ROLE_PATHS |= {"/verify/{code}"}
 #: Публичная подача заявки «Стать партнёром» (ADR-0022, DECISIONS 2026-11-05, PART-ONBOARD).
 ANY_ROLE_PATHS |= {"/auth/partner-application"}
+#: Справочник стран для онбординга и профиля (COUNTRY-MASK-1): доступен публично.
+ANY_ROLE_PATHS |= {"/countries"}
 
 #: Эндпоинты модуля «Каталог и заявки» (`catalog_requests`): заявки, каталог и загрузка вложений.
 CATALOG_REQUESTS_PATHS = {

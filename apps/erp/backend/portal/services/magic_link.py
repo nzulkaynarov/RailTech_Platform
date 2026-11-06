@@ -82,8 +82,8 @@ def find_login_contact(clean_email: str) -> Optional[Contact]:
 def request_magic_link(email: str) -> bool:
     """Создаёт одноразовые ссылку и код входа на 60 минут и отправляет письмо.
 
-    Всегда возвращает True (200), чтобы не раскрывать наличие адреса в базе; единственное исключение —
-    429 по лимиту на адрес, он одинаков для известных и неизвестных адресов.
+    Возвращает True, если письмо поставлено в очередь отправки контакту; False, если адрес не найден в базе
+    (или не имеет доступа в кабинет). Лимит 429 по адресу одинаков для известных и неизвестных адресов.
     """
     clean_email = email.strip().lower()
     _check_address_rate_limit(clean_email)
@@ -93,7 +93,7 @@ def request_magic_link(email: str) -> bool:
     contact = find_login_contact(clean_email)
     if contact is None:
         logger.info("Magic link requested for an unknown, archived, non-client or ambiguous e-mail")
-        return True
+        return False
 
     # Ссылку выпускает и отправляет задача Celery (portal.tasks.send_magic_link): письмо уходит вне потока запроса,
     # иначе по времени ответа (SMTP только у известного адреса) видно, есть ли адрес в базе. В очередь идёт лишь

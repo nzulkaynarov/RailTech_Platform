@@ -13,10 +13,13 @@ from portal.views import (
     CatalogDetailView,
     CatalogDocumentFileView,
     CatalogListView,
+    CompanyPartnerApplicationAgreeView,
     CompanyPartnerApplicationView,
+    CompanyPartnerContractPdfView,
     CompanyView,
     ContractListView,
     ContractSignView,
+    CountriesView,
     DeliveryAcceptView,
     DeliveryDisputeView,
     DeliveryListView,
@@ -74,6 +77,9 @@ urlpatterns = [
         PublicPartnerApplicationView.as_view(),
         name="portal-auth-partner-application-slash",
     ),
+    # Countries (Справочник стран и метаданных для онбординга, COUNTRY-MASK-1)
+    path("countries", CountriesView.as_view(), name="portal-countries"),
+    path("countries/", CountriesView.as_view(), name="portal-countries-slash"),
     # Me
     path("me", MeView.as_view(), name="portal-me"),
     path("me/", MeView.as_view(), name="portal-me-slash"),
@@ -188,6 +194,26 @@ urlpatterns = [
         "company/partner-application/",
         CompanyPartnerApplicationView.as_view(),
         name="portal-company-partner-application-slash",
+    ),
+    path(
+        "company/partner-application/contract-pdf",
+        CompanyPartnerContractPdfView.as_view(),
+        name="portal-company-partner-contract-pdf",
+    ),
+    path(
+        "company/partner-application/contract-pdf/",
+        CompanyPartnerContractPdfView.as_view(),
+        name="portal-company-partner-contract-pdf-slash",
+    ),
+    path(
+        "company/partner-application/agree",
+        CompanyPartnerApplicationAgreeView.as_view(),
+        name="portal-company-partner-application-agree",
+    ),
+    path(
+        "company/partner-application/agree/",
+        CompanyPartnerApplicationAgreeView.as_view(),
+        name="portal-company-partner-application-agree-slash",
     ),
     # Team (Команда клиента)
     path("team", TeamListView.as_view(), name="portal-team"),

@@ -111,6 +111,45 @@ describe('Онбординг партнёров (PART-ONBOARD-1)', () => {
       });
     });
 
+    it('поддержка нерезидентов: предзаполнение email из URL и отправка country с registration_number (COUNTRY-MASK-1)', async () => {
+      const user = userEvent.setup();
+      const body = captureBody('/auth/partner-application');
+      renderApp('/become-partner?email=partner%40kazakh-rails.kz');
+      await heading('Заявка на партнёрство');
+
+      // Email предзаполнен из URL query параметра
+      expect(screen.getByLabelText('Рабочий e-mail')).toHaveValue('partner@kazakh-rails.kz');
+
+      // Выбираем страну Казахстан
+      const countrySelect = screen.getByRole('combobox', { name: /Страна/ });
+      await user.click(countrySelect);
+      const kzOption = await screen.findByRole('option', { name: /Казахстан/ });
+      await user.click(kzOption);
+
+      await user.type(screen.getByLabelText('Название компании'), 'ТОО «Казахские Рельсы»');
+      await user.type(screen.getByLabelText(/БИН/), '123456789012');
+      await user.type(
+        screen.getByLabelText('Поставляемая продукция и категории'),
+        'Высокопрочные железнодорожные рельсы Р65',
+      );
+      await user.type(screen.getByLabelText('Контактное лицо'), 'Нурлан Сапаров');
+      await user.type(screen.getByLabelText('Телефон'), '+77011234567');
+      await user.click(screen.getByRole('checkbox', { name: /Я даю согласие/ }));
+
+      await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
+      expect(await heading('Заявка принята')).toBeInTheDocument();
+
+      expect(body.current).toMatchObject({
+        company_name: 'ТОО «Казахские Рельсы»',
+        country: 'KZ',
+        registration_number: '123456789012',
+        kind: 'supplier',
+        email: 'partner@kazakh-rails.kz',
+        phone: '+77011234567',
+        consent: true,
+      });
+    });
+
     it('срабатывание защиты honeypot', async () => {
       portalServer.use(
         http.post('*/api/portal/v1/auth/partner-application', () =>
@@ -223,6 +262,45 @@ describe('Онбординг партнёров (PART-ONBOARD-1)', () => {
       expect(await screen.findByText('Договор отправлен')).toBeInTheDocument();
       expect(screen.getByText('Партнёрский договор подготовлен и направлен на согласование вашей компании.')).toBeInTheDocument();
       expect(screen.getByText('PRT-2026-088 от 2026-11-05')).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: /Скачать проект договора/ })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Согласовать проект договора/ })).toBeInTheDocument();
+    });
+
+    it('согласование проекта договора кандидатом', async () => {
+      const user = userEvent.setup();
+      signedIn('actor');
+      setMockPartnerApplication({
+        id: 502,
+        status: 'contract_sent',
+        kind: 'supplier',
+        categories_description: 'Электрооборудование тяговых подстанций',
+        company_name: 'ООО Клиент',
+        inn: '123456789',
+        contact_name: 'Иван',
+        email: 'ivan@example.uz',
+        phone: null,
+        contract_number: 'PRT-2026-099',
+        contract_date: '2026-11-05',
+        rejected_reason: null,
+        created_at: '2026-11-05T12:00:00Z',
+        updated_at: '2026-11-05T14:00:00Z',
+      });
+
+      renderApp('/company');
+      await heading('Компания');
+
+      const agreeBtn = await screen.findByRole('button', { name: /Согласовать проект договора/ });
+      await user.click(agreeBtn);
+
+      const dialog = await screen.findByRole('dialog');
+      expect(within(dialog).getByText('Согласование проекта договора')).toBeInTheDocument();
+      await user.type(within(dialog).getByLabelText(/Примечание/), 'Согласовано юристом компании');
+
+      await user.click(within(dialog).getByRole('button', { name: 'Подтвердить согласие' }));
+
+      // После согласования статус меняется на «Согласован вами»
+      expect(await screen.findByText('Согласован вами')).toBeInTheDocument();
+      expect(screen.getByText(/ожидает электронной подписи руководства RailTech/)).toBeInTheDocument();
     });
 
     it('компания уже имеет активный договор партнёра: карточка со ссылкой на «Мои товары»', async () => {

@@ -3,13 +3,14 @@ import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { PanelLeftClose, PanelLeft } from 'lucide-react';
 
-import { MESSAGES_MODULE, type NavItem } from '@/app/nav';
+import { type NavItem } from '@/app/nav';
 import { Button } from '@/components/ui/button';
+import { useNavBadges } from '@/hooks/useActionRequired';
+import { useUnreadText } from '@/hooks/useUnread';
 import { cn } from '@/lib/utils';
 import { useCanAct, useMe } from '@/session/useMe';
 import { useNav } from '@/session/useNav';
 import { BrandMark } from './BrandMark';
-import { useUnread, useUnreadText } from '@/hooks/useUnread';
 import { UnreadBadge, UnreadNote } from './MessagesLink';
 
 export interface SideNavProps {
@@ -145,22 +146,24 @@ export function SideNav({ companyName, collapsed = false, onToggleCollapse }: Si
 
 function NavList({ items, collapsed, className }: { items: NavItem[]; collapsed: boolean; className?: string }) {
   const { t } = useTranslation();
-  const unread = useUnread();
+  const badges = useNavBadges();
+  const unread = badges['/messages'] ?? 0;
   const unreadText = useUnreadText(unread);
   const noteId = useId();
   return (
     <ul className={cn('flex flex-col gap-1', className)}>
       {items.map((item) => {
         const label = t(item.labelKey);
-        // «Сообщения» с непрочитанными: число — бейджем и в подписи для диктора (CHAT-1)
-        const badge = item.module === MESSAGES_MODULE ? unread : 0;
+        // Счётчики действий (волна J1): КП, договоры, счета, акты, поставки, товары, заявки, чат
+        const badge = badges[item.to] ?? 0;
+        const isMessages = item.to === '/messages';
         return (
           <li key={item.to}>
             <NavLink
               to={item.to}
               // свёрнутый с бейджем: имя — скрытым текстом, а не aria-label (видимое «2» не входит в aria-label, axe)
               aria-label={collapsed && badge === 0 ? label : undefined}
-              aria-describedby={badge > 0 && unreadText ? noteId : undefined}
+              aria-describedby={isMessages && badge > 0 && unreadText ? noteId : undefined}
               title={collapsed ? label : undefined}
               className={({ isActive }) =>
                 cn(
@@ -175,7 +178,7 @@ function NavList({ items, collapsed, className }: { items: NavItem[]; collapsed:
               {collapsed && badge > 0 ? <span className="sr-only">{label}</span> : null}
               <UnreadBadge count={badge} className={collapsed ? 'absolute top-0.5 right-0.5' : 'ml-auto'} />
             </NavLink>
-            {badge > 0 ? <UnreadNote id={noteId} text={unreadText} /> : null}
+            {isMessages && badge > 0 ? <UnreadNote id={noteId} text={unreadText} /> : null}
           </li>
         );
       })}

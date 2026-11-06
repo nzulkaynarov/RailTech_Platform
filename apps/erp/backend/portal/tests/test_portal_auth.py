@@ -225,20 +225,20 @@ class TestMagicLinkAuth:
     def test_magic_link_unknown_email(self, anon_portal_client):
         req_resp = request_link(anon_portal_client, "unknown.person@example.com")
 
-        # Не раскрываем отсутствие email, отдаем 200 {"sent": true}
+        # AUTH-CHECK-1: незарегистрированный e-mail возвращает status: not_registered, sent: False
         assert req_resp.status_code == status.HTTP_200_OK
-        assert req_resp.data["sent"] is True
+        assert req_resp.data["sent"] is False
+        assert req_resp.data["status"] == "not_registered"
         assert not MagicLinkToken.objects.exists()
         assert mail.outbox == []
 
-    def test_response_is_identical_for_known_and_unknown_email(self, client_contact, anon_portal_client):
+    def test_response_for_known_and_unknown_email(self, client_contact, anon_portal_client):
         known = request_link(anon_portal_client, client_contact.email)
         unknown = request_link(anon_portal_client, "nobody@example.com")
 
         assert known.status_code == unknown.status_code == status.HTTP_200_OK
-        assert {k: v for k, v in known.data.items() if k != "email"} == {
-            k: v for k, v in unknown.data.items() if k != "email"
-        }
+        assert known.data["sent"] is True and known.data["status"] == "ok"
+        assert unknown.data["sent"] is False and unknown.data["status"] == "not_registered"
 
     def test_magic_link_expired(self, client_contact, anon_portal_client):
         MagicLinkToken.objects.create(
@@ -380,7 +380,8 @@ class TestMagicLinkAuth:
         resp = request_link(anon_portal_client, client_contact.email)
 
         assert resp.status_code == status.HTTP_200_OK
-        assert resp.data["sent"] is True
+        assert resp.data["sent"] is False
+        assert resp.data["status"] == "not_registered"
         assert mail.outbox == []
         assert not MagicLinkToken.objects.exists()
         assert client_contact.email.lower() not in caplog.text.lower()
