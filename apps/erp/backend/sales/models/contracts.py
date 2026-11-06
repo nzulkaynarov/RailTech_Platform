@@ -93,6 +93,44 @@ class Contract(models.Model):
     )
     manager_signed_at = models.DateTimeField(null=True, blank=True)
 
+    # Регламентированная официальная подпись (SIGN-4, ADR-0024)
+    verification_code = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        verbose_name=_("Код проверки подлинности"),
+        help_text=_("10-значный криптографический код проверки (ADR-0024, SIGN-4)"),
+    )
+    signatory_name = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        verbose_name=_("ФИО подписанта"),
+    )
+    signatory_position = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        verbose_name=_("Должность подписанта"),
+    )
+    signatory_basis = models.CharField(
+        max_length=32,
+        blank=True,
+        default="",
+        choices=[("charter", _("Устав")), ("order", _("Приказ")), ("power_of_attorney", _("Доверенность"))],
+        verbose_name=_("Основание полномочия"),
+    )
+    signatory_basis_text = models.TextField(
+        blank=True,
+        default="",
+        verbose_name=_("Формулировка основания"),
+    )
+    signed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Дата и время подписания"),
+    )
+
     valid_from = models.DateField(null=True, blank=True)
     valid_until = models.DateField(null=True, blank=True)
     notes = models.TextField(blank=True)

@@ -42,7 +42,14 @@
     <td>
       <div class="sign-box">
         <div class="role">{% translate "От Поставщика:" %}</div>
-        {% if contract.manager_signer %}
+        {% if contract.verification_code %}
+          <div style="font-weight:700;">{{ contract.signatory_name }}</div>
+          <div class="sign-line">
+            {% translate "Официальная подпись" %} · {{ contract.signed_at|date:"d.m.Y H:i" }}<br>
+            {{ contract.signatory_position }}{% if contract.signatory_basis_text %} · {{ contract.signatory_basis_text }}{% endif %}<br>
+            {% translate "Код проверки:" %} <strong>{{ contract.verification_code }}</strong>
+          </div>
+        {% elif contract.manager_signer %}
           {{ contract.manager_signer.get_full_name|default:contract.manager_signer.email }}
           <div class="sign-line">{% translate "Простая электронная подпись" %} · {{ contract.manager_signed_at|date:"d.m.Y H:i" }}<br>{% translate "Идентификация:" %} {{ contract.manager_signer.email }}</div>
         {% else %}<div class="sign-line">{% translate "Подпись / дата" %}</div>{% endif %}

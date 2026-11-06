@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/eds/signing.decided.v1.json",
+  "title": "Решение по подписи коммерческого документа",
+  "description": "Тип uz.railtech.eds.signing.decided.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Решение уполномоченного лица или сервиса полномочий EDS по запросу на подписание коммерческого документа (КП, договор, счёт, акт; SIGN-4, ADR-0024). При decision=signed несёт снимок полномочия, код проверки и URL валидации; при decision=rejected — комментарий с причиной отказа. Подписчики v1: erp (выпуск документа, снятие водяного знака «ПРОЕКТ», печать отметки и QR), platform-bff.",
+  "type": "object",
+  "required": [
+    "object",
+    "decision",
+    "actor"
+  ],
+  "properties": {
+    "object": {
+      "type": "object",
+      "required": [
+        "kind",
+        "object_id",
+        "number"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "quote",
+            "contract",
+            "invoice",
+            "act"
+          ]
+        },
+        "object_id": {
+          "type": "integer",
+          "description": "Идентификатор сущности в ERP"
+        },
+        "number": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "version": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "decision": {
+      "type": "string",
+      "enum": [
+        "signed",
+        "rejected"
+      ]
+    },
+    "signer": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "crm_user_id": {
+          "type": "integer"
+        },
+        "full_name": {
+          "type": "string"
+        },
+        "position": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "authority_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid"
+    },
+    "basis": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "charter",
+        "order",
+        "power_of_attorney",
+        null
+      ]
+    },
+    "basis_text": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Формулировка основания подписи для печати на документе"
+    },
+    "verification_code": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[A-Z0-9]{10}$",
+      "description": "Случайный 10-значный код проверки подлинности"
+    },
+    "verification_url": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uri"
+    },
+    "signed_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "comment": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Комментарий или причина отказа при decision=rejected"
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    }
+  },
+  "additionalProperties": false
+}
+

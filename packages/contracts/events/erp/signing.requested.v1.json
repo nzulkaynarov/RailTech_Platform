@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/erp/signing.requested.v1.json",
+  "title": "Запрос на официальную подпись коммерческого документа",
+  "description": "Тип uz.railtech.erp.signing.requested.v1, источник rt://erp. Поле data конверта (envelope.v1.json). Запрос на регламентированное подписание официального коммерческого документа (КП, договор, счёт, акт) уполномоченным лицом по реестру SigningAuthority в EDS (SIGN-4, ADR-0024). Сумма передаётся в тийинах для проверки лимита полномочий. Подписчики v1: eds (проверка прав и выпуск решения), platform-bff.",
+  "type": "object",
+  "required": [
+    "object",
+    "requested_by",
+    "actor"
+  ],
+  "properties": {
+    "object": {
+      "type": "object",
+      "required": [
+        "kind",
+        "object_id",
+        "number",
+        "amount_tiyins",
+        "currency",
+        "title"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "quote",
+            "contract",
+            "invoice",
+            "act"
+          ],
+          "description": "Вид коммерческого документа"
+        },
+        "object_id": {
+          "type": "integer",
+          "description": "Идентификатор сущности в ERP"
+        },
+        "number": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "Регистрационный или системный номер документа (КП-*, ДОГ-*, СЧ-*, АКТ-*)"
+        },
+        "version": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Версия документа (для КП), null — если не версионируется"
+        },
+        "amount_tiyins": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Сумма документа в минимальных единицах валюты (тийины/центы) для проверки лимита"
+        },
+        "currency": {
+          "$ref": "_defs.v1.json#/$defs/Currency"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "description": "Краткое наименование / тема документа"
+        },
+        "deal_id": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Сделка, к которой относится документ"
+        },
+        "erp_company_id": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Компания-эмитент в ERP"
+        }
+      },
+      "additionalProperties": false
+    },
+    "requested_by": {
+      "type": "object",
+      "required": [
+        "crm_user_id",
+        "name"
+      ],
+      "properties": {
+        "crm_user_id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "position": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "requested_signer": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "crm_user_id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "position": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    }
+  },
+  "additionalProperties": false
+}
+

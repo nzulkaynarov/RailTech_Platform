@@ -54,6 +54,7 @@ VALID_EVENT_TYPES = {
     "partner.client_rejected",
     "contact.telegram_unlink_requested",
     "contact.telegram_test_requested",
+    "signing.requested",
 }
 
 EVENT_TYPE_PREFIX = "uz.railtech.erp."

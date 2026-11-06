@@ -8,8 +8,19 @@
     <td>
       <div class="sign-box">
         <div class="role">{% translate "Руководитель:" %}</div>
-        {% if seller_profile.signatory_name %}{{ seller_profile.signatory_name }}{% endif %}
-        <div class="sign-line">{% translate "Подпись" %}</div>
+        {% if invoice.verification_code %}
+          <div style="font-weight:700;">{{ invoice.signatory_name }}</div>
+          <div class="sign-line">
+            {% translate "Официальная подпись" %} · {{ invoice.signed_at|date:"d.m.Y H:i" }}<br>
+            {{ invoice.signatory_position }}{% if invoice.signatory_basis_text %} · {{ invoice.signatory_basis_text }}{% endif %}<br>
+            {% translate "Код проверки:" %} <strong>{{ invoice.verification_code }}</strong>
+          </div>
+        {% elif seller_profile.signatory_name %}
+          {{ seller_profile.signatory_name }}
+          <div class="sign-line">{% translate "Подпись" %}</div>
+        {% else %}
+          <div class="sign-line">{% translate "Подпись" %}</div>
+        {% endif %}
         <div class="seal">{% translate "М.П." %}</div>
       </div>
     </td>

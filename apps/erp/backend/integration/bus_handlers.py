@@ -91,6 +91,11 @@ def on_document_signed(event: Event) -> None:
     eds_inbound.apply_document_signed(event.data, event_id=_event_uuid(event))
 
 
+@subscribe("uz.railtech.eds.signing.decided.v1")
+def on_signing_decided(event: Event) -> None:
+    eds_inbound.apply_signing_decided(event.data, event_id=_event_uuid(event))
+
+
 def _event_uuid(event: Event) -> Optional[UUID]:
     try:
         return UUID(str(event.id))

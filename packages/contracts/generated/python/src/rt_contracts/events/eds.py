@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
-from enum import StrEnum
+from enum import Enum, StrEnum
 from typing import Annotated, Literal
 from uuid import UUID
 
@@ -157,13 +157,26 @@ class Authority(BaseModel):
     )
     eds_authority_id: Uuid
     holder: Holder
-    basis: Basis
+    basis: Basis2
     basis_number: Annotated[str | None, Field(max_length=64)] = None
     valid_to: date
     days_left: Annotated[int, Field(ge=0)]
 
 
 class Basis(StrEnum):
+    charter = "charter"
+    order = "order"
+    power_of_attorney = "power_of_attorney"
+
+
+class Basis1(Enum):
+    charter = "charter"
+    order = "order"
+    power_of_attorney = "power_of_attorney"
+    NoneType_None = None
+
+
+class Basis2(StrEnum):
     charter = "charter"
     order = "order"
     power_of_attorney = "power_of_attorney"
@@ -189,6 +202,11 @@ class Decision(StrEnum):
     approve = "approve"
     return_ = "return"
     reject = "reject"
+
+
+class Decision1(StrEnum):
+    signed = "signed"
+    rejected = "rejected"
 
 
 class DispatchMethod(StrEnum):
@@ -353,6 +371,13 @@ class Kind(StrEnum):
     extension_decided = "extension_decided"
     acquaint_requested = "acquaint_requested"
     letter_executed = "letter_executed"
+
+
+class Kind1(StrEnum):
+    quote = "quote"
+    contract = "contract"
+    invoice = "invoice"
+    act = "act"
 
 
 class Letter(BaseModel):
@@ -574,6 +599,19 @@ class NoticeRequestedV1(BaseModel):
     actor: Actor
 
 
+class Object(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    kind: Kind1
+    object_id: int
+    """
+    Идентификатор сущности в ERP
+    """
+    number: Annotated[str, Field(max_length=64, min_length=1)]
+    version: int | None = None
+
+
 class OutgoingNumber(RootModel[str]):
     root: Annotated[str, Field(pattern="^ИСХ-\\d{3,}/\\d{2}$")]
     """
@@ -675,6 +713,15 @@ class Sender(BaseModel):
     """
 
 
+class Signer(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    crm_user_id: int | None = None
+    full_name: str | None = None
+    position: str | None = None
+
+
 class SigningAuthorityExpiringV1(BaseModel):
     """
     Тип uz.railtech.eds.signing_authority.expiring.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Напоминание (SIGN-2, ADR-0024 п. 1): до окончания срока полномочия подписи (доверенность, приказ со сроком) осталось не больше 14 дней — держателям права `signing.manage` (раздел `eds.signing.manage` каталога ролей). Текст (RU) готовит EDS, доставляет CRM тем же путём, что `notice.requested`: строка колокольчика (`staff_notifications`) и сообщение в Telegram, где он привязан. Одно напоминание на полномочие и дату окончания (перенос срока разрешает новое); повтор доставки того же события — один эффект (inbox CRM). Подписчики v1: crm (доставка).
@@ -700,6 +747,36 @@ class SigningAuthorityExpiringV1(BaseModel):
     Вторая строка: что сделать
     """
     authority: Authority
+    actor: Actor
+
+
+class SigningDecidedV1(BaseModel):
+    """
+    Тип uz.railtech.eds.signing.decided.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Решение уполномоченного лица или сервиса полномочий EDS по запросу на подписание коммерческого документа (КП, договор, счёт, акт; SIGN-4, ADR-0024). При decision=signed несёт снимок полномочия, код проверки и URL валидации; при decision=rejected — комментарий с причиной отказа. Подписчики v1: erp (выпуск документа, снятие водяного знака «ПРОЕКТ», печать отметки и QR), platform-bff.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    object: Object
+    decision: Decision1
+    signer: Signer | None = None
+    authority_id: UUID | None = None
+    basis: Basis1 | None = None
+    basis_text: str | None = None
+    """
+    Формулировка основания подписи для печати на документе
+    """
+    verification_code: Annotated[str | None, Field(pattern="^[A-Z0-9]{10}$")] = None
+    """
+    Случайный 10-значный код проверки подлинности
+    """
+    verification_url: AnyUrl | None = None
+    signed_at: AwareDatetime | None = None
+    comment: str | None = None
+    """
+    Комментарий или причина отказа при decision=rejected
+    """
     actor: Actor
 
 
