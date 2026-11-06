@@ -1088,9 +1088,20 @@ class CompanyView(BasePortalView):
 
         if "name" in data and data["name"].strip():
             company.name = data["name"].strip()
+        if "country_code" in data:
+            code = data["country_code"].strip().upper()
+            if code:
+                from parties.models import Country
+
+                country = Country.objects.filter(code=code).first()
+                if country:
+                    company.country = country
+        if "registration_number" in data:
+            company.registration_number = data["registration_number"].strip()
         if "inn" in data:
             inn = data["inn"].strip()
-            if inn and len(inn) != 9:
+            is_uz = not company.country or company.country.code == "UZ"
+            if is_uz and inn and len(inn) != 9:
                 raise PortalValidationError("INN_INVALID")
             company.inn = inn or None
         if "legal_address" in data:

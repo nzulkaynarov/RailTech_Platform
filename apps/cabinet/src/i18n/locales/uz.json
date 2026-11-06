@@ -737,6 +737,8 @@
       "fields": {
         "name": "Nomi",
         "inn": "STIR",
+        "country": "Mamlakat",
+        "registrationNumber": "Roʻyxatdan oʻtish raqami / Tax ID",
         "legalAddress": "Yuridik manzil",
         "bankDetails": "Bank rekvizitlari",
         "language": "Hujjatlar va xatlar tili"

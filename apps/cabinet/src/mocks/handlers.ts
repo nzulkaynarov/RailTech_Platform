@@ -841,7 +841,10 @@ export const handlers = [
         const body = await readJson<Schemas['CompanyUpdate']>(request);
         if (body.name !== undefined && !body.name.trim()) return error(422, 'VALIDATION_ERROR');
         if (body.inn !== undefined && body.inn !== '' && !/^\d{9,14}$/.test(body.inn)) return error(422, 'INN_INVALID');
-        db.company = { ...db.company, ...body };
+        const country = body.country_code
+          ? { code: body.country_code, name: body.country_code === 'UZ' ? 'Узбекистан' : 'Казахстан' }
+          : db.company.country;
+        db.company = { ...db.company, ...body, country };
         return json(db.company);
       },
       { action: true },

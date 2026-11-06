@@ -5,7 +5,7 @@ import { Building2, CheckCircle2, FileText, Handshake, Pencil, UserPlus, Users, 
 import { toast } from '@/lib/toast';
 
 import { apiErrorKey } from '@/api/errors';
-import type { Company, CompanyUpdate, PartnerKind, Schemas, TeamInvite, TeamMember } from '@/api/portal';
+import type { Company, PartnerKind, Schemas, TeamInvite, TeamMember } from '@/api/portal';
 import { getPartnerContractPdfUrl } from '@/api/portal';
 import {
   useAgreeCompanyPartnerContract,
@@ -30,8 +30,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { findCountry } from '@/lib/countries';
 import { LOCALES } from '@/i18n/locales';
-import { companyChanges, validateInvite, type InviteDraft, type InviteProblem } from '@/lib/company';
+import { companyChanges, validateInvite, type CompanyFormDraft, type InviteDraft, type InviteProblem } from '@/lib/company';
 import { formatDateTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { CanAct } from '@/session/CanAct';
@@ -89,7 +90,19 @@ export function CompanyPage() {
                 className="sm:grid-cols-1"
                 items={[
                   { label: t('pages.company.fields.name'), value: company.data.name },
-                  { label: t('pages.company.fields.inn'), value: company.data.inn || t('pages.company.notSet') },
+                  ...(company.data.country
+                    ? [{ label: t('pages.company.fields.country'), value: company.data.country.name }]
+                    : []),
+                  {
+                    label:
+                      company.data.country && company.data.country.code !== 'UZ'
+                        ? t('pages.company.fields.registrationNumber')
+                        : t('pages.company.fields.inn'),
+                    value:
+                      (company.data.country && company.data.country.code !== 'UZ'
+                        ? company.data.registration_number
+                        : company.data.inn) || t('pages.company.notSet'),
+                  },
                   { label: t('pages.company.fields.legalAddress'), value: company.data.legal_address || t('pages.company.notSet') },
                   {
                     label: t('pages.company.fields.bankDetails'),
@@ -140,16 +153,19 @@ function CompanyForm({
   const { t } = useTranslation();
   const id = useId();
   const update = useUpdateCompany();
-  const [draft, setDraft] = useState<Required<CompanyUpdate>>({
+  const isUzbekistan = !company.country || company.country.code === 'UZ';
+  const [draft, setDraft] = useState<CompanyFormDraft>({
     name: company.name,
     inn: company.inn ?? '',
+    registration_number: company.registration_number ?? '',
+    country_code: company.country?.code ?? 'UZ',
     legal_address: company.legal_address ?? '',
     bank_details: company.bank_details ?? '',
     language: company.language,
   });
   const [nameMissing, setNameMissing] = useState(false);
 
-  const set = <K extends keyof CompanyUpdate>(key: K, value: Required<CompanyUpdate>[K]) =>
+  const set = <K extends keyof CompanyFormDraft>(key: K, value: CompanyFormDraft[K]) =>
     setDraft((current) => ({ ...current, [key]: value }));
 
   const submit = (event: FormEvent) => {
@@ -178,6 +194,8 @@ function CompanyForm({
     setDraft({
       name: company.name,
       inn: company.inn ?? '',
+      registration_number: company.registration_number ?? '',
+      country_code: company.country?.code ?? 'UZ',
       legal_address: company.legal_address ?? '',
       bank_details: company.bank_details ?? '',
       language: company.language,
@@ -209,10 +227,28 @@ function CompanyForm({
               </p>
             ) : null}
           </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor={`${id}-inn`}>{t('pages.company.fields.inn')}</Label>
-            <Input id={`${id}-inn`} inputMode="numeric" value={draft.inn} maxLength={20} onChange={(event) => set('inn', event.target.value)} />
-          </div>
+          {isUzbekistan ? (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor={`${id}-inn`}>{t('pages.company.fields.inn')}</Label>
+              <Input
+                id={`${id}-inn`}
+                inputMode="numeric"
+                value={draft.inn}
+                maxLength={20}
+                onChange={(event) => set('inn', event.target.value)}
+              />
+            </div>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor={`${id}-reg`}>{t('pages.company.fields.registrationNumber')}</Label>
+              <Input
+                id={`${id}-reg`}
+                value={draft.registration_number}
+                maxLength={50}
+                onChange={(event) => set('registration_number', event.target.value)}
+              />
+            </div>
+          )}
           <div className="flex flex-col gap-1.5">
             <Label htmlFor={`${id}-address`}>{t('pages.company.fields.legalAddress')}</Label>
             <Textarea
@@ -372,6 +408,11 @@ function InviteDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (op
   const { t, i18n } = useTranslation();
   const id = useId();
   const invite = useInviteTeamMember();
+  const company = useCompany();
+  const countryCode = company.data?.country?.code ?? 'UZ';
+  const countryMeta = findCountry(countryCode);
+  const phonePlaceholder = countryMeta.phonePlaceholder;
+
   const defaultLanguage = (LOCALES.find((locale) => locale.code === i18n.language)?.code ?? 'ru') as Schemas['Language'];
   const [draft, setDraft] = useState<InviteDraft>(() => emptyInvite(defaultLanguage));
   const [problems, setProblems] = useState<InviteProblem[]>([]);
@@ -448,7 +489,7 @@ function InviteDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (op
             value={draft.phone}
             maxLength={32}
             autoComplete="off"
-            placeholder="+998"
+            placeholder={phonePlaceholder}
             aria-invalid={has('phone') || undefined}
             onChange={(event) => set({ phone: event.target.value })}
           />

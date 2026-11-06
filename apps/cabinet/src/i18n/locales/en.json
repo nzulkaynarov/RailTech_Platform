@@ -737,6 +737,8 @@
       "fields": {
         "name": "Name",
         "inn": "Tax ID (INN)",
+        "country": "Country",
+        "registrationNumber": "Registration Number / Tax ID",
         "legalAddress": "Legal address",
         "bankDetails": "Bank details",
         "language": "Language of documents and e-mails"

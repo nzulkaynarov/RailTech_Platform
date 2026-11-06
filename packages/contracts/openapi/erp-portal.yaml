@@ -4038,6 +4038,19 @@ components:
           type: string
         inn:
           type: [string, 'null']
+        registration_number:
+          type: [string, 'null']
+          description: Регистрационный номер / Tax ID для компаний-нерезидентов (ОГРН, БИН, CRN и др.)
+        country:
+          type: [object, 'null']
+          description: Страна регистрации компании
+          properties:
+            code:
+              type: string
+              example: UZ
+            name:
+              type: string
+              example: Узбекистан
         legal_address:
           type: [string, 'null']
         bank_details:
@@ -4054,6 +4067,14 @@ components:
         inn:
           type: string
           maxLength: 20
+        registration_number:
+          type: string
+          maxLength: 50
+          description: Регистрационный номер / Tax ID для нерезидентов
+        country_code:
+          type: string
+          maxLength: 2
+          description: Двухбуквенный ISO-код страны
         legal_address:
           type: string
           maxLength: 500

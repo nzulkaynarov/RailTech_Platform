@@ -60,6 +60,8 @@ class TeamMemberSerializer(serializers.ModelSerializer):
 
 class CompanySerializer(serializers.ModelSerializer):
     bank_details = serializers.CharField(source="formatted_bank_details", read_only=True)
+    country = serializers.SerializerMethodField()
+    registration_number = serializers.CharField(read_only=True)
 
     class Meta:
         model = Company
@@ -67,15 +69,27 @@ class CompanySerializer(serializers.ModelSerializer):
             "id",
             "name",
             "inn",
+            "registration_number",
+            "country",
             "legal_address",
             "bank_details",
             "language",
         ]
 
+    def get_country(self, company):
+        if not company.country:
+            return None
+        return {
+            "code": company.country.code,
+            "name": company.country.name,
+        }
+
 
 class CompanyUpdateSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=300, required=False)
     inn = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    registration_number = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    country_code = serializers.CharField(max_length=2, required=False, allow_blank=True)
     legal_address = serializers.CharField(max_length=500, required=False, allow_blank=True)
     bank_details = serializers.CharField(max_length=1000, required=False, allow_blank=True)
     language = serializers.ChoiceField(choices=["ru", "uz", "en"], required=False)

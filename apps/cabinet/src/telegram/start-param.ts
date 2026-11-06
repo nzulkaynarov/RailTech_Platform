@@ -21,6 +21,10 @@ const ID_ROUTES = new Map<string, (id: string) => string>(Object.entries({
 const SECTION_ROUTES = new Map<string, string>([
   ['chat', '/messages'],
   ['products', '/my-products'],
+  ['partner_app', '/company'],
+  ['partner_contract', '/company'],
+  ['company', '/company'],
+  ['team', '/team'],
 ]);
 
 const START_PARAM_RE = /^([a-z]+)_(\d{1,18})$/;

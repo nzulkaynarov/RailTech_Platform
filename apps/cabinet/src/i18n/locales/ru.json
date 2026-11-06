@@ -752,6 +752,8 @@
       "fields": {
         "name": "Название",
         "inn": "ИНН",
+        "country": "Страна",
+        "registrationNumber": "Регистрационный номер / Tax ID",
         "legalAddress": "Юридический адрес",
         "bankDetails": "Банковские реквизиты",
         "language": "Язык документов и писем"

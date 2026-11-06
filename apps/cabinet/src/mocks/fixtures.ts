@@ -63,6 +63,8 @@ export const company: Schemas['Company'] = {
   id: 7,
   name: 'ООО «Тошкент Логистик»',
   inn: '305123456',
+  registration_number: null,
+  country: { code: 'UZ', name: 'Узбекистан' },
   legal_address: 'г. Ташкент, Мирзо-Улугбекский р-н, ул. Буюк Ипак Йули, 12',
   bank_details: 'р/с 20208000900123456001, АКБ «Узпромстройбанк», МФО 00440',
   language: 'ru',

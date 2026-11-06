@@ -2061,6 +2061,15 @@ export interface components {
       id: number;
       name: string;
       inn?: string | null;
+      /** @description Регистрационный номер / Tax ID для компаний-нерезидентов (ОГРН, БИН, CRN и др.) */
+      registration_number?: string | null;
+      /** @description Страна регистрации компании */
+      country?: {
+        /** @example UZ */
+        code?: string;
+        /** @example Узбекистан */
+        name?: string;
+      } | null;
       legal_address?: string | null;
       bank_details?: string | null;
       language: components["schemas"]["Language"];
@@ -2068,6 +2077,10 @@ export interface components {
     CompanyUpdate: {
       name?: string;
       inn?: string;
+      /** @description Регистрационный номер / Tax ID для нерезидентов */
+      registration_number?: string;
+      /** @description Двухбуквенный ISO-код страны */
+      country_code?: string;
       legal_address?: string;
       bank_details?: string;
       language?: components["schemas"]["Language"];
