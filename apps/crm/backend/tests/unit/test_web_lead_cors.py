@@ -29,23 +29,26 @@ def _app(origins: list[str]) -> TestClient:
     return TestClient(app)
 
 
-def test_cabinet_origin_allowed_on_web_form_only() -> None:
-    client = _app([CABINET])
-    allowed = client.get("/api/v1/leads/web/token", headers={"Origin": CABINET})
-    assert allowed.headers.get("access-control-allow-origin") == CABINET
-    preflight = client.options(
-        "/api/v1/leads/web",
-        headers={
-            "Origin": CABINET,
-            "Access-Control-Request-Method": "POST",
-            "Access-Control-Request-Headers": "content-type",
-        },
-    )
-    assert preflight.status_code == 200
-    assert preflight.headers.get("access-control-allow-origin") == CABINET
-    assert "POST" in preflight.headers.get("access-control-allow-methods", "")
+def test_cabinet_and_website_origins_allowed_on_web_form_only() -> None:
+    website = "https://railtech.uz"
+    client = _app([CABINET, website, "http://localhost:4321"])
+    for origin in (CABINET, website, "http://localhost:4321"):
+        allowed = client.get("/api/v1/leads/web/token", headers={"Origin": origin})
+        assert allowed.headers.get("access-control-allow-origin") == origin
+        preflight = client.options(
+            "/api/v1/leads/web",
+            headers={
+                "Origin": origin,
+                "Access-Control-Request-Method": "POST",
+                "Access-Control-Request-Headers": "content-type",
+            },
+        )
+        assert preflight.status_code == 200
+        assert preflight.headers.get("access-control-allow-origin") == origin
+        assert "POST" in preflight.headers.get("access-control-allow-methods", "")
+
     # Остальной API CORS-заголовков не получает даже для разрешённого origin.
-    other = client.get("/api/v1/leads", headers={"Origin": CABINET})
+    other = client.get("/api/v1/leads", headers={"Origin": website})
     assert other.status_code == 200
     assert "access-control-allow-origin" not in other.headers
 
@@ -67,6 +70,14 @@ def test_foreign_origin_gets_no_cors_headers() -> None:
             [
                 "https://cabinet.railtech.uz",
                 "http://cabinet.localhost",
+            ],
+        ),
+        (
+            "https://cabinet.railtech.uz, https://railtech.uz, http://localhost:4321/ ",
+            [
+                "https://cabinet.railtech.uz",
+                "https://railtech.uz",
+                "http://localhost:4321",
             ],
         ),
     ],
