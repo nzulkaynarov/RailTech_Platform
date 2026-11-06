@@ -24,6 +24,7 @@ import {
   useUpdateSupplierCabinetRights,
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
+import { DateField } from "../../../shared/ui/DateField";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { ErrorNote, FormField, QueryState } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
@@ -138,6 +139,18 @@ function AccessBody({ supplierId, data }: { supplierId: string; data: AccessData
                 ? dateTime(relationship.activated_at)
                 : t("cabinetAccess.noLogin"),
             },
+            {
+              label: t("cabinetAccess.contract"),
+              value:
+                [
+                  relationship.contract_number
+                    ? t("cabinetAccess.contractNumber", { number: relationship.contract_number })
+                    : null,
+                  relationship.contract_date ? date(relationship.contract_date) : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ") || t("cabinetAccess.contractNotSet"),
+            },
             ...(suspended && relationship.suspended_at
               ? [
                   {
@@ -172,6 +185,19 @@ function AccessBody({ supplierId, data }: { supplierId: string; data: AccessData
             disabled={!editable || rights.isPending}
             onChange={(value) => {
               rights.mutate({ id: supplierId, data: { catalog_price_visibility: value } });
+            }}
+          />
+        ) : null}
+        {relationship ? (
+          <ContractInputs
+            contractNumber={relationship.contract_number}
+            contractDate={relationship.contract_date}
+            disabled={!editable || rights.isPending}
+            onSave={(number, dateVal) => {
+              rights.mutate({
+                id: supplierId,
+                data: { contract_number: number, contract_date: dateVal },
+              });
             }}
           />
         ) : null}
@@ -538,6 +564,65 @@ function ContactRight({
       />
       <span aria-hidden="true">{t("cabinetAccess.contact.canAct")}</span>
       <ErrorNote message={update.error ? catalogErrorText(t, update.error) : null} />
+    </div>
+  );
+}
+
+function ContractInputs({
+  contractNumber,
+  contractDate,
+  disabled,
+  onSave,
+}: {
+  contractNumber: string;
+  contractDate: string | null;
+  disabled: boolean;
+  onSave: (number: string, dateVal: string | null) => void;
+}) {
+  const { t } = useTranslation("catalog");
+  const numId = useId();
+  const dateId = useId();
+  const [num, setNum] = useState(contractNumber);
+  const [dt, setDt] = useState(contractDate ?? "");
+  const changed = num !== contractNumber || dt !== (contractDate ?? "");
+
+  return (
+    <div className="pf-cat-contract-fields" role="group" aria-label={t("cabinetAccess.contract")}>
+      <FormField id={numId} label={t("cabinetAccess.contractNumberLabel")}>
+        <Input
+          id={numId}
+          disabled={disabled}
+          value={num}
+          onChange={(e) => {
+            setNum(e.target.value);
+          }}
+          placeholder={t("cabinetAccess.contractNumberPlaceholder")}
+        />
+      </FormField>
+      <FormField id={dateId} label={t("cabinetAccess.contractDateLabel")}>
+        <DateField
+          id={dateId}
+          disabled={disabled}
+          value={dt}
+          onChange={(val) => {
+            setDt(val);
+          }}
+        />
+      </FormField>
+      {changed ? (
+        <div className="pf-cat-actions">
+          <Button
+            type="primary"
+            size="small"
+            disabled={disabled}
+            onClick={() => {
+              onSave(num.trim(), dt ? dt : null);
+            }}
+          >
+            {t("cabinetAccess.saveContract")}
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }

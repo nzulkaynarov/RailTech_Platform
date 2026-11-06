@@ -10985,6 +10985,393 @@
                 }
             }
         },
+        "/api/v1/catalog/partner-applications/": {
+            "get": {
+                "operationId": "catalog_partner_applications_list",
+                "description": "Очередь заявок кандидатов в партнёры со счётчиком ожидающих (`pending_count`).",
+                "summary": "List partner applications",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "A page number within the paginated result set.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "required": false,
+                        "in": "query",
+                        "description": "Number of results to return per page.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "status",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Фильтр по статусу (submitted, contract_sent...)"
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedDeskPartnerApplicationListResponseList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/partner-applications/{id}/": {
+            "get": {
+                "operationId": "catalog_partner_applications_retrieve",
+                "description": "Детальные сведения о заявке на партнёрство и сопоставленная компания.",
+                "summary": "Retrieve a partner application",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskPartnerApplicationDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/partner-applications/{id}/approve/": {
+            "post": {
+                "operationId": "catalog_partner_applications_approve",
+                "description": "Одобряет заявку, активирует отношение `partner`, фиксирует договор, связывает компанию с CRM и отправляет приглашение кандидату.",
+                "summary": "Approve partner application",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskPartnerApplicationApproveInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskPartnerApplicationApproveInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskPartnerApplicationApproveInRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskPartnerApplicationDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/partner-applications/{id}/reject/": {
+            "post": {
+                "operationId": "catalog_partner_applications_reject",
+                "description": "Отклоняет заявку с указанием обязательной причины (`rejected_reason`).",
+                "summary": "Reject partner application",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskPartnerApplicationRejectInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskPartnerApplicationRejectInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskPartnerApplicationRejectInRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskPartnerApplicationDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/partner-applications/{id}/send-contract/": {
+            "post": {
+                "operationId": "catalog_partner_applications_send_contract",
+                "description": "Переводит заявку в `contract_sent` и опционально сохраняет реквизиты договора.",
+                "summary": "Send contract to applicant",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskPartnerApplicationSendContractInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskPartnerApplicationSendContractInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskPartnerApplicationSendContractInRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskPartnerApplicationDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/catalog/product-enrich/": {
             "post": {
                 "operationId": "catalog_product_enrich_create",
@@ -38117,6 +38504,271 @@
                 "type": "string",
                 "description": "* `item` - item\n* `brand` - brand\n* `none` - none"
             },
+            "DeskPartnerApplicationApproveInRequest": {
+                "type": "object",
+                "properties": {
+                    "contract_number": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Номер партнёрского договора (обязателен для завершения договорного шлюза).",
+                        "maxLength": 64
+                    },
+                    "contract_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "company_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "kind": {
+                        "type": "string",
+                        "maxLength": 20
+                    }
+                },
+                "required": [
+                    "contract_number"
+                ]
+            },
+            "DeskPartnerApplicationDetail": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "source": {
+                        "$ref": "#/components/schemas/PartnerApplicationSourceEnum"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/PartnerApplicationStatusEnum"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "company_name": {
+                        "type": "string"
+                    },
+                    "inn": {
+                        "type": "string"
+                    },
+                    "contact_name": {
+                        "type": "string"
+                    },
+                    "email": {
+                        "type": "string"
+                    },
+                    "phone": {
+                        "type": "string"
+                    },
+                    "language": {
+                        "$ref": "#/components/schemas/LanguageEnum"
+                    },
+                    "categories_description": {
+                        "type": "string"
+                    },
+                    "contract_number": {
+                        "type": "string"
+                    },
+                    "contract_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "rejected_reason": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "reviewed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "matching_company_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "matching_company_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "company_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "applicant_contact_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "reviewed_by": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DeskRef"
+                            }
+                        ],
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "applicant_contact_id",
+                    "categories_description",
+                    "company_id",
+                    "company_name",
+                    "contact_name",
+                    "contract_date",
+                    "contract_number",
+                    "created_at",
+                    "email",
+                    "id",
+                    "inn",
+                    "kind",
+                    "language",
+                    "matching_company_id",
+                    "matching_company_name",
+                    "phone",
+                    "rejected_reason",
+                    "reviewed_at",
+                    "reviewed_by",
+                    "source",
+                    "status"
+                ]
+            },
+            "DeskPartnerApplicationListItem": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "source": {
+                        "$ref": "#/components/schemas/PartnerApplicationSourceEnum"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/PartnerApplicationStatusEnum"
+                    },
+                    "kind": {
+                        "type": "string"
+                    },
+                    "company_name": {
+                        "type": "string"
+                    },
+                    "inn": {
+                        "type": "string"
+                    },
+                    "contact_name": {
+                        "type": "string"
+                    },
+                    "email": {
+                        "type": "string"
+                    },
+                    "phone": {
+                        "type": "string"
+                    },
+                    "language": {
+                        "$ref": "#/components/schemas/LanguageEnum"
+                    },
+                    "categories_description": {
+                        "type": "string"
+                    },
+                    "contract_number": {
+                        "type": "string"
+                    },
+                    "contract_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "rejected_reason": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "reviewed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "matching_company_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "matching_company_name": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "categories_description",
+                    "company_name",
+                    "contact_name",
+                    "contract_date",
+                    "contract_number",
+                    "created_at",
+                    "email",
+                    "id",
+                    "inn",
+                    "kind",
+                    "language",
+                    "matching_company_id",
+                    "matching_company_name",
+                    "phone",
+                    "rejected_reason",
+                    "reviewed_at",
+                    "source",
+                    "status"
+                ]
+            },
+            "DeskPartnerApplicationListResponse": {
+                "type": "object",
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DeskPartnerApplicationListItem"
+                        }
+                    },
+                    "pending_count": {
+                        "type": "integer",
+                        "description": "Количество заявок в статусе submitted"
+                    }
+                },
+                "required": [
+                    "items",
+                    "pending_count"
+                ]
+            },
+            "DeskPartnerApplicationRejectInRequest": {
+                "type": "object",
+                "properties": {
+                    "rejected_reason": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Причина отклонения заявки.",
+                        "maxLength": 1000
+                    }
+                },
+                "required": [
+                    "rejected_reason"
+                ]
+            },
+            "DeskPartnerApplicationSendContractInRequest": {
+                "type": "object",
+                "properties": {
+                    "contract_number": {
+                        "type": "string",
+                        "maxLength": 64
+                    },
+                    "contract_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    }
+                }
+            },
             "DeskProposal": {
                 "type": "object",
                 "properties": {
@@ -38494,6 +39146,15 @@
                     "kind": {
                         "type": "string",
                         "maxLength": 20
+                    },
+                    "contract_number": {
+                        "type": "string",
+                        "maxLength": 64
+                    },
+                    "contract_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
                     }
                 },
                 "required": [
@@ -38554,6 +39215,17 @@
                     },
                     "status": {
                         "$ref": "#/components/schemas/DeskSupplierAccessRelationshipStatusEnum"
+                    },
+                    "contract_number": {
+                        "type": "string",
+                        "default": "",
+                        "description": "Номер партнёрского договора (PART-ONBOARD-2)."
+                    },
+                    "contract_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true,
+                        "description": "Дата партнёрского договора (PART-ONBOARD-2)."
                     },
                     "invited_at": {
                         "type": "string",
@@ -42924,6 +43596,37 @@
                     }
                 }
             },
+            "PaginatedDeskPartnerApplicationListResponseList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DeskPartnerApplicationListResponse"
+                        }
+                    }
+                }
+            },
             "PaginatedDeskSupplierRowList": {
                 "type": "object",
                 "required": [
@@ -43358,6 +44061,24 @@
                 "required": [
                     "quote_id"
                 ]
+            },
+            "PartnerApplicationSourceEnum": {
+                "enum": [
+                    "public",
+                    "client_cabinet"
+                ],
+                "type": "string",
+                "description": "* `public` - public\n* `client_cabinet` - client_cabinet"
+            },
+            "PartnerApplicationStatusEnum": {
+                "enum": [
+                    "submitted",
+                    "contract_sent",
+                    "approved",
+                    "rejected"
+                ],
+                "type": "string",
+                "description": "* `submitted` - submitted\n* `contract_sent` - contract_sent\n* `approved` - approved\n* `rejected` - rejected"
             },
             "PartnerPriceVisibilityEnum": {
                 "enum": [
@@ -44502,6 +45223,15 @@
                     "kind": {
                         "type": "string",
                         "maxLength": 20
+                    },
+                    "contract_number": {
+                        "type": "string",
+                        "maxLength": 64
+                    },
+                    "contract_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
                     },
                     "catalog_price_visibility": {
                         "type": "string",

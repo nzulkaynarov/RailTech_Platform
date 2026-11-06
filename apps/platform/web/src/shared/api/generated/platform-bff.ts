@@ -261,6 +261,7 @@ import type {
   ListManufacturersParams,
   ListMemoApprovalsParams,
   ListNotificationsParams,
+  ListPartnerApplicationsParams,
   ListPaymentMemosParams,
   ListPaymentsParams,
   ListQuoteApprovalsParams,
@@ -304,6 +305,11 @@ import type {
   OffsiteBackup,
   OffsiteBackupIn,
   OffsiteCheck,
+  PartnerApplicationApproveRequest,
+  PartnerApplicationItem,
+  PartnerApplicationListResponse,
+  PartnerApplicationRejectRequest,
+  PartnerApplicationSendContractRequest,
   PartnerRequestDecision,
   PasswordConfirm,
   PaymentBoard,
@@ -48764,6 +48770,553 @@ export const useRejectSupplierCrmClient = <
   TContext
 > => {
   return useMutation(getRejectSupplierCrmClientMutationOptions(options), queryClient);
+};
+
+export const getListPartnerApplicationsUrl = (params?: ListPartnerApplicationsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/erp/catalog/partner-applications?${stringifiedParams}`
+    : `/api/v1/erp/catalog/partner-applications`;
+};
+
+/**
+ * Очередь заявок на партнёрство со счётчиком необработанных заявок (`pending_count`).
+ * @summary Расчёт · Каталог: очередь заявок кандидатов в партнёры (PART-ONBOARD-2)
+ */
+export const listPartnerApplications = async (
+  params?: ListPartnerApplicationsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<PartnerApplicationListResponse> => {
+  return http<PartnerApplicationListResponse>(getListPartnerApplicationsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListPartnerApplicationsQueryKey = (params?: ListPartnerApplicationsParams) => {
+  return [`/api/v1/erp/catalog/partner-applications`, ...(params ? [params] : [])] as const;
+};
+
+export const getListPartnerApplicationsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPartnerApplications>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListPartnerApplicationsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listPartnerApplications>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListPartnerApplicationsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listPartnerApplications>>> = ({
+    signal,
+  }) => listPartnerApplications(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPartnerApplications>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListPartnerApplicationsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPartnerApplications>>
+>;
+export type ListPartnerApplicationsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListPartnerApplications<
+  TData = Awaited<ReturnType<typeof listPartnerApplications>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params: undefined | ListPartnerApplicationsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listPartnerApplications>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listPartnerApplications>>,
+          TError,
+          Awaited<ReturnType<typeof listPartnerApplications>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListPartnerApplications<
+  TData = Awaited<ReturnType<typeof listPartnerApplications>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListPartnerApplicationsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listPartnerApplications>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listPartnerApplications>>,
+          TError,
+          Awaited<ReturnType<typeof listPartnerApplications>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListPartnerApplications<
+  TData = Awaited<ReturnType<typeof listPartnerApplications>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListPartnerApplicationsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listPartnerApplications>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Расчёт · Каталог: очередь заявок кандидатов в партнёры (PART-ONBOARD-2)
+ */
+
+export function useListPartnerApplications<
+  TData = Awaited<ReturnType<typeof listPartnerApplications>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListPartnerApplicationsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listPartnerApplications>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListPartnerApplicationsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getSendContractPartnerApplicationUrl = (id: CompanyItemRef) => {
+  return `/api/v1/erp/catalog/partner-applications/${id}/send-contract`;
+};
+
+/**
+ * ERP `POST catalog/partner-applications/{id}/send-contract/` — право `supply.manage`. Переводит заявку в статус `contract_sent`.
+ * @summary Расчёт · Заявка в партнёры: отправить проект договора
+ */
+export const sendContractPartnerApplication = async (
+  id: CompanyItemRef,
+  partnerApplicationSendContractRequest?: PartnerApplicationSendContractRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<PartnerApplicationItem> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<PartnerApplicationItem>(getSendContractPartnerApplicationUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(partnerApplicationSendContractRequest),
+  });
+};
+
+export const getSendContractPartnerApplicationMutationKey = () =>
+  ["sendContractPartnerApplication"] as const;
+
+export const getSendContractPartnerApplicationMutationOptions = <
+  TError = ErrorType<
+    | ValidationFailedResponse
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendContractPartnerApplication>>,
+    TError,
+    SendContractPartnerApplicationMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof sendContractPartnerApplication>>,
+  TError,
+  SendContractPartnerApplicationMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSendContractPartnerApplicationMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof sendContractPartnerApplication>>,
+    SendContractPartnerApplicationMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return sendContractPartnerApplication(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SendContractPartnerApplicationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof sendContractPartnerApplication>>
+>;
+export type SendContractPartnerApplicationMutationBody =
+  PartnerApplicationSendContractRequest | undefined;
+export type SendContractPartnerApplicationMutationError = ErrorType<
+  | ValidationFailedResponse
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | BackendUnavailableResponse
+>;
+export type SendContractPartnerApplicationMutationVariables = {
+  id: CompanyItemRef;
+  data?: PartnerApplicationSendContractRequest;
+};
+
+/**
+ * @summary Расчёт · Заявка в партнёры: отправить проект договора
+ */
+export const useSendContractPartnerApplication = <
+  TError = ErrorType<
+    | ValidationFailedResponse
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof sendContractPartnerApplication>>,
+      TError,
+      SendContractPartnerApplicationMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof sendContractPartnerApplication>>,
+  TError,
+  SendContractPartnerApplicationMutationVariables,
+  TContext
+> => {
+  return useMutation(getSendContractPartnerApplicationMutationOptions(options), queryClient);
+};
+
+export const getApprovePartnerApplicationUrl = (id: CompanyItemRef) => {
+  return `/api/v1/erp/catalog/partner-applications/${id}/approve`;
+};
+
+/**
+ * ERP `POST catalog/partner-applications/{id}/approve/` — право `supply.manage`. Активирует отношение `partner`, фиксирует договор и отправляет приглашение.
+ * @summary Расчёт · Заявка в партнёры: подтвердить договор и открыть кабинет
+ */
+export const approvePartnerApplication = async (
+  id: CompanyItemRef,
+  partnerApplicationApproveRequest: PartnerApplicationApproveRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<PartnerApplicationItem> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<PartnerApplicationItem>(getApprovePartnerApplicationUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(partnerApplicationApproveRequest),
+  });
+};
+
+export const getApprovePartnerApplicationMutationKey = () => ["approvePartnerApplication"] as const;
+
+export const getApprovePartnerApplicationMutationOptions = <
+  TError = ErrorType<
+    | ValidationFailedResponse
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof approvePartnerApplication>>,
+    TError,
+    ApprovePartnerApplicationMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof approvePartnerApplication>>,
+  TError,
+  ApprovePartnerApplicationMutationVariables,
+  TContext
+> => {
+  const mutationKey = getApprovePartnerApplicationMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof approvePartnerApplication>>,
+    ApprovePartnerApplicationMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return approvePartnerApplication(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ApprovePartnerApplicationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof approvePartnerApplication>>
+>;
+export type ApprovePartnerApplicationMutationBody = PartnerApplicationApproveRequest;
+export type ApprovePartnerApplicationMutationError = ErrorType<
+  | ValidationFailedResponse
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | BackendUnavailableResponse
+>;
+export type ApprovePartnerApplicationMutationVariables = {
+  id: CompanyItemRef;
+  data: PartnerApplicationApproveRequest;
+};
+
+/**
+ * @summary Расчёт · Заявка в партнёры: подтвердить договор и открыть кабинет
+ */
+export const useApprovePartnerApplication = <
+  TError = ErrorType<
+    | ValidationFailedResponse
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof approvePartnerApplication>>,
+      TError,
+      ApprovePartnerApplicationMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof approvePartnerApplication>>,
+  TError,
+  ApprovePartnerApplicationMutationVariables,
+  TContext
+> => {
+  return useMutation(getApprovePartnerApplicationMutationOptions(options), queryClient);
+};
+
+export const getRejectPartnerApplicationUrl = (id: CompanyItemRef) => {
+  return `/api/v1/erp/catalog/partner-applications/${id}/reject`;
+};
+
+/**
+ * ERP `POST catalog/partner-applications/{id}/reject/` — право `supply.manage`. Отклоняет заявку с указанием причины.
+ * @summary Расчёт · Заявка в партнёры: отклонить
+ */
+export const rejectPartnerApplication = async (
+  id: CompanyItemRef,
+  partnerApplicationRejectRequest: PartnerApplicationRejectRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<PartnerApplicationItem> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<PartnerApplicationItem>(getRejectPartnerApplicationUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(partnerApplicationRejectRequest),
+  });
+};
+
+export const getRejectPartnerApplicationMutationKey = () => ["rejectPartnerApplication"] as const;
+
+export const getRejectPartnerApplicationMutationOptions = <
+  TError = ErrorType<
+    | ValidationFailedResponse
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rejectPartnerApplication>>,
+    TError,
+    RejectPartnerApplicationMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof rejectPartnerApplication>>,
+  TError,
+  RejectPartnerApplicationMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRejectPartnerApplicationMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof rejectPartnerApplication>>,
+    RejectPartnerApplicationMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return rejectPartnerApplication(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RejectPartnerApplicationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof rejectPartnerApplication>>
+>;
+export type RejectPartnerApplicationMutationBody = PartnerApplicationRejectRequest;
+export type RejectPartnerApplicationMutationError = ErrorType<
+  | ValidationFailedResponse
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | BackendUnavailableResponse
+>;
+export type RejectPartnerApplicationMutationVariables = {
+  id: CompanyItemRef;
+  data: PartnerApplicationRejectRequest;
+};
+
+/**
+ * @summary Расчёт · Заявка в партнёры: отклонить
+ */
+export const useRejectPartnerApplication = <
+  TError = ErrorType<
+    | ValidationFailedResponse
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof rejectPartnerApplication>>,
+      TError,
+      RejectPartnerApplicationMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof rejectPartnerApplication>>,
+  TError,
+  RejectPartnerApplicationMutationVariables,
+  TContext
+> => {
+  return useMutation(getRejectPartnerApplicationMutationOptions(options), queryClient);
 };
 
 export const getUpdateSupplierOfferUrl = (id: CompanyItemRef, offerId: CompanyItemRef) => {

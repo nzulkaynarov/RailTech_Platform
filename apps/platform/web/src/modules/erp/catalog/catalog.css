@@ -384,3 +384,29 @@
     justify-self: start;
   }
 }
+
+/* PART-ONBOARD-2: Очередь заявок кандидатов в партнёры и договорной шлюз */
+.pf-cat-applications {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.pf-cat-match-badge {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 6px;
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #389e0d;
+}
+.pf-cat-danger {
+  color: #cf1322;
+}
+.pf-cat-contract-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}

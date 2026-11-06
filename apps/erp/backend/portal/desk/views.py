@@ -152,7 +152,13 @@ class SupplierAccessViewSet(DeskViewSet):
             data = body.validated_data
             return Response(
                 service.invite(
-                    company, data["contact_id"], request.user, modules=data.get("modules"), kind=data.get("kind")
+                    company,
+                    data["contact_id"],
+                    request.user,
+                    modules=data.get("modules"),
+                    kind=data.get("kind"),
+                    contract_number=data.get("contract_number"),
+                    contract_date=data.get("contract_date"),
                 )
             )
         except service.AccessError as error:

@@ -11,4 +11,14 @@ export interface SupplierCabinetInvite {
   /** Включённые модули; не указаны — у нового отношения значения по умолчанию */
   modules?: SupplierCabinetInviteModulesItem[];
   kind?: SupplierCabinetInviteKind;
+  /**
+   * Номер партнёрского договора
+   * @maxLength 64
+   */
+  contract_number?: string;
+  /**
+   * Дата партнёрского договора
+   * @nullable
+   */
+  contract_date?: string | null;
 }

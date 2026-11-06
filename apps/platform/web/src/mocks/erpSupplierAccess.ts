@@ -58,6 +58,8 @@ function seed(): Record<string, Entry> {
         modules: ["my_products"],
         catalog_price_visibility: "",
         status: "active",
+        contract_number: "ПД-2026/02",
+        contract_date: "2026-10-30",
         invited_at: "2026-10-30T09:00:00+05:00",
         activated_at: "2026-10-30T11:20:00+05:00",
         suspended_at: null,
@@ -88,6 +90,8 @@ function seed(): Record<string, Entry> {
         modules: ["my_products", "catalog_requests"],
         catalog_price_visibility: "",
         status: "invited",
+        contract_number: "ПД-2026/03",
+        contract_date: "2026-11-04",
         invited_at: "2026-11-04T09:00:00+05:00",
         activated_at: null,
         suspended_at: null,
@@ -285,6 +289,8 @@ export const erpSupplierAccessHandlers = [
       const data = await body<{
         modules?: unknown;
         kind?: SupplierCabinetRelationship["kind"];
+        contract_number?: string;
+        contract_date?: string | null;
         catalog_price_visibility?: SupplierCabinetRelationship["catalog_price_visibility"];
       }>(request);
       if (
@@ -302,6 +308,16 @@ export const erpSupplierAccessHandlers = [
         found[1].relationship = {
           ...found[1].relationship,
           catalog_price_visibility: data.catalog_price_visibility,
+        };
+      if (data.contract_number !== undefined)
+        found[1].relationship = {
+          ...found[1].relationship,
+          contract_number: data.contract_number,
+        };
+      if (data.contract_date !== undefined)
+        found[1].relationship = {
+          ...found[1].relationship,
+          contract_date: data.contract_date,
         };
       if (data.modules !== undefined) {
         const modules = cleanModules(data.modules);
@@ -322,6 +338,8 @@ export const erpSupplierAccessHandlers = [
       contact_id: string;
       modules?: unknown;
       kind?: SupplierCabinetRelationship["kind"];
+      contract_number?: string;
+      contract_date?: string | null;
     }>(request);
     const contact = found[1].contacts.find((c) => c.id === data.contact_id);
     if (!contact) return missing();
@@ -334,6 +352,8 @@ export const erpSupplierAccessHandlers = [
       kind: data.kind ?? current?.kind ?? "",
       modules: modules ?? current?.modules ?? [...ALLOWED],
       catalog_price_visibility: current?.catalog_price_visibility ?? "",
+      contract_number: data.contract_number ?? current?.contract_number ?? "",
+      contract_date: data.contract_date ?? current?.contract_date ?? null,
       status: current?.activated_at ? "active" : "invited",
       invited_at: MOCK_NOW,
       activated_at: current?.activated_at ?? null,

@@ -4301,6 +4301,106 @@ export interface paths {
         patch: operations["catalog_offers_partial_update"];
         trace?: never;
     };
+    "/api/v1/catalog/partner-applications/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List partner applications
+         * @description Очередь заявок кандидатов в партнёры со счётчиком ожидающих (`pending_count`).
+         */
+        get: operations["catalog_partner_applications_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/partner-applications/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Retrieve a partner application
+         * @description Детальные сведения о заявке на партнёрство и сопоставленная компания.
+         */
+        get: operations["catalog_partner_applications_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/partner-applications/{id}/approve/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve partner application
+         * @description Одобряет заявку, активирует отношение `partner`, фиксирует договор, связывает компанию с CRM и отправляет приглашение кандидату.
+         */
+        post: operations["catalog_partner_applications_approve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/partner-applications/{id}/reject/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject partner application
+         * @description Отклоняет заявку с указанием обязательной причины (`rejected_reason`).
+         */
+        post: operations["catalog_partner_applications_reject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/partner-applications/{id}/send-contract/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send contract to applicant
+         * @description Переводит заявку в `contract_sent` и опционально сохраняет реквизиты договора.
+         */
+        post: operations["catalog_partner_applications_send_contract"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/product-enrich/": {
         parameters: {
             query?: never;
@@ -12787,6 +12887,77 @@ export interface components {
          * @enum {string}
          */
         DeskOriginSourceEnum: "item" | "brand" | "none";
+        DeskPartnerApplicationApproveInRequest: {
+            /** @description Номер партнёрского договора (обязателен для завершения договорного шлюза). */
+            contract_number: string;
+            /** Format: date */
+            contract_date?: string | null;
+            company_id?: number | null;
+            kind?: string;
+        };
+        DeskPartnerApplicationDetail: {
+            id: number;
+            source: components["schemas"]["PartnerApplicationSourceEnum"];
+            status: components["schemas"]["PartnerApplicationStatusEnum"];
+            kind: string;
+            company_name: string;
+            inn: string;
+            contact_name: string;
+            email: string;
+            phone: string;
+            language: components["schemas"]["LanguageEnum"];
+            categories_description: string;
+            contract_number: string;
+            /** Format: date */
+            contract_date: string | null;
+            rejected_reason: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            reviewed_at: string | null;
+            matching_company_id: number | null;
+            matching_company_name: string | null;
+            company_id: number | null;
+            applicant_contact_id: number | null;
+            reviewed_by: components["schemas"]["DeskRef"] | null;
+        };
+        DeskPartnerApplicationListItem: {
+            id: number;
+            source: components["schemas"]["PartnerApplicationSourceEnum"];
+            status: components["schemas"]["PartnerApplicationStatusEnum"];
+            kind: string;
+            company_name: string;
+            inn: string;
+            contact_name: string;
+            email: string;
+            phone: string;
+            language: components["schemas"]["LanguageEnum"];
+            categories_description: string;
+            contract_number: string;
+            /** Format: date */
+            contract_date: string | null;
+            rejected_reason: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            reviewed_at: string | null;
+            matching_company_id: number | null;
+            matching_company_name: string | null;
+        };
+        DeskPartnerApplicationListResponse: {
+            items: components["schemas"]["DeskPartnerApplicationListItem"][];
+            /** @description Количество заявок в статусе submitted */
+            pending_count: number;
+        };
+        DeskPartnerApplicationRejectInRequest: {
+            /** @description Причина отклонения заявки. */
+            rejected_reason: string;
+        };
+        DeskPartnerApplicationSendContractInRequest: {
+            contract_number?: string;
+            /** Format: date */
+            contract_date?: string | null;
+        };
         DeskProposal: {
             id: number;
             field: components["schemas"]["ProductFieldProposalFieldEnum"];
@@ -12946,6 +13117,9 @@ export interface components {
             /** @description Включённые модули; не указаны — у нового отношения значения по умолчанию. */
             modules?: string[];
             kind?: string;
+            contract_number?: string;
+            /** Format: date */
+            contract_date?: string | null;
         };
         DeskSupplierAccessModules: {
             /** @description Что шаблон роли разрешает включить. */
@@ -12969,6 +13143,16 @@ export interface components {
              */
             catalog_price_visibility: components["schemas"]["PartnerPriceVisibilityEnum"] | components["schemas"]["BlankEnum"];
             status: components["schemas"]["DeskSupplierAccessRelationshipStatusEnum"];
+            /**
+             * @description Номер партнёрского договора (PART-ONBOARD-2).
+             * @default
+             */
+            contract_number: string;
+            /**
+             * Format: date
+             * @description Дата партнёрского договора (PART-ONBOARD-2).
+             */
+            contract_date?: string | null;
             /** Format: date-time */
             invited_at: string | null;
             /** Format: date-time */
@@ -14729,6 +14913,21 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["DeskOfferHistoryRow"][];
         };
+        PaginatedDeskPartnerApplicationListResponseList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["DeskPartnerApplicationListResponse"][];
+        };
         PaginatedDeskSupplierRowList: {
             /** @example 123 */
             count: number;
@@ -14934,6 +15133,20 @@ export interface components {
         ParseRequestTextRequestRequest: {
             quote_id: number;
         };
+        /**
+         * @description * `public` - public
+         *     * `client_cabinet` - client_cabinet
+         * @enum {string}
+         */
+        PartnerApplicationSourceEnum: "public" | "client_cabinet";
+        /**
+         * @description * `submitted` - submitted
+         *     * `contract_sent` - contract_sent
+         *     * `approved` - approved
+         *     * `rejected` - rejected
+         * @enum {string}
+         */
+        PartnerApplicationStatusEnum: "submitted" | "contract_sent" | "approved" | "rejected";
         /**
          * @description * `` -
          *     * `cabinet` - cabinet
@@ -15646,6 +15859,9 @@ export interface components {
         PatchedDeskSupplierAccessRelationshipPatchRequest: {
             modules?: string[];
             kind?: string;
+            contract_number?: string;
+            /** Format: date */
+            contract_date?: string | null;
             /** @description Пусто — как у компании; `cabinet` или `on_request`. Другое — 400 `VALIDATION_ERROR`. */
             catalog_price_visibility?: string;
         };
@@ -26812,6 +27028,231 @@ export interface operations {
             401: components["responses"]["UnauthorizedResponse"];
             403: components["responses"]["ForbiddenResponse"];
             404: components["responses"]["NotFoundResponse"];
+        };
+    };
+    catalog_partner_applications_list: {
+        parameters: {
+            query?: {
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
+                /** @description Фильтр по статусу (submitted, contract_sent...) */
+                status?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedDeskPartnerApplicationListResponseList"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+        };
+    };
+    catalog_partner_applications_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskPartnerApplicationDetail"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            /** @description Объекта нет. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    catalog_partner_applications_approve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeskPartnerApplicationApproveInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["DeskPartnerApplicationApproveInRequest"];
+                "multipart/form-data": components["schemas"]["DeskPartnerApplicationApproveInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskPartnerApplicationDetail"];
+                };
+            };
+            /** @description Отказ проверки: код в `detail` или ошибки полей. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Объекта нет. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    catalog_partner_applications_reject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeskPartnerApplicationRejectInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["DeskPartnerApplicationRejectInRequest"];
+                "multipart/form-data": components["schemas"]["DeskPartnerApplicationRejectInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskPartnerApplicationDetail"];
+                };
+            };
+            /** @description Отказ проверки: код в `detail` или ошибки полей. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Объекта нет. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    catalog_partner_applications_send_contract: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["DeskPartnerApplicationSendContractInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["DeskPartnerApplicationSendContractInRequest"];
+                "multipart/form-data": components["schemas"]["DeskPartnerApplicationSendContractInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskPartnerApplicationDetail"];
+                };
+            };
+            /** @description Отказ проверки: код в `detail` или ошибки полей. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Объекта нет. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
         };
     };
     catalog_product_enrich_create: {

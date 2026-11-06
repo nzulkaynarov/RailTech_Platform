@@ -212,6 +212,12 @@ exports[`карты статусов > снимок карты: изменени
     "own": "default",
     "sample": "blue",
   },
+  "partnerApplication": {
+    "approved": "green",
+    "contract_sent": "blue",
+    "rejected": "red",
+    "submitted": "gold",
+  },
   "priceRequest": {
     "answered": "green",
     "failed": "red",

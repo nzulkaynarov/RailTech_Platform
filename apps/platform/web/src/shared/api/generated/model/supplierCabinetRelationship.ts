@@ -18,6 +18,13 @@ export interface SupplierCabinetRelationship {
   /** Цены товаров партнёра в каталоге клиентов (PART-3): пусто — как у компании, `cabinet` — показывать, `on_request` — по запросу; своя политика карточки сильнее */
   catalog_price_visibility: SupplierCabinetRelationshipCatalogPriceVisibility;
   status: SupplierCabinetRelationshipStatus;
+  /** Номер партнёрского договора (PART-ONBOARD-2) */
+  contract_number: string;
+  /**
+   * Дата партнёрского договора (PART-ONBOARD-2)
+   * @nullable
+   */
+  contract_date: string | null;
   /** @nullable */
   invited_at: string | null;
   /**
