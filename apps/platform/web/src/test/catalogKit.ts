@@ -3,6 +3,7 @@ import { beforeEach } from "vitest";
 
 import { resetCompanyMock } from "../mocks/fixtures/company";
 import { resetErpCatalog } from "../mocks/fixtures/erpCatalog";
+import { resetPartnerApplications } from "../mocks/erpPartnerApplications";
 import { resetSupplierAccess } from "../mocks/erpSupplierAccess";
 import { resetRoles } from "../mocks/fixtures/roles";
 import { setupBotTests } from "./botKit";
@@ -14,6 +15,7 @@ export function setupCatalogTests(width = 1440): void {
   setupBotTests(width);
   beforeEach(() => {
     resetErpCatalog();
+    resetPartnerApplications();
     resetSupplierAccess();
     resetCompanyMock();
     resetRoles();

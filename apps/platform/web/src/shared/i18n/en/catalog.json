@@ -7,6 +7,8 @@
     "label": "Catalog sections",
     "items": "Items",
     "suppliers": "Suppliers",
+    "applications": "Partner applications",
+    "applicationsCount": "Partner applications ({{count}})",
     "brigades": "Crews",
     "refs": "Reference lists",
     "requests": "Category requests",
@@ -644,6 +646,13 @@
     "firstLogin": "First sign-in",
     "noLogin": "has not signed in yet",
     "suspendedAt": "Suspended",
+    "contract": "Partner contract",
+    "contractNumber": "No. {{number}}",
+    "contractNotSet": "not set",
+    "contractNumberLabel": "Contract number",
+    "contractNumberPlaceholder": "e.g. PC-2026/01",
+    "contractDateLabel": "Contract date",
+    "saveContract": "Save contract details",
     "crmClient": {
       "label": "CRM client",
       "linked": "Created",
@@ -1011,5 +1020,82 @@
     "inherit": "Same as the company",
     "cabinet": "Show",
     "on_request": "On request"
+  },
+  "partnerApplications": {
+    "title": "Partner Candidate Applications Queue",
+    "filterLabel": "Applications filter",
+    "filter": {
+      "all": "All applications",
+      "submitted": "New",
+      "contract_sent": "Contract sent",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "status": {
+      "submitted": "Submitted",
+      "contract_sent": "Contract sent",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "source": {
+      "public": "Public form",
+      "client_cabinet": "Client cabinet"
+    },
+    "inn": "TIN: {{inn}}",
+    "matchFound": "Database match: {{name}}",
+    "matchHint": "An organization with the same TIN was found in ERP",
+    "contractNumber": "Contract number",
+    "contractNumberPlaceholder": "e.g. PC-2026/01",
+    "contractDate": "Contract date",
+    "kind": "Partner kind",
+    "reviewedAt": "Reviewed: {{date}}",
+    "columns": {
+      "company": "Organization",
+      "contact": "Contact person",
+      "kind": "Kind & products",
+      "source": "Source",
+      "contract": "Contract",
+      "status": "Status",
+      "created": "Date submitted",
+      "actions": "Actions"
+    },
+    "actions": {
+      "sendContract": "Send contract",
+      "approve": "Approve and open cabinet",
+      "reject": "Reject"
+    },
+    "empty": {
+      "title": "No partner applications",
+      "hint": "New candidate applications will appear here for supply team review and contract approval."
+    },
+    "sendContractModal": {
+      "title": "Sending contract draft: {{name}}",
+      "hint": "Specify the contract number (if assigned) and record that the draft was sent to the candidate.",
+      "ok": "Mark contract as sent",
+      "steps": [
+        "Application status will change to “Contract sent”",
+        "The candidate will receive the partner contract draft"
+      ]
+    },
+    "approveModal": {
+      "title": "Approve application and open cabinet: {{name}}",
+      "hint": "Confirm signing of the partner contract. Upon approval, the company gains partner cabinet access, the contact is invited, and the counterparty is linked with CRM.",
+      "ok": "Confirm contract and open access",
+      "linkToExisting": "Link to existing organization: {{name}}",
+      "createNew": "Create a new supplier organization",
+      "steps": [
+        "“Partner” relationship will be activated with “My products” and “Catalog & orders” modules",
+        "Contract number and date will be recorded in supplier profile",
+        "Contact person will receive invitation code",
+        "Counterparty will be synced with CRM"
+      ]
+    },
+    "rejectModal": {
+      "title": "Reject application: {{name}}",
+      "hint": "Specify the rejection reason. It will be recorded in audit logs and sent to the applicant.",
+      "reasonLabel": "Rejection reason",
+      "reasonPlaceholder": "e.g.: irrelevant product categories / missing required documents",
+      "ok": "Reject application"
+    }
   }
 }

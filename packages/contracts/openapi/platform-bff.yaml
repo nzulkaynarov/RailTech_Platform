@@ -12408,6 +12408,126 @@ paths:
           $ref: '#/components/responses/RequestConflict'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/partner-applications:
+    get:
+      tags: [erp-catalog]
+      operationId: listPartnerApplications
+      summary: 'Расчёт · Каталог: очередь заявок кандидатов в партнёры (PART-ONBOARD-2)'
+      description: Очередь заявок на партнёрство со счётчиком необработанных заявок (`pending_count`).
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: {type: string, enum: ['', submitted, contract_sent, approved, rejected]}
+      responses:
+        '200':
+          description: Список заявок
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerApplicationListResponse'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/partner-applications/{id}/send-contract:
+    post:
+      tags: [erp-catalog]
+      operationId: sendContractPartnerApplication
+      summary: 'Расчёт · Заявка в партнёры: отправить проект договора'
+      description: ERP `POST catalog/partner-applications/{id}/send-contract/` — право `supply.manage`. Переводит заявку в статус `contract_sent`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, description: Id заявки, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerApplicationSendContractRequest'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerApplicationItem'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/partner-applications/{id}/approve:
+    post:
+      tags: [erp-catalog]
+      operationId: approvePartnerApplication
+      summary: 'Расчёт · Заявка в партнёры: подтвердить договор и открыть кабинет'
+      description: ERP `POST catalog/partner-applications/{id}/approve/` — право `supply.manage`. Активирует отношение `partner`, фиксирует договор и отправляет приглашение.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, description: Id заявки, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerApplicationApproveRequest'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerApplicationItem'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/partner-applications/{id}/reject:
+    post:
+      tags: [erp-catalog]
+      operationId: rejectPartnerApplication
+      summary: 'Расчёт · Заявка в партнёры: отклонить'
+      description: ERP `POST catalog/partner-applications/{id}/reject/` — право `supply.manage`. Отклоняет заявку с указанием причины.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, description: Id заявки, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerApplicationRejectRequest'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerApplicationItem'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /erp/catalog/suppliers/{id}/offers/{offer_id}:
     patch:
       tags: [erp-catalog]
@@ -24329,7 +24449,7 @@ components:
     SupplierCabinetRelationship:
       type: object
       additionalProperties: false
-      required: [role, kind, modules, catalog_price_visibility, status, invited_at, activated_at, suspended_at, responsible, invited_by]
+      required: [role, kind, modules, catalog_price_visibility, status, invited_at, activated_at, suspended_at, responsible, invited_by, contract_number, contract_date]
       properties:
         role: {type: string, enum: [partner]}
         kind: {type: string, enum: ['', manufacturer, supplier, principal, other], description: 'Вид партнёра — метка, на права не влияет'}
@@ -24339,6 +24459,8 @@ components:
           description: Включённые партнёру модули кабинета
         catalog_price_visibility: {type: string, enum: ['', cabinet, on_request], description: 'Цены товаров партнёра в каталоге клиентов (PART-3): пусто — как у компании, `cabinet` — показывать, `on_request` — по запросу; своя политика карточки сильнее'}
         status: {type: string, enum: [invited, active, suspended]}
+        contract_number: {type: string, description: 'Номер партнёрского договора (PART-ONBOARD-2)'}
+        contract_date: {type: [string, 'null'], format: date, description: 'Дата партнёрского договора (PART-ONBOARD-2)'}
         invited_at: {type: [string, 'null'], format: date-time}
         activated_at: {type: [string, 'null'], format: date-time, description: Первый вход}
         suspended_at: {type: [string, 'null'], format: date-time}
@@ -24433,6 +24555,8 @@ components:
           type: array
           items: {type: string, enum: [my_products, catalog_requests]}
         kind: {type: string, enum: ['', manufacturer, supplier, principal, other]}
+        contract_number: {type: string, maxLength: 64, description: 'Номер партнёрского договора'}
+        contract_date: {type: [string, 'null'], format: date, description: 'Дата партнёрского договора'}
         catalog_price_visibility: {type: string, enum: ['', cabinet, on_request], description: 'Цены товаров партнёра в каталоге: пусто — как у компании'}
     SupplierCabinetInvite:
       type: object
@@ -24445,6 +24569,72 @@ components:
           items: {type: string, enum: [my_products, catalog_requests]}
           description: Включённые модули; не указаны — у нового отношения значения по умолчанию
         kind: {type: string, enum: ['', manufacturer, supplier, principal, other]}
+        contract_number: {type: string, maxLength: 64, description: 'Номер партнёрского договора'}
+        contract_date: {type: [string, 'null'], format: date, description: 'Дата партнёрского договора'}
+    PartnerApplicationSource:
+      type: string
+      enum: [public, client_cabinet]
+    PartnerApplicationStatus:
+      type: string
+      enum: [submitted, contract_sent, approved, rejected]
+    PartnerApplicationKind:
+      type: string
+      enum: ['', manufacturer, supplier, principal, other]
+    PartnerApplicationItem:
+      type: object
+      additionalProperties: false
+      required: [id, source, status, kind, company_name, inn, contact_name, email, phone, language, categories_description, contract_number, contract_date, rejected_reason, created_at, reviewed_at, matching_company_id, matching_company_name]
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        source: {$ref: '#/components/schemas/PartnerApplicationSource'}
+        status: {$ref: '#/components/schemas/PartnerApplicationStatus'}
+        kind: {$ref: '#/components/schemas/PartnerApplicationKind'}
+        company_name: {type: string}
+        inn: {type: string}
+        contact_name: {type: string}
+        email: {type: string}
+        phone: {type: string}
+        language: {type: string, enum: [ru, uz, en]}
+        categories_description: {type: string}
+        contract_number: {type: string}
+        contract_date: {type: [string, 'null'], format: date}
+        rejected_reason: {type: string}
+        created_at: {type: string, format: date-time}
+        reviewed_at: {type: [string, 'null'], format: date-time}
+        matching_company_id: {type: [string, 'null']}
+        matching_company_name: {type: [string, 'null']}
+    PartnerApplicationListResponse:
+      type: object
+      additionalProperties: false
+      required: [items, pending_count]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/PartnerApplicationItem'}
+        pending_count:
+          type: integer
+          description: 'Количество заявок, ожидающих рассмотрения (submitted)'
+    PartnerApplicationSendContractRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        contract_number: {type: string, maxLength: 64}
+        contract_date: {type: [string, 'null'], format: date}
+    PartnerApplicationApproveRequest:
+      type: object
+      additionalProperties: false
+      required: [contract_number]
+      properties:
+        contract_number: {type: string, minLength: 1, maxLength: 64}
+        contract_date: {type: [string, 'null'], format: date}
+        company_id: {type: [string, 'null']}
+        kind: {$ref: '#/components/schemas/PartnerApplicationKind'}
+    PartnerApplicationRejectRequest:
+      type: object
+      additionalProperties: false
+      required: [rejected_reason]
+      properties:
+        rejected_reason: {type: string, minLength: 1, maxLength: 1000}
     SupplierOfferCreate:
       type: object
       additionalProperties: false

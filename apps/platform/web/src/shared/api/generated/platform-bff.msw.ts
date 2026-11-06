@@ -59,6 +59,9 @@ import {
   NumberingResetPeriod,
   ObjectKind,
   OnBehalfChannel,
+  PartnerApplicationKind,
+  PartnerApplicationSource,
+  PartnerApplicationStatus,
   PaymentDisplayStatus,
   PaymentMemoStatus,
   PaymentProofSource,
@@ -250,6 +253,8 @@ import type {
   OffsiteCheck,
   OnBehalfNote,
   OnBehalfRecord,
+  PartnerApplicationItem,
+  PartnerApplicationListResponse,
   PartnerRequestDecision,
   PaymentBoard,
   PaymentCard,
@@ -27062,6 +27067,8 @@ export const getGetSupplierCabinetAccessResponseSupplierCabinetRelationshipMock 
     modules: faker.helpers.arrayElements(["my_products", "catalog_requests"] as const),
     catalog_price_visibility: faker.helpers.arrayElement(["", "cabinet", "on_request"] as const),
     status: faker.helpers.arrayElement(["invited", "active", "suspended"] as const),
+    contract_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    contract_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
     invited_at: faker.helpers.arrayElement([
       faker.date.past().toISOString().slice(0, 19) + "Z",
       null,
@@ -27208,6 +27215,8 @@ export const getUpdateSupplierCabinetRightsResponseSupplierCabinetRelationshipMo
     modules: faker.helpers.arrayElements(["my_products", "catalog_requests"] as const),
     catalog_price_visibility: faker.helpers.arrayElement(["", "cabinet", "on_request"] as const),
     status: faker.helpers.arrayElement(["invited", "active", "suspended"] as const),
+    contract_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    contract_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
     invited_at: faker.helpers.arrayElement([
       faker.date.past().toISOString().slice(0, 19) + "Z",
       null,
@@ -27314,6 +27323,8 @@ export const getInviteSupplierToCabinetResponseSupplierCabinetRelationshipMock =
     modules: faker.helpers.arrayElements(["my_products", "catalog_requests"] as const),
     catalog_price_visibility: faker.helpers.arrayElement(["", "cabinet", "on_request"] as const),
     status: faker.helpers.arrayElement(["invited", "active", "suspended"] as const),
+    contract_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    contract_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
     invited_at: faker.helpers.arrayElement([
       faker.date.past().toISOString().slice(0, 19) + "Z",
       null,
@@ -27420,6 +27431,8 @@ export const getSuspendSupplierCabinetAccessResponseSupplierCabinetRelationshipM
     modules: faker.helpers.arrayElements(["my_products", "catalog_requests"] as const),
     catalog_price_visibility: faker.helpers.arrayElement(["", "cabinet", "on_request"] as const),
     status: faker.helpers.arrayElement(["invited", "active", "suspended"] as const),
+    contract_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    contract_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
     invited_at: faker.helpers.arrayElement([
       faker.date.past().toISOString().slice(0, 19) + "Z",
       null,
@@ -27526,6 +27539,8 @@ export const getConfirmSupplierCrmClientResponseSupplierCabinetRelationshipMock 
     modules: faker.helpers.arrayElements(["my_products", "catalog_requests"] as const),
     catalog_price_visibility: faker.helpers.arrayElement(["", "cabinet", "on_request"] as const),
     status: faker.helpers.arrayElement(["invited", "active", "suspended"] as const),
+    contract_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    contract_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
     invited_at: faker.helpers.arrayElement([
       faker.date.past().toISOString().slice(0, 19) + "Z",
       null,
@@ -27632,6 +27647,8 @@ export const getRejectSupplierCrmClientResponseSupplierCabinetRelationshipMock =
     modules: faker.helpers.arrayElements(["my_products", "catalog_requests"] as const),
     catalog_price_visibility: faker.helpers.arrayElement(["", "cabinet", "on_request"] as const),
     status: faker.helpers.arrayElement(["invited", "active", "suspended"] as const),
+    contract_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    contract_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
     invited_at: faker.helpers.arrayElement([
       faker.date.past().toISOString().slice(0, 19) + "Z",
       null,
@@ -27710,6 +27727,141 @@ export const getRejectSupplierCrmClientResponseMock = (
     (_, i) => i + 1,
   ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
   can_manage: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getListPartnerApplicationsResponseMock = (
+  overrideResponse: Partial<Extract<PartnerApplicationListResponse, object>> = {},
+): PartnerApplicationListResponse => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    source: faker.helpers.arrayElement(Object.values(PartnerApplicationSource)),
+    status: faker.helpers.arrayElement(Object.values(PartnerApplicationStatus)),
+    kind: faker.helpers.arrayElement(Object.values(PartnerApplicationKind)),
+    company_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    inn: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    contact_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    phone: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    language: faker.helpers.arrayElement(["ru", "uz", "en"] as const),
+    categories_description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    contract_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    contract_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    rejected_reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    reviewed_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    matching_company_id: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    matching_company_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  })),
+  pending_count: faker.number.int(),
+  ...overrideResponse,
+});
+
+export const getSendContractPartnerApplicationResponseMock = (
+  overrideResponse: Partial<Extract<PartnerApplicationItem, object>> = {},
+): PartnerApplicationItem => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  source: faker.helpers.arrayElement(Object.values(PartnerApplicationSource)),
+  status: faker.helpers.arrayElement(Object.values(PartnerApplicationStatus)),
+  kind: faker.helpers.arrayElement(Object.values(PartnerApplicationKind)),
+  company_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  inn: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  contact_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  phone: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  language: faker.helpers.arrayElement(["ru", "uz", "en"] as const),
+  categories_description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  contract_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  contract_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  rejected_reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  reviewed_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  matching_company_id: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  matching_company_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getApprovePartnerApplicationResponseMock = (
+  overrideResponse: Partial<Extract<PartnerApplicationItem, object>> = {},
+): PartnerApplicationItem => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  source: faker.helpers.arrayElement(Object.values(PartnerApplicationSource)),
+  status: faker.helpers.arrayElement(Object.values(PartnerApplicationStatus)),
+  kind: faker.helpers.arrayElement(Object.values(PartnerApplicationKind)),
+  company_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  inn: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  contact_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  phone: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  language: faker.helpers.arrayElement(["ru", "uz", "en"] as const),
+  categories_description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  contract_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  contract_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  rejected_reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  reviewed_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  matching_company_id: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  matching_company_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getRejectPartnerApplicationResponseMock = (
+  overrideResponse: Partial<Extract<PartnerApplicationItem, object>> = {},
+): PartnerApplicationItem => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  source: faker.helpers.arrayElement(Object.values(PartnerApplicationSource)),
+  status: faker.helpers.arrayElement(Object.values(PartnerApplicationStatus)),
+  kind: faker.helpers.arrayElement(Object.values(PartnerApplicationKind)),
+  company_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  inn: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  contact_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  phone: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  language: faker.helpers.arrayElement(["ru", "uz", "en"] as const),
+  categories_description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  contract_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  contract_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  rejected_reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  reviewed_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  matching_company_id: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  matching_company_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -37252,6 +37404,102 @@ export const getRejectSupplierCrmClientMockHandler = (
   );
 };
 
+export const getListPartnerApplicationsMockHandler = (
+  overrideResponse?:
+    | PartnerApplicationListResponse
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<PartnerApplicationListResponse> | PartnerApplicationListResponse),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/catalog/partner-applications",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListPartnerApplicationsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getSendContractPartnerApplicationMockHandler = (
+  overrideResponse?:
+    | PartnerApplicationItem
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<PartnerApplicationItem> | PartnerApplicationItem),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/catalog/partner-applications/:id/send-contract",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSendContractPartnerApplicationResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getApprovePartnerApplicationMockHandler = (
+  overrideResponse?:
+    | PartnerApplicationItem
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<PartnerApplicationItem> | PartnerApplicationItem),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/catalog/partner-applications/:id/approve",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getApprovePartnerApplicationResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getRejectPartnerApplicationMockHandler = (
+  overrideResponse?:
+    | PartnerApplicationItem
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<PartnerApplicationItem> | PartnerApplicationItem),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/catalog/partner-applications/:id/reject",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRejectPartnerApplicationResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getUpdateSupplierOfferMockHandler = (
   overrideResponse?:
     | CatalogOffer
@@ -38167,6 +38415,10 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getSuspendSupplierCabinetAccessMockHandler(),
   getConfirmSupplierCrmClientMockHandler(),
   getRejectSupplierCrmClientMockHandler(),
+  getListPartnerApplicationsMockHandler(),
+  getSendContractPartnerApplicationMockHandler(),
+  getApprovePartnerApplicationMockHandler(),
+  getRejectPartnerApplicationMockHandler(),
   getUpdateSupplierOfferMockHandler(),
   getDownloadPriceImportTemplateMockHandler(),
   getStartPriceImportMockHandler(),

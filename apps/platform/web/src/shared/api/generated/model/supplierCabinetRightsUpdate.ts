@@ -9,6 +9,16 @@ import type { SupplierCabinetRightsUpdateModulesItem } from "./supplierCabinetRi
 export interface SupplierCabinetRightsUpdate {
   modules?: SupplierCabinetRightsUpdateModulesItem[];
   kind?: SupplierCabinetRightsUpdateKind;
+  /**
+   * Номер партнёрского договора
+   * @maxLength 64
+   */
+  contract_number?: string;
+  /**
+   * Дата партнёрского договора
+   * @nullable
+   */
+  contract_date?: string | null;
   /** Цены товаров партнёра в каталоге: пусто — как у компании */
   catalog_price_visibility?: SupplierCabinetRightsUpdateCatalogPriceVisibility;
 }

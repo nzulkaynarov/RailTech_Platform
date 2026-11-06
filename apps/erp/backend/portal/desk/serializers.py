@@ -36,6 +36,16 @@ class DeskSupplierAccessRelationship(serializers.Serializer):
         ),
     )
     status = serializers.ChoiceField(choices=["invited", "active", "suspended"])
+    contract_number = serializers.CharField(
+        allow_blank=True,
+        default="",
+        help_text="Номер партнёрского договора (PART-ONBOARD-2).",
+    )
+    contract_date = serializers.DateField(
+        allow_null=True,
+        default=None,
+        help_text="Дата партнёрского договора (PART-ONBOARD-2).",
+    )
     invited_at = serializers.DateTimeField(allow_null=True)
     activated_at = serializers.DateTimeField(allow_null=True)
     suspended_at = serializers.DateTimeField(allow_null=True)
@@ -115,14 +125,79 @@ class DeskSupplierAccessInviteIn(serializers.Serializer):
         help_text="Включённые модули; не указаны — у нового отношения значения по умолчанию.",
     )
     kind = serializers.CharField(required=False, allow_blank=True, max_length=20)
+    contract_number = serializers.CharField(required=False, allow_blank=True, max_length=64)
+    contract_date = serializers.DateField(required=False, allow_null=True)
 
 
 class DeskSupplierAccessRelationshipPatch(serializers.Serializer):
     modules = serializers.ListField(required=False, child=serializers.CharField())
     kind = serializers.CharField(required=False, allow_blank=True, max_length=20)
+    contract_number = serializers.CharField(required=False, allow_blank=True, max_length=64)
+    contract_date = serializers.DateField(required=False, allow_null=True)
     catalog_price_visibility = serializers.CharField(
         required=False,
         allow_blank=True,
         max_length=16,
         help_text="Пусто — как у компании; `cabinet` или `on_request`. Другое — 400 `VALIDATION_ERROR`.",
+    )
+
+
+# --- Заявки на партнёрство (PART-ONBOARD-2) ---
+
+
+class DeskPartnerApplicationListItem(serializers.Serializer):
+    id = serializers.IntegerField()
+    source = serializers.ChoiceField(choices=["public", "client_cabinet"])
+    status = serializers.ChoiceField(choices=["submitted", "contract_sent", "approved", "rejected"])
+    kind = serializers.CharField(allow_blank=True)
+    company_name = serializers.CharField()
+    inn = serializers.CharField(allow_blank=True)
+    contact_name = serializers.CharField()
+    email = serializers.CharField()
+    phone = serializers.CharField(allow_blank=True)
+    language = serializers.ChoiceField(choices=["ru", "uz", "en"])
+    categories_description = serializers.CharField()
+    contract_number = serializers.CharField(allow_blank=True)
+    contract_date = serializers.DateField(allow_null=True)
+    rejected_reason = serializers.CharField(allow_blank=True)
+    created_at = serializers.DateTimeField()
+    reviewed_at = serializers.DateTimeField(allow_null=True)
+    matching_company_id = serializers.IntegerField(allow_null=True)
+    matching_company_name = serializers.CharField(allow_null=True)
+
+
+class DeskPartnerApplicationDetail(DeskPartnerApplicationListItem):
+    company_id = serializers.IntegerField(allow_null=True)
+    applicant_contact_id = serializers.IntegerField(allow_null=True)
+    reviewed_by = DeskRef(allow_null=True)
+
+
+class DeskPartnerApplicationListResponse(serializers.Serializer):
+    items = DeskPartnerApplicationListItem(many=True)
+    pending_count = serializers.IntegerField(help_text="Количество заявок в статусе submitted")
+
+
+class DeskPartnerApplicationSendContractIn(serializers.Serializer):
+    contract_number = serializers.CharField(required=False, allow_blank=True, max_length=64)
+    contract_date = serializers.DateField(required=False, allow_null=True)
+
+
+class DeskPartnerApplicationApproveIn(serializers.Serializer):
+    contract_number = serializers.CharField(
+        required=True,
+        min_length=1,
+        max_length=64,
+        help_text="Номер партнёрского договора (обязателен для завершения договорного шлюза).",
+    )
+    contract_date = serializers.DateField(required=False, allow_null=True)
+    company_id = serializers.IntegerField(required=False, allow_null=True)
+    kind = serializers.CharField(required=False, allow_blank=True, max_length=20)
+
+
+class DeskPartnerApplicationRejectIn(serializers.Serializer):
+    rejected_reason = serializers.CharField(
+        required=True,
+        min_length=1,
+        max_length=1000,
+        help_text="Причина отклонения заявки.",
     )

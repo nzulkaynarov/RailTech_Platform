@@ -6761,6 +6761,86 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/erp/catalog/partner-applications": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Каталог: очередь заявок кандидатов в партнёры (PART-ONBOARD-2)
+     * @description Очередь заявок на партнёрство со счётчиком необработанных заявок (`pending_count`).
+     */
+    get: operations["listPartnerApplications"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/partner-applications/{id}/send-contract": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Заявка в партнёры: отправить проект договора
+     * @description ERP `POST catalog/partner-applications/{id}/send-contract/` — право `supply.manage`. Переводит заявку в статус `contract_sent`.
+     */
+    post: operations["sendContractPartnerApplication"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/partner-applications/{id}/approve": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Заявка в партнёры: подтвердить договор и открыть кабинет
+     * @description ERP `POST catalog/partner-applications/{id}/approve/` — право `supply.manage`. Активирует отношение `partner`, фиксирует договор и отправляет приглашение.
+     */
+    post: operations["approvePartnerApplication"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/partner-applications/{id}/reject": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Заявка в партнёры: отклонить
+     * @description ERP `POST catalog/partner-applications/{id}/reject/` — право `supply.manage`. Отклоняет заявку с указанием причины.
+     */
+    post: operations["rejectPartnerApplication"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/erp/catalog/suppliers/{id}/offers/{offer_id}": {
     parameters: {
       query?: never;
@@ -14535,6 +14615,13 @@ export interface components {
       catalog_price_visibility: "" | "cabinet" | "on_request";
       /** @enum {string} */
       status: "invited" | "active" | "suspended";
+      /** @description Номер партнёрского договора (PART-ONBOARD-2) */
+      contract_number: string;
+      /**
+       * Format: date
+       * @description Дата партнёрского договора (PART-ONBOARD-2)
+       */
+      contract_date: string | null;
       /** Format: date-time */
       invited_at: string | null;
       /**
@@ -14609,6 +14696,13 @@ export interface components {
       modules?: ("my_products" | "catalog_requests")[];
       /** @enum {string} */
       kind?: "" | "manufacturer" | "supplier" | "principal" | "other";
+      /** @description Номер партнёрского договора */
+      contract_number?: string;
+      /**
+       * Format: date
+       * @description Дата партнёрского договора
+       */
+      contract_date?: string | null;
       /**
        * @description Цены товаров партнёра в каталоге: пусто — как у компании
        * @enum {string}
@@ -14621,6 +14715,63 @@ export interface components {
       modules?: ("my_products" | "catalog_requests")[];
       /** @enum {string} */
       kind?: "" | "manufacturer" | "supplier" | "principal" | "other";
+      /** @description Номер партнёрского договора */
+      contract_number?: string;
+      /**
+       * Format: date
+       * @description Дата партнёрского договора
+       */
+      contract_date?: string | null;
+    };
+    /** @enum {string} */
+    PartnerApplicationSource: "public" | "client_cabinet";
+    /** @enum {string} */
+    PartnerApplicationStatus: "submitted" | "contract_sent" | "approved" | "rejected";
+    /** @enum {string} */
+    PartnerApplicationKind: "" | "manufacturer" | "supplier" | "principal" | "other";
+    PartnerApplicationItem: {
+      id: components["schemas"]["CompanyItemRef"];
+      source: components["schemas"]["PartnerApplicationSource"];
+      status: components["schemas"]["PartnerApplicationStatus"];
+      kind: components["schemas"]["PartnerApplicationKind"];
+      company_name: string;
+      inn: string;
+      contact_name: string;
+      email: string;
+      phone: string;
+      /** @enum {string} */
+      language: "ru" | "uz" | "en";
+      categories_description: string;
+      contract_number: string;
+      /** Format: date */
+      contract_date: string | null;
+      rejected_reason: string;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      reviewed_at: string | null;
+      matching_company_id: string | null;
+      matching_company_name: string | null;
+    };
+    PartnerApplicationListResponse: {
+      items: components["schemas"]["PartnerApplicationItem"][];
+      /** @description Количество заявок, ожидающих рассмотрения (submitted) */
+      pending_count: number;
+    };
+    PartnerApplicationSendContractRequest: {
+      contract_number?: string;
+      /** Format: date */
+      contract_date?: string | null;
+    };
+    PartnerApplicationApproveRequest: {
+      contract_number: string;
+      /** Format: date */
+      contract_date?: string | null;
+      company_id?: string | null;
+      kind?: components["schemas"]["PartnerApplicationKind"];
+    };
+    PartnerApplicationRejectRequest: {
+      rejected_reason: string;
     };
     SupplierOfferCreate: {
       product_id: components["schemas"]["CompanyItemRef"];
@@ -27443,6 +27594,136 @@ export interface operations {
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
       409: components["responses"]["RequestConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listPartnerApplications: {
+    parameters: {
+      query?: {
+        status?: "" | "submitted" | "contract_sent" | "approved" | "rejected";
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Список заявок */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerApplicationListResponse"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  sendContractPartnerApplication: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id заявки */
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PartnerApplicationSendContractRequest"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerApplicationItem"];
+        };
+      };
+      400: components["responses"]["ValidationFailed"];
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  approvePartnerApplication: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id заявки */
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PartnerApplicationApproveRequest"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerApplicationItem"];
+        };
+      };
+      400: components["responses"]["ValidationFailed"];
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  rejectPartnerApplication: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id заявки */
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PartnerApplicationRejectRequest"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerApplicationItem"];
+        };
+      };
+      400: components["responses"]["ValidationFailed"];
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

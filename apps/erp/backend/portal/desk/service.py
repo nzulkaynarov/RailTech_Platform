@@ -116,6 +116,8 @@ def access_state(company: Company, *, can_manage: bool) -> dict:
                 "modules": partner_toggled(relationship.modules),
                 "catalog_price_visibility": relationship.catalog_price_visibility,
                 "status": relationship.status,
+                "contract_number": relationship.contract_number or "",
+                "contract_date": relationship.contract_date,
                 "invited_at": relationship.invited_at,
                 "activated_at": relationship.activated_at,
                 "suspended_at": relationship.suspended_at,
@@ -225,7 +227,16 @@ class _Undo(Exception):
     """Письмо не ушло: состояние отношения откатывается вместе с остальным."""
 
 
-def invite(company: Company, contact_id: int, user, *, modules=None, kind=None) -> dict:
+def invite(
+    company: Company,
+    contact_id: int,
+    user,
+    *,
+    modules=None,
+    kind=None,
+    contract_number=None,
+    contract_date=None,
+) -> dict:
     """Создать/вернуть отношение `partner` и отправить контакту письмо с кодом входа.
 
     `modules` — включённые партнёру модули (нет — у нового отношения значения шаблона по умолчанию, у существующего
@@ -269,6 +280,10 @@ def invite(company: Company, contact_id: int, user, *, modules=None, kind=None) 
                 relationship.modules = wanted_modules
             if wanted_kind is not None:
                 relationship.kind = wanted_kind
+            if contract_number is not None:
+                relationship.contract_number = (contract_number or "").strip()
+            if contract_date is not None:
+                relationship.contract_date = contract_date
             # Возврат после приостановки: бывавший в кабинете остаётся активным, новый — приглашённым.
             relationship.status = RelationshipStatus.ACTIVE if relationship.activated_at else RelationshipStatus.INVITED
             relationship.save()
@@ -323,6 +338,8 @@ def _snapshot(relationship: CompanyRelationship) -> dict:
         "kind": relationship.kind,
         "modules": partner_toggled(relationship.modules),
         "catalog_price_visibility": relationship.catalog_price_visibility,
+        "contract_number": relationship.contract_number,
+        "contract_date": str(relationship.contract_date) if relationship.contract_date else None,
     }
 
 
@@ -344,6 +361,10 @@ def update_relationship(company: Company, data: dict, user) -> dict:
             relationship.kind = kind
         if visibility is not None:
             relationship.catalog_price_visibility = visibility
+        if "contract_number" in data:
+            relationship.contract_number = (data.get("contract_number") or "").strip()
+        if "contract_date" in data:
+            relationship.contract_date = data.get("contract_date")
         relationship.save()
         record(
             user,

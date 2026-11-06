@@ -7,6 +7,8 @@
     "label": "Nomenklatura bo'limlari",
     "items": "Pozitsiyalar",
     "suppliers": "Yetkazib beruvchilar",
+    "applications": "Hamkorlik arizalari",
+    "applicationsCount": "Hamkorlik arizalari ({{count}})",
     "brigades": "Brigadalar",
     "refs": "Ma'lumotnomalar",
     "requests": "Kategoriya so'rovlari",
@@ -644,6 +646,13 @@
     "firstLogin": "Birinchi kirish",
     "noLogin": "hali kirmagan",
     "suspendedAt": "To'xtatilgan",
+    "contract": "Hamkorlik shartnomasi",
+    "contractNumber": "№ {{number}}",
+    "contractNotSet": "ko'rsatilmagan",
+    "contractNumberLabel": "Shartnoma raqami",
+    "contractNumberPlaceholder": "Masalan, HSH-2026/01",
+    "contractDateLabel": "Shartnoma sanasi",
+    "saveContract": "Shartnoma ma'lumotlarini saqlash",
     "crmClient": {
       "label": "CRMdagi mijoz",
       "linked": "Yaratilgan",
@@ -1011,5 +1020,82 @@
     "inherit": "Kompaniya kabi",
     "cabinet": "Ko'rsatish",
     "on_request": "So'rov bo'yicha"
+  },
+  "partnerApplications": {
+    "title": "Hamkorlik arizalari navbati",
+    "filterLabel": "Arizalar filtri",
+    "filter": {
+      "all": "Barcha arizalar",
+      "submitted": "Yangi",
+      "contract_sent": "Shartnoma yuborilgan",
+      "approved": "Ma'qullangan",
+      "rejected": "Rad etilgan"
+    },
+    "status": {
+      "submitted": "Topshirilgan",
+      "contract_sent": "Shartnoma yuborilgan",
+      "approved": "Ma'qullangan",
+      "rejected": "Rad etilgan"
+    },
+    "source": {
+      "public": "Tashqi ariza",
+      "client_cabinet": "Mijoz kabineti"
+    },
+    "inn": "STIR: {{inn}}",
+    "matchFound": "Bazadan topildi: {{name}}",
+    "matchHint": "ERP bazasida xuddi shunday STIRga ega tashkilot topildi",
+    "contractNumber": "Shartnoma raqami",
+    "contractNumberPlaceholder": "Masalan, HSH-2026/01",
+    "contractDate": "Shartnoma sanasi",
+    "kind": "Hamkor turi",
+    "reviewedAt": "Ko'rib chiqildi: {{date}}",
+    "columns": {
+      "company": "Tashkilot",
+      "contact": "Aloqachi shaxs",
+      "kind": "Turi va mahsulot",
+      "source": "Manba",
+      "contract": "Shartnoma",
+      "status": "Holat",
+      "created": "Yuborilgan sana",
+      "actions": "Amallar"
+    },
+    "actions": {
+      "sendContract": "Shartnoma yuborish",
+      "approve": "Ma'qullash va kabinetni ochish",
+      "reject": "Rad etish"
+    },
+    "empty": {
+      "title": "Hamkorlik arizalari yo'q",
+      "hint": "Yangi nomzodlar arizalari ta'minot bo'limi ko'rib chiqishi va shartnomani kelishish uchun bu yerda paydo bo'ladi."
+    },
+    "sendContractModal": {
+      "title": "Shartnoma loyihasini yuborish: {{name}}",
+      "hint": "Tayyorlangan shartnoma raqamini ko'rsating va nomzodga loyiha yuborilganini belgilang.",
+      "ok": "Shartnoma yuborilgan deb belgilash",
+      "steps": [
+        "Ariza holati «Shartnoma yuborilgan» ga o'zgaradi",
+        "Nomzod hamkorlik shartnomasi loyihasini oladi"
+      ]
+    },
+    "approveModal": {
+      "title": "Arizani ma'qullash va kabinetni ochish: {{name}}",
+      "hint": "Hamkorlik shartnomasi imzolanganini tasdiqlash. Tasdiqlangandan so'ng kompaniya kabinetga kirish huquqiga ega bo'ladi, aloqachi taklifnoma oladi va CRM bilan bog'lanadi.",
+      "ok": "Shartnomani tasdiqlash va kirishni ochish",
+      "linkToExisting": "Topilgan tashkilotga bog'lash: {{name}}",
+      "createNew": "Yangi yetkazib beruvchi tashkilotini yaratish",
+      "steps": [
+        "«Hamkor» munosabati «Mening mahsulotlarim» va «Katalog va buyurtmalar» modullari bilan faollashtiriladi",
+        "Shartnoma raqami va sanasi yetkazib beruvchi kartasida qayd etiladi",
+        "Aloqachi shaxs kirish kodi bilan taklifnoma oladi",
+        "Kontragent CRM bilan bog'lanadi"
+      ]
+    },
+    "rejectModal": {
+      "title": "Arizani rad etish: {{name}}",
+      "hint": "Rad etish sababini ko'rsating. U jurnalda qayd etiladi va arizachiga yuboriladi.",
+      "reasonLabel": "Rad etish sababi",
+      "reasonPlaceholder": "Masalan: mahsulot yo'nalishimizga to'g'ri kelmaydi / hujjatlar taqdim etilmadi",
+      "ok": "Arizani rad etish"
+    }
   }
 }

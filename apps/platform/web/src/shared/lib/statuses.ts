@@ -270,6 +270,8 @@ export const STATUS_TONE = {
   instruction: { in_work: GO, executed: OK, cancelled: OFF },
   /** Пункт чек-листа одобрения КП */
   check: { ok: OK, fail: NO, pending: W },
+  /** Заявка на партнёрство (PART-ONBOARD-2) */
+  partnerApplication: { submitted: W, contract_sent: GO, approved: OK, rejected: NO },
 } as const satisfies Record<string, Record<string, StatusTone>>;
 
 export type StatusKind = keyof typeof STATUS_TONE;

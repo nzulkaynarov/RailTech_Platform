@@ -51,6 +51,8 @@ class SupplierCabinetRelationship(Out):
     modules: list[PartnerModule]
     catalog_price_visibility: PartnerPriceVisibility
     status: RelationshipStatus
+    contract_number: str = ""
+    contract_date: str | None = None
     invited_at: str | None
     activated_at: str | None
     suspended_at: str | None
@@ -101,6 +103,8 @@ class SupplierCabinetContactUpdate(Patch):
 class SupplierCabinetRightsUpdate(Patch):
     modules: list[PartnerModule] | None = None
     kind: PartnerKind | None = None
+    contract_number: str | None = None
+    contract_date: str | None = None
     catalog_price_visibility: PartnerPriceVisibility | None = None
 
 
@@ -108,6 +112,8 @@ class SupplierCabinetInvite(Body):
     contact_id: str = Field(pattern=r"^[0-9]+$")
     modules: list[PartnerModule] | None = None
     kind: PartnerKind | None = None
+    contract_number: str | None = None
+    contract_date: str | None = None
 
 
 def _person(raw: Any) -> dict[str, Any] | None:
@@ -167,6 +173,8 @@ def to_access(raw: Mapping[str, Any]) -> SupplierCabinetAccess:
                 "modules": list(relationship.get("modules") or []),
                 "catalog_price_visibility": text(relationship.get("catalog_price_visibility")),
                 "status": relationship.get("status"),
+                "contract_number": text(relationship.get("contract_number")),
+                "contract_date": relationship.get("contract_date") or None,
                 "invited_at": relationship.get("invited_at"),
                 "activated_at": relationship.get("activated_at"),
                 "suspended_at": relationship.get("suspended_at"),
