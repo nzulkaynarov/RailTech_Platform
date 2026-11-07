@@ -954,7 +954,7 @@ export const handlers = [
       return json({
         items: [
           {
-            id: 'sec-1',
+            id: 1,
             event_type: 'login',
             created_at: new Date(Date.now() - 3600_000).toISOString(),
             actor_name: currentContact.name,

@@ -2196,7 +2196,7 @@ export interface components {
             items: components["schemas"]["CompanySecurityLogItem"][];
         };
         CompanySecurityLogItem: {
-            id: string;
+            id: number;
             /** @enum {string} */
             event_type: "login" | "logout" | "revoke_sessions" | "role_change" | "member_deactivated" | "member_invited" | "bank_details_changed";
             /** Format: date-time */

@@ -2288,7 +2288,7 @@ export interface components {
       items: components["schemas"]["CompanySecurityLogItem"][];
     };
     CompanySecurityLogItem: {
-      id: string;
+      id: number;
       /** @enum {string} */
       event_type:
         | "login"

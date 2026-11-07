@@ -4462,7 +4462,7 @@ components:
       required: [id, event_type, created_at, actor_name]
       properties:
         id:
-          type: string
+          type: integer
         event_type:
           type: string
           enum: [login, logout, revoke_sessions, role_change, member_deactivated, member_invited, bank_details_changed]

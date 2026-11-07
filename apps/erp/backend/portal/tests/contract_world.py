@@ -434,6 +434,18 @@ def contract_world(db, client_company, other_company, client_contact, other_cont
     )
     world["verification"] = verification
 
+    # ── Журнал безопасности компании (J2-audit / J7) ──────────────────────────────────────────
+    from portal.models import PortalSecurityEvent, record_portal_security_event
+
+    record_portal_security_event(
+        client_company,
+        PortalSecurityEvent.EventType.LOGIN,
+        actor_contact=client_contact,
+        ip_address="198.51.100.1",
+        user_agent="Mozilla/5.0",
+        details="Сессия открыта через Telegram",
+    )
+
     # ── Колокольчик (NOTIFY-2): уведомления видов, открытых клиенту, — для сторожа `GET /notifications` ────────
     from portal.services import notice_sources
 
