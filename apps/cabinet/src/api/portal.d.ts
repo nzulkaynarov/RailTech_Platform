@@ -1026,6 +1026,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/company/security-log": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Журнал событий безопасности компании
+         * @description Доступен только администраторам компании (`is_admin: true`). Возвращает историю ключевых событий безопасности
+         *     (входы, смены прав, отзыв сессий, деактивации, изменения реквизитов) согласно ADR-0022 и J2-audit.
+         */
+        get: operations["getCompanySecurityLog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/company/partner-application": {
         parameters: {
             query?: never;
@@ -2146,6 +2167,49 @@ export interface components {
             legal_address?: string | null;
             bank_details?: string | null;
             language: components["schemas"]["Language"];
+            relationship_status?: components["schemas"]["PortalRelationshipStatus"];
+            /** @description Действующие и архивные отношения компании с нами (роль, статус, договор) */
+            relationships?: components["schemas"]["PortalRelationship"][];
+        };
+        /**
+         * @description Статус отношений контрагента (ADR-0022, Counterparty Journey J7):
+         *     - invited: компания приглашена, ожидает первого входа;
+         *     - active: отношения активны, полный доступ согласно включённым модулям;
+         *     - suspended: отношения временно приостановлены (доступ только на чтение/архив);
+         *     - terminated: отношения завершены (доступ только на чтение к архиву).
+         * @enum {string}
+         */
+        PortalRelationshipStatus: "invited" | "active" | "suspended" | "terminated";
+        PortalRelationship: {
+            role: components["schemas"]["PortalRole"];
+            kind?: string | null;
+            status: components["schemas"]["PortalRelationshipStatus"];
+            contract_number?: string | null;
+            /** Format: date */
+            contract_date?: string | null;
+            /** Format: date-time */
+            activated_at?: string | null;
+            /** Format: date-time */
+            suspended_at?: string | null;
+        };
+        CompanySecurityLogResponse: {
+            items: components["schemas"]["CompanySecurityLogItem"][];
+        };
+        CompanySecurityLogItem: {
+            id: number;
+            /** @enum {string} */
+            event_type: "login" | "logout" | "revoke_sessions" | "role_change" | "member_deactivated" | "member_invited" | "bank_details_changed";
+            /** Format: date-time */
+            created_at: string;
+            /** @description Имя сотрудника, выполнившего действие */
+            actor_name: string;
+            actor_email?: string | null;
+            ip_address?: string | null;
+            user_agent?: string | null;
+            /** @description Имя целевого сотрудника при операциях с командой */
+            target_name?: string | null;
+            /** @description Дополнительные детали события */
+            details?: string | null;
         };
         CompanyUpdate: {
             name?: string;
@@ -4345,6 +4409,29 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    getCompanySecurityLog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Журнал событий */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompanySecurityLogResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             429: components["responses"]["TooManyRequests"];
         };
     };

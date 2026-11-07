@@ -65,6 +65,7 @@ GET_CASES = {
         f"/catalog/{w['product'].pk}/documents/{w['certificate'].pk}/file"
     ],
     "/company": lambda w: ["/company"],
+    "/company/security-log": lambda w: ["/company/security-log"],
     "/company/partner-application": lambda w: ["/company/partner-application"],
     "/company/partner-application/contract-pdf": lambda w: ["/company/partner-application/contract-pdf"],
     "/countries": lambda w: ["/countries"],

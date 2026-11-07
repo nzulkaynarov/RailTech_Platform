@@ -37,6 +37,7 @@ class RelationshipStatus(models.TextChoices):
     INVITED = "invited", _("Приглашён")
     ACTIVE = "active", _("Активен")
     SUSPENDED = "suspended", _("Приостановлен")
+    TERMINATED = "terminated", _("Завершён")
 
 
 #: Статусы, при которых вход открыт: приглашённый входит впервые (первый вход переводит отношение в `active`).

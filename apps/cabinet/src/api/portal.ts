@@ -231,6 +231,10 @@ export type CatalogQuery = QueryOf<paths['/catalog']['get']>;
 export type DocumentsQuery = QueryOf<paths['/documents']['get']>;
 export type Company = Schemas['Company'];
 export type CompanyUpdate = Schemas['CompanyUpdate'];
+export type CompanySecurityLogResponse = Schemas['CompanySecurityLogResponse'];
+export type CompanySecurityLogItem = Schemas['CompanySecurityLogItem'];
+export type PortalRelationshipStatus = Schemas['PortalRelationshipStatus'];
+export type PortalRelationship = Schemas['PortalRelationship'];
 export type TeamMember = Schemas['TeamMember'];
 export type TeamMemberUpdate = Schemas['TeamMemberUpdate'];
 export type TeamInvite = Schemas['TeamInvite'];
@@ -458,6 +462,8 @@ export function markMessagesRead(lastId: number): Promise<Schemas['PortalMessage
 
 export const getCompany = () => portalRequest<Company>('/company');
 export const updateCompany = (body: CompanyUpdate) => portalRequest<Company>('/company', { method: 'PUT', body });
+export const getCompanySecurityLog = () =>
+  portalRequest<CompanySecurityLogResponse>('/company/security-log');
 export const listTeam = () => portalRequest<TeamMember[]>('/team');
 export const inviteTeamMember = (body: TeamInvite) =>
   portalRequest<TeamMember>('/team/invite', { method: 'POST', body });

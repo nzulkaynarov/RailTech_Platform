@@ -36,6 +36,7 @@ export const keys = {
   priceListTask: (taskId: string) => ['partner', 'price-list', taskId] as const,
   verify: (code: string) => ['verify', code] as const,
   partnerApplication: ['company', 'partner-application'] as const,
+  securityLog: ['company', 'security-log'] as const,
 };
 
 /** Список раздела грузится, только если у сессии есть его модуль (партнёру клиентские разделы закрыты, ADR-0022). */
@@ -91,6 +92,8 @@ export const useCatalogItem = (id: number) =>
   useQuery({ queryKey: keys.catalogItem(id), queryFn: () => portal.getCatalogItem(id), enabled: Number.isFinite(id) });
 export const useCompany = ({ enabled = true }: { enabled?: boolean } = {}) =>
   useQuery({ queryKey: keys.company, queryFn: portal.getCompany, enabled });
+export const useCompanySecurityLog = ({ enabled = true }: { enabled?: boolean } = {}) =>
+  useQuery({ queryKey: keys.securityLog, queryFn: portal.getCompanySecurityLog, enabled });
 export const useTeam = ({ enabled = true }: { enabled?: boolean } = {}) =>
   useQuery({ queryKey: keys.team, queryFn: portal.listTeam, enabled });
 export const useSessions = ({ enabled = true }: { enabled?: boolean } = {}) =>
