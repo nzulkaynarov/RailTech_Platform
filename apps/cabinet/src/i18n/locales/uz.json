@@ -181,6 +181,10 @@
       "other": "Boshqa"
     }
   },
+  "roles": {
+    "client": "Mijoz",
+    "partner": "Hamkor"
+  },
   "languages": {
     "label": "Til",
     "ru": "Русский",
@@ -722,6 +726,19 @@
       "emptyKindText": "Boshqa turni tanlang yoki barcha hujjatlarni koʻrsating.",
       "showAll": "Hammasini koʻrsatish",
       "filter": "Hujjat turi",
+      "dateFrom": "Boshlanish sanasi",
+      "dateTo": "Tugash sanasi",
+      "exportRegistry": "Reestrni eksport qilish",
+      "exportSuccess": "Hujjatlar reestri muvaffaqiyatli yuklab olindi",
+      "csv": {
+        "number": "№",
+        "kind": "Turi",
+        "title": "Hujjat nomi",
+        "docNumber": "Hujjat raqami",
+        "date": "Sana",
+        "deal": "Bitim",
+        "size": "Hajmi (bayt)"
+      },
       "searchPlaceholder": "Raqam, nom, loyiha…",
       "noMatchTitle": "Hech narsa topilmadi",
       "noMatchText": "«{{query}}» soʻrovi boʻyicha hujjat yoʻq. Raqam yoki nomni tekshiring yoki qidiruvni tozalang.",
@@ -811,7 +828,31 @@
         "bankAdminOnlyBadge": "Faqat administrator",
         "bankDetailsAdminOnly": "Bank rekvizitlarini faqat kompaniya administratori o‘zgartirishi mumkin.",
         "bankDetailsAdminNotice": "Rekvizitlar o‘zgarganda kompaniyaning barcha administratorlariga xavfsizlik ogohlantirishi yuboriladi.",
+        "relationshipStatus": "Munosabatlar holati",
         "language": "Hujjatlar va xatlar tili"
+      },
+      "relationship": {
+        "active": "Munosabatlar faol",
+        "suspended": "To'xtatilgan",
+        "terminated": "Yakunlangan",
+        "invited": "Taklif etilgan",
+        "suspendedAlert": "Munosabatlar vaqtincha to'xtatilgan. Kirish arxivni o'qish rejimida taqdim etiladi.",
+        "terminatedAlert": "Munosabatlar yakunlandi. Hujjatlar arxivi ko'rish va yuklab olish uchun ochiq."
+      },
+      "securityLog": {
+        "title": "Kompaniya xavfsizlik jurnali",
+        "description": "Kirishlar, xodimlar huquqlari o'zgarishi va xavfsizlik sozlamalari tarixi",
+        "empty": "Hozircha xavfsizlik hodisalari qayd etilmagan",
+        "error": "Xavfsizlik jurnalini yuklab bo'lmadi",
+        "events": {
+          "login": "Kirish",
+          "logout": "Chiqish",
+          "revoke_sessions": "Sessiyalarni bekor qilish",
+          "role_change": "Huquqlarni o'zgartirish",
+          "member_deactivated": "O'chirish",
+          "member_invited": "Taklif etish",
+          "bank_details_changed": "Rekvizitlar o'zgarishi"
+        }
       },
       "closeEdit": "Yopish",
       "partner": {

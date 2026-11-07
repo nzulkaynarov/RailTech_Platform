@@ -16,6 +16,7 @@ from portal.views import (
     CompanyPartnerApplicationAgreeView,
     CompanyPartnerApplicationView,
     CompanyPartnerContractPdfView,
+    CompanySecurityLogView,
     CompanyView,
     ContractListView,
     ContractSignView,
@@ -206,6 +207,8 @@ urlpatterns = [
     # Company (Профиль компании)
     path("company", CompanyView.as_view(), name="portal-company"),
     path("company/", CompanyView.as_view(), name="portal-company-slash"),
+    path("company/security-log", CompanySecurityLogView.as_view(), name="portal-company-security-log"),
+    path("company/security-log/", CompanySecurityLogView.as_view(), name="portal-company-security-log-slash"),
     path(
         "company/partner-application",
         CompanyPartnerApplicationView.as_view(),

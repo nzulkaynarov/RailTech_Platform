@@ -1027,6 +1027,34 @@
                 }
             }
         },
+        "/api/portal/v1/company/security-log": {
+            "get": {
+                "operationId": "api_portal_v1_company_security_log_retrieve",
+                "description": "GET /company/security-log — Журнал событий безопасности (J2-audit, только администратор компании).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/company/security-log/": {
+            "get": {
+                "operationId": "api_portal_v1_company_security_log_retrieve_2",
+                "description": "GET /company/security-log — Журнал событий безопасности (J2-audit, только администратор компании).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/portal/v1/contracts": {
             "get": {
                 "operationId": "api_portal_v1_contracts_retrieve",

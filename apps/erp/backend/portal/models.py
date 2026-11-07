@@ -470,3 +470,95 @@ class PortalDocumentVerification(models.Model):
 
     def __str__(self):
         return f"PortalDocumentVerification(code={self.code}, {self.kind} #{self.number}, {self.status})"
+
+
+class PortalSecurityEvent(models.Model):
+    """Журнал событий безопасности компании в портале (J2-audit, ADR-0022).
+
+    Фиксирует ключевые события для администраторов компании:
+    - login: вход сотрудника;
+    - logout: выход;
+    - revoke_sessions: отзыв других сессий;
+    - role_change: изменение прав коллеги (can_act, is_admin);
+    - member_deactivated: деактивация коллеги;
+    - member_invited: приглашение нового коллеги;
+    - bank_details_changed: изменение банковских реквизитов компании.
+    """
+
+    class EventType(models.TextChoices):
+        LOGIN = "login", _("Вход в систему")
+        LOGOUT = "logout", _("Выход из системы")
+        REVOKE_SESSIONS = "revoke_sessions", _("Отзыв других сессий")
+        ROLE_CHANGE = "role_change", _("Изменение прав")
+        MEMBER_DEACTIVATED = "member_deactivated", _("Отключение сотрудника")
+        MEMBER_INVITED = "member_invited", _("Приглашение сотрудника")
+        BANK_DETAILS_CHANGED = "bank_details_changed", _("Изменение банковских реквизитов")
+
+    company = models.ForeignKey(
+        "parties.Company",
+        on_delete=models.CASCADE,
+        related_name="portal_security_events",
+        verbose_name=_("Компания"),
+    )
+    actor_contact = models.ForeignKey(
+        "parties.Contact",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("Кто выполнил"),
+    )
+    actor_name = models.CharField(max_length=255, verbose_name=_("Имя исполнителя"))
+    actor_email = models.EmailField(blank=True, default="", verbose_name=_("Email исполнителя"))
+    event_type = models.CharField(max_length=32, choices=EventType.choices, verbose_name=_("Тип события"))
+    target_contact = models.ForeignKey(
+        "parties.Contact",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("Целевой контакт"),
+    )
+    target_name = models.CharField(max_length=255, blank=True, default="", verbose_name=_("Имя целевого контакта"))
+    ip_address = models.GenericIPAddressField(null=True, blank=True, verbose_name=_("IP адрес"))
+    user_agent = models.TextField(blank=True, default="", verbose_name=_("User Agent"))
+    details = models.TextField(blank=True, default="", verbose_name=_("Детали события"))
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = _("Событие безопасности портала")
+        verbose_name_plural = _("События безопасности портала")
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"PortalSecurityEvent({self.company_id}, {self.event_type}, {self.created_at})"
+
+
+def record_portal_security_event(
+    company,
+    event_type: str,
+    *,
+    actor_contact=None,
+    actor_name: str = "",
+    actor_email: str = "",
+    target_contact=None,
+    target_name: str = "",
+    ip_address=None,
+    user_agent: str = "",
+    details: str = "",
+) -> PortalSecurityEvent:
+    name = actor_name or (actor_contact.name if actor_contact else "Система")
+    email = actor_email or (actor_contact.email if actor_contact else "")
+    t_name = target_name or (target_contact.name if target_contact else "")
+    return PortalSecurityEvent.objects.create(
+        company=company,
+        actor_contact=actor_contact,
+        actor_name=name,
+        actor_email=email,
+        event_type=event_type,
+        target_contact=target_contact,
+        target_name=t_name,
+        ip_address=ip_address,
+        user_agent=user_agent or "",
+        details=details or "",
+    )

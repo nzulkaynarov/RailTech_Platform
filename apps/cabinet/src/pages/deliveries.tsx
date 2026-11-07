@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, CheckCircle2, FolderOpen, Loader2, Search, Truck } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Download, FolderOpen, Loader2, Search, Truck } from 'lucide-react';
 import { toast } from '@/lib/toast';
 
 import { apiErrorKey } from '@/api/errors';
 import type { DeliveryLine, DocumentKind, PortalDocument } from '@/api/portal';
 import { useAcceptDelivery, useDeliveries, useDisputeDelivery, useDocuments } from '@/api/queries';
+import { DateField } from '@/components/DateField';
 import { DealLink } from '@/components/Details';
 import { DocumentButton } from '@/components/DocumentButton';
 import { EmptyState } from '@/components/EmptyState';
@@ -21,6 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { groupDeliveries } from '@/lib/deliveries';
 import { DOCUMENT_KINDS, isDocumentKind } from '@/lib/documents';
+import { saveBlob } from '@/lib/download';
 import { formatDate, formatDateTime, formatFileSize, formatQuantity } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { CanAct } from '@/session/CanAct';
@@ -183,9 +185,15 @@ export function DocumentsPage() {
   const { t } = useTranslation();
   const [params, setParams] = useSearchParams();
   const [query, setQuery] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const rawKind = params.get('kind');
   const kind: DocumentKind | undefined = isDocumentKind(rawKind) ? rawKind : undefined;
-  const documents = useDocuments(kind ? { kind } : {});
+  const documents = useDocuments({
+    kind,
+    date_from: dateFrom || undefined,
+    date_to: dateTo || undefined,
+  });
 
   const filtered = useMemo(() => {
     if (!documents.data) return [];
@@ -209,35 +217,108 @@ export function DocumentsPage() {
       { replace: true },
     );
 
+  const exportRegistry = () => {
+    if (!filtered.length) return;
+    const headers = [
+      t('pages.documents.csv.number', '№'),
+      t('pages.documents.csv.kind', 'Тип'),
+      t('pages.documents.csv.title', 'Название документа'),
+      t('pages.documents.csv.docNumber', 'Номер документа'),
+      t('pages.documents.csv.date', 'Дата'),
+      t('pages.documents.csv.deal', 'Сделка'),
+      t('pages.documents.csv.size', 'Размер (байт)'),
+    ];
+    const rows = filtered.map((doc, idx) => [
+      String(idx + 1),
+      t(`documents.kinds.${doc.kind}`),
+      `"${(doc.title || '').replace(/"/g, '""')}"`,
+      doc.number || '',
+      doc.date || '',
+      doc.deal?.number || '',
+      String(doc.size_bytes || 0),
+    ]);
+    const csvContent = '\uFEFF' + [headers.join(';'), ...rows.map((r) => r.join(';'))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    saveBlob(blob, `documents_registry_${new Date().toISOString().slice(0, 10)}.csv`);
+    toast.success(t('pages.documents.exportSuccess', 'Реестр документов успешно выгружен'));
+  };
+
   return (
     <>
-      <PageHeader title={t('pages.documents.title')} icon={FolderOpen} />
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div role="group" aria-label={t('pages.documents.filter')} className="flex flex-wrap gap-2">
-          {[undefined, ...DOCUMENT_KINDS].map((option) => (
-            <Button
-              key={option ?? 'all'}
-              type="button"
-              size="sm"
-              variant={option === kind ? 'default' : 'outline'}
-              aria-pressed={option === kind}
-              className={cn('rounded-full')}
-              onClick={() => choose(option)}
-            >
-              {option ? t(`documents.kinds.${option}`) : t('common.all')}
+      <PageHeader
+        title={t('pages.documents.title')}
+        icon={FolderOpen}
+        actions={
+          filtered.length > 0 ? (
+            <Button variant="outline" size="sm" onClick={exportRegistry}>
+              <Download aria-hidden="true" />
+              {t('pages.documents.exportRegistry', 'Экспорт реестра')}
             </Button>
-          ))}
+          ) : null
+        }
+      />
+      <div className="mb-4 flex flex-col gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div role="group" aria-label={t('pages.documents.filter')} className="flex flex-wrap gap-2">
+            {[undefined, ...DOCUMENT_KINDS].map((option) => (
+              <Button
+                key={option ?? 'all'}
+                type="button"
+                size="sm"
+                variant={option === kind ? 'default' : 'outline'}
+                aria-pressed={option === kind}
+                className={cn('rounded-full')}
+                onClick={() => choose(option)}
+              >
+                {option ? t(`documents.kinds.${option}`) : t('common.all')}
+              </Button>
+            ))}
+          </div>
+          <div className="relative w-full sm:w-64">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+            <Input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t('pages.documents.searchPlaceholder')}
+              aria-label={t('pages.documents.searchLabel')}
+              className="pl-9"
+            />
+          </div>
         </div>
-        <div className="relative w-full sm:w-64">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-          <Input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={t('pages.documents.searchPlaceholder')}
-            aria-label={t('pages.documents.searchLabel')}
-            className="pl-9"
-          />
+        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1.5">
+            <label htmlFor="docs-date-from">{t('pages.documents.dateFrom', 'С даты')}:</label>
+            <DateField
+              id="docs-date-from"
+              value={dateFrom || null}
+              onChange={(v) => setDateFrom(v || '')}
+              className="h-8 w-32 text-xs"
+            />
+          </div>
+          <div className="flex items-center gap-1.5">
+            <label htmlFor="docs-date-to">{t('pages.documents.dateTo', 'По дату')}:</label>
+            <DateField
+              id="docs-date-to"
+              value={dateTo || null}
+              onChange={(v) => setDateTo(v || '')}
+              className="h-8 w-32 text-xs"
+            />
+          </div>
+          {(dateFrom || dateTo) && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 text-xs"
+              onClick={() => {
+                setDateFrom('');
+                setDateTo('');
+              }}
+            >
+              {t('common.reset', 'Сбросить')}
+            </Button>
+          )}
         </div>
       </div>
       {documents.isPending ? (

@@ -17,6 +17,7 @@ export function DateField({
   onChange,
   invalid,
   describedBy,
+  className,
 }: {
   id: string;
   /** Ключ `YYYY-MM-DD`, `''` или `null` (набрано не до конца). */
@@ -24,6 +25,7 @@ export function DateField({
   onChange: (value: string | null) => void;
   invalid?: boolean;
   describedBy?: string;
+  className?: string;
 }) {
   const { t } = useTranslation();
   const [text, setText] = useState(() => isoToText(value));
@@ -36,6 +38,7 @@ export function DateField({
   return (
     <Input
       id={id}
+      className={className}
       inputMode="numeric"
       autoComplete="off"
       maxLength={10}

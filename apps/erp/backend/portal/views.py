@@ -27,7 +27,14 @@ from parties.models import (
 from portal import projections
 from portal.authentication import PortalAuthentication
 from portal.exceptions import PortalBadRequest, PortalConflict, PortalValidationError, portal_exception_handler
-from portal.models import MagicLinkToken, PortalDocumentVerification, PortalSession, PortalUpload
+from portal.models import (
+    MagicLinkToken,
+    PortalDocumentVerification,
+    PortalSecurityEvent,
+    PortalSession,
+    PortalUpload,
+    record_portal_security_event,
+)
 from portal.permissions import ANY_MODULE, CanAct, HasPortalModule, IsPortalAuthenticated
 from portal.projections import (
     annotate_request_sources,
@@ -61,6 +68,7 @@ from portal.serializers import (
     PaymentProofCreateSerializer,
     PaymentProofSerializer,
     PortalDocumentSerializer,
+    PortalSecurityEventSerializer,
     PortalSessionItemSerializer,
     PortalUploadResponseSerializer,
     QuoteAcceptSerializer,
@@ -225,6 +233,15 @@ class TelegramAuthView(APIView):
             user_agent=ua,
         )
 
+        record_portal_security_event(
+            session.company,
+            PortalSecurityEvent.EventType.LOGIN,
+            actor_contact=session.contact,
+            ip_address=ip,
+            user_agent=ua,
+            details="Вход через Telegram Mini App",
+        )
+
         res = Response(MeSerializer(_me_data(session, "telegram")).data, status=status.HTTP_200_OK)
         return _set_portal_cookie(res, token)
 
@@ -266,6 +283,14 @@ def _exchange_magic_token(request, token: str) -> Response:
 
 def _session_response(session, session_token: str) -> Response:
     """Ответ входа по письму (ссылка или код): `Me` и cookie сессии."""
+    record_portal_security_event(
+        session.company,
+        PortalSecurityEvent.EventType.LOGIN,
+        actor_contact=session.contact,
+        ip_address=session.ip_address,
+        user_agent=session.user_agent,
+        details="Вход по электронной почте",
+    )
     res = Response(MeSerializer(_me_data(session, "magic_link")).data, status=status.HTTP_200_OK)
     return _set_portal_cookie(res, session_token)
 
@@ -330,6 +355,14 @@ class LogoutView(APIView):
     def post(self, request):
         session = getattr(request, "portal_session", None)
         if session:
+            record_portal_security_event(
+                session.company,
+                PortalSecurityEvent.EventType.LOGOUT,
+                actor_contact=session.contact,
+                ip_address=session.ip_address,
+                user_agent=session.user_agent,
+                details="Выход из системы",
+            )
             session.delete()
         res = Response(status=status.HTTP_204_NO_CONTENT)
         return _delete_portal_cookie(res)
@@ -376,6 +409,14 @@ class PortalSessionsRevokeOthersView(APIView):
             )
             .exclude(pk=request.portal_session.pk)
             .delete()
+        )
+        record_portal_security_event(
+            request.portal_company,
+            PortalSecurityEvent.EventType.REVOKE_SESSIONS,
+            actor_contact=request.portal_contact,
+            ip_address=request.META.get("REMOTE_ADDR"),
+            user_agent=request.META.get("HTTP_USER_AGENT", ""),
+            details=f"Отозвано сессий: {revoked_count}",
         )
         return Response({"revoked_count": revoked_count}, status=status.HTTP_200_OK)
 
@@ -1238,6 +1279,14 @@ class CompanyView(BasePortalView):
                 if not getattr(request.portal_contact, "is_admin", False):
                     raise PortalConflict("ADMIN_REQUIRED")
                 company.bank_details = new_bank
+                record_portal_security_event(
+                    company,
+                    PortalSecurityEvent.EventType.BANK_DETAILS_CHANGED,
+                    actor_contact=request.portal_contact,
+                    ip_address=request.META.get("REMOTE_ADDR"),
+                    user_agent=request.META.get("HTTP_USER_AGENT", ""),
+                    details="Банковские реквизиты компании обновлены",
+                )
                 # Уведомление безопасности для всех администраторов компании
                 from parties.models import Contact, active_contact_q
                 from portal.models import NoticeChannel, PortalNotice
@@ -1266,6 +1315,20 @@ class CompanyView(BasePortalView):
 
         company.save()
         return Response(CompanySerializer(company).data)
+
+
+class CompanySecurityLogView(BasePortalView):
+    """GET /company/security-log — Журнал событий безопасности (J2-audit, только администратор компании)."""
+
+    required_module = "company"
+
+    def get(self, request):
+        if not getattr(request.portal_contact, "is_admin", False):
+            raise exceptions.PermissionDenied("ADMIN_REQUIRED")
+
+        events = PortalSecurityEvent.objects.filter(company=request.portal_company).order_by("-created_at")[:100]
+
+        return Response({"items": PortalSecurityEventSerializer(events, many=True).data})
 
 
 class CompanyPartnerApplicationView(BasePortalView):
@@ -1456,6 +1519,16 @@ class TeamInviteView(BasePortalView):
         if not serializer.is_valid():
             raise PortalValidationError("VALIDATION_ERROR")
         contact = invite_team_member(request.portal_company, request.portal_contact, serializer.validated_data)
+        record_portal_security_event(
+            request.portal_company,
+            PortalSecurityEvent.EventType.MEMBER_INVITED,
+            actor_contact=request.portal_contact,
+            target_contact=contact,
+            target_name=contact.name,
+            ip_address=request.META.get("REMOTE_ADDR"),
+            user_agent=request.META.get("HTTP_USER_AGENT", ""),
+            details=f"Приглашён коллега: {contact.name} ({contact.email}), is_admin={contact.is_admin}",
+        )
         return Response(TeamMemberSerializer(contact).data, status=status.HTTP_201_CREATED)
 
 
@@ -1513,6 +1586,16 @@ class TeamMemberDetailView(BasePortalView):
 
         if fields_to_update:
             target.save(update_fields=fields_to_update)
+            record_portal_security_event(
+                request.portal_company,
+                PortalSecurityEvent.EventType.ROLE_CHANGE,
+                actor_contact=request.portal_contact,
+                target_contact=target,
+                target_name=target.name,
+                ip_address=request.META.get("REMOTE_ADDR"),
+                user_agent=request.META.get("HTTP_USER_AGENT", ""),
+                details=f"Обновлены права: can_act={target.can_act}, is_admin={target.is_admin}",
+            )
 
         return Response(TeamMemberSerializer(target).data, status=status.HTTP_200_OK)
 
@@ -1560,5 +1643,16 @@ class TeamMemberDeactivateView(BasePortalView):
 
         PortalSession.objects.filter(contact=target).delete()
         MagicLinkToken.objects.filter(contact=target).delete()
+
+        record_portal_security_event(
+            request.portal_company,
+            PortalSecurityEvent.EventType.MEMBER_DEACTIVATED,
+            actor_contact=request.portal_contact,
+            target_contact=target,
+            target_name=target.name,
+            ip_address=request.META.get("REMOTE_ADDR"),
+            user_agent=request.META.get("HTTP_USER_AGENT", ""),
+            details=f"Сотрудник {target.name} отключен",
+        )
 
         return Response({"ok": True, "deactivated_contact_id": target.pk}, status=status.HTTP_200_OK)

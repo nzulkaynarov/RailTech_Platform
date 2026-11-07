@@ -2001,6 +2001,28 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
+  /company/security-log:
+    get:
+      tags: [company]
+      operationId: getCompanySecurityLog
+      summary: Журнал событий безопасности компании
+      description: |
+        Доступен только администраторам компании (`is_admin: true`). Возвращает историю ключевых событий безопасности
+        (входы, смены прав, отзыв сессий, деактивации, изменения реквизитов) согласно ADR-0022 и J2-audit.
+      responses:
+        '200':
+          description: Журнал событий
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanySecurityLogResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
   /company/partner-application:
     get:
       tags: [company]
@@ -4386,6 +4408,82 @@ components:
           type: [string, 'null']
         language:
           $ref: '#/components/schemas/Language'
+        relationship_status:
+          $ref: '#/components/schemas/PortalRelationshipStatus'
+        relationships:
+          type: array
+          description: Действующие и архивные отношения компании с нами (роль, статус, договор)
+          items:
+            $ref: '#/components/schemas/PortalRelationship'
+
+    PortalRelationshipStatus:
+      type: string
+      enum: [invited, active, suspended, terminated]
+      description: |
+        Статус отношений контрагента (ADR-0022, Counterparty Journey J7):
+        - invited: компания приглашена, ожидает первого входа;
+        - active: отношения активны, полный доступ согласно включённым модулям;
+        - suspended: отношения временно приостановлены (доступ только на чтение/архив);
+        - terminated: отношения завершены (доступ только на чтение к архиву).
+
+    PortalRelationship:
+      type: object
+      required: [role, status]
+      properties:
+        role:
+          $ref: '#/components/schemas/PortalRole'
+        kind:
+          type: [string, 'null']
+        status:
+          $ref: '#/components/schemas/PortalRelationshipStatus'
+        contract_number:
+          type: [string, 'null']
+        contract_date:
+          type: [string, 'null']
+          format: date
+        activated_at:
+          type: [string, 'null']
+          format: date-time
+        suspended_at:
+          type: [string, 'null']
+          format: date-time
+
+    CompanySecurityLogResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CompanySecurityLogItem'
+
+    CompanySecurityLogItem:
+      type: object
+      required: [id, event_type, created_at, actor_name]
+      properties:
+        id:
+          type: string
+        event_type:
+          type: string
+          enum: [login, logout, revoke_sessions, role_change, member_deactivated, member_invited, bank_details_changed]
+        created_at:
+          type: string
+          format: date-time
+        actor_name:
+          type: string
+          description: Имя сотрудника, выполнившего действие
+        actor_email:
+          type: [string, 'null']
+        ip_address:
+          type: [string, 'null']
+        user_agent:
+          type: [string, 'null']
+        target_name:
+          type: [string, 'null']
+          description: Имя целевого сотрудника при операциях с командой
+        details:
+          type: [string, 'null']
+          description: Дополнительные детали события
 
     CompanyUpdate:
       type: object

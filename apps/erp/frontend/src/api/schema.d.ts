@@ -961,6 +961,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/portal/v1/company/security-log": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description GET /company/security-log — Журнал событий безопасности (J2-audit, только администратор компании). */
+        get: operations["api_portal_v1_company_security_log_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/company/security-log/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description GET /company/security-log — Журнал событий безопасности (J2-audit, только администратор компании). */
+        get: operations["api_portal_v1_company_security_log_retrieve_2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/portal/v1/contracts": {
         parameters: {
             query?: never;
@@ -21011,6 +21045,42 @@ export interface operations {
         };
     };
     api_portal_v1_company_partner_application_contract_pdf_retrieve_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_company_security_log_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_company_security_log_retrieve_2: {
         parameters: {
             query?: never;
             header?: never;

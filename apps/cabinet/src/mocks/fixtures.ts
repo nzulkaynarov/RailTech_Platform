@@ -68,6 +68,18 @@ export const company: Schemas['Company'] = {
   legal_address: 'г. Ташкент, Мирзо-Улугбекский р-н, ул. Буюк Ипак Йули, 12',
   bank_details: 'р/с 20208000900123456001, АКБ «Узпромстройбанк», МФО 00440',
   language: 'ru',
+  relationship_status: 'active',
+  relationships: [
+    {
+      role: 'client',
+      kind: null,
+      status: 'active',
+      contract_number: null,
+      contract_date: null,
+      activated_at: null,
+      suspended_at: null,
+    },
+  ],
 };
 
 /** Основной контакт с правом действовать (`can_act=true`). */

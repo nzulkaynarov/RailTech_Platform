@@ -181,6 +181,10 @@
       "other": "Other"
     }
   },
+  "roles": {
+    "client": "Client",
+    "partner": "Partner"
+  },
   "languages": {
     "label": "Language",
     "ru": "Русский",
@@ -722,6 +726,19 @@
       "emptyKindText": "Choose another kind or show all documents.",
       "showAll": "Show all",
       "filter": "Document kind",
+      "dateFrom": "From date",
+      "dateTo": "To date",
+      "exportRegistry": "Export registry",
+      "exportSuccess": "Document registry successfully exported",
+      "csv": {
+        "number": "No.",
+        "kind": "Type",
+        "title": "Document title",
+        "docNumber": "Document number",
+        "date": "Date",
+        "deal": "Deal",
+        "size": "Size (bytes)"
+      },
       "searchPlaceholder": "Number, title, project…",
       "noMatchTitle": "Nothing found",
       "noMatchText": "No documents match “{{query}}”. Check the number or title, or clear the search.",
@@ -811,7 +828,31 @@
         "bankAdminOnlyBadge": "Admin only",
         "bankDetailsAdminOnly": "Editing bank details is restricted to company administrators.",
         "bankDetailsAdminNotice": "When updated, all company administrators will receive an immediate security alert.",
+        "relationshipStatus": "Relationship status",
         "language": "Language of documents and e-mails"
+      },
+      "relationship": {
+        "active": "Active relationship",
+        "suspended": "Suspended",
+        "terminated": "Terminated",
+        "invited": "Invited",
+        "suspendedAlert": "Relationship is temporarily suspended. Access is granted in archive read-only mode.",
+        "terminatedAlert": "Relationship has been terminated. The document archive is available for viewing and export."
+      },
+      "securityLog": {
+        "title": "Company Security Log",
+        "description": "History of logins, employee permission changes, and security settings",
+        "empty": "No security events recorded yet",
+        "error": "Failed to load security log",
+        "events": {
+          "login": "Login",
+          "logout": "Logout",
+          "revoke_sessions": "Revoke sessions",
+          "role_change": "Role change",
+          "member_deactivated": "Deactivation",
+          "member_invited": "Invite",
+          "bank_details_changed": "Bank details changed"
+        }
       },
       "closeEdit": "Close",
       "partner": {

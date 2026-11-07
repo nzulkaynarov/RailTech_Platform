@@ -946,6 +946,28 @@ export const handlers = [
 
   // --- компания и команда -----------------------------------------------------------------------
   http.get(`${API}/company`, withSession(({ db }) => json(db.company))),
+  http.get(
+    `${API}/company/security-log`,
+    withSession(({ session }) => {
+      const currentContact = contactFor(session.role);
+      if (!currentContact.is_admin) return error(403, 'ADMIN_REQUIRED');
+      return json({
+        items: [
+          {
+            id: 'sec-1',
+            event_type: 'login',
+            created_at: new Date(Date.now() - 3600_000).toISOString(),
+            actor_name: currentContact.name,
+            actor_email: currentContact.email,
+            ip_address: '192.168.1.10',
+            user_agent: 'Mozilla/5.0 Chrome/120',
+            target_name: null,
+            details: 'Вход в систему',
+          },
+        ],
+      });
+    }),
+  ),
   http.put(
     `${API}/company`,
     withSession(

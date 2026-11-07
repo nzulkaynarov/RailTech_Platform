@@ -4,9 +4,9 @@ import re
 from decimal import Decimal
 from typing import Optional
 
-from parties.models import Company, Contact
+from parties.models import Company, CompanyRelationship, Contact, RelationshipStatus
 from portal import projections
-from portal.models import PortalSession
+from portal.models import PortalSecurityEvent, PortalSession
 from portal.services import act_scan
 from portal.services import documents as portal_documents
 from rest_framework import serializers
@@ -64,6 +64,8 @@ class CompanySerializer(serializers.ModelSerializer):
     bank_details = serializers.CharField(source="formatted_bank_details", read_only=True)
     country = serializers.SerializerMethodField()
     registration_number = serializers.CharField(read_only=True)
+    relationship_status = serializers.SerializerMethodField()
+    relationships = serializers.SerializerMethodField()
 
     class Meta:
         model = Company
@@ -76,6 +78,8 @@ class CompanySerializer(serializers.ModelSerializer):
             "legal_address",
             "bank_details",
             "language",
+            "relationship_status",
+            "relationships",
         ]
 
     def get_country(self, company):
@@ -93,6 +97,69 @@ class CompanySerializer(serializers.ModelSerializer):
             "code": country.code,
             "name": country.name,
         }
+
+    def get_relationship_status(self, company):
+        if isinstance(company, dict):
+            status = company.get("relationship_status")
+            if status:
+                return status
+            rels = company.get("relationships") or []
+            if rels and isinstance(rels[0], dict) and "status" in rels[0]:
+                return rels[0]["status"]
+            return RelationshipStatus.ACTIVE.value
+        rel = CompanyRelationship.objects.filter(company=company).order_by("-updated_at").first()
+        if rel:
+            return rel.status
+        if not getattr(company, "is_active", True):
+            return RelationshipStatus.TERMINATED.value
+        return RelationshipStatus.ACTIVE.value
+
+    def get_relationships(self, company):
+        if isinstance(company, dict):
+            rels = company.get("relationships")
+            if rels is not None:
+                return rels
+            return [
+                {
+                    "role": "client",
+                    "kind": None,
+                    "status": company.get("relationship_status", RelationshipStatus.ACTIVE.value),
+                    "contract_number": None,
+                    "contract_date": None,
+                    "activated_at": None,
+                    "suspended_at": None,
+                }
+            ]
+        rels = list(CompanyRelationship.objects.filter(company=company).order_by("role"))
+        if rels:
+            return [
+                {
+                    "role": r.role,
+                    "kind": r.kind or None,
+                    "status": r.status,
+                    "contract_number": r.contract_number or None,
+                    "contract_date": r.contract_date.isoformat() if r.contract_date else None,
+                    "activated_at": r.activated_at.isoformat() if r.activated_at else None,
+                    "suspended_at": r.suspended_at.isoformat() if r.suspended_at else None,
+                }
+                for r in rels
+            ]
+        status = (
+            RelationshipStatus.ACTIVE.value
+            if getattr(company, "is_active", True)
+            else RelationshipStatus.TERMINATED.value
+        )
+        return [
+            {
+                "role": "client",
+                "kind": None,
+                "status": status,
+                "contract_number": None,
+                "contract_date": None,
+                "activated_at": None,
+                "suspended_at": None,
+            }
+        ]
 
 
 class CompanyUpdateSerializer(serializers.Serializer):
@@ -155,6 +222,22 @@ class PortalSessionItemSerializer(serializers.ModelSerializer):
     def get_is_current(self, obj) -> bool:
         current_session = self.context.get("current_session")
         return bool(current_session and obj.pk == current_session.pk)
+
+
+class PortalSecurityEventSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PortalSecurityEvent
+        fields = [
+            "id",
+            "event_type",
+            "created_at",
+            "actor_name",
+            "actor_email",
+            "ip_address",
+            "user_agent",
+            "target_name",
+            "details",
+        ]
 
 
 class MagicLinkTokenSerializer(serializers.Serializer):

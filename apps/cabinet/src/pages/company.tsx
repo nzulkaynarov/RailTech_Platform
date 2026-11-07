@@ -1,7 +1,7 @@
 import { useEffect, useId, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Building2, CheckCircle2, FileText, Handshake, Pencil, Shield, UserMinus, UserPlus, Users, X } from 'lucide-react';
+import { AlertTriangle, Building2, CheckCircle2, FileText, Handshake, Pencil, Shield, UserMinus, UserPlus, Users, X } from 'lucide-react';
 import { toast } from '@/lib/toast';
 
 import { apiErrorKey } from '@/api/errors';
@@ -11,6 +11,7 @@ import {
   useAgreeCompanyPartnerContract,
   useCompany,
   useCompanyPartnerApplication,
+  useCompanySecurityLog,
   useDeactivateTeamMember,
   useInviteTeamMember,
   useSubmitCompanyPartnerApplication,
@@ -88,12 +89,59 @@ export function CompanyPage() {
         <CompanyForm company={company.data} onDone={stopEditing} onDirtyChange={setDirty} />
       ) : (
         <div className="flex flex-col gap-4">
+          {company.data.relationship_status === 'suspended' && (
+            <Alert variant="destructive" className="border-warning/50 bg-warning/10 text-warning-foreground">
+              <AlertTriangle className="size-4 text-warning" aria-hidden="true" />
+              <AlertDescription>
+                {t(
+                  'pages.company.relationship.suspendedAlert',
+                  'Отношения временно приостановлены. Доступ открыт в режиме чтения архива.',
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+          {company.data.relationship_status === 'terminated' && (
+            <Alert variant="destructive" className="border-destructive/50 bg-destructive/10">
+              <AlertTriangle className="size-4 text-destructive" aria-hidden="true" />
+              <AlertDescription>
+                {t(
+                  'pages.company.relationship.terminatedAlert',
+                  'Отношения завершены. Архив документов доступен для просмотра и выгрузки.',
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
           <Card>
             <CardContent>
               <DetailList
                 className="sm:grid-cols-1"
                 items={[
                   { label: t('pages.company.fields.name'), value: company.data.name },
+                  {
+                    label: t('pages.company.fields.relationshipStatus', 'Статус отношений'),
+                    value: (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <ToneBadge
+                          tone={
+                            company.data.relationship_status === 'active'
+                              ? 'success'
+                              : company.data.relationship_status === 'suspended'
+                              ? 'warning'
+                              : company.data.relationship_status === 'terminated'
+                              ? 'neutral'
+                              : 'info'
+                          }
+                        >
+                          {t(`pages.company.relationship.${company.data.relationship_status || 'active'}`)}
+                        </ToneBadge>
+                        {company.data.relationships?.map((rel, idx) => (
+                          <span key={idx} className="text-xs text-muted-foreground">
+                            ({t(`roles.${rel.role}`)}{rel.contract_number ? ` · № ${rel.contract_number}` : ''})
+                          </span>
+                        ))}
+                      </div>
+                    ),
+                  },
                   ...(company.data.country
                     ? [{ label: t('pages.company.fields.country'), value: company.data.country.name }]
                     : []),
@@ -134,6 +182,7 @@ export function CompanyPage() {
               {t('pages.company.toTeam')}
             </Link>
           </Button>
+          {isAdmin && <SecurityLogCard />}
         </div>
       )}
       <ActionDialog
@@ -364,6 +413,80 @@ function LanguageChoice({
         ))}
       </div>
     </div>
+  );
+}
+
+function SecurityLogCard() {
+  const { t } = useTranslation();
+  const securityLog = useCompanySecurityLog();
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Shield className="size-4 text-primary" aria-hidden="true" />
+          {t('pages.company.securityLog.title', 'Журнал безопасности компании')}
+        </CardTitle>
+        <CardDescription>
+          {t(
+            'pages.company.securityLog.description',
+            'История входов, изменений прав сотрудников и настроек безопасности',
+          )}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {securityLog.isPending ? (
+          <ListSkeleton />
+        ) : securityLog.isError ? (
+          <p className="text-sm text-destructive">
+            {t('pages.company.securityLog.error', 'Не удалось загрузить журнал безопасности')}
+          </p>
+        ) : !securityLog.data?.items?.length ? (
+          <p className="text-sm text-muted-foreground">
+            {t('pages.company.securityLog.empty', 'Событий безопасности пока не зафиксировано')}
+          </p>
+        ) : (
+          <ul
+            className="flex flex-col divide-y divide-border text-sm"
+            aria-label={t('pages.company.securityLog.title', 'Журнал безопасности компании')}
+          >
+            {securityLog.data.items.map((event) => (
+              <li key={event.id} className="flex flex-col gap-1 py-3 first:pt-0 last:pb-0">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <ToneBadge
+                      tone={
+                        event.event_type === 'login'
+                          ? 'info'
+                          : event.event_type === 'bank_details_changed' || event.event_type === 'member_deactivated'
+                          ? 'warning'
+                          : 'neutral'
+                      }
+                      className="text-xs"
+                    >
+                      {String(t(`pages.company.securityLog.events.${event.event_type}`, { defaultValue: event.event_type }))}
+                    </ToneBadge>
+                    <span className="font-medium text-foreground">{event.actor_name}</span>
+                    {event.target_name && (
+                      <span className="text-xs text-muted-foreground">→ {event.target_name}</span>
+                    )}
+                  </div>
+                  <time className="text-xs text-muted-foreground" dateTime={event.created_at}>
+                    {formatDateTime(event.created_at)}
+                  </time>
+                </div>
+                {event.details && <p className="text-xs text-muted-foreground">{event.details}</p>}
+                {(event.ip_address || event.user_agent) && (
+                  <p className="text-xs text-muted-foreground/80">
+                    {[event.ip_address, event.user_agent].filter(Boolean).join(' · ')}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
