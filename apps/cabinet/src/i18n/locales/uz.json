@@ -8,6 +8,15 @@
     "sideNav": "Kabinet boʻlimlari",
     "breadcrumbs": "Sahifaga yoʻl"
   },
+  "help": {
+    "trigger": "Yordam va koʻrsatmalar",
+    "drawerTitle": "Kabinet bilimlar bazasi",
+    "searchPlaceholder": "Maqolalar va yoʻriqnomalar boʻyicha qidiruv…",
+    "relevantSection": "Ushbu boʻlim uchun maslahatlar",
+    "noResults": "Soʻrovingiz boʻyicha hech narsa topilmadi.",
+    "footerHint": "Savolingizga javob topmadingizmi?",
+    "contactManager": "Shaxsiy menejerga yozish"
+  },
   "nav": {
     "requests": "Soʻrovlar",
     "quotes": "Takliflar",
@@ -372,7 +381,42 @@
       "sendTest": "Tekshiruv xabarini yuborish",
       "sendingTest": "Yuborilmoqda…",
       "testSent": "Xabar yuborildi — Telegramni tekshiring",
-      "testRetry": "{{seconds}} soniyadan keyin qayta urinish mumkin"
+      "testRetry": "{{seconds}} soniyadan keyin qayta urinish mumkin",
+      "matrixTitle": "Bildirishnoma kanallari",
+      "matrixDesc": "Qaysi hodisalar haqida qayerda xabar olishni tanlang",
+      "colGroup": "Hodisalar toifasi",
+      "channelInApp": "Kabinetda",
+      "channelEmail": "E-mail",
+      "channelTelegram": "Telegram",
+      "telegramNotConnected": "Telegram ulanmagan. Xabarlarni messenjerda olish uchun yuqorida botni ulang.",
+      "alwaysOn": "Majburiy",
+      "saved": "Bildirishnoma sozlamalari yangilandi",
+      "groups": {
+        "documents": {
+          "title": "Hujjatlar",
+          "desc": "Yangi shartnomalar, dalolatnomalar va tijorat takliflari"
+        },
+        "money": {
+          "title": "Moliya",
+          "desc": "Chiqarilgan hisob-fakturalar va to‘lov tasdiqlari"
+        },
+        "deliveries": {
+          "title": "Yetkazib berish",
+          "desc": "Yuk jo‘natish holati va omborga kelib tushishi"
+        },
+        "messages": {
+          "title": "Xabarlar",
+          "desc": "Menejer javoblari va chatdagi yangi xabarlar"
+        },
+        "partner_products": {
+          "title": "Mening mahsulotlarim",
+          "desc": "Tovar kartochkalarining tekshiruv va nashr holatlari"
+        },
+        "security": {
+          "title": "Xavfsizlik",
+          "desc": "Yangi qurilmadan kirish, seanslarni yakunlash, bank rekvizitlarining o‘zgarishi"
+        }
+      }
     }
   },
   "pages": {
@@ -754,6 +798,9 @@
         "registrationNumber": "Roʻyxatdan oʻtish raqami / Tax ID",
         "legalAddress": "Yuridik manzil",
         "bankDetails": "Bank rekvizitlari",
+        "bankAdminOnlyBadge": "Faqat administrator",
+        "bankDetailsAdminOnly": "Bank rekvizitlarini faqat kompaniya administratori o‘zgartirishi mumkin.",
+        "bankDetailsAdminNotice": "Rekvizitlar o‘zgarganda kompaniyaning barcha administratorlariga xavfsizlik ogohlantirishi yuboriladi.",
         "language": "Hujjatlar va xatlar tili"
       },
       "closeEdit": "Yopish",
@@ -1328,7 +1375,8 @@
       "manager_replied": "Menejer sizga chatda javob berdi",
       "partner_card_returned": "«{{number}}» kartochkasi qayta ishlashga qaytarildi",
       "fallback": "Yangi bildirishnoma {{number}}",
-      "partner_card_published": "«{{number}}» kartochkasi katalogda eʼlon qilindi"
+      "partner_card_published": "«{{number}}» kartochkasi katalogda eʼlon qilindi",
+      "security_bank_requisites_changed": "Xodim {{actor}} kompaniyaning bank rekvizitlarini o‘zgartirdi"
     }
   },
   "verify": {

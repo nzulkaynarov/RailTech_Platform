@@ -89,6 +89,12 @@ class Contact(models.Model):
         verbose_name=_("Администратор компании"),
         help_text=_("Управляет командой компании и правами доступа в кабинете (J2, ADR-0022)"),
     )
+    notification_settings = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name=_("Настройки каналов уведомлений"),
+        help_text=_("Матрица группа событий -> каналы {email: bool, telegram: bool} (J3, ADR-0023)"),
+    )
     invited_at = models.DateTimeField(
         null=True,
         blank=True,

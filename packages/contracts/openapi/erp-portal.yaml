@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Portal API (Cabinet → ERP)
-  version: 0.7.0
+  version: 0.8.0
   summary: Пространство `/api/portal/v1/` — вызывает Cabinet SPA от имени клиента.
   description: |
     Контракт по `docs/architecture/CONTRACTS.md` §4 и ADR-0004 (Cabinet без бэкенда). Версия 0 (M0-INF-02):
@@ -650,6 +650,59 @@ paths:
           $ref: '#/components/responses/UnsupportedMediaType'
         '429':
           $ref: '#/components/responses/TooManyRequests'
+
+  /notifications/settings:
+    get:
+      tags: [notifications]
+      operationId: getNotificationSettings
+      summary: Настройки каналов уведомлений контакта
+      description: |
+        Матрица настроек каналов (in_app, email, telegram) по группам событий контакта сессии (J3, ADR-0023).
+        Обязательные группы (например, security) всегда включены. Эндпоинт открыт любой сессии (модуль profile).
+      responses:
+        '200':
+          description: Настройки уведомлений контакта
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationSettingsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    patch:
+      tags: [notifications]
+      operationId: updateNotificationSettings
+      summary: Обновить настройки каналов уведомлений контакта
+      description: |
+        Обновление каналов (email, telegram) по группам событий (J3, ADR-0023).
+        Канал in_app (колокольчик) всегда активен и не отключается. Системные события (security) не могут быть отключены.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationSettingsUpdate'
+      responses:
+        '200':
+          description: Обновлённые настройки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationSettingsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+
   /requests:
     get:
       tags: [requests]
@@ -3413,11 +3466,12 @@ components:
         - manager_replied
         - partner_card_returned
         - partner_card_published
+        - bank_requisites_changed
 
     NotificationGroup:
       type: string
       description: Группа событий — основа настройки «группа × канал» в профиле контакта (J3)
-      enum: [documents, money, deliveries, messages, partner_products]
+      enum: [documents, money, deliveries, messages, partner_products, security]
 
     NotificationObjectType:
       type: string
@@ -3516,6 +3570,83 @@ components:
         unread:
           type: integer
           minimum: 0
+      additionalProperties: false
+
+    NotificationChannelSettings:
+      type: object
+      description: Состояние каналов доставки для группы событий (J3, ADR-0023)
+      required: [in_app, email, telegram, required]
+      properties:
+        in_app:
+          type: boolean
+          description: Колокольчик в кабинете (всегда включен)
+        email:
+          type: boolean
+          description: Уведомления на email контакта
+        telegram:
+          type: boolean
+          description: Уведомления в Telegram бот
+        required:
+          type: boolean
+          description: Обязательная группа (нельзя отключить email или in_app)
+      additionalProperties: false
+
+    NotificationGroupSettingsMap:
+      type: object
+      required: [documents, money, deliveries, messages, partner_products, security]
+      properties:
+        documents:
+          $ref: '#/components/schemas/NotificationChannelSettings'
+        money:
+          $ref: '#/components/schemas/NotificationChannelSettings'
+        deliveries:
+          $ref: '#/components/schemas/NotificationChannelSettings'
+        messages:
+          $ref: '#/components/schemas/NotificationChannelSettings'
+        partner_products:
+          $ref: '#/components/schemas/NotificationChannelSettings'
+        security:
+          $ref: '#/components/schemas/NotificationChannelSettings'
+      additionalProperties: false
+
+    NotificationSettingsResponse:
+      type: object
+      required: [telegram_connected, groups]
+      properties:
+        telegram_connected:
+          type: boolean
+          description: Привязан ли аккаунт Telegram у контакта (NOTIFY-1)
+        groups:
+          $ref: '#/components/schemas/NotificationGroupSettingsMap'
+      additionalProperties: false
+
+    NotificationChannelSettingsUpdate:
+      type: object
+      properties:
+        email:
+          type: boolean
+        telegram:
+          type: boolean
+      additionalProperties: false
+
+    NotificationSettingsUpdate:
+      type: object
+      required: [groups]
+      properties:
+        groups:
+          type: object
+          properties:
+            documents:
+              $ref: '#/components/schemas/NotificationChannelSettingsUpdate'
+            money:
+              $ref: '#/components/schemas/NotificationChannelSettingsUpdate'
+            deliveries:
+              $ref: '#/components/schemas/NotificationChannelSettingsUpdate'
+            messages:
+              $ref: '#/components/schemas/NotificationChannelSettingsUpdate'
+            partner_products:
+              $ref: '#/components/schemas/NotificationChannelSettingsUpdate'
+          additionalProperties: false
       additionalProperties: false
 
     RequestStatus:

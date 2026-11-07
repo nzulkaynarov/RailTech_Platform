@@ -290,7 +290,7 @@ ANY_ROLE_PATHS = {
 #: NOTIFY-1: Telegram — личная настройка контакта (модуль `profile` есть у любой сессии).
 ANY_ROLE_PATHS |= {"/me/telegram", "/me/telegram/test", "/me/telegram-link"}
 #: Колокольчик (NOTIFY-2) — модуль `profile`, он есть у любой сессии: лента фильтруется по модулям, а не закрывается
-ANY_ROLE_PATHS |= {"/notifications", "/notifications/read"}
+ANY_ROLE_PATHS |= {"/notifications", "/notifications/read", "/notifications/settings"}
 #: Публичная проверка подлинности документов (ADR-0024 §6, SIGN-VERIFY-1): доступна без сессии и модулей.
 ANY_ROLE_PATHS |= {"/verify/{code}"}
 #: Управление сессиями контакта (J2): личная безопасность контакта, доступна любой роли.

@@ -1679,6 +1679,58 @@
                 }
             }
         },
+        "/api/portal/v1/notifications/settings": {
+            "get": {
+                "operationId": "api_portal_v1_notifications_settings_retrieve",
+                "description": "GET/PATCH /notifications/settings — Настройки каналов уведомлений контакта (J3, ADR-0023).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "api_portal_v1_notifications_settings_partial_update",
+                "description": "GET/PATCH /notifications/settings — Настройки каналов уведомлений контакта (J3, ADR-0023).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/notifications/settings/": {
+            "get": {
+                "operationId": "api_portal_v1_notifications_settings_retrieve_2",
+                "description": "GET/PATCH /notifications/settings — Настройки каналов уведомлений контакта (J3, ADR-0023).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "api_portal_v1_notifications_settings_partial_update_2",
+                "description": "GET/PATCH /notifications/settings — Настройки каналов уведомлений контакта (J3, ADR-0023).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/portal/v1/partner/offers/confirm": {
             "post": {
                 "operationId": "api_portal_v1_partner_offers_confirm_create",

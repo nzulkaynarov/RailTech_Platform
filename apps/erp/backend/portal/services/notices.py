@@ -78,10 +78,11 @@ KINDS: dict[str, NoticeKind] = {
         NoticeKind(
             "partner_card_published", "partner_products", "partner_product", "published", "my_products", True, False
         ),
+        NoticeKind("bank_requisites_changed", "security", "chat", "status_changed", "profile", True, False),
     )
 }
 
-GROUPS = ("documents", "money", "deliveries", "messages", "partner_products")
+GROUPS = ("documents", "money", "deliveries", "messages", "partner_products", "security")
 
 
 def visible_kinds(modules: Iterable[str]) -> list[str]:
@@ -132,10 +133,17 @@ def choose_channel(
     """Внешний канал уведомления для контакта — один на событие (ADR-0023 п. 2) — и причина, если письма нет."""
     if not kind.important:
         return NoticeChannel.CABINET, ""
-    if kind.bot_sends and bot_reaches and contact.telegram_user_id:
+
+    pref = (contact.notification_settings or {}).get(kind.group, {}) if kind.group != "security" else {}
+    email_enabled = pref.get("email", True)
+    telegram_enabled = pref.get("telegram", True)
+
+    if kind.bot_sends and bot_reaches and contact.telegram_user_id and telegram_enabled:
         return NoticeChannel.TELEGRAM, ""
     if _normalized(contact.email) in already_emailed:
         return NoticeChannel.SOURCE, ""
+    if not email_enabled:
+        return NoticeChannel.CABINET, "disabled_by_contact"
     reason = email_allowed(contact, document_contact_ids)
     if reason:
         return NoticeChannel.CABINET, reason

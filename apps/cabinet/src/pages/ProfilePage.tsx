@@ -11,6 +11,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { ToneBadge } from '@/components/StatusBadge';
 import type { ConnectTelegramState } from '@/onboarding/telegramStep';
 import { TelegramNotifications } from '@/components/TelegramNotifications';
+import { NotificationSettingsCard } from '@/components/NotificationSettingsCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { formatDateTime } from '@/lib/format';
@@ -111,6 +112,7 @@ export function ProfilePage() {
           </CardContent>
         </Card>
         <TelegramNotifications autoStart={autoStart} />
+        <NotificationSettingsCard />
         <SessionsCard />
       </div>
     </>

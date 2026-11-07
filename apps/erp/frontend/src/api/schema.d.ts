@@ -1587,6 +1587,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/portal/v1/notifications/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description GET/PATCH /notifications/settings — Настройки каналов уведомлений контакта (J3, ADR-0023). */
+        get: operations["api_portal_v1_notifications_settings_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description GET/PATCH /notifications/settings — Настройки каналов уведомлений контакта (J3, ADR-0023). */
+        patch: operations["api_portal_v1_notifications_settings_partial_update"];
+        trace?: never;
+    };
+    "/api/portal/v1/notifications/settings/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description GET/PATCH /notifications/settings — Настройки каналов уведомлений контакта (J3, ADR-0023). */
+        get: operations["api_portal_v1_notifications_settings_retrieve_2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description GET/PATCH /notifications/settings — Настройки каналов уведомлений контакта (J3, ADR-0023). */
+        patch: operations["api_portal_v1_notifications_settings_partial_update_2"];
+        trace?: never;
+    };
     "/api/portal/v1/partner/offers/confirm": {
         parameters: {
             query?: never;
@@ -21681,6 +21717,78 @@ export interface operations {
         };
     };
     api_portal_v1_notifications_read_create_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_notifications_settings_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_notifications_settings_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_notifications_settings_retrieve_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_notifications_settings_partial_update_2: {
         parameters: {
             query?: never;
             header?: never;

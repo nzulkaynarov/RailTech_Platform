@@ -8,6 +8,15 @@
     "sideNav": "Cabinet sections",
     "breadcrumbs": "Page path"
   },
+  "help": {
+    "trigger": "Help & tips",
+    "drawerTitle": "Cabinet Knowledge Base",
+    "searchPlaceholder": "Search articles and guides…",
+    "relevantSection": "Tips for this section",
+    "noResults": "No results found for your query.",
+    "footerHint": "Didn't find what you were looking for?",
+    "contactManager": "Message account manager"
+  },
   "nav": {
     "requests": "Requests",
     "quotes": "Quotes",
@@ -372,7 +381,42 @@
       "sendTest": "Send a test message",
       "sendingTest": "Sending…",
       "testSent": "Message sent — check Telegram",
-      "testRetry": "You can retry in {{seconds}} s"
+      "testRetry": "You can retry in {{seconds}} s",
+      "matrixTitle": "Notification Channels",
+      "matrixDesc": "Choose events and channels where you wish to receive alerts",
+      "colGroup": "Event Category",
+      "channelInApp": "In Cabinet",
+      "channelEmail": "E-mail",
+      "channelTelegram": "Telegram",
+      "telegramNotConnected": "Telegram is not connected. Connect the bot above to receive instant messenger notifications.",
+      "alwaysOn": "Mandatory",
+      "saved": "Notification settings updated",
+      "groups": {
+        "documents": {
+          "title": "Documents",
+          "desc": "New contracts, acts, and commercial quotes"
+        },
+        "money": {
+          "title": "Finance",
+          "desc": "Issued invoices, payment reminders, and confirmations"
+        },
+        "deliveries": {
+          "title": "Deliveries",
+          "desc": "Shipment status updates, tracking numbers, and warehouse arrival"
+        },
+        "messages": {
+          "title": "Messages",
+          "desc": "Manager replies and new chat messages"
+        },
+        "partner_products": {
+          "title": "My Products",
+          "desc": "Product card review and catalog publishing statuses"
+        },
+        "security": {
+          "title": "Security",
+          "desc": "New device logins, session revocations, and banking detail changes"
+        }
+      }
     }
   },
   "pages": {
@@ -754,6 +798,9 @@
         "registrationNumber": "Registration Number / Tax ID",
         "legalAddress": "Legal address",
         "bankDetails": "Bank details",
+        "bankAdminOnlyBadge": "Admin only",
+        "bankDetailsAdminOnly": "Editing bank details is restricted to company administrators.",
+        "bankDetailsAdminNotice": "When updated, all company administrators will receive an immediate security alert.",
         "language": "Language of documents and e-mails"
       },
       "closeEdit": "Close",
@@ -1328,7 +1375,8 @@
       "manager_replied": "Your manager replied in the chat",
       "partner_card_returned": "Product card «{{number}}» was returned for revision",
       "fallback": "New notification {{number}}",
-      "partner_card_published": "Product card «{{number}}» has been published"
+      "partner_card_published": "Product card «{{number}}» has been published",
+      "security_bank_requisites_changed": "User {{actor}} changed company bank details"
     }
   },
   "verify": {

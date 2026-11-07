@@ -109,3 +109,91 @@ class NotificationReadView(BasePortalView):
             all=bool(data.get("all")),
         )
         return Response({"unread": unread})
+
+
+DEFAULT_NOTIFICATION_SETTINGS = {
+    "documents": {"in_app": True, "email": True, "telegram": True, "required": False},
+    "money": {"in_app": True, "email": True, "telegram": True, "required": False},
+    "deliveries": {"in_app": True, "email": True, "telegram": True, "required": False},
+    "messages": {"in_app": True, "email": True, "telegram": True, "required": False},
+    "partner_products": {"in_app": True, "email": True, "telegram": True, "required": False},
+    "security": {"in_app": True, "email": True, "telegram": True, "required": True},
+}
+
+
+def get_contact_notification_settings(contact) -> dict:
+    stored = contact.notification_settings or {}
+    result = {}
+    for group, defaults in DEFAULT_NOTIFICATION_SETTINGS.items():
+        if group == "security":
+            result["security"] = {"in_app": True, "email": True, "telegram": True, "required": True}
+            continue
+        group_stored = stored.get(group, {})
+        result[group] = {
+            "in_app": True,
+            "email": bool(group_stored.get("email", defaults["email"])),
+            "telegram": bool(group_stored.get("telegram", defaults["telegram"])),
+            "required": False,
+        }
+    return result
+
+
+class NotificationChannelUpdateSerializer(serializers.Serializer):
+    email = serializers.BooleanField(required=False)
+    telegram = serializers.BooleanField(required=False)
+
+
+class NotificationSettingsUpdateSerializer(serializers.Serializer):
+    groups = serializers.DictField(child=NotificationChannelUpdateSerializer(), required=True)
+
+    def validate_groups(self, groups):
+        valid_groups = {"documents", "money", "deliveries", "messages", "partner_products"}
+        for k in groups.keys():
+            if k not in valid_groups:
+                raise serializers.ValidationError("VALIDATION_ERROR")
+        return groups
+
+
+class NotificationSettingsView(BasePortalView):
+    """GET/PATCH /notifications/settings — Настройки каналов уведомлений контакта (J3, ADR-0023)."""
+
+    required_module = MODULE
+    permission_classes = [IsPortalAuthenticated, HasPortalModule]
+
+    def get(self, request):
+        contact = request.portal_contact
+        return Response(
+            {
+                "telegram_connected": bool(contact.telegram_user_id),
+                "groups": get_contact_notification_settings(contact),
+            }
+        )
+
+    def patch(self, request):
+        serializer = NotificationSettingsUpdateSerializer(data=request.data if isinstance(request.data, dict) else {})
+        if not serializer.is_valid():
+            raise PortalValidationError("VALIDATION_ERROR")
+
+        contact = request.portal_contact
+        updates = serializer.validated_data["groups"]
+        stored = dict(contact.notification_settings or {})
+
+        for group, channel_updates in updates.items():
+            if group == "security":
+                continue
+            group_data = dict(stored.get(group, {}))
+            if "email" in channel_updates:
+                group_data["email"] = channel_updates["email"]
+            if "telegram" in channel_updates:
+                group_data["telegram"] = channel_updates["telegram"]
+            stored[group] = group_data
+
+        contact.notification_settings = stored
+        contact.save(update_fields=["notification_settings"])
+
+        return Response(
+            {
+                "telegram_connected": bool(contact.telegram_user_id),
+                "groups": get_contact_notification_settings(contact),
+            }
+        )

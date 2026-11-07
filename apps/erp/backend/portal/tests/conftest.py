@@ -189,6 +189,7 @@ def client_contact(db, client_company):
         telegram_user_id=123456789,
         telegram_username="azamat_client",
         can_act=True,
+        is_admin=True,
         language="ru",
     )
 

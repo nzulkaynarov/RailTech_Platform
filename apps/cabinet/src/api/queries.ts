@@ -23,6 +23,7 @@ export const keys = {
   company: ['company'] as const,
   team: ['team'] as const,
   sessions: ['sessions'] as const,
+  notificationSettings: ['notifications', 'settings'] as const,
   // Не под ['me']: выход стирает всё, кроме ['me'], — статус Telegram прошлого контакта не должен пережить выход.
   telegram: ['telegram'] as const,
   /** Лента чата кабинета: первая страница, дальше опрос дописывает в тот же кэш (`hooks/useMessagesFeed.ts`). */
@@ -261,3 +262,18 @@ export const useAgreeCompanyPartnerContract = () =>
 
 export const useSubmitPartnerApplication = () =>
   useMutation({ mutationFn: portal.submitPartnerApplication });
+
+// --- настройки каналов уведомлений (Wave J3, ADR-0023) -------------------------------------------
+
+export const useNotificationSettings = () =>
+  useQuery({ queryKey: keys.notificationSettings, queryFn: portal.getNotificationSettings });
+
+export const useUpdateNotificationSettings = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: portal.updateNotificationSettings,
+    onSuccess: (data) => {
+      qc.setQueryData(keys.notificationSettings, data);
+    },
+  });
+};
