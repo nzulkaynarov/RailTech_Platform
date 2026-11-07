@@ -344,13 +344,10 @@ class PortalSessionsView(APIView):
         return portal_exception_handler
 
     def get(self, request):
-        sessions = (
-            PortalSession.objects.filter(
-                contact=request.portal_contact,
-                expires_at__gt=timezone.now(),
-            )
-            .order_by("-last_used_at", "-created_at")
-        )
+        sessions = PortalSession.objects.filter(
+            contact=request.portal_contact,
+            expires_at__gt=timezone.now(),
+        ).order_by("-last_used_at", "-created_at")
         serializer = PortalSessionItemSerializer(
             sessions,
             many=True,
@@ -1458,4 +1455,3 @@ class TeamMemberDeactivateView(BasePortalView):
         MagicLinkToken.objects.filter(contact=target).delete()
 
         return Response({"ok": True, "deactivated_contact_id": target.pk}, status=status.HTTP_200_OK)
-

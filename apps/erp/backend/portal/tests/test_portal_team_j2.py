@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
+
 import pytest
 from django.core import mail
 from django.utils import timezone
@@ -180,14 +181,14 @@ def test_deactivate_success_revokes_sessions_and_tokens(
 ):
     now = timezone.now()
     # Создаём сессию и магическую ссылку для коллеги
-    colleague_session = PortalSession.objects.create(
+    PortalSession.objects.create(
         contact=colleague_contact,
         company=client_company,
         token_hash=hash_token("colleague-token-12345"),
         auth_method="magic_link",
         expires_at=now + timedelta(days=1),
     )
-    colleague_token = MagicLinkToken.objects.create(
+    MagicLinkToken.objects.create(
         contact=colleague_contact,
         token_hash=hash_token("colleague-magic-token-12345"),
         purpose="login",

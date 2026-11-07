@@ -77,8 +77,16 @@ urlpatterns = [
     path("auth/logout/", LogoutView.as_view(), name="portal-auth-logout-slash"),
     path("auth/sessions", PortalSessionsView.as_view(), name="portal-auth-sessions"),
     path("auth/sessions/", PortalSessionsView.as_view(), name="portal-auth-sessions-slash"),
-    path("auth/sessions/revoke-others", PortalSessionsRevokeOthersView.as_view(), name="portal-auth-sessions-revoke-others"),
-    path("auth/sessions/revoke-others/", PortalSessionsRevokeOthersView.as_view(), name="portal-auth-sessions-revoke-others-slash"),
+    path(
+        "auth/sessions/revoke-others",
+        PortalSessionsRevokeOthersView.as_view(),
+        name="portal-auth-sessions-revoke-others",
+    ),
+    path(
+        "auth/sessions/revoke-others/",
+        PortalSessionsRevokeOthersView.as_view(),
+        name="portal-auth-sessions-revoke-others-slash",
+    ),
     path("auth/partner-application", PublicPartnerApplicationView.as_view(), name="portal-auth-partner-application"),
     path(
         "auth/partner-application/",

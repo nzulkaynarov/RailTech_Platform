@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from datetime import timedelta
+
 import pytest
 from django.utils import timezone
 from portal.models import PortalSession
 from portal.services.tokens import hash_token
-from portal.tests.conftest import make_portal_session
 from portal.tests.contract_support import check_response, component
 
 pytestmark = pytest.mark.django_db
@@ -76,12 +76,10 @@ def test_list_sessions_returns_only_active_sessions_with_is_current(
     assert other_items[0]["is_current"] is False
 
 
-def test_revoke_other_sessions(
-    portal_client, client_session, client_contact, client_company
-):
+def test_revoke_other_sessions(portal_client, client_session, client_contact, client_company):
     now = timezone.now()
     # Создаём 2 другие активные сессии
-    s1 = PortalSession.objects.create(
+    PortalSession.objects.create(
         contact=client_contact,
         company=client_company,
         token_hash=hash_token("token-s1-12345"),
@@ -90,7 +88,7 @@ def test_revoke_other_sessions(
         user_agent="Device 1",
         expires_at=now + timedelta(days=1),
     )
-    s2 = PortalSession.objects.create(
+    PortalSession.objects.create(
         contact=client_contact,
         company=client_company,
         token_hash=hash_token("token-s2-12345"),

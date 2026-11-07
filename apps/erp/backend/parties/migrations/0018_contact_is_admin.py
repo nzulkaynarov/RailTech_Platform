@@ -38,3 +38,4 @@ class Migration(migrations.Migration):
         ),
         migrations.RunPython(set_default_admins, reverse_code=migrations.RunPython.noop),
     ]
+
