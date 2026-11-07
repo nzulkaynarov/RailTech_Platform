@@ -9,6 +9,8 @@ import * as portal from './portal';
  */
 export const keys = {
   requests: ['requests'] as const,
+  requestsList: (params: portal.RequestsQuery = {}) =>
+    Object.keys(params).length > 0 ? (['requests', params] as const) : (['requests'] as const),
   request: (id: number) => ['requests', id] as const,
   quotes: ['quotes'] as const,
   quote: (id: number) => ['quotes', id] as const,
@@ -41,10 +43,27 @@ interface ListOptions {
   enabled?: boolean;
 }
 
-export const useRequests = ({ enabled = true }: ListOptions = {}) =>
-  useQuery({ queryKey: keys.requests, queryFn: portal.listRequests, enabled });
+export type UseRequestsOptions = ListOptions & portal.RequestsQuery;
+
+export const useRequests = ({ enabled = true, ...params }: UseRequestsOptions = {}) =>
+  useQuery({
+    queryKey: keys.requestsList(params),
+    queryFn: () => portal.listRequests(params),
+    placeholderData: keepPreviousData,
+    enabled,
+  });
 export const useRequest = (id: number) =>
   useQuery({ queryKey: keys.request(id), queryFn: () => portal.getRequest(id), enabled: Number.isFinite(id) });
+export function useReorderRequest() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => portal.reorderRequest(id),
+    onSuccess: (created) => {
+      queryClient.setQueryData(keys.request(created.id), created);
+      void queryClient.invalidateQueries({ queryKey: keys.requests });
+    },
+  });
+}
 export const useQuotes = ({ enabled = true }: ListOptions = {}) =>
   useQuery({ queryKey: keys.quotes, queryFn: portal.listQuotes, enabled });
 export const useQuote = (id: number) =>

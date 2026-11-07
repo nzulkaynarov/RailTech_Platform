@@ -44,6 +44,7 @@ from portal.views import (
     QuoteRequestCodeView,
     RequestDetailView,
     RequestListView,
+    RequestReorderView,
     TeamInviteView,
     TeamListView,
     TeamMemberDeactivateView,
@@ -118,6 +119,8 @@ urlpatterns = [
     path("requests/", RequestListView.as_view(), name="portal-requests-slash"),
     path("requests/<int:pk>", RequestDetailView.as_view(), name="portal-request-detail"),
     path("requests/<int:pk>/", RequestDetailView.as_view(), name="portal-request-detail-slash"),
+    path("requests/<int:pk>/reorder", RequestReorderView.as_view(), name="portal-request-reorder"),
+    path("requests/<int:pk>/reorder/", RequestReorderView.as_view(), name="portal-request-reorder-slash"),
     # Quotes (Коммерческие предложения)
     path("quotes", QuoteListView.as_view(), name="portal-quotes"),
     path("quotes/", QuoteListView.as_view(), name="portal-quotes-slash"),

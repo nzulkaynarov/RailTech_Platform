@@ -40,11 +40,12 @@ export interface DealStage {
 
 export interface DealProgress {
   closed: boolean;
+  outcome?: 'won' | 'cancelled' | null;
   stages: DealStage[];
 }
 
 export interface DealDocuments {
-  requests: Pick<ClientRequest, 'status'>[];
+  requests: Pick<ClientRequest, 'status' | 'outcome'>[];
   quotes: Pick<QuoteListItem, 'status'>[];
   contracts: Pick<Contract, 'status'>[];
   invoices: Pick<Invoice, 'status'>[];
@@ -93,14 +94,16 @@ export function dealProgress(docs: DealDocuments): DealProgress {
   );
 
   const closed = docs.requests.length > 0 && docs.requests.every((request) => request.status === 'closed');
+  const outcome = docs.requests.find((r) => r.outcome)?.outcome ?? null;
   if (closed) {
     return {
       closed,
+      outcome,
       stages: stages
         .map((stage): DealStage => ({ id: stage.id, state: stage.id === 'request' ? 'done' : stage.state, current: false }))
         .filter((stage) => stage.state === 'done'),
     };
   }
   const currentIndex = stages.findIndex((stage) => stage.state !== 'done');
-  return { closed, stages: stages.map((stage, index) => ({ ...stage, current: index === currentIndex })) };
+  return { closed, outcome, stages: stages.map((stage, index) => ({ ...stage, current: index === currentIndex })) };
 }

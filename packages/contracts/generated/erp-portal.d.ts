@@ -391,6 +391,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/requests/{id}/reorder": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Повторить запрос
+     * @description Создаёт новый запрос на основе существующего, копируя строки спецификации.
+     */
+    post: operations["reorderRequest"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/quotes": {
     parameters: {
       query?: never;
@@ -1846,6 +1866,11 @@ export interface components {
       id: number;
       number: string;
       status: components["schemas"]["RequestStatus"];
+      /**
+       * @description Исход закрытого запроса (B-CABFIX-2); null, пока запрос открыт
+       * @enum {string|null}
+       */
+      outcome?: "won" | "cancelled" | null;
       summary: string;
       /** @enum {string} */
       source?: "crm" | "cabinet" | "erp";
@@ -3073,7 +3098,12 @@ export interface operations {
   };
   listRequests: {
     parameters: {
-      query?: never;
+      query?: {
+        /** @description Поисковая строка по номеру, тексту или позиции запроса */
+        q?: string;
+        /** @description Фильтр по статусу запроса */
+        status?: components["schemas"]["RequestStatus"];
+      };
       header?: never;
       path?: never;
       cookie?: never;
@@ -3154,6 +3184,40 @@ export interface operations {
       401: components["responses"]["Unauthorized"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  reorderRequest: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: components["parameters"]["Id"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Новый запрос создан */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ClientRequest"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationError"];
       429: components["responses"]["TooManyRequests"];
     };
   };
@@ -3815,6 +3879,12 @@ export interface operations {
       query?: {
         kind?: components["schemas"]["DocumentKind"];
         deal_id?: number;
+        /** @description Поисковая строка по номеру, названию документа или сделки */
+        q?: string;
+        /** @description Начало периода (включительно) */
+        date_from?: string;
+        /** @description Конец периода (включительно) */
+        date_to?: string;
       };
       header?: never;
       path?: never;

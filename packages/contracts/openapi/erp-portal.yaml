@@ -708,6 +708,19 @@ paths:
       tags: [requests]
       operationId: listRequests
       summary: Мои запросы
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Поисковая строка по номеру, тексту или позиции запроса
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/RequestStatus'
+          description: Фильтр по статусу запроса
       responses:
         '200':
           description: Запросы компании
@@ -776,6 +789,33 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /requests/{id}/reorder:
+    post:
+      tags: [requests]
+      operationId: reorderRequest
+      summary: Повторить запрос
+      description: Создаёт новый запрос на основе существующего, копируя строки спецификации.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '201':
+          description: Новый запрос создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
@@ -1362,6 +1402,26 @@ paths:
           schema:
             type: integer
             format: int64
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Поисковая строка по номеру, названию документа или сделки
+        - name: date_from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          description: Начало периода (включительно)
+        - name: date_to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          description: Конец периода (включительно)
       responses:
         '200':
           description: Документы без файлов
@@ -3709,6 +3769,10 @@ components:
           type: string
         status:
           $ref: '#/components/schemas/RequestStatus'
+        outcome:
+          type: [string, 'null']
+          enum: [won, cancelled, null]
+          description: Исход закрытого запроса (B-CABFIX-2); null, пока запрос открыт
         summary:
           type: string
         source:

@@ -1172,7 +1172,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description GET /documents — Выпущенные документы компании клиента (FIX-23); `kind` и `deal_id` — фильтры. */
+        /** @description GET /documents — Выпущенные документы компании клиента (FIX-23, J6); `kind`, `deal_id`, `q`, `date_from`, `date_to` — фильтры. */
         get: operations["api_portal_v1_documents_retrieve"];
         put?: never;
         post?: never;
@@ -1189,7 +1189,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description GET /documents — Выпущенные документы компании клиента (FIX-23); `kind` и `deal_id` — фильтры. */
+        /** @description GET /documents — Выпущенные документы компании клиента (FIX-23, J6); `kind`, `deal_id`, `q`, `date_from`, `date_to` — фильтры. */
         get: operations["api_portal_v1_documents_retrieve_2"];
         put?: never;
         post?: never;
@@ -2072,10 +2072,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description GET/POST /requests — Запросы клиента. */
+        /** @description GET/POST /requests — Запросы клиента (J6: фильтры q и status). */
         get: operations["api_portal_v1_requests_retrieve"];
         put?: never;
-        /** @description GET/POST /requests — Запросы клиента. */
+        /** @description GET/POST /requests — Запросы клиента (J6: фильтры q и status). */
         post: operations["api_portal_v1_requests_create"];
         delete?: never;
         options?: never;
@@ -2090,10 +2090,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description GET/POST /requests — Запросы клиента. */
+        /** @description GET/POST /requests — Запросы клиента (J6: фильтры q и status). */
         get: operations["api_portal_v1_requests_retrieve_2"];
         put?: never;
-        /** @description GET/POST /requests — Запросы клиента. */
+        /** @description GET/POST /requests — Запросы клиента (J6: фильтры q и status). */
         post: operations["api_portal_v1_requests_create_2"];
         delete?: never;
         options?: never;
@@ -2129,6 +2129,40 @@ export interface paths {
         get: operations["api_portal_v1_requests_retrieve_4"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/requests/{id}/reorder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /requests/{id}/reorder — Повтор запроса клиента (J6.2). */
+        post: operations["api_portal_v1_requests_reorder_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/requests/{id}/reorder/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /requests/{id}/reorder — Повтор запроса клиента (J6.2). */
+        post: operations["api_portal_v1_requests_reorder_create_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -22395,6 +22429,46 @@ export interface operations {
         };
     };
     api_portal_v1_requests_retrieve_4: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_requests_reorder_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_requests_reorder_create_2: {
         parameters: {
             query?: never;
             header?: never;

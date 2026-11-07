@@ -284,6 +284,7 @@ class ClientRequestSerializer(serializers.Serializer):
     id = serializers.IntegerField(read_only=True)
     number = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()
+    outcome = serializers.SerializerMethodField()
     summary = serializers.SerializerMethodField()
     source = serializers.SerializerMethodField()
     deal = serializers.SerializerMethodField()
@@ -296,6 +297,9 @@ class ClientRequestSerializer(serializers.Serializer):
 
     def get_status(self, deal) -> str:
         return projections.request_status(deal)
+
+    def get_outcome(self, deal) -> Optional[str]:
+        return projections.request_outcome(deal)
 
     def get_summary(self, deal) -> str:
         summary = getattr(deal, "portal_summary", None)  # полный текст клиента (до 5000); у чужих путей — название

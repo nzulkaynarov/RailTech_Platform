@@ -1258,7 +1258,7 @@
         "/api/portal/v1/documents": {
             "get": {
                 "operationId": "api_portal_v1_documents_retrieve",
-                "description": "GET /documents — Выпущенные документы компании клиента (FIX-23); `kind` и `deal_id` — фильтры.",
+                "description": "GET /documents — Выпущенные документы компании клиента (FIX-23, J6); `kind`, `deal_id`, `q`, `date_from`, `date_to` — фильтры.",
                 "tags": [
                     "api"
                 ],
@@ -1272,7 +1272,7 @@
         "/api/portal/v1/documents/": {
             "get": {
                 "operationId": "api_portal_v1_documents_retrieve_2",
-                "description": "GET /documents — Выпущенные документы компании клиента (FIX-23); `kind` и `deal_id` — фильтры.",
+                "description": "GET /documents — Выпущенные документы компании клиента (FIX-23, J6); `kind`, `deal_id`, `q`, `date_from`, `date_to` — фильтры.",
                 "tags": [
                     "api"
                 ],
@@ -2238,7 +2238,7 @@
         "/api/portal/v1/requests": {
             "get": {
                 "operationId": "api_portal_v1_requests_retrieve",
-                "description": "GET/POST /requests — Запросы клиента.",
+                "description": "GET/POST /requests — Запросы клиента (J6: фильтры q и status).",
                 "tags": [
                     "api"
                 ],
@@ -2250,7 +2250,7 @@
             },
             "post": {
                 "operationId": "api_portal_v1_requests_create",
-                "description": "GET/POST /requests — Запросы клиента.",
+                "description": "GET/POST /requests — Запросы клиента (J6: фильтры q и status).",
                 "tags": [
                     "api"
                 ],
@@ -2264,7 +2264,7 @@
         "/api/portal/v1/requests/": {
             "get": {
                 "operationId": "api_portal_v1_requests_retrieve_2",
-                "description": "GET/POST /requests — Запросы клиента.",
+                "description": "GET/POST /requests — Запросы клиента (J6: фильтры q и status).",
                 "tags": [
                     "api"
                 ],
@@ -2276,7 +2276,7 @@
             },
             "post": {
                 "operationId": "api_portal_v1_requests_create_2",
-                "description": "GET/POST /requests — Запросы клиента.",
+                "description": "GET/POST /requests — Запросы клиента (J6: фильтры q и status).",
                 "tags": [
                     "api"
                 ],
@@ -2315,6 +2315,54 @@
             "get": {
                 "operationId": "api_portal_v1_requests_retrieve_4",
                 "description": "GET /requests/{id} — Детали запроса клиента (Q-16).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/requests/{id}/reorder": {
+            "post": {
+                "operationId": "api_portal_v1_requests_reorder_create",
+                "description": "POST /requests/{id}/reorder — Повтор запроса клиента (J6.2).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/requests/{id}/reorder/": {
+            "post": {
+                "operationId": "api_portal_v1_requests_reorder_create_2",
+                "description": "POST /requests/{id}/reorder — Повтор запроса клиента (J6.2).",
                 "parameters": [
                     {
                         "in": "path",

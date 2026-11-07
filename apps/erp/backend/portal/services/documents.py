@@ -337,8 +337,16 @@ def _generated_queryset(company, deal_id: Optional[int]):
     return queryset.filter(Q(deal__company=company) | Q(deal__isnull=True, contact__company=company))
 
 
-def client_documents(company, *, kind: Optional[str] = None, deal_id: Optional[int] = None) -> list[PortalDocument]:
-    """Документы компании, выпущенные клиенту; новые первыми. Фильтры `kind` и `deal_id` — как в контракте."""
+def client_documents(
+    company,
+    *,
+    kind: Optional[str] = None,
+    deal_id: Optional[int] = None,
+    q: Optional[str] = None,
+    date_from: Optional[datetime.date] = None,
+    date_to: Optional[datetime.date] = None,
+) -> list[PortalDocument]:
+    """Документы компании, выпущенные клиенту; новые первыми. Фильтры `kind`, `deal_id`, `q`, `date_from`, `date_to` — как в контракте."""
     documents: list[PortalDocument] = []
     for source, (_model, build) in _MODEL_BUILDERS.items():
         if kind not in (None, KIND_BY_SOURCE[source]):
@@ -353,6 +361,27 @@ def client_documents(company, *, kind: Optional[str] = None, deal_id: Optional[i
     if kind is None or kind in KIND_BY_TEMPLATE_KIND.values():
         generated = [_generated_document(d) for d in _generated_queryset(company, deal_id)]
         documents += [d for d in generated if kind in (None, d.kind)]
+    if date_from is not None:
+        documents = [d for d in documents if d.date >= date_from]
+    if date_to is not None:
+        documents = [d for d in documents if d.date <= date_to]
+    if q:
+        q_lower = q.lower().strip()
+        documents = [
+            d
+            for d in documents
+            if q_lower in d.number.lower()
+            or q_lower in d.title.lower()
+            or q_lower in d.file_name.lower()
+            or (
+                d.deal
+                and (
+                    q_lower in (getattr(d.deal, "number", "") or "").lower()
+                    or q_lower in (getattr(d.deal, "title", "") or "").lower()
+                    or str(d.deal.pk) == q_lower
+                )
+            )
+        ]
     documents.sort(key=lambda d: (d.date, d.id), reverse=True)
     return documents
 

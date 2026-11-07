@@ -101,7 +101,9 @@
       "new": "Yangi",
       "in_progress": "Ishda",
       "quoted": "Taklif bor",
-      "closed": "Yopilgan"
+      "closed": "Yopilgan",
+      "outcome_won": "Bajarildi",
+      "outcome_cancelled": "Bekor qilingan"
     },
     "quote": {
       "sent": "Qaror kutilmoqda",
@@ -423,6 +425,12 @@
     "requests": {
       "title": "Soʻrovlar",
       "new": "Yangi soʻrov",
+      "filterLabel": "Soʻrovlarni holat boʻyicha filtrlash",
+      "filterAll": "Barchasi",
+      "searchPlaceholder": "Raqam, tavsif yoki mahsulot boʻyicha qidirish...",
+      "noMatchTitle": "Hech narsa topilmadi",
+      "noMatchText": "«{{query}}» soʻrovi boʻyicha hech narsa topilmadi",
+      "clearSearch": "Qidiruvni tozalash",
       "emptyTitle": "Hozircha soʻrovlar yoʻq",
       "emptyText": "Bu yerda soʻrovlaringiz va ularning holati koʻrinadi: yangi, ishda, taklif bor, yopilgan.",
       "columns": {
@@ -474,6 +482,8 @@
         "title": "Pozitsiya / bosqich",
         "quantity": "Miqdor"
       },
+      "reorder": "Soʻrovni takrorlash",
+      "reorderSummary": "{{number}}-sonli soʻrov takrori: {{summary}}",
       "backToList": "Soʻrovlar roʻyxatiga",
       "sources": {
         "cabinet": "Siz — kabinetda",
@@ -959,6 +969,7 @@
       "documents": "Hujjatlar",
       "toRequests": "Soʻrovlarga",
       "titleFallback": "Loyiha",
+      "reorder": "Loyihani takrorlash",
       "stages": {
         "title": "Loyiha bosqichlari",
         "request": "Soʻrov",
@@ -967,6 +978,8 @@
         "payment": "Toʻlov",
         "delivery": "Yetkazib berish va dalolatnoma",
         "closed": "Soʻrov yopilgan",
+        "outcome_won": "Loyiha muvaffaqiyatli yakunlandi",
+        "outcome_cancelled": "Loyiha bekor qilingan",
         "state": {
           "done": "bajarildi",
           "active": "boshlangan",
