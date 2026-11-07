@@ -1,13 +1,12 @@
 """Тесты для Wave J3 (Уведомления под контролем) и J2-bank (Защита банковских реквизитов)."""
 
 import pytest
-from rest_framework.test import APIClient
-from parties.models import Contact, Company, CompanyType
-from portal.models import PortalSession, PortalNotice, NoticeChannel
-from portal.tests.conftest import PortalAPIClient, make_portal_session
-from portal.services import notices
-from portal.views_notifications import get_contact_notification_settings
 from django.conf import settings
+from parties.models import Company, CompanyType, Contact
+from portal.models import NoticeChannel
+from portal.services import notices
+from portal.tests.conftest import PortalAPIClient, make_portal_session
+from portal.views_notifications import get_contact_notification_settings
 
 pytestmark = pytest.mark.django_db
 

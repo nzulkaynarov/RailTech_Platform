@@ -114,7 +114,7 @@ class NotificationReadView(BasePortalView):
 DEFAULT_NOTIFICATION_SETTINGS = {
     "documents": {"in_app": True, "email": True, "telegram": True, "required": False},
     "money": {"in_app": True, "email": True, "telegram": True, "required": False},
-    "deliveries": {"in_app": True, "email": False, "telegram": True, "required": False},
+    "deliveries": {"in_app": True, "email": True, "telegram": True, "required": False},
     "messages": {"in_app": True, "email": True, "telegram": True, "required": False},
     "partner_products": {"in_app": True, "email": True, "telegram": True, "required": False},
     "security": {"in_app": True, "email": True, "telegram": True, "required": True},
@@ -162,10 +162,12 @@ class NotificationSettingsView(BasePortalView):
 
     def get(self, request):
         contact = request.portal_contact
-        return Response({
-            "telegram_connected": bool(contact.telegram_user_id),
-            "groups": get_contact_notification_settings(contact),
-        })
+        return Response(
+            {
+                "telegram_connected": bool(contact.telegram_user_id),
+                "groups": get_contact_notification_settings(contact),
+            }
+        )
 
     def patch(self, request):
         serializer = NotificationSettingsUpdateSerializer(data=request.data if isinstance(request.data, dict) else {})
@@ -189,7 +191,9 @@ class NotificationSettingsView(BasePortalView):
         contact.notification_settings = stored
         contact.save(update_fields=["notification_settings"])
 
-        return Response({
-            "telegram_connected": bool(contact.telegram_user_id),
-            "groups": get_contact_notification_settings(contact),
-        })
+        return Response(
+            {
+                "telegram_connected": bool(contact.telegram_user_id),
+                "groups": get_contact_notification_settings(contact),
+            }
+        )

@@ -1161,8 +1161,9 @@ class CompanyView(BasePortalView):
                     raise PortalConflict("ADMIN_REQUIRED")
                 company.bank_details = new_bank
                 # Уведомление безопасности для всех администраторов компании
-                from portal.models import NoticeChannel, PortalNotice
                 from parties.models import Contact, active_contact_q
+                from portal.models import NoticeChannel, PortalNotice
+
                 other_admins = (
                     Contact.objects.filter(company=company, is_admin=True)
                     .exclude(pk=request.portal_contact.pk)

@@ -1014,7 +1014,6 @@
     }
   },
   "apiErrors": {
-    "ADMIN_REQUIRED": "Bu amal faqat kompaniya administratori uchun mavjud.",
     "UNKNOWN": "Soʻrovni bajarib boʻlmadi. Qayta urinib koʻring.",
     "NETWORK": "Server bilan aloqa yoʻq. Ulanishni tekshiring.",
     "UNAUTHORIZED": "Sessiya tugadi — qayta kiring.",

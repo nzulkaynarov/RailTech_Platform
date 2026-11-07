@@ -1014,7 +1014,6 @@
     }
   },
   "apiErrors": {
-    "ADMIN_REQUIRED": "This action is restricted to company administrators.",
     "UNKNOWN": "The request could not be completed. Please try again.",
     "NETWORK": "No connection to the server. Check your network.",
     "UNAUTHORIZED": "The session has ended — sign in again.",

@@ -135,8 +135,7 @@ def choose_channel(
         return NoticeChannel.CABINET, ""
 
     pref = (contact.notification_settings or {}).get(kind.group, {}) if kind.group != "security" else {}
-    default_email = False if kind.group == "deliveries" else True
-    email_enabled = pref.get("email", default_email)
+    email_enabled = pref.get("email", True)
     telegram_enabled = pref.get("telegram", True)
 
     if kind.bot_sends and bot_reaches and contact.telegram_user_id and telegram_enabled:
