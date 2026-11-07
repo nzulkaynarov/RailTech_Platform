@@ -57,14 +57,19 @@ export async function chooseOption(field: Locator, label: string): Promise<void>
       has: page.locator(`[id="${listId ?? ""}"]`),
     });
     await expect(dropdown).toBeVisible({ timeout: 3_000 });
-    const active = dropdown.locator(".ant-select-item-option-active");
-    // список виртуальный: в DOM не все пункты — шагов не больше полусотни
-    for (let step = 0; step < 50; step += 1) {
-      if ((await active.getAttribute("title")) === label) break;
-      await field.press("ArrowDown");
+    const option = dropdown.locator(`.ant-select-item-option[title="${label}"]`);
+    if ((await option.count()) > 0 && (await option.first().isVisible())) {
+      await option.first().click();
+    } else {
+      const active = dropdown.locator(".ant-select-item-option-active");
+      // список виртуальный: в DOM не все пункты — шагов не больше полусотни
+      for (let step = 0; step < 50; step += 1) {
+        if ((await active.getAttribute("title")) === label) break;
+        await field.press("ArrowDown");
+      }
+      await expect(active).toHaveAttribute("title", label, { timeout: 1_000 });
+      await field.press("Enter");
     }
-    await expect(active).toHaveAttribute("title", label, { timeout: 1_000 });
-    await field.press("Enter");
     await expect(selected).toHaveAttribute("title", label, { timeout: 2_000 });
   }).toPass({ timeout: 30_000 });
 }

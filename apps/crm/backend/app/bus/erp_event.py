@@ -34,6 +34,8 @@ NOT_FOR_CRM: Final = frozenset(
         "uz.railtech.erp.contract.status_changed.v1",
         # W18A-P4: снимок бланка своей компании (с логотипом) — проекция EDS для писем на бланке.
         "uz.railtech.erp.letterhead.updated.v1",
+        # SIGN-4 (ADR-0024): запрос на подпись коммерческого документа адресован EDS.
+        "uz.railtech.erp.signing.requested.v1",
     }
 )
 #: Типы ERP со своим обработчиком вне `ErpEventsService`: запрос письма почтовому сервису CRM
