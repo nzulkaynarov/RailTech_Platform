@@ -235,13 +235,21 @@ def invite_team_member(company, inviter, data: dict) -> Contact:
     if existing.filter(email__iexact=email).exists() or (phone and existing.filter(phone=phone).exists()):
         raise PortalValidationError("TEAM_MEMBER_EXISTS")
 
+    wants_admin = bool(data.get("is_admin", False))
+    wants_can_act = bool(data.get("can_act", False))
+    if wants_admin and not getattr(inviter, "is_admin", False):
+        raise PortalValidationError("CANNOT_ELEVATE_RIGHTS")
+    if wants_can_act and not (getattr(inviter, "can_act", False) or getattr(inviter, "is_admin", False)):
+        raise PortalValidationError("CANNOT_ELEVATE_RIGHTS")
+
     contact = Contact.objects.create(
         company=company,
         name=data["name"].strip(),
         email=email,
         phone=phone,
         language=data.get("language", "ru"),
-        can_act=data.get("can_act", False),
+        can_act=wants_can_act,
+        is_admin=wants_admin,
         preferred_channel="email",
         is_primary=False,
     )

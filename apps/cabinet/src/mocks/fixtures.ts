@@ -80,6 +80,7 @@ export const contactActor: Schemas['TeamMember'] = {
   language: 'ru',
   preferred_channel: 'both',
   can_act: true,
+  is_admin: true,
   is_primary: true,
   invited_at: '2026-09-01T09:00:00+05:00',
   last_login_at: '2026-10-13T18:20:00+05:00',
@@ -95,6 +96,7 @@ export const contactViewer: Schemas['TeamMember'] = {
   language: 'uz',
   preferred_channel: 'email',
   can_act: false,
+  is_admin: false,
   is_primary: false,
   invited_at: '2026-10-02T11:30:00+05:00',
   last_login_at: null,
@@ -109,12 +111,34 @@ const contactAccountant: Schemas['TeamMember'] = {
   language: 'ru',
   preferred_channel: 'telegram',
   can_act: true,
+  is_admin: false,
   is_primary: false,
   invited_at: '2026-09-03T10:00:00+05:00',
   last_login_at: '2026-10-10T09:12:00+05:00',
 };
 
 export const team: Schemas['TeamMember'][] = [contactActor, contactViewer, contactAccountant];
+
+export const sessions: Schemas['PortalSessionItem'][] = [
+  {
+    id: 1,
+    auth_method: 'magic_link',
+    ip_address: '198.51.100.1',
+    user_agent: 'Chrome 128 / macOS',
+    is_current: true,
+    created_at: '2026-10-14T10:00:00+05:00',
+    last_used_at: '2026-10-14T15:30:00+05:00',
+  },
+  {
+    id: 2,
+    auth_method: 'magic_link',
+    ip_address: '203.0.113.42',
+    user_agent: 'Safari / iPhone',
+    is_current: false,
+    created_at: '2026-10-12T08:00:00+05:00',
+    last_used_at: '2026-10-13T19:00:00+05:00',
+  },
+];
 
 export const requests: Schemas['ClientRequest'][] = [
   {
@@ -811,6 +835,7 @@ export function meFor(
     contact,
     company,
     can_act: contact.can_act,
+    is_admin: contact.is_admin ?? false,
     auth_method: authMethod,
     notifications_unread: 0,
     roles: access.roles,

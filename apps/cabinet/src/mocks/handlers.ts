@@ -90,6 +90,7 @@ function createDb(dataset: Dataset = 'demo') {
     catalog: empty ? [] : structuredClone(fixtures.catalog),
     company: structuredClone(fixtures.company),
     team: empty ? [structuredClone(fixtures.contactActor)] : structuredClone(fixtures.team),
+    sessions: structuredClone(fixtures.sessions),
     /** Сколько раз запрошен файл документа — для сценария «PDF готовится» (202 → 200). */
     fileRequests: new Map<number, number>(),
     /** КП, по которым клиент запросил код акцепта: id КП → выданный код. */
@@ -360,6 +361,18 @@ export const handlers = [
     withSession(() => {
       setMockSession(null);
       return new HttpResponse(null, { status: 204 });
+    }),
+  ),
+  http.get(
+    `${API}/auth/sessions`,
+    withSession(({ db }) => json(db.sessions)),
+  ),
+  http.post(
+    `${API}/auth/sessions/revoke-others`,
+    withSession(({ db }) => {
+      const revokedCount = db.sessions.filter((s) => !s.is_current).length;
+      db.sessions = db.sessions.filter((s) => s.is_current);
+      return json({ revoked_count: revokedCount });
     }),
   ),
   http.get(`${API}/me`, withSession(({ session }) => json(me(session)))),
@@ -1019,6 +1032,52 @@ export const handlers = [
         };
         db.team = [...db.team, member];
         return json(member, 201);
+      },
+      { action: true },
+    ),
+  ),
+  http.patch(
+    `${API}/team/:id`,
+    withSession(
+      async ({ db, params, request, session }) => {
+        const currentContact = contactFor(session.role);
+        if (!currentContact.is_admin) return error(403, 'ADMIN_REQUIRED');
+        const { id } = params as { id: string };
+        const memberId = Number(id);
+        const member = db.team.find((m) => m.id === memberId);
+        if (!member) return error(404, 'NOT_FOUND');
+        const body = await readJson<Schemas['TeamMemberUpdate']>(request);
+        if (member.is_primary && body.is_admin === false) return error(422, 'CANNOT_MODIFY_PRIMARY_CONTACT');
+        if (member.is_primary && body.can_act === false) return error(422, 'CANNOT_MODIFY_PRIMARY_CONTACT');
+        if (body.is_admin === false && member.is_admin) {
+          const otherAdmins = db.team.filter((m) => m.is_admin && m.id !== memberId);
+          if (otherAdmins.length === 0) return error(422, 'LAST_ADMIN_CANNOT_BE_REMOVED');
+        }
+        if (body.can_act !== undefined) member.can_act = body.can_act;
+        if (body.is_admin !== undefined) member.is_admin = body.is_admin;
+        return json(member);
+      },
+      { action: true },
+    ),
+  ),
+  http.post(
+    `${API}/team/:id/deactivate`,
+    withSession(
+      async ({ db, params, session }) => {
+        const currentContact = contactFor(session.role);
+        if (!currentContact.is_admin) return error(403, 'ADMIN_REQUIRED');
+        const { id } = params as { id: string };
+        const memberId = Number(id);
+        if (memberId === currentContact.id) return error(422, 'CANNOT_DEACTIVATE_SELF');
+        const member = db.team.find((m) => m.id === memberId);
+        if (!member) return error(404, 'NOT_FOUND');
+        if (member.is_primary) return error(422, 'CANNOT_MODIFY_PRIMARY_CONTACT');
+        if (member.is_admin) {
+          const otherAdmins = db.team.filter((m) => m.is_admin && m.id !== memberId);
+          if (otherAdmins.length === 0) return error(422, 'LAST_ADMIN_CANNOT_BE_REMOVED');
+        }
+        db.team = db.team.filter((m) => m.id !== memberId);
+        return json({ ok: true, deactivated_contact_id: memberId });
       },
       { action: true },
     ),

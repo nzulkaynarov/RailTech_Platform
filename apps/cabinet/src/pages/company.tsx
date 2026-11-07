@@ -1,7 +1,7 @@
 import { useEffect, useId, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Building2, CheckCircle2, FileText, Handshake, Pencil, UserPlus, Users, X } from 'lucide-react';
+import { Building2, CheckCircle2, FileText, Handshake, Pencil, UserMinus, UserPlus, Users, X } from 'lucide-react';
 import { toast } from '@/lib/toast';
 
 import { apiErrorKey } from '@/api/errors';
@@ -11,10 +11,12 @@ import {
   useAgreeCompanyPartnerContract,
   useCompany,
   useCompanyPartnerApplication,
+  useDeactivateTeamMember,
   useInviteTeamMember,
   useSubmitCompanyPartnerApplication,
   useTeam,
   useUpdateCompany,
+  useUpdateTeamMember,
 } from '@/api/queries';
 import { ActionDialog } from '@/components/ActionDialog';
 import { DetailList } from '@/components/Details';
@@ -327,9 +329,58 @@ function LanguageChoice({
 
 export function TeamPage() {
   const { t } = useTranslation();
+  const me = useMe();
+  const meId = me.data?.contact.id;
+  const isMeAdmin = Boolean(me.data?.contact.is_admin);
   const team = useTeam();
-  const meId = useMe().data?.contact.id;
   const [inviting, setInviting] = useState(false);
+  const [memberToDeactivate, setMemberToDeactivate] = useState<TeamMember | null>(null);
+
+  const updateMember = useUpdateTeamMember();
+  const deactivateMember = useDeactivateTeamMember();
+
+  const handleToggleCanAct = (member: TeamMember) => {
+    updateMember.mutate(
+      { id: member.id, body: { can_act: !member.can_act } },
+      {
+        onSuccess: (updated) => {
+          toast.success(t('pages.team.updated', { name: updated.name }));
+        },
+        onError: (err) => {
+          toast.error(t(apiErrorKey(err)));
+        },
+      },
+    );
+  };
+
+  const handleToggleAdmin = (member: TeamMember) => {
+    updateMember.mutate(
+      { id: member.id, body: { is_admin: !member.is_admin } },
+      {
+        onSuccess: (updated) => {
+          toast.success(t('pages.team.updated', { name: updated.name }));
+        },
+        onError: (err) => {
+          toast.error(t(apiErrorKey(err)));
+        },
+      },
+    );
+  };
+
+  const handleDeactivate = () => {
+    if (!memberToDeactivate) return;
+    deactivateMember.mutate(memberToDeactivate.id, {
+      onSuccess: () => {
+        toast.success(t('pages.team.deactivated', { name: memberToDeactivate.name }));
+        setMemberToDeactivate(null);
+      },
+      onError: (err) => {
+        toast.error(t(apiErrorKey(err)));
+      },
+    });
+  };
+
+  const isPending = updateMember.isPending || deactivateMember.isPending;
 
   return (
     <>
@@ -355,18 +406,53 @@ export function TeamPage() {
         <ul className="grid gap-3 lg:grid-cols-2" aria-label={t('pages.team.title')}>
           {team.data.map((member) => (
             <li key={member.id}>
-              <MemberCard member={member} isMe={member.id === meId} />
+              <MemberCard
+                member={member}
+                isMe={member.id === meId}
+                isMeAdmin={isMeAdmin}
+                onToggleCanAct={handleToggleCanAct}
+                onToggleAdmin={handleToggleAdmin}
+                onDeactivate={(m) => setMemberToDeactivate(m)}
+                isPending={isPending}
+              />
             </li>
           ))}
         </ul>
       )}
       <p className="mt-4 text-xs text-muted-foreground">{t('pages.team.rightsHint')}</p>
-      <InviteDialog open={inviting} onOpenChange={setInviting} />
+      <InviteDialog open={inviting} onOpenChange={setInviting} isMeAdmin={isMeAdmin} />
+
+      <ActionDialog
+        open={Boolean(memberToDeactivate)}
+        onOpenChange={(open) => !open && setMemberToDeactivate(null)}
+        title={t('pages.team.deactivateTitle')}
+        description={t('pages.team.deactivateDesc', { name: memberToDeactivate?.name })}
+        confirmLabel={t('pages.team.deactivateConfirm')}
+        pending={deactivateMember.isPending}
+        error={deactivateMember.error}
+        onSubmit={handleDeactivate}
+      />
     </>
   );
 }
 
-function MemberCard({ member, isMe }: { member: TeamMember; isMe: boolean }) {
+function MemberCard({
+  member,
+  isMe,
+  isMeAdmin,
+  onToggleCanAct,
+  onToggleAdmin,
+  onDeactivate,
+  isPending,
+}: {
+  member: TeamMember;
+  isMe: boolean;
+  isMeAdmin: boolean;
+  onToggleCanAct: (member: TeamMember) => void;
+  onToggleAdmin: (member: TeamMember) => void;
+  onDeactivate: (member: TeamMember) => void;
+  isPending: boolean;
+}) {
   const { t } = useTranslation();
   return (
     <article className="portal-card flex h-full min-w-0 flex-col gap-3 rounded-2xl border border-border bg-card p-4">
@@ -374,6 +460,7 @@ function MemberCard({ member, isMe }: { member: TeamMember; isMe: boolean }) {
         <h2 className="text-sm font-semibold break-words">{member.name}</h2>
         {isMe ? <ToneBadge tone="info">{t('pages.team.you')}</ToneBadge> : null}
         {member.is_primary ? <ToneBadge tone="neutral">{t('pages.team.primary')}</ToneBadge> : null}
+        {member.is_admin ? <ToneBadge tone="warning">{t('pages.team.admin')}</ToneBadge> : null}
       </div>
       <DetailList
         items={[
@@ -391,6 +478,35 @@ function MemberCard({ member, isMe }: { member: TeamMember; isMe: boolean }) {
           },
         ]}
       />
+      {isMeAdmin && !isMe && !member.is_primary ? (
+        <div className="mt-auto flex flex-wrap gap-2 border-t border-border pt-3">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={isPending}
+            onClick={() => onToggleCanAct(member)}
+          >
+            {member.can_act ? t('pages.team.revokeCanAct') : t('pages.team.grantCanAct')}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={isPending}
+            onClick={() => onToggleAdmin(member)}
+          >
+            {member.is_admin ? t('pages.team.revokeAdmin') : t('pages.team.grantAdmin')}
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            disabled={isPending}
+            onClick={() => onDeactivate(member)}
+          >
+            <UserMinus className="size-4 mr-1" aria-hidden="true" />
+            {t('pages.team.deactivate')}
+          </Button>
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -404,7 +520,15 @@ const emptyInvite = (language: Schemas['Language']): InviteDraft => ({
   channels: { email: true, telegram: false },
 });
 
-function InviteDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+function InviteDialog({
+  open,
+  onOpenChange,
+  isMeAdmin,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  isMeAdmin: boolean;
+}) {
   const { t, i18n } = useTranslation();
   const id = useId();
   const invite = useInviteTeamMember();
@@ -525,6 +649,22 @@ function InviteDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (op
             </p>
           </div>
         </div>
+        {isMeAdmin ? (
+          <div className={cn('flex items-start gap-2 rounded-md border p-3')}>
+            <Checkbox
+              id={`${id}-is-admin`}
+              checked={draft.is_admin ?? false}
+              onCheckedChange={(checked) => set({ is_admin: checked === true })}
+              aria-describedby={`${id}-is-admin-hint`}
+            />
+            <div className="flex flex-col gap-1">
+              <Label htmlFor={`${id}-is-admin`}>{t('pages.team.fields.roleAdmin')}</Label>
+              <p id={`${id}-is-admin-hint`} className="text-xs text-muted-foreground">
+                {t('pages.team.fields.roleAdminHint')}
+              </p>
+            </div>
+          </div>
+        ) : null}
       </div>
     </ActionDialog>
   );

@@ -56,6 +56,11 @@ ERROR_CODES = (
     "APPLICATION_EXISTS",
     "PARTNER_APPLICATION_NOT_FOUND",
     "NOT_IN_CONTRACT_SENT_STATUS",
+    "LAST_ADMIN_CANNOT_BE_REMOVED",
+    "CANNOT_DEACTIVATE_SELF",
+    "CANNOT_ELEVATE_RIGHTS",
+    "ADMIN_REQUIRED",
+    "CANNOT_MODIFY_PRIMARY_CONTACT",
 )
 
 #: Код по HTTP-статусу для ошибок, у которых своего кода нет (чужие исключения DRF и Django).

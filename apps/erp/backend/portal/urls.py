@@ -33,6 +33,8 @@ from portal.views import (
     MagicLinkRequestView,
     MagicLinkTokenExchangeView,
     MeView,
+    PortalSessionsRevokeOthersView,
+    PortalSessionsView,
     PublicPartnerApplicationView,
     QuoteAcceptView,
     QuoteCommentView,
@@ -44,6 +46,8 @@ from portal.views import (
     RequestListView,
     TeamInviteView,
     TeamListView,
+    TeamMemberDeactivateView,
+    TeamMemberDetailView,
     TelegramAuthView,
     UploadView,
 )
@@ -71,6 +75,18 @@ urlpatterns = [
     path("auth/code/", LoginCodeExchangeView.as_view(), name="portal-auth-code-slash"),
     path("auth/logout", LogoutView.as_view(), name="portal-auth-logout"),
     path("auth/logout/", LogoutView.as_view(), name="portal-auth-logout-slash"),
+    path("auth/sessions", PortalSessionsView.as_view(), name="portal-auth-sessions"),
+    path("auth/sessions/", PortalSessionsView.as_view(), name="portal-auth-sessions-slash"),
+    path(
+        "auth/sessions/revoke-others",
+        PortalSessionsRevokeOthersView.as_view(),
+        name="portal-auth-sessions-revoke-others",
+    ),
+    path(
+        "auth/sessions/revoke-others/",
+        PortalSessionsRevokeOthersView.as_view(),
+        name="portal-auth-sessions-revoke-others-slash",
+    ),
     path("auth/partner-application", PublicPartnerApplicationView.as_view(), name="portal-auth-partner-application"),
     path(
         "auth/partner-application/",
@@ -220,6 +236,10 @@ urlpatterns = [
     path("team/", TeamListView.as_view(), name="portal-team-slash"),
     path("team/invite", TeamInviteView.as_view(), name="portal-team-invite"),
     path("team/invite/", TeamInviteView.as_view(), name="portal-team-invite-slash"),
+    path("team/<int:pk>", TeamMemberDetailView.as_view(), name="portal-team-member-detail"),
+    path("team/<int:pk>/", TeamMemberDetailView.as_view(), name="portal-team-member-detail-slash"),
+    path("team/<int:pk>/deactivate", TeamMemberDeactivateView.as_view(), name="portal-team-member-deactivate"),
+    path("team/<int:pk>/deactivate/", TeamMemberDeactivateView.as_view(), name="portal-team-member-deactivate-slash"),
     # Messages (Чат кабинета, CHAT-1)
     path("messages", MessageListView.as_view(), name="portal-messages"),
     path("messages/", MessageListView.as_view(), name="portal-messages-slash"),

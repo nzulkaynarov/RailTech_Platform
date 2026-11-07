@@ -327,9 +327,22 @@
     "rights": "Huquqlar",
     "canAct": "Tasdiqlay oladi: takliflarni qabul qilish, shartnomalarni kelishish, dalolatnomalarni qabul qilish",
     "viewOnly": "Faqat koʻrish",
+    "admin": "Kompaniya administratori",
     "language": "Kabinet tili",
     "logout": "Kabinetdan chiqish",
     "name": "Ism",
+    "sessions": {
+      "title": "Faol sessiyalar",
+      "desc": "Hisobingiz orqali kabinetga kirish imkoniyatiga ega qurilmalar va brauzerlar",
+      "current": "Joriy sessiya",
+      "revokeOthers": "Boshqa sessiyalarni yakunlash",
+      "revoked": "Yakunlangan boshqa sessiyalar soni: {{count}}",
+      "noOther": "Boshqa faol sessiyalar yoʻq",
+      "device": "Qurilma",
+      "ip": "IP-manzil",
+      "lastUsed": "Faollik: {{date}}",
+      "created": "Yaratilgan: {{date}}"
+    },
     "notifications": {
       "title": "Bildirishnomalar",
       "linked": "Telegram ulangan",
@@ -846,10 +859,23 @@
       "rights": "Huquqlar",
       "canAct": "Tasdiqlay oladi",
       "viewOnly": "Faqat koʻrish",
+      "admin": "Administrator",
+      "canActBadge": "Tasdiqlay oladi",
+      "viewOnlyBadge": "Faqat koʻrish",
+      "grantAdmin": "Admin etib tayinlash",
+      "revokeAdmin": "Admin huquqini olish",
+      "grantCanAct": "Imzolashga ruxsat",
+      "revokeCanAct": "Imzoni bekor qilish",
+      "deactivate": "Oʻchirish",
+      "deactivateTitle": "Hamkasbni oʻchirib qoʻyilsinmi?",
+      "deactivateDesc": "{{name}} kompaniya kabinetiga kirish huquqini yoʻqotadi va uning barcha faol sessiyalari darhol yakunlanadi.",
+      "deactivateConfirm": "Ha, oʻchirilsin",
+      "deactivated": "Hamkasb {{name}} kabinetdan oʻchirildi",
+      "updated": "{{name}} uchun huquqlar yangilandi",
       "lastLogin": "Oxirgi kirish",
       "invitedAt": "{{date}} da taklif qilingan, hali kirmagan",
       "neverLoggedIn": "Hali kirmagan",
-      "rightsHint": "Hamkasbning huquqlarini yoki asosiy kontaktni menejeringiz oʻzgartirishi mumkin.",
+      "rightsHint": "Kompaniya administratorlari hamkasblar huquqlarini boshqarishi va xodimlar almashganda kirishni toʻxtatishi mumkin.",
       "inviteTitle": "Hamkasbni taklif qilish",
       "inviteText": "Hamkasb kabinetga taklifnomani tanlangan kanallar orqali oladi.",
       "inviteConfirm": "Taklifnoma yuborish",
@@ -861,7 +887,9 @@
         "channels": "Taklifnomani qayerga yuborish",
         "language": "Taklifnoma tili",
         "canAct": "Tasdiqlay oladi",
-        "canActHint": "Takliflarni qabul qilish, shartnomalarni kelishish, dalolatnomalarni qabul qilish, soʻrov yaratish. Busiz — faqat koʻrish."
+        "canActHint": "Takliflarni qabul qilish, shartnomalarni kelishish, dalolatnomalarni qabul qilish, soʻrov yaratish. Busiz — faqat koʻrish.",
+        "roleAdmin": "Kompaniya administratori",
+        "roleAdminHint": "Kompaniya hamkasblarini boshqarishi, huquqlar berishi va sessiyalarni toʻxtatishi mumkin."
       },
       "channels": {
         "email": "E-mail orqali",
@@ -987,7 +1015,12 @@
     "HONEYPOT_DETECTED": "Shubhali shakl faoliyati aniqlandi.",
     "ALREADY_PARTNER": "Kompaniyangizda hamkorlik shartnomasi allaqachon tuzilgan va faol.",
     "APPLICATION_EXISTS": "Hamkor maqomini olish uchun ariza allaqachon koʻrib chiqilmoqda.",
-    "PARTNER_APPLICATION_NOT_FOUND": "Hamkor maqomini olish uchun ariza topilmadi."
+    "PARTNER_APPLICATION_NOT_FOUND": "Hamkor maqomini olish uchun ariza topilmadi.",
+    "LAST_ADMIN_CANNOT_BE_REMOVED": "Kompaniyaning yagona administratoridan admin maqomini olib tashlash mumkin emas.",
+    "CANNOT_DEACTIVATE_SELF": "Oʻz akkauntingizni oʻchirib boʻlmaydi.",
+    "CANNOT_ELEVATE_RIGHTS": "Oʻz huquqlaringizdan yuqori huquqlar berish mumkin emas.",
+    "ADMIN_REQUIRED": "Bu amal faqat kompaniya administratori uchun mavjud.",
+    "CANNOT_MODIFY_PRIMARY_CONTACT": "Kompaniyaning asosiy kontaktining huquqlarini oʻzgartirib boʻlmaydi."
   },
   "widgets": {
     "actionRequired": {

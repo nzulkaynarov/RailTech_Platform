@@ -106,6 +106,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/auth/sessions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Список активных сессий текущего контакта (J2, этап 8) */
+    get: operations["listSessions"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/auth/sessions/revoke-others": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Завершить все остальные сессии текущего контакта (J2, «Выйти везде») */
+    post: operations["revokeOtherSessions"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/auth/partner-application": {
     parameters: {
       query?: never;
@@ -1048,6 +1082,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/team/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Обновить права коллеги (J2, только администратор компании) */
+    patch: operations["updateTeamMember"];
+    trace?: never;
+  };
+  "/team/{id}/deactivate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Отключить коллегу и завершить все его активные сессии (J2, только администратор) */
+    post: operations["deactivateTeamMember"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/messages": {
     parameters: {
       query?: never;
@@ -1546,6 +1614,8 @@ export interface components {
       company: components["schemas"]["Company"];
       /** @description Право «действовать» (принимать КП, подписывать, принимать акты); иначе — только смотреть */
       can_act: boolean;
+      /** @description Право «администратор компании» (управление командой и реквизитами); первый приглашённый — админ */
+      is_admin?: boolean;
       /** @enum {string} */
       auth_method: "telegram" | "magic_link";
       /** @description Непрочитанные контактом уведомления колокольчика (только видимые модулям сессии); 0 — нет */
@@ -2097,10 +2167,16 @@ export interface components {
       preferred_channel: components["schemas"]["PreferredChannel"];
       can_act: boolean;
       is_primary: boolean;
+      /** @description Администратор компании в кабинете */
+      is_admin?: boolean;
       /** Format: date-time */
       invited_at?: string | null;
       /** Format: date-time */
       last_login_at?: string | null;
+    };
+    TeamMemberUpdate: {
+      can_act?: boolean;
+      is_admin?: boolean;
     };
     TeamInvite: {
       name: string;
@@ -2110,7 +2186,22 @@ export interface components {
       language: components["schemas"]["Language"];
       /** @default false */
       can_act: boolean;
+      /** @description Права администратора компании (только если сам приглашающий — админ) */
+      is_admin?: boolean;
       channels: ("email" | "telegram")[];
+    };
+    PortalSessionItem: {
+      /** Format: int64 */
+      id: number;
+      /** @enum {string} */
+      auth_method: "telegram" | "magic_link";
+      ip_address?: string | null;
+      user_agent?: string;
+      is_current: boolean;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      last_used_at: string;
     };
     CatalogCategory: {
       /** Format: int64 */
@@ -2491,6 +2582,60 @@ export interface operations {
           [name: string]: unknown;
         };
         content?: never;
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  listSessions: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Активные сессии */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PortalSessionItem"][];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  revokeOtherSessions: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Сессии завершены */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            revoked_count: number;
+          };
+        };
       };
       400: components["responses"]["IdempotencyKeyRequired"];
       401: components["responses"]["Unauthorized"];
@@ -4296,6 +4441,85 @@ export interface operations {
           "application/json": components["schemas"]["Error"];
         };
       };
+    };
+  };
+  updateTeamMember: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TeamMemberUpdate"];
+      };
+    };
+    responses: {
+      /** @description Права обновлены */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TeamMember"];
+        };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      415: components["responses"]["UnsupportedMediaType"];
+      422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  deactivateTeamMember: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Коллега деактивирован */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            ok: boolean;
+            /** Format: int64 */
+            deactivated_contact_id: number;
+          };
+        };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   listMessages: {

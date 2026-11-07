@@ -34,6 +34,7 @@ export interface InviteDraft {
   phone: string;
   language: Schemas['Language'];
   can_act: boolean;
+  is_admin?: boolean;
   channels: { email: boolean; telegram: boolean };
 }
 
@@ -60,7 +61,13 @@ export function validateInvite(
   if ((draft.channels.email || email) && !EMAIL_RE.test(email)) problems.push('email');
   if ((draft.channels.telegram || phone) && !PHONE_RE.test(phone)) problems.push('phone');
   if (problems.length) return { ok: false, problems };
-  const body: TeamInvite = { name, language: draft.language, can_act: draft.can_act, channels };
+  const body: TeamInvite = {
+    name,
+    language: draft.language,
+    can_act: draft.can_act,
+    channels,
+  };
+  if (draft.is_admin !== undefined) body.is_admin = draft.is_admin;
   if (email) body.email = email;
   if (phone) body.phone = phone;
   return { ok: true, body };

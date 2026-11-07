@@ -69,6 +69,7 @@ GET_CASES = {
     "/countries": lambda w: ["/countries"],
     "/team": lambda w: ["/team"],
     "/me/telegram": lambda w: ["/me/telegram"],  # NOTIFY-1: статус привязки по проекции CRM
+    "/auth/sessions": lambda w: ["/auth/sessions"],
     "/messages": lambda w: ["/messages"],
     "/verify/{code}": lambda w: [f"/verify/{w['verification'].code}"],
 }
@@ -114,6 +115,8 @@ def api(path: str) -> str:
 
 
 def anonymous_for(path: str) -> bool:
+    if path == "/auth/sessions":
+        return False
     return path.startswith("/auth/") or path.startswith("/verify") or path.startswith("/countries")
 
 
