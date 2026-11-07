@@ -615,6 +615,62 @@
                 }
             }
         },
+        "/api/portal/v1/auth/sessions": {
+            "get": {
+                "operationId": "api_portal_v1_auth_sessions_retrieve",
+                "description": "GET /auth/sessions — Список активных сессий текущего контакта (J2).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/auth/sessions/": {
+            "get": {
+                "operationId": "api_portal_v1_auth_sessions_retrieve_2",
+                "description": "GET /auth/sessions — Список активных сессий текущего контакта (J2).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/auth/sessions/revoke-others": {
+            "post": {
+                "operationId": "api_portal_v1_auth_sessions_revoke_others_create",
+                "description": "POST /auth/sessions/revoke-others — Завершить все остальные сессии текущего контакта (J2).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/auth/sessions/revoke-others/": {
+            "post": {
+                "operationId": "api_portal_v1_auth_sessions_revoke_others_create_2",
+                "description": "POST /auth/sessions/revoke-others — Завершить все остальные сессии текущего контакта (J2).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/portal/v1/auth/telegram": {
             "post": {
                 "operationId": "api_portal_v1_auth_telegram_create",
@@ -2245,6 +2301,102 @@
             "get": {
                 "operationId": "api_portal_v1_team_retrieve_2",
                 "description": "GET /team — Список участников команды клиента.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/team/{id}": {
+            "patch": {
+                "operationId": "api_portal_v1_team_partial_update",
+                "description": "PATCH /team/{id} — Обновление прав коллеги (J2, только администратор компании).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/team/{id}/": {
+            "patch": {
+                "operationId": "api_portal_v1_team_partial_update_2",
+                "description": "PATCH /team/{id} — Обновление прав коллеги (J2, только администратор компании).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/team/{id}/deactivate": {
+            "post": {
+                "operationId": "api_portal_v1_team_deactivate_create",
+                "description": "POST /team/{id}/deactivate — Отключение коллеги и завершение всех его сессий (J2, только администратор).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/team/{id}/deactivate/": {
+            "post": {
+                "operationId": "api_portal_v1_team_deactivate_create_2",
+                "description": "POST /team/{id}/deactivate — Отключение коллеги и завершение всех его сессий (J2, только администратор).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
                 "tags": [
                     "api"
                 ],
