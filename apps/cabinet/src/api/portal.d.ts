@@ -327,6 +327,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/notifications/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Настройки каналов уведомлений контакта
+         * @description Матрица настроек каналов (in_app, email, telegram) по группам событий контакта сессии (J3, ADR-0023).
+         *     Обязательные группы (например, security) всегда включены. Эндпоинт открыт любой сессии (модуль profile).
+         */
+        get: operations["getNotificationSettings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Обновить настройки каналов уведомлений контакта
+         * @description Обновление каналов (email, telegram) по группам событий (J3, ADR-0023).
+         *     Канал in_app (колокольчик) всегда активен и не отключается. Системные события (security) не могут быть отключены.
+         */
+        patch: operations["updateNotificationSettings"];
+        trace?: never;
+    };
     "/requests": {
         parameters: {
             query?: never;
@@ -1630,12 +1656,12 @@ export interface components {
          *     Незнакомый вид Cabinet показывает общим текстом.
          * @enum {string}
          */
-        NotificationKind: "quote_sent" | "invoice_issued" | "payment_overdue" | "act_issued" | "delivery_status_changed" | "delivery_eta_changed" | "manager_replied" | "partner_card_returned" | "partner_card_published";
+        NotificationKind: "quote_sent" | "invoice_issued" | "payment_overdue" | "act_issued" | "delivery_status_changed" | "delivery_eta_changed" | "manager_replied" | "partner_card_returned" | "partner_card_published" | "bank_requisites_changed";
         /**
          * @description Группа событий — основа настройки «группа × канал» в профиле контакта (J3)
          * @enum {string}
          */
-        NotificationGroup: "documents" | "money" | "deliveries" | "messages" | "partner_products";
+        NotificationGroup: "documents" | "money" | "deliveries" | "messages" | "partner_products" | "security";
         /** @enum {string} */
         NotificationObjectType: "quote" | "invoice" | "act" | "delivery" | "chat" | "partner_product";
         /**
@@ -1688,6 +1714,43 @@ export interface components {
         };
         NotificationUnread: {
             unread: number;
+        };
+        /** @description Состояние каналов доставки для группы событий (J3, ADR-0023) */
+        NotificationChannelSettings: {
+            /** @description Колокольчик в кабинете (всегда включен) */
+            in_app: boolean;
+            /** @description Уведомления на email контакта */
+            email: boolean;
+            /** @description Уведомления в Telegram бот */
+            telegram: boolean;
+            /** @description Обязательная группа (нельзя отключить email или in_app) */
+            required: boolean;
+        };
+        NotificationGroupSettingsMap: {
+            documents: components["schemas"]["NotificationChannelSettings"];
+            money: components["schemas"]["NotificationChannelSettings"];
+            deliveries: components["schemas"]["NotificationChannelSettings"];
+            messages: components["schemas"]["NotificationChannelSettings"];
+            partner_products: components["schemas"]["NotificationChannelSettings"];
+            security: components["schemas"]["NotificationChannelSettings"];
+        };
+        NotificationSettingsResponse: {
+            /** @description Привязан ли аккаунт Telegram у контакта (NOTIFY-1) */
+            telegram_connected: boolean;
+            groups: components["schemas"]["NotificationGroupSettingsMap"];
+        };
+        NotificationChannelSettingsUpdate: {
+            email?: boolean;
+            telegram?: boolean;
+        };
+        NotificationSettingsUpdate: {
+            groups: {
+                documents?: components["schemas"]["NotificationChannelSettingsUpdate"];
+                money?: components["schemas"]["NotificationChannelSettingsUpdate"];
+                deliveries?: components["schemas"]["NotificationChannelSettingsUpdate"];
+                messages?: components["schemas"]["NotificationChannelSettingsUpdate"];
+                partner_products?: components["schemas"]["NotificationChannelSettingsUpdate"];
+            };
         };
         /** @enum {string} */
         RequestStatus: "new" | "in_progress" | "quoted" | "closed";
@@ -2856,6 +2919,64 @@ export interface operations {
             415: components["responses"]["UnsupportedMediaType"];
             422: components["responses"]["ValidationError"];
             429: components["responses"]["TooManyRequests"];
+        };
+    };
+    getNotificationSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Настройки уведомлений контакта */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationSettingsResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    updateNotificationSettings: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationSettingsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Обновлённые настройки */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationSettingsResponse"];
+                };
+            };
+            400: components["responses"]["IdempotencyKeyRequired"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            415: components["responses"]["UnsupportedMediaType"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listRequests: {

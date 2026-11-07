@@ -45,6 +45,7 @@ def pks(items):
 GET_CASES = {
     "/me": lambda w: ["/me"],
     "/notifications": lambda w: ["/notifications", "/notifications?limit=2"],
+    "/notifications/settings": lambda w: ["/notifications/settings"],
     "/requests": lambda w: ["/requests"],
     "/requests/{id}": lambda w: [
         f"/requests/{pk}" for pk in pks([w["new_deal"], w["in_progress"], w["closed"], w["main"]])
@@ -130,7 +131,7 @@ def fetch(client, anon_client, contract_path: str, url: str):
 def test_contract_is_mounted_and_readable():
     path = find_contract_path()
     assert path.name == "erp-portal.yaml"
-    assert load_contract()["info"]["version"] == "0.7.0"
+    assert load_contract()["info"]["version"] == "0.8.0"
 
 
 #: GET раздела «Мои товары» партнёра (PART-2): сессия клиента сюда не допущена (403 `MODULE_REQUIRED`), поэтому их

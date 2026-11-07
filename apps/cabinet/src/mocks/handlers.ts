@@ -100,6 +100,17 @@ function createDb(dataset: Dataset = 'demo') {
     telegram: fixtures.telegramMock(),
     /** Колокольчик (NOTIFY-2): лента контакта; у пустой компании — пусто (пустое состояние шторки). */
     notifications: empty ? [] : structuredClone(fixtures.notifications),
+    notificationSettings: {
+      telegram_connected: !empty,
+      groups: {
+        documents: { in_app: true, email: true, telegram: true, required: false },
+        money: { in_app: true, email: true, telegram: true, required: false },
+        deliveries: { in_app: true, email: false, telegram: true, required: false },
+        messages: { in_app: true, email: true, telegram: true, required: false },
+        partner_products: { in_app: true, email: true, telegram: true, required: false },
+        security: { in_app: true, email: true, telegram: true, required: true },
+      },
+    } as Schemas['NotificationSettingsResponse'],
     /** Лента чата кабинета и отметка «прочитано» (одна на мок-сессию). */
     messages: empty ? [] : structuredClone(fixtures.messages),
     readMark: empty ? 0 : fixtures.MOCK_READ_MARK,
@@ -453,6 +464,34 @@ export const handlers = [
       }
       const unread = db.notifications.filter((item) => item.read_at === null).length;
       return json({ unread } satisfies Schemas['NotificationUnread']);
+    }),
+  ),
+  http.get(
+    `${API}/notifications/settings`,
+    withSession(({ db }) => {
+      return json({
+        telegram_connected: db.telegram.linked,
+        groups: db.notificationSettings.groups,
+      } satisfies Schemas['NotificationSettingsResponse']);
+    }),
+  ),
+  http.patch(
+    `${API}/notifications/settings`,
+    withSession(async ({ db, request }) => {
+      const body = await readJson<Schemas['NotificationSettingsUpdate']>(request);
+      if (!body.groups) return error(422, 'VALIDATION_ERROR');
+      for (const [group, updates] of Object.entries(body.groups)) {
+        if (group === 'security') continue;
+        if (db.notificationSettings.groups[group as keyof Schemas['NotificationGroupSettingsMap']]) {
+          const target = db.notificationSettings.groups[group as keyof Schemas['NotificationGroupSettingsMap']];
+          if (updates.email !== undefined) target.email = updates.email;
+          if (updates.telegram !== undefined) target.telegram = updates.telegram;
+        }
+      }
+      return json({
+        telegram_connected: db.telegram.linked,
+        groups: db.notificationSettings.groups,
+      } satisfies Schemas['NotificationSettingsResponse']);
     }),
   ),
 
@@ -850,10 +889,27 @@ export const handlers = [
   http.put(
     `${API}/company`,
     withSession(
-      async ({ db, request }) => {
+      async ({ db, session, request }) => {
         const body = await readJson<Schemas['CompanyUpdate']>(request);
         if (body.name !== undefined && !body.name.trim()) return error(422, 'VALIDATION_ERROR');
         if (body.inn !== undefined && body.inn !== '' && !/^\d{9,14}$/.test(body.inn)) return error(422, 'INN_INVALID');
+        if (body.bank_details !== undefined && body.bank_details !== (db.company.bank_details ?? '')) {
+          const currentContact = contactFor(session.role);
+          if (!currentContact.is_admin) return error(409, 'ADMIN_REQUIRED');
+          const noticeId = (db.notifications[0]?.id ?? 0) + 1;
+          db.notifications.unshift({
+            id: noticeId,
+            kind: 'bank_requisites_changed',
+            group: 'security',
+            object: { type: 'chat', id: 0, number: null },
+            action: 'status_changed',
+            text_key: 'security_bank_requisites_changed',
+            params: { actor: currentContact.name || currentContact.email || 'Admin' },
+            link: '/company',
+            created_at: new Date().toISOString(),
+            read_at: null,
+          });
+        }
         const country = body.country_code
           ? { code: body.country_code, name: body.country_code === 'UZ' ? 'Узбекистан' : 'Казахстан' }
           : db.company.country;

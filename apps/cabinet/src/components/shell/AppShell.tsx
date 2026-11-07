@@ -19,6 +19,7 @@ import { BottomNav } from './BottomNav';
 import { MessagesLink } from './MessagesLink';
 import { BrandMark } from './BrandMark';
 import { NotificationBell } from './NotificationBell';
+import { HelpDrawer } from './HelpDrawer';
 import { SetCrumbContext, type PageCrumb } from './crumbs';
 import { SideNav } from './SideNav';
 import { useTelegramBackButton } from './useTelegramBackButton';
@@ -222,8 +223,9 @@ export function AppShell() {
                   </div>
                 </div>
 
-                {/* Правая часть: колокольчик (NOTIFY-2), сообщения (бейдж непрочитанного, CHAT-1) и профиль */}
+                {/* Правая часть: справка, колокольчик (NOTIFY-2), сообщения (бейдж непрочитанного, CHAT-1) и профиль */}
                 <div className="flex items-center gap-2">
+                  <HelpDrawer />
                   <NotificationBell />
                   <MessagesLink />
                   <Link

@@ -477,6 +477,19 @@ export function markNotificationsRead(body: JsonBody<paths['/notifications/read'
   return portalRequest<Schemas['NotificationUnread']>('/notifications/read', { method: 'POST', body });
 }
 
+// --- настройки каналов уведомлений (Wave J3, ADR-0023) -------------------------------------------
+
+export type NotificationSettingsResponse = Schemas['NotificationSettingsResponse'];
+export type NotificationSettingsUpdate = Schemas['NotificationSettingsUpdate'];
+export type NotificationGroupSettingsMap = Schemas['NotificationGroupSettingsMap'];
+export type NotificationChannelSettings = Schemas['NotificationChannelSettings'];
+
+export const getNotificationSettings = () =>
+  portalRequest<NotificationSettingsResponse>('/notifications/settings');
+
+export const updateNotificationSettings = (body: NotificationSettingsUpdate) =>
+  portalRequest<NotificationSettingsResponse>('/notifications/settings', { method: 'PATCH', body });
+
 // --- публичная проверка официальных документов (ADR-0024 §6, SIGN-VERIFY-1) -----------------------
 
 export type DocumentVerification = Schemas['DocumentVerification'];

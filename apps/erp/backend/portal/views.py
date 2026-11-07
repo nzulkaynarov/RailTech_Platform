@@ -1153,7 +1153,35 @@ class CompanyView(BasePortalView):
         if "legal_address" in data:
             company.legal_address = data["legal_address"].strip()
         if "bank_details" in data:
-            company.bank_details = data["bank_details"].strip()
+            old_bank = (company.bank_details or "").strip()
+            new_bank = data["bank_details"].strip()
+            if old_bank != new_bank:
+                # Смена банковских реквизитов — только администратор компании (J2-bank, OWASP / ISO 27001)
+                if not getattr(request.portal_contact, "is_admin", False):
+                    raise PortalConflict("ADMIN_REQUIRED")
+                company.bank_details = new_bank
+                # Уведомление безопасности для всех администраторов компании
+                from portal.models import NoticeChannel, PortalNotice
+                from parties.models import Contact, active_contact_q
+                other_admins = (
+                    Contact.objects.filter(company=company, is_admin=True)
+                    .exclude(pk=request.portal_contact.pk)
+                    .filter(active_contact_q())
+                )
+                for admin in other_admins:
+                    PortalNotice.objects.create(
+                        contact=admin,
+                        company=company,
+                        kind="bank_requisites_changed",
+                        group="security",
+                        object_type="chat",
+                        object_id=0,
+                        action="status_changed",
+                        text_key="security_bank_requisites_changed",
+                        params={"actor": request.portal_contact.name or request.portal_contact.email},
+                        link="/company",
+                        channel=NoticeChannel.CABINET,
+                    )
         if "language" in data:
             company.language = data["language"]
 

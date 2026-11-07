@@ -1,7 +1,7 @@
 import { useEffect, useId, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Building2, CheckCircle2, FileText, Handshake, Pencil, UserMinus, UserPlus, Users, X } from 'lucide-react';
+import { Building2, CheckCircle2, FileText, Handshake, Pencil, Shield, UserMinus, UserPlus, Users, X } from 'lucide-react';
 import { toast } from '@/lib/toast';
 
 import { apiErrorKey } from '@/api/errors';
@@ -48,6 +48,8 @@ import { useMe } from '@/session/useMe';
 export function CompanyPage() {
   const { t } = useTranslation();
   const company = useCompany();
+  const me = useMe().data;
+  const isAdmin = me?.contact?.is_admin === true;
   const [editing, setEditing] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
@@ -108,7 +110,17 @@ export function CompanyPage() {
                   { label: t('pages.company.fields.legalAddress'), value: company.data.legal_address || t('pages.company.notSet') },
                   {
                     label: t('pages.company.fields.bankDetails'),
-                    value: <span className="whitespace-pre-line">{company.data.bank_details || t('pages.company.notSet')}</span>,
+                    value: (
+                      <div className="flex flex-col gap-1">
+                        <span className="whitespace-pre-line">{company.data.bank_details || t('pages.company.notSet')}</span>
+                        {!isAdmin && (
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Shield className="size-3 text-muted-foreground" aria-hidden="true" />
+                            {t('pages.company.fields.bankAdminOnlyBadge', 'Редактировать может только администратор')}
+                          </span>
+                        )}
+                      </div>
+                    ),
                   },
                   { label: t('pages.company.fields.language'), value: t(`languages.${company.data.language}`) },
                 ]}
@@ -155,6 +167,8 @@ function CompanyForm({
   const { t } = useTranslation();
   const id = useId();
   const update = useUpdateCompany();
+  const me = useMe().data;
+  const isAdmin = me?.contact?.is_admin === true;
   const isUzbekistan = !company.country || company.country.code === 'UZ';
   const [draft, setDraft] = useState<CompanyFormDraft>({
     name: company.name,
@@ -262,14 +276,42 @@ function CompanyForm({
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor={`${id}-bank`}>{t('pages.company.fields.bankDetails')}</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor={`${id}-bank`}>{t('pages.company.fields.bankDetails')}</Label>
+              {!isAdmin && (
+                <ToneBadge tone="warning" className="text-xs py-0 px-1.5">
+                  <Shield className="size-3 mr-1 inline" aria-hidden="true" />
+                  {t('pages.company.fields.bankAdminOnlyBadge', 'Только администратор')}
+                </ToneBadge>
+              )}
+            </div>
             <Textarea
               id={`${id}-bank`}
               rows={3}
               value={draft.bank_details}
               maxLength={1000}
+              disabled={!isAdmin}
               onChange={(event) => set('bank_details', event.target.value)}
+              className={!isAdmin ? 'bg-muted/50 cursor-not-allowed opacity-80' : undefined}
             />
+            {!isAdmin ? (
+              <p className="text-xs text-muted-foreground">
+                {t(
+                  'pages.company.fields.bankDetailsAdminOnly',
+                  'Изменение банковских реквизитов доступно только администратору компании.',
+                )}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <Shield className="size-3 text-primary shrink-0" aria-hidden="true" />
+                <span>
+                  {t(
+                    'pages.company.fields.bankDetailsAdminNotice',
+                    'При изменении реквизитов все администраторы компании получат уведомление безопасности.',
+                  )}
+                </span>
+              </p>
+            )}
           </div>
           <LanguageChoice
             label={t('pages.company.fields.language')}
