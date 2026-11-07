@@ -327,9 +327,22 @@
     "rights": "Rights",
     "canAct": "Can approve: accept quotes, agree contracts, accept acts",
     "viewOnly": "View only",
+    "admin": "Company administrator",
     "language": "Cabinet language",
     "logout": "Sign out of the cabinet",
     "name": "Name",
+    "sessions": {
+      "title": "Active sessions",
+      "desc": "Devices and browsers signed in to the cabinet under your account",
+      "current": "Current session",
+      "revokeOthers": "Sign out of all other sessions",
+      "revoked": "Signed out of other sessions: {{count}}",
+      "noOther": "No other active sessions",
+      "device": "Device",
+      "ip": "IP address",
+      "lastUsed": "Active: {{date}}",
+      "created": "Created: {{date}}"
+    },
     "notifications": {
       "title": "Notifications",
       "linked": "Telegram connected",
@@ -846,10 +859,23 @@
       "rights": "Rights",
       "canAct": "Can approve",
       "viewOnly": "View only",
+      "admin": "Administrator",
+      "canActBadge": "Can approve",
+      "viewOnlyBadge": "View only",
+      "grantAdmin": "Make admin",
+      "revokeAdmin": "Remove admin",
+      "grantCanAct": "Allow approvals",
+      "revokeCanAct": "Revoke approvals",
+      "deactivate": "Deactivate",
+      "deactivateTitle": "Deactivate colleague?",
+      "deactivateDesc": "{{name}} will immediately lose access to the company cabinet, and all their active sessions will be terminated.",
+      "deactivateConfirm": "Yes, deactivate",
+      "deactivated": "Colleague {{name}} deactivated",
+      "updated": "Rights updated for {{name}}",
       "lastLogin": "Last sign-in",
       "invitedAt": "Invited {{date}}, not signed in yet",
       "neverLoggedIn": "Not signed in yet",
-      "rightsHint": "Your manager can change a colleague’s rights or the primary contact.",
+      "rightsHint": "Company administrators can manage team rights and deactivate accounts upon departures.",
       "inviteTitle": "Invite a colleague",
       "inviteText": "Your colleague will get an invitation to the cabinet through the selected channels.",
       "inviteConfirm": "Send invitation",
@@ -861,7 +887,9 @@
         "channels": "Where to send the invitation",
         "language": "Invitation language",
         "canAct": "Can approve",
-        "canActHint": "Accept quotes, agree contracts, accept acts, create requests. Without it — view only."
+        "canActHint": "Accept quotes, agree contracts, accept acts, create requests. Without it — view only.",
+        "roleAdmin": "Company administrator",
+        "roleAdminHint": "Can manage company team members, assign permissions, and terminate sessions."
       },
       "channels": {
         "email": "By e-mail",
@@ -987,7 +1015,12 @@
     "HONEYPOT_DETECTED": "Suspicious form activity detected.",
     "ALREADY_PARTNER": "Your company already has an active partner agreement.",
     "APPLICATION_EXISTS": "An application for partner status is already under review.",
-    "PARTNER_APPLICATION_NOT_FOUND": "Partner application not found."
+    "PARTNER_APPLICATION_NOT_FOUND": "Partner application not found.",
+    "LAST_ADMIN_CANNOT_BE_REMOVED": "Cannot remove administrator role from the company’s only administrator.",
+    "CANNOT_DEACTIVATE_SELF": "Cannot deactivate your own account.",
+    "CANNOT_ELEVATE_RIGHTS": "Cannot grant rights higher than your own.",
+    "ADMIN_REQUIRED": "This action requires company administrator rights.",
+    "CANNOT_MODIFY_PRIMARY_CONTACT": "Cannot modify permissions of the primary company contact."
   },
   "widgets": {
     "actionRequired": {

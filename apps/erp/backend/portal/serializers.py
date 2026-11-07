@@ -6,6 +6,7 @@ from typing import Optional
 
 from parties.models import Company, Contact
 from portal import projections
+from portal.models import PortalSession
 from portal.services import act_scan
 from portal.services import documents as portal_documents
 from rest_framework import serializers
@@ -46,6 +47,7 @@ class TeamMemberSerializer(serializers.ModelSerializer):
             "preferred_channel",
             "can_act",
             "is_primary",
+            "is_admin",
             "invited_at",
             "last_login_at",
         ]
@@ -107,6 +109,7 @@ class MeSerializer(serializers.Serializer):
     contact = TeamMemberSerializer()
     company = CompanySerializer()
     can_act = serializers.BooleanField()
+    is_admin = serializers.BooleanField(default=False)
     auth_method = serializers.ChoiceField(choices=["telegram", "magic_link"])
     notifications_unread = serializers.IntegerField(min_value=0)
     roles = serializers.ListField(child=serializers.ChoiceField(choices=["client", "partner"]))
@@ -134,6 +137,26 @@ class LoginCodeSerializer(serializers.Serializer):
         return super().to_internal_value(data)
 
 
+class PortalSessionItemSerializer(serializers.ModelSerializer):
+    is_current = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PortalSession
+        fields = [
+            "id",
+            "auth_method",
+            "ip_address",
+            "user_agent",
+            "is_current",
+            "created_at",
+            "last_used_at",
+        ]
+
+    def get_is_current(self, obj) -> bool:
+        current_session = self.context.get("current_session")
+        return bool(current_session and obj.pk == current_session.pk)
+
+
 class MagicLinkTokenSerializer(serializers.Serializer):
     """`POST /auth/magic`: токен из фрагмента ссылки (`minLength 16`, `maxLength 512` по контракту)."""
 
@@ -155,9 +178,20 @@ class TeamInviteSerializer(serializers.Serializer):
     phone = serializers.CharField(max_length=32, required=False, allow_blank=True, default="")
     language = serializers.ChoiceField(choices=["ru", "uz", "en"], default="ru")
     can_act = serializers.BooleanField(default=False)
+    is_admin = serializers.BooleanField(default=False)
     # Контракт: `channels` обязателен, `minItems: 1`, значения `email|telegram`; доставляется только email —
     # `telegram` отвечает 422 `INVALID_CHANNEL` (FIX-23), проверка в `portal.services.invitation.invite_team_member`.
     channels = serializers.ListField(child=serializers.ChoiceField(choices=["email", "telegram"]), allow_empty=False)
+
+
+class TeamMemberUpdateSerializer(serializers.Serializer):
+    can_act = serializers.BooleanField(required=False)
+    is_admin = serializers.BooleanField(required=False)
+
+    def to_internal_value(self, data):
+        if isinstance(data, dict) and set(data) - set(self.fields):
+            raise serializers.ValidationError({"non_field_errors": "VALIDATION_ERROR"})
+        return super().to_internal_value(data)
 
 
 class StrictCharField(serializers.CharField):

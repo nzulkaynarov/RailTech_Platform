@@ -84,6 +84,11 @@ class Contact(models.Model):
         verbose_name=_("Право действовать"),
         help_text=_("Право принимать КП, подписывать договоры и принимать акты"),
     )
+    is_admin = models.BooleanField(
+        default=False,
+        verbose_name=_("Администратор компании"),
+        help_text=_("Управляет командой компании и правами доступа в кабинете (J2, ADR-0022)"),
+    )
     invited_at = models.DateTimeField(
         null=True,
         blank=True,

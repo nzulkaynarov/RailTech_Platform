@@ -314,6 +314,50 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
+  /auth/sessions:
+    get:
+      tags: [auth]
+      operationId: listSessions
+      summary: Список активных сессий текущего контакта (J2, этап 8)
+      responses:
+        '200':
+          description: Активные сессии
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PortalSessionItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /auth/sessions/revoke-others:
+    post:
+      tags: [auth]
+      operationId: revokeOtherSessions
+      summary: Завершить все остальные сессии текущего контакта (J2, «Выйти везде»)
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Сессии завершены
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [revoked_count]
+                properties:
+                  revoked_count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
   /auth/partner-application:
     post:
       tags: [auth]
@@ -2030,6 +2074,87 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /team/{id}:
+    patch:
+      tags: [company]
+      operationId: updateTeamMember
+      summary: Обновить права коллеги (J2, только администратор компании)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeamMemberUpdate'
+      responses:
+        '200':
+          description: Права обновлены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamMember'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /team/{id}/deactivate:
+    post:
+      tags: [company]
+      operationId: deactivateTeamMember
+      summary: Отключить коллегу и завершить все его активные сессии (J2, только администратор)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Коллега деактивирован
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, deactivated_contact_id]
+                properties:
+                  ok:
+                    type: boolean
+                  deactivated_contact_id:
+                    type: integer
+                    format: int64
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
   /messages:
     get:
       tags: [messages]
@@ -2312,6 +2437,11 @@ components:
         - APPLICATION_EXISTS
         - PARTNER_APPLICATION_NOT_FOUND
         - NOT_IN_CONTRACT_SENT_STATUS
+        - LAST_ADMIN_CANNOT_BE_REMOVED
+        - CANNOT_DEACTIVATE_SELF
+        - CANNOT_ELEVATE_RIGHTS
+        - ADMIN_REQUIRED
+        - CANNOT_MODIFY_PRIMARY_CONTACT
 
     PartnerKind:
       type: string
@@ -3187,6 +3317,9 @@ components:
         can_act:
           type: boolean
           description: 'Право «действовать» (принимать КП, подписывать, принимать акты); иначе — только смотреть'
+        is_admin:
+          type: boolean
+          description: 'Право «администратор компании» (управление командой и реквизитами); первый приглашённый — админ'
         auth_method:
           type: string
           enum: [telegram, magic_link]
@@ -4110,12 +4243,24 @@ components:
           type: boolean
         is_primary:
           type: boolean
+        is_admin:
+          type: boolean
+          description: Администратор компании в кабинете
         invited_at:
           type: [string, 'null']
           format: date-time
         last_login_at:
           type: [string, 'null']
           format: date-time
+
+    TeamMemberUpdate:
+      type: object
+      properties:
+        can_act:
+          type: boolean
+        is_admin:
+          type: boolean
+      additionalProperties: false
 
     TeamInvite:
       type: object
@@ -4135,12 +4280,39 @@ components:
         can_act:
           type: boolean
           default: false
+        is_admin:
+          type: boolean
+          description: Права администратора компании (только если сам приглашающий — админ)
         channels:
           type: array
           minItems: 1
           items:
             type: string
             enum: [email, telegram]
+      additionalProperties: false
+
+    PortalSessionItem:
+      type: object
+      required: [id, auth_method, is_current, created_at, last_used_at]
+      properties:
+        id:
+          type: integer
+          format: int64
+        auth_method:
+          type: string
+          enum: [telegram, magic_link]
+        ip_address:
+          type: [string, 'null']
+        user_agent:
+          type: string
+        is_current:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        last_used_at:
+          type: string
+          format: date-time
       additionalProperties: false
 
     CatalogCategory:

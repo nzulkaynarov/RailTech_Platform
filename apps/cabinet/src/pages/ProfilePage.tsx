@@ -1,16 +1,19 @@
 import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LogOut } from 'lucide-react';
+import { Laptop, LogOut, Shield } from 'lucide-react';
 import { toast } from '@/lib/toast';
 
 import { apiErrorKey } from '@/api/errors';
+import { useRevokeOtherSessions, useSessions } from '@/api/queries';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { PageHeader } from '@/components/PageHeader';
+import { ToneBadge } from '@/components/StatusBadge';
 import type { ConnectTelegramState } from '@/onboarding/telegramStep';
 import { TelegramNotifications } from '@/components/TelegramNotifications';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatDateTime } from '@/lib/format';
 import { useAppMode } from '@/session/mode';
 import { useLogout, useMe } from '@/session/useMe';
 
@@ -83,7 +86,10 @@ export function ProfilePage() {
               </div>
               <div>
                 <dt className="text-muted-foreground">{t('profile.rights')}</dt>
-                <dd>{me.can_act ? t('profile.canAct') : t('profile.viewOnly')}</dd>
+                <dd className="flex flex-wrap items-center gap-2">
+                  <span>{me.can_act ? t('profile.canAct') : t('profile.viewOnly')}</span>
+                  {contact.is_admin ? <ToneBadge tone="warning">{t('profile.admin')}</ToneBadge> : null}
+                </dd>
               </div>
             </dl>
           </CardContent>
@@ -105,7 +111,88 @@ export function ProfilePage() {
           </CardContent>
         </Card>
         <TelegramNotifications autoStart={autoStart} />
+        <SessionsCard />
       </div>
     </>
+  );
+}
+
+function SessionsCard() {
+  const { t } = useTranslation();
+  const sessions = useSessions();
+  const revokeOthers = useRevokeOtherSessions();
+
+  const handleRevokeOthers = () => {
+    revokeOthers.mutate(undefined, {
+      onSuccess: (data) => {
+        toast.success(t('profile.sessions.revoked', { count: data.revoked_count }));
+      },
+      onError: (err) => {
+        toast.error(t(apiErrorKey(err)));
+      },
+    });
+  };
+
+  const otherSessionsCount = sessions.data ? sessions.data.filter((s) => !s.is_current).length : 0;
+
+  return (
+    <Card className="md:col-span-2">
+      <CardHeader className="flex flex-row items-start justify-between gap-4">
+        <div>
+          <CardTitle>
+            <h2 className="text-base flex items-center gap-2">
+              <Shield className="size-4 text-primary" aria-hidden="true" />
+              {t('profile.sessions.title')}
+            </h2>
+          </CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            {t('profile.sessions.desc')}
+          </p>
+        </div>
+        {otherSessionsCount > 0 ? (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={revokeOthers.isPending}
+            onClick={handleRevokeOthers}
+          >
+            {t('profile.sessions.revokeOthers')}
+          </Button>
+        ) : null}
+      </CardHeader>
+      <CardContent>
+        {sessions.isPending ? (
+          <p className="text-xs text-muted-foreground">{t('app.loading')}</p>
+        ) : sessions.isError ? (
+          <p className="text-xs text-destructive">{t(apiErrorKey(sessions.error))}</p>
+        ) : sessions.data.length === 0 ? (
+          <p className="text-xs text-muted-foreground">{t('profile.sessions.noOther')}</p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-border rounded-lg border border-border">
+            {sessions.data.map((s) => (
+              <li key={s.id} className="flex flex-wrap items-center justify-between gap-3 p-3">
+                <div className="flex items-center gap-3">
+                  <div className="size-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
+                    <Laptop className="size-4" aria-hidden="true" />
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{s.user_agent || t('profile.sessions.device')}</span>
+                      {s.is_current ? (
+                        <ToneBadge tone="success">{t('profile.sessions.current')}</ToneBadge>
+                      ) : null}
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {s.ip_address ? `${s.ip_address} • ` : ''}
+                      {t('profile.sessions.lastUsed', { date: formatDateTime(s.last_used_at) })}
+                    </span>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
   );
 }

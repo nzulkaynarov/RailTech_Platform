@@ -68,7 +68,7 @@ export function parseRetryAfter(value: string | null, now: number = Date.now()):
   return Number.isNaN(at) ? null : Math.max(0, Math.ceil((at - now) / 1000));
 }
 
-type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';
+type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 async function send(
   path: string,
@@ -169,6 +169,14 @@ export function logout(): Promise<void> {
   return portalRequest<void>('/auth/logout', { method: 'POST' });
 }
 
+export function listSessions(): Promise<PortalSessionItem[]> {
+  return portalRequest<PortalSessionItem[]>('/auth/sessions');
+}
+
+export function revokeOtherSessions(): Promise<{ revoked_count: number }> {
+  return portalRequest<{ revoked_count: number }>('/auth/sessions/revoke-others', { method: 'POST' });
+}
+
 export function getMe(): Promise<Me> {
   return portalRequest<Me>('/me');
 }
@@ -224,7 +232,9 @@ export type DocumentsQuery = QueryOf<paths['/documents']['get']>;
 export type Company = Schemas['Company'];
 export type CompanyUpdate = Schemas['CompanyUpdate'];
 export type TeamMember = Schemas['TeamMember'];
+export type TeamMemberUpdate = Schemas['TeamMemberUpdate'];
 export type TeamInvite = Schemas['TeamInvite'];
+export type PortalSessionItem = Schemas['PortalSessionItem'];
 
 export const listRequests = () => portalRequest<ClientRequest[]>('/requests');
 export const getRequest = (id: number) => portalRequest<ClientRequest>(`/requests/${id}`);
@@ -446,6 +456,10 @@ export const updateCompany = (body: CompanyUpdate) => portalRequest<Company>('/c
 export const listTeam = () => portalRequest<TeamMember[]>('/team');
 export const inviteTeamMember = (body: TeamInvite) =>
   portalRequest<TeamMember>('/team/invite', { method: 'POST', body });
+export const updateTeamMember = (id: number, body: TeamMemberUpdate) =>
+  portalRequest<TeamMember>(`/team/${id}`, { method: 'PATCH', body });
+export const deactivateTeamMember = (id: number) =>
+  portalRequest<{ ok: boolean; deactivated_contact_id: number }>(`/team/${id}/deactivate`, { method: 'POST' });
 
 // --- колокольчик кабинета (NOTIFY-2, ADR-0023 п. 2) ---------------------------------------------
 

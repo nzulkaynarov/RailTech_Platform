@@ -22,6 +22,7 @@ export const keys = {
   catalogItem: (id: number) => ['catalog', 'item', id] as const,
   company: ['company'] as const,
   team: ['team'] as const,
+  sessions: ['sessions'] as const,
   // Не под ['me']: выход стирает всё, кроме ['me'], — статус Telegram прошлого контакта не должен пережить выход.
   telegram: ['telegram'] as const,
   /** Лента чата кабинета: первая страница, дальше опрос дописывает в тот же кэш (`hooks/useMessagesFeed.ts`). */
@@ -72,6 +73,8 @@ export const useCompany = ({ enabled = true }: { enabled?: boolean } = {}) =>
   useQuery({ queryKey: keys.company, queryFn: portal.getCompany, enabled });
 export const useTeam = ({ enabled = true }: { enabled?: boolean } = {}) =>
   useQuery({ queryKey: keys.team, queryFn: portal.listTeam, enabled });
+export const useSessions = ({ enabled = true }: { enabled?: boolean } = {}) =>
+  useQuery({ queryKey: keys.sessions, queryFn: portal.listSessions, enabled });
 
 /** Шаг опроса статуса Telegram; в тестах короткий, чтобы не ждать секунды реального времени. */
 export const TELEGRAM_POLL_MS = import.meta.env.MODE === 'test' ? 50 : 3000;
@@ -213,6 +216,14 @@ export const useUpdateCompany = () =>
     client.setQueryData(keys.company, company),
   );
 export const useInviteTeamMember = () => useInvalidatingMutation(portal.inviteTeamMember, [keys.team]);
+export const useUpdateTeamMember = () =>
+  useInvalidatingMutation(
+    ({ id, body }: { id: number; body: portal.TeamMemberUpdate }) => portal.updateTeamMember(id, body),
+    [keys.team, ['me']],
+  );
+export const useDeactivateTeamMember = () =>
+  useInvalidatingMutation((id: number) => portal.deactivateTeamMember(id), [keys.team]);
+export const useRevokeOtherSessions = () => useInvalidatingMutation(portal.revokeOtherSessions, [keys.sessions]);
 
 // --- «Мои товары» партнёра (PART-2) -------------------------------------------------------------
 

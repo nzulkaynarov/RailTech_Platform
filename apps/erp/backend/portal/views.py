@@ -25,7 +25,7 @@ from parties.models import (
 )
 from portal.authentication import PortalAuthentication
 from portal.exceptions import PortalBadRequest, PortalConflict, PortalValidationError, portal_exception_handler
-from portal.models import PortalDocumentVerification, PortalUpload
+from portal.models import MagicLinkToken, PortalDocumentVerification, PortalSession, PortalUpload
 from portal.permissions import ANY_MODULE, CanAct, HasPortalModule, IsPortalAuthenticated
 from portal.projections import (
     annotate_request_sources,
@@ -59,6 +59,7 @@ from portal.serializers import (
     PaymentProofCreateSerializer,
     PaymentProofSerializer,
     PortalDocumentSerializer,
+    PortalSessionItemSerializer,
     PortalUploadResponseSerializer,
     QuoteAcceptSerializer,
     QuoteCommentCreateSerializer,
@@ -68,6 +69,7 @@ from portal.serializers import (
     ReasonSerializer,
     TeamInviteSerializer,
     TeamMemberSerializer,
+    TeamMemberUpdateSerializer,
     TelegramAuthSerializer,
 )
 from portal.services import catalog_documents
@@ -163,6 +165,7 @@ def _me_data(session, auth_method: str | None = None, access: tuple[list[str], l
         "contact": TeamMemberSerializer(session.contact).data,
         "company": CompanySerializer(session.company).data,
         "can_act": session.contact.can_act,
+        "is_admin": session.contact.is_admin,
         "auth_method": auth_method or session.auth_method,
         "notifications_unread": notices.unread_count(session.contact, session.company, modules),
         "roles": roles,
@@ -328,6 +331,54 @@ class LogoutView(APIView):
             session.delete()
         res = Response(status=status.HTTP_204_NO_CONTENT)
         return _delete_portal_cookie(res)
+
+
+class PortalSessionsView(APIView):
+    """GET /auth/sessions — Список активных сессий текущего контакта (J2)."""
+
+    authentication_classes = [PortalAuthentication]
+    permission_classes = [IsPortalAuthenticated]
+    throttle_classes = [PortalSessionRateThrottle]
+
+    def get_exception_handler(self):
+        return portal_exception_handler
+
+    def get(self, request):
+        sessions = (
+            PortalSession.objects.filter(
+                contact=request.portal_contact,
+                expires_at__gt=timezone.now(),
+            )
+            .order_by("-last_used_at", "-created_at")
+        )
+        serializer = PortalSessionItemSerializer(
+            sessions,
+            many=True,
+            context={"current_session": request.portal_session},
+        )
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class PortalSessionsRevokeOthersView(APIView):
+    """POST /auth/sessions/revoke-others — Завершить все остальные сессии текущего контакта (J2)."""
+
+    authentication_classes = [PortalAuthentication]
+    permission_classes = [IsPortalAuthenticated]
+    throttle_classes = [PortalSessionRateThrottle]
+
+    def get_exception_handler(self):
+        return portal_exception_handler
+
+    def post(self, request):
+        revoked_count, _ = (
+            PortalSession.objects.filter(
+                contact=request.portal_contact,
+                expires_at__gt=timezone.now(),
+            )
+            .exclude(pk=request.portal_session.pk)
+            .delete()
+        )
+        return Response({"revoked_count": revoked_count}, status=status.HTTP_200_OK)
 
 
 class DocumentVerificationView(APIView):
@@ -1302,3 +1353,109 @@ class TeamInviteView(BasePortalView):
             raise PortalValidationError("VALIDATION_ERROR")
         contact = invite_team_member(request.portal_company, request.portal_contact, serializer.validated_data)
         return Response(TeamMemberSerializer(contact).data, status=status.HTTP_201_CREATED)
+
+
+class TeamMemberDetailView(BasePortalView):
+    """PATCH /team/{id} — Обновление прав коллеги (J2, только администратор компании)."""
+
+    required_module = "team"
+
+    def patch(self, request, pk: int):
+        if not getattr(request.portal_contact, "is_admin", False):
+            raise exceptions.PermissionDenied("ADMIN_REQUIRED")
+
+        target = Contact.objects.filter(
+            active_contact_q(),
+            pk=pk,
+            company=request.portal_company,
+        ).first()
+        if target is None:
+            raise Http404
+
+        serializer = TeamMemberUpdateSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise PortalValidationError("VALIDATION_ERROR")
+
+        validated = serializer.validated_data
+
+        # Защита основного контакта: статус администратора и право действовать нельзя снять
+        if target.is_primary:
+            if "is_admin" in validated and not validated["is_admin"]:
+                raise PortalValidationError("CANNOT_MODIFY_PRIMARY_CONTACT")
+            if "can_act" in validated and not validated["can_act"]:
+                raise PortalValidationError("CANNOT_MODIFY_PRIMARY_CONTACT")
+
+        # Защита последнего администратора: нельзя снять статус администратора с единственного админа компании
+        if "is_admin" in validated and not validated["is_admin"] and target.is_admin:
+            has_other_admin = (
+                Contact.objects.filter(
+                    active_contact_q(),
+                    company=request.portal_company,
+                    is_admin=True,
+                )
+                .exclude(pk=target.pk)
+                .exists()
+            )
+            if not has_other_admin:
+                raise PortalValidationError("LAST_ADMIN_CANNOT_BE_REMOVED")
+
+        fields_to_update = []
+        if "can_act" in validated:
+            target.can_act = validated["can_act"]
+            fields_to_update.append("can_act")
+        if "is_admin" in validated:
+            target.is_admin = validated["is_admin"]
+            fields_to_update.append("is_admin")
+
+        if fields_to_update:
+            target.save(update_fields=fields_to_update)
+
+        return Response(TeamMemberSerializer(target).data, status=status.HTTP_200_OK)
+
+
+class TeamMemberDeactivateView(BasePortalView):
+    """POST /team/{id}/deactivate — Отключение коллеги и завершение всех его сессий (J2, только администратор)."""
+
+    required_module = "team"
+
+    def post(self, request, pk: int):
+        if not getattr(request.portal_contact, "is_admin", False):
+            raise exceptions.PermissionDenied("ADMIN_REQUIRED")
+
+        target = Contact.objects.filter(
+            active_contact_q(),
+            pk=pk,
+            company=request.portal_company,
+        ).first()
+        if target is None:
+            raise Http404
+
+        if target.pk == request.portal_contact.pk:
+            raise PortalValidationError("CANNOT_DEACTIVATE_SELF")
+
+        if target.is_primary:
+            raise PortalValidationError("CANNOT_MODIFY_PRIMARY_CONTACT")
+
+        if target.is_admin:
+            has_other_admin = (
+                Contact.objects.filter(
+                    active_contact_q(),
+                    company=request.portal_company,
+                    is_admin=True,
+                )
+                .exclude(pk=target.pk)
+                .exists()
+            )
+            if not has_other_admin:
+                raise PortalValidationError("LAST_ADMIN_CANNOT_BE_REMOVED")
+
+        target.archived_at = timezone.now()
+        target.is_admin = False
+        target.can_act = False
+        target.save(update_fields=["archived_at", "is_admin", "can_act"])
+
+        PortalSession.objects.filter(contact=target).delete()
+        MagicLinkToken.objects.filter(contact=target).delete()
+
+        return Response({"ok": True, "deactivated_contact_id": target.pk}, status=status.HTTP_200_OK)
+

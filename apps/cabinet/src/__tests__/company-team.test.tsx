@@ -184,4 +184,64 @@ describe('Команда', () => {
     await screen.findByRole('list', { name: 'Команда' });
     expect(screen.queryByRole('button', { name: 'Пригласить коллегу' })).not.toBeInTheDocument();
   });
+
+  it('J2: администратор компании может обновлять роли коллеги и отключать его', async () => {
+    signedIn();
+    const user = userEvent.setup();
+    renderApp('/team');
+    await heading('Команда');
+    const list = await screen.findByRole('list', { name: 'Команда' });
+
+    // Коллега Dilnoza (id: 102)
+    const viewer = within(list).getByRole('heading', { name: /Dilnoza Yusupova/ }).closest('article') as HTMLElement;
+    expect(within(viewer).getByRole('button', { name: 'Разрешить подпись' })).toBeInTheDocument();
+    expect(within(viewer).getByRole('button', { name: 'Назначить админом' })).toBeInTheDocument();
+    expect(within(viewer).getByRole('button', { name: 'Отключить' })).toBeInTheDocument();
+
+    // Назначаем админом
+    await user.click(within(viewer).getByRole('button', { name: 'Назначить админом' }));
+    expect(await screen.findByText('Права для Dilnoza Yusupova обновлены')).toBeInTheDocument();
+
+    // Отключаем коллегу
+    await user.click(within(viewer).getByRole('button', { name: 'Отключить' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Отключить коллегу?')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Да, отключить' }));
+
+    expect(await screen.findByText('Коллега Dilnoza Yusupova отключён от кабинета')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: /Dilnoza Yusupova/ })).not.toBeInTheDocument();
+    });
+  });
+
+  it('J2: не-администратор не видит кнопок управления ролями и отключения', async () => {
+    signedIn('viewer');
+    window.localStorage.setItem('cabinet.language', 'ru');
+    renderApp('/team');
+    await heading('Команда');
+    const list = await screen.findByRole('list', { name: 'Команда' });
+    expect(within(list).queryByRole('button', { name: 'Отключить' })).not.toBeInTheDocument();
+    expect(within(list).queryByRole('button', { name: 'Назначить админом' })).not.toBeInTheDocument();
+  });
+});
+
+describe('Профиль и сессии (J2)', () => {
+  it('отображает активные сессии и завершает другие сессии', async () => {
+    signedIn();
+    const user = userEvent.setup();
+    renderApp('/profile');
+    await heading('Профиль');
+
+    expect(await screen.findByText('Активные сессии')).toBeInTheDocument();
+    expect(screen.getByText('Текущая сессия')).toBeInTheDocument();
+    expect(screen.getByText('Safari / iPhone')).toBeInTheDocument();
+
+    const revokeBtn = screen.getByRole('button', { name: 'Завершить другие сессии' });
+    await user.click(revokeBtn);
+
+    expect(await screen.findByText(/Завершено других сессий: 1/)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText('Safari / iPhone')).not.toBeInTheDocument();
+    });
+  });
 });
