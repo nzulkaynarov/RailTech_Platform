@@ -63,6 +63,8 @@ subscribers:
       - uz.railtech.eds.approval.decided.v1
       # SIGN-3 (ADR-0024 п. 6): документ подписан — проекция в ERP для проверки в кабинете (/v/<код>).
       - uz.railtech.eds.document.signed.v1
+      # SIGN-4 (ADR-0024 п. 7): решение по запросу подписи коммерческого документа (КП, договор, счёт, акт).
+      - uz.railtech.eds.signing.decided.v1
       # W18A-P1: итог доставки письма, запрошенного ERP с notify = true (журнал писем ERP, Quote.send_report КП).
       - uz.railtech.crm.mail.*.v1
       # CHAT-1 (ADR-0023): ответ менеджера в чат кабинета — лента кабинета компании; обезличивание лида, который вёл
@@ -95,6 +97,8 @@ subscribers:
       - uz.railtech.identity.user.*.v1
       - uz.railtech.erp.request.created.v1
       - uz.railtech.erp.quote.ready_for_approval.v1
+      # SIGN-4 (ADR-0024 п. 7): запрос на подпись коммерческого документа по реестру SigningAuthority.
+      - uz.railtech.erp.signing.requested.v1
       # D2-5: договоры, счета и акты проектов — проекция реестра «Все документы» (без общих таблиц).
       - uz.railtech.erp.contract.status_changed.v1
       - uz.railtech.erp.invoice.issued.v1

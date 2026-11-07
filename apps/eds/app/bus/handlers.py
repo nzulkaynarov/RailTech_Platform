@@ -22,9 +22,10 @@ from rt_bus import Event, HandlerRegistry
 from rt_bus.sqlalchemy import AsyncBus
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.bus.erp_snapshots import ProjectDocumentEvent, QuoteReady, RequestCreated
+from app.bus.erp_snapshots import ProjectDocumentEvent, QuoteReady, RequestCreated, SigningRequestedEvent
 from app.bus.snapshots import AiPolicyChanged, UserDeactivated, UserEnvelope, parse_time
 from app.services import (
+    commercial_signing,
     docflow_settings,
     employees,
     letter_mail,
@@ -45,6 +46,7 @@ LETTERHEAD_UPDATED = "uz.railtech.erp.letterhead.updated.v1"
 MAIL_SENT = "uz.railtech.crm.mail.sent.v1"
 MAIL_FAILED = "uz.railtech.crm.mail.failed.v1"
 AI_POLICY_CHANGED = "uz.railtech.crm.ai_policy.changed.v1"
+SIGNING_REQUESTED = "uz.railtech.erp.signing.requested.v1"
 
 
 async def on_user_snapshot(event: Event, session: AsyncSession) -> None:
@@ -161,6 +163,20 @@ def build_registry(get_bus: Callable[[], AsyncBus] | None = None) -> HandlerRegi
             route = await quotes.open_for_quote(session, get_bus(), QuoteReady.model_validate(event.data))
             log.info("quote_route", route=str(route.id) if route else None, event_id=event.id)
 
+        async def signing_requested(event: Event, session: AsyncSession) -> None:
+            data = SigningRequestedEvent.model_validate(event.data)
+            decided = await commercial_signing.handle_signing_request(
+                session, get_bus(), data, event_time=parse_time(event.time)
+            )
+            log.info(
+                "commercial_signing_decision",
+                kind=data.object.kind,
+                number=data.object.number,
+                decision=decided.get("decision"),
+                event_id=event.id,
+            )
+
         registry.add(REQUEST_CREATED, request_created)
         registry.add(QUOTE_READY, quote_ready)
+        registry.add(SIGNING_REQUESTED, signing_requested)
     return registry

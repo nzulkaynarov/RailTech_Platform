@@ -1,0 +1,40 @@
+{
+  "specversion": "1.0",
+  "id": "e3a1f820-2c77-4b71-9f90-1c394142f101",
+  "source": "rt://erp",
+  "type": "uz.railtech.erp.signing.requested.v1",
+  "time": "2026-11-07T10:00:00Z",
+  "subject": "ДОГ-2026/00142",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/erp/signing.requested/v1",
+  "tenant": "railtech",
+  "correlationid": "0a9b8c7d-6e5f-4a3b-2c1d-0e9f8a7b6c5d",
+  "data": {
+    "object": {
+      "kind": "contract",
+      "object_id": 142,
+      "number": "ДОГ-2026/00142",
+      "version": null,
+      "amount_tiyins": 12500000000,
+      "currency": "UZS",
+      "title": "Договор поставки рельсовых скреплений",
+      "deal_id": 905,
+      "erp_company_id": 118
+    },
+    "requested_by": {
+      "crm_user_id": 14,
+      "name": "Каримов Б. Х.",
+      "position": "Менеджер по продажам"
+    },
+    "requested_signer": {
+      "crm_user_id": 3,
+      "name": "Рахимов А. Т.",
+      "position": "Директор"
+    },
+    "actor": {
+      "type": "staff",
+      "name": "Каримов Б. Х."
+    }
+  }
+}
+

@@ -46,9 +46,9 @@ def test_types_present() -> None:
     domains = {t.domain for t in TYPES}
     assert {"erp", "crm", "identity", "eds"} <= domains
     assert (
-        len([t for t in TYPES if t.domain == "erp"]) == 32
+        len([t for t in TYPES if t.domain == "erp"]) == 33
     )  # + contract.status_changed (D2-5), mail.requested (W18A-P1), letterhead.updated (W18A-P4), CHAT-1,
-    # NOTIFY-1, partner (PART-CRM)
+    # NOTIFY-1, partner (PART-CRM), signing.requested (SIGN-4)
 
 
 @pytest.mark.parametrize("path", schema_files(), ids=lambda p: p.relative_to(CONTRACTS).as_posix())
@@ -168,6 +168,9 @@ ERP_EVENTS_CHAT = {"cabinet.message_posted"}
 #: PART-CRM: партнёр приглашён в кабинет — CRM заводит клиента (ответ — crm.partner.client_resolved).
 ERP_EVENTS_PART_CRM = {"partner.client_requested", "partner.client_rejected"}
 
+#: SIGN-4 (ADR-0024): запрос подписания официального коммерческого документа (КП, договор, счёт, акт).
+ERP_EVENTS_SIGN = {"signing.requested"}
+
 
 def test_erp_types_are_the_22_events_of_the_former_webhook_and_the_c1_ones() -> None:
     """22 события бывшего вебхука (events.schema.json удалён в B4) — по-прежнему uz.railtech.erp.<тип>.v1; плюс C1."""
@@ -182,6 +185,7 @@ def test_erp_types_are_the_22_events_of_the_former_webhook_and_the_c1_ones() -> 
         | ERP_EVENTS_PART_CRM
         | ERP_EVENTS_CHAT
         | ERP_EVENTS_NOTIFY
+        | ERP_EVENTS_SIGN
     )
 
 
@@ -202,6 +206,8 @@ EDS_EVENTS = {
     "signing_authority.expiring",
     # SIGN-3: подписание официального документа уполномоченным лицом.
     "document.signed",
+    # SIGN-4: решение уполномоченного лица по коммерческому документу ERP (подписан/отклонён).
+    "signing.decided",
 }
 
 
@@ -429,6 +435,7 @@ def test_initial_subscriptions_v1() -> None:
         "uz.railtech.eds.document.signed.v1",
         "uz.railtech.eds.letter.rejected.v1",
         "uz.railtech.eds.letter.resolved.v1",
+        "uz.railtech.eds.signing.decided.v1",
     ]
 
 
@@ -442,6 +449,7 @@ def test_crm_gets_every_erp_event_except_those_for_eds() -> None:
         "uz.railtech.erp.quote.ready_for_approval.v1",
         "uz.railtech.erp.contract.status_changed.v1",
         "uz.railtech.erp.letterhead.updated.v1",
+        "uz.railtech.erp.signing.requested.v1",
     }
     # от EDS — запрос письма (W18A-P1), уведомления сотрудникам (P8b) и ВХ из очереди «Входящая почта» (W18A-P2)
     assert _gets(crm) - erp_got == {
@@ -464,6 +472,8 @@ def test_eds_subscription_c1() -> None:
         "uz.railtech.identity.user.deactivated.v1",
         "uz.railtech.erp.request.created.v1",
         "uz.railtech.erp.quote.ready_for_approval.v1",
+        # SIGN-4: запрос на подписание коммерческого документа ERP (КП, договор, счёт, акт).
+        "uz.railtech.erp.signing.requested.v1",
         # D2-5: проекция документов проектов (договор, счёт, акт) в реестре «Все документы».
         "uz.railtech.erp.contract.status_changed.v1",
         "uz.railtech.erp.invoice.issued.v1",

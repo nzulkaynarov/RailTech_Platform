@@ -7,7 +7,7 @@
 
 import datetime as dt
 import uuid
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
@@ -105,3 +105,30 @@ class ProjectDocumentEvent(_Tolerant):
     crm_client_id: int | None = None
     deal: DealRef
     payload: ProjectDocumentPayload
+
+
+class SigningObject(_Tolerant):
+    kind: Literal["quote", "contract", "invoice", "act"]
+    object_id: int
+    number: str
+    version: int | None = None
+    amount_tiyins: int
+    currency: str
+    title: str
+    deal_id: int | None = None
+    erp_company_id: int | None = None
+
+
+class SigningPerson(_Tolerant):
+    crm_user_id: int
+    name: str
+    position: str = ""
+
+
+class SigningRequestedEvent(_Tolerant):
+    """`data` события `uz.railtech.erp.signing.requested.v1` (SIGN-4, ADR-0024)."""
+
+    object: SigningObject
+    requested_by: SigningPerson
+    requested_signer: SigningPerson | None = None
+    actor: dict[str, Any] = Field(default_factory=dict)

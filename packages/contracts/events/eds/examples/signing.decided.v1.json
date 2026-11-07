@@ -1,0 +1,38 @@
+{
+  "specversion": "1.0",
+  "id": "1e2d3c4b-5a6f-7e8d-9c0b-1a2b3c4d5e6f",
+  "source": "rt://eds",
+  "type": "uz.railtech.eds.signing.decided.v1",
+  "time": "2026-11-07T10:05:00Z",
+  "subject": "ДОГ-2026/00142",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/eds/signing.decided/v1",
+  "tenant": "railtech",
+  "correlationid": "0a9b8c7d-6e5f-4a3b-2c1d-0e9f8a7b6c5d",
+  "data": {
+    "object": {
+      "kind": "contract",
+      "object_id": 142,
+      "number": "ДОГ-2026/00142",
+      "version": null
+    },
+    "decision": "signed",
+    "signer": {
+      "crm_user_id": 3,
+      "full_name": "Рахимов А. Т.",
+      "position": "Директор"
+    },
+    "authority_id": "11111111-2222-3333-4444-555555555555",
+    "basis": "power_of_attorney",
+    "basis_text": "Действует по доверенности № Д-14/26 от 15.01.2026 (до 31.12.2026)",
+    "verification_code": "V7K9Q2P4M1",
+    "verification_url": "https://cabinet.railtech.uz/v/V7K9Q2P4M1",
+    "signed_at": "2026-11-07T10:05:00Z",
+    "comment": null,
+    "actor": {
+      "type": "staff",
+      "crm_user_id": 3
+    }
+  }
+}
+

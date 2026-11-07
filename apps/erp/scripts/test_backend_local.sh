@@ -81,13 +81,15 @@ done
 # rt_bus и контракты шины (B3, L14) приходят в образ именованными контекстами сборки — как в compose (additional_contexts).
 # Сборка идёт каждый раз: слои из кэша docker — доли секунды (замер: ≤ 2 с), а вход образа не ограничен requirements*
 # (rtbus, contracts, Dockerfile) — штамп по ним дал бы шанс забыть пересборку и получить устаревшую шину в образе.
-echo "▸ сборка образа $IMAGE"
-NO_CACHE=()
-[ "${ERP_TEST_REBUILD:-}" = 1 ] && NO_CACHE=(--no-cache)
-docker build -q ${NO_CACHE[@]+"${NO_CACHE[@]}"} -t "$IMAGE" \
-  --build-context "rtbus=$ROOT/../../packages/rt-bus" \
-  --build-context "contracts=$ROOT/../../packages/contracts" \
-  "$ROOT/backend" >/dev/null
+if [ "${ERP_TEST_SKIP_BUILD:-}" != 1 ]; then
+  echo "▸ сборка образа $IMAGE"
+  NO_CACHE=()
+  [ "${ERP_TEST_REBUILD:-}" = 1 ] && NO_CACHE=(--no-cache)
+  docker build -q ${NO_CACHE[@]+"${NO_CACHE[@]}"} -t "$IMAGE" \
+    --build-context "rtbus=$ROOT/../../packages/rt-bus" \
+    --build-context "contracts=$ROOT/../../packages/contracts" \
+    "$ROOT/backend" >/dev/null
+fi
 
 DB_URL="postgresql://rt:${PASS}@${PG}:5432"
 run_in() {

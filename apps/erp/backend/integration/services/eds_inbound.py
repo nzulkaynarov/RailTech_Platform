@@ -151,3 +151,187 @@ def apply_document_signed(data: dict[str, Any], event_id: Optional[UUID] = None)
     )
     logger.info("eds.document.signed: сохранена проекция проверки документа %s (#%s)", code, obj.number)
     return Outcome(True, "created" if created else "updated")
+
+
+def apply_signing_decided(data: dict[str, Any], event_id: Optional[UUID] = None) -> Outcome:
+    """`signing.decided` (SIGN-4, ADR-0024): решение уполномоченного лица EDS по коммерческому документу ERP.
+
+    Объект — `object.kind` ("quote", "contract", "invoice", "act"), `object.object_id`, `object.number`.
+    `decision`: "signed" | "rejected".
+    """
+    obj = data.get("object") or {}
+    kind = obj.get("kind")
+    object_id = obj.get("object_id")
+    decision = data.get("decision")
+
+    if not kind or not object_id:
+        logger.warning("eds.signing.decided: нет kind или object_id — пропуск")
+        return Outcome(False, "invalid_object")
+
+    from portal.models import PortalDocumentVerification
+
+    from core.tenant import own_company
+
+    company = own_company()
+    company_name = company.name if company else "RailTech"
+
+    if decision == "signed":
+        code = data.get("verification_code")
+        signer = data.get("signer") or {}
+        signed_at_str = data.get("signed_at")
+        signed_at_dt = _when(signed_at_str) if signed_at_str else datetime.now()
+        basis_val = data.get("basis") or "charter"
+        basis_text = data.get("basis_text") or ("на основании Устава" if basis_val == "charter" else "")
+        signer_name = signer.get("full_name") or signer.get("name") or ""
+        signer_position = signer.get("position") or ""
+
+        # 1. Обновляем публичную проекцию PortalDocumentVerification
+        if code:
+            PortalDocumentVerification.objects.update_or_create(
+                code=code,
+                defaults={
+                    "kind": kind,
+                    "number": obj.get("number") or "",
+                    "date": signed_at_dt.date(),
+                    "company_name": company_name,
+                    "signatory_name": signer_name,
+                    "signatory_position": signer_position,
+                    "signatory_basis": basis_text,
+                    "status": "valid",
+                    "sha256_hash": None,
+                    "signed_at": signed_at_dt,
+                    "eds_document_id": None,
+                },
+            )
+
+        # 2. Обновляем целевой документ в ERP
+        if kind == "quote":
+            from sales.models import Quote
+
+            from crm.services.quotes.lifecycle import QuoteLifecycleService
+
+            quote = Quote.objects.filter(pk=object_id).first()
+            if not quote:
+                logger.warning("eds.signing.decided: Quote #%s не найден", object_id)
+                return Outcome(False, "quote_not_found")
+
+            quote.verification_code = code or ""
+            quote.signatory_name = signer_name
+            quote.signatory_position = signer_position
+            quote.signatory_basis = basis_val
+            quote.signatory_basis_text = basis_text
+            quote.signed_at = signed_at_dt
+            quote.save(
+                update_fields=[
+                    "verification_code",
+                    "signatory_name",
+                    "signatory_position",
+                    "signatory_basis",
+                    "signatory_basis_text",
+                    "signed_at",
+                ]
+            )
+            QuoteLifecycleService.generate_pdf(quote.pk)
+            logger.info("eds.signing.decided: Quote #%s подписано уполномоченным (%s)", object_id, code)
+            return Outcome(True, "quote_signed")
+
+        elif kind == "contract":
+            from sales.models import Contract
+
+            from crm.services.contracts import _render_contract_pdf
+
+            contract = Contract.objects.filter(pk=object_id).first()
+            if not contract:
+                logger.warning("eds.signing.decided: Contract #%s не найден", object_id)
+                return Outcome(False, "contract_not_found")
+
+            contract.verification_code = code or ""
+            contract.signatory_name = signer_name
+            contract.signatory_position = signer_position
+            contract.signatory_basis = basis_val
+            contract.signatory_basis_text = basis_text
+            contract.signed_at = signed_at_dt
+            contract.manager_signed_at = signed_at_dt
+            contract.save(
+                update_fields=[
+                    "verification_code",
+                    "signatory_name",
+                    "signatory_position",
+                    "signatory_basis",
+                    "signatory_basis_text",
+                    "signed_at",
+                    "manager_signed_at",
+                ]
+            )
+            _render_contract_pdf(contract)
+            logger.info("eds.signing.decided: Contract #%s подписан уполномоченным (%s)", object_id, code)
+            return Outcome(True, "contract_signed")
+
+        elif kind == "invoice":
+            from finance.models import Invoice
+
+            from crm.services.billing import _render_invoice_pdf
+
+            invoice = Invoice.objects.filter(pk=object_id).first()
+            if not invoice:
+                logger.warning("eds.signing.decided: Invoice #%s не найден", object_id)
+                return Outcome(False, "invoice_not_found")
+
+            invoice.verification_code = code or ""
+            invoice.signatory_name = signer_name
+            invoice.signatory_position = signer_position
+            invoice.signatory_basis = basis_val
+            invoice.signatory_basis_text = basis_text
+            invoice.signed_at = signed_at_dt
+            invoice.save(
+                update_fields=[
+                    "verification_code",
+                    "signatory_name",
+                    "signatory_position",
+                    "signatory_basis",
+                    "signatory_basis_text",
+                    "signed_at",
+                ]
+            )
+            _render_invoice_pdf(invoice)
+            logger.info("eds.signing.decided: Invoice #%s подписан уполномоченным (%s)", object_id, code)
+            return Outcome(True, "invoice_signed")
+
+        elif kind == "act":
+            from finance.models import Act
+
+            from crm.services.billing import _render_act_pdf
+
+            act = Act.objects.filter(pk=object_id).first()
+            if not act:
+                logger.warning("eds.signing.decided: Act #%s не найден", object_id)
+                return Outcome(False, "act_not_found")
+
+            act.verification_code = code or ""
+            act.signatory_name = signer_name
+            act.signatory_position = signer_position
+            act.signatory_basis = basis_val
+            act.signatory_basis_text = basis_text
+            act.signed_at = signed_at_dt
+            act.issuer_signed_at = signed_at_dt
+            act.save(
+                update_fields=[
+                    "verification_code",
+                    "signatory_name",
+                    "signatory_position",
+                    "signatory_basis",
+                    "signatory_basis_text",
+                    "signed_at",
+                    "issuer_signed_at",
+                ]
+            )
+            _render_act_pdf(act)
+            logger.info("eds.signing.decided: Act #%s подписан уполномоченным (%s)", object_id, code)
+            return Outcome(True, "act_signed")
+
+    elif decision == "rejected":
+        comment = data.get("comment") or "Отказ в подписании документа"
+        logger.warning("eds.signing.decided: документ %s #%s отклонен: %s", kind, object_id, comment)
+        return Outcome(True, "rejected")
+
+    return Outcome(False, f"unknown_decision: {decision}")

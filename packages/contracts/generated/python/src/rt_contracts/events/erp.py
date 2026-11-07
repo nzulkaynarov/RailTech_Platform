@@ -818,6 +818,17 @@ class Kind1(StrEnum):
     act = "act"
 
 
+class Kind2(StrEnum):
+    """
+    Вид коммерческого документа
+    """
+
+    quote = "quote"
+    contract = "contract"
+    invoice = "invoice"
+    act = "act"
+
+
 class Language(StrEnum):
     """
     Язык контакта в ERP; бот CRM берёт язык лида, если он известен
@@ -984,6 +995,45 @@ class MailRequestedV1(BaseModel):
     content: Content
     """
     Тело письма шифртекстом: Fernet с ключом urlsafe_b64(HMAC-SHA256(секрет пары «erp → crm», "rt-mail/v1/content")); открытый текст — JSON {text, html|null, links: [{url, expires_at}]}. Первым шифрует первый секрет пары, CRM пробует каждый действующий
+    """
+
+
+class Object(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    kind: Kind2
+    """
+    Вид коммерческого документа
+    """
+    object_id: int
+    """
+    Идентификатор сущности в ERP
+    """
+    number: Annotated[str, Field(max_length=64, min_length=1)]
+    """
+    Регистрационный или системный номер документа (КП-*, ДОГ-*, СЧ-*, АКТ-*)
+    """
+    version: int | None = None
+    """
+    Версия документа (для КП), null — если не версионируется
+    """
+    amount_tiyins: Annotated[int, Field(ge=0)]
+    """
+    Сумма документа в минимальных единицах валюты (тийины/центы) для проверки лимита
+    """
+    currency: Currency
+    title: Annotated[str, Field(max_length=300, min_length=1)]
+    """
+    Краткое наименование / тема документа
+    """
+    deal_id: int | None = None
+    """
+    Сделка, к которой относится документ
+    """
+    erp_company_id: int | None = None
+    """
+    Компания-эмитент в ERP
     """
 
 
@@ -1496,6 +1546,38 @@ class RequestCreatedV1(BaseModel):
     deal: DealRef
     actor: Actor
     payload: RequestCreated
+
+
+class RequestedBy(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    crm_user_id: int
+    name: str
+    position: str | None = None
+
+
+class RequestedSigner(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    crm_user_id: int | None = None
+    name: str | None = None
+    position: str | None = None
+
+
+class SigningRequestedV1(BaseModel):
+    """
+    Тип uz.railtech.erp.signing.requested.v1, источник rt://erp. Поле data конверта (envelope.v1.json). Запрос на регламентированное подписание официального коммерческого документа (КП, договор, счёт, акт) уполномоченным лицом по реестру SigningAuthority в EDS (SIGN-4, ADR-0024). Сумма передаётся в тийинах для проверки лимита полномочий. Подписчики v1: eds (проверка прав и выпуск решения), platform-bff.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    object: Object
+    requested_by: RequestedBy
+    requested_signer: RequestedSigner | None = None
+    actor: Actor
 
 
 class Source(StrEnum):

@@ -38,6 +38,7 @@ from rt_contracts.events.eds import (
     MailRequestedV1,
     NoticeRequestedV1,
     SigningAuthorityExpiringV1,
+    SigningDecidedV1,
 )
 from rt_contracts.events.envelope import Envelope
 from rt_contracts.events.erp import (
@@ -73,6 +74,7 @@ from rt_contracts.events.erp import (
     QuoteSentV1,
     QuoteViewedV1,
     RequestCreatedV1,
+    SigningRequestedV1,
 )
 from rt_contracts.events.identity import UserCreatedV1, UserDeactivatedV1, UserUpdatedV1
 
@@ -125,6 +127,7 @@ TYPES: dict[str, type[BaseModel]] = {
     "uz.railtech.erp.quote.sent.v1": QuoteSentV1,
     "uz.railtech.erp.quote.viewed.v1": QuoteViewedV1,
     "uz.railtech.erp.request.created.v1": RequestCreatedV1,
+    "uz.railtech.erp.signing.requested.v1": SigningRequestedV1,
     "uz.railtech.eds.approval.decided.v1": ApprovalDecidedV1,
     "uz.railtech.eds.approval.requested.v1": ApprovalRequestedV1,
     "uz.railtech.eds.document.archived.v1": DocumentArchivedV1,
@@ -136,6 +139,7 @@ TYPES: dict[str, type[BaseModel]] = {
     "uz.railtech.eds.letter.returned.v1": LetterReturnedV1,
     "uz.railtech.eds.mail.requested.v1": MailRequestedV1,
     "uz.railtech.eds.notice.requested.v1": NoticeRequestedV1,
+    "uz.railtech.eds.signing.decided.v1": SigningDecidedV1,
     "uz.railtech.eds.signing_authority.expiring.v1": SigningAuthorityExpiringV1,
     "uz.railtech.identity.user.created.v1": UserCreatedV1,
     "uz.railtech.identity.user.deactivated.v1": UserDeactivatedV1,
@@ -206,6 +210,8 @@ __all__ = [
     "QuoteViewedV1",
     "RequestCreatedV1",
     "SigningAuthorityExpiringV1",
+    "SigningDecidedV1",
+    "SigningRequestedV1",
     "UserCreatedV1",
     "UserDeactivatedV1",
     "UserUpdatedV1",

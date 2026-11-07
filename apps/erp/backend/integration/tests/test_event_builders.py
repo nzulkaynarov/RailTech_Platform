@@ -72,7 +72,8 @@ def test_the_29_types_of_the_erp_are_the_files_of_the_contract():
     # W18A-P4: letterhead.updated — бланк своей компании для EDS, публикует сервис профиля (`accounts/services/letterhead_event.py`).
     # CHAT-1: cabinet.message_posted — сообщение чата кабинета, публикует портал (`portal/services/messages.py`) и без
     # сопоставления с CRM.
-    excluded = {"mail.requested", "letterhead.updated", "cabinet.message_posted"}
+    # SIGN-4: signing.requested — запрос подписания документа в EDS, публикует crm.services.signing_outbound.
+    excluded = {"mail.requested", "letterhead.updated", "cabinet.message_posted", "signing.requested"}
     assert names - excluded == VALID_EVENT_TYPES and len(VALID_EVENT_TYPES) == 29
     for short in VALID_EVENT_TYPES:
         assert event_type_name(short) == f"uz.railtech.erp.{short}.v1"
