@@ -464,7 +464,7 @@ function SecurityLogCard() {
                       }
                       className="text-xs"
                     >
-                      {String(t(`pages.company.securityLog.events.${event.event_type}`, { defaultValue: event.event_type }))}
+                      {t(`pages.company.securityLog.events.${event.event_type}`)}
                     </ToneBadge>
                     <span className="font-medium text-foreground">{event.actor_name}</span>
                     {event.target_name && (

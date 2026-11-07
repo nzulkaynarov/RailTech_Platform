@@ -316,7 +316,7 @@ export function DocumentsPage() {
                 setDateTo('');
               }}
             >
-              {t('common.reset', 'Сбросить')}
+              {t('common.reset')}
             </Button>
           )}
         </div>

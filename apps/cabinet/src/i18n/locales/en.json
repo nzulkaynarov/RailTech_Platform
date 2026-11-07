@@ -63,6 +63,7 @@
     "close": "Close",
     "cancel": "Cancel",
     "save": "Save",
+    "reset": "Reset",
     "all": "All",
     "actions": "Actions",
     "loadFailed": "Could not load",
