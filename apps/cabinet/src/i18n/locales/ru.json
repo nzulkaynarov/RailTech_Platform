@@ -101,7 +101,9 @@
       "new": "Новый",
       "in_progress": "В работе",
       "quoted": "Есть КП",
-      "closed": "Закрыт"
+      "closed": "Закрыт",
+      "outcome_won": "Исполнен",
+      "outcome_cancelled": "Отменён"
     },
     "quote": {
       "sent": "Ждёт решения",
@@ -423,6 +425,12 @@
     "requests": {
       "title": "Запросы",
       "new": "Новый запрос",
+      "filterLabel": "Фильтр запросов по статусу",
+      "filterAll": "Все",
+      "searchPlaceholder": "Поиск по номеру, описанию или позиции...",
+      "noMatchTitle": "Ничего не нашлось",
+      "noMatchText": "По запросу «{{query}}» запросов не найдено",
+      "clearSearch": "Сбросить поиск",
       "emptyTitle": "Запросов пока нет",
       "emptyText": "Здесь появятся ваши запросы и их статус: новый, в работе, есть КП, закрыт.",
       "columns": {
@@ -474,6 +482,8 @@
         "title": "Позиция / этап",
         "quantity": "Кол-во"
       },
+      "reorder": "Повторить запрос",
+      "reorderSummary": "Повтор запроса {{number}}: {{summary}}",
       "backToList": "К списку запросов",
       "sources": {
         "cabinet": "Вы — в кабинете",
@@ -974,6 +984,7 @@
       "documents": "Документы",
       "toRequests": "К запросам",
       "titleFallback": "Проект",
+      "reorder": "Повторить проект",
       "stages": {
         "title": "Этапы проекта",
         "request": "Запрос",
@@ -982,6 +993,8 @@
         "payment": "Оплата",
         "delivery": "Поставка и акт",
         "closed": "Запрос закрыт",
+        "outcome_won": "Проект успешно завершён",
+        "outcome_cancelled": "Проект отменён",
         "state": {
           "done": "выполнено",
           "active": "начато",

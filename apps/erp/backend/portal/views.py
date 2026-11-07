@@ -6,6 +6,7 @@
 Действия мутации требуют CanAct (can_act=True), иначе 403 {"detail": "FORBIDDEN"}.
 """
 
+import datetime
 import logging
 
 from django.conf import settings
@@ -23,6 +24,7 @@ from parties.models import (
     RelationshipStatus,
     active_contact_q,
 )
+from portal import projections
 from portal.authentication import PortalAuthentication
 from portal.exceptions import PortalBadRequest, PortalConflict, PortalValidationError, portal_exception_handler
 from portal.models import MagicLinkToken, PortalDocumentVerification, PortalSession, PortalUpload
@@ -483,13 +485,32 @@ def _requests_queryset(company):
 
 
 class RequestListView(BasePortalView):
-    """GET/POST /requests — Запросы клиента."""
+    """GET/POST /requests — Запросы клиента (J6: фильтры q и status)."""
 
     required_module = "catalog_requests"
 
     def get(self, request):
+        q = (request.query_params.get("q") or "").strip().lower()
+        status_filter = request.query_params.get("status")
+        if status_filter is not None and status_filter not in ("new", "quoted", "in_progress", "closed"):
+            raise PortalValidationError("VALIDATION_ERROR")
+
         deals = list(_requests_queryset(request.portal_company).order_by("-created_at"))
         annotate_request_sources(deals)
+
+        if status_filter:
+            deals = [d for d in deals if projections.request_status(d) == status_filter]
+
+        if q:
+            deals = [
+                d
+                for d in deals
+                if q in projections.request_number(d).lower()
+                or q in (d.portal_summary.text if getattr(d, "portal_summary", None) else (d.title or "")).lower()
+                or (d.pk and str(d.pk) == q)
+                or any(q in line.text.lower() for line in d.portal_lines.all())
+            ]
+
         return Response(ClientRequestSerializer(deals, many=True).data)
 
     def post(self, request):
@@ -505,6 +526,38 @@ class RequestListView(BasePortalView):
             attachments=data["attachments"],
         )
         created = _requests_queryset(request.portal_company).get(pk=deal.pk)
+        return Response(ClientRequestSerializer(created).data, status=status.HTTP_201_CREATED)
+
+
+class RequestReorderView(BasePortalView):
+    """POST /requests/{id}/reorder — Повтор запроса клиента (J6.2)."""
+
+    required_module = "catalog_requests"
+
+    def post(self, request, pk):
+        deal = _requests_queryset(request.portal_company).filter(pk=pk).first()
+        if not deal:
+            raise Http404
+
+        lines_data = [
+            {
+                "text": line.text,
+                "quantity": str(line.quantity) if line.quantity is not None else None,
+                "unit": line.unit or "",
+            }
+            for line in deal.portal_lines.all()
+        ]
+        old_summary = deal.portal_summary.text if getattr(deal, "portal_summary", None) else (deal.title or "")
+        reorder_summary = f"Повтор запроса {projections.request_number(deal)}: {old_summary}".strip(": ")
+
+        new_deal = create_client_request(
+            request.portal_company,
+            request.portal_contact,
+            summary=reorder_summary[:5000],
+            lines=lines_data,
+            attachments=[],
+        )
+        created = _requests_queryset(request.portal_company).get(pk=new_deal.pk)
         return Response(ClientRequestSerializer(created).data, status=status.HTTP_201_CREATED)
 
 
@@ -926,7 +979,7 @@ def _contact_language(request) -> str:
 
 
 class DocumentListView(BasePortalView):
-    """GET /documents — Выпущенные документы компании клиента (FIX-23); `kind` и `deal_id` — фильтры."""
+    """GET /documents — Выпущенные документы компании клиента (FIX-23, J6); `kind`, `deal_id`, `q`, `date_from`, `date_to` — фильтры."""
 
     required_module = "documents"
 
@@ -940,8 +993,33 @@ class DocumentListView(BasePortalView):
                 deal_id = int(deal_id)
             except ValueError:
                 raise PortalValidationError("VALIDATION_ERROR") from None
+
+        q = (request.query_params.get("q") or "").strip()
+        date_from_str = request.query_params.get("date_from")
+        date_from = None
+        if date_from_str:
+            try:
+                date_from = datetime.date.fromisoformat(date_from_str)
+            except ValueError:
+                raise PortalValidationError("VALIDATION_ERROR") from None
+
+        date_to_str = request.query_params.get("date_to")
+        date_to = None
+        if date_to_str:
+            try:
+                date_to = datetime.date.fromisoformat(date_to_str)
+            except ValueError:
+                raise PortalValidationError("VALIDATION_ERROR") from None
+
         with translation.override(_contact_language(request)):
-            documents = portal_documents.client_documents(request.portal_company, kind=kind, deal_id=deal_id)
+            documents = portal_documents.client_documents(
+                request.portal_company,
+                kind=kind,
+                deal_id=deal_id,
+                q=q,
+                date_from=date_from,
+                date_to=date_to,
+            )
         return Response(PortalDocumentSerializer(documents, many=True).data)
 
 

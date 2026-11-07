@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Briefcase, Check, FileText } from 'lucide-react';
+import { Briefcase, Check, FileText, RotateCw } from 'lucide-react';
 
 import type { DealRef } from '@/api/portal';
 import { useActs, useContracts, useDeliveries, useDocuments, useInvoices, useQuotes, useRequests } from '@/api/queries';
@@ -10,7 +10,7 @@ import { DocumentButton } from '@/components/DocumentButton';
 import { EmptyState } from '@/components/EmptyState';
 import { PageHeader } from '@/components/PageHeader';
 import { ErrorState, ListSkeleton } from '@/components/QueryStates';
-import { QuoteStatusBadge, StatusBadge } from '@/components/StatusBadge';
+import { QuoteStatusBadge, RequestStatusBadge, StatusBadge } from '@/components/StatusBadge';
 import { ManagerButton } from '@/components/TelegramLinkButton';
 import { Button } from '@/components/ui/button';
 import { useNow } from '@/hooks/useNow';
@@ -18,6 +18,7 @@ import { formatDate, formatMoney, formatQuantity } from '@/lib/format';
 import { dealProgress, type DealProgress } from '@/lib/dealStage';
 import { invoiceView } from '@/lib/invoice';
 import { cn } from '@/lib/utils';
+import { CanAct } from '@/session/CanAct';
 
 /**
  * Сделка — цель deep-link бота (`start_param=deal_<id>`): всё по сделке на одном экране, собрано из
@@ -102,10 +103,33 @@ export function DealPage() {
         subtitle={subtitle}
         icon={Briefcase}
         actions={
-          <ManagerButton
-            context={dealRef ? { kind: 'deal', id: dealRef.id, number: dealRef.number } : null}
-            label={dealRef ? t('manager.aboutDeal', { number: dealRef.number }) : undefined}
-          />
+          <div className="flex items-center gap-2">
+            {dealRequests.length > 0 ? (
+              <CanAct>
+                <Button asChild variant="outline">
+                  <Link
+                    to="/requests/new"
+                    state={{
+                      summary: t('pages.requestDetail.reorderSummary', {
+                        number: dealRef?.number ?? String(dealId),
+                        summary: dealRef?.title ?? '',
+                      }),
+                      lines: dealRequests
+                        .flatMap((r) => r.lines ?? [])
+                        .map((l) => ({ text: l.text, quantity: l.quantity ?? '', unit: l.unit })),
+                    }}
+                  >
+                    <RotateCw className="size-4" aria-hidden="true" />
+                    {t('pages.deal.reorder')}
+                  </Link>
+                </Button>
+              </CanAct>
+            ) : null}
+            <ManagerButton
+              context={dealRef ? { kind: 'deal', id: dealRef.id, number: dealRef.number } : null}
+              label={dealRef ? t('manager.aboutDeal', { number: dealRef.number }) : undefined}
+            />
+          </div>
         }
       />
 
@@ -115,7 +139,7 @@ export function DealPage() {
         <DealSection title={t('pages.deal.requests')} count={dealRequests.length}>
           {dealRequests.map((item) => (
             <DealRow key={item.id} to={`/requests/${item.id}`} title={item.number} meta={formatDate(item.created_at)}>
-              <StatusBadge entity="request" code={item.status} />
+              <RequestStatusBadge request={item} />
             </DealRow>
           ))}
         </DealSection>
@@ -216,7 +240,15 @@ function DealStages({ progress }: { progress: DealProgress }) {
         <h2 id="deal-stages" className="font-semibold tracking-wider text-primary uppercase">
           {t('pages.deal.stages.title')}
         </h2>
-        {progress.closed ? <span className="font-medium text-muted-foreground">{t('pages.deal.stages.closed')}</span> : null}
+        {progress.closed ? (
+          progress.outcome === 'won' ? (
+            <span className="font-medium text-success">{t('pages.deal.stages.outcome_won')}</span>
+          ) : progress.outcome === 'cancelled' ? (
+            <span className="font-medium text-muted-foreground">{t('pages.deal.stages.outcome_cancelled')}</span>
+          ) : (
+            <span className="font-medium text-muted-foreground">{t('pages.deal.stages.closed')}</span>
+          )
+        ) : null}
       </div>
       <ol className="grid grid-cols-2 gap-2 sm:grid-cols-5">
         {progress.stages.map((stage, index) => {

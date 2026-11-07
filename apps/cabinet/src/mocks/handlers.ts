@@ -496,13 +496,58 @@ export const handlers = [
   ),
 
   // --- запросы ------------------------------------------------------------------------------
-  http.get(`${API}/requests`, withSession(({ db }) => json(db.requests))),
+  http.get(
+    `${API}/requests`,
+    withSession(({ db, request }) => {
+      const url = new URL(request.url);
+      const q = (url.searchParams.get('q') || '').trim().toLowerCase();
+      const status = url.searchParams.get('status');
+      let list = db.requests;
+      if (status) {
+        list = list.filter((r) => r.status === status);
+      }
+      if (q) {
+        list = list.filter(
+          (r) =>
+            r.number.toLowerCase().includes(q) ||
+            r.summary.toLowerCase().includes(q) ||
+            (r.lines && r.lines.some((l) => l.text.toLowerCase().includes(q))),
+        );
+      }
+      return json(list);
+    }),
+  ),
   http.get<IdParams>(
     `${API}/requests/:id`,
     withSession<IdParams>(({ db, params }) => {
       const item = byId(db.requests, params.id);
       return item ? json(item) : error(404, 'NOT_FOUND');
     }),
+  ),
+  http.post<IdParams>(
+    `${API}/requests/:id/reorder`,
+    withSession<IdParams>(
+      ({ db, params }) => {
+        const item = byId(db.requests, params.id);
+        if (!item) return error(404, 'NOT_FOUND');
+        const nextId = Math.max(500, ...db.requests.map((r) => r.id)) + 1;
+        const created: Schemas['ClientRequest'] = {
+          id: nextId,
+          number: `Z-2026-${String(nextId - 400).padStart(4, '0')}`,
+          status: 'new',
+          outcome: null,
+          summary: `Повтор запроса ${item.number}: ${item.summary}`,
+          source: 'cabinet',
+          deal: null,
+          created_at: new Date().toISOString(),
+          lines: item.lines ?? [],
+          attachments: [],
+        };
+        db.requests = [created, ...db.requests];
+        return json(created, 201);
+      },
+      { action: true },
+    ),
   ),
   http.post(
     `${API}/requests`,
@@ -515,6 +560,7 @@ export const handlers = [
           id: nextId,
           number: `Z-2026-${String(nextId - 400).padStart(4, '0')}`,
           status: 'new',
+          outcome: null,
           summary: body.summary,
           source: 'cabinet',
           deal: null,
@@ -770,9 +816,23 @@ export const handlers = [
       const url = new URL(request.url);
       const kind = url.searchParams.get('kind');
       const dealId = url.searchParams.get('deal_id');
-      return json(
-        db.documents.filter((doc) => (!kind || doc.kind === kind) && (!dealId || String(doc.deal?.id) === dealId)),
+      const q = (url.searchParams.get('q') || '').trim().toLowerCase();
+      const dateFrom = url.searchParams.get('date_from');
+      const dateTo = url.searchParams.get('date_to');
+      let list = db.documents.filter(
+        (doc) => (!kind || doc.kind === kind) && (!dealId || String(doc.deal?.id) === dealId),
       );
+      if (dateFrom) list = list.filter((doc) => doc.date >= dateFrom);
+      if (dateTo) list = list.filter((doc) => doc.date <= dateTo);
+      if (q) {
+        list = list.filter(
+          (doc) =>
+            doc.title.toLowerCase().includes(q) ||
+            doc.number.toLowerCase().includes(q) ||
+            (doc.deal && doc.deal.number.toLowerCase().includes(q)),
+        );
+      }
+      return json(list);
     }),
   ),
   http.get<IdParams>(

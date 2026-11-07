@@ -101,7 +101,9 @@
       "new": "New",
       "in_progress": "In progress",
       "quoted": "Quoted",
-      "closed": "Closed"
+      "closed": "Closed",
+      "outcome_won": "Fulfilled",
+      "outcome_cancelled": "Cancelled"
     },
     "quote": {
       "sent": "Awaiting decision",
@@ -423,6 +425,12 @@
     "requests": {
       "title": "Requests",
       "new": "New request",
+      "filterLabel": "Filter requests by status",
+      "filterAll": "All",
+      "searchPlaceholder": "Search by number, summary or item...",
+      "noMatchTitle": "No matches found",
+      "noMatchText": "No requests found for \"{{query}}\"",
+      "clearSearch": "Clear search",
       "emptyTitle": "No requests yet",
       "emptyText": "Your requests and their status will appear here: new, in progress, quoted, closed.",
       "columns": {
@@ -474,6 +482,8 @@
         "title": "Item / stage",
         "quantity": "Qty"
       },
+      "reorder": "Repeat request",
+      "reorderSummary": "Reorder of request {{number}}: {{summary}}",
       "backToList": "Back to requests",
       "sources": {
         "cabinet": "You, in the cabinet",
@@ -959,6 +969,7 @@
       "documents": "Documents",
       "toRequests": "Go to requests",
       "titleFallback": "Project",
+      "reorder": "Repeat project",
       "stages": {
         "title": "Project stages",
         "request": "Request",
@@ -967,6 +978,8 @@
         "payment": "Payment",
         "delivery": "Delivery and act",
         "closed": "The request is closed",
+        "outcome_won": "Project completed successfully",
+        "outcome_cancelled": "Project cancelled",
         "state": {
           "done": "done",
           "active": "started",

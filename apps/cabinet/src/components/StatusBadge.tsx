@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
-import type { QuoteListItem } from '@/api/portal';
+import type { ClientRequest, QuoteListItem } from '@/api/portal';
 import { quoteExpired } from '@/lib/quotes';
 import { cn } from '@/lib/utils';
 import { statusLabelKey, statusTone, type StatusCode, type StatusEntity, type StatusTone } from '@/lib/status';
@@ -38,4 +38,17 @@ export function StatusBadge<E extends StatusEntity>({ entity, code }: { entity: 
  */
 export function QuoteStatusBadge({ quote, now }: { quote: Pick<QuoteListItem, 'status' | 'valid_until'>; now: number }) {
   return <StatusBadge entity="quote" code={quoteExpired(quote, now) ? 'expired' : quote.status} />;
+}
+
+/**
+ * Статус запроса: для закрытых запросов (closed) отображает честный исход won/cancelled (B-CABFIX-2).
+ */
+export function RequestStatusBadge({ request }: { request: Pick<ClientRequest, 'status' | 'outcome'> }) {
+  const { t } = useTranslation();
+  if (request.status === 'closed' && request.outcome) {
+    const tone = request.outcome === 'won' ? 'success' : 'neutral';
+    const key = request.outcome === 'won' ? 'status.request.outcome_won' : 'status.request.outcome_cancelled';
+    return <ToneBadge tone={tone}>{t(key)}</ToneBadge>;
+  }
+  return <StatusBadge entity="request" code={request.status} />;
 }

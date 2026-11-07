@@ -304,6 +304,7 @@ ANY_ROLE_PATHS |= {"/countries"}
 CATALOG_REQUESTS_PATHS = {
     "/requests",
     "/requests/{id}",
+    "/requests/{id}/reorder",
     "/catalog",
     "/catalog/{id}",
     "/catalog/{id}/documents/{doc_id}/file",

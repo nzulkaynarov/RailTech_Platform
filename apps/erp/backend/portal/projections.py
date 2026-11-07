@@ -89,6 +89,16 @@ def request_status(deal) -> str:
     return "in_progress"
 
 
+def request_outcome(deal) -> Optional[str]:
+    """Исход закрытого запроса (`won` / `cancelled` / `None`, B-CABFIX-2)."""
+    code = deal.stage.code if deal.stage else DealStageCode.DRAFT
+    if code == DealStageCode.CLOSED_WON:
+        return "won"
+    if code == DealStageCode.CLOSED_LOST:
+        return "cancelled"
+    return None
+
+
 def annotate_request_sources(deals: Iterable) -> None:
     """Ставит `deal.portal_source` (`crm|cabinet|erp`) одним запросом к журналу «сделка создана».
 

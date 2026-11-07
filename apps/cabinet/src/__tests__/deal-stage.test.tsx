@@ -156,12 +156,12 @@ describe('Этапы на странице проекта', () => {
     expect(screen.queryByText('Что произойдёт')).not.toBeInTheDocument();
   });
 
-  it('D-35: закрытый запрос — «Запрос закрыт», без этапов «в работе» и без «исполнения»', async () => {
+  it('D-35: закрытый запрос с исходом won — «Проект успешно завершён», без этапов «в работе» и без «исполнения»', async () => {
     signedIn();
     renderApp('/deals/35');
     await heading('Проект D-35');
     const stages = await screen.findByRole('region', { name: 'Этапы проекта' });
-    expect(within(stages).getByText('Запрос закрыт')).toBeInTheDocument();
+    expect(within(stages).getByText('Проект успешно завершён')).toBeInTheDocument();
     expect(within(stages).queryByText(/текущий этап|начато/)).not.toBeInTheDocument();
     expect(within(stages).queryByText('Поставка и акт')).not.toBeInTheDocument();
   });

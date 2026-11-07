@@ -235,11 +235,16 @@ export type TeamMember = Schemas['TeamMember'];
 export type TeamMemberUpdate = Schemas['TeamMemberUpdate'];
 export type TeamInvite = Schemas['TeamInvite'];
 export type PortalSessionItem = Schemas['PortalSessionItem'];
+export type RequestsQuery = QueryOf<paths['/requests']['get']>;
 
-export const listRequests = () => portalRequest<ClientRequest[]>('/requests');
+export const listRequests = (params: RequestsQuery = {}) =>
+  portalRequest<ClientRequest[]>(`/requests${toQuery(params)}`);
 export const getRequest = (id: number) => portalRequest<ClientRequest>(`/requests/${id}`);
 export function createRequest(body: JsonBody<paths['/requests']['post']>): Promise<ClientRequest> {
   return portalRequest<ClientRequest>('/requests', { method: 'POST', body });
+}
+export function reorderRequest(id: number): Promise<ClientRequest> {
+  return portalRequest<ClientRequest>(`/requests/${id}/reorder`, { method: 'POST' });
 }
 
 export const listQuotes = () => portalRequest<QuoteListItem[]>('/quotes');

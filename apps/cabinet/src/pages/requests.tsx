@@ -1,7 +1,7 @@
 import { useEffect, useId, useState, type FormEvent } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { BookOpen, FilePlus2, Inbox, Loader2, Lock, Paperclip, Plus, SearchX, Trash2, Upload } from 'lucide-react';
+import { BookOpen, FilePlus2, Inbox, Loader2, Lock, Paperclip, Plus, RotateCw, Search, SearchX, Trash2, Upload } from 'lucide-react';
 import { toast } from '@/lib/toast';
 
 import { apiErrorKey } from '@/api/errors';
@@ -15,7 +15,8 @@ import { EmptyState } from '@/components/EmptyState';
 import { PageHeader } from '@/components/PageHeader';
 import { ErrorState, ListSkeleton } from '@/components/QueryStates';
 import { ResponsiveList } from '@/components/ResponsiveList';
-import { QuoteStatusBadge, StatusBadge } from '@/components/StatusBadge';
+import { QuoteStatusBadge, RequestStatusBadge } from '@/components/StatusBadge';
+import { ManagerButton } from '@/components/TelegramLinkButton';
 import { useNow } from '@/hooks/useNow';
 import { ConsequenceCallout } from '@/components/ConsequenceCallout';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -50,27 +51,98 @@ function NewRequestButton() {
   );
 }
 
+type RequestFilterStatus = undefined | 'new' | 'quoted' | 'in_progress' | 'closed';
+
+const FILTER_STATUSES: RequestFilterStatus[] = [undefined, 'new', 'quoted', 'in_progress', 'closed'];
+
 export function RequestsPage() {
   const { t } = useTranslation();
-  const requests = useRequests();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [query, setQuery] = useState('');
+  const rawStatus = searchParams.get('status');
+  const status: RequestFilterStatus = ['new', 'quoted', 'in_progress', 'closed'].includes(rawStatus as string)
+    ? (rawStatus as RequestFilterStatus)
+    : undefined;
+
+  const requests = useRequests({ q: query.trim() || undefined, status });
   // Список показывается вместе с виджетом «Требует вашего решения»: виджет не вставляется над готовым списком (K10).
   const actionsPending = useActionRequired().isPending;
-  const [searchParams] = useSearchParams();
 
   // Старые ссылки с `?view=…` (вид-переключатель убран, CAB-FIX-1) ведут на список без параметра.
   if (searchParams.has('view')) return <Navigate to="/requests" replace />;
+
+  const chooseStatus = (next: RequestFilterStatus) =>
+    setSearchParams(
+      (current) => {
+        const copy = new URLSearchParams(current);
+        if (next) copy.set('status', next);
+        else copy.delete('status');
+        return copy;
+      },
+      { replace: true },
+    );
+
+  const hasFilter = Boolean(query.trim() || status);
 
   return (
     <>
       <PageHeader title={t('pages.requests.title')} icon={Inbox} actions={<NewRequestButton />} />
       <OnboardingChecklist />
       <ActionRequiredWidget holdSkeleton={requests.isPending} />
+
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div role="group" aria-label={t('pages.requests.filterLabel')} className="flex flex-wrap gap-2">
+          {FILTER_STATUSES.map((option) => (
+            <Button
+              key={option ?? 'all'}
+              type="button"
+              size="sm"
+              variant={option === status ? 'default' : 'outline'}
+              aria-pressed={option === status}
+              className="rounded-full"
+              onClick={() => chooseStatus(option)}
+            >
+              {option ? t(`status.request.${option}`) : t('pages.requests.filterAll')}
+            </Button>
+          ))}
+        </div>
+        <div className="relative w-full sm:w-72">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+          <Input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t('pages.requests.searchPlaceholder')}
+            aria-label={t('pages.requests.searchPlaceholder')}
+            className="pl-9"
+          />
+        </div>
+      </div>
+
       {requests.isPending || actionsPending ? (
         <ListSkeleton />
       ) : requests.isError ? (
         <ErrorState error={requests.error} onRetry={() => void requests.refetch()} />
       ) : requests.data.length === 0 ? (
-        <EmptyState icon={Inbox} title={t('pages.requests.emptyTitle')} text={t('pages.requests.emptyText')} />
+        hasFilter ? (
+          <EmptyState
+            icon={Search}
+            title={t('pages.requests.noMatchTitle')}
+            text={t('pages.requests.noMatchText', { query: query.trim() || t(`status.request.${status}`) })}
+          >
+            <Button
+              variant="outline"
+              onClick={() => {
+                setQuery('');
+                chooseStatus(undefined);
+              }}
+            >
+              {t('pages.requests.clearSearch')}
+            </Button>
+          </EmptyState>
+        ) : (
+          <EmptyState icon={Inbox} title={t('pages.requests.emptyTitle')} text={t('pages.requests.emptyText')} />
+        )
       ) : (
         <ResponsiveList<ClientRequest>
           label={t('pages.requests.title')}
@@ -90,11 +162,33 @@ export function RequestsPage() {
             {
               id: 'status',
               header: t('pages.requests.columns.status'),
-              cell: (row) => <StatusBadge entity="request" code={row.status} />,
+              cell: (row) => <RequestStatusBadge request={row} />,
             },
             { id: 'created', header: t('pages.requests.columns.created'), cell: (row) => formatDate(row.created_at) },
             { id: 'deal', header: t('pages.requests.columns.deal'), cell: (row) => <DealLink deal={row.deal} /> },
           ]}
+          actions={{
+            header: t('common.actions'),
+            cell: (row) => (
+              <CanAct>
+                <Button asChild variant="ghost" size="sm" className="h-8 gap-1 px-2 text-xs">
+                  <Link
+                    to="/requests/new"
+                    state={{
+                      summary: t('pages.requestDetail.reorderSummary', { number: row.number, summary: row.summary }),
+                      lines: row.lines?.map((l) => ({ text: l.text, quantity: l.quantity ?? '', unit: l.unit })),
+                    }}
+                    title={t('pages.requestDetail.reorder')}
+                    aria-label={t('pages.requestDetail.reorder')}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <RotateCw className="size-3.5" aria-hidden="true" />
+                    <span className="hidden md:inline">{t('pages.requestDetail.reorder')}</span>
+                  </Link>
+                </Button>
+              </CanAct>
+            ),
+          }}
         />
       )}
     </>
@@ -131,12 +225,37 @@ export function RequestDetailPage() {
 
   return (
     <>
-      <PageHeader title={t('pages.requestDetail.title', { number: request.number })} crumb={request.number} />
+      <PageHeader
+        title={t('pages.requestDetail.title', { number: request.number })}
+        crumb={request.number}
+        actions={
+          <div className="flex items-center gap-2">
+            <CanAct>
+              <Button asChild variant="outline">
+                <Link
+                  to="/requests/new"
+                  state={{
+                    summary: t('pages.requestDetail.reorderSummary', { number: request.number, summary: request.summary }),
+                    lines: request.lines?.map((l) => ({ text: l.text, quantity: l.quantity ?? '', unit: l.unit })),
+                  }}
+                >
+                  <RotateCw className="size-4" aria-hidden="true" />
+                  {t('pages.requestDetail.reorder')}
+                </Link>
+              </Button>
+            </CanAct>
+            <ManagerButton
+              context={request.deal ? { kind: 'deal', id: request.deal.id, number: request.deal.number } : null}
+              label={request.deal ? t('manager.aboutDeal', { number: request.deal.number }) : undefined}
+            />
+          </div>
+        }
+      />
       <div className="flex flex-col gap-4">
         <Card>
           <CardContent className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center gap-2">
-              <StatusBadge entity="request" code={request.status} />
+              <RequestStatusBadge request={request} />
               <span className="text-sm text-muted-foreground">{t(`pages.requestDetail.next.${request.status}`)}</span>
             </div>
             <p className="text-sm whitespace-pre-line wrap-break-word">{request.summary}</p>
@@ -286,22 +405,24 @@ function RequestForm() {
   // действие «Запросить», оно главнее старого черновика и затирает его при первом же сохранении.
   const me = useMe().data;
   const draftKey = me ? requestDraftKey({ companyId: me.company.id, contactId: me.contact.id }) : null;
-  const [restored] = useState(() => (prefillLines.length || !draftKey ? null : loadRequestDraft(draftKey)));
+  const [restored] = useState(() => (prefillLines.length || locationState?.summary || !draftKey ? null : loadRequestDraft(draftKey)));
 
   const [summary, setSummary] = useState(() =>
-    restored
-      ? restored.summary
-      : prefillLines.length === 1
-        ? t('pages.requestNew.prefillSummary', { name: prefillLines[0].text })
-        : prefillLines.length > 1
-          ? t('pages.requestNew.prefillSummary', { name: prefillLines.map((l) => l.text).join(', ') })
-          : '',
+    locationState?.summary
+      ? locationState.summary
+      : restored
+        ? restored.summary
+        : prefillLines.length === 1
+          ? t('pages.requestNew.prefillSummary', { name: prefillLines[0].text })
+          : prefillLines.length > 1
+            ? t('pages.requestNew.prefillSummary', { name: prefillLines.map((l) => l.text).join(', ') })
+            : '',
   );
   const [lines, setLines] = useState<LineDraft[]>(() =>
     restored?.lines.length
       ? restored.lines.map((l) => blankLine(l))
       : prefillLines.length
-        ? prefillLines.map((l) => blankLine({ text: l.text, unit: l.unit ?? '' }))
+        ? prefillLines.map((l) => blankLine({ text: l.text, quantity: l.quantity ?? '', unit: l.unit ?? '' }))
         : [blankLine()],
   );
   const [submitted, setSubmitted] = useState(false);

@@ -181,6 +181,7 @@ export const requests: Schemas['ClientRequest'][] = [
     id: 504,
     number: 'Z-2026-0035',
     status: 'closed',
+    outcome: 'won',
     summary: 'Редукторы червячные NMRV 063 — 6 шт., муфты упругие — 12 шт.',
     source: 'crm',
     ...dealOf(35),
