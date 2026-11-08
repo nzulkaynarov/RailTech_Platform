@@ -81,16 +81,24 @@ class TestPortalCookie:
 def load_settings(**env) -> dict:
     """Настройки в чистом процессе: CORS и cookie считаются при импорте, `override_settings` их не пересчитает."""
     code = (
-        "import json, django;"
+        "import json, os, django;"
+        "django.setup();"
         "from django.conf import settings;"
-        "print(json.dumps({"
+        "pre = None\n"
+        "if os.environ.get('CHECK_PREFLIGHT'):\n"
+        "    from django.test import Client\n"
+        "    r = Client().options('/api/portal/v1/auth/logout', HTTP_ORIGIN=os.environ['CHECK_ORIGIN'],"
+        " HTTP_ACCESS_CONTROL_REQUEST_METHOD='POST', HTTP_HOST='localhost')\n"
+        "    pre = {'allow_origin': r.headers.get('Access-Control-Allow-Origin'),"
+        " 'allow_credentials': r.headers.get('Access-Control-Allow-Credentials')}\n"
+        "print(json.dumps({'preflight': pre,"
         "'allow_all': settings.CORS_ALLOW_ALL_ORIGINS,"
         "'origins': settings.CORS_ALLOWED_ORIGINS,"
         "'cabinet_origins': settings.CABINET_ORIGINS,"
         "'samesite': settings.PORTAL_COOKIE_SAMESITE,"
         "}))"
     )
-    base = {k: v for k, v in os.environ.items() if k not in ("DJANGO_DEBUG", "CABINET_URL", "CABINET_ORIGIN")}
+    base = {k: v for k, v in os.environ.items() if k not in ("DJANGO_DEBUG", "CABINET_URL", "CABINET_ORIGIN", "ERP_CABINET_ORIGIN")}
     base.update(
         DJANGO_SETTINGS_MODULE="core.settings",
         DJANGO_SECRET_KEY="test-only-secret-key-not-for-production",
@@ -142,14 +150,14 @@ class TestCorsOrigins:
 
     def test_cabinet_origin_setting_wins_over_cabinet_url(self):
         loaded = load_settings(
-            DJANGO_DEBUG="false", CABINET_URL="https://cabinet.example.uz", CABINET_ORIGIN="https://app.example.uz"
+            DJANGO_DEBUG="false", CABINET_URL="https://cabinet.example.uz", ERP_CABINET_ORIGIN="https://app.example.uz"
         )
 
         assert loaded["origins"] == ["https://app.example.uz"]
 
     def test_cabinet_origin_accepts_a_comma_separated_list_like_crm(self):
         loaded = load_settings(
-            DJANGO_DEBUG="false", CABINET_ORIGIN="https://a.example.uz/, https://b.example.uz:8443,https://a.example.uz"
+            DJANGO_DEBUG="false", ERP_CABINET_ORIGIN="https://a.example.uz/, https://b.example.uz:8443,https://a.example.uz"
         )
 
         assert loaded["origins"] == ["https://a.example.uz", "https://b.example.uz:8443"]
@@ -166,3 +174,73 @@ class TestCorsOrigins:
     def test_unknown_samesite_value_stops_startup(self):
         with pytest.raises(AssertionError, match="PORTAL_COOKIE_SAMESITE"):
             load_settings(DJANGO_DEBUG="true", PORTAL_COOKIE_SAMESITE="whatever")
+
+
+class TestSiteOriginGetsNoCredentials:
+    """FX-5: `CABINET_ORIGIN` общий с CRM (форма «Запрос», без cookie) и включает origin сайта / github.io.
+
+    ERP отдаёт CORS с `Access-Control-Allow-Credentials: true`, поэтому origin сайта в её списке — это чтение портала
+    с cookie сессии со стороннего сайта. Список ERP — только `ERP_CABINET_ORIGIN` (или origin из `CABINET_URL`).
+    """
+
+    # значение из infra/.env.prod.example (раскомментированное), домены вымышленные
+    SHARED_WITH_CRM = "https://cabinet.example.uz,https://example.uz,https://someone.github.io"
+    SITE_ORIGINS = {"https://example.uz", "https://someone.github.io"}
+
+    def test_shared_cabinet_origin_of_crm_does_not_reach_erp_cors(self):
+        loaded = load_settings(
+            DJANGO_DEBUG="false", CABINET_URL="https://cabinet.example.uz", CABINET_ORIGIN=self.SHARED_WITH_CRM
+        )
+
+        assert not self.SITE_ORIGINS & set(loaded["origins"])
+        assert not self.SITE_ORIGINS & set(loaded["cabinet_origins"])
+        assert loaded["origins"] == ["https://cabinet.example.uz"]
+
+    def test_explicit_erp_origin_is_the_only_extra_source(self):
+        loaded = load_settings(
+            DJANGO_DEBUG="false",
+            CABINET_URL="https://cabinet.example.uz",
+            CABINET_ORIGIN=self.SHARED_WITH_CRM,
+            ERP_CABINET_ORIGIN="https://cabinet.example.uz",
+        )
+
+        assert loaded["origins"] == ["https://cabinet.example.uz"]
+
+    def test_site_origin_preflight_gets_no_credentials_header(self):
+        """Ответ на preflight: для origin сайта нет `Access-Control-Allow-Credentials` (и нет Allow-Origin)."""
+        loaded = load_settings(
+            DJANGO_DEBUG="false",
+            CABINET_URL="https://cabinet.example.uz",
+            CABINET_ORIGIN=self.SHARED_WITH_CRM,
+            CHECK_ORIGIN="https://example.uz",
+            CHECK_PREFLIGHT="1",
+        )
+
+        assert loaded["preflight"] == {"allow_origin": None, "allow_credentials": None}
+
+    def test_cabinet_origin_still_gets_credentials(self):
+        loaded = load_settings(
+            DJANGO_DEBUG="false",
+            CABINET_URL="https://cabinet.example.uz",
+            CABINET_ORIGIN=self.SHARED_WITH_CRM,
+            CHECK_ORIGIN="https://cabinet.example.uz",
+            CHECK_PREFLIGHT="1",
+        )
+
+        assert loaded["preflight"] == {"allow_origin": "https://cabinet.example.uz", "allow_credentials": "true"}
+
+
+def test_prod_compose_and_example_do_not_share_crm_origins_with_erp():
+    """Пример `.env.prod.example` и prod.yml: у ERP свой список, `CABINET_ORIGIN` (CRM) его не задаёт."""
+    infra = pathlib.Path(__file__).resolve().parents[5] / "infra"
+    if not infra.is_dir():  # образ бэкенда без репозитория
+        pytest.skip("infra/ недоступен")
+    erp_env = (infra / "compose" / "prod.yml").read_text().split("# Окружение EDS")[0]
+    assert "CABINET_ORIGIN:" not in erp_env.replace("ERP_CABINET_ORIGIN:", "")
+    assert "ERP_CABINET_ORIGIN:" in erp_env
+    example = (infra / ".env.prod.example").read_text()
+    erp_lines = [ln for ln in example.splitlines() if ln.lstrip("# ").startswith("ERP_CABINET_ORIGIN=")]
+    assert erp_lines, "в примере нет ERP_CABINET_ORIGIN"
+    assert not [ln for ln in erp_lines if "github.io" in ln or "WEBSITE" in ln]
+    # пример `CABINET_ORIGIN` (сайт для CRM) подписан как не относящийся к ERP
+    assert "CRM" in example.split("CABINET_ORIGIN=")[0].splitlines()[-2]
