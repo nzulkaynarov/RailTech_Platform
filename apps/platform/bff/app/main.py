@@ -34,6 +34,7 @@ from app.api import (
     eds_documents,
     eds_letter_intake,
     eds_letters,
+    eds_bank_changes,
     eds_payments,
     eds_projects,
     eds_resolution_templates,
@@ -157,6 +158,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(erp_docs.router, prefix=API_PREFIX)
     app.include_router(erp_images.router, prefix=API_PREFIX)
     app.include_router(erp_price_import.router, prefix=API_PREFIX)
+    app.include_router(eds_bank_changes.router, prefix=API_PREFIX)
     app.include_router(eds_payments.router, prefix=API_PREFIX)
     app.include_router(erp_calc.router, prefix=API_PREFIX)
     app.include_router(erp_stock.router, prefix=API_PREFIX)

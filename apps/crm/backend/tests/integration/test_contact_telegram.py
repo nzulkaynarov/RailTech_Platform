@@ -19,6 +19,7 @@ from app.models.auth import AuditLog
 from app.models.clients import Client, ClientContact
 from app.models.leads import Lead, TelegramIdentity, TelegramLinkNonce
 from app.repositories import leads as repo
+from app.services.contact_security_notice import SECURITY_NOTICE_REQUESTED, SecurityNoticeDelivery
 from app.services.contact_telegram import UNLINK_REQUESTED, ContactTelegramService
 from app.services.contact_telegram_test import TEST_REQUESTED, TelegramTestDelivery
 from app.services.start_links import StartLinkService
@@ -444,3 +445,65 @@ async def test_telegram_failure_of_the_test_message_is_reported_not_raised(
     )
 
     assert result == "failed"
+
+
+# ── уведомление безопасности (FX-4) ─────────────────────────────────────────────────────────────
+
+
+def security_event(client_id: int, contact_id: int, kind: str = "bank_requisites_changed") -> Event:
+    event = unlink_event(client_id, contact_id)
+    event.data["payload"].update(language="uz", kind=kind)
+    return dataclasses.replace(event, type=SECURITY_NOTICE_REQUESTED)
+
+
+def security_delivery(
+    sessions: async_sessionmaker[AsyncSession], bot: FakeBot
+) -> SecurityNoticeDelivery:
+    async def provider() -> Any:
+        return bot
+
+    return SecurityNoticeDelivery(sessions, provider)
+
+
+async def test_security_notice_goes_to_the_contacts_own_telegram_in_its_language(
+    sessions: async_sessionmaker[AsyncSession], service: ContactTelegramService
+) -> None:
+    await chat(sessions, USER)
+    client_id, contact_id = await contact(sessions)
+    await service.bind(USER, token(contact=contact_id), BEFORE)
+    bot = FakeBot()
+
+    outcome = await security_delivery(sessions, bot).deliver(security_event(client_id, contact_id))
+
+    assert outcome == "processed"
+    assert bot.sent == [
+        (USER, client_texts.contact_security_notice("uz", "bank_requisites_changed", "ООО Альфа"))
+    ]
+
+
+async def test_security_notice_is_not_sent_to_an_unlinked_or_foreign_contact(
+    sessions: async_sessionmaker[AsyncSession], service: ContactTelegramService
+) -> None:
+    await chat(sessions, USER)
+    client_id, contact_id = await contact(sessions)
+    other_client, _ = await contact(sessions, "ООО Бета")
+    bot = FakeBot()
+    deliver = security_delivery(sessions, bot).deliver
+
+    assert await deliver(security_event(client_id, contact_id)) == "skipped"
+    await service.bind(USER, token(contact=contact_id), BEFORE)
+    assert await deliver(security_event(other_client, contact_id)) == "skipped"
+    assert bot.sent == []
+
+
+async def test_network_failure_of_a_security_notice_is_raised_for_redelivery(
+    sessions: async_sessionmaker[AsyncSession], service: ContactTelegramService
+) -> None:
+    await chat(sessions, USER)
+    client_id, contact_id = await contact(sessions)
+    await service.bind(USER, token(contact=contact_id), BEFORE)
+
+    with pytest.raises(TimeoutError):
+        await security_delivery(sessions, FakeBot(TimeoutError())).deliver(
+            security_event(client_id, contact_id)
+        )

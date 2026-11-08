@@ -217,6 +217,33 @@ def contact_link_test(language: str | None, company: str | None) -> str:
     return _pick(_CONTACT_LINK_TEST, language).format(company=clean).replace(" «»", "")
 
 
+_SECURITY_NOTICE: Final = {
+    "bank_requisites_change_requested": {
+        "ru": "Важно: в кабинете «{company}» подан запрос на смену банковских реквизитов компании. Реквизиты изменятся только "
+        "после проверки сотрудником. Если это были не вы — срочно свяжитесь с менеджером.",
+        "uz": "Muhim: «{company}» kabinetida kompaniya bank rekvizitlarini oʻzgartirish soʻrovi yuborildi. Rekvizitlar faqat "
+        "xodim tekshiruvidan soʻng oʻzgaradi. Agar bu siz boʻlmasangiz, zudlik bilan menejerga yozing.",
+        "en": "Important: a request to change the bank details of «{company}» has been submitted. The details change only "
+        "after a staff check. If this was not you, contact your manager immediately.",
+    },
+    "bank_requisites_changed": {
+        "ru": "Сотрудник подтвердил смену банковских реквизитов компании «{company}». Новые реквизиты действуют.",
+        "uz": "Xodim «{company}» kompaniyasi bank rekvizitlarini oʻzgartirishni tasdiqladi. Yangi rekvizitlar amalda.",
+        "en": "A staff member confirmed the bank details change for «{company}». The new details are now in effect.",
+    },
+    "bank_requisites_change_rejected": {
+        "ru": "Запрос на смену банковских реквизитов компании «{company}» отклонён. Подробности — в кабинете.",
+        "uz": "«{company}» kompaniyasi bank rekvizitlarini oʻzgartirish soʻrovi rad etildi. Tafsilotlar — kabinetda.",
+        "en": "The request to change the bank details of «{company}» was rejected. See the details in your account.",
+    },
+}
+
+
+def contact_security_notice(language: str | None, kind: str, company: str | None) -> str:
+    clean = " ".join((company or "").split())
+    return _pick(_SECURITY_NOTICE[kind], language).format(company=clean).replace(" «»", "")
+
+
 def contact_link_bound(language: str | None, company: str | None) -> str:
     clean = " ".join((company or "").split())
     return _pick(_CONTACT_LINK_BOUND, language).format(company=clean).replace(" «»", "")

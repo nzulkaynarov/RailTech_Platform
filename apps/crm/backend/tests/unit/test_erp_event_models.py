@@ -29,6 +29,7 @@ from app.bus.erp_event import (
     NOT_FOR_CRM,
     OWN_HANDLER,
     PARTNER_REQUEST,
+    SECURITY_NOTICE_TYPE,
     TEST_TYPE,
     erp_types,
     parse_erp_event,
@@ -48,8 +49,8 @@ def event_of(event_type: str, **changes: Any) -> Event:
     return Event.from_dict({**example_envelope(event_type), **changes})
 
 
-def test_the_contract_has_twenty_three_erp_types_for_the_crm_with_one_example_each() -> None:
-    assert len(ALL_TYPES) == 24  # + contact.telegram_test_requested (NOTIFY-1, inline)
+def test_the_contract_has_twenty_five_erp_types_for_the_crm_with_one_example_each() -> None:
+    assert len(ALL_TYPES) == 25  # + contact.telegram_test_requested (NOTIFY-1, inline), FX-4
     examples = set(example_types("erp"))
     assert examples == set(event_types("erp")), "на каждое событие контракта — один пример"
 
@@ -98,7 +99,12 @@ def test_partner_client_events_have_their_own_handlers_and_no_deal_feed() -> Non
 
 
 def test_the_crm_listens_to_exactly_the_erp_events_of_the_contract_except_the_code() -> None:
-    assert set(erp_types()) == set(ALL_TYPES) - {CODE_TYPE, INVITE_TYPE, TEST_TYPE}
+    assert set(erp_types()) == set(ALL_TYPES) - {
+        CODE_TYPE,
+        INVITE_TYPE,
+        TEST_TYPE,
+        SECURITY_NOTICE_TYPE,
+    }
     assert len(erp_types()) == 21
     for event_type in ALL_TYPES:
         matched = default_registry.match(event_type)

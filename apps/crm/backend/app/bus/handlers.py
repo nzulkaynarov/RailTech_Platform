@@ -16,6 +16,8 @@
   поручениям входящих (P8b) — строка колокольчика и сообщение Telegram после коммита;
 * `uz.railtech.erp.contact.telegram_test_requested.v1` — inline: проверочное сообщение контакту в
   его привязанный Telegram (NOTIFY-1);
+* `uz.railtech.erp.contact.security_notice_requested.v1` — inline: уведомление безопасности контакту
+  (смена реквизитов, FX-4), сбой сети — 503 и повтор ERP;
 * `uz.railtech.erp.contact.telegram_unlink_requested.v1` — в очереди, в транзакции inbox: контакт
   отключил
   Telegram в кабинете — CRM отвязывает и публикует `contact.updated` (NOTIFY-1);
@@ -33,7 +35,7 @@
 from rt_bus import Event, subscribe
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.bus.erp_event import CODE_TYPE, INVITE_TYPE, TEST_TYPE, erp_types
+from app.bus.erp_event import CODE_TYPE, INVITE_TYPE, SECURITY_NOTICE_TYPE, TEST_TYPE, erp_types
 from app.bus.runtime import current_container
 from app.services.cabinet_chat import POSTED_TYPE
 from app.services.contact_telegram import UNLINK_REQUESTED
@@ -56,6 +58,11 @@ async def on_acceptance_code(event: Event, session: AsyncSession) -> None:
 @subscribe(INVITE_TYPE, inline=True)
 async def on_invite_requested(event: Event, session: AsyncSession) -> None:
     await current_container().erp_events_service.deliver_invite(event)
+
+
+@subscribe(SECURITY_NOTICE_TYPE, inline=True)
+async def on_contact_security_notice(event: Event, session: AsyncSession) -> None:
+    await current_container().contact_security_notice.deliver(event)
 
 
 @subscribe(TEST_TYPE, inline=True)
