@@ -291,7 +291,9 @@ def test_contact_without_email_gets_cabinet_and_telegram(portal_client, client_c
 
     row = PortalNotice.objects.get(contact=client_contact, kind="bank_requisites_change_requested")
     assert row.channel == NoticeChannel.TELEGRAM
-    assert bus_support.only("contact.security_notice_requested")["data"]["payload"]["erp_contact_id"] == client_contact.pk
+    assert (
+        bus_support.only("contact.security_notice_requested")["data"]["payload"]["erp_contact_id"] == client_contact.pk
+    )
 
 
 def test_notice_row_is_rendered_in_the_feed(portal_client, client_contact):

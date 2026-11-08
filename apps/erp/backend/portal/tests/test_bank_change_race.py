@@ -72,7 +72,10 @@ def test_two_approvals_apply_once(django_db_setup, django_db_blocker):
             assert results[0].status == BankDetailsChangeStatus.APPROVED
             world["company"].refresh_from_db()
             assert world["company"].bank_details == "р/с 20208000000000002222"
-            assert PortalSecurityEvent.objects.filter(company=world["company"], event_type="bank_details_changed").count() == 1
+            assert (
+                PortalSecurityEvent.objects.filter(company=world["company"], event_type="bank_details_changed").count()
+                == 1
+            )
             assert PortalNotice.objects.filter(company=world["company"], kind="bank_requisites_changed").count() == 1
         finally:
             _cleanup(world)
@@ -92,9 +95,12 @@ def test_two_submissions_give_one_pending_request(django_db_setup, django_db_blo
             worker.join(timeout=30)
 
             assert results == ["refused"]
-            assert BankDetailsChangeRequest.objects.filter(
-                company=world["company"], status=BankDetailsChangeStatus.PENDING
-            ).count() == 1
+            assert (
+                BankDetailsChangeRequest.objects.filter(
+                    company=world["company"], status=BankDetailsChangeStatus.PENDING
+                ).count()
+                == 1
+            )
         finally:
             _cleanup(world)
             connection.close()

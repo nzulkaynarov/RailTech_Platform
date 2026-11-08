@@ -1,4 +1,3 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { Alert, Button, Input, Modal, Segmented } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -179,11 +178,9 @@ function conflictMessage(error: unknown, t: (key: string) => string): string {
 }
 
 function useAfterDecision(onClose: () => void) {
-  const queryClient = useQueryClient();
   const refresh = useRefreshPayments();
   return () => {
     void refresh();
-    void queryClient.invalidateQueries({ queryKey: ["/api/v1/eds/payments/bank-changes"] });
     onClose();
   };
 }

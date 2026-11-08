@@ -128,7 +128,11 @@ def _notify_staff(company: Company) -> None:
     ).distinct()
     if not recipients:
         notify_platform_admins(
-            title=title, message=message, type_code="WARNING", event_code="portal.bank_change_requested", event_params=params
+            title=title,
+            message=message,
+            type_code="WARNING",
+            event_code="portal.bank_change_requested",
+            event_params=params,
         )
         return
     for user in recipients:

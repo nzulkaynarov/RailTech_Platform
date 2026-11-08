@@ -30,7 +30,12 @@ class BankDetailsChangeRequest(models.Model):
     old_bank_details = models.TextField(blank=True, default="", verbose_name=_("Реквизиты на момент подачи"))
     new_bank_details = models.TextField(blank=True, default="", verbose_name=_("Запрошенные реквизиты"))
     requested_by_contact = models.ForeignKey(
-        "parties.Contact", on_delete=models.SET_NULL, null=True, blank=True, related_name="+", verbose_name=_("Кто подал")
+        "parties.Contact",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("Кто подал"),
     )
     requested_by_name = models.CharField(max_length=255, verbose_name=_("Имя подавшего"))
     requested_by_email = models.EmailField(blank=True, default="", verbose_name=_("Email подавшего"))

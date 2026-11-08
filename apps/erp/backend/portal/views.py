@@ -691,9 +691,7 @@ class QuoteRequestCodeView(BasePortalView):
         quote = _quote_or_404(request, pk)
         _assert_quote_awaits_decision(quote)
         try:
-            sent = request_acceptance_code(
-                quote, request.portal_contact, request_ip=_client_ip(request)
-            )
+            sent = request_acceptance_code(quote, request.portal_contact, request_ip=_client_ip(request))
         except ContactChannelRequired:
             raise PortalValidationError("CONTACT_CHANNEL_REQUIRED")
         return Response(AcceptanceCodeSentSerializer(sent).data, status=status.HTTP_202_ACCEPTED)
@@ -1269,7 +1267,10 @@ class CompanyView(BasePortalView):
 
     @staticmethod
     def _company_data(request, company) -> dict:
-        return {**CompanySerializer(company).data, "bank_change_request": _bank_change_data(request.portal_contact, company)}
+        return {
+            **CompanySerializer(company).data,
+            "bank_change_request": _bank_change_data(request.portal_contact, company),
+        }
 
     def put(self, request):
         if not request.portal_contact.can_act:

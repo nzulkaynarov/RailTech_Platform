@@ -144,7 +144,7 @@ export function setMockPartnerApplication(app: Schemas['PartnerApplication'] | n
 }
 
 /** Новый счёт запроса — только администратору, как в ERP (FX-4). */
-function companyView(company: Schemas['Company'], isAdmin: boolean): Schemas['Company'] {
+function companyView(company: Schemas['Company'], isAdmin: boolean | undefined): Schemas['Company'] {
   const change = company.bank_change_request;
   if (!change || isAdmin) return company;
   return { ...company, bank_change_request: { ...change, new_bank_details: null } };
