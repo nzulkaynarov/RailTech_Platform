@@ -115,6 +115,8 @@ def test_partner_orders_and_rfq_match_contract(partner_world):
     from decimal import Decimal
 
     from supply.models import (
+        GoodsReceipt,
+        GoodsReceiptLine,
         OrderLogKind,
         OrderStatus,
         PriceRequest,
@@ -155,6 +157,19 @@ def test_partner_orders_and_rfq_match_contract(partner_world):
         detail="Отправлен поставщику",
     )
 
+    receipt = GoodsReceipt.objects.create(
+        order=order_sent,
+        supplier_doc="ТТН-100500",
+        note="Приёмка первой партии",
+    )
+    GoodsReceiptLine.objects.create(
+        receipt=receipt,
+        order_line=order_sent.lines.first(),
+        quantity=5,
+        conformity_doc_number="ЕАЭС RU С-RU.АЯ46.В.00001/26",
+        conformity_doc_valid_until="2027-12-31",
+    )
+
     order_b = SupplierOrder.objects.create(
         number="ЗП-2026-002",
         number_year=2026,
@@ -180,6 +195,13 @@ def test_partner_orders_and_rfq_match_contract(partner_world):
     assert detail_resp.json()["id"] == order_sent.id
     assert len(detail_resp.json()["lines"]) == 1
     assert detail_resp.json()["lines"][0]["unit_price"] == "150.00"
+    assert len(detail_resp.json()["receipts"]) == 1
+    rcpt = detail_resp.json()["receipts"][0]
+    assert rcpt["supplier_doc"] == "ТТН-100500"
+    assert len(rcpt["lines"]) == 1
+    assert rcpt["lines"][0]["quantity"] == 5
+    assert rcpt["lines"][0]["conformity_doc_number"] == "ЕАЭС RU С-RU.АЯ46.В.00001/26"
+    assert rcpt["lines"][0]["conformity_doc_valid_until"] == "2027-12-31"
 
     # Чужой заказ — 404
     foreign_resp = w["client_a"].get(f"{PREFIX}/orders/{order_b.id}")
@@ -265,3 +287,66 @@ def test_partner_orders_and_rfq_match_contract(partner_world):
     assert respond_resp.json()["status"] == "answered"
     assert respond_resp.json()["answer_note"] == "Готовы отгрузить по 140 руб., срок 5 рабочих дней"
     assert respond_resp.json()["answered_at"] is not None
+
+
+def test_partner_product_documents_match_the_contract(partner_world):
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    w = partner_world
+    card = w["cards"]["draft"]
+    client_a = w["client_a"]
+    client_b = w["client_b"]
+
+    # 1. Загрузка документа multipart/form-data
+    test_file = SimpleUploadedFile("cert.pdf", b"%PDF-1.4 test certificate content", content_type="application/pdf")
+    upload_resp = client_a.post(
+        f"{PREFIX}/products/{card.pk}/documents",
+        {
+            "file": test_file,
+            "title": "Сертификат соответствия ГОСТ",
+            "kind": "certificate",
+            "number": "ГОСТ-12345",
+            "valid_until": "2028-05-15",
+        },
+        format="multipart",
+    )
+    assert upload_resp.status_code == 201
+    assert_matches(upload_resp.json(), "/partner/products/{id}/documents", "post", "201")
+    doc_id = upload_resp.json()["id"]
+    assert upload_resp.json()["title"] == "Сертификат соответствия ГОСТ"
+    assert upload_resp.json()["number"] == "ГОСТ-12345"
+
+    # 2. Список документов карточки
+    list_resp = client_a.get(f"{PREFIX}/products/{card.pk}/documents")
+    assert list_resp.status_code == 200
+    assert_matches(list_resp.json(), "/partner/products/{id}/documents")
+    docs = list_resp.json()
+    assert len(docs) == 1
+    assert docs[0]["id"] == doc_id
+
+    # 3. Детали товара включают documents
+    card_resp = client_a.get(f"{PREFIX}/products/{card.pk}")
+    assert card_resp.status_code == 200
+    assert_matches(card_resp.json(), "/partner/products/{id}")
+    assert len(card_resp.json()["documents"]) == 1
+    assert card_resp.json()["documents"][0]["id"] == doc_id
+
+    # 4. Скачивание файла
+    file_resp = client_a.get(f"{PREFIX}/products/{card.pk}/documents/{doc_id}/file")
+    assert file_resp.status_code == 200
+    assert b"".join(file_resp.streaming_content) == b"%PDF-1.4 test certificate content"
+
+    # 5. Чужой партнёр — 404
+    foreign_resp = client_b.get(f"{PREFIX}/products/{card.pk}/documents")
+    assert foreign_resp.status_code == 404
+    foreign_file = client_b.get(f"{PREFIX}/products/{card.pk}/documents/{doc_id}/file")
+    assert foreign_file.status_code == 404
+
+    # 6. Удаление документа
+    del_resp = client_a.delete(f"{PREFIX}/products/{card.pk}/documents/{doc_id}")
+    assert del_resp.status_code == 204
+
+    # Проверка, что удалено
+    list_after_del = client_a.get(f"{PREFIX}/products/{card.pk}/documents")
+    assert list_after_del.status_code == 200
+    assert len(list_after_del.json()) == 0

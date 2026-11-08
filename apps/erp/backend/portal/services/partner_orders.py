@@ -132,6 +132,35 @@ def get_partner_order(company, order_id: int) -> Optional[dict]:
         for log in order.log.all().order_by("created_at", "id")
     ]
 
+    receipts = []
+    for receipt in (
+        order.receipts.all().prefetch_related("lines__order_line", "lines__warehouse").order_by("-received_at", "-id")
+    ):
+        rlines = []
+        for rline in receipt.lines.all().order_by("id"):
+            rlines.append(
+                {
+                    "id": rline.id,
+                    "order_line_id": rline.order_line_id,
+                    "name": rline.order_line.name if rline.order_line else "",
+                    "article": (rline.order_line.article if rline.order_line else "") or "",
+                    "quantity": rline.quantity,
+                    "unit": (rline.order_line.unit if rline.order_line else "") or "",
+                    "warehouse_name": rline.warehouse.name if rline.warehouse else "",
+                    "conformity_doc_number": rline.conformity_doc_number or "",
+                    "conformity_doc_valid_until": rline.conformity_doc_valid_until,
+                }
+            )
+        receipts.append(
+            {
+                "id": receipt.id,
+                "supplier_doc": receipt.supplier_doc or "",
+                "note": receipt.note or "",
+                "received_at": receipt.received_at,
+                "lines": rlines,
+            }
+        )
+
     return {
         "id": order.id,
         "number": order.number,
@@ -148,6 +177,7 @@ def get_partner_order(company, order_id: int) -> Optional[dict]:
         "currency": order.currency.code if order.currency else "RUB",
         "lines": lines,
         "logs": logs,
+        "receipts": receipts,
     }
 
 

@@ -140,6 +140,8 @@ def test_contract_is_mounted_and_readable():
 PARTNER_GET_PATHS = {
     "/partner/products",
     "/partner/products/{id}",
+    "/partner/products/{id}/documents",
+    "/partner/products/{id}/documents/{doc_id}/file",
     "/partner/price-template",
     "/partner/price-list/{task_id}",
     "/partner/orders",

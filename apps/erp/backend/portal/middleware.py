@@ -15,6 +15,8 @@
 Ошибки: 400 `IDEMPOTENCY_KEY_REQUIRED`, 415 `UNSUPPORTED_MEDIA_TYPE` — формат `{"detail": "<CODE>"}`.
 """
 
+import re
+
 from django.http import JsonResponse
 
 PORTAL_PREFIX = "/api/portal/"
@@ -29,6 +31,7 @@ UPLOADS_PATHS = frozenset(
         "/api/portal/v1/partner/price-list/",
     }
 )
+PARTNER_PRODUCT_DOCUMENTS_RE = re.compile(r"^/api/portal/v1/partner/products/\d+/documents/?$")
 
 
 class PortalRequestGuardMiddleware:
@@ -54,4 +57,6 @@ class PortalRequestGuardMiddleware:
         media_type = (request.META.get("CONTENT_TYPE") or "").split(";")[0].strip().lower()
         if media_type == "application/json":
             return True
-        return media_type == "multipart/form-data" and request.path in UPLOADS_PATHS
+        return media_type == "multipart/form-data" and (
+            request.path in UPLOADS_PATHS or bool(PARTNER_PRODUCT_DOCUMENTS_RE.match(request.path))
+        )

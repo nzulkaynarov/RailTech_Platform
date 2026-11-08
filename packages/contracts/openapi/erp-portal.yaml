@@ -1767,6 +1767,160 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
+  /partner/products/{id}/documents:
+    get:
+      tags: [partner]
+      operationId: listPartnerProductDocuments
+      summary: Документы карточки товара партнёра
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Список документов товара
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PartnerProductDocument'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+    post:
+      tags: [partner]
+      operationId: uploadPartnerProductDocument
+      summary: Прикрепить документ (сертификат, паспорт) к карточке товара
+      description: |
+        Загрузка файла и прикрепление к карточке товара партнёра.
+        Поддерживает multipart/form-data (прямая загрузка файла) и application/json (с upload_id из POST /uploads).
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, title]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                kind:
+                  type: string
+                  default: certificate
+                title:
+                  type: string
+                  maxLength: 255
+                number:
+                  type: string
+                  maxLength: 100
+                issued_by:
+                  type: string
+                  maxLength: 255
+                issued_at:
+                  type: string
+                  format: date
+                valid_until:
+                  type: string
+                  format: date
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerDocumentUploadRequest'
+      responses:
+        '201':
+          description: Документ прикреплён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerProductDocument'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /partner/products/{id}/documents/{doc_id}:
+    delete:
+      tags: [partner]
+      operationId: deletePartnerProductDocument
+      summary: Удалить документ из карточки товара
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - name: doc_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '204':
+          description: Документ удалён
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /partner/products/{id}/documents/{doc_id}/file:
+    get:
+      tags: [partner]
+      operationId: getPartnerProductDocumentFile
+      summary: Скачать файл документа карточки товара
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - name: doc_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Файл документа
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
   /partner/products/submit:
     post:
       tags: [partner]
@@ -2844,6 +2998,10 @@ components:
         - CANNOT_ELEVATE_RIGHTS
         - ADMIN_REQUIRED
         - CANNOT_MODIFY_PRIMARY_CONTACT
+        - TECH_DOC_KIND_INVALID
+        - FILE_TYPE_NOT_ALLOWED
+        - TECH_DOC_DATE_INVALID
+        - TECH_DOC_VALIDITY_RANGE_INVALID
 
     PartnerKind:
       type: string
@@ -3349,6 +3507,7 @@ components:
         - uom
         - missing
         - history
+        - documents
       properties:
         id:
           type: integer
@@ -3407,6 +3566,71 @@ components:
           description: Отправки на проверку и решения, новые сверху; только у своей карточки
           items:
             $ref: '#/components/schemas/PartnerReviewEntry'
+        documents:
+          type: array
+          description: Документы и сертификаты товара, прикреплённые партнёром
+          items:
+            $ref: '#/components/schemas/PartnerProductDocument'
+      additionalProperties: false
+
+    PartnerProductDocument:
+      type: object
+      required: [id, kind, kind_name, title, number, issued_by, issued_at, valid_until, original_name, size_bytes, created_at]
+      properties:
+        id:
+          type: integer
+          format: int64
+        kind:
+          type: string
+        kind_name:
+          type: string
+        title:
+          type: string
+        number:
+          type: string
+        issued_by:
+          type: string
+        issued_at:
+          type: [string, 'null']
+          format: date
+        valid_until:
+          type: [string, 'null']
+          format: date
+        original_name:
+          type: string
+        size_bytes:
+          type: integer
+          minimum: 0
+        created_at:
+          type: string
+          format: date-time
+      additionalProperties: false
+
+    PartnerDocumentUploadRequest:
+      type: object
+      required: [title]
+      properties:
+        upload_id:
+          type: string
+          description: ID загруженного файла из POST /uploads
+        kind:
+          type: string
+          default: certificate
+        title:
+          type: string
+          maxLength: 255
+        number:
+          type: string
+          maxLength: 100
+        issued_by:
+          type: string
+          maxLength: 255
+        issued_at:
+          type: [string, 'null']
+          format: date
+        valid_until:
+          type: [string, 'null']
+          format: date
       additionalProperties: false
 
     PartnerSubmitRequest:
@@ -3761,9 +3985,55 @@ components:
           format: date-time
       additionalProperties: false
 
+    PartnerOrderReceiptLineItem:
+      type: object
+      required: [id, order_line_id, name, article, quantity, unit, conformity_doc_number, conformity_doc_valid_until]
+      properties:
+        id:
+          type: integer
+        order_line_id:
+          type: integer
+        name:
+          type: string
+        article:
+          type: string
+        quantity:
+          type: integer
+          minimum: 0
+        unit:
+          type: string
+        warehouse_name:
+          type: string
+        conformity_doc_number:
+          type: string
+        conformity_doc_valid_until:
+          type: [string, 'null']
+          format: date
+      additionalProperties: false
+
+    PartnerOrderReceiptItem:
+      type: object
+      required: [id, supplier_doc, note, received_at, lines]
+      properties:
+        id:
+          type: integer
+        supplier_doc:
+          type: string
+          description: Номер накладной или документа поставщика
+        note:
+          type: string
+        received_at:
+          type: string
+          format: date-time
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerOrderReceiptLineItem'
+      additionalProperties: false
+
     PartnerOrderDetail:
       type: object
-      required: [id, number, status, created_at, lines, logs, total_amount, currency, note, cancel_reason]
+      required: [id, number, status, created_at, lines, logs, receipts, total_amount, currency, note, cancel_reason]
       properties:
         id:
           type: integer
@@ -3805,6 +4075,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PartnerOrderLogItem'
+        receipts:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerOrderReceiptItem'
       additionalProperties: false
 
     PartnerOrderConfirmRequest:

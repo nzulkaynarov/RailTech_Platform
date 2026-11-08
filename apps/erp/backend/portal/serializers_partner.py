@@ -56,12 +56,37 @@ class PartnerReviewEntrySerializer(serializers.Serializer):
     decided_at = serializers.DateTimeField(allow_null=True)
 
 
+class PartnerProductDocumentSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    kind = serializers.CharField()
+    kind_name = serializers.CharField()
+    title = serializers.CharField()
+    number = serializers.CharField(allow_blank=True)
+    issued_by = serializers.CharField(allow_blank=True)
+    issued_at = serializers.DateField(allow_null=True)
+    valid_until = serializers.DateField(allow_null=True)
+    original_name = serializers.CharField()
+    size_bytes = serializers.IntegerField()
+    created_at = serializers.DateTimeField()
+
+
 class PartnerProductDetailSerializer(PartnerProductSerializer):
     description = serializers.CharField(allow_blank=True)
     hs_code = serializers.CharField(allow_blank=True)
     uom = serializers.CharField(allow_null=True)
     missing = PartnerMissingSerializer(many=True)
     history = PartnerReviewEntrySerializer(many=True)
+    documents = PartnerProductDocumentSerializer(many=True)
+
+
+class PartnerDocumentUploadRequestSerializer(serializers.Serializer):
+    upload_id = serializers.CharField(required=False, allow_blank=True, default="")
+    kind = serializers.CharField(required=False, default="certificate")
+    title = serializers.CharField(max_length=255)
+    number = serializers.CharField(max_length=100, required=False, allow_blank=True, default="")
+    issued_by = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
+    issued_at = serializers.DateField(required=False, allow_null=True)
+    valid_until = serializers.DateField(required=False, allow_null=True)
 
 
 class PartnerStatusCountsSerializer(serializers.Serializer):
@@ -218,6 +243,26 @@ class PartnerOrderLogItemSerializer(serializers.Serializer):
     created_at = serializers.DateTimeField()
 
 
+class PartnerOrderReceiptLineItemSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    order_line_id = serializers.IntegerField()
+    name = serializers.CharField()
+    article = serializers.CharField(allow_blank=True)
+    quantity = serializers.IntegerField()
+    unit = serializers.CharField(allow_blank=True)
+    warehouse_name = serializers.CharField(allow_blank=True, default="")
+    conformity_doc_number = serializers.CharField(allow_blank=True)
+    conformity_doc_valid_until = serializers.DateField(allow_null=True)
+
+
+class PartnerOrderReceiptItemSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    supplier_doc = serializers.CharField(allow_blank=True)
+    note = serializers.CharField(allow_blank=True)
+    received_at = serializers.DateTimeField()
+    lines = PartnerOrderReceiptLineItemSerializer(many=True)
+
+
 class PartnerOrderDetailSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     number = serializers.CharField()
@@ -234,6 +279,7 @@ class PartnerOrderDetailSerializer(serializers.Serializer):
     currency = serializers.CharField()
     lines = PartnerOrderLineItemSerializer(many=True)
     logs = PartnerOrderLogItemSerializer(many=True)
+    receipts = PartnerOrderReceiptItemSerializer(many=True)
 
 
 class PartnerOrderConfirmRequestSerializer(serializers.Serializer):

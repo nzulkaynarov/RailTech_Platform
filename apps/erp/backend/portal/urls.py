@@ -67,6 +67,9 @@ from portal.views_partner import (
     PartnerPriceRequestRespondView,
     PartnerPriceTemplateView,
     PartnerProductDetailView,
+    PartnerProductDocumentDetailView,
+    PartnerProductDocumentFileView,
+    PartnerProductDocumentsView,
     PartnerProductListView,
     PartnerSubmitView,
 )
@@ -191,6 +194,36 @@ urlpatterns = [
     path("partner/products/submit/", PartnerSubmitView.as_view(), name="portal-partner-submit-slash"),
     path("partner/products/<int:pk>", PartnerProductDetailView.as_view(), name="portal-partner-product"),
     path("partner/products/<int:pk>/", PartnerProductDetailView.as_view(), name="portal-partner-product-slash"),
+    path(
+        "partner/products/<int:pk>/documents",
+        PartnerProductDocumentsView.as_view(),
+        name="portal-partner-product-documents",
+    ),
+    path(
+        "partner/products/<int:pk>/documents/",
+        PartnerProductDocumentsView.as_view(),
+        name="portal-partner-product-documents-slash",
+    ),
+    path(
+        "partner/products/<int:pk>/documents/<int:doc_id>",
+        PartnerProductDocumentDetailView.as_view(),
+        name="portal-partner-product-document-detail",
+    ),
+    path(
+        "partner/products/<int:pk>/documents/<int:doc_id>/",
+        PartnerProductDocumentDetailView.as_view(),
+        name="portal-partner-product-document-detail-slash",
+    ),
+    path(
+        "partner/products/<int:pk>/documents/<int:doc_id>/file",
+        PartnerProductDocumentFileView.as_view(),
+        name="portal-partner-product-document-file",
+    ),
+    path(
+        "partner/products/<int:pk>/documents/<int:doc_id>/file/",
+        PartnerProductDocumentFileView.as_view(),
+        name="portal-partner-product-document-file-slash",
+    ),
     path("partner/offers/confirm", PartnerConfirmView.as_view(), name="portal-partner-confirm"),
     path("partner/offers/confirm/", PartnerConfirmView.as_view(), name="portal-partner-confirm-slash"),
     path("partner/price-template", PartnerPriceTemplateView.as_view(), name="portal-partner-template"),

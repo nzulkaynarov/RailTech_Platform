@@ -101,6 +101,69 @@ const MISSING: Record<number, Array<{ code: string; label: string }>> = {
   9005: [{ code: 'identity', label: 'Артикул производителя или ГОСТ' }],
 };
 
+const DOCUMENTS: Record<number, Schemas['PartnerProductDocument'][]> = {
+  9001: [
+    {
+      id: 7001,
+      kind: 'certificate',
+      kind_name: 'Сертификат соответствия',
+      title: 'Сертификат соответствия ГОСТ 7798-70',
+      number: 'ЕАЭС RU С-RU.АЯ46.В.00001/26',
+      issued_by: 'Орган по сертификации',
+      issued_at: '2026-01-15',
+      valid_until: '2029-01-14',
+      original_name: 'certificate-brake-pads.pdf',
+      size_bytes: 524288,
+      created_at: '2026-02-01T12:00:00+05:00',
+    },
+  ],
+};
+
+export function documentsOf(productId: number): Schemas['PartnerProductDocument'][] {
+  return DOCUMENTS[productId] ?? [];
+}
+
+export function addDocument(
+  productId: number,
+  data: {
+    kind?: string;
+    title: string;
+    number?: string;
+    issued_by?: string;
+    issued_at?: string | null;
+    valid_until?: string | null;
+    file_name?: string;
+    size_bytes?: number;
+  },
+): Schemas['PartnerProductDocument'] {
+  const list = DOCUMENTS[productId] ?? (DOCUMENTS[productId] = []);
+  const nextId = 7000 + list.length + 1;
+  const doc: Schemas['PartnerProductDocument'] = {
+    id: nextId,
+    kind: data.kind || 'certificate',
+    kind_name: data.kind === 'passport' ? 'Паспорт изделия' : 'Сертификат соответствия',
+    title: data.title,
+    number: data.number || '',
+    issued_by: data.issued_by || '',
+    issued_at: data.issued_at || null,
+    valid_until: data.valid_until || null,
+    original_name: data.file_name || `${data.title}.pdf`,
+    size_bytes: data.size_bytes || 102400,
+    created_at: new Date().toISOString(),
+  };
+  list.push(doc);
+  return doc;
+}
+
+export function deleteDocument(productId: number, docId: number): boolean {
+  const list = DOCUMENTS[productId];
+  if (!list) return false;
+  const idx = list.findIndex((d) => d.id === docId);
+  if (idx === -1) return false;
+  list.splice(idx, 1);
+  return true;
+}
+
 export function detailOf(product: Product): Detail {
   const history: Detail['history'] = [];
   if (product.is_own && product.status === 'returned') {
@@ -114,7 +177,7 @@ export function detailOf(product: Product): Detail {
   if (product.is_own && product.status === 'published') {
     history.push({ submitted_at: '2026-09-25T12:00:00+05:00', decision: 'published', reason: '', issues: [], decided_at: '2026-09-26T09:40:00+05:00' });
   }
-  if (product.status === 'matched') return { ...product, description: '', hs_code: '', uom: null, missing: [], history: [] };
+  if (product.status === 'matched') return { ...product, description: '', hs_code: '', uom: null, missing: [], history: [], documents: [] };
   return {
     ...product,
     description: product.is_own ? `Описание: ${product.name}.` : '',
@@ -122,6 +185,7 @@ export function detailOf(product: Product): Detail {
     uom: 'шт',
     missing: MISSING[product.id] ?? [],
     history,
+    documents: documentsOf(product.id),
   };
 }
 
@@ -287,6 +351,7 @@ export function partnerOrders(): Schemas['PartnerOrderDetail'][] {
           created_at: '2026-11-01T10:00:00+05:00',
         },
       ],
+      receipts: [],
     },
     {
       id: 8002,
@@ -310,7 +375,7 @@ export function partnerOrders(): Schemas['PartnerOrderDetail'][] {
           name: 'Подшипник 6205-2RS',
           article: '6205-2RS',
           quantity: 100,
-          received_quantity: 0,
+          received_quantity: 50,
           unit: 'шт',
           unit_price: '4200.00',
           total_price: '420000.00',
@@ -322,6 +387,27 @@ export function partnerOrders(): Schemas['PartnerOrderDetail'][] {
           kind: 'confirmed',
           detail: 'Подтверждён поставщиком в портале',
           created_at: '2026-11-02T14:30:00+05:00',
+        },
+      ],
+      receipts: [
+        {
+          id: 8301,
+          supplier_doc: 'ТН-1002 от 05.11.2026',
+          note: 'Приёмка партии 1',
+          received_at: '2026-11-06T15:00:00+05:00',
+          lines: [
+            {
+              id: 8401,
+              order_line_id: 8102,
+              name: 'Подшипник 6205-2RS',
+              article: '6205-2RS',
+              quantity: 50,
+              unit: 'шт',
+              warehouse_name: 'Центральный склад Ташкент',
+              conformity_doc_number: 'ЕАЭС RU С-RU.АЯ46.В.00001/26',
+              conformity_doc_valid_until: '2029-01-14',
+            },
+          ],
         },
       ],
     },

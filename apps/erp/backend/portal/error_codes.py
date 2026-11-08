@@ -62,6 +62,10 @@ ERROR_CODES = (
     "CANNOT_ELEVATE_RIGHTS",
     "ADMIN_REQUIRED",
     "CANNOT_MODIFY_PRIMARY_CONTACT",
+    "TECH_DOC_KIND_INVALID",
+    "FILE_TYPE_NOT_ALLOWED",
+    "TECH_DOC_DATE_INVALID",
+    "TECH_DOC_VALIDITY_RANGE_INVALID",
 )
 
 #: Код по HTTP-статусу для ошибок, у которых своего кода нет (чужие исключения DRF и Django).
