@@ -8,6 +8,24 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task(
+    name="portal.send_magic_link_to_address",
+    time_limit=60,
+    soft_time_limit=50,
+    max_retries=3,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+)
+def send_magic_link_to_address(clean_email: str) -> dict:
+    """Ищет контакт по адресу вне запроса (FX-3): ответ и его время не должны зависеть от наличия адреса.
+
+    Адреса нет в результате задачи: результат лежит в бэкенде дольше, чем сообщение в брокере.
+    """
+    from portal.services.magic_link import queue_login_link_for_address
+
+    return {"queued": queue_login_link_for_address(clean_email)}
+
+
+@shared_task(
     name="portal.send_magic_link",
     time_limit=120,
     soft_time_limit=100,

@@ -101,8 +101,7 @@ class TestMagicLink:
 
         assert known.status_code == supplier.status_code == unknown.status_code == status.HTTP_200_OK
         strip = lambda r: {k: v for k, v in r.data.items() if k != "email"}  # noqa: E731
-        assert strip(supplier) == strip(unknown) == {"sent": False, "status": "not_registered"}
-        assert strip(known) == {"sent": True, "status": "ok"}
+        assert strip(supplier) == strip(unknown) == strip(known) == {"sent": True, "status": "ok"}
         assert mail.outbox == []
         assert not MagicLinkToken.objects.filter(contact=supplier_contact).exists()
 

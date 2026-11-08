@@ -268,12 +268,8 @@ class MagicLinkRequestView(APIView):
             raise PortalValidationError("VALIDATION_ERROR")
 
         email = serializer.validated_data["email"]
-        sent = request_magic_link(email)
-        if not sent:
-            return Response(
-                {"status": "not_registered", "sent": False, "email": email},
-                status=status.HTTP_200_OK,
-            )
+        request_magic_link(email)
+        # Один ответ для любого адреса (решение владельца 2026-11-08, FX-3).
         return Response({"status": "ok", "sent": True, "email": email}, status=status.HTTP_200_OK)
 
 

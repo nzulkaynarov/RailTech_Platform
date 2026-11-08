@@ -43,10 +43,15 @@ def break_mail_handoff(settings, monkeypatch):
 @pytest.fixture
 def inline_magic_link_task(monkeypatch):
     """Брокера в тестах нет: письмо ссылки входа (задача Celery, FIX-15) выполняется сразу, в этом же процессе."""
-    from portal.tasks import send_magic_link
+    from portal.tasks import send_magic_link, send_magic_link_to_address
 
     monkeypatch.setattr(
         send_magic_link, "delay", lambda *args, **kwargs: send_magic_link.apply(args=args, kwargs=kwargs)
+    )
+    monkeypatch.setattr(
+        send_magic_link_to_address,
+        "apply_async",
+        lambda args=None, kwargs=None, **options: send_magic_link_to_address.apply(args=args, kwargs=kwargs),
     )
 
 

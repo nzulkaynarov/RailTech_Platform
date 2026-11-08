@@ -24,7 +24,7 @@ describe('вход с веба', () => {
     expect(screen.getByRole('link', { name: 'Я новый клиент' })).toHaveAttribute('href', '/new-client');
   });
 
-  it('«Войти»: magic-link → «Мы отправили письмо»', async () => {
+  it('«Войти»: magic-link → «Если адрес зарегистрирован, мы отправили письмо»', async () => {
     const user = userEvent.setup();
     let sentBody: unknown;
     portalServer.events.on('request:start', async ({ request }) => {
@@ -35,32 +35,53 @@ describe('вход с веба', () => {
     await user.type(await screen.findByLabelText('E-mail'), 'a.karimov@toshlog.example');
     await user.click(screen.getByRole('button', { name: 'Войти' }));
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Мы отправили письмо' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Если адрес зарегистрирован, мы отправили письмо' })).toBeInTheDocument();
     expect(screen.getByText(/a\.karimov@toshlog\.example/)).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/login/sent');
     expect(sentBody).toEqual({ email: 'a.karimov@toshlog.example' });
     portalServer.events.removeAllListeners();
   });
 
-  it('«Войти»: незарегистрированный адрес показывает плашку с действиями (AUTH-CHECK-1)', async () => {
-    portalServer.use(
-      http.post('*/api/portal/v1/auth/magic-link', () =>
-        HttpResponse.json({ status: 'not_registered', sent: false, email: 'unknown@example.com' }),
-      ),
-    );
+  it('«Войти»: ответ для любого адреса ведёт на один экран, адрес не раскрывается (FX-3)', async () => {
     const user = userEvent.setup();
     const { router } = renderApp('/login');
 
     await user.type(await screen.findByLabelText('E-mail'), 'unknown@example.com');
     await user.click(screen.getByRole('button', { name: 'Войти' }));
 
-    expect(await screen.findByText('Адрес не зарегистрирован')).toBeInTheDocument();
-    expect(screen.getByText(/unknown@example\.com/)).toBeInTheDocument();
-    const newClientLink = screen.getByRole('link', { name: /Я клиент — оставить запрос/ });
-    expect(newClientLink).toHaveAttribute('href', '/new-client?email=unknown%40example.com');
-    const partnerLink = screen.getByRole('link', { name: /Я поставщик — стать партнёром/ });
-    expect(partnerLink).toHaveAttribute('href', '/become-partner?email=unknown%40example.com');
-    expect(router.state.location.pathname).toBe('/login');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Если адрес зарегистрирован, мы отправили письмо' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/login/sent');
+    expect(screen.queryByText(/не зарегистрирован/)).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Вы новый клиент? Оставьте запрос' })).toHaveAttribute(
+      'href',
+      '/new-client?email=unknown%40example.com',
+    );
+    expect(screen.getByRole('link', { name: 'Стать партнёром' })).toHaveAttribute(
+      'href',
+      '/become-partner?email=unknown%40example.com',
+    );
+  });
+
+  it.each([
+    ['ru', 'Войти', 'Если адрес зарегистрирован, мы отправили письмо'],
+    ['uz', 'Kirish', 'Agar manzil roʻyxatdan oʻtgan boʻlsa, xat yubordik'],
+    ['en', 'Sign in', 'If this address is registered, we sent an email'],
+  ])('заголовок после запроса не утверждает, что адрес есть (%s)', async (lang, submit, title) => {
+    window.localStorage.setItem('cabinet.language', lang);
+    await i18n.changeLanguage(lang);
+    const user = userEvent.setup();
+    renderApp('/login');
+    await user.type(await screen.findByLabelText('E-mail'), 'a@example.com');
+    await user.click(screen.getByRole('button', { name: submit }));
+    expect(await screen.findByRole('heading', { level: 1, name: title })).toBeInTheDocument();
+    window.localStorage.removeItem('cabinet.language');
+    await i18n.changeLanguage('ru');
+  });
+
+  it('на странице входа «Новый клиент» и «Стать партнёром» видны без запроса', async () => {
+    renderApp('/login');
+    expect(await screen.findByRole('link', { name: 'Я новый клиент' })).toHaveAttribute('href', '/new-client');
+    expect(screen.getByRole('link', { name: 'Стать партнёром' })).toHaveAttribute('href', '/become-partner');
   });
 
   it('ошибка API показывается текстом из словаря по коду detail', async () => {
@@ -306,7 +327,7 @@ describe('вход с веба', () => {
       await user.type(await screen.findByLabelText('E-mail'), 'neznakomets@example.com');
       await user.click(screen.getByRole('button', { name: 'Войти' }));
 
-      expect(await screen.findByRole('heading', { level: 1, name: 'Мы отправили письмо' })).toBeInTheDocument();
+      expect(await screen.findByRole('heading', { level: 1, name: 'Если адрес зарегистрирован, мы отправили письмо' })).toBeInTheDocument();
       expect(
         screen.getByText(
           'Если адрес neznakomets@example.com зарегистрирован, в письме — код и ссылка для входа. Они действуют 60 минут.',
@@ -314,7 +335,10 @@ describe('вход с веба', () => {
       ).toBeInTheDocument();
       expect(screen.queryByText(/есть в кабинете/)).not.toBeInTheDocument();
       expect(screen.getByText('Письмо может идти несколько минут. Проверьте папку «Спам».')).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: 'Вы новый клиент? Оставьте запрос' })).toHaveAttribute('href', '/new-client');
+      expect(screen.getByRole('link', { name: 'Вы новый клиент? Оставьте запрос' })).toHaveAttribute(
+        'href',
+        '/new-client?email=neznakomets%40example.com',
+      );
     });
 
     it('ссылка «Вы новый клиент?» открывает форму запроса', async () => {
