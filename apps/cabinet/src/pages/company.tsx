@@ -507,7 +507,7 @@ function SecurityLogCard() {
                 </div>
                 {event.details && <p className="text-xs text-muted-foreground">{event.details}</p>}
                 {(event.ip_address || event.user_agent) && (
-                  <p className="text-xs text-muted-foreground/80">
+                  <p className="text-xs text-muted-foreground">
                     {[event.ip_address, event.user_agent].filter(Boolean).join(' · ')}
                   </p>
                 )}
