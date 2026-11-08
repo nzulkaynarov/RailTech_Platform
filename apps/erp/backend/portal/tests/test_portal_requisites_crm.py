@@ -26,7 +26,8 @@ def test_portal_still_updates_the_rest_of_the_profile_of_a_crm_company(portal_cl
         format="json",
     )
     assert response.status_code == 200
-    assert response.json()["bank_details"] == "р/с 2020"
+    assert response.json()["language"] == "uz"
+    assert response.json()["bank_change_request"]["new_bank_details"] == "р/с 2020"  # смена — на проверке (FX-4)
 
 
 def test_portal_edits_the_name_of_a_company_without_crm(portal_client, client_company):

@@ -6948,3 +6948,21 @@ msgstr "set it up in your account: Profile → “Notifications”."
 
 msgid "после входа подключите бот в разделе Профиль → «Уведомления»: счета, акты и ответы менеджера будут приходить сразу."
 msgstr "after signing in, connect the bot in Profile → “Notifications”: invoices, acts and your manager’s replies will arrive instantly."
+
+msgid "Запрошена смена банковских реквизитов компании"
+msgstr "Company bank details change requested"
+
+msgid "Банковские реквизиты компании изменены"
+msgstr "Company bank details have been changed"
+
+msgid "Запрос на смену банковских реквизитов отклонён"
+msgstr "Bank details change request rejected"
+
+msgid "Подан запрос на смену банковских реквизитов компании. Реквизиты изменятся только после проверки сотрудником. Если это были не вы, срочно свяжитесь с менеджером."
+msgstr "A request to change the company bank details has been submitted. The details change only after a staff check. If this was not you, contact your manager immediately."
+
+msgid "Сотрудник подтвердил смену банковских реквизитов компании, новые реквизиты действуют."
+msgstr "A staff member confirmed the bank details change; the new details are now in effect."
+
+msgid "Запрос на смену банковских реквизитов компании отклонён, прежние реквизиты действуют."
+msgstr "The request to change the company bank details was rejected; the previous details remain in effect."

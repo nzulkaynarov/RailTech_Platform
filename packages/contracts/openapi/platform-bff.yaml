@@ -3350,6 +3350,87 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /eds/payments/bank-changes:
+    get:
+      tags: [eds-payments]
+      operationId: listBankChangeRequests
+      summary: 'Счета и оплаты · Смена реквизитов контрагента: очередь'
+      description: ERP `GET finance/bank-changes/` — запросы контрагентов на смену банковских реквизитов (FX-4, решение владельца 2026-11-08). Полные реквизиты — сотруднику с правом подтверждать (`finance.payment`); читающему — маскированные (`•••• 1234`).
+      parameters:
+        - {name: status, in: query, required: false, description: Фильтр по статусу, schema: {$ref: '#/components/schemas/BankChangeStatus'}}
+      responses:
+        '200':
+          description: Очередь
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BankChangeList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /eds/payments/bank-changes/{id}/approve:
+    post:
+      tags: [eds-payments]
+      operationId: approveBankChangeRequest
+      summary: 'Счета и оплаты · Смена реквизитов: подтвердить'
+      description: ERP `POST finance/bank-changes/{id}/approve/` — право `finance.payment`. Применяет новые реквизиты компании и уведомляет её администраторов и основной контакт по всем каналам. Повтор на подтверждённом запросе — тот же ответ без второго эффекта. Отклонённый запрос — 409 `bank_change_not_pending`; компания в архиве — 409 `company_archived`; реквизиты изменились после подачи — 409 `bank_change_stale`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, description: Id запроса, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BankChangeItem'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/BankChangeConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /eds/payments/bank-changes/{id}/reject:
+    post:
+      tags: [eds-payments]
+      operationId: rejectBankChangeRequest
+      summary: 'Счета и оплаты · Смена реквизитов: отклонить с причиной'
+      description: ERP `POST finance/bank-changes/{id}/reject/` — право `finance.payment`. Реквизиты не меняются, причину видит компания. Повтор на отклонённом запросе — тот же ответ без второго эффекта; подтверждённый запрос — 409 `bank_change_not_pending`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, description: Id запроса, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BankChangeRejectRequest'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BankChangeItem'
+        '400':
+          $ref: '#/components/responses/ValidationFailed'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/BankChangeConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /eds/payments/{id}:
     get:
       tags: [eds-payments]
@@ -13833,6 +13914,14 @@ components:
         409 `CONFLICT` — `details.reason`: `contract_transition_not_allowed` (договор сейчас в другом статусе),
         `act_sign_not_allowed`, `act_already_exists`, `no_invoice`, `contract_exists`, `delivery_transition_not_allowed`
         (отметка доставки не подходит к статусу исполнения), `fulfillment_not_ready` (исполнения ещё нет); обновите карточку
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    BankChangeConflict:
+      description: >-
+        409 `CONFLICT` — запрос нельзя решить: `details.reason` — `bank_change_not_pending` (уже решён иначе), `bank_change_stale`
+        (реквизиты изменились после подачи), `company_archived` (компания в архиве); обновите очередь
       content:
         application/json:
           schema:
@@ -24696,6 +24785,43 @@ components:
           type: string
           maxLength: 1000
           description: 'Причина одобрения без согласия кандидата, пишется в журнал; без неё нужен статус candidate_agreed (FX-1)'
+    BankChangeStatus:
+      type: string
+      enum: [pending, approved, rejected]
+    BankChangeItem:
+      type: object
+      additionalProperties: false
+      required: [id, company_id, company_name, company_inn, company_archived, status, stale, old_bank_details, new_bank_details, requested_by_name, requested_by_email, requested_ip, created_at, decided_at, decided_by_name, reject_reason]
+      properties:
+        id: {type: string}
+        company_id: {type: string}
+        company_name: {type: string}
+        company_inn: {type: string}
+        company_archived: {type: boolean, description: Компания в архиве — подтвердить нельзя}
+        status: {$ref: '#/components/schemas/BankChangeStatus'}
+        stale: {type: boolean, description: 'Реквизиты изменились после подачи: подтвердить нельзя, только отклонить'}
+        old_bank_details: {type: string, description: 'На момент подачи; без права подтверждать — маска'}
+        new_bank_details: {type: string, description: 'Запрошенные; без права подтверждать — маска'}
+        requested_by_name: {type: string}
+        requested_by_email: {type: string}
+        requested_ip: {type: [string, 'null']}
+        created_at: {type: string, format: date-time}
+        decided_at: {type: [string, 'null'], format: date-time}
+        decided_by_name: {type: [string, 'null']}
+        reject_reason: {type: [string, 'null']}
+    BankChangeList:
+      type: object
+      additionalProperties: false
+      required: [items, pending_count]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/BankChangeItem'}}
+        pending_count: {type: integer}
+    BankChangeRejectRequest:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: {type: string, minLength: 1, maxLength: 1000}
     PartnerApplicationRejectRequest:
       type: object
       additionalProperties: false

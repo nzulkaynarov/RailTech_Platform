@@ -9,6 +9,7 @@ from django.utils.translation import gettext_lazy as _
 
 from core.storage import get_private_storage
 
+from .models_bank_change import BankDetailsChangeRequest, BankDetailsChangeStatus  # noqa: F401 — смена реквизитов (FX-4)
 from .models_notices import NoticeChannel, NoticeEmailState, PortalNotice  # noqa: F401 — лента колокольчика (NOTIFY-2)
 
 
@@ -482,7 +483,8 @@ class PortalSecurityEvent(models.Model):
     - role_change: изменение прав коллеги (can_act, is_admin);
     - member_deactivated: деактивация коллеги;
     - member_invited: приглашение нового коллеги;
-    - bank_details_changed: изменение банковских реквизитов компании.
+    - bank_details_changed: реквизиты изменены после подтверждения сотрудником;
+    - bank_details_change_requested / bank_details_change_rejected: запрос на смену подан / отклонён (FX-4).
     """
 
     class EventType(models.TextChoices):
@@ -493,6 +495,8 @@ class PortalSecurityEvent(models.Model):
         MEMBER_DEACTIVATED = "member_deactivated", _("Отключение сотрудника")
         MEMBER_INVITED = "member_invited", _("Приглашение сотрудника")
         BANK_DETAILS_CHANGED = "bank_details_changed", _("Изменение банковских реквизитов")
+        BANK_DETAILS_CHANGE_REQUESTED = "bank_details_change_requested", _("Запрос на смену банковских реквизитов")
+        BANK_DETAILS_CHANGE_REJECTED = "bank_details_change_rejected", _("Смена банковских реквизитов отклонена")
 
     company = models.ForeignKey(
         "parties.Company",

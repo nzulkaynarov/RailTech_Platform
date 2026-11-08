@@ -57,6 +57,8 @@ class NoticeKind:
     #: Бот CRM сам шлёт клиенту это событие ERP (`erp_bot_messages.client_message`) — ERP не дублирует в Telegram.
     bot_sends: bool
     email_delay: Optional[timedelta] = None
+    #: Группа `security`: письмо и Telegram одновременно, не один канал на событие (FX-4). Отключить контакт не может.
+    all_channels: bool = False
 
 
 #: Виды уведомлений; тот же перечень — `NotificationKind` контракта `erp-portal.yaml` (сверка — тест).
@@ -87,7 +89,21 @@ KINDS: dict[str, NoticeKind] = {
         NoticeKind(
             "partner_goods_received", "partner_products", "partner_order", "status_changed", "my_products", False, False
         ),
-        NoticeKind("bank_requisites_changed", "security", "chat", "status_changed", "profile", True, False),
+        NoticeKind("bank_requisites_changed", "security", "bank_change", "status_changed", "profile", True, False, None, True),
+        NoticeKind(
+            "bank_requisites_change_requested",
+            "security",
+            "bank_change",
+            "awaiting_decision",
+            "profile",
+            True,
+            False,
+            None,
+            True,
+        ),
+        NoticeKind(
+            "bank_requisites_change_rejected", "security", "bank_change", "returned", "profile", True, False, None, True
+        ),
     )
 }
 
@@ -179,11 +195,13 @@ def notify(
     already_emailed: Iterable[str] = (),
     document_contact_ids: Iterable[int] = (),
     email_skip: Optional[dict[int, str]] = None,
+    contact_ids: Optional[Iterable[int]] = None,
 ) -> list[PortalNotice]:
     """Записать событие в ленту каждого действующего контакта компании и выбрать каждому внешний канал.
 
     Идемпотентно: повтор того же события (`dedup`) строк и писем не добавляет. Вызывать в транзакции изменения: откат —
     ни строк, ни писем (письма уходят после коммита). Компании, закрытой для кабинета, уведомлять некуда — пусто.
+    `contact_ids` сужает получателей; вид с `all_channels` идёт и письмом, и в Telegram (`_request_security_telegram`).
     """
     kind = KINDS[kind_code]
     if company is None or not company_has_cabinet_access(company.pk):
@@ -198,6 +216,8 @@ def notify(
     created: list[PortalNotice] = []
     sent_now: set[str] = set()  # адреса, которым это событие уже выбрало письмо
     contacts = Contact.objects.filter(active_contact_q(), company_id=company.pk).order_by("pk")
+    if contact_ids is not None:
+        contacts = contacts.filter(pk__in=list(contact_ids))
     for contact in contacts:
         channel, reason = choose_channel(
             kind, contact, bot_reaches=bot_reaches, already_emailed=emailed, document_contact_ids=document_contacts
@@ -216,6 +236,9 @@ def notify(
         elif channel == NoticeChannel.SOURCE and not reason and address in sent_now:
             reason = REASON_SAME_ADDRESS
         wants_email = channel in (NoticeChannel.EMAIL, NoticeChannel.EMAIL_DELAYED)
+        telegram_target = _security_telegram_target(kind, contact)
+        if telegram_target is not None and not wants_email:
+            channel = NoticeChannel.TELEGRAM
         notice, was_created = PortalNotice.objects.get_or_create(
             contact=contact,
             dedup_key=f"{kind.code}:{dedup}"[:200],
@@ -238,10 +261,29 @@ def notify(
         )
         if was_created:
             created.append(notice)
+            if telegram_target is not None:
+                _request_security_telegram(contact, telegram_target, kind.code)
     immediate = [n.pk for n in created if n.channel == NoticeChannel.EMAIL]
     if immediate:
         transaction.on_commit(lambda: _enqueue_emails(immediate))
     return created
+
+
+def _security_telegram_target(kind: NoticeKind, contact: Contact) -> Optional[int]:
+    """Контакт в CRM для сообщения бота: вид безопасности, привязанный Telegram и сопоставление; иначе `None`."""
+    if not kind.all_channels or not contact.telegram_user_id:
+        return None
+    from integration.models import CrmContactMapping
+
+    return CrmContactMapping.objects.filter(contact=contact).values_list("crm_contact_id", flat=True).first()
+
+
+@transaction.atomic
+def _request_security_telegram(contact: Contact, crm_contact_id: int, kind_code: str) -> None:
+    """ERP в Telegram не пишет: запрос боту CRM в outbox транзакции уведомления (откат — без сообщения)."""
+    from integration.services import events
+
+    events.publish_contact_security_notice_requested(contact, crm_contact_id, kind_code)
 
 
 def _pending_delayed(contact, kind: NoticeKind) -> bool:

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Portal API (Cabinet → ERP)
-  version: 0.9.0
+  version: 0.10.0
   summary: Пространство `/api/portal/v1/` — вызывает Cabinet SPA от имени клиента.
   description: |
     Контракт по `docs/architecture/CONTRACTS.md` §4 и ADR-0004 (Cabinet без бэкенда). Версия 0 (M0-INF-02):
@@ -2423,6 +2423,12 @@ paths:
       description: |
         Название и ИНН компании, связанной с клиентом CRM, ведёт CRM (ORCHESTRATOR §3 п. 16): их правка — 422
         `REQUISITES_MANAGED_BY_CRM`. Остальные поля правятся здесь.
+
+        `bank_details` не применяется сразу (решение владельца 2026-11-08, FX-4): изменённое значение создаёт запрос на смену, в
+        ответе `bank_details` прежнее, а в `bank_change_request` — запрос в статусе `pending`; реквизиты меняются только после
+        подтверждения сотрудником. Менять может только администратор компании (иначе 409 `ADMIN_REQUIRED`). Один активный запрос
+        на компанию: пока он на проверке, новая смена — 409 `BANK_CHANGE_ALREADY_PENDING`, остальные поля запроса при этом не
+        сохраняются. Значение, совпадающее с текущим, запроса не создаёт.
       requestBody:
         required: true
         content:
@@ -2440,6 +2446,12 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Смена реквизитов не администратором (`ADMIN_REQUIRED`) или запрос уже на проверке (`BANK_CHANGE_ALREADY_PENDING`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '422':
           $ref: '#/components/responses/ValidationError'
         '429':
@@ -3034,6 +3046,7 @@ components:
         - CANNOT_DEACTIVATE_SELF
         - CANNOT_ELEVATE_RIGHTS
         - ADMIN_REQUIRED
+        - BANK_CHANGE_ALREADY_PENDING
         - CANNOT_MODIFY_PRIMARY_CONTACT
         - TECH_DOC_KIND_INVALID
         - FILE_TYPE_NOT_ALLOWED
@@ -4553,7 +4566,9 @@ components:
         поставки, `delivery_eta_changed` — сдвиг срока поставки, `manager_replied` — ответ менеджера в чате кабинета,
         `partner_card_returned` — карточка партнёра возвращена на доработку, `partner_card_published` — опубликована,
         `partner_order_sent` — направлен заказ на поставку, `partner_rfq_sent` — направлен запрос цен,
-        `partner_goods_received` — склад принял товары по заказу.
+        `partner_goods_received` — склад принял товары по заказу, `bank_requisites_change_requested` — подан запрос на смену
+        банковских реквизитов, `bank_requisites_changed` — смену подтвердил сотрудник, `bank_requisites_change_rejected` —
+        сотрудник отклонил смену (FX-4; группа `security`, отключить нельзя).
         Незнакомый вид Cabinet показывает общим текстом.
       enum:
         - quote_sent
@@ -4569,6 +4584,8 @@ components:
         - partner_order_sent
         - partner_rfq_sent
         - partner_goods_received
+        - bank_requisites_change_requested
+        - bank_requisites_change_rejected
 
     NotificationGroup:
       type: string
@@ -4577,7 +4594,7 @@ components:
 
     NotificationObjectType:
       type: string
-      enum: [quote, invoice, act, delivery, chat, partner_product, partner_order, partner_rfq]
+      enum: [quote, invoice, act, delivery, chat, partner_product, partner_order, partner_rfq, bank_change]
 
     NotificationAction:
       type: string
@@ -5426,6 +5443,12 @@ components:
           type: [string, 'null']
         bank_details:
           type: [string, 'null']
+          description: Действующие реквизиты; смена на проверке их не меняет (см. `bank_change_request`)
+        bank_change_request:
+          description: Последний запрос на смену реквизитов; только в `GET` и `PUT /company`, `null` — запросов не было (FX-4)
+          oneOf:
+            - $ref: '#/components/schemas/BankChangeRequest'
+            - type: 'null'
         language:
           $ref: '#/components/schemas/Language'
         relationship_status:
@@ -5435,6 +5458,35 @@ components:
           description: Действующие и архивные отношения компании с нами (роль, статус, договор)
           items:
             $ref: '#/components/schemas/PortalRelationship'
+
+    BankChangeRequest:
+      type: object
+      description: Запрос на смену банковских реквизитов компании (FX-4)
+      required: [id, status, requested_by_name, new_bank_details, created_at, decided_at, reject_reason]
+      properties:
+        id:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+          description: '`pending` — на проверке у сотрудника, `approved` — подтверждён и применён, `rejected` — отклонён'
+        requested_by_name:
+          type: string
+          description: Кто подал
+        new_bank_details:
+          type: [string, 'null']
+          description: Новые реквизиты — только администратору компании, остальным `null`
+        created_at:
+          type: string
+          format: date-time
+        decided_at:
+          type: [string, 'null']
+          format: date-time
+        reject_reason:
+          type: [string, 'null']
+          description: Причина отказа; `null` — запрос не отклонён
+      additionalProperties: false
 
     PortalRelationshipStatus:
       type: string
@@ -5485,7 +5537,7 @@ components:
           type: integer
         event_type:
           type: string
-          enum: [login, logout, revoke_sessions, role_change, member_deactivated, member_invited, bank_details_changed]
+          enum: [login, logout, revoke_sessions, role_change, member_deactivated, member_invited, bank_details_changed, bank_details_change_requested, bank_details_change_rejected]
         created_at:
           type: string
           format: date-time

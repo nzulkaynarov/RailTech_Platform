@@ -1,0 +1,25 @@
+{
+  "specversion": "1.0",
+  "id": "7b1f3c5e-2d4a-5f6b-9c8d-1e2f3a4b5c6d",
+  "source": "rt://erp",
+  "type": "uz.railtech.erp.contact.security_notice_requested.v1",
+  "time": "2026-11-04T07:15:00Z",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/erp/contact.security_notice_requested/v1",
+  "tenant": "railtech",
+  "correlationid": "1e2f3a4b-5c6d-5e7f-8a9b-0c1d2e3f4a5b",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+  "data": {
+    "erp_company_id": 118,
+    "crm_client_id": 42,
+    "actor": {
+      "type": "client"
+    },
+    "payload": {
+      "erp_contact_id": 310,
+      "crm_contact_id": 58,
+      "language": "uz",
+      "kind": "bank_requisites_change_requested"
+    }
+  }
+}

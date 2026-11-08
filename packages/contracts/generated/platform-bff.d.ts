@@ -1672,6 +1672,66 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/eds/payments/bank-changes": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Счета и оплаты · Смена реквизитов контрагента: очередь
+     * @description ERP `GET finance/bank-changes/` — запросы контрагентов на смену банковских реквизитов (FX-4, решение владельца 2026-11-08). Полные реквизиты — сотруднику с правом подтверждать (`finance.payment`); читающему — маскированные (`•••• 1234`).
+     */
+    get: operations["listBankChangeRequests"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/payments/bank-changes/{id}/approve": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Счета и оплаты · Смена реквизитов: подтвердить
+     * @description ERP `POST finance/bank-changes/{id}/approve/` — право `finance.payment`. Применяет новые реквизиты компании и уведомляет её администраторов и основной контакт по всем каналам. Повтор на подтверждённом запросе — тот же ответ без второго эффекта. Отклонённый запрос — 409 `bank_change_not_pending`; компания в архиве — 409 `company_archived`; реквизиты изменились после подачи — 409 `bank_change_stale`.
+     */
+    post: operations["approveBankChangeRequest"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/payments/bank-changes/{id}/reject": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Счета и оплаты · Смена реквизитов: отклонить с причиной
+     * @description ERP `POST finance/bank-changes/{id}/reject/` — право `finance.payment`. Реквизиты не меняются, причину видит компания. Повтор на отклонённом запросе — тот же ответ без второго эффекта; подтверждённый запрос — 409 `bank_change_not_pending`.
+     */
+    post: operations["rejectBankChangeRequest"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/eds/payments/{id}": {
     parameters: {
       query?: never;
@@ -14816,6 +14876,39 @@ export interface components {
       /** @description Причина одобрения без согласия кандидата, пишется в журнал; без неё нужен статус candidate_agreed (FX-1) */
       override_reason?: string;
     };
+    /** @enum {string} */
+    BankChangeStatus: "pending" | "approved" | "rejected";
+    BankChangeItem: {
+      id: string;
+      company_id: string;
+      company_name: string;
+      company_inn: string;
+      /** @description Компания в архиве — подтвердить нельзя */
+      company_archived: boolean;
+      status: components["schemas"]["BankChangeStatus"];
+      /** @description Реквизиты изменились после подачи: подтвердить нельзя, только отклонить */
+      stale: boolean;
+      /** @description На момент подачи; без права подтверждать — маска */
+      old_bank_details: string;
+      /** @description Запрошенные; без права подтверждать — маска */
+      new_bank_details: string;
+      requested_by_name: string;
+      requested_by_email: string;
+      requested_ip: string | null;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      decided_at: string | null;
+      decided_by_name: string | null;
+      reject_reason: string | null;
+    };
+    BankChangeList: {
+      items: components["schemas"]["BankChangeItem"][];
+      pending_count: number;
+    };
+    BankChangeRejectRequest: {
+      reason: string;
+    };
     PartnerApplicationRejectRequest: {
       rejected_reason: string;
     };
@@ -15387,6 +15480,15 @@ export interface components {
     };
     /** @description 409 `CONFLICT` — `details.reason`: `contract_transition_not_allowed` (договор сейчас в другом статусе), `act_sign_not_allowed`, `act_already_exists`, `no_invoice`, `contract_exists`, `delivery_transition_not_allowed` (отметка доставки не подходит к статусу исполнения), `fulfillment_not_ready` (исполнения ещё нет); обновите карточку */
     ProjectConflict: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
+    /** @description 409 `CONFLICT` — запрос нельзя решить: `details.reason` — `bank_change_not_pending` (уже решён иначе), `bank_change_stale` (реквизиты изменились после подачи), `company_archived` (компания в архиве); обновите очередь */
+    BankChangeConflict: {
       headers: {
         [name: string]: unknown;
       };
@@ -18365,6 +18467,99 @@ export interface operations {
       413: components["responses"]["EdsPayloadTooLarge"];
       415: components["responses"]["EdsUnsupportedMedia"];
       422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listBankChangeRequests: {
+    parameters: {
+      query?: {
+        /** @description Фильтр по статусу */
+        status?: components["schemas"]["BankChangeStatus"];
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Очередь */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BankChangeList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  approveBankChangeRequest: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id запроса */
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BankChangeItem"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["BankChangeConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  rejectBankChangeRequest: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id запроса */
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BankChangeRejectRequest"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BankChangeItem"];
+        };
+      };
+      400: components["responses"]["ValidationFailed"];
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["BankChangeConflict"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

@@ -25,6 +25,7 @@ from parties.models import (
     active_contact_q,
 )
 from portal import projections
+from portal.client_ip import client_ip as _client_ip
 from portal.authentication import PortalAuthentication
 from portal.exceptions import (
     PortalBadRequest,
@@ -88,7 +89,7 @@ from portal.serializers import (
     TeamMemberUpdateSerializer,
     TelegramAuthSerializer,
 )
-from portal.services import catalog_documents
+from portal.services import bank_details_change, catalog_documents
 from portal.services import documents as portal_documents
 from portal.services import notices
 from portal.services.acceptance import ContactChannelRequired, request_acceptance_code
@@ -230,7 +231,7 @@ class TelegramAuthView(APIView):
             raise PortalValidationError("INVALID_INIT_DATA")
 
         init_data = serializer.validated_data["init_data"]
-        ip = request.META.get("REMOTE_ADDR")
+        ip = _client_ip(request)
         ua = request.META.get("HTTP_USER_AGENT", "")
 
         session, token = authenticate_telegram_user(
@@ -277,7 +278,7 @@ def _exchange_magic_token(request, token: str) -> Response:
     """Обмен токена ссылки входа на сессию (`POST /auth/magic`)."""
     session, session_token = exchange_magic_link(
         token,
-        ip_address=request.META.get("REMOTE_ADDR"),
+        ip_address=_client_ip(request),
         user_agent=request.META.get("HTTP_USER_AGENT", ""),
     )
     return _session_response(session, session_token)
@@ -338,7 +339,7 @@ class LoginCodeExchangeView(APIView):
         session, session_token = exchange_login_code(
             serializer.validated_data["email"],
             serializer.validated_data["code"],
-            ip_address=request.META.get("REMOTE_ADDR"),
+            ip_address=_client_ip(request),
             user_agent=request.META.get("HTTP_USER_AGENT", ""),
         )
         return _session_response(session, session_token)
@@ -416,7 +417,7 @@ class PortalSessionsRevokeOthersView(APIView):
             request.portal_company,
             PortalSecurityEvent.EventType.REVOKE_SESSIONS,
             actor_contact=request.portal_contact,
-            ip_address=request.META.get("REMOTE_ADDR"),
+            ip_address=_client_ip(request),
             user_agent=request.META.get("HTTP_USER_AGENT", ""),
             details=f"Отозвано сессий: {revoked_count}",
         )
@@ -691,7 +692,7 @@ class QuoteRequestCodeView(BasePortalView):
         _assert_quote_awaits_decision(quote)
         try:
             sent = request_acceptance_code(
-                quote, request.portal_contact, request_ip=request.META.get("REMOTE_ADDR", "")
+                quote, request.portal_contact, request_ip=_client_ip(request)
             )
         except ContactChannelRequired:
             raise PortalValidationError("CONTACT_CHANNEL_REQUIRED")
@@ -718,7 +719,7 @@ class QuoteAcceptView(BasePortalView):
         # Код акцепта — одноразовый, с TTL и лимитом попыток; погашение и акцепт — одна транзакция
         # (crm.services.public_page, общий путь с публичной страницей КП). Мастер-кода нет (FIX-02).
         accepted, error = verify_code_and_accept(
-            quote, code, request_ip=request.META.get("REMOTE_ADDR", ""), contact=request.portal_contact
+            quote, code, request_ip=_client_ip(request), contact=request.portal_contact
         )
         if error == "QUOTE_ALREADY_DECIDED":
             raise PortalConflict("QUOTE_FINALIZED")  # успели решить из другой вкладки
@@ -743,7 +744,7 @@ class QuoteRejectView(BasePortalView):
                 rejected_by_user=None,
                 reason=reason,
                 contact_email=request.portal_contact.email,
-                request_ip=request.META.get("REMOTE_ADDR"),
+                request_ip=_client_ip(request),
                 portal_contact=request.portal_contact,
             )
         except ValueError:
@@ -1011,10 +1012,6 @@ class DeliveryDisputeView(BasePortalView):
 # ── 9. Documents & Files ────────────────────────────────────────────────────
 
 
-def _client_ip(request) -> str:
-    return request.META.get("REMOTE_ADDR") or ""
-
-
 def _contact_language(request) -> str:
     """Язык подписей документов — язык контакта, а не заголовок запроса: Cabinet говорит на языке клиента."""
     language = (getattr(request.portal_contact, "language", "") or "").lower()
@@ -1232,13 +1229,47 @@ class CatalogDocumentFileView(BasePortalView):
 # ── 12. Company & Team ──────────────────────────────────────────────────────
 
 
+_COMPANY_SAVE_FIELDS = {
+    "name": ("name",),
+    "country_code": ("country",),
+    "registration_number": ("registration_number",),
+    "inn": ("inn",),
+    "legal_address": ("legal_address",),
+    "language": ("language",),
+}
+
+
+def _company_fields_to_save(data) -> list[str]:
+    return [field for key, fields in _COMPANY_SAVE_FIELDS.items() if key in data for field in fields]
+
+
+def _bank_change_data(contact, company):
+    """Последний запрос на смену реквизитов: новый счёт — только администратору (FX-4)."""
+    last = company.bank_change_requests.order_by("-pk").first()
+    if last is None:
+        return None
+    return {
+        "id": last.pk,
+        "status": last.status,
+        "requested_by_name": last.requested_by_name,
+        "new_bank_details": last.new_bank_details if getattr(contact, "is_admin", False) else None,
+        "created_at": last.created_at,
+        "decided_at": last.decided_at,
+        "reject_reason": last.reject_reason or None,
+    }
+
+
 class CompanyView(BasePortalView):
     """GET/PUT /company — Профиль компании клиента."""
 
     required_module = "company"
 
     def get(self, request):
-        return Response(CompanySerializer(request.portal_company).data)
+        return Response(self._company_data(request, request.portal_company))
+
+    @staticmethod
+    def _company_data(request, company) -> dict:
+        return {**CompanySerializer(company).data, "bank_change_request": _bank_change_data(request.portal_contact, company)}
 
     def put(self, request):
         if not request.portal_contact.can_act:
@@ -1273,50 +1304,27 @@ class CompanyView(BasePortalView):
             company.inn = inn or None
         if "legal_address" in data:
             company.legal_address = data["legal_address"].strip()
-        if "bank_details" in data:
-            old_bank = (company.bank_details or "").strip()
-            new_bank = data["bank_details"].strip()
-            if old_bank != new_bank:
-                # Смена банковских реквизитов — только администратор компании (J2-bank, OWASP / ISO 27001)
-                if not getattr(request.portal_contact, "is_admin", False):
-                    raise PortalConflict("ADMIN_REQUIRED")
-                company.bank_details = new_bank
-                record_portal_security_event(
-                    company,
-                    PortalSecurityEvent.EventType.BANK_DETAILS_CHANGED,
-                    actor_contact=request.portal_contact,
-                    ip_address=request.META.get("REMOTE_ADDR"),
-                    user_agent=request.META.get("HTTP_USER_AGENT", ""),
-                    details="Банковские реквизиты компании обновлены",
-                )
-                # Уведомление безопасности для всех администраторов компании
-                from parties.models import Contact, active_contact_q
-                from portal.models import NoticeChannel, PortalNotice
-
-                other_admins = (
-                    Contact.objects.filter(company=company, is_admin=True)
-                    .exclude(pk=request.portal_contact.pk)
-                    .filter(active_contact_q())
-                )
-                for admin in other_admins:
-                    PortalNotice.objects.create(
-                        contact=admin,
-                        company=company,
-                        kind="bank_requisites_changed",
-                        group="security",
-                        object_type="chat",
-                        object_id=0,
-                        action="status_changed",
-                        text_key="security_bank_requisites_changed",
-                        params={"actor": request.portal_contact.name or request.portal_contact.email},
-                        link="/company",
-                        channel=NoticeChannel.CABINET,
-                    )
+        new_bank = data["bank_details"].strip() if "bank_details" in data else None
+        change_bank = new_bank is not None and new_bank != (company.formatted_bank_details or "").strip()
+        if change_bank and not getattr(request.portal_contact, "is_admin", False):
+            # Смена банковских реквизитов — только администратор компании (J2-bank, OWASP / ISO 27001)
+            raise PortalConflict("ADMIN_REQUIRED")
         if "language" in data:
             company.language = data["language"]
 
-        company.save()
-        return Response(CompanySerializer(company).data)
+        # Только переданные поля: иначе сессия, прочитавшая компанию раньше решения сотрудника, вернула бы старые реквизиты.
+        with transaction.atomic():
+            if change_bank:
+                bank_details_change.submit(
+                    company,
+                    request.portal_contact,
+                    new_bank,
+                    ip=_client_ip(request),
+                    user_agent=request.META.get("HTTP_USER_AGENT", ""),
+                )
+            if update_fields := _company_fields_to_save(data):
+                company.save(update_fields=[*update_fields, "updated_at"])
+        return Response(self._company_data(request, company))
 
 
 class CompanySecurityLogView(BasePortalView):
@@ -1515,7 +1523,7 @@ class TeamInviteView(BasePortalView):
             actor_contact=request.portal_contact,
             target_contact=contact,
             target_name=contact.name,
-            ip_address=request.META.get("REMOTE_ADDR"),
+            ip_address=_client_ip(request),
             user_agent=request.META.get("HTTP_USER_AGENT", ""),
             details=f"Приглашён коллега: {contact.name} ({contact.email}), is_admin={contact.is_admin}",
         )
@@ -1582,7 +1590,7 @@ class TeamMemberDetailView(BasePortalView):
                 actor_contact=request.portal_contact,
                 target_contact=target,
                 target_name=target.name,
-                ip_address=request.META.get("REMOTE_ADDR"),
+                ip_address=_client_ip(request),
                 user_agent=request.META.get("HTTP_USER_AGENT", ""),
                 details=f"Обновлены права: can_act={target.can_act}, is_admin={target.is_admin}",
             )
@@ -1640,7 +1648,7 @@ class TeamMemberDeactivateView(BasePortalView):
             actor_contact=request.portal_contact,
             target_contact=target,
             target_name=target.name,
-            ip_address=request.META.get("REMOTE_ADDR"),
+            ip_address=_client_ip(request),
             user_agent=request.META.get("HTTP_USER_AGENT", ""),
             details=f"Сотрудник {target.name} отключен",
         )

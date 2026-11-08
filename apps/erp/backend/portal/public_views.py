@@ -9,6 +9,7 @@ Plus quote action endpoints (POST, JSON): viewed beacon, request-code, accept, r
 
 from documents.models import GeneratedDocument
 from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
+from portal.client_ip import client_ip
 from rest_framework import serializers as drf_serializers
 from rest_framework import status
 from rest_framework.permissions import AllowAny
@@ -74,9 +75,7 @@ def _gate_error(quote):
     return public_quote_gate(quote)
 
 
-def _client_ip(request) -> str:
-    """Best-effort client IP."""
-    return request.META.get("REMOTE_ADDR", "") or ""
+_client_ip = client_ip  # имя, под которым функцию импортируют публичные страницы КП
 
 
 def _mask_email(email: str) -> str:

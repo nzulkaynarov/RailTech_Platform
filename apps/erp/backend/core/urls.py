@@ -34,6 +34,7 @@ from inventory.views import (
     StockTraceView,
 )
 from portal.desk.views import SupplierAccessViewSet
+from portal.desk.views_bank_changes import BankChangeDeskViewSet
 from portal.desk.views_partner_applications import PartnerApplicationDeskViewSet
 from portal.exceptions import portal_not_found
 from portal.public_views import (
@@ -187,6 +188,7 @@ router.register(r"catalog/items", ItemDeskViewSet, basename="desk-item")
 router.register(r"catalog/suppliers", SupplierDeskViewSet, basename="desk-supplier")
 router.register(r"catalog/supplier-access", SupplierAccessViewSet, basename="desk-supplier-access")
 router.register(r"catalog/partner-applications", PartnerApplicationDeskViewSet, basename="desk-partner-application")
+router.register(r"finance/bank-changes", BankChangeDeskViewSet, basename="desk-bank-change")
 router.register(r"catalog/field-proposals", ProposalDeskViewSet, basename="desk-field-proposal")
 router.register(r"catalog/brigades", BrigadeDeskViewSet, basename="desk-brigade")
 router.register(r"catalog/tech-docs", TechDocDeskViewSet, basename="desk-tech-doc")
