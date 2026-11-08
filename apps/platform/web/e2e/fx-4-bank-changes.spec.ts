@@ -20,7 +20,9 @@ for (const width of WIDTHS) {
       await loginAndWait(page, "accountant@demo.example");
     });
 
-    test("запрос на проверке: старые и новые реквизиты, подтвердить и отклонить", async ({ page }) => {
+    test("запрос на проверке: старые и новые реквизиты, подтвердить и отклонить", async ({
+      page,
+    }) => {
       await spaGoto(page, URL_PATH);
       const list = page.getByRole("list", { name: "Запросы на смену реквизитов" });
       await expect(list.getByText(/20208000555566667777/)).toBeVisible();

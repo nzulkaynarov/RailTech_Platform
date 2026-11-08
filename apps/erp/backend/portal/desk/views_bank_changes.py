@@ -11,6 +11,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from catalog.desk.views_base import FORBIDDEN, NOT_FOUND, REFUSED, DeskViewSet
+from core.permissions import ROLE_NOT_PERMITTED
 
 CONFLICT = OpenApiResponse(
     description="Запрос решён иначе (`BANK_CHANGE_NOT_PENDING`), реквизиты изменились (`BANK_CHANGE_STALE`) или компания в архиве (`COMPANY_ARCHIVED`)."
@@ -34,7 +35,7 @@ class BankChangeDeskViewSet(DeskViewSet):
     )
     def list(self, request):
         if not desk.can_read(request.user):
-            return Response({"detail": "ROLE_NOT_PERMITTED"}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"detail": ROLE_NOT_PERMITTED}, status=status.HTTP_403_FORBIDDEN)
         value = request.query_params.get("status") or None
         if value is not None and value not in BankDetailsChangeStatus.values:
             value = None
