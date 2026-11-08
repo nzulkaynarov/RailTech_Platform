@@ -58,7 +58,7 @@ _env_cors = [o.strip() for o in os.environ.get("CORS_ALLOWED_ORIGINS", "").split
 CORS_ALLOW_ALL_ORIGINS = DEBUG
 CORS_ALLOW_CREDENTIALS = True
 # Dev-источники (Vite, `*.localhost`) — только при DEBUG=True. На DEBUG=False список строится из настроек:
-# origin'ы Cabinet (CABINET_ORIGIN) и CORS_ALLOWED_ORIGINS из окружения; `localhost` в проде не пускаем (FIX-15, P-18).
+# origin'ы Cabinet (ERP_CABINET_ORIGIN) и CORS_ALLOWED_ORIGINS из окружения; `localhost` в проде не пускаем (FIX-15, P-18).
 _DEV_CORS_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",

@@ -98,7 +98,11 @@ def load_settings(**env) -> dict:
         "'samesite': settings.PORTAL_COOKIE_SAMESITE,"
         "}))"
     )
-    base = {k: v for k, v in os.environ.items() if k not in ("DJANGO_DEBUG", "CABINET_URL", "CABINET_ORIGIN", "ERP_CABINET_ORIGIN")}
+    base = {
+        k: v
+        for k, v in os.environ.items()
+        if k not in ("DJANGO_DEBUG", "CABINET_URL", "CABINET_ORIGIN", "ERP_CABINET_ORIGIN")
+    }
     base.update(
         DJANGO_SETTINGS_MODULE="core.settings",
         DJANGO_SECRET_KEY="test-only-secret-key-not-for-production",
@@ -157,7 +161,8 @@ class TestCorsOrigins:
 
     def test_cabinet_origin_accepts_a_comma_separated_list_like_crm(self):
         loaded = load_settings(
-            DJANGO_DEBUG="false", ERP_CABINET_ORIGIN="https://a.example.uz/, https://b.example.uz:8443,https://a.example.uz"
+            DJANGO_DEBUG="false",
+            ERP_CABINET_ORIGIN="https://a.example.uz/, https://b.example.uz:8443,https://a.example.uz",
         )
 
         assert loaded["origins"] == ["https://a.example.uz", "https://b.example.uz:8443"]
@@ -232,8 +237,10 @@ class TestSiteOriginGetsNoCredentials:
 
 def test_prod_compose_and_example_do_not_share_crm_origins_with_erp():
     """Пример `.env.prod.example` и prod.yml: у ERP свой список, `CABINET_ORIGIN` (CRM) его не задаёт."""
-    infra = pathlib.Path(__file__).resolve().parents[5] / "infra"
-    if not infra.is_dir():  # образ бэкенда без репозитория
+    infra = next(
+        (p / "infra" for p in pathlib.Path(__file__).resolve().parents if (p / "infra" / "compose").is_dir()), None
+    )
+    if infra is None:  # образ бэкенда без репозитория
         pytest.skip("infra/ недоступен")
     erp_env = (infra / "compose" / "prod.yml").read_text().split("# Окружение EDS")[0]
     assert "CABINET_ORIGIN:" not in erp_env.replace("ERP_CABINET_ORIGIN:", "")

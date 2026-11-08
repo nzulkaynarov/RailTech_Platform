@@ -134,8 +134,8 @@ EDS (помощник «Заполнить из файла», EDS-REG) ходи�
    браузеры с блокировкой сторонних cookie (Safari, Chrome Incognito) cookie фрейма могут не принять — проверка идёт на телефоне.
 5. Верните `PORTAL_COOKIE_SAMESITE=Lax` и `CABINET_URL=http://cabinet.localhost`, `make up`.
 
-На проде (M5) `PORTAL_COOKIE_SAMESITE=None` задаётся в окружении `production` вместе с `CABINET_ORIGIN=https://cabinet.railtech.uz`:
-у ERP на `DEBUG=False` в CORS только этот origin.
+На проде (M5) `PORTAL_COOKIE_SAMESITE=None` задаётся в окружении `production` вместе с `ERP_CABINET_ORIGIN=https://cabinet.railtech.uz`
+(по умолчанию так и есть; `CABINET_ORIGIN` — список CRM для сайта, ERP его не читает): у ERP на `DEBUG=False` в CORS только origin Cabinet.
 
 ## Проверка: токена ссылки входа нет в журнале ERP (FIX-15)
 
