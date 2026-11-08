@@ -4,7 +4,7 @@ import pytest
 from django.core.files.base import ContentFile
 from parties.models import Company
 
-from catalog.models import DocumentKind, TechDocument
+from catalog.models import DocumentKind, Product, TechDocument
 from catalog.published import client_visible_documents
 from catalog.tests.desk_world import build_world
 from crm.models import ActivityLog
@@ -100,3 +100,25 @@ def test_staff_without_manage_cannot_decide(world, pending):
 
 def test_bad_decision_is_400(world, pending):
     assert post(world, "engineer", pending, {"decision": "maybe"}).status_code == 400
+
+
+@pytest.mark.parametrize("state", ["pending", "rejected"])
+def test_unreviewed_partner_document_does_not_close_the_conformity_requirement(world, state):
+    from catalog.completeness import CompletenessContext
+    from catalog.models import Category
+
+    category = Category.objects.create(name="Требует сертификат", requires_conformity_doc=True)
+    DocumentKind.objects.get_or_create(code="certificate", defaults={"name": "Сертификат", "is_active": True})
+    product = Product.objects.create(name="Изделие", category=category)
+    TechDocument.objects.create(
+        kind="certificate",
+        title="Сертификат",
+        number="N-1",
+        review_state=state,
+        client_visible=False,
+        product=product,
+        original_name="c.pdf",
+    )
+    assert product.pk not in CompletenessContext([product]).products_with_conformity_doc
+    TechDocument.objects.filter(product=product).update(review_state="approved")
+    assert product.pk in CompletenessContext([product]).products_with_conformity_doc

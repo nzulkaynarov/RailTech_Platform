@@ -367,7 +367,7 @@ export async function uploadPartnerProductDocument(
   productId: number,
   data: {
     file?: File;
-    upload_id?: number;
+    upload_id?: string;
     kind?: string;
     title: string;
     number?: string;
@@ -391,7 +391,7 @@ export async function uploadPartnerProductDocument(
   return portalRequest<PartnerProductDocument>(`/partner/products/${productId}/documents`, {
     method: 'POST',
     body: {
-      upload_id: data.upload_id ? String(data.upload_id) : undefined,
+      upload_id: data.upload_id || undefined,
       kind: data.kind,
       title: data.title,
       number: data.number,

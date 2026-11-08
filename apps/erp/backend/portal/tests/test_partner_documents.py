@@ -87,6 +87,28 @@ class TestVisibility:
         assert partner_world["client_a"].get(url(card)).status_code == 404
 
 
+class TestForeignFileName:
+    def test_price_only_partner_does_not_get_the_file_name_or_size_of_a_foreign_card_document(
+        self, partner_world, docs
+    ):
+        card = partner_world["cards"]["shared"]
+        doc = staff_doc(card, "Сертификат конкурента", visible=True)
+        TechDocument.objects.filter(pk=doc.pk).update(original_name="Zavod_Konkurent_supplier_cert.pdf")
+        response = partner_world["client_a"].get(url(card))
+        assert "Zavod_Konkurent" not in response.content.decode()
+        row = next(d for d in response.json() if d["id"] == doc.pk)
+        assert row["original_name"] == "" and row["size_bytes"] == 0
+
+    def test_partner_sees_name_and_size_of_own_upload_only(self, partner_world, docs):
+        client, card = partner_world["client_a"], partner_world["cards"]["published"]
+        file = SimpleUploadedFile("my-cert.pdf", PDF, content_type="application/pdf")
+        mine = client.post(url(card), {"file": file, "title": "Мой"}, format="multipart").json()
+        rows = {d["id"]: d for d in client.get(url(card)).json()}
+        assert (rows[mine["id"]]["original_name"], rows[mine["id"]]["size_bytes"]) == ("my-cert.pdf", len(PDF))
+        staff = rows[docs["own_public"].pk]
+        assert (staff["original_name"], staff["size_bytes"]) == ("", 0)
+
+
 class TestDownloadAudit:
     def test_download_is_written_to_the_journal(self, partner_world, docs):
         doc, card = docs["shared_public"], partner_world["cards"]["shared"]
@@ -147,7 +169,7 @@ class TestUpload:
         assert response.status_code == 422
         assert response.json()["detail"] == "UPLOAD_NOT_FOUND"
 
-    def test_upload_file_is_copied_not_shared(self, partner_world, docs):
+    def test_upload_file_is_copied_not_shared(self, partner_world, docs, django_capture_on_commit_callbacks):
         up = PortalUpload(company=partner_world["a"], name="a.pdf", size_bytes=len(PDF))
         up.file.save("a.pdf", ContentFile(PDF), save=True)
         card = partner_world["cards"]["published"]
@@ -160,9 +182,11 @@ class TestUpload:
         storage = up.file.storage
         assert storage.exists(up.file.name) and storage.exists(doc.file.name)
         assert doc.source_supplier_id == partner_world["a"].pk
-        # удаление документа не уносит файл загрузки
-        assert partner_world["client_a"].delete(url(card, doc.pk)).status_code == 204
+        # удаление документа не уносит файл загрузки (файл документа удаляется после коммита)
+        with django_capture_on_commit_callbacks(execute=True):
+            assert partner_world["client_a"].delete(url(card, doc.pk)).status_code == 204
         assert storage.exists(up.file.name)
+        assert not storage.exists(doc.file.name)
 
 
 class TestDelete:

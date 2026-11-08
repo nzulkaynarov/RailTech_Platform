@@ -317,6 +317,7 @@ def project_detail(company, product, language: str | None = None) -> dict:
 def serialize_partner_document(doc: TechDocument, company, kind_names: dict[str, str] | None = None) -> dict:
     if kind_names is None:
         kind_names = {k.code: k.name for k in DocumentKind.objects.all()}
+    own = doc.source_supplier_id == company.pk
     return {
         "id": doc.pk,
         "kind": doc.kind,
@@ -326,10 +327,11 @@ def serialize_partner_document(doc: TechDocument, company, kind_names: dict[str,
         "issued_by": doc.issued_by or "",
         "issued_at": doc.issued_at,
         "valid_until": doc.valid_until,
-        "original_name": doc.original_name or "",
-        "size_bytes": doc.size_bytes or 0,
+        # Имя загруженного файла и размер — только у документов своей компании: в имени бывает название чужого поставщика
+        "original_name": (doc.original_name or "") if own else "",
+        "size_bytes": (doc.size_bytes or 0) if own else 0,
         "status": doc.review_state,
-        "can_delete": doc.source_supplier_id == company.pk,
+        "can_delete": own,
         "created_at": doc.created_at,
     }
 
