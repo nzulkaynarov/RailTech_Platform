@@ -1775,6 +1775,13 @@ export interface components {
       valid_until: string | null;
       original_name: string;
       size_bytes: number;
+      /**
+       * @description Проверка сотрудником. Присланный партнёром документ — `pending` и клиенту не виден; после одобрения — `approved`; `rejected` — отклонён. Документы сотрудников, видимые партнёру, — `approved`.
+       * @enum {string}
+       */
+      status: "pending" | "approved" | "rejected";
+      /** @description Документ прислала эта компания — его можно удалить; документы сотрудников удалить нельзя. */
+      can_delete: boolean;
       /** Format: date-time */
       created_at: string;
     };

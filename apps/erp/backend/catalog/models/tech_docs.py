@@ -95,6 +95,31 @@ class TechDocument(models.Model):
     uploaded_by = models.ForeignKey(
         "accounts.CustomUser", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )
+    #: Партнёр, приславший документ из кабинета (FX-2); у документов сотрудников пусто.
+    source_supplier = models.ForeignKey(
+        "parties.Company",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("Партнёр-источник"),
+    )
+    uploaded_by_contact = models.ForeignKey(
+        "parties.Contact", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    #: Проверка присланного партнёром: `pending` — ждёт сотрудника, `rejected` — отклонён; клиенту отдаётся только `approved`
+    #: (у документов сотрудников всегда `approved`).
+    review_state = models.CharField(
+        max_length=16,
+        choices=[("approved", _("Одобрен")), ("pending", _("На проверке")), ("rejected", _("Отклонён"))],
+        default="approved",
+        db_index=True,
+        verbose_name=_("Проверка"),
+    )
+    reviewed_by = models.ForeignKey(
+        "accounts.CustomUser", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -134,6 +134,11 @@ class DeskTechDocRef(serializers.Serializer):
     original_name = serializers.CharField()
     size_bytes = serializers.IntegerField()
     previewable = serializers.BooleanField()
+    review_state = serializers.ChoiceField(
+        choices=["approved", "pending", "rejected"],
+        help_text="Проверка присланного партнёром: pending — ждёт сотрудника, клиенту не виден; у документов сотрудников approved.",
+    )
+    partner = serializers.CharField(allow_null=True, help_text="Название партнёра, приславшего документ из кабинета.")
 
 
 class DeskImage(serializers.Serializer):
@@ -416,6 +421,15 @@ class DeskTechDocUpload(DeskTechDocPassport):
 
 class DeskTechDocIn(DeskTechDocPassport):
     """Правка паспорта документа (файл не меняется)."""
+
+
+class DeskTechDocReviewIn(serializers.Serializer):
+    """Решение по документу, присланному партнёром (FX-2)."""
+
+    decision = serializers.ChoiceField(choices=["approve", "reject"])
+    client_visible = serializers.BooleanField(
+        required=False, help_text="Только при approve: видно ли клиенту. Пусто — по умолчанию вида документа."
+    )
 
 
 class DeskHsCode(serializers.Serializer):

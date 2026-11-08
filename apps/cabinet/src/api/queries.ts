@@ -383,7 +383,7 @@ export const useUploadPartnerProductDocument = () =>
       productId: number;
       data: {
         file?: File;
-        upload_id?: number;
+        upload_id?: string;
         kind?: string;
         title: string;
         number?: string;

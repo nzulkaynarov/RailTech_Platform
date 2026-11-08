@@ -612,6 +612,23 @@
       "validUntilHint": "Empty — no expiry",
       "clientVisible": "Visible to client",
       "clientVisibleHint": "A mark for the client portal; showing it is enabled later."
+    },
+    "review": {
+      "filter": "Review",
+      "all": "All files",
+      "pending": "Waiting for review",
+      "state": {
+        "approved": "Approved",
+        "pending": "Under review",
+        "rejected": "Rejected"
+      },
+      "fieldState": "Review",
+      "fieldPartner": "Partner",
+      "approve": "Approve",
+      "reject": "Reject",
+      "approved": "Document approved.",
+      "rejected": "Document rejected.",
+      "note": "A partner sent this file from the cabinet. Clients cannot see it until you approve it."
     }
   },
   "supplierForm": {

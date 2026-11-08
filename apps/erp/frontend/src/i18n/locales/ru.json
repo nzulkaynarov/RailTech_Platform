@@ -3116,6 +3116,10 @@
       "category_request_reviewed": {
         "title": "Заявка на категорию рассмотрена",
         "detail": "{{company_name}} → «{{category_name}}»: {{status_code}}"
+      },
+      "partner_document_deleted": {
+        "title": "Партнёр удалил документ товара",
+        "detail": "{{contact_name}} удалил документ «{{title}}»"
       }
     },
     "admin": {

@@ -59,7 +59,9 @@ def validate_upload(file) -> str:
 
 
 def list_queryset(params):
-    queryset = TechDocument.objects.select_related("product", "deal", "deal__company", "deal__stage", "uploaded_by")
+    queryset = TechDocument.objects.select_related(
+        "product", "deal", "deal__company", "deal__stage", "uploaded_by", "source_supplier"
+    )
     text = (params.get("q") or "").strip()
     if text:
         queryset = queryset.filter(
@@ -72,6 +74,9 @@ def list_queryset(params):
         queryset = queryset.filter(product_id=int(params["product"]))
     if str(params.get("deal", "")).isdigit():
         queryset = queryset.filter(deal_id=int(params["deal"]))
+    review = (params.get("review_state") or "").strip()
+    if review in REVIEW_STATES:
+        queryset = queryset.filter(review_state=review)
     return queryset.order_by("-created_at", "-id")
 
 
@@ -101,6 +106,8 @@ def doc_fields(doc, names: dict[str, str], today=None) -> dict:
         "original_name": doc.original_name,
         "size_bytes": doc.size_bytes,
         "previewable": is_previewable(doc),
+        "review_state": doc.review_state,
+        "partner": doc.source_supplier.name if doc.source_supplier_id else None,
     }
 
 
@@ -198,6 +205,30 @@ def create_doc(file, data: dict, actor) -> TechDocument:
     )
 
 
+REVIEW_STATES = ("approved", "pending", "rejected")
+
+
+def review_doc(doc: TechDocument, decision: str, actor, client_visible=None) -> TechDocument:
+    """Решение сотрудника по документу партнёра: одобрить (клиенту виден по решению) или отклонить."""
+    if doc.review_state != "pending":
+        raise ItemError("TECH_DOC_NOT_PENDING", "review_state")
+    if decision == "approve":
+        doc.review_state = "approved"
+        doc.client_visible = _kind_default(doc) if client_visible is None else bool(client_visible)
+    else:
+        doc.review_state = "rejected"
+        doc.client_visible = False
+    doc.reviewed_by = actor
+    doc.reviewed_at = timezone.now()
+    doc.save(update_fields=["review_state", "client_visible", "reviewed_by", "reviewed_at"])
+    return doc
+
+
+def _kind_default(doc: TechDocument) -> bool:
+    kind = DocumentKind.objects.filter(code=doc.kind).first()
+    return bool(kind and kind.client_visible_default)
+
+
 def update_doc(doc: TechDocument, data: dict) -> TechDocument:
     """Правка паспорта документа: вид, название, номер, орган, даты, «видно клиенту». Файл не меняется."""
     # Активность вида проверяется только при смене: документ выключенного вида остаётся правимым (номер, срок, видимость).
@@ -208,6 +239,9 @@ def update_doc(doc: TechDocument, data: dict) -> TechDocument:
         if title:
             doc.title = title[:255]
     for name, value in _passport(data).items():
+        # Видимость клиенту решается только при одобрении: документ партнёра «на проверке» или отклонённый её не получает
+        if name == "client_visible" and doc.review_state != "approved":
+            continue
         setattr(doc, name, value)
     _check_range(doc.issued_at, doc.valid_until)
     doc.save()

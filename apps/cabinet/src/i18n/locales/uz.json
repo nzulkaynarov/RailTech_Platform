@@ -1431,6 +1431,11 @@
       "documentsTitle": "Hujjatlar va sertifikatlar",
       "addDocument": "Hujjat qoʻshish",
       "documentsEmpty": "Kartochkaga hali hujjatlar yoki sertifikatlar biriktirilmagan.",
+      "docStatus": {
+        "pending": "Tekshiruvda",
+        "pendingHint": "Hujjat xodim tekshiruvini kutmoqda va hozircha mijozlarga koʻrinmaydi",
+        "rejected": "Rad etildi"
+      },
       "docNumber": "№",
       "validUntil": "Amal qilish muddati: {{date}} gacha",
       "unlimited": "Muddatsiz",
@@ -1439,7 +1444,7 @@
       "deleteConfirm": "«{{name}}» hujjatini oʻchirishni xohlaysizmi?",
       "uploadDialog": {
         "title": "Mahsulotga hujjat qoʻshish",
-        "description": "Muvofiqlik sertifikati, sifat pasporti yoki deklaratsiyani biriktiring.",
+        "description": "Muvofiqlik sertifikati, sifat pasporti yoki deklaratsiyani biriktiring. Yuklangandan keyin hujjatni xodim tekshiradi; shu paytgacha u mijozlarga koʻrinmaydi.",
         "kind": "Hujjat turi",
         "kinds": {
           "certificate": "Muvofiqlik sertifikati",

@@ -5,6 +5,8 @@ ERP — на respx. Проверяется: раздел `erp.stock` (чтени
 ERP как есть, предел 20 МБ, не multipart — 422), выдача файла (всегда вложением, `nosniff`,
 поток), привязка к заявке с номером ЗВ/ПР."""
 
+import json
+
 import httpx
 import pytest
 
@@ -25,6 +27,8 @@ DOC = {
     "valid_until": None,
     "is_expired": False,
     "client_visible": False,
+    "review_state": "approved",
+    "partner": None,
     "original_name": "tz.pdf",
     "content_type": "application/pdf",
     "size_bytes": len(PDF),
@@ -257,3 +261,75 @@ async def test_accountant_reads_but_cannot_upload(web: Web, be: Backends) -> Non
     )
     assert response.status_code == 403
     assert response.json()["details"] == {"resource": "erp.stock", "need": "full"}
+
+
+PARTNER_DOC = {**DOC, "review_state": "pending", "partner": "Завод Север"}
+
+
+async def test_list_forwards_review_state_and_shows_the_partner(
+    web: Web, be: Backends, check: ContractChecker
+) -> None:
+    await web.login(["SUPPLY"])
+    route = be.router.get(f"{API}/catalog/tech-docs/").mock(
+        return_value=httpx.Response(
+            200, json={"count": 1, "next": None, "previous": None, "results": [PARTNER_DOC]}
+        )
+    )
+    response = await web.client.get("/api/v1/erp/docs/files", params={"review_state": "pending"})
+    assert response.status_code == 200
+    check(response, "/erp/docs/files", "get")
+    assert route.calls.last.request.url.params["review_state"] == "pending"
+    item = response.json()["items"][0]
+    assert item["review_state"] == "pending"
+    assert item["partner"] == "Завод Север"
+
+    bad = await web.client.get("/api/v1/erp/docs/files", params={"review_state": "all"})
+    assert bad.status_code == 422
+
+
+async def test_review_goes_to_erp_for_full_access_only(
+    web: Web, be: Backends, check: ContractChecker
+) -> None:
+    await web.login(["SUPPLY"])
+    route = be.router.post(f"{API}/catalog/tech-docs/5/review/").mock(
+        return_value=httpx.Response(200, json={**PARTNER_DOC, "review_state": "approved"})
+    )
+    response = await web.client.post(
+        "/api/v1/erp/docs/files/5/review",
+        json={"decision": "approve", "client_visible": False},
+        headers={"X-CSRF-Token": web.csrf},
+    )
+    assert response.status_code == 200
+    check(response, "/erp/docs/files/{id}/review", "post")
+    assert json.loads(route.calls.last.request.content) == {
+        "decision": "approve",
+        "client_visible": False,
+    }
+    assert response.json()["review_state"] == "approved"
+
+    wrong = await web.client.post(
+        "/api/v1/erp/docs/files/5/review",
+        json={"decision": "maybe"},
+        headers={"X-CSRF-Token": web.csrf},
+    )
+    assert wrong.status_code == 422
+
+    be.router.post(f"{API}/catalog/tech-docs/6/review/").mock(
+        return_value=httpx.Response(409, json={"detail": "TECH_DOC_NOT_PENDING"})
+    )
+    again = await web.client.post(
+        "/api/v1/erp/docs/files/6/review",
+        json={"decision": "reject"},
+        headers={"X-CSRF-Token": web.csrf},
+    )
+    assert again.status_code == 409
+
+
+async def test_accountant_cannot_review(web: Web, be: Backends) -> None:
+    await web.login(["ACCOUNTANT"])
+    response = await web.client.post(
+        "/api/v1/erp/docs/files/5/review",
+        json={"decision": "approve"},
+        headers={"X-CSRF-Token": web.csrf},
+    )
+    assert response.status_code == 403

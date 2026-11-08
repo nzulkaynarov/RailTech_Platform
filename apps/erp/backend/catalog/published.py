@@ -187,7 +187,7 @@ def _warranty(product, company_default: int | None) -> dict | None:
 def client_visible_documents():
     """Документы, которые видит клиент: «видно клиенту» и действующие (пусто в «действует до» — бессрочно).
 
-    Единственное правило видимости: им пользуются и список `documents` карточки (`client_documents`), и выдача файла
+    Присланный партнёром документ, не одобренный сотрудником, клиенту не виден (FX-2). Единственное правило видимости: им пользуются и список `documents` карточки (`client_documents`), и выдача файла
     (`portal.services.catalog_documents`). «Сегодня» — по `TIME_ZONE` (Asia/Tashkent): документ со сроком «до 4 ноября»
     действует весь день 4 ноября по Ташкенту, а не по UTC.
     """
@@ -195,7 +195,7 @@ def client_visible_documents():
 
     from .models import TechDocument
 
-    return TechDocument.objects.filter(client_visible=True).filter(
+    return TechDocument.objects.filter(client_visible=True, review_state="approved").filter(
         Q(valid_until__isnull=True) | Q(valid_until__gte=timezone.localdate())
     )
 

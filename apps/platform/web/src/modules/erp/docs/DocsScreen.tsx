@@ -20,6 +20,7 @@ import {
   useListCatalogItems,
   useListTechDocDealOptions,
   useListTechDocs,
+  useReviewTechDoc,
   useUploadTechDoc,
 } from "../../../shared/api/generated/platform-bff";
 import { formatFileSize } from "../../../shared/lib/fileSize";
@@ -59,12 +60,14 @@ export function DocsScreen() {
   const [params, setParams] = useSearchParams();
   const [text, setText] = useState("");
   const [kind, setKind] = useState<string | undefined>(undefined);
+  const [pendingOnly, setPendingOnly] = useState(false);
   const kinds = useGetCatalogLookups().data?.document_kinds ?? [];
   const [page, setPage] = useState(1);
   const [uploading, setUploading] = useState(false);
   const q = useDebounced(text.trim());
   const searchId = useId();
   const kindId = useId();
+  const reviewId = useId();
   const productFilter = params.get("product_id");
   const dealFilter = params.get("deal_id");
   const opened = params.get("doc");
@@ -73,6 +76,7 @@ export function DocsScreen() {
     ...(kind ? { kind } : {}),
     ...(productFilter ? { product_id: productFilter } : {}),
     ...(dealFilter ? { deal_id: dealFilter } : {}),
+    ...(pendingOnly ? { review_state: "pending" as const } : {}),
     page,
     page_size: PAGE_SIZE,
   });
@@ -107,7 +111,16 @@ export function DocsScreen() {
           >
             {row.title}
           </Button>
-          <span className="pf-cat-sub">{row.original_name}</span>
+          {row.review_state !== "approved" ? (
+            row.review_state === "pending" ? (
+              <StatusTag tone="gold">{t("docs.review.state.pending")}</StatusTag>
+            ) : (
+              <StatusTag tone="red">{t("docs.review.state.rejected")}</StatusTag>
+            )
+          ) : null}
+          <span className="pf-cat-sub">
+            {row.partner ? `${row.original_name} · ${row.partner}` : row.original_name}
+          </span>
         </>
       ),
     },
@@ -195,6 +208,22 @@ export function DocsScreen() {
             options={kinds.map((k) => ({ value: k.code, label: k.name }))}
           />
         </div>
+        <div className="pf-cat-control">
+          <label htmlFor={reviewId}>{t("docs.review.filter")}</label>
+          <Select
+            id={reviewId}
+            style={{ width: 220 }}
+            value={pendingOnly ? "pending" : "all"}
+            onChange={(value: string) => {
+              setPendingOnly(value === "pending");
+              setPage(1);
+            }}
+            options={[
+              { value: "all", label: t("docs.review.all") },
+              { value: "pending", label: t("docs.review.pending") },
+            ]}
+          />
+        </div>
         {productFilter || dealFilter ? (
           <Button onClick={clearLinks}>{t("catalog:docs.clearLinks")}</Button>
         ) : null}
@@ -216,7 +245,7 @@ export function DocsScreen() {
             <EmptyState
               title={t("catalog:docs.empty.title")}
               text={
-                q || kind || productFilter || dealFilter
+                q || kind || productFilter || dealFilter || pendingOnly
                   ? t("catalog:docs.empty.filtered")
                   : t("catalog:docs.empty.text")
               }
@@ -302,6 +331,19 @@ function DocDrawer({
       },
     },
   });
+  const decide = useReviewTechDoc({
+    mutation: {
+      onSuccess: (_data, variables) => {
+        void queryClient.invalidateQueries({ queryKey: getListTechDocsQueryKey() });
+        void queryClient.invalidateQueries({ queryKey: getListCatalogItemsQueryKey() });
+        void message.success(
+          t(
+            variables.data.decision === "approve" ? "docs.review.approved" : "docs.review.rejected",
+          ),
+        );
+      },
+    },
+  });
   const [confirming, setConfirming] = useState(false);
   const download = () => {
     void downloadFile(getDownloadTechDocUrl(id), doc?.original_name ?? "file").catch(() => {
@@ -329,6 +371,15 @@ function DocDrawer({
                 value: doc.issued_at ? date(doc.issued_at) : undefined,
               },
               { label: t("docs.fields.validUntil"), value: <DocValidity doc={doc} /> },
+              ...(doc.review_state !== "approved" || doc.partner
+                ? [
+                    {
+                      label: t("docs.review.fieldState"),
+                      value: t(`docs.review.state.${doc.review_state}`),
+                    },
+                    { label: t("docs.review.fieldPartner"), value: doc.partner ?? undefined },
+                  ]
+                : []),
               {
                 label: t("docs.fields.clientVisible"),
                 value: doc.client_visible ? t("docs.fields.yes") : t("docs.fields.no"),
@@ -362,6 +413,27 @@ function DocDrawer({
             <Button type="primary" onClick={download}>
               {t("docs.download")}
             </Button>
+            {doc.review_state === "pending" && canEdit(me, "erp.stock") ? (
+              <>
+                <Button
+                  loading={decide.isPending}
+                  onClick={() => {
+                    decide.mutate({ id, data: { decision: "approve" } });
+                  }}
+                >
+                  {t("docs.review.approve")}
+                </Button>
+                <Button
+                  danger
+                  loading={decide.isPending}
+                  onClick={() => {
+                    decide.mutate({ id, data: { decision: "reject" } });
+                  }}
+                >
+                  {t("docs.review.reject")}
+                </Button>
+              </>
+            ) : null}
             {canEdit(me, "erp.stock") ? (
               <Button
                 danger
@@ -373,6 +445,9 @@ function DocDrawer({
               </Button>
             ) : null}
           </div>
+          {doc.review_state === "pending" ? (
+            <p className="pf-cat-note">{t("docs.review.note")}</p>
+          ) : null}
           <p className="pf-cat-note">{t("docs.chatLater")}</p>
           <h3 className="pf-cat-section">{t("docs.preview")}</h3>
           {!doc.previewable ? (

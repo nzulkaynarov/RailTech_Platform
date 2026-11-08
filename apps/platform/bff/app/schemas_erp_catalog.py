@@ -244,6 +244,8 @@ class TechDocFields(Out):
     valid_until: str | None
     is_expired: bool
     client_visible: bool
+    review_state: Literal["approved", "pending", "rejected"]
+    partner: str | None
     original_name: str
     size_bytes: int
     previewable: bool
@@ -1146,6 +1148,13 @@ class TechDocUpdate(Patch):
     client_visible: bool | None = None
 
 
+class TechDocReview(Patch):
+    """Решение по документу партнёра (FX-2): `approve` или `reject`."""
+
+    decision: Literal["approve", "reject"]
+    client_visible: bool | None = None
+
+
 class TechDocPage(PageOut):
     items: list[TechDoc]
 
@@ -1156,6 +1165,7 @@ def _tech_kind(value: Any) -> str:
 
 def tech_doc_fields(raw: Mapping[str, Any]) -> dict[str, Any]:
     kind = _tech_kind(raw.get("kind"))
+    state = raw.get("review_state")
     return {
         "id": ident(raw.get("id")),
         "title": text(raw.get("title")),
@@ -1167,6 +1177,8 @@ def tech_doc_fields(raw: Mapping[str, Any]) -> dict[str, Any]:
         "valid_until": raw.get("valid_until"),
         "is_expired": bool(raw.get("is_expired")),
         "client_visible": bool(raw.get("client_visible")),
+        "review_state": state if state in ("approved", "pending", "rejected") else "approved",
+        "partner": text(raw.get("partner")) or None,
         "original_name": text(raw.get("original_name")),
         "size_bytes": int(raw.get("size_bytes") or 0),
         "previewable": bool(raw.get("previewable")),

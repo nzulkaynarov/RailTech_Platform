@@ -176,7 +176,9 @@ class CompletenessContext:
         for start in range(0, len(needing), COMPLETENESS_BATCH):
             found |= set(
                 TechDocument.objects.filter(
-                    product_id__in=needing[start : start + COMPLETENESS_BATCH], kind__in=suitable_kinds
+                    product_id__in=needing[start : start + COMPLETENESS_BATCH],
+                    kind__in=suitable_kinds,
+                    review_state="approved",  # документ партнёра «на проверке» или отклонённый требование не закрывает (FX-2)
                 )
                 .exclude(number="")
                 .filter(Q(valid_until__isnull=True) | Q(valid_until__gte=today))

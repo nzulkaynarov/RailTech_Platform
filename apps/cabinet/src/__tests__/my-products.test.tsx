@@ -164,6 +164,19 @@ describe('Мои товары: карточка', () => {
     expect(within(dialog).getByText(/ЕАЭС RU С-RU.АЯ46.В.00001\/26/)).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: /Добавить документ/ })).toBeInTheDocument();
   });
+
+  it('документ, присланный партнёром, помечен «На проверке»; документ сотрудника удалить нельзя (FX-2)', async () => {
+    const user = userEvent.setup();
+    await open();
+    await user.click(within(await card('Тормозная колодка композитная')).getByRole('button', { name: /Открыть карточку/ }));
+    const dialog = await screen.findByRole('dialog');
+    const pending = (await within(dialog).findByText('Протокол испытаний колодок')).closest('li') as HTMLElement;
+    expect(within(pending).getByTestId('doc-status-pending')).toHaveTextContent('На проверке');
+    expect(within(pending).getByRole('button', { name: /Удалить Протокол испытаний колодок/ })).toBeInTheDocument();
+    const approved = within(dialog).getByText('Сертификат соответствия ГОСТ 7798-70').closest('li') as HTMLElement;
+    expect(within(approved).queryByTestId('doc-status-pending')).not.toBeInTheDocument();
+    expect(within(approved).queryByRole('button', { name: /Удалить/ })).not.toBeInTheDocument();
+  });
 });
 
 describe('Мои товары: отправка на проверку', () => {

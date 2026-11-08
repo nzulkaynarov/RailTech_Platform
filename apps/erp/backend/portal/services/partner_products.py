@@ -10,12 +10,16 @@
 
 from __future__ import annotations
 
+import os
+import uuid
 from datetime import timedelta
 
 import pghistory
+from django.core.files.base import ContentFile
 from django.db import transaction
 from django.db.models import Case, Count, Exists, F, OuterRef, Q, Subquery, When
 from django.db.models.functions import Greatest
+from django.http import Http404
 from django.utils import timezone
 from portal.exceptions import PortalValidationError
 from portal.models import PortalUpload
@@ -23,6 +27,7 @@ from portal.models import PortalUpload
 from catalog.completeness import CompletenessContext, requirements_for
 from catalog.constants import DEFAULT_OFFER_CONFIRM_DAYS
 from catalog.desk.items import ItemError
+from catalog.desk.tech_docs import _check_range, _date, validate_upload
 from catalog.models import (
     DocumentKind,
     Product,
@@ -34,6 +39,7 @@ from catalog.models import (
 )
 from catalog.offer_freshness import EXPIRING_DAYS, freshness
 from catalog.policy import policy_for
+from catalog.published import client_visible_documents
 from catalog.review_flow import close_pending_review
 from catalog.review_queue import reason_text
 from core.tenant import own_company_id
@@ -308,9 +314,10 @@ def project_detail(company, product, language: str | None = None) -> dict:
     }
 
 
-def serialize_partner_document(doc: TechDocument, kind_names: dict[str, str] | None = None) -> dict:
+def serialize_partner_document(doc: TechDocument, company, kind_names: dict[str, str] | None = None) -> dict:
     if kind_names is None:
         kind_names = {k.code: k.name for k in DocumentKind.objects.all()}
+    own = doc.source_supplier_id == company.pk
     return {
         "id": doc.pk,
         "kind": doc.kind,
@@ -320,44 +327,73 @@ def serialize_partner_document(doc: TechDocument, kind_names: dict[str, str] | N
         "issued_by": doc.issued_by or "",
         "issued_at": doc.issued_at,
         "valid_until": doc.valid_until,
-        "original_name": doc.original_name or "",
-        "size_bytes": doc.size_bytes or 0,
+        # Имя загруженного файла и размер — только у документов своей компании: в имени бывает название чужого поставщика
+        "original_name": (doc.original_name or "") if own else "",
+        "size_bytes": (doc.size_bytes or 0) if own else 0,
+        "status": doc.review_state,
+        "can_delete": own,
         "created_at": doc.created_at,
     }
 
 
-def list_partner_documents(company, product_id: int) -> list[dict]:
-    product = Product.objects.filter(pk=product_id).exclude(status__code=CODE_ARCHIVED).first()
+def _documents_for(company, product_id: int):
+    """Документы карточки, которые партнёру можно видеть и скачивать; `None` — карточка ему не видна.
+
+    Партнёр без владения карточкой (есть только цена) — как клиент: `client_visible`, одобренные, действующие и только у
+    опубликованной карточки. Владелец (источник данных) дополнительно видит присланное им самим, в том числе «на проверке» и
+    отклонённое. Внутренние документы сотрудников (`client_visible=False`) не отдаются никому из партнёров.
+    """
+    product = Product.objects.filter(pk=product_id).select_related("status").exclude(status__code=CODE_ARCHIVED).first()
     if product is None:
+        return None
+    owns = product.source_supplier_id == company.pk
+    if not owns and not SupplierOffer.objects.filter(supplier=company, product=product).exists():
+        return None
+    if owns:
+        shown = Q(source_supplier_id=company.pk) | Q(client_visible=True, review_state="approved")
+        return TechDocument.objects.filter(product_id=product_id).filter(shown)
+    if product.status_id is None or product.status.code != CODE_PUBLISHED:
+        return TechDocument.objects.none()
+    return client_visible_documents().filter(product_id=product_id)
+
+
+def list_partner_documents(company, product_id: int) -> list[dict]:
+    queryset = _documents_for(company, product_id)
+    if queryset is None:
         return []
-    if (
-        product.source_supplier_id != company.pk
-        and not SupplierOffer.objects.filter(supplier=company, product=product).exists()
-    ):
-        return []
-    docs = list(TechDocument.objects.filter(product_id=product_id).order_by("-created_at", "-id"))
+    docs = list(queryset.order_by("-created_at", "-id"))
     kinds = {k.code: k.name for k in DocumentKind.objects.filter(code__in={d.kind for d in docs})}
-    return [serialize_partner_document(doc, kinds) for doc in docs]
+    return [serialize_partner_document(doc, company, kinds) for doc in docs]
 
 
 def get_partner_document(company, product_id: int, doc_id: int) -> TechDocument | None:
-    product = Product.objects.filter(pk=product_id).exclude(status__code=CODE_ARCHIVED).first()
-    if product is None:
-        return None
-    if (
-        product.source_supplier_id != company.pk
-        and not SupplierOffer.objects.filter(supplier=company, product=product).exists()
-    ):
-        return None
-    return TechDocument.objects.filter(pk=doc_id, product_id=product_id).first()
+    queryset = _documents_for(company, product_id)
+    return queryset.filter(pk=doc_id).first() if queryset is not None else None
+
+
+def _read_upload(company, upload_id):
+    """Файл `PortalUpload` компании как отдельный `ContentFile` (копия содержимого, а не ссылка на путь загрузки)."""
+    try:
+        key = uuid.UUID(str(upload_id))
+    except ValueError:
+        raise PortalValidationError("UPLOAD_NOT_FOUND")
+    upload = PortalUpload.objects.filter(upload_id=key, company=company).first()
+    if upload is None or not upload.file:
+        raise PortalValidationError("UPLOAD_NOT_FOUND")
+    try:
+        with upload.file.open("rb") as stream:
+            content = stream.read()
+    except OSError:
+        raise PortalValidationError("UPLOAD_NOT_FOUND")
+    return ContentFile(content, name=upload.name or os.path.basename(upload.file.name))
 
 
 @transaction.atomic
 def create_partner_document(company, product_id: int, data: dict, file_obj=None, contact=None) -> dict:
-    import os
+    """Документ своей карточки от партнёра: уходит сотруднику на проверку и до одобрения клиенту не виден.
 
-    from django.http import Http404
-
+    `client_visible` из тела запроса игнорируется — решает сотрудник при одобрении.
+    """
     product = (
         Product.objects.filter(pk=product_id, source_supplier_id=company.pk).exclude(status__code=CODE_ARCHIVED).first()
     )
@@ -368,14 +404,9 @@ def create_partner_document(company, product_id: int, data: dict, file_obj=None,
         upload_id = data.get("upload_id")
         if not upload_id:
             raise PortalValidationError("FILE_REQUIRED")
-        upload = PortalUpload.objects.filter(upload_id=upload_id, company=company).first()
-        if upload is None or not upload.file:
-            raise PortalValidationError("UPLOAD_NOT_FOUND")
-        file_obj = upload.file
+        file_obj = _read_upload(company, upload_id)
 
     try:
-        from catalog.desk.tech_docs import validate_upload
-
         content_type = validate_upload(file_obj)
     except ItemError as err:
         raise PortalValidationError(err.code)
@@ -384,8 +415,6 @@ def create_partner_document(company, product_id: int, data: dict, file_obj=None,
     kind = DocumentKind.objects.filter(code=kind_code, is_active=True).first()
     if kind is None:
         raise PortalValidationError("TECH_DOC_KIND_INVALID")
-
-    from catalog.desk.tech_docs import _check_range, _date
 
     try:
         issued_at = _date(data.get("issued_at"), "issued_at")
@@ -409,25 +438,58 @@ def create_partner_document(company, product_id: int, data: dict, file_obj=None,
         issued_by=issued_by[:255],
         issued_at=issued_at,
         valid_until=valid_until,
-        client_visible=True,
+        client_visible=False,
+        review_state="pending",
+        source_supplier=company,
+        uploaded_by_contact=contact,
         product=product,
     )
-    return serialize_partner_document(doc, {kind.code: kind.name})
+    return serialize_partner_document(doc, company, {kind.code: kind.name})
 
 
 @transaction.atomic
-def delete_partner_document(company, product_id: int, doc_id: int) -> bool:
+def delete_partner_document(company, product_id: int, doc_id: int, contact=None, ip: str = "") -> bool:
+    """Удалить можно только документ, присланный этой компанией; запись в журнал — в той же транзакции.
+
+    Документы сотрудников на своей карточке партнёр удалить не может: для него они «не найдены».
+    """
     product = (
         Product.objects.filter(pk=product_id, source_supplier_id=company.pk).exclude(status__code=CODE_ARCHIVED).first()
     )
     if product is None:
         return False
-    doc = TechDocument.objects.filter(pk=doc_id, product_id=product_id).first()
+    doc = (
+        TechDocument.objects.select_for_update()
+        .filter(pk=doc_id, product_id=product_id, source_supplier=company)
+        .first()
+    )
     if doc is None:
         return False
-    if doc.file:
-        doc.file.delete(save=False)
+    from crm.models import ActivityLog
+
+    ActivityLog.objects.create(
+        action="Партнёр удалил документ товара",
+        event_code="catalog.partner_document_deleted",
+        event_params={
+            "document_id": doc.pk,
+            "kind": doc.kind,
+            "number": doc.number,
+            "title": doc.title,
+            "product_id": product_id,
+            "review_state": doc.review_state,
+            "contact_id": contact.pk if contact else None,
+            "ip": ip,
+        },
+        detail=f"{doc.title}: {contact.name if contact else company.name}",
+        entity_type="tech_document",
+        entity_id=doc.pk,
+        company_id=company.pk,
+        contact_id=contact.pk if contact else None,
+    )
+    name, storage = (doc.file.name, doc.file.storage) if doc.file else (None, None)
     doc.delete()
+    if name:
+        transaction.on_commit(lambda: storage.delete(name))
     return True
 
 

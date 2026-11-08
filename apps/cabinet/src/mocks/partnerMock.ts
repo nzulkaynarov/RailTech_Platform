@@ -114,7 +114,24 @@ const DOCUMENTS: Record<number, Schemas['PartnerProductDocument'][]> = {
       valid_until: '2029-01-14',
       original_name: 'certificate-brake-pads.pdf',
       size_bytes: 524288,
+      status: 'approved',
+      can_delete: false,
       created_at: '2026-02-01T12:00:00+05:00',
+    },
+    {
+      id: 7002,
+      kind: 'passport',
+      kind_name: 'Паспорт изделия',
+      title: 'Протокол испытаний колодок',
+      number: 'ПИ-2026/14',
+      issued_by: 'Испытательная лаборатория',
+      issued_at: '2026-03-10',
+      valid_until: null,
+      original_name: 'test-protocol.pdf',
+      size_bytes: 262144,
+      status: 'pending',
+      can_delete: true,
+      created_at: '2026-10-13T12:00:00+05:00',
     },
   ],
 };
@@ -149,6 +166,9 @@ export function addDocument(
     valid_until: data.valid_until || null,
     original_name: data.file_name || `${data.title}.pdf`,
     size_bytes: data.size_bytes || 102400,
+    // Как в ERP: присланное партнёром ждёт сотрудника и клиенту не видно (FX-2)
+    status: 'pending',
+    can_delete: true,
     created_at: new Date().toISOString(),
   };
   list.push(doc);
@@ -542,4 +562,3 @@ export function partnerFinanceSummary(
     settlements,
   };
 }
-

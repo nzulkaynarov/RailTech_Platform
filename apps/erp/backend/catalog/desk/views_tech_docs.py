@@ -15,7 +15,13 @@ from rest_framework.response import Response
 from catalog.desk import tech_docs
 from catalog.desk.audit import record
 from catalog.desk.items import ItemError
-from catalog.desk.serializers import DeskDocumentKind, DeskTechDoc, DeskTechDocIn, DeskTechDocUpload
+from catalog.desk.serializers import (
+    DeskDocumentKind,
+    DeskTechDoc,
+    DeskTechDocIn,
+    DeskTechDocReviewIn,
+    DeskTechDocUpload,
+)
 from catalog.desk.views_base import FORBIDDEN, NOT_FOUND, PAGE, PAGE_SIZE, REFUSED, SEARCH, DeskViewSet, refuse
 from catalog.models import DocumentKind, TechDocument
 from core.file_streaming import storage_file_response
@@ -36,7 +42,12 @@ class _Gone:
 class TechDocDeskViewSet(DeskViewSet):
     """Реестр читает любой сотрудник бэк-офиса; загрузка и удаление — `catalog.manage`."""
 
-    required_permissions = {"create": "catalog.manage", "partial_update": "catalog.manage", "destroy": "catalog.manage"}
+    required_permissions = {
+        "create": "catalog.manage",
+        "partial_update": "catalog.manage",
+        "destroy": "catalog.manage",
+        "review": "catalog.manage",
+    }
     lookup_value_regex = r"\d+"
     queryset = TechDocument.objects.none()
     serializer_class = DeskTechDoc
@@ -44,7 +55,9 @@ class TechDocDeskViewSet(DeskViewSet):
 
     def _doc(self, pk) -> TechDocument:
         doc = (
-            TechDocument.objects.select_related("product", "deal", "deal__company", "uploaded_by").filter(pk=pk).first()
+            TechDocument.objects.select_related("product", "deal", "deal__company", "uploaded_by", "source_supplier")
+            .filter(pk=pk)
+            .first()
             if str(pk).isdigit()
             else None
         )
@@ -60,6 +73,11 @@ class TechDocDeskViewSet(DeskViewSet):
             OpenApiParameter("kind", str, description="Код вида из справочника видов."),
             OpenApiParameter("product", int, description="Id позиции номенклатуры."),
             OpenApiParameter("deal", int, description="Id заявки или проекта."),
+            OpenApiParameter(
+                "review_state",
+                str,
+                description="pending, approved или rejected: очередь проверки документов партнёров.",
+            ),
             PAGE,
             PAGE_SIZE,
         ],
@@ -113,6 +131,45 @@ class TechDocDeskViewSet(DeskViewSet):
                 tech_docs.update_doc(doc, dict(body.validated_data))
         except ItemError as error:
             return refuse(error)
+        return Response(tech_docs.doc_row(self._doc(doc.pk)))
+
+    @extend_schema(
+        operation_id="catalog_tech_docs_review",
+        summary="Approve or reject a partner document",
+        description=(
+            "Needs `catalog.manage`. Решение по документу, присланному партнёром из кабинета (`review_state=pending`): "
+            "`approve` — документ одобрен, «видно клиенту» — из тела или по умолчанию вида; `reject` — отклонён, клиенту "
+            "не виден. Решённый документ повторно не решается: TECH_DOC_NOT_PENDING (409)."
+        ),
+        request=DeskTechDocReviewIn,
+        responses={200: DeskTechDoc, 400: REFUSED, 403: FORBIDDEN, 404: NOT_FOUND, 409: REFUSED},
+        tags=["Catalog"],
+    )
+    @action(detail=True, methods=["post"], url_path="review")
+    def review(self, request, pk=None):
+        body = DeskTechDocReviewIn(data=request.data)
+        body.is_valid(raise_exception=True)
+        try:
+            with transaction.atomic():
+                doc = TechDocument.objects.select_for_update(of=("self",)).filter(pk=self._doc(pk).pk).first()
+                before = {"review_state": doc.review_state, "client_visible": doc.client_visible}
+                tech_docs.review_doc(
+                    doc,
+                    body.validated_data["decision"],
+                    request.user,
+                    body.validated_data.get("client_visible"),
+                )
+        except ItemError as error:
+            return refuse(error)
+        record(
+            request.user,
+            entity="tech_doc",
+            instance=doc,
+            event="reviewed",
+            action="Документ партнёра проверен",
+            before=before,
+            after={"review_state": doc.review_state, "client_visible": doc.client_visible},
+        )
         return Response(tech_docs.doc_row(self._doc(doc.pk)))
 
     @extend_schema(

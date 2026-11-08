@@ -7165,6 +7165,26 @@ export interface paths {
     patch: operations["updateTechDoc"];
     trace?: never;
   };
+  "/erp/docs/files/{id}/review": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Документы: решение по документу партнёра
+     * @description ERP `POST catalog/tech-docs/{id}/review/` — право `catalog.manage`. Документ, присланный партнёром из кабинета, ждёт решения: `approve` открывает его клиенту (или оставляет внутренним по `client_visible`), `reject` отклоняет. Решённый документ повторно не решается (409 `TECH_DOC_NOT_PENDING`). Раздел `erp.stock` — полный.
+     */
+    post: operations["reviewTechDoc"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/erp/docs/files/{id}/content": {
     parameters: {
       query?: never;
@@ -14238,6 +14258,9 @@ export interface components {
       is_expired: boolean;
       /** @description Клиент видит документ в кабинете */
       client_visible: boolean;
+      review_state: components["schemas"]["TechDocReviewState"];
+      /** @description Партнёр, приславший документ из кабинета; у документов сотрудников `null` */
+      partner: string | null;
       original_name: string;
       size_bytes: number;
       previewable: boolean;
@@ -15072,6 +15095,17 @@ export interface components {
       /** @description Новый документ этого вида по умолчанию виден клиенту */
       client_visible_default: boolean;
     };
+    /**
+     * @description Проверка присланного партнёром: `pending` — ждёт сотрудника и клиенту не виден; у документов сотрудников `approved`
+     * @enum {string}
+     */
+    TechDocReviewState: "approved" | "pending" | "rejected";
+    TechDocReview: {
+      /** @enum {string} */
+      decision: "approve" | "reject";
+      /** @description Только при `approve`; пусто — по умолчанию вида документа */
+      client_visible?: boolean;
+    };
     TechDocDeal: {
       id: components["schemas"]["CompanyItemRef"];
       /** @description Номер для показа (`ЗВ-2026-104`, `ПР-…`); составляется до ERP-09 */
@@ -15100,6 +15134,9 @@ export interface components {
       is_expired: boolean;
       /** @description Клиент видит документ в кабинете */
       client_visible: boolean;
+      review_state: components["schemas"]["TechDocReviewState"];
+      /** @description Партнёр, приславший документ из кабинета; у документов сотрудников `null` */
+      partner: string | null;
       original_name: string;
       content_type: string;
       size_bytes: number;
@@ -28348,6 +28385,8 @@ export interface operations {
         product_id?: components["schemas"]["CompanyItemRef"];
         /** @description Заявка или проект (id сделки ERP) */
         deal_id?: components["schemas"]["CompanyItemRef"];
+        /** @description Очередь проверки документов партнёров: `pending` */
+        review_state?: components["schemas"]["TechDocReviewState"];
       };
       header?: never;
       path?: never;
@@ -28469,6 +28508,50 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  reviewTechDoc: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TechDocReview"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TechDoc"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `TECH_DOC_NOT_PENDING` — решение уже принято */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
       422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
     };

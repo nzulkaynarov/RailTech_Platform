@@ -180,6 +180,19 @@ function ProductBody({ product }: { product: PartnerProductDetail }) {
                     <FileText className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
                     <span className="font-medium truncate">{doc.title}</span>
                     <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">{doc.kind_name}</span>
+                    {doc.status !== 'approved' ? (
+                      <span
+                        data-testid={`doc-status-${doc.status}`}
+                        title={doc.status === 'pending' ? t('partner.sheet.docStatus.pendingHint') : undefined}
+                        className={
+                          doc.status === 'rejected'
+                            ? 'rounded bg-destructive/10 px-1.5 py-0.5 text-xs text-destructive'
+                            : 'rounded border border-warning/30 bg-warning/10 px-1.5 py-0.5 text-xs text-warning'
+                        }
+                      >
+                        {t(`partner.sheet.docStatus.${doc.status}`)}
+                      </span>
+                    ) : null}
                   </div>
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {doc.number ? `${t('partner.sheet.docNumber')}: ${doc.number} · ` : ''}
@@ -198,7 +211,7 @@ function ProductBody({ product }: { product: PartnerProductDetail }) {
                     <Download className="size-4" aria-hidden="true" />
                   </Button>
                   <CanAct>
-                    {product.is_own ? (
+                    {product.is_own && doc.can_delete ? (
                       <Button
                         size="sm"
                         variant="ghost"
