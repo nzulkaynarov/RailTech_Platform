@@ -3598,7 +3598,7 @@ components:
 
     PartnerProductDocument:
       type: object
-      required: [id, kind, kind_name, title, number, issued_by, issued_at, valid_until, original_name, size_bytes, created_at]
+      required: [id, kind, kind_name, title, number, issued_by, issued_at, valid_until, original_name, size_bytes, status, can_delete, created_at]
       properties:
         id:
           type: integer
@@ -3624,6 +3624,15 @@ components:
         size_bytes:
           type: integer
           minimum: 0
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+          description: >-
+            Проверка сотрудником. Присланный партнёром документ — `pending` и клиенту не виден; после одобрения — `approved`;
+            `rejected` — отклонён. Документы сотрудников, видимые партнёру, — `approved`.
+        can_delete:
+          type: boolean
+          description: Документ прислала эта компания — его можно удалить; документы сотрудников удалить нельзя.
         created_at:
           type: string
           format: date-time

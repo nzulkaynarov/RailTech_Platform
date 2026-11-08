@@ -9,7 +9,7 @@ multipart BFF не разбирает и передаёт ERP как есть; �
 изображений собирает интерфейс сам из полученных байт (CSP Платформы запрещает встроенные
 просмотрщики). «Отправить клиенту в чат» в этом разделе нет — чатов ещё нет (B-019, D3)."""
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Path, Query, Request, Response, status
 from fastapi.responses import StreamingResponse
@@ -25,6 +25,7 @@ from app.schemas_erp_catalog import (
     KIND_CODE,
     TechDoc,
     TechDocPage,
+    TechDocReview,
     TechDocUpdate,
     to_tech_doc,
     to_tech_page,
@@ -69,6 +70,7 @@ async def list_files(
     kind: Annotated[str | None, Query(pattern=KIND_CODE)] = None,
     product_id: Annotated[str | None, ID_QUERY] = None,
     deal_id: Annotated[str | None, ID_QUERY] = None,
+    review_state: Annotated[Literal["approved", "pending", "rejected"] | None, Query()] = None,
     page: Page = 1,
     page_size: PageSize = 25,
 ) -> TechDocPage:
@@ -76,7 +78,13 @@ async def list_files(
         "GET",
         "catalog/tech-docs/",
         params=_params(
-            q=q, kind=kind, product=product_id, deal=deal_id, page=page, page_size=page_size
+            q=q,
+            kind=kind,
+            product=product_id,
+            deal=deal_id,
+            review_state=review_state,
+            page=page,
+            page_size=page_size,
         ),
     )
     return to_tech_page(data, page, page_size)
@@ -107,6 +115,13 @@ async def upload_file(request: Request, authed: Writer) -> TechDoc:
 @router.patch("/erp/docs/files/{id}", response_model=TechDoc, operation_id="updateTechDoc")
 async def update_file(id: DocId, body: TechDocUpdate, authed: Writer) -> TechDoc:
     data = await _erp(authed).data("PATCH", f"catalog/tech-docs/{id}/", json=body.sent())
+    return to_tech_doc(data)
+
+
+@router.post("/erp/docs/files/{id}/review", response_model=TechDoc, operation_id="reviewTechDoc")
+async def review_file(id: DocId, body: TechDocReview, authed: Writer) -> TechDoc:
+    """Решение по документу, присланному партнёром (FX-2): одобрить или отклонить."""
+    data = await _erp(authed).data("POST", f"catalog/tech-docs/{id}/review/", json=body.sent())
     return to_tech_doc(data)
 
 

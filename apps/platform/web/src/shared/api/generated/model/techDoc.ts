@@ -6,6 +6,7 @@ import type { CatalogProductRef } from "./catalogProductRef";
 import type { CompanyItemRef } from "./companyItemRef";
 import type { TechDocDeal } from "./techDocDeal";
 import type { TechDocKind } from "./techDocKind";
+import type { TechDocReviewState } from "./techDocReviewState";
 
 export interface TechDoc {
   id: CompanyItemRef;
@@ -28,6 +29,12 @@ export interface TechDoc {
   is_expired: boolean;
   /** Клиент видит документ в кабинете */
   client_visible: boolean;
+  review_state: TechDocReviewState;
+  /**
+   * Партнёр, приславший документ из кабинета; у документов сотрудников `null`
+   * @nullable
+   */
+  partner: string | null;
   original_name: string;
   content_type: string;
   /** @minimum 0 */

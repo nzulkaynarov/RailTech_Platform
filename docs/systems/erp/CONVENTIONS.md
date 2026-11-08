@@ -214,6 +214,15 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в docs/runbooks/erp/ —
   действует до (пусто — бессрочно), «видно клиенту» (без значения — по умолчанию вида); `PATCH catalog/tech-docs/{id}/` правит паспорт,
   `GET catalog/document-kinds/` — виды для формы. Выдача — потоком через представление. `ProductDocument` остаётся только для старого
   фронта до P6: его данные перенесены в `TechDocument`, Платформа работает с одним реестром.
+  **Документы партнёра (FX-2, `portal/services/partner_products.py`).** Партнёр присылает документ только к своей карточке
+  (`source_supplier`): `review_state=pending`, `client_visible=False`, `source_supplier`/`uploaded_by_contact` — кто прислал; `client_visible` из
+  запроса партнёра игнорируется. Клиенту (`catalog.published.client_visible_documents`) отдаётся только `review_state=approved`.
+  Решение сотрудника — `POST catalog/tech-docs/{id}/review/` (`catalog.manage`, `approve` с `client_visible` или по умолчанию вида / `reject`; повтор —
+  409 `TECH_DOC_NOT_PENDING`), очередь — `GET catalog/tech-docs/?review_state=pending`; запись `admin.tech_doc.reviewed`. Видимость партнёру одна
+  функция `_documents_for`: без владения карточкой — как клиенту и только у опубликованной; владелец — ещё присланное им самим; внутренние
+  (`client_visible=False`) документы сотрудников партнёру не отдаются ни списком, ни файлом. Удалить можно только присланное своей компанией
+  (`catalog.partner_document_deleted` в `ActivityLog`); скачивание — `document.downloaded_by_client` (`catalog_documents.record_issue`);
+  файл `PortalUpload` копируется (`ContentFile`), нечисловой `upload_id` — 422 `UPLOAD_NOT_FOUND`.
 - **Карточка товара (CAT-CARD-1, `catalog/desk/images.py`).** Фото — `catalog.ProductImage` в публичном бакете: до 10 на товар, ровно одно
   главное (первое — само; при удалении главного — следующее), порядок — позиции 0..n-1 без дыр, JPEG/PNG/WebP до 5 МБ; операции берут
   строку товара под `select_for_update` (две загрузки не пробьют предел; тест с мутационной проверкой). `POST|PATCH|DELETE

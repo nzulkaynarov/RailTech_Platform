@@ -6088,6 +6088,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/tech-docs/{id}/review/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve or reject a partner document
+         * @description Needs `catalog.manage`. Решение по документу, присланному партнёром из кабинета (`review_state=pending`): `approve` — документ одобрен, «видно клиенту» — из тела или по умолчанию вида; `reject` — отклонён, клиенту не виден. Решённый документ повторно не решается: TECH_DOC_NOT_PENDING (409).
+         */
+        post: operations["catalog_tech_docs_review"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/activity-logs/": {
         parameters: {
             query?: never;
@@ -13998,6 +14018,16 @@ export interface components {
             original_name: string;
             size_bytes: number;
             previewable: boolean;
+            /**
+             * @description Проверка присланного партнёром: pending — ждёт сотрудника, клиенту не виден; у документов сотрудников approved.
+             *
+             *     * `approved` - approved
+             *     * `pending` - pending
+             *     * `rejected` - rejected
+             */
+            review_state: components["schemas"]["ReviewStateEnum"];
+            /** @description Название партнёра, приславшего документ из кабинета. */
+            partner: string | null;
             content_type: string;
             product: components["schemas"]["DeskTechDocProduct"] | null;
             deal: components["schemas"]["DeskTechDocDeal"] | null;
@@ -14047,6 +14077,28 @@ export interface components {
             original_name: string;
             size_bytes: number;
             previewable: boolean;
+            /**
+             * @description Проверка присланного партнёром: pending — ждёт сотрудника, клиенту не виден; у документов сотрудников approved.
+             *
+             *     * `approved` - approved
+             *     * `pending` - pending
+             *     * `rejected` - rejected
+             */
+            review_state: components["schemas"]["ReviewStateEnum"];
+            /** @description Название партнёра, приславшего документ из кабинета. */
+            partner: string | null;
+        };
+        /**
+         * @description * `approve` - approve
+         *     * `reject` - reject
+         * @enum {string}
+         */
+        DeskTechDocReviewInDecisionEnum: "approve" | "reject";
+        /** @description Решение по документу, присланному партнёром (FX-2). */
+        DeskTechDocReviewInRequest: {
+            decision: components["schemas"]["DeskTechDocReviewInDecisionEnum"];
+            /** @description Только при approve: видно ли клиенту. Пусто — по умолчанию вида документа. */
+            client_visible?: boolean;
         };
         /** @description multipart/form-data: файл ≤ 20 МБ (PDF, PNG, JPEG, DOC(X), XLS(X)), хотя бы одна привязка — позиция или заявка. */
         DeskTechDocUploadRequest: {
@@ -19267,6 +19319,13 @@ export interface components {
          * @enum {string}
          */
         ReviewKindEnum: "card" | "changes";
+        /**
+         * @description * `approved` - approved
+         *     * `pending` - pending
+         *     * `rejected` - rejected
+         * @enum {string}
+         */
+        ReviewStateEnum: "approved" | "pending" | "rejected";
         SearchDocument: {
             type: components["schemas"]["TypeEnum"];
             id: number;
@@ -30634,6 +30693,8 @@ export interface operations {
                 product?: number;
                 /** @description Поиск по названию и коду. */
                 q?: string;
+                /** @description pending, approved или rejected: очередь проверки документов партнёров. */
+                review_state?: string;
             };
             header?: never;
             path?: never;
@@ -30815,6 +30876,70 @@ export interface operations {
             403: components["responses"]["ForbiddenResponse"];
             /** @description Документа или файла нет. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    catalog_tech_docs_review: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["DeskTechDocReviewInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["DeskTechDocReviewInRequest"];
+                "application/json": components["schemas"]["DeskTechDocReviewInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskTechDoc"];
+                };
+            };
+            /** @description Отказ проверки: код в `detail` или ошибки полей. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Объекта нет. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Отказ проверки: код в `detail` или ошибки полей. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

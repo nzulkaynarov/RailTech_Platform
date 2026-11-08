@@ -16,6 +16,7 @@ CONFLICT_CODES = frozenset(
         "SUPPLIER_EXISTS",
         "OFFER_EXISTS",
         "PROPOSAL_DECIDED",
+        "TECH_DOC_NOT_PENDING",
         "PROPOSAL_STALE",
         "PRODUCT_INCOMPLETE",
         "PRODUCT_NOT_ON_REVIEW",

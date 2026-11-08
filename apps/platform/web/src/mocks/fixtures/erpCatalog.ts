@@ -653,7 +653,16 @@ function seedDocs(items: readonly MockItem[]): MockDoc[] {
     by: string,
     at: string,
     passport: Partial<
-      Pick<TechDoc, "number" | "issued_by" | "issued_at" | "valid_until" | "client_visible">
+      Pick<
+        TechDoc,
+        | "number"
+        | "issued_by"
+        | "issued_at"
+        | "valid_until"
+        | "client_visible"
+        | "review_state"
+        | "partner"
+      >
     > = {},
   ): MockDoc => {
     const bytes = makePdf(`SAMPLE ${kind.toUpperCase()} (placeholder)`, [
@@ -675,6 +684,8 @@ function seedDocs(items: readonly MockItem[]): MockDoc[] {
         client_visible:
           passport.client_visible ??
           DOC_KINDS.some((k) => k.code === kind && k.client_visible_default),
+        review_state: passport.review_state ?? "approved",
+        partner: passport.partner ?? null,
         original_name: name,
         content_type: "application/pdf",
         size_bytes: bytes.length,
@@ -732,6 +743,24 @@ function seedDocs(items: readonly MockItem[]): MockDoc[] {
       null,
       "Гл. инженер",
       "2026-10-22T08:00:00Z",
+    ),
+    // Документ, присланный партнёром из кабинета: ждёт решения сотрудника, клиенту не виден (FX-2)
+    make(
+      5,
+      "certificate",
+      "Протокол испытаний рельса (партнёр)",
+      "protocol-r65.pdf",
+      "3",
+      null,
+      "Партнёр",
+      "2026-10-27T10:00:00Z",
+      {
+        number: "ПИ-2026/14",
+        issued_by: "Испытательная лаборатория (демо)",
+        client_visible: false,
+        review_state: "pending",
+        partner: "Завод Север",
+      },
     ),
   ];
 }

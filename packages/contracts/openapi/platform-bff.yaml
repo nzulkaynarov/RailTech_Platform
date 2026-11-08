@@ -13145,6 +13145,11 @@ paths:
           required: false
           description: Заявка или проект (id сделки ERP)
           schema: {$ref: '#/components/schemas/CompanyItemRef'}
+        - name: review_state
+          in: query
+          required: false
+          description: 'Очередь проверки документов партнёров: `pending`'
+          schema: {$ref: '#/components/schemas/TechDocReviewState'}
       responses:
         '200':
           description: Готово
@@ -13246,6 +13251,45 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/docs/files/{id}/review:
+    post:
+      tags: [erp-catalog]
+      operationId: reviewTechDoc
+      summary: 'Расчёт · Документы: решение по документу партнёра'
+      description: >-
+        ERP `POST catalog/tech-docs/{id}/review/` — право `catalog.manage`. Документ, присланный партнёром из кабинета, ждёт решения: `approve` открывает его клиенту (или оставляет внутренним по `client_visible`), `reject` отклоняет. Решённый документ повторно не решается (409 `TECH_DOC_NOT_PENDING`). Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TechDocReview'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TechDoc'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '`TECH_DOC_NOT_PENDING` — решение уже принято'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
   /erp/docs/files/{id}/content:
@@ -24097,7 +24141,7 @@ components:
     CatalogTechDocRef:
       type: object
       additionalProperties: false
-      required: [id, title, kind, kind_name, number, issued_by, issued_at, valid_until, is_expired, client_visible, original_name, size_bytes, previewable]
+      required: [id, title, kind, kind_name, number, issued_by, issued_at, valid_until, is_expired, client_visible, review_state, partner, original_name, size_bytes, previewable]
       properties:
         id: {$ref: '#/components/schemas/CompanyItemRef'}
         title: {type: string}
@@ -24109,6 +24153,8 @@ components:
         valid_until: {type: [string, 'null'], format: date, description: 'Действует до; `null` — бессрочно'}
         is_expired: {type: boolean, description: Срок «действует до» прошёл — пометка для сотрудника}
         client_visible: {type: boolean, description: Клиент видит документ в кабинете}
+        review_state: {$ref: '#/components/schemas/TechDocReviewState'}
+        partner: {type: [string, 'null'], description: 'Партнёр, приславший документ из кабинета; у документов сотрудников `null`'}
         original_name: {type: string}
         size_bytes: {type: integer, minimum: 0}
         previewable: {type: boolean}
@@ -24952,6 +24998,17 @@ components:
         name: {type: string}
         has_validity: {type: boolean, description: 'У документа этого вида есть срок действия'}
         client_visible_default: {type: boolean, description: 'Новый документ этого вида по умолчанию виден клиенту'}
+    TechDocReviewState:
+      type: string
+      enum: [approved, pending, rejected]
+      description: 'Проверка присланного партнёром: `pending` — ждёт сотрудника и клиенту не виден; у документов сотрудников `approved`'
+    TechDocReview:
+      type: object
+      additionalProperties: false
+      required: [decision]
+      properties:
+        decision: {type: string, enum: [approve, reject]}
+        client_visible: {type: boolean, description: 'Только при `approve`; пусто — по умолчанию вида документа'}
     TechDocDeal:
       type: object
       additionalProperties: false
@@ -24964,7 +25021,7 @@ components:
     TechDoc:
       type: object
       additionalProperties: false
-      required: [id, kind, kind_name, title, number, issued_by, issued_at, valid_until, is_expired, client_visible, original_name, content_type, size_bytes, previewable, product, deal, uploaded_by, created_at]
+      required: [id, kind, kind_name, title, number, issued_by, issued_at, valid_until, is_expired, client_visible, review_state, partner, original_name, content_type, size_bytes, previewable, product, deal, uploaded_by, created_at]
       properties:
         id: {$ref: '#/components/schemas/CompanyItemRef'}
         kind: {$ref: '#/components/schemas/TechDocKind'}
@@ -24976,6 +25033,8 @@ components:
         valid_until: {type: [string, 'null'], format: date, description: 'Действует до; `null` — бессрочно'}
         is_expired: {type: boolean, description: Срок «действует до» прошёл — пометка для сотрудника}
         client_visible: {type: boolean, description: Клиент видит документ в кабинете}
+        review_state: {$ref: '#/components/schemas/TechDocReviewState'}
+        partner: {type: [string, 'null'], description: 'Партнёр, приславший документ из кабинета; у документов сотрудников `null`'}
         original_name: {type: string}
         content_type: {type: string}
         size_bytes: {type: integer, minimum: 0}

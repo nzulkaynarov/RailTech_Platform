@@ -605,6 +605,23 @@
       "validUntilHint": "Bo‘sh — muddatsiz",
       "clientVisible": "Mijozga ko‘rinadi",
       "clientVisibleHint": "Mijoz kabineti uchun belgi; ko‘rsatish keyinroq yoqiladi."
+    },
+    "review": {
+      "filter": "Tekshiruv",
+      "all": "Barcha fayllar",
+      "pending": "Tekshiruvni kutmoqda",
+      "state": {
+        "approved": "Tasdiqlangan",
+        "pending": "Tekshiruvda",
+        "rejected": "Rad etilgan"
+      },
+      "fieldState": "Tekshiruv",
+      "fieldPartner": "Hamkor",
+      "approve": "Tasdiqlash",
+      "reject": "Rad etish",
+      "approved": "Hujjat tasdiqlandi.",
+      "rejected": "Hujjat rad etildi.",
+      "note": "Faylni hamkor kabinetdan yubordi. Siz tasdiqlamaguningizcha mijozlar uni koʻrmaydi."
     }
   },
   "supplierForm": {

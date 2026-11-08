@@ -237,16 +237,19 @@ export const HELP_ARTICLES: HelpArticle[] = [
         'Партнёры платформы могут поставлять собственную продукцию через платформу RailTech.',
         'Загрузите файл Excel по стандартному шаблону через «Загрузить прайс-лист».',
         'После загрузки карточки проходят автоматическую и ручную модерацию перед публикацией в общем каталоге.',
+        'Документы к своей карточке (сертификат, паспорт) сначала проверяет сотрудник: пока документ «На проверке», клиенты его не видят. Удалить можно только присланный вами документ.',
       ],
       uz: [
         'Platforma hamkorlari o‘z mahsulotlarini RailTech orqali yetkazib berishlari mumkin.',
         '«Narxlar ro‘yxatini yuklash» orqali standart Excel faylini yuklang.',
         'Yuklangach, tovar kartochkalari umumiy katalogda chop etilishidan oldin moderatsiyadan o‘tadi.',
+        'Kartochkaga yuklangan hujjatlarni (sertifikat, pasport) avval xodim tekshiradi: «Tekshiruvda» holatida mijozlar ularni koʻrmaydi. Faqat oʻzingiz yuborgan hujjatni oʻchirish mumkin.',
       ],
       en: [
         'Verified partners can distribute their products through the RailTech platform.',
         'Upload your Excel catalog using the standard template.',
         'Cards undergo automatic and manual verification before public catalog listing.',
+        'Documents you add to your card (certificates, passports) are reviewed by staff first: while a document is "Under review", clients cannot see it. You can delete only documents you sent yourself.',
       ],
     },
   },
@@ -307,4 +310,3 @@ export function searchHelpArticles(query: string, lang: 'ru' | 'uz' | 'en'): Hel
     return title.includes(q) || summary.includes(q) || content.includes(q);
   });
 }
-

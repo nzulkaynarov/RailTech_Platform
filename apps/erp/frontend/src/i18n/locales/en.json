@@ -3105,6 +3105,10 @@
       "category_request_reviewed": {
         "title": "Category request reviewed",
         "detail": "{{company_name}} → “{{category_name}}”: {{status_code}}"
+      },
+      "partner_document_deleted": {
+        "title": "Partner deleted a product document",
+        "detail": "{{contact_name}} deleted the document “{{title}}”"
       }
     },
     "admin": {

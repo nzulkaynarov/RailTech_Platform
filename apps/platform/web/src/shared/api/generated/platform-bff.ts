@@ -453,6 +453,7 @@ import type {
   TeamNoteIn,
   TechDoc,
   TechDocPage,
+  TechDocReview,
   TechDocUpdate,
   TechDocUpload,
   TelegramChannelList,
@@ -52240,6 +52241,136 @@ export const useDeleteTechDoc = <
   TContext
 > => {
   return useMutation(getDeleteTechDocMutationOptions(options), queryClient);
+};
+
+export const getReviewTechDocUrl = (id: string) => {
+  return `/api/v1/erp/docs/files/${id}/review`;
+};
+
+/**
+ * ERP `POST catalog/tech-docs/{id}/review/` — право `catalog.manage`. Документ, присланный партнёром из кабинета, ждёт решения: `approve` открывает его клиенту (или оставляет внутренним по `client_visible`), `reject` отклоняет. Решённый документ повторно не решается (409 `TECH_DOC_NOT_PENDING`). Раздел `erp.stock` — полный.
+ * @summary Расчёт · Документы: решение по документу партнёра
+ */
+export const reviewTechDoc = async (
+  id: string,
+  techDocReview: TechDocReview,
+  options?: Parameters<typeof http>[1],
+): Promise<TechDoc> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<TechDoc>(getReviewTechDocUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(techDocReview),
+  });
+};
+
+export const getReviewTechDocMutationKey = () => ["reviewTechDoc"] as const;
+
+export const getReviewTechDocMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof reviewTechDoc>>,
+    TError,
+    ReviewTechDocMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof reviewTechDoc>>,
+  TError,
+  ReviewTechDocMutationVariables,
+  TContext
+> => {
+  const mutationKey = getReviewTechDocMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof reviewTechDoc>>,
+    ReviewTechDocMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return reviewTechDoc(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReviewTechDocMutationResult = NonNullable<Awaited<ReturnType<typeof reviewTechDoc>>>;
+export type ReviewTechDocMutationBody = TechDocReview;
+export type ReviewTechDocMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | Error
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type ReviewTechDocMutationVariables = { id: string; data: TechDocReview };
+
+/**
+ * @summary Расчёт · Документы: решение по документу партнёра
+ */
+export const useReviewTechDoc = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof reviewTechDoc>>,
+      TError,
+      ReviewTechDocMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof reviewTechDoc>>,
+  TError,
+  ReviewTechDocMutationVariables,
+  TContext
+> => {
+  return useMutation(getReviewTechDocMutationOptions(options), queryClient);
 };
 
 export const getDownloadTechDocUrl = (id: string) => {

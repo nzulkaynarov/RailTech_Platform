@@ -4,6 +4,7 @@
  */
 import type { CompanyItemRef } from "./companyItemRef";
 import type { TechDocKind } from "./techDocKind";
+import type { TechDocReviewState } from "./techDocReviewState";
 
 export type ListTechDocsParams = {
   /**
@@ -29,4 +30,8 @@ export type ListTechDocsParams = {
    * Заявка или проект (id сделки ERP)
    */
   deal_id?: CompanyItemRef;
+  /**
+   * Очередь проверки документов партнёров: `pending`
+   */
+  review_state?: TechDocReviewState;
 };

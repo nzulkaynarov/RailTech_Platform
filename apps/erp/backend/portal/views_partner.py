@@ -29,7 +29,7 @@ from portal.serializers_partner import (
 from portal.services import partner_orders as orders
 from portal.services import partner_price_list as price_list
 from portal.services import partner_products as products
-from portal.views import BasePortalView
+from portal.views import BasePortalView, _client_ip
 from rest_framework import status
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
@@ -342,6 +342,8 @@ class PartnerProductDocumentDetailView(BasePortalView):
             company=request.portal_company,
             product_id=pk,
             doc_id=doc_id,
+            contact=request.portal_contact,
+            ip=_client_ip(request),
         )
         if not deleted:
             raise Http404
@@ -366,6 +368,9 @@ class PartnerProductDocumentFileView(BasePortalView):
         resp = catalog_documents.file_response(doc)
         if resp is None:
             raise Http404
+        catalog_documents.record_issue(
+            doc, contact=request.portal_contact, session=request.portal_session, ip=_client_ip(request)
+        )
         return resp
 
 

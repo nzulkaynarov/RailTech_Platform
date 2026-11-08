@@ -67,6 +67,8 @@ class PartnerProductDocumentSerializer(serializers.Serializer):
     valid_until = serializers.DateField(allow_null=True)
     original_name = serializers.CharField()
     size_bytes = serializers.IntegerField()
+    status = serializers.ChoiceField(choices=["pending", "approved", "rejected"])
+    can_delete = serializers.BooleanField()
     created_at = serializers.DateTimeField()
 
 

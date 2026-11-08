@@ -247,6 +247,8 @@ describe("Карточка товара: документ выключенног
         valid_until: null,
         is_expired: false,
         client_visible: false,
+        review_state: "approved",
+        partner: null,
         original_name: "old.pdf",
         content_type: "application/pdf",
         size_bytes: 10,

@@ -87,6 +87,7 @@ import {
   SourceState,
   StepCode,
   SupplierOrderStatus,
+  TechDocReviewState,
   TicketStatus,
   TicketSubject,
   TrackingClass,
@@ -25109,6 +25110,11 @@ export const getCreateCatalogItemResponseMock = (
       valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
       is_expired: faker.datatype.boolean(),
       client_visible: faker.datatype.boolean(),
+      review_state: faker.helpers.arrayElement(Object.values(TechDocReviewState)),
+      partner: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
       original_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
       size_bytes: faker.number.int({ min: 0 }),
       previewable: faker.datatype.boolean(),
@@ -25312,6 +25318,11 @@ export const getGetCatalogItemResponseMock = (
       valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
       is_expired: faker.datatype.boolean(),
       client_visible: faker.datatype.boolean(),
+      review_state: faker.helpers.arrayElement(Object.values(TechDocReviewState)),
+      partner: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
       original_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
       size_bytes: faker.number.int({ min: 0 }),
       previewable: faker.datatype.boolean(),
@@ -25512,6 +25523,11 @@ export const getUpdateCatalogItemResponseMock = (
       valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
       is_expired: faker.datatype.boolean(),
       client_visible: faker.datatype.boolean(),
+      review_state: faker.helpers.arrayElement(Object.values(TechDocReviewState)),
+      partner: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
       original_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
       size_bytes: faker.number.int({ min: 0 }),
       previewable: faker.datatype.boolean(),
@@ -25741,6 +25757,11 @@ export const getPublishCatalogItemResponseMock = (
       valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
       is_expired: faker.datatype.boolean(),
       client_visible: faker.datatype.boolean(),
+      review_state: faker.helpers.arrayElement(Object.values(TechDocReviewState)),
+      partner: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
       original_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
       size_bytes: faker.number.int({ min: 0 }),
       previewable: faker.datatype.boolean(),
@@ -25947,6 +25968,11 @@ export const getUnpublishCatalogItemResponseMock = (
       valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
       is_expired: faker.datatype.boolean(),
       client_visible: faker.datatype.boolean(),
+      review_state: faker.helpers.arrayElement(Object.values(TechDocReviewState)),
+      partner: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
       original_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
       size_bytes: faker.number.int({ min: 0 }),
       previewable: faker.datatype.boolean(),
@@ -26153,6 +26179,11 @@ export const getReturnCatalogItemResponseMock = (
       valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
       is_expired: faker.datatype.boolean(),
       client_visible: faker.datatype.boolean(),
+      review_state: faker.helpers.arrayElement(Object.values(TechDocReviewState)),
+      partner: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
       original_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
       size_bytes: faker.number.int({ min: 0 }),
       previewable: faker.datatype.boolean(),
@@ -26362,6 +26393,11 @@ export const getAcceptCatalogProposalResponseMock = (
       valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
       is_expired: faker.datatype.boolean(),
       client_visible: faker.datatype.boolean(),
+      review_state: faker.helpers.arrayElement(Object.values(TechDocReviewState)),
+      partner: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
       original_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
       size_bytes: faker.number.int({ min: 0 }),
       previewable: faker.datatype.boolean(),
@@ -26571,6 +26607,11 @@ export const getRejectCatalogProposalResponseMock = (
       valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
       is_expired: faker.datatype.boolean(),
       client_visible: faker.datatype.boolean(),
+      review_state: faker.helpers.arrayElement(Object.values(TechDocReviewState)),
+      partner: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
       original_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
       size_bytes: faker.number.int({ min: 0 }),
       previewable: faker.datatype.boolean(),
@@ -28321,6 +28362,11 @@ export const getListTechDocsResponseMock = (
     valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
     is_expired: faker.datatype.boolean(),
     client_visible: faker.datatype.boolean(),
+    review_state: faker.helpers.arrayElement(Object.values(TechDocReviewState)),
+    partner: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
     original_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
     size_bytes: faker.number.int({ min: 0 }),
@@ -28378,6 +28424,8 @@ export const getUploadTechDocResponseMock = (
   valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
   is_expired: faker.datatype.boolean(),
   client_visible: faker.datatype.boolean(),
+  review_state: faker.helpers.arrayElement(Object.values(TechDocReviewState)),
+  partner: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   original_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
   size_bytes: faker.number.int({ min: 0 }),
@@ -28431,6 +28479,8 @@ export const getUpdateTechDocResponseMock = (
   valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
   is_expired: faker.datatype.boolean(),
   client_visible: faker.datatype.boolean(),
+  review_state: faker.helpers.arrayElement(Object.values(TechDocReviewState)),
+  partner: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   original_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
   size_bytes: faker.number.int({ min: 0 }),
@@ -28440,6 +28490,61 @@ export const getUpdateTechDocResponseMock = (
     null,
   ]),
   deal: faker.helpers.arrayElement([{ ...getUpdateTechDocResponseTechDocDealMock() }, null]),
+  uploaded_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getReviewTechDocResponseCatalogProductRefMock = (
+  overrideResponse: Partial<CatalogProductRef> = {},
+): CatalogProductRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getReviewTechDocResponseTechDocDealMock = (
+  overrideResponse: Partial<TechDocDeal> = {},
+): TechDocDeal => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    client: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getReviewTechDocResponseMock = (
+  overrideResponse: Partial<Extract<TechDoc, object>> = {},
+): TechDoc => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  kind: faker.helpers.fromRegExp("^[a-z0-9_-]{1,32}$"),
+  kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  issued_by: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  issued_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  is_expired: faker.datatype.boolean(),
+  client_visible: faker.datatype.boolean(),
+  review_state: faker.helpers.arrayElement(Object.values(TechDocReviewState)),
+  partner: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  original_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  size_bytes: faker.number.int({ min: 0 }),
+  previewable: faker.datatype.boolean(),
+  product: faker.helpers.arrayElement([
+    { ...getReviewTechDocResponseCatalogProductRefMock() },
+    null,
+  ]),
+  deal: faker.helpers.arrayElement([{ ...getReviewTechDocResponseTechDocDealMock() }, null]),
   uploaded_by: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     null,
@@ -37977,6 +38082,28 @@ export const getDeleteTechDocMockHandler = (
   );
 };
 
+export const getReviewTechDocMockHandler = (
+  overrideResponse?:
+    | TechDoc
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<TechDoc> | TechDoc),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/docs/files/:id/review",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getReviewTechDocResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getDownloadTechDocMockHandler = (
   overrideResponse?:
     Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
@@ -38440,6 +38567,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getUploadTechDocMockHandler(),
   getUpdateTechDocMockHandler(),
   getDeleteTechDocMockHandler(),
+  getReviewTechDocMockHandler(),
   getDownloadTechDocMockHandler(),
   getListTechDocDealOptionsMockHandler(),
 ];

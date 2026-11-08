@@ -32,6 +32,7 @@ import type {
   CatalogImage,
   CatalogTechDocRef,
   TechDoc,
+  TechDocReview,
   TechDocUpdate,
 } from "../shared/api/generated/model";
 import {
@@ -285,6 +286,8 @@ function docRefOf(doc: MockDoc["doc"]): CatalogTechDocRef {
     valid_until: doc.valid_until,
     is_expired: doc.is_expired,
     client_visible: doc.client_visible,
+    review_state: doc.review_state,
+    partner: doc.partner,
     original_name: doc.original_name,
     size_bytes: doc.size_bytes,
     previewable: doc.previewable,
@@ -1359,7 +1362,8 @@ export const erpCatalogHandlers = [
             contains(d.product?.name ?? "", q)) &&
           (!params.get("kind") || d.kind === params.get("kind")) &&
           (!params.get("product_id") || d.product?.id === params.get("product_id")) &&
-          (!params.get("deal_id") || d.dealId === params.get("deal_id")),
+          (!params.get("deal_id") || d.dealId === params.get("deal_id")) &&
+          (!params.get("review_state") || d.review_state === params.get("review_state")),
       )
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
       .map(docOf);
@@ -1410,6 +1414,8 @@ export const erpCatalogHandlers = [
         form.fields["client_visible"] !== undefined
           ? form.fields["client_visible"] === "true"
           : DOC_KINDS.some((k) => k.code === kind && k.client_visible_default),
+      review_state: "approved" as const,
+      partner: null,
       title: (form.fields["title"] ?? "").trim() || name.replace(/\.[^.]+$/, ""),
       original_name: name,
       content_type: type,
@@ -1445,6 +1451,26 @@ export const erpCatalogHandlers = [
     if (doc.issued_at && doc.valid_until && doc.valid_until < doc.issued_at)
       return invalid("valid_until", "tech_doc_validity_range_invalid");
     doc.is_expired = doc.valid_until !== null && doc.valid_until < MOCK_TODAY;
+    return HttpResponse.json(docOf(doc));
+  }),
+  http.post("*/erp/docs/files/:id/review", async ({ request, params }) => {
+    const who = guard("full");
+    if (isResponse(who)) return who;
+    const found = readErpCatalog().docs.find((d) => d.doc.id === params["id"]);
+    if (!found) return notFound();
+    const data = await body<TechDocReview>(request);
+    const doc = found.doc;
+    if (doc.review_state !== "pending")
+      return failure(409, "TECH_DOC_NOT_PENDING", "Решение по документу уже принято.", "erp");
+    if (data.decision === "approve") {
+      doc.review_state = "approved";
+      doc.client_visible =
+        data.client_visible ??
+        DOC_KINDS.some((k) => k.code === doc.kind && k.client_visible_default);
+    } else {
+      doc.review_state = "rejected";
+      doc.client_visible = false;
+    }
     return HttpResponse.json(docOf(doc));
   }),
   http.delete("*/erp/docs/files/:id", ({ params }) => {

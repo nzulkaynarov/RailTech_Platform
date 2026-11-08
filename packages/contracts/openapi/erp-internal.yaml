@@ -7700,6 +7700,11 @@ paths:
         schema:
           type: string
         description: Поиск по названию и коду.
+      - in: query
+        name: review_state
+        schema:
+          type: string
+        description: 'pending, approved или rejected: очередь проверки документов партнёров.'
       tags:
       - Catalog
       security:
@@ -7880,6 +7885,69 @@ paths:
           $ref: '#/components/responses/UnauthorizedResponse'
         '403':
           $ref: '#/components/responses/ForbiddenResponse'
+  /api/v1/catalog/tech-docs/{id}/review/:
+    post:
+      operationId: catalog_tech_docs_review
+      description: 'Needs `catalog.manage`. Решение по документу, присланному партнёром из кабинета (`review_state=pending`):
+        `approve` — документ одобрен, «видно клиенту» — из тела или по умолчанию вида; `reject` — отклонён, клиенту не виден.
+        Решённый документ повторно не решается: TECH_DOC_NOT_PENDING (409).'
+      summary: Approve or reject a partner document
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Catalog
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeskTechDocReviewInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeskTechDocReviewInRequest'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeskTechDocReviewInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskTechDoc'
+          description: ''
+        '400':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '409':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/crm/activity-logs/:
     get:
       operationId: crm_activity_logs_list
@@ -24959,6 +25027,19 @@ components:
           type: integer
         previewable:
           type: boolean
+        review_state:
+          allOf:
+          - $ref: '#/components/schemas/ReviewStateEnum'
+          description: |-
+            Проверка присланного партнёром: pending — ждёт сотрудника, клиенту не виден; у документов сотрудников approved.
+
+            * `approved` - approved
+            * `pending` - pending
+            * `rejected` - rejected
+        partner:
+          type: string
+          nullable: true
+          description: Название партнёра, приславшего документ из кабинета.
         content_type:
           type: string
         product:
@@ -24988,8 +25069,10 @@ components:
       - kind_name
       - number
       - original_name
+      - partner
       - previewable
       - product
+      - review_state
       - size_bytes
       - title
       - uploaded_by
@@ -25073,6 +25156,19 @@ components:
           type: integer
         previewable:
           type: boolean
+        review_state:
+          allOf:
+          - $ref: '#/components/schemas/ReviewStateEnum'
+          description: |-
+            Проверка присланного партнёром: pending — ждёт сотрудника, клиенту не виден; у документов сотрудников approved.
+
+            * `approved` - approved
+            * `pending` - pending
+            * `rejected` - rejected
+        partner:
+          type: string
+          nullable: true
+          description: Название партнёра, приславшего документ из кабинета.
       required:
       - client_visible
       - id
@@ -25083,10 +25179,31 @@ components:
       - kind_name
       - number
       - original_name
+      - partner
       - previewable
+      - review_state
       - size_bytes
       - title
       - valid_until
+    DeskTechDocReviewInDecisionEnum:
+      enum:
+      - approve
+      - reject
+      type: string
+      description: |-
+        * `approve` - approve
+        * `reject` - reject
+    DeskTechDocReviewInRequest:
+      type: object
+      description: Решение по документу, присланному партнёром (FX-2).
+      properties:
+        decision:
+          $ref: '#/components/schemas/DeskTechDocReviewInDecisionEnum'
+        client_visible:
+          type: boolean
+          description: 'Только при approve: видно ли клиенту. Пусто — по умолчанию вида документа.'
+      required:
+      - decision
     DeskTechDocUploadRequest:
       type: object
       description: 'multipart/form-data: файл ≤ 20 МБ (PDF, PNG, JPEG, DOC(X), XLS(X)), хотя бы одна привязка — позиция или
@@ -33528,6 +33645,16 @@ components:
       description: |-
         * `card` - card
         * `changes` - changes
+    ReviewStateEnum:
+      enum:
+      - approved
+      - pending
+      - rejected
+      type: string
+      description: |-
+        * `approved` - approved
+        * `pending` - pending
+        * `rejected` - rejected
     SearchDocument:
       type: object
       properties:

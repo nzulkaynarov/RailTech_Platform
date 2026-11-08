@@ -84,6 +84,7 @@ EVENT_TEXTS: dict[str, str] = {
     "act.cancelled": "Акт аннулирован",
     "document.received": "Получен документ",
     "document.downloaded_by_client": "Клиент скачал документ",
+    "catalog.partner_document_deleted": "Партнёр удалил документ товара",
     "document.link_issued": "Выдана ссылка на документ",
     "document.link_downloaded": "Документ скачан по ссылке",
     "delivery.line_accepted": "Строка поставки принята клиентом",

@@ -1431,6 +1431,11 @@
       "documentsTitle": "Documents & Certificates",
       "addDocument": "Add Document",
       "documentsEmpty": "No documents or certificates attached to this card yet.",
+      "docStatus": {
+        "pending": "Under review",
+        "pendingHint": "The document is waiting for staff review and is not visible to clients yet",
+        "rejected": "Rejected"
+      },
       "docNumber": "No.",
       "validUntil": "Valid until {{date}}",
       "unlimited": "No expiration",
@@ -1439,7 +1444,7 @@
       "deleteConfirm": "Delete document \"{{name}}\"?",
       "uploadDialog": {
         "title": "Add Product Document",
-        "description": "Attach a certificate of conformity, product passport, or declaration.",
+        "description": "Attach a certificate of conformity, product passport, or declaration. After upload, a staff member reviews the document; until then it is not visible to clients.",
         "kind": "Document Type",
         "kinds": {
           "certificate": "Certificate of Conformity",
