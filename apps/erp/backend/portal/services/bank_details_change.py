@@ -113,7 +113,6 @@ def submit(company: Company, contact: Contact, new_value: str, *, ip: str, user_
 def _notify_staff(company: Company) -> None:
     """Сотрудникам с правом подтверждать — в колокольчик Платформы; нет таких — администраторам платформы."""
     from accounts.models import CustomUser
-
     from core.tenant import own_company_id
     from notifications.services import notify_platform_admins, notify_user
 

@@ -25,8 +25,8 @@ from parties.models import (
     active_contact_q,
 )
 from portal import projections
-from portal.client_ip import client_ip as _client_ip
 from portal.authentication import PortalAuthentication
+from portal.client_ip import client_ip as _client_ip
 from portal.exceptions import (
     PortalBadRequest,
     PortalConflict,

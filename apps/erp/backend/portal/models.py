@@ -9,10 +9,7 @@ from django.utils.translation import gettext_lazy as _
 
 from core.storage import get_private_storage
 
-from .models_bank_change import (
-    BankDetailsChangeRequest,
-    BankDetailsChangeStatus,
-)  # noqa: F401 — смена реквизитов (FX-4)
+from .models_bank_change import BankDetailsChangeRequest, BankDetailsChangeStatus  # noqa: F401
 from .models_notices import NoticeChannel, NoticeEmailState, PortalNotice  # noqa: F401 — лента колокольчика (NOTIFY-2)
 
 
