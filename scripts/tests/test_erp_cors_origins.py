@@ -13,6 +13,12 @@ BASE = ROOT / "infra/compose/base.yml"
 EXAMPLE = ROOT / "infra/.env.prod.example"
 
 
+# ключ как `KEY:`, `"KEY":` или запись списком `- KEY=...`
+OVERRIDE = re.compile(
+    r"""^\s*(?:-\s*)?["']?(CABINET_ORIGIN|ERP_CABINET_ORIGIN|CORS_ALLOWED_ORIGINS)["']?\s*[:=]""", re.M
+)
+
+
 def read(path: Path) -> str:
     return path.read_text(encoding="utf-8")  # нет файла — FileNotFoundError, то есть падение
 
@@ -63,7 +69,7 @@ class ErpCorsOrigins(unittest.TestCase):
         self.assertIn("erp-backend", services)
         for name in services:
             service = block(self.prod, f"  {name}:", 2)
-            self.assertNotRegex(service, r"^\s*(CABINET_ORIGIN|ERP_CABINET_ORIGIN|CORS_ALLOWED_ORIGINS):", msg=name)
+            self.assertNotRegex(service, OVERRIDE, msg=name)
 
     def test_base_compose_erp_backend_is_cabinet_only(self):
         service = block(read(BASE), "  erp-backend:", 2)
