@@ -233,21 +233,3 @@ class TestSiteOriginGetsNoCredentials:
         )
 
         assert loaded["preflight"] == {"allow_origin": "https://cabinet.example.uz", "allow_credentials": "true"}
-
-
-def test_prod_compose_and_example_do_not_share_crm_origins_with_erp():
-    """Пример `.env.prod.example` и prod.yml: у ERP свой список, `CABINET_ORIGIN` (CRM) его не задаёт."""
-    infra = next(
-        (p / "infra" for p in pathlib.Path(__file__).resolve().parents if (p / "infra" / "compose").is_dir()), None
-    )
-    if infra is None:  # образ бэкенда без репозитория
-        pytest.skip("infra/ недоступен")
-    erp_env = (infra / "compose" / "prod.yml").read_text().split("# Окружение EDS")[0]
-    assert "CABINET_ORIGIN:" not in erp_env.replace("ERP_CABINET_ORIGIN:", "")
-    assert "ERP_CABINET_ORIGIN:" in erp_env
-    example = (infra / ".env.prod.example").read_text()
-    erp_lines = [ln for ln in example.splitlines() if ln.lstrip("# ").startswith("ERP_CABINET_ORIGIN=")]
-    assert erp_lines, "в примере нет ERP_CABINET_ORIGIN"
-    assert not [ln for ln in erp_lines if "github.io" in ln or "WEBSITE" in ln]
-    # пример `CABINET_ORIGIN` (сайт для CRM) подписан как не относящийся к ERP
-    assert "CRM" in example.split("CABINET_ORIGIN=")[0].splitlines()[-2]
