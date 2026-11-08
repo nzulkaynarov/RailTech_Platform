@@ -56,11 +56,13 @@ def _origin_of(url: str) -> str:
     return f"{parts.scheme}://{parts.netloc}" if parts.scheme and parts.netloc else url.rstrip("/")
 
 
-# Единственный источник CORS на DEBUG=False (FIX-15, P-18): origin'ы Cabinet — `CABINET_ORIGIN` (через запятую, как у
-# CRM: origin сравнивается со схемой и портом), по умолчанию — origin из CABINET_URL.
+# Единственный источник CORS на DEBUG=False (FIX-15, P-18): origin'ы Cabinet — `ERP_CABINET_ORIGIN` (через запятую,
+# origin сравнивается со схемой и портом), по умолчанию — origin из CABINET_URL. Общий с CRM `CABINET_ORIGIN` ERP не
+# читает (FX-5): у CRM в нём origin сайта и github.io для формы «Запрос» без cookie, а ERP отвечает CORS с
+# `Access-Control-Allow-Credentials: true` — сайт получил бы чтение портала с cookie сессии.
 CABINET_ORIGINS = [
     origin.strip().rstrip("/")
-    for origin in (os.environ.get("CABINET_ORIGIN") or _origin_of(CABINET_URL)).split(",")
+    for origin in (os.environ.get("ERP_CABINET_ORIGIN") or _origin_of(CABINET_URL)).split(",")
     if origin.strip()
 ]
 

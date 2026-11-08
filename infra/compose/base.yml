@@ -565,8 +565,9 @@ services:
       CABINET_URL: ${CABINET_URL:-http://cabinet.localhost:${HTTP_PORT:-80}}
       # Компания-владелец ERP (core.tenant); пусто — автоопределение, пока продавец с сотрудниками один.
       OWN_COMPANY_ID: ${OWN_COMPANY_ID:-}
-      # CORS портала на DEBUG=False (на стенде ERP_DEBUG=true — разрешён любой origin); список как у CRM (FIX-15).
-      CABINET_ORIGIN: ${CABINET_ORIGIN:-http://cabinet.localhost,http://cabinet.localhost:${HTTP_PORT:-80},https://${CABINET_DOMAIN:-cabinet.railtech.uz}}
+      # CORS портала на DEBUG=False (на стенде ERP_DEBUG=true — разрешён любой origin). С cookie, поэтому только Cabinet,
+      # отдельно от CABINET_ORIGIN CRM (там сайт для формы «Запрос»; FX-5).
+      ERP_CABINET_ORIGIN: ${ERP_CABINET_ORIGIN:-http://cabinet.localhost,http://cabinet.localhost:${HTTP_PORT:-80},https://${CABINET_DOMAIN:-cabinet.railtech.uz}}
       # SameSite cookie сессии портала: Lax (веб) или None (Telegram Mini App, только за TLS) — docs/runbooks/stand.md.
       PORTAL_COOKIE_SAMESITE: ${PORTAL_COOKIE_SAMESITE:-Lax}
       # Тот же бот, что у CRM: ERP проверяет им подпись initData Mini App (пусто — вход через Mini App закрыт).
