@@ -26,7 +26,7 @@ test.describe('публичные экраны кабинета', () => {
     await snap(page, '02-login-sent');
 
     await page.getByRole('link', { name: 'Вы новый клиент? Оставьте запрос' }).click();
-    await expect(page).toHaveURL(/\/new-client$/);
+    await expect(page).toHaveURL(/\/new-client\?email=neznakomets%40example\.com$/);
     await expect(page.getByRole('heading', { level: 1, name: 'Я новый клиент' })).toBeVisible();
     await snap(page, '03-new-client');
   });
