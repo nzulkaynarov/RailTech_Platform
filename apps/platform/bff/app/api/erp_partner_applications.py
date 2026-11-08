@@ -42,7 +42,9 @@ def _path(id: str, tail: str = "") -> str:
 )
 async def list_partner_applications(
     authed: Reader,
-    status: str = Query(default="", pattern=r"^(|submitted|contract_sent|approved|rejected)$"),
+    status: str = Query(
+        default="", pattern=r"^(|submitted|contract_sent|candidate_agreed|approved|rejected)$"
+    ),
 ) -> PartnerApplicationListResponse:
     params = {"status": status} if status else {}
     raw = await _erp(authed).data("GET", "catalog/partner-applications/", params=params)
@@ -60,6 +62,8 @@ async def send_contract_partner_application(
     body: PartnerApplicationSendContractRequest | None = None,
 ) -> PartnerApplicationItem:
     json_body = body.sent() if body else {}
+    if json_body.get("company_id"):
+        json_body["company_id"] = int(json_body["company_id"])
     raw = await _erp(authed).data("POST", _path(id, "send-contract/"), json=json_body)
     return to_partner_application(raw)
 

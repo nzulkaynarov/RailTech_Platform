@@ -922,7 +922,7 @@
         "/api/portal/v1/company/partner-application": {
             "get": {
                 "operationId": "api_portal_v1_company_partner_application_retrieve",
-                "description": "GET/POST /company/partner-application — Заявка действующего клиента на получение роли партнёра.",
+                "description": "GET/POST /company/partner-application — Заявка компании сессии на роль партнёра.\n\nGET открыт любой сессии (FX-1): кандидат с отношением без модулей работает со своей заявкой, модуля `company` у него\nнет. Заявка ищется только по компании сессии. Подача новой (POST) — модуль `company` и `can_act`.",
                 "tags": [
                     "api"
                 ],
@@ -934,7 +934,7 @@
             },
             "post": {
                 "operationId": "api_portal_v1_company_partner_application_create",
-                "description": "GET/POST /company/partner-application — Заявка действующего клиента на получение роли партнёра.",
+                "description": "GET/POST /company/partner-application — Заявка компании сессии на роль партнёра.\n\nGET открыт любой сессии (FX-1): кандидат с отношением без модулей работает со своей заявкой, модуля `company` у него\nнет. Заявка ищется только по компании сессии. Подача новой (POST) — модуль `company` и `can_act`.",
                 "tags": [
                     "api"
                 ],
@@ -948,7 +948,7 @@
         "/api/portal/v1/company/partner-application/": {
             "get": {
                 "operationId": "api_portal_v1_company_partner_application_retrieve_2",
-                "description": "GET/POST /company/partner-application — Заявка действующего клиента на получение роли партнёра.",
+                "description": "GET/POST /company/partner-application — Заявка компании сессии на роль партнёра.\n\nGET открыт любой сессии (FX-1): кандидат с отношением без модулей работает со своей заявкой, модуля `company` у него\nнет. Заявка ищется только по компании сессии. Подача новой (POST) — модуль `company` и `can_act`.",
                 "tags": [
                     "api"
                 ],
@@ -960,7 +960,7 @@
             },
             "post": {
                 "operationId": "api_portal_v1_company_partner_application_create_2",
-                "description": "GET/POST /company/partner-application — Заявка действующего клиента на получение роли партнёра.",
+                "description": "GET/POST /company/partner-application — Заявка компании сессии на роль партнёра.\n\nGET открыт любой сессии (FX-1): кандидат с отношением без модулей работает со своей заявкой, модуля `company` у него\nнет. Заявка ищется только по компании сессии. Подача новой (POST) — модуль `company` и `can_act`.",
                 "tags": [
                     "api"
                 ],
@@ -974,7 +974,7 @@
         "/api/portal/v1/company/partner-application/agree": {
             "post": {
                 "operationId": "api_portal_v1_company_partner_application_agree_create",
-                "description": "POST /company/partner-application/agree — Согласование проекта договора кандидатом.",
+                "description": "POST /company/partner-application/agree — Согласование проекта договора кандидатом компании сессии.",
                 "tags": [
                     "api"
                 ],
@@ -988,7 +988,7 @@
         "/api/portal/v1/company/partner-application/agree/": {
             "post": {
                 "operationId": "api_portal_v1_company_partner_application_agree_create_2",
-                "description": "POST /company/partner-application/agree — Согласование проекта договора кандидатом.",
+                "description": "POST /company/partner-application/agree — Согласование проекта договора кандидатом компании сессии.",
                 "tags": [
                     "api"
                 ],
@@ -1002,7 +1002,7 @@
         "/api/portal/v1/company/partner-application/contract-pdf": {
             "get": {
                 "operationId": "api_portal_v1_company_partner_application_contract_pdf_retrieve",
-                "description": "GET /company/partner-application/contract-pdf — Скачать проект или подписанный партнёрский договор.",
+                "description": "GET /company/partner-application/contract-pdf — Проект или подписанный договор заявки компании сессии.",
                 "tags": [
                     "api"
                 ],
@@ -1016,7 +1016,7 @@
         "/api/portal/v1/company/partner-application/contract-pdf/": {
             "get": {
                 "operationId": "api_portal_v1_company_partner_application_contract_pdf_retrieve_2",
-                "description": "GET /company/partner-application/contract-pdf — Скачать проект или подписанный партнёрский договор.",
+                "description": "GET /company/partner-application/contract-pdf — Проект или подписанный договор заявки компании сессии.",
                 "tags": [
                     "api"
                 ],
@@ -36123,6 +36123,14 @@
                     "name"
                 ]
             },
+            "CompanyMatchPendingEnum": {
+                "enum": [
+                    "inn",
+                    "registration_number"
+                ],
+                "type": "string",
+                "description": "* `inn` - inn\n* `registration_number` - registration_number"
+            },
             "CompanyMember": {
                 "type": "object",
                 "properties": {
@@ -39428,11 +39436,22 @@
                     },
                     "company_id": {
                         "type": "integer",
-                        "nullable": true
+                        "nullable": true,
+                        "description": "Сотрудник подтвердил: заявка от этой существующей компании."
+                    },
+                    "create_new_company": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "Сотрудник подтвердил: найденная компания — другая, завести новую."
                     },
                     "kind": {
                         "type": "string",
                         "maxLength": 20
+                    },
+                    "override_reason": {
+                        "type": "string",
+                        "description": "Причина одобрения без согласия кандидата; пишется в журнал. Без неё нужен статус candidate_agreed.",
+                        "maxLength": 1000
                     }
                 },
                 "required": [
@@ -39531,6 +39550,30 @@
                         "type": "string",
                         "nullable": true
                     },
+                    "company_match_pending": {
+                        "nullable": true,
+                        "description": "По какому ключу найдена существующая компания, пока сотрудник не решил, та ли это компания; иначе null.\n\n* `inn` - inn\n* `registration_number` - registration_number",
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/CompanyMatchPendingEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
+                    "invite_delivery": {
+                        "nullable": true,
+                        "description": "Итог последнего письма-приглашения кандидату; null — приглашения ещё не было.\n\n* `queued` - queued\n* `sent` - sent\n* `failed` - failed",
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/InviteDeliveryEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
                     "company_id": {
                         "type": "integer",
                         "nullable": true
@@ -39552,6 +39595,7 @@
                     "applicant_contact_id",
                     "categories_description",
                     "company_id",
+                    "company_match_pending",
                     "company_name",
                     "contact_name",
                     "contract_date",
@@ -39560,6 +39604,7 @@
                     "email",
                     "id",
                     "inn",
+                    "invite_delivery",
                     "kind",
                     "language",
                     "matching_company_id",
@@ -39663,10 +39708,35 @@
                     "matching_company_name": {
                         "type": "string",
                         "nullable": true
+                    },
+                    "company_match_pending": {
+                        "nullable": true,
+                        "description": "По какому ключу найдена существующая компания, пока сотрудник не решил, та ли это компания; иначе null.\n\n* `inn` - inn\n* `registration_number` - registration_number",
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/CompanyMatchPendingEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
+                    "invite_delivery": {
+                        "nullable": true,
+                        "description": "Итог последнего письма-приглашения кандидату; null — приглашения ещё не было.\n\n* `queued` - queued\n* `sent` - sent\n* `failed` - failed",
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/InviteDeliveryEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
                     }
                 },
                 "required": [
                     "categories_description",
+                    "company_match_pending",
                     "company_name",
                     "contact_name",
                     "contract_date",
@@ -39675,6 +39745,7 @@
                     "email",
                     "id",
                     "inn",
+                    "invite_delivery",
                     "kind",
                     "language",
                     "matching_company_id",
@@ -39730,6 +39801,16 @@
                         "type": "string",
                         "format": "date",
                         "nullable": true
+                    },
+                    "company_id": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "Сотрудник подтвердил: заявка от этой существующей компании."
+                    },
+                    "create_new_company": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "Сотрудник подтвердил: найденная компания — другая, завести новую."
                     }
                 }
             },
@@ -42063,6 +42144,15 @@
                 ],
                 "type": "string",
                 "description": "* `stock` - stock\n* `supply` - supply\n* `engineer` - engineer"
+            },
+            "InviteDeliveryEnum": {
+                "enum": [
+                    "queued",
+                    "sent",
+                    "failed"
+                ],
+                "type": "string",
+                "description": "* `queued` - queued\n* `sent` - sent\n* `failed` - failed"
             },
             "InviteRequestRequest": {
                 "type": "object",

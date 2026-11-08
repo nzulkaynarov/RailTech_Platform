@@ -48926,7 +48926,7 @@ export const getSendContractPartnerApplicationUrl = (id: CompanyItemRef) => {
 };
 
 /**
- * ERP `POST catalog/partner-applications/{id}/send-contract/` — право `supply.manage`. Переводит заявку в статус `contract_sent`.
+ * ERP `POST catalog/partner-applications/{id}/send-contract/` — право `supply.manage`. Переводит заявку в статус `contract_sent`. Совпадение с существующей компанией — только с решением сотрудника (`company_id` или `create_new_company`), иначе 422 `company_match_confirmation_required`.
  * @summary Расчёт · Заявка в партнёры: отправить проект договора
  */
 export const sendContractPartnerApplication = async (
@@ -49060,7 +49060,7 @@ export const getApprovePartnerApplicationUrl = (id: CompanyItemRef) => {
 };
 
 /**
- * ERP `POST catalog/partner-applications/{id}/approve/` — право `supply.manage`. Активирует отношение `partner`, фиксирует договор и отправляет приглашение.
+ * ERP `POST catalog/partner-applications/{id}/approve/` — право `supply.manage`. Только после согласия кандидата или с `override_reason` (иначе 422 `candidate_agreement_required`). Активирует отношение `partner`, фиксирует договор и отправляет приглашение.
  * @summary Расчёт · Заявка в партнёры: подтвердить договор и открыть кабинет
  */
 export const approvePartnerApplication = async (

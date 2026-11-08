@@ -2472,8 +2472,8 @@ paths:
       operationId: getCompanyPartnerApplication
       summary: Статус заявки компании на получение роли партнёра
       description: |
-        Проверка наличия и текущего статуса заявки «Стать партнёром» для действующего клиента (DECISIONS 2026-11-05).
-        Требует модуль `company`.
+        Статус заявки «Стать партнёром» компании сессии (DECISIONS 2026-11-05). Открыт любой сессии: кандидат с отношением
+        без модулей работает со своей заявкой (FX-1). Заявка другой компании не отдаётся, даже при том же адресе контакта.
       responses:
         '200':
           description: Текущий статус партнёрства и заявки
@@ -2533,7 +2533,8 @@ paths:
       operationId: getCompanyPartnerContractPdf
       summary: Скачать проект или подписанный партнёрский договор
       description: |
-        Отдаёт PDF-файл проекта договора или подписанного партнёрского договора для ознакомления и согласования.
+        Отдаёт PDF-файл проекта договора или подписанного партнёрского договора компании сессии для ознакомления и
+        согласования. Открыт любой сессии (FX-1). Документ не собрался — 503 `DOCUMENT_PENDING`, заглушка не отдаётся.
       responses:
         '200':
           description: PDF-файл договора
@@ -2550,6 +2551,12 @@ paths:
           $ref: '#/components/responses/NotFound'
         '429':
           $ref: '#/components/responses/TooManyRequests'
+        '503':
+          description: Документ не собрался (`DOCUMENT_PENDING`), повторите позже
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /company/partner-application/agree:
     post:
@@ -2557,8 +2564,8 @@ paths:
       operationId: agreeCompanyPartnerContract
       summary: Согласовать проект партнёрского договора кандидатом
       description: |
-        Кандидат подтверждает согласование проекта партнёрского договора. Статус переводится в `candidate_agreed`.
-        Требует права действовать `can_act`.
+        Кандидат подтверждает согласование проекта партнёрского договора своей компании. Статус переводится в
+        `candidate_agreed`. Открыт любой сессии (FX-1), требует права действовать `can_act`.
       requestBody:
         required: false
         content:
@@ -2590,6 +2597,12 @@ paths:
           $ref: '#/components/responses/NotFound'
         '429':
           $ref: '#/components/responses/TooManyRequests'
+        '503':
+          description: Документ не собрался (`DOCUMENT_PENDING`), повторите позже
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /team:
     get:

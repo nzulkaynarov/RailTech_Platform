@@ -56,6 +56,18 @@ describe("Очередь заявок кандидатов в партнёры (
     fireEvent.click(screen.getByRole("button", { name: "Отправить договор" }));
     const modal = await findModal(/Отправка проекта договора/);
 
+    // FX-1: совпадение по ИНН — вопрос сотруднику, без ответа договор не уходит
+    const okBtn = within(modal).getByRole("button", { name: "Отметить договор отправленным" });
+    expect(within(modal).getByText(/Это та же компания\?/)).toBeInTheDocument();
+    expect(within(modal).queryByRole("radio", { name: /Создать новую/ })).toBeNull();
+    expect(okBtn).toBeDisabled();
+    fireEvent.click(
+      within(modal).getByRole("radio", {
+        name: /Привязать к найденной организации: АО «Южный Металл»/,
+      }),
+    );
+    expect(okBtn).not.toBeDisabled();
+
     fireEvent.change(within(modal).getByLabelText("Номер договора"), {
       target: { value: "ПД-2026/777" },
     });
@@ -63,30 +75,24 @@ describe("Очередь заявок кандидатов в партнёры (
       target: { value: "2026-11-06" },
     });
 
-    fireEvent.click(within(modal).getByRole("button", { name: "Отметить договор отправленным" }));
+    fireEvent.click(okBtn);
     await modalClosed(/Отправка проекта договора/);
 
     expect(await screen.findByText("№ ПД-2026/777")).toBeVisible();
   });
 
-  it("снабжение может одобрить договор и открыть доступ", async () => {
+  it("согласованную кандидатом заявку одобряют без причины", async () => {
     await openApplications("supply@demo.example");
 
-    const [approveButton] = screen.getAllByRole("button", { name: "Одобрить и открыть кабинет" });
-    if (!approveButton) throw new Error("No approve button found");
-    fireEvent.click(approveButton);
+    expect(screen.getByText("Согласован кандидатом")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Одобрить и открыть кабинет" }));
 
     const modal = await findModal(/Одобрение заявки и открытие кабинета/);
-    expect(
-      within(modal).getByRole("radio", {
-        name: /Привязать к найденной организации: АО «Южный Металл»/,
-      }),
-    ).toBeInTheDocument();
+    expect(within(modal).queryByLabelText(/Причина одобрения без согласия/)).toBeNull();
 
     fireEvent.change(within(modal).getByLabelText(/Номер договора/), {
       target: { value: "DOG-PART-FINAL" },
     });
-
     fireEvent.click(
       within(modal).getByRole("button", { name: "Подтвердить договор и открыть доступ" }),
     );
@@ -94,6 +100,43 @@ describe("Очередь заявок кандидатов в партнёры (
 
     expect(await screen.findByText("№ DOG-PART-FINAL")).toBeVisible();
     expect(await screen.findByText("Одобрена")).toBeVisible();
+  });
+
+  it("без согласия кандидата одобрить можно только с причиной", async () => {
+    await openApplications("supply@demo.example");
+
+    const vostokRow = screen.getByText("ООО «Восток Снаб»").closest("tr");
+    if (!vostokRow) throw new Error("Row not found");
+    expect(
+      within(vostokRow).queryByRole("button", { name: "Одобрить и открыть кабинет" }),
+    ).toBeNull();
+    fireEvent.click(within(vostokRow).getByRole("button", { name: "Одобрить без согласия" }));
+
+    const modal = await findModal(/Одобрение заявки и открытие кабинета/);
+    const okBtn = within(modal).getByRole("button", {
+      name: "Подтвердить договор и открыть доступ",
+    });
+    expect(okBtn).toBeDisabled();
+
+    fireEvent.change(within(modal).getByLabelText(/Причина одобрения без согласия/), {
+      target: { value: "Договор подписан на бумаге" },
+    });
+    expect(okBtn).not.toBeDisabled();
+
+    fireEvent.click(okBtn);
+    await modalClosed(/Одобрение заявки и открытие кабинета/);
+    expect(await screen.findByText("Одобрена")).toBeVisible();
+  });
+
+  it("сбой письма виден в строке, договор можно отправить снова", async () => {
+    await openApplications("supply@demo.example");
+
+    const vostokRow = screen.getByText("ООО «Восток Снаб»").closest("tr");
+    if (!vostokRow) throw new Error("Row not found");
+    expect(within(vostokRow).getByText("Письмо-приглашение не доставлено")).toBeVisible();
+    expect(
+      within(vostokRow).getByRole("button", { name: "Отправить договор снова" }),
+    ).toBeVisible();
   });
 
   it("снабжение может отклонить заявку с указанием причины", async () => {

@@ -30,6 +30,7 @@ const STATUS_FILTERS: readonly (PartnerApplicationStatus | "all")[] = [
   "all",
   "submitted",
   "contract_sent",
+  "candidate_agreed",
   "approved",
   "rejected",
 ];
@@ -41,9 +42,9 @@ const KINDS: PartnerApplicationKind[] = ["manufacturer", "supplier", "principal"
  * Очередь заявок кандидатов в партнёры (PART-ONBOARD-2, ADR-0022).
  * Договорной шлюз для снабжения:
  * - Просмотр анкет заявителей (публичные и из кабинета клиента);
- * - Сопоставление с базой контрагентов по ИНН;
+ * - Сопоставление с базой контрагентов по ИНН: совпадение — вопрос сотруднику, не автопривязка (FX-1);
  * - Отправка проекта договора;
- * - Одобрение договора и автоматическая активация кабинета с отправкой приглашения;
+ * - Одобрение после согласия кандидата (без согласия — только с причиной в журнале, FX-1);
  * - Отклонение с указанием причины.
  */
 export function PartnerApplicationsPanel() {
@@ -92,6 +93,11 @@ export function PartnerApplicationsPanel() {
           <div>{row.contact_name}</div>
           <span className="pf-cat-sub">{row.email}</span>
           {row.phone ? <span className="pf-cat-sub">{row.phone}</span> : null}
+          {row.invite_delivery === "failed" ? (
+            <span className="pf-cat-sub pf-cat-danger">
+              {t("partnerApplications.inviteFailed")}
+            </span>
+          ) : null}
         </div>
       ),
     },
@@ -155,30 +161,40 @@ export function PartnerApplicationsPanel() {
     {
       key: "actions",
       title: t("partnerApplications.columns.actions"),
+      width: 220,
       render: (row) => {
         if (!canManage || row.status === "approved" || row.status === "rejected") {
           return null;
         }
         return (
           <div className="pf-cat-actions">
-            {row.status === "submitted" ? (
+            {row.status === "submitted" ||
+            (row.status === "contract_sent" && row.invite_delivery === "failed") ? (
               <Button
                 size="small"
                 onClick={() => {
                   setSendContractRow(row);
                 }}
               >
-                {t("partnerApplications.actions.sendContract")}
+                {t(
+                  row.status === "submitted"
+                    ? "partnerApplications.actions.sendContract"
+                    : "partnerApplications.actions.resendContract",
+                )}
               </Button>
             ) : null}
             <Button
-              type="primary"
+              type={row.status === "candidate_agreed" ? "primary" : "default"}
               size="small"
               onClick={() => {
                 setApproveRow(row);
               }}
             >
-              {t("partnerApplications.actions.approve")}
+              {t(
+                row.status === "candidate_agreed"
+                  ? "partnerApplications.actions.approve"
+                  : "partnerApplications.actions.approveWithoutAgreement",
+              )}
             </Button>
             <Button
               danger
@@ -278,6 +294,59 @@ export function PartnerApplicationsPanel() {
   );
 }
 
+type CompanyChoice = "match" | "new";
+
+/** Запрос к форме по решению сотрудника о найденной организации: подтвердить её или завести новую. */
+function companyDecision(item: PartnerApplicationItem, choice: CompanyChoice | undefined) {
+  if (!item.company_match_pending) return {};
+  return choice === "new"
+    ? { create_new_company: true }
+    : { company_id: item.matching_company_id ?? undefined };
+}
+
+/**
+ * Вопрос о найденной организации: ИНН и рег. номер в анкете никем не проверены, совпадение — предложение, а не привязка
+ * (DECISIONS 2026-11-04). Занятый ИНН завести заново нельзя: другая компания с таким ИНН — это опечатка, заявка отклоняется.
+ */
+function CompanyMatchChoice({
+  item,
+  value,
+  onChange,
+}: {
+  item: PartnerApplicationItem;
+  value: CompanyChoice | undefined;
+  onChange: (next: CompanyChoice) => void;
+}) {
+  const { t } = useTranslation("catalog");
+  return (
+    <div className="pf-cat-match-choice" style={{ marginBottom: 16 }}>
+      <p>
+        <strong>
+          {t("partnerApplications.matchQuestion", { name: item.matching_company_name })}
+        </strong>
+      </p>
+      <Radio.Group
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value as CompanyChoice);
+        }}
+      >
+        <Radio value="match">
+          {t("partnerApplications.approveModal.linkToExisting", {
+            name: item.matching_company_name ?? item.matching_company_id,
+          })}
+        </Radio>
+        {item.company_match_pending === "registration_number" ? (
+          <Radio value="new">{t("partnerApplications.approveModal.createNew")}</Radio>
+        ) : null}
+      </Radio.Group>
+      {item.company_match_pending === "inn" ? (
+        <p className="pf-cat-sub">{t("partnerApplications.matchInnTaken")}</p>
+      ) : null}
+    </div>
+  );
+}
+
 function SendContractModal({
   item,
   onDone,
@@ -292,6 +361,8 @@ function SendContractModal({
   const dateId = useId();
   const [contractNumber, setContractNumber] = useState(item.contract_number || "");
   const [contractDate, setContractDate] = useState(item.contract_date || "");
+  const [companyChoice, setCompanyChoice] = useState<CompanyChoice | undefined>(undefined);
+  const needsChoice = Boolean(item.company_match_pending);
 
   const sendContract = useSendContractPartnerApplication({
     mutation: {
@@ -309,18 +380,23 @@ function SendContractModal({
       items={steps}
       loading={sendContract.isPending}
       error={sendContract.error}
+      disabled={needsChoice && !companyChoice}
       onOk={() => {
         sendContract.mutate({
           id: item.id,
           data: {
             contract_number: contractNumber.trim() || undefined,
             contract_date: contractDate || undefined,
+            ...companyDecision(item, companyChoice),
           },
         });
       }}
       onCancel={onClose}
     >
       <p>{t("partnerApplications.sendContractModal.hint")}</p>
+      {needsChoice ? (
+        <CompanyMatchChoice item={item} value={companyChoice} onChange={setCompanyChoice} />
+      ) : null}
       <FormField id={numId} label={t("partnerApplications.contractNumber")}>
         <Input
           id={numId}
@@ -362,9 +438,10 @@ function ApproveModal({
     item.contract_date || new Date().toISOString().slice(0, 10),
   );
   const [kind, setKind] = useState<PartnerApplicationKind>(item.kind || "supplier");
-  const [linkTarget, setLinkTarget] = useState<"match" | "new">(
-    item.matching_company_id ? "match" : "new",
-  );
+  const [companyChoice, setCompanyChoice] = useState<CompanyChoice | undefined>(undefined);
+  const [overrideReason, setOverrideReason] = useState("");
+  const needsChoice = Boolean(item.company_match_pending);
+  const withoutAgreement = item.status !== "candidate_agreed";
 
   const approve = useApprovePartnerApplication({
     mutation: {
@@ -373,6 +450,7 @@ function ApproveModal({
   });
 
   const fields = errorFields(approve.error);
+  const reasonId = useId();
   const rawSteps = t("partnerApplications.approveModal.steps", { returnObjects: true });
   const steps = Array.isArray(rawSteps) ? (rawSteps as string[]) : [];
 
@@ -383,6 +461,11 @@ function ApproveModal({
       items={steps}
       loading={approve.isPending}
       error={approve.error}
+      disabled={
+        !contractNumber.trim() ||
+        (needsChoice && !companyChoice) ||
+        (withoutAgreement && !overrideReason.trim())
+      }
       onOk={() => {
         approve.mutate({
           id: item.id,
@@ -390,33 +473,38 @@ function ApproveModal({
             contract_number: contractNumber.trim(),
             contract_date: contractDate || undefined,
             kind,
-            company_id:
-              linkTarget === "match" && item.matching_company_id
-                ? item.matching_company_id
-                : undefined,
+            ...companyDecision(item, companyChoice),
+            ...(withoutAgreement ? { override_reason: overrideReason.trim() } : {}),
           },
         });
       }}
       onCancel={onClose}
     >
-      <p>{t("partnerApplications.approveModal.hint")}</p>
+      <p>
+        {t(
+          withoutAgreement
+            ? "partnerApplications.approveModal.hintOverride"
+            : "partnerApplications.approveModal.hint",
+        )}
+      </p>
 
-      {item.matching_company_id ? (
-        <div className="pf-cat-match-choice" style={{ marginBottom: 16 }}>
-          <Radio.Group
-            value={linkTarget}
+      {needsChoice ? (
+        <CompanyMatchChoice item={item} value={companyChoice} onChange={setCompanyChoice} />
+      ) : null}
+
+      {withoutAgreement ? (
+        <FormField id={reasonId} label={t("partnerApplications.approveModal.overrideLabel")}>
+          <Input.TextArea
+            id={reasonId}
+            rows={2}
+            value={overrideReason}
             onChange={(e) => {
-              setLinkTarget(e.target.value as "match" | "new");
+              setOverrideReason(e.target.value);
             }}
-          >
-            <Radio value="match">
-              {t("partnerApplications.approveModal.linkToExisting", {
-                name: item.matching_company_name ?? item.matching_company_id,
-              })}
-            </Radio>
-            <Radio value="new">{t("partnerApplications.approveModal.createNew")}</Radio>
-          </Radio.Group>
-        </div>
+            placeholder={t("partnerApplications.approveModal.overridePlaceholder")}
+            maxLength={1000}
+          />
+        </FormField>
       ) : null}
 
       <FormField id={numId} label={t("partnerApplications.contractNumber")}>

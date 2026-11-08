@@ -137,7 +137,13 @@
       "product_not_on_review": "Kartochka endi tekshiruvda emas. Sahifani yangilang.",
       "review_reason_required": "Sababni kiriting: umumiy izoh yoki maydon bo'yicha eslatma.",
       "review_issues_invalid": "Eslatmalarni tekshiring: ro'yxatdagi maydon va 500 belgigacha matn.",
-      "review_reason_too_long": "Izoh juda uzun: 2000 belgidan oshmasin."
+      "review_reason_too_long": "Izoh juda uzun: 2000 belgidan oshmasin.",
+      "company_match_confirmation_required": "Shu raqamli tashkilot topildi. O‘sha kompaniya ekanini tasdiqlang.",
+      "company_inn_taken": "Bunday STIRli tashkilot bor. Agar bu boshqa kompaniya bo‘lsa, arizani rad eting.",
+      "candidate_agreement_required": "Nomzod hali shartnomani kelishmagan. Kelishuvsiz tasdiqlash uchun sabab ko‘rsating.",
+      "partner_suspended": "Hamkor to‘xtatilgan. To‘xtatishni yetkazib beruvchi kartasida bekor qiling.",
+      "inn_too_long": "Arizadagi STIR 20 belgidan uzun. Arizani rad eting yoki qayta topshirishni so‘rang.",
+      "contract_render_failed": "Shartnomani yig‘ib bo‘lmadi. Hech narsa saqlanmadi, keyinroq urinib ko‘ring."
     }
   },
   "items": {
@@ -1028,12 +1034,14 @@
       "all": "Barcha arizalar",
       "submitted": "Yangi",
       "contract_sent": "Shartnoma yuborilgan",
+      "candidate_agreed": "Nomzod kelishgan",
       "approved": "Ma'qullangan",
       "rejected": "Rad etilgan"
     },
     "status": {
       "submitted": "Topshirilgan",
       "contract_sent": "Shartnoma yuborilgan",
+      "candidate_agreed": "Nomzod kelishgan",
       "approved": "Ma'qullangan",
       "rejected": "Rad etilgan"
     },
@@ -1044,11 +1052,14 @@
     "inn": "STIR: {{inn}}",
     "matchFound": "Bazadan topildi: {{name}}",
     "matchHint": "ERP bazasida xuddi shunday STIRga ega tashkilot topildi",
+    "matchQuestion": "«{{name}}» tashkiloti topildi. Bu o‘sha kompaniyami?",
+    "matchInnTaken": "Bu STIR band. Agar bu boshqa kompaniya bo‘lsa, arizani sabab ko‘rsatib rad eting.",
     "contractNumber": "Shartnoma raqami",
     "contractNumberPlaceholder": "Masalan, HSH-2026/01",
     "contractDate": "Shartnoma sanasi",
     "kind": "Hamkor turi",
     "reviewedAt": "Ko'rib chiqildi: {{date}}",
+    "inviteFailed": "Taklif xati yetkazilmadi",
     "columns": {
       "company": "Tashkilot",
       "contact": "Aloqachi shaxs",
@@ -1061,7 +1072,9 @@
     },
     "actions": {
       "sendContract": "Shartnoma yuborish",
+      "resendContract": "Shartnomani qayta yuborish",
       "approve": "Ma'qullash va kabinetni ochish",
+      "approveWithoutAgreement": "Kelishuvsiz tasdiqlash",
       "reject": "Rad etish"
     },
     "empty": {
@@ -1074,12 +1087,16 @@
       "ok": "Shartnoma yuborilgan deb belgilash",
       "steps": [
         "Ariza holati «Shartnoma yuborilgan» ga o'zgaradi",
-        "Nomzod hamkorlik shartnomasi loyihasini oladi"
+        "Nomzod hamkorlik shartnomasi loyihasini oladi",
+        "Nomzod kabinetga kirish xatini oladi"
       ]
     },
     "approveModal": {
       "title": "Arizani ma'qullash va kabinetni ochish: {{name}}",
       "hint": "Hamkorlik shartnomasi imzolanganini tasdiqlash. Tasdiqlangandan so'ng kompaniya kabinetga kirish huquqiga ega bo'ladi, aloqachi taklifnoma oladi va CRM bilan bog'lanadi.",
+      "hintOverride": "Nomzod hali shartnomani kelishmagan. Faqat sabab ko‘rsatib tasdiqlash mumkin — u jurnalga yoziladi.",
+      "overrideLabel": "Kelishuvsiz tasdiqlash sababi",
+      "overridePlaceholder": "Masalan, shartnoma qog‘ozda imzolangan",
       "ok": "Shartnomani tasdiqlash va kirishni ochish",
       "linkToExisting": "Topilgan tashkilotga bog'lash: {{name}}",
       "createNew": "Yangi yetkazib beruvchi tashkilotini yaratish",

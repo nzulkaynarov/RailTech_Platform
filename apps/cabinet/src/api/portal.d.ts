@@ -1269,8 +1269,8 @@ export interface paths {
         };
         /**
          * Статус заявки компании на получение роли партнёра
-         * @description Проверка наличия и текущего статуса заявки «Стать партнёром» для действующего клиента (DECISIONS 2026-11-05).
-         *     Требует модуль `company`.
+         * @description Статус заявки «Стать партнёром» компании сессии (DECISIONS 2026-11-05). Открыт любой сессии: кандидат с отношением
+         *     без модулей работает со своей заявкой (FX-1). Заявка другой компании не отдаётся, даже при том же адресе контакта.
          */
         get: operations["getCompanyPartnerApplication"];
         put?: never;
@@ -1296,7 +1296,8 @@ export interface paths {
         };
         /**
          * Скачать проект или подписанный партнёрский договор
-         * @description Отдаёт PDF-файл проекта договора или подписанного партнёрского договора для ознакомления и согласования.
+         * @description Отдаёт PDF-файл проекта договора или подписанного партнёрского договора компании сессии для ознакомления и
+         *     согласования. Открыт любой сессии (FX-1). Документ не собрался — 503 `DOCUMENT_PENDING`, заглушка не отдаётся.
          */
         get: operations["getCompanyPartnerContractPdf"];
         put?: never;
@@ -1318,8 +1319,8 @@ export interface paths {
         put?: never;
         /**
          * Согласовать проект партнёрского договора кандидатом
-         * @description Кандидат подтверждает согласование проекта партнёрского договора. Статус переводится в `candidate_agreed`.
-         *     Требует права действовать `can_act`.
+         * @description Кандидат подтверждает согласование проекта партнёрского договора своей компании. Статус переводится в
+         *     `candidate_agreed`. Открыт любой сессии (FX-1), требует права действовать `can_act`.
          */
         post: operations["agreeCompanyPartnerContract"];
         delete?: never;
@@ -5374,6 +5375,15 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             429: components["responses"]["TooManyRequests"];
+            /** @description Документ не собрался (`DOCUMENT_PENDING`), повторите позже */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     agreeCompanyPartnerContract: {
@@ -5414,6 +5424,15 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             429: components["responses"]["TooManyRequests"];
+            /** @description Документ не собрался (`DOCUMENT_PENDING`), повторите позже */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     listTeam: {

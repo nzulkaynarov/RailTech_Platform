@@ -12437,7 +12437,7 @@ paths:
       tags: [erp-catalog]
       operationId: sendContractPartnerApplication
       summary: 'Расчёт · Заявка в партнёры: отправить проект договора'
-      description: ERP `POST catalog/partner-applications/{id}/send-contract/` — право `supply.manage`. Переводит заявку в статус `contract_sent`.
+      description: ERP `POST catalog/partner-applications/{id}/send-contract/` — право `supply.manage`. Переводит заявку в статус `contract_sent`. Совпадение с существующей компанией — только с решением сотрудника (`company_id` или `create_new_company`), иначе 422 `company_match_confirmation_required`.
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
         - {name: id, in: path, required: true, description: Id заявки, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
@@ -12469,7 +12469,7 @@ paths:
       tags: [erp-catalog]
       operationId: approvePartnerApplication
       summary: 'Расчёт · Заявка в партнёры: подтвердить договор и открыть кабинет'
-      description: ERP `POST catalog/partner-applications/{id}/approve/` — право `supply.manage`. Активирует отношение `partner`, фиксирует договор и отправляет приглашение.
+      description: ERP `POST catalog/partner-applications/{id}/approve/` — право `supply.manage`. Только после согласия кандидата или с `override_reason` (иначе 422 `candidate_agreement_required`). Активирует отношение `partner`, фиксирует договор и отправляет приглашение.
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
         - {name: id, in: path, required: true, description: Id заявки, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
@@ -24583,7 +24583,7 @@ components:
     PartnerApplicationItem:
       type: object
       additionalProperties: false
-      required: [id, source, status, kind, company_name, inn, contact_name, email, phone, language, categories_description, contract_number, contract_date, rejected_reason, created_at, reviewed_at, matching_company_id, matching_company_name]
+      required: [id, source, status, kind, company_name, inn, contact_name, email, phone, language, categories_description, contract_number, contract_date, rejected_reason, created_at, reviewed_at, matching_company_id, matching_company_name, company_match_pending, invite_delivery]
       properties:
         id: {$ref: '#/components/schemas/CompanyItemRef'}
         source: {$ref: '#/components/schemas/PartnerApplicationSource'}
@@ -24603,6 +24603,14 @@ components:
         reviewed_at: {type: [string, 'null'], format: date-time}
         matching_company_id: {type: [string, 'null']}
         matching_company_name: {type: [string, 'null']}
+        company_match_pending:
+          type: [string, 'null']
+          enum: [inn, registration_number, null]
+          description: 'По какому ключу найдена существующая компания, пока сотрудник не решил, та ли это компания; иначе null (FX-1)'
+        invite_delivery:
+          type: [string, 'null']
+          enum: [queued, sent, failed, null]
+          description: 'Итог последнего письма-приглашения кандидату; null — приглашения ещё не было (FX-1)'
     PartnerApplicationListResponse:
       type: object
       additionalProperties: false
@@ -24620,6 +24628,12 @@ components:
       properties:
         contract_number: {type: string, maxLength: 64}
         contract_date: {type: [string, 'null'], format: date}
+        company_id:
+          type: [string, 'null']
+          description: 'Сотрудник подтвердил: заявка от этой существующей компании (FX-1)'
+        create_new_company:
+          type: boolean
+          description: 'Сотрудник подтвердил: найденная компания — другая, завести новую (FX-1)'
     PartnerApplicationApproveRequest:
       type: object
       additionalProperties: false
@@ -24628,7 +24642,14 @@ components:
         contract_number: {type: string, minLength: 1, maxLength: 64}
         contract_date: {type: [string, 'null'], format: date}
         company_id: {type: [string, 'null']}
+        create_new_company:
+          type: boolean
+          description: 'Сотрудник подтвердил: найденная компания — другая, завести новую (FX-1)'
         kind: {$ref: '#/components/schemas/PartnerApplicationKind'}
+        override_reason:
+          type: string
+          maxLength: 1000
+          description: 'Причина одобрения без согласия кандидата, пишется в журнал; без неё нужен статус candidate_agreed (FX-1)'
     PartnerApplicationRejectRequest:
       type: object
       additionalProperties: false

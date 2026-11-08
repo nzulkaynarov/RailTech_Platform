@@ -105,10 +105,10 @@
         <div class="sign-box">
           <div class="role">{% translate "От Платформы:" %}</div>
           {% if signed_by_director %}
-            <div><strong>{{ director_name|default:"Генеральный директор" }}</strong></div>
+            <div><strong>{{ director_name }}</strong></div>
             <div class="sign-line">
               {% translate "Электронная подпись (ПЭП)" %} · {{ approved_at|date:"d.m.Y H:i" }}<br>
-              {% translate "Идентификация:" %} {{ director_email|default:"director@railtech.uz" }}
+              {% translate "Идентификация:" %} {{ director_email }}
             </div>
           {% else %}
             <div class="sign-line">{% translate "Подпись / дата" %}</div>

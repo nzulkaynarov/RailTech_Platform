@@ -17,6 +17,8 @@ REASON_MAX_LENGTH = 2000
 #: `QuoteCommentCreate.text` и `PaymentProofCreate.comment` (последнее — длина `PaymentConfirmation.note`).
 COMMENT_MAX_LENGTH = 2000
 PROOF_COMMENT_MAX_LENGTH = 500
+#: Длина ИНН компании: длиннее — нельзя завести компанию (FX-1).
+COMPANY_INN_MAX_LENGTH = Company._meta.get_field("inn").max_length
 
 _DATETIME = serializers.DateTimeField()
 
@@ -929,6 +931,16 @@ class PartnerApplicationPublicCreateSerializer(serializers.Serializer):
     language = serializers.ChoiceField(choices=["ru", "uz", "en"], default="ru")
     consent = serializers.BooleanField(required=True)
     website = serializers.CharField(allow_blank=True, allow_null=True, required=False, default="")
+
+    def validate(self, attrs):
+        """ИНН длиннее поля компании — 422 сразу (FX-1); у нерезидента без рег. номера он станет рег. номером."""
+        inn = (attrs.get("inn") or "").strip()
+        foreign_number = (attrs.get("country") or "UZ").strip().upper() != "UZ" and not (
+            attrs.get("registration_number") or ""
+        ).strip()
+        if len(inn) > COMPANY_INN_MAX_LENGTH and not foreign_number:
+            raise serializers.ValidationError({"inn": "INN_TOO_LONG"})
+        return attrs
 
     def validate_consent(self, value):
         if not value:

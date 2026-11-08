@@ -14,5 +14,12 @@ export interface PartnerApplicationApproveRequest {
   contract_date?: string | null;
   /** @nullable */
   company_id?: string | null;
+  /** Сотрудник подтвердил: найденная компания — другая, завести новую (FX-1) */
+  create_new_company?: boolean;
   kind?: PartnerApplicationKind;
+  /**
+   * Причина одобрения без согласия кандидата, пишется в журнал; без неё нужен статус candidate_agreed (FX-1)
+   * @maxLength 1000
+   */
+  override_reason?: string;
 }

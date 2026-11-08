@@ -171,6 +171,16 @@ class DeskPartnerApplicationListItem(serializers.Serializer):
     reviewed_at = serializers.DateTimeField(allow_null=True)
     matching_company_id = serializers.IntegerField(allow_null=True)
     matching_company_name = serializers.CharField(allow_null=True)
+    company_match_pending = serializers.ChoiceField(
+        choices=["inn", "registration_number"],
+        allow_null=True,
+        help_text="По какому ключу найдена существующая компания, пока сотрудник не решил, та ли это компания; иначе null.",
+    )
+    invite_delivery = serializers.ChoiceField(
+        choices=["queued", "sent", "failed"],
+        allow_null=True,
+        help_text="Итог последнего письма-приглашения кандидату; null — приглашения ещё не было.",
+    )
 
 
 class DeskPartnerApplicationDetail(DeskPartnerApplicationListItem):
@@ -187,6 +197,12 @@ class DeskPartnerApplicationListResponse(serializers.Serializer):
 class DeskPartnerApplicationSendContractIn(serializers.Serializer):
     contract_number = serializers.CharField(required=False, allow_blank=True, max_length=64)
     contract_date = serializers.DateField(required=False, allow_null=True)
+    company_id = serializers.IntegerField(
+        required=False, allow_null=True, help_text="Сотрудник подтвердил: заявка от этой существующей компании."
+    )
+    create_new_company = serializers.BooleanField(
+        required=False, default=False, help_text="Сотрудник подтвердил: найденная компания — другая, завести новую."
+    )
 
 
 class DeskPartnerApplicationApproveIn(serializers.Serializer):
@@ -197,8 +213,19 @@ class DeskPartnerApplicationApproveIn(serializers.Serializer):
         help_text="Номер партнёрского договора (обязателен для завершения договорного шлюза).",
     )
     contract_date = serializers.DateField(required=False, allow_null=True)
-    company_id = serializers.IntegerField(required=False, allow_null=True)
+    company_id = serializers.IntegerField(
+        required=False, allow_null=True, help_text="Сотрудник подтвердил: заявка от этой существующей компании."
+    )
+    create_new_company = serializers.BooleanField(
+        required=False, default=False, help_text="Сотрудник подтвердил: найденная компания — другая, завести новую."
+    )
     kind = serializers.CharField(required=False, allow_blank=True, max_length=20)
+    override_reason = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=1000,
+        help_text="Причина одобрения без согласия кандидата; пишется в журнал. Без неё нужен статус candidate_agreed.",
+    )
 
 
 class DeskPartnerApplicationRejectIn(serializers.Serializer):

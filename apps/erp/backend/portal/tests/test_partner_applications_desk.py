@@ -5,6 +5,7 @@
 
 import pytest
 from django.core import mail
+from django.utils import timezone
 from parties.models import (
     Company,
     CompanyRelationship,
@@ -176,6 +177,8 @@ class TestApproveApplicationClientCabinet:
             applicant_contact=contact,
             company_name=client_company.name,
             inn=client_company.inn,
+            status=PartnerApplicationStatus.CANDIDATE_AGREED,
+            candidate_agreed_at=timezone.now(),
         )
 
         client = world["clients"]["supply"]
@@ -211,6 +214,8 @@ class TestApproveApplicationPublic:
             email="strelka@example.com",
             phone="+998901112233",
             kind=PartnerKind.MANUFACTURER,
+            status=PartnerApplicationStatus.CANDIDATE_AGREED,
+            candidate_agreed_at=timezone.now(),
         )
 
         client = world["clients"]["supply"]

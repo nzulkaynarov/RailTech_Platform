@@ -3,6 +3,8 @@
  * RailTech Platform — BFF API (Платформа → CRM и ERP)
  */
 import type { CompanyItemRef } from "./companyItemRef";
+import type { PartnerApplicationItemCompanyMatchPending } from "./partnerApplicationItemCompanyMatchPending";
+import type { PartnerApplicationItemInviteDelivery } from "./partnerApplicationItemInviteDelivery";
 import type { PartnerApplicationItemLanguage } from "./partnerApplicationItemLanguage";
 import type { PartnerApplicationKind } from "./partnerApplicationKind";
 import type { PartnerApplicationSource } from "./partnerApplicationSource";
@@ -31,4 +33,14 @@ export interface PartnerApplicationItem {
   matching_company_id: string | null;
   /** @nullable */
   matching_company_name: string | null;
+  /**
+   * По какому ключу найдена существующая компания, пока сотрудник не решил, та ли это компания; иначе null (FX-1)
+   * @nullable
+   */
+  company_match_pending: PartnerApplicationItemCompanyMatchPending;
+  /**
+   * Итог последнего письма-приглашения кандидату; null — приглашения ещё не было (FX-1)
+   * @nullable
+   */
+  invite_delivery: PartnerApplicationItemInviteDelivery;
 }

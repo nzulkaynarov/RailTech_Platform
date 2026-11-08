@@ -864,10 +864,20 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description GET/POST /company/partner-application — Заявка действующего клиента на получение роли партнёра. */
+        /**
+         * @description GET/POST /company/partner-application — Заявка компании сессии на роль партнёра.
+         *
+         *     GET открыт любой сессии (FX-1): кандидат с отношением без модулей работает со своей заявкой, модуля `company` у него
+         *     нет. Заявка ищется только по компании сессии. Подача новой (POST) — модуль `company` и `can_act`.
+         */
         get: operations["api_portal_v1_company_partner_application_retrieve"];
         put?: never;
-        /** @description GET/POST /company/partner-application — Заявка действующего клиента на получение роли партнёра. */
+        /**
+         * @description GET/POST /company/partner-application — Заявка компании сессии на роль партнёра.
+         *
+         *     GET открыт любой сессии (FX-1): кандидат с отношением без модулей работает со своей заявкой, модуля `company` у него
+         *     нет. Заявка ищется только по компании сессии. Подача новой (POST) — модуль `company` и `can_act`.
+         */
         post: operations["api_portal_v1_company_partner_application_create"];
         delete?: never;
         options?: never;
@@ -882,10 +892,20 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description GET/POST /company/partner-application — Заявка действующего клиента на получение роли партнёра. */
+        /**
+         * @description GET/POST /company/partner-application — Заявка компании сессии на роль партнёра.
+         *
+         *     GET открыт любой сессии (FX-1): кандидат с отношением без модулей работает со своей заявкой, модуля `company` у него
+         *     нет. Заявка ищется только по компании сессии. Подача новой (POST) — модуль `company` и `can_act`.
+         */
         get: operations["api_portal_v1_company_partner_application_retrieve_2"];
         put?: never;
-        /** @description GET/POST /company/partner-application — Заявка действующего клиента на получение роли партнёра. */
+        /**
+         * @description GET/POST /company/partner-application — Заявка компании сессии на роль партнёра.
+         *
+         *     GET открыт любой сессии (FX-1): кандидат с отношением без модулей работает со своей заявкой, модуля `company` у него
+         *     нет. Заявка ищется только по компании сессии. Подача новой (POST) — модуль `company` и `can_act`.
+         */
         post: operations["api_portal_v1_company_partner_application_create_2"];
         delete?: never;
         options?: never;
@@ -902,7 +922,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description POST /company/partner-application/agree — Согласование проекта договора кандидатом. */
+        /** @description POST /company/partner-application/agree — Согласование проекта договора кандидатом компании сессии. */
         post: operations["api_portal_v1_company_partner_application_agree_create"];
         delete?: never;
         options?: never;
@@ -919,7 +939,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description POST /company/partner-application/agree — Согласование проекта договора кандидатом. */
+        /** @description POST /company/partner-application/agree — Согласование проекта договора кандидатом компании сессии. */
         post: operations["api_portal_v1_company_partner_application_agree_create_2"];
         delete?: never;
         options?: never;
@@ -934,7 +954,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description GET /company/partner-application/contract-pdf — Скачать проект или подписанный партнёрский договор. */
+        /** @description GET /company/partner-application/contract-pdf — Проект или подписанный договор заявки компании сессии. */
         get: operations["api_portal_v1_company_partner_application_contract_pdf_retrieve"];
         put?: never;
         post?: never;
@@ -951,7 +971,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description GET /company/partner-application/contract-pdf — Скачать проект или подписанный партнёрский договор. */
+        /** @description GET /company/partner-application/contract-pdf — Проект или подписанный договор заявки компании сессии. */
         get: operations["api_portal_v1_company_partner_application_contract_pdf_retrieve_2"];
         put?: never;
         post?: never;
@@ -12139,6 +12159,12 @@ export interface components {
              */
             logo?: string | null;
         };
+        /**
+         * @description * `inn` - inn
+         *     * `registration_number` - registration_number
+         * @enum {string}
+         */
+        CompanyMatchPendingEnum: "inn" | "registration_number";
         CompanyMember: {
             readonly id: number;
             /**
@@ -13610,8 +13636,16 @@ export interface components {
             contract_number: string;
             /** Format: date */
             contract_date?: string | null;
+            /** @description Сотрудник подтвердил: заявка от этой существующей компании. */
             company_id?: number | null;
+            /**
+             * @description Сотрудник подтвердил: найденная компания — другая, завести новую.
+             * @default false
+             */
+            create_new_company: boolean;
             kind?: string;
+            /** @description Причина одобрения без согласия кандидата; пишется в журнал. Без неё нужен статус candidate_agreed. */
+            override_reason?: string;
         };
         DeskPartnerApplicationDetail: {
             id: number;
@@ -13645,6 +13679,21 @@ export interface components {
             reviewed_at: string | null;
             matching_company_id: number | null;
             matching_company_name: string | null;
+            /**
+             * @description По какому ключу найдена существующая компания, пока сотрудник не решил, та ли это компания; иначе null.
+             *
+             *     * `inn` - inn
+             *     * `registration_number` - registration_number
+             */
+            company_match_pending: (components["schemas"]["CompanyMatchPendingEnum"] | components["schemas"]["NullEnum"]) | null;
+            /**
+             * @description Итог последнего письма-приглашения кандидату; null — приглашения ещё не было.
+             *
+             *     * `queued` - queued
+             *     * `sent` - sent
+             *     * `failed` - failed
+             */
+            invite_delivery: (components["schemas"]["InviteDeliveryEnum"] | components["schemas"]["NullEnum"]) | null;
             company_id: number | null;
             applicant_contact_id: number | null;
             reviewed_by: components["schemas"]["DeskRef"] | null;
@@ -13681,6 +13730,21 @@ export interface components {
             reviewed_at: string | null;
             matching_company_id: number | null;
             matching_company_name: string | null;
+            /**
+             * @description По какому ключу найдена существующая компания, пока сотрудник не решил, та ли это компания; иначе null.
+             *
+             *     * `inn` - inn
+             *     * `registration_number` - registration_number
+             */
+            company_match_pending: (components["schemas"]["CompanyMatchPendingEnum"] | components["schemas"]["NullEnum"]) | null;
+            /**
+             * @description Итог последнего письма-приглашения кандидату; null — приглашения ещё не было.
+             *
+             *     * `queued` - queued
+             *     * `sent` - sent
+             *     * `failed` - failed
+             */
+            invite_delivery: (components["schemas"]["InviteDeliveryEnum"] | components["schemas"]["NullEnum"]) | null;
         };
         DeskPartnerApplicationListResponse: {
             items: components["schemas"]["DeskPartnerApplicationListItem"][];
@@ -13695,6 +13759,13 @@ export interface components {
             contract_number?: string;
             /** Format: date */
             contract_date?: string | null;
+            /** @description Сотрудник подтвердил: заявка от этой существующей компании. */
+            company_id?: number | null;
+            /**
+             * @description Сотрудник подтвердил: найденная компания — другая, завести новую.
+             * @default false
+             */
+            create_new_company: boolean;
         };
         DeskProposal: {
             id: number;
@@ -14663,6 +14734,13 @@ export interface components {
          * @enum {string}
          */
         GroupEnum: "stock" | "supply" | "engineer";
+        /**
+         * @description * `queued` - queued
+         *     * `sent` - sent
+         *     * `failed` - failed
+         * @enum {string}
+         */
+        InviteDeliveryEnum: "queued" | "sent" | "failed";
         InviteRequestRequest: {
             /** Format: email */
             email: string;
