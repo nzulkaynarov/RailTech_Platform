@@ -3488,6 +3488,10 @@
     "created": "Вариант добавлен"
   },
   "notification": {
+    "portal.bank_change_requested": {
+      "title": "Запрос на смену банковских реквизитов: {{company}}",
+      "message": "Сверьте новый счёт с компанией и подтвердите или отклоните запрос."
+    },
     "payment.recorded": {
       "title": "Оплата получена",
       "message": "По счёту {{number}} записана оплата на сумму {{amount}}"
