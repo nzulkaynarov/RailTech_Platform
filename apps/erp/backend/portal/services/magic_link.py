@@ -23,6 +23,7 @@ from portal.services.login_code import LOGIN_LINK_TTL, issue_login, reset_addres
 from portal.services.mail_context import responsible_manager_email
 from portal.services.tokens import hash_token, issue_portal_session, token_prefix
 from portal.tasks import send_magic_link, send_magic_link_to_address
+from redis.exceptions import RedisError
 from rest_framework.exceptions import PermissionDenied
 
 from notifications.emails import send_templated_email
@@ -30,6 +31,8 @@ from notifications.emails import send_templated_email
 logger = logging.getLogger(__name__)
 
 RATE_WINDOW_SECONDS = 3600
+# Анонимный запрос не ждёт Redis дольше секунды-двух. max_retries: 0 — иначе kombu повторяет подключение сам, ещё до публикации.
+PUBLISH_TRANSPORT_OPTIONS = {"socket_connect_timeout": 1, "socket_timeout": 1, "max_retries": 0}
 
 
 def build_login_url(raw_token: str) -> str:
@@ -83,18 +86,28 @@ def request_magic_link(email: str) -> None:
     """Принимает запрос ссылки входа: один и тот же путь для любого адреса, зарегистрирован он или нет (FX-3).
 
     Лимит 429 считает все адреса, поиск контакта и письмо — в задаче Celery. Внутри запроса нет ни чтения контактов, ни
-    ветвления по их наличию, поэтому ни ответ, ни его время не выдают адрес. Сбой очереди ответ не меняет: клиент
-    запросит ссылку ещё раз.
+    ветвления по их наличию, поэтому ни ответ, ни его время не выдают адрес. Отказ брокера или бэкенда результатов ответ не
+    меняет, и его ожидание ограничено таймаутами сокета: клиент запросит ссылку ещё раз.
     """
     clean_email = email.strip().lower()
     _check_address_rate_limit(clean_email)
     # Новый код — счёт неверных попыток заново; для любого адреса, иначе сброс выдал бы, что адрес известен.
     reset_address_failures(clean_email)
 
+    app = send_magic_link_to_address.app
     try:
-        # argsrepr: адрес в сообщении нужен воркеру, но не журналу и инструментам наблюдения за очередью.
-        send_magic_link_to_address.apply_async(args=[clean_email], argsrepr="('<address>',)")
-    except (KombuError, OSError) as exc:  # брокер недоступен: kombu оборачивает ошибки Redis, сокет даёт OSError
+        # Своё соединение с таймаутами, без повторов и без бэкенда результатов: иначе недоступный Redis держал бы анонимный
+        # запрос (при отказе бэкенда — около 19 с и голый RuntimeError). argsrepr прячет адрес только при первой доставке:
+        # при повторе задачи Celery показывает настоящие аргументы.
+        with app.connection_for_write(transport_options=PUBLISH_TRANSPORT_OPTIONS) as connection:
+            send_magic_link_to_address.apply_async(
+                args=[clean_email],
+                argsrepr="('<address>',)",
+                ignore_result=True,
+                retry=False,
+                connection=connection,
+            )
+    except (KombuError, OSError, RedisError, RuntimeError) as exc:  # отказ брокера или бэкенда, ошибки кода не прячем
         logger.warning("Login link request was not queued (%s)", type(exc).__name__)
 
 

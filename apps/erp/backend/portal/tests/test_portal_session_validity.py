@@ -1,5 +1,6 @@
 """FIX-15 (хвосты ревью FIX-14): живая сессия портала и архивность через общий предикат; письмо — через Celery."""
 
+import logging
 import pathlib
 import re
 from unittest import mock
@@ -12,6 +13,7 @@ from portal.services.magic_link import request_magic_link
 from portal.services.tokens import hash_token
 from portal.tasks import send_magic_link, send_magic_link_to_address
 from portal.tests.conftest import LOCMEM_BACKEND
+from redis.exceptions import RedisError
 from rest_framework import status
 
 from notifications.models import EmailLog
@@ -120,6 +122,16 @@ class TestMagicLinkMailIsQueued:
 
         assert client_contact.email.lower() not in enqueue.call_args.kwargs["argsrepr"]
 
+    def test_publication_cannot_hold_the_request(self, client_contact, enqueue):
+        """Бэкенд результатов не трогается, повторов нет, сокет — с таймаутами: запрос не ждёт недоступный брокер."""
+        request_magic_link(client_contact.email)
+
+        options = enqueue.call_args.kwargs
+        assert options["ignore_result"] is True
+        assert options["retry"] is False
+        assert options["connection"].transport_options["socket_timeout"] <= 1
+        assert options["connection"].transport_options["socket_connect_timeout"] <= 1
+
     def test_every_address_is_enqueued_the_same_way(self, client_contact, client_company, enqueue):
         request_magic_link(client_contact.email)
         request_magic_link("nobody@example.com")
@@ -142,6 +154,14 @@ class TestMagicLinkMailIsQueued:
 
         assert client_contact.email.lower() not in repr(result)
 
+    def test_worker_step_logs_no_address(self, caplog, client_contact, delay):
+        caplog.set_level(logging.DEBUG)
+
+        send_magic_link_to_address.apply(args=[client_contact.email.lower()]).get()
+
+        assert "queued for contact" in caplog.text
+        assert client_contact.email.lower() not in caplog.text.lower()
+
     def test_unknown_archived_or_ambiguous_address_enqueues_nothing(self, delay, client_contact, client_company):
         assert send_magic_link_to_address.apply(args=["nobody@example.com"]).get() == {"queued": False}
         client_company.is_active = False
@@ -156,7 +176,15 @@ class TestMagicLinkMailIsQueued:
 
         request_magic_link(client_contact.email)  # не бросает
 
-    @pytest.mark.parametrize("error", [OperationalError("redis down"), TimeoutError("broker timeout")])
+    @pytest.mark.parametrize(
+        "error",
+        [
+            OperationalError("redis down"),
+            TimeoutError("broker timeout"),
+            RedisError("redis refused"),
+            RuntimeError("Retry limit exceeded while trying to reconnect to the Celery redis result store backend."),
+        ],
+    )
     def test_broker_errors_are_swallowed_with_the_same_answer(self, client_contact, enqueue, error):
         enqueue.side_effect = error
 

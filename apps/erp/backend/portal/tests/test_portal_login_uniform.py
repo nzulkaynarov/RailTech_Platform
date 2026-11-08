@@ -4,10 +4,16 @@
 письмо и поиск контакта вне запроса; код, тело и заголовки совпадают.
 """
 
+import json
+import logging
+import socket
+import threading
+import time
 from unittest import mock
 
 import pytest
-from celery import Task
+import redis
+from celery import Task, current_app
 from django.core import mail
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
@@ -19,6 +25,8 @@ from portal.tests.conftest import LOCMEM_BACKEND
 
 MAGIC_LINK_URL = "/api/portal/v1/auth/magic-link"
 DOMAIN = "@example.com"
+PUBLISH_TIME_LIMIT = 4  # секунды; граница «анонимный запрос не держит воркер», а не замер разницы между адресами
+SILENT_BROKER_LIFETIME = PUBLISH_TIME_LIMIT * 2
 PER_REQUEST_HEADERS = {"x-request-id"}  # у каждого ответа свой, от адреса не зависит
 KIND_NAMES = ["unknown", "archived_contact", "supplier", "archived_company", "ambiguous"]
 
@@ -74,6 +82,51 @@ def published():
     """Перехват публикации в брокер на уровне Celery: что и сколько раз ставит запрос, задачи не выполняются."""
     with mock.patch.object(Task, "apply_async", autospec=True) as calls:
         yield calls
+
+
+@pytest.fixture
+def point_celery_at(monkeypatch):
+    """Настоящая публикация без подмен: брокер и бэкенд результатов переводятся на заданный адрес, кэши Celery сбрасываются."""
+    app = current_app._get_current_object()
+    saved = {key: app.conf[key] for key in ("broker_url", "result_backend", "task_always_eager")}
+
+    def drop_caches():
+        app._pool = None
+        app.amqp._producer_pool = None
+        app._local.__dict__.pop("backend", None)
+
+    def point(url: str) -> None:
+        # Celery читает эти переменные окружения раньше своих настроек.
+        monkeypatch.setenv("CELERY_BROKER_URL", url)
+        monkeypatch.setenv("CELERY_RESULT_BACKEND", url)
+        app.conf.update(broker_url=url, result_backend=url, task_always_eager=False)
+        drop_caches()
+
+    yield point
+    app.conf.update(**saved)
+    drop_caches()
+
+
+@pytest.fixture
+def closed_port_url():
+    """Порт, на котором никто не слушает: соединение сразу отклоняется."""
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+    return f"redis://127.0.0.1:{port}/0"
+
+
+@pytest.fixture
+def silent_redis_url():
+    """Порт принимает соединение и молчит: отказа соединения нет. Закрывается сам, чтобы тест без таймаутов не завис."""
+    listener = socket.socket()
+    listener.bind(("127.0.0.1", 0))
+    listener.listen(32)
+    closer = threading.Timer(SILENT_BROKER_LIFETIME, listener.close)
+    closer.start()
+    yield f"redis://127.0.0.1:{listener.getsockname()[1]}/0"
+    closer.cancel()
+    listener.close()
 
 
 def post(client, address):
@@ -143,6 +196,50 @@ class TestUniformLoginLinkAnswer:
 
         assert known.status_code == 200
         assert fingerprint(unknown, address) == fingerprint(known, known_address)
+
+    def test_dead_broker_and_backend_give_the_same_answer_quickly(
+        self, caplog, point_celery_at, closed_port_url, known_address, anon_portal_client
+    ):
+        """Настоящий путь Celery: порт брокера и бэкенда результатов закрыт, подмен нет."""
+        caplog.set_level(logging.DEBUG)
+        point_celery_at(closed_port_url)
+        address = _address("nobody")
+
+        started = time.monotonic()
+        known = post(anon_portal_client, known_address)
+        known_elapsed = time.monotonic() - started
+        unknown = post(anon_portal_client, address)
+
+        assert known.status_code == 200
+        assert fingerprint(unknown, address) == fingerprint(known, known_address)
+        assert known_elapsed < PUBLISH_TIME_LIMIT
+        assert known_address not in caplog.text.lower() and address not in caplog.text.lower()
+        assert any("was not queued" in record.getMessage() for record in caplog.records)
+
+    def test_live_broker_receives_the_task(self, settings, point_celery_at, known_address, anon_portal_client):
+        """Ограничения публикации не должны мешать письму: при живом Redis задача доходит до очереди."""
+        point_celery_at(settings.CELERY_BROKER_URL)
+        client = redis.Redis.from_url(settings.CELERY_BROKER_URL)
+        queue = current_app.conf.task_default_queue
+        client.delete(queue)
+
+        response = post(anon_portal_client, known_address)
+
+        assert response.status_code == 200
+        assert client.llen(queue) == 1
+        headers = json.loads(client.lpop(queue))["headers"]
+        assert headers["task"] == "portal.send_magic_link_to_address"
+        assert known_address not in headers["argsrepr"]
+
+    def test_silent_broker_does_not_hold_the_request(self, point_celery_at, silent_redis_url, anon_portal_client):
+        """Соединение принято, ответа нет: без таймаутов сокета запрос висел бы, пока брокер молчит."""
+        point_celery_at(silent_redis_url)
+
+        started = time.monotonic()
+        response = post(anon_portal_client, _address("nobody"))
+
+        assert response.status_code == 200
+        assert time.monotonic() - started < PUBLISH_TIME_LIMIT
 
     def test_address_limit_answers_the_same(self, settings, published, known_address, anon_portal_client):
         settings.PORTAL_MAGIC_LINK_MAX_PER_HOUR = 1
