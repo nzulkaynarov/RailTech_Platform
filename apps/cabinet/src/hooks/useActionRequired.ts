@@ -4,6 +4,8 @@ import {
   useContracts,
   useDeliveries,
   useInvoices,
+  usePartnerOrders,
+  usePartnerPriceRequests,
   usePartnerProducts,
   useQuotes,
 } from '@/api/queries';
@@ -48,15 +50,29 @@ export function useActionRequired() {
     { status: 'returned', page_size: 20 },
     { enabled: modules.myProducts },
   );
+  const partnerOrdersQuery = usePartnerOrders(
+    { status: 'sent', page_size: 20 },
+    { enabled: modules.myProducts },
+  );
+  const partnerRfqsQuery = usePartnerPriceRequests(
+    { status: 'sent', page_size: 20 },
+    { enabled: modules.myProducts },
+  );
   const partnerAppQuery = useCompanyPartnerApplication({ enabled: !modules.myProducts });
 
   const available = Object.values(modules).some(Boolean) || Boolean(partnerAppQuery.data?.has_application);
   const isPending =
     queries.some((query) => query.isPending && query.fetchStatus !== 'idle') ||
-    (modules.myProducts && partnerProductsQuery.isPending && partnerProductsQuery.fetchStatus !== 'idle');
+    (modules.myProducts &&
+      (partnerProductsQuery.isPending || partnerOrdersQuery.isPending || partnerRfqsQuery.isPending) &&
+      (partnerProductsQuery.fetchStatus !== 'idle' ||
+        partnerOrdersQuery.fetchStatus !== 'idle' ||
+        partnerRfqsQuery.fetchStatus !== 'idle'));
   const failed = [
     ...queries.filter((query) => query.isError),
     ...(modules.myProducts && partnerProductsQuery.isError ? [partnerProductsQuery] : []),
+    ...(modules.myProducts && partnerOrdersQuery.isError ? [partnerOrdersQuery] : []),
+    ...(modules.myProducts && partnerRfqsQuery.isError ? [partnerRfqsQuery] : []),
   ];
   const views = invoiceViews(invoices.data ?? [], now);
 
@@ -73,6 +89,8 @@ export function useActionRequired() {
   const rejectedProducts = (partnerProductsQuery.data?.items ?? []).filter(
     (product) => product.status === 'returned',
   );
+  const awaitingOrders = (partnerOrdersQuery.data?.items ?? []).filter((order) => order.status === 'sent');
+  const awaitingRfqs = (partnerRfqsQuery.data?.items ?? []).filter((rfq) => rfq.status === 'sent');
 
   const total =
     awaitingQuotes.length +
@@ -82,6 +100,8 @@ export function useActionRequired() {
     awaitingDeliveries.length +
     (partnerApplicationAwaiting ? 1 : 0) +
     rejectedProducts.length +
+    awaitingOrders.length +
+    awaitingRfqs.length +
     (unread > 0 ? 1 : 0);
 
   return {
@@ -91,6 +111,8 @@ export function useActionRequired() {
     retry: () => {
       failed.forEach((query) => void query.refetch());
       if (partnerProductsQuery.isError) void partnerProductsQuery.refetch();
+      if (partnerOrdersQuery.isError) void partnerOrdersQuery.refetch();
+      if (partnerRfqsQuery.isError) void partnerRfqsQuery.refetch();
     },
     views,
     quotes: awaitingQuotes,
@@ -101,6 +123,8 @@ export function useActionRequired() {
     partnerApplication: partnerAppQuery.data ?? null,
     partnerApplicationAwaiting,
     rejectedProducts,
+    orders: awaitingOrders,
+    rfqs: awaitingRfqs,
     unread,
     total,
   };
@@ -118,6 +142,7 @@ export function useNavBadges(): Record<string, number> {
     '/acts': actions.acts.length,
     '/deliveries': actions.deliveries.length,
     '/my-products': actions.rejectedProducts.length,
+    '/partner/orders': actions.orders.length + actions.rfqs.length,
     '/company': actions.partnerApplicationAwaiting ? 1 : 0,
     '/messages': actions.unread,
   };

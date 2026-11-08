@@ -56,6 +56,7 @@ from portal.views import (
 from portal.views_notifications import NotificationListView, NotificationReadView, NotificationSettingsView
 from portal.views_partner import (
     PartnerConfirmView,
+    PartnerFinanceView,
     PartnerOrderConfirmView,
     PartnerOrderDetailView,
     PartnerOrderListView,
@@ -266,6 +267,9 @@ urlpatterns = [
         PartnerPriceRequestRespondView.as_view(),
         name="portal-partner-price-request-respond-slash",
     ),
+    # Partner Finance & Scorecard (K4-partner-finance)
+    path("partner/finance", PartnerFinanceView.as_view(), name="portal-partner-finance"),
+    path("partner/finance/", PartnerFinanceView.as_view(), name="portal-partner-finance-slash"),
     path(
         "catalog/<int:pk>/documents/<int:doc_id>/file",
         CatalogDocumentFileView.as_view(),

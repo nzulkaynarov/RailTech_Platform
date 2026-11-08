@@ -148,6 +148,7 @@ PARTNER_GET_PATHS = {
     "/partner/orders/{id}",
     "/partner/price-requests",
     "/partner/price-requests/{id}",
+    "/partner/finance",
 }
 
 

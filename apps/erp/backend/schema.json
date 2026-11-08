@@ -1759,6 +1759,34 @@
                 }
             }
         },
+        "/api/portal/v1/partner/finance": {
+            "get": {
+                "operationId": "api_portal_v1_partner_finance_retrieve",
+                "description": "GET /partner/finance — сводка взаиморасчётов и оценка эффективности партнёра.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/finance/": {
+            "get": {
+                "operationId": "api_portal_v1_partner_finance_retrieve_2",
+                "description": "GET /partner/finance — сводка взаиморасчётов и оценка эффективности партнёра.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/portal/v1/partner/offers/confirm": {
             "post": {
                 "operationId": "api_portal_v1_partner_offers_confirm_create",

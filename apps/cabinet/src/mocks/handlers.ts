@@ -1559,6 +1559,12 @@ export const handlers = [
       { action: true },
     ),
   ),
+  http.get(
+    `${API}/partner/finance`,
+    withSession(({ db }) => {
+      return json(partner.partnerFinanceSummary(db.partnerOrders));
+    }),
+  ),
 
   // Публичная проверка официальных документов (ADR-0024 §6, SIGN-VERIFY-1)
   http.get<{ code: string }>(`${API}/verify/:code`, ({ params }) => {

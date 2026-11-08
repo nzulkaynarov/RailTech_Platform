@@ -241,3 +241,79 @@ def partner_card_decision(product, decision: str, *, reason: str = "", issues=()
         bot_reaches=False,
     )
     return len(rows)
+
+
+def partner_order_sent(order) -> int:
+    """Заказ поставщику отправлен — ждёт подтверждения (колокольчик и письмо контактам партнёра)."""
+    from .access import company_access
+
+    company = getattr(order, "supplier", None)
+    if company is None:
+        return 0
+    _roles, modules = company_access(company.pk)
+    if "my_products" not in modules:
+        return 0
+    number = order.number or f"PO-{order.pk}"
+    rows = notify(
+        "partner_order_sent",
+        company=company,
+        object_id=order.pk,
+        object_number=number,
+        params={"number": number},
+        link=f"/partner/orders?orderId={order.pk}",
+        dedup=f"{order.pk}:sent",
+        bot_reaches=False,
+    )
+    return len(rows)
+
+
+def partner_rfq_sent(price_request) -> int:
+    """Запрос цены направлен поставщику — ждёт ответа (колокольчик и письмо контактам партнёра)."""
+    from .access import company_access
+
+    company = getattr(price_request, "supplier", None)
+    if company is None:
+        return 0
+    _roles, modules = company_access(company.pk)
+    if "my_products" not in modules:
+        return 0
+    ref = price_request.subject or f"RFQ-{price_request.pk}"
+    rows = notify(
+        "partner_rfq_sent",
+        company=company,
+        object_id=price_request.pk,
+        object_number=ref[:100],
+        params={"number": ref[:100]},
+        link=f"/partner/orders?view=rfq&rfqId={price_request.pk}",
+        dedup=f"{price_request.pk}:sent",
+        bot_reaches=False,
+    )
+    return len(rows)
+
+
+def partner_goods_received(receipt) -> int:
+    """Склад принял поставку по заказу — колокольчик контактам партнёра."""
+    from .access import company_access
+
+    order = getattr(receipt, "order", None)
+    if order is None:
+        return 0
+    company = getattr(order, "supplier", None)
+    if company is None:
+        return 0
+    _roles, modules = company_access(company.pk)
+    if "my_products" not in modules:
+        return 0
+    number = order.number or f"PO-{order.pk}"
+    doc = receipt.supplier_doc or str(receipt.pk)
+    rows = notify(
+        "partner_goods_received",
+        company=company,
+        object_id=order.pk,
+        object_number=number,
+        params={"number": number, "receipt": doc},
+        link=f"/partner/orders?orderId={order.pk}",
+        dedup=f"{receipt.pk}:received",
+        bot_reaches=False,
+    )
+    return len(rows)

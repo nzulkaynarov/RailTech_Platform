@@ -350,3 +350,92 @@ def test_partner_product_documents_match_the_contract(partner_world):
     list_after_del = client_a.get(f"{PREFIX}/products/{card.pk}/documents")
     assert list_after_del.status_code == 200
     assert len(list_after_del.json()) == 0
+
+
+def test_partner_finance_and_scorecard_match_contract(partner_world):
+    """Сводка взаиморасчётов и оценка эффективности партнёра по контракту (K4, K5)."""
+    from decimal import Decimal
+
+    from supply.models import (
+        GoodsReceipt,
+        GoodsReceiptLine,
+        OrderStatus,
+        PriceRequest,
+        PriceRequestStatus,
+        SupplierOrder,
+        SupplierOrderLine,
+    )
+
+    w = partner_world
+    a = w["a"]
+    product = w["cards"]["published"]
+
+    # Завершённый заказ с приёмкой
+    order_completed = SupplierOrder.objects.create(
+        number="ЗП-2026-099",
+        number_year=2026,
+        number_seq=99,
+        supplier=a,
+        status=OrderStatus.RECEIVED,
+        expected_date="2026-11-20",
+    )
+    line_c = SupplierOrderLine.objects.create(
+        order=order_completed,
+        position=1,
+        product=product,
+        name="Болт А-4",
+        quantity=20,
+        received_quantity=20,
+        unit_price=Decimal("120.00"),
+    )
+    receipt_c = GoodsReceipt.objects.create(
+        order=order_completed,
+        supplier_doc="ТТН-10099",
+    )
+    GoodsReceiptLine.objects.create(
+        receipt=receipt_c,
+        order_line=line_c,
+        quantity=20,
+    )
+
+    # Запрос цен
+    PriceRequest.objects.create(
+        supplier=a,
+        subject="Запрос цен на крепёж",
+        status=PriceRequestStatus.SENT,
+        to_email="north@plant-north.example",
+    )
+
+    # 1. Сводка партнёра А
+    resp = w["client_a"].get(f"{PREFIX}/finance")
+    assert resp.status_code == 200
+    assert_matches(resp.json(), "/partner/finance")
+    data = resp.json()
+
+    assert "balances" in data
+    assert "scorecard" in data
+    assert "settlements" in data
+    assert isinstance(data["balances"], list)
+    assert len(data["balances"]) > 0
+    bal = data["balances"][0]
+    assert bal["currency"]
+    assert Decimal(bal["ordered_total"]) >= Decimal(bal["received_total"])
+
+    sc = data["scorecard"]
+    assert 0 <= sc["otif_rate"] <= 100
+    assert 0 <= sc["rfq_response_rate"] <= 100
+    assert 0 <= sc["price_freshness_rate"] <= 100
+    assert sc["completed_orders_count"] >= 1
+
+    settlements = data["settlements"]
+    assert len(settlements) >= 1
+    st = settlements[0]
+    assert "order_id" in st
+    assert "order_number" in st
+    assert "status" in st
+    assert "receipts_count" in st
+
+    # 2. Сводка партнёра Б
+    resp_b = w["client_b"].get(f"{PREFIX}/finance")
+    assert resp_b.status_code == 200
+    assert_matches(resp_b.json(), "/partner/finance")

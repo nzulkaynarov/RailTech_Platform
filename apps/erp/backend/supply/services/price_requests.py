@@ -127,6 +127,13 @@ def create(
         request.status = PriceRequestStatus.FAILED
         request.error = error
         request.save(update_fields=["status", "error"])
+    else:
+        try:
+            from portal.services import notice_sources
+
+            notice_sources.partner_rfq_sent(request)
+        except Exception:
+            logger.exception("Не удалось отправить уведомление о запросе цены %s", request.pk)
     _log_deal(deal, user, request, supplier.name, failed)
     return request
 

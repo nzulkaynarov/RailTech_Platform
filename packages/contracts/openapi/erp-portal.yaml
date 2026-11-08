@@ -2374,6 +2374,29 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
+  /partner/finance:
+    get:
+      tags: [partner]
+      operationId: getPartnerFinanceSummary
+      summary: Взаиморасчёты и показатели эффективности поставщика
+      description: |
+        Финансовая сводка по заказам поставщика (суммы заказов, приёмок, остатка в пути)
+        по валютам, оценка качества работы (OTIF %, ответы на RFQ %, актуальность цен)
+        и детализированные взаиморасчёты по заказам.
+      responses:
+        '200':
+          description: Сводка взаиморасчётов и оценка эффективности
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerFinanceSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
   /company:
     get:
       tags: [company]
@@ -4222,6 +4245,121 @@ components:
           maxLength: 1000
       additionalProperties: false
 
+    PartnerFinanceBalance:
+      type: object
+      description: Баланс взаиморасчётов по конкретной валюте
+      required: [currency, ordered_total, received_total, in_transit_total, orders_count]
+      properties:
+        currency:
+          type: string
+          example: UZS
+        ordered_total:
+          type: string
+          example: "12500000.00"
+        received_total:
+          type: string
+          example: "10000000.00"
+        in_transit_total:
+          type: string
+          example: "2500000.00"
+        orders_count:
+          type: integer
+          minimum: 0
+      additionalProperties: false
+
+    PartnerFinanceScorecard:
+      type: object
+      description: Показатели эффективности поставщика (Scorecard)
+      required:
+        - otif_rate
+        - rfq_response_rate
+        - price_freshness_rate
+        - completed_orders_count
+        - total_rfqs_count
+        - active_offers_count
+      properties:
+        otif_rate:
+          type: number
+          description: "On-Time In-Full (OTIF) процент: своевременность и полнота приёмки"
+          minimum: 0
+          maximum: 100
+          example: 95.5
+        rfq_response_rate:
+          type: number
+          description: "Процент ответов на запросы цен (RFQ)"
+          minimum: 0
+          maximum: 100
+          example: 88.0
+        price_freshness_rate:
+          type: number
+          description: "Процент актуальных цен в каталоге"
+          minimum: 0
+          maximum: 100
+          example: 92.3
+        completed_orders_count:
+          type: integer
+          minimum: 0
+        total_rfqs_count:
+          type: integer
+          minimum: 0
+        active_offers_count:
+          type: integer
+          minimum: 0
+      additionalProperties: false
+
+    PartnerSettlementLine:
+      type: object
+      description: Строка взаиморасчётов по заказу
+      required:
+        - order_id
+        - order_number
+        - order_date
+        - status
+        - currency
+        - ordered_amount
+        - received_amount
+        - in_transit_amount
+        - receipts_count
+      properties:
+        order_id:
+          type: integer
+        order_number:
+          type: string
+        order_date:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/PartnerOrderStatus'
+        currency:
+          type: string
+        ordered_amount:
+          type: string
+        received_amount:
+          type: string
+        in_transit_amount:
+          type: string
+        receipts_count:
+          type: integer
+          minimum: 0
+      additionalProperties: false
+
+    PartnerFinanceSummary:
+      type: object
+      description: Сводка взаиморасчётов и оценка эффективности работы партнёра (K4, K5)
+      required: [balances, scorecard, settlements]
+      properties:
+        balances:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerFinanceBalance'
+        scorecard:
+          $ref: '#/components/schemas/PartnerFinanceScorecard'
+        settlements:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerSettlementLine'
+      additionalProperties: false
+
     Reason:
       type: object
       required: [reason]
@@ -4390,7 +4528,9 @@ components:
         Вид уведомления (событие для контрагента): `quote_sent` — КП ждёт решения, `invoice_issued` — выставлен счёт,
         `payment_overdue` — срок оплаты счёта прошёл, `act_issued` — акт ждёт приёмки, `delivery_status_changed` — статус
         поставки, `delivery_eta_changed` — сдвиг срока поставки, `manager_replied` — ответ менеджера в чате кабинета,
-        `partner_card_returned` — карточка партнёра возвращена на доработку, `partner_card_published` — опубликована.
+        `partner_card_returned` — карточка партнёра возвращена на доработку, `partner_card_published` — опубликована,
+        `partner_order_sent` — направлен заказ на поставку, `partner_rfq_sent` — направлен запрос цен,
+        `partner_goods_received` — склад принял товары по заказу.
         Незнакомый вид Cabinet показывает общим текстом.
       enum:
         - quote_sent
@@ -4403,6 +4543,9 @@ components:
         - partner_card_returned
         - partner_card_published
         - bank_requisites_changed
+        - partner_order_sent
+        - partner_rfq_sent
+        - partner_goods_received
 
     NotificationGroup:
       type: string
@@ -4411,7 +4554,7 @@ components:
 
     NotificationObjectType:
       type: string
-      enum: [quote, invoice, act, delivery, chat, partner_product]
+      enum: [quote, invoice, act, delivery, chat, partner_product, partner_order, partner_rfq]
 
     NotificationAction:
       type: string

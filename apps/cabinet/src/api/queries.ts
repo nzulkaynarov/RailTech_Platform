@@ -42,6 +42,7 @@ export const keys = {
   partnerPriceRequestList: (params: portal.PartnerPriceRequestsQuery) =>
     ['partner', 'price-requests', 'list', params] as const,
   partnerPriceRequest: (id: number) => ['partner', 'price-requests', 'item', id] as const,
+  partnerFinance: ['partner', 'finance'] as const,
   verify: (code: string) => ['verify', code] as const,
   partnerApplication: ['company', 'partner-application'] as const,
   securityLog: ['company', 'security-log'] as const,
@@ -328,14 +329,14 @@ export const useConfirmPartnerOrder = () =>
   useInvalidatingMutation(
     ({ id, body }: { id: number; body?: portal.PartnerOrderConfirmRequest }) =>
       portal.confirmPartnerOrder(id, body),
-    [keys.partnerOrders],
+    [keys.partnerOrders, keys.partnerFinance],
   );
 
 export const useShipPartnerOrder = () =>
   useInvalidatingMutation(
     ({ id, body }: { id: number; body: portal.PartnerShipmentNoticeRequest }) =>
       portal.shipPartnerOrder(id, body),
-    [keys.partnerOrders],
+    [keys.partnerOrders, keys.partnerFinance],
   );
 
 export const usePartnerPriceRequests = (params: portal.PartnerPriceRequestsQuery = {}, options: ListOptions = {}) =>
@@ -356,8 +357,15 @@ export const useRespondPartnerPriceRequest = () =>
   useInvalidatingMutation(
     ({ id, body }: { id: number; body: portal.PartnerPriceRequestResponse }) =>
       portal.respondPartnerPriceRequest(id, body),
-    [keys.partnerPriceRequests],
+    [keys.partnerPriceRequests, keys.partnerFinance],
   );
+
+export const usePartnerFinance = (options: ListOptions = {}) =>
+  useQuery({
+    queryKey: keys.partnerFinance,
+    queryFn: portal.getPartnerFinanceSummary,
+    enabled: options.enabled ?? true,
+  });
 
 export const usePartnerProductDocuments = (productId: number | null, options: ListOptions = {}) =>
   useQuery({
