@@ -18,6 +18,7 @@ import pghistory
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
+from integration.models import CrmContactMapping
 from integration.services.partner_client import lock_company, request_client_in_crm
 from parties.models import (
     Company,
@@ -68,6 +69,9 @@ def _company_match(app: PartnerApplication) -> tuple[str | None, Company | None]
 def _chosen_company(app: PartnerApplication, data: dict) -> Company | None:
     """Компания заявки по решению сотрудника; `None` — завести новую. Совпадение без решения — отказ (FX-1, PART-CRM)."""
     company_id = data.get("company_id")
+    if company_id and app.company_id and company_id != app.company_id:
+        # Привязка решена при отправке договора: иначе первая компания осталась бы с приглашением и открытым входом
+        raise AccessError("COMPANY_MISMATCH")
     if company_id:
         company = Company.objects.filter(pk=company_id).first()
         if company is None:
@@ -127,6 +131,7 @@ def _applicant_contact(app: PartnerApplication, company: Company, user) -> Conta
             preferred_channel="email",
             created_by=user,
         )
+        app.applicant_contact_created = True
     return contact
 
 
@@ -201,7 +206,10 @@ def list_applications(status_filter: str | None = None) -> dict:
     qs = PartnerApplication.objects.all().select_related("company", "reviewed_by").order_by("-created_at")
     if status_filter:
         qs = qs.filter(status=status_filter)
-    pending_count = PartnerApplication.objects.filter(status=PartnerApplicationStatus.SUBMITTED).count()
+    # Ждут сотрудника: новые и согласованные кандидатом
+    pending_count = PartnerApplication.objects.filter(
+        status__in=[PartnerApplicationStatus.SUBMITTED, PartnerApplicationStatus.CANDIDATE_AGREED]
+    ).count()
     apps = list(qs)
     deliveries = _invite_deliveries(apps)
     return {
@@ -275,7 +283,8 @@ def send_contract(pk: int, data: dict, user) -> dict:
                     )
                 elif rel.status == RelationshipStatus.SUSPENDED:
                     raise AccessError("PARTNER_SUSPENDED")
-                else:
+                elif rel.status == RelationshipStatus.INVITED:
+                    # Действующему партнёру договор меняет только одобрение: кандидат ещё ничего не согласовал
                     rel.contract_number = app.contract_number
                     rel.contract_date = app.contract_date
                     rel.save(update_fields=["contract_number", "contract_date"])
@@ -323,9 +332,10 @@ def approve_application(pk: int, data: dict, user) -> dict:
                 raise AccessError("APPLICATION_ALREADY_APPROVED", 400)
             if app.status == PartnerApplicationStatus.REJECTED:
                 raise AccessError("APPLICATION_ALREADY_DECIDED", 400)
-            # Без согласия кандидата — только явный обход с причиной в журнале (FX-1)
+            # Без согласия кандидата — только явный обход с причиной в журнале и только после отправки договора (FX-1)
             bypassed_agreement = app.status != PartnerApplicationStatus.CANDIDATE_AGREED
-            if bypassed_agreement and not override_reason:
+            may_bypass = app.status == PartnerApplicationStatus.CONTRACT_SENT and override_reason
+            if bypassed_agreement and not may_bypass:
                 raise AccessError("CANDIDATE_AGREEMENT_REQUIRED", 400)
 
             # 1. Компания: выбранная сотрудником, уже привязанная или новая
@@ -450,6 +460,24 @@ def _close_candidate_access(app: PartnerApplication) -> None:
     )
     invited.filter(modules=[]).delete()
     invited.update(status=RelationshipStatus.SUSPENDED, suspended_at=timezone.now())
+    _archive_created_contact(app)
+
+
+def _archive_created_contact(app: PartnerApplication) -> None:
+    """Контакт, заведённый этой заявкой, снимается (решение архитектора, #427): вход читает `active_contact_q`.
+
+    Существующий контакт компании не трогаем, как и связанный с CRM или с другой неотклонённой заявкой.
+    """
+    contact = app.applicant_contact
+    if contact is None or not app.applicant_contact_created or contact.is_archived:
+        return
+    other_application = PartnerApplication.objects.filter(applicant_contact=contact).exclude(pk=app.pk)
+    if other_application.exclude(status=PartnerApplicationStatus.REJECTED).exists():
+        return
+    if CrmContactMapping.objects.filter(contact=contact).exists():
+        return
+    contact.archived_at = timezone.now()
+    contact.save(update_fields=["archived_at"])
 
 
 def reject_application(pk: int, data: dict, user) -> dict:

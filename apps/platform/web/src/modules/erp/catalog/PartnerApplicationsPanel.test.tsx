@@ -128,6 +128,15 @@ describe("Очередь заявок кандидатов в партнёры (
     expect(await screen.findByText("Одобрена")).toBeVisible();
   });
 
+  it("новую заявку нельзя одобрить, пока не отправлен договор", async () => {
+    await openApplications("supply@demo.example");
+
+    const newRow = screen.getByText("ООО «Сталь-Транс»").closest("tr");
+    if (!newRow) throw new Error("Row not found");
+    expect(within(newRow).queryByRole("button", { name: "Одобрить без согласия" })).toBeNull();
+    expect(within(newRow).queryByRole("button", { name: "Одобрить и открыть кабинет" })).toBeNull();
+  });
+
   it("сбой письма виден в строке, договор можно отправить снова", async () => {
     await openApplications("supply@demo.example");
 

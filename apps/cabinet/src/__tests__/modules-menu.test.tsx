@@ -1,11 +1,14 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { parse } from 'yaml';
+import { afterEach, describe, expect, it } from 'vitest';
 import { axe } from 'vitest-axe';
 
 import { NAV_ITEMS, navFor } from '@/app/nav';
 import i18n from '@/i18n';
+import type { Schemas } from '@/api/portal';
 import { CLIENT_ACCESS } from '@/mocks/fixtures';
+import { setMockPartnerApplication } from '@/mocks/handlers';
 import { renderApp, signedIn } from '@/test/render';
 
 /** Меню строится из `/me.modules` (ADR-0022, PART-1): клиент — прежнее меню, партнёр — по включённым модулям. */
@@ -279,10 +282,49 @@ describe('меню из /me.modules', () => {
     expect(screen.queryByText(/скоро/i)).not.toBeInTheDocument();
   });
 
-  it('пустой список модулей — тот же экран', async () => {
-    signedIn('actor', 'demo', { roles: ['partner'], modules: [] });
-    renderApp('/requests');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Доступ открыт' })).toBeInTheDocument();
+  describe('кандидат в партнёры (FX-1): сервер отдаёт roles=[partner], modules=[messages, profile]', () => {
+    const CANDIDATE = { roles: ['partner' as const], modules: ['messages', 'profile'] };
+    const CONTRACT_SENT = {
+      id: 701,
+      status: 'contract_sent',
+      kind: 'supplier',
+      categories_description: 'Крепёж и рельсовые скрепления',
+      company_name: 'ООО Кандидат',
+      inn: '7722222222',
+      contact_name: 'Кандидат',
+      email: 'candidate@candidate.example',
+      phone: null,
+      contract_number: 'PART-2026-0701',
+      contract_date: '2026-11-08',
+      rejected_reason: null,
+      created_at: '2026-11-08T10:00:00Z',
+      updated_at: '2026-11-08T11:00:00Z',
+    } as Schemas['PartnerApplication'];
+
+    afterEach(() => setMockPartnerApplication(null));
+
+    it('на главной — карточка заявки с кнопкой согласования', async () => {
+      signedIn('actor', 'demo', CANDIDATE);
+      setMockPartnerApplication(CONTRACT_SENT);
+      const { container } = renderApp('/');
+      expect(await screen.findByRole('button', { name: 'Согласовать проект договора' })).toBeInTheDocument();
+      expect((await axe(container)).violations).toEqual([]);
+    });
+
+    it('раздел «Компания» приводит к той же карточке', async () => {
+      signedIn('actor', 'demo', CANDIDATE);
+      setMockPartnerApplication(CONTRACT_SENT);
+      const { router } = renderApp('/company');
+      expect(await screen.findByRole('button', { name: 'Согласовать проект договора' })).toBeInTheDocument();
+      expect(router.state.location.pathname).toBe('/');
+    });
+
+    it('без заявки — обычный первый раздел', async () => {
+      signedIn('actor', 'demo', CANDIDATE);
+      setMockPartnerApplication(null);
+      const { router } = renderApp('/');
+      await waitFor(() => expect(router.state.location.pathname).toBe('/messages'));
+    });
   });
 
   it.each([

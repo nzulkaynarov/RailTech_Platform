@@ -183,19 +183,21 @@ export function PartnerApplicationsPanel() {
                 )}
               </Button>
             ) : null}
-            <Button
-              type={row.status === "candidate_agreed" ? "primary" : "default"}
-              size="small"
-              onClick={() => {
-                setApproveRow(row);
-              }}
-            >
-              {t(
-                row.status === "candidate_agreed"
-                  ? "partnerApplications.actions.approve"
-                  : "partnerApplications.actions.approveWithoutAgreement",
-              )}
-            </Button>
+            {row.status === "submitted" ? null : (
+              <Button
+                type={row.status === "candidate_agreed" ? "primary" : "default"}
+                size="small"
+                onClick={() => {
+                  setApproveRow(row);
+                }}
+              >
+                {t(
+                  row.status === "candidate_agreed"
+                    ? "partnerApplications.actions.approve"
+                    : "partnerApplications.actions.approveWithoutAgreement",
+                )}
+              </Button>
+            )}
             <Button
               danger
               size="small"
@@ -441,7 +443,7 @@ function ApproveModal({
   const [companyChoice, setCompanyChoice] = useState<CompanyChoice | undefined>(undefined);
   const [overrideReason, setOverrideReason] = useState("");
   const needsChoice = Boolean(item.company_match_pending);
-  const withoutAgreement = item.status !== "candidate_agreed";
+  const withoutAgreement = item.status === "contract_sent";
 
   const approve = useApprovePartnerApplication({
     mutation: {

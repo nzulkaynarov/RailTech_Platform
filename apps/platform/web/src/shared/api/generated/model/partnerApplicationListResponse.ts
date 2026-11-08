@@ -6,6 +6,6 @@ import type { PartnerApplicationItem } from "./partnerApplicationItem";
 
 export interface PartnerApplicationListResponse {
   items: PartnerApplicationItem[];
-  /** Количество заявок, ожидающих рассмотрения (submitted) */
+  /** Заявки, ждущие сотрудника: submitted и candidate_agreed */
   pending_count: number;
 }

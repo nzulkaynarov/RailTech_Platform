@@ -58,13 +58,14 @@ class TestPartnerApplicationsRead:
         _make_app(status=PartnerApplicationStatus.SUBMITTED)
         _make_app(status=PartnerApplicationStatus.SUBMITTED, company_name="Второй", inn="7709999999")
         _make_app(status=PartnerApplicationStatus.CONTRACT_SENT, company_name="Третий", inn="7708888888")
+        _make_app(status=PartnerApplicationStatus.CANDIDATE_AGREED, company_name="Четвёртый", inn="7707777777")
 
         client = world["clients"]["supply"]
         response = client.get("/api/v1/catalog/partner-applications/")
         assert response.status_code == 200
         data = response.json()
-        assert len(data["items"]) == 3
-        assert data["pending_count"] == 2
+        assert len(data["items"]) == 4
+        assert data["pending_count"] == 3
 
     def test_status_filter(self, world):
         _make_app(status=PartnerApplicationStatus.SUBMITTED)
@@ -76,7 +77,7 @@ class TestPartnerApplicationsRead:
         data = response.json()
         assert len(data["items"]) == 1
         assert data["items"][0]["status"] == "contract_sent"
-        assert data["pending_count"] == 1
+        assert data["pending_count"] == 1  # подана — ждёт снабжение; «договор отправлен» ждёт кандидата
 
     def test_retrieve_detail_with_matching_company(self, world):
         company = world["supplier"]

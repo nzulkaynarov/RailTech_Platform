@@ -12469,7 +12469,7 @@ paths:
       tags: [erp-catalog]
       operationId: approvePartnerApplication
       summary: 'Расчёт · Заявка в партнёры: подтвердить договор и открыть кабинет'
-      description: ERP `POST catalog/partner-applications/{id}/approve/` — право `supply.manage`. Только после согласия кандидата или с `override_reason` (иначе 422 `candidate_agreement_required`). Активирует отношение `partner`, фиксирует договор и отправляет приглашение.
+      description: ERP `POST catalog/partner-applications/{id}/approve/` — право `supply.manage`. Только после согласия кандидата; из `contract_sent` — с `override_reason` (иначе 422 `candidate_agreement_required`). `company_id`, отличный от уже привязанной компании, — 422 `company_mismatch`. Активирует отношение `partner`, фиксирует договор и отправляет приглашение.
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
         - {name: id, in: path, required: true, description: Id заявки, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
@@ -24621,7 +24621,7 @@ components:
           items: {$ref: '#/components/schemas/PartnerApplicationItem'}
         pending_count:
           type: integer
-          description: 'Количество заявок, ожидающих рассмотрения (submitted)'
+          description: 'Заявки, ждущие сотрудника: submitted и candidate_agreed'
     PartnerApplicationSendContractRequest:
       type: object
       additionalProperties: false

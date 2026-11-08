@@ -13748,7 +13748,7 @@ export interface components {
         };
         DeskPartnerApplicationListResponse: {
             items: components["schemas"]["DeskPartnerApplicationListItem"][];
-            /** @description Количество заявок в статусе submitted */
+            /** @description Заявки, ждущие сотрудника: submitted и candidate_agreed */
             pending_count: number;
         };
         DeskPartnerApplicationRejectInRequest: {

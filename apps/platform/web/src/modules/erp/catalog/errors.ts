@@ -80,6 +80,7 @@ const REASONS = new Set([
   "review_reason_too_long",
   // FX-1: договорной шлюз заявок партнёров
   "company_match_confirmation_required",
+  "company_mismatch",
   "company_inn_taken",
   "candidate_agreement_required",
   "partner_suspended",

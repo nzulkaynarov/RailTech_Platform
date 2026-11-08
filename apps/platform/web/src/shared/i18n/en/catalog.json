@@ -143,7 +143,8 @@
       "candidate_agreement_required": "The candidate has not agreed the contract yet. Give a reason to approve without agreement.",
       "partner_suspended": "The partner is suspended. Lift the suspension in the supplier card.",
       "inn_too_long": "The tax ID in the application is longer than 20 characters. Reject it or ask to re-apply.",
-      "contract_render_failed": "Could not build the contract. Nothing was saved, try again later."
+      "contract_render_failed": "Could not build the contract. Nothing was saved, try again later.",
+      "company_mismatch": "The application is already linked to another organization. Refresh the list."
     }
   },
   "items": {

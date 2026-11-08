@@ -59,6 +59,13 @@ class PartnerApplication(models.Model):
         verbose_name=_("Контакт-заявитель"),
         help_text=_("Контакт клиента, подавший заявку из кабинета"),
     )
+    applicant_contact_created = models.BooleanField(
+        default=False,
+        verbose_name=_("Контакт заведён заявкой"),
+        help_text=_(
+            "Контакт-заявитель создан этой заявкой: при её отклонении он снимается, если ни с чем больше не связан"
+        ),
+    )
     status = models.CharField(
         max_length=20,
         choices=PartnerApplicationStatus.choices,

@@ -39768,7 +39768,7 @@
                     },
                     "pending_count": {
                         "type": "integer",
-                        "description": "Количество заявок в статусе submitted"
+                        "description": "Заявки, ждущие сотрудника: submitted и candidate_agreed"
                     }
                 },
                 "required": [

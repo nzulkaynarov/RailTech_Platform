@@ -6812,7 +6812,7 @@ export interface paths {
     put?: never;
     /**
      * Расчёт · Заявка в партнёры: подтвердить договор и открыть кабинет
-     * @description ERP `POST catalog/partner-applications/{id}/approve/` — право `supply.manage`. Только после согласия кандидата или с `override_reason` (иначе 422 `candidate_agreement_required`). Активирует отношение `partner`, фиксирует договор и отправляет приглашение.
+     * @description ERP `POST catalog/partner-applications/{id}/approve/` — право `supply.manage`. Только после согласия кандидата; из `contract_sent` — с `override_reason` (иначе 422 `candidate_agreement_required`). `company_id`, отличный от уже привязанной компании, — 422 `company_mismatch`. Активирует отношение `partner`, фиксирует договор и отправляет приглашение.
      */
     post: operations["approvePartnerApplication"];
     delete?: never;
@@ -14770,7 +14770,7 @@ export interface components {
     };
     PartnerApplicationListResponse: {
       items: components["schemas"]["PartnerApplicationItem"][];
-      /** @description Количество заявок, ожидающих рассмотрения (submitted) */
+      /** @description Заявки, ждущие сотрудника: submitted и candidate_agreed */
       pending_count: number;
     };
     PartnerApplicationSendContractRequest: {

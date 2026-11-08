@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 
 import { apiErrorKey, loginErrorText } from '@/api/errors';
 import { isPortalApiError } from '@/api/portal';
+import { useCompanyPartnerApplication } from '@/api/queries';
+import { PartnerApplicationCard } from '@/pages/company';
 import { botLink } from './links';
 import { StatusScreen } from '@/components/StatusScreen';
 import { Button } from '@/components/ui/button';
@@ -81,12 +83,23 @@ export function WebOnly() {
  */
 export function HomeRedirect() {
   const { work } = useNav();
+  // Кандидат в партнёры (`invited`, модули — только обязательные): его рабочее место — заявка и договор (FX-1)
+  const onlyChat = work.length > 0 && work.every((item) => item.module === 'messages');
+  const application = useCompanyPartnerApplication({ enabled: onlyChat });
   // Адрес, с которого отправили на вход (`RequireSession`), — один раз; потом обычный первый раздел.
   const [back] = useState(() => readReturnTo());
   useEffect(() => {
     if (back) clearReturnTo();
   }, [back]);
   if (back) return <Navigate to={back} replace />;
+  if (onlyChat && application.isPending) return null;
+  if (onlyChat && application.data?.has_application) {
+    return (
+      <div className="mx-auto max-w-2xl py-8">
+        <PartnerApplicationCard />
+      </div>
+    );
+  }
   // Нет рабочих разделов — остаёмся на «/»: оболочка показывает «Доступ открыт» и «Профиль» в меню
   if (work.length === 0) return null;
   return <Navigate to={work[0]?.to ?? '/requests'} replace />;
@@ -101,7 +114,8 @@ export function RequireModule() {
   const { items, work } = useNav();
   const section = navItemFor(pathname);
   if (section && !items.some((item) => item.module === section.module)) {
-    return <Navigate to={work[0]?.to ?? '/'} replace />;
+    // «Компания» кандидата ведёт на главную — там его заявка (FX-1); без заявки главная отправит в первый раздел
+    return <Navigate to={section.module === 'company' ? '/' : (work[0]?.to ?? '/')} replace />;
   }
   return <Outlet />;
 }

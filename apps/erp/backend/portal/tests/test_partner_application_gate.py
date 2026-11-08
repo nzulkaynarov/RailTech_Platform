@@ -158,7 +158,7 @@ class TestCompanyMatchIsAProposal:
         assert not Contact.objects.filter(company=foreign).exists()
 
     def test_approve_does_not_bind_without_confirmation(self, supply, victim):
-        app = make_app(inn=victim.inn, email="attacker@evil.example")
+        app = make_app(inn=victim.inn, email="attacker@evil.example", status=PartnerApplicationStatus.CONTRACT_SENT)
 
         response = post(supply, app, "approve", {"contract_number": "D-1", "override_reason": "бумажный договор"})
 
@@ -276,7 +276,7 @@ class TestApproveGate:
         assert response.json()["detail"] == "CANDIDATE_AGREEMENT_REQUIRED"
 
     def test_override_goes_to_the_journal_with_reason(self, world, supply):
-        app = make_app()
+        app = make_app(status=PartnerApplicationStatus.CONTRACT_SENT)
 
         response = post(
             supply, app, "approve", {"contract_number": "D-1", "override_reason": "договор подписан на бумаге"}
@@ -291,6 +291,16 @@ class TestApproveGate:
         assert entry.after_data["override_reason"] == "договор подписан на бумаге"
         assert entry.user_id == world["users"]["supply"].pk
 
+    def test_override_is_refused_until_the_contract_is_sent(self, supply):
+        app = make_app()
+
+        response = post(supply, app, "approve", {"contract_number": "D-1", "override_reason": "договор на бумаге"})
+
+        assert response.status_code == 400
+        assert response.json()["detail"] == "CANDIDATE_AGREEMENT_REQUIRED"
+        app.refresh_from_db()
+        assert app.status == PartnerApplicationStatus.SUBMITTED
+
     def test_agreed_application_is_approved_without_override(self, supply):
         company = Company.objects.create(name="Партнёр", inn="7733333333", is_active=True)
         app = agreed_app(company)
@@ -303,7 +313,7 @@ class TestApproveGate:
         ).exists()
 
     def test_override_does_not_print_candidate_agreement(self, supply):
-        app = make_app()
+        app = make_app(status=PartnerApplicationStatus.CONTRACT_SENT)
         post(supply, app, "approve", {"contract_number": "D-1", "override_reason": "договор подписан на бумаге"})
         app.refresh_from_db()
 
@@ -497,6 +507,137 @@ class TestApproveKeepsWhatIsThere:
         assert str(app.contract_date) == "2026-01-15"
 
 
+class TestBindingIsNotRewritten:
+    """Ревью #427: договор действующего партнёра и уже привязанная компания не меняются запросом."""
+
+    def test_send_contract_keeps_contract_of_active_partner(self, supply):
+        company = Company.objects.create(name="Партнёр", inn="7746666666", is_active=True)
+        rel = CompanyRelationship.objects.create(
+            company=company,
+            role=RelationshipRole.PARTNER,
+            status=RelationshipStatus.ACTIVE,
+            modules=["my_products"],
+            contract_number="OLD-1",
+            contract_date="2026-01-15",
+        )
+        app = make_app(inn=company.inn)
+
+        response = post(supply, app, "send-contract", {"company_id": company.pk, "contract_number": "NEW-1"})
+        assert response.status_code == 200
+        assert post(supply, app, "reject", {"rejected_reason": "Передумали"}).status_code == 200
+
+        rel.refresh_from_db()
+        assert rel.contract_number == "OLD-1"
+        assert str(rel.contract_date) == "2026-01-15"
+
+    def test_invited_relationship_gets_contract_of_application(self, supply):
+        company = Company.objects.create(name="Партнёр", inn="7746666667", is_active=True)
+        rel = CompanyRelationship.objects.create(
+            company=company, role=RelationshipRole.PARTNER, status=RelationshipStatus.INVITED, modules=[]
+        )
+        app = make_app(inn=company.inn)
+
+        response = post(supply, app, "send-contract", {"company_id": company.pk, "contract_number": "NEW-2"})
+
+        assert response.status_code == 200
+        rel.refresh_from_db()
+        assert rel.contract_number == "NEW-2"
+
+    def test_approve_cannot_move_bound_application_to_another_company(self, supply):
+        bound = Company.objects.create(name="Привязанная", inn="7746666668", is_active=True)
+        other = Company.objects.create(name="Другая", inn="7746666669", is_active=True)
+        rel = CompanyRelationship.objects.create(
+            company=bound, role=RelationshipRole.PARTNER, status=RelationshipStatus.INVITED, modules=[]
+        )
+        app = agreed_app(bound)
+
+        response = post(supply, app, "approve", {"contract_number": "D-1", "company_id": other.pk})
+
+        assert response.status_code == 400
+        assert response.json()["detail"] == "COMPANY_MISMATCH"
+        app.refresh_from_db()
+        rel.refresh_from_db()
+        assert app.company_id == bound.pk and app.status == PartnerApplicationStatus.CANDIDATE_AGREED
+        assert rel.status == RelationshipStatus.INVITED
+        assert not Contact.objects.filter(company=other).exists()
+        assert not CompanyRelationship.objects.filter(company=other).exists()
+
+    def test_approve_with_the_same_bound_company_goes_through(self, supply):
+        bound = Company.objects.create(name="Привязанная", inn="7746666670", is_active=True)
+        app = agreed_app(bound)
+
+        assert post(supply, app, "approve", {"contract_number": "D-1", "company_id": bound.pk}).status_code == 200
+
+
+class TestRejectArchivesCreatedContact:
+    """Решение архитектора по #427: контакт, заведённый этой заявкой и ни с чем больше не связанный, снимается при отклонении."""
+
+    def sent(self, supply, **kwargs) -> PartnerApplication:
+        app = make_app(**kwargs)
+        assert post(supply, app, "send-contract", {}).status_code == 200
+        app.refresh_from_db()
+        return app
+
+    def test_contact_created_by_application_is_archived(self, supply):
+        app = self.sent(supply)
+        contact = app.applicant_contact
+
+        assert post(supply, app, "reject", {"rejected_reason": "Не наш профиль"}).status_code == 200
+
+        contact.refresh_from_db()
+        assert contact.is_archived
+
+    def test_contact_created_in_confirmed_company_is_archived(self, supply, victim):
+        app = make_app(inn=victim.inn, email="owner@victim.example")
+        assert post(supply, app, "send-contract", {"company_id": victim.pk}).status_code == 200
+        app.refresh_from_db()
+
+        assert post(supply, app, "reject", {"rejected_reason": "Не подтвердили"}).status_code == 200
+
+        contact = Contact.objects.get(company=victim, email="owner@victim.example")
+        assert contact.is_archived
+
+    def test_existing_contact_of_the_company_is_kept(self, supply, victim):
+        existing = Contact.objects.create(company=victim, name="Сотрудник", email="staff@victim.example", can_act=True)
+        app = make_app(inn=victim.inn, email="staff@victim.example")
+        assert post(supply, app, "send-contract", {"company_id": victim.pk}).status_code == 200
+        app.refresh_from_db()
+        assert app.applicant_contact_id == existing.pk
+
+        assert post(supply, app, "reject", {"rejected_reason": "Дубль"}).status_code == 200
+
+        existing.refresh_from_db()
+        assert not existing.is_archived
+
+    def test_contact_with_another_open_application_is_kept(self, supply):
+        app = self.sent(supply)
+        contact = app.applicant_contact
+        make_app(
+            company=app.company,
+            applicant_contact=contact,
+            company_name="Другая заявка",
+            inn="7777000001",
+            status=PartnerApplicationStatus.CONTRACT_SENT,
+        )
+
+        assert post(supply, app, "reject", {"rejected_reason": "Дубль"}).status_code == 200
+
+        contact.refresh_from_db()
+        assert not contact.is_archived
+
+    def test_contact_linked_to_crm_is_kept(self, supply):
+        from integration.models import CrmContactMapping
+
+        app = self.sent(supply)
+        contact = app.applicant_contact
+        CrmContactMapping.objects.create(crm_contact_id=98765, contact=contact)
+
+        assert post(supply, app, "reject", {"rejected_reason": "Дубль"}).status_code == 200
+
+        contact.refresh_from_db()
+        assert not contact.is_archived
+
+
 class TestRenderFailure:
     """(ж) Сбой WeasyPrint — ошибка, заглушка договором не сохраняется."""
 
@@ -620,7 +761,7 @@ class TestLongInn:
         assert response.json()["detail"] == "INN_TOO_LONG"
 
     def test_approve_refuses_already_stored_long_inn(self, supply):
-        app = make_app(inn=self.LONG)
+        app = make_app(inn=self.LONG, status=PartnerApplicationStatus.CONTRACT_SENT)
 
         response = post(supply, app, "approve", {"contract_number": "D-1", "override_reason": "бумага"})
 

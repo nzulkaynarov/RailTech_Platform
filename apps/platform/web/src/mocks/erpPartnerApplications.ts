@@ -85,7 +85,9 @@ export const erpPartnerApplicationsHandlers = [
     const url = new URL(request.url);
     const statusFilter = url.searchParams.get("status");
     const filtered = statusFilter ? items.filter((i) => i.status === statusFilter) : items;
-    const pendingCount = items.filter((i) => i.status === "submitted").length;
+    const pendingCount = items.filter(
+      (i) => i.status === "submitted" || i.status === "candidate_agreed",
+    ).length;
     return HttpResponse.json({
       items: filtered,
       pending_count: pendingCount,
@@ -136,7 +138,10 @@ export const erpPartnerApplicationsHandlers = [
       create_new_company?: boolean;
       override_reason?: string;
     };
-    if (item.status !== "candidate_agreed" && !body.override_reason) {
+    if (
+      item.status !== "candidate_agreed" &&
+      !(item.status === "contract_sent" && body.override_reason)
+    ) {
       return HttpResponse.json(
         {
           code: "VALIDATION_FAILED",

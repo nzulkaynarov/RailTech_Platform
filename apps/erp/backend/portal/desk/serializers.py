@@ -191,7 +191,7 @@ class DeskPartnerApplicationDetail(DeskPartnerApplicationListItem):
 
 class DeskPartnerApplicationListResponse(serializers.Serializer):
     items = DeskPartnerApplicationListItem(many=True)
-    pending_count = serializers.IntegerField(help_text="Количество заявок в статусе submitted")
+    pending_count = serializers.IntegerField(help_text="Заявки, ждущие сотрудника: submitted и candidate_agreed")
 
 
 class DeskPartnerApplicationSendContractIn(serializers.Serializer):

@@ -19,6 +19,8 @@ for (const width of WIDTHS) {
     await expect(list.getByText("Согласован кандидатом")).toBeVisible();
     await expect(list.getByText("Письмо-приглашение не доставлено")).toBeVisible();
     await expect(list.getByText("Совпадение в базе: АО «Южный Металл»")).toBeVisible();
+    // Новая заявка: договор ещё не отправлен, одобрить нельзя (решение архитектора по #427)
+    await expect(list.getByRole("button", { name: "Одобрить без согласия" })).toHaveCount(1);
     await expectNoViolations(page, "заявки партнёров");
     await settledScreenshot(page, "fx-1-queue");
 
