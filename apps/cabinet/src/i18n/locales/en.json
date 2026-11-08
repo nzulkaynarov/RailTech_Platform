@@ -849,7 +849,9 @@
           "role_change": "Role change",
           "member_deactivated": "Deactivation",
           "member_invited": "Invite",
-          "bank_details_changed": "Bank details changed"
+          "bank_details_changed": "Bank details changed",
+          "bank_details_change_requested": "Bank details change requested",
+          "bank_details_change_rejected": "Bank details change rejected"
         }
       },
       "closeEdit": "Close",
@@ -890,6 +892,16 @@
         "dialogDesc": "Specify your partnership kind and product categories. We will prepare the partner agreement.",
         "dialogSubmit": "Submit Application",
         "dialogSuccess": "Application successfully submitted for review."
+      },
+      "bankChange": {
+        "title": "Bank details change request",
+        "pending": "Under review",
+        "rejected": "Rejected",
+        "pendingHint": "The current details remain in effect until a staff member approves the change.",
+        "rejectedHint": "Reason: {{reason}}",
+        "alreadyPending": "A request is already under review: a new change can be submitted after the staff decision.",
+        "adminNotice": "The new details apply only after a staff check. All admins and the primary contact will be notified.",
+        "submitted": "The request was sent for review"
       }
     },
     "becomePartner": {
@@ -1244,7 +1256,8 @@
     "CANNOT_ELEVATE_RIGHTS": "Cannot grant rights higher than your own.",
     "ADMIN_REQUIRED": "This action requires company administrator rights.",
     "CANNOT_MODIFY_PRIMARY_CONTACT": "Cannot modify permissions of the primary company contact.",
-    "ORDER_FINALIZED": "This order has already been completed or cancelled — action unavailable."
+    "ORDER_FINALIZED": "This order has already been completed or cancelled — action unavailable.",
+    "BANK_CHANGE_ALREADY_PENDING": "A bank details change is already under review. Wait for the staff decision or message your manager."
   },
   "widgets": {
     "actionRequired": {
@@ -1597,7 +1610,10 @@
       "partner_goods_received": "Warehouse received goods for order #{{number}}",
       "fallback": "New notification {{number}}",
       "partner_card_published": "Product card «{{number}}» has been published",
-      "security_bank_requisites_changed": "User {{actor}} changed company bank details"
+      "security_bank_requisites_changed": "User {{actor}} changed company bank details",
+      "bank_requisites_change_requested": "{{actor}} requested a change to the company bank details",
+      "bank_requisites_changed": "Company bank details have been changed",
+      "bank_requisites_change_rejected": "Bank details change request rejected: {{reason}}"
     }
   },
   "verify": {

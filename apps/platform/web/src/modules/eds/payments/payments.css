@@ -119,3 +119,42 @@
 .pf-pay-table td:last-child {
   padding-right: 16px;
 }
+
+/* Смена реквизитов контрагента (FX-4): одна колонка карточек, на телефоне тоже. */
+.pf-bank-list {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.pf-bank-card {
+  border: 1px solid var(--pf-border);
+  border-radius: 8px;
+  padding: 16px;
+}
+.pf-bank-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.pf-bank-sub {
+  color: var(--pf-text-secondary);
+}
+.pf-bank-details {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 12px;
+  margin: 12px 0;
+}
+.pf-bank-details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.pf-bank-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}

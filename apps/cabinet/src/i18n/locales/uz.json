@@ -849,7 +849,9 @@
           "role_change": "Huquqlarni o'zgartirish",
           "member_deactivated": "O'chirish",
           "member_invited": "Taklif etish",
-          "bank_details_changed": "Rekvizitlar o'zgarishi"
+          "bank_details_changed": "Rekvizitlar o'zgarishi",
+          "bank_details_change_requested": "Rekvizitlarni oʻzgartirish soʻraldi",
+          "bank_details_change_rejected": "Rekvizitlarni oʻzgartirish rad etildi"
         }
       },
       "closeEdit": "Yopish",
@@ -890,6 +892,16 @@
         "dialogDesc": "Hamkorlik turi va mahsulot toifalarini koʻrsating. Biz hamkorlik shartnomasini tayyorlaymiz.",
         "dialogSubmit": "Arizani yuborish",
         "dialogSuccess": "Ariza muvaffaqiyatli koʻrib chiqishga yuborildi."
+      },
+      "bankChange": {
+        "title": "Bank rekvizitlarini oʻzgartirish soʻrovi",
+        "pending": "Tekshiruvda",
+        "rejected": "Rad etilgan",
+        "pendingHint": "Xodim tasdiqlaguncha joriy rekvizitlar amalda boʻladi.",
+        "rejectedHint": "Sababi: {{reason}}",
+        "alreadyPending": "Soʻrov allaqachon tekshiruvda: yangi oʻzgartirishni xodim qaroridan keyin yuborish mumkin.",
+        "adminNotice": "Yangi rekvizitlar faqat xodim tekshiruvidan soʻng qoʻllanadi. Barcha administratorlar va asosiy kontakt bildirishnoma oladi.",
+        "submitted": "Soʻrov tekshiruvga yuborildi"
       }
     },
     "becomePartner": {
@@ -1244,7 +1256,8 @@
     "CANNOT_ELEVATE_RIGHTS": "Oʻz huquqlaringizdan yuqori huquqlar berish mumkin emas.",
     "ADMIN_REQUIRED": "Bu amal faqat kompaniya administratori uchun mavjud.",
     "CANNOT_MODIFY_PRIMARY_CONTACT": "Kompaniyaning asosiy kontaktining huquqlarini oʻzgartirib boʻlmaydi.",
-    "ORDER_FINALIZED": "Buyurtma allaqachon yakunlangan yoki bekor qilingan — amal mavjud emas."
+    "ORDER_FINALIZED": "Buyurtma allaqachon yakunlangan yoki bekor qilingan — amal mavjud emas.",
+    "BANK_CHANGE_ALREADY_PENDING": "Rekvizitlarni oʻzgartirish soʻrovi allaqachon tekshiruvda. Xodim qarorini kuting yoki menejerga yozing."
   },
   "widgets": {
     "actionRequired": {
@@ -1597,7 +1610,10 @@
       "partner_goods_received": "Ombor {{number}}-sonli buyurtma bo'yicha mahsulotni qabul qildi",
       "fallback": "Yangi bildirishnoma {{number}}",
       "partner_card_published": "«{{number}}» kartochkasi katalogda eʼlon qilindi",
-      "security_bank_requisites_changed": "Xodim {{actor}} kompaniyaning bank rekvizitlarini o‘zgartirdi"
+      "security_bank_requisites_changed": "Xodim {{actor}} kompaniyaning bank rekvizitlarini o‘zgartirdi",
+      "bank_requisites_change_requested": "{{actor}} kompaniya bank rekvizitlarini oʻzgartirishni soʻradi",
+      "bank_requisites_changed": "Kompaniya bank rekvizitlari oʻzgartirildi",
+      "bank_requisites_change_rejected": "Bank rekvizitlarini oʻzgartirish soʻrovi rad etildi: {{reason}}"
     }
   },
   "verify": {

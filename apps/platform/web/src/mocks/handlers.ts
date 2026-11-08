@@ -18,6 +18,7 @@ import { crmMessagesHandlers } from "./crmMessages";
 import { edsApprovalsHandlers } from "./edsApprovals";
 import { edsProjectsHandlers } from "./edsProjects";
 import { erpCatalogHandlers } from "./erpCatalog";
+import { edsBankChangesHandlers } from "./edsBankChanges";
 import { erpPartnerApplicationsHandlers } from "./erpPartnerApplications";
 import { erpSupplierAccessHandlers } from "./erpSupplierAccess";
 import { edsPaymentsHandlers } from "./edsPayments";
@@ -76,6 +77,8 @@ const sessionExpired = () => failure(401, "SESSION_EXPIRED", "Сессия ис�
  * `wrong-password`; адреса `disabled@`, `norole@`, `busy@`, `down@` дают ошибки входа.
  */
 export const handlers = [
+  // Раньше `/eds/payments/:id`: иначе путь очереди поймал бы карточку счёта.
+  ...edsBankChangesHandlers,
   // Сгенерированные orval обработчики слушают `*/queue`, `*/me`, `*/health`…: без этой «калитки» они перехватили бы и
   // переходы по страницам SPA (`/dashboard/queue`). API живёт только под `/api/v1/`, всё остальное — как есть.
   http.all("*", ({ request }) =>

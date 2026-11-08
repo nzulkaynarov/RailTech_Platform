@@ -48,8 +48,10 @@ async def call(web: Web, method: str, path: str, body: Any = None) -> httpx.Resp
 
 async def test_list_goes_to_erp_with_filter(web: Web, be: Any, check: ContractChecker) -> None:
     await web.login(["ACCOUNTANT"])
-    route = mock(be).get(f"{API}/").mock(
-        return_value=httpx.Response(200, json={"items": [RAW], "pending_count": 1})
+    route = (
+        mock(be)
+        .get(f"{API}/")
+        .mock(return_value=httpx.Response(200, json={"items": [RAW], "pending_count": 1}))
     )
 
     response = await call(web, "GET", f"{BASE}?status=pending")
@@ -85,9 +87,13 @@ async def test_approve(web: Web, be: Any, check: ContractChecker) -> None:
 
 async def test_reject_sends_the_reason(web: Web, be: Any, check: ContractChecker) -> None:
     await web.login(["ACCOUNTANT"])
-    route = mock(be).post(f"{API}/7/reject/").mock(
-        return_value=httpx.Response(
-            200, json={**RAW, "status": "rejected", "reject_reason": "Нет письма банка"}
+    route = (
+        mock(be)
+        .post(f"{API}/7/reject/")
+        .mock(
+            return_value=httpx.Response(
+                200, json={**RAW, "status": "rejected", "reject_reason": "Нет письма банка"}
+            )
         )
     )
 

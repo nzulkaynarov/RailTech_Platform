@@ -1,8 +1,9 @@
 """Счета и оплаты · смена реквизитов контрагента (FX-4, решение владельца 2026-11-08).
 
-BFF не решает: права (`finance.view`, `finance.payment`), маска реквизитов, статусы и повторы — ERP
-(`finance/bank-changes/`). Раздел каталога — `eds.payments`: читает директор и менеджер, решает бухгалтер.
-Подключается раньше `eds_payments`, иначе `/eds/payments/bank-changes` поймал бы `/eds/payments/{id}`.
+BFF не решает: права (`finance.view`, `finance.payment`), маска реквизитов, статусы и повторы —
+ERP (`finance/bank-changes/`). Раздел каталога — `eds.payments`: читает директор и менеджер, решает
+бухгалтер. Подключается раньше `eds_payments`, иначе `/eds/payments/bank-changes` поймал бы
+`/eds/payments/{id}`.
 """
 
 from typing import Annotated
@@ -37,12 +38,10 @@ def _path(id: str, tail: str) -> str:
 
 @router.get("", response_model=BankChangeList, operation_id="listBankChangeRequests")
 async def list_bank_change_requests(
-    authed: Reader, status: BankChangeStatus | None = Query(default=None)
+    authed: Reader, status: Annotated[BankChangeStatus | None, Query()] = None
 ) -> BankChangeList:
     params = {"status": status} if status else {}
-    return to_list(
-        cast(dict, await _erp(authed).data("GET", "finance/bank-changes/", params=params))
-    )
+    return to_list(await _erp(authed).data("GET", "finance/bank-changes/", params=params))
 
 
 @router.post(
