@@ -126,7 +126,7 @@ export function authTelegram(initData: string): Promise<Me> {
 }
 
 export interface MagicLinkResult {
-  status: 'ok' | 'not_registered';
+  status: 'ok';
   sent: boolean;
   email: string;
 }

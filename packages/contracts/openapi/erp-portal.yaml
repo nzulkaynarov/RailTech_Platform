@@ -144,7 +144,8 @@ paths:
       summary: Запросить ссылку для входа по e-mail
       description: >-
         Письмо со ссылкой и 6-значным кодом входа на 60 минут, одноразовыми (B-MAIL-1). Новый запрос гасит прежние ссылку и
-        код входа (приглашение остаётся). Ответ всегда 200, чтобы не раскрывать наличие адреса.
+        код входа (приглашение остаётся). Ответ, статус и время не зависят от того, зарегистрирован ли адрес (решение 2026-11-08):
+        поиск контакта и письмо — в фоновой задаче, 200 с одним и тем же телом для любого адреса.
       security: []
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -162,7 +163,7 @@ paths:
               additionalProperties: false
       responses:
         '200':
-          description: Ответ запроса ссылки (status=ok или not_registered)
+          description: Запрос принят. Тело одно и то же для любого адреса
           content:
             application/json:
               schema:
@@ -3212,14 +3213,14 @@ components:
       properties:
         status:
           type: string
-          enum: [ok, not_registered]
-          description: Статус проверки адреса (ok или not_registered)
+          enum: [ok]
+          description: Запрос принят; не говорит, зарегистрирован ли адрес
         sent:
           type: boolean
-          description: Отправлено ли письмо с кодом
+          description: Всегда true; письмо уходит, только если адрес зарегистрирован
         email:
           type: string
-          description: Проверяемый адрес электронной почты
+          description: Адрес из запроса
 
     PortalCountry:
       type: object

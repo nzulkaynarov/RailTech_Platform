@@ -2,12 +2,12 @@ import { useId, useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
-import { AlertCircle, Eye, Handshake, Mail, Send, Sparkles, UserCheck, UserPlus } from 'lucide-react';
+import { Eye, Handshake, Mail, Send, Sparkles, UserCheck, UserPlus } from 'lucide-react';
 
 import { loginErrorText } from '@/api/errors';
 import { requestMagicLink } from '@/api/portal';
 import { botLink, isPortalMock } from '@/app/links';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -26,27 +26,19 @@ export function LoginPage() {
   const errorId = useId();
   const telegramHintId = useId();
   const [email, setEmail] = useState('');
-  const [unregisteredEmail, setUnregisteredEmail] = useState<string | null>(null);
   const me = useMe().data;
   const telegramLink = botLink();
 
   const magicLink = useMutation({
     mutationFn: (address: string) => requestMagicLink(address),
-    onSuccess: (data, address) => {
-      if (data?.status === 'not_registered' || data?.sent === false) {
-        setUnregisteredEmail(address);
-      } else {
-        setUnregisteredEmail(null);
-        navigate('/login/sent', { state: { email: address, sentAt: Date.now() } });
-      }
-    },
+    // Ответ один для любого адреса (FX-3): экран не знает, зарегистрирован ли адрес.
+    onSuccess: (_data, address) => navigate('/login/sent', { state: { email: address, sentAt: Date.now() } }),
   });
 
   if (me) return <Navigate to="/" replace />;
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setUnregisteredEmail(null);
     magicLink.mutate(email.trim());
   };
 
@@ -76,29 +68,6 @@ export function LoginPage() {
                 aria-describedby={magicLink.isError ? errorId : undefined}
               />
             </div>
-            {unregisteredEmail ? (
-              <Alert className="border-warning/40 bg-warning/10 text-foreground" id={errorId}>
-                <AlertCircle className="size-4 text-warning" aria-hidden="true" />
-                <AlertTitle className="font-semibold">{t('auth.login.unregisteredTitle')}</AlertTitle>
-                <AlertDescription className="mt-1 flex flex-col gap-2.5">
-                  <p>{t('auth.login.unregisteredText', { email: unregisteredEmail })}</p>
-                  <div className="flex flex-col gap-2 pt-1">
-                    <Button asChild size="sm" variant="secondary" className="w-full justify-start text-xs font-medium">
-                      <Link to={`/new-client?email=${encodeURIComponent(unregisteredEmail)}`}>
-                        <UserPlus className="mr-1.5 size-3.5" aria-hidden="true" />
-                        {t('auth.login.unregisteredNewClient')}
-                      </Link>
-                    </Button>
-                    <Button asChild size="sm" variant="outline" className="w-full justify-start text-xs font-medium bg-background">
-                      <Link to={`/become-partner?email=${encodeURIComponent(unregisteredEmail)}`}>
-                        <Handshake className="mr-1.5 size-3.5" aria-hidden="true" />
-                        {t('auth.login.unregisteredBecomePartner')}
-                      </Link>
-                    </Button>
-                  </div>
-                </AlertDescription>
-              </Alert>
-            ) : null}
             {magicLink.isError ? (
               <Alert variant="destructive" id={errorId}>
                 <AlertDescription>{loginErrorText(magicLink.error, t)}</AlertDescription>

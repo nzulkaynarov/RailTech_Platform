@@ -213,14 +213,10 @@
       "demoHint": "Local test stand with mock data. No password required:",
       "demoActor": "Sign in as Client (Toshkent Logistik LLC)",
       "demoViewer": "Sign in as Viewer (read-only)",
-      "haveCode": "Already have a code from the email? Log in with the code",
-      "unregisteredTitle": "Email not found",
-      "unregisteredText": "The email {{email}} was not found among registered clients or partners. Check spelling or choose an option:",
-      "unregisteredNewClient": "I am a client — submit request",
-      "unregisteredBecomePartner": "I am a supplier — become a partner"
+      "haveCode": "Already have a code from the email? Log in with the code"
     },
     "sent": {
-      "title": "We sent you an email",
+      "title": "If this address is registered, we sent an email",
       "text": "If {{email}} is registered, the email has a login code and a link. They are valid for 60 minutes.",
       "back": "Use another address",
       "mockLink": "Open the link from the email (mock)",
@@ -228,7 +224,7 @@
       "hint": "The email may take a few minutes. Check your spam folder.",
       "resend": "Send again",
       "resendIn": "Send again in {{seconds}} s",
-      "resent": "We sent a new email. The code from the previous one no longer works."
+      "resent": "If this address is registered, we sent a new email. The code from the previous one no longer works."
     },
     "magic": {
       "exchanging": "Signing in with the link…",

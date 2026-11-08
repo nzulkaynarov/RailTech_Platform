@@ -35,7 +35,7 @@ export interface paths {
         put?: never;
         /**
          * Запросить ссылку для входа по e-mail
-         * @description Письмо со ссылкой и 6-значным кодом входа на 60 минут, одноразовыми (B-MAIL-1). Новый запрос гасит прежние ссылку и код входа (приглашение остаётся). Ответ всегда 200, чтобы не раскрывать наличие адреса.
+         * @description Письмо со ссылкой и 6-значным кодом входа на 60 минут, одноразовыми (B-MAIL-1). Новый запрос гасит прежние ссылку и код входа (приглашение остаётся). Ответ, статус и время не зависят от того, зарегистрирован ли адрес (решение 2026-11-08): поиск контакта и письмо — в фоновой задаче, 200 с одним и тем же телом для любого адреса.
          */
         post: operations["requestMagicLink"];
         delete?: never;
@@ -1567,13 +1567,13 @@ export interface components {
         };
         MagicLinkResult: {
             /**
-             * @description Статус проверки адреса (ok или not_registered)
+             * @description Запрос принят; не говорит, зарегистрирован ли адрес
              * @enum {string}
              */
-            status: "ok" | "not_registered";
-            /** @description Отправлено ли письмо с кодом */
+            status: "ok";
+            /** @description Всегда true; письмо уходит, только если адрес зарегистрирован */
             sent: boolean;
-            /** @description Проверяемый адрес электронной почты */
+            /** @description Адрес из запроса */
             email: string;
         };
         PortalCountry: {
@@ -2968,7 +2968,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Ответ запроса ссылки (status=ok или not_registered) */
+            /** @description Запрос принят. Тело одно и то же для любого адреса */
             200: {
                 headers: {
                     [name: string]: unknown;

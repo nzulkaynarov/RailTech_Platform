@@ -319,9 +319,6 @@ export const handlers = [
     if (body.email.startsWith('throttled')) {
       return HttpResponse.json({ detail: 'TOO_MANY_REQUESTS' }, { status: 429, headers: { 'Retry-After': '45' } });
     }
-    if (body.email.startsWith('unknown') || body.email.startsWith('unregistered')) {
-      return json({ status: 'not_registered', sent: false, email: body.email });
-    }
     return json({ status: 'ok', sent: true, email: body.email });
   }),
   http.get(`${API}/countries`, () => {

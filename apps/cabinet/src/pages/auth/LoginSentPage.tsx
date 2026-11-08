@@ -20,10 +20,10 @@ import { AuthLayout } from './AuthLayout';
 type SentState = { email?: string; sentAt?: number } | null;
 
 /**
- * «Мы отправили письмо» (`/login/sent`) и «Вход по коду» (`/login/code`), B-MAIL-1. Письмо может идти несколько минут, а
+ * «Если адрес зарегистрирован, мы отправили письмо» (`/login/sent`) и «Вход по коду» (`/login/code`), B-MAIL-1. Письмо может идти несколько минут, а
  * ссылка — открыться на другом устройстве, поэтому в письме и код из 6 цифр: клиент вводит его здесь (как Slack, Notion,
  * Stripe), `autocomplete="one-time-code"` подставляет код с телефона. «Отправить ещё раз» — через 60 секунд после письма
- * (сервер всё равно держит лимит 5 писем в час на адрес). Ответ `POST /auth/magic-link` всегда 200, поэтому текст не
+ * (сервер всё равно держит лимит 5 писем в час на адрес). Ответ `POST /auth/magic-link` один для любого адреса (FX-3), поэтому текст не
  * утверждает, что адрес есть. Код из приглашения вводится на `/login/code` без нового письма.
  */
 export function LoginSentPage({ mode = 'sent' }: { mode?: 'sent' | 'code' }) {
@@ -42,6 +42,7 @@ export function LoginSentPage({ mode = 'sent' }: { mode?: 'sent' | 'code' }) {
   const now = useNow(1000);
   const wait = sentAt === null ? 0 : secondsLeft(sentAt, now);
   const telegramLink = botLink();
+  const emailQuery = state?.email ? `?email=${encodeURIComponent(state.email)}` : '';
 
   const signIn = useMutation({
     mutationFn: () => exchangeLoginCode(email.trim(), code),
@@ -60,7 +61,7 @@ export function LoginSentPage({ mode = 'sent' }: { mode?: 'sent' | 'code' }) {
     },
   });
 
-  // Пришли на «Мы отправили письмо» без адреса (перезагрузка, закладка) — это вход по коду с полем адреса.
+  // Пришли на экран отправки без адреса (перезагрузка, закладка) — это вход по коду с полем адреса.
   if (mode === 'sent' && !state?.email) return <Navigate to="/login/code" replace />;
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -180,10 +181,16 @@ export function LoginSentPage({ mode = 'sent' }: { mode?: 'sent' | 'code' }) {
             <Link to="/login">{t('auth.sent.back')}</Link>
           </Button>
           <Link
-            to="/new-client"
+            to={`/new-client${emailQuery}`}
             className="text-center text-sm font-medium text-primary underline-offset-4 hover:underline"
           >
             {t('auth.sent.newClientLink')}
+          </Link>
+          <Link
+            to={`/become-partner${emailQuery}`}
+            className="text-center text-sm font-medium text-primary underline-offset-4 hover:underline"
+          >
+            {t('auth.login.becomePartner')}
           </Link>
         </CardContent>
       </Card>

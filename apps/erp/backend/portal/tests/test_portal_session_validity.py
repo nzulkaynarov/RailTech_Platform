@@ -1,5 +1,6 @@
 """FIX-15 (хвосты ревью FIX-14): живая сессия портала и архивность через общий предикат; письмо — через Celery."""
 
+import logging
 import pathlib
 import re
 from unittest import mock
@@ -10,8 +11,9 @@ from kombu.exceptions import OperationalError
 from portal.models import MagicLinkToken
 from portal.services.magic_link import request_magic_link
 from portal.services.tokens import hash_token
-from portal.tasks import send_magic_link
+from portal.tasks import send_magic_link, send_magic_link_to_address
 from portal.tests.conftest import LOCMEM_BACKEND
+from redis.exceptions import RedisError
 from rest_framework import status
 
 from notifications.models import EmailLog
@@ -90,6 +92,13 @@ def delay(monkeypatch):
     return mocked
 
 
+@pytest.fixture
+def enqueue():
+    """Подмена постановки шага поиска контакта: брокера в тестах нет, смотрим сам вызов."""
+    with mock.patch.object(send_magic_link_to_address, "apply_async") as mocked:
+        yield mocked
+
+
 @pytest.fixture(autouse=True)
 def _locmem_mail(settings):
     settings.EMAIL_BACKEND = LOCMEM_BACKEND
@@ -99,43 +108,90 @@ def _locmem_mail(settings):
 
 @pytest.mark.django_db
 class TestMagicLinkMailIsQueued:
-    def test_request_only_enqueues_and_sends_nothing_inline(self, client_contact, delay):
-        assert request_magic_link(client_contact.email) is True
-
-        delay.assert_called_once_with(client_contact.pk)
-        assert mail.outbox == []
-        assert not EmailLog.objects.filter(template="portal_magic_link").exists()
-
-    def test_queue_carries_only_the_contact_id_never_the_token(self, client_contact, delay):
+    def test_request_only_enqueues_and_sends_nothing_inline(self, client_contact, enqueue):
         request_magic_link(client_contact.email)
 
-        assert delay.call_args.args == (client_contact.pk,)
-        assert delay.call_args.kwargs == {}
+        assert enqueue.call_count == 1
+        assert enqueue.call_args.kwargs["args"] == [client_contact.email.lower()]
+        assert mail.outbox == []
+        assert not EmailLog.objects.filter(template="portal_magic_link").exists()
         assert not MagicLinkToken.objects.exists()  # токен рождается внутри задачи
 
-    def test_unknown_archived_or_ambiguous_address_enqueues_nothing(self, delay, client_contact, client_company):
+    def test_address_is_hidden_from_queue_logs(self, client_contact, enqueue):
+        request_magic_link(client_contact.email)
+
+        assert client_contact.email.lower() not in enqueue.call_args.kwargs["argsrepr"]
+
+    def test_publication_cannot_hold_the_request(self, client_contact, enqueue):
+        """Бэкенд результатов не трогается, повторов нет, сокет — с таймаутами: запрос не ждёт недоступный брокер."""
+        request_magic_link(client_contact.email)
+
+        options = enqueue.call_args.kwargs
+        assert options["ignore_result"] is True
+        assert options["retry"] is False
+        assert options["connection"].transport_options["socket_timeout"] <= 1
+        assert options["connection"].transport_options["socket_connect_timeout"] <= 1
+
+    def test_every_address_is_enqueued_the_same_way(self, client_contact, client_company, enqueue):
+        request_magic_link(client_contact.email)
         request_magic_link("nobody@example.com")
         client_company.is_active = False
         client_company.save(update_fields=["is_active"])
         request_magic_link(client_contact.email)
 
+        assert enqueue.call_count == 3
+
+    def test_worker_step_queues_only_the_contact_id_never_the_token(self, client_contact, delay):
+        result = send_magic_link_to_address.apply(args=[client_contact.email.lower()]).get()
+
+        assert result == {"queued": True}
+        assert delay.call_args.args == (client_contact.pk,)
+        assert delay.call_args.kwargs == {}
+        assert not MagicLinkToken.objects.exists()  # токен рождается внутри задачи
+
+    def test_worker_step_does_not_keep_the_address_in_the_result(self, client_contact, delay):
+        result = send_magic_link_to_address.apply(args=[client_contact.email.lower()]).get()
+
+        assert client_contact.email.lower() not in repr(result)
+
+    def test_worker_step_logs_no_address(self, caplog, client_contact, delay):
+        caplog.set_level(logging.DEBUG)
+
+        send_magic_link_to_address.apply(args=[client_contact.email.lower()]).get()
+
+        assert "queued for contact" in caplog.text
+        assert client_contact.email.lower() not in caplog.text.lower()
+
+    def test_unknown_archived_or_ambiguous_address_enqueues_nothing(self, delay, client_contact, client_company):
+        assert send_magic_link_to_address.apply(args=["nobody@example.com"]).get() == {"queued": False}
+        client_company.is_active = False
+        client_company.save(update_fields=["is_active"])
+        assert send_magic_link_to_address.apply(args=[client_contact.email.lower()]).get() == {"queued": False}
+
         delay.assert_not_called()
 
-    def test_queue_failure_does_not_reveal_a_known_address(self, client_contact, delay):
+    def test_queue_failure_does_not_reveal_a_known_address(self, client_contact, enqueue):
         """Брокер недоступен: ответ тот же 200, что и для неизвестного адреса (иначе 500 выдал бы контакт)."""
-        delay.side_effect = ConnectionError("broker down")
+        enqueue.side_effect = ConnectionError("broker down")
 
-        assert request_magic_link(client_contact.email) is True
+        request_magic_link(client_contact.email)  # не бросает
 
-    @pytest.mark.parametrize("error", [OperationalError("redis down"), TimeoutError("broker timeout")])
-    def test_broker_errors_are_swallowed_with_the_same_answer(self, client_contact, delay, error):
-        delay.side_effect = error
+    @pytest.mark.parametrize(
+        "error",
+        [
+            OperationalError("redis down"),
+            TimeoutError("broker timeout"),
+            RedisError("redis refused"),
+        ],
+    )
+    def test_broker_errors_are_swallowed_with_the_same_answer(self, client_contact, enqueue, error):
+        enqueue.side_effect = error
 
-        assert request_magic_link(client_contact.email) is True
+        request_magic_link(client_contact.email)  # не бросает
 
-    def test_unexpected_errors_are_not_masked_as_broker_outage(self, client_contact, delay):
+    def test_unexpected_errors_are_not_masked_as_broker_outage(self, client_contact, enqueue):
         """Голый `except Exception` прятал и ошибки кода; теперь проглатываются только ошибки брокера (FIX-11b)."""
-        delay.side_effect = TypeError("bug in the task signature")
+        enqueue.side_effect = TypeError("bug in the task signature")
 
         with pytest.raises(TypeError):
             request_magic_link(client_contact.email)

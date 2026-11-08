@@ -8,6 +8,7 @@ import time
 import urllib.parse
 import uuid
 from datetime import timedelta
+from unittest import mock
 
 import pytest
 from django.conf import settings
@@ -43,11 +44,19 @@ def break_mail_handoff(settings, monkeypatch):
 @pytest.fixture
 def inline_magic_link_task(monkeypatch):
     """Брокера в тестах нет: письмо ссылки входа (задача Celery, FIX-15) выполняется сразу, в этом же процессе."""
-    from portal.tasks import send_magic_link
+    from portal.tasks import send_magic_link, send_magic_link_to_address
 
     monkeypatch.setattr(
         send_magic_link, "delay", lambda *args, **kwargs: send_magic_link.apply(args=args, kwargs=kwargs)
     )
+    # mock.patch, а не monkeypatch: откат monkeypatch оставил бы на задаче атрибут экземпляра, и подмена `Task.apply_async`
+    # на классе в других тестах перестала бы действовать на неё.
+    with mock.patch.object(
+        send_magic_link_to_address,
+        "apply_async",
+        new=lambda args=None, kwargs=None, **options: send_magic_link_to_address.apply(args=args, kwargs=kwargs),
+    ):
+        yield
 
 
 class PortalAPIClient(APIClient):
