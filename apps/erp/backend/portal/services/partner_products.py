@@ -17,10 +17,21 @@ from django.db import transaction
 from django.db.models import Case, Count, Exists, F, OuterRef, Q, Subquery, When
 from django.db.models.functions import Greatest
 from django.utils import timezone
+from portal.exceptions import PortalValidationError
+from portal.models import PortalUpload
 
 from catalog.completeness import CompletenessContext, requirements_for
 from catalog.constants import DEFAULT_OFFER_CONFIRM_DAYS
-from catalog.models import Product, ProductFieldProposal, ProductReview, ProductStatus, SupplierOffer
+from catalog.desk.items import ItemError
+from catalog.models import (
+    DocumentKind,
+    Product,
+    ProductFieldProposal,
+    ProductReview,
+    ProductStatus,
+    SupplierOffer,
+    TechDocument,
+)
 from catalog.offer_freshness import EXPIRING_DAYS, freshness
 from catalog.policy import policy_for
 from catalog.review_flow import close_pending_review
@@ -271,7 +282,7 @@ def project_detail(company, product, language: str | None = None) -> dict:
     """
     [item] = project_cards(company, [product], language)
     if item["status"] == MATCHED:
-        return {**item, "description": "", "hs_code": "", "uom": None, "missing": [], "history": []}
+        return {**item, "description": "", "hs_code": "", "uom": None, "missing": [], "history": [], "documents": []}
     ctx = CompletenessContext([product])
     own = product.source_supplier_id == company.pk
     history = []
@@ -293,7 +304,131 @@ def project_detail(company, product, language: str | None = None) -> dict:
         "uom": product.uom.code if product.uom_id else None,
         "missing": partner_completeness(product, ctx)["missing"],
         "history": history,
+        "documents": list_partner_documents(company, product.pk),
     }
+
+
+def serialize_partner_document(doc: TechDocument, kind_names: dict[str, str] | None = None) -> dict:
+    if kind_names is None:
+        kind_names = {k.code: k.name for k in DocumentKind.objects.all()}
+    return {
+        "id": doc.pk,
+        "kind": doc.kind,
+        "kind_name": kind_names.get(doc.kind, doc.kind),
+        "title": doc.title,
+        "number": doc.number or "",
+        "issued_by": doc.issued_by or "",
+        "issued_at": doc.issued_at,
+        "valid_until": doc.valid_until,
+        "original_name": doc.original_name or "",
+        "size_bytes": doc.size_bytes or 0,
+        "created_at": doc.created_at,
+    }
+
+
+def list_partner_documents(company, product_id: int) -> list[dict]:
+    product = Product.objects.filter(pk=product_id).exclude(status__code=CODE_ARCHIVED).first()
+    if product is None:
+        return []
+    if (
+        product.source_supplier_id != company.pk
+        and not SupplierOffer.objects.filter(supplier=company, product=product).exists()
+    ):
+        return []
+    docs = list(TechDocument.objects.filter(product_id=product_id).order_by("-created_at", "-id"))
+    kinds = {k.code: k.name for k in DocumentKind.objects.filter(code__in={d.kind for d in docs})}
+    return [serialize_partner_document(doc, kinds) for doc in docs]
+
+
+def get_partner_document(company, product_id: int, doc_id: int) -> TechDocument | None:
+    product = Product.objects.filter(pk=product_id).exclude(status__code=CODE_ARCHIVED).first()
+    if product is None:
+        return None
+    if (
+        product.source_supplier_id != company.pk
+        and not SupplierOffer.objects.filter(supplier=company, product=product).exists()
+    ):
+        return None
+    return TechDocument.objects.filter(pk=doc_id, product_id=product_id).first()
+
+
+@transaction.atomic
+def create_partner_document(company, product_id: int, data: dict, file_obj=None, contact=None) -> dict:
+    import os
+
+    from django.http import Http404
+
+    product = (
+        Product.objects.filter(pk=product_id, source_supplier_id=company.pk).exclude(status__code=CODE_ARCHIVED).first()
+    )
+    if product is None:
+        raise Http404
+
+    if file_obj is None:
+        upload_id = data.get("upload_id")
+        if not upload_id:
+            raise PortalValidationError("FILE_REQUIRED")
+        upload = PortalUpload.objects.filter(upload_id=upload_id, company=company).first()
+        if upload is None or not upload.file:
+            raise PortalValidationError("UPLOAD_NOT_FOUND")
+        file_obj = upload.file
+
+    try:
+        from catalog.desk.tech_docs import validate_upload
+
+        content_type = validate_upload(file_obj)
+    except ItemError as err:
+        raise PortalValidationError(err.code)
+
+    kind_code = (data.get("kind") or "certificate").strip()
+    kind = DocumentKind.objects.filter(code=kind_code, is_active=True).first()
+    if kind is None:
+        raise PortalValidationError("TECH_DOC_KIND_INVALID")
+
+    from catalog.desk.tech_docs import _check_range, _date
+
+    try:
+        issued_at = _date(data.get("issued_at"), "issued_at")
+        valid_until = _date(data.get("valid_until"), "valid_until")
+        _check_range(issued_at, valid_until)
+    except ItemError as err:
+        raise PortalValidationError(err.code)
+
+    title = (data.get("title") or "").strip() or os.path.splitext(getattr(file_obj, "name", "document"))[0]
+    number = (data.get("number") or "").strip()
+    issued_by = (data.get("issued_by") or "").strip()
+
+    doc = TechDocument.objects.create(
+        kind=kind.code,
+        title=title[:255],
+        file=file_obj,
+        original_name=os.path.basename(getattr(file_obj, "name", "document"))[:255],
+        content_type=content_type,
+        size_bytes=getattr(file_obj, "size", 0),
+        number=number[:100],
+        issued_by=issued_by[:255],
+        issued_at=issued_at,
+        valid_until=valid_until,
+        client_visible=True,
+        product=product,
+    )
+    return serialize_partner_document(doc, {kind.code: kind.name})
+
+
+@transaction.atomic
+def delete_partner_document(company, product_id: int, doc_id: int) -> bool:
+    product = (
+        Product.objects.filter(pk=product_id, source_supplier_id=company.pk).exclude(status__code=CODE_ARCHIVED).first()
+    )
+    if product is None:
+        return False
+    doc = TechDocument.objects.filter(pk=doc_id, product_id=product_id).first()
+    if doc is None:
+        return False
+    if doc.file:
+        doc.file.delete(save=False)
+    doc.delete()
+    return True
 
 
 # ── Отправка на проверку ─────────────────────────────────────────────────────────────────────────────

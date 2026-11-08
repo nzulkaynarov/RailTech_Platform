@@ -33,6 +33,7 @@ export const keys = {
   partnerProducts: ['partner', 'products'] as const,
   partnerProductList: (params: portal.PartnerProductsQuery) => ['partner', 'products', 'list', params] as const,
   partnerProduct: (id: number) => ['partner', 'products', 'item', id] as const,
+  partnerProductDocuments: (productId: number) => ['partner', 'products', productId, 'documents'] as const,
   priceListTask: (taskId: string) => ['partner', 'price-list', taskId] as const,
   partnerOrders: ['partner', 'orders'] as const,
   partnerOrderList: (params: portal.PartnerOrdersQuery) => ['partner', 'orders', 'list', params] as const,
@@ -356,4 +357,39 @@ export const useRespondPartnerPriceRequest = () =>
     ({ id, body }: { id: number; body: portal.PartnerPriceRequestResponse }) =>
       portal.respondPartnerPriceRequest(id, body),
     [keys.partnerPriceRequests],
+  );
+
+export const usePartnerProductDocuments = (productId: number | null, options: ListOptions = {}) =>
+  useQuery({
+    queryKey: keys.partnerProductDocuments(productId ?? 0),
+    queryFn: () => portal.listPartnerProductDocuments(productId!),
+    enabled: (options.enabled ?? true) && typeof productId === 'number' && productId > 0,
+  });
+
+export const useUploadPartnerProductDocument = () =>
+  useInvalidatingMutation(
+    ({
+      productId,
+      data,
+    }: {
+      productId: number;
+      data: {
+        file?: File;
+        upload_id?: number;
+        kind?: string;
+        title: string;
+        number?: string;
+        issued_by?: string;
+        issued_at?: string;
+        valid_until?: string;
+      };
+    }) => portal.uploadPartnerProductDocument(productId, data),
+    [keys.partnerProducts],
+  );
+
+export const useDeletePartnerProductDocument = () =>
+  useInvalidatingMutation(
+    ({ productId, docId }: { productId: number; docId: number }) =>
+      portal.deletePartnerProductDocument(productId, docId),
+    [keys.partnerProducts],
   );

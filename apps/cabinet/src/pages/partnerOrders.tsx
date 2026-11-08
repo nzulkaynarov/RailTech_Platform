@@ -827,7 +827,15 @@ function OrderDetailDialog({
                           {l.quantity} {l.unit}
                         </td>
                         <td className="p-2.5 text-right">
-                          {l.received_quantity} {l.unit}
+                          <span
+                            className={
+                              l.received_quantity < l.quantity && order.status === 'received'
+                                ? 'font-semibold text-warning'
+                                : ''
+                            }
+                          >
+                            {l.received_quantity} {l.unit}
+                          </span>
                         </td>
                         <td className="p-2.5 text-right">{l.unit_price}</td>
                         <td className="p-2.5 text-right font-medium">{l.total_price}</td>
@@ -837,6 +845,71 @@ function OrderDetailDialog({
                 </table>
               </div>
             </div>
+
+            {/* Warehouse Receipts */}
+            {order.receipts && order.receipts.length > 0 ? (
+              <div>
+                <h4 className="mb-2 flex items-center gap-2 font-semibold">
+                  <ClipboardList className="size-4" />
+                  {t('pages.partnerOrders.receiptsTitle')}
+                </h4>
+                <div className="space-y-3">
+                  {order.receipts.map((rcpt) => (
+                    <div key={rcpt.id} className="rounded-lg border border-border p-3 text-sm">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-2">
+                        <div className="flex items-center gap-2 font-medium">
+                          <span>
+                            {t('pages.partnerOrders.receiptPrefix')} #{rcpt.id}
+                          </span>
+                          {rcpt.supplier_doc ? (
+                            <span className="text-xs text-muted-foreground">
+                              ({t('pages.partnerOrders.dialogs.supplierDocLabel')}: {rcpt.supplier_doc})
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="text-xs text-muted-foreground">{formatDateTime(rcpt.received_at)}</div>
+                      </div>
+                      {rcpt.note ? <p className="mt-1.5 text-xs text-muted-foreground">{rcpt.note}</p> : null}
+                      <div className="mt-2 overflow-x-auto">
+                        <table className="w-full text-left text-xs">
+                          <thead className="bg-muted/40 text-muted-foreground">
+                            <tr>
+                              <th className="p-1.5">{t('pages.partnerOrders.columns.name')}</th>
+                              <th className="p-1.5 text-right">{t('pages.partnerOrders.columns.receivedQty')}</th>
+                              <th className="p-1.5">{t('pages.partnerOrders.columns.warehouse')}</th>
+                              <th className="p-1.5">{t('pages.partnerOrders.columns.conformityDoc')}</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border/40">
+                            {rcpt.lines.map((rline) => (
+                              <tr key={rline.id}>
+                                <td className="p-1.5 font-medium">{rline.name}</td>
+                                <td className="p-1.5 text-right font-semibold">
+                                  {rline.quantity} {rline.unit}
+                                </td>
+                                <td className="p-1.5 text-muted-foreground">{rline.warehouse_name || '—'}</td>
+                                <td className="p-1.5 text-muted-foreground">
+                                  {rline.conformity_doc_number ? (
+                                    <span>
+                                      {rline.conformity_doc_number}
+                                      {rline.conformity_doc_valid_until
+                                        ? ` (${formatDate(rline.conformity_doc_valid_until)})`
+                                        : ''}
+                                    </span>
+                                  ) : (
+                                    '—'
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
             {/* History logs */}
             {order.logs.length > 0 ? (

@@ -342,6 +342,8 @@ function fileNameFrom(disposition: string | null): string | null {
 export type PartnerProduct = Schemas['PartnerProduct'];
 export type PartnerProductDetail = Schemas['PartnerProductDetail'];
 export type PartnerProductPage = Schemas['PartnerProductPage'];
+export type PartnerProductDocument = Schemas['PartnerProductDocument'];
+export type PartnerDocumentUploadRequest = Schemas['PartnerDocumentUploadRequest'];
 export type PartnerCardStatus = Schemas['PartnerCardStatus'];
 export type PartnerOffer = Schemas['PartnerOffer'];
 export type OfferFreshness = Schemas['OfferFreshness'];
@@ -357,6 +359,62 @@ export type PartnerProductsQuery = QueryOf<paths['/partner/products']['get']>;
 export const listPartnerProducts = (params: PartnerProductsQuery = {}) =>
   portalRequest<PartnerProductPage>(`/partner/products${toQuery(params)}`);
 export const getPartnerProduct = (id: number) => portalRequest<PartnerProductDetail>(`/partner/products/${id}`);
+
+export const listPartnerProductDocuments = (productId: number) =>
+  portalRequest<PartnerProductDocument[]>(`/partner/products/${productId}/documents`);
+
+export async function uploadPartnerProductDocument(
+  productId: number,
+  data: {
+    file?: File;
+    upload_id?: number;
+    kind?: string;
+    title: string;
+    number?: string;
+    issued_by?: string;
+    issued_at?: string;
+    valid_until?: string;
+  },
+): Promise<PartnerProductDocument> {
+  if (data.file) {
+    const formData = new FormData();
+    formData.append('file', data.file);
+    if (data.kind) formData.append('kind', data.kind);
+    formData.append('title', data.title);
+    if (data.number) formData.append('number', data.number);
+    if (data.issued_by) formData.append('issued_by', data.issued_by);
+    if (data.issued_at) formData.append('issued_at', data.issued_at);
+    if (data.valid_until) formData.append('valid_until', data.valid_until);
+    const response = await postForm(`/partner/products/${productId}/documents`, formData);
+    return (await response.json()) as PartnerProductDocument;
+  }
+  return portalRequest<PartnerProductDocument>(`/partner/products/${productId}/documents`, {
+    method: 'POST',
+    body: {
+      upload_id: data.upload_id ? String(data.upload_id) : undefined,
+      kind: data.kind,
+      title: data.title,
+      number: data.number,
+      issued_by: data.issued_by,
+      issued_at: data.issued_at,
+      valid_until: data.valid_until,
+    },
+  });
+}
+
+export const deletePartnerProductDocument = (productId: number, docId: number) =>
+  portalRequest<void>(`/partner/products/${productId}/documents/${docId}`, { method: 'DELETE' });
+
+export async function getPartnerProductDocumentFile(
+  productId: number,
+  documentId: number,
+): Promise<{ blob: Blob; fileName: string | null }> {
+  const response = await send(`/partner/products/${productId}/documents/${documentId}/file`, {
+    accept: 'application/pdf, image/png, image/jpeg, application/octet-stream',
+  });
+  return { blob: await response.blob(), fileName: fileNameFrom(response.headers.get('Content-Disposition')) };
+}
+
 export function submitPartnerProducts(ids: number[]): Promise<PartnerSubmitResult> {
   const body: JsonBody<paths['/partner/products/submit']['post']> = { ids };
   return portalRequest<PartnerSubmitResult>('/partner/products/submit', { method: 'POST', body });
@@ -546,6 +604,8 @@ export type PartnerOrderStatusCounts = Schemas['PartnerOrderStatusCounts'];
 export type PartnerOrderPage = Schemas['PartnerOrderPage'];
 export type PartnerOrderLineItem = Schemas['PartnerOrderLineItem'];
 export type PartnerOrderLogItem = Schemas['PartnerOrderLogItem'];
+export type PartnerOrderReceiptItem = Schemas['PartnerOrderReceiptItem'];
+export type PartnerOrderReceiptLineItem = Schemas['PartnerOrderReceiptLineItem'];
 export type PartnerOrderDetail = Schemas['PartnerOrderDetail'];
 export type PartnerOrderConfirmRequest = Schemas['PartnerOrderConfirmRequest'];
 export type PartnerShipmentNoticeRequest = Schemas['PartnerShipmentNoticeRequest'];

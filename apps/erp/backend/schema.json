@@ -2263,6 +2263,226 @@
                 }
             }
         },
+        "/api/portal/v1/partner/products/{id}/documents": {
+            "get": {
+                "operationId": "api_portal_v1_partner_products_documents_retrieve",
+                "description": "GET/POST /partner/products/{id}/documents — список и загрузка документов карточки товара партнёра.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "api_portal_v1_partner_products_documents_create",
+                "description": "GET/POST /partner/products/{id}/documents — список и загрузка документов карточки товара партнёра.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/products/{id}/documents/": {
+            "get": {
+                "operationId": "api_portal_v1_partner_products_documents_retrieve_2",
+                "description": "GET/POST /partner/products/{id}/documents — список и загрузка документов карточки товара партнёра.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "api_portal_v1_partner_products_documents_create_2",
+                "description": "GET/POST /partner/products/{id}/documents — список и загрузка документов карточки товара партнёра.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/products/{id}/documents/{doc_id}": {
+            "delete": {
+                "operationId": "api_portal_v1_partner_products_documents_destroy",
+                "description": "DELETE /partner/products/{id}/documents/{doc_id} — удаление документа товара партнёром.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "doc_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/products/{id}/documents/{doc_id}/": {
+            "delete": {
+                "operationId": "api_portal_v1_partner_products_documents_destroy_2",
+                "description": "DELETE /partner/products/{id}/documents/{doc_id} — удаление документа товара партнёром.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "doc_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/products/{id}/documents/{doc_id}/file": {
+            "get": {
+                "operationId": "api_portal_v1_partner_products_documents_file_retrieve",
+                "description": "GET /partner/products/{id}/documents/{doc_id}/file — скачивание файла документа товара партнёра.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "doc_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/products/{id}/documents/{doc_id}/file/": {
+            "get": {
+                "operationId": "api_portal_v1_partner_products_documents_file_retrieve_2",
+                "description": "GET /partner/products/{id}/documents/{doc_id}/file — скачивание файла документа товара партнёра.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "doc_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/portal/v1/partner/products/submit": {
             "post": {
                 "operationId": "api_portal_v1_partner_products_submit_create",

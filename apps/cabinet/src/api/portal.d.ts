@@ -903,6 +903,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/partner/products/{id}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Документы карточки товара партнёра */
+        get: operations["listPartnerProductDocuments"];
+        put?: never;
+        /**
+         * Прикрепить документ (сертификат, паспорт) к карточке товара
+         * @description Загрузка файла и прикрепление к карточке товара партнёра.
+         *     Поддерживает multipart/form-data (прямая загрузка файла) и application/json (с upload_id из POST /uploads).
+         */
+        post: operations["uploadPartnerProductDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/partner/products/{id}/documents/{doc_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Удалить документ из карточки товара */
+        delete: operations["deletePartnerProductDocument"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/partner/products/{id}/documents/{doc_id}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Скачать файл документа карточки товара */
+        get: operations["getPartnerProductDocumentFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/partner/products/submit": {
         parameters: {
             query?: never;
@@ -1663,6 +1719,38 @@ export interface components {
             missing: components["schemas"]["PartnerMissingField"][];
             /** @description Отправки на проверку и решения, новые сверху; только у своей карточки */
             history: components["schemas"]["PartnerReviewEntry"][];
+            /** @description Документы и сертификаты товара, прикреплённые партнёром */
+            documents: components["schemas"]["PartnerProductDocument"][];
+        };
+        PartnerProductDocument: {
+            /** Format: int64 */
+            id: number;
+            kind: string;
+            kind_name: string;
+            title: string;
+            number: string;
+            issued_by: string;
+            /** Format: date */
+            issued_at: string | null;
+            /** Format: date */
+            valid_until: string | null;
+            original_name: string;
+            size_bytes: number;
+            /** Format: date-time */
+            created_at: string;
+        };
+        PartnerDocumentUploadRequest: {
+            /** @description ID загруженного файла из POST /uploads */
+            upload_id?: string;
+            /** @default certificate */
+            kind: string;
+            title: string;
+            number?: string;
+            issued_by?: string;
+            /** Format: date */
+            issued_at?: string | null;
+            /** Format: date */
+            valid_until?: string | null;
         };
         PartnerSubmitRequest: {
             ids: number[];
@@ -1801,6 +1889,27 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        PartnerOrderReceiptLineItem: {
+            id: number;
+            order_line_id: number;
+            name: string;
+            article: string;
+            quantity: number;
+            unit: string;
+            warehouse_name?: string;
+            conformity_doc_number: string;
+            /** Format: date */
+            conformity_doc_valid_until: string | null;
+        };
+        PartnerOrderReceiptItem: {
+            id: number;
+            /** @description Номер накладной или документа поставщика */
+            supplier_doc: string;
+            note: string;
+            /** Format: date-time */
+            received_at: string;
+            lines: components["schemas"]["PartnerOrderReceiptLineItem"][];
+        };
         PartnerOrderDetail: {
             id: number;
             number: string;
@@ -1823,6 +1932,7 @@ export interface components {
             currency: string;
             lines: components["schemas"]["PartnerOrderLineItem"][];
             logs: components["schemas"]["PartnerOrderLogItem"][];
+            receipts: components["schemas"]["PartnerOrderReceiptItem"][];
         };
         PartnerOrderConfirmRequest: {
             /** Format: date */
@@ -4428,6 +4538,147 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PartnerProductDetail"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    listPartnerProductDocuments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Список документов товара */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerProductDocument"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    uploadPartnerProductDocument: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    /** @default certificate */
+                    kind?: string;
+                    title: string;
+                    number?: string;
+                    issued_by?: string;
+                    /** Format: date */
+                    issued_at?: string;
+                    /** Format: date */
+                    valid_until?: string;
+                };
+                "application/json": components["schemas"]["PartnerDocumentUploadRequest"];
+            };
+        };
+        responses: {
+            /** @description Документ прикреплён */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerProductDocument"];
+                };
+            };
+            400: components["responses"]["IdempotencyKeyRequired"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            415: components["responses"]["UnsupportedMediaType"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    deletePartnerProductDocument: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                id: components["parameters"]["Id"];
+                doc_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Документ удалён */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["IdempotencyKeyRequired"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    getPartnerProductDocumentFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+                doc_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Файл документа */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                    "image/png": string;
+                    "application/octet-stream": string;
                 };
             };
             401: components["responses"]["Unauthorized"];

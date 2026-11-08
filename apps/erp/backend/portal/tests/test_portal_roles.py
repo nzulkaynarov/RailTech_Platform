@@ -316,6 +316,9 @@ CATALOG_REQUESTS_PATHS = {
 MY_PRODUCTS_PATHS = {
     "/partner/products",
     "/partner/products/{id}",
+    "/partner/products/{id}/documents",
+    "/partner/products/{id}/documents/{doc_id}",
+    "/partner/products/{id}/documents/{doc_id}/file",
     "/partner/products/submit",
     "/partner/offers/confirm",
     "/partner/price-template",

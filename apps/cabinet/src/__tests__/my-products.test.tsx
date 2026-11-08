@@ -152,6 +152,18 @@ describe('Мои товары: карточка', () => {
     const dialog = await screen.findByRole('dialog');
     expect(await within(dialog).findByText('Не найдено.')).toBeInTheDocument();
   });
+
+  it('отображает список документов и сертификатов в карточке товара (K3-supply-docs)', async () => {
+    const user = userEvent.setup();
+    await open();
+    await user.click(within(await card('Тормозная колодка композитная')).getByRole('button', { name: /Открыть карточку/ }));
+    const dialog = await screen.findByRole('dialog');
+    expect(await within(dialog).findByText('Документы и сертификаты')).toBeInTheDocument();
+    expect(within(dialog).getByText('Сертификат соответствия ГОСТ 7798-70')).toBeInTheDocument();
+    expect(within(dialog).getByText('Сертификат соответствия')).toBeInTheDocument();
+    expect(within(dialog).getByText(/ЕАЭС RU С-RU.АЯ46.В.00001\/26/)).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: /Добавить документ/ })).toBeInTheDocument();
+  });
 });
 
 describe('Мои товары: отправка на проверку', () => {

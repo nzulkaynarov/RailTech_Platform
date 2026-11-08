@@ -9,6 +9,7 @@ from portal.exceptions import PortalValidationError
 from portal.serializers_partner import (
     PartnerConfirmRequestSerializer,
     PartnerConfirmResultSerializer,
+    PartnerDocumentUploadRequestSerializer,
     PartnerOrderConfirmRequestSerializer,
     PartnerOrderDetailSerializer,
     PartnerOrderPageSerializer,
@@ -16,6 +17,7 @@ from portal.serializers_partner import (
     PartnerPriceRequestPageSerializer,
     PartnerPriceRequestResponseSerializer,
     PartnerProductDetailSerializer,
+    PartnerProductDocumentSerializer,
     PartnerProductPageSerializer,
     PartnerShipmentNoticeRequestSerializer,
     PartnerSubmitRequestSerializer,
@@ -28,7 +30,7 @@ from portal.services import partner_price_list as price_list
 from portal.services import partner_products as products
 from portal.views import BasePortalView
 from rest_framework import status
-from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 
 from sourcing.views_templates import build_template_response
@@ -294,3 +296,73 @@ class PartnerPriceRequestRespondView(BasePortalView):
         if data is None:
             raise Http404
         return Response(PartnerPriceRequestDetailSerializer(data).data)
+
+
+class PartnerProductDocumentsView(BasePortalView):
+    """GET/POST /partner/products/{id}/documents — список и загрузка документов карточки товара партнёра."""
+
+    required_module = MODULE
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get(self, request, pk):
+        product = products.partner_cards(request.portal_company).filter(pk=pk).first()
+        if product is None:
+            raise Http404
+        data = products.list_partner_documents(company=request.portal_company, product_id=pk)
+        return Response(PartnerProductDocumentSerializer(data, many=True).data)
+
+    def post(self, request, pk):
+        file_obj = request.FILES.get("file")
+        if file_obj:
+            data = request.data
+        else:
+            serializer = PartnerDocumentUploadRequestSerializer(data=request.data)
+            if not serializer.is_valid():
+                raise PortalValidationError("VALIDATION_ERROR")
+            data = serializer.validated_data
+
+        doc = products.create_partner_document(
+            company=request.portal_company,
+            product_id=pk,
+            data=data,
+            file_obj=file_obj,
+            contact=request.portal_contact,
+        )
+        return Response(PartnerProductDocumentSerializer(doc).data, status=status.HTTP_201_CREATED)
+
+
+class PartnerProductDocumentDetailView(BasePortalView):
+    """DELETE /partner/products/{id}/documents/{doc_id} — удаление документа товара партнёром."""
+
+    required_module = MODULE
+
+    def delete(self, request, pk, doc_id):
+        deleted = products.delete_partner_document(
+            company=request.portal_company,
+            product_id=pk,
+            doc_id=doc_id,
+        )
+        if not deleted:
+            raise Http404
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PartnerProductDocumentFileView(BasePortalView):
+    """GET /partner/products/{id}/documents/{doc_id}/file — скачивание файла документа товара партнёра."""
+
+    required_module = MODULE
+
+    def get(self, request, pk, doc_id):
+        doc = products.get_partner_document(
+            company=request.portal_company,
+            product_id=pk,
+            doc_id=doc_id,
+        )
+        if doc is None:
+            raise Http404
+        from portal.services import catalog_documents
+
+        resp = catalog_documents.file_response(doc)
+        if resp is None:
+            raise Http404
+        return resp

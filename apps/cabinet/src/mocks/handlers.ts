@@ -1255,6 +1255,87 @@ export const handlers = [
       return item ? json(partner.detailOf(item)) : error(404, 'NOT_FOUND');
     }),
   ),
+  http.get<IdParams>(
+    `${API}/partner/products/:id/documents`,
+    withSession<IdParams>(({ db, params }) => {
+      const item = byId(db.partnerProducts, params.id);
+      return item ? json(partner.documentsOf(item.id)) : error(404, 'NOT_FOUND');
+    }),
+  ),
+  http.post<IdParams>(
+    `${API}/partner/products/:id/documents`,
+    withSession<IdParams>(
+      async ({ db, params, request }) => {
+        const item = byId(db.partnerProducts, params.id);
+        if (!item) return error(404, 'NOT_FOUND');
+        const contentType = request.headers.get('content-type') || '';
+        let title: string;
+        let kind: string;
+        let number: string;
+        let validUntil: string;
+        let fileName = 'document.pdf';
+        let sizeBytes = 102400;
+
+        if (contentType.includes('multipart/form-data')) {
+          const form = await request.formData();
+          const file = form.get('file');
+          if (file instanceof File) {
+            fileName = file.name;
+            sizeBytes = file.size;
+          }
+          title = String(form.get('title') || fileName);
+          kind = String(form.get('kind') || 'certificate');
+          number = String(form.get('number') || '');
+          validUntil = String(form.get('valid_until') || '');
+        } else {
+          const body = await readJson<{ title?: string; kind?: string; number?: string; valid_until?: string }>(request);
+          title = body.title || 'document';
+          kind = body.kind || 'certificate';
+          number = body.number || '';
+          validUntil = body.valid_until || '';
+        }
+        const doc = partner.addDocument(item.id, {
+          title,
+          kind,
+          number,
+          valid_until: validUntil || null,
+          file_name: fileName,
+          size_bytes: sizeBytes,
+        });
+        return json(doc, 201);
+      },
+      { action: true },
+    ),
+  ),
+  http.delete<IdParams & { docId: string }>(
+    `${API}/partner/products/:id/documents/:docId`,
+    withSession<IdParams & { docId: string }>(
+      ({ db, params }) => {
+        const item = byId(db.partnerProducts, params.id);
+        if (!item) return error(404, 'NOT_FOUND');
+        const deleted = partner.deleteDocument(item.id, Number(params.docId));
+        return deleted ? new HttpResponse(null, { status: 204 }) : error(404, 'NOT_FOUND');
+      },
+      { action: true },
+    ),
+  ),
+  http.get<IdParams & { docId: string }>(
+    `${API}/partner/products/:id/documents/:docId/file`,
+    withSession<IdParams & { docId: string }>(({ db, params }) => {
+      const item = byId(db.partnerProducts, params.id);
+      if (!item) return error(404, 'NOT_FOUND');
+      const docs = partner.documentsOf(item.id);
+      const doc = docs.find((d) => d.id === Number(params.docId));
+      if (!doc) return error(404, 'NOT_FOUND');
+      const fileName = `${doc.title.replace(/[^\p{L}\p{N}._-]+/gu, '_')}.pdf`;
+      return new HttpResponse('%PDF-1.4\n% mock partner technical document\n', {
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="document.pdf"; filename*=UTF-8''${encodeURIComponent(fileName)}`,
+        },
+      });
+    }),
+  ),
   http.post(
     `${API}/partner/products/submit`,
     withSession(

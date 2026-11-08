@@ -95,4 +95,29 @@ describe('Заказы на поставку (PO, ASN) и запросы цен 
 
     expect(await screen.findByText('Ответ дан')).toBeInTheDocument();
   });
+
+  it('отображает складские приёмки и расхождения в карточке заказа (K3-supply-docs)', async () => {
+    signedIn('actor', 'demo', PARTNER_ACCESS);
+    const user = userEvent.setup();
+    renderApp('/partner/orders');
+
+    await screen.findByRole('heading', { level: 1, name: 'Заказы на поставку' });
+
+    // Открываем детали заказа PO-2026-0042
+    const orderBtn = await screen.findByRole('button', { name: 'PO-2026-0042' });
+    await user.click(orderBtn);
+
+    const dialog = await screen.findByRole('dialog');
+    expect(await within(dialog).findByText('Заказ PO-2026-0042')).toBeInTheDocument();
+
+    // Проверяем секцию складских приёмок
+    expect(within(dialog).getByText('Складские приёмки')).toBeInTheDocument();
+    expect(within(dialog).getByText(/Приёмка #8301/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/ТН-1002 от 05.11.2026/)).toBeInTheDocument();
+    expect(within(dialog).getByText('Центральный склад Ташкент')).toBeInTheDocument();
+    expect(within(dialog).getByText(/ЕАЭС RU С-RU\.АЯ46\.В\.00001\/26/)).toBeInTheDocument();
+
+    // Проверяем отображение позиций
+    expect(within(dialog).getAllByText('Подшипник 6205-2RS').length).toBeGreaterThan(0);
+  });
 });
