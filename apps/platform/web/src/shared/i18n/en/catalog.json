@@ -137,7 +137,14 @@
       "product_not_on_review": "The card is no longer on review. Refresh the page.",
       "review_reason_required": "Give a reason: a general comment or a note on a field.",
       "review_issues_invalid": "Check the notes: a field from the list and text up to 500 characters.",
-      "review_reason_too_long": "The comment is too long: 2000 characters at most."
+      "review_reason_too_long": "The comment is too long: 2000 characters at most.",
+      "company_match_confirmation_required": "An organization with the same number exists. Confirm whether it is the same company.",
+      "company_inn_taken": "An organization with this tax ID exists. If it is a different company, reject the application.",
+      "candidate_agreement_required": "The candidate has not agreed the contract yet. Give a reason to approve without agreement.",
+      "partner_suspended": "The partner is suspended. Lift the suspension in the supplier card.",
+      "inn_too_long": "The tax ID in the application is longer than 20 characters. Reject it or ask to re-apply.",
+      "contract_render_failed": "Could not build the contract. Nothing was saved, try again later.",
+      "company_mismatch": "The application is already linked to another organization. Refresh the list."
     }
   },
   "items": {
@@ -1028,12 +1035,14 @@
       "all": "All applications",
       "submitted": "New",
       "contract_sent": "Contract sent",
+      "candidate_agreed": "Agreed by candidate",
       "approved": "Approved",
       "rejected": "Rejected"
     },
     "status": {
       "submitted": "Submitted",
       "contract_sent": "Contract sent",
+      "candidate_agreed": "Agreed by candidate",
       "approved": "Approved",
       "rejected": "Rejected"
     },
@@ -1044,11 +1053,14 @@
     "inn": "TIN: {{inn}}",
     "matchFound": "Database match: {{name}}",
     "matchHint": "An organization with the same TIN was found in ERP",
+    "matchQuestion": "Organization “{{name}}” found. Is it the same company?",
+    "matchInnTaken": "This tax ID is already taken. If it is a different company, reject the application with a reason.",
     "contractNumber": "Contract number",
     "contractNumberPlaceholder": "e.g. PC-2026/01",
     "contractDate": "Contract date",
     "kind": "Partner kind",
     "reviewedAt": "Reviewed: {{date}}",
+    "inviteFailed": "Invitation email was not delivered",
     "columns": {
       "company": "Organization",
       "contact": "Contact person",
@@ -1061,7 +1073,9 @@
     },
     "actions": {
       "sendContract": "Send contract",
+      "resendContract": "Send contract again",
       "approve": "Approve and open cabinet",
+      "approveWithoutAgreement": "Approve without agreement",
       "reject": "Reject"
     },
     "empty": {
@@ -1074,12 +1088,16 @@
       "ok": "Mark contract as sent",
       "steps": [
         "Application status will change to “Contract sent”",
-        "The candidate will receive the partner contract draft"
+        "The candidate will receive the partner contract draft",
+        "The candidate contact will receive an email with cabinet sign-in"
       ]
     },
     "approveModal": {
       "title": "Approve application and open cabinet: {{name}}",
       "hint": "Confirm signing of the partner contract. Upon approval, the company gains partner cabinet access, the contact is invited, and the counterparty is linked with CRM.",
+      "hintOverride": "The candidate has not agreed the contract yet. You can approve only with a reason, recorded in the log.",
+      "overrideLabel": "Reason for approval without agreement",
+      "overridePlaceholder": "e.g.: the contract was signed on paper",
       "ok": "Confirm contract and open access",
       "linkToExisting": "Link to existing organization: {{name}}",
       "createNew": "Create a new supplier organization",

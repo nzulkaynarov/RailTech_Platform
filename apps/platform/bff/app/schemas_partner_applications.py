@@ -8,9 +8,13 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.schemas_company import Body, ident, text
 
 PartnerApplicationSource = Literal["public", "client_cabinet"]
-PartnerApplicationStatus = Literal["submitted", "contract_sent", "approved", "rejected"]
+PartnerApplicationStatus = Literal[
+    "submitted", "contract_sent", "candidate_agreed", "approved", "rejected"
+]
 PartnerApplicationKind = Literal["", "manufacturer", "supplier", "principal", "other"]
 Language = Literal["ru", "uz", "en"]
+CompanyMatchPending = Literal["inn", "registration_number"]
+InviteDelivery = Literal["queued", "sent", "failed"]
 
 
 class Out(BaseModel):
@@ -36,6 +40,8 @@ class PartnerApplicationItem(Out):
     reviewed_at: str | None
     matching_company_id: str | None
     matching_company_name: str | None
+    company_match_pending: CompanyMatchPending | None
+    invite_delivery: InviteDelivery | None
 
 
 class PartnerApplicationListResponse(Out):
@@ -46,23 +52,31 @@ class PartnerApplicationListResponse(Out):
 class PartnerApplicationSendContractRequest(Body):
     contract_number: str | None = Field(default=None, max_length=64)
     contract_date: str | None = None
+    company_id: str | None = None
+    create_new_company: bool | None = None
 
 
 class PartnerApplicationApproveRequest(Body):
     contract_number: str = Field(min_length=1, max_length=64)
     contract_date: str | None = None
     company_id: str | None = None
+    create_new_company: bool | None = None
     kind: PartnerApplicationKind | None = None
+    override_reason: str | None = Field(default=None, max_length=1000)
 
 
 class PartnerApplicationRejectRequest(Body):
     rejected_reason: str = Field(min_length=1, max_length=1000)
 
 
+def _one_of(value: Any, allowed: tuple[str, ...]) -> Any:
+    return value if value in allowed else None
+
+
 def to_partner_application(raw: Mapping[str, Any]) -> PartnerApplicationItem:
     matching_id = raw.get("matching_company_id")
     raw_status = raw.get("status")
-    allowed_statuses = ("submitted", "contract_sent", "approved", "rejected")
+    allowed_statuses = ("submitted", "contract_sent", "candidate_agreed", "approved", "rejected")
     status: PartnerApplicationStatus = raw_status if raw_status in allowed_statuses else "submitted"
     raw_source = raw.get("source")
     source: PartnerApplicationSource = (
@@ -93,6 +107,10 @@ def to_partner_application(raw: Mapping[str, Any]) -> PartnerApplicationItem:
         reviewed_at=str(raw.get("reviewed_at")) if raw.get("reviewed_at") else None,
         matching_company_id=str(matching_id) if matching_id is not None else None,
         matching_company_name=text(matching_name) if matching_name else None,
+        company_match_pending=_one_of(
+            raw.get("company_match_pending"), ("inn", "registration_number")
+        ),
+        invite_delivery=_one_of(raw.get("invite_delivery"), ("queued", "sent", "failed")),
     )
 
 

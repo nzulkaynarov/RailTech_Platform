@@ -23,6 +23,8 @@ const SEED_APPLICATIONS: PartnerApplicationItem[] = [
     reviewed_at: null,
     matching_company_id: "2",
     matching_company_name: "АО «Южный Металл»",
+    company_match_pending: "inn",
+    invite_delivery: null,
   },
   {
     id: "102",
@@ -43,13 +45,37 @@ const SEED_APPLICATIONS: PartnerApplicationItem[] = [
     reviewed_at: "2026-11-05T16:00:00+05:00",
     matching_company_id: null,
     matching_company_name: null,
+    company_match_pending: null,
+    invite_delivery: "failed",
+  },
+  {
+    id: "103",
+    source: "public",
+    status: "candidate_agreed",
+    kind: "principal",
+    company_name: "ООО «Рельс Сервис»",
+    inn: "7703333444",
+    contact_name: "Дилноза Каримова",
+    email: "karimova@rels-servis.example",
+    phone: "+998 91 555 66 77",
+    language: "ru",
+    categories_description: "Рельсовые скрепления и подкладки",
+    contract_number: "ПД-2026/103",
+    contract_date: "2026-11-05",
+    rejected_reason: "",
+    created_at: "2026-11-04T11:00:00+05:00",
+    reviewed_at: "2026-11-05T12:00:00+05:00",
+    matching_company_id: null,
+    matching_company_name: null,
+    company_match_pending: null,
+    invite_delivery: "sent",
   },
 ];
 
-let items: PartnerApplicationItem[] = [...SEED_APPLICATIONS];
+let items: PartnerApplicationItem[] = structuredClone(SEED_APPLICATIONS);
 
 export function resetPartnerApplications(): void {
-  items = [...SEED_APPLICATIONS];
+  items = structuredClone(SEED_APPLICATIONS);
 }
 
 export const erpPartnerApplicationsHandlers = [
@@ -59,7 +85,9 @@ export const erpPartnerApplicationsHandlers = [
     const url = new URL(request.url);
     const statusFilter = url.searchParams.get("status");
     const filtered = statusFilter ? items.filter((i) => i.status === statusFilter) : items;
-    const pendingCount = items.filter((i) => i.status === "submitted").length;
+    const pendingCount = items.filter(
+      (i) => i.status === "submitted" || i.status === "candidate_agreed",
+    ).length;
     return HttpResponse.json({
       items: filtered,
       pending_count: pendingCount,
@@ -75,7 +103,20 @@ export const erpPartnerApplicationsHandlers = [
     const body = (await request.json().catch(() => ({}))) as {
       contract_number?: string;
       contract_date?: string | null;
+      company_id?: string;
+      create_new_company?: boolean;
     };
+    if (item.company_match_pending && !body.company_id && !body.create_new_company) {
+      return HttpResponse.json(
+        {
+          code: "VALIDATION_FAILED",
+          message: "Проверьте заполнение полей.",
+          details: { reason: "company_match_confirmation_required" },
+        },
+        { status: 422 },
+      );
+    }
+    item.company_match_pending = null;
     item.status = "contract_sent";
     if (body.contract_number) item.contract_number = body.contract_number;
     if (body.contract_date) item.contract_date = body.contract_date;
@@ -94,7 +135,23 @@ export const erpPartnerApplicationsHandlers = [
       contract_date?: string | null;
       kind?: PartnerApplicationItem["kind"];
       company_id?: string;
+      create_new_company?: boolean;
+      override_reason?: string;
     };
+    if (
+      item.status !== "candidate_agreed" &&
+      !(item.status === "contract_sent" && body.override_reason)
+    ) {
+      return HttpResponse.json(
+        {
+          code: "VALIDATION_FAILED",
+          message: "Проверьте заполнение полей.",
+          details: { reason: "candidate_agreement_required" },
+        },
+        { status: 422 },
+      );
+    }
+    item.company_match_pending = null;
     item.status = "approved";
     item.contract_number = body.contract_number;
     item.contract_date = body.contract_date ?? "2026-11-06";

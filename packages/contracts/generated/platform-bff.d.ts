@@ -6792,7 +6792,7 @@ export interface paths {
     put?: never;
     /**
      * Расчёт · Заявка в партнёры: отправить проект договора
-     * @description ERP `POST catalog/partner-applications/{id}/send-contract/` — право `supply.manage`. Переводит заявку в статус `contract_sent`.
+     * @description ERP `POST catalog/partner-applications/{id}/send-contract/` — право `supply.manage`. Переводит заявку в статус `contract_sent`. Совпадение с существующей компанией — только с решением сотрудника (`company_id` или `create_new_company`), иначе 422 `company_match_confirmation_required`.
      */
     post: operations["sendContractPartnerApplication"];
     delete?: never;
@@ -6812,7 +6812,7 @@ export interface paths {
     put?: never;
     /**
      * Расчёт · Заявка в партнёры: подтвердить договор и открыть кабинет
-     * @description ERP `POST catalog/partner-applications/{id}/approve/` — право `supply.manage`. Активирует отношение `partner`, фиксирует договор и отправляет приглашение.
+     * @description ERP `POST catalog/partner-applications/{id}/approve/` — право `supply.manage`. Только после согласия кандидата; из `contract_sent` — с `override_reason` (иначе 422 `candidate_agreement_required`). `company_id`, отличный от уже привязанной компании, — 422 `company_mismatch`. Активирует отношение `partner`, фиксирует договор и отправляет приглашение.
      */
     post: operations["approvePartnerApplication"];
     delete?: never;
@@ -14757,23 +14757,41 @@ export interface components {
       reviewed_at: string | null;
       matching_company_id: string | null;
       matching_company_name: string | null;
+      /**
+       * @description По какому ключу найдена существующая компания, пока сотрудник не решил, та ли это компания; иначе null (FX-1)
+       * @enum {string|null}
+       */
+      company_match_pending: "inn" | "registration_number" | null;
+      /**
+       * @description Итог последнего письма-приглашения кандидату; null — приглашения ещё не было (FX-1)
+       * @enum {string|null}
+       */
+      invite_delivery: "queued" | "sent" | "failed" | null;
     };
     PartnerApplicationListResponse: {
       items: components["schemas"]["PartnerApplicationItem"][];
-      /** @description Количество заявок, ожидающих рассмотрения (submitted) */
+      /** @description Заявки, ждущие сотрудника: submitted и candidate_agreed */
       pending_count: number;
     };
     PartnerApplicationSendContractRequest: {
       contract_number?: string;
       /** Format: date */
       contract_date?: string | null;
+      /** @description Сотрудник подтвердил: заявка от этой существующей компании (FX-1) */
+      company_id?: string | null;
+      /** @description Сотрудник подтвердил: найденная компания — другая, завести новую (FX-1) */
+      create_new_company?: boolean;
     };
     PartnerApplicationApproveRequest: {
       contract_number: string;
       /** Format: date */
       contract_date?: string | null;
       company_id?: string | null;
+      /** @description Сотрудник подтвердил: найденная компания — другая, завести новую (FX-1) */
+      create_new_company?: boolean;
       kind?: components["schemas"]["PartnerApplicationKind"];
+      /** @description Причина одобрения без согласия кандидата, пишется в журнал; без неё нужен статус candidate_agreed (FX-1) */
+      override_reason?: string;
     };
     PartnerApplicationRejectRequest: {
       rejected_reason: string;

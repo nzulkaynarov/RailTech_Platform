@@ -214,6 +214,7 @@ exports[`карты статусов > снимок карты: изменени
   },
   "partnerApplication": {
     "approved": "green",
+    "candidate_agreed": "blue",
     "contract_sent": "blue",
     "rejected": "red",
     "submitted": "gold",

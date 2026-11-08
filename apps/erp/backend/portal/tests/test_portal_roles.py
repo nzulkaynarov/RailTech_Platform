@@ -299,6 +299,12 @@ ANY_ROLE_PATHS |= {"/auth/sessions", "/auth/sessions/revoke-others"}
 ANY_ROLE_PATHS |= {"/auth/partner-application"}
 #: Справочник стран для онбординга и профиля (COUNTRY-MASK-1): доступен публично.
 ANY_ROLE_PATHS |= {"/countries"}
+#: Своя заявка на партнёрство (FX-1): кандидат работает с ней до появления модулей; подача новой — по-прежнему модуль `company`.
+CANDIDATE_OPERATIONS = {
+    ("GET", "/company/partner-application"),
+    ("GET", "/company/partner-application/contract-pdf"),
+    ("POST", "/company/partner-application/agree"),
+}
 
 #: Эндпоинты модуля «Каталог и заявки» (`catalog_requests`): заявки, каталог и загрузка вложений.
 CATALOG_REQUESTS_PATHS = {
@@ -340,7 +346,10 @@ def _client_operations(only=None, exclude=None):
     return sorted(
         (method, path)
         for method, path in operations
-        if path not in ANY_ROLE_PATHS and (only is None or path in only) and (exclude is None or path not in exclude)
+        if path not in ANY_ROLE_PATHS
+        and (method, path) not in CANDIDATE_OPERATIONS
+        and (only is None or path in only)
+        and (exclude is None or path not in exclude)
     )
 
 

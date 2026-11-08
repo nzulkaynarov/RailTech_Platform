@@ -8,4 +8,11 @@ export interface PartnerApplicationSendContractRequest {
   contract_number?: string;
   /** @nullable */
   contract_date?: string | null;
+  /**
+   * Сотрудник подтвердил: заявка от этой существующей компании (FX-1)
+   * @nullable
+   */
+  company_id?: string | null;
+  /** Сотрудник подтвердил: найденная компания — другая, завести новую (FX-1) */
+  create_new_company?: boolean;
 }

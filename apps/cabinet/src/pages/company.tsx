@@ -1011,7 +1011,7 @@ export function PartnerApplicationCard() {
               items={[
                 { label: t('pages.becomePartner.fields.kind'), value: t(`pages.becomePartner.fields.kinds.${app.kind}`) },
                 { label: t('pages.becomePartner.fields.categoriesDescription'), value: app.categories_description },
-                { label: t('pages.company.partner.appliedAt'), value: formatDateTime(app.created_at) },
+                { label: t('pages.company.partner.appliedAt', { date: '' }).trim(), value: formatDateTime(app.created_at) },
                 ...(app.contract_number
                   ? [
                       {

@@ -31,6 +31,8 @@ APPLICATION_RAW = {
     "reviewed_at": None,
     "matching_company_id": 9,
     "matching_company_name": "ООО Поставщик Север",
+    "company_match_pending": "inn",
+    "invite_delivery": None,
 }
 
 LIST_RAW = {
@@ -141,6 +143,76 @@ async def test_reject_application(web: Web, be: Any, check: ContractChecker) -> 
     check(response, "/erp/catalog/partner-applications/{id}/reject", "post")
     assert response.json()["status"] == "rejected"
     assert response.json()["rejected_reason"] == "Не наш профиль"
+
+
+async def test_candidate_agreed_is_shown_as_is(web: Web, be: Any, check: ContractChecker) -> None:
+    """FX-1 (к): согласованная кандидатом заявка не маскируется под новую."""
+    await web.login(["SUPPLY"])
+    mock(be).get(f"{API}/catalog/partner-applications/").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "items": [
+                    {**APPLICATION_RAW, "status": "candidate_agreed", "invite_delivery": "failed"}
+                ],
+                "pending_count": 0,
+            },
+        )
+    )
+    response = await call(web, "GET", BASE)
+    assert response.status_code == 200
+    item = response.json()["items"][0]
+    assert item["status"] == "candidate_agreed"
+    check(response, "/erp/catalog/partner-applications", "get")
+    filtered = await call(web, "GET", f"{BASE}?status=candidate_agreed")
+    assert filtered.status_code == 200
+    assert item["company_match_pending"] == "inn"
+    assert item["invite_delivery"] == "failed"
+
+
+async def test_send_contract_confirms_match_as_int(web: Web, be: Any) -> None:
+    await web.login(["SUPPLY"])
+    route = (
+        mock(be)
+        .post(f"{API}/catalog/partner-applications/15/send-contract/")
+        .mock(return_value=httpx.Response(200, json={**APPLICATION_RAW, "status": "contract_sent"}))
+    )
+    response = await call(web, "POST", f"{BASE}/15/send-contract", {"company_id": "9"})
+    assert response.status_code == 200
+    assert json.loads(route.calls.last.request.content)["company_id"] == 9
+
+
+async def test_approve_passes_override_reason(web: Web, be: Any) -> None:
+    await web.login(["SUPPLY"])
+    route = (
+        mock(be)
+        .post(f"{API}/catalog/partner-applications/15/approve/")
+        .mock(return_value=httpx.Response(200, json={**APPLICATION_RAW, "status": "approved"}))
+    )
+    response = await call(
+        web,
+        "POST",
+        f"{BASE}/15/approve",
+        {
+            "contract_number": "D-1",
+            "override_reason": "Подписан на бумаге",
+            "create_new_company": True,
+        },
+    )
+    assert response.status_code == 200
+    body = json.loads(route.calls.last.request.content)
+    assert body["override_reason"] == "Подписан на бумаге"
+    assert body["create_new_company"] is True
+
+
+async def test_refusal_reason_reaches_the_screen(web: Web, be: Any) -> None:
+    await web.login(["SUPPLY"])
+    mock(be).post(f"{API}/catalog/partner-applications/15/approve/").mock(
+        return_value=httpx.Response(400, json={"detail": "CANDIDATE_AGREEMENT_REQUIRED"})
+    )
+    response = await call(web, "POST", f"{BASE}/15/approve", {"contract_number": "D-1"})
+    assert response.status_code == 422
+    assert response.json()["details"]["reason"] == "candidate_agreement_required"
 
 
 async def test_access_control(web: Web) -> None:

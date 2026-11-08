@@ -13,12 +13,26 @@ from typing import Any
 
 from django.template.loader import render_to_string
 from django.utils import timezone
-from parties.models import PartnerApplication, PartnerApplicationStatus
+from parties.models import PartnerApplication
 
 from core.tenant import own_company
 from crm.services.documents import brand_context_for_pdf, document_brand_context, draft_context
 
 logger = logging.getLogger(__name__)
+
+#: Право подписывать договоры от своей компании: без него сотрудник на договоре подписантом не печатается (FX-1).
+SIGN_PERMISSION = "contract.sign"
+
+
+class PartnerContractRenderError(Exception):
+    """PDF договора не собрался: заглушка договором не считается и не сохраняется (FX-1)."""
+
+
+def _may_sign(user: Any) -> bool:
+    from accounts.services.permissions import member_has_permission
+    from core.tenant import own_company_id
+
+    return member_has_permission(user, own_company_id(), SIGN_PERMISSION)
 
 
 def generate_partner_contract_number(app_pk: int) -> str:
@@ -42,22 +56,18 @@ def build_partner_contract_context(
 
     brand = document_brand_context(platform_company)
 
-    candidate_agreed = bool(
-        app.candidate_agreed_at is not None
-        or app.status in (PartnerApplicationStatus.CANDIDATE_AGREED, PartnerApplicationStatus.APPROVED)
-    )
-    is_signed_by_director = not draft and (app.status == PartnerApplicationStatus.APPROVED or director_user is not None)
+    # Согласие печатается только по факту согласования: одобрение в обход согласия его не означает (FX-1).
+    candidate_agreed = app.candidate_agreed_at is not None
 
-    director_name = "Генеральный директор"
-    director_email = "director@railtech.uz"
-    if director_user:
-        full_name = getattr(director_user, "get_full_name", lambda: "")()
-        director_name = full_name or getattr(director_user, "name", "") or director_user.email
-        director_email = getattr(director_user, "email", director_email)
-    elif app.reviewed_by:
-        full_name = getattr(app.reviewed_by, "get_full_name", lambda: "")()
-        director_name = full_name or getattr(app.reviewed_by, "name", "") or app.reviewed_by.email
-        director_email = getattr(app.reviewed_by, "email", director_email)
+    # Подпись от нашей стороны — только у того, кому положено подписывать; иначе строка «Подпись / дата» (FX-1).
+    signer = director_user or app.reviewed_by
+    is_signed_by_director = not draft and signer is not None and _may_sign(signer)
+    director_name = ""
+    director_email = ""
+    if is_signed_by_director:
+        full_name = getattr(signer, "get_full_name", lambda: "")()
+        director_name = full_name or getattr(signer, "name", "") or signer.email
+        director_email = getattr(signer, "email", "")
 
     country_name = ""
     if app.country:
@@ -78,7 +88,7 @@ def build_partner_contract_context(
         "partner_kind_label": app.get_kind_display(),
         "categories_description": app.categories_description,
         "candidate_agreed": candidate_agreed,
-        "candidate_agreed_at": app.candidate_agreed_at or app.reviewed_at or timezone.now(),
+        "candidate_agreed_at": app.candidate_agreed_at,
         "signed_by_director": is_signed_by_director,
         "director_name": director_name,
         "director_email": director_email,
@@ -95,7 +105,7 @@ def render_partner_contract_pdf(
     draft: bool = True,
     director_user: Any = None,
 ) -> bytes:
-    """Рендерит PDF партнёрского договора через WeasyPrint с безопасным фоллбеком."""
+    """Рендерит PDF партнёрского договора через WeasyPrint; сбой — `PartnerContractRenderError`, заглушки нет (FX-1)."""
     context = build_partner_contract_context(app, draft=draft, director_user=director_user)
     html_content = render_to_string("crm/partner_contract_pdf.html", context)
 
@@ -104,19 +114,7 @@ def render_partner_contract_pdf(
 
         buf = io.BytesIO()
         HTML(string=html_content).write_pdf(buf)
-        return buf.getvalue()
     except Exception as exc:
-        logger.warning("WeasyPrint render failed: %s; using PDF stub", exc)
-        return (
-            b"%PDF-1.4\n"
-            b"1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"
-            b"2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n"
-            b"3 0 obj<</Type/Page/MediaBox[0 0 595 842]/Parent 2 0 R>>endobj\n"
-            b"xref\n0 4\n"
-            b"0000000000 65535 f\n"
-            b"0000000010 00000 n\n"
-            b"0000000053 00000 n\n"
-            b"0000000102 00000 n\n"
-            b"trailer<</Size 4/Root 1 0 R>>\n"
-            b"startxref\n163\n%%EOF\n"
-        )
+        logger.exception("Partner contract render failed for application %s", app.pk)
+        raise PartnerContractRenderError(str(exc)) from exc
+    return buf.getvalue()

@@ -27761,6 +27761,14 @@ export const getListPartnerApplicationsResponseMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+    company_match_pending: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["inn", "registration_number"] as const),
+      null,
+    ]),
+    invite_delivery: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["queued", "sent", "failed"] as const),
+      null,
+    ]),
   })),
   pending_count: faker.number.int(),
   ...overrideResponse,
@@ -27796,6 +27804,14 @@ export const getSendContractPartnerApplicationResponseMock = (
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     null,
   ]),
+  company_match_pending: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["inn", "registration_number"] as const),
+    null,
+  ]),
+  invite_delivery: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["queued", "sent", "failed"] as const),
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -27829,6 +27845,14 @@ export const getApprovePartnerApplicationResponseMock = (
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     null,
   ]),
+  company_match_pending: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["inn", "registration_number"] as const),
+    null,
+  ]),
+  invite_delivery: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["queued", "sent", "failed"] as const),
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -27860,6 +27884,14 @@ export const getRejectPartnerApplicationResponseMock = (
   ]),
   matching_company_name: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  company_match_pending: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["inn", "registration_number"] as const),
+    null,
+  ]),
+  invite_delivery: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["queued", "sent", "failed"] as const),
     null,
   ]),
   ...overrideResponse,

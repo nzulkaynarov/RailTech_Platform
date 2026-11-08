@@ -21549,6 +21549,14 @@ components:
       required:
       - id
       - name
+    CompanyMatchPendingEnum:
+      enum:
+      - inn
+      - registration_number
+      type: string
+      description: |-
+        * `inn` - inn
+        * `registration_number` - registration_number
     CompanyMember:
       type: object
       properties:
@@ -24104,9 +24112,18 @@ components:
         company_id:
           type: integer
           nullable: true
+          description: 'Сотрудник подтвердил: заявка от этой существующей компании.'
+        create_new_company:
+          type: boolean
+          default: false
+          description: 'Сотрудник подтвердил: найденная компания — другая, завести новую.'
         kind:
           type: string
           maxLength: 20
+        override_reason:
+          type: string
+          description: Причина одобрения без согласия кандидата; пишется в журнал. Без неё нужен статус candidate_agreed.
+          maxLength: 1000
       required:
       - contract_number
     DeskPartnerApplicationDetail:
@@ -24176,6 +24193,27 @@ components:
         matching_company_name:
           type: string
           nullable: true
+        company_match_pending:
+          nullable: true
+          description: |-
+            По какому ключу найдена существующая компания, пока сотрудник не решил, та ли это компания; иначе null.
+
+            * `inn` - inn
+            * `registration_number` - registration_number
+          oneOf:
+          - $ref: '#/components/schemas/CompanyMatchPendingEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        invite_delivery:
+          nullable: true
+          description: |-
+            Итог последнего письма-приглашения кандидату; null — приглашения ещё не было.
+
+            * `queued` - queued
+            * `sent` - sent
+            * `failed` - failed
+          oneOf:
+          - $ref: '#/components/schemas/InviteDeliveryEnum'
+          - $ref: '#/components/schemas/NullEnum'
         company_id:
           type: integer
           nullable: true
@@ -24190,6 +24228,7 @@ components:
       - applicant_contact_id
       - categories_description
       - company_id
+      - company_match_pending
       - company_name
       - contact_name
       - contract_date
@@ -24198,6 +24237,7 @@ components:
       - email
       - id
       - inn
+      - invite_delivery
       - kind
       - language
       - matching_company_id
@@ -24275,8 +24315,30 @@ components:
         matching_company_name:
           type: string
           nullable: true
+        company_match_pending:
+          nullable: true
+          description: |-
+            По какому ключу найдена существующая компания, пока сотрудник не решил, та ли это компания; иначе null.
+
+            * `inn` - inn
+            * `registration_number` - registration_number
+          oneOf:
+          - $ref: '#/components/schemas/CompanyMatchPendingEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        invite_delivery:
+          nullable: true
+          description: |-
+            Итог последнего письма-приглашения кандидату; null — приглашения ещё не было.
+
+            * `queued` - queued
+            * `sent` - sent
+            * `failed` - failed
+          oneOf:
+          - $ref: '#/components/schemas/InviteDeliveryEnum'
+          - $ref: '#/components/schemas/NullEnum'
       required:
       - categories_description
+      - company_match_pending
       - company_name
       - contact_name
       - contract_date
@@ -24285,6 +24347,7 @@ components:
       - email
       - id
       - inn
+      - invite_delivery
       - kind
       - language
       - matching_company_id
@@ -24303,7 +24366,7 @@ components:
             $ref: '#/components/schemas/DeskPartnerApplicationListItem'
         pending_count:
           type: integer
-          description: Количество заявок в статусе submitted
+          description: 'Заявки, ждущие сотрудника: submitted и candidate_agreed'
       required:
       - items
       - pending_count
@@ -24327,6 +24390,14 @@ components:
           type: string
           format: date
           nullable: true
+        company_id:
+          type: integer
+          nullable: true
+          description: 'Сотрудник подтвердил: заявка от этой существующей компании.'
+        create_new_company:
+          type: boolean
+          default: false
+          description: 'Сотрудник подтвердил: найденная компания — другая, завести новую.'
     DeskProposal:
       type: object
       properties:
@@ -26206,6 +26277,16 @@ components:
         * `stock` - stock
         * `supply` - supply
         * `engineer` - engineer
+    InviteDeliveryEnum:
+      enum:
+      - queued
+      - sent
+      - failed
+      type: string
+      description: |-
+        * `queued` - queued
+        * `sent` - sent
+        * `failed` - failed
     InviteRequestRequest:
       type: object
       properties:

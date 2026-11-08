@@ -670,6 +670,8 @@ export * from "./pageLimitParameter";
 export * from "./pageOffsetParameter";
 export * from "./partnerApplicationApproveRequest";
 export * from "./partnerApplicationItem";
+export * from "./partnerApplicationItemCompanyMatchPending";
+export * from "./partnerApplicationItemInviteDelivery";
 export * from "./partnerApplicationItemLanguage";
 export * from "./partnerApplicationKind";
 export * from "./partnerApplicationListResponse";
