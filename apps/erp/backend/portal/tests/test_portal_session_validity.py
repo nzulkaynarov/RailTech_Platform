@@ -182,7 +182,6 @@ class TestMagicLinkMailIsQueued:
             OperationalError("redis down"),
             TimeoutError("broker timeout"),
             RedisError("redis refused"),
-            RuntimeError("Retry limit exceeded while trying to reconnect to the Celery redis result store backend."),
         ],
     )
     def test_broker_errors_are_swallowed_with_the_same_answer(self, client_contact, enqueue, error):

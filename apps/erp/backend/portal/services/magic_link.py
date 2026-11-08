@@ -107,7 +107,7 @@ def request_magic_link(email: str) -> None:
                 retry=False,
                 connection=connection,
             )
-    except (KombuError, OSError, RedisError, RuntimeError) as exc:  # отказ брокера или бэкенда, ошибки кода не прячем
+    except (KombuError, OSError, RedisError) as exc:  # отказ брокера или бэкенда, ошибки кода не прячем
         logger.warning("Login link request was not queued (%s)", type(exc).__name__)
 
 
