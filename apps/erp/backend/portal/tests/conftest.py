@@ -8,6 +8,7 @@ import time
 import urllib.parse
 import uuid
 from datetime import timedelta
+from unittest import mock
 
 import pytest
 from django.conf import settings
@@ -48,11 +49,14 @@ def inline_magic_link_task(monkeypatch):
     monkeypatch.setattr(
         send_magic_link, "delay", lambda *args, **kwargs: send_magic_link.apply(args=args, kwargs=kwargs)
     )
-    monkeypatch.setattr(
+    # mock.patch, а не monkeypatch: откат monkeypatch оставил бы на задаче атрибут экземпляра, и подмена `Task.apply_async`
+    # на классе в других тестах перестала бы действовать на неё.
+    with mock.patch.object(
         send_magic_link_to_address,
         "apply_async",
-        lambda args=None, kwargs=None, **options: send_magic_link_to_address.apply(args=args, kwargs=kwargs),
-    )
+        new=lambda args=None, kwargs=None, **options: send_magic_link_to_address.apply(args=args, kwargs=kwargs),
+    ):
+        yield
 
 
 class PortalAPIClient(APIClient):

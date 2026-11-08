@@ -91,11 +91,10 @@ def delay(monkeypatch):
 
 
 @pytest.fixture
-def enqueue(monkeypatch):
+def enqueue():
     """Подмена постановки шага поиска контакта: брокера в тестах нет, смотрим сам вызов."""
-    mocked = mock.Mock()
-    monkeypatch.setattr("portal.tasks.send_magic_link_to_address.apply_async", mocked)
-    return mocked
+    with mock.patch.object(send_magic_link_to_address, "apply_async") as mocked:
+        yield mocked
 
 
 @pytest.fixture(autouse=True)
