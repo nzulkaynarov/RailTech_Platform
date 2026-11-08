@@ -270,6 +270,19 @@ def test_all_admins_and_primary_are_notified_by_every_channel(
     assert "2020" not in str(envelope["data"]), "реквизитов в событии нет"
 
 
+def test_rolled_back_submission_leaves_no_event_or_notice(client_company, client_contact, crm_paired):
+    from django.db import transaction
+    from portal.services import bank_details_change
+
+    with pytest.raises(RuntimeError), transaction.atomic():
+        bank_details_change.submit(client_company, client_contact, NEW, ip="203.0.113.7", user_agent="")
+        raise RuntimeError("откат")
+
+    assert not bus_support.published("contact.security_notice_requested")
+    assert not PortalNotice.objects.exists()
+    assert not PortalSecurityEvent.objects.exists()
+
+
 def test_contact_without_email_gets_cabinet_and_telegram(portal_client, client_contact, people, crm_paired):
     client_contact.email = ""
     client_contact.save(update_fields=["email"])
