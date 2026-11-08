@@ -143,6 +143,13 @@ export function setMockPartnerApplication(app: Schemas['PartnerApplication'] | n
   dbs.demo.partnerApplication = app;
 }
 
+/** Новый счёт запроса — только администратору, как в ERP (FX-4). */
+function companyView(company: Schemas['Company'], isAdmin: boolean | undefined): Schemas['Company'] {
+  const change = company.bank_change_request;
+  if (!change || isAdmin) return company;
+  return { ...company, bank_change_request: { ...change, new_bank_details: null } };
+}
+
 function contactFor(role: Role): Schemas['TeamMember'] {
   return role === 'viewer' ? fixtures.contactViewer : fixtures.contactActor;
 }
@@ -944,7 +951,10 @@ export const handlers = [
   ),
 
   // --- компания и команда -----------------------------------------------------------------------
-  http.get(`${API}/company`, withSession(({ db }) => json(db.company))),
+  http.get(
+    `${API}/company`,
+    withSession(({ db, session }) => json(companyView(db.company, contactFor(session.role).is_admin))),
+  ),
   http.get(
     `${API}/company/security-log`,
     withSession(({ session }) => {
@@ -974,17 +984,28 @@ export const handlers = [
         const body = await readJson<Schemas['CompanyUpdate']>(request);
         if (body.name !== undefined && !body.name.trim()) return error(422, 'VALIDATION_ERROR');
         if (body.inn !== undefined && body.inn !== '' && !/^\d{9,14}$/.test(body.inn)) return error(422, 'INN_INVALID');
-        if (body.bank_details !== undefined && body.bank_details !== (db.company.bank_details ?? '')) {
+        const { bank_details: requested, ...profile } = body;
+        if (requested !== undefined && requested !== (db.company.bank_details ?? '')) {
           const currentContact = contactFor(session.role);
           if (!currentContact.is_admin) return error(409, 'ADMIN_REQUIRED');
+          if (db.company.bank_change_request?.status === 'pending') return error(409, 'BANK_CHANGE_ALREADY_PENDING');
           const noticeId = (db.notifications[0]?.id ?? 0) + 1;
+          db.company.bank_change_request = {
+            id: noticeId,
+            status: 'pending',
+            requested_by_name: currentContact.name || currentContact.email || 'Admin',
+            new_bank_details: requested,
+            created_at: new Date().toISOString(),
+            decided_at: null,
+            reject_reason: null,
+          };
           db.notifications.unshift({
             id: noticeId,
-            kind: 'bank_requisites_changed',
+            kind: 'bank_requisites_change_requested',
             group: 'security',
-            object: { type: 'chat', id: 0, number: null },
-            action: 'status_changed',
-            text_key: 'security_bank_requisites_changed',
+            object: { type: 'bank_change', id: noticeId, number: null },
+            action: 'awaiting_decision',
+            text_key: 'bank_requisites_change_requested',
             params: { actor: currentContact.name || currentContact.email || 'Admin' },
             link: '/company',
             created_at: new Date().toISOString(),
@@ -994,8 +1015,8 @@ export const handlers = [
         const country = body.country_code
           ? { code: body.country_code, name: body.country_code === 'UZ' ? 'Узбекистан' : 'Казахстан' }
           : db.company.country;
-        db.company = { ...db.company, ...body, country };
-        return json(db.company);
+        db.company = { ...db.company, ...profile, country };
+        return json(companyView(db.company, contactFor(session.role).is_admin));
       },
       { action: true },
     ),

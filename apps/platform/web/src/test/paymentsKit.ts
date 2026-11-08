@@ -1,5 +1,6 @@
 import { beforeEach } from "vitest";
 
+import { resetBankChangesMock } from "../mocks/edsBankChanges";
 import { resetPayments } from "../mocks/fixtures/payments";
 import { setupApprovalTests } from "./approvalsKit";
 
@@ -10,5 +11,6 @@ export function setupPaymentTests(width = 1440): void {
   setupApprovalTests(width);
   beforeEach(() => {
     resetPayments();
+    resetBankChangesMock();
   });
 }

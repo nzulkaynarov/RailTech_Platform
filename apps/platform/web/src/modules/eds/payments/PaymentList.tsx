@@ -11,6 +11,7 @@ import {
   getListPaymentsQueryKey,
   listPaymentMemos,
   listPayments,
+  useListBankChangeRequests,
 } from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useLastDefined, useShownKey } from "../../../shared/lib/useShownKey";
@@ -22,6 +23,7 @@ import { InvoiceRows } from "./InvoiceRows";
 import { MemoRows } from "./MemoRows";
 import { MemoSlot } from "./MemoPanel";
 import { PaymentSlot } from "./PaymentPanel";
+import { BankChangesPanel } from "./BankChangesPanel";
 import { BankDetailsNotice } from "./BankDetailsNotice";
 import { TabNav } from "./TabNav";
 import { useStateLabels } from "./labels";
@@ -75,11 +77,12 @@ export function PaymentList() {
     setDraft(query);
   }
 
-  const invoiceTab: InvoiceTab = tab === "memos" ? "awaiting" : tab;
+  const separateTab = tab === "memos" || tab === "bank_changes";
+  const invoiceTab: InvoiceTab = separateTab ? "awaiting" : tab;
   const boardParams = {
     tab: invoiceTab,
-    ...(query && tab !== "memos" ? { q: query } : {}),
-    limit: tab === "memos" ? 1 : PAGE,
+    ...(query && !separateTab ? { q: query } : {}),
+    limit: separateTab ? 1 : PAGE,
   };
   const boardKey = getListPaymentsQueryKey(boardParams);
   const board = useInfiniteQuery({
@@ -125,7 +128,9 @@ export function PaymentList() {
     memosTab ? memos.isPlaceholderData : board.isPlaceholderData,
   );
   let body;
-  if (tab === "memos") {
+  if (tab === "bank_changes") {
+    body = <BankChangesPanel />;
+  } else if (tab === "memos") {
     if (memos.isPending) {
       body = <ListSkeleton rows={PAGE} />;
     } else if (memos.isError) {
@@ -206,7 +211,7 @@ export function PaymentList() {
   } else if (invoices.length === 0) {
     const searching = query !== "";
     const key = searching ? "search" : tab;
-    const next = searching ? null : NEXT[tab];
+    const next = searching ? null : NEXT[invoiceTab];
     body = (
       <EmptyState
         title={t(`payments:list.empty.${key}.title`)}
@@ -245,6 +250,7 @@ export function PaymentList() {
   }
 
   // Числа вкладок — последние известные, пока счета перечитываются с другой вкладкой (UX-1c, S8)
+  const bankChanges = useListBankChangeRequests({ status: "pending" });
   const knownCounts = useLastDefined(first?.counts);
   const knownMemos = useLastDefined(first ? first.memos_to_pay : undefined);
   const counts = board.isError ? undefined : knownCounts;
@@ -253,7 +259,12 @@ export function PaymentList() {
   return (
     <div className="pf-dec-page">
       <PageHeader title={title} subtitle={t("payments:list.subtitle")} />
-      <TabNav active={tab} counts={counts} memos={memosToPay} />
+      <TabNav
+        active={tab}
+        counts={counts}
+        memos={memosToPay}
+        bankChanges={bankChanges.data?.pending_count}
+      />
       {tab === "memos" ? (
         <Segmented
           aria-label={t("payments:memo.scope.label")}

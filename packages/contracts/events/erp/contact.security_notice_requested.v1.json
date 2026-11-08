@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/erp/contact.security_notice_requested.v1.json",
+  "title": "Уведомление безопасности контакту в Telegram",
+  "description": "Тип uz.railtech.erp.contact.security_notice_requested.v1, источник rt://erp. Поле data конверта (envelope.v1.json). ERP в Telegram не пишет (бот принадлежит CRM): событие безопасности компании (смена банковских реквизитов, FX-4) уходит администраторам и основному контакту по всем их каналам, и бот CRM присылает короткое сообщение на язык контакта на его привязанный Telegram. Группу security контакт отключить не может. Публикуется только контакту с привязанным Telegram и сопоставлением с CRM; реквизитов и причин в событии нет. Итог доставки не возвращается.",
+  "type": "object",
+  "required": [
+    "erp_company_id",
+    "crm_client_id",
+    "actor",
+    "payload"
+  ],
+  "properties": {
+    "erp_company_id": {
+      "type": "integer",
+      "description": "Компания контакта в ERP"
+    },
+    "crm_client_id": {
+      "type": "integer",
+      "description": "Клиент в CRM; CRM сверяет, что контакт принадлежит этому клиенту"
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    },
+    "payload": {
+      "$ref": "_defs.v1.json#/$defs/ContactSecurityNoticeRequested"
+    }
+  },
+  "additionalProperties": false
+}

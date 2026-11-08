@@ -127,7 +127,7 @@ describe('Wave J3, J4 & J2-bank Journey Tests', () => {
       const bankTextarea = screen.getByLabelText('Банковские реквизиты');
       expect(bankTextarea).not.toBeDisabled();
       expect(
-        screen.getByText(/При изменении реквизитов все администраторы компании получат уведомление безопасности/),
+        screen.getByText(/применятся только после проверки сотрудником/),
       ).toBeInTheDocument();
     });
   });

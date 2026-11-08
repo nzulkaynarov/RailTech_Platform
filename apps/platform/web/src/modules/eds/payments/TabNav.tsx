@@ -13,15 +13,23 @@ export function TabNav({
   active,
   counts,
   memos,
+  bankChanges,
 }: {
   active: ShowTab;
   counts: PaymentCounts | undefined;
   memos: number | null | undefined;
+  bankChanges: number | null | undefined;
 }) {
   const { t } = useTranslation("payments");
   const [params] = useSearchParams();
   const number = (tab: ShowTab): number | null | undefined =>
-    tab === "memos" ? memos : tab === "all" ? undefined : counts?.[tab];
+    tab === "memos"
+      ? memos
+      : tab === "bank_changes"
+        ? bankChanges
+        : tab === "all"
+          ? undefined
+          : counts?.[tab];
   return (
     <nav aria-label={t("list.tabsLabel")}>
       <ul className="pf-pay-tabs">

@@ -571,6 +571,23 @@ def publish_contact_telegram_test_requested(contact: Any, crm_contact_id: int) -
     )
 
 
+def publish_contact_security_notice_requested(contact: Any, crm_contact_id: int, kind: str) -> Optional[Event]:
+    """Событие `contact.security_notice_requested` (FX-4): уведомление безопасности в Telegram контакта — пишет бот CRM.
+
+    `None` — компания не сопоставлена клиенту CRM. Реквизитов и причин в событии нет; действующее лицо — система.
+    """
+    payload: Dict[str, Any] = {"erp_contact_id": contact.id, "crm_contact_id": int(crm_contact_id), "kind": kind}
+    if contact.language in ("ru", "uz", "en"):
+        payload["language"] = contact.language
+    return publish_event(
+        "contact.security_notice_requested",
+        erp_company_id=contact.company_id,
+        payload=payload,
+        deal=None,
+        actor={"type": "system"},
+    )
+
+
 #: Решение клиента по строке поставки → тип события (`DeliveryLineDecision.status`).
 DELIVERY_LINE_EVENTS = {"accepted": "delivery.line_accepted", "disputed": "delivery.line_disputed"}
 

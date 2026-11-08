@@ -265,7 +265,8 @@ class TestPortalEndToEndLifecycle:
             format="json",
         )
         assert update_comp_resp.status_code == status.HTTP_200_OK
-        assert update_comp_resp.data["bank_details"] == "р/с 20208000999988887777 в НБУ"
+        assert update_comp_resp.data["bank_details"] == client_company.bank_details  # смена — на проверке (FX-4)
+        assert update_comp_resp.data["bank_change_request"]["new_bank_details"] == "р/с 20208000999988887777 в НБУ"
         assert update_comp_resp.data["language"] == "uz"
 
         # Приглашение коллеги

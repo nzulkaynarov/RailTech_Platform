@@ -172,17 +172,17 @@ export const HELP_ARTICLES: HelpArticle[] = [
       ru: [
         'Администратор компании может приглашать коллег в разделе «Команда».',
         'Роли определяют возможности: просмотр, право подписи (can_act) и администратор (is_admin).',
-        'Важно: банковские реквизиты компании может изменять только администратор. При любом изменении все администраторы немедленно получают предупреждение безопасности.',
+        'Важно: смену банковских реквизитов подаёт только администратор, а применяется она после подтверждения сотрудником; до этого действуют старые реквизиты. Все администраторы и основной контакт получают уведомление во всех каналах.',
       ],
       uz: [
         'Kompaniya administratori «Jamoa» bo‘limida xodimlarni taklif qilishi mumkin.',
         'Rollar huquqlarni belgilaydi: ko‘rish, imzolash huquqi (can_act) va administrator (is_admin).',
-        'Muhim: bank rekvizitlarini faqat administrator o‘zgartirishi mumkin. O‘zgartirilganda barcha administratorlarga xavfsizlik ogohlantirishi boradi.',
+        'Muhim: bank rekvizitlarini o‘zgartirish so‘rovini faqat administrator yuboradi, o‘zgarish xodim tasdig‘idan keyin qo‘llanadi; shu vaqtgacha eski rekvizitlar amalda. Barcha administratorlar va asosiy kontakt barcha kanallarda bildirishnoma oladi.',
       ],
       en: [
         'Company administrators can invite colleagues in the "Team" section.',
         'Roles specify privileges: view only, action rights (can_act), and administrator (is_admin).',
-        'Important: only administrators can modify banking details. Any edit triggers security alerts to all company admins.',
+        'Important: only an administrator can request a bank details change, and it applies only after a staff member confirms it; until then the old details remain in effect. All admins and the primary contact are notified on every channel.',
       ],
     },
   },

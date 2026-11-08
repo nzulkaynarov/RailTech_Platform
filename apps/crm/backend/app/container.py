@@ -45,6 +45,7 @@ if TYPE_CHECKING:
     from app.services.client_requests import ClientRequestService
     from app.services.clients import ClientService
     from app.services.company_articles import CompanyArticleService
+    from app.services.contact_security_notice import SecurityNoticeDelivery
     from app.services.contact_telegram import ContactTelegramService
     from app.services.contact_telegram_test import TelegramTestDelivery
     from app.services.documents import DocumentService
@@ -834,6 +835,15 @@ class Container:
         from app.services.contact_telegram_test import TelegramTestDelivery
 
         return TelegramTestDelivery(
+            self.session_factory, self.telegram_bot, dry_run=self.settings.telegram_dry_run
+        )
+
+    @cached_property
+    def contact_security_notice(self) -> "SecurityNoticeDelivery":
+        """Уведомление безопасности контакту по запросу ERP (FX-4), inline."""
+        from app.services.contact_security_notice import SecurityNoticeDelivery
+
+        return SecurityNoticeDelivery(
             self.session_factory, self.telegram_bot, dry_run=self.settings.telegram_dry_run
         )
 

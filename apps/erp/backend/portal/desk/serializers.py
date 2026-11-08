@@ -235,3 +235,31 @@ class DeskPartnerApplicationRejectIn(serializers.Serializer):
         max_length=1000,
         help_text="Причина отклонения заявки.",
     )
+
+
+class DeskBankChange(serializers.Serializer):
+    id = serializers.IntegerField()
+    company_id = serializers.IntegerField()
+    company_name = serializers.CharField()
+    company_inn = serializers.CharField(allow_blank=True)
+    company_archived = serializers.BooleanField()
+    status = serializers.CharField(help_text="pending, approved или rejected.")
+    stale = serializers.BooleanField(help_text="Реквизиты изменились после подачи: подтвердить нельзя.")
+    old_bank_details = serializers.CharField(allow_blank=True, help_text="Без права подтверждать — маска.")
+    new_bank_details = serializers.CharField(allow_blank=True, help_text="Без права подтверждать — маска.")
+    requested_by_name = serializers.CharField()
+    requested_by_email = serializers.CharField(allow_blank=True)
+    requested_ip = serializers.IPAddressField(allow_null=True)
+    created_at = serializers.DateTimeField()
+    decided_at = serializers.DateTimeField(allow_null=True)
+    decided_by_name = serializers.CharField(allow_null=True)
+    reject_reason = serializers.CharField(allow_null=True)
+
+
+class DeskBankChangeListResponse(serializers.Serializer):
+    items = DeskBankChange(many=True)
+    pending_count = serializers.IntegerField()
+
+
+class DeskBankChangeRejectIn(serializers.Serializer):
+    reason = serializers.CharField(max_length=1000, trim_whitespace=True)

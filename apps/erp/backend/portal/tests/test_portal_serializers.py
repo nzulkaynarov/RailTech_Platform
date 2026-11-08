@@ -555,7 +555,8 @@ def test_team_member_form(client_contact):
 
 def test_company_form(client_company):
     data = CompanySerializer(client_company).data
-    assert set(data) == set(component("Company")["properties"])
+    # `bank_change_request` — только в `GET` и `PUT /company` (FX-4), в `Me.company` его нет
+    assert set(data) | {"bank_change_request"} == set(component("Company")["properties"])
     assert_matches_contract(data, "Company")
 
 

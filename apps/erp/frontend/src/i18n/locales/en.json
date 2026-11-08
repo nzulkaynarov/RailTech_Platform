@@ -3467,6 +3467,10 @@
     "created": "Variant added"
   },
   "notification": {
+    "portal.bank_change_requested": {
+      "title": "Bank details change request: {{company}}",
+      "message": "Verify the new account with the company, then approve or reject the request."
+    },
     "payment.recorded": {
       "title": "Payment received",
       "message": "Payment of {{amount}} recorded against invoice {{number}}"

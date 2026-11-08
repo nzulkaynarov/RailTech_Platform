@@ -206,6 +206,52 @@ class ClientActor(BaseModel):
     name: str | None = None
 
 
+class ContactSecurityNoticeRequested(BaseModel):
+    """
+    Кому и о чём прислать уведомление безопасности (FX-4)
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_contact_id: int
+    """
+    Контакт в ERP
+    """
+    crm_contact_id: int
+    """
+    Контакт в CRM (CrmContactMapping): его привязанный Telegram получит сообщение
+    """
+    language: Language1 | None = None
+    """
+    Язык контакта в ERP
+    """
+    kind: Kind1
+    """
+    Подан запрос на смену реквизитов, смена подтверждена сотрудником или отклонена
+    """
+
+
+class ContactSecurityNoticeRequestedV1(BaseModel):
+    """
+    Тип uz.railtech.erp.contact.security_notice_requested.v1, источник rt://erp. Поле data конверта (envelope.v1.json). ERP в Telegram не пишет (бот принадлежит CRM): событие безопасности компании (смена банковских реквизитов, FX-4) уходит администраторам и основному контакту по всем их каналам, и бот CRM присылает короткое сообщение на язык контакта на его привязанный Telegram. Группу security контакт отключить не может. Публикуется только контакту с привязанным Telegram и сопоставлением с CRM; реквизитов и причин в событии нет. Итог доставки не возвращается.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_company_id: int
+    """
+    Компания контакта в ERP
+    """
+    crm_client_id: int
+    """
+    Клиент в CRM; CRM сверяет, что контакт принадлежит этому клиенту
+    """
+    actor: Actor
+    payload: ContactSecurityNoticeRequested
+
+
 class ContactTelegramTestRequested(BaseModel):
     """
     Кому прислать проверочное сообщение (NOTIFY-1)
@@ -222,7 +268,7 @@ class ContactTelegramTestRequested(BaseModel):
     """
     Контакт в CRM (CrmContactMapping): его привязанный Telegram получит сообщение
     """
-    language: Language1 | None = None
+    language: Language2 | None = None
     """
     Язык контакта в ERP; на нём бот пишет сообщение
     """
@@ -312,7 +358,7 @@ class Context(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
     )
-    kind: Kind1
+    kind: Kind2
     erp_id: int
     number: Annotated[str, Field(max_length=64)]
 
@@ -812,13 +858,23 @@ class Kind(StrEnum):
 
 
 class Kind1(StrEnum):
+    """
+    Подан запрос на смену реквизитов, смена подтверждена сотрудником или отклонена
+    """
+
+    bank_requisites_change_requested = "bank_requisites_change_requested"
+    bank_requisites_changed = "bank_requisites_changed"
+    bank_requisites_change_rejected = "bank_requisites_change_rejected"
+
+
+class Kind2(StrEnum):
     deal = "deal"
     quote = "quote"
     invoice = "invoice"
     act = "act"
 
 
-class Kind2(StrEnum):
+class Kind3(StrEnum):
     """
     Вид коммерческого документа
     """
@@ -841,7 +897,7 @@ class Language(StrEnum):
 
 class Language1(StrEnum):
     """
-    Язык контакта в ERP; на нём бот пишет сообщение
+    Язык контакта в ERP
     """
 
     ru = "ru"
@@ -851,7 +907,7 @@ class Language1(StrEnum):
 
 class Language2(StrEnum):
     """
-    Язык документов компании в ERP
+    Язык контакта в ERP; на нём бот пишет сообщение
     """
 
     ru = "ru"
@@ -860,6 +916,16 @@ class Language2(StrEnum):
 
 
 class Language3(StrEnum):
+    """
+    Язык документов компании в ERP
+    """
+
+    ru = "ru"
+    uz = "uz"
+    en = "en"
+
+
+class Language4(StrEnum):
     ru = "ru"
     uz = "uz"
     en = "en"
@@ -1002,7 +1068,7 @@ class Object(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
     )
-    kind: Kind2
+    kind: Kind3
     """
     Вид коммерческого документа
     """
@@ -1113,7 +1179,7 @@ class PartnerClientRequestedV1PartnerCompany(BaseModel):
     """
     address: Annotated[str | None, Field(max_length=1000)]
     website: Annotated[str | None, Field(max_length=255)]
-    language: Language2
+    language: Language3
     """
     Язык документов компании в ERP
     """
@@ -1127,7 +1193,7 @@ class PartnerClientRequestedV1PartnerContact(BaseModel):
     full_name: Annotated[str, Field(max_length=255, min_length=1)]
     email: Annotated[EmailStr, Field(max_length=255)]
     phone: Annotated[str | None, Field(max_length=50)]
-    language: Language3
+    language: Language4
 
 
 class Payload(BaseModel):

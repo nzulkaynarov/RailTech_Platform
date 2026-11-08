@@ -5,10 +5,18 @@ import type {
   PaymentRow,
 } from "../../../shared/api/generated/model";
 
-/** Вкладки «Счетов и оплат» (SPEC-v3 §7.3) плюс «Все счета»: параметр адреса `?show=`. */
-export const TABS = ["to_issue", "awaiting", "proofs", "overdue", "memos", "all"] as const;
+/** Вкладки «Счетов и оплат» (SPEC-v3 §7.3) плюс «Смена реквизитов» (FX-4) и «Все счета»: параметр адреса `?show=`. */
+export const TABS = [
+  "to_issue",
+  "awaiting",
+  "proofs",
+  "overdue",
+  "memos",
+  "bank_changes",
+  "all",
+] as const;
 export type ShowTab = (typeof TABS)[number];
-export type InvoiceTab = Exclude<ShowTab, "memos">;
+export type InvoiceTab = Exclude<ShowTab, "memos" | "bank_changes">;
 
 export function showTab(value: string | null): ShowTab {
   return (TABS as readonly string[]).includes(value ?? "") ? (value as ShowTab) : "awaiting";

@@ -161,6 +161,7 @@ export function CompanyPage() {
                     value: (
                       <div className="flex flex-col gap-1">
                         <span className="whitespace-pre-line">{company.data.bank_details || t('pages.company.notSet')}</span>
+                        <BankChangeNotice change={company.data.bank_change_request ?? null} />
                         {!isAdmin && (
                           <span className="text-xs text-muted-foreground flex items-center gap-1">
                             <Shield className="size-3 text-muted-foreground" aria-hidden="true" />
@@ -229,6 +230,7 @@ function CompanyForm({
     language: company.language,
   });
   const [nameMissing, setNameMissing] = useState(false);
+  const bankChangePending = company.bank_change_request?.status === 'pending';
 
   const set = <K extends keyof CompanyFormDraft>(key: K, value: CompanyFormDraft[K]) =>
     setDraft((current) => ({ ...current, [key]: value }));
@@ -246,7 +248,7 @@ function CompanyForm({
     }
     update.mutate(changes, {
       onSuccess: () => {
-        toast.success(t('pages.company.saved'));
+        toast.success(t(changes.bank_details !== undefined ? 'pages.company.bankChange.submitted' : 'pages.company.saved'));
         onDone();
       },
     });
@@ -339,11 +341,15 @@ function CompanyForm({
               rows={3}
               value={draft.bank_details}
               maxLength={1000}
-              disabled={!isAdmin}
+              disabled={!isAdmin || bankChangePending}
               onChange={(event) => set('bank_details', event.target.value)}
-              className={!isAdmin ? 'bg-muted/50 cursor-not-allowed opacity-80' : undefined}
+              className={!isAdmin || bankChangePending ? 'bg-muted/50 cursor-not-allowed opacity-80' : undefined}
             />
-            {!isAdmin ? (
+            {bankChangePending ? (
+              <p className="text-xs text-muted-foreground">
+                {t('pages.company.bankChange.alreadyPending')}
+              </p>
+            ) : !isAdmin ? (
               <p className="text-xs text-muted-foreground">
                 {t(
                   'pages.company.fields.bankDetailsAdminOnly',
@@ -353,12 +359,7 @@ function CompanyForm({
             ) : (
               <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                 <Shield className="size-3 text-primary shrink-0" aria-hidden="true" />
-                <span>
-                  {t(
-                    'pages.company.fields.bankDetailsAdminNotice',
-                    'При изменении реквизитов все администраторы компании получат уведомление безопасности.',
-                  )}
-                </span>
+                <span>{t('pages.company.bankChange.adminNotice')}</span>
               </p>
             )}
           </div>
@@ -414,6 +415,35 @@ function LanguageChoice({
       </div>
     </div>
   );
+}
+
+/** Запрос на смену реквизитов (FX-4): на проверке или отклонён; подтверждённый ничего не добавляет — реквизиты уже новые. */
+function BankChangeNotice({ change }: { change: Schemas['BankChangeRequest'] | null }) {
+  const { t } = useTranslation();
+  if (change?.status === 'pending') {
+    return (
+      <div role="status" aria-label={t('pages.company.bankChange.title')} className="flex flex-col gap-1 text-sm">
+        <span>
+          <ToneBadge tone="warning">{t('pages.company.bankChange.pending')}</ToneBadge>
+        </span>
+        <span className="text-muted-foreground">{t('pages.company.bankChange.pendingHint')}</span>
+        {change.new_bank_details ? <span className="whitespace-pre-line">{change.new_bank_details}</span> : null}
+      </div>
+    );
+  }
+  if (change?.status === 'rejected') {
+    return (
+      <div role="status" aria-label={t('pages.company.bankChange.title')} className="flex flex-col gap-1 text-sm">
+        <span>
+          <ToneBadge tone="danger">{t('pages.company.bankChange.rejected')}</ToneBadge>
+        </span>
+        <span className="text-muted-foreground">
+          {t('pages.company.bankChange.rejectedHint', { reason: change.reject_reason ?? '' })}
+        </span>
+      </div>
+    );
+  }
+  return null;
 }
 
 function SecurityLogCard() {
@@ -477,7 +507,7 @@ function SecurityLogCard() {
                 </div>
                 {event.details && <p className="text-xs text-muted-foreground">{event.details}</p>}
                 {(event.ip_address || event.user_agent) && (
-                  <p className="text-xs text-muted-foreground/80">
+                  <p className="text-xs text-muted-foreground">
                     {[event.ip_address, event.user_agent].filter(Boolean).join(' · ')}
                   </p>
                 )}

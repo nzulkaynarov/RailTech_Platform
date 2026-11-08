@@ -1230,6 +1230,12 @@ export interface paths {
      * Обновить профиль компании
      * @description Название и ИНН компании, связанной с клиентом CRM, ведёт CRM (ORCHESTRATOR §3 п. 16): их правка — 422
      *     `REQUISITES_MANAGED_BY_CRM`. Остальные поля правятся здесь.
+     *
+     *     `bank_details` не применяется сразу (решение владельца 2026-11-08, FX-4): изменённое значение создаёт запрос на смену, в
+     *     ответе `bank_details` прежнее, а в `bank_change_request` — запрос в статусе `pending`; реквизиты меняются только после
+     *     подтверждения сотрудником. Менять может только администратор компании (иначе 409 `ADMIN_REQUIRED`). Один активный запрос
+     *     на компанию: пока он на проверке, новая смена — 409 `BANK_CHANGE_ALREADY_PENDING`, остальные поля запроса при этом не
+     *     сохраняются. Значение, совпадающее с текущим, запроса не создаёт.
      */
     put: operations["updateCompany"];
     post?: never;
@@ -2201,7 +2207,9 @@ export interface components {
      *     поставки, `delivery_eta_changed` — сдвиг срока поставки, `manager_replied` — ответ менеджера в чате кабинета,
      *     `partner_card_returned` — карточка партнёра возвращена на доработку, `partner_card_published` — опубликована,
      *     `partner_order_sent` — направлен заказ на поставку, `partner_rfq_sent` — направлен запрос цен,
-     *     `partner_goods_received` — склад принял товары по заказу.
+     *     `partner_goods_received` — склад принял товары по заказу, `bank_requisites_change_requested` — подан запрос на смену
+     *     банковских реквизитов, `bank_requisites_changed` — смену подтвердил сотрудник, `bank_requisites_change_rejected` —
+     *     сотрудник отклонил смену (FX-4; группа `security`, отключить нельзя).
      *     Незнакомый вид Cabinet показывает общим текстом.
      * @enum {string}
      */
@@ -2218,7 +2226,9 @@ export interface components {
       | "bank_requisites_changed"
       | "partner_order_sent"
       | "partner_rfq_sent"
-      | "partner_goods_received";
+      | "partner_goods_received"
+      | "bank_requisites_change_requested"
+      | "bank_requisites_change_rejected";
     /**
      * @description Группа событий — основа настройки «группа × канал» в профиле контакта (J3)
      * @enum {string}
@@ -2239,7 +2249,8 @@ export interface components {
       | "chat"
       | "partner_product"
       | "partner_order"
-      | "partner_rfq";
+      | "partner_rfq"
+      | "bank_change";
     /**
      * @description Что произошло с объектом или чего ждут от контакта
      * @enum {string}
@@ -2731,11 +2742,34 @@ export interface components {
         name?: string;
       } | null;
       legal_address?: string | null;
+      /** @description Действующие реквизиты; смена на проверке их не меняет (см. `bank_change_request`) */
       bank_details?: string | null;
+      /** @description Последний запрос на смену реквизитов; только в `GET` и `PUT /company`, `null` — запросов не было (FX-4) */
+      bank_change_request?: components["schemas"]["BankChangeRequest"] | null;
       language: components["schemas"]["Language"];
       relationship_status?: components["schemas"]["PortalRelationshipStatus"];
       /** @description Действующие и архивные отношения компании с нами (роль, статус, договор) */
       relationships?: components["schemas"]["PortalRelationship"][];
+    };
+    /** @description Запрос на смену банковских реквизитов компании (FX-4) */
+    BankChangeRequest: {
+      /** Format: int64 */
+      id: number;
+      /**
+       * @description `pending` — на проверке у сотрудника, `approved` — подтверждён и применён, `rejected` — отклонён
+       * @enum {string}
+       */
+      status: "pending" | "approved" | "rejected";
+      /** @description Кто подал */
+      requested_by_name: string;
+      /** @description Новые реквизиты — только администратору компании, остальным `null` */
+      new_bank_details: string | null;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      decided_at: string | null;
+      /** @description Причина отказа; `null` — запрос не отклонён */
+      reject_reason: string | null;
     };
     /**
      * @description Статус отношений контрагента (ADR-0022, Counterparty Journey J7):
@@ -2771,7 +2805,9 @@ export interface components {
         | "role_change"
         | "member_deactivated"
         | "member_invited"
-        | "bank_details_changed";
+        | "bank_details_changed"
+        | "bank_details_change_requested"
+        | "bank_details_change_rejected";
       /** Format: date-time */
       created_at: string;
       /** @description Имя сотрудника, выполнившего действие */
@@ -5375,6 +5411,15 @@ export interface operations {
       };
       401: components["responses"]["Unauthorized"];
       403: components["responses"]["Forbidden"];
+      /** @description Смена реквизитов не администратором (`ADMIN_REQUIRED`) или запрос уже на проверке (`BANK_CHANGE_ALREADY_PENDING`) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
       422: components["responses"]["ValidationError"];
       429: components["responses"]["TooManyRequests"];
     };

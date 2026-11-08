@@ -36,6 +36,10 @@ import type {
   AvatarUpload,
   BackendUnavailableResponse,
   BackupsStatus,
+  BankChangeConflictResponse,
+  BankChangeItem,
+  BankChangeList,
+  BankChangeRejectRequest,
   BotProfile,
   BotProfileState,
   BotSettings,
@@ -234,6 +238,7 @@ import type {
   LetterRejectIn,
   LetterReturnIn,
   ListAuditParams,
+  ListBankChangeRequestsParams,
   ListBrigadesParams,
   ListBusDeliveriesParams,
   ListBusInboxParams,
@@ -11966,6 +11971,396 @@ export const useUploadPaymentReceiptFile = <
   TContext
 > => {
   return useMutation(getUploadPaymentReceiptFileMutationOptions(options), queryClient);
+};
+
+export const getListBankChangeRequestsUrl = (params?: ListBankChangeRequestsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/eds/payments/bank-changes?${stringifiedParams}`
+    : `/api/v1/eds/payments/bank-changes`;
+};
+
+/**
+ * ERP `GET finance/bank-changes/` — запросы контрагентов на смену банковских реквизитов (FX-4, решение владельца 2026-11-08). Полные реквизиты — сотруднику с правом подтверждать (`finance.payment`); читающему — маскированные (`•••• 1234`).
+ * @summary Счета и оплаты · Смена реквизитов контрагента: очередь
+ */
+export const listBankChangeRequests = async (
+  params?: ListBankChangeRequestsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<BankChangeList> => {
+  return http<BankChangeList>(getListBankChangeRequestsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListBankChangeRequestsQueryKey = (params?: ListBankChangeRequestsParams) => {
+  return [`/api/v1/eds/payments/bank-changes`, ...(params ? [params] : [])] as const;
+};
+
+export const getListBankChangeRequestsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listBankChangeRequests>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListBankChangeRequestsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listBankChangeRequests>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListBankChangeRequestsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listBankChangeRequests>>> = ({ signal }) =>
+    listBankChangeRequests(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listBankChangeRequests>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListBankChangeRequestsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listBankChangeRequests>>
+>;
+export type ListBankChangeRequestsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListBankChangeRequests<
+  TData = Awaited<ReturnType<typeof listBankChangeRequests>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params: undefined | ListBankChangeRequestsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listBankChangeRequests>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listBankChangeRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listBankChangeRequests>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListBankChangeRequests<
+  TData = Awaited<ReturnType<typeof listBankChangeRequests>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListBankChangeRequestsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listBankChangeRequests>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listBankChangeRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listBankChangeRequests>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListBankChangeRequests<
+  TData = Awaited<ReturnType<typeof listBankChangeRequests>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListBankChangeRequestsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listBankChangeRequests>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Счета и оплаты · Смена реквизитов контрагента: очередь
+ */
+
+export function useListBankChangeRequests<
+  TData = Awaited<ReturnType<typeof listBankChangeRequests>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListBankChangeRequestsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listBankChangeRequests>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListBankChangeRequestsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getApproveBankChangeRequestUrl = (id: CompanyItemRef) => {
+  return `/api/v1/eds/payments/bank-changes/${id}/approve`;
+};
+
+/**
+ * ERP `POST finance/bank-changes/{id}/approve/` — право `finance.payment`. Применяет новые реквизиты компании и уведомляет её администраторов и основной контакт по всем каналам. Повтор на подтверждённом запросе — тот же ответ без второго эффекта. Отклонённый запрос — 409 `bank_change_not_pending`; компания в архиве — 409 `company_archived`; реквизиты изменились после подачи — 409 `bank_change_stale`.
+ * @summary Счета и оплаты · Смена реквизитов: подтвердить
+ */
+export const approveBankChangeRequest = async (
+  id: CompanyItemRef,
+  options?: Parameters<typeof http>[1],
+): Promise<BankChangeItem> => {
+  return http<BankChangeItem>(getApproveBankChangeRequestUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getApproveBankChangeRequestMutationKey = () => ["approveBankChangeRequest"] as const;
+
+export const getApproveBankChangeRequestMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | BankChangeConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof approveBankChangeRequest>>,
+    TError,
+    ApproveBankChangeRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof approveBankChangeRequest>>,
+  TError,
+  ApproveBankChangeRequestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getApproveBankChangeRequestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof approveBankChangeRequest>>,
+    ApproveBankChangeRequestMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return approveBankChangeRequest(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ApproveBankChangeRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof approveBankChangeRequest>>
+>;
+
+export type ApproveBankChangeRequestMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | BankChangeConflictResponse
+  | BackendUnavailableResponse
+>;
+export type ApproveBankChangeRequestMutationVariables = { id: CompanyItemRef };
+
+/**
+ * @summary Счета и оплаты · Смена реквизитов: подтвердить
+ */
+export const useApproveBankChangeRequest = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | BankChangeConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof approveBankChangeRequest>>,
+      TError,
+      ApproveBankChangeRequestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof approveBankChangeRequest>>,
+  TError,
+  ApproveBankChangeRequestMutationVariables,
+  TContext
+> => {
+  return useMutation(getApproveBankChangeRequestMutationOptions(options), queryClient);
+};
+
+export const getRejectBankChangeRequestUrl = (id: CompanyItemRef) => {
+  return `/api/v1/eds/payments/bank-changes/${id}/reject`;
+};
+
+/**
+ * ERP `POST finance/bank-changes/{id}/reject/` — право `finance.payment`. Реквизиты не меняются, причину видит компания. Повтор на отклонённом запросе — тот же ответ без второго эффекта; подтверждённый запрос — 409 `bank_change_not_pending`.
+ * @summary Счета и оплаты · Смена реквизитов: отклонить с причиной
+ */
+export const rejectBankChangeRequest = async (
+  id: CompanyItemRef,
+  bankChangeRejectRequest: BankChangeRejectRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<BankChangeItem> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<BankChangeItem>(getRejectBankChangeRequestUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(bankChangeRejectRequest),
+  });
+};
+
+export const getRejectBankChangeRequestMutationKey = () => ["rejectBankChangeRequest"] as const;
+
+export const getRejectBankChangeRequestMutationOptions = <
+  TError = ErrorType<
+    | ValidationFailedResponse
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | BankChangeConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rejectBankChangeRequest>>,
+    TError,
+    RejectBankChangeRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof rejectBankChangeRequest>>,
+  TError,
+  RejectBankChangeRequestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRejectBankChangeRequestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof rejectBankChangeRequest>>,
+    RejectBankChangeRequestMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return rejectBankChangeRequest(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RejectBankChangeRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof rejectBankChangeRequest>>
+>;
+export type RejectBankChangeRequestMutationBody = BankChangeRejectRequest;
+export type RejectBankChangeRequestMutationError = ErrorType<
+  | ValidationFailedResponse
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | BankChangeConflictResponse
+  | BackendUnavailableResponse
+>;
+export type RejectBankChangeRequestMutationVariables = {
+  id: CompanyItemRef;
+  data: BankChangeRejectRequest;
+};
+
+/**
+ * @summary Счета и оплаты · Смена реквизитов: отклонить с причиной
+ */
+export const useRejectBankChangeRequest = <
+  TError = ErrorType<
+    | ValidationFailedResponse
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | BankChangeConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof rejectBankChangeRequest>>,
+      TError,
+      RejectBankChangeRequestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof rejectBankChangeRequest>>,
+  TError,
+  RejectBankChangeRequestMutationVariables,
+  TContext
+> => {
+  return useMutation(getRejectBankChangeRequestMutationOptions(options), queryClient);
 };
 
 export const getGetPaymentUrl = (id: number) => {

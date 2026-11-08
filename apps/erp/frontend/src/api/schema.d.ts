@@ -8876,6 +8876,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/finance/bank-changes/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List bank details change requests
+         * @description Очередь запросов контрагентов на смену реквизитов; `finance.view` или `finance.payment`. Полные реквизиты — только с `finance.payment`, остальным маска.
+         */
+        get: operations["finance_bank_changes_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/bank-changes/{id}/approve/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve a bank details change
+         * @description Применяет новые реквизиты компании. Повтор на подтверждённом запросе — тот же ответ без второго эффекта.
+         */
+        post: operations["finance_bank_changes_approve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/bank-changes/{id}/reject/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject a bank details change
+         * @description Отклоняет запрос с обязательной причиной; реквизиты не меняются. Повтор на отклонённом — тот же ответ.
+         */
+        post: operations["finance_bank_changes_reject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/finance/deals/{deal_id}/margin-deviation/": {
         parameters: {
             query?: never;
@@ -13315,6 +13375,37 @@ export interface components {
              */
             file?: string;
         };
+        DeskBankChange: {
+            id: number;
+            company_id: number;
+            company_name: string;
+            company_inn: string;
+            company_archived: boolean;
+            /** @description pending, approved или rejected. */
+            status: string;
+            /** @description Реквизиты изменились после подачи: подтвердить нельзя. */
+            stale: boolean;
+            /** @description Без права подтверждать — маска. */
+            old_bank_details: string;
+            /** @description Без права подтверждать — маска. */
+            new_bank_details: string;
+            requested_by_name: string;
+            requested_by_email: string;
+            requested_ip: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            decided_at: string | null;
+            decided_by_name: string | null;
+            reject_reason: string | null;
+        };
+        DeskBankChangeListResponse: {
+            items: components["schemas"]["DeskBankChange"][];
+            pending_count: number;
+        };
+        DeskBankChangeRejectInRequest: {
+            reason: string;
+        };
         DeskBrigade: {
             id: number;
             name: string;
@@ -15690,6 +15781,21 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["DealList"][];
+        };
+        PaginatedDeskBankChangeListResponseList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["DeskBankChangeListResponse"][];
         };
         PaginatedDeskBrigadeList: {
             /** @example 123 */
@@ -36653,6 +36759,154 @@ export interface operations {
             };
             401: components["responses"]["UnauthorizedResponse"];
             403: components["responses"]["ForbiddenResponse"];
+        };
+    };
+    finance_bank_changes_list: {
+        parameters: {
+            query?: {
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
+                status?: "approved" | "pending" | "rejected";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedDeskBankChangeListResponseList"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    finance_bank_changes_approve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskBankChange"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Объекта нет. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Запрос решён иначе (`BANK_CHANGE_NOT_PENDING`), реквизиты изменились (`BANK_CHANGE_STALE`) или компания в архиве (`COMPANY_ARCHIVED`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    finance_bank_changes_reject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeskBankChangeRejectInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["DeskBankChangeRejectInRequest"];
+                "multipart/form-data": components["schemas"]["DeskBankChangeRejectInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskBankChange"];
+                };
+            };
+            /** @description Отказ проверки: код в `detail` или ошибки полей. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Объекта нет. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Запрос решён иначе (`BANK_CHANGE_NOT_PENDING`), реквизиты изменились (`BANK_CHANGE_STALE`) или компания в архиве (`COMPANY_ARCHIVED`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
         };
     };
     finance_deals_margin_deviation_retrieve: {

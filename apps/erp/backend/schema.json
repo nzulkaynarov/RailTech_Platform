@@ -25870,6 +25870,250 @@
                 }
             }
         },
+        "/api/v1/finance/bank-changes/": {
+            "get": {
+                "operationId": "finance_bank_changes_list",
+                "description": "Очередь запросов контрагентов на смену реквизитов; `finance.view` или `finance.payment`. Полные реквизиты — только с `finance.payment`, остальным маска.",
+                "summary": "List bank details change requests",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "A page number within the paginated result set.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "required": false,
+                        "in": "query",
+                        "description": "Number of results to return per page.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "status",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "approved",
+                                "pending",
+                                "rejected"
+                            ]
+                        }
+                    }
+                ],
+                "tags": [
+                    "Finance"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedDeskBankChangeListResponseList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/finance/bank-changes/{id}/approve/": {
+            "post": {
+                "operationId": "finance_bank_changes_approve",
+                "description": "Применяет новые реквизиты компании. Повтор на подтверждённом запросе — тот же ответ без второго эффекта.",
+                "summary": "Approve a bank details change",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Finance"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskBankChange"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Запрос решён иначе (`BANK_CHANGE_NOT_PENDING`), реквизиты изменились (`BANK_CHANGE_STALE`) или компания в архиве (`COMPANY_ARCHIVED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/finance/bank-changes/{id}/reject/": {
+            "post": {
+                "operationId": "finance_bank_changes_reject",
+                "description": "Отклоняет запрос с обязательной причиной; реквизиты не меняются. Повтор на отклонённом — тот же ответ.",
+                "summary": "Reject a bank details change",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Finance"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskBankChangeRejectInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskBankChangeRejectInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskBankChangeRejectInRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskBankChange"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Запрос решён иначе (`BANK_CHANGE_NOT_PENDING`), реквизиты изменились (`BANK_CHANGE_STALE`) или компания в архиве (`COMPANY_ARCHIVED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/finance/deals/{deal_id}/margin-deviation/": {
             "get": {
                 "operationId": "finance_deals_margin_deviation_retrieve",
@@ -38489,6 +38733,118 @@
                     "on_date"
                 ]
             },
+            "DeskBankChange": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "company_id": {
+                        "type": "integer"
+                    },
+                    "company_name": {
+                        "type": "string"
+                    },
+                    "company_inn": {
+                        "type": "string"
+                    },
+                    "company_archived": {
+                        "type": "boolean"
+                    },
+                    "status": {
+                        "type": "string",
+                        "description": "pending, approved или rejected."
+                    },
+                    "stale": {
+                        "type": "boolean",
+                        "description": "Реквизиты изменились после подачи: подтвердить нельзя."
+                    },
+                    "old_bank_details": {
+                        "type": "string",
+                        "description": "Без права подтверждать — маска."
+                    },
+                    "new_bank_details": {
+                        "type": "string",
+                        "description": "Без права подтверждать — маска."
+                    },
+                    "requested_by_name": {
+                        "type": "string"
+                    },
+                    "requested_by_email": {
+                        "type": "string"
+                    },
+                    "requested_ip": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "decided_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "decided_by_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "reject_reason": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "company_archived",
+                    "company_id",
+                    "company_inn",
+                    "company_name",
+                    "created_at",
+                    "decided_at",
+                    "decided_by_name",
+                    "id",
+                    "new_bank_details",
+                    "old_bank_details",
+                    "reject_reason",
+                    "requested_by_email",
+                    "requested_by_name",
+                    "requested_ip",
+                    "stale",
+                    "status"
+                ]
+            },
+            "DeskBankChangeListResponse": {
+                "type": "object",
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DeskBankChange"
+                        }
+                    },
+                    "pending_count": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "items",
+                    "pending_count"
+                ]
+            },
+            "DeskBankChangeRejectInRequest": {
+                "type": "object",
+                "properties": {
+                    "reason": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1000
+                    }
+                },
+                "required": [
+                    "reason"
+                ]
+            },
             "DeskBrigade": {
                 "type": "object",
                 "properties": {
@@ -44623,6 +44979,37 @@
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/DealList"
+                        }
+                    }
+                }
+            },
+            "PaginatedDeskBankChangeListResponseList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DeskBankChangeListResponse"
                         }
                     }
                 }

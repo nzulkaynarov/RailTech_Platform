@@ -41,6 +41,7 @@
       "proofs": "Tasdiqlash uchun to‘lov topshiriqnomalari",
       "overdue": "Muddati o‘tgan",
       "memos": "To‘lanadigan xizmat xatlari",
+      "bank_changes": "Rekvizitlarni oʻzgartirish",
       "all": "Barcha hisoblar"
     },
     "search": {
@@ -453,5 +454,54 @@
     "title": "Kompaniyaning bank rekvizitlari yo‘q — hisob chiqarib bo‘lmaydi.",
     "text": "Administrator to‘ldiradi: Sozlamalar · Rekvizitlar va blanka.",
     "open": "«Rekvizitlar va blanka»ni ochish"
+  },
+  "bankChanges": {
+    "listLabel": "Rekvizitlarni oʻzgartirish soʻrovlari",
+    "filterLabel": "Soʻrovlarni koʻrsatish",
+    "filter": {
+      "pending": "Tekshiruvda",
+      "all": "Barchasi"
+    },
+    "status": {
+      "pending": "Tekshiruvda",
+      "approved": "Tasdiqlangan",
+      "rejected": "Rad etilgan"
+    },
+    "inn": "STIR {{inn}}",
+    "old": "Hozir",
+    "new": "Soʻralgan",
+    "notSet": "toʻldirilmagan",
+    "requestedBy": "Yuborgan",
+    "rejectReason": "Rad etish sababi: {{reason}}",
+    "approve": "Tasdiqlash",
+    "reject": "Rad etish",
+    "cancel": "Bekor qilish",
+    "archived": "Kompaniya arxivda: tasdiqlab boʻlmaydi, faqat rad etish mumkin.",
+    "stale": "Rekvizitlar soʻrovdan keyin oʻzgargan: tasdiqlab boʻlmaydi, faqat rad etish mumkin.",
+    "empty": {
+      "title": "Tekshiruvdagi soʻrovlar yoʻq",
+      "text": "Kompaniya rekvizitlarni oʻzgartirish soʻrovini yuborganda, u shu yerda paydo boʻladi."
+    },
+    "loadError": {
+      "title": "Soʻrovlar yuklanmadi",
+      "text": "Qayta urinib koʻring."
+    },
+    "approveModal": {
+      "title": "«{{name}}» rekvizitlarini oʻzgartirish tasdiqlansinmi?",
+      "apply": "Yangi rekvizitlar kompaniyaga qoʻllanadi.",
+      "notify": "Administratorlar va asosiy kontakt bildirishnoma oladi."
+    },
+    "rejectModal": {
+      "title": "«{{name}}» rekvizitlarini oʻzgartirish rad etilsinmi?",
+      "reason": "Rad etish sababi",
+      "keep": "Kompaniya rekvizitlari oʻzgarmaydi.",
+      "notify": "Kompaniya sababni koʻradi va bildirishnoma oladi."
+    },
+    "conflict": {
+      "bank_change_not_pending": "Soʻrov allaqachon hal qilingan. Roʻyxatni yangilang.",
+      "bank_change_stale": "Rekvizitlar soʻrovdan keyin oʻzgargan. Soʻrovni rad eting.",
+      "company_archived": "Kompaniya arxivda: rekvizitlarni qoʻllab boʻlmaydi.",
+      "unknown": "Qarorni saqlab boʻlmadi. Takrorlang."
+    }
   }
 }

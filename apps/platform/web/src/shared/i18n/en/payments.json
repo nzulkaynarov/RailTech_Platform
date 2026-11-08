@@ -41,6 +41,7 @@
       "proofs": "Payment orders to confirm",
       "overdue": "Overdue",
       "memos": "Memos to pay",
+      "bank_changes": "Bank details change",
       "all": "All invoices"
     },
     "search": {
@@ -453,5 +454,54 @@
     "title": "The company has no bank details — the invoice cannot be issued.",
     "text": "An administrator fills them in: Settings · Details & letterhead.",
     "open": "Open “Details & letterhead”"
+  },
+  "bankChanges": {
+    "listLabel": "Bank details change requests",
+    "filterLabel": "Show requests",
+    "filter": {
+      "pending": "Under review",
+      "all": "All"
+    },
+    "status": {
+      "pending": "Under review",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "inn": "TIN {{inn}}",
+    "old": "Current",
+    "new": "Requested",
+    "notSet": "not set",
+    "requestedBy": "Submitted by",
+    "rejectReason": "Reason for rejection: {{reason}}",
+    "approve": "Approve",
+    "reject": "Reject",
+    "cancel": "Cancel",
+    "archived": "The company is archived: can only be rejected.",
+    "stale": "The details changed after submission: can only be rejected.",
+    "empty": {
+      "title": "No requests under review",
+      "text": "A company's request to change bank details will appear here."
+    },
+    "loadError": {
+      "title": "Requests did not load",
+      "text": "Please try again."
+    },
+    "approveModal": {
+      "title": "Approve the bank details change for «{{name}}»?",
+      "apply": "The new details will apply to the company.",
+      "notify": "Admins and the primary contact will be notified."
+    },
+    "rejectModal": {
+      "title": "Reject the bank details change for «{{name}}»?",
+      "reason": "Reason for rejection",
+      "keep": "The company's details will not change.",
+      "notify": "The company will see the reason and be notified."
+    },
+    "conflict": {
+      "bank_change_not_pending": "This request is already decided. Refresh the list.",
+      "bank_change_stale": "The details changed after submission. Reject the request.",
+      "company_archived": "The company is archived: details cannot be applied.",
+      "unknown": "Could not save the decision. Please retry."
+    }
   }
 }

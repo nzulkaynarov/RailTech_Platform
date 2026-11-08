@@ -13,6 +13,7 @@ import {
   ApprovalRouteStatus,
   AttentionKind,
   AuditActorType,
+  BankChangeStatus,
   BrigadeKind,
   BusDeliveryStatus,
   BusDomain,
@@ -103,6 +104,8 @@ import type {
   AssistSuggestion,
   AuditPage,
   BackupsStatus,
+  BankChangeItem,
+  BankChangeList,
   BotProfileState,
   BotSettings,
   BrandProfile,
@@ -8576,6 +8579,111 @@ export const getUploadPaymentReceiptFileResponseMock = (
   name: faker.string.alpha({ length: { min: 10, max: 255 } }),
   content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
   size: faker.number.int({ min: 0 }),
+  ...overrideResponse,
+});
+
+export const getListBankChangeRequestsResponseMock = (
+  overrideResponse: Partial<Extract<BankChangeList, object>> = {},
+): BankChangeList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    company_id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    company_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    company_inn: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    company_archived: faker.datatype.boolean(),
+    status: faker.helpers.arrayElement(Object.values(BankChangeStatus)),
+    stale: faker.datatype.boolean(),
+    old_bank_details: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    new_bank_details: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    requested_by_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    requested_by_email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    requested_ip: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    decided_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    decided_by_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    reject_reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  })),
+  pending_count: faker.number.int(),
+  ...overrideResponse,
+});
+
+export const getApproveBankChangeRequestResponseMock = (
+  overrideResponse: Partial<Extract<BankChangeItem, object>> = {},
+): BankChangeItem => ({
+  id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  company_id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  company_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  company_inn: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  company_archived: faker.datatype.boolean(),
+  status: faker.helpers.arrayElement(Object.values(BankChangeStatus)),
+  stale: faker.datatype.boolean(),
+  old_bank_details: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  new_bank_details: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  requested_by_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  requested_by_email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  requested_ip: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  decided_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  decided_by_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  reject_reason: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getRejectBankChangeRequestResponseMock = (
+  overrideResponse: Partial<Extract<BankChangeItem, object>> = {},
+): BankChangeItem => ({
+  id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  company_id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  company_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  company_inn: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  company_archived: faker.datatype.boolean(),
+  status: faker.helpers.arrayElement(Object.values(BankChangeStatus)),
+  stale: faker.datatype.boolean(),
+  old_bank_details: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  new_bank_details: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  requested_by_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  requested_by_email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  requested_ip: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  decided_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  decided_by_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  reject_reason: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -30735,6 +30843,78 @@ export const getUploadPaymentReceiptFileMockHandler = (
   );
 };
 
+export const getListBankChangeRequestsMockHandler = (
+  overrideResponse?:
+    | BankChangeList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<BankChangeList> | BankChangeList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/payments/bank-changes",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListBankChangeRequestsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getApproveBankChangeRequestMockHandler = (
+  overrideResponse?:
+    | BankChangeItem
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<BankChangeItem> | BankChangeItem),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/payments/bank-changes/:id/approve",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getApproveBankChangeRequestResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getRejectBankChangeRequestMockHandler = (
+  overrideResponse?:
+    | BankChangeItem
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<BankChangeItem> | BankChangeItem),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/payments/bank-changes/:id/reject",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRejectBankChangeRequestResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getGetPaymentMockHandler = (
   overrideResponse?:
     | PaymentCard
@@ -38277,6 +38457,9 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getGetPaymentMemoMockHandler(),
   getPayPaymentMemoMockHandler(),
   getUploadPaymentReceiptFileMockHandler(),
+  getListBankChangeRequestsMockHandler(),
+  getApproveBankChangeRequestMockHandler(),
+  getRejectBankChangeRequestMockHandler(),
   getGetPaymentMockHandler(),
   getConfirmPaymentMockHandler(),
   getAttachPaymentProofMockHandler(),

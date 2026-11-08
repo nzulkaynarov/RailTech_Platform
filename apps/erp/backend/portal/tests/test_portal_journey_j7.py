@@ -160,6 +160,6 @@ def test_company_security_log_permissions_and_records(j7_setup):
 
     log_res3 = admin_client.get(f"{PREFIX}/company/security-log")
     log_items3 = log_res3.json()["items"]
-    bank_event = next((e for e in log_items3 if e["event_type"] == "bank_details_changed"), None)
+    bank_event = next((e for e in log_items3 if e["event_type"] == "bank_details_change_requested"), None)
     assert bank_event is not None
     assert bank_event["actor_name"] == admin_contact.name

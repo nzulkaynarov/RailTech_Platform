@@ -145,12 +145,13 @@ def test_bank_details_change_requires_admin(test_setup):
     assert resp.status_code == 409
     assert resp.json().get("detail") == "ADMIN_REQUIRED"
 
-    # Админ меняет реквизиты -> 200 и уведомление создано
+    # Админ подаёт смену -> 200, запрос на проверке, старые реквизиты действуют (FX-4); применение — test_bank_change.py
     resp = admin_client.put(
         f"{PREFIX}/company",
         {"bank_details": "New Official Account 202080009999"},
         format="json",
     )
     assert resp.status_code == 200
+    assert resp.json()["bank_change_request"]["status"] == "pending"
     company.refresh_from_db()
-    assert company.bank_details == "New Official Account 202080009999"
+    assert company.bank_details == "Old Bank Account 202080001000"

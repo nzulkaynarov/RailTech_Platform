@@ -307,3 +307,21 @@ msgstr "shaxsiy kabinetda ulanadi: Profil → «Bildirishnomalar»."
 
 msgid "после входа подключите бот в разделе Профиль → «Уведомления»: счета, акты и ответы менеджера будут приходить сразу."
 msgstr "kirgandan keyin Profil → «Bildirishnomalar» boʻlimida botni ulang: hisob-fakturalar, dalolatnomalar va menejer javoblari darhol keladi."
+
+msgid "Запрошена смена банковских реквизитов компании"
+msgstr "Kompaniya bank rekvizitlarini oʻzgartirish soʻraldi"
+
+msgid "Банковские реквизиты компании изменены"
+msgstr "Kompaniya bank rekvizitlari oʻzgartirildi"
+
+msgid "Запрос на смену банковских реквизитов отклонён"
+msgstr "Bank rekvizitlarini oʻzgartirish soʻrovi rad etildi"
+
+msgid "Подан запрос на смену банковских реквизитов компании. Реквизиты изменятся только после проверки сотрудником. Если это были не вы, срочно свяжитесь с менеджером."
+msgstr "Kompaniya bank rekvizitlarini oʻzgartirish soʻrovi yuborildi. Rekvizitlar faqat xodim tekshiruvidan soʻng oʻzgaradi. Agar bu siz boʻlmasangiz, zudlik bilan menejerga murojaat qiling."
+
+msgid "Сотрудник подтвердил смену банковских реквизитов компании, новые реквизиты действуют."
+msgstr "Xodim kompaniya bank rekvizitlarini oʻzgartirishni tasdiqladi, yangi rekvizitlar amalda."
+
+msgid "Запрос на смену банковских реквизитов компании отклонён, прежние реквизиты действуют."
+msgstr "Kompaniya bank rekvizitlarini oʻzgartirish soʻrovi rad etildi, avvalgi rekvizitlar amalda."
