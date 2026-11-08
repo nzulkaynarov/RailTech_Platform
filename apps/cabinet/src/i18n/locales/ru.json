@@ -40,6 +40,7 @@
     "sectionDocumentsAndTeam": "Документы и компания",
     "unread": "Непрочитанных сообщений: {{count}}",
     "myProducts": "Мои товары",
+    "partnerOrders": "Заказы на поставку",
     "groups": {
       "buy": "Покупаю",
       "supply": "Поставляю",
@@ -1081,6 +1082,100 @@
       "attachLink": "Перейти к запросам",
       "deletedUser": "Удалённый пользователь",
       "deletedText": "Сообщение удалено по запросу автора"
+    },
+    "partnerOrders": {
+      "title": "Заказы на поставку",
+      "description": "Подтверждение заказов, уведомления об отгрузке (ASN) и ответы на запросы цен (RFQ)",
+      "posShort": "поз.",
+      "tabsLabel": "Статусы заказов и запросов цен",
+      "ordersListLabel": "Список заказов на поставку",
+      "rfqListLabel": "Список запросов цен",
+      "searchPlaceholder": "Поиск по номеру или теме…",
+      "emptyTitle": "Ничего не найдено",
+      "notFoundText": "Попробуйте изменить параметры поиска или переключить вкладку.",
+      "emptyOrdersText": "Заказов на поставку пока нет.",
+      "emptyRfqText": "Запросов цен пока нет.",
+      "orderPrefix": "Заказ",
+      "createdAt": "Создан",
+      "confirmedAt": "Подтверждён",
+      "requestedAt": "Направлен",
+      "noteLabel": "Примечание",
+      "linesTitle": "Позиции",
+      "historyTitle": "История операций",
+      "responseSent": "Ваш ответ отправлен",
+      "confirmSuccess": "Заказ на поставку подтверждён",
+      "shipSuccess": "Уведомление об отгрузке (ASN) отправлено",
+      "respondSuccess": "Ответ на запрос цен отправлен",
+      "views": {
+        "orders": "Заказы (PO)",
+        "rfq": "Запросы цен (RFQ)"
+      },
+      "orderTabs": {
+        "all": "Все",
+        "sent": "Новые",
+        "confirmed": "Подтверждены",
+        "received": "Приняты",
+        "cancelled": "Отменены"
+      },
+      "rfqTabs": {
+        "all": "Все",
+        "sent": "Ожидают ответа",
+        "answered": "Отвечены"
+      },
+      "status": {
+        "draft": "Черновик",
+        "sent": "Ждёт подтверждения",
+        "confirmed": "Подтверждён",
+        "received": "Принят на склад",
+        "cancelled": "Отменён"
+      },
+      "rfqStatus": {
+        "sent": "Ждёт ответа",
+        "answered": "Ответ дан",
+        "failed": "Не доставлен"
+      },
+      "columns": {
+        "number": "Номер заказа",
+        "subject": "Тема запроса",
+        "status": "Статус",
+        "expectedDate": "Ожидаемая дата",
+        "positions": "Позиций",
+        "totalAmount": "Сумма",
+        "answeredAt": "Дата ответа",
+        "actions": "Действия",
+        "name": "Наименование",
+        "article": "Артикул",
+        "qty": "Заказано",
+        "receivedQty": "Принято",
+        "unitPrice": "Цена за ед.",
+        "totalPrice": "Сумма"
+      },
+      "actions": {
+        "confirm": "Подтвердить",
+        "ship": "Отгрузить (ASN)",
+        "view": "Открыть",
+        "respond": "Ответить",
+        "sendResponse": "Отправить ответ"
+      },
+      "dialogs": {
+        "confirmTitle": "Подтверждение заказа на поставку",
+        "confirmDescription": "Подтвердите готовность отгрузить заказ по указанным позициям и ценам. Вы можете уточнить плановую дату поставки.",
+        "expectedDateLabel": "Плановая дата поставки",
+        "shipTitle": "Уведомление об отгрузке (ASN)",
+        "shipDescription": "Укажите реквизиты отгрузочного документа и данные перевозчика для подготовки склада к приёмке.",
+        "supplierDocLabel": "Номер накладной / УПД поставщика",
+        "supplierDocPlaceholder": "Например: ТН-402 от 08.11.2026",
+        "carrierLabel": "Перевозчик / ТК",
+        "carrierPlaceholder": "Например: Деловые Линии / Автотранспорт",
+        "trackingNumberLabel": "Трек-номер / Госномер ТС",
+        "trackingNumberPlaceholder": "Например: 01 A 777 AA или трек-код",
+        "noteLabel": "Комментарий к отгрузке",
+        "notePlaceholder": "Количество мест, особенности разгрузки…",
+        "respondTitle": "Ответ на запрос цен (RFQ)",
+        "respondDescription": "Укажите предлагаемые цены, сроки поставки и условия оплаты по позициям запроса.",
+        "responseNoteLabel": "Коммерческие условия и цены",
+        "responseNotePlaceholder": "Укажите цены по позициям, наличие на складе и срок поставки…"
+      }
     }
   },
   "apiErrors": {
@@ -1137,7 +1232,8 @@
     "CANNOT_DEACTIVATE_SELF": "Нельзя отключить собственный аккаунт.",
     "CANNOT_ELEVATE_RIGHTS": "Нельзя выдать права выше собственных.",
     "ADMIN_REQUIRED": "Действие доступно только администратору компании.",
-    "CANNOT_MODIFY_PRIMARY_CONTACT": "Нельзя изменить права основного контакта компании."
+    "CANNOT_MODIFY_PRIMARY_CONTACT": "Нельзя изменить права основного контакта компании.",
+    "ORDER_FINALIZED": "Заказ уже завершён или отменён — действие недоступно."
   },
   "widgets": {
     "actionRequired": {

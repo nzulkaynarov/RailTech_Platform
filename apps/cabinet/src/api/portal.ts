@@ -537,3 +537,48 @@ export const getPartnerContractPdfUrl = () => portalUrl('/company/partner-applic
 /** Согласование проекта партнёрского договора кандидатом. */
 export const agreeCompanyPartnerContract = (body?: { notes?: string }) =>
   portalRequest<PartnerApplication>('/company/partner-application/agree', { method: 'POST', body: body ?? {} });
+
+// --- заказы партнёра и запросы цен (K2-orders) ----------------------------------------------------
+
+export type PartnerOrderStatus = Schemas['PartnerOrderStatus'];
+export type PartnerOrderListItem = Schemas['PartnerOrderListItem'];
+export type PartnerOrderStatusCounts = Schemas['PartnerOrderStatusCounts'];
+export type PartnerOrderPage = Schemas['PartnerOrderPage'];
+export type PartnerOrderLineItem = Schemas['PartnerOrderLineItem'];
+export type PartnerOrderLogItem = Schemas['PartnerOrderLogItem'];
+export type PartnerOrderDetail = Schemas['PartnerOrderDetail'];
+export type PartnerOrderConfirmRequest = Schemas['PartnerOrderConfirmRequest'];
+export type PartnerShipmentNoticeRequest = Schemas['PartnerShipmentNoticeRequest'];
+
+export type PartnerOrdersQuery = QueryOf<paths['/partner/orders']['get']>;
+
+export const listPartnerOrders = (params: PartnerOrdersQuery = {}) =>
+  portalRequest<PartnerOrderPage>(`/partner/orders${toQuery(params)}`);
+
+export const getPartnerOrder = (id: number) =>
+  portalRequest<PartnerOrderDetail>(`/partner/orders/${id}`);
+
+export const confirmPartnerOrder = (id: number, body?: PartnerOrderConfirmRequest) =>
+  portalRequest<PartnerOrderDetail>(`/partner/orders/${id}/confirm`, { method: 'POST', body: body ?? {} });
+
+export const shipPartnerOrder = (id: number, body: PartnerShipmentNoticeRequest) =>
+  portalRequest<PartnerOrderDetail>(`/partner/orders/${id}/ship`, { method: 'POST', body });
+
+export type PartnerPriceRequestStatus = Schemas['PartnerPriceRequestStatus'];
+export type PartnerPriceRequestListItem = Schemas['PartnerPriceRequestListItem'];
+export type PartnerPriceRequestStatusCounts = Schemas['PartnerPriceRequestStatusCounts'];
+export type PartnerPriceRequestPage = Schemas['PartnerPriceRequestPage'];
+export type PartnerPriceRequestLineItem = Schemas['PartnerPriceRequestLineItem'];
+export type PartnerPriceRequestDetail = Schemas['PartnerPriceRequestDetail'];
+export type PartnerPriceRequestResponse = Schemas['PartnerPriceRequestResponse'];
+
+export type PartnerPriceRequestsQuery = QueryOf<paths['/partner/price-requests']['get']>;
+
+export const listPartnerPriceRequests = (params: PartnerPriceRequestsQuery = {}) =>
+  portalRequest<PartnerPriceRequestPage>(`/partner/price-requests${toQuery(params)}`);
+
+export const getPartnerPriceRequest = (id: number) =>
+  portalRequest<PartnerPriceRequestDetail>(`/partner/price-requests/${id}`);
+
+export const respondPartnerPriceRequest = (id: number, body: PartnerPriceRequestResponse) =>
+  portalRequest<PartnerPriceRequestDetail>(`/partner/price-requests/${id}/respond`, { method: 'POST', body });

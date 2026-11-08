@@ -321,6 +321,13 @@ MY_PRODUCTS_PATHS = {
     "/partner/price-template",
     "/partner/price-list",
     "/partner/price-list/{task_id}",
+    "/partner/orders",
+    "/partner/orders/{id}",
+    "/partner/orders/{id}/confirm",
+    "/partner/orders/{id}/ship",
+    "/partner/price-requests",
+    "/partner/price-requests/{id}",
+    "/partner/price-requests/{id}/respond",
 }
 
 

@@ -40,6 +40,7 @@
     "sectionDocumentsAndTeam": "Documents and company",
     "unread": "Unread messages: {{count}}",
     "myProducts": "My products",
+    "partnerOrders": "Purchase orders",
     "groups": {
       "buy": "I buy",
       "supply": "I supply",
@@ -1066,6 +1067,100 @@
       "attachLink": "Go to requests",
       "deletedUser": "Deleted user",
       "deletedText": "Message deleted at the author’s request"
+    },
+    "partnerOrders": {
+      "title": "Purchase orders",
+      "description": "Confirm purchase orders, submit advance shipping notices (ASN), and respond to price requests (RFQ)",
+      "posShort": "items",
+      "tabsLabel": "Order and RFQ statuses",
+      "ordersListLabel": "Purchase orders list",
+      "rfqListLabel": "Price requests list",
+      "searchPlaceholder": "Search by number or subject…",
+      "emptyTitle": "Nothing found",
+      "notFoundText": "Try adjusting your search query or switching tabs.",
+      "emptyOrdersText": "No purchase orders yet.",
+      "emptyRfqText": "No price requests yet.",
+      "orderPrefix": "Order",
+      "createdAt": "Created",
+      "confirmedAt": "Confirmed",
+      "requestedAt": "Requested",
+      "noteLabel": "Note",
+      "linesTitle": "Line items",
+      "historyTitle": "Activity log",
+      "responseSent": "Your response was sent",
+      "confirmSuccess": "Purchase order confirmed",
+      "shipSuccess": "Advance shipping notice (ASN) submitted",
+      "respondSuccess": "Price request response submitted",
+      "views": {
+        "orders": "Purchase Orders (PO)",
+        "rfq": "Price Requests (RFQ)"
+      },
+      "orderTabs": {
+        "all": "All",
+        "sent": "New",
+        "confirmed": "Confirmed",
+        "received": "Received",
+        "cancelled": "Cancelled"
+      },
+      "rfqTabs": {
+        "all": "All",
+        "sent": "Awaiting reply",
+        "answered": "Answered"
+      },
+      "status": {
+        "draft": "Draft",
+        "sent": "Awaiting confirmation",
+        "confirmed": "Confirmed",
+        "received": "Received",
+        "cancelled": "Cancelled"
+      },
+      "rfqStatus": {
+        "sent": "Awaiting reply",
+        "answered": "Answered",
+        "failed": "Delivery failed"
+      },
+      "columns": {
+        "number": "Order number",
+        "subject": "Request subject",
+        "status": "Status",
+        "expectedDate": "Expected date",
+        "positions": "Items",
+        "totalAmount": "Total amount",
+        "answeredAt": "Answered at",
+        "actions": "Actions",
+        "name": "Item name",
+        "article": "Part number",
+        "qty": "Ordered",
+        "receivedQty": "Received",
+        "unitPrice": "Unit price",
+        "totalPrice": "Total"
+      },
+      "actions": {
+        "confirm": "Confirm",
+        "ship": "Ship (ASN)",
+        "view": "Open",
+        "respond": "Respond",
+        "sendResponse": "Send response"
+      },
+      "dialogs": {
+        "confirmTitle": "Confirm purchase order",
+        "confirmDescription": "Confirm your readiness to fulfill this order for the listed items and prices. You may specify or update the expected delivery date.",
+        "expectedDateLabel": "Expected delivery date",
+        "shipTitle": "Advance shipping notice (ASN)",
+        "shipDescription": "Provide shipping document details and carrier information so our warehouse can prepare for receiving.",
+        "supplierDocLabel": "Supplier waybill / invoice number",
+        "supplierDocPlaceholder": "e.g. WB-402 dated 08.11.2026",
+        "carrierLabel": "Carrier / Logistics company",
+        "carrierPlaceholder": "e.g. Road freight / DHL",
+        "trackingNumberLabel": "Tracking / Vehicle plate number",
+        "trackingNumberPlaceholder": "e.g. 01 A 777 AA or tracking code",
+        "noteLabel": "Shipping note",
+        "notePlaceholder": "Number of pallets, unloading instructions…",
+        "respondTitle": "Respond to price request (RFQ)",
+        "respondDescription": "Provide your offered prices, lead times, and payment terms for the requested items.",
+        "responseNoteLabel": "Commercial terms & prices",
+        "responseNotePlaceholder": "Specify unit prices, stock availability, and delivery lead time…"
+      }
     }
   },
   "apiErrors": {
@@ -1122,7 +1217,8 @@
     "CANNOT_DEACTIVATE_SELF": "Cannot deactivate your own account.",
     "CANNOT_ELEVATE_RIGHTS": "Cannot grant rights higher than your own.",
     "ADMIN_REQUIRED": "This action requires company administrator rights.",
-    "CANNOT_MODIFY_PRIMARY_CONTACT": "Cannot modify permissions of the primary company contact."
+    "CANNOT_MODIFY_PRIMARY_CONTACT": "Cannot modify permissions of the primary company contact.",
+    "ORDER_FINALIZED": "This order has already been completed or cancelled — action unavailable."
   },
   "widgets": {
     "actionRequired": {

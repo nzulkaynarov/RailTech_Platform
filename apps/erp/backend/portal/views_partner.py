@@ -9,13 +9,21 @@ from portal.exceptions import PortalValidationError
 from portal.serializers_partner import (
     PartnerConfirmRequestSerializer,
     PartnerConfirmResultSerializer,
+    PartnerOrderConfirmRequestSerializer,
+    PartnerOrderDetailSerializer,
+    PartnerOrderPageSerializer,
+    PartnerPriceRequestDetailSerializer,
+    PartnerPriceRequestPageSerializer,
+    PartnerPriceRequestResponseSerializer,
     PartnerProductDetailSerializer,
     PartnerProductPageSerializer,
+    PartnerShipmentNoticeRequestSerializer,
     PartnerSubmitRequestSerializer,
     PartnerSubmitResultSerializer,
     PriceListAcceptedSerializer,
     PriceListTaskSerializer,
 )
+from portal.services import partner_orders as orders
 from portal.services import partner_price_list as price_list
 from portal.services import partner_products as products
 from portal.views import BasePortalView
@@ -163,3 +171,126 @@ class PartnerPriceListTaskView(BasePortalView):
         if price_list.task_for_company(request.portal_company, task_id) is None:
             raise Http404
         return Response(PriceListTaskSerializer(price_list.task_view(task_id)).data)
+
+
+class PartnerOrderListView(BasePortalView):
+    """GET /partner/orders — заказы нашей компании к партнёру."""
+
+    required_module = MODULE
+
+    def get(self, request):
+        wanted = request.query_params.get("status", "")
+        if wanted and wanted not in orders.ORDER_STATUSES:
+            raise PortalValidationError("VALIDATION_ERROR")
+        page, page_size = _page_params(request)
+        q = request.query_params.get("q", "")
+        data = orders.list_partner_orders(
+            company=request.portal_company, status=wanted or None, q=q, page=page, page_size=page_size
+        )
+        return Response(PartnerOrderPageSerializer(data).data)
+
+
+class PartnerOrderDetailView(BasePortalView):
+    """GET /partner/orders/{id} — детали заказа; чужой — 404."""
+
+    required_module = MODULE
+
+    def get(self, request, pk):
+        data = orders.get_partner_order(company=request.portal_company, order_id=pk)
+        if data is None:
+            raise Http404
+        return Response(PartnerOrderDetailSerializer(data).data)
+
+
+class PartnerOrderConfirmView(BasePortalView):
+    """POST /partner/orders/{id}/confirm — подтверждение заказа поставщиком."""
+
+    required_module = MODULE
+
+    def post(self, request, pk):
+        serializer = PartnerOrderConfirmRequestSerializer(data=request.data or {})
+        if not serializer.is_valid():
+            raise PortalValidationError("VALIDATION_ERROR")
+        expected_date = serializer.validated_data.get("expected_date")
+        data = orders.confirm_partner_order(
+            company=request.portal_company,
+            user=request.portal_contact,
+            order_id=pk,
+            expected_date=expected_date,
+        )
+        if data is None:
+            raise Http404
+        return Response(PartnerOrderDetailSerializer(data).data)
+
+
+class PartnerOrderShipView(BasePortalView):
+    """POST /partner/orders/{id}/ship — уведомление об отгрузке (ASN)."""
+
+    required_module = MODULE
+
+    def post(self, request, pk):
+        serializer = PartnerShipmentNoticeRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise PortalValidationError("VALIDATION_ERROR")
+        vd = serializer.validated_data
+        data = orders.ship_partner_order(
+            company=request.portal_company,
+            user=request.portal_contact,
+            order_id=pk,
+            supplier_doc=vd["supplier_doc"],
+            carrier=vd.get("carrier", ""),
+            tracking_number=vd.get("tracking_number", ""),
+            note=vd.get("note", ""),
+        )
+        if data is None:
+            raise Http404
+        return Response(PartnerOrderDetailSerializer(data).data)
+
+
+class PartnerPriceRequestListView(BasePortalView):
+    """GET /partner/price-requests — запросы цен от нас к поставщику."""
+
+    required_module = MODULE
+
+    def get(self, request):
+        wanted = request.query_params.get("status", "")
+        if wanted and wanted not in orders.PRICE_REQUEST_STATUSES:
+            raise PortalValidationError("VALIDATION_ERROR")
+        page, page_size = _page_params(request)
+        q = request.query_params.get("q", "")
+        data = orders.list_partner_price_requests(
+            company=request.portal_company, status=wanted or None, q=q, page=page, page_size=page_size
+        )
+        return Response(PartnerPriceRequestPageSerializer(data).data)
+
+
+class PartnerPriceRequestDetailView(BasePortalView):
+    """GET /partner/price-requests/{id} — детали запроса цен; чужой — 404."""
+
+    required_module = MODULE
+
+    def get(self, request, pk):
+        data = orders.get_partner_price_request(company=request.portal_company, request_id=pk)
+        if data is None:
+            raise Http404
+        return Response(PartnerPriceRequestDetailSerializer(data).data)
+
+
+class PartnerPriceRequestRespondView(BasePortalView):
+    """POST /partner/price-requests/{id}/respond — ответ на запрос цен."""
+
+    required_module = MODULE
+
+    def post(self, request, pk):
+        serializer = PartnerPriceRequestResponseSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise PortalValidationError("VALIDATION_ERROR")
+        data = orders.respond_partner_price_request(
+            company=request.portal_company,
+            user=request.portal_contact,
+            request_id=pk,
+            answer_note=serializer.validated_data["answer_note"],
+        )
+        if data is None:
+            raise Http404
+        return Response(PartnerPriceRequestDetailSerializer(data).data)

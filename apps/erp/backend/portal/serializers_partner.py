@@ -165,3 +165,129 @@ class PriceListTaskSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=["pending", "running", "completed", "failed"])
     error = serializers.CharField(allow_null=True)
     report = PriceListReportSerializer(allow_null=True)
+
+
+class PartnerOrderListItemSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    number = serializers.CharField()
+    status = serializers.ChoiceField(choices=["draft", "sent", "confirmed", "received", "cancelled"])
+    expected_date = serializers.DateField(allow_null=True)
+    created_at = serializers.DateTimeField()
+    sent_at = serializers.DateTimeField(allow_null=True)
+    confirmed_at = serializers.DateTimeField(allow_null=True)
+    received_at = serializers.DateTimeField(allow_null=True)
+    cancelled_at = serializers.DateTimeField(allow_null=True)
+    lines_count = serializers.IntegerField()
+    total_amount = serializers.CharField()
+    currency = serializers.CharField()
+
+
+class PartnerOrderStatusCountsSerializer(serializers.Serializer):
+    all = serializers.IntegerField()
+    sent = serializers.IntegerField()
+    confirmed = serializers.IntegerField()
+    received = serializers.IntegerField()
+    cancelled = serializers.IntegerField()
+
+
+class PartnerOrderPageSerializer(serializers.Serializer):
+    items = PartnerOrderListItemSerializer(many=True)
+    page = serializers.IntegerField()
+    page_size = serializers.IntegerField()
+    total = serializers.IntegerField()
+    counts = PartnerOrderStatusCountsSerializer()
+
+
+class PartnerOrderLineItemSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    position = serializers.IntegerField()
+    product_id = serializers.IntegerField(allow_null=True)
+    name = serializers.CharField()
+    article = serializers.CharField(allow_blank=True)
+    unit = serializers.CharField(allow_blank=True)
+    quantity = serializers.IntegerField()
+    received_quantity = serializers.IntegerField()
+    unit_price = serializers.CharField()
+    total_price = serializers.CharField()
+
+
+class PartnerOrderLogItemSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    kind = serializers.CharField()
+    detail = serializers.CharField(allow_blank=True)
+    created_at = serializers.DateTimeField()
+
+
+class PartnerOrderDetailSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    number = serializers.CharField()
+    status = serializers.ChoiceField(choices=["draft", "sent", "confirmed", "received", "cancelled"])
+    expected_date = serializers.DateField(allow_null=True)
+    created_at = serializers.DateTimeField()
+    sent_at = serializers.DateTimeField(allow_null=True)
+    confirmed_at = serializers.DateTimeField(allow_null=True)
+    received_at = serializers.DateTimeField(allow_null=True)
+    cancelled_at = serializers.DateTimeField(allow_null=True)
+    cancel_reason = serializers.CharField(allow_blank=True)
+    note = serializers.CharField(allow_blank=True)
+    total_amount = serializers.CharField()
+    currency = serializers.CharField()
+    lines = PartnerOrderLineItemSerializer(many=True)
+    logs = PartnerOrderLogItemSerializer(many=True)
+
+
+class PartnerOrderConfirmRequestSerializer(serializers.Serializer):
+    expected_date = serializers.DateField(required=False, allow_null=True)
+
+
+class PartnerShipmentNoticeRequestSerializer(serializers.Serializer):
+    supplier_doc = serializers.CharField(max_length=100, min_length=1)
+    carrier = serializers.CharField(max_length=120, required=False, allow_blank=True, default="")
+    tracking_number = serializers.CharField(max_length=120, required=False, allow_blank=True, default="")
+    note = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
+
+
+class PartnerPriceRequestListItemSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    requested_at = serializers.DateTimeField()
+    subject = serializers.CharField()
+    status = serializers.ChoiceField(choices=["sent", "failed", "answered"])
+    lines_count = serializers.IntegerField()
+    answered_at = serializers.DateTimeField(allow_null=True)
+
+
+class PartnerPriceRequestStatusCountsSerializer(serializers.Serializer):
+    all = serializers.IntegerField()
+    sent = serializers.IntegerField()
+    answered = serializers.IntegerField()
+
+
+class PartnerPriceRequestPageSerializer(serializers.Serializer):
+    items = PartnerPriceRequestListItemSerializer(many=True)
+    page = serializers.IntegerField()
+    page_size = serializers.IntegerField()
+    total = serializers.IntegerField()
+    counts = PartnerPriceRequestStatusCountsSerializer()
+
+
+class PartnerPriceRequestLineItemSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    article = serializers.CharField(allow_blank=True)
+    quantity = serializers.IntegerField()
+    unit = serializers.CharField(allow_blank=True)
+
+
+class PartnerPriceRequestDetailSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    requested_at = serializers.DateTimeField()
+    subject = serializers.CharField()
+    note = serializers.CharField(allow_blank=True)
+    status = serializers.ChoiceField(choices=["sent", "failed", "answered"])
+    answered_at = serializers.DateTimeField(allow_null=True)
+    answer_note = serializers.CharField(allow_blank=True)
+    lines = PartnerPriceRequestLineItemSerializer(many=True)
+
+
+class PartnerPriceRequestResponseSerializer(serializers.Serializer):
+    answer_note = serializers.CharField(max_length=1000, min_length=1)

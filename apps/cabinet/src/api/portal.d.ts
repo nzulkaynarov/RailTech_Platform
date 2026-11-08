@@ -1004,6 +1004,141 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/partner/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Заказы поставщику компании
+         * @description Список заказов нашей компании к поставщику (`SupplierOrder`). Партнёр видит только свои заказы.
+         */
+        get: operations["listPartnerOrders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/partner/orders/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Детали заказа поставщику */
+        get: operations["getPartnerOrder"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/partner/orders/{id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Подтверждение заказа поставщиком
+         * @description Партнёр подтверждает готовность выполнить заказ (переход в статус `confirmed`).
+         *     При необходимости можно указать или скорректировать ожидаемую дату поставки.
+         */
+        post: operations["confirmPartnerOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/partner/orders/{id}/ship": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Уведомление об отгрузке (ASN)
+         * @description Партнёр направляет уведомление об отгрузке (номер транспортной накладной, перевозчик, трек-номер).
+         */
+        post: operations["shipPartnerOrder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/partner/price-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Запросы цен (RFQ)
+         * @description Список запросов цен от нашей компании к поставщику (`PriceRequest`).
+         */
+        get: operations["listPartnerPriceRequests"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/partner/price-requests/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Детали запроса цен */
+        get: operations["getPartnerPriceRequest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/partner/price-requests/{id}/respond": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ответ на запрос цен
+         * @description Партнёр направляет ценовое предложение и условия по запросу цен.
+         */
+        post: operations["respondPartnerPriceRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/company": {
         parameters: {
             query?: never;
@@ -1610,6 +1745,140 @@ export interface components {
             /** @description Код ошибки уровня файла при `failed` (`NAME_COLUMN_NOT_FOUND` — нет колонки наименования) */
             error: string | null;
             report: components["schemas"]["PriceListReport"] | null;
+        };
+        /** @enum {string} */
+        PartnerOrderStatus: "draft" | "sent" | "confirmed" | "received" | "cancelled";
+        PartnerOrderListItem: {
+            id: number;
+            number: string;
+            status: components["schemas"]["PartnerOrderStatus"];
+            /** Format: date */
+            expected_date?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            sent_at?: string | null;
+            /** Format: date-time */
+            confirmed_at?: string | null;
+            /** Format: date-time */
+            received_at?: string | null;
+            /** Format: date-time */
+            cancelled_at?: string | null;
+            lines_count: number;
+            total_amount: string;
+            currency: string;
+        };
+        PartnerOrderStatusCounts: {
+            all: number;
+            sent: number;
+            confirmed: number;
+            received: number;
+            cancelled: number;
+        };
+        PartnerOrderPage: {
+            items: components["schemas"]["PartnerOrderListItem"][];
+            page: number;
+            page_size: number;
+            total: number;
+            counts: components["schemas"]["PartnerOrderStatusCounts"];
+        };
+        PartnerOrderLineItem: {
+            id: number;
+            position: number;
+            product_id?: number | null;
+            name: string;
+            article: string;
+            unit: string;
+            quantity: number;
+            received_quantity: number;
+            unit_price: string;
+            total_price: string;
+        };
+        PartnerOrderLogItem: {
+            id: number;
+            kind: string;
+            detail: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        PartnerOrderDetail: {
+            id: number;
+            number: string;
+            status: components["schemas"]["PartnerOrderStatus"];
+            /** Format: date */
+            expected_date?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            sent_at?: string | null;
+            /** Format: date-time */
+            confirmed_at?: string | null;
+            /** Format: date-time */
+            received_at?: string | null;
+            /** Format: date-time */
+            cancelled_at?: string | null;
+            cancel_reason: string;
+            note: string;
+            total_amount: string;
+            currency: string;
+            lines: components["schemas"]["PartnerOrderLineItem"][];
+            logs: components["schemas"]["PartnerOrderLogItem"][];
+        };
+        PartnerOrderConfirmRequest: {
+            /** Format: date */
+            expected_date?: string | null;
+        };
+        PartnerShipmentNoticeRequest: {
+            supplier_doc: string;
+            carrier?: string;
+            tracking_number?: string;
+            note?: string;
+        };
+        /** @enum {string} */
+        PartnerPriceRequestStatus: "sent" | "failed" | "answered";
+        PartnerPriceRequestListItem: {
+            id: number;
+            /** Format: date-time */
+            requested_at: string;
+            subject: string;
+            status: components["schemas"]["PartnerPriceRequestStatus"];
+            lines_count: number;
+            /** Format: date-time */
+            answered_at?: string | null;
+        };
+        PartnerPriceRequestStatusCounts: {
+            all: number;
+            sent: number;
+            answered: number;
+        };
+        PartnerPriceRequestPage: {
+            items: components["schemas"]["PartnerPriceRequestListItem"][];
+            page: number;
+            page_size: number;
+            total: number;
+            counts: components["schemas"]["PartnerPriceRequestStatusCounts"];
+        };
+        PartnerPriceRequestLineItem: {
+            id: number;
+            name: string;
+            article: string;
+            quantity: number;
+            unit: string;
+        };
+        PartnerPriceRequestDetail: {
+            id: number;
+            /** Format: date-time */
+            requested_at: string;
+            subject: string;
+            note: string;
+            status: components["schemas"]["PartnerPriceRequestStatus"];
+            /** Format: date-time */
+            answered_at?: string | null;
+            answer_note: string;
+            lines: components["schemas"]["PartnerPriceRequestLineItem"][];
+        };
+        PartnerPriceRequestResponse: {
+            answer_note: string;
         };
         Reason: {
             reason: string;
@@ -4358,6 +4627,236 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    listPartnerOrders: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["PartnerOrderStatus"];
+                q?: string;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Страница заказов и количество по статусам */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerOrderPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    getPartnerOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Детали заказа; чужой или несуществующий — 404 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerOrderDetail"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    confirmPartnerOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PartnerOrderConfirmRequest"];
+            };
+        };
+        responses: {
+            /** @description Заказ подтверждён */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerOrderDetail"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Недопустимый статус заказа */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    shipPartnerOrder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartnerShipmentNoticeRequest"];
+            };
+        };
+        responses: {
+            /** @description Уведомление зарегистрировано */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerOrderDetail"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Недопустимый статус заказа */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    listPartnerPriceRequests: {
+        parameters: {
+            query?: {
+                status?: components["schemas"]["PartnerPriceRequestStatus"];
+                q?: string;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Страница запросов цен и количество по статусам */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerPriceRequestPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    getPartnerPriceRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Детали запроса цен; чужой или несуществующий — 404 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerPriceRequestDetail"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    respondPartnerPriceRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PartnerPriceRequestResponse"];
+            };
+        };
+        responses: {
+            /** @description Ответ зафиксирован */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerPriceRequestDetail"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Недопустимый статус заказа */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
             429: components["responses"]["TooManyRequests"];
         };
     };

@@ -118,6 +118,8 @@ function createDb(dataset: Dataset = 'demo') {
     partnerProducts: empty ? [] : partner.partnerProducts(),
     priceTasks: new Map<string, ReturnType<typeof partner.newTask>>(),
     partnerApplication: null as Schemas['PartnerApplication'] | null,
+    partnerOrders: empty ? [] : partner.partnerOrders(),
+    partnerPriceRequests: empty ? [] : partner.partnerPriceRequests(),
   };
 }
 
@@ -1313,6 +1315,168 @@ export const handlers = [
       const task = db.priceTasks.get(params.taskId);
       return task ? json(partner.taskView(params.taskId, task, db.partnerProducts)) : error(404, 'NOT_FOUND');
     }),
+  ),
+
+  // --- Заказы на поставку (PO, ASN) и запросы цен (RFQ) партнёра (K2-orders) -----------------
+  http.get(
+    `${API}/partner/orders`,
+    withSession(({ db, request }) => {
+      const url = new URL(request.url);
+      const status = url.searchParams.get('status');
+      const q = url.searchParams.get('q')?.trim().toLowerCase() ?? '';
+      const page = Math.max(1, Number(url.searchParams.get('page') ?? 1) || 1);
+      const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get('page_size') ?? 20) || 20));
+      if (status && !['draft', 'sent', 'confirmed', 'received', 'cancelled'].includes(status)) {
+        return error(422, 'VALIDATION_ERROR');
+      }
+      const searched = db.partnerOrders.filter(
+        (item) => !q || item.number.toLowerCase().includes(q) || item.note.toLowerCase().includes(q),
+      );
+      const found = status ? searched.filter((item) => item.status === status) : searched;
+      const items: Schemas['PartnerOrderListItem'][] = found
+        .slice((page - 1) * pageSize, page * pageSize)
+        .map((row) => ({
+          id: row.id,
+          number: row.number,
+          status: row.status,
+          expected_date: row.expected_date,
+          created_at: row.created_at,
+          sent_at: row.sent_at,
+          confirmed_at: row.confirmed_at,
+          received_at: row.received_at,
+          cancelled_at: row.cancelled_at,
+          lines_count: row.lines.length,
+          total_amount: row.total_amount,
+          currency: row.currency,
+        }));
+      const body: Schemas['PartnerOrderPage'] = {
+        items,
+        page,
+        page_size: pageSize,
+        total: found.length,
+        counts: partner.orderStatusCounts(searched),
+      };
+      return json(body);
+    }),
+  ),
+  http.get<IdParams>(
+    `${API}/partner/orders/:id`,
+    withSession<IdParams>(({ db, params }) => {
+      const item = byId(db.partnerOrders, params.id);
+      return item ? json(item) : error(404, 'NOT_FOUND');
+    }),
+  ),
+  http.post<IdParams>(
+    `${API}/partner/orders/:id/confirm`,
+    withSession<IdParams>(
+      async ({ db, params, request }) => {
+        const item = byId(db.partnerOrders, params.id);
+        if (!item) return error(404, 'NOT_FOUND');
+        if (item.status === 'received' || item.status === 'cancelled') return error(409, 'ORDER_FINALIZED');
+        const body = ((await readJson<Schemas['PartnerOrderConfirmRequest']>(request).catch(() => ({}))) ||
+          {}) as Schemas['PartnerOrderConfirmRequest'];
+        item.status = 'confirmed';
+        item.confirmed_at = new Date().toISOString();
+        if (body.expected_date !== undefined) {
+          item.expected_date = body.expected_date;
+        }
+        item.logs.unshift({
+          id: Math.max(8200, ...item.logs.map((l) => l.id)) + 1,
+          kind: 'confirmed',
+          detail: 'Подтверждён поставщиком в портале',
+          created_at: item.confirmed_at,
+        });
+        return json(item);
+      },
+      { action: true },
+    ),
+  ),
+  http.post<IdParams>(
+    `${API}/partner/orders/:id/ship`,
+    withSession<IdParams>(
+      async ({ db, params, request }) => {
+        const item = byId(db.partnerOrders, params.id);
+        if (!item) return error(404, 'NOT_FOUND');
+        if (item.status === 'received' || item.status === 'cancelled') return error(409, 'ORDER_FINALIZED');
+        const body = await readJson<Schemas['PartnerShipmentNoticeRequest']>(request);
+        if (!body.supplier_doc?.trim()) return error(422, 'VALIDATION_ERROR');
+        if (item.status === 'draft' || item.status === 'sent') {
+          item.status = 'confirmed';
+          if (!item.confirmed_at) item.confirmed_at = new Date().toISOString();
+        }
+        const now = new Date().toISOString();
+        const parts = [`УПД/накладная: ${body.supplier_doc.trim()}`];
+        if (body.carrier?.trim()) parts.push(`перевозчик: ${body.carrier.trim()}`);
+        if (body.tracking_number?.trim()) parts.push(`трек: ${body.tracking_number.trim()}`);
+        if (body.note?.trim()) parts.push(`прим.: ${body.note.trim()}`);
+        item.logs.unshift({
+          id: Math.max(8200, ...item.logs.map((l) => l.id)) + 1,
+          kind: 'shipped',
+          detail: parts.join(', '),
+          created_at: now,
+        });
+        return json(item);
+      },
+      { action: true },
+    ),
+  ),
+  http.get(
+    `${API}/partner/price-requests`,
+    withSession(({ db, request }) => {
+      const url = new URL(request.url);
+      const status = url.searchParams.get('status');
+      const q = url.searchParams.get('q')?.trim().toLowerCase() ?? '';
+      const page = Math.max(1, Number(url.searchParams.get('page') ?? 1) || 1);
+      const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get('page_size') ?? 20) || 20));
+      if (status && !['sent', 'answered', 'failed'].includes(status)) {
+        return error(422, 'VALIDATION_ERROR');
+      }
+      const searched = db.partnerPriceRequests.filter(
+        (item) => !q || item.subject.toLowerCase().includes(q) || item.note.toLowerCase().includes(q),
+      );
+      const found = status ? searched.filter((item) => item.status === status) : searched;
+      const items: Schemas['PartnerPriceRequestListItem'][] = found
+        .slice((page - 1) * pageSize, page * pageSize)
+        .map((row) => ({
+          id: row.id,
+          status: row.status,
+          subject: row.subject,
+          lines_count: row.lines.length,
+          requested_at: row.requested_at,
+          answered_at: row.answered_at,
+        }));
+      const body: Schemas['PartnerPriceRequestPage'] = {
+        items,
+        page,
+        page_size: pageSize,
+        total: found.length,
+        counts: partner.rfqStatusCounts(searched),
+      };
+      return json(body);
+    }),
+  ),
+  http.get<IdParams>(
+    `${API}/partner/price-requests/:id`,
+    withSession<IdParams>(({ db, params }) => {
+      const item = byId(db.partnerPriceRequests, params.id);
+      return item ? json(item) : error(404, 'NOT_FOUND');
+    }),
+  ),
+  http.post<IdParams>(
+    `${API}/partner/price-requests/:id/respond`,
+    withSession<IdParams>(
+      async ({ db, params, request }) => {
+        const item = byId(db.partnerPriceRequests, params.id);
+        if (!item) return error(404, 'NOT_FOUND');
+        const body = await readJson<Schemas['PartnerPriceRequestResponse']>(request);
+        if (!body.answer_note?.trim()) return error(422, 'VALIDATION_ERROR');
+        item.status = 'answered';
+        item.answer_note = body.answer_note.trim();
+        item.answered_at = new Date().toISOString();
+        return json(item);
+      },
+      { action: true },
+    ),
   ),
 
   // Публичная проверка официальных документов (ADR-0024 §6, SIGN-VERIFY-1)

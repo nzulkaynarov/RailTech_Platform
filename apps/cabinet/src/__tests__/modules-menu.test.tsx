@@ -47,7 +47,7 @@ describe('меню при двух ролях: «Покупаю» и «Пост�
     const groups = within(side).getAllByRole('region');
     expect(groups.map((group) => within(group).getAllByRole('link').map((link) => link.textContent?.replace(/\d+/g, '').trim()))).toEqual([
       ['Запросы', 'КП', 'Каталог', 'Документы', 'Договоры', 'Счета', 'Акты', 'Поставки'],
-      ['Мои товары'],
+      ['Мои товары', 'Заказы на поставку'],
       // «Сообщения» (CHAT-1) — в «Компании»: беседа компании с нами одна и о покупках, и о поставках
       ['Сообщения', 'Компания', 'Команда', 'Профиль'],
     ]);
@@ -67,8 +67,9 @@ describe('меню при двух ролях: «Покупаю» и «Пост�
     ).toEqual(['Запросы', 'КП', 'Каталог', 'Мои товары']);
     await user.click(within(bottom).getByRole('button', { name: 'Ещё' }));
     const sheet = await screen.findByRole('dialog');
-    expect(within(sheet).getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual(['Покупаю', 'Компания']);
+    expect(within(sheet).getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual(['Покупаю', 'Поставляю', 'Компания']);
     expect(within(sheet).getByRole('link', { name: 'Договоры' })).toBeInTheDocument();
+    expect(within(sheet).getByRole('link', { name: 'Заказы на поставку' })).toBeInTheDocument();
     expect(within(sheet).getByRole('link', { name: 'Профиль' })).toBeInTheDocument();
   });
 
@@ -100,7 +101,7 @@ describe('меню при двух ролях: «Покупаю» и «Пост�
 
   it('все ключи разделов есть в трёх словарях', () => {
     for (const language of ['ru', 'uz', 'en']) {
-      for (const key of ['nav.groups.buy', 'nav.groups.supply', 'nav.groups.account', 'nav.myProducts']) {
+      for (const key of ['nav.groups.buy', 'nav.groups.supply', 'nav.groups.account', 'nav.myProducts', 'nav.partnerOrders']) {
         expect(i18n.exists(key, { lng: language }), `${language}: ${key}`).toBe(true);
       }
     }
@@ -139,7 +140,7 @@ describe('меню из /me.modules', () => {
     expect(new Set(NAV_ITEMS.filter((item) => item.group !== 'supply').map((item) => item.module))).toEqual(
       new Set(template.client),
     );
-    expect(NAV_ITEMS.filter((item) => item.group === 'supply').map((item) => item.module)).toEqual(['my_products']);
+    expect(new Set(NAV_ITEMS.filter((item) => item.group === 'supply').map((item) => item.module))).toEqual(new Set(['my_products']));
     expect(contract.components.schemas.Me['x-role-default-modules'].partner).toEqual(PARTNER_DEFAULT.modules);
   });
 
@@ -157,6 +158,7 @@ describe('меню из /me.modules', () => {
     // «Мои товары» — первым пунктом партнёра; групп при одной роли нет
     expect(navFor(['my_products', 'catalog_requests', 'profile'], ['partner']).items.map((item) => item.to)).toEqual([
       '/my-products',
+      '/partner/orders',
       '/requests',
       '/catalog',
       '/profile',
@@ -175,7 +177,7 @@ describe('меню из /me.modules', () => {
       within(side)
         .getAllByRole('link')
         .map((link) => link.textContent?.replace(/\d+/g, '').trim()),
-    ).toEqual(['Мои товары', 'Запросы', 'Каталог', 'Сообщения', 'Профиль']);
+    ).toEqual(['Мои товары', 'Заказы на поставку', 'Запросы', 'Каталог', 'Сообщения', 'Профиль']);
     // одна роль — меню плоское, без разделов «Покупаю» / «Поставляю»
     expect(within(side).queryByRole('heading', { name: 'Покупаю' })).not.toBeInTheDocument();
     const bottom = screen.getByRole('navigation', { name: 'Основные разделы' });
@@ -255,7 +257,7 @@ describe('меню из /me.modules', () => {
       within(side)
         .getAllByRole('link')
         .map((link) => link.textContent?.replace(/\d+/g, '').trim()),
-    ).toEqual(['Мои товары', 'Профиль']);
+    ).toEqual(['Мои товары', 'Заказы на поставку', 'Профиль']);
     await router.navigate('/requests');
     await waitFor(() => expect(router.state.location.pathname).toBe('/my-products'));
   });
