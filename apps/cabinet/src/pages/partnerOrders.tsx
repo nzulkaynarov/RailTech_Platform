@@ -2,13 +2,17 @@ import { useState, type FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
+  BarChart3,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  Coins,
   FileText,
+  Scale,
   Search,
   SearchX,
+  TrendingUp,
   Truck,
 } from 'lucide-react';
 
@@ -20,9 +24,11 @@ import type {
   PartnerPriceRequestDetail,
   PartnerPriceRequestListItem,
   PartnerPriceRequestStatus,
+  PartnerSettlementLine,
 } from '@/api/portal';
 import {
   useConfirmPartnerOrder,
+  usePartnerFinance,
   usePartnerOrderDetail,
   usePartnerOrders,
   usePartnerPriceRequestDetail,
@@ -38,6 +44,7 @@ import { ErrorState, ListSkeleton } from '@/components/QueryStates';
 import { ResponsiveList, type ListColumn } from '@/components/ResponsiveList';
 import { ToneBadge } from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Dialog,
   DialogClose,
@@ -51,7 +58,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useUrlParams } from '@/hooks/useUrlParams';
 import { pageCount, parsePage } from '@/lib/catalog';
-import { formatDate, formatDateTime } from '@/lib/format';
+import { formatDate, formatDateTime, formatMoney } from '@/lib/format';
 import { toast } from '@/lib/toast';
 import { CanAct } from '@/session/CanAct';
 
@@ -72,7 +79,8 @@ export function PartnerOrdersPage() {
   const [params] = useSearchParams();
   const patchUrl = useUrlParams();
 
-  const view = params.get('view') === 'rfq' ? 'rfq' : 'orders';
+  const view =
+    params.get('view') === 'rfq' ? 'rfq' : params.get('view') === 'finance' ? 'finance' : 'orders';
   const tab = params.get('tab') ?? 'all';
   const q = params.get('q') ?? '';
   const page = parsePage(params.get('page'));
@@ -121,6 +129,8 @@ export function PartnerOrdersPage() {
     },
     { enabled: view === 'rfq' },
   );
+
+  const financeQuery = usePartnerFinance({ enabled: view === 'finance' });
 
   const selectedOrderQuery = usePartnerOrderDetail(orderId);
   const selectedRfqQuery = usePartnerPriceRequestDetail(rfqId);
@@ -241,6 +251,51 @@ export function PartnerOrdersPage() {
     },
   ];
 
+  // Settlement table columns (K4-partner-finance)
+  const settlementColumns: ListColumn<PartnerSettlementLine>[] = [
+    {
+      id: 'status',
+      header: t('pages.partnerOrders.columns.status'),
+      cell: (row) => <OrderStatusBadge status={row.status} />,
+    },
+    {
+      id: 'orderedAmount',
+      header: t('pages.partnerOrders.finance.orderedTotal'),
+      cell: (row) => (
+        <span className="font-medium tabular-nums">
+          {formatMoney({ amount: row.ordered_amount, currency: row.currency })}
+        </span>
+      ),
+    },
+    {
+      id: 'receivedAmount',
+      header: t('pages.partnerOrders.finance.receivedTotal'),
+      cell: (row) => (
+        <span className="font-medium text-success tabular-nums">
+          {formatMoney({ amount: row.received_amount, currency: row.currency })}
+        </span>
+      ),
+    },
+    {
+      id: 'inTransitAmount',
+      header: t('pages.partnerOrders.finance.inTransitTotal'),
+      cell: (row) => (
+        <span className="font-medium text-warning tabular-nums">
+          {formatMoney({ amount: row.in_transit_amount, currency: row.currency })}
+        </span>
+      ),
+    },
+    {
+      id: 'receiptsCount',
+      header: t('pages.partnerOrders.finance.receiptsCount'),
+      cell: (row) => (
+        <ToneBadge tone={row.receipts_count > 0 ? 'info' : 'neutral'}>
+          {row.receipts_count}
+        </ToneBadge>
+      ),
+    },
+  ];
+
   const total = view === 'orders' ? (ordersQuery.data?.total ?? 0) : (rfqQuery.data?.total ?? 0);
   const totalPages = pageCount(total, PAGE_SIZE);
 
@@ -282,51 +337,243 @@ export function PartnerOrdersPage() {
             </span>
           ) : null}
         </Button>
+        <Button
+          type="button"
+          variant={view === 'finance' ? 'default' : 'ghost'}
+          className="rounded-full"
+          onClick={() => update({ view: 'finance', tab: null, page: null, q: null })}
+        >
+          <BarChart3 className="mr-2 size-4" />
+          {t('pages.partnerOrders.views.finance')}
+        </Button>
       </div>
 
       {/* Subtabs and Search */}
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div role="group" aria-label={t('pages.partnerOrders.tabsLabel')} className="flex flex-wrap gap-2">
-          {view === 'orders'
-            ? ORDER_TABS.map((statusName) => (
-                <Button
-                  key={statusName}
-                  type="button"
-                  size="sm"
-                  variant={statusName === tab ? 'default' : 'outline'}
-                  aria-pressed={statusName === tab}
-                  className="rounded-full"
-                  onClick={() => update({ tab: statusName === 'all' ? null : statusName, page: null })}
-                >
-                  {t(`pages.partnerOrders.orderTabs.${statusName}`)}
-                  <span className="ml-1 tabular-nums opacity-80">
-                    {ordersQuery.data?.counts[statusName] ?? 0}
-                  </span>
-                </Button>
-              ))
-            : RFQ_TABS.map((statusName) => (
-                <Button
-                  key={statusName}
-                  type="button"
-                  size="sm"
-                  variant={statusName === tab ? 'default' : 'outline'}
-                  aria-pressed={statusName === tab}
-                  className="rounded-full"
-                  onClick={() => update({ tab: statusName === 'all' ? null : statusName, page: null })}
-                >
-                  {t(`pages.partnerOrders.rfqTabs.${statusName}`)}
-                  <span className="ml-1 tabular-nums opacity-80">
-                    {rfqQuery.data?.counts[statusName] ?? 0}
-                  </span>
-                </Button>
-              ))}
-        </div>
+      {view !== 'finance' ? (
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div role="group" aria-label={t('pages.partnerOrders.tabsLabel')} className="flex flex-wrap gap-2">
+            {view === 'orders'
+              ? ORDER_TABS.map((statusName) => (
+                  <Button
+                    key={statusName}
+                    type="button"
+                    size="sm"
+                    variant={statusName === tab ? 'default' : 'outline'}
+                    aria-pressed={statusName === tab}
+                    className="rounded-full"
+                    onClick={() => update({ tab: statusName === 'all' ? null : statusName, page: null })}
+                  >
+                    {t(`pages.partnerOrders.orderTabs.${statusName}`)}
+                    <span className="ml-1 tabular-nums opacity-80">
+                      {ordersQuery.data?.counts[statusName] ?? 0}
+                    </span>
+                  </Button>
+                ))
+              : RFQ_TABS.map((statusName) => (
+                  <Button
+                    key={statusName}
+                    type="button"
+                    size="sm"
+                    variant={statusName === tab ? 'default' : 'outline'}
+                    aria-pressed={statusName === tab}
+                    className="rounded-full"
+                    onClick={() => update({ tab: statusName === 'all' ? null : statusName, page: null })}
+                  >
+                    {t(`pages.partnerOrders.rfqTabs.${statusName}`)}
+                    <span className="ml-1 tabular-nums opacity-80">
+                      {rfqQuery.data?.counts[statusName] ?? 0}
+                    </span>
+                  </Button>
+                ))}
+          </div>
 
-        <SearchForm key={q} initial={q} onSearch={(term) => update({ q: term || null, page: null })} />
-      </div>
+          <SearchForm key={q} initial={q} onSearch={(term) => update({ q: term || null, page: null })} />
+        </div>
+      ) : null}
 
       {/* Main Content Area */}
-      {view === 'orders' ? (
+      {view === 'finance' ? (
+        financeQuery.isPending ? (
+          <ListSkeleton />
+        ) : financeQuery.isError ? (
+          <ErrorState error={financeQuery.error} onRetry={() => void financeQuery.refetch()} />
+        ) : !financeQuery.data ? null : (
+          <div>
+            {/* Balances by currency */}
+            <div className="mb-8">
+              <h3 className="mb-4 text-base font-semibold text-foreground flex items-center gap-2">
+                <Coins className="size-5 text-primary" />
+                {t('pages.partnerOrders.finance.balancesTitle')}
+              </h3>
+              {financeQuery.data.balances.length === 0 ? (
+                <EmptyState
+                  icon={SearchX}
+                  title={t('pages.partnerOrders.emptyTitle')}
+                  text={t('pages.partnerOrders.finance.emptyBalancesText')}
+                />
+              ) : (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {financeQuery.data.balances.map((b) => (
+                    <Card key={b.currency} className="border-border/60">
+                      <CardContent className="p-5">
+                        <div className="flex items-center justify-between pb-3 border-b border-border/40">
+                          <span className="font-bold text-lg">{b.currency}</span>
+                          <ToneBadge tone="neutral">
+                            {b.orders_count} {t('pages.partnerOrders.finance.ordersCountSuffix')}
+                          </ToneBadge>
+                        </div>
+                        <div className="mt-4 space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">{t('pages.partnerOrders.finance.orderedTotal')}</span>
+                            <span className="font-semibold tabular-nums">
+                              {formatMoney({ amount: b.ordered_total, currency: b.currency })}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">{t('pages.partnerOrders.finance.receivedTotal')}</span>
+                            <span className="font-semibold text-success tabular-nums">
+                              {formatMoney({ amount: b.received_total, currency: b.currency })}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">{t('pages.partnerOrders.finance.inTransitTotal')}</span>
+                            <span className="font-semibold text-warning tabular-nums">
+                              {formatMoney({ amount: b.in_transit_total, currency: b.currency })}
+                            </span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Scorecard */}
+            <div className="mb-8">
+              <h3 className="mb-4 text-base font-semibold text-foreground flex items-center gap-2">
+                <TrendingUp className="size-5 text-primary" />
+                {t('pages.partnerOrders.finance.scorecardTitle')}
+              </h3>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <Card className="border-border/60">
+                  <CardContent className="p-5">
+                    <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      {t('pages.partnerOrders.finance.otifRate')}
+                    </div>
+                    <div className="mt-2 flex items-baseline gap-2">
+                      <span className="text-3xl font-bold tracking-tight text-foreground">
+                        {financeQuery.data.scorecard.otif_rate}%
+                      </span>
+                      <ToneBadge
+                        tone={
+                          financeQuery.data.scorecard.otif_rate >= 90
+                            ? 'success'
+                            : financeQuery.data.scorecard.otif_rate >= 75
+                              ? 'warning'
+                              : 'danger'
+                        }
+                      >
+                        {financeQuery.data.scorecard.otif_rate >= 90
+                          ? t('pages.partnerOrders.finance.excellent')
+                          : t('pages.partnerOrders.finance.target')}
+                      </ToneBadge>
+                    </div>
+                    <div className="mt-3 text-xs text-muted-foreground">
+                      {t('pages.partnerOrders.finance.completedOrdersCount', {
+                        count: financeQuery.data.scorecard.completed_orders_count,
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-border/60">
+                  <CardContent className="p-5">
+                    <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      {t('pages.partnerOrders.finance.rfqRate')}
+                    </div>
+                    <div className="mt-2 flex items-baseline gap-2">
+                      <span className="text-3xl font-bold tracking-tight text-foreground">
+                        {financeQuery.data.scorecard.rfq_response_rate}%
+                      </span>
+                      <ToneBadge tone={financeQuery.data.scorecard.rfq_response_rate >= 80 ? 'success' : 'warning'}>
+                        {financeQuery.data.scorecard.rfq_response_rate >= 80
+                          ? t('pages.partnerOrders.finance.responsive')
+                          : t('pages.partnerOrders.finance.target')}
+                      </ToneBadge>
+                    </div>
+                    <div className="mt-3 text-xs text-muted-foreground">
+                      {t('pages.partnerOrders.finance.totalRfqsCount', {
+                        count: financeQuery.data.scorecard.total_rfqs_count,
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-border/60">
+                  <CardContent className="p-5">
+                    <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      {t('pages.partnerOrders.finance.freshnessRate')}
+                    </div>
+                    <div className="mt-2 flex items-baseline gap-2">
+                      <span className="text-3xl font-bold tracking-tight text-foreground">
+                        {financeQuery.data.scorecard.price_freshness_rate}%
+                      </span>
+                      <ToneBadge tone={financeQuery.data.scorecard.price_freshness_rate >= 90 ? 'success' : 'warning'}>
+                        {financeQuery.data.scorecard.price_freshness_rate >= 90
+                          ? t('pages.partnerOrders.finance.fresh')
+                          : t('pages.partnerOrders.finance.updateNeeded')}
+                      </ToneBadge>
+                    </div>
+                    <div className="mt-3 text-xs text-muted-foreground">
+                      {t('pages.partnerOrders.finance.activeOffersCount', {
+                        count: financeQuery.data.scorecard.active_offers_count,
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* Settlements Table */}
+            <div className="mb-8">
+              <h3 className="mb-4 text-base font-semibold text-foreground flex items-center gap-2">
+                <Scale className="size-5 text-primary" />
+                {t('pages.partnerOrders.finance.settlementsTitle')}
+              </h3>
+              {financeQuery.data.settlements.length === 0 ? (
+                <EmptyState
+                  icon={SearchX}
+                  title={t('pages.partnerOrders.emptyTitle')}
+                  text={t('pages.partnerOrders.finance.emptySettlementsText')}
+                />
+              ) : (
+                <ResponsiveList<PartnerSettlementLine>
+                  label={t('pages.partnerOrders.finance.settlementsListLabel')}
+                  rows={financeQuery.data.settlements}
+                  getRowId={(row) => row.order_id}
+                  title={{
+                    header: t('pages.partnerOrders.columns.number'),
+                    cell: (row) => (
+                      <div>
+                        <button
+                          type="button"
+                          className="text-left font-semibold text-primary hover:underline"
+                          onClick={() => update({ orderId: String(row.order_id) })}
+                        >
+                          {row.order_number}
+                        </button>
+                        <div className="text-xs text-muted-foreground">{formatDate(row.order_date)}</div>
+                      </div>
+                    ),
+                  }}
+                  columns={settlementColumns}
+                />
+              )}
+            </div>
+          </div>
+        )
+      ) : view === 'orders' ? (
         ordersQuery.isPending ? (
           <ListSkeleton />
         ) : ordersQuery.isError ? (

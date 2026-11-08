@@ -120,4 +120,31 @@ describe('Заказы на поставку (PO, ASN) и запросы цен 
     // Проверяем отображение позиций
     expect(within(dialog).getAllByText('Подшипник 6205-2RS').length).toBeGreaterThan(0);
   });
+
+  it('переключается на взаиморасчёты и оценку (K4-partner-finance) и отображает сводку и показатели', async () => {
+    signedIn('actor', 'demo', PARTNER_ACCESS);
+    const user = userEvent.setup();
+    renderApp('/partner/orders');
+
+    await screen.findByRole('heading', { level: 1, name: 'Заказы на поставку' });
+
+    // Переключаемся на вкладку «Взаиморасчёты и оценка»
+    await user.click(screen.getByRole('button', { name: /Взаиморасчёты и оценка/ }));
+
+    // Проверяем наличие карточек взаиморасчётов и оценки
+    expect(await screen.findByText('Баланс взаиморасчётов по валютам')).toBeInTheDocument();
+    expect(screen.getByText('Оценка эффективности поставщика')).toBeInTheDocument();
+    expect(screen.getByText('Детализация взаиморасчётов по заказам')).toBeInTheDocument();
+
+    // Проверяем показатели scorecard
+    expect(screen.getByText(/OTIF/)).toBeInTheDocument();
+    expect(screen.getByText('96.5%')).toBeInTheDocument();
+    expect(screen.getByText('90%')).toBeInTheDocument();
+    expect(screen.getByText('95%')).toBeInTheDocument();
+
+    // Проверяем таблицу детализации
+    expect(screen.getByText('PO-2026-0041')).toBeInTheDocument();
+    expect(screen.getByText('PO-2026-0042')).toBeInTheDocument();
+  });
 });
+

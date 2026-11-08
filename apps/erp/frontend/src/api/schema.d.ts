@@ -1657,6 +1657,40 @@ export interface paths {
         patch: operations["api_portal_v1_notifications_settings_partial_update_2"];
         trace?: never;
     };
+    "/api/portal/v1/partner/finance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description GET /partner/finance — сводка взаиморасчётов и оценка эффективности партнёра. */
+        get: operations["api_portal_v1_partner_finance_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/partner/finance/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description GET /partner/finance — сводка взаиморасчётов и оценка эффективности партнёра. */
+        get: operations["api_portal_v1_partner_finance_retrieve_2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/portal/v1/partner/offers/confirm": {
         parameters: {
             query?: never;
@@ -22235,6 +22269,42 @@ export interface operations {
         };
     };
     api_portal_v1_notifications_settings_partial_update_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_partner_finance_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_partner_finance_retrieve_2: {
         parameters: {
             query?: never;
             header?: never;

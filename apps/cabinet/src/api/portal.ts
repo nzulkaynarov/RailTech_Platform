@@ -642,3 +642,11 @@ export const getPartnerPriceRequest = (id: number) =>
 
 export const respondPartnerPriceRequest = (id: number, body: PartnerPriceRequestResponse) =>
   portalRequest<PartnerPriceRequestDetail>(`/partner/price-requests/${id}/respond`, { method: 'POST', body });
+
+export type PartnerFinanceBalance = Schemas['PartnerFinanceBalance'];
+export type PartnerFinanceScorecard = Schemas['PartnerFinanceScorecard'];
+export type PartnerSettlementLine = Schemas['PartnerSettlementLine'];
+export type PartnerFinanceSummary = Schemas['PartnerFinanceSummary'];
+
+export const getPartnerFinanceSummary = () =>
+  portalRequest<PartnerFinanceSummary>('/partner/finance');

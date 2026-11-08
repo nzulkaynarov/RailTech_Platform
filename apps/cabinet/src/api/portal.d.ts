@@ -1195,6 +1195,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/partner/finance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Взаиморасчёты и показатели эффективности поставщика
+         * @description Финансовая сводка по заказам поставщика (суммы заказов, приёмок, остатка в пути)
+         *     по валютам, оценка качества работы (OTIF %, ответы на RFQ %, актуальность цен)
+         *     и детализированные взаиморасчёты по заказам.
+         */
+        get: operations["getPartnerFinanceSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/company": {
         parameters: {
             query?: never;
@@ -1990,6 +2012,58 @@ export interface components {
         PartnerPriceRequestResponse: {
             answer_note: string;
         };
+        /** @description Баланс взаиморасчётов по конкретной валюте */
+        PartnerFinanceBalance: {
+            /** @example UZS */
+            currency: string;
+            /** @example 12500000.00 */
+            ordered_total: string;
+            /** @example 10000000.00 */
+            received_total: string;
+            /** @example 2500000.00 */
+            in_transit_total: string;
+            orders_count: number;
+        };
+        /** @description Показатели эффективности поставщика (Scorecard) */
+        PartnerFinanceScorecard: {
+            /**
+             * @description On-Time In-Full (OTIF) процент: своевременность и полнота приёмки
+             * @example 95.5
+             */
+            otif_rate: number;
+            /**
+             * @description Процент ответов на запросы цен (RFQ)
+             * @example 88
+             */
+            rfq_response_rate: number;
+            /**
+             * @description Процент актуальных цен в каталоге
+             * @example 92.3
+             */
+            price_freshness_rate: number;
+            completed_orders_count: number;
+            total_rfqs_count: number;
+            active_offers_count: number;
+        };
+        /** @description Строка взаиморасчётов по заказу */
+        PartnerSettlementLine: {
+            order_id: number;
+            order_number: string;
+            /** Format: date-time */
+            order_date: string;
+            status: components["schemas"]["PartnerOrderStatus"];
+            currency: string;
+            ordered_amount: string;
+            received_amount: string;
+            in_transit_amount: string;
+            receipts_count: number;
+        };
+        /** @description Сводка взаиморасчётов и оценка эффективности работы партнёра (K4, K5) */
+        PartnerFinanceSummary: {
+            balances: components["schemas"]["PartnerFinanceBalance"][];
+            scorecard: components["schemas"]["PartnerFinanceScorecard"];
+            settlements: components["schemas"]["PartnerSettlementLine"][];
+        };
         Reason: {
             reason: string;
         };
@@ -2072,18 +2146,20 @@ export interface components {
          * @description Вид уведомления (событие для контрагента): `quote_sent` — КП ждёт решения, `invoice_issued` — выставлен счёт,
          *     `payment_overdue` — срок оплаты счёта прошёл, `act_issued` — акт ждёт приёмки, `delivery_status_changed` — статус
          *     поставки, `delivery_eta_changed` — сдвиг срока поставки, `manager_replied` — ответ менеджера в чате кабинета,
-         *     `partner_card_returned` — карточка партнёра возвращена на доработку, `partner_card_published` — опубликована.
+         *     `partner_card_returned` — карточка партнёра возвращена на доработку, `partner_card_published` — опубликована,
+         *     `partner_order_sent` — направлен заказ на поставку, `partner_rfq_sent` — направлен запрос цен,
+         *     `partner_goods_received` — склад принял товары по заказу.
          *     Незнакомый вид Cabinet показывает общим текстом.
          * @enum {string}
          */
-        NotificationKind: "quote_sent" | "invoice_issued" | "payment_overdue" | "act_issued" | "delivery_status_changed" | "delivery_eta_changed" | "manager_replied" | "partner_card_returned" | "partner_card_published" | "bank_requisites_changed";
+        NotificationKind: "quote_sent" | "invoice_issued" | "payment_overdue" | "act_issued" | "delivery_status_changed" | "delivery_eta_changed" | "manager_replied" | "partner_card_returned" | "partner_card_published" | "bank_requisites_changed" | "partner_order_sent" | "partner_rfq_sent" | "partner_goods_received";
         /**
          * @description Группа событий — основа настройки «группа × канал» в профиле контакта (J3)
          * @enum {string}
          */
         NotificationGroup: "documents" | "money" | "deliveries" | "messages" | "partner_products" | "security";
         /** @enum {string} */
-        NotificationObjectType: "quote" | "invoice" | "act" | "delivery" | "chat" | "partner_product";
+        NotificationObjectType: "quote" | "invoice" | "act" | "delivery" | "chat" | "partner_product" | "partner_order" | "partner_rfq";
         /**
          * @description Что произошло с объектом или чего ждут от контакта
          * @enum {string}
@@ -5108,6 +5184,29 @@ export interface operations {
                 };
             };
             422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    getPartnerFinanceSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Сводка взаиморасчётов и оценка эффективности */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PartnerFinanceSummary"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             429: components["responses"]["TooManyRequests"];
         };
     };

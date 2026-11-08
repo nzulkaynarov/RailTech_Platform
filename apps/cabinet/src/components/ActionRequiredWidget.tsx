@@ -46,7 +46,11 @@ export function ActionRequiredWidget({
   const actions = useActionRequired();
   const location = useLocation();
 
-  const currentScope = scope ?? (location.pathname.startsWith('/my-products') ? 'partner' : 'client');
+  const currentScope =
+    scope ??
+    (location.pathname.startsWith('/my-products') || location.pathname.startsWith('/partner')
+      ? 'partner'
+      : 'client');
 
   const hasMyProducts = useHasModule('my_products');
   const hasQuotes = useHasModule('quotes');
@@ -58,7 +62,11 @@ export function ActionRequiredWidget({
   const hasClientItems = hasQuotes || hasContracts || hasInvoices || hasActs || hasDeliveries;
 
   if (currentScope === 'partner') {
-    if (!hasMyProducts || actions.rejectedProducts.length === 0) return null;
+    if (
+      !hasMyProducts ||
+      (actions.rejectedProducts.length === 0 && actions.orders.length === 0 && actions.rfqs.length === 0)
+    )
+      return null;
   } else {
     if (!hasClientItems && !actions.partnerApplicationAwaiting) return null;
   }
@@ -80,7 +88,9 @@ export function ActionRequiredWidget({
     (actions.partnerApplicationAwaiting ? 1 : 0) +
     (actions.unread > 0 ? 1 : 0);
 
-  const total = currentScope === 'partner' ? actions.rejectedProducts.length : clientTotal;
+  const partnerTotal =
+    actions.rejectedProducts.length + actions.orders.length + actions.rfqs.length;
+  const total = currentScope === 'partner' ? partnerTotal : clientTotal;
   if (total === 0) {
     if (currentScope === 'partner') return null;
     return (
@@ -103,19 +113,51 @@ export function ActionRequiredWidget({
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {currentScope === 'partner' ? (
-          actions.rejectedProducts.map((product) => (
-            <ActionCard
-              key={`product-remark-${product.id}`}
-              icon={PackageOpen}
-              tone="warning"
-              badge={t('widgets.actionRequired.productRemarkBadge')}
-              aside={<ToneBadge tone="warning">{product.manufacturer_part_number || t('widgets.actionRequired.remarks')}</ToneBadge>}
-              to="/my-products?tab=returned"
-              label={product.name}
-            >
-              {hint('fixProductRemarks')}
-            </ActionCard>
-          ))
+          <>
+            {actions.orders.map((order) => (
+              <ActionCard
+                key={`po-${order.id}`}
+                icon={Truck}
+                tone="warning"
+                badge={t('widgets.actionRequired.partnerOrderBadge')}
+                aside={<Amount>{formatMoney({ amount: order.total_amount, currency: order.currency })}</Amount>}
+                to={`/partner/orders?orderId=${order.id}`}
+                label={order.number}
+              >
+                {hint('confirmPartnerOrder')}
+              </ActionCard>
+            ))}
+            {actions.rfqs.map((rfq) => (
+              <ActionCard
+                key={`rfq-${rfq.id}`}
+                icon={ClipboardCheck}
+                tone="primary"
+                badge={t('widgets.actionRequired.partnerRfqBadge')}
+                aside={<ToneBadge tone="info">{rfq.lines_count} поз.</ToneBadge>}
+                to={`/partner/orders?view=rfq&rfqId=${rfq.id}`}
+                label={rfq.subject}
+              >
+                {hint('respondPartnerRfq')}
+              </ActionCard>
+            ))}
+            {actions.rejectedProducts.map((product) => (
+              <ActionCard
+                key={`product-remark-${product.id}`}
+                icon={PackageOpen}
+                tone="warning"
+                badge={t('widgets.actionRequired.productRemarkBadge')}
+                aside={
+                  <ToneBadge tone="warning">
+                    {product.manufacturer_part_number || t('widgets.actionRequired.remarks')}
+                  </ToneBadge>
+                }
+                to="/my-products?tab=returned"
+                label={product.name}
+              >
+                {hint('fixProductRemarks')}
+              </ActionCard>
+            ))}
+          </>
         ) : (
           <>
             {actions.partnerApplicationAwaiting ? (

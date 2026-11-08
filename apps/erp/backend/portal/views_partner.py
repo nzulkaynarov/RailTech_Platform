@@ -10,6 +10,7 @@ from portal.serializers_partner import (
     PartnerConfirmRequestSerializer,
     PartnerConfirmResultSerializer,
     PartnerDocumentUploadRequestSerializer,
+    PartnerFinanceSummarySerializer,
     PartnerOrderConfirmRequestSerializer,
     PartnerOrderDetailSerializer,
     PartnerOrderPageSerializer,
@@ -366,3 +367,13 @@ class PartnerProductDocumentFileView(BasePortalView):
         if resp is None:
             raise Http404
         return resp
+
+
+class PartnerFinanceView(BasePortalView):
+    """GET /partner/finance — сводка взаиморасчётов и оценка эффективности партнёра."""
+
+    required_module = MODULE
+
+    def get(self, request):
+        data = orders.get_partner_finance_summary(company=request.portal_company)
+        return Response(PartnerFinanceSummarySerializer(data).data)

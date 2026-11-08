@@ -68,6 +68,7 @@ describe('Каталог', () => {
     expect(router.state.location.search).toBe('?q=%D1%80%D0%B5%D0%BC%D0%B5%D0%BD%D1%8C');
 
     await user.click(screen.getByRole('button', { name: 'Очистить поиск' }));
+    expect(await screen.findByText('Найдено 24 позиции')).toBeInTheDocument();
     await user.click(await screen.findByRole('button', { name: 'Услуги' }));
     expect(await screen.findByText('Найдено 2 позиции')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Услуги' })).toHaveAttribute('aria-pressed', 'true');

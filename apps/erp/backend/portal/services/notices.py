@@ -78,6 +78,15 @@ KINDS: dict[str, NoticeKind] = {
         NoticeKind(
             "partner_card_published", "partner_products", "partner_product", "published", "my_products", True, False
         ),
+        NoticeKind(
+            "partner_order_sent", "partner_products", "partner_order", "awaiting_acceptance", "my_products", True, False
+        ),
+        NoticeKind(
+            "partner_rfq_sent", "partner_products", "partner_rfq", "awaiting_decision", "my_products", True, False
+        ),
+        NoticeKind(
+            "partner_goods_received", "partner_products", "partner_order", "status_changed", "my_products", False, False
+        ),
         NoticeKind("bank_requisites_changed", "security", "chat", "status_changed", "profile", True, False),
     )
 }

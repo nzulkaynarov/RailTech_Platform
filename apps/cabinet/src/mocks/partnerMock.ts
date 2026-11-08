@@ -463,3 +463,83 @@ export function rfqStatusCounts(items: Schemas['PartnerPriceRequestDetail'][]): 
     answered: count('answered'),
   };
 }
+
+export function partnerFinanceSummary(
+  orders: Schemas['PartnerOrderDetail'][] = partnerOrders(),
+): Schemas['PartnerFinanceSummary'] {
+  const currencyMap = new Map<
+    string,
+    { currency: string; ordered: number; received: number; in_transit: number; count: number }
+  >();
+
+  const settlements: Schemas['PartnerSettlementLine'][] = orders.map((order) => {
+    const orderedAmount = order.lines.reduce(
+      (sum, line) => sum + Number(line.unit_price || 0) * line.quantity,
+      0,
+    );
+    const receivedAmount = order.lines.reduce(
+      (sum, line) => sum + Number(line.unit_price || 0) * (line.received_quantity || 0),
+      0,
+    );
+    const inTransitAmount =
+      order.status === 'sent' || order.status === 'confirmed'
+        ? order.lines.reduce(
+            (sum, line) =>
+              sum + Number(line.unit_price || 0) * Math.max(0, line.quantity - (line.received_quantity || 0)),
+            0,
+          )
+        : 0;
+
+    const curr = order.currency;
+    if (order.status !== 'cancelled') {
+      const entry = currencyMap.get(curr) || {
+        currency: curr,
+        ordered: 0,
+        received: 0,
+        in_transit: 0,
+        count: 0,
+      };
+      entry.ordered += orderedAmount;
+      entry.received += receivedAmount;
+      entry.in_transit += inTransitAmount;
+      entry.count += 1;
+      currencyMap.set(curr, entry);
+    }
+
+    return {
+      order_id: order.id,
+      order_number: order.number,
+      order_date: order.created_at,
+      status: order.status,
+      currency: order.currency,
+      ordered_amount: orderedAmount.toFixed(2),
+      received_amount: receivedAmount.toFixed(2),
+      in_transit_amount: inTransitAmount.toFixed(2),
+      receipts_count: order.receipts.length,
+    };
+  });
+
+  const balances: Schemas['PartnerFinanceBalance'][] = Array.from(currencyMap.values()).map((c) => ({
+    currency: c.currency,
+    ordered_total: c.ordered.toFixed(2),
+    received_total: c.received.toFixed(2),
+    in_transit_total: c.in_transit.toFixed(2),
+    orders_count: c.count,
+  }));
+
+  const scorecard: Schemas['PartnerFinanceScorecard'] = {
+    otif_rate: 96.5,
+    rfq_response_rate: 90.0,
+    price_freshness_rate: 95.0,
+    completed_orders_count: orders.filter((o) => o.status === 'received').length,
+    total_rfqs_count: 5,
+    active_offers_count: 24,
+  };
+
+  return {
+    balances,
+    scorecard,
+    settlements,
+  };
+}
+

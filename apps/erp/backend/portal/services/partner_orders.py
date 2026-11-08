@@ -328,3 +328,134 @@ def respond_partner_price_request(company, user, request_id: int, answer_note: s
     req.answer_note = answer_note.strip()[:1000]
     req.save(update_fields=["answered_at", "answered_by", "answer_note"])
     return get_partner_price_request(company, req.pk)
+
+
+def get_partner_finance_summary(company) -> dict:
+    from portal.services.partner_products import offers_attention
+
+    from catalog.models import SupplierOffer
+
+    orders_qs = (
+        SupplierOrder.objects.filter(supplier=company)
+        .select_related("currency")
+        .prefetch_related("lines", "receipts")
+        .order_by("-created_at", "-id")
+    )
+    all_orders = list(orders_qs)
+
+    currency_map: dict[str, dict] = {}
+    settlement_lines = []
+
+    for order in all_orders:
+        lines = list(order.lines.all())
+        curr = order.currency.code if order.currency else "RUB"
+
+        ordered_amount = sum(((line.unit_price or Decimal("0.00")) * line.quantity for line in lines), Decimal("0.00"))
+        received_amount = sum(
+            ((line.unit_price or Decimal("0.00")) * line.received_quantity for line in lines), Decimal("0.00")
+        )
+
+        if order.status in (OrderStatus.SENT, OrderStatus.CONFIRMED):
+            in_transit_amount = sum(
+                (
+                    (line.unit_price or Decimal("0.00")) * max(0, line.quantity - line.received_quantity)
+                    for line in lines
+                ),
+                Decimal("0.00"),
+            )
+        else:
+            in_transit_amount = Decimal("0.00")
+
+        settlement_lines.append(
+            {
+                "order_id": order.id,
+                "order_number": order.number,
+                "order_date": order.created_at,
+                "status": order.status,
+                "currency": curr,
+                "ordered_amount": _format_money(ordered_amount),
+                "received_amount": _format_money(received_amount),
+                "in_transit_amount": _format_money(in_transit_amount),
+                "receipts_count": order.receipts.count(),
+            }
+        )
+
+        if order.status != OrderStatus.CANCELLED:
+            if curr not in currency_map:
+                currency_map[curr] = {
+                    "currency": curr,
+                    "ordered_total": Decimal("0.00"),
+                    "received_total": Decimal("0.00"),
+                    "in_transit_total": Decimal("0.00"),
+                    "orders_count": 0,
+                }
+            c_entry = currency_map[curr]
+            c_entry["ordered_total"] += ordered_amount
+            c_entry["received_total"] += received_amount
+            c_entry["in_transit_total"] += in_transit_amount
+            c_entry["orders_count"] += 1
+
+    balances = [
+        {
+            "currency": c["currency"],
+            "ordered_total": _format_money(c["ordered_total"]),
+            "received_total": _format_money(c["received_total"]),
+            "in_transit_total": _format_money(c["in_transit_total"]),
+            "orders_count": c["orders_count"],
+        }
+        for c in sorted(currency_map.values(), key=lambda x: x["currency"])
+    ]
+
+    # Scorecard: OTIF
+    completed_orders = [o for o in all_orders if o.status == OrderStatus.RECEIVED]
+    otif_count = 0
+    for order in completed_orders:
+        lines = list(order.lines.all())
+        in_full = all(line.received_quantity >= line.quantity for line in lines)
+        if not in_full:
+            continue
+        if order.expected_date:
+            order_date = order.received_at.date() if order.received_at else None
+            if not order_date:
+                latest_receipt = order.receipts.order_by("-received_at").first()
+                if latest_receipt:
+                    order_date = latest_receipt.received_at.date()
+            if order_date and order_date > order.expected_date:
+                continue
+        otif_count += 1
+
+    completed_orders_count = len(completed_orders)
+    otif_rate = round((otif_count / completed_orders_count * 100), 1) if completed_orders_count > 0 else 100.0
+
+    # Scorecard: RFQ response rate
+    rfqs = PriceRequest.objects.filter(supplier=company)
+    total_rfqs_count = rfqs.count()
+    answered_rfqs = rfqs.filter(answered_at__isnull=False).count()
+    rfq_response_rate = round((answered_rfqs / total_rfqs_count * 100), 1) if total_rfqs_count > 0 else 100.0
+
+    # Scorecard: Price freshness rate
+    active_offers = SupplierOffer.objects.filter(supplier=company, is_active=True)
+    active_offers_count = active_offers.count()
+    if active_offers_count > 0:
+        totals = offers_attention(company)
+        expired = totals.get("expired") or 0
+        stale = totals.get("stale") or 0
+        fresh_count = max(0, active_offers_count - expired - stale)
+        price_freshness_rate = round((fresh_count / active_offers_count * 100), 1)
+    else:
+        price_freshness_rate = 100.0
+
+    scorecard = {
+        "otif_rate": otif_rate,
+        "rfq_response_rate": rfq_response_rate,
+        "price_freshness_rate": price_freshness_rate,
+        "completed_orders_count": completed_orders_count,
+        "total_rfqs_count": total_rfqs_count,
+        "active_offers_count": active_offers_count,
+    }
+
+    return {
+        "balances": balances,
+        "scorecard": scorecard,
+        "settlements": settlement_lines,
+    }

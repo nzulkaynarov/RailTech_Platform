@@ -331,6 +331,7 @@ MY_PRODUCTS_PATHS = {
     "/partner/price-requests",
     "/partner/price-requests/{id}",
     "/partner/price-requests/{id}/respond",
+    "/partner/finance",
 }
 
 

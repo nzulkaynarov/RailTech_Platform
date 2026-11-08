@@ -439,6 +439,12 @@ def send_order(user, order_id: int, *, to_email: str = "") -> SupplierOrder:
     order.sent_to = recipient
     order.save(update_fields=["status", "sent_at", "sent_by", "sent_to", "updated_at"])
     _log(order, OrderLogKind.SENT, user, recipient)
+    try:
+        from portal.services import notice_sources
+
+        notice_sources.partner_order_sent(order)
+    except Exception:
+        logger.exception("Не удалось отправить уведомление о заказе %s", order.pk)
     return order
 
 
@@ -597,6 +603,12 @@ def receive(user, order_id: int, lines: list[ReceiptInput], *, supplier_doc: str
         order.received_at = timezone.now()
         order.save(update_fields=["status", "received_at", "updated_at"])
         _log(order, OrderLogKind.RECEIVED, user)
+    try:
+        from portal.services import notice_sources
+
+        notice_sources.partner_goods_received(receipt)
+    except Exception:
+        logger.exception("Не удалось отправить уведомление о приёмке %s", receipt.pk)
     return order
 
 

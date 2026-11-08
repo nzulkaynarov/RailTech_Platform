@@ -16,11 +16,14 @@ const ID_ROUTES = new Map<string, (id: string) => string>(Object.entries({
   invoice: (id: string) => `/invoices?focus=${id}`,
   act: (id: string) => `/acts?focus=${id}`,
   product: (id: string) => `/my-products?card=${id}`,
+  po: (id: string) => `/partner/orders?orderId=${id}`,
+  rfq: (id: string) => `/partner/orders?view=rfq&rfqId=${id}`,
 }));
 
 const SECTION_ROUTES = new Map<string, string>([
   ['chat', '/messages'],
   ['products', '/my-products'],
+  ['partner_orders', '/partner/orders'],
   ['partner_app', '/company'],
   ['partner_contract', '/company'],
   ['company', '/company'],

@@ -337,3 +337,38 @@ class PartnerPriceRequestDetailSerializer(serializers.Serializer):
 
 class PartnerPriceRequestResponseSerializer(serializers.Serializer):
     answer_note = serializers.CharField(max_length=1000, min_length=1)
+
+
+class PartnerFinanceBalanceSerializer(serializers.Serializer):
+    currency = serializers.CharField()
+    ordered_total = serializers.CharField()
+    received_total = serializers.CharField()
+    in_transit_total = serializers.CharField()
+    orders_count = serializers.IntegerField()
+
+
+class PartnerFinanceScorecardSerializer(serializers.Serializer):
+    otif_rate = serializers.FloatField()
+    rfq_response_rate = serializers.FloatField()
+    price_freshness_rate = serializers.FloatField()
+    completed_orders_count = serializers.IntegerField()
+    total_rfqs_count = serializers.IntegerField()
+    active_offers_count = serializers.IntegerField()
+
+
+class PartnerSettlementLineSerializer(serializers.Serializer):
+    order_id = serializers.IntegerField()
+    order_number = serializers.CharField()
+    order_date = serializers.DateTimeField()
+    status = serializers.ChoiceField(choices=["draft", "sent", "confirmed", "received", "cancelled"])
+    currency = serializers.CharField()
+    ordered_amount = serializers.CharField()
+    received_amount = serializers.CharField()
+    in_transit_amount = serializers.CharField()
+    receipts_count = serializers.IntegerField()
+
+
+class PartnerFinanceSummarySerializer(serializers.Serializer):
+    balances = PartnerFinanceBalanceSerializer(many=True)
+    scorecard = PartnerFinanceScorecardSerializer()
+    settlements = PartnerSettlementLineSerializer(many=True)

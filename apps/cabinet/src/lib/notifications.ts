@@ -18,6 +18,9 @@ const KNOWN_TEXTS = new Set([
   'manager_replied',
   'partner_card_returned',
   'partner_card_published',
+  'partner_order_sent',
+  'partner_rfq_sent',
+  'partner_goods_received',
 ]);
 
 /** Статусы поставки в параметре `status` (`DeliveryEvent.status` ERP) — подписи из `status.delivery.*`. */
