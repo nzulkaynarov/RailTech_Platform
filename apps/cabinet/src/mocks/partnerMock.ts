@@ -246,3 +246,134 @@ export function taskView(taskId: string, task: Task, items: Product[]): Schemas[
   }
   return { task_id: taskId, status: 'completed', error: null, report };
 }
+
+// --- Заказы на поставку (PO, ASN) и запросы цен (RFQ) партнёра (K2-orders) ---
+
+export function partnerOrders(): Schemas['PartnerOrderDetail'][] {
+  return [
+    {
+      id: 8001,
+      number: 'PO-2026-0041',
+      status: 'sent',
+      expected_date: '2026-11-20',
+      total_amount: '1505000.00',
+      currency: 'UZS',
+      note: 'Просьба отгрузить одной партией на склад Ташкент.',
+      cancel_reason: '',
+      sent_at: '2026-11-01T10:05:00+05:00',
+      confirmed_at: null,
+      received_at: null,
+      cancelled_at: null,
+      created_at: '2026-11-01T10:00:00+05:00',
+      lines: [
+        {
+          id: 8101,
+          position: 1,
+          product_id: 9001,
+          name: 'Тормозная колодка композитная',
+          article: 'AQ-9001',
+          quantity: 10,
+          received_quantity: 0,
+          unit: 'шт',
+          unit_price: '150500.00',
+          total_price: '1505000.00',
+        },
+      ],
+      logs: [
+        {
+          id: 8201,
+          kind: 'created',
+          detail: 'Заказ сформирован отделом снабжения',
+          created_at: '2026-11-01T10:00:00+05:00',
+        },
+      ],
+    },
+    {
+      id: 8002,
+      number: 'PO-2026-0042',
+      status: 'confirmed',
+      expected_date: '2026-11-25',
+      total_amount: '420000.00',
+      currency: 'UZS',
+      note: '',
+      cancel_reason: '',
+      sent_at: '2026-11-02T09:10:00+05:00',
+      confirmed_at: '2026-11-02T14:30:00+05:00',
+      received_at: null,
+      cancelled_at: null,
+      created_at: '2026-11-02T09:00:00+05:00',
+      lines: [
+        {
+          id: 8102,
+          position: 1,
+          product_id: 9002,
+          name: 'Подшипник 6205-2RS',
+          article: '6205-2RS',
+          quantity: 100,
+          received_quantity: 0,
+          unit: 'шт',
+          unit_price: '4200.00',
+          total_price: '420000.00',
+        },
+      ],
+      logs: [
+        {
+          id: 8202,
+          kind: 'confirmed',
+          detail: 'Подтверждён поставщиком в портале',
+          created_at: '2026-11-02T14:30:00+05:00',
+        },
+      ],
+    },
+  ];
+}
+
+export function orderStatusCounts(items: Schemas['PartnerOrderDetail'][]): Schemas['PartnerOrderStatusCounts'] {
+  const count = (status: Schemas['PartnerOrderStatus']) => items.filter((item) => item.status === status).length;
+  return {
+    all: items.length,
+    sent: count('sent'),
+    confirmed: count('confirmed'),
+    received: count('received'),
+    cancelled: count('cancelled'),
+  };
+}
+
+export function partnerPriceRequests(): Schemas['PartnerPriceRequestDetail'][] {
+  return [
+    {
+      id: 8501,
+      status: 'sent',
+      subject: 'Запрос цен на тормозные колодки и втулки (Q4)',
+      requested_at: '2026-11-05T11:00:00+05:00',
+      answered_at: null,
+      note: 'Укажите срок поставки до Ташкента (FCA/DAP).',
+      answer_note: '',
+      lines: [
+        {
+          id: 8601,
+          name: 'Тормозная колодка композитная',
+          article: 'AQ-9001',
+          quantity: 50,
+          unit: 'шт',
+        },
+        {
+          id: 8602,
+          name: 'Втулка резиновая',
+          article: 'AQ-9004',
+          quantity: 200,
+          unit: 'шт',
+        },
+      ],
+    },
+  ];
+}
+
+export function rfqStatusCounts(items: Schemas['PartnerPriceRequestDetail'][]): Schemas['PartnerPriceRequestStatusCounts'] {
+  const count = (status: Schemas['PartnerPriceRequestStatus']) => items.filter((item) => item.status === status).length;
+  return {
+    all: items.length,
+    sent: count('sent'),
+    answered: count('answered'),
+  };
+}

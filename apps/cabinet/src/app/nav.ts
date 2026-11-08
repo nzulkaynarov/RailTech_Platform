@@ -1,6 +1,7 @@
 import {
   Building2,
   ClipboardCheck,
+  ClipboardList,
   FileSignature,
   FileText,
   FolderOpen,
@@ -41,6 +42,14 @@ export const NAV_ITEMS: NavItem[] = [
     to: '/my-products',
     labelKey: 'nav.myProducts',
     icon: PackageOpen,
+    module: 'my_products',
+    group: 'supply',
+    primary: true,
+  },
+  {
+    to: '/partner/orders',
+    labelKey: 'nav.partnerOrders',
+    icon: ClipboardList,
     module: 'my_products',
     group: 'supply',
     primary: true,

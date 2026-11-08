@@ -1787,6 +1787,178 @@
                 }
             }
         },
+        "/api/portal/v1/partner/orders": {
+            "get": {
+                "operationId": "api_portal_v1_partner_orders_retrieve",
+                "description": "GET /partner/orders — заказы нашей компании к партнёру.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/orders/": {
+            "get": {
+                "operationId": "api_portal_v1_partner_orders_retrieve_2",
+                "description": "GET /partner/orders — заказы нашей компании к партнёру.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/orders/{id}": {
+            "get": {
+                "operationId": "api_portal_v1_partner_orders_retrieve_3",
+                "description": "GET /partner/orders/{id} — детали заказа; чужой — 404.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/orders/{id}/": {
+            "get": {
+                "operationId": "api_portal_v1_partner_orders_retrieve_4",
+                "description": "GET /partner/orders/{id} — детали заказа; чужой — 404.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/orders/{id}/confirm": {
+            "post": {
+                "operationId": "api_portal_v1_partner_orders_confirm_create",
+                "description": "POST /partner/orders/{id}/confirm — подтверждение заказа поставщиком.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/orders/{id}/confirm/": {
+            "post": {
+                "operationId": "api_portal_v1_partner_orders_confirm_create_2",
+                "description": "POST /partner/orders/{id}/confirm — подтверждение заказа поставщиком.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/orders/{id}/ship": {
+            "post": {
+                "operationId": "api_portal_v1_partner_orders_ship_create",
+                "description": "POST /partner/orders/{id}/ship — уведомление об отгрузке (ASN).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/orders/{id}/ship/": {
+            "post": {
+                "operationId": "api_portal_v1_partner_orders_ship_create_2",
+                "description": "POST /partner/orders/{id}/ship — уведомление об отгрузке (ASN).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/portal/v1/partner/price-list": {
             "post": {
                 "operationId": "api_portal_v1_partner_price_list_create",
@@ -1849,6 +2021,130 @@
                         "name": "task_id",
                         "schema": {
                             "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/price-requests": {
+            "get": {
+                "operationId": "api_portal_v1_partner_price_requests_retrieve",
+                "description": "GET /partner/price-requests — запросы цен от нас к поставщику.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/price-requests/": {
+            "get": {
+                "operationId": "api_portal_v1_partner_price_requests_retrieve_2",
+                "description": "GET /partner/price-requests — запросы цен от нас к поставщику.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/price-requests/{id}": {
+            "get": {
+                "operationId": "api_portal_v1_partner_price_requests_retrieve_3",
+                "description": "GET /partner/price-requests/{id} — детали запроса цен; чужой — 404.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/price-requests/{id}/": {
+            "get": {
+                "operationId": "api_portal_v1_partner_price_requests_retrieve_4",
+                "description": "GET /partner/price-requests/{id} — детали запроса цен; чужой — 404.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/price-requests/{id}/respond": {
+            "post": {
+                "operationId": "api_portal_v1_partner_price_requests_respond_create",
+                "description": "POST /partner/price-requests/{id}/respond — ответ на запрос цен.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/price-requests/{id}/respond/": {
+            "post": {
+                "operationId": "api_portal_v1_partner_price_requests_respond_create_2",
+                "description": "POST /partner/price-requests/{id}/respond — ответ на запрос цен.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
                         },
                         "required": true
                     }

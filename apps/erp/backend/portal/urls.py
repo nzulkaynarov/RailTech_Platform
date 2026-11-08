@@ -56,8 +56,15 @@ from portal.views import (
 from portal.views_notifications import NotificationListView, NotificationReadView, NotificationSettingsView
 from portal.views_partner import (
     PartnerConfirmView,
+    PartnerOrderConfirmView,
+    PartnerOrderDetailView,
+    PartnerOrderListView,
+    PartnerOrderShipView,
     PartnerPriceListTaskView,
     PartnerPriceListView,
+    PartnerPriceRequestDetailView,
+    PartnerPriceRequestListView,
+    PartnerPriceRequestRespondView,
     PartnerPriceTemplateView,
     PartnerProductDetailView,
     PartnerProductListView,
@@ -193,6 +200,38 @@ urlpatterns = [
     path("partner/price-list/<str:task_id>", PartnerPriceListTaskView.as_view(), name="portal-partner-price-task"),
     path(
         "partner/price-list/<str:task_id>/", PartnerPriceListTaskView.as_view(), name="portal-partner-price-task-slash"
+    ),
+    # Partner Orders (K2-orders)
+    path("partner/orders", PartnerOrderListView.as_view(), name="portal-partner-orders"),
+    path("partner/orders/", PartnerOrderListView.as_view(), name="portal-partner-orders-slash"),
+    path("partner/orders/<int:pk>", PartnerOrderDetailView.as_view(), name="portal-partner-order"),
+    path("partner/orders/<int:pk>/", PartnerOrderDetailView.as_view(), name="portal-partner-order-slash"),
+    path("partner/orders/<int:pk>/confirm", PartnerOrderConfirmView.as_view(), name="portal-partner-order-confirm"),
+    path(
+        "partner/orders/<int:pk>/confirm/", PartnerOrderConfirmView.as_view(), name="portal-partner-order-confirm-slash"
+    ),
+    path("partner/orders/<int:pk>/ship", PartnerOrderShipView.as_view(), name="portal-partner-order-ship"),
+    path("partner/orders/<int:pk>/ship/", PartnerOrderShipView.as_view(), name="portal-partner-order-ship-slash"),
+    # Partner Price Requests (K2-orders)
+    path("partner/price-requests", PartnerPriceRequestListView.as_view(), name="portal-partner-price-requests"),
+    path("partner/price-requests/", PartnerPriceRequestListView.as_view(), name="portal-partner-price-requests-slash"),
+    path(
+        "partner/price-requests/<int:pk>", PartnerPriceRequestDetailView.as_view(), name="portal-partner-price-request"
+    ),
+    path(
+        "partner/price-requests/<int:pk>/",
+        PartnerPriceRequestDetailView.as_view(),
+        name="portal-partner-price-request-slash",
+    ),
+    path(
+        "partner/price-requests/<int:pk>/respond",
+        PartnerPriceRequestRespondView.as_view(),
+        name="portal-partner-price-request-respond",
+    ),
+    path(
+        "partner/price-requests/<int:pk>/respond/",
+        PartnerPriceRequestRespondView.as_view(),
+        name="portal-partner-price-request-respond-slash",
     ),
     path(
         "catalog/<int:pk>/documents/<int:doc_id>/file",

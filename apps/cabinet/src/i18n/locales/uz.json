@@ -40,6 +40,7 @@
     "sectionDocumentsAndTeam": "Hujjatlar va kompaniya",
     "unread": "O‘qilmagan xabarlar: {{count}}",
     "myProducts": "Mening tovarlarim",
+    "partnerOrders": "Yetkazib berish buyurtmalari",
     "groups": {
       "buy": "Xarid qilaman",
       "supply": "Yetkazib beraman",
@@ -1066,6 +1067,100 @@
       "attachLink": "So‘rovlarga o‘tish",
       "deletedUser": "O‘chirilgan foydalanuvchi",
       "deletedText": "Xabar muallif so‘rovi bilan o‘chirildi"
+    },
+    "partnerOrders": {
+      "title": "Yetkazib berish buyurtmalari",
+      "description": "Buyurtmalarni tasdiqlash, joʻnatish xabarnomalari (ASN) va narx soʻrovlariga (RFQ) javoblar",
+      "posShort": "poz.",
+      "tabsLabel": "Buyurtmalar va narx soʻrovlari holati",
+      "ordersListLabel": "Yetkazib berish buyurtmalari roʻyxati",
+      "rfqListLabel": "Narx soʻrovlari roʻyxati",
+      "searchPlaceholder": "Raqam yoki mavzu boʻyicha qidirish…",
+      "emptyTitle": "Hech narsa topilmadi",
+      "notFoundText": "Qidiruv parametrlarini oʻzgartirib koʻring yoki boshqa boʻlimni tanlang.",
+      "emptyOrdersText": "Yetkazib berish buyurtmalari hozircha yoʻq.",
+      "emptyRfqText": "Narx soʻrovlari hozircha yoʻq.",
+      "orderPrefix": "Buyurtma",
+      "createdAt": "Yaratilgan",
+      "confirmedAt": "Tasdiqlangan",
+      "requestedAt": "Yuborilgan",
+      "noteLabel": "Izoh",
+      "linesTitle": "Pozitsiyalar",
+      "historyTitle": "Amallar tarixi",
+      "responseSent": "Javobingiz yuborilgan",
+      "confirmSuccess": "Yetkazib berish buyurtmasi tasdiqlandi",
+      "shipSuccess": "Joʻnatish xabarnomasi (ASN) yuborildi",
+      "respondSuccess": "Narx soʻroviga javob yuborildi",
+      "views": {
+        "orders": "Buyurtmalar (PO)",
+        "rfq": "Narx soʻrovlari (RFQ)"
+      },
+      "orderTabs": {
+        "all": "Barchasi",
+        "sent": "Yangi",
+        "confirmed": "Tasdiqlangan",
+        "received": "Qabul qilingan",
+        "cancelled": "Bekor qilingan"
+      },
+      "rfqTabs": {
+        "all": "Barchasi",
+        "sent": "Javob kutilmoqda",
+        "answered": "Javob berilgan"
+      },
+      "status": {
+        "draft": "Qoralama",
+        "sent": "Tasdiqlash kutilmoqda",
+        "confirmed": "Tasdiqlangan",
+        "received": "Omborga qabul qilingan",
+        "cancelled": "Bekor qilingan"
+      },
+      "rfqStatus": {
+        "sent": "Javob kutilmoqda",
+        "answered": "Javob berilgan",
+        "failed": "Yetkazilmadi"
+      },
+      "columns": {
+        "number": "Buyurtma raqami",
+        "subject": "Soʻrov mavzusi",
+        "status": "Holat",
+        "expectedDate": "Kutilayotgan sana",
+        "positions": "Pozitsiyalar",
+        "totalAmount": "Summa",
+        "answeredAt": "Javob sanasi",
+        "actions": "Amallar",
+        "name": "Nomi",
+        "article": "Artikul",
+        "qty": "Buyurtma qilingan",
+        "receivedQty": "Qabul qilingan",
+        "unitPrice": "Birlik narxi",
+        "totalPrice": "Jami"
+      },
+      "actions": {
+        "confirm": "Tasdiqlash",
+        "ship": "Joʻnatish (ASN)",
+        "view": "Ochish",
+        "respond": "Javob berish",
+        "sendResponse": "Javobni yuborish"
+      },
+      "dialogs": {
+        "confirmTitle": "Yetkazib berish buyurtmasini tasdiqlash",
+        "confirmDescription": "Koʻrsatilgan pozitsiyalar va narxlar boʻyicha buyurtmani yetkazib berishga tayyorligingizni tasdiqlang. Rejalashtirilgan yetkazib berish sanasini aniqlashtirishingiz mumkin.",
+        "expectedDateLabel": "Rejalashtirilgan yetkazib berish sanasi",
+        "shipTitle": "Joʻnatish xabarnomasi (ASN)",
+        "shipDescription": "Omborni qabul qilishga tayyorlash uchun yuk hujjati rekvizitlari va tashuvchi maʼlumotlarini koʻrsating.",
+        "supplierDocLabel": "Yetkazib beruvchi yuk xati / hisob-faktura raqami",
+        "supplierDocPlaceholder": "Masalan: YX-402, 08.11.2026",
+        "carrierLabel": "Tashuvchi / Logistika kompaniyasi",
+        "carrierPlaceholder": "Masalan: Avtotransport / DHL",
+        "trackingNumberLabel": "Trek-raqam / Avtotransport raqami",
+        "trackingNumberPlaceholder": "Masalan: 01 A 777 AA yoki trek-kod",
+        "noteLabel": "Joʻnatishga izoh",
+        "notePlaceholder": "Joylar soni, tushirish xususiyatlari…",
+        "respondTitle": "Narx soʻroviga javob (RFQ)",
+        "respondDescription": "Soʻrov pozitsiyalari boʻyicha taklif etilayotgan narxlar, yetkazib berish muddatlari va toʻlov shartlarini koʻrsating.",
+        "responseNoteLabel": "Tijorat shartlari va narxlar",
+        "responseNotePlaceholder": "Pozitsiyalar boʻyicha narxlar, ombordagi mavjudlik va yetkazib berish muddatini koʻrsating…"
+      }
     }
   },
   "apiErrors": {
@@ -1122,7 +1217,8 @@
     "CANNOT_DEACTIVATE_SELF": "Oʻz akkauntingizni oʻchirib boʻlmaydi.",
     "CANNOT_ELEVATE_RIGHTS": "Oʻz huquqlaringizdan yuqori huquqlar berish mumkin emas.",
     "ADMIN_REQUIRED": "Bu amal faqat kompaniya administratori uchun mavjud.",
-    "CANNOT_MODIFY_PRIMARY_CONTACT": "Kompaniyaning asosiy kontaktining huquqlarini oʻzgartirib boʻlmaydi."
+    "CANNOT_MODIFY_PRIMARY_CONTACT": "Kompaniyaning asosiy kontaktining huquqlarini oʻzgartirib boʻlmaydi.",
+    "ORDER_FINALIZED": "Buyurtma allaqachon yakunlangan yoki bekor qilingan — amal mavjud emas."
   },
   "widgets": {
     "actionRequired": {

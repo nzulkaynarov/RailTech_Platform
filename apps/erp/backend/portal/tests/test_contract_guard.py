@@ -142,6 +142,10 @@ PARTNER_GET_PATHS = {
     "/partner/products/{id}",
     "/partner/price-template",
     "/partner/price-list/{task_id}",
+    "/partner/orders",
+    "/partner/orders/{id}",
+    "/partner/price-requests",
+    "/partner/price-requests/{id}",
 }
 
 

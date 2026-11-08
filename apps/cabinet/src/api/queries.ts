@@ -34,6 +34,13 @@ export const keys = {
   partnerProductList: (params: portal.PartnerProductsQuery) => ['partner', 'products', 'list', params] as const,
   partnerProduct: (id: number) => ['partner', 'products', 'item', id] as const,
   priceListTask: (taskId: string) => ['partner', 'price-list', taskId] as const,
+  partnerOrders: ['partner', 'orders'] as const,
+  partnerOrderList: (params: portal.PartnerOrdersQuery) => ['partner', 'orders', 'list', params] as const,
+  partnerOrder: (id: number) => ['partner', 'orders', 'item', id] as const,
+  partnerPriceRequests: ['partner', 'price-requests'] as const,
+  partnerPriceRequestList: (params: portal.PartnerPriceRequestsQuery) =>
+    ['partner', 'price-requests', 'list', params] as const,
+  partnerPriceRequest: (id: number) => ['partner', 'price-requests', 'item', id] as const,
   verify: (code: string) => ['verify', code] as const,
   partnerApplication: ['company', 'partner-application'] as const,
   securityLog: ['company', 'security-log'] as const,
@@ -299,3 +306,54 @@ export const useUpdateNotificationSettings = () => {
     },
   });
 };
+
+// --- заказы партнёра и запросы цен (K2-orders) ----------------------------------------------------
+
+export const usePartnerOrders = (params: portal.PartnerOrdersQuery = {}, options: ListOptions = {}) =>
+  useQuery({
+    queryKey: keys.partnerOrderList(params),
+    queryFn: () => portal.listPartnerOrders(params),
+    enabled: options.enabled ?? true,
+  });
+
+export const usePartnerOrderDetail = (id: number | null, options: ListOptions = {}) =>
+  useQuery({
+    queryKey: keys.partnerOrder(id ?? 0),
+    queryFn: () => portal.getPartnerOrder(id!),
+    enabled: (options.enabled ?? true) && typeof id === 'number' && id > 0,
+  });
+
+export const useConfirmPartnerOrder = () =>
+  useInvalidatingMutation(
+    ({ id, body }: { id: number; body?: portal.PartnerOrderConfirmRequest }) =>
+      portal.confirmPartnerOrder(id, body),
+    [keys.partnerOrders],
+  );
+
+export const useShipPartnerOrder = () =>
+  useInvalidatingMutation(
+    ({ id, body }: { id: number; body: portal.PartnerShipmentNoticeRequest }) =>
+      portal.shipPartnerOrder(id, body),
+    [keys.partnerOrders],
+  );
+
+export const usePartnerPriceRequests = (params: portal.PartnerPriceRequestsQuery = {}, options: ListOptions = {}) =>
+  useQuery({
+    queryKey: keys.partnerPriceRequestList(params),
+    queryFn: () => portal.listPartnerPriceRequests(params),
+    enabled: options.enabled ?? true,
+  });
+
+export const usePartnerPriceRequestDetail = (id: number | null, options: ListOptions = {}) =>
+  useQuery({
+    queryKey: keys.partnerPriceRequest(id ?? 0),
+    queryFn: () => portal.getPartnerPriceRequest(id!),
+    enabled: (options.enabled ?? true) && typeof id === 'number' && id > 0,
+  });
+
+export const useRespondPartnerPriceRequest = () =>
+  useInvalidatingMutation(
+    ({ id, body }: { id: number; body: portal.PartnerPriceRequestResponse }) =>
+      portal.respondPartnerPriceRequest(id, body),
+    [keys.partnerPriceRequests],
+  );

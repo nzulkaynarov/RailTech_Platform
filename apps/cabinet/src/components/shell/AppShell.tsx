@@ -81,6 +81,8 @@ export function AppShell() {
 
     if (path.startsWith('/my-products')) {
       segments.push({ label: t('nav.myProducts') });
+    } else if (path.startsWith('/partner/orders')) {
+      segments.push({ label: t('nav.partnerOrders') });
     } else if (path.startsWith('/requests/new')) {
       segments.push({ label: t('nav.requests'), href: '/requests' });
       segments.push({ label: t('pages.requests.new') });

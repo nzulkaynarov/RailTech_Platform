@@ -1954,6 +1954,272 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
+  /partner/orders:
+    get:
+      tags: [partner]
+      operationId: listPartnerOrders
+      summary: Заказы поставщику компании
+      description: |
+        Список заказов нашей компании к поставщику (`SupplierOrder`). Партнёр видит только свои заказы.
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/PartnerOrderStatus'
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 200
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10000
+            default: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Страница заказов и количество по статусам
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerOrderPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /partner/orders/{id}:
+    get:
+      tags: [partner]
+      operationId: getPartnerOrder
+      summary: Детали заказа поставщику
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Детали заказа; чужой или несуществующий — 404
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerOrderDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /partner/orders/{id}/confirm:
+    post:
+      tags: [partner]
+      operationId: confirmPartnerOrder
+      summary: Подтверждение заказа поставщиком
+      description: |
+        Партнёр подтверждает готовность выполнить заказ (переход в статус `confirmed`).
+        При необходимости можно указать или скорректировать ожидаемую дату поставки.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerOrderConfirmRequest'
+      responses:
+        '200':
+          description: Заказ подтверждён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerOrderDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Недопустимый статус заказа
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /partner/orders/{id}/ship:
+    post:
+      tags: [partner]
+      operationId: shipPartnerOrder
+      summary: Уведомление об отгрузке (ASN)
+      description: |
+        Партнёр направляет уведомление об отгрузке (номер транспортной накладной, перевозчик, трек-номер).
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerShipmentNoticeRequest'
+      responses:
+        '200':
+          description: Уведомление зарегистрировано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerOrderDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Недопустимый статус заказа
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /partner/price-requests:
+    get:
+      tags: [partner]
+      operationId: listPartnerPriceRequests
+      summary: Запросы цен (RFQ)
+      description: |
+        Список запросов цен от нашей компании к поставщику (`PriceRequest`).
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/PartnerPriceRequestStatus'
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 200
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10000
+            default: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Страница запросов цен и количество по статусам
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerPriceRequestPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /partner/price-requests/{id}:
+    get:
+      tags: [partner]
+      operationId: getPartnerPriceRequest
+      summary: Детали запроса цен
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Детали запроса цен; чужой или несуществующий — 404
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerPriceRequestDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /partner/price-requests/{id}/respond:
+    post:
+      tags: [partner]
+      operationId: respondPartnerPriceRequest
+      summary: Ответ на запрос цен
+      description: |
+        Партнёр направляет ценовое предложение и условия по запросу цен.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerPriceRequestResponse'
+      responses:
+        '200':
+          description: Ответ зафиксирован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerPriceRequestDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Недопустимый статус заказа
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
   /company:
     get:
       tags: [company]
@@ -2556,6 +2822,7 @@ components:
         - INVOICE_NOT_OPEN
         - TEXT_REQUIRED
         - CONFLICT
+        - ORDER_FINALIZED
         - CONTACT_NOT_IN_CRM
         - TELEGRAM_LINK_UNAVAILABLE
         - TELEGRAM_NOT_LINKED
@@ -3366,6 +3633,319 @@ components:
           oneOf:
             - $ref: '#/components/schemas/PriceListReport'
             - type: 'null'
+      additionalProperties: false
+
+    PartnerOrderStatus:
+      type: string
+      enum: [draft, sent, confirmed, received, cancelled]
+
+    PartnerOrderListItem:
+      type: object
+      required: [id, number, status, created_at, lines_count, total_amount, currency]
+      properties:
+        id:
+          type: integer
+        number:
+          type: string
+        status:
+          $ref: '#/components/schemas/PartnerOrderStatus'
+        expected_date:
+          type: [string, 'null']
+          format: date
+        created_at:
+          type: string
+          format: date-time
+        sent_at:
+          type: [string, 'null']
+          format: date-time
+        confirmed_at:
+          type: [string, 'null']
+          format: date-time
+        received_at:
+          type: [string, 'null']
+          format: date-time
+        cancelled_at:
+          type: [string, 'null']
+          format: date-time
+        lines_count:
+          type: integer
+          minimum: 0
+        total_amount:
+          type: string
+        currency:
+          type: string
+      additionalProperties: false
+
+    PartnerOrderStatusCounts:
+      type: object
+      required: [all, sent, confirmed, received, cancelled]
+      properties:
+        all:
+          type: integer
+          minimum: 0
+        sent:
+          type: integer
+          minimum: 0
+        confirmed:
+          type: integer
+          minimum: 0
+        received:
+          type: integer
+          minimum: 0
+        cancelled:
+          type: integer
+          minimum: 0
+      additionalProperties: false
+
+    PartnerOrderPage:
+      type: object
+      required: [items, page, page_size, total, counts]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerOrderListItem'
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+        total:
+          type: integer
+          minimum: 0
+        counts:
+          $ref: '#/components/schemas/PartnerOrderStatusCounts'
+      additionalProperties: false
+
+    PartnerOrderLineItem:
+      type: object
+      required: [id, position, name, article, unit, quantity, received_quantity, unit_price, total_price]
+      properties:
+        id:
+          type: integer
+        position:
+          type: integer
+        product_id:
+          type: [integer, 'null']
+        name:
+          type: string
+        article:
+          type: string
+        unit:
+          type: string
+        quantity:
+          type: integer
+          minimum: 0
+        received_quantity:
+          type: integer
+          minimum: 0
+        unit_price:
+          type: string
+        total_price:
+          type: string
+      additionalProperties: false
+
+    PartnerOrderLogItem:
+      type: object
+      required: [id, kind, detail, created_at]
+      properties:
+        id:
+          type: integer
+        kind:
+          type: string
+        detail:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      additionalProperties: false
+
+    PartnerOrderDetail:
+      type: object
+      required: [id, number, status, created_at, lines, logs, total_amount, currency, note, cancel_reason]
+      properties:
+        id:
+          type: integer
+        number:
+          type: string
+        status:
+          $ref: '#/components/schemas/PartnerOrderStatus'
+        expected_date:
+          type: [string, 'null']
+          format: date
+        created_at:
+          type: string
+          format: date-time
+        sent_at:
+          type: [string, 'null']
+          format: date-time
+        confirmed_at:
+          type: [string, 'null']
+          format: date-time
+        received_at:
+          type: [string, 'null']
+          format: date-time
+        cancelled_at:
+          type: [string, 'null']
+          format: date-time
+        cancel_reason:
+          type: string
+        note:
+          type: string
+        total_amount:
+          type: string
+        currency:
+          type: string
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerOrderLineItem'
+        logs:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerOrderLogItem'
+      additionalProperties: false
+
+    PartnerOrderConfirmRequest:
+      type: object
+      properties:
+        expected_date:
+          type: [string, 'null']
+          format: date
+      additionalProperties: false
+
+    PartnerShipmentNoticeRequest:
+      type: object
+      required: [supplier_doc]
+      properties:
+        supplier_doc:
+          type: string
+          minLength: 1
+          maxLength: 100
+        carrier:
+          type: string
+          maxLength: 120
+        tracking_number:
+          type: string
+          maxLength: 120
+        note:
+          type: string
+          maxLength: 500
+      additionalProperties: false
+
+    PartnerPriceRequestStatus:
+      type: string
+      enum: [sent, failed, answered]
+
+    PartnerPriceRequestListItem:
+      type: object
+      required: [id, requested_at, subject, status, lines_count]
+      properties:
+        id:
+          type: integer
+        requested_at:
+          type: string
+          format: date-time
+        subject:
+          type: string
+        status:
+          $ref: '#/components/schemas/PartnerPriceRequestStatus'
+        lines_count:
+          type: integer
+          minimum: 0
+        answered_at:
+          type: [string, 'null']
+          format: date-time
+      additionalProperties: false
+
+    PartnerPriceRequestStatusCounts:
+      type: object
+      required: [all, sent, answered]
+      properties:
+        all:
+          type: integer
+          minimum: 0
+        sent:
+          type: integer
+          minimum: 0
+        answered:
+          type: integer
+          minimum: 0
+      additionalProperties: false
+
+    PartnerPriceRequestPage:
+      type: object
+      required: [items, page, page_size, total, counts]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerPriceRequestListItem'
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+        total:
+          type: integer
+          minimum: 0
+        counts:
+          $ref: '#/components/schemas/PartnerPriceRequestStatusCounts'
+      additionalProperties: false
+
+    PartnerPriceRequestLineItem:
+      type: object
+      required: [id, name, article, quantity, unit]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        article:
+          type: string
+        quantity:
+          type: integer
+          minimum: 0
+        unit:
+          type: string
+      additionalProperties: false
+
+    PartnerPriceRequestDetail:
+      type: object
+      required: [id, requested_at, subject, note, status, lines, answer_note]
+      properties:
+        id:
+          type: integer
+        requested_at:
+          type: string
+          format: date-time
+        subject:
+          type: string
+        note:
+          type: string
+        status:
+          $ref: '#/components/schemas/PartnerPriceRequestStatus'
+        answered_at:
+          type: [string, 'null']
+          format: date-time
+        answer_note:
+          type: string
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerPriceRequestLineItem'
+      additionalProperties: false
+
+    PartnerPriceRequestResponse:
+      type: object
+      required: [answer_note]
+      properties:
+        answer_note:
+          type: string
+          minLength: 1
+          maxLength: 1000
       additionalProperties: false
 
     Reason:
