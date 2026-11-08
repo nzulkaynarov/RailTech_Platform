@@ -187,7 +187,7 @@ function ProductBody({ product }: { product: PartnerProductDetail }) {
                         className={
                           doc.status === 'rejected'
                             ? 'rounded bg-destructive/10 px-1.5 py-0.5 text-xs text-destructive'
-                            : 'rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-900'
+                            : 'rounded border border-warning/30 bg-warning/10 px-1.5 py-0.5 text-xs text-warning'
                         }
                       >
                         {t(`partner.sheet.docStatus.${doc.status}`)}
