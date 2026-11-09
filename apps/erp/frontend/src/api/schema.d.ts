@@ -1684,7 +1684,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description GET /partner/finance — сводка взаиморасчётов и оценка эффективности партнёра. */
+        /** @description GET /partner/finance — оборот по заказам и оценка партнёра. */
         get: operations["api_portal_v1_partner_finance_retrieve"];
         put?: never;
         post?: never;
@@ -1701,7 +1701,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description GET /partner/finance — сводка взаиморасчётов и оценка эффективности партнёра. */
+        /** @description GET /partner/finance — оборот по заказам и оценка партнёра. */
         get: operations["api_portal_v1_partner_finance_retrieve_2"];
         put?: never;
         post?: never;

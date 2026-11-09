@@ -1,0 +1,34 @@
+[
+  {
+    "screen": "finance",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 40,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "finance",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 36,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "finance-empty",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 35,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "finance-empty",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 35,
+    "overflowPx": 0,
+    "violations": []
+  }
+]

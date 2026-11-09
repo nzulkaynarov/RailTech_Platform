@@ -551,7 +551,15 @@ export function partnerFinanceSummary(
     orders_count: c.count,
   }));
 
-  const scorecard: Schemas['PartnerFinanceScorecard'] = {
+  const scorecard: Schemas['PartnerFinanceScorecard'] = orders.length === 0 ? {
+    otif_rate: null,
+    otif_orders_count: 0,
+    rfq_response_rate: null,
+    rfq_avg_response_hours: null,
+    price_freshness_rate: null,
+    total_rfqs_count: 0,
+    active_offers_count: 0,
+  } : {
     otif_rate: 96.5,
     otif_orders_count: orders.filter((o) => o.status === 'received').length,
     rfq_response_rate: 90.0,

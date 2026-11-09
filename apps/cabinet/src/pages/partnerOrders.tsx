@@ -481,10 +481,10 @@ export function PartnerOrdersPage() {
           <div>
             {/* Balances by currency */}
             <div className="mb-8">
-              <h3 className="mb-4 text-base font-semibold text-foreground flex items-center gap-2">
+              <h2 className="mb-4 text-base font-semibold text-foreground flex items-center gap-2">
                 <Coins className="size-5 text-primary" />
                 {t('pages.partnerOrders.finance.balancesTitle')}
-              </h3>
+              </h2>
               {financeQuery.data.balances.length === 0 ? (
                 <EmptyState
                   icon={SearchX}
@@ -531,10 +531,10 @@ export function PartnerOrdersPage() {
 
             {/* Scorecard */}
             <div className="mb-8">
-              <h3 className="mb-4 text-base font-semibold text-foreground flex items-center gap-2">
+              <h2 className="mb-4 text-base font-semibold text-foreground flex items-center gap-2">
                 <TrendingUp className="size-5 text-primary" />
                 {t('pages.partnerOrders.finance.scorecardTitle')}
-              </h3>
+              </h2>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <ScoreCard
                   title={t('pages.partnerOrders.finance.otifRate')}
@@ -580,10 +580,10 @@ export function PartnerOrdersPage() {
 
             {/* Settlements Table */}
             <div className="mb-8">
-              <h3 className="mb-4 text-base font-semibold text-foreground flex items-center gap-2">
+              <h2 className="mb-4 text-base font-semibold text-foreground flex items-center gap-2">
                 <Scale className="size-5 text-primary" />
                 {t('pages.partnerOrders.finance.settlementsTitle')}
-              </h3>
+              </h2>
               {financeQuery.data.settlements.length === 0 ? (
                 <EmptyState
                   icon={SearchX}
