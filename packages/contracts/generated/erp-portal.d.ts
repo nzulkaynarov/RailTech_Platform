@@ -1108,10 +1108,33 @@ export interface paths {
     put?: never;
     /**
      * Подтверждение заказа поставщиком
-     * @description Партнёр подтверждает готовность выполнить заказ (переход в статус `confirmed`).
-     *     При необходимости можно указать или скорректировать ожидаемую дату поставки.
+     * @description Партнёр подтверждает заказ в статусе `sent` (переход в `confirmed`) и называет дату поставки. Заказ без срока
+     *     получает эту дату; у заказа со сроком срок не меняется, а другая дата становится запросом на перенос (`date_change`).
+     *     Коды 409: `TRANSITION_NOT_ALLOWED` — заказ не в статусе `sent`, в том числе повторное подтверждение.
      */
     post: operations["confirmPartnerOrder"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/partner/orders/{id}/date-change": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Запрос на перенос срока поставки
+     * @description Партнёр просит перенести срок подтверждённого заказа. Срок (`expected_date`) и показатель OTIF не меняются, пока
+     *     сотрудник снабжения сам не поставит новую дату. Новый запрос заменяет прежний; повтор той же даты ничего не делает.
+     *     Коды 409: `ORDER_NOT_CONFIRMED` — заказ не в статусе `confirmed`.
+     */
+    post: operations["requestPartnerOrderDateChange"];
     delete?: never;
     options?: never;
     head?: never;
@@ -1129,7 +1152,9 @@ export interface paths {
     put?: never;
     /**
      * Уведомление об отгрузке (ASN)
-     * @description Партнёр направляет уведомление об отгрузке (номер транспортной накладной, перевозчик, трек-номер).
+     * @description Партнёр направляет уведомление об отгрузке (номер транспортной накладной, перевозчик, трек-номер) по заказу в
+     *     статусе `confirmed`. Коды 409: `ORDER_NOT_CONFIRMED` — другой статус, `SHIPMENT_NOTICE_DUPLICATE` — эта накладная по
+     *     заказу уже заявлена.
      */
     post: operations["shipPartnerOrder"];
     delete?: never;
@@ -1186,7 +1211,9 @@ export interface paths {
     put?: never;
     /**
      * Ответ на запрос цен
-     * @description Партнёр направляет ценовое предложение и условия по запросу цен.
+     * @description Партнёр отвечает на запрос цен. Ответ принимается один раз: повторный не затирает прежний. Цены из `lines` обновляют
+     *     цену поставщика на товар строки запроса (источник `rfq_reply`). Коды 409: `REQUEST_NOT_SENT` — запрос не был
+     *     доставлен, `ALREADY_ANSWERED` — ответ уже дан.
      */
     post: operations["respondPartnerPriceRequest"];
     delete?: never;
@@ -1923,7 +1950,8 @@ export interface components {
       cancelled_at?: string | null;
       lines_count: number;
       total_amount: string;
-      currency: string;
+      /** @description Код валюты заказа; `null` — валюта в заказе не указана */
+      currency: string | null;
     };
     PartnerOrderStatusCounts: {
       all: number;
@@ -1953,8 +1981,8 @@ export interface components {
     };
     PartnerOrderLogItem: {
       id: number;
+      /** @description Событие заказа, видимое партнёру (`sent`, `confirmed`, `receipt`, `received`, `cancelled`) */
       kind: string;
-      detail: string;
       /** Format: date-time */
       created_at: string;
     };
@@ -1974,7 +2002,6 @@ export interface components {
       id: number;
       /** @description Номер накладной или документа поставщика */
       supplier_doc: string;
-      note: string;
       /** Format: date-time */
       received_at: string;
       lines: components["schemas"]["PartnerOrderReceiptLineItem"][];
@@ -1995,17 +2022,48 @@ export interface components {
       received_at?: string | null;
       /** Format: date-time */
       cancelled_at?: string | null;
-      cancel_reason: string;
+      /** @description Примечание заказа; уходит поставщику и в письме с заказом */
       note: string;
       total_amount: string;
-      currency: string;
+      /** @description Код валюты заказа; `null` — валюта в заказе не указана */
+      currency: string | null;
+      /** @description Запрос партнёра на перенос срока, пока сотрудник не поставил новую дату */
+      date_change: null | components["schemas"]["PartnerOrderDateChange"];
+      shipment_notices: components["schemas"]["PartnerShipmentNotice"][];
       lines: components["schemas"]["PartnerOrderLineItem"][];
       logs: components["schemas"]["PartnerOrderLogItem"][];
       receipts: components["schemas"]["PartnerOrderReceiptItem"][];
     };
     PartnerOrderConfirmRequest: {
+      /**
+       * Format: date
+       * @description Дата поставки по подтверждению партнёра; не раньше сегодняшней
+       */
+      expected_date: string;
+    };
+    PartnerOrderDateChange: {
       /** Format: date */
-      expected_date?: string | null;
+      requested_date: string;
+      reason: string;
+      /** Format: date-time */
+      requested_at: string;
+    };
+    PartnerOrderDateChangeRequest: {
+      /**
+       * Format: date
+       * @description Новая дата поставки; не раньше сегодняшней и не равна текущему сроку
+       */
+      requested_date: string;
+      reason?: string;
+    };
+    PartnerShipmentNotice: {
+      id: number;
+      supplier_doc: string;
+      carrier: string;
+      tracking_number: string;
+      note: string;
+      /** Format: date-time */
+      created_at: string;
     };
     PartnerShipmentNoticeRequest: {
       supplier_doc: string;
@@ -2043,6 +2101,8 @@ export interface components {
       article: string;
       quantity: number;
       unit: string;
+      /** @description Цена партнёра за единицу из его ответа */
+      answer_price?: string | null;
     };
     PartnerPriceRequestDetail: {
       id: number;
@@ -2054,10 +2114,26 @@ export interface components {
       /** Format: date-time */
       answered_at?: string | null;
       answer_note: string;
+      /** @description Валюта цен ответа */
+      answer_currency?: string | null;
       lines: components["schemas"]["PartnerPriceRequestLineItem"][];
     };
     PartnerPriceRequestResponse: {
       answer_note: string;
+      /** @description Валюта цен; обязательна, если заданы `lines` */
+      currency?: string;
+      /**
+       * Format: date
+       * @description Срок действия цен; не раньше сегодняшней даты
+       */
+      valid_until?: string | null;
+      lines?: components["schemas"]["PartnerPriceResponseLine"][];
+    };
+    PartnerPriceResponseLine: {
+      /** @description Строка запроса цен */
+      id: number;
+      /** @description Цена за единицу, больше нуля */
+      unit_price: string;
     };
     /** @description Баланс взаиморасчётов по конкретной валюте */
     PartnerFinanceBalance: {
@@ -5175,7 +5251,7 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: {
+    requestBody: {
       content: {
         "application/json": components["schemas"]["PartnerOrderConfirmRequest"];
       };
@@ -5194,6 +5270,46 @@ export interface operations {
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
       /** @description Недопустимый статус заказа */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  requestPartnerOrderDateChange: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components["parameters"]["Id"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PartnerOrderDateChangeRequest"];
+      };
+    };
+    responses: {
+      /** @description Запрос передан снабжению */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerOrderDetail"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description Заказ не в статусе `confirmed` */
       409: {
         headers: {
           [name: string]: unknown;

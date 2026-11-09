@@ -1178,11 +1178,13 @@
         "ship": "Joʻnatish (ASN)",
         "view": "Ochish",
         "respond": "Javob berish",
-        "sendResponse": "Javobni yuborish"
+        "sendResponse": "Javobni yuborish",
+        "requestDateChange": "Muddatni ko‘chirish",
+        "sendDateChange": "So‘rov yuborish"
       },
       "dialogs": {
         "confirmTitle": "Yetkazib berish buyurtmasini tasdiqlash",
-        "confirmDescription": "Koʻrsatilgan pozitsiyalar va narxlar boʻyicha buyurtmani yetkazib berishga tayyorligingizni tasdiqlang. Rejalashtirilgan yetkazib berish sanasini aniqlashtirishingiz mumkin.",
+        "confirmDescription": "Ko‘rsatilgan pozitsiyalar va narxlar bo‘yicha jo‘natishga tayyorligingizni tasdiqlang va yetkazib berish sanasini kiriting. Sana buyurtma muddatidan farq qilsa, muddat o‘zgarmaydi: ta’minot ko‘chirish so‘rovini oladi.",
         "expectedDateLabel": "Rejalashtirilgan yetkazib berish sanasi",
         "shipTitle": "Joʻnatish xabarnomasi (ASN)",
         "shipDescription": "Omborni qabul qilishga tayyorlash uchun yuk hujjati rekvizitlari va tashuvchi maʼlumotlarini koʻrsating.",
@@ -1197,7 +1199,28 @@
         "respondTitle": "Narx soʻroviga javob (RFQ)",
         "respondDescription": "Soʻrov pozitsiyalari boʻyicha taklif etilayotgan narxlar, yetkazib berish muddatlari va toʻlov shartlarini koʻrsating.",
         "responseNoteLabel": "Tijorat shartlari va narxlar",
-        "responseNotePlaceholder": "Pozitsiyalar boʻyicha narxlar, ombordagi mavjudlik va yetkazib berish muddatini koʻrsating…"
+        "responseNotePlaceholder": "Pozitsiyalar boʻyicha narxlar, ombordagi mavjudlik va yetkazib berish muddatini koʻrsating…",
+        "dateRequired": "Yetkazib berish sanasini kiriting.",
+        "dateChangeTitle": "Muddatni ko‘chirish so‘rovi",
+        "dateChangeDescription": "Ta’minot qaror qilmaguncha buyurtma muddati o‘zgarmaydi.",
+        "newDateLabel": "Yangi yetkazib berish sanasi",
+        "reasonLabel": "Sabab",
+        "pricesLegend": "Pozitsiyalar bo‘yicha narxlar",
+        "pricesHint": "Bu pozitsiyalar bo‘yicha narxingizni yangilash uchun to‘ldiring. Bo‘sh qoldirish mumkin.",
+        "currencyLabel": "Valyuta (kod, masalan UZS)",
+        "priceInvalid": "Narx musbat son bo‘lishi va verguldan keyin ko‘pi bilan ikki raqam bo‘lishi kerak.",
+        "currencyInvalid": "Uch harfli valyuta kodini kiriting."
+      },
+      "dateChangeSuccess": "Muddatni ko‘chirish so‘rovi ta’minot bo‘limiga yuborildi",
+      "dateChangePending": "Siz muddatni {{date}} sanasiga ko‘chirishni so‘radingiz — ta’minot qaror qilmaguncha buyurtma muddati o‘zgarmaydi.",
+      "shipmentsTitle": "Jo‘natma bildirishnomalari",
+      "loadErrorTitle": "Ochib bo‘lmadi",
+      "logKinds": {
+        "sent": "Sizga yuborildi",
+        "confirmed": "Tasdiqlandi",
+        "receipt": "Omborga qabul",
+        "received": "To‘liq qabul qilindi",
+        "cancelled": "Bekor qilindi"
       }
     }
   },
@@ -1257,7 +1280,13 @@
     "ADMIN_REQUIRED": "Bu amal faqat kompaniya administratori uchun mavjud.",
     "CANNOT_MODIFY_PRIMARY_CONTACT": "Kompaniyaning asosiy kontaktining huquqlarini oʻzgartirib boʻlmaydi.",
     "ORDER_FINALIZED": "Buyurtma allaqachon yakunlangan yoki bekor qilingan — amal mavjud emas.",
-    "BANK_CHANGE_ALREADY_PENDING": "Rekvizitlarni oʻzgartirish soʻrovi allaqachon tekshiruvda. Xodim qarorini kuting yoki menejerga yozing."
+    "BANK_CHANGE_ALREADY_PENDING": "Rekvizitlarni oʻzgartirish soʻrovi allaqachon tekshiruvda. Xodim qarorini kuting yoki menejerga yozing.",
+    "TRANSITION_NOT_ALLOWED": "Buyurtma allaqachon tasdiqlangan yoki yopilgan — amal mavjud emas.",
+    "ORDER_NOT_CONFIRMED": "Bu amal faqat tasdiqlangan buyurtma uchun mavjud.",
+    "SHIPMENT_NOTICE_DUPLICATE": "Bu yuk xati buyurtma bo‘yicha allaqachon ko‘rsatilgan.",
+    "REQUEST_NOT_SENT": "So‘rov yetkazilmagan — unga javob berib bo‘lmaydi.",
+    "ALREADY_ANSWERED": "Bu so‘rovga allaqachon javob berilgan.",
+    "FILE_CONTENT_MISMATCH": "Fayl tarkibi uning kengaytmasiga mos kelmaydi."
   },
   "widgets": {
     "actionRequired": {

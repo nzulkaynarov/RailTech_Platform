@@ -4,6 +4,8 @@
 попадёт, даже если проекция его отдаст.
 """
 
+from decimal import Decimal
+
 from portal.serializers import MoneySerializer
 from portal.services.partner_products import MAX_BATCH
 from rest_framework import serializers
@@ -206,7 +208,7 @@ class PartnerOrderListItemSerializer(serializers.Serializer):
     cancelled_at = serializers.DateTimeField(allow_null=True)
     lines_count = serializers.IntegerField()
     total_amount = serializers.CharField()
-    currency = serializers.CharField()
+    currency = serializers.CharField(allow_null=True)
 
 
 class PartnerOrderStatusCountsSerializer(serializers.Serializer):
@@ -241,7 +243,6 @@ class PartnerOrderLineItemSerializer(serializers.Serializer):
 class PartnerOrderLogItemSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     kind = serializers.CharField()
-    detail = serializers.CharField(allow_blank=True)
     created_at = serializers.DateTimeField()
 
 
@@ -260,9 +261,23 @@ class PartnerOrderReceiptLineItemSerializer(serializers.Serializer):
 class PartnerOrderReceiptItemSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     supplier_doc = serializers.CharField(allow_blank=True)
-    note = serializers.CharField(allow_blank=True)
     received_at = serializers.DateTimeField()
     lines = PartnerOrderReceiptLineItemSerializer(many=True)
+
+
+class PartnerShipmentNoticeSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    supplier_doc = serializers.CharField()
+    carrier = serializers.CharField(allow_blank=True)
+    tracking_number = serializers.CharField(allow_blank=True)
+    note = serializers.CharField(allow_blank=True)
+    created_at = serializers.DateTimeField()
+
+
+class PartnerOrderDateChangeSerializer(serializers.Serializer):
+    requested_date = serializers.DateField()
+    reason = serializers.CharField(allow_blank=True)
+    requested_at = serializers.DateTimeField()
 
 
 class PartnerOrderDetailSerializer(serializers.Serializer):
@@ -275,17 +290,23 @@ class PartnerOrderDetailSerializer(serializers.Serializer):
     confirmed_at = serializers.DateTimeField(allow_null=True)
     received_at = serializers.DateTimeField(allow_null=True)
     cancelled_at = serializers.DateTimeField(allow_null=True)
-    cancel_reason = serializers.CharField(allow_blank=True)
     note = serializers.CharField(allow_blank=True)
     total_amount = serializers.CharField()
-    currency = serializers.CharField()
+    currency = serializers.CharField(allow_null=True)
+    date_change = PartnerOrderDateChangeSerializer(allow_null=True)
     lines = PartnerOrderLineItemSerializer(many=True)
     logs = PartnerOrderLogItemSerializer(many=True)
     receipts = PartnerOrderReceiptItemSerializer(many=True)
+    shipment_notices = PartnerShipmentNoticeSerializer(many=True)
 
 
 class PartnerOrderConfirmRequestSerializer(serializers.Serializer):
-    expected_date = serializers.DateField(required=False, allow_null=True)
+    expected_date = serializers.DateField()
+
+
+class PartnerOrderDateChangeRequestSerializer(serializers.Serializer):
+    requested_date = serializers.DateField()
+    reason = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
 
 
 class PartnerShipmentNoticeRequestSerializer(serializers.Serializer):
@@ -324,6 +345,7 @@ class PartnerPriceRequestLineItemSerializer(serializers.Serializer):
     article = serializers.CharField(allow_blank=True)
     quantity = serializers.IntegerField()
     unit = serializers.CharField(allow_blank=True)
+    answer_price = serializers.CharField(allow_null=True)
 
 
 class PartnerPriceRequestDetailSerializer(serializers.Serializer):
@@ -334,11 +356,20 @@ class PartnerPriceRequestDetailSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=["sent", "failed", "answered"])
     answered_at = serializers.DateTimeField(allow_null=True)
     answer_note = serializers.CharField(allow_blank=True)
+    answer_currency = serializers.CharField(allow_null=True)
     lines = PartnerPriceRequestLineItemSerializer(many=True)
+
+
+class PartnerPriceResponseLineSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    unit_price = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=Decimal("0.01"))
 
 
 class PartnerPriceRequestResponseSerializer(serializers.Serializer):
     answer_note = serializers.CharField(max_length=1000, min_length=1)
+    currency = serializers.RegexField(r"^[A-Z]{3}$", required=False)
+    valid_until = serializers.DateField(required=False, allow_null=True)
+    lines = PartnerPriceResponseLineSerializer(many=True, required=False, max_length=100)
 
 
 class PartnerFinanceBalanceSerializer(serializers.Serializer):

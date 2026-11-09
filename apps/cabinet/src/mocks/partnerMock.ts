@@ -343,7 +343,8 @@ export function partnerOrders(): Schemas['PartnerOrderDetail'][] {
       total_amount: '1505000.00',
       currency: 'UZS',
       note: 'Просьба отгрузить одной партией на склад Ташкент.',
-      cancel_reason: '',
+      date_change: null,
+      shipment_notices: [],
       sent_at: '2026-11-01T10:05:00+05:00',
       confirmed_at: null,
       received_at: null,
@@ -366,9 +367,8 @@ export function partnerOrders(): Schemas['PartnerOrderDetail'][] {
       logs: [
         {
           id: 8201,
-          kind: 'created',
-          detail: 'Заказ сформирован отделом снабжения',
-          created_at: '2026-11-01T10:00:00+05:00',
+          kind: 'sent',
+          created_at: '2026-11-01T10:05:00+05:00',
         },
       ],
       receipts: [],
@@ -381,7 +381,8 @@ export function partnerOrders(): Schemas['PartnerOrderDetail'][] {
       total_amount: '420000.00',
       currency: 'UZS',
       note: '',
-      cancel_reason: '',
+      date_change: null,
+      shipment_notices: [],
       sent_at: '2026-11-02T09:10:00+05:00',
       confirmed_at: '2026-11-02T14:30:00+05:00',
       received_at: null,
@@ -405,7 +406,6 @@ export function partnerOrders(): Schemas['PartnerOrderDetail'][] {
         {
           id: 8202,
           kind: 'confirmed',
-          detail: 'Подтверждён поставщиком в портале',
           created_at: '2026-11-02T14:30:00+05:00',
         },
       ],
@@ -413,7 +413,6 @@ export function partnerOrders(): Schemas['PartnerOrderDetail'][] {
         {
           id: 8301,
           supplier_doc: 'ТН-1002 от 05.11.2026',
-          note: 'Приёмка партии 1',
           received_at: '2026-11-06T15:00:00+05:00',
           lines: [
             {
@@ -455,6 +454,7 @@ export function partnerPriceRequests(): Schemas['PartnerPriceRequestDetail'][] {
       answered_at: null,
       note: 'Укажите срок поставки до Ташкента (FCA/DAP).',
       answer_note: '',
+      answer_currency: null,
       lines: [
         {
           id: 8601,
@@ -462,6 +462,7 @@ export function partnerPriceRequests(): Schemas['PartnerPriceRequestDetail'][] {
           article: 'AQ-9001',
           quantity: 50,
           unit: 'шт',
+          answer_price: null,
         },
         {
           id: 8602,
@@ -469,6 +470,7 @@ export function partnerPriceRequests(): Schemas['PartnerPriceRequestDetail'][] {
           article: 'AQ-9004',
           quantity: 200,
           unit: 'шт',
+          answer_price: null,
         },
       ],
     },

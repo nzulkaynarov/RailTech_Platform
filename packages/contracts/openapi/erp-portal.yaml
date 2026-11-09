@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Portal API (Cabinet → ERP)
-  version: 0.10.0
+  version: 0.11.0
   summary: Пространство `/api/portal/v1/` — вызывает Cabinet SPA от имени клиента.
   description: |
     Контракт по `docs/architecture/CONTRACTS.md` §4 и ADR-0004 (Cabinet без бэкенда). Версия 0 (M0-INF-02):
@@ -2189,12 +2189,13 @@ paths:
       operationId: confirmPartnerOrder
       summary: Подтверждение заказа поставщиком
       description: |
-        Партнёр подтверждает готовность выполнить заказ (переход в статус `confirmed`).
-        При необходимости можно указать или скорректировать ожидаемую дату поставки.
+        Партнёр подтверждает заказ в статусе `sent` (переход в `confirmed`) и называет дату поставки. Заказ без срока
+        получает эту дату; у заказа со сроком срок не меняется, а другая дата становится запросом на перенос (`date_change`).
+        Коды 409: `TRANSITION_NOT_ALLOWED` — заказ не в статусе `sent`, в том числе повторное подтверждение.
       parameters:
         - $ref: '#/components/parameters/Id'
       requestBody:
-        required: false
+        required: true
         content:
           application/json:
             schema:
@@ -2223,13 +2224,56 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
+  /partner/orders/{id}/date-change:
+    post:
+      tags: [partner]
+      operationId: requestPartnerOrderDateChange
+      summary: Запрос на перенос срока поставки
+      description: |
+        Партнёр просит перенести срок подтверждённого заказа. Срок (`expected_date`) и показатель OTIF не меняются, пока
+        сотрудник снабжения сам не поставит новую дату. Новый запрос заменяет прежний; повтор той же даты ничего не делает.
+        Коды 409: `ORDER_NOT_CONFIRMED` — заказ не в статусе `confirmed`.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerOrderDateChangeRequest'
+      responses:
+        '200':
+          description: Запрос передан снабжению
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerOrderDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Заказ не в статусе `confirmed`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
   /partner/orders/{id}/ship:
     post:
       tags: [partner]
       operationId: shipPartnerOrder
       summary: Уведомление об отгрузке (ASN)
       description: |
-        Партнёр направляет уведомление об отгрузке (номер транспортной накладной, перевозчик, трек-номер).
+        Партнёр направляет уведомление об отгрузке (номер транспортной накладной, перевозчик, трек-номер) по заказу в
+        статусе `confirmed`. Коды 409: `ORDER_NOT_CONFIRMED` — другой статус, `SHIPMENT_NOTICE_DUPLICATE` — эта накладная по
+        заказу уже заявлена.
       parameters:
         - $ref: '#/components/parameters/Id'
       requestBody:
@@ -2342,7 +2386,9 @@ paths:
       operationId: respondPartnerPriceRequest
       summary: Ответ на запрос цен
       description: |
-        Партнёр направляет ценовое предложение и условия по запросу цен.
+        Партнёр отвечает на запрос цен. Ответ принимается один раз: повторный не затирает прежний. Цены из `lines` обновляют
+        цену поставщика на товар строки запроса (источник `rfq_reply`). Коды 409: `REQUEST_NOT_SENT` — запрос не был
+        доставлен, `ALREADY_ANSWERED` — ответ уже дан.
       parameters:
         - $ref: '#/components/parameters/Id'
       requestBody:
@@ -3026,6 +3072,12 @@ components:
         - TEXT_REQUIRED
         - CONFLICT
         - ORDER_FINALIZED
+        - TRANSITION_NOT_ALLOWED
+        - ORDER_NOT_CONFIRMED
+        - SHIPMENT_NOTICE_DUPLICATE
+        - REQUEST_NOT_SENT
+        - ALREADY_ANSWERED
+        - FILE_CONTENT_MISMATCH
         - CONTACT_NOT_IN_CRM
         - TELEGRAM_LINK_UNAVAILABLE
         - TELEGRAM_NOT_LINKED
@@ -3956,7 +4008,8 @@ components:
         total_amount:
           type: string
         currency:
-          type: string
+          type: [string, 'null']
+          description: Код валюты заказа; `null` — валюта в заказе не указана
       additionalProperties: false
 
     PartnerOrderStatusCounts:
@@ -4031,14 +4084,13 @@ components:
 
     PartnerOrderLogItem:
       type: object
-      required: [id, kind, detail, created_at]
+      required: [id, kind, created_at]
       properties:
         id:
           type: integer
         kind:
           type: string
-        detail:
-          type: string
+          description: Событие заказа, видимое партнёру (`sent`, `confirmed`, `receipt`, `received`, `cancelled`)
         created_at:
           type: string
           format: date-time
@@ -4072,15 +4124,13 @@ components:
 
     PartnerOrderReceiptItem:
       type: object
-      required: [id, supplier_doc, note, received_at, lines]
+      required: [id, supplier_doc, received_at, lines]
       properties:
         id:
           type: integer
         supplier_doc:
           type: string
           description: Номер накладной или документа поставщика
-        note:
-          type: string
         received_at:
           type: string
           format: date-time
@@ -4092,7 +4142,7 @@ components:
 
     PartnerOrderDetail:
       type: object
-      required: [id, number, status, created_at, lines, logs, receipts, total_amount, currency, note, cancel_reason]
+      required: [id, number, status, created_at, lines, logs, receipts, shipment_notices, date_change, total_amount, currency, note]
       properties:
         id:
           type: integer
@@ -4118,14 +4168,23 @@ components:
         cancelled_at:
           type: [string, 'null']
           format: date-time
-        cancel_reason:
-          type: string
         note:
           type: string
+          description: Примечание заказа; уходит поставщику и в письме с заказом
         total_amount:
           type: string
         currency:
-          type: string
+          type: [string, 'null']
+          description: Код валюты заказа; `null` — валюта в заказе не указана
+        date_change:
+          description: Запрос партнёра на перенос срока, пока сотрудник не поставил новую дату
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/PartnerOrderDateChange'
+        shipment_notices:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerShipmentNotice'
         lines:
           type: array
           items:
@@ -4142,10 +4201,58 @@ components:
 
     PartnerOrderConfirmRequest:
       type: object
+      required: [expected_date]
       properties:
         expected_date:
-          type: [string, 'null']
+          type: string
           format: date
+          description: Дата поставки по подтверждению партнёра; не раньше сегодняшней
+      additionalProperties: false
+
+    PartnerOrderDateChange:
+      type: object
+      required: [requested_date, reason, requested_at]
+      properties:
+        requested_date:
+          type: string
+          format: date
+        reason:
+          type: string
+        requested_at:
+          type: string
+          format: date-time
+      additionalProperties: false
+
+    PartnerOrderDateChangeRequest:
+      type: object
+      required: [requested_date]
+      properties:
+        requested_date:
+          type: string
+          format: date
+          description: Новая дата поставки; не раньше сегодняшней и не равна текущему сроку
+        reason:
+          type: string
+          maxLength: 500
+      additionalProperties: false
+
+    PartnerShipmentNotice:
+      type: object
+      required: [id, supplier_doc, carrier, tracking_number, note, created_at]
+      properties:
+        id:
+          type: integer
+        supplier_doc:
+          type: string
+        carrier:
+          type: string
+        tracking_number:
+          type: string
+        note:
+          type: string
+        created_at:
+          type: string
+          format: date-time
       additionalProperties: false
 
     PartnerShipmentNoticeRequest:
@@ -4243,6 +4350,9 @@ components:
           minimum: 0
         unit:
           type: string
+        answer_price:
+          type: [string, 'null']
+          description: Цена партнёра за единицу из его ответа
       additionalProperties: false
 
     PartnerPriceRequestDetail:
@@ -4265,6 +4375,9 @@ components:
           format: date-time
         answer_note:
           type: string
+        answer_currency:
+          type: [string, 'null']
+          description: Валюта цен ответа
         lines:
           type: array
           items:
@@ -4279,6 +4392,32 @@ components:
           type: string
           minLength: 1
           maxLength: 1000
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+          description: Валюта цен; обязательна, если заданы `lines`
+        valid_until:
+          type: [string, 'null']
+          format: date
+          description: Срок действия цен; не раньше сегодняшней даты
+        lines:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/PartnerPriceResponseLine'
+      additionalProperties: false
+
+    PartnerPriceResponseLine:
+      type: object
+      required: [id, unit_price]
+      properties:
+        id:
+          type: integer
+          description: Строка запроса цен
+        unit_price:
+          type: string
+          pattern: '^\d{1,12}(\.\d{1,2})?$'
+          description: Цена за единицу, больше нуля
       additionalProperties: false
 
     PartnerFinanceBalance:

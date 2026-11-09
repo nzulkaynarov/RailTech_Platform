@@ -1178,11 +1178,13 @@
         "ship": "Ship (ASN)",
         "view": "Open",
         "respond": "Respond",
-        "sendResponse": "Send response"
+        "sendResponse": "Send response",
+        "requestDateChange": "Change date",
+        "sendDateChange": "Send request"
       },
       "dialogs": {
         "confirmTitle": "Confirm purchase order",
-        "confirmDescription": "Confirm your readiness to fulfill this order for the listed items and prices. You may specify or update the expected delivery date.",
+        "confirmDescription": "Confirm that you can ship the listed items at the listed prices and enter the delivery date. If it differs from the order date, the order date stays: procurement receives a change request.",
         "expectedDateLabel": "Expected delivery date",
         "shipTitle": "Advance shipping notice (ASN)",
         "shipDescription": "Provide shipping document details and carrier information so our warehouse can prepare for receiving.",
@@ -1197,7 +1199,28 @@
         "respondTitle": "Respond to price request (RFQ)",
         "respondDescription": "Provide your offered prices, lead times, and payment terms for the requested items.",
         "responseNoteLabel": "Commercial terms & prices",
-        "responseNotePlaceholder": "Specify unit prices, stock availability, and delivery lead time…"
+        "responseNotePlaceholder": "Specify unit prices, stock availability, and delivery lead time…",
+        "dateRequired": "Enter the delivery date.",
+        "dateChangeTitle": "Delivery date change request",
+        "dateChangeDescription": "The order date does not change until procurement decides.",
+        "newDateLabel": "New delivery date",
+        "reasonLabel": "Reason",
+        "pricesLegend": "Prices by item",
+        "pricesHint": "Fill in to update your price for these items. You may leave it empty.",
+        "currencyLabel": "Currency (code, e.g. UZS)",
+        "priceInvalid": "Price must be a positive number with at most two decimals.",
+        "currencyInvalid": "Enter a three-letter currency code."
+      },
+      "dateChangeSuccess": "Date change request sent to procurement",
+      "dateChangePending": "You requested a move to {{date}} — the order date stays the same until procurement decides.",
+      "shipmentsTitle": "Shipment notices",
+      "loadErrorTitle": "Could not open",
+      "logKinds": {
+        "sent": "Sent to you",
+        "confirmed": "Confirmed",
+        "receipt": "Warehouse receipt",
+        "received": "Fully received",
+        "cancelled": "Cancelled"
       }
     }
   },
@@ -1257,7 +1280,13 @@
     "ADMIN_REQUIRED": "This action requires company administrator rights.",
     "CANNOT_MODIFY_PRIMARY_CONTACT": "Cannot modify permissions of the primary company contact.",
     "ORDER_FINALIZED": "This order has already been completed or cancelled — action unavailable.",
-    "BANK_CHANGE_ALREADY_PENDING": "A bank details change is already under review. Wait for the staff decision or message your manager."
+    "BANK_CHANGE_ALREADY_PENDING": "A bank details change is already under review. Wait for the staff decision or message your manager.",
+    "TRANSITION_NOT_ALLOWED": "This order is already confirmed or closed — action unavailable.",
+    "ORDER_NOT_CONFIRMED": "This action is available only for a confirmed order.",
+    "SHIPMENT_NOTICE_DUPLICATE": "This waybill has already been declared for the order.",
+    "REQUEST_NOT_SENT": "This request was not delivered and cannot be answered.",
+    "ALREADY_ANSWERED": "This request has already been answered.",
+    "FILE_CONTENT_MISMATCH": "The file content does not match its extension."
   },
   "widgets": {
     "actionRequired": {

@@ -64,6 +64,10 @@ class SupplierOrder(models.Model):
     overdue_notified_at = models.DateTimeField(
         null=True, blank=True, help_text=_("Когда уведомили о просрочке: одно уведомление на заказ")
     )
+    # Запрос партнёра на перенос срока (FX-7): `expected_date` меняет только сотрудник, новая дата закрывает запрос.
+    partner_requested_date = models.DateField(null=True, blank=True, verbose_name=_("Партнёр просит перенести на"))
+    partner_requested_at = models.DateTimeField(null=True, blank=True)
+    partner_requested_reason = models.CharField(max_length=500, blank=True, default="")
 
     class Meta:
         verbose_name = _("Заказ поставщику")
@@ -175,6 +179,24 @@ class OrderLogKind(models.TextChoices):
     OVERDUE = "overdue", _("Просрочен")
 
 
+class SupplierOrderShipmentNotice(models.Model):
+    """Уведомление партнёра об отгрузке (ASN, FX-7): одна накладная — одна запись на заказ."""
+
+    order = models.ForeignKey(SupplierOrder, on_delete=models.CASCADE, related_name="shipment_notices")
+    supplier_doc = models.CharField(max_length=100, verbose_name=_("Накладная"))
+    carrier = models.CharField(max_length=120, blank=True, default="")
+    tracking_number = models.CharField(max_length=120, blank=True, default="")
+    note = models.CharField(max_length=500, blank=True, default="")
+    contact = models.ForeignKey("parties.Contact", null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("Уведомление об отгрузке")
+        verbose_name_plural = _("Уведомления об отгрузке")
+        ordering = ["created_at", "id"]
+        constraints = [models.UniqueConstraint(fields=["order", "supplier_doc"], name="uniq_shipment_notice_doc")]
+
+
 class SupplierOrderLog(models.Model):
     """Журнал заказа: любое изменение статуса и приёмка — запись с автором и временем (SPEC-v3 §11.2 п. 8)."""
 
@@ -221,6 +243,7 @@ class PriceRequest(models.Model):
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )
     answer_note = models.CharField(max_length=1000, blank=True, default="")
+    answer_currency = models.ForeignKey("core.Currency", null=True, blank=True, on_delete=models.PROTECT, related_name="+")
 
     class Meta:
         verbose_name = _("Запрос цены поставщику")
@@ -237,6 +260,7 @@ class PriceRequestLine(models.Model):
     article = models.CharField(max_length=120, blank=True, default="")
     quantity = models.PositiveIntegerField()
     unit = models.CharField(max_length=32, blank=True, default="")
+    answer_price = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
 
     class Meta:
         ordering = ["request_id", "id"]
