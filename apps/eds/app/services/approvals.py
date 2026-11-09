@@ -90,14 +90,6 @@ def object_ref(route: ApprovalRoute, document: Document | None) -> dict[str, Any
             "erp_deal_id": route.erp_deal_id,
             "deal_number": route.deal_number,
         }
-    if route.template == ApprovalTemplate.SIGNING.value:
-        snap = route.signing_snapshot or {}
-        return {
-            "kind": "signing",
-            "signing_kind": snap.get("kind"),
-            "signing_number": snap.get("number"),
-            "signing_version": snap.get("version"),
-        }
     if document is None or document.number is None:
         raise RuntimeError("маршрут документа открывается только для документа с номером реестра")
     return {"kind": route.template, "eds_document_id": str(document.id), "number": document.number}
@@ -113,8 +105,6 @@ def approval_ref(route: ApprovalRoute, document: Document | None) -> dict[str, A
 
 
 def _subject(route: ApprovalRoute, document: Document | None) -> str:
-    if route.template == ApprovalTemplate.SIGNING.value:
-        return str((route.signing_snapshot or {}).get("number") or route.id)
     return (route.quote_number if document is None else document.number) or str(route.id)
 
 
@@ -164,6 +154,8 @@ async def open_route(
         document_id=route.document_id,
         version=round_no,
     )
+    if template is ApprovalTemplate.SIGNING:  # итог подписи — событие `signing.decided`, не `approval.*`
+        return route
     data = {
         "approval": approval_ref(route, document),
         "step": {"index": 1, "assignee": assignee_dict(steps[0])},
@@ -297,7 +289,8 @@ async def _apply(
             comment=f"Одобрено с опозданием: {late}",
             version=route.round,
         )
-    await _publish_decided(session, bus, employee, route, document, current, body, route_status, now)
+    if route.template != ApprovalTemplate.SIGNING.value:
+        await _publish_decided(session, bus, employee, route, document, current, body, route_status, now)
     if route_status is RouteStatus.OPEN and following is not None:
         await _publish_step_requested(session, bus, employee, route, document, following)
     if document is not None:  # статус документа и архив — после решения: события идут в порядке причин

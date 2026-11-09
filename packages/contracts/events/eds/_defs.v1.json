@@ -258,14 +258,13 @@
         "memo",
         "application",
         "report",
-        "quote",
-        "signing"
+        "quote"
       ],
-      "description": "Шаблон маршрута (runbook §2.5): memo — директор, затем бухгалтер, если указана сумма; quote — директор с чек-листом; application, report — директор; signing — подпись коммерческого документа ERP уполномоченным (SIGN-4)"
+      "description": "Шаблон маршрута (runbook §2.5): memo — директор, затем бухгалтер, если указана сумма; quote — директор с чек-листом; application, report — директор"
     },
     "ApprovalObject": {
       "type": "object",
-      "description": "Что согласуется. Документ EDS (memo, application, report) — eds_document_id и number; КП ERP (quote) — erp_quote_id, quote_number, quote_version, erp_deal_id (коммерческое содержание остаётся в ERP); подпись документа ERP (signing) — signing_kind, signing_number, signing_version",
+      "description": "Что согласуется. Документ EDS (memo, application, report) — eds_document_id и number; КП ERP (quote) — erp_quote_id, quote_number, quote_version, erp_deal_id (коммерческое содержание остаётся в ERP)",
       "required": [
         "kind"
       ],
@@ -304,26 +303,6 @@
             "null"
           ],
           "maxLength": 64
-        },
-        "signing_kind": {
-          "type": "string",
-          "enum": [
-            "quote",
-            "contract",
-            "invoice",
-            "act"
-          ]
-        },
-        "signing_number": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 64
-        },
-        "signing_version": {
-          "type": [
-            "integer",
-            "null"
-          ]
         }
       },
       "additionalProperties": false,
@@ -343,25 +322,10 @@
         ]
       },
       "else": {
-        "if": {
-          "properties": {
-            "kind": {
-              "const": "signing"
-            }
-          }
-        },
-        "then": {
-          "required": [
-            "signing_kind",
-            "signing_number"
-          ]
-        },
-        "else": {
-          "required": [
-            "eds_document_id",
-            "number"
-          ]
-        }
+        "required": [
+          "eds_document_id",
+          "number"
+        ]
       }
     },
     "StepAssignee": {

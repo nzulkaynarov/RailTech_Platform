@@ -44,6 +44,14 @@ def signing_requested(
     return envelope
 
 
+async def _open_ids(client: httpx.AsyncClient, staff: dict[str, Person]) -> list[str]:
+    resp = await client.get(
+        "/api/v1/approvals", params={"template": ["signing"], "status": ["open"]}, headers=staff["director"].headers
+    )
+    assert resp.status_code == 200, resp.text
+    return [item["id"] for item in resp.json()["items"]]
+
+
 async def test_commercial_signing_approved_for_director(
     client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
 ) -> None:
@@ -74,7 +82,7 @@ async def test_commercial_signing_approved_for_director(
 
     # 3. Сам запрос ничего не подписывает: шаг «Подписать» ждёт живого уполномоченного
     assert await outbox(container, "signing.decided") == []
-    approval_id = (await outbox(container, "approval.requested"))[-1]["data"]["approval"]["eds_approval_id"]
+    approval_id = (await _open_ids(client, staff))[0]
 
     decided = await client.post(
         f"/api/v1/approvals/{approval_id}/decision", json={"decision": "approve"}, headers=staff["director"].headers
@@ -195,17 +203,13 @@ def _request(staff: dict[str, Person], **extra: Any) -> dict[str, Any]:
     )
 
 
-async def _approval_ids(container: Container) -> list[str]:
-    return [e["data"]["approval"]["eds_approval_id"] for e in await outbox(container, "approval.requested")]
-
-
 async def test_repeat_of_an_open_request_opens_nothing_new(
     client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
 ) -> None:
     await _grant_director(client, staff)
     await deliver_erp(client, container, _request(staff))
     await deliver_erp(client, container, _request(staff))
-    assert len(await _approval_ids(container)) == 1
+    assert len(await _open_ids(client, staff)) == 1
     assert await outbox(container, "signing.decided") == []
 
 
@@ -214,7 +218,7 @@ async def test_signed_version_cannot_be_signed_again(
 ) -> None:
     await _grant_director(client, staff)
     await deliver_erp(client, container, _request(staff))
-    [approval_id] = await _approval_ids(container)
+    [approval_id] = await _open_ids(client, staff)
     await client.post(
         f"/api/v1/approvals/{approval_id}/decision", json={"decision": "approve"}, headers=staff["director"].headers
     )
@@ -231,7 +235,7 @@ async def test_only_the_assigned_signer_can_sign(
 ) -> None:
     await _grant_director(client, staff)
     await deliver_erp(client, container, _request(staff))
-    [approval_id] = await _approval_ids(container)
+    [approval_id] = await _open_ids(client, staff)
     resp = await client.post(
         f"/api/v1/approvals/{approval_id}/decision", json={"decision": "approve"}, headers=staff["accountant"].headers
     )
@@ -244,7 +248,7 @@ async def test_refusal_reaches_the_author_with_the_reason(
 ) -> None:
     await _grant_director(client, staff)
     await deliver_erp(client, container, _request(staff))
-    [approval_id] = await _approval_ids(container)
+    [approval_id] = await _open_ids(client, staff)
     resp = await client.post(
         f"/api/v1/approvals/{approval_id}/decision",
         json={"decision": "reject", "comment": "Неверные реквизиты"},
@@ -261,7 +265,7 @@ async def test_authority_revoked_before_signing_blocks_the_signature(
 ) -> None:
     await _grant_director(client, staff)
     await deliver_erp(client, container, _request(staff))
-    [approval_id] = await _approval_ids(container)
+    [approval_id] = await _open_ids(client, staff)
     listed = await client.get(URL_AUTHORITIES, headers=staff["admin"].headers)
     authority = listed.json()["items"][0]["id"]
     revoked = await client.post(

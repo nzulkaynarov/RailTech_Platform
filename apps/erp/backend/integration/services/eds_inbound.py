@@ -201,9 +201,7 @@ def _notify_author(request: Any, title: str, message: str) -> None:
     if request.requested_by is None:
         return
     try:
-        notify_user(
-            user=request.requested_by, title=title, message=message, type_code="INFO", event_code="signing.decided"
-        )
+        notify_user(user=request.requested_by, title=title, message=message, type_code="INFO")
     except Exception:
         logger.exception("eds.signing.decided: не удалось уведомить автора")
 
