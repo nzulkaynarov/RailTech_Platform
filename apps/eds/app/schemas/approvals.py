@@ -15,6 +15,7 @@ class ApprovalTemplate(StrEnum):
     APPLICATION = "application"
     REPORT = "report"
     QUOTE = "quote"
+    SIGNING = "signing"
 
 
 class RouteStatus(StrEnum):
@@ -76,6 +77,12 @@ class ApprovalObject(BaseModel):
     deal_number: str | None = None
     # D26G-2: КП этой версии заменено более новой версией (того же КП или той же заявки) — номер новой версии.
     superseded_by_version: int | None = None
+    # Подпись коммерческого документа ERP (SIGN-4, FX-10): что подписывается.
+    signing_kind: str | None = None
+    signing_number: str | None = None
+    signing_version: int | None = None
+    signing_amount_tiyins: int | None = None
+    signing_currency: str | None = None
 
     @model_serializer(mode="wrap")
     def _only_applicable(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:

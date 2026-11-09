@@ -58,6 +58,13 @@ class ProjectQuoteRef(BaseModel):
     version: int
 
 
+class ProjectSigningIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["contract", "invoice", "act"]
+    document_id: int
+
+
 class ProjectContractRef(BaseModel):
     id: int
     number: str

@@ -28,6 +28,8 @@ from app.feeds.models import StepCode
 from app.feeds.numbers import deal_step, request_path
 from app.rbac import allows, strip_restricted
 from app.schemas_eds_approvals import (
+    SigningApprovalPage,
+    SigningApprovalRow,
     MEMO_KINDS,
     Channel,
     DeliveryReason,
@@ -212,6 +214,31 @@ async def quote_page(
             )
         )
     return QuoteApprovalPage(items=rows, next_cursor=page.next_cursor)
+
+
+async def signing_page(proxy: EdsProxy) -> SigningApprovalPage:
+    """Открытые шаги «Подписать» текущего сотрудника (SIGN-4, FX-10): подписант назначен в EDS."""
+    data = await proxy.request(
+        "GET",
+        f"{API}/approvals",
+        params={"mine": "true", "template": ["signing"], "status": ["open"], "limit": 100},
+    )
+    rows = []
+    for item in data.get("items", []):
+        obj = item.get("object") or {}
+        tiyins = obj.get("signing_amount_tiyins")
+        rows.append(
+            SigningApprovalRow(
+                id=item["id"],
+                kind=obj["signing_kind"],
+                number=obj["signing_number"],
+                title=item.get("title") or "",
+                amount=f"{Decimal(tiyins) / 100:.2f}" if tiyins is not None else None,
+                currency=obj.get("signing_currency"),
+                created_at=item["created_at"],
+            )
+        )
+    return SigningApprovalPage(items=rows)
 
 
 async def memo_page(

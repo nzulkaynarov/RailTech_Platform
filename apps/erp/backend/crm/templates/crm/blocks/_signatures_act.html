@@ -1,4 +1,4 @@
-{% load i18n %}
+{% load document_format %}{% load i18n %}
 {% comment %}
   Блок «подписи сторон» акта. Вставляется одним плейсхолдером {{doc.signatures}} — компания
   решает, где он стоит, но не что внутри (аналог locked block). Разметка — та, что печатал
@@ -14,10 +14,12 @@
         {% if act.verification_code %}
           <div style="font-weight:700; margin-top:3pt;">{{ act.signatory_name }}</div>
           <div class="sign-line">
-            {% translate "Официальная подпись" %} · {{ act.signed_at|date:"d.m.Y H:i" }}<br>
+            {% translate "Официальная подпись" %} · {{ act.issuer_signed_at|date:"d.m.Y H:i" }}<br>
             {{ act.signatory_position }}{% if act.signatory_basis_text %} · {{ act.signatory_basis_text }}{% endif %}<br>
             {% translate "Код проверки:" %} <strong>{{ act.verification_code }}</strong>
           </div>
+          <div style="margin-top:4pt;"><img src="{% verification_qr act.verification_code %}" alt="QR" style="width:52pt;height:52pt;"></div>
+          <style>@page { @bottom-right { content: "№ {{ act.number }} · код проверки {{ act.verification_code }}"; font-size: 7pt; color: #667085; } }</style>
         {% elif act.issuer_signer %}<div class="sign-line">{% translate "Простая электронная подпись" %} · {{ act.issuer_signed_at|date:"d.m.Y H:i" }}<br>{% translate "Идентификация:" %} {{ act.issuer_signer.email }}</div>
         {% elif seller_profile.signatory_name %}<div class="sign-line">{% translate "Подписант" as default_signatory %}{{ seller_profile.signatory_position|default:default_signatory }}: {{ seller_profile.signatory_name }}</div>{% else %}<div class="sign-line">{% translate "Подпись / дата" %}</div>{% endif %}
         <div class="seal">{% translate "М.П." %}</div>

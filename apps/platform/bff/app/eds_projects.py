@@ -275,6 +275,20 @@ class ErpProjects:
         )
         return await self.card(ref)
 
+    async def request_signing(self, ref: str, kind: str, document_id: int) -> ProjectCard:
+        """На подпись уполномоченному (SIGN-4): документ должен принадлежать этому проекту."""
+        card = await self.raw_card(ref)
+        allowed = {
+            "contract": {card.contract.id} if card.contract else set(),
+            "act": {card.act.id} if card.act else set(),
+            "invoice": {item.id for item in card.invoices},
+        }
+        if document_id not in allowed[kind]:
+            raise not_found()
+        slug = {"contract": "contracts", "invoice": "invoices", "act": "acts"}[kind]
+        await self._json("POST", f"{API}/{slug}/{document_id}/request-signing/")
+        return await self.card(ref)
+
     async def act_action(self, ref: str, body: ActActionIn) -> ProjectCard:
         card = await self.raw_card(ref)
         if body.action == "issue":

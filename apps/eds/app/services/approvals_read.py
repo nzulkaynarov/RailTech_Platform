@@ -39,6 +39,16 @@ def object_of(
             deal_number=route.deal_number,
             superseded_by_version=(newer or {}).get(route.id),
         )
+    if route.template == ApprovalTemplate.SIGNING.value:
+        snap = route.signing_snapshot or {}
+        return ApprovalObject(
+            kind=ApprovalTemplate.SIGNING,
+            signing_kind=snap.get("kind"),
+            signing_number=snap.get("number"),
+            signing_version=snap.get("version"),
+            signing_amount_tiyins=snap.get("amount_tiyins"),
+            signing_currency=snap.get("currency"),
+        )
     return ApprovalObject(
         kind=ApprovalTemplate(route.template),
         document_id=route.document_id,

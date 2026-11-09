@@ -21,6 +21,7 @@ import { PageHeader } from "../../../shared/ui/PageHeader";
 import { RequestSteps } from "../../../shared/ui/RequestSteps";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { isActionable } from "../../bridge";
+import { SigningButton } from "./SigningButton";
 import { fileUrl, projectRef } from "./api";
 import { FileLinks } from "./FileLinks";
 import { DeliveryActions } from "./DeliveryMarks";
@@ -94,6 +95,7 @@ function InvoiceRows({ card, objectId }: { card: ProjectCard; objectId: string }
           {t("card.documents.payments")}
         </LinkButton>
       ) : null}
+      <SigningButton objectId={objectId} kind="invoice" documentId={invoice.id} />
     </>
   );
   if (card.invoices.length === 0) {

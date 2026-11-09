@@ -90,6 +90,14 @@ def object_ref(route: ApprovalRoute, document: Document | None) -> dict[str, Any
             "erp_deal_id": route.erp_deal_id,
             "deal_number": route.deal_number,
         }
+    if route.template == ApprovalTemplate.SIGNING.value:
+        snap = route.signing_snapshot or {}
+        return {
+            "kind": "signing",
+            "signing_kind": snap.get("kind"),
+            "signing_number": snap.get("number"),
+            "signing_version": snap.get("version"),
+        }
     if document is None or document.number is None:
         raise RuntimeError("маршрут документа открывается только для документа с номером реестра")
     return {"kind": route.template, "eds_document_id": str(document.id), "number": document.number}
@@ -105,6 +113,8 @@ def approval_ref(route: ApprovalRoute, document: Document | None) -> dict[str, A
 
 
 def _subject(route: ApprovalRoute, document: Document | None) -> str:
+    if route.template == ApprovalTemplate.SIGNING.value:
+        return str((route.signing_snapshot or {}).get("number") or route.id)
     return (route.quote_number if document is None else document.number) or str(route.id)
 
 
@@ -195,6 +205,10 @@ async def decide(
     late: str | None = None
     if route.template == ApprovalTemplate.QUOTE.value and body.decision is Decision.APPROVE:
         late = await _require_green(session, route)
+    if route.template == ApprovalTemplate.SIGNING.value:
+        from app.services import commercial_signing  # взаимная зависимость: шаг подписи закрывается через `complete_step`
+
+        return await commercial_signing.decide(session, bus, employee, route, steps, current, body)
     return await _apply(session, bus, employee, route, steps, current, body, late=late)
 
 

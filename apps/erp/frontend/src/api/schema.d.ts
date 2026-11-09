@@ -6398,6 +6398,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/acts/{id}/request-signing/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Акты — только чтение плюс сервисные экшены ниже (Rule 8).
+         *
+         *     Выпуск — через `invoices/{id}/generate-act/` (там же проверяется роутинг
+         *     продавца, аудит H4), подпись — через `acts/{id}/sign/`. Сырые create/update/
+         *     destroy обходили обе проверки и позволяли проставить номер, статус и даты руками.
+         */
+        post: operations["crm_acts_request_signing_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/acts/{id}/signing-status/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Акты — только чтение плюс сервисные экшены ниже (Rule 8).
+         *
+         *     Выпуск — через `invoices/{id}/generate-act/` (там же проверяется роутинг
+         *     продавца, аудит H4), подпись — через `acts/{id}/sign/`. Сырые create/update/
+         *     destroy обходили обе проверки и позволяли проставить номер, статус и даты руками.
+         */
+        get: operations["crm_acts_signing_status_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/analytics/dashboard/": {
         parameters: {
             query?: never;
@@ -6780,6 +6826,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/contracts/{id}/request-signing/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Contracts -- generated from approved quotes, double-signed. */
+        post: operations["crm_contracts_request_signing_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/contracts/{id}/revise/": {
         parameters: {
             query?: never;
@@ -6854,6 +6917,23 @@ export interface paths {
          * @description Contracts -- generated from approved quotes, double-signed.
          */
         post: operations["crm_contracts_sign_manager_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/contracts/{id}/signing-status/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Contracts -- generated from approved quotes, double-signed. */
+        get: operations["crm_contracts_signing_status_retrieve"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -7783,6 +7863,58 @@ export interface paths {
          * @description Идемпотентность по `reference`: повтор с тем же референсом, суммой и датой возвращает существующий платёж (200); тот же референс с другой суммой или датой — 409 `PAYMENT_REFERENCE_CONFLICT`.
          */
         post: operations["crm_invoices_record_payment_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/invoices/{id}/request-signing/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description Счета. Сырые `create`/`destroy` НЕ подключены намеренно (Rule 8).
+         *
+         *     Выставление счёта — только через сервисные экшены `create-manual` и
+         *     `generate-from-contract`; отмена — через `cancel` (сервис `cancel_invoice`).
+         *     Сырое удаление обходило бы отмену, а при наличии платежей падало бы в
+         *     `ProtectedError` → 500 (`Payment.invoice` объявлен с `on_delete=PROTECT`).
+         *     `update` оставлен: им правят черновик (due_date / notes), и он уже загейчен
+         *     на DRAFT ниже — фронтенд использует именно его.
+         */
+        post: operations["crm_invoices_request_signing_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/invoices/{id}/signing-status/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * @description Счета. Сырые `create`/`destroy` НЕ подключены намеренно (Rule 8).
+         *
+         *     Выставление счёта — только через сервисные экшены `create-manual` и
+         *     `generate-from-contract`; отмена — через `cancel` (сервис `cancel_invoice`).
+         *     Сырое удаление обходило бы отмену, а при наличии платежей падало бы в
+         *     `ProtectedError` → 500 (`Payment.invoice` объявлен с `on_delete=PROTECT`).
+         *     `update` оставлен: им правят черновик (due_date / notes), и он уже загейчен
+         *     на DRAFT ниже — фронтенд использует именно его.
+         */
+        get: operations["crm_invoices_signing_status_retrieve"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -10924,6 +11056,32 @@ export interface components {
             id: number;
             number: string;
             status: components["schemas"]["ProjectActStatusEnum"];
+        };
+        /**
+         * @description Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.
+         *
+         *     Зачем. SPA выводила роль из `activeStatus` (= первый тип компании), поэтому компания,
+         *     которая одновременно покупает и продаёт, не видела продавцовских кнопок: «Сформировать
+         *     акт» пряталась за `!isBuyer`, и у dual-компании с порядком типов [CLIENT, SUPPLIER]
+         *     кнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`
+         *     у договора.
+         *
+         *     Поля-подсказки НЕ являются полным правом: подписку и стадию проверит сервис,
+         *     выполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку
+         *     кнопок чужой стороны.
+         */
+        ActRequest: {
+            /** Сделка */
+            deal: number;
+            contract?: number | null;
+            invoice?: number | null;
+            /** Format: date */
+            issued_at?: string | null;
+            /** Format: decimal */
+            total_amount?: string;
+            /** Format: binary */
+            signed_file?: string | null;
+            notes?: string;
         };
         ActReturnInRequest: {
             /** @description Причина возврата акта заказчиком — обязательна */
@@ -31604,6 +31762,63 @@ export interface operations {
             404: components["responses"]["NotFoundResponse"];
         };
     };
+    crm_acts_request_signing_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Акт. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ActRequest"];
+                "multipart/form-data": components["schemas"]["ActRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Act"];
+                };
+            };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
+        };
+    };
+    crm_acts_signing_status_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Акт. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Act"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
+        };
+    };
     crm_analytics_dashboard_retrieve: {
         parameters: {
             query?: {
@@ -32466,6 +32681,38 @@ export interface operations {
             };
         };
     };
+    crm_contracts_request_signing_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Контракт. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContractRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ContractRequest"];
+                "multipart/form-data": components["schemas"]["ContractRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Contract"];
+                };
+            };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
+        };
+    };
     crm_contracts_revise_create: {
         parameters: {
             query?: never;
@@ -32655,6 +32902,31 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
+        };
+    };
+    crm_contracts_signing_status_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Контракт. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Contract"];
+                };
+            };
             401: components["responses"]["UnauthorizedResponse"];
             403: components["responses"]["ForbiddenResponse"];
             404: components["responses"]["NotFoundResponse"];
@@ -34370,6 +34642,63 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorDetail"];
                 };
             };
+        };
+    };
+    crm_invoices_request_signing_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Инвойс. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvoiceRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["InvoiceRequest"];
+                "multipart/form-data": components["schemas"]["InvoiceRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Invoice"];
+                };
+            };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
+        };
+    };
+    crm_invoices_signing_status_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Инвойс. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Invoice"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_invoices_create_manual_create: {

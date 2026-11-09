@@ -27,6 +27,7 @@ import { FileLinks } from "./FileLinks";
 import { NoteField, ReasonForm, ScanForm } from "./forms";
 import { contractStateKey, journalText } from "./model";
 import { ProjectStatusTag } from "./status";
+import { SigningButton } from "./SigningButton";
 import { useApplyCard } from "./useProjectMutations";
 
 type Action = ProjectContractActionInAction;
@@ -385,6 +386,8 @@ function ContractBody({
           />
         </ActionToggle>
       ) : null}
+
+      <SigningButton objectId={objectId} kind="contract" documentId={contract.id} />
 
       <section aria-label={t("contract.history")}>
         <h3 className="pf-dec-subhead">{t("contract.history")}</h3>

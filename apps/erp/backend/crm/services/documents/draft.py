@@ -31,7 +31,8 @@ def quote_is_draft(quote) -> bool:
 
 
 def contract_is_draft(contract) -> bool:
-    return contract.status_code == ContractStatusCode.DRAFT
+    # Подписанный уполномоченным договор — не проект, хотя статус ещё DRAFT (SIGN-4, FX-10).
+    return contract.status_code == ContractStatusCode.DRAFT and not contract.verification_code
 
 
 def invoice_is_draft(invoice) -> bool:
