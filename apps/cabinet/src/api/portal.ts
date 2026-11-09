@@ -618,8 +618,13 @@ export const listPartnerOrders = (params: PartnerOrdersQuery = {}) =>
 export const getPartnerOrder = (id: number) =>
   portalRequest<PartnerOrderDetail>(`/partner/orders/${id}`);
 
-export const confirmPartnerOrder = (id: number, body?: PartnerOrderConfirmRequest) =>
-  portalRequest<PartnerOrderDetail>(`/partner/orders/${id}/confirm`, { method: 'POST', body: body ?? {} });
+export const confirmPartnerOrder = (id: number, body: PartnerOrderConfirmRequest) =>
+  portalRequest<PartnerOrderDetail>(`/partner/orders/${id}/confirm`, { method: 'POST', body });
+
+export type PartnerOrderDateChangeRequest = Schemas['PartnerOrderDateChangeRequest'];
+
+export const requestPartnerOrderDateChange = (id: number, body: PartnerOrderDateChangeRequest) =>
+  portalRequest<PartnerOrderDetail>(`/partner/orders/${id}/date-change`, { method: 'POST', body });
 
 export const shipPartnerOrder = (id: number, body: PartnerShipmentNoticeRequest) =>
   portalRequest<PartnerOrderDetail>(`/partner/orders/${id}/ship`, { method: 'POST', body });

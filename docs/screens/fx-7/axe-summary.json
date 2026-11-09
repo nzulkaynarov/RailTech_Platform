@@ -1,0 +1,98 @@
+[
+  {
+    "screen": "orders-list",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 43,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "orders-list",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "confirm-dialog",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 34,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "confirm-dialog",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 34,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "date-change-dialog",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 34,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "date-change-dialog",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 34,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "order-date-change",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 35,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "order-date-change",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 35,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "rfq-respond-dialog",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 33,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "rfq-respond-dialog",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 33,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "order-not-found",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 36,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "order-not-found",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 34,
+    "overflowPx": 0,
+    "violations": []
+  }
+]

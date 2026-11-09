@@ -333,6 +333,7 @@ MY_PRODUCTS_PATHS = {
     "/partner/orders",
     "/partner/orders/{id}",
     "/partner/orders/{id}/confirm",
+    "/partner/orders/{id}/date-change",
     "/partner/orders/{id}/ship",
     "/partner/price-requests",
     "/partner/price-requests/{id}",

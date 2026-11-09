@@ -58,6 +58,7 @@ from portal.views_partner import (
     PartnerConfirmView,
     PartnerFinanceView,
     PartnerOrderConfirmView,
+    PartnerOrderDateChangeView,
     PartnerOrderDetailView,
     PartnerOrderListView,
     PartnerOrderShipView,
@@ -243,6 +244,16 @@ urlpatterns = [
     path("partner/orders/<int:pk>/confirm", PartnerOrderConfirmView.as_view(), name="portal-partner-order-confirm"),
     path(
         "partner/orders/<int:pk>/confirm/", PartnerOrderConfirmView.as_view(), name="portal-partner-order-confirm-slash"
+    ),
+    path(
+        "partner/orders/<int:pk>/date-change",
+        PartnerOrderDateChangeView.as_view(),
+        name="portal-partner-order-date-change",
+    ),
+    path(
+        "partner/orders/<int:pk>/date-change/",
+        PartnerOrderDateChangeView.as_view(),
+        name="portal-partner-order-date-change-slash",
     ),
     path("partner/orders/<int:pk>/ship", PartnerOrderShipView.as_view(), name="portal-partner-order-ship"),
     path("partner/orders/<int:pk>/ship/", PartnerOrderShipView.as_view(), name="portal-partner-order-ship-slash"),

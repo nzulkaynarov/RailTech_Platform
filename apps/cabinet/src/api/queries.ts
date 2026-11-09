@@ -327,9 +327,16 @@ export const usePartnerOrderDetail = (id: number | null, options: ListOptions = 
 
 export const useConfirmPartnerOrder = () =>
   useInvalidatingMutation(
-    ({ id, body }: { id: number; body?: portal.PartnerOrderConfirmRequest }) =>
+    ({ id, body }: { id: number; body: portal.PartnerOrderConfirmRequest }) =>
       portal.confirmPartnerOrder(id, body),
     [keys.partnerOrders, keys.partnerFinance],
+  );
+
+export const useRequestPartnerOrderDateChange = () =>
+  useInvalidatingMutation(
+    ({ id, body }: { id: number; body: portal.PartnerOrderDateChangeRequest }) =>
+      portal.requestPartnerOrderDateChange(id, body),
+    [keys.partnerOrders],
   );
 
 export const useShipPartnerOrder = () =>

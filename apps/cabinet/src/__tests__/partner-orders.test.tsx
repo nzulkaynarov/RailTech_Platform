@@ -96,6 +96,109 @@ describe('Заказы на поставку (PO, ASN) и запросы цен 
     expect(await screen.findByText('Ответ дан')).toBeInTheDocument();
   });
 
+  it('FX-7: без даты заказ не подтверждается, диалог объясняет почему', async () => {
+    signedIn('actor', 'demo', PARTNER_ACCESS);
+    const user = userEvent.setup();
+    renderApp('/partner/orders');
+
+    await screen.findByText('PO-2026-0041');
+    await user.click(screen.getAllByRole('button', { name: 'Подтвердить' })[0]!);
+    const dialog = await screen.findByRole('dialog');
+    await user.clear(within(dialog).getByLabelText('Плановая дата поставки'));
+    await user.click(within(dialog).getByRole('button', { name: 'Подтвердить' }));
+
+    expect(await within(dialog).findByText('Укажите дату поставки.')).toBeInTheDocument();
+    expect(await screen.findByText('PO-2026-0041')).toBeInTheDocument();
+  });
+
+  it('FX-7: другая дата при подтверждении не меняет срок и показывает запрос на перенос', async () => {
+    signedIn('actor', 'demo', PARTNER_ACCESS);
+    const user = userEvent.setup();
+    renderApp('/partner/orders');
+
+    await screen.findByText('PO-2026-0041');
+    await user.click(screen.getAllByRole('button', { name: 'Подтвердить' })[0]!);
+    const confirm = await screen.findByRole('dialog');
+    const date = within(confirm).getByLabelText('Плановая дата поставки');
+    await user.clear(date);
+    await user.type(date, '30112026');
+    await user.click(within(confirm).getByRole('button', { name: 'Подтвердить' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    await user.click(await screen.findByRole('button', { name: 'PO-2026-0041' }));
+    const card = await screen.findByRole('dialog');
+    expect(await within(card).findByText(/Вы запросили перенос на 30 нояб\. 2026/)).toBeInTheDocument();
+    expect(within(card).getByText('20 нояб. 2026 г.')).toBeInTheDocument();
+  });
+
+  it('FX-7: отгрузка доступна только у подтверждённого заказа', async () => {
+    signedIn('actor', 'demo', PARTNER_ACCESS);
+    renderApp('/partner/orders');
+
+    await screen.findByText('PO-2026-0041');
+    expect(screen.getAllByRole('button', { name: 'Отгрузить (ASN)' })).toHaveLength(1);
+  });
+
+  it('FX-7: запрос на перенос у подтверждённого заказа', async () => {
+    signedIn('actor', 'demo', PARTNER_ACCESS);
+    const user = userEvent.setup();
+    renderApp('/partner/orders?orderId=8002');
+
+    const card = await screen.findByRole('dialog');
+    await within(card).findByText('Заказ PO-2026-0042');
+    await user.click(within(card).getByRole('button', { name: 'Перенести срок' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Запрос на перенос срока' });
+    await user.type(within(dialog).getByLabelText(/Новая дата поставки/), '10122026');
+    await user.type(within(dialog).getByLabelText('Причина'), 'Задержка сырья');
+    await user.click(within(dialog).getByRole('button', { name: 'Отправить запрос' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    await user.click(await screen.findByRole('button', { name: 'PO-2026-0042' }));
+    expect(await within(await screen.findByRole('dialog')).findByText(/Вы запросили перенос на 10 дек\. 2026/)).toBeInTheDocument();
+  });
+
+  it('FX-7: карточка несуществующего заказа показывает ошибку, а не вечный скелетон', async () => {
+    signedIn('actor', 'demo', PARTNER_ACCESS);
+    renderApp('/partner/orders?orderId=999999');
+
+    const dialog = await screen.findByRole('dialog');
+    expect(await within(dialog).findByText('Не удалось открыть')).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Повторить' })).toBeInTheDocument();
+  });
+
+  it('FX-7: карточка несуществующего запроса цен показывает ошибку', async () => {
+    signedIn('actor', 'demo', PARTNER_ACCESS);
+    renderApp('/partner/orders?view=rfq&rfqId=999999');
+
+    const dialog = await screen.findByRole('dialog');
+    expect(await within(dialog).findByText('Не удалось открыть')).toBeInTheDocument();
+  });
+
+  it('FX-7: ответ с ценами показывает цену партнёра и больше не предлагает ответить', async () => {
+    signedIn('actor', 'demo', PARTNER_ACCESS);
+    const user = userEvent.setup();
+    renderApp('/partner/orders?view=rfq');
+
+    await screen.findByText('Запрос цен на тормозные колодки и втулки (Q4)');
+    await user.click(screen.getByRole('button', { name: 'Ответить' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.type(within(dialog).getByLabelText(/Коммерческие условия и цены/), 'Колодки в наличии');
+    await user.type(await within(dialog).findByLabelText('Втулка резиновая'), 'абв');
+    await user.click(within(dialog).getByRole('button', { name: 'Отправить ответ' }));
+    expect(await within(dialog).findByText(/Цена — положительное число/)).toBeInTheDocument();
+
+    await user.clear(within(dialog).getByLabelText('Втулка резиновая'));
+    await user.type(within(dialog).getByLabelText('Втулка резиновая'), '1250,50');
+    await user.click(within(dialog).getByRole('button', { name: 'Отправить ответ' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    await user.click(await screen.findByRole('button', { name: 'Запрос цен на тормозные колодки и втулки (Q4)' }));
+    const card = await screen.findByRole('dialog');
+    expect(await within(card).findByText(/1\s250,50/)).toBeInTheDocument();
+    expect(within(card).queryByRole('button', { name: 'Ответить' })).not.toBeInTheDocument();
+  });
+
   it('отображает складские приёмки и расхождения в карточке заказа (K3-supply-docs)', async () => {
     signedIn('actor', 'demo', PARTNER_ACCESS);
     const user = userEvent.setup();
@@ -147,4 +250,3 @@ describe('Заказы на поставку (PO, ASN) и запросы цен 
     expect(screen.getByText('PO-2026-0042')).toBeInTheDocument();
   });
 });
-

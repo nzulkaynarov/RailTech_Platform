@@ -6,9 +6,11 @@
 
 import base64
 import uuid
+from datetime import timedelta
 from types import SimpleNamespace
 
 import pytest
+from django.utils import timezone
 from portal.tests.contract_support import check_response, component, contract_get_paths, response_schema
 from portal.tests.partner_world import PREFIX, row, upload, xlsx
 from portal.tests.test_contract_guard import PARTNER_GET_PATHS
@@ -208,15 +210,16 @@ def test_partner_orders_and_rfq_match_contract(partner_world):
     assert foreign_resp.status_code == 404
 
     # Подтверждение заказа (POST /partner/orders/{id}/confirm)
+    promised = (timezone.localdate() + timedelta(days=30)).isoformat()
     confirm_resp = w["client_a"].post(
         f"{PREFIX}/orders/{order_sent.id}/confirm",
-        {"expected_date": "2026-12-01"},
+        {"expected_date": promised},
         format="json",
     )
     assert confirm_resp.status_code == 200
     assert_matches(confirm_resp.json(), "/partner/orders/{id}/confirm", "post")
     assert confirm_resp.json()["status"] == "confirmed"
-    assert confirm_resp.json()["expected_date"] == "2026-12-01"
+    assert confirm_resp.json()["expected_date"] == promised
 
     # Уведомление об отгрузке (POST /partner/orders/{id}/ship)
     ship_resp = w["client_a"].post(
@@ -231,7 +234,7 @@ def test_partner_orders_and_rfq_match_contract(partner_world):
     )
     assert ship_resp.status_code == 200
     assert_matches(ship_resp.json(), "/partner/orders/{id}/ship", "post")
-    assert any("ТОРГ-12-999" in log["detail"] for log in ship_resp.json()["logs"])
+    assert [row["supplier_doc"] for row in ship_resp.json()["shipment_notices"]] == ["ТОРГ-12-999"]
 
     # 2. Запросы цен (PriceRequest)
     rfq_a = PriceRequest.objects.create(
