@@ -243,7 +243,9 @@ class PriceRequest(models.Model):
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )
     answer_note = models.CharField(max_length=1000, blank=True, default="")
-    answer_currency = models.ForeignKey("core.Currency", null=True, blank=True, on_delete=models.PROTECT, related_name="+")
+    answer_currency = models.ForeignKey(
+        "core.Currency", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
+    )
 
     class Meta:
         verbose_name = _("Запрос цены поставщику")

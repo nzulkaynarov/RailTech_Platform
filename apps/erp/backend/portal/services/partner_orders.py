@@ -89,7 +89,9 @@ def _supply_recipients(company, author) -> list:
         .select_related("responsible")
         .first()
     )
-    people = {user.pk: user for user in (author, relationship.responsible if relationship else None) if user is not None}
+    people = {
+        user.pk: user for user in (author, relationship.responsible if relationship else None) if user is not None
+    }
     active = [user for user in people.values() if user.is_active]
     if active:
         return active
@@ -455,7 +457,8 @@ def ship_partner_order(
         company,
         order.created_by,
         title=f"Партнёр отгрузил заказ {order.number}",
-        message=f"«{company.name}»: накладная {supplier_doc}." + (f" Трек: {tracking_number}." if tracking_number else ""),
+        message=f"«{company.name}»: накладная {supplier_doc}."
+        + (f" Трек: {tracking_number}." if tracking_number else ""),
         event_code=EVENT_SHIPPED,
         params={"number": order.number, "supplier": company.name, "supplier_doc": supplier_doc},
     )
