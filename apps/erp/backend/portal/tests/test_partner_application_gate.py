@@ -562,6 +562,31 @@ class TestBindingIsNotRewritten:
         assert not Contact.objects.filter(company=other).exists()
         assert not CompanyRelationship.objects.filter(company=other).exists()
 
+    def test_send_contract_cannot_move_bound_application_to_another_company(self, supply):
+        """B-FX1-1: `company_id` у привязанной заявки не игнорируется молча — ни для внешней заявки, ни для внутренней."""
+        bound = Company.objects.create(name="Привязанная", inn="7746666671", is_active=True)
+        other = Company.objects.create(name="Другая", inn="7746666672", is_active=True)
+        app = agreed_app(bound)
+
+        response = post(supply, app, "send-contract", {"company_id": other.pk, "contract_number": "D-2"})
+
+        assert response.status_code == 400
+        assert response.json()["detail"] == "COMPANY_MISMATCH"
+        app.refresh_from_db()
+        assert app.company_id == bound.pk and app.status == PartnerApplicationStatus.CANDIDATE_AGREED
+        assert app.contract_number != "D-2"
+
+    def test_rejected_application_archives_created_contact_without_rights(self, supply):
+        """B-FX1-1: заведённый заявкой контакт в архиве не сохраняет `can_act` и `is_admin`."""
+        app = make_app(inn="7746666673")
+        assert post(supply, app, "send-contract", {"contract_number": "D-3"}).status_code == 200
+        app.refresh_from_db()
+        contact = app.applicant_contact
+        assert contact.can_act is True and contact.is_admin is True
+        assert post(supply, app, "reject", {"rejected_reason": "Передумали"}).status_code == 200
+        contact.refresh_from_db()
+        assert contact.is_archived and contact.can_act is False and contact.is_admin is False
+
     def test_approve_with_the_same_bound_company_goes_through(self, supply):
         bound = Company.objects.create(name="Привязанная", inn="7746666670", is_active=True)
         app = agreed_app(bound)

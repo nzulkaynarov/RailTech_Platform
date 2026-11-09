@@ -20,7 +20,7 @@ from typing import Dict, List, Optional, Tuple
 
 from django.db import transaction
 from django.utils import timezone
-from parties.models import Contact
+from parties.models import Contact, active_contact_q
 from portal.exceptions import PortalDeliveryFailed, PortalValidationError
 from portal.models import MagicLinkToken
 from portal.services.access import company_has_cabinet_access, company_in_circulation, company_roles
@@ -231,7 +231,7 @@ def invite_team_member(company, inviter, data: dict) -> Contact:
     if not email:
         raise PortalValidationError("CONTACT_EMAIL_REQUIRED")
 
-    existing = Contact.objects.filter(company=company)
+    existing = Contact.objects.filter(active_contact_q(), company=company)
     if existing.filter(email__iexact=email).exists() or (phone and existing.filter(phone=phone).exists()):
         raise PortalValidationError("TEAM_MEMBER_EXISTS")
 

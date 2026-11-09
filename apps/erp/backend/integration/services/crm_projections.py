@@ -28,6 +28,7 @@ from typing import Any, Mapping, Optional
 
 from django.db import transaction
 from django.utils.dateparse import parse_datetime
+from parties.company_admin import ensure_company_admin
 from parties.models import Company, Contact
 
 from ..models import CrmClientMapping, CrmContactMapping, CrmProjectionKind, CrmProjectionState
@@ -268,12 +269,22 @@ def archive_contact(contact: Contact, at: datetime) -> None:
 
     contact.archived_at = at
     contact.can_act = False
+    contact.is_admin = False
     contact.telegram_user_id = None
     contact.telegram_username = ""
     contact.telegram_name = ""
     contact.save(
-        update_fields=["archived_at", "can_act", "telegram_user_id", "telegram_username", "telegram_name", "updated_at"]
+        update_fields=[
+            "archived_at",
+            "can_act",
+            "is_admin",
+            "telegram_user_id",
+            "telegram_username",
+            "telegram_name",
+            "updated_at",
+        ]
     )
+    ensure_company_admin(contact.company)
     PortalSession.objects.filter(contact=contact).delete()
     MagicLinkToken.objects.filter(contact=contact).delete()
 
