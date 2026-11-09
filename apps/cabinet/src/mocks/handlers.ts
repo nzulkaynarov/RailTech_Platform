@@ -1471,20 +1471,40 @@ export const handlers = [
       async ({ db, params, request }) => {
         const item = byId(db.partnerOrders, params.id);
         if (!item) return error(404, 'NOT_FOUND');
-        if (item.status === 'received' || item.status === 'cancelled') return error(409, 'ORDER_FINALIZED');
-        const body = ((await readJson<Schemas['PartnerOrderConfirmRequest']>(request).catch(() => ({}))) ||
-          {}) as Schemas['PartnerOrderConfirmRequest'];
+        if (item.status !== 'sent') return error(409, 'TRANSITION_NOT_ALLOWED');
+        const body = await readJson<Schemas['PartnerOrderConfirmRequest']>(request);
+        if (!body.expected_date) return error(422, 'VALIDATION_ERROR');
         item.status = 'confirmed';
         item.confirmed_at = new Date().toISOString();
-        if (body.expected_date !== undefined) {
+        if (!item.expected_date) {
           item.expected_date = body.expected_date;
+        } else if (item.expected_date !== body.expected_date) {
+          item.date_change = { requested_date: body.expected_date, reason: '', requested_at: item.confirmed_at };
         }
         item.logs.unshift({
           id: Math.max(8200, ...item.logs.map((l) => l.id)) + 1,
           kind: 'confirmed',
-          detail: 'Подтверждён поставщиком в портале',
           created_at: item.confirmed_at,
         });
+        return json(item);
+      },
+      { action: true },
+    ),
+  ),
+  http.post<IdParams>(
+    `${API}/partner/orders/:id/date-change`,
+    withSession<IdParams>(
+      async ({ db, params, request }) => {
+        const item = byId(db.partnerOrders, params.id);
+        if (!item) return error(404, 'NOT_FOUND');
+        if (item.status !== 'confirmed') return error(409, 'ORDER_NOT_CONFIRMED');
+        const body = await readJson<Schemas['PartnerOrderDateChangeRequest']>(request);
+        if (!body.requested_date || body.requested_date === item.expected_date) return error(422, 'VALIDATION_ERROR');
+        item.date_change = {
+          requested_date: body.requested_date,
+          reason: body.reason?.trim() ?? '',
+          requested_at: new Date().toISOString(),
+        };
         return json(item);
       },
       { action: true },
@@ -1496,23 +1516,20 @@ export const handlers = [
       async ({ db, params, request }) => {
         const item = byId(db.partnerOrders, params.id);
         if (!item) return error(404, 'NOT_FOUND');
-        if (item.status === 'received' || item.status === 'cancelled') return error(409, 'ORDER_FINALIZED');
+        if (item.status !== 'confirmed') return error(409, 'ORDER_NOT_CONFIRMED');
         const body = await readJson<Schemas['PartnerShipmentNoticeRequest']>(request);
-        if (!body.supplier_doc?.trim()) return error(422, 'VALIDATION_ERROR');
-        if (item.status === 'draft' || item.status === 'sent') {
-          item.status = 'confirmed';
-          if (!item.confirmed_at) item.confirmed_at = new Date().toISOString();
+        const doc = body.supplier_doc?.trim();
+        if (!doc) return error(422, 'VALIDATION_ERROR');
+        if (item.shipment_notices.some((row) => row.supplier_doc.toLowerCase() === doc.toLowerCase())) {
+          return error(409, 'SHIPMENT_NOTICE_DUPLICATE');
         }
-        const now = new Date().toISOString();
-        const parts = [`УПД/накладная: ${body.supplier_doc.trim()}`];
-        if (body.carrier?.trim()) parts.push(`перевозчик: ${body.carrier.trim()}`);
-        if (body.tracking_number?.trim()) parts.push(`трек: ${body.tracking_number.trim()}`);
-        if (body.note?.trim()) parts.push(`прим.: ${body.note.trim()}`);
-        item.logs.unshift({
-          id: Math.max(8200, ...item.logs.map((l) => l.id)) + 1,
-          kind: 'shipped',
-          detail: parts.join(', '),
-          created_at: now,
+        item.shipment_notices.push({
+          id: Math.max(8400, ...item.shipment_notices.map((row) => row.id)) + 1,
+          supplier_doc: doc,
+          carrier: body.carrier?.trim() ?? '',
+          tracking_number: body.tracking_number?.trim() ?? '',
+          note: body.note?.trim() ?? '',
+          created_at: new Date().toISOString(),
         });
         return json(item);
       },
@@ -1568,9 +1585,17 @@ export const handlers = [
         const item = byId(db.partnerPriceRequests, params.id);
         if (!item) return error(404, 'NOT_FOUND');
         const body = await readJson<Schemas['PartnerPriceRequestResponse']>(request);
+        if (item.status === 'failed') return error(409, 'REQUEST_NOT_SENT');
+        if (item.status === 'answered') return error(409, 'ALREADY_ANSWERED');
         if (!body.answer_note?.trim()) return error(422, 'VALIDATION_ERROR');
         item.status = 'answered';
         item.answer_note = body.answer_note.trim();
+        item.answer_currency = body.lines?.length ? (body.currency ?? null) : null;
+        for (const row of body.lines ?? []) {
+          const line = item.lines.find((candidate) => candidate.id === row.id);
+          if (!line) return error(422, 'VALIDATION_ERROR');
+          line.answer_price = row.unit_price;
+        }
         item.answered_at = new Date().toISOString();
         return json(item);
       },

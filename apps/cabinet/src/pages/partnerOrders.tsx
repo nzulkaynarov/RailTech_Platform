@@ -33,6 +33,7 @@ import {
   usePartnerOrders,
   usePartnerPriceRequestDetail,
   usePartnerPriceRequests,
+  useRequestPartnerOrderDateChange,
   useRespondPartnerPriceRequest,
   useShipPartnerOrder,
 } from '@/api/queries';
@@ -74,6 +75,14 @@ const ORDER_TABS: ReadonlyArray<'all' | 'sent' | 'confirmed' | 'received' | 'can
 
 const RFQ_TABS: ReadonlyArray<'all' | 'sent' | 'answered'> = ['all', 'sent', 'answered'];
 
+const PRICE_RE = /^\d{1,12}([.,]\d{1,2})?$/;
+const CURRENCY_RE = /^[A-Z]{3}$/;
+
+/** Сумма заказа: валюта в заказе может быть не указана — тогда только число, без чужой валюты. */
+function orderAmount(amount: string, currency: string | null | undefined) {
+  return currency ? formatMoney({ amount, currency }) : amount;
+}
+
 export function PartnerOrdersPage() {
   const { t } = useTranslation();
   const [params] = useSearchParams();
@@ -94,7 +103,15 @@ export function PartnerOrdersPage() {
   // Dialog state for confirming order
   const [confirmOrderId, setConfirmOrderId] = useState<number | null>(null);
   const [expectedDate, setExpectedDate] = useState<string | null>('');
+  const [confirmError, setConfirmError] = useState<string | null>(null);
   const confirmOrder = useConfirmPartnerOrder();
+
+  // Dialog state for a date change request
+  const [dateChangeOrderId, setDateChangeOrderId] = useState<number | null>(null);
+  const [requestedDate, setRequestedDate] = useState<string | null>('');
+  const [dateChangeReason, setDateChangeReason] = useState<string>('');
+  const [dateChangeError, setDateChangeError] = useState<string | null>(null);
+  const requestDateChange = useRequestPartnerOrderDateChange();
 
   // Dialog state for shipping order (ASN)
   const [shipOrderId, setShipOrderId] = useState<number | null>(null);
@@ -107,7 +124,11 @@ export function PartnerOrdersPage() {
   // Dialog state for responding to RFQ
   const [respondRfqId, setRespondRfqId] = useState<number | null>(null);
   const [answerNote, setAnswerNote] = useState<string>('');
+  const [linePrices, setLinePrices] = useState<Record<number, string>>({});
+  const [priceCurrency, setPriceCurrency] = useState<string>('UZS');
+  const [respondError, setRespondError] = useState<string | null>(null);
   const respondRfq = useRespondPartnerPriceRequest();
+  const respondRfqQuery = usePartnerPriceRequestDetail(respondRfqId);
 
   // Queries
   const ordersQuery = usePartnerOrders(
@@ -141,16 +162,52 @@ export function PartnerOrdersPage() {
 
   const handleConfirmSubmit = () => {
     if (!confirmOrderId) return;
+    if (!expectedDate) {
+      setConfirmError(t('pages.partnerOrders.dialogs.dateRequired'));
+      return;
+    }
+    setConfirmError(null);
     confirmOrder.mutate(
       {
         id: confirmOrderId,
-        body: expectedDate ? { expected_date: expectedDate } : {},
+        body: { expected_date: expectedDate },
       },
       {
         onSuccess: () => {
           toast.success(t('pages.partnerOrders.confirmSuccess'));
           setConfirmOrderId(null);
           setExpectedDate('');
+        },
+        onError: (err) => {
+          toast.error(t(apiErrorKey(err)));
+        },
+      },
+    );
+  };
+
+  const closeDateChange = () => {
+    setDateChangeOrderId(null);
+    setRequestedDate('');
+    setDateChangeReason('');
+    setDateChangeError(null);
+  };
+
+  const handleDateChangeSubmit = () => {
+    if (!dateChangeOrderId) return;
+    if (!requestedDate) {
+      setDateChangeError(t('pages.partnerOrders.dialogs.dateRequired'));
+      return;
+    }
+    setDateChangeError(null);
+    requestDateChange.mutate(
+      {
+        id: dateChangeOrderId,
+        body: { requested_date: requestedDate, reason: dateChangeReason.trim() || undefined },
+      },
+      {
+        onSuccess: () => {
+          toast.success(t('pages.partnerOrders.dateChangeSuccess'));
+          closeDateChange();
         },
         onError: (err) => {
           toast.error(t(apiErrorKey(err)));
@@ -189,16 +246,34 @@ export function PartnerOrdersPage() {
 
   const handleRespondSubmit = () => {
     if (!respondRfqId || !answerNote.trim()) return;
+    const priced = Object.entries(linePrices)
+      .map(([id, value]) => ({ id: Number(id), unit_price: value.trim().replace(',', '.') }))
+      .filter((row) => row.unit_price !== '');
+    if (priced.some((row) => !PRICE_RE.test(row.unit_price) || Number(row.unit_price) <= 0)) {
+      setRespondError(t('pages.partnerOrders.dialogs.priceInvalid'));
+      return;
+    }
+    const currency = priceCurrency.trim().toUpperCase();
+    if (priced.length > 0 && !CURRENCY_RE.test(currency)) {
+      setRespondError(t('pages.partnerOrders.dialogs.currencyInvalid'));
+      return;
+    }
+    setRespondError(null);
     respondRfq.mutate(
       {
         id: respondRfqId,
-        body: { answer_note: answerNote.trim() },
+        body: {
+          answer_note: answerNote.trim(),
+          ...(priced.length > 0 ? { currency, lines: priced } : {}),
+        },
       },
       {
         onSuccess: () => {
           toast.success(t('pages.partnerOrders.respondSuccess'));
           setRespondRfqId(null);
           setAnswerNote('');
+          setLinePrices({});
+          setRespondError(null);
         },
         onError: (err) => {
           toast.error(t(apiErrorKey(err)));
@@ -228,7 +303,7 @@ export function PartnerOrdersPage() {
       id: 'totalAmount',
       header: t('pages.partnerOrders.columns.totalAmount'),
       className: 'text-right font-medium',
-      cell: (row) => `${row.total_amount} ${row.currency}`,
+      cell: (row) => orderAmount(row.total_amount, row.currency),
     },
   ];
 
@@ -308,7 +383,7 @@ export function PartnerOrdersPage() {
       />
 
       {/* Primary View Switcher: Orders vs RFQ */}
-      <div className="mb-6 flex gap-2 border-b border-border pb-3">
+      <div className="mb-6 flex flex-wrap gap-2 border-b border-border pb-3">
         <Button
           type="button"
           variant={view === 'orders' ? 'default' : 'ghost'}
@@ -625,7 +700,7 @@ export function PartnerOrdersPage() {
                           {t('pages.partnerOrders.actions.confirm')}
                         </Button>
                       ) : null}
-                      {row.status === 'confirmed' || row.status === 'sent' ? (
+                      {row.status === 'confirmed' ? (
                         <Button
                           size="sm"
                           variant="outline"
@@ -721,7 +796,7 @@ export function PartnerOrdersPage() {
               cell: (row) => (
                 <div className="flex items-center gap-1.5">
                   <CanAct>
-                    {row.status !== 'answered' ? (
+                    {row.status === 'sent' ? (
                       <Button
                         size="sm"
                         variant="default"
@@ -729,6 +804,8 @@ export function PartnerOrdersPage() {
                         onClick={() => {
                           setRespondRfqId(row.id);
                           setAnswerNote('');
+                          setLinePrices({});
+                          setRespondError(null);
                         }}
                       >
                         {t('pages.partnerOrders.actions.respond')}
@@ -782,7 +859,15 @@ export function PartnerOrdersPage() {
         orderId={orderId}
         order={selectedOrderQuery.data ?? null}
         loading={selectedOrderQuery.isPending}
+        error={selectedOrderQuery.isError ? selectedOrderQuery.error : null}
+        onRetry={() => void selectedOrderQuery.refetch()}
         onClose={() => update({ orderId: null })}
+        onDateChangeClick={(id) => {
+          setDateChangeOrderId(id);
+          setRequestedDate('');
+          setDateChangeReason('');
+          setDateChangeError(null);
+        }}
         onConfirmClick={(id, date) => {
           setConfirmOrderId(id);
           setExpectedDate(date ?? '');
@@ -801,10 +886,14 @@ export function PartnerOrdersPage() {
         rfqId={rfqId}
         rfq={selectedRfqQuery.data ?? null}
         loading={selectedRfqQuery.isPending}
+        error={selectedRfqQuery.isError ? selectedRfqQuery.error : null}
+        onRetry={() => void selectedRfqQuery.refetch()}
         onClose={() => update({ rfqId: null })}
         onRespondClick={(id) => {
           setRespondRfqId(id);
           setAnswerNote('');
+          setLinePrices({});
+          setRespondError(null);
         }}
       />
 
@@ -815,6 +904,7 @@ export function PartnerOrdersPage() {
           if (!open) {
             setConfirmOrderId(null);
             setExpectedDate('');
+            setConfirmError(null);
           }
         }}
         title={t('pages.partnerOrders.dialogs.confirmTitle')}
@@ -822,6 +912,7 @@ export function PartnerOrdersPage() {
         confirmLabel={t('pages.partnerOrders.actions.confirm')}
         pending={confirmOrder.isPending}
         error={confirmOrder.error}
+        message={confirmError}
         onSubmit={handleConfirmSubmit}
       >
         <div className="space-y-3 pt-2">
@@ -831,6 +922,37 @@ export function PartnerOrdersPage() {
             value={expectedDate}
             onChange={(val) => setExpectedDate(val)}
           />
+        </div>
+      </ActionDialog>
+
+      {/* Date Change Request Dialog */}
+      <ActionDialog
+        open={dateChangeOrderId !== null}
+        onOpenChange={(open) => {
+          if (!open) closeDateChange();
+        }}
+        title={t('pages.partnerOrders.dialogs.dateChangeTitle')}
+        description={t('pages.partnerOrders.dialogs.dateChangeDescription')}
+        confirmLabel={t('pages.partnerOrders.actions.sendDateChange')}
+        pending={requestDateChange.isPending}
+        error={requestDateChange.error}
+        message={dateChangeError}
+        onSubmit={handleDateChangeSubmit}
+      >
+        <div className="space-y-3 pt-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="date-change-date">{t('pages.partnerOrders.dialogs.newDateLabel')} *</Label>
+            <DateField id="date-change-date" value={requestedDate} onChange={(val) => setRequestedDate(val)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="date-change-reason">{t('pages.partnerOrders.dialogs.reasonLabel')}</Label>
+            <Input
+              id="date-change-reason"
+              maxLength={500}
+              value={dateChangeReason}
+              onChange={(e) => setDateChangeReason(e.target.value)}
+            />
+          </div>
         </div>
       </ActionDialog>
 
@@ -901,6 +1023,8 @@ export function PartnerOrdersPage() {
           if (!open) {
             setRespondRfqId(null);
             setAnswerNote('');
+            setLinePrices({});
+            setRespondError(null);
           }
         }}
         title={t('pages.partnerOrders.dialogs.respondTitle')}
@@ -908,6 +1032,7 @@ export function PartnerOrdersPage() {
         confirmLabel={t('pages.partnerOrders.actions.sendResponse')}
         pending={respondRfq.isPending}
         error={respondRfq.error}
+        message={respondError}
         onSubmit={handleRespondSubmit}
       >
         <div className="space-y-3 pt-2">
@@ -921,6 +1046,38 @@ export function PartnerOrdersPage() {
             onChange={(e) => setAnswerNote(e.target.value)}
             required
           />
+          {(respondRfqQuery.data?.lines.length ?? 0) > 0 ? (
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-medium">{t('pages.partnerOrders.dialogs.pricesLegend')}</legend>
+              <p className="text-xs text-muted-foreground">{t('pages.partnerOrders.dialogs.pricesHint')}</p>
+              {respondRfqQuery.data?.lines.map((line) => (
+                <div key={line.id} className="flex items-center gap-2">
+                  <Label htmlFor={`rfq-price-${line.id}`} className="min-w-0 flex-1 text-sm font-normal break-words">
+                    {line.name}
+                  </Label>
+                  <Input
+                    id={`rfq-price-${line.id}`}
+                    inputMode="decimal"
+                    className="w-28 tabular-nums"
+                    value={linePrices[line.id] ?? ''}
+                    onChange={(e) => setLinePrices((prev) => ({ ...prev, [line.id]: e.target.value }))}
+                  />
+                </div>
+              ))}
+              <div className="flex items-center gap-2">
+                <Label htmlFor="rfq-currency" className="flex-1 text-sm font-normal">
+                  {t('pages.partnerOrders.dialogs.currencyLabel')}
+                </Label>
+                <Input
+                  id="rfq-currency"
+                  maxLength={3}
+                  className="w-28 uppercase"
+                  value={priceCurrency}
+                  onChange={(e) => setPriceCurrency(e.target.value)}
+                />
+              </div>
+            </fieldset>
+          ) : null}
         </div>
       </ActionDialog>
     </div>
@@ -965,15 +1122,15 @@ function SearchForm({ initial, onSearch }: { initial: string; onSearch: (val: st
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2">
-      <div className="relative">
+    <form onSubmit={handleSubmit} className="flex w-full gap-2 sm:w-auto">
+      <div className="relative min-w-0 flex-1">
         <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
         <Input
           type="search"
           placeholder={t('pages.partnerOrders.searchPlaceholder')}
           value={val}
           onChange={(e) => setVal(e.target.value)}
-          className="w-64 pl-9 text-sm"
+          className="w-full pl-9 text-sm sm:w-64"
         />
       </div>
       <Button type="submit" size="sm" variant="outline">
@@ -987,16 +1144,22 @@ function OrderDetailDialog({
   orderId,
   order,
   loading,
+  error,
+  onRetry,
   onClose,
   onConfirmClick,
   onShipClick,
+  onDateChangeClick,
 }: {
   orderId: number | null;
   order: PartnerOrderDetail | null;
   loading: boolean;
+  error: unknown;
+  onRetry: () => void;
   onClose: () => void;
   onConfirmClick: (id: number, date?: string | null) => void;
   onShipClick: (id: number) => void;
+  onDateChangeClick: (id: number) => void;
 }) {
   const { t } = useTranslation();
 
@@ -1006,7 +1169,11 @@ function OrderDetailDialog({
         <DialogHeader>
           <div className="flex items-center justify-between pr-6">
             <DialogTitle className="text-xl font-bold">
-              {order ? `${t('pages.partnerOrders.orderPrefix')} ${order.number}` : t('app.loading')}
+              {order
+                ? `${t('pages.partnerOrders.orderPrefix')} ${order.number}`
+                : error
+                  ? t('pages.partnerOrders.loadErrorTitle')
+                  : t('app.loading')}
             </DialogTitle>
             {order ? <OrderStatusBadge status={order.status} /> : null}
           </div>
@@ -1015,10 +1182,12 @@ function OrderDetailDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {loading || !order ? (
+        {error ? (
+          <ErrorState error={error} onRetry={onRetry} />
+        ) : loading || !order ? (
           <ListSkeleton />
         ) : (
-          <div className="space-y-6 py-2">
+          <div className="min-w-0 space-y-6 py-2">
             {/* Summary info */}
             <div className="grid grid-cols-2 gap-4 rounded-lg bg-muted/40 p-4 sm:grid-cols-4">
               <div>
@@ -1027,8 +1196,8 @@ function OrderDetailDialog({
               </div>
               <div>
                 <div className="text-xs text-muted-foreground">{t('pages.partnerOrders.columns.totalAmount')}</div>
-                <div className="font-semibold text-primary">
-                  {order.total_amount} {order.currency}
+                <div className="font-semibold text-primary tabular-nums">
+                  {orderAmount(order.total_amount, order.currency)}
                 </div>
               </div>
               <div>
@@ -1041,6 +1210,15 @@ function OrderDetailDialog({
               </div>
             </div>
 
+            {order.date_change ? (
+              <div className="rounded-md bg-warning/10 p-3 text-sm">
+                {t('pages.partnerOrders.dateChangePending', { date: formatDate(order.date_change.requested_date) })}
+                {order.date_change.reason ? (
+                  <div className="mt-1 text-xs text-muted-foreground">{order.date_change.reason}</div>
+                ) : null}
+              </div>
+            ) : null}
+
             {order.note ? (
               <div className="rounded-md border border-border p-3 text-sm">
                 <span className="font-semibold text-muted-foreground">{t('pages.partnerOrders.noteLabel')}: </span>
@@ -1050,8 +1228,13 @@ function OrderDetailDialog({
 
             {/* Lines table */}
             <div>
-              <h4 className="mb-2 font-semibold">{t('pages.partnerOrders.linesTitle')}</h4>
-              <div className="overflow-x-auto rounded-md border border-border">
+              <h3 className="mb-2 font-semibold">{t('pages.partnerOrders.linesTitle')}</h3>
+              <div
+                className="overflow-x-auto rounded-md border border-border"
+                tabIndex={0}
+                role="region"
+                aria-label={t('pages.partnerOrders.linesTitle')}
+              >
                 <table className="w-full text-left text-sm">
                   <thead className="border-b border-border bg-muted/60 text-xs text-muted-foreground">
                     <tr>
@@ -1096,10 +1279,10 @@ function OrderDetailDialog({
             {/* Warehouse Receipts */}
             {order.receipts && order.receipts.length > 0 ? (
               <div>
-                <h4 className="mb-2 flex items-center gap-2 font-semibold">
+                <h3 className="mb-2 flex items-center gap-2 font-semibold">
                   <ClipboardList className="size-4" />
                   {t('pages.partnerOrders.receiptsTitle')}
-                </h4>
+                </h3>
                 <div className="space-y-3">
                   {order.receipts.map((rcpt) => (
                     <div key={rcpt.id} className="rounded-lg border border-border p-3 text-sm">
@@ -1116,8 +1299,12 @@ function OrderDetailDialog({
                         </div>
                         <div className="text-xs text-muted-foreground">{formatDateTime(rcpt.received_at)}</div>
                       </div>
-                      {rcpt.note ? <p className="mt-1.5 text-xs text-muted-foreground">{rcpt.note}</p> : null}
-                      <div className="mt-2 overflow-x-auto">
+                      <div
+                        className="mt-2 overflow-x-auto"
+                        tabIndex={0}
+                        role="region"
+                        aria-label={t('pages.partnerOrders.receiptsTitle')}
+                      >
                         <table className="w-full text-left text-xs">
                           <thead className="bg-muted/40 text-muted-foreground">
                             <tr>
@@ -1158,20 +1345,44 @@ function OrderDetailDialog({
               </div>
             ) : null}
 
+            {/* Shipment notices */}
+            {order.shipment_notices.length > 0 ? (
+              <div>
+                <h3 className="mb-2 flex items-center gap-2 font-semibold">
+                  <Truck className="size-4" />
+                  {t('pages.partnerOrders.shipmentsTitle')}
+                </h3>
+                <div className="space-y-2">
+                  {order.shipment_notices.map((notice) => (
+                    <div key={notice.id} className="rounded-md border border-border/70 p-2.5 text-xs">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-semibold">{notice.supplier_doc}</span>
+                        <span className="shrink-0 text-muted-foreground">{formatDateTime(notice.created_at)}</span>
+                      </div>
+                      {[notice.carrier, notice.tracking_number, notice.note].some(Boolean) ? (
+                        <div className="mt-1 text-muted-foreground">
+                          {[notice.carrier, notice.tracking_number, notice.note].filter(Boolean).join(' · ')}
+                        </div>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
             {/* History logs */}
             {order.logs.length > 0 ? (
               <div>
-                <h4 className="mb-2 font-semibold">{t('pages.partnerOrders.historyTitle')}</h4>
+                <h3 className="mb-2 font-semibold">{t('pages.partnerOrders.historyTitle')}</h3>
                 <div className="space-y-2">
                   {order.logs.map((log) => (
                     <div
                       key={log.id}
                       className="flex items-start justify-between rounded-md border border-border/70 p-2.5 text-xs"
                     >
-                      <div>
-                        <span className="font-semibold">{log.kind}:</span>{' '}
-                        <span className="text-foreground/90">{log.detail}</span>
-                      </div>
+                      <span className="font-semibold">
+                        {t(`pages.partnerOrders.logKinds.${log.kind}`)}
+                      </span>
                       <div className="shrink-0 text-muted-foreground">{formatDateTime(log.created_at)}</div>
                     </div>
                   ))}
@@ -1196,18 +1407,30 @@ function OrderDetailDialog({
                   {t('pages.partnerOrders.actions.confirm')}
                 </Button>
               ) : null}
-              {order && (order.status === 'confirmed' || order.status === 'sent') ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    onClose();
-                    onShipClick(order.id);
-                  }}
-                >
-                  <Truck className="mr-1.5 size-4" />
-                  {t('pages.partnerOrders.actions.ship')}
-                </Button>
+              {order && order.status === 'confirmed' ? (
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      onClose();
+                      onShipClick(order.id);
+                    }}
+                  >
+                    <Truck className="mr-1.5 size-4" />
+                    {t('pages.partnerOrders.actions.ship')}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      onClose();
+                      onDateChangeClick(order.id);
+                    }}
+                  >
+                    {t('pages.partnerOrders.actions.requestDateChange')}
+                  </Button>
+                </>
               ) : null}
             </CanAct>
           </div>
@@ -1226,12 +1449,16 @@ function RfqDetailDialog({
   rfqId,
   rfq,
   loading,
+  error,
+  onRetry,
   onClose,
   onRespondClick,
 }: {
   rfqId: number | null;
   rfq: PartnerPriceRequestDetail | null;
   loading: boolean;
+  error: unknown;
+  onRetry: () => void;
   onClose: () => void;
   onRespondClick: (id: number) => void;
 }) {
@@ -1243,7 +1470,7 @@ function RfqDetailDialog({
         <DialogHeader>
           <div className="flex items-center justify-between pr-6">
             <DialogTitle className="text-xl font-bold">
-              {rfq ? rfq.subject : t('app.loading')}
+              {rfq ? rfq.subject : error ? t('pages.partnerOrders.loadErrorTitle') : t('app.loading')}
             </DialogTitle>
             {rfq ? <RfqStatusBadge status={rfq.status} /> : null}
           </div>
@@ -1252,10 +1479,12 @@ function RfqDetailDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {loading || !rfq ? (
+        {error ? (
+          <ErrorState error={error} onRetry={onRetry} />
+        ) : loading || !rfq ? (
           <ListSkeleton />
         ) : (
-          <div className="space-y-4 py-2">
+          <div className="min-w-0 space-y-4 py-2">
             {rfq.note ? (
               <div className="rounded-md border border-border p-3 text-sm">
                 <span className="font-semibold text-muted-foreground">{t('pages.partnerOrders.noteLabel')}: </span>
@@ -1265,8 +1494,13 @@ function RfqDetailDialog({
 
             {/* Lines */}
             <div>
-              <h4 className="mb-2 font-semibold">{t('pages.partnerOrders.linesTitle')}</h4>
-              <div className="overflow-x-auto rounded-md border border-border">
+              <h3 className="mb-2 font-semibold">{t('pages.partnerOrders.linesTitle')}</h3>
+              <div
+                className="overflow-x-auto rounded-md border border-border"
+                tabIndex={0}
+                role="region"
+                aria-label={t('pages.partnerOrders.linesTitle')}
+              >
                 <table className="w-full text-left text-sm">
                   <thead className="border-b border-border bg-muted/60 text-xs text-muted-foreground">
                     <tr>
@@ -1274,6 +1508,7 @@ function RfqDetailDialog({
                       <th className="p-2.5">{t('pages.partnerOrders.columns.name')}</th>
                       <th className="p-2.5">{t('pages.partnerOrders.columns.article')}</th>
                       <th className="p-2.5 text-right">{t('pages.partnerOrders.columns.qty')}</th>
+                      <th className="p-2.5 text-right">{t('pages.partnerOrders.columns.unitPrice')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -1284,6 +1519,9 @@ function RfqDetailDialog({
                         <td className="p-2.5 text-muted-foreground">{l.article || '—'}</td>
                         <td className="p-2.5 text-right">
                           {l.quantity} {l.unit}
+                        </td>
+                        <td className="p-2.5 text-right tabular-nums">
+                          {l.answer_price ? orderAmount(l.answer_price, rfq.answer_currency) : '—'}
                         </td>
                       </tr>
                     ))}
@@ -1306,7 +1544,7 @@ function RfqDetailDialog({
 
         <DialogFooter className="gap-2 sm:justify-between">
           <CanAct>
-            {rfq && rfq.status !== 'answered' ? (
+            {rfq && rfq.status === 'sent' ? (
               <Button
                 size="sm"
                 onClick={() => {
@@ -1328,4 +1566,3 @@ function RfqDetailDialog({
     </Dialog>
   );
 }
-

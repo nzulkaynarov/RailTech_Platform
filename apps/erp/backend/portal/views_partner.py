@@ -12,6 +12,7 @@ from portal.serializers_partner import (
     PartnerDocumentUploadRequestSerializer,
     PartnerFinanceSummarySerializer,
     PartnerOrderConfirmRequestSerializer,
+    PartnerOrderDateChangeRequestSerializer,
     PartnerOrderDetailSerializer,
     PartnerOrderPageSerializer,
     PartnerPriceRequestDetailSerializer,
@@ -214,12 +215,33 @@ class PartnerOrderConfirmView(BasePortalView):
         serializer = PartnerOrderConfirmRequestSerializer(data=request.data or {})
         if not serializer.is_valid():
             raise PortalValidationError("VALIDATION_ERROR")
-        expected_date = serializer.validated_data.get("expected_date")
         data = orders.confirm_partner_order(
             company=request.portal_company,
             user=request.portal_contact,
             order_id=pk,
-            expected_date=expected_date,
+            expected_date=serializer.validated_data["expected_date"],
+        )
+        if data is None:
+            raise Http404
+        return Response(PartnerOrderDetailSerializer(data).data)
+
+
+class PartnerOrderDateChangeView(BasePortalView):
+    """POST /partner/orders/{id}/date-change — запрос на перенос срока; срок меняет только сотрудник."""
+
+    required_module = MODULE
+
+    def post(self, request, pk):
+        serializer = PartnerOrderDateChangeRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise PortalValidationError("VALIDATION_ERROR")
+        vd = serializer.validated_data
+        data = orders.request_partner_date_change(
+            company=request.portal_company,
+            user=request.portal_contact,
+            order_id=pk,
+            requested_date=vd["requested_date"],
+            reason=vd["reason"],
         )
         if data is None:
             raise Http404
@@ -288,11 +310,15 @@ class PartnerPriceRequestRespondView(BasePortalView):
         serializer = PartnerPriceRequestResponseSerializer(data=request.data)
         if not serializer.is_valid():
             raise PortalValidationError("VALIDATION_ERROR")
+        vd = serializer.validated_data
         data = orders.respond_partner_price_request(
             company=request.portal_company,
             user=request.portal_contact,
             request_id=pk,
-            answer_note=serializer.validated_data["answer_note"],
+            answer_note=vd["answer_note"],
+            prices=vd.get("lines") or [],
+            currency_code=vd.get("currency"),
+            valid_until=vd.get("valid_until"),
         )
         if data is None:
             raise Http404

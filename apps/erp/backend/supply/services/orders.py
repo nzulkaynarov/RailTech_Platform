@@ -362,6 +362,9 @@ def update_order(user, order_id: int, data: OrderInput) -> SupplierOrder:
     if data.expected_given and data.expected_date != order.expected_date:
         order.expected_date = data.expected_date
         order.overdue_notified_at = None  # новая дата — о просрочке можно сообщить заново
+        order.partner_requested_date = None  # сотрудник решил: запрос партнёра на перенос закрыт (FX-7)
+        order.partner_requested_at = None
+        order.partner_requested_reason = ""
         changed.append("ожидаемая дата")
     if data.note is not None and data.note != order.note:
         order.note = data.note[:5000]
