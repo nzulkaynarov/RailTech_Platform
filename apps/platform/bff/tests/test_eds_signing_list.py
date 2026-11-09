@@ -44,4 +44,9 @@ async def test_rows_carry_document_and_amount_and_only_open_own_steps_are_asked(
     assert proxy.params["template"] == ["signing"]
     assert proxy.params["status"] == ["open"]
     [row] = page.items
-    assert (row.kind, row.number, row.amount, row.currency) == ("contract", "Д-500", "12500.50", "UZS")
+    assert (row.kind, row.number, row.amount, row.currency) == (
+        "contract",
+        "Д-500",
+        "12500.50",
+        "UZS",
+    )

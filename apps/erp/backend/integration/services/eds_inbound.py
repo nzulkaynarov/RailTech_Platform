@@ -201,7 +201,9 @@ def _notify_author(request: Any, title: str, message: str) -> None:
     if request.requested_by is None:
         return
     try:
-        notify_user(user=request.requested_by, title=title, message=message, type_code="INFO", event_code="signing.decided")
+        notify_user(
+            user=request.requested_by, title=title, message=message, type_code="INFO", event_code="signing.decided"
+        )
     except Exception:
         logger.exception("eds.signing.decided: не удалось уведомить автора")
 
@@ -216,11 +218,11 @@ def apply_signing_decided(data: dict[str, Any], event_id: Optional[UUID] = None)
     Решение применяется только к открытому запросу и только к той редакции документа, что ушла на подпись. Проекция для
     публичной проверки появляется после штампа и PDF: без документа её нет.
     """
-    from crm.services.signing_outbound import fingerprint
     from integration.models import CommercialSigningRequest as Request
     from portal.models import PortalDocumentVerification
 
     from core.tenant import own_company
+    from crm.services.signing_outbound import fingerprint
 
     obj = data.get("object") or {}
     kind = obj.get("kind")

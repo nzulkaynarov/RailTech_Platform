@@ -36,8 +36,6 @@ from app.eds_documents import API, EdsProxy
 from app.eds_projects import project_error
 from app.errors import backend_unavailable
 from app.schemas_eds_approvals import (
-    SigningApprovalPage,
-    SigningDecisionIn,
     MemoApprovalCard,
     MemoApprovalPage,
     MemoDecisionIn,
@@ -46,6 +44,8 @@ from app.schemas_eds_approvals import (
     QuoteDecisionIn,
     QuoteSendIn,
     RouteStatus,
+    SigningApprovalPage,
+    SigningDecisionIn,
 )
 
 router = APIRouter(prefix="/eds", tags=["eds-approvals"])
@@ -192,7 +192,7 @@ async def record_quote_client_decision(
 # --- служебные записки, заявления, отчёты ---------------------------------------------------------
 
 
-# --- подпись коммерческих документов (SIGN-4) --------------------------------------------------------
+# --- подпись коммерческих документов (SIGN-4) --------------------------------------
 
 
 @router.get(

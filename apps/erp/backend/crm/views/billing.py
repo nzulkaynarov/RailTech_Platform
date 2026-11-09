@@ -162,7 +162,9 @@ def _signing_status(row) -> dict:
     }
 
 
-class ContractViewSet(RoleGatedViewMixin, OptimisticLockingMixin, ContractFlowMixin, CommercialSigningMixin, viewsets.ModelViewSet):
+class ContractViewSet(
+    RoleGatedViewMixin, OptimisticLockingMixin, ContractFlowMixin, CommercialSigningMixin, viewsets.ModelViewSet
+):
     """Contracts -- generated from approved quotes, double-signed."""
 
     required_permissions = {

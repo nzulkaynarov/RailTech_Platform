@@ -82,7 +82,7 @@ class ApprovalDecidedV1(BaseModel):
 
 class ApprovalObject(BaseModel):
     """
-    Что согласуется. Документ EDS (memo, application, report) — eds_document_id и number; КП ERP (quote) — erp_quote_id, quote_number, quote_version, erp_deal_id (коммерческое содержание остаётся в ERP)
+    Что согласуется. Документ EDS (memo, application, report) — eds_document_id и number; КП ERP (quote) — erp_quote_id, quote_number, quote_version, erp_deal_id (коммерческое содержание остаётся в ERP); подпись документа ERP (signing) — signing_kind, signing_number, signing_version
     """
 
     model_config = ConfigDict(
@@ -99,6 +99,9 @@ class ApprovalObject(BaseModel):
     quote_version: Annotated[int | None, Field(ge=1)] = None
     erp_deal_id: int | None = None
     deal_number: Annotated[str | None, Field(max_length=64)] = None
+    signing_kind: SigningKind | None = None
+    signing_number: Annotated[str | None, Field(max_length=64, min_length=1)] = None
+    signing_version: int | None = None
 
 
 class ApprovalRequestedV1(BaseModel):
@@ -116,13 +119,14 @@ class ApprovalRequestedV1(BaseModel):
 
 class ApprovalTemplate(StrEnum):
     """
-    Шаблон маршрута (runbook §2.5): memo — директор, затем бухгалтер, если указана сумма; quote — директор с чек-листом; application, report — директор
+    Шаблон маршрута (runbook §2.5): memo — директор, затем бухгалтер, если указана сумма; quote — директор с чек-листом; application, report — директор; signing — подпись коммерческого документа ERP уполномоченным (SIGN-4)
     """
 
     memo = "memo"
     application = "application"
     report = "report"
     quote = "quote"
+    signing = "signing"
 
 
 class Assignee(BaseModel):
@@ -778,6 +782,13 @@ class SigningDecidedV1(BaseModel):
     Комментарий или причина отказа при decision=rejected
     """
     actor: Actor
+
+
+class SigningKind(StrEnum):
+    quote = "quote"
+    contract = "contract"
+    invoice = "invoice"
+    act = "act"
 
 
 class Source(BaseModel):

@@ -7,8 +7,8 @@ BFF не решает: статус маршрута, чек-лист КП, кт
 """
 
 import datetime as dt
-from uuid import UUID
 from typing import Any, Literal
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 

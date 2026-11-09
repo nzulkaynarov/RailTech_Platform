@@ -36,7 +36,5 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.execute(f"DROP INDEX {INDEX}")
     op.drop_constraint("template", "approval_routes", type_="check")
-    op.create_check_constraint(
-        "template", "approval_routes", "template IN ('memo', 'application', 'report', 'quote')"
-    )
+    op.create_check_constraint("template", "approval_routes", "template IN ('memo', 'application', 'report', 'quote')")
     op.drop_column("approval_routes", "signing_snapshot")

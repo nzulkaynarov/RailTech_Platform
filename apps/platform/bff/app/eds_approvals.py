@@ -28,8 +28,6 @@ from app.feeds.models import StepCode
 from app.feeds.numbers import deal_step, request_path
 from app.rbac import allows, strip_restricted
 from app.schemas_eds_approvals import (
-    SigningApprovalPage,
-    SigningApprovalRow,
     MEMO_KINDS,
     Channel,
     DeliveryReason,
@@ -58,6 +56,8 @@ from app.schemas_eds_approvals import (
     RawDocument,
     RawListItem,
     RawPage,
+    SigningApprovalPage,
+    SigningApprovalRow,
     parse,
     person,
     route_step,

@@ -206,7 +206,9 @@ async def decide(
     if route.template == ApprovalTemplate.QUOTE.value and body.decision is Decision.APPROVE:
         late = await _require_green(session, route)
     if route.template == ApprovalTemplate.SIGNING.value:
-        from app.services import commercial_signing  # взаимная зависимость: шаг подписи закрывается через `complete_step`
+        from app.services import (
+            commercial_signing,  # взаимная зависимость: шаг подписи закрывается через `complete_step`
+        )
 
         return await commercial_signing.decide(session, bus, employee, route, steps, current, body)
     return await _apply(session, bus, employee, route, steps, current, body, late=late)

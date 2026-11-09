@@ -23,7 +23,6 @@ from crm.tests.test_permission_guards import (  # noqa: F401 — фикстур�
     seller_company,
 )
 
-
 SIGNED = {
     "decision": "signed",
     "signer": {"crm_user_id": 3, "full_name": "Рустам Директоров", "position": "Генеральный директор"},
@@ -53,14 +52,14 @@ def _pending(kind, doc, user=None):
     )
 
 
-def _seller(seller_company, email):
+def _seller(seller_company, email):  # noqa: F811
     user = _make_user(email)
     _make_member(user, seller_company, is_primary=True)
     CrmUserMapping.objects.create(crm_user_id=user.pk + 5000, user=user)
     return user
 
 
-def _contract(deal, quote):
+def _contract(deal, quote):  # noqa: F811
     return Contract.objects.create(
         deal=deal,
         quote=quote,
@@ -185,6 +184,7 @@ def test_decision_without_an_open_request_changes_nothing(lookups, deal, seller_
 @pytest.mark.django_db
 def test_rejection_is_recorded_and_the_author_is_told(lookups, deal, seller_company):  # noqa: F811
     from integration.services.eds_inbound import apply_signing_decided
+
     from notifications.models import Notification
 
     seller = _seller(seller_company, "rejected@seller.test")

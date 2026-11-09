@@ -11,11 +11,12 @@ import logging
 from decimal import Decimal
 from typing import Any, Literal, Optional
 
-from accounts.models import CustomUser
 from django.db import transaction
 from integration.bus import get_bus
 from integration.models import CommercialSigningRequest, CrmUserMapping
 from integration.services.event_builders import build_actor
+
+from accounts.models import CustomUser
 
 logger = logging.getLogger(__name__)
 

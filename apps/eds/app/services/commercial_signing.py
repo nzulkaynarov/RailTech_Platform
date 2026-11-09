@@ -34,7 +34,12 @@ _TITLES = {"quote": "КП", "contract": "Договор", "invoice": "Счёт",
 
 
 def _object_ref(snap: dict[str, Any]) -> dict[str, Any]:
-    return {"kind": snap["kind"], "object_id": snap["object_id"], "number": snap["number"], "version": snap.get("version")}
+    return {
+        "kind": snap["kind"],
+        "object_id": snap["object_id"],
+        "number": snap["number"],
+        "version": snap.get("version"),
+    }
 
 
 def _amount(snap: dict[str, Any]) -> Decimal | None:
@@ -60,7 +65,10 @@ async def _publish_rejected(
     }
     await events.publish(bus, session, "signing.decided", data, subject=snap["number"])
     await journal.record(
-        session, "commercial_signing.rejected", by=by, comment=f"Отказ в подписи {snap['kind']} № {snap['number']}: {comment}"
+        session,
+        "commercial_signing.rejected",
+        by=by,
+        comment=f"Отказ в подписи {snap['kind']} № {snap['number']}: {comment}",
     )
     log.warning("commercial_signing_rejected", kind=snap["kind"], number=snap["number"], reason=comment)
     return data
@@ -85,7 +93,12 @@ async def _supersede(session: AsyncSession, route: ApprovalRoute, version: int |
             step.status = "skipped"
     route.status, route.current_step, route.closed_at = RouteStatus.RETURNED.value, None, clock.now()
     await journal.record(
-        session, "approval.superseded", by=None, approval_id=route.id, comment=f"заменён версией {version}", version=route.round
+        session,
+        "approval.superseded",
+        by=None,
+        approval_id=route.id,
+        comment=f"заменён версией {version}",
+        version=route.round,
     )
 
 
@@ -126,7 +139,9 @@ async def handle_signing_request(
 
     today = event_time.date() if event_time else clock.now().date()
     amount = _amount(snap)
-    resolution = await signing_resolve.resolve(session, kind=obj.kind, amount=amount, currency=obj.currency, on_date=today)
+    resolution = await signing_resolve.resolve(
+        session, kind=obj.kind, amount=amount, currency=obj.currency, on_date=today
+    )
     if data.requested_signer is not None:
         check = signing_resolve.signer_check(resolution, data.requested_signer.crm_user_id)
         if not (check.allowed and check.candidate):
@@ -138,7 +153,12 @@ async def handle_signing_request(
         signer_id = resolution.candidates[0].signer.crm_user_id
     else:
         return await _publish_rejected(
-            session, bus, snap, fallback, "Нет сотрудника с полномочием подписать этот документ. Проверьте реестр.", None
+            session,
+            bus,
+            snap,
+            fallback,
+            "Нет сотрудника с полномочием подписать этот документ. Проверьте реестр.",
+            None,
         )
 
     route = await approvals.open_route(
@@ -164,12 +184,16 @@ async def decide(
     current: ApprovalStep,
     body: DecisionIn,
 ) -> ApprovalRoute:
-    """Шаг «Подписать»: подпись только при действующем на сегодня полномочии; отказ и возврат уходят автору с причиной."""
+    """Шаг «Подписать»: подпись только при действующем полномочии; отказ и возврат уходят автору с причиной."""
     snap = route.signing_snapshot or {}
     now = clock.now()
     if body.decision is not Decision.APPROVE:
         result = await approvals.complete_step(session, bus, employee, route, steps, current, body)
-        signer = {"crm_user_id": employee.crm_user_id, "full_name": employee.full_name, "position": employee.position or ""}
+        signer = {
+            "crm_user_id": employee.crm_user_id,
+            "full_name": employee.full_name,
+            "position": employee.position or "",
+        }
         await _publish_rejected(session, bus, snap, signer, body.comment or "Отказ", employee.crm_user_id)
         return result
 
