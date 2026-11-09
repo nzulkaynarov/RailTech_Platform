@@ -120,7 +120,7 @@ export function ActionRequiredWidget({
                 icon={Truck}
                 tone="warning"
                 badge={t('widgets.actionRequired.partnerOrderBadge')}
-                aside={<Amount>{formatMoney({ amount: order.total_amount, currency: order.currency })}</Amount>}
+                aside={<Amount>{order.currency ? formatMoney({ amount: order.total_amount, currency: order.currency }) : order.total_amount}</Amount>}
                 to={`/partner/orders?orderId=${order.id}`}
                 label={order.number}
               >

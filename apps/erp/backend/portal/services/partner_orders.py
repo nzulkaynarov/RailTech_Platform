@@ -79,10 +79,11 @@ def _actor_part(user) -> str:
 
 def _supply_recipients(company, author) -> list:
     """Кому сообщить: автор заказа или запроса и ответственный по отношению; никого — все с правом `supply.manage`."""
+    from parties.models import CompanyRelationship, RelationshipRole
+
     from accounts.constants import Permission
     from accounts.models import CustomUser
     from core.tenant import own_company_id
-    from parties.models import CompanyRelationship, RelationshipRole
 
     relationship = (
         CompanyRelationship.objects.filter(company=company, role=RelationshipRole.PARTNER)
