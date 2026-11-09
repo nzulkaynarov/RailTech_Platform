@@ -1939,6 +1939,54 @@
                 }
             }
         },
+        "/api/portal/v1/partner/orders/{id}/date-change": {
+            "post": {
+                "operationId": "api_portal_v1_partner_orders_date_change_create",
+                "description": "POST /partner/orders/{id}/date-change — запрос на перенос срока; срок меняет только сотрудник.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/orders/{id}/date-change/": {
+            "post": {
+                "operationId": "api_portal_v1_partner_orders_date_change_create_2",
+                "description": "POST /partner/orders/{id}/date-change — запрос на перенос срока; срок меняет только сотрудник.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/portal/v1/partner/orders/{id}/ship": {
             "post": {
                 "operationId": "api_portal_v1_partner_orders_ship_create",

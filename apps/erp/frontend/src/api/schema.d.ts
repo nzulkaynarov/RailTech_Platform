@@ -1847,6 +1847,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/portal/v1/partner/orders/{id}/date-change": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /partner/orders/{id}/date-change — запрос на перенос срока; срок меняет только сотрудник. */
+        post: operations["api_portal_v1_partner_orders_date_change_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/partner/orders/{id}/date-change/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /partner/orders/{id}/date-change — запрос на перенос срока; срок меняет только сотрудник. */
+        post: operations["api_portal_v1_partner_orders_date_change_create_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/portal/v1/partner/orders/{id}/ship": {
         parameters: {
             query?: never;
@@ -22698,6 +22732,46 @@ export interface operations {
         };
     };
     api_portal_v1_partner_orders_confirm_create_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_partner_orders_date_change_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_partner_orders_date_change_create_2: {
         parameters: {
             query?: never;
             header?: never;
