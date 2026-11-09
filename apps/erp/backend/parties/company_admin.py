@@ -7,9 +7,11 @@
 
 from __future__ import annotations
 
+from django.db import transaction
 from parties.models import Company, Contact, active_contact_q
 
 
+@transaction.atomic  # вне транзакции блокировка — 500; внутри внешней живёт до её коммита
 def lock_company_row(company: Company) -> None:
     """Блокировка строки компании до конца транзакции: проверки состава администраторов идут по очереди."""
     Company.objects.select_for_update().filter(pk=company.pk).first()

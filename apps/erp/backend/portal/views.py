@@ -35,7 +35,6 @@ from portal.exceptions import (
     portal_exception_handler,
 )
 from portal.models import (
-    MagicLinkToken,
     PortalDocumentVerification,
     PortalSecurityEvent,
     PortalSession,
