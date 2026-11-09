@@ -46,6 +46,7 @@
 | Открытые вопросы (вверху — «Ждут владельца») | [`QUESTIONS.md`](QUESTIONS.md) | действует | архитектор |
 | Действия владельца вне кода | [`OWNER-CHECKLIST.md`](OWNER-CHECKLIST.md) | действует | владелец |
 | Стратегия, целевая архитектура, план этапов 0, B–H | [`strategy/2026-10-23-platform-architecture-strategy.md`](strategy/2026-10-23-platform-architecture-strategy.md) | действует | архитектор |
+| Стратегия выхода на рынок: цели на 3 года и 12 месяцев, порядок работы партиями | [`strategy/2026-11-09-market-strategy.md`](strategy/2026-11-09-market-strategy.md) |
 | Стратегия экосистемы и профиль международной сертификации (кибербезопасность и качество) | [`strategy/2026-11-07-ecosystem-and-certification-strategy.md`](strategy/2026-11-07-ecosystem-and-certification-strategy.md) | действует | владелец |
 | Архитектурные решения ансамбля | [`adr/README.md`](adr/README.md) — индекс со статусами и поправками (0001…0021) | действует | архитектор |
 | Продукт: спецификация единого интерфейса (словарь, процессы, роли, экраны) | [`product/SPEC-v3.md`](product/SPEC-v3.md) (§4 — вместе с ADR-0012) | действует | владелец |
