@@ -44,6 +44,14 @@ def signing_requested(
     return envelope
 
 
+async def _open_ids(client: httpx.AsyncClient, staff: dict[str, Person]) -> list[str]:
+    resp = await client.get(
+        "/api/v1/approvals", params={"template": ["signing"], "status": ["open"]}, headers=staff["director"].headers
+    )
+    assert resp.status_code == 200, resp.text
+    return [item["id"] for item in resp.json()["items"]]
+
+
 async def test_commercial_signing_approved_for_director(
     client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
 ) -> None:
@@ -72,9 +80,17 @@ async def test_commercial_signing_approved_for_director(
     status = await deliver_erp(client, container, envelope)
     assert status == "processed"
 
-    # 3. Проверяем outbox: событие signing.decided
+    # 3. Сам запрос ничего не подписывает: шаг «Подписать» ждёт живого уполномоченного
+    assert await outbox(container, "signing.decided") == []
+    approval_id = (await _open_ids(client, staff))[0]
+
+    decided = await client.post(
+        f"/api/v1/approvals/{approval_id}/decision", json={"decision": "approve"}, headers=staff["director"].headers
+    )
+    assert decided.status_code == 200, decided.text
+
     events = await outbox(container, "signing.decided")
-    assert len(events) >= 1
+    assert len(events) == 1
     event = events[-1]
     data = event["data"]
 
@@ -160,3 +176,106 @@ async def test_commercial_signing_rejected_when_no_authority_for_kind(
     assert data["object"]["kind"] == "contract"
     assert data["verification_code"] is None
     assert data["comment"] is not None
+
+
+async def _grant_director(client: httpx.AsyncClient, staff: dict[str, Person]) -> None:
+    resp = await client.post(
+        URL_AUTHORITIES,
+        json={
+            "crm_user_id": staff["director"].id,
+            "kinds": ["quote", "contract", "invoice", "act"],
+            "basis": "charter",
+            "valid_from": "2026-01-01",
+        },
+        headers=staff["admin"].headers,
+    )
+    assert resp.status_code == 201, resp.text
+
+
+def _request(staff: dict[str, Person], **extra: Any) -> dict[str, Any]:
+    return signing_requested(
+        kind="contract",
+        object_id=500,
+        number="Д-500",
+        signer_crm_user_id=staff["director"].id,
+        signer_name=staff["director"].name,
+        **extra,
+    )
+
+
+async def test_repeat_of_an_open_request_opens_nothing_new(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    await _grant_director(client, staff)
+    await deliver_erp(client, container, _request(staff))
+    await deliver_erp(client, container, _request(staff))
+    assert len(await _open_ids(client, staff)) == 1
+    assert await outbox(container, "signing.decided") == []
+
+
+async def test_signed_version_cannot_be_signed_again(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    await _grant_director(client, staff)
+    await deliver_erp(client, container, _request(staff))
+    [approval_id] = await _open_ids(client, staff)
+    await client.post(
+        f"/api/v1/approvals/{approval_id}/decision", json={"decision": "approve"}, headers=staff["director"].headers
+    )
+
+    await deliver_erp(client, container, _request(staff))
+
+    decided = await outbox(container, "signing.decided")
+    assert [e["data"]["decision"] for e in decided] == ["signed", "rejected"]
+    assert "уже подписана" in decided[-1]["data"]["comment"]
+
+
+async def test_only_the_assigned_signer_can_sign(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    await _grant_director(client, staff)
+    await deliver_erp(client, container, _request(staff))
+    [approval_id] = await _open_ids(client, staff)
+    resp = await client.post(
+        f"/api/v1/approvals/{approval_id}/decision", json={"decision": "approve"}, headers=staff["accountant"].headers
+    )
+    assert resp.status_code in (403, 404), resp.text
+    assert await outbox(container, "signing.decided") == []
+
+
+async def test_refusal_reaches_the_author_with_the_reason(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    await _grant_director(client, staff)
+    await deliver_erp(client, container, _request(staff))
+    [approval_id] = await _open_ids(client, staff)
+    resp = await client.post(
+        f"/api/v1/approvals/{approval_id}/decision",
+        json={"decision": "reject", "comment": "Неверные реквизиты"},
+        headers=staff["director"].headers,
+    )
+    assert resp.status_code == 200, resp.text
+    [event] = await outbox(container, "signing.decided")
+    assert event["data"]["decision"] == "rejected"
+    assert event["data"]["comment"] == "Неверные реквизиты"
+
+
+async def test_authority_revoked_before_signing_blocks_the_signature(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    await _grant_director(client, staff)
+    await deliver_erp(client, container, _request(staff))
+    [approval_id] = await _open_ids(client, staff)
+    listed = await client.get(URL_AUTHORITIES, headers=staff["admin"].headers)
+    authority = listed.json()["items"][0]["id"]
+    revoked = await client.post(
+        f"{URL_AUTHORITIES}/{authority}/revoke", json={"reason": "Уволен"}, headers=staff["admin"].headers
+    )
+    assert revoked.status_code == 200, revoked.text
+
+    resp = await client.post(
+        f"/api/v1/approvals/{approval_id}/decision", json={"decision": "approve"}, headers=staff["director"].headers
+    )
+
+    assert resp.status_code == 409, resp.text
+    assert await outbox(container, "signing.decided") == []

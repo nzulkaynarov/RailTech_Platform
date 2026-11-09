@@ -33,12 +33,21 @@ class ApprovalRoute(Base):
 
     __tablename__ = "approval_routes"
     __table_args__ = (
-        CheckConstraint("template IN ('memo', 'application', 'report', 'quote')", name="template"),
+        CheckConstraint("template IN ('memo', 'application', 'report', 'quote', 'signing')", name="template"),
         CheckConstraint("status IN ('open', 'approved', 'returned', 'rejected')", name="status"),
         UniqueConstraint("document_id", "round", name="uq_approval_routes_document_round"),
         UniqueConstraint("erp_quote_id", "quote_version", name="uq_approval_routes_quote_version"),
         Index("ix_approval_routes_created_at_id", "created_at", "id"),
         Index("ix_approval_routes_status", "status"),
+        # Одна открытая или завершённая подпись на версию документа ERP (SIGN-4): запрос не задваивается.
+        Index(
+            "uq_approval_routes_signing_version",
+            text("(signing_snapshot->>'kind')"),
+            text("(signing_snapshot->>'object_id')"),
+            text("(coalesce(signing_snapshot->>'version', ''))"),
+            unique=True,
+            postgresql_where=text("template = 'signing' AND status IN ('open', 'approved')"),
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
@@ -57,6 +66,7 @@ class ApprovalRoute(Base):
     erp_company_id: Mapped[int | None] = mapped_column(BigInteger)
     eds_letter_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
     quote_snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    signing_snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     outgoing_number: Mapped[str | None] = mapped_column(String(32))
     channels: Mapped[list[str] | None] = mapped_column(JSONB)
     # КП одобрено, хотя готово позже срока резолюции: строка `due` чек-листа — предупреждение (C1-G-1, 2026-10-26)

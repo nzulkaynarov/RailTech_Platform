@@ -154,6 +154,8 @@ async def open_route(
         document_id=route.document_id,
         version=round_no,
     )
+    if template is ApprovalTemplate.SIGNING:  # итог подписи — событие `signing.decided`, не `approval.*`
+        return route
     data = {
         "approval": approval_ref(route, document),
         "step": {"index": 1, "assignee": assignee_dict(steps[0])},
@@ -195,6 +197,12 @@ async def decide(
     late: str | None = None
     if route.template == ApprovalTemplate.QUOTE.value and body.decision is Decision.APPROVE:
         late = await _require_green(session, route)
+    if route.template == ApprovalTemplate.SIGNING.value:
+        from app.services import (
+            commercial_signing,  # взаимная зависимость: шаг подписи закрывается через `complete_step`
+        )
+
+        return await commercial_signing.decide(session, bus, employee, route, steps, current, body)
     return await _apply(session, bus, employee, route, steps, current, body, late=late)
 
 
@@ -281,7 +289,8 @@ async def _apply(
             comment=f"Одобрено с опозданием: {late}",
             version=route.round,
         )
-    await _publish_decided(session, bus, employee, route, document, current, body, route_status, now)
+    if route.template != ApprovalTemplate.SIGNING.value:
+        await _publish_decided(session, bus, employee, route, document, current, body, route_status, now)
     if route_status is RouteStatus.OPEN and following is not None:
         await _publish_step_requested(session, bus, employee, route, document, following)
     if document is not None:  # статус документа и архив — после решения: события идут в порядке причин

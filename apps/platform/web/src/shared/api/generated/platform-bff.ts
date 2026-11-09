@@ -346,6 +346,7 @@ import type {
   ProjectPage,
   ProjectPayloadTooLargeResponse,
   ProjectScanUpload,
+  ProjectSigningIn,
   ProviderKeyIn,
   ProviderKeyResult,
   Queue,
@@ -407,10 +408,12 @@ import type {
   SetupCompanyCreated,
   SetupCompanyIn,
   SetupState,
+  SigningApprovalPage,
   SigningAuthorityDetail,
   SigningAuthorityIn,
   SigningAuthorityList,
   SigningAuthorityPatch,
+  SigningDecisionIn,
   SigningResolution,
   SigningRevokeIn,
   SigningSetupHint,
@@ -8076,6 +8079,375 @@ export const useScanEdsProjectContract = <
   TContext
 > => {
   return useMutation(getScanEdsProjectContractMutationOptions(options), queryClient);
+};
+
+export const getRequestEdsProjectSigningUrl = (ref: string) => {
+  return `/api/v1/eds/projects/${ref}/signing`;
+};
+
+/**
+ * Договор, счёт или акт проекта уходит шагом «Подписать» в EDS (SIGN-4, ADR-0024). Подписант — по реестру полномочий. 409 — документ уже подписан, уже на подписи или ещё не выпущен. Раздел `eds.projects` — полный.
+ * @summary EDS · Проект: отправить документ на подпись уполномоченному
+ */
+export const requestEdsProjectSigning = async (
+  ref: string,
+  projectSigningIn: ProjectSigningIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ProjectCard> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ProjectCard>(getRequestEdsProjectSigningUrl(ref), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(projectSigningIn),
+  });
+};
+
+export const getRequestEdsProjectSigningMutationKey = () => ["requestEdsProjectSigning"] as const;
+
+export const getRequestEdsProjectSigningMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | ProjectConflictResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof requestEdsProjectSigning>>,
+    TError,
+    RequestEdsProjectSigningMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof requestEdsProjectSigning>>,
+  TError,
+  RequestEdsProjectSigningMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRequestEdsProjectSigningMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof requestEdsProjectSigning>>,
+    RequestEdsProjectSigningMutationVariables
+  > = (props) => {
+    const { ref, data } = props ?? {};
+
+    return requestEdsProjectSigning(ref, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RequestEdsProjectSigningMutationResult = NonNullable<
+  Awaited<ReturnType<typeof requestEdsProjectSigning>>
+>;
+export type RequestEdsProjectSigningMutationBody = ProjectSigningIn;
+export type RequestEdsProjectSigningMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | ProjectConflictResponse
+>;
+export type RequestEdsProjectSigningMutationVariables = { ref: string; data: ProjectSigningIn };
+
+/**
+ * @summary EDS · Проект: отправить документ на подпись уполномоченному
+ */
+export const useRequestEdsProjectSigning = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | ProjectConflictResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof requestEdsProjectSigning>>,
+      TError,
+      RequestEdsProjectSigningMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof requestEdsProjectSigning>>,
+  TError,
+  RequestEdsProjectSigningMutationVariables,
+  TContext
+> => {
+  return useMutation(getRequestEdsProjectSigningMutationOptions(options), queryClient);
+};
+
+export const getListSigningApprovalsUrl = () => {
+  return `/api/v1/eds/signing-approvals`;
+};
+
+/**
+ * @summary EDS · Документы, ждущие вашей подписи
+ */
+export const listSigningApprovals = async (
+  options?: Parameters<typeof http>[1],
+): Promise<SigningApprovalPage> => {
+  return http<SigningApprovalPage>(getListSigningApprovalsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListSigningApprovalsQueryKey = () => {
+  return [`/api/v1/eds/signing-approvals`] as const;
+};
+
+export const getListSigningApprovalsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listSigningApprovals>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listSigningApprovals>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListSigningApprovalsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listSigningApprovals>>> = ({ signal }) =>
+    listSigningApprovals({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listSigningApprovals>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListSigningApprovalsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listSigningApprovals>>
+>;
+export type ListSigningApprovalsQueryError = ErrorType<SessionExpiredResponse | ForbiddenResponse>;
+
+export function useListSigningApprovals<
+  TData = Awaited<ReturnType<typeof listSigningApprovals>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listSigningApprovals>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listSigningApprovals>>,
+          TError,
+          Awaited<ReturnType<typeof listSigningApprovals>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListSigningApprovals<
+  TData = Awaited<ReturnType<typeof listSigningApprovals>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listSigningApprovals>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listSigningApprovals>>,
+          TError,
+          Awaited<ReturnType<typeof listSigningApprovals>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListSigningApprovals<
+  TData = Awaited<ReturnType<typeof listSigningApprovals>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listSigningApprovals>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Документы, ждущие вашей подписи
+ */
+
+export function useListSigningApprovals<
+  TData = Awaited<ReturnType<typeof listSigningApprovals>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listSigningApprovals>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListSigningApprovalsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getDecideSigningApprovalUrl = (id: string) => {
+  return `/api/v1/eds/signing-approvals/${id}/decision`;
+};
+
+/**
+ * `approve` — подпись при действующем полномочии (409 `no_signing_authority`, если его нет). `reject` — отказ, причина обязательна и видна автору. Решает только назначенный подписант.
+ * @summary EDS · Подписать документ или отказать
+ */
+export const decideSigningApproval = async (
+  id: string,
+  signingDecisionIn: SigningDecisionIn,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<void>(getDecideSigningApprovalUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(signingDecisionIn),
+  });
+};
+
+export const getDecideSigningApprovalMutationKey = () => ["decideSigningApproval"] as const;
+
+export const getDecideSigningApprovalMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ApprovalConflictResponse
+    | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof decideSigningApproval>>,
+    TError,
+    DecideSigningApprovalMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof decideSigningApproval>>,
+  TError,
+  DecideSigningApprovalMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDecideSigningApprovalMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof decideSigningApproval>>,
+    DecideSigningApprovalMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return decideSigningApproval(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DecideSigningApprovalMutationResult = NonNullable<
+  Awaited<ReturnType<typeof decideSigningApproval>>
+>;
+export type DecideSigningApprovalMutationBody = SigningDecisionIn;
+export type DecideSigningApprovalMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ApprovalConflictResponse
+  | ValidationFailedResponse
+>;
+export type DecideSigningApprovalMutationVariables = { id: string; data: SigningDecisionIn };
+
+/**
+ * @summary EDS · Подписать документ или отказать
+ */
+export const useDecideSigningApproval = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ApprovalConflictResponse
+    | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof decideSigningApproval>>,
+      TError,
+      DecideSigningApprovalMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof decideSigningApproval>>,
+  TError,
+  DecideSigningApprovalMutationVariables,
+  TContext
+> => {
+  return useMutation(getDecideSigningApprovalMutationOptions(options), queryClient);
 };
 
 export const getActEdsProjectActUrl = (ref: string) => {

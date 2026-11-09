@@ -193,5 +193,14 @@
       "reject": "Document rejected"
     },
     "hint": "No separate “accept for payment” is needed: “Paid” closes the accountant step. You can return the document here with a comment."
+  },
+  "signing": {
+    "title": "Waiting for your signature",
+    "sign": "Sign",
+    "reject": "Refuse",
+    "rejectTitle": "Reason for refusal",
+    "reason": "Reason, visible to the author",
+    "done": "Decision saved",
+    "failed": "Could not save the decision"
   }
 }

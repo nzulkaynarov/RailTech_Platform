@@ -30,6 +30,7 @@ from app.eds_approvals import (
     quote_route_id,
     record_client_decision,
     send_quote,
+    signing_page,
 )
 from app.eds_documents import API, EdsProxy
 from app.eds_projects import project_error
@@ -43,6 +44,8 @@ from app.schemas_eds_approvals import (
     QuoteDecisionIn,
     QuoteSendIn,
     RouteStatus,
+    SigningApprovalPage,
+    SigningDecisionIn,
 )
 
 router = APIRouter(prefix="/eds", tags=["eds-approvals"])
@@ -187,6 +190,25 @@ async def record_quote_client_decision(
 
 
 # --- служебные записки, заявления, отчёты ---------------------------------------------------------
+
+
+# --- подпись коммерческих документов (SIGN-4) --------------------------------------
+
+
+@router.get(
+    "/signing-approvals", response_model=SigningApprovalPage, operation_id="listSigningApprovals"
+)
+async def list_signing(authed: MemoReader) -> SigningApprovalPage:
+    return await signing_page(_proxy(authed))
+
+
+@router.post(
+    "/signing-approvals/{id}/decision",
+    status_code=204,
+    operation_id="decideSigningApproval",
+)
+async def decide_signing(id: ApprovalId, body: SigningDecisionIn, authed: MemoReader) -> None:
+    await _decide(_proxy(authed), id, body.for_eds())
 
 
 @router.get("/memo-approvals", response_model=MemoApprovalPage, operation_id="listMemoApprovals")

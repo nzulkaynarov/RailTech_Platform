@@ -386,3 +386,37 @@ class DeferredRequestEvent(models.Model):
 
     def __str__(self):
         return f"DeferredRequestEvent(deal={self.deal_id}, published={self.published_at is not None})"
+
+
+class CommercialSigningRequest(models.Model):
+    """Запрос подписи коммерческого документа в EDS (SIGN-4, FX-10): какая редакция ушла на подпись и чем закончилось."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", _("На подписи")
+        SIGNED = "signed", _("Подписан")
+        REJECTED = "rejected", _("Отказ")
+        STALE = "stale", _("Документ изменён")
+
+    kind = models.CharField(max_length=16)
+    object_id = models.BigIntegerField()
+    number = models.CharField(max_length=64)
+    fingerprint = models.CharField(max_length=64, help_text=_("Отпечаток редакции документа на момент запроса"))
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
+    comment = models.TextField(blank=True, default="")
+    signer_name = models.CharField(max_length=255, blank=True, default="")
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["kind", "object_id"], name="integration_kind_obj_idx")]
+        ordering = ["-created_at", "-id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["kind", "object_id"],
+                condition=models.Q(status="pending"),
+                name="uq_commercial_signing_one_pending",
+            )
+        ]

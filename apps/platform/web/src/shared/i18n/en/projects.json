@@ -472,5 +472,10 @@
       "text": "There is no such project, or it is not open yet: a project appears when the client accepts the quote.",
       "action": "To the project list"
     }
+  },
+  "signing": {
+    "action": "Send for signature",
+    "sent": "Sent for signature",
+    "failed": "Could not send for signature"
   }
 }

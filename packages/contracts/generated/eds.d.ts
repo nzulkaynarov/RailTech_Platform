@@ -2909,7 +2909,7 @@ export interface components {
       dispatch_method?: components["schemas"]["DispatchMethod"] | null;
     };
     /** @enum {string} */
-    ApprovalTemplate: "memo" | "application" | "report" | "quote";
+    ApprovalTemplate: "memo" | "application" | "report" | "quote" | "signing";
     /** @enum {string} */
     RouteStatus: "open" | "approved" | "returned" | "rejected";
     /** @enum {string} */
@@ -2936,6 +2936,12 @@ export interface components {
     /** @description Документ EDS (`document_id`, `number`) или КП ERP (`erp_quote_id`, `quote_number`, `quote_version`, `erp_deal_id`) */
     ApprovalObject: {
       kind: components["schemas"]["ApprovalTemplate"];
+      /** @enum {string} */
+      signing_kind?: "quote" | "contract" | "invoice" | "act";
+      signing_number?: string;
+      signing_version?: number | null;
+      signing_amount_tiyins?: number | null;
+      signing_currency?: string | null;
       document_id?: components["schemas"]["Uuid"];
       number?: components["schemas"]["DocumentNumber"];
       erp_quote_id?: number;

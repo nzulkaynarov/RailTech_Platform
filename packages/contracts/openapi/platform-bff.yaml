@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.43.0
+  version: 0.44.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -2337,6 +2337,89 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /eds/projects/{ref}/signing:
+    post:
+      tags: [eds-projects]
+      operationId: requestEdsProjectSigning
+      summary: 'EDS · Проект: отправить документ на подпись уполномоченному'
+      description: >-
+        Договор, счёт или акт проекта уходит шагом «Подписать» в EDS (SIGN-4, ADR-0024). Подписант — по реестру полномочий.
+        409 — документ уже подписан, уже на подписи или ещё не выпущен. Раздел `eds.projects` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/ProjectRefPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectSigningIn'
+      responses:
+        '200':
+          description: Документ отправлен на подпись
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/ProjectConflict'
+  /eds/signing-approvals:
+    get:
+      tags: [eds-approvals]
+      operationId: listSigningApprovals
+      summary: 'EDS · Документы, ждущие вашей подписи'
+      responses:
+        '200':
+          description: Открытые шаги «Подписать» текущего сотрудника
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SigningApprovalPage'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /eds/signing-approvals/{id}/decision:
+    post:
+      tags: [eds-approvals]
+      operationId: decideSigningApproval
+      summary: 'EDS · Подписать документ или отказать'
+      description: >-
+        `approve` — подпись при действующем полномочии (409 `no_signing_authority`, если его нет). `reject` — отказ, причина
+        обязательна и видна автору. Решает только назначенный подписант.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SigningDecisionIn'
+      responses:
+        '204':
+          description: Решение принято
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/ApprovalConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
   /eds/projects/{ref}/act:
     post:
       tags: [eds-projects]
@@ -18713,6 +18796,58 @@ components:
           type: boolean
         show_fx_note:
           type: boolean
+    ProjectSigningIn:
+      type: object
+      additionalProperties: false
+      required: [kind, document_id]
+      properties:
+        kind:
+          type: string
+          enum: [contract, invoice, act]
+        document_id:
+          type: integer
+    SigningApprovalRow:
+      type: object
+      additionalProperties: false
+      required: [id, kind, number, title, amount, currency, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum: [quote, contract, invoice, act]
+        number:
+          type: string
+        title:
+          type: string
+        amount:
+          type: [string, 'null']
+        currency:
+          type: [string, 'null']
+        created_at:
+          type: string
+          format: date-time
+    SigningApprovalPage:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SigningApprovalRow'
+    SigningDecisionIn:
+      type: object
+      additionalProperties: false
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [approve, reject]
+        comment:
+          type: string
+          maxLength: 4000
     DocumentKind:
       type: string
       enum:

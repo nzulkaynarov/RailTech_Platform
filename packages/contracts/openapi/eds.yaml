@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — EDS API (электронный документооборот)
-  version: 0.11.0
+  version: 0.12.0
   summary: Пространство `/api/v1/` сервиса EDS — вызывает BFF Платформы от имени сотрудника.
   description: |
     Контракт сервиса EDS (`apps/eds`, ADR-0015; `docs/history/runbooks/wave12-eds-c1.md` §2). EDS — владелец реестра документов и
@@ -5483,7 +5483,7 @@ components:
 
     ApprovalTemplate:
       type: string
-      enum: [memo, application, report, quote]
+      enum: [memo, application, report, quote, signing]
     RouteStatus:
       type: string
       enum: [open, approved, returned, rejected]
@@ -5563,15 +5563,33 @@ components:
           erp_deal_id:
             type: [integer, 'null']
       else:
-        required: [document_id, number]
-        properties:
-          document_id:
-            $ref: '#/components/schemas/Uuid'
-          number:
-            $ref: '#/components/schemas/DocumentNumber'
+        if:
+          properties:
+            kind:
+              const: signing
+        then:
+          required: [signing_kind, signing_number]
+        else:
+          required: [document_id, number]
+          properties:
+            document_id:
+              $ref: '#/components/schemas/Uuid'
+            number:
+              $ref: '#/components/schemas/DocumentNumber'
       properties:
         kind:
           $ref: '#/components/schemas/ApprovalTemplate'
+        signing_kind:
+          type: string
+          enum: [quote, contract, invoice, act]
+        signing_number:
+          type: string
+        signing_version:
+          type: [integer, 'null']
+        signing_amount_tiyins:
+          type: [integer, 'null']
+        signing_currency:
+          type: [string, 'null']
         document_id:
           $ref: '#/components/schemas/Uuid'
         number:

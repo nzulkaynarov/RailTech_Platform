@@ -193,5 +193,14 @@
       "reject": "Hujjat rad etildi"
     },
     "hint": "Alohida «to‘lovga qabul qilish» shart emas: buxgalter qadamini «To‘landi» yopadi. Hujjatni shu yerda izoh bilan qaytarish mumkin."
+  },
+  "signing": {
+    "title": "Imzoingizni kutmoqda",
+    "sign": "Imzolash",
+    "reject": "Rad etish",
+    "rejectTitle": "Rad etish sababi",
+    "reason": "Sabab, muallif ko'radi",
+    "done": "Qaror saqlandi",
+    "failed": "Qarorni saqlab bo'lmadi"
   }
 }

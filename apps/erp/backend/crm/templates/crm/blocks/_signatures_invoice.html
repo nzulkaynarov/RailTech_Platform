@@ -1,4 +1,4 @@
-{% load i18n %}
+{% load document_format %}{% load i18n %}
 {% comment %}
   Блок «подписи» счёта: руководитель + главный бухгалтер — как печатал код-шаблон
   invoice_pdf.html. Вставляется одним плейсхолдером {{doc.signatures}}.
@@ -15,6 +15,8 @@
             {{ invoice.signatory_position }}{% if invoice.signatory_basis_text %} · {{ invoice.signatory_basis_text }}{% endif %}<br>
             {% translate "Код проверки:" %} <strong>{{ invoice.verification_code }}</strong>
           </div>
+          <div style="margin-top:4pt;"><img src="{% verification_qr invoice.verification_code %}" alt="QR" style="width:52pt;height:52pt;"></div>
+          <style>@page { @bottom-right { content: "№ {{ invoice.number }} · код проверки {{ invoice.verification_code }}"; font-size: 7pt; color: #667085; } }</style>
         {% elif seller_profile.signatory_name %}
           {{ seller_profile.signatory_name }}
           <div class="sign-line">{% translate "Подпись" %}</div>

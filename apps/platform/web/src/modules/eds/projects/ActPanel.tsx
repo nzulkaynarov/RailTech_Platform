@@ -20,6 +20,7 @@ import { FileLinks } from "./FileLinks";
 import { ReasonForm, ScanForm } from "./forms";
 import { journalText } from "./model";
 import { ProjectStatusTag } from "./status";
+import { SigningButton } from "./SigningButton";
 import { useApplyCard } from "./useProjectMutations";
 
 function NoAct({
@@ -297,6 +298,8 @@ function ActBody({
       {act.actions.length === 0 && act.status !== "signed" && act.status !== "cancelled" ? (
         <p className="pf-hint">{t("act.readOnly")}</p>
       ) : null}
+
+      <SigningButton objectId={objectId} kind="act" documentId={act.id} />
 
       <section aria-label={t("act.history")}>
         <h3 className="pf-dec-subhead">{t("act.history")}</h3>

@@ -125,7 +125,46 @@ def _billing_visibility_q(user, request, *, deal_path):
     return buyer_q | seller_q
 
 
-class ContractViewSet(RoleGatedViewMixin, OptimisticLockingMixin, ContractFlowMixin, viewsets.ModelViewSet):
+class CommercialSigningMixin:
+    """Отправка документа на подпись уполномоченному в EDS и последний итог (SIGN-4, FX-10)."""
+
+    signing_kind = ""
+
+    @action(detail=True, methods=["post"], url_path="request-signing")
+    def request_signing(self, request, pk=None):
+        from crm.services.signing_outbound import SigningRequestError, request_commercial_signing
+
+        document = self.get_object()
+        try:
+            created = request_commercial_signing(kind=self.signing_kind, doc=document, user=request.user)
+        except SigningRequestError as exc:
+            return Response({"code": exc.code, "detail": exc.message}, status=exc.status)
+        return Response(_signing_status(created), status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["get"], url_path="signing-status")
+    def signing_status(self, request, pk=None):
+        from integration.models import CommercialSigningRequest
+
+        document = self.get_object()
+        last = CommercialSigningRequest.objects.filter(kind=self.signing_kind, object_id=document.pk).first()
+        return Response(_signing_status(last))
+
+
+def _signing_status(row) -> dict:
+    if row is None:
+        return {"status": "none", "comment": "", "signer_name": "", "created_at": None, "decided_at": None}
+    return {
+        "status": row.status,
+        "comment": row.comment,
+        "signer_name": row.signer_name,
+        "created_at": row.created_at,
+        "decided_at": row.decided_at,
+    }
+
+
+class ContractViewSet(
+    RoleGatedViewMixin, OptimisticLockingMixin, ContractFlowMixin, CommercialSigningMixin, viewsets.ModelViewSet
+):
     """Contracts -- generated from approved quotes, double-signed."""
 
     required_permissions = {
@@ -146,7 +185,10 @@ class ContractViewSet(RoleGatedViewMixin, OptimisticLockingMixin, ContractFlowMi
         "cancel": ADMIN_ONLY,
         "force_cancel": ADMIN_ONLY,
         "sign_manager": "contract.sign",
+        "request_signing": "contract.manage",
+        "signing_status": "contract.manage",
     }
+    signing_kind = "contract"
 
     serializer_class = ContractSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
@@ -357,6 +399,7 @@ class ContractViewSet(RoleGatedViewMixin, OptimisticLockingMixin, ContractFlowMi
 class InvoiceViewSet(
     RoleGatedViewMixin,
     OptimisticLockingMixin,
+    CommercialSigningMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
     mixins.UpdateModelMixin,
@@ -383,7 +426,10 @@ class InvoiceViewSet(
         "issue": "finance.invoice",
         "generate_act": "fulfillment.act",
         "record_payment": "finance.payment",
+        "request_signing": "finance.invoice",
+        "signing_status": "finance.view",
     }
+    signing_kind = "invoice"
 
     serializer_class = InvoiceSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
@@ -618,7 +664,7 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
         return _stream_or_render_pdf(self.get_object())
 
 
-class ActViewSet(RoleGatedViewMixin, ActFlowMixin, viewsets.ReadOnlyModelViewSet):
+class ActViewSet(RoleGatedViewMixin, ActFlowMixin, CommercialSigningMixin, viewsets.ReadOnlyModelViewSet):
     """Акты — только чтение плюс сервисные экшены ниже (Rule 8).
 
     Выпуск — через `invoices/{id}/generate-act/` (там же проверяется роутинг
@@ -632,7 +678,10 @@ class ActViewSet(RoleGatedViewMixin, ActFlowMixin, viewsets.ReadOnlyModelViewSet
         "remind": "fulfillment.act",
         "attach_scan": "fulfillment.act",  # D2-5: скан подписанного акта
         "record_return": "fulfillment.act",
+        "request_signing": "fulfillment.act",
+        "signing_status": "fulfillment.act",
     }
+    signing_kind = "act"
 
     serializer_class = ActSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]

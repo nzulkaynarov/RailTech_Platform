@@ -8423,6 +8423,86 @@ paths:
           $ref: '#/components/responses/ForbiddenResponse'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/crm/acts/{id}/request-signing/:
+    post:
+      operationId: crm_acts_request_signing_create
+      description: |-
+        Акты — только чтение плюс сервисные экшены ниже (Rule 8).
+
+        Выпуск — через `invoices/{id}/generate-act/` (там же проверяется роутинг
+        продавца, аудит H4), подпись — через `acts/{id}/sign/`. Сырые create/update/
+        destroy обходили обе проверки и позволяли проставить номер, статус и даты руками.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Акт.
+        required: true
+      tags:
+      - crm
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ActRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ActRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Act'
+          description: ''
+        '400':
+          $ref: '#/components/responses/BadRequestResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/crm/acts/{id}/signing-status/:
+    get:
+      operationId: crm_acts_signing_status_retrieve
+      description: |-
+        Акты — только чтение плюс сервисные экшены ниже (Rule 8).
+
+        Выпуск — через `invoices/{id}/generate-act/` (там же проверяется роутинг
+        продавца, аудит H4), подпись — через `acts/{id}/sign/`. Сырые create/update/
+        destroy обходили обе проверки и позволяли проставить номер, статус и даты руками.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Акт.
+        required: true
+      tags:
+      - crm
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Act'
+          description: ''
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
   /api/v1/crm/analytics/dashboard/:
     get:
       operationId: crm_analytics_dashboard_retrieve
@@ -9459,6 +9539,48 @@ paths:
                 $ref: '#/components/schemas/ErrorDetail'
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/crm/contracts/{id}/request-signing/:
+    post:
+      operationId: crm_contracts_request_signing_create
+      description: Contracts -- generated from approved quotes, double-signed.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Контракт.
+        required: true
+      tags:
+      - crm
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContractRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ContractRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ContractRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contract'
+          description: ''
+        '400':
+          $ref: '#/components/responses/BadRequestResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
   /api/v1/crm/contracts/{id}/revise/:
     post:
       operationId: crm_contracts_revise_create
@@ -9659,6 +9781,34 @@ paths:
           description: ''
         '400':
           $ref: '#/components/responses/BadRequestResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/crm/contracts/{id}/signing-status/:
+    get:
+      operationId: crm_contracts_signing_status_retrieve
+      description: Contracts -- generated from approved quotes, double-signed.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Контракт.
+        required: true
+      tags:
+      - crm
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contract'
+          description: ''
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
         '403':
@@ -11787,6 +11937,92 @@ paths:
                 $ref: '#/components/schemas/ErrorDetail'
         '400':
           $ref: '#/components/responses/BadRequestResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/crm/invoices/{id}/request-signing/:
+    post:
+      operationId: crm_invoices_request_signing_create
+      description: |-
+        Счета. Сырые `create`/`destroy` НЕ подключены намеренно (Rule 8).
+
+        Выставление счёта — только через сервисные экшены `create-manual` и
+        `generate-from-contract`; отмена — через `cancel` (сервис `cancel_invoice`).
+        Сырое удаление обходило бы отмену, а при наличии платежей падало бы в
+        `ProtectedError` → 500 (`Payment.invoice` объявлен с `on_delete=PROTECT`).
+        `update` оставлен: им правят черновик (due_date / notes), и он уже загейчен
+        на DRAFT ниже — фронтенд использует именно его.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Инвойс.
+        required: true
+      tags:
+      - crm
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoiceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/InvoiceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/InvoiceRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+          description: ''
+        '400':
+          $ref: '#/components/responses/BadRequestResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/crm/invoices/{id}/signing-status/:
+    get:
+      operationId: crm_invoices_signing_status_retrieve
+      description: |-
+        Счета. Сырые `create`/`destroy` НЕ подключены намеренно (Rule 8).
+
+        Выставление счёта — только через сервисные экшены `create-manual` и
+        `generate-from-contract`; отмена — через `cancel` (сервис `cancel_invoice`).
+        Сырое удаление обходило бы отмену, а при наличии платежей падало бы в
+        `ProtectedError` → 500 (`Payment.invoice` объявлен с `on_delete=PROTECT`).
+        `update` оставлен: им правят черновик (due_date / notes), и он уже загейчен
+        на DRAFT ниже — фронтенд использует именно его.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Инвойс.
+        required: true
+      tags:
+      - crm
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+          description: ''
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
         '403':
@@ -19535,6 +19771,46 @@ components:
       - id
       - number
       - status
+    ActRequest:
+      type: object
+      description: |-
+        Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.
+
+        Зачем. SPA выводила роль из `activeStatus` (= первый тип компании), поэтому компания,
+        которая одновременно покупает и продаёт, не видела продавцовских кнопок: «Сформировать
+        акт» пряталась за `!isBuyer`, и у dual-компании с порядком типов [CLIENT, SUPPLIER]
+        кнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`
+        у договора.
+
+        Поля-подсказки НЕ являются полным правом: подписку и стадию проверит сервис,
+        выполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку
+        кнопок чужой стороны.
+      properties:
+        deal:
+          type: integer
+          title: Сделка
+        contract:
+          type: integer
+          nullable: true
+        invoice:
+          type: integer
+          nullable: true
+        issued_at:
+          type: string
+          format: date
+          nullable: true
+        total_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        signed_file:
+          type: string
+          format: binary
+          nullable: true
+        notes:
+          type: string
+      required:
+      - deal
     ActReturnInRequest:
       type: object
       properties:

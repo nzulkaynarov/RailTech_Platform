@@ -80,3 +80,21 @@ def qty(value, unit=None):
     if unit:
         return f"{number}{NBSP}{unit}"
     return number
+
+
+@register.simple_tag
+def verification_qr(code):
+    """QR публичной проверки документа (`<кабинет>/v/<код>`, ADR-0024 п. 5) как data-URI; без кода — пусто."""
+    if not code:
+        return ""
+    import base64
+    import io
+
+    import qrcode
+    import qrcode.image.svg as qrsvg
+    from django.conf import settings
+
+    url = f"{settings.CABINET_URL.rstrip('/')}/v/{code}"
+    buffer = io.BytesIO()
+    qrcode.make(url, image_factory=qrsvg.SvgPathImage, box_size=6, border=1).save(buffer)
+    return f"data:image/svg+xml;base64,{base64.b64encode(buffer.getvalue()).decode('ascii')}"

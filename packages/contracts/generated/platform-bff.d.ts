@@ -1128,6 +1128,63 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/eds/projects/{ref}/signing": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Проект: отправить документ на подпись уполномоченному
+     * @description Договор, счёт или акт проекта уходит шагом «Подписать» в EDS (SIGN-4, ADR-0024). Подписант — по реестру полномочий. 409 — документ уже подписан, уже на подписи или ещё не выпущен. Раздел `eds.projects` — полный.
+     */
+    post: operations["requestEdsProjectSigning"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/signing-approvals": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** EDS · Документы, ждущие вашей подписи */
+    get: operations["listSigningApprovals"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/signing-approvals/{id}/decision": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Подписать документ или отказать
+     * @description `approve` — подпись при действующем полномочии (409 `no_signing_authority`, если его нет). `reject` — отказ, причина обязательна и видна автору. Решает только назначенный подписант.
+     */
+    post: operations["decideSigningApproval"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/eds/projects/{ref}/act": {
     parameters: {
       query?: never;
@@ -10599,6 +10656,31 @@ export interface components {
       show_lead_time?: boolean;
       show_fx_note?: boolean;
     };
+    ProjectSigningIn: {
+      /** @enum {string} */
+      kind: "contract" | "invoice" | "act";
+      document_id: number;
+    };
+    SigningApprovalRow: {
+      /** Format: uuid */
+      id: string;
+      /** @enum {string} */
+      kind: "quote" | "contract" | "invoice" | "act";
+      number: string;
+      title: string;
+      amount: string | null;
+      currency: string | null;
+      /** Format: date-time */
+      created_at: string;
+    };
+    SigningApprovalPage: {
+      items: components["schemas"]["SigningApprovalRow"][];
+    };
+    SigningDecisionIn: {
+      /** @enum {string} */
+      decision: "approve" | "reject";
+      comment?: string;
+    };
     /**
      * @description Вид документа: КП, договор, счёт, акт, письмо (ERP `KP`, `CT`, `INV`, `ACT`, `DOC`)
      * @enum {string}
@@ -17555,6 +17637,94 @@ export interface operations {
       413: components["responses"]["ProjectPayloadTooLarge"];
       422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  requestEdsProjectSigning: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер проекта `ПР-2026-104` (или заявки `ЗВ-2026-104`) либо id сделки ERP цифрами; год номера сверяется с годом создания сделки */
+        ref: components["parameters"]["ProjectRefPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ProjectSigningIn"];
+      };
+    };
+    responses: {
+      /** @description Документ отправлен на подпись */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProjectCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["ProjectConflict"];
+    };
+  };
+  listSigningApprovals: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Открытые шаги «Подписать» текущего сотрудника */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SigningApprovalPage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  decideSigningApproval: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SigningDecisionIn"];
+      };
+    };
+    responses: {
+      /** @description Решение принято */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["ApprovalConflict"];
+      422: components["responses"]["ValidationFailed"];
     };
   };
   actEdsProjectAct: {

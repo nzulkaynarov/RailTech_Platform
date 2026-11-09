@@ -1,4 +1,4 @@
-{% load i18n %}
+{% load document_format %}{% load i18n %}
 {% comment %}
   Хвост договора одним блоком ({{doc.requisites_and_signatures}}): статья «Реквизиты и подписи
   Сторон» (номер сдвигается, когда есть «Особые условия»), полные реквизиты обеих сторон и
@@ -49,6 +49,8 @@
             {{ contract.signatory_position }}{% if contract.signatory_basis_text %} · {{ contract.signatory_basis_text }}{% endif %}<br>
             {% translate "Код проверки:" %} <strong>{{ contract.verification_code }}</strong>
           </div>
+          <div style="margin-top:4pt;"><img src="{% verification_qr contract.verification_code %}" alt="QR" style="width:52pt;height:52pt;"></div>
+          <style>@page { @bottom-right { content: "№ {{ contract.number }} · код проверки {{ contract.verification_code }}"; font-size: 7pt; color: #667085; } }</style>
         {% elif contract.manager_signer %}
           {{ contract.manager_signer.get_full_name|default:contract.manager_signer.email }}
           <div class="sign-line">{% translate "Простая электронная подпись" %} · {{ contract.manager_signed_at|date:"d.m.Y H:i" }}<br>{% translate "Идентификация:" %} {{ contract.manager_signer.email }}</div>

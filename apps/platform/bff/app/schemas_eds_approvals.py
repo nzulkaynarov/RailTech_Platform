@@ -8,6 +8,7 @@ BFF не решает: статус маршрута, чек-лист КП, кт
 
 import datetime as dt
 from typing import Any, Literal
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
@@ -315,6 +316,36 @@ class _DecisionIn(BaseModel):
 
 class MemoDecisionIn(_DecisionIn):
     pass
+
+
+class SigningDecisionIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    decision: Literal["approve", "reject"]
+    comment: str | None = Field(default=None, max_length=4000)
+
+    @model_validator(mode="after")
+    def _reason_for_reject(self) -> "SigningDecisionIn":
+        if self.decision == "reject" and not (self.comment or "").strip():
+            raise ValueError("comment is required for reject")
+        return self
+
+    def for_eds(self) -> dict[str, Any]:
+        return {"decision": self.decision, "comment": self.comment}
+
+
+class SigningApprovalRow(BaseModel):
+    id: UUID
+    kind: Literal["quote", "contract", "invoice", "act"]
+    number: str
+    title: str
+    amount: str | None
+    currency: str | None
+    created_at: dt.datetime
+
+
+class SigningApprovalPage(BaseModel):
+    items: list[SigningApprovalRow]
 
 
 class QuoteDecisionIn(_DecisionIn):

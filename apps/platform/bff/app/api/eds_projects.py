@@ -27,6 +27,7 @@ from app.schemas_eds_projects import (
     FileVariant,
     ProjectCard,
     ProjectPage,
+    ProjectSigningIn,
     ProjectStage,
 )
 
@@ -152,6 +153,13 @@ async def contract_action(ref: Ref, body: ContractActionIn, authed: Writer) -> P
 async def contract_scan(ref: Ref, request: Request, authed: Writer) -> ProjectCard:
     content, content_type = await _scan_body(request)
     return await _erp(authed).contract_scan(ref, content, content_type)
+
+
+@router.post(
+    "/projects/{ref}/signing", response_model=ProjectCard, operation_id="requestEdsProjectSigning"
+)
+async def request_signing(ref: Ref, body: ProjectSigningIn, authed: Writer) -> ProjectCard:
+    return await _erp(authed).request_signing(ref, body.kind, body.document_id)
 
 
 # --- акт ---------------------------------------------------------------------------------------

@@ -472,5 +472,10 @@
       "text": "Bunday loyiha yo‘q yoki u hali ochilmagan: loyiha mijoz TT ni qabul qilganda paydo bo‘ladi.",
       "action": "Loyihalar ro‘yxatiga"
     }
+  },
+  "signing": {
+    "action": "Imzoga yuborish",
+    "sent": "Hujjat imzoga yuborildi",
+    "failed": "Imzoga yuborib bo'lmadi"
   }
 }
