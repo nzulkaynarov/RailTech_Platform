@@ -31,6 +31,7 @@ from django.conf import settings
 from django.db import IntegrityError, connection, transaction
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
+from parties.company_admin import ensure_company_admin
 from parties.models import Company, CompanyType, Contact
 from portal.models import PortalRequestLine
 from portal.services.invitation import invite_contact
@@ -192,6 +193,8 @@ def _create_contacts(
         contacts.append(contact)
         if is_primary or primary is None:
             primary = contact
+    if can_act:  # компания создана передачей; найденной по ИНН администратора не назначаем — контакты не проверены
+        ensure_company_admin(company)
     return contacts, primary
 
 

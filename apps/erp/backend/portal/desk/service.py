@@ -14,6 +14,7 @@ from django.db import transaction
 from django.utils import timezone
 from integration.services import partner_client
 from integration.services.partner_client import crm_client_state, lock_company, request_client_in_crm
+from parties.company_admin import ensure_company_admin
 from parties.models import (
     Company,
     CompanyRelationship,
@@ -177,6 +178,8 @@ def create_contact(company: Company, data: dict, user) -> Contact:
             **clean,
         },  # право действовать (заявки, загрузки) — по умолчанию; сотрудник выключает в блоке
     )
+    ensure_company_admin(company)
+    contact.refresh_from_db()
     record(
         user,
         entity="supplier_access",

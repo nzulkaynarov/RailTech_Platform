@@ -1415,7 +1415,7 @@ function OrderDetailDialog({
                       className="flex items-start justify-between rounded-md border border-border/70 p-2.5 text-xs"
                     >
                       <span className="font-semibold">
-                        {t(`pages.partnerOrders.logKinds.${log.kind}`, { defaultValue: log.kind })}
+                        {t(`pages.partnerOrders.logKinds.${log.kind}`)}
                       </span>
                       <div className="shrink-0 text-muted-foreground">{formatDateTime(log.created_at)}</div>
                     </div>

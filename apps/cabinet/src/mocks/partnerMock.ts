@@ -514,7 +514,7 @@ export function partnerFinanceSummary(
           )
         : 0;
 
-    const curr = order.currency;
+    const curr = order.currency ?? 'UZS';
     if (order.status !== 'cancelled') {
       const entry = currencyMap.get(curr) || {
         currency: curr,
@@ -535,7 +535,7 @@ export function partnerFinanceSummary(
       order_number: order.number,
       order_date: order.created_at,
       status: order.status,
-      currency: order.currency,
+      currency: curr,
       ordered_amount: orderedAmount.toFixed(2),
       received_amount: receivedAmount.toFixed(2),
       in_transit_amount: inTransitAmount.toFixed(2),

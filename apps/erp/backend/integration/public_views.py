@@ -8,6 +8,7 @@
 """
 
 from drf_spectacular.utils import OpenApiResponse, extend_schema
+from portal.client_ip import client_ip
 from portal.services import documents as portal_documents
 from rest_framework import status
 from rest_framework.permissions import AllowAny
@@ -56,6 +57,6 @@ class PublicDocumentLinkView(APIView):
                 headers={"Retry-After": str(portal_documents.RETRY_AFTER_SECONDS)},
             )
 
-        documents_link.record_download(link, ip=request.META.get("REMOTE_ADDR", "") or "")
+        documents_link.record_download(link, ip=client_ip(request))
         response["Cache-Control"] = "private, no-store"  # ссылка с секретом: прокси и браузер файл не хранят
         return response
