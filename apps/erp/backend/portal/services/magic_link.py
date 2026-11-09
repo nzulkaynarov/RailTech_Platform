@@ -74,12 +74,11 @@ def find_login_contact(clean_email: str) -> Optional[Contact]:
         cabinet_company_q("company"), active_contact_q(), email__iexact=clean_email
     ).select_related("company")
     company_ids = list(contacts.order_by().values_list("company_id", flat=True).distinct()[:2])
-    if not company_ids:
-        return None
     if len(company_ids) > 1:
         logger.warning("Magic link requested for an e-mail shared by several companies; nothing sent")
-        return None
-    return contacts.filter(company_id=company_ids[0]).first()
+    # Второй запрос идёт при любом исходе: путь работы не зависит от того, есть ли адрес (B-FX3-1)
+    contact = contacts.filter(company_id__in=company_ids[:1] or [0]).first()
+    return contact if len(company_ids) == 1 else None
 
 
 def request_magic_link(email: str) -> None:

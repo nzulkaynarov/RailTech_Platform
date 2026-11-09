@@ -10,6 +10,7 @@ import logging
 from typing import Optional, Tuple
 
 from django.db import transaction
+from parties.company_admin import ensure_company_admin
 
 from ..models import Company, CompanyType, Contact, CustomUser
 
@@ -117,5 +118,7 @@ def create_offline_client(
             preferred_channel=preferred_channel if preferred_channel in ("email", "telegram", "both") else "email",
             telegram_username=telegram_username,
         )
+    ensure_company_admin(company)
+    contact.refresh_from_db()
 
     return {"company": company, "contact": contact, "company_created": company_created}, None
