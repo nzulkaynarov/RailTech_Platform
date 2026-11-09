@@ -1120,31 +1120,33 @@
       "views": {
         "orders": "Заказы (PO)",
         "rfq": "Запросы цен (RFQ)",
-        "finance": "Взаиморасчёты и оценка"
+        "finance": "Оборот и оценка"
       },
       "finance": {
-        "balancesTitle": "Баланс взаиморасчётов по валютам",
-        "emptyBalancesText": "Нет данных по взаиморасчётам.",
+        "balancesTitle": "Оборот по заказам",
+        "emptyBalancesText": "Заказов пока нет.",
         "ordersCountSuffix": "заказов",
         "orderedTotal": "Заказано",
         "receivedTotal": "Принято складом",
-        "inTransitTotal": "Остаток в пути",
+        "inTransitTotal": "Отгружено, не принято",
         "receiptsCount": "Приёмок",
         "scorecardTitle": "Оценка эффективности поставщика",
         "otifRate": "OTIF (в срок и в полном объёме)",
         "rfqRate": "Ответы на запросы цен (RFQ)",
         "freshnessRate": "Актуальность цен в каталоге",
-        "completedOrdersCount": "Выполнено заказов: {{count}}",
-        "totalRfqsCount": "Всего запросов цен: {{count}}",
+        "otifOrdersCount": "Заказов в расчёте: {{count}}",
+        "avgResponse": "Средний ответ: {{hours}} ч",
+        "noData": "Нет данных",
+        "totalRfqsCount": "Доставленных запросов: {{count}}",
         "activeOffersCount": "Активных позиций: {{count}}",
         "excellent": "Отлично",
-        "target": "В норме",
+        "target": "Ниже цели",
         "responsive": "Высокая",
         "fresh": "Актуально",
         "updateNeeded": "Требует обновления",
-        "settlementsTitle": "Детализация взаиморасчётов по заказам",
-        "settlementsListLabel": "Список взаиморасчётов по заказам",
-        "emptySettlementsText": "История взаиморасчётов пуста."
+        "settlementsTitle": "Разбивка по заказам",
+        "settlementsListLabel": "Список заказов с суммами",
+        "emptySettlementsText": "Заказов пока нет."
       },
       "orderTabs": {
         "all": "Все",

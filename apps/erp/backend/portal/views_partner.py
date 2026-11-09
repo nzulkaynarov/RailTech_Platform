@@ -401,10 +401,11 @@ class PartnerProductDocumentFileView(BasePortalView):
 
 
 class PartnerFinanceView(BasePortalView):
-    """GET /partner/finance — сводка взаиморасчётов и оценка эффективности партнёра."""
+    """GET /partner/finance — оборот по заказам и оценка партнёра."""
 
     required_module = MODULE
 
     def get(self, request):
-        data = orders.get_partner_finance_summary(company=request.portal_company)
+        page, page_size = _page_params(request)
+        data = orders.get_partner_finance_summary(company=request.portal_company, page=page, page_size=page_size)
         return Response(PartnerFinanceSummarySerializer(data).data)

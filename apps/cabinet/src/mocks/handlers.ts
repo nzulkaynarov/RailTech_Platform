@@ -1604,8 +1604,15 @@ export const handlers = [
   ),
   http.get(
     `${API}/partner/finance`,
-    withSession(({ db }) => {
-      return json(partner.partnerFinanceSummary(db.partnerOrders));
+    withSession(({ db, request }) => {
+      const query = new URL(request.url).searchParams;
+      return json(
+        partner.partnerFinanceSummary(
+          db.partnerOrders,
+          Number(query.get('page') ?? 1),
+          Number(query.get('page_size') ?? 20),
+        ),
+      );
     }),
   ),
 

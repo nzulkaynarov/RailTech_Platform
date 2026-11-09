@@ -151,7 +151,7 @@ export function PartnerOrdersPage() {
     { enabled: view === 'rfq' },
   );
 
-  const financeQuery = usePartnerFinance({ enabled: view === 'finance' });
+  const financeQuery = usePartnerFinance({ page, page_size: PAGE_SIZE }, { enabled: view === 'finance' });
 
   const selectedOrderQuery = usePartnerOrderDetail(orderId);
   const selectedRfqQuery = usePartnerPriceRequestDetail(rfqId);
@@ -338,7 +338,7 @@ export function PartnerOrdersPage() {
       header: t('pages.partnerOrders.finance.orderedTotal'),
       cell: (row) => (
         <span className="font-medium tabular-nums">
-          {formatMoney({ amount: row.ordered_amount, currency: row.currency })}
+          {orderAmount(row.ordered_amount, row.currency)}
         </span>
       ),
     },
@@ -347,7 +347,7 @@ export function PartnerOrdersPage() {
       header: t('pages.partnerOrders.finance.receivedTotal'),
       cell: (row) => (
         <span className="font-medium text-success tabular-nums">
-          {formatMoney({ amount: row.received_amount, currency: row.currency })}
+          {orderAmount(row.received_amount, row.currency)}
         </span>
       ),
     },
@@ -356,7 +356,7 @@ export function PartnerOrdersPage() {
       header: t('pages.partnerOrders.finance.inTransitTotal'),
       cell: (row) => (
         <span className="font-medium text-warning tabular-nums">
-          {formatMoney({ amount: row.in_transit_amount, currency: row.currency })}
+          {orderAmount(row.in_transit_amount, row.currency)}
         </span>
       ),
     },
@@ -371,7 +371,12 @@ export function PartnerOrdersPage() {
     },
   ];
 
-  const total = view === 'orders' ? (ordersQuery.data?.total ?? 0) : (rfqQuery.data?.total ?? 0);
+  const total =
+    view === 'orders'
+      ? (ordersQuery.data?.total ?? 0)
+      : view === 'rfq'
+        ? (rfqQuery.data?.total ?? 0)
+        : (financeQuery.data?.settlements_total ?? 0);
   const totalPages = pageCount(total, PAGE_SIZE);
 
   return (
@@ -489,10 +494,10 @@ export function PartnerOrdersPage() {
               ) : (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {financeQuery.data.balances.map((b) => (
-                    <Card key={b.currency} className="border-border/60">
+                    <Card key={b.currency ?? 'none'} className="border-border/60">
                       <CardContent className="p-5">
                         <div className="flex items-center justify-between pb-3 border-b border-border/40">
-                          <span className="font-bold text-lg">{b.currency}</span>
+                          <span className="font-bold text-lg">{b.currency ?? '—'}</span>
                           <ToneBadge tone="neutral">
                             {b.orders_count} {t('pages.partnerOrders.finance.ordersCountSuffix')}
                           </ToneBadge>
@@ -501,19 +506,19 @@ export function PartnerOrdersPage() {
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">{t('pages.partnerOrders.finance.orderedTotal')}</span>
                             <span className="font-semibold tabular-nums">
-                              {formatMoney({ amount: b.ordered_total, currency: b.currency })}
+                              {orderAmount(b.ordered_total, b.currency)}
                             </span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">{t('pages.partnerOrders.finance.receivedTotal')}</span>
                             <span className="font-semibold text-success tabular-nums">
-                              {formatMoney({ amount: b.received_total, currency: b.currency })}
+                              {orderAmount(b.received_total, b.currency)}
                             </span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">{t('pages.partnerOrders.finance.inTransitTotal')}</span>
                             <span className="font-semibold text-warning tabular-nums">
-                              {formatMoney({ amount: b.in_transit_total, currency: b.currency })}
+                              {orderAmount(b.in_transit_total, b.currency)}
                             </span>
                           </div>
                         </div>
@@ -531,82 +536,45 @@ export function PartnerOrdersPage() {
                 {t('pages.partnerOrders.finance.scorecardTitle')}
               </h3>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <Card className="border-border/60">
-                  <CardContent className="p-5">
-                    <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      {t('pages.partnerOrders.finance.otifRate')}
-                    </div>
-                    <div className="mt-2 flex items-baseline gap-2">
-                      <span className="text-3xl font-bold tracking-tight text-foreground">
-                        {financeQuery.data.scorecard.otif_rate}%
-                      </span>
-                      <ToneBadge
-                        tone={
-                          financeQuery.data.scorecard.otif_rate >= 90
-                            ? 'success'
-                            : financeQuery.data.scorecard.otif_rate >= 75
-                              ? 'warning'
-                              : 'danger'
-                        }
-                      >
-                        {financeQuery.data.scorecard.otif_rate >= 90
-                          ? t('pages.partnerOrders.finance.excellent')
-                          : t('pages.partnerOrders.finance.target')}
-                      </ToneBadge>
-                    </div>
-                    <div className="mt-3 text-xs text-muted-foreground">
-                      {t('pages.partnerOrders.finance.completedOrdersCount', {
-                        count: financeQuery.data.scorecard.completed_orders_count,
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-border/60">
-                  <CardContent className="p-5">
-                    <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      {t('pages.partnerOrders.finance.rfqRate')}
-                    </div>
-                    <div className="mt-2 flex items-baseline gap-2">
-                      <span className="text-3xl font-bold tracking-tight text-foreground">
-                        {financeQuery.data.scorecard.rfq_response_rate}%
-                      </span>
-                      <ToneBadge tone={financeQuery.data.scorecard.rfq_response_rate >= 80 ? 'success' : 'warning'}>
-                        {financeQuery.data.scorecard.rfq_response_rate >= 80
-                          ? t('pages.partnerOrders.finance.responsive')
-                          : t('pages.partnerOrders.finance.target')}
-                      </ToneBadge>
-                    </div>
-                    <div className="mt-3 text-xs text-muted-foreground">
-                      {t('pages.partnerOrders.finance.totalRfqsCount', {
-                        count: financeQuery.data.scorecard.total_rfqs_count,
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-border/60">
-                  <CardContent className="p-5">
-                    <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                      {t('pages.partnerOrders.finance.freshnessRate')}
-                    </div>
-                    <div className="mt-2 flex items-baseline gap-2">
-                      <span className="text-3xl font-bold tracking-tight text-foreground">
-                        {financeQuery.data.scorecard.price_freshness_rate}%
-                      </span>
-                      <ToneBadge tone={financeQuery.data.scorecard.price_freshness_rate >= 90 ? 'success' : 'warning'}>
-                        {financeQuery.data.scorecard.price_freshness_rate >= 90
-                          ? t('pages.partnerOrders.finance.fresh')
-                          : t('pages.partnerOrders.finance.updateNeeded')}
-                      </ToneBadge>
-                    </div>
-                    <div className="mt-3 text-xs text-muted-foreground">
-                      {t('pages.partnerOrders.finance.activeOffersCount', {
-                        count: financeQuery.data.scorecard.active_offers_count,
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
+                <ScoreCard
+                  title={t('pages.partnerOrders.finance.otifRate')}
+                  rate={financeQuery.data.scorecard.otif_rate}
+                  threshold={90}
+                  goodLabel={t('pages.partnerOrders.finance.excellent')}
+                  badLabel={t('pages.partnerOrders.finance.target')}
+                  caption={t('pages.partnerOrders.finance.otifOrdersCount', {
+                    count: financeQuery.data.scorecard.otif_orders_count,
+                  })}
+                />
+                <ScoreCard
+                  title={t('pages.partnerOrders.finance.rfqRate')}
+                  rate={financeQuery.data.scorecard.rfq_response_rate}
+                  threshold={80}
+                  goodLabel={t('pages.partnerOrders.finance.responsive')}
+                  badLabel={t('pages.partnerOrders.finance.target')}
+                  caption={[
+                    t('pages.partnerOrders.finance.totalRfqsCount', {
+                      count: financeQuery.data.scorecard.total_rfqs_count,
+                    }),
+                    financeQuery.data.scorecard.rfq_avg_response_hours === null
+                      ? null
+                      : t('pages.partnerOrders.finance.avgResponse', {
+                          hours: financeQuery.data.scorecard.rfq_avg_response_hours,
+                        }),
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                />
+                <ScoreCard
+                  title={t('pages.partnerOrders.finance.freshnessRate')}
+                  rate={financeQuery.data.scorecard.price_freshness_rate}
+                  threshold={90}
+                  goodLabel={t('pages.partnerOrders.finance.fresh')}
+                  badLabel={t('pages.partnerOrders.finance.updateNeeded')}
+                  caption={t('pages.partnerOrders.finance.activeOffersCount', {
+                    count: financeQuery.data.scorecard.active_offers_count,
+                  })}
+                />
               </div>
             </div>
 
@@ -645,6 +613,31 @@ export function PartnerOrdersPage() {
                   columns={settlementColumns}
                 />
               )}
+              {totalPages > 1 ? (
+                <div className="mt-6 flex items-center justify-between border-t border-border pt-4">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={page <= 1}
+                    onClick={() => update({ page: page > 2 ? String(page - 1) : null })}
+                  >
+                    <ChevronLeft className="mr-1 size-4" />
+                    {t('partner.prev')}
+                  </Button>
+                  <div className="text-sm text-muted-foreground">
+                    {t('partner.page', { page, pages: totalPages })}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={page >= totalPages}
+                    onClick={() => update({ page: String(page + 1) })}
+                  >
+                    {t('partner.next')}
+                    <ChevronRight className="ml-1 size-4" />
+                  </Button>
+                </div>
+              ) : null}
             </div>
           </div>
         )
@@ -1081,6 +1074,47 @@ export function PartnerOrdersPage() {
         </div>
       </ActionDialog>
     </div>
+  );
+}
+
+/** Показатель партнёра: нечем измерить — «нет данных», без процента и оценки (FX-8). */
+function ScoreCard({
+  title,
+  rate,
+  threshold,
+  goodLabel,
+  badLabel,
+  caption,
+}: {
+  title: string;
+  rate: number | null;
+  threshold: number;
+  goodLabel: string;
+  badLabel: string;
+  caption: string;
+}) {
+  const { t } = useTranslation();
+  return (
+    <Card className="border-border/60">
+      <CardContent className="p-5">
+        <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{title}</div>
+        <div className="mt-2 flex items-baseline gap-2">
+          {rate === null ? (
+            <span className="text-lg font-semibold text-muted-foreground">
+              {t('pages.partnerOrders.finance.noData')}
+            </span>
+          ) : (
+            <>
+              <span className="text-3xl font-bold tracking-tight text-foreground">{rate}%</span>
+              <ToneBadge tone={rate >= threshold ? 'success' : 'warning'}>
+                {rate >= threshold ? goodLabel : badLabel}
+              </ToneBadge>
+            </>
+          )}
+        </div>
+        <div className="mt-3 text-xs text-muted-foreground">{caption}</div>
+      </CardContent>
+    </Card>
   );
 }
 

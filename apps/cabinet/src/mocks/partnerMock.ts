@@ -488,13 +488,15 @@ export function rfqStatusCounts(items: Schemas['PartnerPriceRequestDetail'][]): 
 
 export function partnerFinanceSummary(
   orders: Schemas['PartnerOrderDetail'][] = partnerOrders(),
+  page = 1,
+  pageSize = 20,
 ): Schemas['PartnerFinanceSummary'] {
   const currencyMap = new Map<
     string,
     { currency: string; ordered: number; received: number; in_transit: number; count: number }
   >();
 
-  const settlements: Schemas['PartnerSettlementLine'][] = orders.map((order) => {
+  const settlements: Schemas['PartnerSettlementLine'][] = orders.filter((order) => order.status !== 'draft').map((order) => {
     const orderedAmount = order.lines.reduce(
       (sum, line) => sum + Number(line.unit_price || 0) * line.quantity,
       0,
@@ -504,7 +506,7 @@ export function partnerFinanceSummary(
       0,
     );
     const inTransitAmount =
-      order.status === 'sent' || order.status === 'confirmed'
+      order.status === 'confirmed' && order.shipment_notices.length > 0
         ? order.lines.reduce(
             (sum, line) =>
               sum + Number(line.unit_price || 0) * Math.max(0, line.quantity - (line.received_quantity || 0)),
@@ -551,9 +553,10 @@ export function partnerFinanceSummary(
 
   const scorecard: Schemas['PartnerFinanceScorecard'] = {
     otif_rate: 96.5,
+    otif_orders_count: orders.filter((o) => o.status === 'received').length,
     rfq_response_rate: 90.0,
+    rfq_avg_response_hours: 18.5,
     price_freshness_rate: 95.0,
-    completed_orders_count: orders.filter((o) => o.status === 'received').length,
     total_rfqs_count: 5,
     active_offers_count: 24,
   };
@@ -561,6 +564,9 @@ export function partnerFinanceSummary(
   return {
     balances,
     scorecard,
-    settlements,
+    settlements: settlements.slice((page - 1) * pageSize, page * pageSize),
+    settlements_total: settlements.length,
+    page,
+    page_size: pageSize,
   };
 }

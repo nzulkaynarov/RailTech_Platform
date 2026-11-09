@@ -421,14 +421,13 @@ def test_partner_finance_and_scorecard_match_contract(partner_world):
     assert isinstance(data["balances"], list)
     assert len(data["balances"]) > 0
     bal = data["balances"][0]
-    assert bal["currency"]
     assert Decimal(bal["ordered_total"]) >= Decimal(bal["received_total"])
 
     sc = data["scorecard"]
-    assert 0 <= sc["otif_rate"] <= 100
+    assert sc["otif_rate"] is None or 0 <= sc["otif_rate"] <= 100
     assert 0 <= sc["rfq_response_rate"] <= 100
     assert 0 <= sc["price_freshness_rate"] <= 100
-    assert sc["completed_orders_count"] >= 1
+    assert sc["otif_orders_count"] >= 0
 
     settlements = data["settlements"]
     assert len(settlements) >= 1

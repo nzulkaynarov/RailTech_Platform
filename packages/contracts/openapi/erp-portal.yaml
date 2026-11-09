@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Portal API (Cabinet → ERP)
-  version: 0.11.0
+  version: 0.12.0
   summary: Пространство `/api/portal/v1/` — вызывает Cabinet SPA от имени клиента.
   description: |
     Контракт по `docs/architecture/CONTRACTS.md` §4 и ADR-0004 (Cabinet без бэкенда). Версия 0 (M0-INF-02):
@@ -2425,14 +2425,30 @@ paths:
     get:
       tags: [partner]
       operationId: getPartnerFinanceSummary
-      summary: Взаиморасчёты и показатели эффективности поставщика
+      summary: Оборот по заказам и оценка поставщика
       description: |
-        Финансовая сводка по заказам поставщика (суммы заказов, приёмок, остатка в пути)
-        по валютам, оценка качества работы (OTIF %, ответы на RFQ %, актуальность цен)
-        и детализированные взаиморасчёты по заказам.
+        Оборот по заказам партнёра (заказано, принято складом, отгружено и ещё не принято) по валютам, оценка
+        (OTIF, ответы на запросы цен, актуальность цен) и построчная разбивка по заказам. Счетов и оплат здесь нет.
+        Показатель, который нечем измерить, равен `null`. Формулы — `docs/systems/erp/partner-scorecard.md`.
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10000
+            default: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 20
       responses:
         '200':
-          description: Сводка взаиморасчётов и оценка эффективности
+          description: Оборот по заказам и оценка
           content:
             application/json:
               schema:
@@ -2441,6 +2457,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
@@ -4422,11 +4440,11 @@ components:
 
     PartnerFinanceBalance:
       type: object
-      description: Баланс взаиморасчётов по конкретной валюте
+      description: Оборот по заказам в одной валюте; валюта не задана — `null`
       required: [currency, ordered_total, received_total, in_transit_total, orders_count]
       properties:
         currency:
-          type: string
+          type: [string, 'null']
           example: UZS
         ordered_total:
           type: string
@@ -4436,6 +4454,7 @@ components:
           example: "10000000.00"
         in_transit_total:
           type: string
+          description: Отгружено партнёром по его уведомлению и ещё не принято
           example: "2500000.00"
         orders_count:
           type: integer
@@ -4444,39 +4463,47 @@ components:
 
     PartnerFinanceScorecard:
       type: object
-      description: Показатели эффективности поставщика (Scorecard)
+      description: Показатели поставщика; нечем измерить — `null`, а не 100
       required:
         - otif_rate
+        - otif_orders_count
         - rfq_response_rate
-        - price_freshness_rate
-        - completed_orders_count
+        - rfq_avg_response_hours
         - total_rfqs_count
+        - price_freshness_rate
         - active_offers_count
       properties:
         otif_rate:
-          type: number
-          description: "On-Time In-Full (OTIF) процент: своевременность и полнота приёмки"
+          type: [number, 'null']
+          description: "Доля заказов, принятых целиком не позже срока, среди принятых со сроком и подтверждённых с прошедшим сроком"
           minimum: 0
           maximum: 100
           example: 95.5
+        otif_orders_count:
+          type: integer
+          description: Сколько заказов участвует в OTIF
+          minimum: 0
         rfq_response_rate:
-          type: number
-          description: "Процент ответов на запросы цен (RFQ)"
+          type: [number, 'null']
+          description: "Доля отвеченных среди доставленных запросов цен"
           minimum: 0
           maximum: 100
           example: 88.0
+        rfq_avg_response_hours:
+          type: [number, 'null']
+          description: Среднее время ответа на запрос цен, часы
+          minimum: 0
+          example: 18.5
+        total_rfqs_count:
+          type: integer
+          description: Доставленные запросы цен; недоставленные нами не считаются
+          minimum: 0
         price_freshness_rate:
-          type: number
+          type: [number, 'null']
           description: "Процент актуальных цен в каталоге"
           minimum: 0
           maximum: 100
           example: 92.3
-        completed_orders_count:
-          type: integer
-          minimum: 0
-        total_rfqs_count:
-          type: integer
-          minimum: 0
         active_offers_count:
           type: integer
           minimum: 0
@@ -4484,7 +4511,7 @@ components:
 
     PartnerSettlementLine:
       type: object
-      description: Строка взаиморасчётов по заказу
+      description: Суммы по одному заказу партнёра
       required:
         - order_id
         - order_number
@@ -4506,7 +4533,7 @@ components:
         status:
           $ref: '#/components/schemas/PartnerOrderStatus'
         currency:
-          type: string
+          type: [string, 'null']
         ordered_amount:
           type: string
         received_amount:
@@ -4520,8 +4547,8 @@ components:
 
     PartnerFinanceSummary:
       type: object
-      description: Сводка взаиморасчётов и оценка эффективности работы партнёра (K4, K5)
-      required: [balances, scorecard, settlements]
+      description: Оборот по заказам и оценка партнёра (K4, FX-8)
+      required: [balances, scorecard, settlements, settlements_total, page, page_size]
       properties:
         balances:
           type: array
@@ -4531,8 +4558,18 @@ components:
           $ref: '#/components/schemas/PartnerFinanceScorecard'
         settlements:
           type: array
+          description: Страница разбивки по заказам
           items:
             $ref: '#/components/schemas/PartnerSettlementLine'
+        settlements_total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
       additionalProperties: false
 
     Reason:

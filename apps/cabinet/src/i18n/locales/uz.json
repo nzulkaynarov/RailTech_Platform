@@ -1105,31 +1105,33 @@
       "views": {
         "orders": "Buyurtmalar (PO)",
         "rfq": "Narx soʻrovlari (RFQ)",
-        "finance": "Hisob-kitoblar va baholash"
+        "finance": "Aylanma va baholash"
       },
       "finance": {
-        "balancesTitle": "Valyutalar bo'yicha hisob-kitoblar balansi",
-        "emptyBalancesText": "Hisob-kitoblar bo'yicha ma'lumotlar yo'q.",
+        "balancesTitle": "Valyutalar bo'yicha buyurtmalar aylanmasi",
+        "emptyBalancesText": "Hozircha buyurtmalar yo'q.",
         "ordersCountSuffix": "buyurtma",
         "orderedTotal": "Buyurtma qilingan",
         "receivedTotal": "Ombor qabul qilgan",
-        "inTransitTotal": "Yo'ldagi qoldiq",
+        "inTransitTotal": "Jo'natilgan, qabul qilinmagan",
         "receiptsCount": "Qabul qilishlar",
         "scorecardTitle": "Yetkazib beruvchi samaradorligi ko'rsatkichlari",
         "otifRate": "OTIF (o'z vaqtida va to'liq hajmda)",
         "rfqRate": "Narx so'rovlariga javoblar (RFQ)",
         "freshnessRate": "Katalogdagi narxlar dolzarbligi",
-        "completedOrdersCount": "Bajarilgan buyurtmalar: {{count}}",
-        "totalRfqsCount": "Jami narx so'rovlari: {{count}}",
+        "otifOrdersCount": "Hisobdagi buyurtmalar: {{count}}",
+        "avgResponse": "O'rtacha javob: {{hours}} soat",
+        "noData": "Ma'lumot yo'q",
+        "totalRfqsCount": "Yetkazilgan so'rovlar: {{count}}",
         "activeOffersCount": "Faol pozitsiyalar: {{count}}",
         "excellent": "A'lo",
-        "target": "Me'yorda",
+        "target": "Maqsaddan past",
         "responsive": "Yuqori",
         "fresh": "Dolzarb",
         "updateNeeded": "Yangilash talab etiladi",
-        "settlementsTitle": "Buyurtmalar bo'yicha hisob-kitoblar tafsiloti",
-        "settlementsListLabel": "Buyurtmalar bo'yicha hisob-kitoblar ro'yxati",
-        "emptySettlementsText": "Hisob-kitoblar tarixi bo'sh."
+        "settlementsTitle": "Buyurtmalar bo'yicha taqsimot",
+        "settlementsListLabel": "Summalar bilan buyurtmalar ro'yxati",
+        "emptySettlementsText": "Hozircha buyurtmalar yo'q."
       },
       "orderTabs": {
         "all": "Barchasi",

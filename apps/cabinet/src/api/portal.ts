@@ -653,5 +653,7 @@ export type PartnerFinanceScorecard = Schemas['PartnerFinanceScorecard'];
 export type PartnerSettlementLine = Schemas['PartnerSettlementLine'];
 export type PartnerFinanceSummary = Schemas['PartnerFinanceSummary'];
 
-export const getPartnerFinanceSummary = () =>
-  portalRequest<PartnerFinanceSummary>('/partner/finance');
+export type PartnerFinanceQuery = QueryOf<paths['/partner/finance']['get']>;
+
+export const getPartnerFinanceSummary = (params: PartnerFinanceQuery = {}) =>
+  portalRequest<PartnerFinanceSummary>(`/partner/finance${toQuery(params)}`);

@@ -367,10 +367,10 @@ export const useRespondPartnerPriceRequest = () =>
     [keys.partnerPriceRequests, keys.partnerFinance],
   );
 
-export const usePartnerFinance = (options: ListOptions = {}) =>
+export const usePartnerFinance = (params: portal.PartnerFinanceQuery = {}, options: ListOptions = {}) =>
   useQuery({
-    queryKey: keys.partnerFinance,
-    queryFn: portal.getPartnerFinanceSummary,
+    queryKey: [...keys.partnerFinance, params],
+    queryFn: () => portal.getPartnerFinanceSummary(params),
     enabled: options.enabled ?? true,
   });
 
