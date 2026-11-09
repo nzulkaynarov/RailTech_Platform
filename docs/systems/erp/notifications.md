@@ -87,3 +87,7 @@
 Параметр запуска для всех объектов уведомлений — `apps/cabinet/src/telegram/start-param.ts`: `deal_<id>`, `delivery_<id>`
 (id сделки), `quote_<id>`, `invoice_<id>`, `act_<id>`, `product_<id>`, `products`, `chat`. Кнопки бота CRM на эти параметры
 пока не переведены (ссылки бота ведут на веб-кабинет) — хвост NOTIFY-2, задача CRM.
+
+## Отказ от Telegram и бот CRM (FX-9)
+
+Бот CRM сам шлёт клиенту события ERP из `BOT_EVENT_GROUPS` (`integration/services/events.py`). Контакт, отключивший Telegram для группы в кабинете, попадает в `telegram_muted_user_ids` события шины, и бот ему не пишет. Группу `security` отключить нельзя, её событие идёт отдельно.
