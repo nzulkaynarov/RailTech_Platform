@@ -101,6 +101,7 @@ from portal.services.login_code import exchange_login_code
 from portal.services.magic_link import exchange_magic_link, request_magic_link
 from portal.services.messages import unread_count
 from portal.services.requests import create_client_request
+from portal.services.team import deactivate_member, update_member_rights
 from portal.services.telegram_auth import authenticate_telegram_user
 from portal.throttles import (
     PortalAcceptRateThrottle,
@@ -1540,51 +1541,13 @@ class TeamMemberDetailView(BasePortalView):
         if not getattr(request.portal_contact, "is_admin", False):
             raise exceptions.PermissionDenied("ADMIN_REQUIRED")
 
-        target = Contact.objects.filter(
-            active_contact_q(),
-            pk=pk,
-            company=request.portal_company,
-        ).first()
-        if target is None:
-            raise Http404
-
         serializer = TeamMemberUpdateSerializer(data=request.data)
         if not serializer.is_valid():
             raise PortalValidationError("VALIDATION_ERROR")
 
-        validated = serializer.validated_data
+        target, changed = update_member_rights(request.portal_company, pk, serializer.validated_data)
 
-        # Защита основного контакта: статус администратора и право действовать нельзя снять
-        if target.is_primary:
-            if "is_admin" in validated and not validated["is_admin"]:
-                raise PortalValidationError("CANNOT_MODIFY_PRIMARY_CONTACT")
-            if "can_act" in validated and not validated["can_act"]:
-                raise PortalValidationError("CANNOT_MODIFY_PRIMARY_CONTACT")
-
-        # Защита последнего администратора: нельзя снять статус администратора с единственного админа компании
-        if "is_admin" in validated and not validated["is_admin"] and target.is_admin:
-            has_other_admin = (
-                Contact.objects.filter(
-                    active_contact_q(),
-                    company=request.portal_company,
-                    is_admin=True,
-                )
-                .exclude(pk=target.pk)
-                .exists()
-            )
-            if not has_other_admin:
-                raise PortalValidationError("LAST_ADMIN_CANNOT_BE_REMOVED")
-
-        fields_to_update = []
-        if "can_act" in validated:
-            target.can_act = validated["can_act"]
-            fields_to_update.append("can_act")
-        if "is_admin" in validated:
-            target.is_admin = validated["is_admin"]
-            fields_to_update.append("is_admin")
-
-        if fields_to_update:
-            target.save(update_fields=fields_to_update)
+        if changed:
             record_portal_security_event(
                 request.portal_company,
                 PortalSecurityEvent.EventType.ROLE_CHANGE,
@@ -1608,40 +1571,7 @@ class TeamMemberDeactivateView(BasePortalView):
         if not getattr(request.portal_contact, "is_admin", False):
             raise exceptions.PermissionDenied("ADMIN_REQUIRED")
 
-        target = Contact.objects.filter(
-            active_contact_q(),
-            pk=pk,
-            company=request.portal_company,
-        ).first()
-        if target is None:
-            raise Http404
-
-        if target.pk == request.portal_contact.pk:
-            raise PortalValidationError("CANNOT_DEACTIVATE_SELF")
-
-        if target.is_primary:
-            raise PortalValidationError("CANNOT_MODIFY_PRIMARY_CONTACT")
-
-        if target.is_admin:
-            has_other_admin = (
-                Contact.objects.filter(
-                    active_contact_q(),
-                    company=request.portal_company,
-                    is_admin=True,
-                )
-                .exclude(pk=target.pk)
-                .exists()
-            )
-            if not has_other_admin:
-                raise PortalValidationError("LAST_ADMIN_CANNOT_BE_REMOVED")
-
-        target.archived_at = timezone.now()
-        target.is_admin = False
-        target.can_act = False
-        target.save(update_fields=["archived_at", "is_admin", "can_act"])
-
-        PortalSession.objects.filter(contact=target).delete()
-        MagicLinkToken.objects.filter(contact=target).delete()
+        target = deactivate_member(request.portal_company, request.portal_contact, pk)
 
         record_portal_security_event(
             request.portal_company,

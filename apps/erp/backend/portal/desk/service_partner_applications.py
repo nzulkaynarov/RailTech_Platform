@@ -20,6 +20,7 @@ from django.db.models import Q
 from django.utils import timezone
 from integration.models import CrmContactMapping
 from integration.services.partner_client import lock_company, request_client_in_crm
+from parties.company_admin import ensure_company_admin
 from parties.models import (
     Company,
     CompanyRelationship,
@@ -132,6 +133,8 @@ def _applicant_contact(app: PartnerApplication, company: Company, user) -> Conta
             created_by=user,
         )
         app.applicant_contact_created = True
+    ensure_company_admin(company)
+    contact.refresh_from_db()
     return contact
 
 
@@ -477,7 +480,9 @@ def _archive_created_contact(app: PartnerApplication) -> None:
     if CrmContactMapping.objects.filter(contact=contact).exists():
         return
     contact.archived_at = timezone.now()
-    contact.save(update_fields=["archived_at"])
+    contact.can_act = False
+    contact.is_admin = False
+    contact.save(update_fields=["archived_at", "can_act", "is_admin"])
 
 
 def reject_application(pk: int, data: dict, user) -> dict:
