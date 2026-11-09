@@ -28,6 +28,14 @@
     },
     "payload": {
       "$ref": "_defs.v1.json#/$defs/QuoteSent"
+    },
+    "telegram_muted_user_ids": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      },
+      "uniqueItems": true,
+      "description": "Telegram-аккаунты контактов, отключивших эту группу уведомлений в кабинете: бот CRM им не пишет (FX-9). Нет поля — ограничений нет."
     }
   },
   "additionalProperties": false

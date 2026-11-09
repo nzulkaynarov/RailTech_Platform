@@ -23,6 +23,7 @@ from decimal import Decimal
 from typing import Any, Dict, List, Optional, Union
 
 from django.utils import timezone
+from parties.models import Contact, active_contact_q
 from portal import projections
 from portal.services import notice_sources
 from rt_bus import Event
@@ -44,6 +45,32 @@ from .event_builders import (  # noqa: F401 — публичная поверх�
 )
 
 logger = logging.getLogger(__name__)
+
+
+#: События, которые бот CRM шлёт клиенту, и группа настроек уведомлений кабинета для каждого из них (`NoticeKind.group`).
+BOT_EVENT_GROUPS = {
+    "quote.sent": "documents",
+    "invoice.issued": "money",
+    "invoice.paid": "money",
+    "act.issued": "documents",
+    "delivery.status_changed": "deliveries",
+    "delivery.eta_changed": "deliveries",
+}
+
+
+def muted_telegram_user_ids(erp_company_id: int, event_type: str) -> list[int]:
+    """Telegram-аккаунты контактов компании, отключивших группу этого события: бот не пишет им (FX-9)."""
+    group = BOT_EVENT_GROUPS.get(event_type)
+    if group is None:
+        return []
+    return sorted(
+        Contact.objects.filter(
+            active_contact_q(),
+            company_id=erp_company_id,
+            telegram_user_id__isnull=False,
+            **{f"notification_settings__{group}__telegram": False},
+        ).values_list("telegram_user_id", flat=True)
+    )
 
 
 def publish_event(
@@ -71,6 +98,9 @@ def publish_event(
     )
     if data is None:
         return None
+    muted = muted_telegram_user_ids(erp_company_id, event_type)
+    if muted:
+        data["telegram_muted_user_ids"] = muted
     subject = data["deal"]["number"] if "deal" in data else f"company/{int(erp_company_id)}"
     return get_bus().publish(full_type, data, subject=subject, time=_aware(occurred_at))
 

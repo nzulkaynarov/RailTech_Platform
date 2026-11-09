@@ -220,6 +220,8 @@ class ErpEventsService:
                 "client_id": client.id,
                 "text": bot_msg.text,
                 "buttons": [list(button) for button in bot_msg.buttons],
+                # Контакты, отключившие эту группу уведомлений в кабинете ERP (FX-9).
+                "muted_chats": list(getattr(env.data, "telegram_muted_user_ids", None) or []),
             }
             if env.event == "request.created":
                 # «Заявка принята»: бот, а клиенту без Telegram — письмо (SPEC-v3 §8).

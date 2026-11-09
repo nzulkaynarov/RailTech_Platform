@@ -68,6 +68,10 @@ class ActIssuedV1(BaseModel):
     deal: DealRef
     actor: Actor
     payload: ActEvent
+    telegram_muted_user_ids: list[int] | None = None
+    """
+    Telegram-аккаунты контактов, отключивших эту группу уведомлений в кабинете: бот CRM им не пишет (FX-9). Нет поля — ограничений нет.
+    """
 
 
 class ActReturnedV1(BaseModel):
@@ -567,6 +571,10 @@ class DeliveryEtaChangedV1(BaseModel):
     deal: DealRef
     actor: Actor
     payload: DeliveryEvent
+    telegram_muted_user_ids: list[int] | None = None
+    """
+    Telegram-аккаунты контактов, отключивших эту группу уведомлений в кабинете: бот CRM им не пишет (FX-9). Нет поля — ограничений нет.
+    """
 
 
 class DeliveryEvent(BaseModel):
@@ -663,6 +671,10 @@ class DeliveryStatusChangedV1(BaseModel):
     deal: DealRef
     actor: Actor
     payload: DeliveryEvent
+    telegram_muted_user_ids: list[int] | None = None
+    """
+    Telegram-аккаунты контактов, отключивших эту группу уведомлений в кабинете: бот CRM им не пишет (FX-9). Нет поля — ограничений нет.
+    """
 
 
 class DocumentCreated(BaseModel):
@@ -803,6 +815,10 @@ class InvoiceIssuedV1(BaseModel):
     deal: DealRef
     actor: Actor
     payload: InvoiceEvent
+    telegram_muted_user_ids: list[int] | None = None
+    """
+    Telegram-аккаунты контактов, отключивших эту группу уведомлений в кабинете: бот CRM им не пишет (FX-9). Нет поля — ограничений нет.
+    """
 
 
 class InvoiceOverdueV1(BaseModel):
@@ -845,6 +861,10 @@ class InvoicePaidV1(BaseModel):
     deal: DealRef
     actor: Actor
     payload: InvoiceEvent
+    telegram_muted_user_ids: list[int] | None = None
+    """
+    Telegram-аккаунты контактов, отключивших эту группу уведомлений в кабинете: бот CRM им не пишет (FX-9). Нет поля — ограничений нет.
+    """
 
 
 class Kind(StrEnum):
@@ -1453,6 +1473,10 @@ class QuoteSentV1(BaseModel):
     deal: DealRef
     actor: Actor
     payload: QuoteSent
+    telegram_muted_user_ids: list[int] | None = None
+    """
+    Telegram-аккаунты контактов, отключивших эту группу уведомлений в кабинете: бот CRM им не пишет (FX-9). Нет поля — ограничений нет.
+    """
 
 
 class QuoteViewedV1(BaseModel):

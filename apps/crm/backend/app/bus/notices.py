@@ -288,6 +288,8 @@ class ErpEventNotices:
                 chats = await notice_mail.client_chats(
                     session, item["client_id"], with_leads=bool(item.get("track"))
                 )
+                muted = set(item.get("muted_chats") or [])
+                chats = [chat_id for chat_id in chats if chat_id not in muted]
             elif kind == "staff":
                 tg_user_id = await session.scalar(
                     select(User.tg_user_id).where(
