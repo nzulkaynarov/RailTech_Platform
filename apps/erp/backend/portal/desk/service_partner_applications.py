@@ -242,6 +242,10 @@ def send_contract(pk: int, data: dict, user) -> dict:
             raise AccessError("NOT_FOUND", 404)
         if app.status in (PartnerApplicationStatus.APPROVED, PartnerApplicationStatus.REJECTED):
             raise AccessError("APPLICATION_ALREADY_DECIDED", 400)
+        if data.get("company_id") and app.company_id and data["company_id"] != app.company_id:
+            raise AccessError(
+                "COMPANY_MISMATCH"
+            )  # привязка решена: молча игнорировать выбор сотрудника нельзя (B-FX1-1)
 
         contract_number = (data.get("contract_number") or "").strip()
         contract_date = data.get("contract_date")

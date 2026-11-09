@@ -166,7 +166,8 @@ def exchange_login_code(
         raise PortalTooManyRequests("LOGIN_CODE_LOCKED")
 
     contact = find_login_contact(clean_email)
-    result = _redeem(contact, code, ip_address, user_agent) if contact is not None else None
+    # Неизвестный адрес проходит тот же `_redeem` с несуществующим контактом: блокировка и хеш кода те же (B-FX3-1)
+    result = _redeem(contact if contact is not None else Contact(pk=0), code, ip_address, user_agent)
     if result is not None:
         reset_address_failures(clean_email)
         return result

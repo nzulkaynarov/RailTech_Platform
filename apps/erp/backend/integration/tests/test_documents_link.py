@@ -432,3 +432,37 @@ def test_malformed_context_fields_are_dropped_not_trusted(crm, world, context):
     assert link_for(crm, world["document"], context=context).status_code == 200
     params = ActivityLog.objects.get(event_code="document.link_issued").event_params
     assert params["crm_client_id"] is None and params["channel"] is None
+
+
+# ── B-FX4-2: адрес клиента за прокси — общий разбор, подделанный X-Forwarded-For не попадает в журнал ─────────
+
+
+def _download_ips() -> list[str]:
+    rows = ActivityLog.objects.filter(event_code="document.link_downloaded").order_by("id")
+    return [row.event_params["ip"] for row in rows]
+
+
+def test_download_journal_has_the_real_client_ip_behind_proxy(crm, public, world, settings):
+    settings.REST_FRAMEWORK = {**settings.REST_FRAMEWORK, "NUM_PROXIES": 1}
+    issued = link_for(crm, world["document"])
+
+    open_link(public, issued, REMOTE_ADDR="172.18.0.5", HTTP_X_FORWARDED_FOR="203.0.113.7")
+
+    assert _download_ips() == ["203.0.113.7"]
+
+
+def test_forged_forwarded_header_does_not_reach_the_download_journal(crm, public, world, settings):
+    settings.REST_FRAMEWORK = {**settings.REST_FRAMEWORK, "NUM_PROXIES": 1}
+    issued = link_for(crm, world["document"])
+
+    open_link(public, issued, REMOTE_ADDR="172.18.0.5", HTTP_X_FORWARDED_FOR="6.6.6.6, 203.0.113.7")
+
+    assert _download_ips() == ["203.0.113.7"]
+
+
+def test_forged_forwarded_header_is_ignored_without_trusted_proxy(crm, public, world):
+    issued = link_for(crm, world["document"])
+
+    open_link(public, issued, REMOTE_ADDR="198.51.100.4", HTTP_X_FORWARDED_FOR="6.6.6.6")
+
+    assert _download_ips() == ["198.51.100.4"]
