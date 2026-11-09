@@ -373,7 +373,7 @@ class PartnerPriceRequestResponseSerializer(serializers.Serializer):
 
 
 class PartnerFinanceBalanceSerializer(serializers.Serializer):
-    currency = serializers.CharField()
+    currency = serializers.CharField(allow_null=True)
     ordered_total = serializers.CharField()
     received_total = serializers.CharField()
     in_transit_total = serializers.CharField()
@@ -381,10 +381,11 @@ class PartnerFinanceBalanceSerializer(serializers.Serializer):
 
 
 class PartnerFinanceScorecardSerializer(serializers.Serializer):
-    otif_rate = serializers.FloatField()
-    rfq_response_rate = serializers.FloatField()
-    price_freshness_rate = serializers.FloatField()
-    completed_orders_count = serializers.IntegerField()
+    otif_rate = serializers.FloatField(allow_null=True)
+    rfq_response_rate = serializers.FloatField(allow_null=True)
+    rfq_avg_response_hours = serializers.FloatField(allow_null=True)
+    price_freshness_rate = serializers.FloatField(allow_null=True)
+    otif_orders_count = serializers.IntegerField()
     total_rfqs_count = serializers.IntegerField()
     active_offers_count = serializers.IntegerField()
 
@@ -394,7 +395,7 @@ class PartnerSettlementLineSerializer(serializers.Serializer):
     order_number = serializers.CharField()
     order_date = serializers.DateTimeField()
     status = serializers.ChoiceField(choices=["draft", "sent", "confirmed", "received", "cancelled"])
-    currency = serializers.CharField()
+    currency = serializers.CharField(allow_null=True)
     ordered_amount = serializers.CharField()
     received_amount = serializers.CharField()
     in_transit_amount = serializers.CharField()
@@ -405,3 +406,6 @@ class PartnerFinanceSummarySerializer(serializers.Serializer):
     balances = PartnerFinanceBalanceSerializer(many=True)
     scorecard = PartnerFinanceScorecardSerializer()
     settlements = PartnerSettlementLineSerializer(many=True)
+    settlements_total = serializers.IntegerField()
+    page = serializers.IntegerField()
+    page_size = serializers.IntegerField()

@@ -1230,10 +1230,10 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * Взаиморасчёты и показатели эффективности поставщика
-     * @description Финансовая сводка по заказам поставщика (суммы заказов, приёмок, остатка в пути)
-     *     по валютам, оценка качества работы (OTIF %, ответы на RFQ %, актуальность цен)
-     *     и детализированные взаиморасчёты по заказам.
+     * Оборот по заказам и оценка поставщика
+     * @description Оборот по заказам партнёра (заказано, принято складом, отгружено и ещё не принято) по валютам, оценка
+     *     (OTIF, ответы на запросы цен, актуальность цен) и построчная разбивка по заказам. Счетов и оплат здесь нет.
+     *     Показатель, который нечем измерить, равен `null`. Формулы — `docs/systems/erp/partner-scorecard.md`.
      */
     get: operations["getPartnerFinanceSummary"];
     put?: never;
@@ -2135,57 +2135,71 @@ export interface components {
       /** @description Цена за единицу, больше нуля */
       unit_price: string;
     };
-    /** @description Баланс взаиморасчётов по конкретной валюте */
+    /** @description Оборот по заказам в одной валюте; валюта не задана — `null` */
     PartnerFinanceBalance: {
       /** @example UZS */
-      currency: string;
+      currency: string | null;
       /** @example 12500000.00 */
       ordered_total: string;
       /** @example 10000000.00 */
       received_total: string;
-      /** @example 2500000.00 */
+      /**
+       * @description Отгружено партнёром по его уведомлению и ещё не принято
+       * @example 2500000.00
+       */
       in_transit_total: string;
       orders_count: number;
     };
-    /** @description Показатели эффективности поставщика (Scorecard) */
+    /** @description Показатели поставщика; нечем измерить — `null`, а не 100 */
     PartnerFinanceScorecard: {
       /**
-       * @description On-Time In-Full (OTIF) процент: своевременность и полнота приёмки
+       * @description Доля заказов, принятых целиком не позже срока, среди принятых со сроком и подтверждённых с прошедшим сроком
        * @example 95.5
        */
-      otif_rate: number;
+      otif_rate: number | null;
+      /** @description Сколько заказов участвует в OTIF */
+      otif_orders_count: number;
       /**
-       * @description Процент ответов на запросы цен (RFQ)
+       * @description Доля отвеченных среди доставленных запросов цен
        * @example 88
        */
-      rfq_response_rate: number;
+      rfq_response_rate: number | null;
+      /**
+       * @description Среднее время ответа на запрос цен, часы
+       * @example 18.5
+       */
+      rfq_avg_response_hours: number | null;
+      /** @description Доставленные запросы цен; недоставленные нами не считаются */
+      total_rfqs_count: number;
       /**
        * @description Процент актуальных цен в каталоге
        * @example 92.3
        */
-      price_freshness_rate: number;
-      completed_orders_count: number;
-      total_rfqs_count: number;
+      price_freshness_rate: number | null;
       active_offers_count: number;
     };
-    /** @description Строка взаиморасчётов по заказу */
+    /** @description Суммы по одному заказу партнёра */
     PartnerSettlementLine: {
       order_id: number;
       order_number: string;
       /** Format: date-time */
       order_date: string;
       status: components["schemas"]["PartnerOrderStatus"];
-      currency: string;
+      currency: string | null;
       ordered_amount: string;
       received_amount: string;
       in_transit_amount: string;
       receipts_count: number;
     };
-    /** @description Сводка взаиморасчётов и оценка эффективности работы партнёра (K4, K5) */
+    /** @description Оборот по заказам и оценка партнёра (K4, FX-8) */
     PartnerFinanceSummary: {
       balances: components["schemas"]["PartnerFinanceBalance"][];
       scorecard: components["schemas"]["PartnerFinanceScorecard"];
+      /** @description Страница разбивки по заказам */
       settlements: components["schemas"]["PartnerSettlementLine"][];
+      settlements_total: number;
+      page: number;
+      page_size: number;
     };
     Reason: {
       reason: string;
@@ -5459,14 +5473,17 @@ export interface operations {
   };
   getPartnerFinanceSummary: {
     parameters: {
-      query?: never;
+      query?: {
+        page?: number;
+        page_size?: number;
+      };
       header?: never;
       path?: never;
       cookie?: never;
     };
     requestBody?: never;
     responses: {
-      /** @description Сводка взаиморасчётов и оценка эффективности */
+      /** @description Оборот по заказам и оценка */
       200: {
         headers: {
           [name: string]: unknown;
@@ -5477,6 +5494,7 @@ export interface operations {
       };
       401: components["responses"]["Unauthorized"];
       403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationError"];
       429: components["responses"]["TooManyRequests"];
     };
   };

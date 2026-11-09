@@ -1,6 +1,8 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 
+import { portalServer } from '@/mocks/server';
 import { renderApp, signedIn } from '@/test/render';
 
 const PARTNER_ACCESS = {
@@ -231,13 +233,13 @@ describe('Заказы на поставку (PO, ASN) и запросы цен 
 
     await screen.findByRole('heading', { level: 1, name: 'Заказы на поставку' });
 
-    // Переключаемся на вкладку «Взаиморасчёты и оценка»
-    await user.click(screen.getByRole('button', { name: /Взаиморасчёты и оценка/ }));
+    // Переключаемся на вкладку «Оборот и оценка»
+    await user.click(screen.getByRole('button', { name: /Оборот и оценка/ }));
 
     // Проверяем наличие карточек взаиморасчётов и оценки
-    expect(await screen.findByText('Баланс взаиморасчётов по валютам')).toBeInTheDocument();
+    expect(await screen.findByText('Оборот по заказам')).toBeInTheDocument();
     expect(screen.getByText('Оценка эффективности поставщика')).toBeInTheDocument();
-    expect(screen.getByText('Детализация взаиморасчётов по заказам')).toBeInTheDocument();
+    expect(screen.getByText('Разбивка по заказам')).toBeInTheDocument();
 
     // Проверяем показатели scorecard
     expect(screen.getByText(/OTIF/)).toBeInTheDocument();
@@ -248,5 +250,38 @@ describe('Заказы на поставку (PO, ASN) и запросы цен 
     // Проверяем таблицу детализации
     expect(screen.getByText('PO-2026-0041')).toBeInTheDocument();
     expect(screen.getByText('PO-2026-0042')).toBeInTheDocument();
+  });
+
+  it('нет данных — пишет «Нет данных», без процента и оценки (FX-8)', async () => {
+    portalServer.use(
+      http.get('*/partner/finance', () =>
+        HttpResponse.json({
+          balances: [],
+          scorecard: {
+            otif_rate: null,
+            otif_orders_count: 0,
+            rfq_response_rate: null,
+            rfq_avg_response_hours: null,
+            total_rfqs_count: 0,
+            price_freshness_rate: null,
+            active_offers_count: 0,
+          },
+          settlements: [],
+          settlements_total: 0,
+          page: 1,
+          page_size: 20,
+        }),
+      ),
+    );
+    signedIn('actor', 'demo', PARTNER_ACCESS);
+    const user = userEvent.setup();
+    renderApp('/partner/orders');
+
+    await screen.findByRole('heading', { level: 1, name: 'Заказы на поставку' });
+    await user.click(screen.getByRole('button', { name: /Оборот и оценка/ }));
+
+    expect(await screen.findAllByText('Нет данных')).toHaveLength(3);
+    expect(screen.queryByText('Отлично')).not.toBeInTheDocument();
+    expect(screen.queryByText(/%$/)).not.toBeInTheDocument();
   });
 });

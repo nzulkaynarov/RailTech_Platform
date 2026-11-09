@@ -1105,31 +1105,33 @@
       "views": {
         "orders": "Purchase Orders (PO)",
         "rfq": "Price Requests (RFQ)",
-        "finance": "Settlements & Scorecard"
+        "finance": "Turnover & Scorecard"
       },
       "finance": {
-        "balancesTitle": "Settlement balances by currency",
-        "emptyBalancesText": "No settlement data available.",
+        "balancesTitle": "Order turnover by currency",
+        "emptyBalancesText": "No orders yet.",
         "ordersCountSuffix": "orders",
         "orderedTotal": "Ordered",
         "receivedTotal": "Received",
-        "inTransitTotal": "In transit",
+        "inTransitTotal": "Shipped, not received",
         "receiptsCount": "Receipts",
         "scorecardTitle": "Supplier Performance Scorecard",
         "otifRate": "OTIF (On-Time In-Full)",
         "rfqRate": "RFQ Response Rate",
         "freshnessRate": "Price Freshness in Catalog",
-        "completedOrdersCount": "Completed orders: {{count}}",
-        "totalRfqsCount": "Total price requests: {{count}}",
+        "otifOrdersCount": "Orders measured: {{count}}",
+        "avgResponse": "Average reply: {{hours}} h",
+        "noData": "No data",
+        "totalRfqsCount": "Delivered requests: {{count}}",
         "activeOffersCount": "Active offers: {{count}}",
         "excellent": "Excellent",
-        "target": "On track",
+        "target": "Below target",
         "responsive": "High",
         "fresh": "Fresh",
         "updateNeeded": "Needs update",
-        "settlementsTitle": "Order Settlement Breakdown",
-        "settlementsListLabel": "Order settlements list",
-        "emptySettlementsText": "No settlement history found."
+        "settlementsTitle": "Breakdown by order",
+        "settlementsListLabel": "Orders with amounts",
+        "emptySettlementsText": "No orders yet."
       },
       "orderTabs": {
         "all": "All",
