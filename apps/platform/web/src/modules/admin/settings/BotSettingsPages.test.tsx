@@ -220,7 +220,7 @@ describe("Настройки · Telegram и разделы бота по гру�
     fireEvent.click(within(menu).getByRole("link", { name: "Журнал" }));
     const leave = await screen.findAllByRole("button", { name: "Выйти без сохранения" });
     fireEvent.click(leave[leave.length - 1] as HTMLElement);
-    expect(await screen.findByRole("region", { name: "Журнал" })).toBeVisible();
+    expect(await screen.findByRole("heading", { level: 1, name: "История" })).toBeVisible();
   });
 });
 

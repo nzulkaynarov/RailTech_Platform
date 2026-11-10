@@ -35,8 +35,8 @@ const RU = [
     code: "admin",
     name: "Настройки",
     title: "Настройки",
-    path: /\/admin\?group=people$/,
-    first: "Все настройки",
+    path: /\/admin\/org$/,
+    first: "Сотрудники",
   },
 ] as const;
 
@@ -86,7 +86,7 @@ test.describe("названия модулей: десктоп", () => {
     await page.goto("/admin/roles");
     const matrix = page.getByRole("table");
     await expect(
-      matrix.getByRole("rowheader", { name: "Ждут ответа, Лиды, Каналы связи, База знаний бота" }),
+      matrix.getByRole("rowheader", { name: "Лиды, Ждут ответа, База знаний" }),
     ).toBeVisible();
     await expect(matrix).toContainText("Контакты");
     await expect(matrix).not.toContainText(SYSTEM_NAMES);

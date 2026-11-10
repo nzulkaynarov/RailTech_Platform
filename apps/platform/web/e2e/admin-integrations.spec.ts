@@ -51,7 +51,7 @@ async function openIntegrations(page: Page, card?: string): Promise<void> {
     return;
   }
   await spaGoto(page, card ? `/admin/integrations?card=${card}&panel=open` : "/admin/integrations");
-  await expect(page.getByRole("heading", { level: 1, name: "Подключения" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Сервисы" })).toBeVisible();
   await expect(page.getByRole("heading", { level: 2, name: "Сервисы" })).toBeVisible();
 }
 

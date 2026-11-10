@@ -79,7 +79,7 @@ describe("Admin · Ролевая матрица (R-2, ADR-0012)", () => {
     });
     await chooseOption(
       within(table()).getByRole("combobox", {
-        name: "Ждут ответа, Лиды, Каналы связи, База знаний бота — роль «Менеджер и бухгалтер»",
+        name: "Лиды, Ждут ответа, База знаний — роль «Менеджер и бухгалтер»",
       }),
       "Полный доступ",
     );
@@ -107,7 +107,7 @@ describe("Admin · Ролевая матрица (R-2, ADR-0012)", () => {
 
     await chooseOption(
       within(table()).getByRole("combobox", {
-        name: "Сотрудники, Роли и права, Каналы связи, Процессы, Подключения, Журнал, Статьи компании, Обращения сотрудников — роль «Новая роль»",
+        name: "Сотрудники, Подключения, Журнал, Статьи компании, Обращения сотрудников — роль «Новая роль»",
       }),
       "Полный доступ",
     );
@@ -154,7 +154,7 @@ describe("Admin · Ролевая матрица (R-2, ADR-0012)", () => {
     expect(within(table()).queryAllByRole("combobox")).toHaveLength(0);
     expect(within(table()).queryAllByRole("checkbox")).toHaveLength(0);
     // Права директора видны в его столбце: лиды — только чтение.
-    const row = within(table()).getByRole("row", { name: /Ждут ответа, Лиды/ });
+    const row = within(table()).getByRole("row", { name: /Лиды, Ждут ответа/ });
     expect(within(row).getAllByText("Только чтение").length).toBeGreaterThan(0);
   });
 
@@ -200,7 +200,7 @@ describe("Admin · Ролевая матрица (R-2, ADR-0012)", () => {
 
     await chooseOption(
       within(table()).getByRole("combobox", {
-        name: "С клиентами (Telegram-бот, почта) — роль «Бухгалтер»",
+        name: "Переписка с клиентами — роль «Бухгалтер»",
       }),
       "Скрыто",
     );

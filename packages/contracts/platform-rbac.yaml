@@ -171,16 +171,16 @@ crm_base_role:
 resources:
   - key: dashboard.queue
     module: dashboard
-    label: { ru: "Главная · Мои задачи", uz: "Bosh sahifa · Mening vazifalarim", en: "Home · My tasks" }
+    label: { ru: "Главная · Задачи", uz: "Asosiy · Vazifalar", en: "Home · Tasks" }
   - key: dashboard.summary
     module: dashboard
-    label: { ru: "Главная · Сводка по компании", uz: "Bosh sahifa · Kompaniya xulosasi", en: "Home · Company summary" }
+    label: { ru: "Главная · Сводка", uz: "Asosiy · Xulosa", en: "Home · Summary" }
     backend:
       crm: { read: [dashboard:read, spend:read] }
       erp: { full: [data.export] }
   - key: crm.leads
     module: crm
-    label: { ru: "Клиенты · Ждут ответа, Лиды, Каналы связи, База знаний бота", uz: "Mijozlar · Javob kutmoqda, lidlar, aloqa kanallari, bot bilimlar bazasi", en: "Clients · Awaiting reply, leads, channels, bot knowledge base" }
+    label: { ru: "Контакты · Лиды, Ждут ответа, База знаний", uz: "Kontaktlar · Lidlar, javob kutmoqda, bilimlar bazasi", en: "Contacts · Leads, awaiting reply, knowledge base" }
     backend:
       crm:
         read: [leads:read, stream:read, dashboard:read, kb:read]
@@ -192,7 +192,7 @@ resources:
   - key: crm.leads.triage
     module: crm
     levels: [full]
-    label: { ru: "Клиенты · Лиды · разбор и передача менеджеру", uz: "Mijozlar · Lidlar · saralash va menejerga topshirish", en: "Clients · Leads · triage and hand over to a manager" }
+    label: { ru: "Контакты · Лиды и Почта · разбор и передача менеджеру", uz: "Kontaktlar · Lidlar va pochta · saralash va menejerga topshirish", en: "Contacts · Leads and mail · triage and hand over to a manager" }
     # W18A-P2 (B-INB-5): та же первая линия разбирает общий почтовый ящик — очередь «Входящая почта» (`mail_inbox`):
     # карточка письма, «Создать лид», «Архив», ответ в цепочку; «Зарегистрировать ВХ» — право EDS `letters.register`
     # раздела `eds.inbox.register` (у шаблона «Делопроизводитель» есть оба). Директору очередь не приходит.
@@ -201,7 +201,7 @@ resources:
         full: [leads:read, leads:triage, stream:read, dashboard:read, kb:read, mail_inbox:read, mail_inbox:work]
   - key: crm.clients
     module: crm
-    label: { ru: "Клиенты · Клиенты, Заявки, Создать заявку", uz: "Mijozlar · Mijozlar, arizalar, ariza yaratish", en: "Clients · Clients, requests, new request" }
+    label: { ru: "Контакты · Контрагенты, создать заявку", uz: "Kontaktlar · Kontragentlar, ariza yaratish", en: "Contacts · Counterparties, new request" }
     backend:
       crm:
         read: [clients:read, deals:read, documents:read]
@@ -214,7 +214,7 @@ resources:
       eds: { full: [files.upload] }
   - key: eds.inbox
     module: eds
-    label: { ru: "Документы · Входящие письма · резолюция", uz: "Hujjatlar · Kiruvchi xatlar · rezolyutsiya", en: "Documents · Incoming letters · resolution" }
+    label: { ru: "Документы · Входящие · резолюция", uz: "Hujjatlar · Kiruvchi · rezolyutsiya", en: "Documents · Incoming · resolution" }
     backend:
       erp: { full: [deal.assign] }
       # P8 (аудит UI 2026-10-30 R1, SPEC-v3 §3.2a «Права»): «регистрировать входящие» ≠ «резолюция». Полный уровень —
@@ -227,13 +227,13 @@ resources:
   - key: eds.inbox.register
     module: eds
     levels: [full]
-    label: { ru: "Документы · Входящие письма · регистрация", uz: "Hujjatlar · Kiruvchi xatlar · ro‘yxatga olish", en: "Documents · Incoming letters · registration" }
+    label: { ru: "Документы · Входящие · регистрация", uz: "Hujjatlar · Kiruvchi · ro‘yxatga olish", en: "Documents · Incoming · registration" }
     backend:
       eds:
         full: [letters.read, registry.read, letters.register]
   - key: eds.drafts
     module: eds
-    label: { ru: "Документы · КП на одобрение, Исходящие · одобрение и отправка", uz: "Hujjatlar · Tasdiqlash uchun TT, chiquvchi · tasdiqlash va yuborish", en: "Documents · Quotes to approve, outgoing · approval and sending" }
+    label: { ru: "Документы · Исходящие · одобрение и отправка КП", uz: "Hujjatlar · Chiquvchi · TTni tasdiqlash va yuborish", en: "Documents · Outgoing · quote approval and sending" }
     backend:
       # quote.review — права ERP на визы КП; одобряет директор в EDS (EDS-03, E5). Отправка КП клиенту (quote.send) с
       # 2026-10-26 — раздел crm.clients (C1-G-4): у директора он тоже full.
@@ -241,7 +241,7 @@ resources:
       eds: { full: [approvals.decide] }  # одобрение КП — маршрут EDS (EDS-03)
   - key: eds.projects
     module: eds
-    label: { ru: "Документы · Проекты: договор, счёт, акт, сканы", uz: "Hujjatlar · Loyihalar: shartnoma, hisob, dalolatnoma, skanlar", en: "Documents · Projects: contract, invoice, act, scans" }
+    label: { ru: "Главная · Проекты: договор, счёт, акт, сканы", uz: "Asosiy · Loyihalar: shartnoma, hisob, dalolatnoma, skanlar", en: "Home · Projects: contract, invoice, act, scans" }
     backend:
       erp: { full: [contract.manage, contract.sign, fulfillment.act] }
       # registry.export — выгрузка реестра «Все документы»: у директора и бухгалтера (раздел «Проекты» у обоих full), не привязана
@@ -249,7 +249,7 @@ resources:
       eds: { read: [registry.read], full: [registry.read, registry.export] }
   - key: eds.payments
     module: eds
-    label: { ru: "Документы · Счета и оплаты · подтвердить оплату, запросить платёжку", uz: "Hujjatlar · Hisoblar va to‘lovlar · to‘lovni tasdiqlash, to‘lov topshiriqnomasini so‘rash", en: "Documents · Invoices & payments · confirm payment, request a payment order" }
+    label: { ru: "Операции · Финансы · подтвердить оплату, запросить платёжку", uz: "Amallar · Moliya · to‘lovni tasdiqlash, to‘lov topshiriqnomasini so‘rash", en: "Operations · Finance · confirm payment, request a payment order" }
     backend:
       # B-D18-1 (W18A-P3): зона переписки «Счета и оплаты» — диалоги клиентов, по сделкам которых выставлен счёт
       # («Запросить платёжку»). Право CRM `chats:invoiced` само переписку не открывает: только вместе с `chats:read`
@@ -262,12 +262,12 @@ resources:
       eds: { read: [registry.read], full: [registry.read, payments.confirm] }
   - key: eds.memo.create
     module: eds
-    label: { ru: "Документы · Служебная записка · создать", uz: "Hujjatlar · Xizmat xati · yaratish", en: "Documents · Memo · create" }
+    label: { ru: "Документы · Внутренние · создать", uz: "Hujjatlar · Ichki · yaratish", en: "Documents · Internal · create" }
     backend:
       eds: { full: [memos.create] }  # служебные записки, заявления, отчёты
   - key: eds.memo.approve
     module: eds
-    label: { ru: "Документы · Служебная записка · согласовать", uz: "Hujjatlar · Xizmat xati · kelishish", en: "Documents · Memo · approve" }
+    label: { ru: "Документы · Внутренние · согласовать", uz: "Hujjatlar · Ichki · kelishish", en: "Documents · Internal · approve" }
     backend:
       eds: { full: [memos.approve] }
   # SIGN-2 (ADR-0024 п. 1, ADR-0012): вести реестр полномочий подписи — Настройки · «Права подписи». У ролей из шаблонов
@@ -275,38 +275,38 @@ resources:
   - key: eds.signing.manage
     module: eds
     levels: [full]
-    label: { ru: "Документы · Права подписи · вести реестр полномочий", uz: "Hujjatlar · Imzo huquqlari · vakolatlar reyestrini yuritish", en: "Documents · Signing authority · manage the register" }
+    label: { ru: "Настройки · Права подписи", uz: "Sozlamalar · Imzo huquqlari", en: "Settings · Signing authority" }
     backend:
       eds: { full: [signing.manage] }
   - key: erp.calc
     module: erp
-    label: { ru: "Расчёт · Заявки в расчёте, Мои расчёты", uz: "Hisob-kitob · Hisobdagi arizalar, mening hisob-kitoblarim", en: "Costing · Requests in costing, my costings" }
+    label: { ru: "Операции · Заявки · расчёт", uz: "Amallar · Arizalar · hisob-kitob", en: "Operations · Requests · costing" }
     backend:
       erp: { full: [deal.manage, quote.build, quote.edit_pricing] }
   # Виза строки расчёта по типу позиции вместо ролей SUPPLY и ENGINEER в процессе (ADR-0012 п. 6).
   - key: erp.calc.goods
     module: erp
     levels: [full]
-    label: { ru: "Расчёт · Виза расчёта: товары и склад", uz: "Hisob-kitob · Hisob-kitob vizasi: tovarlar va ombor", en: "Costing · Costing sign-off: goods and stock" }
+    label: { ru: "Операции · Заявки · виза: товары и склад", uz: "Amallar · Arizalar · viza: tovarlar va ombor", en: "Operations · Requests · sign-off: goods and stock" }
     backend:
       erp: { full: [quote.build, quote.edit_pricing, quote.visa_goods] }
   - key: erp.calc.services
     module: erp
     levels: [full]
-    label: { ru: "Расчёт · Виза расчёта: услуги", uz: "Hisob-kitob · Hisob-kitob vizasi: xizmatlar", en: "Costing · Costing sign-off: services" }
+    label: { ru: "Операции · Заявки · виза: услуги", uz: "Amallar · Arizalar · viza: xizmatlar", en: "Operations · Requests · sign-off: services" }
     backend:
       erp: { full: [quote.build, quote.visa_services] }
   - key: erp.stock
     module: erp
-    label: { ru: "Расчёт · Склад, Номенклатура и поставщики, Техдокументация", uz: "Hisob-kitob · Ombor, nomenklatura va yetkazib beruvchilar, texnik hujjatlar", en: "Costing · Stock, items & suppliers, technical files" }
+    label: { ru: "Операции · Каталог и Закупки", uz: "Amallar · Katalog va xaridlar", en: "Operations · Catalog and purchases" }
     backend:
       erp: { full: [catalog.manage, catalog.publish, supply.manage, fulfillment.manage] }
   - key: chats.internal
     module: chats
-    label: { ru: "Чаты · Команда (проекты, сотрудники)", uz: "Chatlar · Jamoa (loyihalar, xodimlar)", en: "Chats · Team (projects, staff)" }
+    label: { ru: "Органайзер · Чаты и Люди", uz: "Organayzer · Chatlar va odamlar", en: "Organizer · Chats and people" }
   - key: chats.external
     module: chats
-    label: { ru: "Чаты · С клиентами (Telegram-бот, почта)", uz: "Chatlar · Mijozlar bilan (Telegram-bot, pochta)", en: "Chats · With clients (Telegram bot, email)" }
+    label: { ru: "Контакты · Переписка с клиентами", uz: "Kontaktlar · Mijozlar bilan yozishma", en: "Contacts · Client conversations" }
     # B-D18-1 (W18A-P3, решение архитектора 2026-10-28): переписка отдельно от реестра лидов. `chats:*` открывает только
     # переписку, вложения и заметки команды тех диалогов, где сотрудник участвует (ответственный за лида, клиента или
     # сделку, автор ответа клиенту) или которые назначены его зоне (`chats:invoiced` — «Счета и оплаты»). Реестр лидов
@@ -317,7 +317,7 @@ resources:
         full: [chats:read, chats:reply, chats:note, chats:assist]
   - key: admin
     module: admin
-    label: { ru: "Настройки · Сотрудники, Роли и права, Каналы связи, Процессы, Подключения, Журнал, Статьи компании, Обращения сотрудников", uz: "Sozlamalar · Xodimlar, rollar va huquqlar, aloqa kanallari, jarayonlar, ulanishlar, jurnal, kompaniya maqolalari, xodimlar murojaatlari", en: "Settings · Employees, roles & permissions, channels, processes, connections, log, company articles, staff requests" }
+    label: { ru: "Настройки · Сотрудники, Подключения, Журнал, Статьи компании, Обращения сотрудников", uz: "Sozlamalar · Xodimlar, ulanishlar, jurnal, kompaniya maqolalari, xodimlar murojaatlari", en: "Settings · Employees, connections, log, company articles, staff requests" }
     backend:
       crm:
         # W13-A5: директор (admin: read) читает и настройки бота, шаблоны ответов и базу знаний — без правки; правка и
@@ -361,7 +361,7 @@ resources:
   # у ролей из шаблонов раздела нет, у директора и администратора — full.
   - key: company.settings
     module: admin
-    label: { ru: "Настройки · Компания: реквизиты и бланк, нумерация, налоги и валюты, шаблоны документов", uz: "Sozlamalar · Kompaniya: rekvizitlar va blanka, raqamlash, soliqlar va valyutalar, hujjat shablonlari", en: "Settings · Company: details & letterhead, numbering, taxes & currencies, document templates" }
+    label: { ru: "Настройки · Компания и Документы · Шаблоны", uz: "Sozlamalar · Kompaniya va hujjatlar · shablonlar", en: "Settings · Company and documents · templates" }
     backend:
       erp: { full: [settings.edit, settings.charge_templates] }
 

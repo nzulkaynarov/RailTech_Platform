@@ -40,7 +40,7 @@ const GROUP_PAGES = [
   ["people", "/admin/roles", "Роли и права"],
   ["company", "/admin/company", "Реквизиты и бланк"],
   ["channels", "/admin/telegram", "Telegram"],
-  ["system", "/admin/audit", "Журнал"],
+  ["system", "/admin/audit", "История"],
 ] as const;
 
 /** Старые адреса → новые: закладки, ссылки справки и «Что нового» открывают новое место. */
@@ -208,7 +208,7 @@ test.describe("Настройки: порядок и навигация (SET-IA)
       await spaGoto(page, "/admin");
       await h1(page, "Все настройки");
       const system = page.getByRole("region", { name: "Журнал" });
-      await expect(system.getByRole("link", { name: /Журнал/ })).toBeVisible();
+      await expect(system.getByRole("link", { name: /История/ })).toBeVisible();
       await expect(system.getByRole("link", { name: /Обмен между системами/ })).toHaveCount(0);
       await expect(page.getByRole("region", { name: /^Первый запуск/ })).toHaveCount(0);
       await expectNoViolations(page, `director index ${String(width)}`);

@@ -118,7 +118,7 @@ test.describe("Настройки бота: администратор", () => {
       .getByRole("dialog", { name: "Выйти без сохранения?" })
       .getByRole("button", { name: "Выйти без сохранения" })
       .click();
-    await expect(page.getByRole("region", { name: "Журнал" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "История" })).toBeVisible();
   });
 
   test("рабочие часы, поведение бота, квалификация, бюджет: поля подписаны, значения сохраняются", async ({

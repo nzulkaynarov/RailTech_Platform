@@ -81,7 +81,7 @@ test.describe("Роли: хвосты QA (R3-D-1, R3-D-3, R3-D-4)", () => {
     await openRole(page, "Бухгалтер");
     await chooseOption(
       matrix(page).getByRole("combobox", {
-        name: "С клиентами (Telegram-бот, почта) — роль «Бухгалтер»",
+        name: "Переписка с клиентами — роль «Бухгалтер»",
       }),
       "Скрыто",
     );
@@ -89,7 +89,7 @@ test.describe("Роли: хвосты QA (R3-D-1, R3-D-3, R3-D-4)", () => {
 
     await openRole(page, "Гл. инженер");
     await chooseOption(
-      matrix(page).getByRole("combobox", { name: /^Виза расчёта: услуги — роль «Гл\. инженер»/ }),
+      matrix(page).getByRole("combobox", { name: /^Заявки · виза: услуги — роль «Гл\. инженер»/ }),
       "Скрыто",
     );
     await expectNoViolations(page, "preview");
@@ -127,7 +127,7 @@ test.describe("Роли: хвосты QA (R3-D-1, R3-D-3, R3-D-4)", () => {
     await panel.getByLabel("Название").fill("Временная");
     await chooseOption(
       matrix(page).getByRole("combobox", {
-        name: /^Клиенты, Заявки, Создать заявку — роль «Временная»/,
+        name: /^Контрагенты, создать заявку — роль «Временная»/,
       }),
       "Только чтение",
     );

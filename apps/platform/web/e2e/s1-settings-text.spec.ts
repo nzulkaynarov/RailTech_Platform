@@ -29,7 +29,7 @@ test.describe("S1 · Настройки короче", () => {
 
       // «Подключения»: карточки выше «Требует внимания», одинаковые причины — одной строкой
       await spaGoto(page, "/admin/integrations");
-      await expect(page.getByRole("heading", { level: 1, name: "Подключения" })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1, name: "Сервисы" })).toBeVisible();
       const cards = page.getByRole("heading", { level: 2, name: "Сервисы" });
       const attention = page.getByRole("heading", { level: 2, name: "Требует внимания" });
       await expect(attention).toBeVisible();

@@ -276,7 +276,9 @@ export function AppShell() {
     crumbs.push({ label: t(`modules:${code}.name`), to: itemsOf(code)[0]?.to });
     const sectionLabel = t(`modules:${match.module.code}.sections.${match.section.key}`);
     if (nav) {
-      const leaf = nav.tab ? t(`modules:${code}.nav.${nav.tab.key}`) : sectionLabel;
+      const leaf = nav.tab
+        ? t(nav.tab.label ?? `modules:${code}.nav.${nav.tab.key}`)
+        : sectionLabel;
       const label = itemLabel(code, nav.item);
       const deeper = leaf !== label || match.objectId !== undefined;
       crumbs.push({ label, to: deeper ? activeResolved?.to : undefined });
@@ -462,7 +464,7 @@ export function AppShell() {
                     className="pf-shell-tab pf-focusable"
                     aria-current={nav?.tab?.key === tab.key ? "page" : undefined}
                   >
-                    {t(`modules:${activeModule.code}.nav.${tab.key}`)}
+                    {t(tab.label ?? `modules:${activeModule.code}.nav.${tab.key}`)}
                   </Link>
                 ))}
               </nav>

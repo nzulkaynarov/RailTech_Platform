@@ -21,7 +21,7 @@ async function expectNoViolations(page: Page, context: string): Promise<void> {
 
 async function openCard(page: Page, card: string): Promise<void> {
   await spaGoto(page, `/admin/integrations?card=${card}&panel=open`);
-  await expect(page.getByRole("heading", { level: 1, name: "Подключения" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Сервисы" })).toBeVisible();
   await expect(page.locator(PANEL).locator(".ant-skeleton, [data-pf-skeleton]")).toHaveCount(0);
 }
 
