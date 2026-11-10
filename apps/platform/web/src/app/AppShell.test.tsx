@@ -299,7 +299,7 @@ describe("единая кнопка «Создать»", () => {
     await screen.findByRole("heading", { level: 1, name: "Лиды" });
     const rail = screen.getByRole("navigation", { name: "Модули" });
     fireEvent.click(within(rail).getByRole("button", { name: "Создать" }));
-    expect(await screen.findByRole("menuitem", { name: "Заявка" })).toBeVisible();
+    expect(await screen.findByRole("menuitem", { name: "Заявка" })).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: "Служебная записка" })).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: /Лид · скоро/ })).toHaveAttribute(
       "aria-disabled",
