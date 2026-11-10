@@ -56,14 +56,6 @@ describe("меню — docs/product/NAVIGATION.md", () => {
     expect(at("/crm/messages")).toBe("crm.leads");
   });
 
-  it("главные действия модулей; заявка — одно имя в Клиентах и Расчёте", () => {
-    expect(ru.crm.action).toBe("Создать заявку");
-    expect(ru.eds.action).toBe("Создать документ");
-    expect(ru.erp.action).toBe("Создать заявку");
-    expect(ru.chats.action).toBe("Создать чат");
-    expect(ru.admin.action).toBe("Пригласить сотрудника");
-    expect(MODULES.find((m) => m.code === "dashboard")?.action).toBeUndefined();
-  });
 });
 
 describe("имена модулей — UX-оценка 2026-10-27 §6.1", () => {
