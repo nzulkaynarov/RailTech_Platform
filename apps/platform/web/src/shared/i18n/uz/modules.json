@@ -232,6 +232,40 @@
       "retry": "Qayta urinish",
       "prev": "Orqaga",
       "next": "Oldinga"
+    },
+    "inbox": {
+      "call": "Qo‘ng‘iroq",
+      "search": "Muhokamani topish",
+      "message": "Xabar yozish",
+      "noData": "Ma’lumotlar shu yerda paydo bo‘ladi",
+      "groups": {
+        "objects": "Obyektlar bo‘yicha muhokamalar",
+        "direct": "Shaxsiy"
+      }
+    },
+    "people": {
+      "filter": "Kimni ko‘rsatish",
+      "search": "Odamni topish",
+      "show": "Ko‘rsatish",
+      "write": "Yozish",
+      "call": "Qo‘ng‘iroq",
+      "phone": "Telefon",
+      "email": "Pochta",
+      "noData": "Ma’lumotlar shu yerda paydo bo‘ladi",
+      "kinds": {
+        "all": "Hammasi",
+        "employees": "Xodimlar",
+        "clients": "Mijoz xodimlari",
+        "partners": "Hamkor xodimlari",
+        "leads": "Lidlar"
+      },
+      "columns": {
+        "name": "Ism",
+        "position": "Lavozim",
+        "kind": "Kim",
+        "owner": "Mas’ul",
+        "contacts": "Kontaktlar"
+      }
     }
   },
   "admin": {
