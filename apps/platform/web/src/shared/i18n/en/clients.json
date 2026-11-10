@@ -5,7 +5,7 @@
     "placeholder": "Name or TIN"
   },
   "columns": {
-    "name": "Client",
+    "name": "Counterparty",
     "inn": "TIN",
     "requests": "Open requests",
     "erp": "Back office",
