@@ -121,7 +121,7 @@ test.describe("Настройки без переброса", () => {
 
       // Один журнал с фильтром
       await spaGoto(page, "/admin/audit");
-      await expect(page.getByRole("heading", { level: 1, name: "Журнал" })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1, name: "История" })).toBeVisible();
       const filter = page.getByRole("navigation", { name: "Что показать в журнале" });
       await expect(filter.getByRole("link", { name: "Действия людей" })).toHaveAttribute(
         "aria-current",
@@ -129,7 +129,7 @@ test.describe("Настройки без переброса", () => {
       );
       await expect(page.getByRole("complementary", { name: "Боковое окно" })).toHaveCount(0);
       await expect(page.getByText("Записей: 13")).toBeVisible();
-      await expect(page).toHaveTitle("Журнал · Действия людей — RailTech Platform");
+      await expect(page).toHaveTitle("История · Действия людей — RailTech Platform");
       await expectNoViolations(page, `journal people ${String(width)}`);
       await shot(page, "journal-people");
       await filter.getByRole("link", { name: "Обмен между системами" }).click();

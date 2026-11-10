@@ -17,6 +17,8 @@ export interface NavTarget {
 
 export interface NavTab {
   key: string;
+  /** Ключ подписи, если он не `modules:<module>.nav.<key>` */
+  label?: string;
   targets: readonly NavTarget[];
   /** Разделы без своей вкладки, которые подсвечивают эту */
   also?: readonly string[];
@@ -34,11 +36,28 @@ export interface NavItem {
   tabs?: readonly NavTab[];
 }
 
-function settingsTargets(group: SettingsGroup, skip: readonly string[] = []): NavTarget[] {
-  const to = `/admin?group=${group}`;
-  return SETTINGS.filter((entry) => entry.group === group && !skip.includes(entry.key)).map(
-    (entry) => ({ section: `admin.${entry.key}`, to }),
-  );
+/**
+ * Пункт Настроек: открывает первую доступную страницу группы, остальные страницы группы — вкладками над ней (как «Каталог»).
+ * Индекс `/admin` с поиском и чек-листом первого запуска остаётся по своему адресу.
+ */
+function settingsItem(
+  key: string,
+  group: SettingsGroup,
+  skip: readonly string[] = [],
+  also?: readonly string[],
+): NavItem {
+  const entries = SETTINGS.filter((entry) => entry.group === group && !skip.includes(entry.key));
+  const targets = entries.map((entry): NavTarget => ({ section: `admin.${entry.key}` }));
+  return {
+    key,
+    targets,
+    ...(also ? { also } : {}),
+    tabs: entries.map((entry) => ({
+      key: entry.key,
+      label: `modules:admin.sections.${entry.key}`,
+      targets: [{ section: `admin.${entry.key}` }],
+    })),
+  };
 }
 
 const docs = (box: string): NavTarget => ({
@@ -113,16 +132,17 @@ export const NAVIGATION: Readonly<Record<ModuleCode, readonly NavItem[]>> = {
     { key: "people", targets: [{ section: "chats.contacts" }] },
   ],
   admin: [
-    { key: "people", targets: settingsTargets("people") },
-    { key: "company", targets: settingsTargets("company", ["templates"]) },
-    { key: "channels", targets: settingsTargets("channels"), also: ["crm.channels"] },
-    { key: "system", targets: settingsTargets("system") },
+    settingsItem("people", "people"),
+    settingsItem("company", "company", ["templates"]),
+    settingsItem("channels", "channels", [], ["crm.channels"]),
+    settingsItem("system", "system"),
   ],
 };
 
 export interface ResolvedTab {
   key: string;
   to: string;
+  label?: string;
 }
 
 export interface ResolvedItem {
@@ -163,7 +183,10 @@ export function visibleItems(code: ModuleCode, can: CanSee): readonly ResolvedIt
     if (to === undefined) return [];
     const tabs = (item.tabs ?? []).flatMap((tab) => {
       const tabTo = firstPath(tab.targets, can);
-      return tabTo === undefined ? [] : [{ key: tab.key, to: tabTo }];
+      if (tabTo === undefined) return [];
+      return [
+        tab.label ? { key: tab.key, to: tabTo, label: tab.label } : { key: tab.key, to: tabTo },
+      ];
     });
     return [{ item, to, tabs }];
   });

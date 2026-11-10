@@ -155,7 +155,7 @@ test.describe("Шапка и бар несохранённого", () => {
       ).toBeGreaterThanOrEqual(8);
       await page.getByLabel("Телефон", { exact: true }).focus();
 
-      // Уход со страницы с правками (SET-IA: вкладок нет — уходим рейлом на «Все настройки») спрашивает
+      // Уход со страницы с правками (рейлом «Настройки» — на первую страницу группы «Сотрудники») спрашивает
       const settings = page
         .getByRole("navigation", { name: "Модули" })
         .getByRole("link", { name: "Настройки" });
@@ -167,7 +167,7 @@ test.describe("Шапка и бар несохранённого", () => {
       await page.getByRole("button", { name: "Отменить" }).click();
       await expect(save).toBeHidden();
       await settings.click();
-      await expect(page.getByRole("heading", { level: 1, name: "Все настройки" })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1, name: "Сотрудники" })).toBeVisible();
     });
   }
 

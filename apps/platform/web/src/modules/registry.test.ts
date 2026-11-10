@@ -48,8 +48,10 @@ describe("меню — docs/product/NAVIGATION.md", () => {
     expect(at("/eds/payments")).toBe("erp.finance.invoices");
     expect(at("/eds/payments?show=memos")).toBe("erp.finance.memos");
     expect(at("/eds/projects")).toBe("dashboard.projects");
-    expect(at("/admin/org")).toBe("admin.people");
-    expect(at("/admin?group=channels")).toBe("admin.channels");
+    expect(at("/admin/org")).toBe("admin.people.org");
+    // индекс группы — страница «Все настройки», пункты меню ведут на сами страницы
+    expect(at("/admin?group=channels")).toBeUndefined();
+    expect(at("/admin/telegram")).toBe("admin.channels.telegram");
     expect(at("/admin/templates")).toBe("eds.templates");
     expect(at("/erp/stock")).toBe("erp.catalog.stock");
     expect(at("/erp/stock?view=orders")).toBe("erp.requests.purchases");

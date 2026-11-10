@@ -45,7 +45,7 @@ test.describe("История действий", () => {
   test("админ фильтрует журнал, открывает запись и видит, что изменилось", async ({ page }) => {
     await loginAndWait(page, "admin@demo.example");
     await spaGoto(page, "/admin/audit");
-    await expect(page.getByRole("heading", { level: 1, name: "Журнал" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "История" })).toBeVisible();
     const table = page.getByRole("table", { name: "Записи журнала аудита" });
     await expect(table.getByRole("row")).toHaveCount(14);
     await expect(page.getByText("Записей: 13")).toBeVisible();
@@ -86,7 +86,7 @@ test.describe("История действий", () => {
     await spaGoto(page, "/admin/audit?entry=116&panel=open");
     const side = page.locator(PANEL);
     await expect(
-      side.getByText(/Заявки в расчёте, Мои расчёты: Скрыто → Только чтение/),
+      side.getByText(/Операции · Заявки · расчёт: Скрыто → Только чтение/),
     ).toBeVisible();
     await expect(side.getByText(/Поле «Цены поставщиков»: станет видно/)).toBeVisible();
 

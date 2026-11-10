@@ -26,7 +26,7 @@ describe("Admin · Журнал аудита (экран целиком на MSW
     signInAs("admin@demo.example");
     renderApp("/admin/audit");
 
-    expect(await screen.findByRole("heading", { level: 1, name: "Журнал" })).toBeVisible();
+    expect(await screen.findByRole("heading", { level: 1, name: "История" })).toBeVisible();
     const filter = screen.getByRole("navigation", { name: "Что показать в журнале" });
     expect(within(filter).getByRole("link", { name: "Действия людей" })).toHaveAttribute(
       "aria-current",
@@ -113,9 +113,7 @@ describe("Admin · Журнал аудита (экран целиком на MSW
 
     const side = await panelEl();
     expect(
-      await within(side).findByText(
-        /Расчёт · Заявки в расчёте, Мои расчёты: Скрыто → Только чтение/,
-      ),
+      await within(side).findByText(/Операции · Заявки · расчёт: Скрыто → Только чтение/),
     ).toBeVisible();
     expect(within(side).getByText(/Поле «Цены поставщиков»: станет видно/)).toBeVisible();
   });

@@ -76,7 +76,7 @@ describe("карточки: «Открыть» и «Открыть консол�
     const side = await openPanel("erp", DIRECTOR);
     expect(await within(side).findByText("Сопряжена")).toBeVisible();
     expect(within(side).queryByRole("link", { name: /Открыть консоль/ })).toBeNull();
-    screen.getByRole("heading", { level: 1, name: "Подключения" });
+    screen.getByRole("heading", { level: 1, name: "Сервисы" });
   });
 
   it("бот: BotFather и сам бот", async () => {

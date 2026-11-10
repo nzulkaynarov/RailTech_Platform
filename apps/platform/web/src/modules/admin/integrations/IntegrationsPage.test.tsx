@@ -30,7 +30,7 @@ describe("Admin · Внешние интеграции: обзор", () => {
     signIn("admin@demo.example");
     renderAt("/admin/integrations");
 
-    expect(await screen.findByRole("heading", { level: 1, name: "Подключения" })).toBeVisible();
+    expect(await screen.findByRole("heading", { level: 1, name: "Сервисы" })).toBeVisible();
     const attention = await screen.findByRole("heading", { level: 2, name: "Требует внимания" });
     // Карточки настроек стоят раньше «Требует внимания» (S3): первый экран — то, что настраивают
     const cards = screen.getByRole("heading", { level: 2, name: "Сервисы" });
@@ -186,7 +186,7 @@ describe("Admin · Внешние интеграции: обзор", () => {
     signIn("director@demo.example");
     renderAt("/admin/integrations?card=erp&panel=open");
 
-    expect(await screen.findByRole("heading", { level: 1, name: "Подключения" })).toBeVisible();
+    expect(await screen.findByRole("heading", { level: 1, name: "Сервисы" })).toBeVisible();
     expect(await screen.findByText("Только просмотр")).toBeVisible();
     expect(screen.queryByRole("button", { name: /^Проверить/ })).not.toBeInTheDocument();
     // «Расходы» и «Состояние системы» — отчёты: директору есть «Обновить»

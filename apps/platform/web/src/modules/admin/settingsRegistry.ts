@@ -374,7 +374,7 @@ export const SETTINGS: readonly SettingEntry[] = [
     group: "channels",
     path: "/admin/integrations",
     access: ADMIN,
-    name: { ru: "Подключения", uz: "Ulanishlar", en: "Connections" },
+    name: { ru: "Сервисы", uz: "Servislar", en: "Services" },
     description: {
       ru: "Состояние сервисов, модели ИИ, хранилище и копии",
       uz: "Servislar holati, SI modellari, ombor va nusxalar",
@@ -440,7 +440,7 @@ export const SETTINGS: readonly SettingEntry[] = [
     group: "system",
     path: "/admin/audit",
     access: ADMIN,
-    name: { ru: "Журнал", uz: "Jurnal", en: "Log" },
+    name: { ru: "История", uz: "Tarix", en: "History" },
     description: {
       ru: "Кто, что и когда изменил",
       uz: "Kim, nimani va qachon o‘zgartirgan",
