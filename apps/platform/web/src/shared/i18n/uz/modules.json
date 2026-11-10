@@ -218,6 +218,20 @@
       "calendar": "Taqvim",
       "chats": "Chatlar",
       "people": "Odamlar"
+    },
+    "calendar": {
+      "link": "Taqvim havolasi",
+      "filter": "Nimani ko‘rsatish",
+      "kinds": {
+        "tasks": "Topshiriqlar",
+        "documents": "Hujjatlar",
+        "invoices": "Hisoblar",
+        "deliveries": "Yetkazmalar"
+      },
+      "loadError": "Muddatlarni yuklab bo‘lmadi",
+      "retry": "Qayta urinish",
+      "prev": "Orqaga",
+      "next": "Oldinga"
     }
   },
   "admin": {
