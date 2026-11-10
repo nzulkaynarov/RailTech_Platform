@@ -76,7 +76,7 @@ test.describe("Доработать возвращённый документ", 
     await expect(queue.getByText(`Вернул Демо Директоров: ${REMARK}`)).toBeVisible();
     // старая возвращённая служебка автора лежит тут же: у каждой своя строка
     await expect(queue.getByText(/^Доработать: СЗ-2026\/028/)).toBeVisible();
-    await expect(page.getByRole("main").getByText(/Менеджер · .* · 4 решения/)).toBeVisible();
+    await expect(page.getByRole("main").getByText(/^[^·]+ · 4 решения$/)).toBeVisible();
     await shoot(page, "queue-rework");
 
     // «Открыть» ведёт в форму «Продолжить» — текст на месте, тип нельзя менять
@@ -100,7 +100,7 @@ test.describe("Доработать возвращённый документ", 
     const again = page.getByRole("region", { name: "Что сделать сейчас" });
     await expect(again.getByText(/^Доработать: СЗ-2026\/028/)).toBeVisible();
     await expect(again.getByText(/^Доработать: СЗ-2026\/014/)).toHaveCount(0);
-    await expect(page.getByRole("main").getByText(/Менеджер · .* · 3 решения/)).toBeVisible();
+    await expect(page.getByRole("main").getByText(/^[^·]+ · 3 решения$/)).toBeVisible();
   });
 
   test("у директора нет чужих «Доработать»: возврат касается только автора", async ({ page }) => {

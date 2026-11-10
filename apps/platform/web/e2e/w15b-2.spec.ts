@@ -90,14 +90,12 @@ test.describe("Мелкие дефекты гейта волны 15", () => {
     await shoot(page, "g9-uz-queue-date");
   });
 
-  test("W15-G-8: заглушка «Каналы связи» ведёт в «Настройки · Telegram» (SET-IA)", async ({
+  test("W15-G-8: старый адрес «Каналы связи» ведёт в «Настройки · Telegram» (SET-IA)", async ({
     page,
   }) => {
     await loginAndWait(page, "all@demo.example");
     await page.goto("/crm/channels");
-    const open = page.getByRole("link", { name: "Открыть «Telegram»" });
-    await expect(open).toHaveAttribute("href", "/admin/telegram");
-    await expect(page.getByRole("main")).not.toContainText("Подключения");
-    await shoot(page, "g8-channels-stub");
+    await expect(page).toHaveURL(/\/admin\/telegram$/);
+    await expect(page.getByRole("heading", { level: 1, name: "Telegram" })).toBeVisible();
   });
 });

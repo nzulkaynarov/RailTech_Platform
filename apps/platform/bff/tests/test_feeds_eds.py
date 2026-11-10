@@ -393,8 +393,9 @@ async def test_search_finds_letters_memos_and_documents_in_the_eds_registry(
     assert hits["ВХ-104/26"]["path"] == "/eds/inbox/%D0%92%D0%A5-104%2F26?panel=open&tab=resolution"
     assert hits["СЗ-2026/031"]["path"].startswith("/eds/approvals/%D0%A1%D0%97-2026%2F031")
     assert hits["СЗ-2026/031"]["path"].endswith("?panel=open&tab=agree")
-    assert hits["ЗЯ-2026/003"]["path"] == "/eds/documents?doc=70000000-0000-4000-8000-000000000001"
-    assert hits["ИСХ-027/26"]["path"] == "/eds/documents?doc=70000000-0000-4000-8000-000000000001"
+    doc = "doc=70000000-0000-4000-8000-000000000001"
+    assert hits["ЗЯ-2026/003"]["path"] == f"/eds/documents?box=internal&{doc}"
+    assert hits["ИСХ-027/26"]["path"] == f"/eds/documents?box=outgoing&{doc}"
     assert hits["КП-2026/118"]["path"].endswith("tab=approve")
     assert "None" not in hits
     # EDS получил запрос с латинской раскладкой, исправленной на кириллицу, и токен сотрудника

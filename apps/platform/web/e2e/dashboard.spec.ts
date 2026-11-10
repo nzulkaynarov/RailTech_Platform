@@ -29,7 +29,7 @@ test.describe("Задачи", () => {
     page,
   }) => {
     await loginAndWait(page, "director@demo.example");
-    await expect(page.getByRole("main").getByText(/Директор · .* · 8 решений/)).toBeVisible();
+    await expect(page.getByRole("main").getByText(/^[^·]+ · 8 решений$/)).toBeVisible();
     // Поток подключается вместе с каркасом: ждём, пока MSW примет соединение.
     await expect
       .poll(() => page.evaluate("window.__rtMockStreamCount?.() ?? 0"), { timeout: 5_000 })
@@ -57,7 +57,7 @@ test.describe("Задачи", () => {
     const main = page.getByRole("main");
 
     // D26G-4: «Одобрить КП» — все четыре КП на шаге директора в «КП на одобрение» (EDS)
-    await expect(main.getByText(/Директор · .* · 8 решений/)).toBeVisible();
+    await expect(main.getByText(/^[^·]+ · 8 решений$/)).toBeVisible();
     const cards = main.getByRole("region", { name: "Счётчики очереди" }).getByRole("link");
     await expect(cards).toHaveCount(4);
     await expect(cards.nth(0)).toContainText("Входящие без резолюции");
