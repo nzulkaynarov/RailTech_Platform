@@ -7,10 +7,12 @@ import {
   useDecideSigningApproval,
   useListSigningApprovals,
 } from "../../../shared/api/generated/platform-bff";
+import { useConfirmAction } from "../../../shared/ui/useConfirmAction";
 
 /** Документы ERP, ждущие подписи текущего сотрудника (SIGN-4): «Подписать» или «Отказать» с причиной. */
 export function SigningList() {
   const { t } = useTranslation("approvals");
+  const confirmAction = useConfirmAction();
   const { message } = App.useApp();
   const list = useListSigningApprovals();
   const [rejecting, setRejecting] = useState<SigningApprovalRow | null>(null);
@@ -48,7 +50,13 @@ export function SigningList() {
                 size="small"
                 loading={decide.isPending}
                 onClick={() => {
-                  decide.mutate({ id: row.id, data: { decision: "approve" } });
+                  confirmAction({
+                    action: t("signing.sign"),
+                    object: row.title,
+                    onConfirm: () => {
+                      decide.mutate({ id: row.id, data: { decision: "approve" } });
+                    },
+                  });
                 }}
               >
                 {t("signing.sign")}

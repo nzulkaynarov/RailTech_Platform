@@ -17,6 +17,7 @@ import { DateField } from "../../../shared/ui/DateField";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { companyDate, fieldsOf, reasonOf, useRefreshLetters } from "./api";
 import { type ResolutionDraft, type ZonePick, clearDraft, readDraft, writeDraft } from "./draft";
+import { shortAction, useConfirmAction } from "../../../shared/ui/useConfirmAction";
 
 const ZONES: readonly LetterZone[] = ["goods", "services", "payment_terms"];
 // Бухгалтер (условия оплаты) по умолчанию выключен — SPEC-v3 §7.3.
@@ -58,6 +59,7 @@ export interface ResolutionFormProps {
  */
 export function ResolutionForm({ letter, variant = "panel", onDone }: ResolutionFormProps) {
   const { t } = useTranslation("letters");
+  const confirmAction = useConfirmAction();
   const { me } = useAuth();
   const { date } = useFormat();
   const { message } = App.useApp();
@@ -183,13 +185,19 @@ export function ResolutionForm({ letter, variant = "panel", onDone }: Resolution
       window.setTimeout(() => document.getElementById(target)?.focus(), 0);
       return;
     }
-    resolve.mutate({
-      id: letter.id,
-      data: {
-        text: state.text.trim(),
-        assignees: chosen.map((zone) => ({ id: pickOf(zone).userId, zone })),
-        due: state.due,
-        ...(canMargin && margin !== "" ? { min_margin_pct: margin } : {}),
+    confirmAction({
+      action: shortAction(t("form.submit")),
+      object: letter.number,
+      onConfirm: () => {
+        resolve.mutate({
+          id: letter.id,
+          data: {
+            text: state.text.trim(),
+            assignees: chosen.map((zone) => ({ id: pickOf(zone).userId, zone })),
+            due: state.due,
+            ...(canMargin && margin !== "" ? { min_margin_pct: margin } : {}),
+          },
+        });
       },
     });
   };
@@ -428,8 +436,15 @@ export function ResolutionForm({ letter, variant = "panel", onDone }: Resolution
             disabled={busy || comment === ""}
             aria-describedby={comment === "" ? id("disabled") : undefined}
             onClick={() => {
-              setFailure(null);
-              reject.mutate({ id: letter.id, data: { reason: comment } });
+              confirmAction({
+                action: t("form.other.reject"),
+                object: letter.number,
+                danger: true,
+                onConfirm: () => {
+                  setFailure(null);
+                  reject.mutate({ id: letter.id, data: { reason: comment } });
+                },
+              });
             }}
           >
             {t("form.other.reject")}

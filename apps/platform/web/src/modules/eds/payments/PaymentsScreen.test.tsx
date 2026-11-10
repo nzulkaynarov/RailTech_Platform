@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { findInvoice } from "../../../mocks/fixtures/payments";
 import { server } from "../../../test/server";
 import { panelEl, renderAt, setupPaymentTests, signIn } from "../../../test/paymentsKit";
+import { confirmDialog } from "../../../test/confirmDialog";
 
 setupPaymentTests();
 
@@ -171,6 +172,7 @@ describe("Подтвердить оплату", () => {
       "Счёт СЧ-2026/142 станет «Оплачен»",
     );
     fireEvent.click(within(form).getByRole("button", { name: "Подтвердить оплату" }));
+    await confirmDialog();
 
     expect(await screen.findByText(/Оплата подтверждена: 112\s000\s000/)).toBeVisible();
     await waitFor(() => {
@@ -193,6 +195,8 @@ describe("Подтвердить оплату", () => {
     expect(consequence).toHaveTextContent(/остаток 72\s000\s000/);
 
     fireEvent.click(within(form).getByRole("button", { name: "Подтвердить частичную оплату" }));
+
+    await confirmDialog();
     expect(await screen.findByText(/Частичная оплата подтверждена/)).toBeVisible();
     const row = await screen.findByRole("row", { name: /СЧ-2026\/142/ });
     expect(within(row).getByText("Частично оплачен")).toBeVisible();
@@ -218,6 +222,7 @@ describe("Подтвердить оплату", () => {
 
     fireEvent.change(amount, { target: { value: "112000000.01" } });
     fireEvent.click(within(form).getByRole("button", { name: "Подтвердить оплату" }));
+    await confirmDialog();
 
     expect(
       await within(form).findByText(/Не сохранено: сумма больше остатка по счёту \(112\s000\s000/),
@@ -237,6 +242,7 @@ describe("Подтвердить оплату", () => {
     expect(within(panel).getByText("Кабинет клиента", { exact: false })).toBeVisible();
     expect(within(panel).getByText(/Комментарий клиента: Оплатили из двух счетов/)).toBeVisible();
     fireEvent.click(within(form).getByRole("button", { name: "Подтвердить оплату" }));
+    await confirmDialog();
 
     expect(await screen.findByText(/Оплата подтверждена: 28/)).toBeVisible();
     await waitFor(() => {
@@ -256,6 +262,7 @@ describe("Подтвердить оплату", () => {
 
     fireEvent.click(submit);
     fireEvent.click(submit);
+    await confirmDialog();
 
     await screen.findAllByText(/Оплата подтверждена: 112/);
     const sent = keys.filter((key): key is string => key !== null);
@@ -320,6 +327,7 @@ describe("Служебки к оплате", () => {
     const file = new File(["%PDF-1.4"], "pp-015.pdf", { type: "application/pdf" });
     fireEvent.change(within(form).getByLabelText(/Платёжка/), { target: { files: [file] } });
     fireEvent.click(within(form).getByRole("button", { name: "Оплачено" }));
+    await confirmDialog();
 
     expect(await screen.findByText("Служебка СЗ-2026/015 оплачена")).toBeVisible();
     await waitFor(() => {

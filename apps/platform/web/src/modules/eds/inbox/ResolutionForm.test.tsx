@@ -6,6 +6,7 @@ import { chooseOption, fillDate, selectedLabel } from "../../../test/fields";
 import { server } from "../../../test/server";
 import { companyDate } from "./api";
 import { panelEl, renderAt, setupLetterTests, signIn } from "../../../test/lettersKit";
+import { confirmDialog } from "../../../test/confirmDialog";
 
 setupLetterTests();
 
@@ -155,6 +156,8 @@ describe("Резолюция: форма", () => {
 
     fireEvent.click(within(form).getByRole("button", { name: /Утвердить резолюцию/ }));
 
+    await confirmDialog();
+
     expect(await screen.findByText("Резолюция наложена: задание ушло исполнителям")).toBeVisible();
     expect(sent).toEqual({
       id: "20000000-0000-4000-8000-000000000104",
@@ -201,6 +204,8 @@ describe("Резолюция: форма", () => {
 
     fireEvent.click(within(form).getByRole("button", { name: "Отклонить" }));
 
+    await confirmDialog();
+
     expect(await screen.findByText("Не наш профиль")).toBeVisible();
     await waitFor(() => {
       expect(screen.getAllByText("Отклонено").length).toBeGreaterThan(0);
@@ -229,6 +234,8 @@ describe("Резолюция: ошибки и черновик", () => {
     );
 
     fireEvent.click(within(form).getByRole("button", { name: /Утвердить резолюцию/ }));
+
+    await confirmDialog();
 
     expect(
       await within(form).findByText(
@@ -262,6 +269,7 @@ describe("Резолюция: ошибки и черновик", () => {
     const first = await openForm();
     await fillValid(first.form);
     fireEvent.click(within(first.form).getByRole("button", { name: /Утвердить резолюцию/ }));
+    await confirmDialog();
     expect(
       await within(first.form).findByText(
         "Резолюция не сохранена: документооборот не отвечает. Текст сохранён в черновике.",
@@ -350,6 +358,8 @@ describe("Резолюция: ошибки и черновик", () => {
     await fillValid(form);
 
     fireEvent.click(within(form).getByRole("button", { name: /Утвердить резолюцию/ }));
+
+    await confirmDialog();
 
     expect(await within(form).findByText("Отметьте хотя бы одного исполнителя.")).toBeVisible();
     expect(

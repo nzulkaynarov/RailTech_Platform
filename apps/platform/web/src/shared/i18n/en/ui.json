@@ -121,5 +121,8 @@
     "personLabel": "Who on the client side",
     "personPlaceholder": "Full name and position",
     "personRequired": "Say who confirmed"
+  },
+  "confirm": {
+    "cancel": "Cancel"
   }
 }
