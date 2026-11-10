@@ -105,10 +105,7 @@ test.describe("Ролевая матрица: роли — данные", () => 
     await expect(page).toHaveURL(/\/crm\/messages$/);
     await expect(railLinks(page)).toHaveText(["Контакты", "Документы", "Операции"]);
     const submenu = page.getByRole("navigation", { name: "Разделы модуля" });
-    await expect(submenu.getByRole("link")).toHaveText([
-      /Лиды/,
-      /База знаний/,
-    ]);
+    await expect(submenu.getByRole("link")).toHaveText([/Лиды/, /База знаний/]);
     await settledScreenshot(page, "roles-employee-view");
     // Поиск в шапке работает и без «Моей очереди»: только по разделам роли (лиды — да, клиенты — нет).
     const search = page.getByRole("combobox", { name: "Глобальный поиск" });
