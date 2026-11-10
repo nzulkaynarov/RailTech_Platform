@@ -56,7 +56,7 @@ describe("Первый вход", () => {
     expect(tour).toHaveAccessibleDescription(/Модули/);
     expect(within(tour).getByText("Шаг 1 из 4")).toBeInTheDocument();
 
-    for (const title of ["«Мои задачи»", "Колокольчик", "Помощь"]) {
+    for (const title of ["«Задачи»", "Колокольчик", "Помощь"]) {
       fireEvent.click(within(tour).getByRole("button", { name: /^(Дальше)$/ }));
       expect(await within(tour).findByRole("heading", { name: title })).toBeInTheDocument();
     }

@@ -77,7 +77,9 @@ test.describe("Ролевая матрица: роли — данные", () => 
     });
     await chooseOption(payments, "Полный доступ");
     const consequence = panel.getByRole("group", { name: "Что произойдёт" });
-    await expect(consequence.getByText("Роль открывает модули: Клиенты, Документы.")).toBeVisible();
+    await expect(
+      consequence.getByText("Роль открывает модули: Контакты, Документы."),
+    ).toBeVisible();
     await settledScreenshot(page, "roles-new");
     await panel.getByRole("button", { name: "Создать роль" }).click();
     await expect(page.getByText(`Роль «${MIXED}» создана`)).toBeVisible();
@@ -92,7 +94,7 @@ test.describe("Ролевая матрица: роли — данные", () => 
     await expect(panel.getByRole("heading", { level: 3, name: "Демо Инженеров" })).toBeVisible();
     await panel.getByRole("checkbox", { name: /^Гл\. инженер/ }).uncheck();
     await panel.getByRole("checkbox", { name: new RegExp(`^${MIXED}`) }).check();
-    await expect(panel.getByText("Сотрудник увидит модули: Клиенты, Документы.")).toBeVisible();
+    await expect(panel.getByText("Сотрудник увидит модули: Контакты, Документы.")).toBeVisible();
     await panel.getByRole("button", { name: "Сохранить роли" }).click();
     await expect(page.getByText("Сохранено")).toBeVisible();
     await expect(page.getByRole("row", { name: /Демо Инженеров/ })).toContainText(MIXED);
@@ -101,14 +103,9 @@ test.describe("Ролевая матрица: роли — данные", () => 
     await signOut(page);
     await login(page, "engineer@demo.example");
     await expect(page).toHaveURL(/\/crm\/messages$/);
-    await expect(railLinks(page)).toHaveText(["Клиенты", "Документы"]);
+    await expect(railLinks(page)).toHaveText(["Контакты", "Документы", "Операции"]);
     const submenu = page.getByRole("navigation", { name: "Разделы модуля" });
-    await expect(submenu.getByRole("link")).toHaveText([
-      /Ждут ответа/,
-      /Лиды/,
-      /Каналы связи/,
-      /База знаний/,
-    ]);
+    await expect(submenu.getByRole("link")).toHaveText([/Лиды/, /База знаний/]);
     await settledScreenshot(page, "roles-employee-view");
     // Поиск в шапке работает и без «Моей очереди»: только по разделам роли (лиды — да, клиенты — нет).
     const search = page.getByRole("combobox", { name: "Глобальный поиск" });
@@ -118,7 +115,7 @@ test.describe("Ролевая матрица: роли — данные", () => 
     await expect(page.getByRole("option", { name: /ИНН 300000001/ })).toHaveCount(0);
     await search.press("Escape");
     await railLinks(page).filter({ hasText: "Документы" }).click();
-    await expect(submenu.getByRole("link")).toHaveText([/Все документы/, /Счета и оплаты/]);
+    await expect(submenu.getByRole("link")).toHaveText([/Исходящие/, /Внутренние/, /Архив/]);
     // Название роли под аватаром — из данных.
     await expect(
       page.getByRole("button", { name: new RegExp(`${MIXED}: профиль и настройки`) }),

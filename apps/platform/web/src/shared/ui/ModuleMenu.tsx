@@ -191,7 +191,7 @@ export function ModuleMenuContent({
 }
 
 /** Ширина раскрытого подменю (platform-frontend.md §4, зона 2) */
-const MENU_WIDTH = 208;
+const MENU_WIDTH = 200;
 
 /**
  * Подменю 208 px; свёрнутое не рендерится (не занимает места и не попадает в таб-порядок). Ширина меняется одним шагом,

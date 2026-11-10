@@ -29,9 +29,7 @@ async function expectNoViolations(page: Page, context: string): Promise<void> {
 
 async function openCatalog(page: Page, query: string): Promise<void> {
   await spaGoto(page, `/erp/catalog${query}`);
-  await expect(
-    page.getByRole("heading", { level: 1, name: "Номенклатура и поставщики" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Товары" })).toBeVisible();
 }
 
 const PRICE_FILE = {

@@ -19,36 +19,23 @@ const RU = [
     name: "Главная",
     title: "Главная",
     path: /\/dashboard\/queue$/,
-    first: "Мои задачи",
+    first: "Задачи",
   },
+  { code: "crm", name: "Контакты", title: "Контакты", path: /\/crm\/leads$/, first: "Лиды" },
+  { code: "eds", name: "Документы", title: "Документы", path: /\/eds\/inbox$/, first: "Входящие" },
+  { code: "erp", name: "Операции", title: "Операции", path: /\/erp\/requests$/, first: "Заявки" },
   {
-    code: "crm",
-    name: "Клиенты",
-    title: "Клиенты и лиды",
-    path: /\/crm\/messages$/,
-    first: "Ждут ответа",
+    code: "chats",
+    name: "Органайзер",
+    title: "Органайзер",
+    path: /\/chats\/calendar$/,
+    first: "Календарь",
   },
-  {
-    code: "eds",
-    name: "Документы",
-    title: "Документы и согласования",
-    path: /\/eds\/documents$/,
-    first: "Все документы",
-  },
-  {
-    code: "erp",
-    name: "Расчёт",
-    title: "Расчёт и склад",
-    path: /\/erp\/requests$/,
-    first: "Заявки в расчёте",
-  },
-  { code: "chats", name: "Чаты", title: "Чаты", path: /\/chats$/, first: "Все чаты" },
   {
     code: "admin",
     name: "Настройки",
-    title: "Настройки компании",
-    // SET-IA: рейл «Настройки» открывает индекс «Все настройки»
-    path: /\/admin$/,
+    title: "Настройки",
+    path: /\/admin\?group=people$/,
     first: "Все настройки",
   },
 ] as const;
@@ -101,7 +88,7 @@ test.describe("названия модулей: десктоп", () => {
     await expect(
       matrix.getByRole("rowheader", { name: "Ждут ответа, Лиды, Каналы связи, База знаний бота" }),
     ).toBeVisible();
-    await expect(matrix).toContainText("Клиенты и лиды");
+    await expect(matrix).toContainText("Контакты");
     await expect(matrix).not.toContainText(SYSTEM_NAMES);
     await expectNoViolations(page, "роли и права");
     await settledScreenshot(page, "roles-matrix-ru");
@@ -113,26 +100,26 @@ test.describe("названия модулей: десктоп", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await loginAndWait(page, "director@demo.example");
     await switchLanguage(page, "O‘zbekcha");
-    await expect(page.getByRole("heading", { level: 1, name: "Mening vazifalarim" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Vazifalar" })).toBeVisible();
     const rail = page.getByRole("navigation", { name: "Modullar" }).getByRole("link");
     await expect(rail.filter({ hasNotText: /^RT$/ })).toHaveText([
       "Asosiy",
-      "Mijozlar",
+      "Kontaktlar",
       "Hujjatlar",
-      "Hisob",
-      "Chatlar",
+      "Amallar",
+      "Organayzer",
       "Sozlamalar",
     ]);
 
-    await rail.filter({ hasText: "Mijozlar" }).click();
+    await rail.filter({ hasText: "Kontaktlar" }).click();
     const menu = page.getByRole("navigation", { name: "Modul bo‘limlari" });
-    await expect(menu).toContainText("Mijozlar va lidlar");
-    await expect(menu).toContainText("Javob kutmoqda");
+    await expect(menu).toContainText("Kontaktlar");
+    await expect(menu).toContainText("Lidlar");
     await expect(menu).not.toContainText(SYSTEM_NAMES);
     await settledScreenshot(page, "menu-crm-uz");
 
     await page.goto("/admin/roles");
-    await expect(page.getByRole("table")).toContainText("Mijozlar va lidlar");
+    await expect(page.getByRole("table")).toContainText("Kontaktlar");
     await expect(page.getByRole("table")).not.toContainText(SYSTEM_NAMES);
     await expectNoViolations(page, "roli uz");
     await settledScreenshot(page, "roles-matrix-uz");
@@ -145,10 +132,10 @@ test.describe("названия модулей: 390 @mobile", () => {
     await loginAndWait(page, "director@demo.example");
     const bar = page.getByRole("navigation", { name: "Модули" });
     await expect(bar.getByRole("link")).toHaveText(RU.map((m) => m.name));
-    await bar.getByRole("link", { name: "Клиенты" }).click();
+    await bar.getByRole("link", { name: "Контакты" }).click();
     await page.getByRole("button", { name: "Меню" }).click();
     const drawerMenu = page.getByRole("navigation", { name: "Разделы модуля" });
-    await expect(drawerMenu).toContainText("Клиенты и лиды");
+    await expect(drawerMenu).toContainText("Контакты");
     await expect(drawerMenu).not.toContainText(/\d\.\s/);
     await expectNoViolations(page, "drawer ru");
     await settledScreenshot(page, "mobile-menu-ru");
@@ -159,14 +146,16 @@ test.describe("названия модулей: 390 @mobile", () => {
     const barUz = page.getByRole("navigation", { name: "Modullar" });
     await expect(barUz.getByRole("link")).toHaveText([
       "Asosiy",
-      "Mijozlar",
+      "Kontaktlar",
       "Hujjatlar",
-      "Hisob",
-      "Chatlar",
+      "Amallar",
+      "Organayzer",
       "Sozlamalar",
     ]);
     await page.getByRole("button", { name: "Menyu" }).click();
-    await expect(page.getByText("Mijozlar va lidlar")).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Modul bo‘limlari" })).toContainText(
+      "Lidlar",
+    );
     await settledScreenshot(page, "mobile-menu-uz");
   });
 });

@@ -31,9 +31,7 @@ describe("Расчёт · Заявки в расчёте", () => {
   it("таблица: ЗВ-номер, клиент, стадия, срок, три индикатора виз, ответственный, «Открыть расчёт»", async () => {
     signIn("supply@demo.example");
     renderAt("/erp/requests");
-    expect(
-      await screen.findByRole("heading", { level: 1, name: "Заявки в расчёте" }),
-    ).toBeVisible();
+    expect(await screen.findByRole("heading", { level: 1, name: "Заявки" })).toBeVisible();
     const link = await screen.findByRole("link", { name: `Открыть расчёт по заявке ${NUMBER}` });
     expect(link).toHaveAttribute("href", PATH);
     const row = link.closest("tr");

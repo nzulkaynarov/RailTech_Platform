@@ -9,7 +9,7 @@ import {
   spaGoto,
   waitForMotionEnd,
 } from "./support/app";
-import { routesFor, visibleModules } from "./support/rbac";
+import { matrixModules, routesFor, visibleModules } from "./support/rbac";
 
 // Admin · Оргструктура на MSW (PLT-15): выдача ролей, «последний админ», приглашение, чтение для директора, axe, скриншоты.
 const WIDTHS = [1440, 1280, 390] as const;
@@ -66,7 +66,7 @@ test.describe("Оргструктура: выдача ролей", () => {
     await panel.getByRole("checkbox", { name: /^Менеджер(?!-)/ }).uncheck();
     await panel.getByRole("checkbox", { name: /^Снабженец/ }).check();
     // «Что произойдёт» строится из сгенерированной матрицы, а не из текста в коде
-    const modules = visibleModules("SUPPLY").join(", ");
+    const modules = matrixModules("SUPPLY").join(", ");
     await expect(panel.getByText(`Сотрудник увидит модули: ${modules}.`)).toBeVisible();
     // права ERP вычисляет CRM из разделов ролей (ADR-0012), итог провижининга — в карточке
     await expect(panel.getByText(/В ERP сотрудник получит права по разделам ролей/)).toBeVisible();

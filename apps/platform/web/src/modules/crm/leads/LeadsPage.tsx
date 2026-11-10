@@ -396,7 +396,10 @@ export function LeadsPage({ objectId }: { objectId?: string | undefined }) {
 
   return (
     <div className="pf-crm">
-      <PageHeader title={title} subtitle={t("leads:subtitle")} />
+      <PageHeader
+        title={title}
+        extra={<LinkButton to="/crm/messages">{t("modules:crm.sections.messages")}</LinkButton>}
+      />
       <div className="pf-crm-controls">
         <Segmented
           aria-label={t("leads:scope.label")}

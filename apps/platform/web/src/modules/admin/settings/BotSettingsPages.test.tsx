@@ -211,17 +211,17 @@ describe("Настройки · Telegram и разделы бота по гру�
       ),
     );
     const menu = screen.getByRole("navigation", { name: "Разделы модуля" });
-    fireEvent.click(within(menu).getByRole("link", { name: "Уведомления" }));
+    fireEvent.click(within(menu).getByRole("link", { name: "Журнал" }));
     expect(
       await screen.findByRole("dialog", { name: "Выйти без сохранения?" }),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Остаться" }));
     expect(within(hours).getByText("Есть несохранённые изменения")).toBeVisible();
 
-    fireEvent.click(within(menu).getByRole("link", { name: "Уведомления" }));
+    fireEvent.click(within(menu).getByRole("link", { name: "Журнал" }));
     const leave = await screen.findAllByRole("button", { name: "Выйти без сохранения" });
     fireEvent.click(leave[leave.length - 1] as HTMLElement);
-    expect(await screen.findByRole("heading", { level: 1, name: "Уведомления" })).toBeVisible();
+    expect(await screen.findByRole("region", { name: "Журнал" })).toBeVisible();
   });
 });
 

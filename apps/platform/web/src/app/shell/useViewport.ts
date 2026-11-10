@@ -39,8 +39,8 @@ export function useMediaQuery(query: string): boolean {
 }
 
 /** Ширины каркаса (platform-frontend.md §4): рейл и раскрытое подменю. */
-export const RAIL_WIDTH = 56;
-export const MENU_WIDTH = 208;
+export const RAIL_WIDTH = 64;
+export const MENU_WIDTH = 200;
 /** Закреплённому окну рядом нужна рабочая область не уже этого (UX-1a), иначе окно — поверх. */
 export const MIN_MAIN_WITH_DOCK = 760;
 

@@ -64,7 +64,7 @@ test.describe("Мелкие дефекты гейта C2a: G-5 и G-6", () => {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
       await loginAndWait(page, "admin@demo.example");
       await spaGoto(page, "/crm/kb");
-      await expect(page.getByRole("heading", { level: 1, name: "База знаний бота" })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1, name: "База знаний" })).toBeVisible();
 
       await page.getByLabel("Вопрос клиента").fill("поиск без ключа");
       await page.getByRole("button", { name: "Найти" }).click();

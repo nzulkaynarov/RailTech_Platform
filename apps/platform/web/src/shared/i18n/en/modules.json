@@ -3,9 +3,9 @@
     "name": "Home",
     "title": "Home",
     "sections": {
-      "queue": "My tasks",
+      "queue": "Tasks",
       "projects": "Projects",
-      "summary": "Company summary"
+      "summary": "Summary"
     },
     "queue": {
       "title": "What to do now",
@@ -110,66 +110,100 @@
           }
         }
       }
+    },
+    "nav": {
+      "queue": "Tasks",
+      "projects": "Projects",
+      "summary": "Summary"
     }
   },
   "crm": {
-    "name": "Clients",
-    "title": "Clients & leads",
+    "name": "Contacts",
+    "title": "Contacts",
     "sections": {
       "messages": "Awaiting reply",
       "leads": "Leads",
-      "clients": "Clients",
+      "clients": "Counterparties",
       "requests": "Requests",
       "channels": "Channels",
-      "kb": "Bot knowledge base"
+      "kb": "Knowledge base"
     },
-    "action": "New request"
+    "action": "New request",
+    "nav": {
+      "leads": "Leads",
+      "clients": "Counterparties",
+      "mail": "Mail",
+      "kb": "Knowledge base"
+    }
   },
   "eds": {
     "name": "Documents",
-    "title": "Documents & approvals",
+    "title": "Documents",
     "sections": {
       "documents": "All documents",
-      "inbox": "Incoming letters",
+      "inbox": "Incoming",
       "outbox": "Outgoing",
-      "projects": "Projects: contracts & acts",
+      "projects": "Projects",
       "drafts": "Quotes to approve",
       "approvals": "Awaiting approval",
-      "payments": "Invoices & payments",
+      "payments": "Finance",
       "new": "New document",
       "register": "Register incoming",
       "tasks": "Instruction",
-      "mail": "Incoming mail",
+      "mail": "Mail",
       "mymail": "My mail"
     },
-    "action": "New document"
+    "action": "New document",
+    "nav": {
+      "inbox": "Incoming",
+      "outbox": "Outgoing",
+      "internal": "Internal",
+      "archive": "Archive",
+      "templates": "Templates"
+    }
   },
   "erp": {
-    "name": "Costing",
-    "title": "Costing & stock",
+    "name": "Operations",
+    "title": "Operations",
     "sections": {
-      "requests": "Requests in costing",
+      "requests": "Requests",
       "calc": "My costings",
       "stock": "Stock",
-      "catalog": "Items & suppliers",
-      "docs": "Technical files"
+      "catalog": "Products",
+      "docs": "Documentation"
     },
-    "action": "New request"
+    "action": "New request",
+    "nav": {
+      "requests": "Requests",
+      "sales": "Sales",
+      "purchases": "Purchasing",
+      "catalog": "Catalog",
+      "products": "Products",
+      "stock": "Stock",
+      "docs": "Documentation",
+      "finance": "Finance"
+    }
   },
   "chats": {
-    "name": "Chats",
-    "title": "Chats",
+    "name": "Organizer",
+    "title": "Organizer",
     "sections": {
-      "all": "All chats",
+      "all": "Chats",
       "internal": "Team",
       "external": "With clients",
-      "contacts": "Contacts"
+      "contacts": "People",
+      "calendar": "Calendar"
     },
-    "action": "Create chat"
+    "action": "Create chat",
+    "nav": {
+      "calendar": "Calendar",
+      "chats": "Chats",
+      "people": "People"
+    }
   },
   "admin": {
     "name": "Settings",
-    "title": "Company settings",
+    "title": "Settings",
     "sections": {
       "overview": "All settings",
       "org": "Employees",
@@ -196,11 +230,10 @@
       "tickets": "Staff requests"
     },
     "groups": {
-      "people": "People & access",
+      "people": "Employees",
       "company": "Company",
-      "channels": "Channels",
-      "processes": "Processes",
-      "system": "System"
+      "channels": "Connections",
+      "system": "Log"
     },
     "home": {
       "viewOnly": "View only",
@@ -212,7 +245,7 @@
       "clear": "Clear search",
       "matchedBy": "Found by “{{word}}”",
       "setupTitle": "First run: {{done}} of {{total}} done",
-      "tickets": "Staff requests are in “My tasks”, new: {{count}}.",
+      "tickets": "Staff requests are in “Tasks”, new: {{count}}.",
       "ticketsLink": "Open",
       "more": "Learn more",
       "moreAria": "Learn more about “{{title}}” in Help",
@@ -637,6 +670,12 @@
       "filterLabel": "What the log shows",
       "people": "People’s actions",
       "systems": "System exchange"
+    },
+    "nav": {
+      "people": "Employees",
+      "company": "Company",
+      "channels": "Connections",
+      "system": "Log"
     }
   },
   "tabs": {

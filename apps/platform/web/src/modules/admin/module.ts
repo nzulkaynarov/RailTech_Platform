@@ -37,7 +37,9 @@ export const admin: ModuleConfig = {
     {
       key: "overview",
       path: SETTINGS_HOME,
-      access: { resource: "admin" },
+      // Индекс показывает только доступные страницы, поэтому открыт всем, у кого есть хотя бы одна.
+      access: { anyOf: ["admin", "company.settings", "eds.signing.manage"] },
+      menuAccess: { resource: "admin" },
       tabs: [{ key: "card" }],
       defaults: { panelOpen: false },
       actionTo: "/admin/org",

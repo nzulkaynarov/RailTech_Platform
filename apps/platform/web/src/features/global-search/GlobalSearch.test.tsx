@@ -63,7 +63,7 @@ describe("Глобальный поиск", () => {
     type(box, "ЗВ-2026-104");
 
     const list = await screen.findByRole("listbox", { name: "Результаты поиска" });
-    const group = within(list).getByRole("group", { name: "Клиенты" });
+    const group = within(list).getByRole("group", { name: "Контакты" });
     const option = within(group).getByRole("option", { name: /ЗВ-2026-104 · Стрелочные приводы/ });
     expect(option).toHaveTextContent("Заявка");
     expect(box).toHaveAttribute("aria-expanded", "true");
@@ -93,7 +93,7 @@ describe("Глобальный поиск", () => {
 
     type(box, "Демо");
     const list = await screen.findByRole("listbox", { name: "Результаты поиска" });
-    expect(within(list).getByRole("group", { name: "Клиенты" })).toBeVisible();
+    expect(within(list).getByRole("group", { name: "Контакты" })).toBeVisible();
     expect(within(list).getByRole("group", { name: "Документы" })).toBeVisible();
   });
 
@@ -362,7 +362,7 @@ describe("Глобальный поиск", () => {
     const settings = await screen.findByRole("group", { name: "Настройки" });
     const first = within(settings).getAllByRole("option")[0] as HTMLElement;
     expect(first).toHaveTextContent("Почта");
-    expect(first).toHaveTextContent("Каналы связи");
+    expect(first).toHaveTextContent("Подключения");
     fireEvent.click(first);
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/admin/mail");

@@ -44,7 +44,7 @@ function queueRow(page: Page, title: string | RegExp) {
     .filter({ hasText: title });
 }
 
-test.describe("D2-8: «Мои задачи» менеджера-универсала и «Выставить счёт»", () => {
+test.describe("D2-8: «Задачи» менеджера-универсала и «Выставить счёт»", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
 
   for (const width of WIDTHS) {
@@ -151,7 +151,7 @@ test.describe("D2-8: «Мои задачи» менеджера-универса
       }
       await link.click();
       await expect(page).toHaveURL(/\/erp\/requests\?request=/);
-      await expect(page.getByRole("heading", { level: 1, name: "Заявки в расчёте" })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1, name: "Заявки" })).toBeVisible();
       await expect(page.getByText("в старом ERP")).toHaveCount(0);
       await shot(page, "request-from-letter");
       await expectNoViolations(page, `заявка из письма ${String(width)}`);

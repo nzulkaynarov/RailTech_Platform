@@ -1,13 +1,14 @@
 import { Button, Drawer, Layout } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Outlet, useLocation } from "react-router";
+import { Link, Outlet, useLocation } from "react-router";
 
 import { MODULE_ACTION_WHEN, bridgeEntry, isStubSection } from "../../modules/bridge";
-import { MODULES, findModule, isSectionActive, matchSection } from "../../modules/registry";
+import { MODULES, matchSection } from "../../modules/registry";
+import { findNavItem, visibleItems, type NavItem } from "../../modules/navigation";
 import { MODULE_SETTINGS } from "../../modules/admin/moduleSettings";
 import { SETTINGS_HOME } from "../../modules/admin/module";
-import type { ModuleConfig, SectionConfig } from "../../modules/types";
+import type { SectionConfig } from "../../modules/types";
 import { SetupBanner } from "../../features/first-run/SetupBanner";
 import { useLateSetupBanner, useSetupKnown } from "../../features/first-run/useSetupKnown";
 import { GlobalSearch } from "../../features/global-search/GlobalSearch";
@@ -44,10 +45,6 @@ const PANEL_ID = "pf-context-panel";
 const MOBILE_BAR_HEIGHT = 60;
 const HEADER_HEIGHT = 56;
 
-function firstSection(module: ModuleConfig, inMenu: (s: SectionConfig) => boolean) {
-  return module.sections.find(inMenu);
-}
-
 function isMac(): boolean {
   return typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent);
 }
@@ -83,29 +80,20 @@ export function AppShell() {
   const panelWidthPx = panels.panelWidth === "wide" ? 600 : 440;
   const dockFits = useDockFits(!viewport.mobile && panels.menuOpen, panelWidthPx);
 
-  const railModules = useMemo(
-    () => me.modules.flatMap((code) => findModule(code) ?? []),
-    [me.modules],
-  );
   const sectionAllowed = (s: SectionConfig) => canSee(me, s.access);
-  // Пункт подменю: не скрыт и виден роли (`menuAccess` уже доступа к адресу).
-  const inMenu = (s: SectionConfig) => !s.hidden && canSee(me, s.menuAccess ?? s.access);
-  const groupLabel = (module: string, s: SectionConfig) =>
-    s.group ? t(`modules:${module}.groups.${s.group}`) : undefined;
-  // Раздел открыт, но его пункта в своём модуле у сотрудника нет: меню и крошки — там, где раздел для него живёт
-  // (`menuHome`; база знаний для администратора — Настройки · Telegram-бот).
-  const homeOf = (() => {
-    const home = match?.section.menuHome;
-    if (!match || !home || inMenu(match.section) || !sectionAllowed(match.section))
-      return undefined;
-    const module = railModules.find((m) => m.code === home.module);
-    const section = module?.sections.find((s) => s.key === home.section);
-    return module && section ? { module, section } : undefined;
-  })();
+  const railModules = useMemo(
+    () => MODULES.filter((m) => visibleItems(m.code, (s) => canSee(me, s.access)).length > 0),
+    [me],
+  );
+  const itemsOf = (code: (typeof MODULES)[number]["code"]) => visibleItems(code, sectionAllowed);
+  const nav = match ? findNavItem(match, location.pathname, location.search) : undefined;
   // Подменю — активного модуля; если адрес ведёт в модуль вне роли (403), показываем первый доступный, а не чужой.
   const matchedVisible = match && railModules.some((m) => m.code === match.module.code);
   const activeModule =
-    homeOf?.module ?? (matchedVisible ? match.module : undefined) ?? railModules[0] ?? MODULES[0];
+    railModules.find((m) => m.code === nav?.module) ??
+    (matchedVisible ? match.module : undefined) ??
+    railModules[0] ??
+    MODULES[0];
 
   // Счётчики меню и уведомления открыты разделом «Моя очередь» (как в BFF): без него запросов нет.
   const hasQueue = canSee(me, { resource: "dashboard.queue" });
@@ -206,43 +194,58 @@ export function AppShell() {
     return { count: item.count, attention: item.attention };
   };
 
+  const badgeOfItem = (code: string, targets: readonly string[]) => {
+    const badges = targets.flatMap((ref) => {
+      const [module = "", key = ""] = ref.split(".");
+      const section = MODULES.find((m) => m.code === module)?.sections.find((s) => s.key === key);
+      if (!section) return [];
+      const counter = counters.data?.items.find((c) => c.module === module && c.section === key);
+      return badgeFor(counter, code === module ? code : module, section) ?? [];
+    });
+    if (badges.length === 0) return undefined;
+    const hint = badges.find((b) => b.hint)?.hint;
+    return {
+      count: badges.reduce((sum, b) => sum + b.count, 0),
+      attention: badges.some((b) => b.attention),
+      ...(hint ? { hint } : {}),
+    };
+  };
+  const refsOf = (item: NavItem) => [...item.targets.map((x) => x.section), ...(item.also ?? [])];
+  const itemLabel = (code: string, item: NavItem) => t(`modules:${code}.nav.${item.key}`);
+  const isActiveItem = (code: string, item: NavItem) =>
+    nav?.module === code && nav.item.key === item.key;
+
   const railItems: RailModule[] = railModules.map((module) => {
-    const target = firstSection(module, inMenu);
-    const sections = module.sections.filter(inMenu).map((s) => ({
-      key: s.path,
-      path: s.path,
-      label: t(`modules:${module.code}.sections.${s.key}`),
-      group: groupLabel(module.code, s),
-      active: homeOf ? homeOf.section.key === s.key : isSectionActive(s, match),
-      badge: badgeFor(
-        counters.data?.items.find((c) => c.module === module.code && c.section === s.key),
-        module.code,
-        s,
-      ),
+    const sections = itemsOf(module.code).map(({ item, to }) => ({
+      key: `${module.code}.${item.key}`,
+      path: to,
+      label: itemLabel(module.code, item),
+      active: isActiveItem(module.code, item),
+      badge: badgeOfItem(module.code, [...new Set(refsOf(item))]),
     }));
     return {
       code: module.code,
       name: t(`modules:${module.code}.name`),
       title: t(`modules:${module.code}.title`),
-      to: target?.path ?? `/${module.code}`,
-      active:
-        (homeOf !== undefined || matchedVisible === true) && module.code === activeModule.code,
+      to: sections[0]?.path ?? `/${module.code}`,
+      active: (nav !== undefined || matchedVisible === true) && module.code === activeModule.code,
       sections,
     };
   });
 
-  const menuItems: MenuItem[] = activeModule.sections.filter(inMenu).map((section) => ({
-    key: section.path,
-    to: section.path,
-    label: t(`modules:${activeModule.code}.sections.${section.key}`),
-    group: groupLabel(activeModule.code, section),
-    active: homeOf ? homeOf.section.key === section.key : isSectionActive(section, match),
-    badge: badgeFor(
-      counters.data?.items.find((c) => c.module === activeModule.code && c.section === section.key),
-      activeModule.code,
-      section,
-    ),
+  const activeItems = itemsOf(activeModule.code);
+  const menuItems: MenuItem[] = activeItems.map(({ item, to }) => ({
+    key: `${activeModule.code}.${item.key}`,
+    to,
+    label: itemLabel(activeModule.code, item),
+    active: isActiveItem(activeModule.code, item),
+    badge: badgeOfItem(activeModule.code, [...new Set(refsOf(item))]),
   }));
+  const activeResolved = nav
+    ? activeItems.find(({ item }) => item.key === nav.item.key)
+    : undefined;
+  const shellTabs = activeResolved?.tabs ?? [];
+  const activeItemLabel = nav ? itemLabel(nav.module, nav.item) : "";
 
   const action =
     activeModule.action && canEdit(me, activeModule.action.access) ? (
@@ -286,24 +289,21 @@ export function AppShell() {
   };
 
   const crumbs: Crumb[] = [];
-  if (match && homeOf) {
-    crumbs.push({
-      label: t(`modules:${homeOf.module.code}.name`),
-      to: firstSection(homeOf.module, inMenu)?.path,
-    });
-    crumbs.push({
-      label: t(`modules:${homeOf.module.code}.sections.${homeOf.section.key}`),
-      to: homeOf.section.path,
-    });
-    crumbs.push({ label: t(`modules:${match.module.code}.sections.${match.section.key}`) });
-  } else if (match) {
-    const moduleStart = firstSection(match.module, inMenu);
-    crumbs.push({ label: t(`modules:${match.module.code}.name`), to: moduleStart?.path });
+  if (match) {
+    const code = nav?.module ?? match.module.code;
+    crumbs.push({ label: t(`modules:${code}.name`), to: itemsOf(code)[0]?.to });
     const sectionLabel = t(`modules:${match.module.code}.sections.${match.section.key}`);
-    crumbs.push({
-      label: sectionLabel,
-      to: match.objectId ? match.section.path : undefined,
-    });
+    if (nav) {
+      const leaf = nav.tab ? t(`modules:${code}.nav.${nav.tab.key}`) : sectionLabel;
+      const label = itemLabel(code, nav.item);
+      const deeper = leaf !== label || match.objectId !== undefined;
+      crumbs.push({ label, to: deeper ? activeResolved?.to : undefined });
+      if (leaf !== label) {
+        crumbs.push({ label: leaf, to: match.objectId ? match.section.path : undefined });
+      }
+    } else {
+      crumbs.push({ label: sectionLabel, to: match.objectId ? match.section.path : undefined });
+    }
     if (match.objectId) crumbs.push({ label: match.objectId });
   }
 
@@ -470,6 +470,20 @@ export function AppShell() {
             }}
           >
             {setupBannerLate ? null : <SetupBanner />}
+            {shellTabs.length > 1 ? (
+              <nav className="pf-shell-tabs" aria-label={activeItemLabel}>
+                {shellTabs.map((tab) => (
+                  <Link
+                    key={tab.key}
+                    to={tab.to}
+                    className="pf-shell-tab pf-focusable"
+                    aria-current={nav?.tab?.key === tab.key ? "page" : undefined}
+                  >
+                    {t(`modules:${activeModule.code}.nav.${tab.key}`)}
+                  </Link>
+                ))}
+              </nav>
+            ) : null}
             <Outlet />
             {/* Чек-лист ответил после показа экрана — баннер под экраном, готовый экран не сдвигается (UX-2b) */}
             {setupBannerLate ? <SetupBanner /> : null}

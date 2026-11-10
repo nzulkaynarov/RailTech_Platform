@@ -110,11 +110,10 @@ test.describe("Компания: права и меню", () => {
     page,
   }) => {
     await loginAndWait(page, "director@demo.example");
-    await spaGoto(page, "/admin/org");
+    await spaGoto(page, "/admin?group=company");
     await page
-      .getByRole("navigation", { name: "Разделы модуля" })
-      .getByRole("group", { name: "Компания" })
-      .getByRole("link", { name: "Реквизиты и бланк" })
+      .getByRole("region", { name: "Компания" })
+      .getByRole("link", { name: /Реквизиты и бланк/ })
       .click();
     await expect(page).toHaveURL(/\/admin\/company/);
     await expect(page.getByRole("heading", { level: 1, name: "Реквизиты и бланк" })).toBeVisible();

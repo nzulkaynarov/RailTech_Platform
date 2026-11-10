@@ -15,7 +15,7 @@ const TITLE = "Доработать: СЗ-2026/028 · Командировка �
 async function queue(email: string) {
   signIn(email);
   const view = renderAt("/dashboard/queue");
-  await screen.findByRole("heading", { level: 1, name: "Мои задачи" });
+  await screen.findByRole("heading", { level: 1, name: "Задачи" });
   return { ...view, page: screen.getByRole("main") };
 }
 
@@ -67,7 +67,7 @@ describe("Моя очередь · «Доработать»", () => {
     });
 
     await act(() => router.navigate("/dashboard/queue"));
-    const again = await screen.findByRole("heading", { level: 1, name: "Мои задачи" });
+    const again = await screen.findByRole("heading", { level: 1, name: "Задачи" });
     expect(again).toBeVisible();
     await waitFor(() => {
       expect(within(screen.getByRole("main")).queryByText(TITLE)).toBeNull();

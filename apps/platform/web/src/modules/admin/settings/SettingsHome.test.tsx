@@ -23,16 +23,22 @@ function cardsOf(group: string): string[] {
 }
 
 describe("Настройки · индекс «Все настройки» (SET-IA)", () => {
-  it("администратор: пять групп карточек в порядке задачи, у каждой карточки — строка описания", async () => {
+  it("администратор: четыре группы карточек в порядке задачи, у каждой карточки — строка описания", async () => {
     await openHome("admin@demo.example");
-    await screen.findByRole("region", { name: "Система" });
+    await screen.findByRole("region", { name: "Журнал" });
     expect(groupTitles()).toEqual(
-      expect.arrayContaining(["Люди и доступ", "Компания", "Каналы связи", "Процессы", "Система"]),
+      expect.arrayContaining(["Сотрудники", "Компания", "Подключения", "Журнал"]),
     );
-    expect(cardsOf("Люди и доступ")).toEqual(["Сотрудники", "Роли и права", "Права подписи"]);
-    expect(cardsOf("Каналы связи")).toEqual(["Telegram", "Почта", "Формы сайта"]);
-    expect(cardsOf("Система")).toContain("Обмен между системами");
-    const mail = within(screen.getByRole("region", { name: "Каналы связи" })).getByRole("link", {
+    expect(cardsOf("Сотрудники")).toEqual(["Сотрудники", "Роли и права", "Права подписи"]);
+    expect(cardsOf("Подключения")).toEqual([
+      "Telegram",
+      "Почта",
+      "Формы сайта",
+      "Подключения",
+      "Расходы на ИИ",
+    ]);
+    expect(cardsOf("Журнал")).toContain("Обмен между системами");
+    const mail = within(screen.getByRole("region", { name: "Подключения" })).getByRole("link", {
       name: /Почта/,
     });
     expect(mail).toHaveAttribute("href", "/admin/mail");
@@ -41,7 +47,7 @@ describe("Настройки · индекс «Все настройки» (SET-
 
   it("плашки состояния — из обзора подключений: у Telegram и Почты есть, у Сотрудников нет", async () => {
     await openHome("admin@demo.example");
-    const channels = await screen.findByRole("region", { name: "Каналы связи" });
+    const channels = await screen.findByRole("region", { name: "Подключения" });
     await waitFor(() => {
       expect(
         within(within(channels).getByRole("link", { name: /Почта/ })).getByText(
@@ -49,7 +55,7 @@ describe("Настройки · индекс «Все настройки» (SET-
         ),
       ).toBeVisible();
     });
-    const people = screen.getByRole("region", { name: "Люди и доступ" });
+    const people = screen.getByRole("region", { name: "Сотрудники" });
     expect(within(people).queryByText(/Работает|Нет данных/)).toBeNull();
   });
 
@@ -60,7 +66,7 @@ describe("Настройки · индекс «Все настройки» (SET-
     const results = await screen.findByRole("region", { name: "Найденные настройки" });
     const links = within(results).getAllByRole("link");
     expect(links[0]).toHaveTextContent("Почта");
-    expect(screen.queryByRole("region", { name: "Люди и доступ" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Сотрудники" })).toBeNull();
     fireEvent.click(links[0] as HTMLElement);
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/admin/mail");
@@ -79,7 +85,7 @@ describe("Настройки · индекс «Все настройки» (SET-
     fireEvent.change(search, { target: { value: "абракадабра" } });
     expect(await screen.findByText("По запросу «абракадабра» настроек нет.")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Очистить поиск" }));
-    expect(await screen.findByRole("region", { name: "Люди и доступ" })).toBeVisible();
+    expect(await screen.findByRole("region", { name: "Сотрудники" })).toBeVisible();
   });
 
   it("чек-лист «Первый запуск» на свежей установке: число шагов из данных, несделанный шаг — ссылка в мастер", async () => {
@@ -109,9 +115,9 @@ describe("Настройки · индекс «Все настройки» (SET-
   });
 
   it("⚙ из модуля (`?group=`): только своя группа и ссылка «Все группы настроек»", async () => {
-    await openHome("admin@demo.example", "/admin?group=processes");
-    expect(await screen.findByRole("region", { name: "Процессы" })).toBeVisible();
-    expect(screen.queryByRole("region", { name: "Люди и доступ" })).toBeNull();
+    await openHome("admin@demo.example", "/admin?group=company");
+    expect(await screen.findByRole("region", { name: "Компания" })).toBeVisible();
+    expect(screen.queryByRole("region", { name: "Сотрудники" })).toBeNull();
     expect(screen.queryByRole("region", { name: /^Первый запуск/ })).toBeNull();
     expect(screen.getByRole("link", { name: "Все группы настроек" })).toHaveAttribute(
       "href",
@@ -121,25 +127,27 @@ describe("Настройки · индекс «Все настройки» (SET-
 
   it("директор: те же группы на чтение, без «Обмена между системами» и без чек-листа первого запуска", async () => {
     await openHome("director@demo.example");
-    await screen.findByRole("region", { name: "Система" });
-    expect(cardsOf("Система")).not.toContain("Обмен между системами");
+    await screen.findByRole("region", { name: "Журнал" });
+    expect(cardsOf("Журнал")).not.toContain("Обмен между системами");
     expect(screen.queryByRole("region", { name: /^Первый запуск/ })).toBeNull();
     const search = screen.getByRole("searchbox", { name: "Найти настройку" });
     fireEvent.change(search, { target: { value: "обмен" } });
     expect(await screen.findByText("По запросу «обмен» настроек нет.")).toBeVisible();
   });
 
-  it("подменю Настроек — пять групп с заголовками; без «Первого запуска» и «Обращений сотрудников»", async () => {
+  it("подменю Настроек — четыре группы с заголовками; без «Первого запуска» и «Обращений сотрудников»", async () => {
     await openHome("admin@demo.example");
     const menu = screen.getByRole("navigation", { name: "Разделы модуля" });
     const groups = within(menu)
-      .getAllByRole("group")
-      .map((g) => g.getAttribute("aria-labelledby") && g.querySelector("p")?.textContent);
-    expect(groups).toEqual(["Люди и доступ", "Компания", "Каналы связи", "Процессы", "Система"]);
-    expect(within(menu).getByRole("link", { name: "Все настройки" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
+      .getAllByRole("link")
+      .map((a) => a.textContent);
+    expect(groups).toEqual([
+      "Сотрудники",
+      "Компания",
+      "Подключения",
+      "Журнал",
+      "Пригласить сотрудника",
+    ]);
     expect(within(menu).queryByRole("link", { name: "Первый запуск" })).toBeNull();
     expect(within(menu).queryByRole("link", { name: "Обращения сотрудников" })).toBeNull();
   });
@@ -147,8 +155,8 @@ describe("Настройки · индекс «Все настройки» (SET-
   it("⚙ в заголовке подменю «Документов» ведёт в группу «Процессы»; у менеджера без Настроек значка нет", async () => {
     signIn("admin@demo.example");
     renderAt("/eds/documents");
-    const gear = await screen.findByRole("link", { name: "Настройки: Процессы" });
-    expect(gear).toHaveAttribute("href", "/admin?group=processes");
+    const gear = await screen.findByRole("link", { name: "Настройки: Компания" });
+    expect(gear).toHaveAttribute("href", "/admin?group=company");
     cleanup();
     endSession();
 

@@ -42,7 +42,7 @@
   align-items: center;
   justify-content: center;
   gap: 3px;
-  width: 56px;
+  width: 64px;
   height: 52px;
   border: 0;
   border-radius: 8px;
@@ -58,7 +58,7 @@
     color 0.15s ease;
 }
 .pf-rail-btn span {
-  max-width: 54px;
+  max-width: 62px;
   font-size: 9.5px;
   letter-spacing: -0.02em;
   overflow: hidden;
@@ -292,4 +292,29 @@
 }
 .pf-panel-sheet .pf-panel-tabs .ant-tabs-nav {
   padding-right: 16px;
+}
+
+/* Вкладки над экраном: разные объекты одного пункта меню (Заявки, Каталог) */
+.pf-shell-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 24px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.pf-shell-tab {
+  padding: 8px 0;
+  color: #595959;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.pf-shell-tab:hover {
+  color: #1f1f1f;
+}
+
+.pf-shell-tab[aria-current="page"] {
+  color: #0958d9;
+  border-bottom-color: #1668dc;
 }

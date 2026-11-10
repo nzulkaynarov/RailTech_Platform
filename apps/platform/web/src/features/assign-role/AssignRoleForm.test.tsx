@@ -62,7 +62,7 @@ describe("AssignRoleForm: выдача ролей", () => {
     const block = screen.getByRole("group", { name: "Что произойдёт" });
     expect(
       within(block).getByText(
-        "Сотрудник увидит модули: Главная, Клиенты, Документы, Расчёт, Чаты.",
+        "Сотрудник увидит модули: Главная, Контакты, Документы, Операции, Органайзер.",
       ),
     ).toBeVisible();
     expect(within(block).getByText("Перестанет видеть модули: Настройки.")).toBeVisible();

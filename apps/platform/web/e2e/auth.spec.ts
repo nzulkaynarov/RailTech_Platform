@@ -15,12 +15,12 @@ test.describe("вход", () => {
 
   test("вход → /dashboard/queue, сессия переживает перезагрузку", async ({ page }) => {
     await loginAndWait(page, "director@demo.example");
-    await expect(page.getByRole("heading", { level: 1, name: "Мои задачи" })).toBeVisible();
-    await expect(page).toHaveTitle("Мои задачи — RailTech Platform");
+    await expect(page.getByRole("heading", { level: 1, name: "Задачи" })).toBeVisible();
+    await expect(page).toHaveTitle("Задачи — RailTech Platform");
 
     await page.reload();
     await expect(page).toHaveURL(/\/dashboard\/queue$/);
-    await expect(page.getByRole("heading", { level: 1, name: "Мои задачи" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Задачи" })).toBeVisible();
   });
 
   test("корень / ведёт в Мою очередь", async ({ page }) => {
@@ -77,7 +77,7 @@ test.describe("вход", () => {
     await page.getByLabel("Текущий пароль").fill(DEMO_PASSWORD);
     await page.getByRole("button", { name: "Сменить пароль" }).click();
     await expect(page).toHaveURL(/\/dashboard\/queue$/);
-    await expect(page.getByRole("heading", { level: 1, name: "Мои задачи" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Задачи" })).toBeVisible();
   });
 
   test("смена пароля: короткий пароль и несовпадение отклоняются на форме", async ({ page }) => {
@@ -111,7 +111,7 @@ test.describe("вход", () => {
   }) => {
     await loginAndWait(page, "director@demo.example");
     await page.goto("/eds/inbox");
-    await expect(page.getByRole("heading", { level: 1, name: "Входящие письма" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Входящие" })).toBeVisible();
     await page.evaluate("window.localStorage.removeItem('rt-pf-mock-session')");
     await page.reload();
     await expect(page).toHaveURL(/\/login\?next=%2Feds%2Finbox$/);
@@ -135,13 +135,13 @@ test.describe("вход", () => {
 
     await openAvatarMenu(page);
     await page.getByRole("menuitem", { name: "O‘zbekcha" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Mening vazifalarim" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Vazifalar" })).toBeVisible();
     await page.reload();
-    await expect(page.getByRole("heading", { level: 1, name: "Mening vazifalarim" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Vazifalar" })).toBeVisible();
 
     await openAvatarMenu(page);
     await page.getByRole("menuitem", { name: "English" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "My tasks" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Tasks" })).toBeVisible();
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
   });
 });

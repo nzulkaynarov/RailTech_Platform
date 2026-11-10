@@ -59,9 +59,7 @@ test.describe("Помощь", () => {
     const button = page.getByRole("button", { name: "Помощь (клавиша ?)" });
     await button.click();
     const help = page.getByRole("dialog", { name: "Помощь" });
-    await expect(
-      help.getByRole("heading", { name: "Мои задачи — что сделать сейчас" }),
-    ).toBeVisible();
+    await expect(help.getByRole("heading", { name: "Задачи — что сделать сейчас" })).toBeVisible();
     await expect(help.getByRole("link", { name: "Все статьи" })).toBeVisible();
     await expect(help.getByRole("button", { name: "Написать администратору" })).toBeVisible();
 
@@ -87,7 +85,7 @@ test.describe("Помощь", () => {
     await loginAndWait(page, "manager@demo.example");
     await page
       .getByRole("navigation", { name: "Модули" })
-      .getByRole("link", { name: "Клиенты" })
+      .getByRole("link", { name: "Контакты" })
       .click();
     await page.getByRole("button", { name: "Помощь (клавиша ?)" }).click();
     await expect(
@@ -233,10 +231,10 @@ test.describe("Обращения к администратору", () => {
     await expect(page.getByRole("link", { name: "Открыть обращение ОБР-0001" })).toBeVisible();
   });
 
-  test("старый адрес списка обращений ведёт в «Мои задачи» (SET-IA)", async ({ page }) => {
+  test("старый адрес списка обращений ведёт в «Задачи» (SET-IA)", async ({ page }) => {
     await loginAndWait(page, "admin@demo.example");
     await page.goto("/admin/tickets");
-    await expect(page.getByRole("heading", { level: 1, name: "Мои задачи" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Задачи" })).toBeVisible();
     await expect(page).toHaveURL(/\/dashboard\/queue$/);
     await shoot(page, "tickets-moved");
   });
@@ -285,7 +283,7 @@ test.describe("Первый вход", () => {
     });
     await page.setViewportSize({ width: 1440, height: 900 });
 
-    for (const title of ["«Мои задачи»", "Колокольчик", "Помощь"]) {
+    for (const title of ["«Задачи»", "Колокольчик", "Помощь"]) {
       await tour.getByRole("button", { name: "Дальше" }).click();
       await expect(tour.getByRole("heading", { name: title })).toBeVisible();
       await expect(tour).toBeFocused();

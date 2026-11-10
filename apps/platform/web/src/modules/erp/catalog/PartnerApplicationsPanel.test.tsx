@@ -14,9 +14,7 @@ setupCatalogTests();
 async function openApplications(email: string) {
   signIn(email);
   const view = renderAt("/erp/catalog?part=applications");
-  expect(
-    await screen.findByRole("heading", { level: 1, name: "Номенклатура и поставщики" }),
-  ).toBeVisible();
+  expect(await screen.findByRole("heading", { level: 1, name: "Товары" })).toBeVisible();
   expect(await screen.findByText("ООО «Сталь-Транс»")).toBeVisible();
   return view;
 }
@@ -176,9 +174,7 @@ describe("Очередь заявок кандидатов в партнёры (
     signIn("accountant@demo.example");
     renderAt("/erp/catalog?part=applications");
 
-    expect(
-      await screen.findByRole("heading", { level: 1, name: "Номенклатура и поставщики" }),
-    ).toBeVisible();
+    expect(await screen.findByRole("heading", { level: 1, name: "Товары" })).toBeVisible();
     expect(await screen.findByText("ООО «Сталь-Транс»")).toBeVisible();
 
     expect(screen.queryByRole("button", { name: "Отправить договор" })).toBeNull();

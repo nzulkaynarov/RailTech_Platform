@@ -24,7 +24,7 @@ async function expectNoViolations(page: Page, context: string): Promise<void> {
 
 async function openKb(page: Page, query = ""): Promise<void> {
   await spaGoto(page, `/crm/kb${query}`);
-  await expect(page.getByRole("heading", { level: 1, name: "База знаний бота" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "База знаний" })).toBeVisible();
 }
 
 function side(page: Page): Locator {
@@ -282,7 +282,7 @@ test.describe("База знаний: права", () => {
   }) => {
     await loginAndWait(page, "supply@demo.example");
     await spaGoto(page, "/crm/clients");
-    await expect(page.getByRole("link", { name: "База знаний бота" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "База знаний" })).toHaveCount(0);
     await spaGoto(page, "/crm/kb");
     await expect(page.getByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
 
@@ -290,14 +290,12 @@ test.describe("База знаний: права", () => {
     await spaGoto(page, "/login");
     await loginAndWait(page, "admin@demo.example");
     await spaGoto(page, "/crm/kb");
-    await expect(page.getByRole("heading", { level: 1, name: "База знаний бота" })).toBeVisible();
-    // W15-H4, SET-IA: пункт базы знаний у администратора — в Настройках (подсвечен «Telegram»), не в Клиентах
+    await expect(page.getByRole("heading", { level: 1, name: "База знаний" })).toBeVisible();
     const menu = page.getByRole("navigation", { name: "Разделы модуля" });
-    await expect(menu.getByRole("link", { name: "Telegram", exact: true })).toHaveAttribute(
+    await expect(menu.getByRole("link", { name: "База знаний", exact: true })).toHaveAttribute(
       "aria-current",
       "page",
     );
-    await expect(menu.getByRole("link", { name: "База знаний бота" })).toHaveCount(0);
   });
 });
 

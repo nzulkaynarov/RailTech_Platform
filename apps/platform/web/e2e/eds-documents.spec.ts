@@ -55,7 +55,7 @@ test.describe("Создать документ: сотрудник", () => {
       .getByRole("navigation", { name: "Модули" })
       .getByRole("link", { name: "Документы" })
       .click();
-    await expect(page.getByRole("heading", { level: 1, name: "Все документы" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Входящие" })).toBeVisible();
 
     // главное действие модуля — «Создать документ» внизу подменю
     await page.getByRole("link", { name: "Создать документ" }).first().click();

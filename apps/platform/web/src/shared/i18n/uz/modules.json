@@ -3,9 +3,9 @@
     "name": "Asosiy",
     "title": "Bosh sahifa",
     "sections": {
-      "queue": "Mening vazifalarim",
+      "queue": "Vazifalar",
       "projects": "Loyihalar",
-      "summary": "Kompaniya xulosasi"
+      "summary": "Xulosa"
     },
     "queue": {
       "title": "Hozir nima qilish kerak",
@@ -110,66 +110,100 @@
           }
         }
       }
+    },
+    "nav": {
+      "queue": "Vazifalar",
+      "projects": "Loyihalar",
+      "summary": "Xulosa"
     }
   },
   "crm": {
-    "name": "Mijozlar",
-    "title": "Mijozlar va lidlar",
+    "name": "Kontaktlar",
+    "title": "Kontaktlar",
     "sections": {
       "messages": "Javob kutmoqda",
       "leads": "Lidlar",
-      "clients": "Mijozlar",
+      "clients": "Kontragentlar",
       "requests": "Arizalar",
       "channels": "Aloqa kanallari",
-      "kb": "Bot bilimlar bazasi"
+      "kb": "Bilimlar bazasi"
     },
-    "action": "Ariza yaratish"
+    "action": "Ariza yaratish",
+    "nav": {
+      "leads": "Lidlar",
+      "clients": "Kontragentlar",
+      "mail": "Pochta",
+      "kb": "Bilimlar bazasi"
+    }
   },
   "eds": {
     "name": "Hujjatlar",
-    "title": "Hujjatlar va kelishuvlar",
+    "title": "Hujjatlar",
     "sections": {
       "documents": "Barcha hujjatlar",
-      "inbox": "Kiruvchi xatlar",
+      "inbox": "Kiruvchi",
       "outbox": "Chiquvchi",
-      "projects": "Loyihalar: shartnoma va dalolatnomalar",
+      "projects": "Loyihalar",
       "drafts": "Tasdiqlash uchun TT",
       "approvals": "Kelishuvda",
-      "payments": "Hisoblar va to‘lovlar",
+      "payments": "Moliya",
       "new": "Hujjat yaratish",
       "register": "Kiruvchi hujjatni ro‘yxatga olish",
       "tasks": "Topshiriq",
-      "mail": "Kiruvchi pochta",
+      "mail": "Pochta",
       "mymail": "Mening pochtam"
     },
-    "action": "Hujjat yaratish"
+    "action": "Hujjat yaratish",
+    "nav": {
+      "inbox": "Kiruvchi",
+      "outbox": "Chiquvchi",
+      "internal": "Ichki",
+      "archive": "Arxiv",
+      "templates": "Shablonlar"
+    }
   },
   "erp": {
-    "name": "Hisob",
-    "title": "Hisob-kitob va ombor",
+    "name": "Amallar",
+    "title": "Amallar",
     "sections": {
-      "requests": "Hisobdagi arizalar",
+      "requests": "Arizalar",
       "calc": "Mening hisob-kitoblarim",
       "stock": "Ombor",
-      "catalog": "Nomenklatura va yetkazib beruvchilar",
-      "docs": "Texnik hujjatlar"
+      "catalog": "Tovarlar",
+      "docs": "Hujjatlar"
     },
-    "action": "Ariza yaratish"
+    "action": "Ariza yaratish",
+    "nav": {
+      "requests": "Arizalar",
+      "sales": "Sotuv",
+      "purchases": "Xarid",
+      "catalog": "Katalog",
+      "products": "Tovarlar",
+      "stock": "Ombor",
+      "docs": "Hujjatlar",
+      "finance": "Moliya"
+    }
   },
   "chats": {
-    "name": "Chatlar",
-    "title": "Chatlar",
+    "name": "Organayzer",
+    "title": "Organayzer",
     "sections": {
-      "all": "Barcha chatlar",
+      "all": "Chatlar",
       "internal": "Jamoa",
       "external": "Mijozlar bilan",
-      "contacts": "Kontaktlar"
+      "contacts": "Odamlar",
+      "calendar": "Taqvim"
     },
-    "action": "Chat yaratish"
+    "action": "Chat yaratish",
+    "nav": {
+      "calendar": "Taqvim",
+      "chats": "Chatlar",
+      "people": "Odamlar"
+    }
   },
   "admin": {
     "name": "Sozlamalar",
-    "title": "Kompaniya sozlamalari",
+    "title": "Sozlamalar",
     "sections": {
       "overview": "Barcha sozlamalar",
       "org": "Xodimlar",
@@ -196,11 +230,10 @@
       "tickets": "Xodimlar murojaatlari"
     },
     "groups": {
-      "people": "Odamlar va kirish",
+      "people": "Xodimlar",
       "company": "Kompaniya",
-      "channels": "Aloqa kanallari",
-      "processes": "Jarayonlar",
-      "system": "Tizim"
+      "channels": "Ulanishlar",
+      "system": "Jurnal"
     },
     "home": {
       "viewOnly": "Faqat ko‘rish",
@@ -212,7 +245,7 @@
       "clear": "Qidiruvni tozalash",
       "matchedBy": "«{{word}}» so‘zi bo‘yicha topildi",
       "setupTitle": "Birinchi ishga tushirish: {{done}} / {{total}} tayyor",
-      "tickets": "Xodimlar murojaatlari — «Mening vazifalarim»da, yangi: {{count}}.",
+      "tickets": "Xodimlar murojaatlari — «Vazifalar»da, yangi: {{count}}.",
       "ticketsLink": "Ochish",
       "more": "Batafsil",
       "moreAria": "«{{title}}» sahifasi haqida Yordamda batafsil",
@@ -637,6 +670,12 @@
       "filterLabel": "Jurnalda nimani ko‘rsatish",
       "people": "Odamlar harakatlari",
       "systems": "Tizimlararo almashinuv"
+    },
+    "nav": {
+      "people": "Xodimlar",
+      "company": "Kompaniya",
+      "channels": "Ulanishlar",
+      "system": "Jurnal"
     }
   },
   "tabs": {

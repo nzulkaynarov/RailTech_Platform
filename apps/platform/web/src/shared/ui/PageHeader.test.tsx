@@ -9,12 +9,12 @@ describe("PageHeader", () => {
   it("h1 20/600 с подзаголовком и действием", () => {
     renderUi(
       <PageHeader
-        title="Мои задачи"
+        title="Задачи"
         subtitle="Директор · четверг"
         extra={<button type="button">Действие</button>}
       />,
     );
-    const heading = screen.getByRole("heading", { level: 1, name: "Мои задачи" });
+    const heading = screen.getByRole("heading", { level: 1, name: "Задачи" });
     expect(heading).toHaveStyle({ fontSize: "20px", fontWeight: "600", lineHeight: "28px" });
     expect(screen.getByText("Директор · четверг")).toBeVisible();
     expect(screen.getByRole("button", { name: "Действие" })).toBeVisible();

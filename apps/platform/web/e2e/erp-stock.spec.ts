@@ -184,7 +184,7 @@ test.describe("Склад и закупки: снабженец", () => {
     const row = page.getByRole("link", { name: new RegExp(`Просрочен заказ ${OVERDUE}`) });
     await expect(row).toBeVisible();
     await settledScreenshot(page, "queue-overdue");
-    await expectNoViolations(page, "Мои задачи с просроченным заказом");
+    await expectNoViolations(page, "Задачи с просроченным заказом");
     await row.click();
     await expect(
       page.getByRole("heading", { level: 1, name: `Заказ поставщику ${OVERDUE}` }),

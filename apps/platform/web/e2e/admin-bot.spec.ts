@@ -109,17 +109,17 @@ test.describe("Настройки бота: администратор", () => {
     await settledScreenshot(page, "company-error");
 
     const menu = page.getByRole("navigation", { name: "Разделы модуля" });
-    await menu.getByRole("link", { name: "Время и сроки" }).click();
+    await menu.getByRole("link", { name: "Журнал", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Выйти без сохранения?" });
     await expect(dialog).toBeVisible();
     await dialog.getByRole("button", { name: "Остаться" }).click();
     await expect(contacts.getByLabel("Название компании")).toHaveValue("   ");
-    await menu.getByRole("link", { name: "Время и сроки" }).click();
+    await menu.getByRole("link", { name: "Журнал", exact: true }).click();
     await page
       .getByRole("dialog", { name: "Выйти без сохранения?" })
       .getByRole("button", { name: "Выйти без сохранения" })
       .click();
-    await expect(form(page, "Рабочие часы")).toBeVisible();
+    await expect(page.getByRole("region", { name: "Журнал" })).toBeVisible();
   });
 
   test("рабочие часы, поведение бота, квалификация, бюджет: поля подписаны, значения сохраняются", async ({
@@ -342,10 +342,9 @@ test.describe("Telegram в одном месте (W15-H4, SET-IA)", () => {
     await expect(page.getByText("Минимальное сходство, чтобы бот отвечал (0–1)")).toBeVisible();
     await settledScreenshot(page, "bot-kb");
     await page.getByRole("link", { name: "Открыть базу знаний" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "База знаний бота" })).toBeVisible();
-    // администратор остаётся в Настройках: подсвечен «Telegram», в рейле нет Клиентов
+    await expect(page.getByRole("heading", { level: 1, name: "База знаний" })).toBeVisible();
     const menu = page.getByRole("navigation", { name: "Разделы модуля" });
-    await expect(menu.getByRole("link", { name: "Telegram", exact: true })).toHaveAttribute(
+    await expect(menu.getByRole("link", { name: "База знаний", exact: true })).toHaveAttribute(
       "aria-current",
       "page",
     );
@@ -394,7 +393,7 @@ test.describe("Настройки бота: права", () => {
     await expect(
       page
         .getByRole("navigation", { name: "Разделы модуля" })
-        .getByRole("link", { name: "Telegram", exact: true }),
+        .getByRole("link", { name: "Подключения", exact: true }),
     ).toBeVisible();
   });
 });

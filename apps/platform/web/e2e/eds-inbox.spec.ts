@@ -23,7 +23,7 @@ async function expectNoViolations(page: Page, context: string): Promise<void> {
 
 async function openInbox(page: Page, query = ""): Promise<void> {
   await spaGoto(page, `/eds/inbox${query}`);
-  await expect(page.getByRole("heading", { level: 1, name: "Входящие письма" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Входящие" })).toBeVisible();
 }
 
 function row(page: Page, number: string) {
@@ -232,7 +232,7 @@ test.describe("Входящие письма на телефоне @mobile", () 
     await page.setViewportSize({ width: 390, height: 844 });
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, "/eds/inbox");
-    await expect(page.getByRole("list", { name: "Входящие письма" })).toBeVisible();
+    await expect(page.getByRole("list", { name: "Входящие" })).toBeVisible();
     await settledScreenshot(page, "mobile-list");
     await expectNoViolations(page, "телефон: список");
 

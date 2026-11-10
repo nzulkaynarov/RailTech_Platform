@@ -275,7 +275,7 @@
       "submit": "Tasdiqlash",
       "consequence": [
         "Holat «Tasdiqlangan» bo‘ladi, yetkazib berish sanasi eslab qolinadi.",
-        "Tovar bu sanagacha kelmasa, buyurtma «Mening vazifalarim»da muddati o‘tgan sifatida chiqadi.",
+        "Tovar bu sanagacha kelmasa, buyurtma «Vazifalar»da muddati o‘tgan sifatida chiqadi.",
         "Keyin tovarni qatorlar bo‘yicha qabul qilish mumkin."
       ]
     },

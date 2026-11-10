@@ -3,6 +3,10 @@ import { resolve } from "node:path";
 
 import { parse } from "yaml";
 
+import { visibleItems } from "../../src/modules/navigation";
+import { MODULES } from "../../src/modules/registry";
+import type { SectionConfig } from "../../src/modules/types";
+
 /**
  * Ожидания e2e строятся прямо из `packages/contracts/platform-rbac.yaml` (каталог версии 2: системные роли и шаблоны),
  * а не из фикстур MSW: если каталог и моки разойдутся, сценарии смены роли упадут.
@@ -65,16 +69,30 @@ function accessOf(role: Role): Partial<Record<string, Level>> {
 /** Имена модулей в рейле (ru, `modules:<code>.name`, UX-оценка 2026-10-27 §6.1). */
 export const MODULE_TITLES: Record<string, string> = {
   dashboard: "Главная",
-  crm: "Клиенты",
+  crm: "Контакты",
   eds: "Документы",
-  erp: "Расчёт",
-  chats: "Чаты",
+  erp: "Операции",
+  chats: "Органайзер",
   admin: "Настройки",
 };
 const MODULE_ORDER = ["dashboard", "crm", "eds", "erp", "chats", "admin"];
 
-/** Модули рейла роли: виден хотя бы один пункт меню модуля (секция `menu` каталога). */
+/** Модули рейла роли: виден хотя бы один пункт меню (`modules/navigation.ts`). */
 export function visibleModules(role: Role): string[] {
+  const access = accessOf(role);
+  const can = (section: SectionConfig) => {
+    const keys = "resource" in section.access ? [section.access.resource] : section.access.anyOf;
+    const levels = keys.flatMap((key) => access[key] ?? []);
+    if (section.access.level === "full") return levels.includes("full");
+    return levels.length > 0;
+  };
+  return MODULES.filter((m) => visibleItems(m.code, can).length > 0).map(
+    (m) => MODULE_TITLES[m.code] ?? m.code,
+  );
+}
+
+/** Модули из секции `menu` каталога: их перечисляет текст о последствиях выдачи роли. */
+export function matrixModules(role: Role): string[] {
   const access = accessOf(role);
   return MODULE_ORDER.filter((module) =>
     Object.values(catalog.menu[module] ?? {}).some((sections) =>

@@ -23,7 +23,7 @@ async function expectNoViolations(page: Page, context: string): Promise<void> {
 
 async function openPayments(page: Page, query = ""): Promise<void> {
   await spaGoto(page, `/eds/payments${query}`);
-  await expect(page.getByRole("heading", { level: 1, name: "Счета и оплаты" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Финансы" })).toBeVisible();
 }
 
 function row(page: Page, label: string) {

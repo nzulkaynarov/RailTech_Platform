@@ -210,12 +210,13 @@ describe("Admin · Журнал интеграций: права", () => {
     },
   );
 
-  it("администратор: «Обмен между системами» — свой пункт группы «Система» (SET-IA); директору пункта нет", async () => {
+  it("администратор: «Обмен между системами» — подсвечивает «Журнал»; директору пункта нет", async () => {
     signIn("admin@demo.example");
     renderAt("/admin/bus");
-    const system = await screen.findByRole("group", { name: "Система" });
-    expect(
-      await within(system).findByRole("link", { name: "Обмен между системами" }),
-    ).toHaveAttribute("aria-current", "page");
+    const menu = await screen.findByRole("navigation", { name: "Разделы модуля" });
+    expect(within(menu).getByRole("link", { name: "Журнал" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 });

@@ -24,7 +24,7 @@ setupCatalogTests();
 async function open(email: string, search = "") {
   signIn(email);
   const view = renderAt(`/erp/docs${search}`);
-  expect(await screen.findByRole("heading", { level: 1, name: "Техдокументация" })).toBeVisible();
+  expect(await screen.findByRole("heading", { level: 1, name: "Документация" })).toBeVisible();
   return view;
 }
 

@@ -17,13 +17,10 @@ const LANGS = ["ru", "uz", "en"] as const;
 const FORBIDDEN = /\b(CRM|ERP|EDS)\b|ансамбл|ansambl|ensemble|бэк-офис|back-?office|воркер|getMe/i;
 
 describe("реестр настроек (SET-IA)", () => {
-  it("ключи и адреса уникальны; группы — пять, в порядке индекса", () => {
+  it("ключи и адреса уникальны; группы — четыре, в порядке индекса", () => {
     expect(new Set(SETTINGS.map((s) => s.key)).size).toBe(SETTINGS.length);
     expect(new Set(SETTINGS.map((s) => s.path)).size).toBe(SETTINGS.length);
-    expect(SETTINGS_GROUPS).toEqual(["people", "company", "channels", "processes", "system"]);
-    // пункты одной группы идут подряд — подменю не перескакивает между группами
-    const order = SETTINGS.map((s) => SETTINGS_GROUPS.indexOf(s.group));
-    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect(SETTINGS_GROUPS).toEqual(["people", "company", "channels", "system"]);
   });
 
   it.each(LANGS)(

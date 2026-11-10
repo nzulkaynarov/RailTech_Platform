@@ -46,7 +46,7 @@ for (const width of WIDTHS) {
   }) => {
     await signInAt(page, width);
     await spaGoto(page, "/eds/mail");
-    await expect(page.getByRole("heading", { level: 1, name: "Входящая почта" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Почта" })).toBeVisible();
     const list = page.getByRole("list", { name: "Письма, ждущие разбора" });
     await expect(list).toBeVisible();
     await expect(page.getByText("Проверено 2 мин назад")).toBeVisible();

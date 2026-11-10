@@ -275,7 +275,7 @@
       "submit": "Confirm",
       "consequence": [
         "The status becomes “Confirmed”, the delivery date is remembered.",
-        "If goods do not arrive by this date, the order appears in My tasks as overdue.",
+        "If goods do not arrive by this date, the order appears in Tasks as overdue.",
         "You can then receive goods by line."
       ]
     },

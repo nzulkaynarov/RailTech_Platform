@@ -13,7 +13,7 @@ beforeEach(() => {
 async function open(email: string, path = "/crm/clients") {
   signIn(email);
   const view = renderAt(path);
-  expect(await screen.findByRole("heading", { level: 1, name: "Клиенты" })).toBeVisible();
+  expect(await screen.findByRole("heading", { level: 1, name: "Контрагенты" })).toBeVisible();
   return view;
 }
 

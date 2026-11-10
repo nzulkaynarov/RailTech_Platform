@@ -113,7 +113,7 @@ for (const width of WIDTHS) {
   }) => {
     await signInAt(page, width, REGISTRAR);
     await spaGoto(page, "/eds/mail");
-    await expect(page.getByRole("heading", { level: 1, name: "Входящая почта" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Почта" })).toBeVisible();
     const list = page.getByRole("list", { name: "Письма, ждущие разбора" });
     // тег типа в строке письма; оформленные письма во «Входящих» не висят — только требующие действия
     await expect(list.getByText("КП или прайс поставщика", { exact: true })).toBeVisible();

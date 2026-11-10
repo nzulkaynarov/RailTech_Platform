@@ -169,16 +169,14 @@ describe("Обращения к администратору", () => {
 
     signInAs("director@demo.example");
     renderApp("/dashboard/queue");
-    await screen.findByRole("heading", { level: 1, name: "Мои задачи" });
+    await screen.findByRole("heading", { level: 1, name: "Задачи" });
     expect(screen.queryByText("Ответить на обращение ОБР-0001")).toBeNull();
   });
 
-  it("старый адрес списка обращений ведёт в «Мои задачи» (SET-IA); на индексе Настроек — счётчик со ссылкой", async () => {
+  it("старый адрес списка обращений ведёт в «Задачи» (SET-IA); на индексе Настроек — счётчик со ссылкой", async () => {
     signInAs("admin@demo.example");
     const { router } = renderApp("/admin/tickets");
-    expect(
-      await screen.findByRole("heading", { level: 1, name: "Мои задачи" }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { level: 1, name: "Задачи" })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/dashboard/queue");
     cleanup();
     renderApp("/admin");

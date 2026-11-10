@@ -8,6 +8,13 @@ export const chats: ModuleConfig = {
   action: { access: "chats.internal" },
   sections: [
     {
+      key: "calendar",
+      path: "/chats/calendar",
+      access: { resource: "dashboard.queue" },
+      hidden: true,
+      defaults: { panelOpen: false },
+    },
+    {
       key: "all",
       path: "/chats",
       detail: "/chats/:id",

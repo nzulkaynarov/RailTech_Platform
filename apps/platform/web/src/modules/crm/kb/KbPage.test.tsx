@@ -9,7 +9,7 @@ setupBotTests();
 async function openKb(email: string, search = "") {
   signIn(email);
   const view = renderAt(`/crm/kb${search}`);
-  expect(await screen.findByRole("heading", { level: 1, name: "База знаний бота" })).toBeVisible();
+  expect(await screen.findByRole("heading", { level: 1, name: "База знаний" })).toBeVisible();
   return view;
 }
 
@@ -447,36 +447,32 @@ describe("CRM · База знаний: пункт меню и права", () =
   it("снабженцу пункта «База знаний» в меню CRM нет, по прямому адресу — «Нет доступа»", async () => {
     signIn("supply@demo.example");
     renderAt("/crm/clients");
-    expect(await screen.findByRole("heading", { level: 1, name: "Клиенты" })).toBeVisible();
-    expect(screen.queryByRole("link", { name: "База знаний бота" })).toBeNull();
+    expect(await screen.findByRole("heading", { level: 1, name: "Контрагенты" })).toBeVisible();
+    expect(screen.queryByRole("link", { name: "База знаний" })).toBeNull();
     cleanup();
 
     renderAt("/crm/kb");
     expect(await screen.findByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
   });
 
-  it("администратор без лидов входит в базу знаний из Настроек · Telegram (W15-H4, SET-IA); менеджер — из Клиентов", async () => {
+  it("администратор без лидов и менеджер входят в базу знаний из «Контактов»", async () => {
     signIn("admin@demo.example");
     renderAt("/crm/kb");
-    expect(
-      await screen.findByRole("heading", { level: 1, name: "База знаний бота" }),
-    ).toBeVisible();
-    // Подменю — Настроек, подсвечен «Telegram»; пункта базы знаний в Клиентах у администратора нет
+    expect(await screen.findByRole("heading", { level: 1, name: "База знаний" })).toBeVisible();
     const menu = screen.getByRole("navigation", { name: "Разделы модуля" });
-    expect(within(menu).getByRole("link", { name: "Telegram" })).toHaveAttribute(
+    expect(within(menu).getByRole("link", { name: "База знаний" })).toHaveAttribute(
       "aria-current",
       "page",
     );
-    expect(within(menu).queryByRole("link", { name: "База знаний бота" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Лиды" })).toBeNull();
     const crumbs = screen.getByRole("navigation", { name: "Хлебные крошки" });
-    expect(crumbs).toHaveTextContent("Настройки/Telegram/База знаний бота");
+    expect(crumbs).toHaveTextContent("Контакты/База знаний");
     cleanup();
     endSession();
 
     signIn("manager@demo.example");
     renderAt("/crm/kb");
-    expect(await screen.findByRole("link", { name: "База знаний бота" })).toBeVisible();
+    expect(await screen.findByRole("link", { name: "База знаний" })).toBeVisible();
     expect(screen.getByRole("link", { name: "Лиды" })).toBeVisible();
   });
 });

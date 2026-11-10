@@ -11,16 +11,15 @@ import type { AccessRule } from "../types";
 export type Lang = "ru" | "uz" | "en";
 export type Texts = Readonly<Record<Lang, string>>;
 
-export const SETTINGS_GROUPS = ["people", "company", "channels", "processes", "system"] as const;
+export const SETTINGS_GROUPS = ["people", "company", "channels", "system"] as const;
 export type SettingsGroup = (typeof SETTINGS_GROUPS)[number];
 
 /** Названия групп; совпадают с `modules:admin.groups.<group>`. */
 export const GROUP_NAMES: Readonly<Record<SettingsGroup, Texts>> = {
-  people: { ru: "Люди и доступ", uz: "Odamlar va kirish", en: "People & access" },
+  people: { ru: "Сотрудники", uz: "Xodimlar", en: "Employees" },
   company: { ru: "Компания", uz: "Kompaniya", en: "Company" },
-  channels: { ru: "Каналы связи", uz: "Aloqa kanallari", en: "Channels" },
-  processes: { ru: "Процессы", uz: "Jarayonlar", en: "Processes" },
-  system: { ru: "Система", uz: "Tizim", en: "System" },
+  channels: { ru: "Подключения", uz: "Ulanishlar", en: "Connections" },
+  system: { ru: "Журнал", uz: "Jurnal", en: "Log" },
 };
 
 export interface SettingEntry {
@@ -260,7 +259,7 @@ export const SETTINGS: readonly SettingEntry[] = [
   },
   {
     key: "dictionaries",
-    group: "processes",
+    group: "company",
     path: "/admin/dictionaries",
     // Списки продаж и документов — `admin`, списки расчёта — `company.settings`: страница открыта, если есть любой.
     access: { anyOf: ["admin", "company.settings"] },
@@ -304,7 +303,7 @@ export const SETTINGS: readonly SettingEntry[] = [
   },
   {
     key: "resolutions",
-    group: "processes",
+    group: "company",
     path: "/admin/resolutions",
     access: ADMIN,
     name: { ru: "Шаблоны резолюций", uz: "Rezolyutsiya shablonlari", en: "Resolution templates" },
@@ -321,7 +320,7 @@ export const SETTINGS: readonly SettingEntry[] = [
   },
   {
     key: "templates",
-    group: "processes",
+    group: "company",
     path: "/admin/templates",
     access: COMPANY,
     name: { ru: "Шаблоны документов", uz: "Hujjat shablonlari", en: "Document templates" },
@@ -338,7 +337,7 @@ export const SETTINGS: readonly SettingEntry[] = [
   },
   {
     key: "timing",
-    group: "processes",
+    group: "company",
     path: "/admin/timing",
     access: ADMIN,
     name: { ru: "Время и сроки", uz: "Vaqt va muddatlar", en: "Hours & deadlines" },
@@ -355,7 +354,7 @@ export const SETTINGS: readonly SettingEntry[] = [
   },
   {
     key: "notifications",
-    group: "processes",
+    group: "company",
     path: "/admin/notifications",
     access: ADMIN,
     name: { ru: "Уведомления", uz: "Bildirishnomalar", en: "Notifications" },
@@ -372,7 +371,7 @@ export const SETTINGS: readonly SettingEntry[] = [
   },
   {
     key: "integrations",
-    group: "system",
+    group: "channels",
     path: "/admin/integrations",
     access: ADMIN,
     name: { ru: "Подключения", uz: "Ulanishlar", en: "Connections" },
@@ -398,7 +397,7 @@ export const SETTINGS: readonly SettingEntry[] = [
   },
   {
     key: "spend",
-    group: "system",
+    group: "channels",
     path: "/admin/ai-spend",
     access: ADMIN,
     name: { ru: "Расходы на ИИ", uz: "SI xarajatlari", en: "AI spend" },

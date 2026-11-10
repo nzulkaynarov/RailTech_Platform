@@ -392,7 +392,7 @@
     },
     "consequence": [
       "Xat ВХ raqamini va «Rezolyutsiya kutilmoqda» holatini oladi.",
-      "Direktor uni «Mening vazifalarim»da ko‘radi va rezolyutsiya qo‘yadi.",
+      "Direktor uni «Vazifalar»da ko‘radi va rezolyutsiya qo‘yadi.",
       "Kartochka «Kiruvchi xatlar»da ochiladi; fayl hujjatlarda saqlanadi."
     ],
     "submit": "Ro‘yxatga olish",
@@ -456,7 +456,7 @@
       "info": "Ma’lumot uchun"
     },
     "kindHint": {
-      "execute": "Ijrochi bajaradi va «Mening vazifalarim»da hisobot beradi.",
+      "execute": "Ijrochi bajaradi va «Vazifalar»da hisobot beradi.",
       "reply": "Ijrochi javob tayyorlaydi: «javoban» chiquvchi xat ro‘yxatga olinsa, topshiriq yopiladi.",
       "info": "Topshiriqsiz: xat «Ma’lumot uchun qabul qilindi» holatini oladi."
     },
@@ -496,7 +496,7 @@
       "title": "Nima bo‘ladi",
       "execute": [
         "Xat «Ijroda» holatini oladi va nazoratga qo‘yiladi.",
-        "Ijrochilarga topshiriq «Mening vazifalarim», qo‘ng‘iroqcha va Telegramga boradi.",
+        "Ijrochilarga topshiriq «Vazifalar», qo‘ng‘iroqcha va Telegramga boradi.",
         "Eslatmalar — muddatdan bir ish kuni oldin va muddat kuni; muddat o‘tgach — «Muddati o‘tgan».",
         "Hamma bajarganda xat «Bajarildi» bo‘ladi, sizga xabar keladi."
       ],
@@ -806,14 +806,14 @@
       "handoverTo": "Kimga",
       "handoverPick": "Xodimni tanlang",
       "handoverNone": "Topshiradigan kishi yo‘q: hech bir xodimda to‘lovni tasdiqlash huquqi yo‘q. Bunday rolni «Sozlamalar · Rollar»da tayinlang.",
-      "handoverWhat": "Xat «Yangi»dan chiqadi va tanlangan xodimning «Mening vazifalarim»ida paydo bo‘ladi.",
+      "handoverWhat": "Xat «Yangi»dan chiqadi va tanlangan xodimning «Vazifalar»ida paydo bo‘ladi.",
       "handoverConfirm": "Topshirish",
       "handoverDone": "Xat topshirildi: {{name}}",
       "suspiciousWhat": "Xat «Shubhali» bo‘limiga o‘tadi — u yerdan qaytarish mumkin («Spam emas»). Pochta qutisida hech narsa o‘zgarmaydi.",
       "suspiciousConfirm": "«Shubhali»ga",
       "suspiciousDone": "Xat «Shubhali»da",
       "priceHandoverNone": "Topshiradigan kishi yo‘q: hech bir xodimda narxnomalarni yuklash va yetkazib beruvchi narxlarini ko‘rish huquqi yo‘q. Bunday rolni «Sozlamalar · Rollar»da tayinlang.",
-      "priceHandoverWhat": "Xat «Yangi»dan chiqadi va tanlangan xodimning «Mening vazifalarim»ida paydo bo‘ladi — u narxnomani yuklaydi.",
+      "priceHandoverWhat": "Xat «Yangi»dan chiqadi va tanlangan xodimning «Vazifalar»ida paydo bo‘ladi — u narxnomani yuklaydi.",
       "priceHandoverConfirm": "Yuklashga topshirish",
       "priceHandoverDone": "Xat narxnomani yuklashga topshirildi: {{name}}",
       "completeWhat": "Xat «Bajarildi» natijasi bilan navbatdan chiqadi. Boshqa hech narsa bo‘lmaydi.",

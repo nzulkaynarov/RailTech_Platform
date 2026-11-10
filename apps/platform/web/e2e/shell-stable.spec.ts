@@ -35,7 +35,7 @@ test.describe("Стабильная оболочка", () => {
       const panel = page.getByRole("complementary", { name: "Боковое окно" });
 
       await page.goto("/eds/inbox");
-      await expect(page.getByRole("heading", { level: 1, name: "Входящие письма" })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1, name: "Входящие" })).toBeVisible();
       const listWidth = await mainWidth(page);
 
       // карточка: окно открыто поверх, ширина рабочей области та же, реквизиты целиком
