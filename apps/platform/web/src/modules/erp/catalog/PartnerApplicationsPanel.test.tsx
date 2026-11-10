@@ -13,8 +13,8 @@ setupCatalogTests();
 
 async function openApplications(email: string) {
   signIn(email);
-  const view = renderAt("/erp/catalog?part=applications");
-  expect(await screen.findByRole("heading", { level: 1, name: "Товары" })).toBeVisible();
+  const view = renderAt("/crm/clients?kind=applications");
+  expect(await screen.findByRole("heading", { level: 1, name: "Контрагенты" })).toBeVisible();
   expect(await screen.findByText("ООО «Сталь-Транс»")).toBeVisible();
   return view;
 }
@@ -172,9 +172,9 @@ describe("Очередь заявок кандидатов в партнёры (
   it("сотрудник без прав не видит кнопок мутации", async () => {
     // Вход под бухгалтером (нет supply.manage / erp.stock write)
     signIn("accountant@demo.example");
-    renderAt("/erp/catalog?part=applications");
+    renderAt("/crm/clients?kind=applications");
 
-    expect(await screen.findByRole("heading", { level: 1, name: "Товары" })).toBeVisible();
+    expect(await screen.findByRole("heading", { level: 1, name: "Контрагенты" })).toBeVisible();
     expect(await screen.findByText("ООО «Сталь-Транс»")).toBeVisible();
 
     expect(screen.queryByRole("button", { name: "Отправить договор" })).toBeNull();

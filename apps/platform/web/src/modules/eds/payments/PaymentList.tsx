@@ -11,7 +11,6 @@ import {
   getListPaymentsQueryKey,
   listPaymentMemos,
   listPayments,
-  useListBankChangeRequests,
 } from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useLastDefined, useShownKey } from "../../../shared/lib/useShownKey";
@@ -23,7 +22,6 @@ import { InvoiceRows } from "./InvoiceRows";
 import { MemoRows } from "./MemoRows";
 import { MemoSlot } from "./MemoPanel";
 import { PaymentSlot } from "./PaymentPanel";
-import { BankChangesPanel } from "./BankChangesPanel";
 import { BankDetailsNotice } from "./BankDetailsNotice";
 import { TabNav } from "./TabNav";
 import { useStateLabels } from "./labels";
@@ -77,7 +75,7 @@ export function PaymentList() {
     setDraft(query);
   }
 
-  const separateTab = tab === "memos" || tab === "bank_changes";
+  const separateTab = tab === "memos";
   const invoiceTab: InvoiceTab = separateTab ? "awaiting" : tab;
   const boardParams = {
     tab: invoiceTab,
@@ -128,9 +126,7 @@ export function PaymentList() {
     memosTab ? memos.isPlaceholderData : board.isPlaceholderData,
   );
   let body;
-  if (tab === "bank_changes") {
-    body = <BankChangesPanel />;
-  } else if (tab === "memos") {
+  if (tab === "memos") {
     if (memos.isPending) {
       body = <ListSkeleton rows={PAGE} />;
     } else if (memos.isError) {
@@ -250,7 +246,6 @@ export function PaymentList() {
   }
 
   // Числа вкладок — последние известные, пока счета перечитываются с другой вкладкой (UX-1c, S8)
-  const bankChanges = useListBankChangeRequests({ status: "pending" });
   const knownCounts = useLastDefined(first?.counts);
   const knownMemos = useLastDefined(first ? first.memos_to_pay : undefined);
   const counts = board.isError ? undefined : knownCounts;
@@ -259,12 +254,7 @@ export function PaymentList() {
   return (
     <div className="pf-dec-page">
       <PageHeader title={title} subtitle={t("payments:list.subtitle")} />
-      <TabNav
-        active={tab}
-        counts={counts}
-        memos={memosToPay}
-        bankChanges={bankChanges.data?.pending_count}
-      />
+      <TabNav active={tab} counts={counts} memos={memosToPay} />
       {tab === "memos" ? (
         <Segmented
           aria-label={t("payments:memo.scope.label")}

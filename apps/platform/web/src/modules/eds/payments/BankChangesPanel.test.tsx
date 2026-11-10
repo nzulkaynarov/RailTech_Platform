@@ -7,7 +7,7 @@ import { renderAt, setupPaymentTests, signIn } from "../../../test/paymentsKit";
 
 setupPaymentTests();
 
-const PATH = "/eds/payments?show=bank_changes";
+const PATH = "/crm/clients?kind=bank_changes";
 
 async function card() {
   const list = await screen.findByRole("list", { name: "Запросы на смену реквизитов" });
@@ -15,14 +15,13 @@ async function card() {
 }
 
 describe("Счета и оплаты · смена реквизитов", () => {
-  it("вкладка с числом, запрос показывает старые и новые реквизиты", async () => {
+  it("фильтр с числом, запрос показывает старые и новые реквизиты", async () => {
     signIn("accountant@demo.example");
     renderAt(PATH);
 
-    const nav = await screen.findByRole("navigation", { name: "Вкладки счетов и оплат" });
     expect(
-      await within(nav).findByRole("link", { name: /^Смена реквизитов\s*1$/ }),
-    ).toHaveAttribute("aria-current", "page");
+      await screen.findByText("Смена реквизитов · 1", { selector: ".ant-segmented-item-label" }),
+    ).toBeVisible();
     const row = await card();
     expect(within(row).getByText(/20208000123456789001/)).toBeVisible();
     expect(within(row).getByText(/20208000555566667777/)).toBeVisible();
@@ -56,7 +55,8 @@ describe("Счета и оплаты · смена реквизитов", () => 
     fireEvent.click(confirm);
 
     expect(await screen.findByText("Запросов на проверке нет")).toBeVisible();
-    fireEvent.click(screen.getByText("Все"));
+    const filter = screen.getByLabelText("Показать запросы");
+    fireEvent.click(within(filter).getByText("Все"));
     expect(await screen.findByText(/Нет письма банка/)).toBeVisible();
   });
 

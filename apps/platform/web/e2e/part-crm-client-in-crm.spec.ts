@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { loginAndWait, settledScreenshot, spaGoto } from "./support/app";
+import { loginAndWait, settledScreenshot, spaGoto, partnerCard } from "./support/app";
 import { expectNoViolations } from "./support/axe";
 
 // PART-CRM: в блоке «Доступ в кабинет» видно, стал ли приглашённый партнёр клиентом CRM: заведён (со ссылкой на клиента),
@@ -15,7 +15,7 @@ for (const width of WIDTHS) {
 
     // Заведён: ссылка ведёт на карточку клиента CRM
     await spaGoto(page, "/erp/catalog?part=suppliers&supplier=2");
-    let drawer = page.getByRole("dialog", { name: "АО «Южный Металл»" });
+    let drawer = partnerCard(page, "АО «Южный Металл»");
     let block = drawer.getByRole("region", { name: "Доступ в кабинет" });
     await expect(block.getByText("Клиент в CRM")).toBeVisible();
     await expect(block.getByText("Заведён", { exact: true })).toBeVisible();
@@ -28,7 +28,7 @@ for (const width of WIDTHS) {
 
     // Конфликт: ничего не изменено, подсказка говорит, что делать
     await spaGoto(page, "/erp/catalog?part=suppliers&supplier=3");
-    drawer = page.getByRole("dialog", { name: "ИП «Восточный склад»" });
+    drawer = partnerCard(page, "ИП «Восточный склад»");
     block = drawer.getByRole("region", { name: "Доступ в кабинет" });
     await expect(block.getByText("Конфликт", { exact: true })).toBeVisible();
     await expect(block.getByText(/Проверьте ИНН/)).toBeVisible();
@@ -39,7 +39,7 @@ for (const width of WIDTHS) {
 
     // Не приглашён: строки про CRM нет
     await spaGoto(page, "/erp/catalog?part=suppliers&supplier=1");
-    drawer = page.getByRole("dialog", { name: "ООО «Поставщик Север»" });
+    drawer = partnerCard(page, "ООО «Поставщик Север»");
     block = drawer.getByRole("region", { name: "Доступ в кабинет" });
     await expect(block.getByText("Не открыт")).toBeVisible();
     await expect(block.getByText("Клиент в CRM")).toBeHidden();

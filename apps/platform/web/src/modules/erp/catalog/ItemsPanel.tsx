@@ -1,7 +1,7 @@
 import { App, Button, Checkbox, Drawer, Input, Select } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useSearchParams } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "../../../app/auth/useAuth";
@@ -368,10 +368,10 @@ function ItemDrawer({ id, onClose }: { id: string; onClose: () => void }) {
   const { mobile } = useViewport();
   const query = useGetCatalogItem(id);
   const [editing, setEditing] = useState(false);
-  const [, setParams] = useSearchParams();
+  const navigate = useNavigate();
   const item = query.data;
   const openSupplier = (supplierId: string) => {
-    setParams({ part: "suppliers", supplier: supplierId });
+    void navigate(`/crm/clients?partner=${supplierId}&panel=open&tab=card`);
   };
   return (
     <Drawer

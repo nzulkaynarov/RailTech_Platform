@@ -8,7 +8,7 @@
     "name": "Counterparty",
     "inn": "TIN",
     "requests": "Open requests",
-    "erp": "Back office",
+    "erp": "Status",
     "last": "Last activity"
   },
   "caption": "Clients",
@@ -104,7 +104,9 @@
       "contacts": "contacts",
       "requests": "requests",
       "documents": "documents"
-    }
+    },
+    "partnerLabel": "Partner card",
+    "openPartner": "Open the partner card"
   },
   "clientSees": {
     "in_work": "Accepted, we are calculating",
@@ -136,6 +138,9 @@
     "partners": "Partners",
     "client": "Client",
     "partner": "Partner",
-    "both": "Client and partner"
-  }
+    "both": "Client and partner",
+    "applications": "Join requests",
+    "bank_changes": "Bank details change"
+  },
+  "addPartner": "Add partner"
 }

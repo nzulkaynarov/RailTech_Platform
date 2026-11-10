@@ -41,7 +41,6 @@
       "proofs": "Payment orders to confirm",
       "overdue": "Overdue",
       "memos": "Memos to pay",
-      "bank_changes": "Bank details change",
       "all": "All invoices"
     },
     "search": {

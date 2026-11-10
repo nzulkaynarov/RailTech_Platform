@@ -9,6 +9,8 @@ import {
   findModal,
   modalClosed,
   renderAt,
+  findPartnerCard,
+  partnerPath,
   setupCatalogTests,
   signIn,
 } from "../../../test/catalogKit";
@@ -135,33 +137,29 @@ describe("Номенклатура: позиции", () => {
 
 describe("Номенклатура: поставщики", () => {
   it("сроки цен словами: истекло, истекает скоро; карточка с предложениями и ценой для снабженца", async () => {
-    await open("supply@demo.example", "?part=suppliers");
+    signIn("supply@demo.example");
+    renderAt("/crm/clients?kind=partners");
 
-    const south = await screen.findByRole("button", {
-      name: /Открыть поставщика ООО «Поставщик Север»/,
-    });
+    const south = await screen.findByRole("link", { name: /ООО «Поставщик Север»/ });
     const southRow = south.closest("tr") as HTMLElement;
-    expect(within(southRow).getByText("Все цены действуют")).toBeVisible();
-    const south2 = screen
-      .getByRole("button", { name: /Южный Металл/ })
-      .closest("tr") as HTMLElement;
+    expect(await within(southRow).findByText("Все цены действуют")).toBeVisible();
+    const south2 = screen.getByRole("link", { name: /Южный Металл/ }).closest("tr") as HTMLElement;
     expect(within(south2).getByText("Истекает скоро: 1")).toBeVisible();
-    const east = screen
-      .getByRole("button", { name: /Восточный склад/ })
-      .closest("tr") as HTMLElement;
+    const east = screen.getByRole("link", { name: /Восточный склад/ }).closest("tr") as HTMLElement;
     expect(within(east).getByText("Истекло: 1")).toBeVisible();
 
     fireEvent.click(south);
-    const drawer = await screen.findByRole("dialog", { name: "ООО «Поставщик Север»" });
+    const drawer = await findPartnerCard("ООО «Поставщик Север»");
     expect(await within(drawer).findByText("Кабель силовой ВВГнг 3×2,5")).toBeVisible();
     expect(within(drawer).getByText(/310\s*USD/)).toBeVisible();
     expect(within(drawer).getByText("УНП")).toBeVisible();
   });
 
   it("гл. инженер видит сроки и квоты, но не цены; правка условий без цены", async () => {
-    await open("engineer@demo.example", "?part=suppliers&supplier=1");
+    signIn("engineer@demo.example");
+    renderAt(partnerPath("1"));
 
-    const drawer = await screen.findByRole("dialog", { name: "ООО «Поставщик Север»" });
+    const drawer = await findPartnerCard("ООО «Поставщик Север»");
     expect(await within(drawer).findByText("Кабель силовой ВВГнг 3×2,5")).toBeVisible();
     fireEvent.click(
       within(drawer).getByRole("button", {
@@ -180,8 +178,9 @@ describe("Номенклатура: поставщики", () => {
   });
 
   it("снабженец меняет цену предложения; неверный срок — ошибка словами", async () => {
-    await open("supply@demo.example", "?part=suppliers&supplier=1");
-    const drawer = await screen.findByRole("dialog", { name: "ООО «Поставщик Север»" });
+    signIn("supply@demo.example");
+    renderAt(partnerPath("1"));
+    const drawer = await findPartnerCard("ООО «Поставщик Север»");
     fireEvent.click(
       await within(drawer).findByRole("button", {
         name: "Изменить предложение по позиции Кабель силовой ВВГнг 3×2,5",

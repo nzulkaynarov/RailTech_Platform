@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { loginAndWait, settledScreenshot, spaGoto } from "./support/app";
+import { loginAndWait, settledScreenshot, spaGoto, partnerCard } from "./support/app";
 import { expectNoViolations } from "./support/axe";
 import { chooseOption } from "./support/fields";
 
@@ -60,7 +60,7 @@ for (const width of WIDTHS) {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
     await loginAndWait(page, "supply@demo.example");
     await spaGoto(page, "/erp/catalog?part=suppliers&supplier=2");
-    const drawer = page.getByRole("dialog", { name: "АО «Южный Металл»" });
+    const drawer = partnerCard(page, "АО «Южный Металл»");
     const block = drawer.getByRole("region", { name: "Доступ в кабинет" });
     const select = block.getByRole("combobox", { name: "Цены товаров в каталоге" });
     await chooseOption(select, "Показывать");

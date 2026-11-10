@@ -1,14 +1,11 @@
 {
-  "subtitle": "Pozitsiyalar, yetkazib beruvchilar va narx muddatlari, brigadalar, ma'lumotnomalar va yangi kategoriyalar so'rovlari.",
+  "subtitle": "Pozitsiyalar, brigadalar, ma'lumotnomalar va yangi kategoriyalar so'rovlari.",
   "cancel": "Bekor qilish",
   "save": "Saqlash",
   "actions": "Amallar",
   "tabs": {
     "label": "Nomenklatura bo'limlari",
     "items": "Pozitsiyalar",
-    "suppliers": "Yetkazib beruvchilar",
-    "applications": "Hamkorlik arizalari",
-    "applicationsCount": "Hamkorlik arizalari ({{count}})",
     "brigades": "Brigadalar",
     "refs": "Ma'lumotnomalar",
     "requests": "Kategoriya so'rovlari",

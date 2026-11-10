@@ -6,6 +6,8 @@ import {
   findModal,
   modalClosed,
   renderAt,
+  findPartnerCard,
+  partnerPath,
   setupCatalogTests,
   signIn,
 } from "../../../test/catalogKit";
@@ -82,8 +84,9 @@ describe("Загрузка прайса поставщика", () => {
 
 describe("Поставщик и его цена", () => {
   it("снабженец добавляет цену с Incoterms и видит историю", async () => {
-    await open("supply@demo.example", "?part=suppliers&supplier=3");
-    const drawer = await screen.findByRole("dialog", { name: "ИП «Восточный склад»" });
+    signIn("supply@demo.example");
+    renderAt(partnerPath("3"));
+    const drawer = await findPartnerCard("ИП «Восточный склад»");
     fireEvent.click(await within(drawer).findByRole("button", { name: "Добавить цену" }));
     const form = await findModal(/Цена поставщика/);
     await chooseOption(within(form).getByLabelText("Позиция"), "Реле защиты РЗ-1");

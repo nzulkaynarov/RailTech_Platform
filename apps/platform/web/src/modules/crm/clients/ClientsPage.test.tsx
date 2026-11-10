@@ -168,6 +168,18 @@ describe("Клиенты · Клиенты (D1-2b)", () => {
   });
 });
 
+const partnerRow = {
+  registration_number: "",
+  country: null,
+  country_id: null,
+  currency: null,
+  is_manufacturer: false,
+  offers_count: 0,
+  expired_count: 0,
+  expiring_count: 0,
+  nearest_valid_until: null,
+};
+
 describe("Контрагенты: тип отношения", () => {
   it("партнёр в общем списке, совпадение по ИНН — «Клиент и партнёр», фильтр сужает", async () => {
     server.use(
@@ -195,12 +207,15 @@ describe("Контрагенты: тип отношения", () => {
           ],
         }),
       ),
-      http.get("*/erp/stock/suppliers", () =>
+      http.get("*/erp/catalog/suppliers", () =>
         HttpResponse.json({
           items: [
-            { id: "7", name: "Партнёр Семь", inn: "700000007", email: null },
-            { id: "8", name: "Клиент Два (поставщик)", inn: "100000002", email: null },
+            { ...partnerRow, id: "7", name: "Партнёр Семь", tin: "700000007" },
+            { ...partnerRow, id: "8", name: "Клиент Два (поставщик)", tin: "100000002" },
           ],
+          total: 2,
+          page: 1,
+          page_size: 200,
         }),
       ),
     );
@@ -208,7 +223,7 @@ describe("Контрагенты: тип отношения", () => {
     renderAt("/crm/clients");
 
     const partner = await screen.findByRole("link", { name: /Партнёр Семь/ });
-    expect(partner).toHaveAttribute("href", "/erp/catalog?part=suppliers&supplier=7");
+    expect(partner.getAttribute("href")).toContain("/crm/clients?partner=7");
     expect(screen.getAllByText("Клиент и партнёр")).toHaveLength(1);
 
     fireEvent.click(screen.getByText("Партнёры", { selector: ".ant-segmented-item-label" }));

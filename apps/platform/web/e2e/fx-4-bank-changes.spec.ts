@@ -5,7 +5,7 @@ import { expectNoViolations } from "./support/axe";
 
 // FX-4: бухгалтер подтверждает или отклоняет запрос контрагента на смену реквизитов. axe 0, снимки 1440 и 390.
 const WIDTHS = [1440, 390] as const;
-const URL_PATH = "/eds/payments?show=bank_changes";
+const URL_PATH = "/crm/clients?kind=bank_changes";
 const SHOTS = process.env["E2E_SCREENSHOT_DIR"];
 
 async function shot(page: Page, name: string): Promise<void> {

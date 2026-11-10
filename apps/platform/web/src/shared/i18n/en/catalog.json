@@ -1,14 +1,11 @@
 {
-  "subtitle": "Items, suppliers and the validity of their prices, crews, reference lists and requests for new categories.",
+  "subtitle": "Items, crews, reference lists and requests for new categories.",
   "cancel": "Cancel",
   "save": "Save",
   "actions": "Actions",
   "tabs": {
     "label": "Catalog sections",
     "items": "Items",
-    "suppliers": "Suppliers",
-    "applications": "Partner applications",
-    "applicationsCount": "Partner applications ({{count}})",
     "brigades": "Crews",
     "refs": "Reference lists",
     "requests": "Category requests",

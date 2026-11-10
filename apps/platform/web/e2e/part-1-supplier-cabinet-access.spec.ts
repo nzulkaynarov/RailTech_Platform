@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { loginAndWait, settledScreenshot, spaGoto } from "./support/app";
+import { loginAndWait, settledScreenshot, spaGoto, partnerCard } from "./support/app";
 import { expectNoViolations } from "./support/axe";
 
 // PART-1: блок «Доступ в кабинет» в карточке поставщика на MSW. Снабженец заводит контакт, выбирает разделы и приглашает;
@@ -13,7 +13,7 @@ for (const width of WIDTHS) {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
     await loginAndWait(page, "supply@demo.example");
     await spaGoto(page, "/erp/catalog?part=suppliers&supplier=1");
-    const drawer = page.getByRole("dialog", { name: "ООО «Поставщик Север»" });
+    const drawer = partnerCard(page, "ООО «Поставщик Север»");
     const block = drawer.getByRole("region", { name: "Доступ в кабинет" });
     await expect(block.getByText("Не открыт")).toBeVisible();
 
