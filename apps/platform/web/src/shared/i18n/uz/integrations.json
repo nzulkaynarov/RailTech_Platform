@@ -938,5 +938,23 @@
     "erp": {
       "name": "baza paneli"
     }
+  },
+  "catalog": {
+    "title": "Keyingi ulanishlar",
+    "soon": "Tez orada",
+    "groups": {
+      "tasks": "Vazifalar va loyihalar",
+      "chats": "Chatlar va qo‘ng‘iroqlar",
+      "calendar": "Taqvim va kontaktlar",
+      "files": "Fayllar",
+      "documents": "Hujjatlar va pul",
+      "other": "Boshqa"
+    },
+    "names": {
+      "caldav": "Istalgan CalDAV",
+      "contacts": "Kontaktlar (CardDAV)",
+      "banks": "Banklar",
+      "api": "Vebxuklar va API"
+    }
   }
 }
