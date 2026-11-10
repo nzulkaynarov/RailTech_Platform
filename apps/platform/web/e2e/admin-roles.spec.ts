@@ -90,7 +90,6 @@ test.describe("Ролевая матрица: роли — данные", () => 
     await expect(panel.getByRole("heading", { level: 3, name: "Демо Инженеров" })).toBeVisible();
     await panel.getByRole("checkbox", { name: /^Гл\. инженер/ }).uncheck();
     await panel.getByRole("checkbox", { name: new RegExp(`^${MIXED}`) }).check();
-    await expect(panel.getByText("Сотрудник увидит модули: Контакты, Документы.")).toBeVisible();
     await panel.getByRole("button", { name: "Сохранить роли" }).click();
     await expect(page.getByText("Сохранено")).toBeVisible();
     await expect(page.getByRole("row", { name: /Демо Инженеров/ })).toContainText(MIXED);
@@ -168,7 +167,6 @@ test.describe("Ролевая матрица: роли — данные", () => 
     await expect(page.getByRole("button", { name: "Склад", exact: true })).toBeVisible();
 
     await panel.getByRole("button", { name: "Удалить роль" }).click();
-    await expect(panel.getByText(/Роль исчезнет из матрицы/)).toBeVisible();
     await panel.getByRole("button", { name: "Удалить", exact: true }).click();
     await expect(page.getByText("Роль удалена")).toBeVisible();
     await expect(page.getByRole("button", { name: "Склад", exact: true })).toHaveCount(0);

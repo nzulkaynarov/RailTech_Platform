@@ -445,9 +445,6 @@ test.describe("Компания: категории, запросы, платф�
 
     await page.getByRole("button", { name: "Одобрить запрос: Стрелочные переводы" }).click();
     const approve = page.getByRole("dialog", { name: /Одобрить запрос/ });
-    await expect(
-      approve.getByText(/Сама категория в каталоге этим действием не создаётся/),
-    ).toBeVisible();
     await choose(page, approve.getByLabel("Категория, которую вы завели для запроса"), "Крепёж");
     await approve.getByRole("button", { name: "Одобрить" }).click();
     await expect(toast(page, "Запрос одобрен")).toBeVisible();

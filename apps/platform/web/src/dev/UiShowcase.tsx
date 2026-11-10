@@ -95,7 +95,7 @@ function Steps() {
 
 function Blocks() {
   return (
-    <Section id="blocks" title="Consequence, History, Checklist, DefinitionList">
+    <Section id="blocks" title="History, Checklist, DefinitionList">
       <div className="dev-columns">
         <div className="dev-stack">
           <div className="pf-card dev-card">

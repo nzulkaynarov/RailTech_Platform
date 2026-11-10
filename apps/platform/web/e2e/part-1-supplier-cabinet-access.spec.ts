@@ -39,7 +39,6 @@ for (const width of WIDTHS) {
     // Приостановка просит подтверждение
     await block.getByRole("button", { name: "Приостановить доступ" }).click();
     const confirm = page.getByRole("dialog", { name: "Приостановить доступ в кабинет" });
-    await expect(confirm.getByText(/Открытые сессии партнёра закроются/)).toBeVisible();
     await expectNoViolations(page, `Поставщик · приостановка`);
     await confirm.getByRole("button", { name: "Приостановить" }).click();
     await expect(block.getByText("Приостановлен", { exact: true }).first()).toBeVisible();

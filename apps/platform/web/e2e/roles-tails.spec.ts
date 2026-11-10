@@ -86,7 +86,6 @@ test.describe("Роли: хвосты QA (R3-D-1, R3-D-3, R3-D-4)", () => {
       }),
       "Скрыто",
     );
-    await expect(panel.getByText(/^1 сотрудник потеряет: /)).toBeVisible();
     await settledScreenshot(page, "roles-preview-one");
 
     await openRole(page, "Гл. инженер");
@@ -94,7 +93,6 @@ test.describe("Роли: хвосты QA (R3-D-1, R3-D-3, R3-D-4)", () => {
       matrix(page).getByRole("combobox", { name: /^Виза расчёта: услуги — роль «Гл\. инженер»/ }),
       "Скрыто",
     );
-    await expect(panel.getByText(/^2 сотрудника потеряют: /)).toBeVisible();
     await expectNoViolations(page, "preview");
     await settledScreenshot(page, "roles-preview-two");
   });

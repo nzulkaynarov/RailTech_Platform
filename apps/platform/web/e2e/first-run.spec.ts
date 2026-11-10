@@ -99,7 +99,6 @@ async function inviteWithoutMail(page: Page, email: string): Promise<string> {
   await panel.getByLabel("Имя и фамилия").fill("Тест Без Почты");
   await panel.getByLabel("Электронная почта").fill(email);
   await panel.getByRole("checkbox", { name: /^Снабженец/ }).check();
-  await expect(panel.getByText(/Вы увидите временный пароль один раз/)).toBeVisible();
   await panel.getByRole("button", { name: "Создать и показать пароль" }).click();
   const field = panel.getByLabel("Временный пароль", { exact: true });
   await expect(field).toBeVisible();

@@ -91,16 +91,6 @@ export function visibleModules(role: Role): string[] {
   );
 }
 
-/** Модули из секции `menu` каталога: их перечисляет текст о последствиях выдачи роли. */
-export function matrixModules(role: Role): string[] {
-  const access = accessOf(role);
-  return MODULE_ORDER.filter((module) =>
-    Object.values(catalog.menu[module] ?? {}).some((sections) =>
-      sections.some((key) => access[key] !== undefined),
-    ),
-  ).map((module) => MODULE_TITLES[module] ?? module);
-}
-
 /** Адрес раздела, который открывает ресурс матрицы; у ресурсов без отдельного экрана адреса нет. */
 const ROUTE_OF: Record<string, string> = {
   "dashboard.summary": "/dashboard/summary",
