@@ -137,9 +137,9 @@ describe("Admin · Компания: доступ и каркас", () => {
 
   it("администратор видит пункт «Реквизиты и бланк» в группе «Компания» меню Настроек", async () => {
     signInAs("admin@demo.example");
-    renderApp("/admin/org");
-    const group = await screen.findByRole("group", { name: "Компания" });
-    expect(within(group).getByRole("link", { name: "Реквизиты и бланк" })).toBeInTheDocument();
+    renderApp("/admin?group=company");
+    const group = await screen.findByRole("region", { name: "Компания" });
+    expect(within(group).getByRole("link", { name: /Реквизиты и бланк/ })).toBeInTheDocument();
   });
 
   it("своей компании в ERP нет — слово и действие «Проверить снова», а не пустая страница", async () => {
@@ -217,7 +217,8 @@ describe("Admin · Компания: доступ и каркас", () => {
     });
 
     const menu = screen.getByRole("navigation", { name: "Разделы модуля" });
-    fireEvent.click(within(menu).getByRole("link", { name: "Шаблоны документов" }));
+    fireEvent.click(within(menu).getByRole("link", { name: "Компания" }));
+    fireEvent.click(await screen.findByRole("link", { name: /Шаблоны документов/ }));
     fireEvent.click(await screen.findByRole("button", { name: "Открыть: Договор поставки (наш)" }));
     const viewer = await screen.findByRole("dialog", { name: "Шаблон документа" });
     expect(within(viewer).getByLabelText(/^Текст шаблона/)).toBeDisabled();
@@ -228,7 +229,12 @@ describe("Admin · Компания: доступ и каркас", () => {
     expect(screen.queryByRole("button", { name: /^Изменить:/ })).toBeNull();
 
     // Справочники расчёта — страница «Процессы · Справочники»: открыта и с одним `company.settings`
-    fireEvent.click(within(menu).getByRole("link", { name: "Справочники" }));
+    fireEvent.click(
+      within(screen.getByRole("navigation", { name: "Модули" })).getByRole("link", {
+        name: "Настройки",
+      }),
+    );
+    fireEvent.click(await screen.findByRole("link", { name: /Справочники/ }));
     expect(await screen.findByText("Казахстан")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Добавить строку" })).toBeDisabled();
     fireEvent.click(screen.getByRole("link", { name: "Валюты" }));

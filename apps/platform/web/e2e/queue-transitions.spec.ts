@@ -3,7 +3,7 @@ import { type Page, expect, test } from "@playwright/test";
 
 import { loginAndWait, settledScreenshot, spaGoto, waitForMotionEnd } from "./support/app";
 
-// «Мои задачи», поиск и колокольчик без тупиков (W15-H2, UX-оценка P0-3, P1-8, P2-9) на MSW: строка с экраном — «Открыть»
+// «Задачи», поиск и колокольчик без тупиков (W15-H2, UX-оценка P0-3, P1-8, P2-9) на MSW: строка с экраном — «Открыть»
 // (primary у всех срочных; строки лидов — «Ждут ответа», D1-6), строка без экрана — «Где сделать», пустые состояния по ролям, частичный результат при отказе
 // CRM или ERP, действия в поиске; axe (WCAG 2.1 AA) на каждом экране; снимки 1440 и 390 для PR (`E2E_SCREENSHOT_DIR=<каталог>`).
 const WIDTHS = [1440, 390] as const;
@@ -52,7 +52,7 @@ async function showStubRow(page: Page): Promise<void> {
 
 const SIDE = { name: "Боковое окно" } as const;
 
-test.describe("Мои задачи: «Открыть» или «Где сделать»", () => {
+test.describe("Задачи: «Открыть» или «Где сделать»", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
 
   test("директор: строка без экрана — «Где сделать» с мостом в старый ERP, ссылки на заглушку нет", async ({
@@ -168,7 +168,7 @@ test.describe("Мои задачи: «Открыть» или «Где сдел�
   });
 });
 
-test.describe("Мои задачи: пустые состояния и частичный результат", () => {
+test.describe("Задачи: пустые состояния и частичный результат", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
 
   test("accountant@demo.example: платёжка и счёт ждут — очередь не пишет «Платёжек нет» (U1, D2-8)", async ({
@@ -193,7 +193,7 @@ test.describe("Мои задачи: пустые состояния и част�
     await page.reload();
     await expect(page.getByRole("main").getByText("Взять в работу лида L-2041")).toBeVisible();
     await expect(page.getByRole("main").getByRole("status")).toContainText(
-      "Не загрузились КП, расчёты, счета и проекты: раздел «Расчёт» не ответил. Остальное показано.",
+      "Не загрузились КП, расчёты, счета и проекты: раздел «Операции» не ответил. Остальное показано.",
     );
     await shoot(page, "queue-partial-erp");
   });
@@ -206,13 +206,13 @@ test.describe("Мои задачи: пустые состояния и част�
       page.getByRole("main").getByText("Одобрить КП-2026/118", { exact: true }),
     ).toBeVisible();
     await expect(page.getByRole("main").getByRole("status").first()).toContainText(
-      "Не загрузились лиды и ответы клиентам: раздел «Клиенты» не ответил. Остальное показано.",
+      "Не загрузились лиды и ответы клиентам: раздел «Контакты» не ответил. Остальное показано.",
     );
     await expectNoViolations(page, "crm down");
   });
 });
 
-test.describe("Мои задачи: EDS не отвечает", () => {
+test.describe("Задачи: EDS не отвечает", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
 
   test("директор: остальное показано, плашка называет «Документы», писем, КП и служебок нет (D26G-4: КП — тоже EDS)", async ({

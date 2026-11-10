@@ -28,7 +28,7 @@ afterEach(() => {
 });
 
 async function main() {
-  await screen.findByRole("heading", { level: 1, name: "Мои задачи" });
+  await screen.findByRole("heading", { level: 1, name: "Задачи" });
   return screen.getByRole("main");
 }
 
@@ -439,7 +439,7 @@ describe("Dashboard · Моя очередь", () => {
 
     expect(
       await within(page).findByText(
-        "Не загрузились данные из разделов «Расчёт», «Документы». Остальное показано.",
+        "Не загрузились данные из разделов «Операции», «Документы». Остальное показано.",
       ),
     ).toBeVisible();
   });
@@ -473,11 +473,11 @@ describe("Dashboard · Моя очередь", () => {
 
     expect(await within(page).findByText("Взять в работу лида L-0001")).toBeVisible();
     expect(within(page).getByRole("status")).toHaveTextContent(
-      "Не загрузились КП, расчёты, счета и проекты: раздел «Расчёт» не ответил. Остальное показано.",
+      "Не загрузились КП, расчёты, счета и проекты: раздел «Операции» не ответил. Остальное показано.",
     );
   });
 
-  it("CRM не отвечает: плашка называет «Клиенты», данные ERP показаны", async () => {
+  it("CRM не отвечает: плашка называет «Контакты», данные ERP показаны", async () => {
     server.use(
       http.get("*/queue", () =>
         HttpResponse.json({
@@ -506,7 +506,7 @@ describe("Dashboard · Моя очередь", () => {
 
     expect(await within(page).findByText("Одобрить КП-2026/118 (черновик)")).toBeVisible();
     expect(within(page).getByRole("status")).toHaveTextContent(
-      "Не загрузились лиды и ответы клиентам: раздел «Клиенты» не ответил. Остальное показано.",
+      "Не загрузились лиды и ответы клиентам: раздел «Контакты» не ответил. Остальное показано.",
     );
   });
 
@@ -525,7 +525,7 @@ describe("Dashboard · Моя очередь", () => {
     // «Повторить» — в плашке над списком, второй кнопки в пустом состоянии нет
     expect(within(page).getAllByRole("button", { name: "Повторить" })).toHaveLength(1);
     expect(within(page).getAllByRole("status")[0]).toHaveTextContent(
-      "разделы «Клиенты» и «Расчёт» не ответили",
+      "разделы «Контакты» и «Операции» не ответили",
     );
   });
 

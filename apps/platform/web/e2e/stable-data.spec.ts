@@ -4,7 +4,7 @@ import { type Page, expect, test } from "@playwright/test";
 import { loginAndWait, screenshot, settledScreenshot, waitForMotionEnd } from "./support/app";
 
 // UX-1c «Данные без мигания» (аудит 2026-10-30, S8–S10; platform-frontend.md §4.1, инвариант 6): смена фильтра и вкладки
-// оставляет прежние строки с признаком загрузки, высота блока и границы колонок стоят; «Мои задачи» администратора
+// оставляет прежние строки с признаком загрузки, высота блока и границы колонок стоят; «Задачи» администратора
 // загружаются без сдвига от счётчиков и баннера настройки. Ответы API задержаны на 600 мс, чтобы поймать кадр «во время».
 // axe 0 и снимки для PR (`E2E_SCREENSHOT_DIR=docs/screens/ux-1c`).
 
@@ -140,7 +140,7 @@ test.describe("Данные без мигания", () => {
       await expectNoViolations(page, "Документы, служебные");
     });
 
-    test(`Мои задачи администратора на ${String(width)}: первая загрузка без сдвига от счётчиков и баннера, axe 0`, async ({
+    test(`Задачи администратора на ${String(width)}: первая загрузка без сдвига от счётчиков и баннера, axe 0`, async ({
       page,
     }) => {
       await page.setViewportSize({ width, height: 900 });
@@ -170,7 +170,7 @@ test.describe("Данные без мигания", () => {
       await page.waitForTimeout(1500);
       expect(await shiftsSince(page, mark)).toBeLessThanOrEqual(width === 390 ? 0.05 : 0.01);
       await settledScreenshot(page, "queue-admin");
-      await expectNoViolations(page, "Мои задачи администратора");
+      await expectNoViolations(page, "Задачи администратора");
     });
   }
 

@@ -40,14 +40,14 @@
     "notFoundText": "The article was renamed or removed. Open the list of articles."
   },
   "start": {
-    "intro": "In the morning open “My tasks”: each row is one job for your role. The bell tells you about news, search (Ctrl K) finds a letter, request, client or invoice by number.",
+    "intro": "In the morning open “Tasks”: each row is one job for your role. The bell tells you about news, search (Ctrl K) finds a letter, request, client or invoice by number.",
     "yours": "Your role: {{role}}",
     "others": "For other roles",
     "kinds": {
       "director": {
         "title": "Director",
         "steps": [
-          "Open “My tasks”: letters without a resolution, quotes for approval and memos are waiting for you.",
+          "Open “Tasks”: letters without a resolution, quotes for approval and memos are waiting for you.",
           "Incoming letters: put a resolution — choose the assignees and the costing deadline.",
           "Quotes for approval: check the margin and sign-offs, approve or send back.",
           "Memos: approve, return or reject; a reason is required for rejection.",
@@ -66,7 +66,7 @@
       "supply": {
         "title": "Supply",
         "steps": [
-          "“My tasks”: costing tasks arrive after the director's resolution.",
+          "“Tasks”: costing tasks arrive after the director's resolution.",
           "Select items: stock, suppliers, delivery terms.",
           "Give the “goods and stock” sign-off. When all sign-offs are in, the quote goes to the director."
         ]
@@ -74,7 +74,7 @@
       "engineer": {
         "title": "Chief engineer",
         "steps": [
-          "“My tasks”: service tasks arrive after the director's resolution.",
+          "“Tasks”: service tasks arrive after the director's resolution.",
           "Cost the services: terms of reference, crew, deadlines.",
           "Give the “services” sign-off. When all sign-offs are in, the quote goes to the director."
         ]
@@ -82,7 +82,7 @@
       "accountant": {
         "title": "Accountant",
         "steps": [
-          "“My tasks”: payment orders to confirm and invoices to issue.",
+          "“Tasks”: payment orders to confirm and invoices to issue.",
           "Confirm payment against the statement: the invoice closes in full or in part.",
           "Contracts and acts: record issuing and signing, attach the scan.",
           "Overdue invoices also arrive as tasks."
@@ -100,7 +100,7 @@
       "default": {
         "title": "Any role",
         "steps": [
-          "“My tasks” are jobs for your role. One row is one action.",
+          "“Tasks” are jobs for your role. One row is one action.",
           "Search (Ctrl K) and the bell help you not to lose anything.",
           "Something is missing — “Write to the administrator”."
         ]
@@ -331,7 +331,7 @@
     "auto": "Attached automatically: page {{page}}, role {{role}}, Platform version.",
     "autoNoPage": "Attached automatically: role {{role}}, Platform version.",
     "consequence": [
-      "The administrator gets the request in “My tasks” and in Telegram.",
+      "The administrator gets the request in “Tasks” and in Telegram.",
       "The page and your role are attached automatically.",
       "The reply arrives in the bell and in Telegram if linked; the status is in “My requests”."
     ],
@@ -469,7 +469,7 @@
         "text": "On the left (at the bottom on a phone) are only the modules your role allows. The rest are hidden, and a section you cannot open says so itself."
       },
       "menu": {
-        "title": "“My tasks”",
+        "title": "“Tasks”",
         "text": "The first item of Home is what to do now. One row is one job; the “Open” button leads to it."
       },
       "bell": {

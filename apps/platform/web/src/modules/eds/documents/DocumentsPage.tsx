@@ -77,6 +77,43 @@ const DOCUMENT_STATUSES = [
   "sent",
 ] as const;
 const REGISTRY_STATUSES = ["awaiting_resolution", "resolved", "open"] as const;
+
+/** Пункты меню «Документов» поверх одного реестра: что показывает каждый */
+const BOXES = ["outgoing", "internal", "archive"] as const;
+type Box = (typeof BOXES)[number];
+const BOX_TABS: Record<Box, readonly KindTab[]> = {
+  outgoing: ["all", "letters", "quote", "contract", "invoice", "act"],
+  internal: ["all", "memo", "application", "report"],
+  archive: KIND_TABS,
+};
+/** Конечные статусы (SPEC-v3 §2.4): документ больше не ждёт ничьего действия и лежит в «Архиве» */
+const ARCHIVE_STATUSES = ["approved", "rejected", "paid", "sent", "resolved"] as const;
+const OPEN_STATUSES = [
+  "draft",
+  "on_approval",
+  "returned",
+  "to_accountant",
+  "awaiting_resolution",
+  "open",
+] as const;
+
+function boxOf(value: string | null): Box | undefined {
+  return BOXES.find((box) => box === value);
+}
+
+/** Виды документов для запроса: вкладка сужает ящик, в «Исходящих» письма только отправленные */
+function kindsOf(tab: KindTab, box: Box | undefined): EdsRegistryKind[] | undefined {
+  if (tab !== "all")
+    return box === "outgoing" && tab === "letters" ? ["letter_out"] : TAB_KINDS[tab];
+  if (box === undefined || box === "archive") return undefined;
+  return BOX_TABS[box].flatMap((key) => (key === "all" ? [] : (kindsOf(key, box) ?? [])));
+}
+const BOX_NAV: Record<Box, string> = {
+  outgoing: "outbox",
+  internal: "internal",
+  archive: "archive",
+};
+
 /** Куда ведут строки реестра, которые не открываются в этом окне: пункт меню EDS и его ключ в `modules` */
 const SECTION_OF: Partial<Record<EdsRegistryKind, { key: string; path: string }>> = {
   letter_in: { key: "inbox", path: "/eds/inbox" },
@@ -310,7 +347,8 @@ export function DocumentsPage() {
   const { me } = useAuth();
   const { mobile } = useViewport();
   const [params, setParams] = useSearchParams();
-  const title = t("modules:eds.sections.documents");
+  const box = boxOf(params.get("box"));
+  const title = t(box ? `modules:eds.nav.${BOX_NAV[box]}` : "modules:eds.sections.documents");
   useDocumentTitle(title);
 
   const canViewAll = canSee(me, { anyOf: ["eds.inbox", "eds.projects", "eds.payments"] });
@@ -318,12 +356,13 @@ export function DocumentsPage() {
   const scope: Scope = canViewAll && params.get("scope") !== "mine" ? "all" : "mine";
   const lettersAllowed = canSee(me, { resource: "eds.inbox" });
   const askedTab = tabOf(params.get("kind"), scope);
-  const tab = askedTab === "letters" && !lettersAllowed ? "all" : askedTab;
+  const allowedTab = askedTab === "letters" && !lettersAllowed ? "all" : askedTab;
+  const tab = box && !BOX_TABS[box].includes(allowedTab) ? "all" : allowedTab;
   const status = params.get("status") ?? "";
   const docId = parseDocumentId(params.get("doc"));
 
   // Страницы списка идут курсором: стек пройденных курсоров; смена условий возвращает на первую страницу.
-  const filterKey = `${scope}|${tab}|${status}`;
+  const filterKey = `${box ?? ""}|${scope}|${tab}|${status}`;
   const [paging, setPaging] = useState<{ key: string; stack: string[] }>({ key: "", stack: [] });
   const cursors = paging.key === filterKey ? paging.stack : [];
   const setCursors = (change: (stack: string[]) => string[]) => {
@@ -331,15 +370,21 @@ export function DocumentsPage() {
   };
   const cursor = cursors[cursors.length - 1];
 
+  const kinds = useMemo(() => kindsOf(tab, box), [tab, box]);
+  const statusFilter = useMemo<string[] | undefined>(() => {
+    if (status) return [status];
+    if (box === "archive") return [...ARCHIVE_STATUSES];
+    return box ? [...OPEN_STATUSES] : undefined;
+  }, [status, box]);
   const query: ListEdsDocumentsParams = useMemo(
     () => ({
       scope,
-      ...(tab === "all" ? {} : { kind: TAB_KINDS[tab] }),
-      ...(status ? { status: [status] } : {}),
+      ...(kinds ? { kind: kinds } : {}),
+      ...(statusFilter ? { status: statusFilter } : {}),
       limit: PAGE_SIZE,
       ...(cursor ? { cursor } : {}),
     }),
-    [scope, tab, status, cursor],
+    [scope, kinds, statusFilter, cursor],
   );
   const list = useListEdsDocuments(query);
   // Колонки, подписи и подзаголовок — по реестру, к которому относятся строки на экране (UX-1c, S8)
@@ -359,10 +404,13 @@ export function DocumentsPage() {
     );
   };
 
-  const statuses = [
+  const allStatuses = [
     ...DOCUMENT_STATUSES,
     ...(scope === "all" ? REGISTRY_STATUSES : []),
   ] as readonly string[];
+  const boxStatuses: readonly string[] | undefined =
+    box === "archive" ? ARCHIVE_STATUSES : box ? OPEN_STATUSES : undefined;
+  const statuses = boxStatuses ? allStatuses.filter((s) => boxStatuses.includes(s)) : allStatuses;
   const filtered = tab !== "all" || status !== "";
 
   const labels = {
@@ -382,7 +430,10 @@ export function DocumentsPage() {
   };
 
   const kindTabs = KIND_TABS.filter(
-    (k) => (!REGISTRY_TABS.includes(k) || scope === "all") && (k !== "letters" || lettersAllowed),
+    (k) =>
+      (!REGISTRY_TABS.includes(k) || scope === "all") &&
+      (k !== "letters" || lettersAllowed) &&
+      (!box || BOX_TABS[box].includes(k)),
   );
 
   const body = (
@@ -463,9 +514,13 @@ export function DocumentsPage() {
     <div className="pf-docs">
       <PageHeader
         title={title}
-        subtitle={t(
-          shownScope === "all" ? "documents:list.subtitleAll" : "documents:list.subtitle",
-        )}
+        {...(box
+          ? {}
+          : {
+              subtitle: t(
+                shownScope === "all" ? "documents:list.subtitleAll" : "documents:list.subtitle",
+              ),
+            })}
         extra={
           canEdit(me, "eds.memo.create") ? (
             <LinkButton type="primary" icon={<PlusIcon />} to="/eds/new">

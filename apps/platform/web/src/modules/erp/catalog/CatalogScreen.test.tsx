@@ -18,9 +18,7 @@ setupCatalogTests();
 async function open(email: string, search = "") {
   signIn(email);
   const view = renderAt(`/erp/catalog${search}`);
-  expect(
-    await screen.findByRole("heading", { level: 1, name: "Номенклатура и поставщики" }),
-  ).toBeVisible();
+  expect(await screen.findByRole("heading", { level: 1, name: "Товары" })).toBeVisible();
   return view;
 }
 

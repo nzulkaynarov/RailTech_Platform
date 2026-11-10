@@ -52,14 +52,12 @@ async function pickPart(page: Page, name: string): Promise<void> {
 
 async function openCatalog(page: Page, query = ""): Promise<void> {
   await spaGoto(page, `/erp/catalog${query}`);
-  await expect(
-    page.getByRole("heading", { level: 1, name: "Номенклатура и поставщики" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Товары" })).toBeVisible();
 }
 
 async function openDocs(page: Page, query = ""): Promise<void> {
   await spaGoto(page, `/erp/docs${query}`);
-  await expect(page.getByRole("heading", { level: 1, name: "Техдокументация" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Документация" })).toBeVisible();
 }
 
 /** Минимальный корректный PDF с латинским текстом и рамкой (файл-образец, не чертёж). */
@@ -122,7 +120,7 @@ async function expectPdfDrawn(page: Page): Promise<void> {
     .toBeGreaterThan(50);
 }
 
-test.describe("Номенклатура и поставщики", () => {
+test.describe("Товары", () => {
   test.skip(({ isMobile }) => isMobile, "сценарии на десктопе; телефон — отдельный блок @mobile");
 
   test("снабженец находит позицию, открывает поставщика с ценой и сроком, подаёт запрос на категорию; директор одобряет", async ({
@@ -131,12 +129,13 @@ test.describe("Номенклатура и поставщики", () => {
     await loginAndWait(page, "supply@demo.example");
     await page
       .getByRole("navigation", { name: "Модули" })
-      .getByRole("link", { name: "Расчёт" })
+      .getByRole("link", { name: "Операции" })
       .click();
-    await page.getByRole("link", { name: "Номенклатура и поставщики" }).first().click();
-    await expect(
-      page.getByRole("heading", { level: 1, name: "Номенклатура и поставщики" }),
-    ).toBeVisible();
+    await page
+      .getByRole("navigation", { name: "Разделы модуля" })
+      .getByRole("link", { name: "Каталог" })
+      .click();
+    await expect(page.getByRole("heading", { level: 1, name: "Товары" })).toBeVisible();
 
     // поиск и тип
     await page.getByLabel("Поиск по названию, артикулу и чертежу").fill("кабель");
@@ -236,7 +235,7 @@ test.describe("Номенклатура и поставщики", () => {
   });
 });
 
-test.describe("Техдокументация", () => {
+test.describe("Документация", () => {
   test.skip(({ isMobile }) => isMobile, "сценарии на десктопе; телефон — отдельный блок @mobile");
 
   test("гл. инженер загружает PDF с привязкой к позиции, открывает его и скачивает", async ({

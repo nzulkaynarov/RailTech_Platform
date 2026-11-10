@@ -56,7 +56,7 @@ test.describe("Расчёт по заявке: снабженец и гл. ин�
 
     // Заявки в расчёте: ЗВ · клиент · стадия · срок · три индикатора виз · ответственный · «Открыть расчёт».
     await spaGoto(page, "/erp/requests");
-    await expect(page.getByRole("heading", { level: 1, name: "Заявки в расчёте" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Заявки" })).toBeVisible();
     const row = page
       .getByRole("row")
       .filter({ has: page.getByRole("link", { name: `Открыть расчёт по заявке ${NUMBER}` }) });
@@ -189,8 +189,8 @@ test.describe("Расчёт на телефоне @mobile", () => {
   test("@mobile заявки и строки карточками; «Задание» — лист на весь экран", async ({ page }) => {
     await loginAndWait(page, "engineer@demo.example");
     await spaGoto(page, "/erp/requests");
-    await expect(page.getByRole("heading", { level: 1, name: "Заявки в расчёте" })).toBeVisible();
-    await expect(page.getByRole("list", { name: "Заявки в расчёте" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Заявки" })).toBeVisible();
+    await expect(page.getByRole("list", { name: "Заявки" })).toBeVisible();
     await settledScreenshot(page, "requests");
     await expectNoViolations(page, "заявки на телефоне");
 

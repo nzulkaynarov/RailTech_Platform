@@ -57,7 +57,7 @@ test.describe("Шапка и бар несохранённого", () => {
       await page.setViewportSize({ width, height: 900 });
       await loginAndWait(page, "all@demo.example");
       await spaGoto(page, "/eds/inbox");
-      await expect(page.getByRole("heading", { level: 1, name: "Входящие письма" })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1, name: "Входящие" })).toBeVisible();
       const x = await searchX(page);
 
       const toggle = page.getByRole("button", { name: "Показать панель" });

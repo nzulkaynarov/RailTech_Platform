@@ -34,7 +34,7 @@ describe("Окно помощи", () => {
     renderApp("/dashboard/queue");
     const help = await openHelp();
     expect(
-      await within(help).findByRole("heading", { name: "Мои задачи — что сделать сейчас" }),
+      await within(help).findByRole("heading", { name: "Задачи — что сделать сейчас" }),
     ).toBeInTheDocument();
     expect(within(help).getByRole("link", { name: "Все статьи" })).toHaveAttribute(
       "href",
@@ -118,7 +118,7 @@ describe("Раздел /help", () => {
     signInAs("manager@demo.example");
     renderApp("/help/articles/queue");
     expect(
-      await screen.findByRole("heading", { name: "Мои задачи — что сделать сейчас" }),
+      await screen.findByRole("heading", { name: "Задачи — что сделать сейчас" }),
     ).toBeInTheDocument();
     cleanup();
     renderApp("/help/articles/net-takoj");

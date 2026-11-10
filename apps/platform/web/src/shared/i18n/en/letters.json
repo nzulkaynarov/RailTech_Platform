@@ -392,7 +392,7 @@
     },
     "consequence": [
       "The letter gets a ВХ number and the status “Awaiting resolution”.",
-      "The director sees it in “My tasks” and adds the resolution.",
+      "The director sees it in “Tasks” and adds the resolution.",
       "The card opens in “Incoming letters”; the file is kept with the documents."
     ],
     "submit": "Register",
@@ -456,7 +456,7 @@
       "info": "For information"
     },
     "kindHint": {
-      "execute": "The executor does it and reports in \"My tasks\".",
+      "execute": "The executor does it and reports in \"Tasks\".",
       "reply": "The executor prepares a reply: registering an outgoing letter \"in reply to\" closes the instruction.",
       "info": "No instruction: the letter becomes \"Noted\"."
     },
@@ -496,7 +496,7 @@
       "title": "What happens",
       "execute": [
         "The letter becomes \"In execution\" and goes under control.",
-        "Executors get the instruction in \"My tasks\", the bell and Telegram.",
+        "Executors get the instruction in \"Tasks\", the bell and Telegram.",
         "Reminders: one working day before the deadline and on the day; after it — \"Overdue\".",
         "When everyone is done, the letter becomes \"Executed\" and you are notified."
       ],
@@ -806,14 +806,14 @@
       "handoverTo": "To",
       "handoverPick": "Choose a colleague",
       "handoverNone": "Nobody to hand over to: no employee can confirm payments. Assign such a role in Settings · Roles.",
-      "handoverWhat": "The letter leaves “New” and appears in My tasks of the chosen colleague.",
+      "handoverWhat": "The letter leaves “New” and appears in Tasks of the chosen colleague.",
       "handoverConfirm": "Hand over",
       "handoverDone": "Letter handed over: {{name}}",
       "suspiciousWhat": "The letter moves to the Suspicious tab — you can bring it back from there (“Not spam”). The mailbox itself is not changed.",
       "suspiciousConfirm": "To Suspicious",
       "suspiciousDone": "Letter moved to Suspicious",
       "priceHandoverNone": "Nobody to hand over to: no employee may upload price lists and see supplier prices. Assign such a role in Settings · Roles.",
-      "priceHandoverWhat": "The letter leaves “New” and appears in My tasks of the chosen colleague, who will upload the price list.",
+      "priceHandoverWhat": "The letter leaves “New” and appears in Tasks of the chosen colleague, who will upload the price list.",
       "priceHandoverConfirm": "Hand over for upload",
       "priceHandoverDone": "Letter handed over for price upload: {{name}}",
       "completeWhat": "The letter leaves the queue with the outcome “Handled”. Nothing else happens.",

@@ -278,11 +278,11 @@ describe("Бейджи меню у заглушек", () => {
 
   it("раздел без аналога в старых экранах: бейджа нет", async () => {
     signInAs("all@demo.example");
-    renderApp("/chats?scope=internal");
+    renderApp("/chats");
     await main();
     const menu = screen.getByRole("navigation", { name: "Разделы модуля" });
-    const item = within(menu).getByRole("link", { name: /^Команда/ });
+    const item = within(menu).getByRole("link", { name: /^Чаты/ });
     expect(item.querySelector(".pf-badge")).toBeNull();
-    expect(item).toHaveAccessibleName("Команда");
+    expect(item).toHaveAccessibleName("Чаты");
   });
 });

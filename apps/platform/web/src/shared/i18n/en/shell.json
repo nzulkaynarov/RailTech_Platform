@@ -207,7 +207,7 @@
     "heading": "Page not found",
     "title": "There is no such address in the Platform",
     "text": "The link is outdated or the address has a typo. Go back to your tasks.",
-    "back": "My tasks"
+    "back": "Tasks"
   },
   "stub": {
     "subtitle": "The section is moving to the Platform"

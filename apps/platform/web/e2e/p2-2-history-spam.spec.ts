@@ -82,7 +82,7 @@ test.describe("P2-2: старые письма и папка «Спам»", () =
       await expectNoViolations(page, `загрузка ${String(width)}`);
 
       await signInAs(page, "registrar@demo.example", width);
-      // «Мои задачи» — без писем «из истории».
+      // «Задачи» — без писем «из истории».
       await expect(
         page.getByRole("link", { name: /Разобрать письмо: Акт сверки за октябрь/ }).first(),
       ).toBeVisible();

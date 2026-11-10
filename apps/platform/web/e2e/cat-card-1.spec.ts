@@ -128,7 +128,7 @@ test.describe("Карточка товара", () => {
     // из карточки — в «Техдокументацию»: ждём смену экрана
     await added.getByRole("link", { name: "decl" }).click();
     await expect(page).toHaveURL(/\/erp\/docs\?doc=/);
-    await expect(page.getByRole("heading", { level: 1, name: "Техдокументация" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Документация" })).toBeVisible();
     const docCard = page.getByRole("dialog", { name: "decl" });
     await expect(docCard.getByText("ЕАЭС N RU Д-UZ.0042")).toBeVisible();
     await expect(docCard.getByText("Орган по сертификации (демо)")).toBeVisible();

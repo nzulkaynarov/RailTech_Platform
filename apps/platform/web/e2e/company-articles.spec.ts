@@ -62,8 +62,9 @@ test.describe("Статьи компании", () => {
       .click();
     await page
       .getByRole("navigation", { name: "Разделы модуля" })
-      .getByRole("link", { name: "Статьи компании" })
+      .getByRole("link", { name: "Компания" })
       .click();
+    await page.getByRole("link", { name: /Статьи компании/ }).click();
     await expect(page).toHaveURL(/\/admin\/articles/);
     await expect(page.getByRole("heading", { level: 1, name: "Статьи компании" })).toBeVisible();
     await expect(
@@ -130,7 +131,7 @@ test.describe("Статьи компании", () => {
     await page.getByRole("textbox", { name: "Поиск по статьям" }).fill("договор");
     await expect(page.getByRole("link", { name: "Кто согласует договор" })).toBeVisible();
     await page.getByRole("textbox", { name: "Поиск по статьям" }).fill("резолюция");
-    await expect(page.getByRole("link", { name: /Входящие письма/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /Входящие/ })).toBeVisible();
     await page.getByRole("textbox", { name: "Поиск по статьям" }).fill("");
     await company.getByRole("link", { name: "Кто согласует договор" }).click();
     await expect(page).toHaveURL(/\/help\/articles\/company-1$/);

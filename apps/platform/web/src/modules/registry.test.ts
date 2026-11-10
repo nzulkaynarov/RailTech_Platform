@@ -1,90 +1,59 @@
 import { describe, expect, it } from "vitest";
 
 import { resources } from "../shared/i18n";
-import { admin } from "./admin/module";
+import { findNavItem, NAVIGATION } from "./navigation";
 import { MODULES, matchSection } from "./registry";
 
 const ru = resources.ru.modules;
 type ModuleKey = "dashboard" | "crm" | "eds" | "erp" | "chats" | "admin";
 
 function menuOf(code: ModuleKey): string[] {
-  const module = MODULES.find((m) => m.code === code);
-  const sections = ru[code].sections as Record<string, string>;
-  return (module?.sections ?? []).filter((s) => !s.hidden).map((s) => sections[s.key] ?? "?");
+  const labels = ru[code].nav as Record<string, string>;
+  return NAVIGATION[code].map((item) => labels[item.key] ?? "?");
 }
 
-describe("меню модулей — SPEC-v3 §6.2 в редакции UX-оценки 2026-10-27 §6.2 (волна 15 H5)", () => {
-  it("Главная", () => {
-    expect(menuOf("dashboard")).toEqual(["Мои задачи", "Проекты", "Сводка по компании"]);
+describe("меню — docs/product/NAVIGATION.md", () => {
+  it("пункты модулей", () => {
+    expect(menuOf("dashboard")).toEqual(["Задачи", "Проекты", "Сводка"]);
+    expect(menuOf("crm")).toEqual(["Лиды", "Контрагенты", "Почта", "База знаний"]);
+    expect(menuOf("eds")).toEqual(["Входящие", "Исходящие", "Внутренние", "Архив", "Шаблоны"]);
+    expect(menuOf("erp")).toEqual(["Заявки", "Каталог", "Финансы"]);
+    expect(menuOf("chats")).toEqual(["Календарь", "Чаты", "Люди"]);
+    expect(menuOf("admin")).toEqual(["Сотрудники", "Компания", "Подключения", "Журнал"]);
+    expect(MODULES.flatMap((m) => menuOf(m.code))).toHaveLength(22);
   });
-  it("Клиенты", () => {
-    expect(menuOf("crm")).toEqual([
-      "Ждут ответа",
-      "Лиды",
-      "Клиенты",
-      "Заявки",
-      "Каналы связи",
-      "База знаний бота",
-    ]);
+
+  it("у каждого раздела из меню есть конфигурация", () => {
+    const refs = MODULES.flatMap((m) =>
+      NAVIGATION[m.code].flatMap((item) => [
+        ...item.targets.map((t) => t.section),
+        ...(item.also ?? []),
+      ]),
+    );
+    const known = MODULES.flatMap((m) => m.sections.map((s) => `${m.code}.${s.key}`));
+    for (const ref of refs) expect(known, ref).toContain(ref);
   });
-  it("Документы", () => {
-    expect(menuOf("eds")).toEqual([
-      "Все документы",
-      "Входящие письма",
-      "Входящая почта",
-      "Исходящие",
-      "Проекты: договоры и акты",
-      "КП на одобрение",
-      "На согласовании",
-      "Счета и оплаты",
-    ]);
-  });
-  it("Расчёт", () => {
-    expect(menuOf("erp")).toEqual([
-      "Заявки в расчёте",
-      "Мои расчёты",
-      "Склад",
-      "Номенклатура и поставщики",
-      "Техдокументация",
-    ]);
-  });
-  it("Чаты", () => {
-    expect(menuOf("chats")).toEqual(["Все чаты", "Команда", "С клиентами", "Контакты"]);
-  });
-  it("Настройки (SET-IA): индекс и пять групп — Люди и доступ · Компания · Каналы связи · Процессы · Система", () => {
-    expect(menuOf("admin")).toEqual([
-      "Все настройки",
-      "Сотрудники",
-      "Роли и права",
-      "Права подписи",
-      "Реквизиты и бланк",
-      "Нумерация",
-      "Налоги и валюты",
-      "Статьи компании",
-      "Telegram",
-      "Почта",
-      "Формы сайта",
-      "Справочники",
-      "Шаблоны резолюций",
-      "Шаблоны документов",
-      "Время и сроки",
-      "Уведомления",
-      "Подключения",
-      "Расходы на ИИ",
-      "Журнал",
-      "Выгрузки",
-      "Обмен между системами",
-    ]);
-    // «Первый запуск» — чек-лист на индексе, «Обращения сотрудников» — в «Моих задачах»: пунктов нет
-    const groups = admin.sections.filter((s) => !s.hidden).map((s) => s.group ?? "—");
-    expect([...new Set(groups)]).toEqual([
-      "—",
-      "people",
-      "company",
-      "channels",
-      "processes",
-      "system",
-    ]);
+
+  it("адрес находит свой пункт меню", () => {
+    const at = (url: string) => {
+      const [pathname = "", query = ""] = url.split("?");
+      const search = query ? `?${query}` : "";
+      const match = matchSection(pathname, search);
+      const hit = match ? findNavItem(match, pathname, search) : undefined;
+      return hit ? [hit.module, hit.item.key, hit.tab?.key].filter(Boolean).join(".") : undefined;
+    };
+    expect(at("/eds/documents?box=archive")).toBe("eds.archive");
+    expect(at("/eds/documents?box=internal")).toBe("eds.internal");
+    expect(at("/eds/documents")).toBeUndefined();
+    expect(at("/eds/payments")).toBe("erp.finance");
+    expect(at("/eds/projects")).toBe("dashboard.projects");
+    expect(at("/admin/org")).toBe("admin.people");
+    expect(at("/admin?group=channels")).toBe("admin.channels");
+    expect(at("/admin/templates")).toBe("eds.templates");
+    expect(at("/erp/stock")).toBe("erp.catalog.stock");
+    expect(at("/erp/stock?view=orders")).toBe("erp.requests.purchases");
+    expect(at("/erp/calc")).toBe("erp.requests.sales");
+    expect(at("/crm/messages")).toBe("crm.leads");
   });
 
   it("главные действия модулей; заявка — одно имя в Клиентах и Расчёте", () => {
@@ -112,26 +81,26 @@ describe("имена модулей — UX-оценка 2026-10-27 §6.1", () =>
     ]);
     expect(names("ru", "name")).toEqual([
       "Главная",
-      "Клиенты",
+      "Контакты",
       "Документы",
-      "Расчёт",
-      "Чаты",
+      "Операции",
+      "Органайзер",
       "Настройки",
     ]);
     expect(names("uz", "name")).toEqual([
       "Asosiy",
-      "Mijozlar",
+      "Kontaktlar",
       "Hujjatlar",
-      "Hisob",
-      "Chatlar",
+      "Amallar",
+      "Organayzer",
       "Sozlamalar",
     ]);
     expect(names("en", "name")).toEqual([
       "Home",
-      "Clients",
+      "Contacts",
       "Documents",
-      "Costing",
-      "Chats",
+      "Operations",
+      "Organizer",
       "Settings",
     ]);
   });
@@ -139,11 +108,11 @@ describe("имена модулей — UX-оценка 2026-10-27 §6.1", () =>
   it("заголовок подменю — полное имя модуля", () => {
     expect(names("ru", "title")).toEqual([
       "Главная",
-      "Клиенты и лиды",
-      "Документы и согласования",
-      "Расчёт и склад",
-      "Чаты",
-      "Настройки компании",
+      "Контакты",
+      "Документы",
+      "Операции",
+      "Органайзер",
+      "Настройки",
     ]);
   });
 

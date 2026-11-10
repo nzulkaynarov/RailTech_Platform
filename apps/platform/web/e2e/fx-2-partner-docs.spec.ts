@@ -14,7 +14,7 @@ for (const width of WIDTHS) {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
     await loginAndWait(page, "supply@demo.example");
     await spaGoto(page, "/erp/docs");
-    await expect(page.getByRole("heading", { level: 1, name: "Техдокументация" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Документация" })).toBeVisible();
     await expect(page.getByText("Протокол испытаний рельса (партнёр)").first()).toBeVisible();
     await expect(page.getByText("На проверке").first()).toBeVisible();
     await expectNoViolations(page, "Техдокументация · файл партнёра на проверке");

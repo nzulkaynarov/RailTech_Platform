@@ -245,7 +245,7 @@
     "typePlaceholder": "Not set",
     "submit": "Hand over",
     "cancel": "Cancel",
-    "hint": "Nothing is sent to the client. The manager sees the lead in “My tasks” with your note and takes it.",
+    "hint": "Nothing is sent to the client. The manager sees the lead in “Tasks” with your note and takes it.",
     "noManagers": "Nobody works leads yet. Ask the administrator to grant the “All-round manager” role.",
     "managersFailed": "Could not load managers. Try again"
   }

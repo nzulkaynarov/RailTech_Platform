@@ -92,7 +92,7 @@
   },
   "deputy": {
     "title": "Cover",
-    "lead": "While you are away, choose a colleague: they will see your tasks in My tasks. Their access to objects stays their own.",
+    "lead": "While you are away, choose a colleague: they will see your tasks in Tasks. Their access to objects stays their own.",
     "sentence": "While I am away, {{name}} sees my tasks from {{from}} to {{to}}.",
     "none": "No cover is set.",
     "who": "Who covers",
@@ -104,7 +104,7 @@
     "clear": "Remove cover",
     "saved": "Cover assigned",
     "cleared": "Cover removed",
-    "covering": "You cover: {{name}} from {{from}} to {{to}}. Their tasks are in My tasks marked “for {{name}}”.",
+    "covering": "You cover: {{name}} from {{from}} to {{to}}. Their tasks are in Tasks marked “for {{name}}”.",
     "noCandidates": "There are no colleagues to assign.",
     "required": "Choose a colleague and both dates",
     "errors": {

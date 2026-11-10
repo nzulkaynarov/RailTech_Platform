@@ -102,7 +102,7 @@ describe("EDS · Зарегистрировать входящее (P8)", () => 
       summary: null,
     });
     expect(body?.file_ids).toHaveLength(1);
-    expect(await screen.findByRole("heading", { level: 1, name: "Входящие письма" })).toBeVisible();
+    expect(await screen.findByRole("heading", { level: 1, name: "Входящие" })).toBeVisible();
   });
 
   it("похожее (тот же корреспондент и исх. № без даты): ссылка на ВХ, регистрация не запрещена", async () => {

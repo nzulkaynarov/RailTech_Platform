@@ -68,7 +68,7 @@ const LEGACY = [
   ["/admin/docflow?tab=ai", "/admin/ai-spend", "Расходы на ИИ"],
   ["/admin/integrations?card=mail&panel=open", "/admin/mail", "Почта"],
   ["/admin/integrations?card=telegram&panel=open", "/admin/telegram", "Telegram"],
-  ["/admin/tickets", "/dashboard/queue", "Мои задачи"],
+  ["/admin/tickets", "/dashboard/queue", "Задачи"],
 ] as const;
 
 test.describe("Настройки: порядок и навигация (SET-IA)", () => {
@@ -85,7 +85,7 @@ test.describe("Настройки: порядок и навигация (SET-IA)
 
       await spaGoto(page, "/admin");
       await h1(page, "Все настройки");
-      for (const group of ["Люди и доступ", "Компания", "Каналы связи", "Процессы", "Система"]) {
+      for (const group of ["Сотрудники", "Компания", "Подключения", "Журнал"]) {
         await expect(page.getByRole("region", { name: group })).toBeVisible();
       }
       await expectNoViolations(page, `index ${String(width)}`);
@@ -130,42 +130,32 @@ test.describe("Настройки: порядок и навигация (SET-IA)
     await spaGoto(page, "/admin/timing");
     await h1(page, "Время и сроки");
     const menu = page.getByRole("navigation", { name: "Разделы модуля" });
-    for (const group of ["Люди и доступ", "Компания", "Каналы связи", "Процессы", "Система"]) {
-      await expect(menu.getByRole("group", { name: group })).toBeVisible();
+    for (const item of ["Сотрудники", "Подключения", "Журнал"]) {
+      await expect(menu.getByRole("link", { name: item, exact: true })).toBeVisible();
     }
-    await expect(
-      menu.getByRole("group", { name: "Процессы" }).getByRole("link", { name: "Время и сроки" }),
-    ).toHaveAttribute("aria-current", "page");
+    await expect(menu.getByRole("link", { name: "Компания", exact: true })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
     await expectNoViolations(page, "menu");
     await shot(page, "menu-groups");
 
     // Последние пункты группы «Система» прокручиваются целиком над кнопкой «Пригласить сотрудника», длинная подпись — в
     // своей подсветке
     await spaGoto(page, "/admin/bus");
-    const bus = menu.getByRole("link", { name: "Обмен между системами" });
-    await expect(bus).toHaveAttribute("aria-current", "page");
-    await bus.scrollIntoViewIfNeeded();
-    const invite = page.getByRole("link", { name: "Пригласить сотрудника" });
-    for (const name of ["Выгрузки", "Обмен между системами"]) {
-      const item = await menu.getByRole("link", { name, exact: true }).boundingBox();
-      const button = await invite.boundingBox();
-      expect((item?.y ?? 0) + (item?.height ?? 0), name).toBeLessThanOrEqual(button?.y ?? 0);
-    }
-    const label = await bus.locator("span").first().boundingBox();
-    const box = await bus.boundingBox();
-    expect((label?.y ?? 0) + (label?.height ?? 0)).toBeLessThanOrEqual(
-      (box?.y ?? 0) + (box?.height ?? 0),
+    await expect(menu.getByRole("link", { name: "Журнал", exact: true })).toHaveAttribute(
+      "aria-current",
+      "page",
     );
-    await page.mouse.move(0, 0);
     await settledScreenshot(page, "menu-bus");
 
     await spaGoto(page, "/eds/documents");
-    const gear = page.getByRole("link", { name: "Настройки: Процессы" });
+    const gear = page.getByRole("link", { name: "Настройки: Компания" });
     await expect(gear).toBeVisible();
     await gear.click();
-    await expect(page).toHaveURL(/\/admin\?group=processes$/);
-    await expect(page.getByRole("region", { name: "Процессы" })).toBeInViewport();
-    await expect(page.getByRole("region", { name: "Люди и доступ" })).toHaveCount(0);
+    await expect(page).toHaveURL(/\/admin\?group=company$/);
+    await expect(page.getByRole("region", { name: "Компания" })).toBeInViewport();
+    await expect(page.getByRole("region", { name: "Сотрудники" })).toHaveCount(0);
 
     await page.keyboard.press("Control+k");
     await page.keyboard.type("почта");
@@ -218,7 +208,7 @@ test.describe("Настройки: порядок и навигация (SET-IA)
       await loginAndWait(page, "director@demo.example");
       await spaGoto(page, "/admin");
       await h1(page, "Все настройки");
-      const system = page.getByRole("region", { name: "Система" });
+      const system = page.getByRole("region", { name: "Журнал" });
       await expect(system.getByRole("link", { name: /Журнал/ })).toBeVisible();
       await expect(system.getByRole("link", { name: /Обмен между системами/ })).toHaveCount(0);
       await expect(page.getByRole("region", { name: /^Первый запуск/ })).toHaveCount(0);

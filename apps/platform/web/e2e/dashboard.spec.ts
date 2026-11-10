@@ -22,7 +22,7 @@ async function setMock(page: Page, key: string, value: string): Promise<void> {
   );
 }
 
-test.describe("Мои задачи", () => {
+test.describe("Задачи", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
 
   test("поток подсказок: событие шины обновляет колокольчик, бейджи и очередь без опроса", async ({
@@ -131,7 +131,7 @@ test.describe("Мои задачи", () => {
 
     await expect(page.getByRole("main").getByText("Взять в работу лида L-2041")).toBeVisible();
     await expect(page.getByRole("main").getByRole("status")).toContainText(
-      "Не загрузились КП, расчёты, счета и проекты: раздел «Расчёт» не ответил. Остальное показано.",
+      "Не загрузились КП, расчёты, счета и проекты: раздел «Операции» не ответил. Остальное показано.",
     );
     // КП на одобрение и письмо читает EDS (D26G-4, D1-6) — строки на месте
     await expect(page.getByText("Одобрить КП-2026/118", { exact: true })).toBeVisible();
@@ -310,7 +310,7 @@ test.describe("Поиск ⌘K", () => {
 
       const option = page.getByRole("option", { name: /ЗВ-2026-104 · Стрелочные приводы/ });
       await expect(option).toBeVisible();
-      await expect(page.getByRole("group", { name: "Клиенты" })).toBeVisible();
+      await expect(page.getByRole("group", { name: "Контакты" })).toBeVisible();
       await settledScreenshot(page, "dashboard-search");
       await expectNoViolations(page, "search results");
 
@@ -330,7 +330,7 @@ test.describe("Поиск ⌘K", () => {
     const search = page.getByRole("combobox", { name: "Глобальный поиск" });
 
     await search.fill("Демо");
-    await expect(page.getByRole("group", { name: "Клиенты" })).toBeVisible();
+    await expect(page.getByRole("group", { name: "Контакты" })).toBeVisible();
     await expect(page.getByRole("group", { name: "Документы" })).toBeVisible();
 
     await search.fill("нет-такого");
@@ -341,7 +341,7 @@ test.describe("Поиск ⌘K", () => {
 // D26G-4 (гейт D2-6): КП ждёт одобрения директора в EDS — в «Моих задачах» строка «Одобрить КП-…» на каждое КП «на моём
 // шаге» (как экран «КП на одобрение»), карточка «КП на одобрение» и бейдж меню — то же число; одобрили — строка ушла.
 // Снимки — docs/screens/d26g-4 (`E2E_SCREENSHOT_DIR`).
-test.describe("Мои задачи директора: «Одобрить КП» из EDS (D26G-4)", () => {
+test.describe("Задачи директора: «Одобрить КП» из EDS (D26G-4)", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
 
   for (const width of [1440, 390] as const) {

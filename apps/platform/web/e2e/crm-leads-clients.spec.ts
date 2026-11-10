@@ -72,7 +72,7 @@ test.describe("Лиды → «Создать заявку» → карточка
     await panel.getByRole("link", { name: "Открыть карточку клиента" }).click();
 
     // Карточка клиента: заявка ЗВ с шкалой и тем, что видит клиент — ровно одна
-    await expect(page.getByRole("heading", { level: 1, name: "Клиенты" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Контрагенты" })).toBeVisible();
     await expect(panel.getByRole("heading", { name: "ООО Демо-Логистик" })).toBeVisible();
     const requests = panel.getByRole("region", { name: "Заявки и проекты" });
     await expect(requests.getByText("ЗВ-2026-040")).toBeVisible();
@@ -100,7 +100,7 @@ test.describe("Лиды → «Создать заявку» → карточка
   }) => {
     await loginAndWait(page, "manager@demo.example");
     await spaGoto(page, "/crm/clients");
-    await expect(page.getByRole("heading", { level: 1, name: "Клиенты" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Контрагенты" })).toBeVisible();
     await page.getByRole("link", { name: "Открыть карточку ООО Рельс-Сервис Демо" }).click();
     const panel = page.locator("#pf-context-panel");
     await expect(panel.getByRole("heading", { name: "ООО Рельс-Сервис Демо" })).toBeVisible();

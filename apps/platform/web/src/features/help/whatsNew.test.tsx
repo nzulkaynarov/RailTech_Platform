@@ -125,7 +125,7 @@ describe("Под статьёй: «Помогла?» и «Здесь устар�
     fireEvent.click(within(again).getByRole("button", { name: "Написать администратору" }));
     const dialog = await screen.findByRole("dialog", { name: "Написать администратору" });
     expect(within(dialog).getByRole("textbox", { name: /Что случилось/ })).toHaveValue(
-      "Статья помощи «Мои задачи — что сделать сейчас» не помогла: /help/articles/queue\nЧего не хватило: ",
+      "Статья помощи «Задачи — что сделать сейчас» не помогла: /help/articles/queue\nЧего не хватило: ",
     );
   });
 
@@ -139,7 +139,7 @@ describe("Под статьёй: «Помогла?» и «Здесь устар�
     fireEvent.change(body, {
       target: {
         value:
-          "Статья помощи «Мои задачи — что сделать сейчас» устарела: /help/articles/queue\nЧто изменилось: кнопка переехала",
+          "Статья помощи «Задачи — что сделать сейчас» устарела: /help/articles/queue\nЧто изменилось: кнопка переехала",
       },
     });
     fireEvent.click(within(dialog).getByRole("button", { name: "Отправить" }));

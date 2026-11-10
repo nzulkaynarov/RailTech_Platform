@@ -118,7 +118,7 @@ test.describe("UX-2b: суммы, статусы, телефон", () => {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
       await loginAndWait(page, "accountant@demo.example");
       await spaGoto(page, "/eds/payments");
-      await expect(page.getByRole("heading", { level: 1, name: "Счета и оплаты" })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1, name: "Финансы" })).toBeVisible();
       const main = page.locator("#main-content");
       await expect(main.getByText(/\d\sсум/).first()).toBeVisible();
       await expect(main.getByText(/остаток [\d\s]+сум/).first()).toBeVisible();

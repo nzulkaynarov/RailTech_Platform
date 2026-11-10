@@ -53,7 +53,7 @@ test.describe("D17G-1: передача лида делопроизводите�
       const mobile = width < 768;
       await signInAt(page, "registrar@demo.example", width, true);
 
-      // «Мои задачи»: «Разобрать лида» вместо «Взять в работу лида»
+      // «Задачи»: «Разобрать лида» вместо «Взять в работу лида»
       const triage = page.getByText("Разобрать лида L-2041");
       await expect(triage).toBeVisible();
       await expect(page.getByText(/Взять в работу лида/)).toHaveCount(0);

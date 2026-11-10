@@ -7,7 +7,7 @@ import type { SettingsGroup } from "./settingsRegistry";
  * (налоги и валюты, нумерация). У остальных модулей своей группы нет.
  */
 export const MODULE_SETTINGS: Readonly<Partial<Record<ModuleCode, SettingsGroup>>> = {
-  eds: "processes",
+  eds: "company",
   crm: "channels",
   erp: "company",
 };

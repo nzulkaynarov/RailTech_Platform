@@ -656,7 +656,7 @@ describe("Баннер настройки и мастер", () => {
       }),
     );
     renderApp("/admin");
-    expect(await screen.findByRole("heading", { level: 2, name: "Люди и доступ" })).toBeVisible();
+    expect(await screen.findByRole("heading", { level: 2, name: "Сотрудники" })).toBeVisible();
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 150));
     });

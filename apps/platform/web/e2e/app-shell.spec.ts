@@ -33,7 +33,7 @@ test.describe("панели", () => {
 
     // перезагрузка: подменю свёрнуто (запомнено), окно закрыто (адрес без panel=open)
     await page.reload();
-    await expect(page.getByRole("heading", { level: 1, name: "Мои задачи" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Задачи" })).toBeVisible();
     await expect(menu).toHaveCount(0);
     await expect(panel).toHaveCount(0);
 
@@ -147,12 +147,12 @@ test.describe("панели", () => {
   test("активный пункт подменю и бейджи очереди", async ({ page }) => {
     await loginAndWait(page, "director@demo.example");
     const menu = page.getByRole("navigation", { name: "Разделы модуля" });
-    await expect(menu.getByRole("link", { name: /^Мои задачи/ })).toHaveAttribute(
+    await expect(menu.getByRole("link", { name: /^Задачи/ })).toHaveAttribute(
       "aria-current",
       "page",
     );
     // D26G-4: четыре «Одобрить КП» из «КП на одобрение» (EDS) входят в число «Моих задач»
-    await expect(menu.getByRole("link", { name: "Мои задачи 8, требует действия" })).toBeVisible();
+    await expect(menu.getByRole("link", { name: "Задачи 8, требует действия" })).toBeVisible();
     await expect(
       menu.getByRole("link", { name: "Проекты 4, ещё в старой системе: 4" }),
     ).toBeVisible();

@@ -92,7 +92,7 @@
   },
   "deputy": {
     "title": "O‘rinbosarlik",
-    "lead": "Yo‘qligingiz vaqtida hamkasbni tanlang: u sizning vazifalaringizni «Mening vazifalarim»da ko‘radi. Obyektlarga huquqlari o‘zinikicha qoladi.",
+    "lead": "Yo‘qligingiz vaqtida hamkasbni tanlang: u sizning vazifalaringizni «Vazifalar»da ko‘radi. Obyektlarga huquqlari o‘zinikicha qoladi.",
     "sentence": "Yo‘qligim vaqtida vazifalarimni {{name}} {{from}} dan {{to}} gacha ko‘radi.",
     "none": "O‘rinbosar tayinlanmagan.",
     "who": "Kim o‘rnimda",
@@ -104,7 +104,7 @@
     "clear": "O‘rinbosarlikni olib tashlash",
     "saved": "O‘rinbosar tayinlandi",
     "cleared": "O‘rinbosarlik olib tashlandi",
-    "covering": "Siz o‘rinbosarsiz: {{name}}, {{from}} dan {{to}} gacha. Ularning vazifalari «Mening vazifalarim»da «{{name}} uchun» belgisi bilan turadi.",
+    "covering": "Siz o‘rinbosarsiz: {{name}}, {{from}} dan {{to}} gacha. Ularning vazifalari «Vazifalar»da «{{name}} uchun» belgisi bilan turadi.",
     "noCandidates": "Tayinlash mumkin bo‘lgan hamkasblar yo‘q.",
     "required": "Hamkasbni va ikkala sanani tanlang",
     "errors": {

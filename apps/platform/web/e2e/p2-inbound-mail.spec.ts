@@ -55,7 +55,7 @@ test.describe("P2: входящая почта общего ящика", () => {
       await shot(page, "queue");
 
       await spaGoto(page, "/eds/mail");
-      await expect(page.getByRole("heading", { level: 1, name: "Входящая почта" })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1, name: "Почта" })).toBeVisible();
       const list = page.getByRole("list", { name: "Письма, ждущие разбора" });
       await expect(list.getByRole("listitem")).toHaveCount(6);
       await shot(page, "mail-list");

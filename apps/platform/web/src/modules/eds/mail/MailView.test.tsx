@@ -174,7 +174,7 @@ describe("Переписка, адресаты, журнал (W18A-P2-3)", () =>
     signIn(REGISTRAR);
     renderAt("/eds/mail/17");
     await heading("Акт сверки за октябрь");
-    fireEvent.click(await screen.findByRole("link", { name: "Входящая почта" }));
+    fireEvent.click(await screen.findByRole("link", { name: "Почта" }));
     const list = await screen.findByRole("list", { name: "Письма, ждущие разбора" });
     const link = within(list).getByRole("link", { name: "Открыть письмо «Акт сверки за октябрь»" });
     await waitFor(() => {

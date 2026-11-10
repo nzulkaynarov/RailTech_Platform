@@ -72,7 +72,6 @@ describe("Настройки · Статьи компании (W18A-P5, B-079)",
     expect(await rowOf("График отпусков на следующий год")).toHaveTextContent("Черновик");
     expect(screen.getByText(/Всего статей: 3, из них черновиков: 1/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Новая статья" })).toBeEnabled();
-    expect(screen.getAllByRole("link", { name: "Статьи компании" }).length).toBeGreaterThan(0);
   });
 
   it("фильтр по статусу: только черновики", async () => {

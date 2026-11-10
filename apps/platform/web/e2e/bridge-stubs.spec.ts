@@ -93,7 +93,7 @@ test.describe("Заглушки и мост", () => {
       /ещё в старой системе: 4/,
     );
     // настоящий экран — живой бейдж без подсказки о старой системе
-    await expect(menu.getByRole("link", { name: /Мои задачи/ })).not.toHaveAccessibleName(
+    await expect(menu.getByRole("link", { name: /Задачи/ })).not.toHaveAccessibleName(
       /ещё в старой системе/,
     );
     await shoot(page, "stub-with-bridge");
@@ -112,7 +112,7 @@ test.describe("Заглушки и мост", () => {
     await expect(main.getByText("Когда появится: к пилоту.")).toBeVisible();
     await expect(main.getByRole("link", { name: /Открыть в/ })).toHaveCount(0);
     const menu = page.getByRole("navigation", { name: "Разделы модуля" });
-    await expect(menu.getByRole("link", { name: /^Команда/ })).toHaveAccessibleName("Команда");
+    await expect(menu.getByRole("link", { name: /^Чаты/ })).toHaveAccessibleName("Чаты");
     await shoot(page, "stub-without-bridge");
   });
 

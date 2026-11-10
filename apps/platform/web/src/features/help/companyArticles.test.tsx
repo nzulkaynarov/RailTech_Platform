@@ -50,7 +50,7 @@ describe("Статьи компании в Помощи (W18A-P5, B-079)", () =>
     expect(within(company).queryByText(/График отпусков/)).toBeNull();
     const product = screen.getByRole("region", { name: "Статьи Платформы" });
     expect(
-      within(product).getByRole("link", { name: "Мои задачи — что сделать сейчас" }),
+      within(product).getByRole("link", { name: "Задачи — что сделать сейчас" }),
     ).toBeVisible();
   });
 
@@ -85,7 +85,7 @@ describe("Статьи компании в Помощи (W18A-P5, B-079)", () =>
     expect(hit.closest("li")).toHaveTextContent("Как у нас принято");
 
     fireEvent.change(search, { target: { value: "резолюция" } });
-    expect(await screen.findByRole("link", { name: /Входящие письма/ })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: /Входящие/ })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Кто согласует договор" })).toBeNull();
 
     fireEvent.change(search, { target: { value: "шаблоны писем" } });
@@ -140,7 +140,7 @@ describe("Статьи компании в Помощи (W18A-P5, B-079)", () =>
     signInAs("manager@demo.example");
     renderApp("/help/articles");
     const product = await screen.findByRole("region", { name: "Статьи Платформы" });
-    expect(within(product).getByRole("link", { name: /Мои задачи/ })).toBeVisible();
+    expect(within(product).getByRole("link", { name: /Задачи/ })).toBeVisible();
     const section = screen.getByRole("region", { name: "Как у нас принято" });
     expect(
       await within(section).findByText(/Статьи компании сейчас недоступны/, undefined, {

@@ -30,7 +30,7 @@ describe("Счета и оплаты: список", () => {
     signIn("accountant@demo.example");
     renderAt("/eds/payments");
 
-    expect(await screen.findByRole("heading", { level: 1, name: "Счета и оплаты" })).toBeVisible();
+    expect(await screen.findByRole("heading", { level: 1, name: "Финансы" })).toBeVisible();
     const nav = screen.getByRole("navigation", { name: "Вкладки счетов и оплат" });
     expect(await within(nav).findByRole("link", { name: /^Ждут оплаты\s*2$/ })).toHaveAttribute(
       "aria-current",

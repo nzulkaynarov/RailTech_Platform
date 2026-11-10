@@ -51,7 +51,7 @@ describe("Настройки · Процессы · Справочники пи�
     expect(tax).toHaveTextContent("Действует");
     expect(await rowOf("Письмо банка")).toHaveTextContent("по общему правилу");
     const menu = screen.getByRole("navigation", { name: "Разделы модуля" });
-    expect(within(menu).getByRole("link", { name: "Справочники" })).toHaveAttribute(
+    expect(within(menu).getByRole("link", { name: "Компания" })).toHaveAttribute(
       "aria-current",
       "page",
     );

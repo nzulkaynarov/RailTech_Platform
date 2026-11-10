@@ -63,7 +63,7 @@ test.describe("P2-3: общий ящик как обращение", () => {
     for (const width of WIDTHS) {
       await signInAt(page, REGISTRAR, width);
       await spaGoto(page, "/eds/mail");
-      await expect(page.getByRole("heading", { level: 1, name: "Входящая почта" })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1, name: "Почта" })).toBeVisible();
       for (const name of [
         "Новые · 6",
         "Мои в работе · 0",
@@ -179,7 +179,7 @@ test.describe("P2-3: общий ящик как обращение", () => {
     }
   });
 
-  test("сотрудник без первой линии: «Мои задачи» → своё письмо, ответ и возврат делопроизводителю", async ({
+  test("сотрудник без первой линии: «Задачи» → своё письмо, ответ и возврат делопроизводителю", async ({
     page,
   }) => {
     for (const width of WIDTHS) {

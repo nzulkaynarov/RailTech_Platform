@@ -51,7 +51,7 @@ describe("Admin · Ролевая матрица (R-2, ADR-0012)", () => {
       "Делопроизводитель",
       "Менеджер-универсал",
     ]);
-    const row = within(table()).getByRole("row", { name: /Сводка по компании/ });
+    const row = within(table()).getByRole("row", { name: /Сводка/ });
     expect(within(row).getAllByText("Скрыто")).toHaveLength(6);
     expect(within(row).getAllByText("Полный доступ")).toHaveLength(1);
     expect(within(row).getAllByText("Только чтение")).toHaveLength(1);
@@ -88,7 +88,7 @@ describe("Admin · Ролевая матрица (R-2, ADR-0012)", () => {
         name: "Только итоговые суммы расчёта (без себестоимости по строкам) — роль «Менеджер и бухгалтер» видит",
       }),
     );
-    expect(within(panel).getByText("Роль открывает модули: Клиенты.")).toBeVisible();
+    expect(within(panel).getByText("Роль открывает модули: Контакты.")).toBeVisible();
     fireEvent.click(within(panel).getByRole("button", { name: "Создать роль" }));
 
     await waitFor(() => {

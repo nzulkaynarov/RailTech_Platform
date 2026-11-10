@@ -40,14 +40,14 @@
     "notFoundText": "Maqola qayta nomlangan yoki o‘chirilgan. Maqolalar ro‘yxatini oching."
   },
   "start": {
-    "intro": "Ertalab «Mening vazifalarim»ni oching: har bir qator sizning rolingiz uchun bitta ish. Qo‘ng‘iroqcha yangilikni bildiradi, qidiruv (Ctrl K) xat, ariza, mijoz yoki hisobni raqami bo‘yicha topadi.",
+    "intro": "Ertalab «Vazifalar»ni oching: har bir qator sizning rolingiz uchun bitta ish. Qo‘ng‘iroqcha yangilikni bildiradi, qidiruv (Ctrl K) xat, ariza, mijoz yoki hisobni raqami bo‘yicha topadi.",
     "yours": "Sizning rolingiz: {{role}}",
     "others": "Boshqa rollar uchun",
     "kinds": {
       "director": {
         "title": "Direktor",
         "steps": [
-          "«Mening vazifalarim»ni oching: rezolyutsiyasiz xatlar, tasdiqlash uchun TT va xizmat yozuvlari sizni kutmoqda.",
+          "«Vazifalar»ni oching: rezolyutsiyasiz xatlar, tasdiqlash uchun TT va xizmat yozuvlari sizni kutmoqda.",
           "Kiruvchi xatlar: rezolyutsiya qo‘ying — ijrochilarni va hisob-kitob muddatini tanlang.",
           "Tasdiqlash uchun TT: marja va vizalarni tekshiring, tasdiqlang yoki qaytaring.",
           "Xizmat yozuvlari: kelishing, qaytaring yoki rad eting; rad etish sababi majburiy.",
@@ -66,7 +66,7 @@
       "supply": {
         "title": "Ta’minotchi",
         "steps": [
-          "«Mening vazifalarim»: hisob-kitob topshiriqlari direktor rezolyutsiyasidan keyin keladi.",
+          "«Vazifalar»: hisob-kitob topshiriqlari direktor rezolyutsiyasidan keyin keladi.",
           "Pozitsiyalarni tanlang: ombor, yetkazib beruvchilar, yetkazish muddati.",
           "«Tovarlar va ombor» vizasini qo‘ying. Vizalar yig‘ilgach, TT direktorga ketadi."
         ]
@@ -74,7 +74,7 @@
       "engineer": {
         "title": "Bosh muhandis",
         "steps": [
-          "«Mening vazifalarim»: xizmatlar bo‘yicha topshiriqlar direktor rezolyutsiyasidan keyin keladi.",
+          "«Vazifalar»: xizmatlar bo‘yicha topshiriqlar direktor rezolyutsiyasidan keyin keladi.",
           "Xizmatlarni hisoblang: texnik topshiriq, brigada, muddatlar.",
           "«Xizmatlar» vizasini qo‘ying. Vizalar yig‘ilgach, TT direktorga ketadi."
         ]
@@ -82,7 +82,7 @@
       "accountant": {
         "title": "Buxgalter",
         "steps": [
-          "«Mening vazifalarim»: tasdiqlanadigan to‘lov topshiriqnomalari va chiqariladigan hisoblar.",
+          "«Vazifalar»: tasdiqlanadigan to‘lov topshiriqnomalari va chiqariladigan hisoblar.",
           "To‘lovni ko‘chirma bo‘yicha tasdiqlang: hisob to‘liq yoki qisman yopiladi.",
           "Shartnomalar va dalolatnomalar: chiqarilganini va imzolanganini kiriting, skanerni biriktiring.",
           "Muddati o‘tgan hisoblar ham vazifa bo‘lib keladi."
@@ -100,7 +100,7 @@
       "default": {
         "title": "Istalgan rol",
         "steps": [
-          "«Mening vazifalarim» — rolingiz uchun ishlar. Bitta qator — bitta harakat.",
+          "«Vazifalar» — rolingiz uchun ishlar. Bitta qator — bitta harakat.",
           "Qidiruv (Ctrl K) va qo‘ng‘iroqcha kerakli narsani yo‘qotmaslikka yordam beradi.",
           "Biror narsa yetishmasa — «Administratorga yozish»."
         ]
@@ -331,7 +331,7 @@
     "auto": "Avtomatik biriktiriladi: sahifa {{page}}, rol {{role}}, Platforma versiyasi.",
     "autoNoPage": "Avtomatik biriktiriladi: rol {{role}}, Platforma versiyasi.",
     "consequence": [
-      "Administrator murojaatni «Mening vazifalarim»da va Telegramda oladi.",
+      "Administrator murojaatni «Vazifalar»da va Telegramda oladi.",
       "Sahifa va rolingiz o‘zi biriktiriladi.",
       "Javob qo‘ng‘iroqchaga va (ulangan bo‘lsa) Telegramga keladi; holat «Mening murojaatlarim»da."
     ],
@@ -469,7 +469,7 @@
         "text": "Chapda (telefonda — pastda) faqat rolingizga tegishli modullar ko‘rinadi. Qolganlari yashirilgan, kirish mumkin bo‘lmagan bo‘lim buni o‘zi aytadi."
       },
       "menu": {
-        "title": "«Mening vazifalarim»",
+        "title": "«Vazifalar»",
         "text": "Bosh sahifaning birinchi bandi — hozir nima qilish kerak. Bitta qator — bitta ish; «Ochish» tugmasi unga olib boradi."
       },
       "bell": {

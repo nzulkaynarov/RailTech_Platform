@@ -245,7 +245,7 @@
     "typePlaceholder": "Ko'rsatilmagan",
     "submit": "Topshirish",
     "cancel": "Bekor qilish",
-    "hint": "Mijozga hech narsa yuborilmaydi. Menejer lidni «Mening vazifalarim»da izohingiz bilan ko'radi va o'zi oladi.",
+    "hint": "Mijozga hech narsa yuborilmaydi. Menejer lidni «Vazifalar»da izohingiz bilan ko'radi va o'zi oladi.",
     "noManagers": "Lidlarni yurituvchi xodimlar yo'q. Administratordan «Universal menejer» rolini berishni so'rang.",
     "managersFailed": "Menejerlar ro'yxatini yuklab bo'lmadi. Qayta urinib ko'ring"
   }
