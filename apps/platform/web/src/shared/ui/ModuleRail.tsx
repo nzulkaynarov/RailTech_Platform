@@ -189,7 +189,7 @@ export function ModuleRail({
   }
   return (
     <Layout.Sider
-      width={56}
+      width={64}
       theme="light"
       role="presentation"
       style={{ borderRight: "1px solid #f0f0f0", overflow: "visible" }}
