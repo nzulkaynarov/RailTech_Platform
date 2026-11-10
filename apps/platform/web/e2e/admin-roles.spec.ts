@@ -97,7 +97,7 @@ test.describe("Ролевая матрица: роли — данные", () => 
     // Сотрудник входит: рейл и подменю — ровно разделы роли, Dashboard нет — первый раздел роли.
     await signOut(page);
     await login(page, "engineer@demo.example");
-    await expect(page).toHaveURL(/\/crm\/messages$/);
+    await expect(page).toHaveURL(/\/crm\/leads\?scope=waiting$/);
     await expect(railLinks(page)).toHaveText(["Контакты", "Документы", "Операции"]);
     const submenu = page.getByRole("navigation", { name: "Разделы модуля" });
     await expect(submenu.getByRole("link")).toHaveText([/Лиды/, /База знаний/]);
