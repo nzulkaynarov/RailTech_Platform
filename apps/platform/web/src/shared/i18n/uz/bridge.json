@@ -52,8 +52,7 @@
     "chats": "jamoa — ish yozishmalari hozircha tizimdan tashqari messenjerlarda yuritiladi",
     "chatsExternal": "mijoz menejeri: kerakli xabar yoki faylni yuborishini so‘rang",
     "tickets": "administrator — unga so‘rovlar hozircha Telegramda yoki shaxsan keladi",
-    "unknown": "interfeysdan tashqaridagi mas’ul xodim",
-    "calendar": "muddatlar hozircha «Vazifalar» bo‘limida"
+    "unknown": "interfeysdan tashqaridagi mas’ul xodim"
   },
   "panel": {
     "title": "Bo‘lim hali ko‘chirilmoqda",

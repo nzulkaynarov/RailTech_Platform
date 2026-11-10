@@ -199,6 +199,20 @@
       "calendar": "Calendar",
       "chats": "Chats",
       "people": "People"
+    },
+    "calendar": {
+      "link": "Calendar link",
+      "filter": "Show",
+      "kinds": {
+        "tasks": "Assignments",
+        "documents": "Documents",
+        "invoices": "Invoices",
+        "deliveries": "Deliveries"
+      },
+      "loadError": "Could not load deadlines",
+      "retry": "Retry",
+      "prev": "Back",
+      "next": "Next"
     }
   },
   "admin": {
