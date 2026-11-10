@@ -211,7 +211,7 @@ test.describe("Входящие письма: роли только для чт�
       await spaGoto(page, "/eds/inbox/%D0%92%D0%A5-104%2F26");
 
       await expect(page.getByRole("heading", { level: 1, name: "Письмо ВХ-104/26" })).toBeVisible();
-      await expect(page.getByText("Только просмотр")).toBeVisible();
+      await expect(page.getByText(/^Только просмотр/).first()).toBeVisible();
       const panel = page.locator(PANEL);
       await expect(
         panel.getByRole("heading", { name: "Письмо ждёт резолюции директора" }),

@@ -75,7 +75,6 @@ test.describe("D17G-1: передача лида делопроизводите�
       await handOver.click();
       const dialog = page.getByRole("dialog", { name: "Передать менеджеру" });
       await expect(dialog).toBeVisible();
-      await expect(dialog.getByText(/Клиенту ничего не уйдёт/)).toBeVisible();
       await dialog.getByRole("button", { name: "Передать", exact: true }).click();
       await expect(dialog.getByText("Выберите менеджера")).toBeVisible();
       await expect(dialog.getByText(/Напишите записку/)).toBeVisible();

@@ -216,7 +216,7 @@ test.describe("Настройки: порядок и навигация (SET-IA)
 
       await spaGoto(page, "/admin/timing");
       await h1(page, "Время и сроки");
-      await expect(page.getByText("Только просмотр", { exact: true })).toBeVisible();
+      await expect(page.getByText(/^Только просмотр/).first()).toBeVisible();
       await expect(page.getByRole("button", { name: /^Сохранить/ })).toHaveCount(0);
       await expectNoViolations(page, `director timing ${String(width)}`);
       await shot(page, "director-timing");

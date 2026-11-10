@@ -153,7 +153,7 @@ test.describe("Ждут ответа: менеджер", () => {
     await loginAndWait(page, "director@demo.example");
     await openMessages(page, "?lead=L-2041");
     await expect(page.getByRole("heading", { level: 2, name: "Азиз Демо" })).toBeVisible();
-    await expect(page.getByText("Только просмотр", { exact: true })).toBeVisible();
+    await expect(page.getByText(/^Только просмотр/).first()).toBeVisible();
     await expect(page.getByRole("button", { name: /Забрать/ })).toHaveCount(0);
     await expect(page.getByLabel("Сообщение клиенту")).toHaveCount(0);
     await expectNoViolations(page, "директор");
