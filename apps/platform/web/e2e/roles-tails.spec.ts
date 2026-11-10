@@ -77,7 +77,6 @@ test.describe("Роли: хвосты QA (R3-D-1, R3-D-3, R3-D-4)", () => {
   test("«Что произойдёт»: «1 сотрудник потеряет», «2 сотрудника потеряют»", async ({ page }) => {
     await resize(page, 1440);
     await loginAndWait(page, "admin@demo.example");
-    const panel = page.locator(PANEL);
 
     await openRole(page, "Бухгалтер");
     await chooseOption(

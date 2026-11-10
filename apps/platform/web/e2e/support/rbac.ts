@@ -75,7 +75,6 @@ export const MODULE_TITLES: Record<string, string> = {
   chats: "Органайзер",
   admin: "Настройки",
 };
-const MODULE_ORDER = ["dashboard", "crm", "eds", "erp", "chats", "admin"];
 
 /** Модули рейла роли: виден хотя бы один пункт меню (`modules/navigation.ts`). */
 export function visibleModules(role: Role): string[] {
