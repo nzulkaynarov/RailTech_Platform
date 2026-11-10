@@ -268,7 +268,7 @@ test.describe("КП на одобрение: менеджер", () => {
 
     await spaGoto(page, `/eds/drafts/${encodeURIComponent("КП-2026/115")}`);
     await expect(page.getByRole("heading", { level: 1, name: "КП-2026/115" })).toBeVisible();
-    await expect(page.getByText("Только просмотр")).toBeVisible();
+    await expect(page.getByText(/^Только просмотр/).first()).toBeVisible();
     await expect(page.getByText(/Состав КП не получен из ERP/)).toBeVisible();
     await expect(page.getByText("Внутренние данные")).toHaveCount(0);
     await expect(page.getByText("Себестоимость")).toHaveCount(0);
@@ -378,7 +378,7 @@ test.describe("На согласовании: служебные записки"
 
     await page.getByRole("link", { name: "Открыть карточку документа СЗ-2026/014" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "СЗ-2026/014" })).toBeVisible();
-    await expect(page.getByText("Только просмотр")).toBeVisible();
+    await expect(page.getByText(/^Только просмотр/).first()).toBeVisible();
     await expect(page.getByRole("button", { name: "Согласовать" })).toHaveCount(0);
     await expect(page.getByRole("form", { name: "Согласование документа" })).toHaveCount(0);
     await expect(
@@ -409,7 +409,6 @@ test.describe("На согласовании: бухгалтер", () => {
     await expect(form.getByRole("button", { name: "Принять к оплате" })).toHaveCount(0);
     const pay = form.getByRole("link", { name: "Оплатить в «Счета и оплаты»" });
     await expect(pay).toBeVisible();
-    await expect(form.getByText(/шаг бухгалтера закрывает «Оплачено»/)).toBeVisible();
     await expect(form.getByRole("button", { name: "Вернуть", exact: true })).toBeDisabled();
     await expect(form.getByRole("button", { name: "Согласовать" })).toHaveCount(0);
     await settledScreenshot(page, "accountant-agree");

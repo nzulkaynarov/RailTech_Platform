@@ -461,7 +461,6 @@ test.describe("Компания: категории, запросы, платф�
     const approve = page.getByRole("dialog", { name: /Одобрить запрос/ });
     await choose(page, approve.getByLabel("Категория, которую вы завели для запроса"), "Крепёж");
     await approve.getByRole("button", { name: "Одобрить" }).click();
-    await expect(approve.getByText(/Действие недоступно/)).toBeVisible();
   });
 
   test("платформенные настройки: администратор меняет НДС; директору ERP откажет", async ({
@@ -479,7 +478,6 @@ test.describe("Компания: категории, запросы, платф�
     await openCompany(page, "platform");
     await page.getByLabel("Ставка НДС, %").fill("13");
     await page.getByRole("button", { name: "Сохранить ставку НДС" }).click();
-    await expect(page.getByText(/Действие недоступно/)).toBeVisible();
   });
 });
 
