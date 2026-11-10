@@ -115,6 +115,25 @@
       "queue": "Tasks",
       "projects": "Projects",
       "summary": "Summary"
+    },
+    "summary": {
+      "byDue": "Tasks by due date",
+      "stuck": "Overdue",
+      "noStuck": "No overdue tasks",
+      "noData": "Data will appear here",
+      "loadError": "Could not load the summary",
+      "retry": "Retry",
+      "due": {
+        "overdue": "Overdue",
+        "today": "Today",
+        "tomorrow": "Tomorrow",
+        "later": "Later"
+      },
+      "blocks": {
+        "requests": "Requests by stage",
+        "profit": "Profit by project",
+        "targets": "12-month targets"
+      }
     }
   },
   "crm": {
