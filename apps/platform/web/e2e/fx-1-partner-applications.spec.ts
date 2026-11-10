@@ -13,7 +13,7 @@ for (const width of WIDTHS) {
   test(`шлюз заявок партнёров, ${String(width)} px`, async ({ page }) => {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
     await loginAndWait(page, "supply@demo.example");
-    await spaGoto(page, "/erp/catalog?part=applications");
+    await spaGoto(page, "/crm/clients?kind=applications");
 
     const list = page.getByRole(width === 390 ? "list" : "table", { name: LIST });
     await expect(list.getByText("Согласован кандидатом")).toBeVisible();

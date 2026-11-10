@@ -9,6 +9,7 @@ import {
   settledScreenshot,
   spaGoto,
   waitForMotionEnd,
+  partnerCard,
 } from "./support/app";
 import { pickFiles } from "./support/fields";
 
@@ -157,17 +158,14 @@ test.describe("Товары", () => {
 
     // переход к поставщику из предложения
     await card.getByRole("button", { name: "Открыть поставщика ООО «Поставщик Север»" }).click();
-    const supplier = page.getByRole("dialog", { name: "ООО «Поставщик Север»" });
+    const supplier = partnerCard(page, "ООО «Поставщик Север»");
     await expect(supplier.getByText(/310\s*USD/)).toBeVisible();
     await expect(supplier.getByText("Цена действует", { exact: true }).first()).toBeVisible();
     await expectNoViolations(page, "поставщик");
     await settledScreenshot(page, "catalog-supplier");
-    await supplier
-      .getByRole("button", { name: /Закрыть|Close/ })
-      .first()
-      .click();
 
     // запрос на новую категорию
+    await openCatalog(page);
     await page.getByRole("tab", { name: /Запросы на категории/ }).click();
     await page.getByRole("button", { name: "Запросить категорию" }).click();
     const form = page.getByRole("dialog", { name: "Запросить новую категорию" });
@@ -195,8 +193,8 @@ test.describe("Товары", () => {
     page,
   }) => {
     await loginAndWait(page, "engineer@demo.example");
-    await openCatalog(page, "?part=suppliers&supplier=1");
-    const supplier = page.getByRole("dialog", { name: "ООО «Поставщик Север»" });
+    await spaGoto(page, "/crm/clients?partner=1&panel=open&tab=card");
+    const supplier = partnerCard(page, "ООО «Поставщик Север»");
     await expect(supplier.getByText("Кабель силовой ВВГнг 3×2,5")).toBeVisible();
     await expect(supplier.getByText(/12,50\s*USD/)).toHaveCount(0);
     await expect(supplier.getByText("500 шт., от 10")).toBeVisible();
@@ -326,8 +324,8 @@ test.describe("Номенклатура и техдокументация на �
     await expectNoViolations(page, "карточка 390");
     await settledScreenshot(page, "catalog-item-prices");
 
-    await openCatalog(page, "?part=suppliers&supplier=2");
-    await expect(page.getByRole("dialog", { name: "АО «Южный Металл»" })).toBeVisible();
+    await spaGoto(page, "/crm/clients?partner=2&panel=open&tab=card");
+    await expect(partnerCard(page, "АО «Южный Металл»")).toBeVisible();
     await expectNoViolations(page, "поставщик 390");
     await settledScreenshot(page, "catalog-supplier");
 

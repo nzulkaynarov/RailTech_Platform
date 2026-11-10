@@ -1,4 +1,4 @@
-import { waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import { beforeEach } from "vitest";
 
 import { resetCompanyMock } from "../mocks/fixtures/company";
@@ -45,4 +45,14 @@ export async function modalClosed(title: string | RegExp): Promise<void> {
     });
     if (open) throw new Error(`окно «${String(title)}» ещё открыто`);
   });
+}
+
+/** Карточка партнёра в боковом окне «Контакты · Контрагенты». */
+export async function findPartnerCard(name: string): Promise<HTMLElement> {
+  const heading = await screen.findByRole("heading", { level: 3, name });
+  return heading.closest("#pf-context-panel") as HTMLElement;
+}
+
+export function partnerPath(id: string): string {
+  return `/crm/clients?partner=${id}&panel=open&tab=card`;
 }

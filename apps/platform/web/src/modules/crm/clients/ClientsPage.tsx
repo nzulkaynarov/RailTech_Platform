@@ -1,14 +1,17 @@
-import { Card, Input, Segmented, Tag } from "antd";
+import { Button, Card, Input, Segmented, Tag } from "antd";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router";
 
 import { useViewport } from "../../../app/shell/useViewport";
 import type { ClientRow } from "../../../shared/api/generated/model";
-import { canSee } from "../../../app/access";
+import { canEdit, canSee } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import {
+  useListBankChangeRequests,
+  useListCatalogSuppliers,
   useListCrmClients,
-  useListStockSuppliers,
+  useListPartnerApplications,
 } from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
@@ -18,17 +21,23 @@ import { tableMinWidth } from "../../../shared/ui/tableWidth";
 import { QueryState, ScrollRegion } from "../../../shared/ui/FormParts";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { StatusTag } from "../../../shared/ui/StatusTag";
+import { BankChangesPanel } from "../../eds/payments/BankChangesPanel";
+import { PartnerApplicationsPanel } from "../../erp/catalog/PartnerApplicationsPanel";
+import { PartnerCard } from "../../erp/catalog/PartnerCard";
+import { SupplierForm } from "../../erp/catalog/supplierForms";
 import { Sheet } from "../common/Sheet";
 import { parseClientId, useParamChanger, withParams } from "../common/params";
 import { CreateRequest } from "../request/CreateRequest";
 import { ClientPanel } from "./ClientPanel";
 
+import "../../eds/payments/payments.css";
+import "../../erp/catalog/catalog.css";
 import "../crm.css";
 
 /** Ширины колонок: название, ИНН, заявки, ERP, последняя активность (UX-1c, S9; по типу — platform-frontend.md §4.2) */
 const COLS = [null, 140, 150, 144, 170, 184] as const;
 
-const KINDS = ["all", "clients", "partners"] as const;
+const KINDS = ["all", "clients", "partners", "applications", "bank_changes"] as const;
 type KindFilter = (typeof KINDS)[number];
 type RelationKind = "client" | "partner" | "both";
 
@@ -42,9 +51,37 @@ function RelationTag({ kind }: { kind: RelationKind }) {
   return <Tag>{t(`kinds.${kind}`)}</Tag>;
 }
 
-function ErpTag({ row }: { row: ClientRow }) {
+/** Сроки цен партнёра: то, что снабжению нужно видеть в списке. */
+interface PriceTerms {
+  expired_count: number;
+  expiring_count: number;
+}
+
+function PriceTermsTag({ terms }: { terms: PriceTerms | undefined }) {
+  const { t } = useTranslation("catalog");
+  if (!terms) return <span aria-hidden="true">—</span>;
+  if (terms.expired_count > 0)
+    return (
+      <StatusTag kind="validity" status="expired">
+        {t("suppliers.expired", { count: terms.expired_count })}
+      </StatusTag>
+    );
+  if (terms.expiring_count > 0)
+    return (
+      <StatusTag kind="validity" status="expiring">
+        {t("suppliers.expiring", { count: terms.expiring_count })}
+      </StatusTag>
+    );
+  return (
+    <StatusTag kind="validity" status="ok">
+      {t("suppliers.allValid")}
+    </StatusTag>
+  );
+}
+
+function StateTag({ row, terms }: { row: ClientRow; terms: PriceTerms | undefined }) {
   const { t } = useTranslation("clients");
-  if (isPartnerOnly(row)) return <span aria-hidden="true">—</span>;
+  if (isPartnerOnly(row)) return <PriceTermsTag terms={terms} />;
   if (row.handoff_status === "failed")
     return (
       <StatusTag kind="access" status="error">
@@ -79,22 +116,13 @@ function NameLink({
 }) {
   const { t } = useTranslation("clients");
   const { mobile } = useViewport();
-  if (isPartnerOnly(row)) {
-    return (
-      <Link
-        className="pf-crm-link pf-focusable"
-        to={`/erp/catalog?part=suppliers&supplier=${String(-row.id)}`}
-        aria-label={t("open", { name: row.name })}
-      >
-        {row.name}
-      </Link>
-    );
-  }
+  const partner = isPartnerOnly(row);
   return (
     <Link
       className="pf-crm-link pf-focusable"
       to={`/crm/clients${withParams(params, {
-        client: String(row.id),
+        client: partner ? null : String(row.id),
+        partner: partner ? String(-row.id) : null,
         create: null,
         panel: mobile ? null : "open",
         tab: mobile ? null : "card",
@@ -131,13 +159,40 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
   useDocumentTitle(title);
   const q = params.get("q") ?? "";
   const { me } = useAuth();
+  const seesPartners = canSee(me, { resource: "erp.stock" });
+  const seesBankChanges = canSee(me, { resource: "eds.payments" });
   const list = useListCrmClients(q ? { q } : {});
-  const suppliers = useListStockSuppliers(q ? { q } : undefined, {
-    query: { enabled: canSee(me, { resource: "erp.stock" }) },
+  const suppliers = useListCatalogSuppliers(
+    { ...(q ? { q } : {}), page: 1, page_size: 200 },
+    { query: { enabled: seesPartners } },
+  );
+  const termsOf = new Map((suppliers.data?.items ?? []).map((row) => [row.id, row]));
+  const applications = useListPartnerApplications(
+    { status: "submitted" },
+    { query: { enabled: seesPartners } },
+  );
+  const bankChanges = useListBankChangeRequests(
+    { status: "pending" },
+    { query: { enabled: seesBankChanges } },
+  );
+  const [addingPartner, setAddingPartner] = useState(false);
+  const shownKinds = KINDS.filter((value) => {
+    if (value === "partners" || value === "applications") return seesPartners;
+    if (value === "bank_changes") return seesBankChanges;
+    return true;
   });
   const askedKind = params.get("kind");
-  const kind: KindFilter = KINDS.find((value) => value === askedKind) ?? "all";
-  const partnerInns = new Set((suppliers.data?.items ?? []).flatMap((s) => s.inn ?? []));
+  const kind: KindFilter = shownKinds.find((value) => value === askedKind) ?? "all";
+  const kindLabel = (value: KindFilter): string => {
+    if (value === "applications" && applications.data?.pending_count) {
+      return `${t("clients:kinds.applications")} · ${String(applications.data.pending_count)}`;
+    }
+    if (value === "bank_changes" && bankChanges.data?.pending_count) {
+      return `${t("clients:kinds.bank_changes")} · ${String(bankChanges.data.pending_count)}`;
+    }
+    return t(`clients:kinds.${value}`);
+  };
+  const partnerInns = new Set((suppliers.data?.items ?? []).flatMap((s) => s.tin || []));
   const relationOf = (row: ClientRow): RelationKind => {
     if (isPartnerOnly(row)) return "partner";
     return row.inn && partnerInns.has(row.inn) ? "both" : "client";
@@ -145,11 +200,11 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
   const rowsOf = (clients: readonly ClientRow[]): ClientRow[] => {
     const clientInns = new Set(clients.flatMap((c) => c.inn ?? []));
     const partners = (suppliers.data?.items ?? [])
-      .filter((s) => !s.inn || !clientInns.has(s.inn))
+      .filter((s) => !s.tin || !clientInns.has(s.tin))
       .map((s): ClientRow => ({
         id: -Number(s.id),
         name: s.name,
-        inn: s.inn,
+        inn: s.tin || null,
         in_erp: true,
         open_requests: 0,
         last_activity_at: null,
@@ -161,18 +216,28 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
     return all;
   };
   const selected = parseClientId(objectId) ?? parseClientId(params.get("client"));
+  const partner = params.get("partner");
+  const selectedInn = list.data?.items.find((row) => row.id === selected)?.inn;
+  const sameCompanyPartner = selectedInn
+    ? suppliers.data?.items.find((row) => row.tin === selectedInn)
+    : undefined;
   const creating = selected !== null && params.get("create") === "1";
+
+  const isOpen = (row: ClientRow): boolean =>
+    isPartnerOnly(row) ? partner === String(-row.id) : selected === row.id;
 
   const close = () => {
     if (objectId !== undefined) {
       const next = new URLSearchParams(params);
-      for (const key of ["client", "create", "panel", "tab"]) next.delete(key);
+      for (const key of ["client", "partner", "create", "panel", "tab"]) next.delete(key);
       const text = next.toString();
       void navigate(`/crm/clients${text ? `?${text}` : ""}`, { replace: true });
       return;
     }
-    change({ client: null, create: null, panel: null, tab: null });
+    change({ client: null, partner: null, create: null, panel: null, tab: null });
   };
+
+  const queue = kind === "applications" || kind === "bank_changes";
 
   const labels = {
     retry: t("clients:retry"),
@@ -183,106 +248,147 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
 
   return (
     <div className="pf-crm">
-      <PageHeader title={title} />
+      <PageHeader
+        title={title}
+        extra={
+          canEdit(me, "erp.stock") ? (
+            <Button
+              onClick={() => {
+                setAddingPartner(true);
+              }}
+            >
+              {t("clients:addPartner")}
+            </Button>
+          ) : undefined
+        }
+      />
       <div className="pf-crm-controls">
         <Segmented
           aria-label={t("clients:kinds.filter")}
           value={kind}
-          options={KINDS.map((value) => ({ value, label: t(`clients:kinds.${value}`) }))}
+          options={shownKinds.map((value) => ({ value, label: kindLabel(value) }))}
           onChange={(value) => {
             change({ kind: value === "all" ? null : value });
           }}
         />
-        <div className="pf-crm-filter pf-crm-search">
-          <label htmlFor="pf-clients-q">{t("clients:search.label")}</label>
-          <Input.Search
-            id="pf-clients-q"
-            defaultValue={q}
-            allowClear
-            placeholder={t("clients:search.placeholder")}
-            onSearch={(value) => {
-              change({ q: value.trim() ? value.trim() : null });
-            }}
-          />
-        </div>
+        {queue ? null : (
+          <div className="pf-crm-filter pf-crm-search">
+            <label htmlFor="pf-clients-q">{t("clients:search.label")}</label>
+            <Input.Search
+              id="pf-clients-q"
+              defaultValue={q}
+              allowClear
+              placeholder={t("clients:search.placeholder")}
+              onSearch={(value) => {
+                change({ q: value.trim() ? value.trim() : null });
+              }}
+            />
+          </div>
+        )}
       </div>
-      <Card styles={{ body: { padding: 0 } }}>
-        <QueryState query={list} labels={labels} rows={20}>
-          {(data) =>
-            rowsOf(data.items).length === 0 ? (
-              <EmptyState
-                title={t(q ? "clients:empty.filteredTitle" : "clients:empty.title")}
-                text={t(q ? "clients:empty.filteredText" : "clients:empty.text")}
-              />
-            ) : mobile ? (
-              <ul className="pf-crm-list" aria-label={t("clients:listLabel")}>
-                {rowsOf(data.items).map((row) => (
-                  <li key={row.id} className="pf-crm-item" data-selected={selected === row.id}>
-                    <div className="pf-crm-item-head">
-                      <RelationTag kind={relationOf(row)} />
-                      <ErpTag row={row} />
-                    </div>
-                    <NameLink row={row} params={params} selected={selected === row.id} />
-                    <div className="pf-crm-item-meta">
-                      {row.inn ? (
+      {kind === "applications" ? <PartnerApplicationsPanel /> : null}
+      {kind === "bank_changes" ? <BankChangesPanel /> : null}
+      {queue ? null : (
+        <Card styles={{ body: { padding: 0 } }}>
+          <QueryState query={list} labels={labels} rows={20}>
+            {(data) =>
+              rowsOf(data.items).length === 0 ? (
+                <EmptyState
+                  title={t(q ? "clients:empty.filteredTitle" : "clients:empty.title")}
+                  text={t(q ? "clients:empty.filteredText" : "clients:empty.text")}
+                />
+              ) : mobile ? (
+                <ul className="pf-crm-list" aria-label={t("clients:listLabel")}>
+                  {rowsOf(data.items).map((row) => (
+                    <li key={row.id} className="pf-crm-item" data-selected={isOpen(row)}>
+                      <div className="pf-crm-item-head">
+                        <RelationTag kind={relationOf(row)} />
+                        <StateTag row={row} terms={termsOf.get(String(-row.id))} />
+                      </div>
+                      <NameLink row={row} params={params} selected={isOpen(row)} />
+                      <div className="pf-crm-item-meta">
+                        {row.inn ? (
+                          <span>
+                            {t("clients:columns.inn")} {row.inn}
+                          </span>
+                        ) : null}
                         <span>
-                          {t("clients:columns.inn")} {row.inn}
+                          {t("clients:columns.requests")}: {row.open_requests}
                         </span>
-                      ) : null}
-                      <span>
-                        {t("clients:columns.requests")}: {row.open_requests}
-                      </span>
-                      <Activity row={row} />
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <ScrollRegion label={t("clients:tableScroll")}>
-                <table
-                  className="pf-crm-table pf-fixed-table"
-                  style={{ minWidth: tableMinWidth(COLS, 240) }}
-                >
-                  <caption className="pf-sr-only">{t("clients:caption")}</caption>
-                  <TableCols widths={COLS} />
-                  <thead>
-                    <tr>
-                      <th scope="col">{t("clients:columns.name")}</th>
-                      <th scope="col">{t("clients:columns.inn")}</th>
-                      <th scope="col">{t("clients:kinds.column")}</th>
-                      <th scope="col" className="pf-col-num">
-                        {t("clients:columns.requests")}
-                      </th>
-                      <th scope="col">{t("clients:columns.erp")}</th>
-                      <th scope="col">{t("clients:columns.last")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rowsOf(data.items).map((row) => (
-                      <tr key={row.id} data-selected={selected === row.id}>
-                        <td className="pf-crm-wrap">
-                          <NameLink row={row} params={params} selected={selected === row.id} />
-                        </td>
-                        <td className="pf-num">{row.inn ?? <span aria-hidden="true">—</span>}</td>
-                        <td>
-                          <RelationTag kind={relationOf(row)} />
-                        </td>
-                        <td className="pf-col-num">{row.open_requests}</td>
-                        <td>
-                          <ErpTag row={row} />
-                        </td>
-                        <td>
-                          <Activity row={row} />
-                        </td>
+                        <Activity row={row} />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <ScrollRegion label={t("clients:tableScroll")}>
+                  <table
+                    className="pf-crm-table pf-fixed-table"
+                    style={{ minWidth: tableMinWidth(COLS, 240) }}
+                  >
+                    <caption className="pf-sr-only">{t("clients:caption")}</caption>
+                    <TableCols widths={COLS} />
+                    <thead>
+                      <tr>
+                        <th scope="col">{t("clients:columns.name")}</th>
+                        <th scope="col">{t("clients:columns.inn")}</th>
+                        <th scope="col">{t("clients:kinds.column")}</th>
+                        <th scope="col" className="pf-col-num">
+                          {t("clients:columns.requests")}
+                        </th>
+                        <th scope="col">{t("clients:columns.erp")}</th>
+                        <th scope="col">{t("clients:columns.last")}</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </ScrollRegion>
-            )
-          }
-        </QueryState>
-      </Card>
+                    </thead>
+                    <tbody>
+                      {rowsOf(data.items).map((row) => (
+                        <tr key={row.id} data-selected={isOpen(row)}>
+                          <td className="pf-crm-wrap">
+                            <NameLink row={row} params={params} selected={isOpen(row)} />
+                          </td>
+                          <td className="pf-num">{row.inn ?? <span aria-hidden="true">—</span>}</td>
+                          <td>
+                            <RelationTag kind={relationOf(row)} />
+                          </td>
+                          <td className="pf-col-num">
+                            {isPartnerOnly(row) ? "—" : row.open_requests}
+                          </td>
+                          <td>
+                            <StateTag row={row} terms={termsOf.get(String(-row.id))} />
+                          </td>
+                          <td>
+                            <Activity row={row} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </ScrollRegion>
+              )
+            }
+          </QueryState>
+        </Card>
+      )}
+      {partner !== null ? (
+        <Sheet label={t("clients:card.partnerLabel")} onClose={close}>
+          <PartnerCard key={partner} id={partner} />
+        </Sheet>
+      ) : null}
+      {addingPartner ? (
+        <SupplierForm
+          onClose={() => {
+            setAddingPartner(false);
+          }}
+          onSaved={(saved) => {
+            setAddingPartner(false);
+            change({
+              partner: saved.id,
+              panel: mobile ? null : "open",
+              tab: mobile ? null : "card",
+            });
+          }}
+        />
+      ) : null}
       {selected !== null ? (
         <Sheet label={t(creating ? "request:title" : "clients:card.label")} onClose={close}>
           {creating ? (
@@ -295,7 +401,22 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
               }}
             />
           ) : (
-            <ClientPanel key={selected} id={selected} onClose={close} />
+            <>
+              {sameCompanyPartner ? (
+                <p>
+                  <Link
+                    className="pf-crm-link pf-focusable"
+                    to={`/crm/clients${withParams(params, {
+                      client: null,
+                      partner: sameCompanyPartner.id,
+                    })}`}
+                  >
+                    {t("clients:card.openPartner")}
+                  </Link>
+                </p>
+              ) : null}
+              <ClientPanel key={selected} id={selected} onClose={close} />
+            </>
           )}
         </Sheet>
       ) : null}

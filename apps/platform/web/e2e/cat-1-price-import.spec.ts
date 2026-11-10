@@ -3,7 +3,13 @@ import { appendFileSync } from "node:fs";
 import AxeBuilder from "@axe-core/playwright";
 import { type Page, expect, test } from "@playwright/test";
 
-import { loginAndWait, settledScreenshot, spaGoto, waitForMotionEnd } from "./support/app";
+import {
+  loginAndWait,
+  settledScreenshot,
+  spaGoto,
+  waitForMotionEnd,
+  partnerCard,
+} from "./support/app";
 import { chooseOption, pickFiles } from "./support/fields";
 
 // CAT-1 (L0-2) на MSW: снабженец заводит иностранный завод без ИНН, загружает его прайс по шаблону (проверка ничего не
@@ -98,8 +104,8 @@ test.describe("CAT-1: загрузка прайса поставщика", () =>
     page,
   }) => {
     await loginAndWait(page, "supply@demo.example");
-    await openCatalog(page, "?part=suppliers&supplier=3");
-    const supplier = page.getByRole("dialog", { name: "ИП «Восточный склад»" });
+    await spaGoto(page, "/crm/clients?partner=3&panel=open&tab=card");
+    const supplier = partnerCard(page, "ИП «Восточный склад»");
     await supplier.getByRole("button", { name: "Добавить цену" }).click();
     const form = page.getByRole("dialog", { name: /Цена поставщика/ });
     await chooseOption(form.getByLabel("Позиция"), "Реле защиты РЗ-1 · RT-0002");

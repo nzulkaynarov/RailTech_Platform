@@ -64,6 +64,10 @@ export function Component() {
     );
   }
   if (match?.module.code === "eds" && match.section.key === "payments") {
+    // Смена реквизитов переехала в «Контакты · Контрагенты»
+    if (new URLSearchParams(location.search).get("show") === "bank_changes") {
+      return <Navigate to="/crm/clients?kind=bank_changes" replace />;
+    }
     return (
       <RequireAccess rule={match.section.access}>
         <PaymentsScreen objectId={match.objectId} />

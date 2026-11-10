@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 
 export const DEMO_PASSWORD = "demo-pass-1";
@@ -69,4 +69,11 @@ export async function waitForMotionEnd(page: Page): Promise<void> {
 /** Нажать главную кнопку открытого окна подтверждения. */
 export async function confirmDialog(page: Page): Promise<void> {
   await page.locator(".ant-modal-confirm-btns .ant-btn-primary").click();
+}
+
+/** Карточка партнёра: боковое окно, на телефоне — лист на весь экран. */
+export function partnerCard(page: Page, name: string): Locator {
+  return page
+    .locator("#pf-context-panel, .pf-crm-sheet")
+    .filter({ has: page.getByRole("heading", { name, level: 3 }) });
 }

@@ -8,7 +8,7 @@
     "name": "Kontragent",
     "inn": "STIR",
     "requests": "Ochiq arizalar",
-    "erp": "Bek-ofis",
+    "erp": "Holat",
     "last": "Oxirgi faollik"
   },
   "caption": "Mijozlar",
@@ -104,7 +104,9 @@
       "contacts": "kontaktlar",
       "requests": "arizalar",
       "documents": "hujjatlar"
-    }
+    },
+    "partnerLabel": "Hamkor kartasi",
+    "openPartner": "Hamkor kartasini ochish"
   },
   "clientSees": {
     "in_work": "Ishga qabul qilindi, hisoblayapmiz",
@@ -136,6 +138,9 @@
     "partners": "Hamkorlar",
     "client": "Mijoz",
     "partner": "Hamkor",
-    "both": "Mijoz va hamkor"
-  }
+    "both": "Mijoz va hamkor",
+    "applications": "Ulanish arizalari",
+    "bank_changes": "Rekvizitlarni oʻzgartirish"
+  },
+  "addPartner": "Hamkor qo‘shish"
 }

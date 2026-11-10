@@ -1,10 +1,12 @@
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import {
   findModal,
   modalClosed,
   renderAt,
+  findPartnerCard,
+  partnerPath,
   setupCatalogTests,
   signIn,
 } from "../../../test/catalogKit";
@@ -13,8 +15,8 @@ setupCatalogTests();
 
 async function openSupplier(email: string, id: string, name: string): Promise<HTMLElement> {
   signIn(email);
-  renderAt(`/erp/catalog?part=suppliers&supplier=${id}`);
-  const drawer = await screen.findByRole("dialog", { name });
+  renderAt(partnerPath(id));
+  const drawer = await findPartnerCard(name);
   await within(drawer).findByRole("heading", { name: "Доступ в кабинет" });
   return drawer;
 }

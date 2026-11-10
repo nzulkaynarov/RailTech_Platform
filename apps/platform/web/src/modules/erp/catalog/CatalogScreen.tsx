@@ -2,37 +2,24 @@ import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
-import {
-  useListCatalogCategoryRequests,
-  useListPartnerApplications,
-} from "../../../shared/api/generated/platform-bff";
+import { useListCatalogCategoryRequests } from "../../../shared/api/generated/platform-bff";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { SectionTabs } from "../../admin/company/SectionTabs";
 import { BrigadesPanel } from "./BrigadesPanel";
 import { ItemsPanel } from "./ItemsPanel";
-import { PartnerApplicationsPanel } from "./PartnerApplicationsPanel";
 import { PriceImportPanel } from "./PriceImportPanel";
 import { RefsPanel } from "./RefsPanel";
 import { RequestsPanel } from "./RequestsPanel";
-import { SuppliersPanel } from "./SuppliersPanel";
 
 import "../../admin/company/company.css";
 import "./catalog.css";
 
-const PARTS = [
-  "items",
-  "suppliers",
-  "applications",
-  "import",
-  "brigades",
-  "refs",
-  "requests",
-] as const;
+const PARTS = ["items", "import", "brigades", "refs", "requests"] as const;
 type Part = (typeof PARTS)[number];
 
 /**
- * Расчёт · Номенклатура и поставщики (`/erp/catalog`, SPEC-v3 §7.4 «Справочники», D2-3): позиции, поставщики со сроками
- * цен, загрузка прайса поставщика (`?part=import`, CAT-1), бригады и исполнители услуг, справочники (курсы, ТН ВЭД, производители) и запросы на новые категории. Раздел
+ * Каталог · Товары (`/erp/catalog`, SPEC-v3 §7.4 «Справочники», D2-3): позиции, загрузка прайса партнёра (`?part=import`,
+ * CAT-1), бригады и исполнители услуг, справочники (курсы, ТН ВЭД, производители) и запросы на новые категории. Раздел
  * `erp.stock`; цены поставщиков и ставки бригад ERP отдаёт только по праву (поля `supplier_prices`, `cost_margin`).
  */
 export function CatalogScreen() {
@@ -43,21 +30,14 @@ export function CatalogScreen() {
   const part: Part = PARTS.find((p) => p === requested) ?? "items";
   const pending = useListCatalogCategoryRequests({ status: "pending" });
   const pendingCount = pending.data?.items.length ?? 0;
-  const partnerApps = useListPartnerApplications({ status: "submitted" });
-  const partnerAppsCount = partnerApps.data?.pending_count ?? 0;
   const label = (key: Part) => {
     if (key === "requests" && pendingCount > 0) {
       return t("catalog:tabs.requestsCount", { count: pendingCount });
-    }
-    if (key === "applications" && partnerAppsCount > 0) {
-      return t("catalog:tabs.applicationsCount", { count: partnerAppsCount });
     }
     return t(`catalog:tabs.${key}`);
   };
   const panels: Record<Part, React.ReactNode> = {
     items: <ItemsPanel />,
-    suppliers: <SuppliersPanel />,
-    applications: <PartnerApplicationsPanel />,
     import: <PriceImportPanel />,
     brigades: <BrigadesPanel />,
     refs: <RefsPanel />,

@@ -9,6 +9,7 @@ import {
   findModal,
   modalClosed,
   renderAt,
+  partnerPath,
   setupCatalogTests,
   signIn,
 } from "../../../test/catalogKit";
@@ -193,7 +194,7 @@ describe("Цены партнёра в каталоге", () => {
 
   it("в блоке «Доступ в кабинет» цены партнёра переключаются и сохраняются", async () => {
     signIn("supply@demo.example");
-    renderAt("/erp/catalog?part=suppliers&supplier=2");
+    renderAt(partnerPath("2"));
     const select = await screen.findByRole("combobox", { name: "Цены товаров в каталоге" });
     expect(select).toBeEnabled();
     await chooseOption(select, "Показывать");
