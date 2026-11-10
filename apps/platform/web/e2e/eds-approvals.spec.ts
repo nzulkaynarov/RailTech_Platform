@@ -1,7 +1,13 @@
 import AxeBuilder from "@axe-core/playwright";
 import { type Page, expect, test } from "@playwright/test";
 
-import { loginAndWait, settledScreenshot, spaGoto, waitForMotionEnd } from "./support/app";
+import {
+  loginAndWait,
+  settledScreenshot,
+  spaGoto,
+  waitForMotionEnd,
+  confirmDialog,
+} from "./support/app";
 
 // EDS · «КП на одобрение» и «На согласовании» на MSW (D1-4): сценарий директора целиком — КП на одобрение → карточка → «Одобрить
 // КП → отправить клиенту» (каналы) → в «Моём шаге» его больше нет; КП с незелёным чек-листом — кнопка неактивна с подписью;
@@ -105,6 +111,8 @@ test.describe("КП на одобрение: директор", () => {
       "Telegram-бот, Кабинет",
     );
     await form.getByRole("button", { name: APPROVE }).click();
+    await settledScreenshot(page, "confirm-dialog");
+    await confirmDialog(page);
 
     await expect(page.getByText(/КП КП-2026\/115 одобрено: ИСХ-/)).toBeVisible();
     await expect(page.locator(PANEL).getByRole("heading", { name: "КП одобрено" })).toBeVisible();
@@ -213,6 +221,7 @@ test.describe("КП на одобрение: директор", () => {
       body: JSON.stringify({ decision: "return", comment: "дубль" })
     })`);
     await form.getByRole("button", { name: APPROVE }).click();
+    await confirmDialog(page);
 
     await expect(
       page
@@ -328,6 +337,8 @@ test.describe("На согласовании: служебные записки"
     await expectNoViolations(page, "карточка документа с «Согласованием»");
 
     await form.getByRole("button", { name: "Согласовать" }).click();
+
+    await confirmDialog(page);
     await expect(page.getByText("Документ согласован", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("Передана бухгалтеру").first()).toBeVisible();
     await settledScreenshot(page, "memo-agreed");
@@ -352,6 +363,7 @@ test.describe("На согласовании: служебные записки"
     await form.getByLabel("Комментарий").fill("Нужны данные по неликвиду.");
     await expect(reject).toBeEnabled();
     await reject.click();
+    await confirmDialog(page);
     await expect(page.getByText("Документ отклонён", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("Нужны данные по неликвиду.").first()).toBeVisible();
 
@@ -445,6 +457,8 @@ test.describe("Одобрение и согласование на телефо�
     await expectNoViolations(page, "телефон: лист «Одобрение»");
 
     await sheet.getByRole("button", { name: APPROVE }).click();
+
+    await confirmDialog(page);
     await expect(page.getByText(/КП КП-2026\/115 одобрено/)).toBeVisible();
     await expect(page.getByRole("dialog", { name: /^Одобрение/ })).toHaveCount(0);
   });
@@ -458,6 +472,7 @@ test.describe("Одобрение и согласование на телефо�
     await expectNoViolations(page, "телефон: карточка КП");
 
     await page.getByRole("button", { name: "Одобрить КП", exact: true }).click();
+
     const sheet = page.getByRole("dialog", { name: /^Одобрение/ });
     await expect(sheet.getByRole("button", { name: APPROVE })).toBeDisabled();
     await expect(sheet.getByText(/Одобрить нельзя: нет визы гл\. инженера/)).toBeVisible();
@@ -481,6 +496,8 @@ test.describe("Одобрение и согласование на телефо�
     await expectNoViolations(page, "телефон: лист «Согласование»");
 
     await sheet.getByRole("button", { name: "Согласовать" }).click();
+
+    await confirmDialog(page);
     await expect(page.getByText("Документ согласован", { exact: true }).first()).toBeVisible();
     await expect(page.getByRole("dialog", { name: /^Согласование/ })).toHaveCount(0);
   });

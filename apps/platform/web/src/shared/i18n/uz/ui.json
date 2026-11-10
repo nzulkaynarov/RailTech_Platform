@@ -121,5 +121,8 @@
     "personLabel": "Mijoz tomonidan kim",
     "personPlaceholder": "F.I.Sh. va lavozimi",
     "personRequired": "Kim tasdiqlaganini ko'rsating"
+  },
+  "confirm": {
+    "cancel": "Bekor qilish"
   }
 }

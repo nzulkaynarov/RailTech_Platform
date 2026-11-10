@@ -11,6 +11,7 @@ import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { decisionReason, isTerminal, useRefreshApprovals } from "../decision/errors";
 import { clearComment, readComment, writeComment } from "./draft";
 import { nextStepLabel } from "./model";
+import { useConfirmAction } from "../../../shared/ui/useConfirmAction";
 
 type Action = "approve" | "return" | "reject";
 
@@ -29,6 +30,7 @@ export interface AgreeFormProps {
  */
 export function AgreeForm({ memo, variant = "panel", onDone }: AgreeFormProps) {
   const { t } = useTranslation("approvals");
+  const confirmAction = useConfirmAction();
   const { me } = useAuth();
   const { message } = App.useApp();
   const refresh = useRefreshApprovals();
@@ -81,7 +83,7 @@ export function AgreeForm({ memo, variant = "panel", onDone }: AgreeFormProps) {
   const may = (d: Action) => memo.allowed_decisions.includes(d);
   const busy = decide.isPending;
 
-  const send = (decision: Action) => {
+  const decideNow = (decision: Action) => {
     setFailure(null);
     setPendingAction(decision);
     decide.mutate({
@@ -98,7 +100,15 @@ export function AgreeForm({ memo, variant = "panel", onDone }: AgreeFormProps) {
       noValidate
       onSubmit={(event) => {
         event.preventDefault();
-        if (!accountant && may("approve") && !busy) send("approve");
+        if (!accountant && may("approve") && !busy) {
+          confirmAction({
+            action: t("form.submit"),
+            object: memo.number ?? "",
+            onConfirm: () => {
+              decideNow("approve");
+            },
+          });
+        }
       }}
     >
       {saved ? <p className="pf-hint">{t("form.draft")}</p> : null}
@@ -164,7 +174,7 @@ export function AgreeForm({ memo, variant = "panel", onDone }: AgreeFormProps) {
             disabled={!may("return") || busy || text === ""}
             aria-describedby={text === "" ? id("disabled") : undefined}
             onClick={() => {
-              send("return");
+              decideNow("return");
             }}
           >
             {accountant ? t("accountant.return") : t("form.return")}
@@ -176,7 +186,14 @@ export function AgreeForm({ memo, variant = "panel", onDone }: AgreeFormProps) {
             disabled={!may("reject") || busy || text === ""}
             aria-describedby={text === "" ? id("disabled") : undefined}
             onClick={() => {
-              send("reject");
+              confirmAction({
+                action: t("form.reject"),
+                object: memo.number ?? "",
+                danger: true,
+                onConfirm: () => {
+                  decideNow("reject");
+                },
+              });
             }}
           >
             {t("form.reject")}

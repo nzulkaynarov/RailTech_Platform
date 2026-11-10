@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { findQuote } from "../../../mocks/fixtures/approvals";
 import { server } from "../../../test/server";
 import { panelEl, renderAt, setupApprovalTests, signIn } from "../../../test/approvalsKit";
+import { confirmDialog } from "../../../test/confirmDialog";
 
 setupApprovalTests();
 
@@ -98,6 +99,8 @@ describe("Одобрение КП: форма", () => {
 
     fireEvent.click(within(form).getByRole("button", { name: APPROVE }));
 
+    await confirmDialog();
+
     await waitFor(() => {
       expect(body).toEqual({ decision: "approve", channels: ["telegram", "cabinet"] });
     });
@@ -119,6 +122,8 @@ describe("Одобрение КП: форма", () => {
     });
 
     fireEvent.click(within(form).getByRole("button", { name: APPROVE }));
+
+    await confirmDialog();
 
     expect(
       await within(form).findByText(
@@ -156,6 +161,8 @@ describe("Одобрение КП: форма", () => {
 
     fireEvent.click(within(form).getByRole("button", { name: APPROVE }));
 
+    await confirmDialog();
+
     expect(
       await within(form).findByText(
         "Не сохранено: чек-лист не выполнен (нет визы гл. инженера, маржа ниже порога резолюции), карточка обновлена",
@@ -176,6 +183,8 @@ describe("Одобрение КП: форма", () => {
     fireEvent.change(within(form).getByLabelText("Комментарий"), { target: { value: "ок" } });
 
     fireEvent.click(within(form).getByRole("button", { name: APPROVE }));
+
+    await confirmDialog();
 
     expect(
       await screen.findAllByText(

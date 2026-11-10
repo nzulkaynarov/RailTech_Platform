@@ -320,7 +320,8 @@
       "validation": "check the comment",
       "unknown": "something went wrong, what you typed stays in the form"
     },
-    "submitNoChannels": "Approve quote → to Outgoing"
+    "submitNoChannels": "Approve quote → to Outgoing",
+    "confirmVerb": "Approve"
   },
   "superseded": "Superseded by version {{version}}"
 }

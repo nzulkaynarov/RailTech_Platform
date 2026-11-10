@@ -1,7 +1,13 @@
 import AxeBuilder from "@axe-core/playwright";
 import { type Page, expect, test } from "@playwright/test";
 
-import { loginAndWait, settledScreenshot, spaGoto, waitForMotionEnd } from "./support/app";
+import {
+  loginAndWait,
+  settledScreenshot,
+  spaGoto,
+  waitForMotionEnd,
+  confirmDialog,
+} from "./support/app";
 import { chooseOption, fillDate } from "./support/fields";
 
 // EDS · Входящие письма и «Резолюция» директора на MSW (D1-3): сценарий директора целиком — Входящие → письмо → резолюция →
@@ -103,6 +109,7 @@ test.describe("Входящие письма: директор", () => {
     await fillDate(form.getByLabel("Срок расчёта"), soon);
     await form.getByLabel("Маржа не ниже, %").fill("15");
     await form.getByRole("button", { name: SUBMIT }).click();
+    await confirmDialog(page);
 
     await expect(page.getByText("Резолюция наложена: задание ушло исполнителям")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Решение директора" })).toBeVisible();
@@ -136,6 +143,7 @@ test.describe("Входящие письма: директор", () => {
       method: "POST", headers: { "content-type": "application/json", "x-csrf-token": "x" }, body: JSON.stringify({ reason: "дубль" })
     })`);
     await form.getByRole("button", { name: SUBMIT }).click();
+    await confirmDialog(page);
 
     await expect(
       form.getByText("Резолюция не сохранена: письмо уже не ждёт резолюции, обновите карточку."),
@@ -172,6 +180,7 @@ test.describe("Входящие письма: директор", () => {
     await expect(reject).toBeDisabled();
     await form.getByLabel("Комментарий").fill("Не наш профиль.");
     await reject.click();
+    await confirmDialog(page);
 
     await expect(page.getByText("Письмо отклонено", { exact: true })).toBeVisible();
     await expect(page.getByText("Не наш профиль.").first()).toBeVisible();
@@ -261,6 +270,7 @@ test.describe("Входящие письма на телефоне @mobile", () 
       "Демо Снабженцев · Специалист по снабжению",
     );
     await sheet.getByRole("button", { name: SUBMIT }).click();
+    await confirmDialog(page);
     await expect(page.getByText("Резолюция наложена: задание ушло исполнителям")).toBeVisible();
     await expect(page.getByRole("dialog", { name: /^Резолюция/ })).toHaveCount(0);
   });

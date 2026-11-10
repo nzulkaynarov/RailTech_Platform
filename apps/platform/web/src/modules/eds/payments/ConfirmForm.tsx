@@ -12,6 +12,7 @@ import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { companyDate } from "../inbox/api";
 import { type InvoiceReason, invoiceReason, isStale, useRefreshPayments } from "./api";
 import { newKey, normalizeAmount, remainderAfter, toCents } from "./model";
+import { useConfirmAction } from "../../../shared/ui/useConfirmAction";
 
 export interface ConfirmFormProps {
   card: PaymentCard;
@@ -29,6 +30,7 @@ export interface ConfirmFormProps {
  */
 export function ConfirmForm({ card, variant = "panel", onDone }: ConfirmFormProps) {
   const { t } = useTranslation("payments");
+  const confirmAction = useConfirmAction();
   const { message } = App.useApp();
   const { money, currency: currencyText } = useFormat();
   const refresh = useRefreshPayments();
@@ -91,8 +93,15 @@ export function ConfirmForm({ card, variant = "panel", onDone }: ConfirmFormProp
     if (invalid || confirm.isPending) return;
     const signature = JSON.stringify([normalized, date, reference.trim(), proofId]);
     if (key.current?.signature !== signature) key.current = { signature, value: newKey() };
-    setFailure(null);
-    confirm.mutate({ apiKey: key.current.value });
+    const apiKey = key.current.value;
+    confirmAction({
+      action: partial ? t("confirm.submitPartial") : t("confirm.submit"),
+      object: card.number,
+      onConfirm: () => {
+        setFailure(null);
+        confirm.mutate({ apiKey });
+      },
+    });
   };
 
   const forget = () => {

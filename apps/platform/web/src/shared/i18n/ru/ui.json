@@ -121,5 +121,8 @@
     "personLabel": "Кто со стороны клиента",
     "personPlaceholder": "ФИО и должность",
     "personRequired": "Укажите, кто подтвердил"
+  },
+  "confirm": {
+    "cancel": "Отмена"
   }
 }

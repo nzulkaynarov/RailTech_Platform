@@ -2,6 +2,7 @@ import { fireEvent, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { renderAt, setupApprovalTests, signIn } from "../../../test/approvalsKit";
+import { confirmDialog } from "../../../test/confirmDialog";
 
 // D17G-2 (гейт D1-7): после одобрения в карточке КП — отчёт «Отправка клиенту» по каналам с причиной; тот, кто отправляет
 // КП (раздел «Клиенты» полный), может отправить по невыбранному каналу и повторно — по не сработавшему.
@@ -44,6 +45,7 @@ describe("Отправка клиенту: отчёт по каналам", () =
     expect(within(form).getByRole("checkbox", { name: "Почта" })).toBeDisabled();
     expect(within(form).getByText("Недоступна: нет e-mail у контакта.")).toBeVisible();
     fireEvent.click(within(form).getByRole("button", { name: "Одобрить КП → отправить клиенту" }));
+    await confirmDialog();
 
     const report = await screen.findByRole("list", { name: "Каналы отправки" });
     expect(within(report).getByText("Telegram-бот — отправлено")).toBeVisible();

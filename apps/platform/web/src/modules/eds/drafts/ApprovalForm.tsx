@@ -12,6 +12,7 @@ import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { decisionReason, failedCodes, isTerminal, useRefreshApprovals } from "../decision/errors";
 import { type ApprovalDraft, clearDraft, readDraft, writeDraft } from "./draft";
 import { channelStates, checklistItems, defaultChannels, lateWarning, redBlockers } from "./model";
+import { useConfirmAction } from "../../../shared/ui/useConfirmAction";
 
 type Action = "approve" | "return";
 
@@ -31,6 +32,7 @@ export interface ApprovalFormProps {
  */
 export function ApprovalForm({ quote, variant = "panel", onDone }: ApprovalFormProps) {
   const { t } = useTranslation("quotes");
+  const confirmAction = useConfirmAction();
   const { me } = useAuth();
   const { date } = useFormat();
   const { message } = App.useApp();
@@ -132,11 +134,17 @@ export function ApprovalForm({ quote, variant = "panel", onDone }: ApprovalFormP
       onSubmit={(event) => {
         event.preventDefault();
         if (!canApprove || decide.isPending) return;
-        setFailure(null);
-        setPendingAction("approve");
-        decide.mutate({
-          id: quote.id,
-          data: { decision: "approve", channels: chosen },
+        confirmAction({
+          action: t("form.confirmVerb"),
+          object: quote.number,
+          onConfirm: () => {
+            setFailure(null);
+            setPendingAction("approve");
+            decide.mutate({
+              id: quote.id,
+              data: { decision: "approve", channels: chosen },
+            });
+          },
         });
       }}
     >

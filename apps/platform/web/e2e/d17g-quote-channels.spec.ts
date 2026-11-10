@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { type Locator, type Page, expect, test } from "@playwright/test";
 
-import { loginAndWait, spaGoto, waitForMotionEnd } from "./support/app";
+import { loginAndWait, spaGoto, waitForMotionEnd, confirmDialog } from "./support/app";
 
 // D17G-2 и D17G-3 (гейт D1-7) на MSW, 1440 и 390 px, axe WCAG 2.1 AA:
 // — панель одобрения КП: каналы по фактическим контактам клиента, недоступный выключен с причиной (нет ложной тревоги);
@@ -64,6 +64,8 @@ test.describe("D17G: каналы отправки КП и адрес кабин
       await shot(page, "d17g-approve-channels");
 
       await form.getByRole("button", { name: "Одобрить КП → отправить клиенту" }).click();
+
+      await confirmDialog(page);
       const report = page.getByRole("list", { name: "Каналы отправки" });
       await expect(report.getByText("Telegram-бот — отправлено")).toBeVisible();
       await expect(report.getByText("Кабинет — опубликовано")).toBeVisible();

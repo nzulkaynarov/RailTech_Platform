@@ -6,6 +6,7 @@ import type { MemoApprovalCard } from "../../../shared/api/generated/model";
 import { server } from "../../../test/server";
 import { panelEl, renderAt, setupApprovalTests, signIn } from "../../../test/approvalsKit";
 import { nextStepLabel } from "./model";
+import { confirmDialog } from "../../../test/confirmDialog";
 
 setupApprovalTests();
 
@@ -72,6 +73,8 @@ describe("Согласование: форма", () => {
 
     fireEvent.click(within(form).getByRole("button", { name: "Отклонить" }));
 
+    await confirmDialog();
+
     expect(
       await within(form).findByText(
         "Не сохранено: сервис документов не отвечает, комментарий остался в форме",
@@ -93,6 +96,8 @@ describe("Согласование: форма", () => {
     const form = within(panel).getByRole("form", { name: "Согласование документа" });
 
     fireEvent.click(within(form).getByRole("button", { name: "Согласовать" }));
+
+    await confirmDialog();
 
     expect(
       (

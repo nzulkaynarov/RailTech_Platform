@@ -65,3 +65,8 @@ export async function waitForMotionEnd(page: Page): Promise<void> {
       document.getAnimations().every((a) => a.playState !== "running")`,
   );
 }
+
+/** Нажать главную кнопку открытого окна подтверждения. */
+export async function confirmDialog(page: Page): Promise<void> {
+  await page.locator(".ant-modal-confirm-btns .ant-btn-primary").click();
+}

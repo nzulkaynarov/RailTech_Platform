@@ -1,7 +1,13 @@
 import AxeBuilder from "@axe-core/playwright";
 import { type Page, expect, test } from "@playwright/test";
 
-import { loginAndWait, settledScreenshot, spaGoto, waitForMotionEnd } from "./support/app";
+import {
+  loginAndWait,
+  settledScreenshot,
+  spaGoto,
+  waitForMotionEnd,
+  confirmDialog,
+} from "./support/app";
 import { pickFiles } from "./support/fields";
 
 // EDS · «Счета и оплаты» бухгалтера на MSW (D2-4): сценарий целиком — платёжка клиента на подтверждение → сверка с выпиской →
@@ -121,6 +127,7 @@ test.describe("Счета и оплаты: бухгалтер", () => {
 
     await form.getByLabel("Номер операции банка").fill("BANK-8841");
     await form.getByRole("button", { name: "Подтвердить оплату" }).click();
+    await confirmDialog(page);
 
     await expect(page.getByText(/Оплата подтверждена: 28\s000\s000/)).toBeVisible();
     await expect(
@@ -156,6 +163,7 @@ test.describe("Счета и оплаты: бухгалтер", () => {
     // больше остатка: ответ словами, введённое остаётся
     await amount.fill("112000001.00");
     await form.getByRole("button", { name: "Подтвердить оплату" }).click();
+    await confirmDialog(page);
     await expect(form.getByText(/Не сохранено: сумма больше остатка по счёту/)).toBeVisible();
     await expect(amount).toHaveValue("112000001.00");
 
@@ -168,6 +176,7 @@ test.describe("Счета и оплаты: бухгалтер", () => {
     await expect(consequence).toContainText(/остаток 72\s000\s000/);
     await settledScreenshot(page, "partial-form");
     await form.getByRole("button", { name: "Подтвердить частичную оплату" }).click();
+    await confirmDialog(page);
 
     await expect(page.getByText(/Частичная оплата подтверждена/)).toBeVisible();
     await expect(row(page, "СЧ-2026/142").getByText("Частично оплачен")).toBeVisible();
@@ -178,6 +187,7 @@ test.describe("Счета и оплаты: бухгалтер", () => {
     const next = confirmForm(page);
     await expect(next.getByLabel(/Сумма по выписке/)).toHaveValue("72000000.00");
     await next.getByRole("button", { name: "Подтвердить оплату" }).click();
+    await confirmDialog(page);
     await expect(page.getByText(/Оплата подтверждена: 72\s000\s000/)).toBeVisible();
     await expect(page.getByRole("row", { name: /СЧ-2026\/142/ })).toHaveCount(0);
   });
@@ -243,6 +253,7 @@ test.describe("Счета и оплаты: бухгалтер", () => {
     await settledScreenshot(page, "memo-card");
     await expectNoViolations(page, "служебка к оплате с формой «Оплачено»");
     await form.getByRole("button", { name: "Оплачено" }).click();
+    await confirmDialog(page);
 
     await expect(page.getByText("Служебка СЗ-2026/015 оплачена")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Служебок к оплате нет" })).toBeVisible();

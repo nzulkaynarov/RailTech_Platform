@@ -20,6 +20,7 @@ import { MAX_FILE_BYTES } from "../documents/fileSize";
 import { type MemoReason, isMemoStale, memoReason, useRefreshPayments } from "./api";
 import { normalizeAmount, toCents } from "./model";
 import { HOME_CURRENCY } from "../../../shared/lib/money";
+import { useConfirmAction } from "../../../shared/ui/useConfirmAction";
 
 export interface PayMemoFormProps {
   memo: PaymentMemoCard;
@@ -34,6 +35,7 @@ export interface PayMemoFormProps {
  */
 export function PayMemoForm({ memo, variant = "panel", onDone }: PayMemoFormProps) {
   const { t } = useTranslation("payments");
+  const confirmAction = useConfirmAction();
   const { message } = App.useApp();
   const { money, currency: currencyText } = useFormat();
   const refresh = useRefreshPayments();
@@ -129,8 +131,14 @@ export function PayMemoForm({ memo, variant = "panel", onDone }: PayMemoFormProp
       onSubmit={(event) => {
         event.preventDefault();
         if (!invalid && !pay.isPending) {
-          setFailure(null);
-          pay.mutate();
+          confirmAction({
+            action: t("memo.form.submit"),
+            object: memo.number ?? "",
+            onConfirm: () => {
+              setFailure(null);
+              pay.mutate();
+            },
+          });
         }
       }}
     >
