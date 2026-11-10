@@ -115,6 +115,25 @@
       "queue": "Vazifalar",
       "projects": "Loyihalar",
       "summary": "Xulosa"
+    },
+    "summary": {
+      "byDue": "Muddat bo‘yicha vazifalar",
+      "stuck": "Muddati o‘tgan",
+      "noStuck": "Muddati o‘tgan vazifalar yo‘q",
+      "noData": "Ma’lumotlar shu yerda paydo bo‘ladi",
+      "loadError": "Xulosani yuklab bo‘lmadi",
+      "retry": "Qayta urinish",
+      "due": {
+        "overdue": "Muddati o‘tgan",
+        "today": "Bugun",
+        "tomorrow": "Ertaga",
+        "later": "Keyinroq"
+      },
+      "blocks": {
+        "requests": "Bosqichlar bo‘yicha arizalar",
+        "profit": "Loyihalar foydasi",
+        "targets": "12 oylik maqsadlar"
+      }
     }
   },
   "crm": {
