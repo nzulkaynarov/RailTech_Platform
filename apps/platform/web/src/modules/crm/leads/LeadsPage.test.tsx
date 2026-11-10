@@ -95,7 +95,7 @@ describe("Клиенты · Лиды (D1-2b)", () => {
     );
     expect(
       screen.getByRole("link", { name: "Ответить Отабек Демо в «Ждут ответа»" }),
-    ).toHaveAttribute("href", "/crm/messages?lead=L-2050");
+    ).toHaveAttribute("href", "/crm/leads?scope=waiting&lead=L-2050");
     // В отказе действий нет
     const lost = within(table()).getByRole("link", { name: "Открыть карточку Отказ Демо" });
     expect(within(lost.closest("tr") as HTMLElement).queryByRole("button")).toBeNull();
@@ -104,9 +104,8 @@ describe("Клиенты · Лиды (D1-2b)", () => {
       screen.getByRole("button", { name: "Забрать Ждёт ответа Демо в «Ждут ответа»" }),
     );
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/crm/messages");
+      expect(router.state.location.search).toBe("?scope=waiting&lead=L-2060");
     });
-    expect(router.state.location.search).toBe("?lead=L-2060");
   });
 
   it("клик по имени — карточка лида в боковом окне: контакты, согласие, факты, сообщения", async () => {

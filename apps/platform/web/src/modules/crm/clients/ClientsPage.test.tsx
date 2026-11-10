@@ -56,7 +56,7 @@ describe("Клиенты · Клиенты (D1-2b)", () => {
       within(conversation).getByRole("link", {
         name: "Бобур Снабженцев · L-2033 — открыть переписку в «Ждут ответа»",
       }),
-    ).toHaveAttribute("href", "/crm/messages?lead=L-2033");
+    ).toHaveAttribute("href", "/crm/leads?scope=waiting&lead=L-2033");
 
     const requests = within(panel).getByRole("region", { name: "Заявки и проекты" });
     expect(within(requests).getByText("ЗВ-2026-031")).toBeVisible();

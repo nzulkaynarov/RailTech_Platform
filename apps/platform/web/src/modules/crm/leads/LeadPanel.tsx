@@ -185,7 +185,7 @@ function Body({ card, sheet, onClose }: { card: LeadCard; sheet: boolean; onClos
           </LinkButton>
         ) : null}
         {handable ? <HandOverButton lead={card.lead} name={card.name} /> : null}
-        <LinkButton to={`/crm/messages?lead=${card.lead}`}>
+        <LinkButton to={`/crm/leads?scope=waiting&lead=${card.lead}`}>
           {t(triage ? "leads:actions.openChat" : "leads:actions.reply")}
         </LinkButton>
         {sheet ? <Button onClick={onClose}>{t("leads:card.close")}</Button> : null}

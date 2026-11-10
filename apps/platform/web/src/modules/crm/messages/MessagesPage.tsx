@@ -7,11 +7,9 @@ import { useAuth } from "../../../app/auth/useAuth";
 import { useViewport } from "../../../app/shell/useViewport";
 import { useListCrmMessages } from "../../../shared/api/generated/platform-bff";
 import { usePollQuery } from "../../../shared/api/polling";
-import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { LockIcon } from "../../../shared/ui/icons";
-import { PageHeader } from "../../../shared/ui/PageHeader";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { Dialog } from "./Dialog";
 import { InboxList } from "./InboxList";
@@ -21,13 +19,13 @@ import "./messages.css";
 const LEAD = /^L-\d{4,}$/;
 
 /**
- * Клиенты · Ждут ответа (SPEC-v3 §7.2 «Все сообщения», UX-оценка P0-5): передачи от бота с запиской и таймером SLA,
+ * Лиды · фильтр «Ждут ответа» (`/crm/leads?scope=waiting`, SPEC-v3 §7.2 «Все сообщения», UX-оценка P0-5): передачи от бота с запиской и таймером SLA,
  * «Забрать», лента диалога и ответ «От себя / Заметка команде». Основное окно — список (≈280 px) и диалог, боковое — карточка
  * лида; на 390 px — список, затем диалог на весь экран. Живые обновления — подсказка `messages` потока BFF (без опроса;
  * опрос — страховка, `usePollQuery`). Директор (`crm.leads` — чтение) видит всё без «Забрать» и ответа; делопроизводитель
  * (`crm.leads.triage`, D17G-1) — с «Передать менеджеру» и пояснением «Ответ клиенту — менеджер».
  */
-export function MessagesPage() {
+export function Conversations() {
   const { t } = useTranslation(["messages", "modules"]);
   const { me } = useAuth();
   const canReply = canEdit(me, "crm.leads");
@@ -37,8 +35,6 @@ export function MessagesPage() {
   const [params] = useSearchParams();
   const raw = params.get("lead")?.toUpperCase() ?? null;
   const lead = raw && LEAD.test(raw) ? raw : null;
-  const title = t("modules:crm.sections.messages");
-  useDocumentTitle(title);
   const poll = usePollQuery();
   const inbox = useListCrmMessages({ query: poll });
   const items = inbox.data?.items ?? [];
@@ -104,21 +100,13 @@ export function MessagesPage() {
 
   return (
     <div className="pf-msg-page">
-      {mobile && lead ? null : (
-        <PageHeader
-          title={title}
-          subtitle={t("messages:subtitle")}
-          extra={
-            canReply ? null : (
-              <StatusTag tone="default">
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                  <LockIcon size={12} />
-                  {t(canTriage ? "messages:triageOnly" : "messages:viewOnly")}
-                </span>
-              </StatusTag>
-            )
-          }
-        />
+      {canReply || (mobile && lead) ? null : (
+        <StatusTag tone="default">
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+            <LockIcon size={12} />
+            {t(canTriage ? "messages:triageOnly" : "messages:viewOnly")}
+          </span>
+        </StatusTag>
       )}
       {body}
     </div>
