@@ -40,8 +40,6 @@ async function shoot(page: Page, name: string): Promise<void> {
   await page.setViewportSize({ width: 1440, height: 900 });
 }
 
-const STUB = "rt-pf-mock-queue-stub";
-
 const SIDE = { name: "Боковое окно" } as const;
 
 test.describe("Задачи: «Открыть» или «Где сделать»", () => {
