@@ -107,6 +107,7 @@ test.describe("A2: «Согласован клиентом» с каналом �
       const side = page.locator("#pf-context-panel");
       await side.getByRole("button", { name: "Сформировать проект договора" }).click();
       await side.getByRole("button", { name: "На согласование клиенту" }).click();
+      await expect(side.getByLabel("Как клиент сообщил")).toBeVisible();
 
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
       if (width === 390) await spaGoto(page, `${project}?sheet=contract`);
