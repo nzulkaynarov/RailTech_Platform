@@ -80,8 +80,18 @@
 
 /* Таблицы счетов и служебок плотнее общих: с открытым боковым окном на 1440 px должны уместиться статус и действие */
 .pf-pay-table th,
+.pf-pay-table td {
+  padding: 10px 8px;
+  font-size: 13px;
+}
 .pf-pay-table th:first-child,
+.pf-pay-table td:first-child {
+  padding-left: 16px;
+}
 .pf-pay-table th:last-child,
+.pf-pay-table td:last-child {
+  padding-right: 16px;
+}
 
 /* Смена реквизитов контрагента (FX-4): одна колонка карточек, на телефоне тоже. */
 .pf-bank-list {
