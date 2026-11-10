@@ -34,6 +34,7 @@ import {
   withParams,
 } from "../common/params";
 import { CreateRequest } from "../request/CreateRequest";
+import { Conversations } from "../messages/MessagesPage";
 import { LeadPanel } from "./LeadPanel";
 
 import "../crm.css";
@@ -47,6 +48,9 @@ const TABS = [
   "client",
 ] as const satisfies readonly ListCrmLeadsTab[];
 const SCOPES = ["all", "mine", "overdue"] as const satisfies readonly ListCrmLeadsScope[];
+/** Переключатель над списком: «Ждут ответа» — не отбор лидов, а переписка, где клиент ждёт ответа */
+const VIEWS = ["all", "mine", "waiting", "overdue"] as const;
+type View = (typeof VIEWS)[number];
 const CHANNELS = ["telegram", "cabinet", "web", "email", "phone", "referral"] as const;
 /** Ширины колонок: имя, статус, что нужно, ответственный, последнее, действие (UX-1c, S9) */
 const COLS = [null, 150, null, 170, 130, 170] as const;
@@ -68,7 +72,7 @@ function RowAction({ row, onError }: { row: LeadRow; onError: (text: string | nu
   const canReply = canEdit(me, "crm.leads");
   const canCreate = canCreateFromLead(me, row.assigned);
   const [params] = useSearchParams();
-  const toDialog = `/crm/messages?lead=${row.lead}`;
+  const toDialog = `/crm/leads?scope=waiting&lead=${row.lead}`;
   if (row.status === "wants_quote" && canCreate) {
     return (
       <LinkButton
@@ -292,7 +296,9 @@ export function LeadsPage({ objectId }: { objectId?: string | undefined }) {
   const [actionFailure, setActionFailure] = useState<string | null>(null);
 
   const tab = pick(TABS, params.get("status"), "all");
-  const scope = pick(SCOPES, params.get("scope"), "all");
+  const view: View = pick(VIEWS, params.get("scope"), "all");
+  const waiting = view === "waiting";
+  const scope = waiting ? "all" : pick(SCOPES, view, "all");
   const channel = pick(["", ...CHANNELS], params.get("channel"), "");
   const q = params.get("q") ?? "";
   const offset = Math.max(0, Number(params.get("offset") ?? "0") || 0);
@@ -315,7 +321,7 @@ export function LeadsPage({ objectId }: { objectId?: string | undefined }) {
     }),
     [tab, scope, channel, q, offset],
   );
-  const list = useListCrmLeads(query);
+  const list = useListCrmLeads(query, { query: { enabled: !waiting } });
   const filtered = tab !== "all" || scope !== "all" || channel !== "" || q !== "";
 
   const close = () => {
@@ -394,21 +400,42 @@ export function LeadsPage({ objectId }: { objectId?: string | undefined }) {
     </QueryState>
   );
 
+  const viewSwitch = (
+    <Segmented
+      aria-label={t("leads:scope.label")}
+      value={view}
+      options={VIEWS.map((value) => ({ value, label: t(`leads:scope.${value}`) }))}
+      onChange={(value) => {
+        change({
+          scope: value === "all" ? null : value,
+          offset: null,
+          lead: null,
+          panel: null,
+          tab: null,
+        });
+      }}
+    />
+  );
+
+  if (waiting) {
+    return (
+      <div className="pf-crm">
+        {mobile && lead ? null : (
+          <>
+            <PageHeader title={title} />
+            <div className="pf-crm-controls">{viewSwitch}</div>
+          </>
+        )}
+        <Conversations />
+      </div>
+    );
+  }
+
   return (
     <div className="pf-crm">
-      <PageHeader
-        title={title}
-        extra={<LinkButton to="/crm/messages">{t("modules:crm.sections.messages")}</LinkButton>}
-      />
+      <PageHeader title={title} />
       <div className="pf-crm-controls">
-        <Segmented
-          aria-label={t("leads:scope.label")}
-          value={scope}
-          options={SCOPES.map((value) => ({ value, label: t(`leads:scope.${value}`) }))}
-          onChange={(value) => {
-            change({ scope: value === "all" ? null : value, offset: null });
-          }}
-        />
+        {viewSwitch}
         {mobile ? (
           <div className="pf-crm-filter">
             <label htmlFor="pf-leads-tab">{t("leads:tabs.label")}</label>

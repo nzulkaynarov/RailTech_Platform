@@ -48,6 +48,9 @@ const FILTERS: readonly Filter[] = [
   ...STATUS_FILTERS.filter((s) => s !== "awaiting_resolution"),
   "all",
 ];
+/** Под рукой — то, с чем работают каждый день; остальные статусы — в списке рядом. */
+const MAIN_FILTERS: readonly Filter[] = ["awaiting_resolution", "on_control", "overdue", "all"];
+const MORE_FILTERS = FILTERS.filter((value) => !MAIN_FILTERS.includes(value));
 
 function filterOf(value: string | null): Filter {
   return FILTERS.find((s) => s === value) ?? "awaiting_resolution";
@@ -377,12 +380,26 @@ export function InboxList() {
           <Segmented
             aria-label={t("letters:list.filter.label")}
             value={filter}
-            options={FILTERS.map((value) => ({ value, label: filterLabel(value, t) }))}
+            options={MAIN_FILTERS.map((value) => ({ value, label: filterLabel(value, t) }))}
             onChange={(value) => {
               setFilter(value);
             }}
           />
         </div>
+        <label htmlFor="pf-letters-status" className="pf-sr-only">
+          {t("letters:list.filter.more")}
+        </label>
+        <Select
+          id="pf-letters-status"
+          className="pf-letters-kind"
+          allowClear
+          value={MORE_FILTERS.includes(filter) ? filter : undefined}
+          placeholder={t("letters:list.filter.more")}
+          options={MORE_FILTERS.map((value) => ({ value, label: filterLabel(value, t) }))}
+          onChange={(value: Filter | undefined) => {
+            setFilter(value ?? "awaiting_resolution");
+          }}
+        />
         <label htmlFor="pf-letters-kind" className="pf-sr-only">
           {t("letters:listKind.label")}
         </label>

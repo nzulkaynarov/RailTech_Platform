@@ -1,3 +1,4 @@
+import { chooseOption } from "../../../test/fields";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
@@ -55,7 +56,7 @@ describe("EDS · Входящие письма: список", () => {
     await screen.findByRole("table");
     const filter = screen.getByRole("radiogroup", { name: "Статус письма" });
 
-    fireEvent.click(within(filter).getByText("Резолюция наложена"));
+    await chooseOption(screen.getByLabelText("Другой статус"), "Резолюция наложена");
     expect(
       await screen.findByRole("link", { name: "Показать письмо ВХ-101/26 в боковом окне" }),
     ).toBeVisible();
@@ -63,7 +64,7 @@ describe("EDS · Входящие письма: список", () => {
       screen.queryByRole("link", { name: "Показать письмо ВХ-104/26 в боковом окне" }),
     ).toBeNull();
 
-    fireEvent.click(within(filter).getByText("Отклонено"));
+    await chooseOption(screen.getByLabelText("Другой статус"), "Отклонено");
     expect(
       await screen.findByRole("link", { name: "Показать письмо ВХ-103/26 в боковом окне" }),
     ).toBeVisible();

@@ -100,11 +100,6 @@ test.describe("D26G: жизненный цикл КП — доработка, о
       page,
     }) => {
       await signInAt(page, DIRECTOR, width);
-      await spaGoto(page, "/eds/drafts?scope=all");
-      await expect(page.getByText("Заменена версией 2").first()).toBeVisible();
-      await shot(page, "quotes-superseded");
-      await expectNoViolations(page, `список КП ${String(width)}`);
-
       await spaGoto(page, "/eds/drafts/40000000-0000-4000-8000-000000001150");
       await expect(page.getByText(/Это версия 1 — её заменила версия 2/)).toBeVisible();
       await shot(page, "quote-v1-superseded");

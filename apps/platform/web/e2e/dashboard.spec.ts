@@ -378,7 +378,7 @@ test.describe("Задачи директора: «Одобрить КП» из E
         .click();
       await expect(page).toHaveURL(/\/eds\/drafts\/%D0%9A%D0%9F-2026%2F115\?.*tab=approve/);
       await spaGoto(page, "/eds/drafts");
-      await expect(page.getByRole("heading", { level: 1, name: "КП на одобрение" })).toBeVisible();
+      await expect(page).toHaveURL(/\/eds\/documents\?box=outgoing&kind=quote$/);
     });
   }
 });

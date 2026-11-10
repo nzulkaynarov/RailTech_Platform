@@ -258,7 +258,7 @@ function DocumentForm({
       void message.success(toast);
       void navigate({
         pathname: "/eds/documents",
-        search: `?scope=mine&doc=${doc.id}${mobile ? "" : "&panel=open"}`,
+        search: `?box=${letter ? "outgoing" : "internal"}&scope=mine&doc=${doc.id}${mobile ? "" : "&panel=open"}`,
       });
     } catch (error) {
       fail(error, submit);
@@ -777,7 +777,9 @@ function ContinueDraft({ id }: { id: string }) {
     );
   }
   const back = (
-    <LinkButton to="/eds/documents?scope=mine">{t("documents:form.toDocuments")}</LinkButton>
+    <LinkButton to="/eds/documents?box=internal&scope=mine">
+      {t("documents:form.toDocuments")}
+    </LinkButton>
   );
   if (query.isError) {
     return (

@@ -107,8 +107,8 @@ test.describe("Задачи: «Открыть» или «Где сделать»
     await settledScreenshot(page, "queue-manager");
 
     await take.click();
-    await expect(page).toHaveURL(/\/crm\/messages\?lead=L-2041$/);
-    await expect(page.getByRole("heading", { level: 1, name: "Ждут ответа" })).toBeVisible();
+    await expect(page).toHaveURL(/\/crm\/leads\?scope=waiting&lead=L-2041$/);
+    await expect(page.getByRole("heading", { level: 1, name: "Лиды" })).toBeVisible();
     await expect(page.getByRole("heading", { level: 2, name: "Азиз Демо" })).toBeVisible();
     await expect(page.getByRole("button", { name: /Забрать/ }).first()).toBeVisible();
     await expectNoViolations(page, "диалог из очереди");
@@ -321,7 +321,7 @@ test.describe("Колокольчик: объект с экраном откры
     await page.getByRole("button", { name: /^Центр уведомлений/ }).click();
     const center = page.getByRole("dialog", { name: "Центр уведомлений" });
     await center.getByRole("link", { name: /Лид L-2041 просит КП/ }).click();
-    await expect(page).toHaveURL(/\/crm\/messages\?lead=L-2041$/);
+    await expect(page).toHaveURL(/\/crm\/leads\?scope=waiting&lead=L-2041$/);
     await expect(page.getByRole("heading", { level: 2, name: "Азиз Демо" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Где посмотреть" })).toHaveCount(0);
   });
@@ -380,7 +380,7 @@ test.describe("Переходы на телефоне @mobile", () => {
       .getByRole("region", { name: "Что сделать сейчас" })
       .getByRole("link", { name: "Открыть: Взять в работу лида L-2041" })
       .click();
-    await expect(page).toHaveURL(/\/crm\/messages\?lead=L-2041$/);
+    await expect(page).toHaveURL(/\/crm\/leads\?scope=waiting&lead=L-2041$/);
     await expect(page.getByRole("heading", { level: 2, name: "Азиз Демо" })).toBeVisible();
     await settledScreenshot(page, "queue-manager-dialog-mobile");
     await expectNoViolations(page, "диалог на телефоне");

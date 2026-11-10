@@ -219,7 +219,7 @@
     "mailFailed": "Not sent"
   },
   "form": {
-    "subtitle": "The document goes to the director for approval. You can save a draft and continue later in “My documents”.",
+    "subtitle": "The document goes to the director for approval. You can save a draft and continue later in “Documents”.",
     "subtitleLetter": "A letter on the company letterhead: see the real PDF, register the outgoing number and send it to the addressee.",
     "subtitleContinue": "Draft {{number}}: changes are saved, you can send it at any time.",
     "subtitleReturned": "{{number}} was returned for rework: fix it and send again.",
@@ -288,7 +288,7 @@
       "memo": [
         "The document gets a number like СЗ-2026/031 and goes to the director for approval.",
         "The director approves, returns it for rework or rejects it — you get a notification.",
-        "An approved document stays in “My documents” with the visa and date."
+        "An approved document stays in “Documents” with the visa and date."
       ],
       "memoAmount": [
         "The document gets a number like СЗ-2026/031 and goes to the director for approval.",
@@ -298,19 +298,19 @@
       "application": [
         "The application gets a number like ЗЯ-2026/012 and goes to the director for approval.",
         "The director approves, returns it for rework or rejects it — you get a notification.",
-        "The decision and its date stay in “My documents”."
+        "The decision and its date stay in “Documents”."
       ],
       "report": [
         "The report gets a number like ОТ-2026/007 and goes to the director for approval.",
         "The director approves, returns it for rework or rejects it — you get a notification.",
-        "The decision and its date stay in “My documents”."
+        "The decision and its date stay in “Documents”."
       ],
       "letter": [
         "The letter gets the outgoing number ИСХ-NNN/YY and the registration date.",
         "The numbered letterhead PDF goes to the addressee by email, if given.",
         "A reply “to ВХ” closes the “Prepare a reply” instruction; the sending log is on the letter card."
       ],
-      "draft": "“Save draft” sends nothing: the document stays in “My documents” with a “Continue” button.",
+      "draft": "“Save draft” sends nothing: the document stays in “Documents” with a “Continue” button.",
       "letterHandover": [
         "The letter draft goes to the records clerk for registration.",
         "They check the PDF, register the outgoing number and send it to the addressee.",
@@ -375,7 +375,7 @@
       "title": "This document cannot be edited",
       "text": "A draft and a document returned for rework can be edited. A sent document is waiting for a decision."
     },
-    "toDocuments": "My documents",
+    "toDocuments": "To documents",
     "forbiddenTitle": "You cannot create documents",
     "replyTo": {
       "label": "In reply to incoming",

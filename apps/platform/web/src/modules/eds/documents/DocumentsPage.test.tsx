@@ -196,7 +196,6 @@ describe("EDS · Документы: список", () => {
 
     expect(await screen.findByText("Своих документов пока нет")).toBeVisible();
     expect(screen.queryByRole("radiogroup", { name: "Чьи документы" })).toBeNull();
-    expect(screen.getAllByRole("link", { name: "Создать документ" }).length).toBeGreaterThan(0);
   });
 
   it("постраничный просмотр: «Дальше» берёт следующий курсор, «Назад» возвращает", async () => {

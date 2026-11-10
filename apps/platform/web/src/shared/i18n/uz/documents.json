@@ -219,7 +219,7 @@
     "mailFailed": "Yuborilmadi"
   },
   "form": {
-    "subtitle": "Hujjat direktorga kelishish uchun yuboriladi. Qoralamani saqlab, keyinroq «Mening hujjatlarim»da davom ettirish mumkin.",
+    "subtitle": "Hujjat direktorga kelishish uchun yuboriladi. Qoralamani saqlab, keyinroq «Hujjatlar»da davom ettirish mumkin.",
     "subtitleLetter": "Kompaniya blankidagi xat: haqiqiy PDF ni ko‘ring, ИСХ ni ro‘yxatdan o‘tkazing va manzilga yuboring.",
     "subtitleContinue": "{{number}} qoralamasi: o‘zgarishlar saqlanadi, istalgan payt yuborish mumkin.",
     "subtitleReturned": "{{number}} qayta ishlashga qaytarilgan: tuzatib, qayta yuboring.",
@@ -288,7 +288,7 @@
       "memo": [
         "Hujjatga СЗ-2026/031 kabi raqam beriladi va u direktorga kelishish uchun yuboriladi.",
         "Direktor kelishadi, qayta ishlashga qaytaradi yoki rad etadi — sizga xabar keladi.",
-        "Kelishilgan hujjat viza va sana bilan «Mening hujjatlarim»da qoladi."
+        "Kelishilgan hujjat viza va sana bilan «Hujjatlar»da qoladi."
       ],
       "memoAmount": [
         "Hujjatga СЗ-2026/031 kabi raqam beriladi va u direktorga kelishish uchun yuboriladi.",
@@ -298,19 +298,19 @@
       "application": [
         "Arizaga ЗЯ-2026/012 kabi raqam beriladi va u direktorga kelishish uchun yuboriladi.",
         "Direktor kelishadi, qayta ishlashga qaytaradi yoki rad etadi — sizga xabar keladi.",
-        "Qaror va sana «Mening hujjatlarim»da qoladi."
+        "Qaror va sana «Hujjatlar»da qoladi."
       ],
       "report": [
         "Hisobotga ОТ-2026/007 kabi raqam beriladi va u direktorga kelishish uchun yuboriladi.",
         "Direktor kelishadi, qayta ishlashga qaytaradi yoki rad etadi — sizga xabar keladi.",
-        "Qaror va sana «Mening hujjatlarim»da qoladi."
+        "Qaror va sana «Hujjatlar»da qoladi."
       ],
       "letter": [
         "Xatga ИСХ-NNN/YY chiquvchi raqami va ro‘yxatga olish sanasi beriladi.",
         "Raqamli blank PDF i e-pochta ko‘rsatilgan bo‘lsa, manzilga yuboriladi.",
         "«ВХ ga javob» «Javob tayyorlash» topshirig‘ini yopadi; yuborish jurnali — xat kartochkasida."
       ],
-      "draft": "«Qoralamani saqlash» hech narsa yubormaydi: hujjat «Mening hujjatlarim»da «Davom ettirish» tugmasi bilan qoladi.",
+      "draft": "«Qoralamani saqlash» hech narsa yubormaydi: hujjat «Hujjatlar»da «Davom ettirish» tugmasi bilan qoladi.",
       "letterHandover": [
         "Xat qoralamasi ro‘yxatga olish uchun ish yurituvchiga o‘tadi.",
         "U PDF ni tekshiradi, ИСХ ni ro‘yxatga oladi va manzilga yuboradi.",
@@ -375,7 +375,7 @@
       "title": "Bu hujjatni tahrirlab bo‘lmaydi",
       "text": "Qoralamani va qayta ishlashga qaytarilgan hujjatni tahrirlash mumkin. Yuborilgan hujjat qarorni kutmoqda."
     },
-    "toDocuments": "Mening hujjatlarim",
+    "toDocuments": "Hujjatlarga",
     "forbiddenTitle": "Hujjat yaratib bo‘lmaydi",
     "replyTo": {
       "label": "Kiruvchi xatga javoban",
