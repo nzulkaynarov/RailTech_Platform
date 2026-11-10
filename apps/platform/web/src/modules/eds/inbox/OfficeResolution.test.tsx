@@ -291,7 +291,7 @@ describe("Журнал «Входящие письма»: фильтры и ко
       await screen.findByRole("link", { name: "Показать письмо ВХ-108/26 в боковом окне" }),
     ).toBeVisible();
 
-    fireEvent.click(within(filter).getByText("Исполнено"));
+    await chooseOption(screen.getByLabelText("Другой статус"), "Исполнено");
     expect(await screen.findByText("Писем с таким статусом нет")).toBeVisible();
   });
 });

@@ -6,7 +6,8 @@
       "label": "Xat holati",
       "all": "Hammasi",
       "on_control": "Nazoratda",
-      "overdue": "Muddati o‘tgan"
+      "overdue": "Muddati o‘tgan",
+      "more": "Boshqa holat"
     },
     "columns": {
       "number": "Raqami",

@@ -87,7 +87,7 @@ test.describe("Создать документ: сотрудник", () => {
 
     await page.getByRole("button", { name: "Отправить на согласование" }).click();
 
-    await expect(page).toHaveURL(/\/eds\/documents\?scope=mine&doc=/);
+    await expect(page).toHaveURL(/\/eds\/documents\?box=internal&scope=mine&doc=/);
     const panel = side(page);
     await expect(
       panel.getByRole("heading", { level: 3, name: "Закупка мебели для переговорной" }),
@@ -285,8 +285,6 @@ test.describe("Создать документ: директор и реестр
     await expect(page.getByText("Своих документов пока нет")).toBeVisible();
     await expect(page.getByRole("radiogroup", { name: "Чьи документы" })).toHaveCount(0);
     await settledScreenshot(page, "my-documents-empty");
-    await page.getByRole("link", { name: "Создать документ" }).first().click();
-    await expect(page).toHaveURL(/\/eds\/new$/);
   });
 });
 
@@ -371,7 +369,7 @@ test.describe("Создать документ: телефон", () => {
       await sheet.getByRole("button", { name: "Закрыть документ" }).click();
       await expect(page.getByRole("dialog", { name: "Документ" })).toHaveCount(0);
 
-      await page.getByRole("link", { name: "Создать документ" }).first().click();
+      await spaGoto(page, "/eds/new");
       await expect(page.getByRole("heading", { level: 1, name: "Создать документ" })).toBeVisible();
       await fillMemo(page, "Заказ воды для офиса", "Прошу согласовать заказ питьевой воды.");
       const submit = page.getByRole("button", { name: "Отправить на согласование" });

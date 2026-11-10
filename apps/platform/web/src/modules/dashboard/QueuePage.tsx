@@ -14,6 +14,9 @@ import { EmptyState } from "../../shared/ui/EmptyState";
 import { LinkButton } from "../../shared/ui/LinkButton";
 import { PageHeader } from "../../shared/ui/PageHeader";
 import { QueueList, type QueueItem as RowItem } from "../../shared/ui/QueueList";
+import { SigningList } from "../eds/approvals/SigningList";
+
+import "../eds/decision/decision.css";
 import { bannerKind } from "../../shared/ui/bannerKind";
 import { SourceBanner } from "../../shared/ui/SourceBanner";
 import { matchSection } from "../registry";
@@ -197,6 +200,10 @@ export function QueuePage() {
         </section>
       ) : null}
       {list}
+      {/* Подписи ERP ждут того, кто согласует служебки (SIGN-4); под списком и после него — их загрузка ничего не сдвигает */}
+      {!queue.isPending && canSee(me, { anyOf: ["eds.memo.approve", "eds.memo.create"] }) ? (
+        <SigningList />
+      ) : null}
     </div>
   );
 }

@@ -120,10 +120,7 @@ test.describe("Входящие письма: директор", () => {
     // письма больше нет в «Ждёт резолюции», зато есть в «Резолюция наложена»
     await openInbox(page);
     await expect(page.getByRole("row")).toHaveCount(1 + 4);
-    await page
-      .getByRole("radiogroup", { name: "Статус письма" })
-      .getByText("Резолюция наложена")
-      .click();
+    await chooseOption(page.getByLabel("Другой статус"), "Резолюция наложена");
     await expect(row(page, "ВХ-104/26").getByText("Резолюция наложена")).toBeVisible();
   });
 

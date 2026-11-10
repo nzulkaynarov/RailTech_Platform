@@ -342,12 +342,12 @@ describe("EDS · Создать документ: форма", () => {
     expect(screen.getByText("Тип нельзя менять после создания.")).toBeVisible();
   });
 
-  it("чужой или отправленный документ править нельзя: словами и со ссылкой на «Мои документы»", async () => {
+  it("чужой или отправленный документ править нельзя: словами и со ссылкой на «К документам»", async () => {
     // СЗ-2026/031 уже на согласовании
     await openForm("manager@demo.example", "?draft=00000000-0000-4000-8000-000000000001");
 
     expect(await screen.findByText("Этот документ нельзя править")).toBeVisible();
-    expect(screen.getByRole("link", { name: "Мои документы" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "К документам" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Отправить на согласование" })).toBeNull();
   });
 

@@ -6,7 +6,8 @@
       "label": "Letter status",
       "all": "All",
       "on_control": "Under control",
-      "overdue": "Overdue"
+      "overdue": "Overdue",
+      "more": "Other status"
     },
     "columns": {
       "number": "Number",

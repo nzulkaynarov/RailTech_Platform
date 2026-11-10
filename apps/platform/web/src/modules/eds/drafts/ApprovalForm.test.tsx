@@ -261,19 +261,19 @@ describe("Одобрение КП: форма", () => {
     expect(await screen.findByText(/расходится с итогом снимка КП/)).toBeVisible();
   });
 
-  it("список адресует КП по id маршрута, а не по номеру", async () => {
+  it("старые адреса списков ведут в ящики «Документов», ссылка на КП — в его карточку", async () => {
     signIn("director@demo.example");
-    const { router } = renderAt("/eds/drafts");
-    const link = await screen.findByRole("link", { name: "Открыть карточку КП КП-2026/115" });
-    expect(link).toHaveAttribute(
-      "href",
-      expect.stringContaining("40000000-0000-4000-8000-000000000115"),
-    );
-
-    fireEvent.click(screen.getByRole("link", { name: "Показать КП КП-2026/115 в боковом окне" }));
-    expect(router.state.location.search).toContain("quote=40000000-0000-4000-8000-000000000115");
+    const { router } = renderAt("/eds/drafts?quote=40000000-0000-4000-8000-000000000115");
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe(
+        "/eds/drafts/40000000-0000-4000-8000-000000000115",
+      );
+    });
+    router.navigate("/eds/approvals").catch(() => undefined);
+    await waitFor(() => {
+      expect(router.state.location.search).toBe("?box=internal");
+    });
   });
-
   it("ссылка из «Моей очереди» (КП-2026/118, panel=open) открывает карточку и «Одобрение»", async () => {
     signIn("director@demo.example");
     renderAt(`/eds/drafts/${encodeURIComponent("КП-2026/118")}?panel=open&tab=approve`);

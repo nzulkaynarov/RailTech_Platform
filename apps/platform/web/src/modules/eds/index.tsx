@@ -18,9 +18,35 @@ import { TasksScreen } from "./tasks/TasksScreen";
  * Модуль EDS. «Входящие письма» (D1-3), «Все документы» (реестр и «Мои документы») и «Создать документ» (D1-5), «КП на одобрение»
  * и «На согласовании» (D1-4), «Проекты: договоры и акты» (D2-5) — настоящие экраны; остальные разделы пока заглушки каркаса.
  */
+/** Старые списки без пункта меню: что ждёт сотрудника — в «Задачах», остальное — в ящиках «Документов». */
+function movedListPath(
+  key: string,
+  objectId: string | undefined,
+  search: string,
+): string | undefined {
+  if (objectId) return undefined;
+  const params = new URLSearchParams(search);
+  if (key === "drafts") {
+    const quote = params.get("quote");
+    return quote
+      ? `/eds/drafts/${encodeURIComponent(quote)}`
+      : "/eds/documents?box=outgoing&kind=quote";
+  }
+  if (key === "approvals") {
+    const memo = params.get("memo");
+    return memo ? `/eds/approvals/${encodeURIComponent(memo)}` : "/eds/documents?box=internal";
+  }
+  return undefined;
+}
+
 export function Component() {
   const location = useLocation();
   const match = matchSection(location.pathname, location.search);
+  const moved =
+    match?.module.code === "eds"
+      ? movedListPath(match.section.key, match.objectId, location.search)
+      : undefined;
+  if (moved) return <Navigate to={moved} replace />;
   if (match?.module.code === "eds" && match.section.key === "inbox") {
     return (
       <RequireAccess rule={match.section.access}>

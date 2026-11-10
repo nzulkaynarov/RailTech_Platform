@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 
-import { canEdit, canSee } from "../../../app/access";
+import { canSee } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { useViewport } from "../../../app/shell/useViewport";
 import type {
@@ -21,7 +21,6 @@ import { TableCols } from "../../../shared/ui/DataBlock";
 import { tableMinWidth } from "../../../shared/ui/tableWidth";
 import { QueryState, ScrollRegion } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
-import { PlusIcon } from "../../../shared/ui/icons";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { TabsBar } from "../../../shared/ui/TabsBar";
@@ -455,13 +454,6 @@ export function DocumentsPage() {
                   ? "documents:list.empty.allText"
                   : "documents:list.empty.mineText",
             )}
-            action={
-              canEdit(me, "eds.memo.create") ? (
-                <LinkButton type="primary" to="/eds/new">
-                  {t("modules:eds.action")}
-                </LinkButton>
-              ) : undefined
-            }
           />
         ) : (
           <>
@@ -521,13 +513,6 @@ export function DocumentsPage() {
                 shownScope === "all" ? "documents:list.subtitleAll" : "documents:list.subtitle",
               ),
             })}
-        extra={
-          canEdit(me, "eds.memo.create") ? (
-            <LinkButton type="primary" icon={<PlusIcon />} to="/eds/new">
-              {t("modules:eds.action")}
-            </LinkButton>
-          ) : null
-        }
       />
       <div className="pf-docs-controls">
         {canViewAll ? (

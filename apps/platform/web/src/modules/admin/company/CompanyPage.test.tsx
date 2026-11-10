@@ -216,9 +216,17 @@ describe("Admin · Компания: доступ и каркас", () => {
       );
     });
 
-    const menu = screen.getByRole("navigation", { name: "Разделы модуля" });
-    fireEvent.click(within(menu).getByRole("link", { name: "Компания" }));
-    fireEvent.click(await screen.findByRole("link", { name: /Шаблоны документов/ }));
+    // «Шаблоны документов» — пункт «Документов»
+    fireEvent.click(
+      within(screen.getByRole("navigation", { name: "Модули" })).getByRole("link", {
+        name: "Документы",
+      }),
+    );
+    fireEvent.click(
+      within(await screen.findByRole("navigation", { name: "Разделы модуля" })).getByRole("link", {
+        name: "Шаблоны",
+      }),
+    );
     fireEvent.click(await screen.findByRole("button", { name: "Открыть: Договор поставки (наш)" }));
     const viewer = await screen.findByRole("dialog", { name: "Шаблон документа" });
     expect(within(viewer).getByLabelText(/^Текст шаблона/)).toBeDisabled();

@@ -27,22 +27,6 @@ async function expectNoViolations(page: Page, context: string): Promise<void> {
   ).toEqual([]);
 }
 
-async function openDrafts(page: Page, query = ""): Promise<void> {
-  await spaGoto(page, `/eds/drafts${query}`);
-  await expect(page.getByRole("heading", { level: 1, name: "КП на одобрение" })).toBeVisible();
-}
-
-async function openApprovals(page: Page, query = ""): Promise<void> {
-  await spaGoto(page, `/eds/approvals${query}`);
-  await expect(page.getByRole("heading", { level: 1, name: "На согласовании" })).toBeVisible();
-}
-
-function row(page: Page, label: string) {
-  return page.getByRole("row").filter({
-    has: page.getByRole("link", { name: new RegExp(`^Показать .* ${label} в боковом окне`) }),
-  });
-}
-
 const quoteForm = (page: Page) => page.locator(PANEL).getByRole("form", { name: "Одобрение КП" });
 const memoForm = (page: Page) =>
   page.locator(PANEL).getByRole("form", { name: "Согласование документа" });
@@ -50,32 +34,9 @@ const memoForm = (page: Page) =>
 test.describe("КП на одобрение: директор", () => {
   test.skip(({ isMobile }) => isMobile, "сценарии на десктопе; телефон — блок @mobile");
 
-  test("список → КП в боковом окне → карточка → «Одобрить КП» с каналами → КП ушло из «Моего шага»", async ({
-    page,
-  }) => {
+  test("карточка КП → «Одобрить КП» с каналами", async ({ page }) => {
     await loginAndWait(page, "director@demo.example");
-    await openDrafts(page);
-
-    // список: КП · заявка · клиент · сумма · срок · поступило · статус · «Открыть»; решённое КП-113 в «Моём шаге» нет
-    const first = row(page, "КП-2026/115");
-    await expect(first.getByText("ООО «Демо-Рейл»")).toBeVisible();
-    await expect(first.getByText("ЗВ-2026-104")).toBeVisible();
-    await expect(first.getByText("На одобрении")).toBeVisible();
-    await expect(page.getByRole("row")).toHaveCount(1 + 4);
-    await settledScreenshot(page, "list");
-    await expectNoViolations(page, "список КП");
-
-    // клик по строке — КП в боковом окне без перехода
-    await first.getByText("ООО «Демо-Рейл»").click();
-    const panel = page.locator(PANEL);
-    await expect(panel.getByRole("heading", { level: 3, name: "КП-2026/115" })).toBeVisible();
-    await expect(quoteForm(page)).toBeVisible();
-    await expect(page).toHaveURL(/\/eds\/drafts\?/);
-
-    // карточка КП
-    // окно поверх списка закрывает правые столбцы (ORCHESTRATOR §3 п. 18): сначала скрыть его
-    await page.getByRole("button", { name: "Скрыть боковое окно" }).click();
-    await first.getByRole("link", { name: "Открыть карточку КП КП-2026/115" }).click();
+    await spaGoto(page, `/eds/drafts/${encodeURIComponent("КП-2026/115")}`);
     await expect(page.getByRole("heading", { level: 1, name: "КП-2026/115" })).toBeVisible();
     await expect(page.getByText("Черновик · отправка заблокирована")).toBeVisible();
     const steps = page.getByRole("list", { name: "Путь заявки ЗВ-2026-104" });
@@ -119,12 +80,6 @@ test.describe("КП на одобрение: директор", () => {
     await expect(report.getByText("Кабинет — опубликовано")).toBeVisible();
     await expect(report.getByText("Почта — не выбрано при одобрении")).toBeVisible();
     await settledScreenshot(page, "approved");
-
-    // КП ушло из «Моего шага», но есть в «Все КП» со статусом «Одобрено»
-    await openDrafts(page);
-    await expect(page.getByRole("row")).toHaveCount(1 + 3);
-    await page.getByRole("radiogroup", { name: "Какие КП показать" }).getByText("Все КП").click();
-    await expect(row(page, "КП-2026/115").getByText("Одобрено")).toBeVisible();
   });
 
   test("отправленное КП: комментарий клиента из кабинета виден в карточке (B-CABFIX-1)", async ({
@@ -258,14 +213,6 @@ test.describe("КП на одобрение: менеджер", () => {
 
   test("видит КП без себестоимости и маржи и без кнопок решения", async ({ page }) => {
     await loginAndWait(page, "manager@demo.example");
-    await openDrafts(page);
-
-    // менеджер открывает «Все КП» сам: у него нет «моего шага»
-    await expect(page.getByRole("radiogroup", { name: "Какие КП показать" })).toHaveCount(0);
-    // пять КП и заменённая версия 1 КП-2026/115 в истории (D26G-2)
-    await expect(page.getByRole("row")).toHaveCount(1 + 6);
-    await settledScreenshot(page, "manager-list");
-
     await spaGoto(page, `/eds/drafts/${encodeURIComponent("КП-2026/115")}`);
     await expect(page.getByRole("heading", { level: 1, name: "КП-2026/115" })).toBeVisible();
     await expect(page.getByText(/^Только просмотр/).first()).toBeVisible();
@@ -285,7 +232,7 @@ test.describe("КП на одобрение: менеджер", () => {
 
   test("роль без раздела «КП на одобрение» получает экран «Нет доступа»", async ({ page }) => {
     await loginAndWait(page, "supply@demo.example");
-    await spaGoto(page, "/eds/drafts");
+    await spaGoto(page, `/eds/drafts/${encodeURIComponent("КП-2026/115")}`);
 
     await expect(page.getByRole("heading", { name: "Нет доступа" })).toBeVisible();
     await expect(page.getByRole("table")).toHaveCount(0);
@@ -295,23 +242,11 @@ test.describe("КП на одобрение: менеджер", () => {
 test.describe("На согласовании: служебные записки", () => {
   test.skip(({ isMobile }) => isMobile, "сценарии на десктопе; телефон — блок @mobile");
 
-  test("служебка с суммой: список → карточка → «Согласовать» → документ идёт бухгалтеру", async ({
+  test("служебка с суммой: карточка → «Согласовать» → документ идёт бухгалтеру", async ({
     page,
   }) => {
     await loginAndWait(page, "director@demo.example");
-    await openApprovals(page);
-
-    const first = row(page, "СЗ-2026/014");
-    await expect(first.getByText("Оплата аренды склада за ноябрь")).toBeVisible();
-    await expect(first.getByText("Демо Менеджеров")).toBeVisible();
-    await expect(first.getByText("На согласовании · Директор")).toBeVisible();
-    // шаг бухгалтера (СЗ-2026/015) директору не принадлежит: «Счета и оплаты» он только читает (D2-4)
-    await expect(page.getByRole("row")).toHaveCount(1 + 4);
-    await expect(row(page, "СЗ-2026/015")).toHaveCount(0);
-    await settledScreenshot(page, "memos-list");
-    await expectNoViolations(page, "список согласований");
-
-    await first.getByRole("link", { name: "Открыть карточку документа СЗ-2026/014" }).click();
+    await spaGoto(page, `/eds/approvals/${encodeURIComponent("СЗ-2026/014")}`);
     await expect(page.getByRole("heading", { level: 1, name: "СЗ-2026/014" })).toBeVisible();
     await expect(page.getByText("Прошу согласовать оплату аренды склада")).toBeVisible();
     await expect(page.getByRole("link", { name: "Скачать файл счёт-аренда.pdf" })).toBeVisible();
@@ -335,15 +270,6 @@ test.describe("На согласовании: служебные записки"
     await expect(page.getByText("Документ согласован", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("Передана бухгалтеру").first()).toBeVisible();
     await settledScreenshot(page, "memo-agreed");
-
-    // шаг теперь у бухгалтера: на шаге директора документа уже нет, в «Все мои согласования» он со словом «Бухгалтер»
-    await openApprovals(page);
-    await expect(row(page, "СЗ-2026/014")).toHaveCount(0);
-    await page
-      .getByRole("radiogroup", { name: "Какие документы показать" })
-      .getByText("Все мои согласования")
-      .click();
-    await expect(row(page, "СЗ-2026/014").getByText("На согласовании · Бухгалтер")).toBeVisible();
   });
 
   test("«Отклонить» и «Вернуть на доработку»: комментарий обязателен", async ({ page }) => {
@@ -372,11 +298,7 @@ test.describe("На согласовании: служебные записки"
 
   test("автор без права решения видит свой документ в режиме чтения", async ({ page }) => {
     await loginAndWait(page, "manager@demo.example");
-    await openApprovals(page);
-    await expect(page.getByRole("radiogroup", { name: "Какие документы показать" })).toHaveCount(0);
-    await expect(page.getByRole("row")).toHaveCount(1 + 1);
-
-    await page.getByRole("link", { name: "Открыть карточку документа СЗ-2026/014" }).click();
+    await spaGoto(page, `/eds/approvals/${encodeURIComponent("СЗ-2026/014")}`);
     await expect(page.getByRole("heading", { level: 1, name: "СЗ-2026/014" })).toBeVisible();
     await expect(page.getByText(/^Только просмотр/).first()).toBeVisible();
     await expect(page.getByRole("button", { name: "Согласовать" })).toHaveCount(0);
@@ -391,17 +313,11 @@ test.describe("На согласовании: служебные записки"
 test.describe("На согласовании: бухгалтер", () => {
   test.skip(({ isMobile }) => isMobile, "сценарии на десктопе");
 
-  test("служебка на шаге бухгалтера: «Оплатить в «Счета и оплаты»» (EDS 0.5.0+, B-D24-5) и «Вернуть»; чужие шаги не показываются", async ({
+  test("служебка на шаге бухгалтера: «Оплатить в «Финансы»» (EDS 0.5.0+, B-D24-5) и «Вернуть»", async ({
     page,
   }) => {
     await loginAndWait(page, "accountant@demo.example");
-    await openApprovals(page);
-
-    // на шаге бухгалтера одна служебка; документ на шаге директора ему не показывается
-    await expect(page.getByRole("row")).toHaveCount(1 + 1);
-    const first = row(page, "СЗ-2026/015");
-    await expect(first.getByText("На согласовании · Бухгалтер")).toBeVisible();
-    await first.getByRole("link", { name: "Открыть карточку документа СЗ-2026/015" }).click();
+    await spaGoto(page, `/eds/approvals/${encodeURIComponent("СЗ-2026/015")}`);
     await expect(page.getByRole("heading", { level: 1, name: "СЗ-2026/015" })).toBeVisible();
 
     const form = memoForm(page);
@@ -421,17 +337,10 @@ test.describe("На согласовании: бухгалтер", () => {
 });
 
 test.describe("Одобрение и согласование на телефоне @mobile", () => {
-  test("@mobile КП: список карточками; «Одобрение» — лист на весь экран с кнопками внизу", async ({
-    page,
-  }) => {
+  test("@mobile КП: «Одобрение» — лист на весь экран с кнопками внизу", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await loginAndWait(page, "director@demo.example");
-    await spaGoto(page, "/eds/drafts");
-    await expect(page.getByRole("list", { name: "КП на одобрение" })).toBeVisible();
-    await settledScreenshot(page, "mobile-list");
-    await expectNoViolations(page, "телефон: список КП");
-
-    await page.getByRole("link", { name: "Показать КП КП-2026/115 в боковом окне" }).click();
+    await spaGoto(page, `/eds/drafts/${encodeURIComponent("КП-2026/115")}?panel=open&tab=approve`);
     const sheet = page.getByRole("dialog", { name: /^Одобрение/ });
     await expect(sheet.getByRole("form", { name: "Одобрение КП" })).toBeVisible();
 
@@ -473,11 +382,7 @@ test.describe("Одобрение и согласование на телефо�
   test("@mobile служебка: «Согласование» — лист с кнопками внизу", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await loginAndWait(page, "director@demo.example");
-    await spaGoto(page, "/eds/approvals");
-    await expect(page.getByRole("list", { name: "Документы на согласовании" })).toBeVisible();
-    await settledScreenshot(page, "mobile-memos");
-
-    await page.getByRole("link", { name: "Показать документ СЗ-2026/014 в боковом окне" }).click();
+    await spaGoto(page, `/eds/approvals/${encodeURIComponent("СЗ-2026/014")}?panel=open&tab=agree`);
     const sheet = page.getByRole("dialog", { name: /^Согласование/ });
     await expect(sheet.getByRole("form", { name: "Согласование документа" })).toBeVisible();
     for (const name of ["Согласовать", "Вернуть на доработку", "Отклонить"]) {
