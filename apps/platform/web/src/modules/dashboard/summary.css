@@ -1,0 +1,29 @@
+.pf-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pf-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+  gap: 16px;
+}
+
+.pf-summary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pf-summary-list li {
+  display: flex;
+  flex-direction: column;
+}
+
+.pf-summary-pending {
+  border-style: dashed;
+}

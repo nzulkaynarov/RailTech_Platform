@@ -30,6 +30,7 @@ import { LockIcon } from "../../../shared/ui/icons";
 import { AttentionGroupRow } from "./AttentionGroup";
 import { mergeSameCause } from "./attention";
 import { CabinetAddress } from "./CabinetAddress";
+import { ConnectorCatalog } from "./ConnectorCatalog";
 import { integrationErrorText } from "./errors";
 import { TechnicalDetails } from "./HealthParts";
 import { ErpPanel } from "./ErpPanel";
@@ -439,6 +440,7 @@ export function IntegrationsPage() {
           </div>
         </section>
         <AttentionSection items={data.attention} editable={editable} />
+        <ConnectorCatalog />
         {editable ? (
           <Card>
             <CabinetAddress />

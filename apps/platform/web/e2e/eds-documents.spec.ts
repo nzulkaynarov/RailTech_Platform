@@ -57,9 +57,9 @@ test.describe("Создать документ: сотрудник", () => {
       .click();
     await expect(page.getByRole("heading", { level: 1, name: "Входящие" })).toBeVisible();
 
-    // главное действие модуля — «Создать документ» внизу подменю
-    await page.getByRole("link", { name: "Создать документ" }).first().click();
-    await expect(page).toHaveURL(/\/eds\/new$/);
+    await page.getByRole("button", { name: "Создать", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Служебная записка" }).click();
+    await expect(page).toHaveURL(/\/eds\/new\?type=memo$/);
     await expect(page.getByRole("heading", { level: 1, name: "Создать документ" })).toBeVisible();
     await expect(page.getByLabel("Кому")).toHaveValue("Директор");
 
