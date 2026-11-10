@@ -1,6 +1,6 @@
 {
   "title": "Ariza yaratish",
-  "intro": "Lid mijozga aylanadi, xat direktorga «Hujjatlar · Kiruvchi xatlar»ga boradi, loyiha chati yaratiladi.",
+  "intro": "",
   "from": "{{lead}} lididan",
   "client": {
     "legend": "Mijoz",
@@ -65,7 +65,7 @@
     "chat": "Loyiha chati yaratiladi."
   },
   "clientGets": "Mijoz oladi: «ЗВ-… arizasi qabul qilindi, hisoblayapmiz» va «Kabinetni ochish» tugmasi — Telegramda yoki xat orqali.",
-  "submit": "Ariza yaratish → direktorga Kiruvchilarga",
+  "submit": "Ariza yaratish",
   "submitting": "Ariza yaratilmoqda…",
   "cancel": "Bekor qilish",
   "done": {

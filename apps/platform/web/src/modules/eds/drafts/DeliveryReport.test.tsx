@@ -44,7 +44,7 @@ describe("Отправка клиенту: отчёт по каналам", () =
     const form = await screen.findByRole("form", { name: "Одобрение КП" });
     expect(within(form).getByRole("checkbox", { name: "Почта" })).toBeDisabled();
     expect(within(form).getByText("Недоступна: нет e-mail у контакта.")).toBeVisible();
-    fireEvent.click(within(form).getByRole("button", { name: "Одобрить КП → отправить клиенту" }));
+    fireEvent.click(within(form).getByRole("button", { name: "Одобрить КП" }));
     await confirmDialog();
 
     const report = await screen.findByRole("list", { name: "Каналы отправки" });

@@ -158,7 +158,6 @@ describe("Документы · Входящая почта: список (W18A-
     signIn(REGISTRAR);
     renderAt("/eds/mail");
     expect(await screen.findByRole("heading", { name: "Почта не подключена" })).toBeVisible();
-    expect(screen.getByText(/Настройки · Подключения · Почта/)).toBeVisible();
   });
 
   it("менеджеру без первой линии раздел не открыт; свои письма — по «Моя почта»", async () => {
@@ -206,7 +205,7 @@ describe("Входящая почта: «Подозрительные» и «и�
     ).toBeVisible();
     expect(screen.getByText(/отметьте его в почте «Не спам»/)).toBeVisible();
     expect(screen.queryByRole("link", { name: "Зарегистрировать как ВХ" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Не спам → в очередь" }));
+    fireEvent.click(screen.getByRole("button", { name: "Не спам" }));
     expect(await screen.findByText("Письмо в «Новых»")).toBeVisible();
     expect(await screen.findByText("Подозрительных писем нет")).toBeVisible();
     fireEvent.click(screen.getByRole("tab", { name: /^Новые/ }));

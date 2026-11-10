@@ -15,7 +15,7 @@
     },
     "notGranted": {
       "title": "No access to document flow",
-      "text": "Your account has not been added to document flow yet. Write to the administrator."
+      "text": "Your account has not been added to document flow yet."
     },
     "notFound": {
       "title": "Document not found",
@@ -187,7 +187,7 @@
       "return": "Document returned",
       "reject": "Document rejected"
     },
-    "hint": "No separate “accept for payment” is needed: “Paid” closes the accountant step. You can return the document here with a comment."
+    "hint": ""
   },
   "signing": {
     "title": "Waiting for your signature",

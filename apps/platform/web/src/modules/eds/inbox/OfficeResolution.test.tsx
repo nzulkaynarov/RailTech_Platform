@@ -30,7 +30,7 @@ describe("Резолюция делопроизводства (P8b, SPEC-v3 §3.
     expect(
       await screen.findByRole(
         "button",
-        { name: /Утвердить резолюцию → задание в расчёт/ },
+        { name: /Утвердить резолюцию/ },
         {
           timeout: 3000,
         },

@@ -23,7 +23,7 @@
     "off": "Not connected"
   },
   "access": {
-    "forbidden": "Not available to your role: this data is open to the administrator only.",
+    "forbidden": "Insufficient permissions.",
     "unavailable": "The server did not respond: the card data is unavailable right now."
   },
   "cards": {
@@ -111,7 +111,7 @@
     "retry": "Retry",
     "password": "Your administrator password",
     "passwordHint": "Needed for confirmation; never stored.",
-    "readOnly": "View mode: changes are available to the administrator.",
+    "readOnly": "View only.",
     "secretsOff": "The server has no secrets encryption key: keys and passwords cannot be saved. Set it in the server settings.",
     "notSet": "not set",
     "set": "set",
@@ -121,7 +121,7 @@
   "panel": {
     "forbidden": {
       "title": "Not available to your role",
-      "text": "This data is not available to your role. If you need it, ask the administrator."
+      "text": "Insufficient permissions."
     },
     "loadError": {
       "title": "Could not load",
@@ -643,7 +643,7 @@
         "network": "Google did not respond: server connectivity problem. Try later; if it persists, tell your hosting.",
         "auth_failed": "Yandex did not accept the login or app password: check the email and that the password was created for “Files” and not deleted. Create a new password (step 3) and save it.",
         "not_app_password": "This looks like the regular account password, but a “Files” app password (16 Latin letters) is needed: create one (steps 2–3).",
-        "webdav_forbidden": "Yandex closed WebDAV access to Disk: the Yandex 360 administrator disabled it or the account has no Disk. Allow access in the Yandex 360 admin console and check again.",
+        "webdav_forbidden": "Insufficient permissions.",
         "no_space": "Yandex Disk is out of space: free some space (and empty the Disk Trash) or upgrade the plan.",
         "ok_yandex": "Access works: folder “{{folder}}” on Yandex Disk, files are written and deleted.",
         "not_folder_yandex": "The path “{{folder}}” on Disk is a file, not a folder: enter another path.",

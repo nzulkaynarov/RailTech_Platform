@@ -198,7 +198,6 @@ test.describe("Товары", () => {
     await openCatalog(page, "?part=suppliers&supplier=1");
     const supplier = page.getByRole("dialog", { name: "ООО «Поставщик Север»" });
     await expect(supplier.getByText("Кабель силовой ВВГнг 3×2,5")).toBeVisible();
-    await expect(supplier.getByText(/Цены поставщиков вам не показываются/)).toBeVisible();
     await expect(supplier.getByText(/12,50\s*USD/)).toHaveCount(0);
     await expect(supplier.getByText("500 шт., от 10")).toBeVisible();
     await expectNoViolations(page, "поставщик без цен");
@@ -207,7 +206,6 @@ test.describe("Товары", () => {
     await openCatalog(page, "?part=brigades");
     const first = page.getByRole("row", { name: /Бригада монтажа №1/ });
     await expect(first.getByText(/900\s*000/)).toBeVisible();
-    await expect(page.getByText(/Ставки бригад вам не показываются/)).toHaveCount(0);
     await expectNoViolations(page, "бригады");
     await settledScreenshot(page, "catalog-brigades");
 
@@ -227,7 +225,6 @@ test.describe("Товары", () => {
     await loginAndWait(page, "manager@demo.example");
     await openCatalog(page, "?part=brigades");
     await expect(page.getByText("Бригада монтажа №1")).toBeVisible();
-    await expect(page.getByText(/Ставки бригад вам не показываются/)).toBeVisible();
     await expect(page.getByRole("button", { name: "Добавить бригаду" })).toHaveCount(0);
     await expect(page.getByText(/900\s*000/)).toHaveCount(0);
     await expectNoViolations(page, "бригады менеджера");

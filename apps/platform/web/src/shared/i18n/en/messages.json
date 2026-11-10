@@ -175,7 +175,7 @@
     "sent": "Sent to the client",
     "noteSaved": "Note saved",
     "takeFirst": "Take the lead to reply",
-    "readOnly": "View only: managers reply",
+    "readOnly": "View only.",
     "editAfterUnknown": "The text was changed — it will go as a new message; the previous one may already have been delivered",
     "managerReplies": "A manager replies to the client. Triage the lead and press “Hand over to a manager” with a note on what the client needs.",
     "selfHintCabinet": "Will be sent to the client in the cabinet"
@@ -245,8 +245,8 @@
     "typePlaceholder": "Not set",
     "submit": "Hand over",
     "cancel": "Cancel",
-    "hint": "Nothing is sent to the client. The manager sees the lead in “Tasks” with your note and takes it.",
-    "noManagers": "Nobody works leads yet. Ask the administrator to grant the “All-round manager” role.",
+    "hint": "",
+    "noManagers": "Nobody works leads yet.",
     "managersFailed": "Could not load managers. Try again"
   }
 }

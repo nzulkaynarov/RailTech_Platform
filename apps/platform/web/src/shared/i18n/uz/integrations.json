@@ -23,7 +23,7 @@
     "off": "Ulanmagan"
   },
   "access": {
-    "forbidden": "Rolingizga ochiq emas: bu ma’lumotlar faqat administratorga ochiq.",
+    "forbidden": "Ruxsat yetarli emas.",
     "unavailable": "Server javob bermadi: karta ma’lumotlari hozir mavjud emas."
   },
   "cards": {
@@ -111,7 +111,7 @@
     "retry": "Qayta urinish",
     "password": "Administrator parolingiz",
     "passwordHint": "Tasdiqlash uchun kerak; hech qayerda saqlanmaydi.",
-    "readOnly": "Ko‘rish rejimi: o‘zgartirishlar administratorga ochiq.",
+    "readOnly": "Faqat ko‘rish.",
     "secretsOff": "Serverda sirlarni shifrlash kaliti kiritilmagan: kalit va parollarni saqlab bo‘lmaydi. Uni server sozlamalarida kiriting.",
     "notSet": "kiritilmagan",
     "set": "kiritilgan",
@@ -121,7 +121,7 @@
   "panel": {
     "forbidden": {
       "title": "Rolingizga ochiq emas",
-      "text": "Bu ma’lumotlar rolingiz uchun yopiq. Kerak bo‘lsa, administratordan so‘rang."
+      "text": "Ruxsat yetarli emas."
     },
     "loadError": {
       "title": "Yuklab bo‘lmadi",
@@ -643,7 +643,7 @@
         "network": "Google javob bermadi: server aloqasi muammosi. Keyinroq takrorlang; o'tmasa — xostingga xabar bering.",
         "auth_failed": "Yandex login yoki ilova parolini qabul qilmadi: pochta manzilini va parol «Fayllar» uchun yaratilgani hamda o'chirilmaganini tekshiring. Yangi parol yarating (3-qadam) va saqlang.",
         "not_app_password": "Hisobning oddiy paroli kiritilganga o'xshaydi, «Fayllar» turidagi ilova paroli (16 lotin harfi) kerak: uni yarating (2–3-qadamlar).",
-        "webdav_forbidden": "Yandex Disk'ga WebDAV orqali kirishni yopdi: uni Yandex 360 administratori o'chirgan yoki hisobda Disk yo'q. Yandex 360 admin panelida ruxsat bering va qayta tekshiring.",
+        "webdav_forbidden": "Ruxsat yetarli emas.",
         "no_space": "Yandex Disk'da joy yo'q: joy bo'shating (va Disk Savatini tozalang) yoki tarifni kengaytiring.",
         "ok_yandex": "Kirish bor: Yandex Disk'dagi «{{folder}}» papkasi, fayllar yoziladi va o'chiriladi.",
         "not_folder_yandex": "Diskdagi «{{folder}}» yo'lida papka emas, fayl bor: boshqa yo'l kiriting.",

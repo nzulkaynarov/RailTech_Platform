@@ -202,7 +202,7 @@
   },
   "tableScroll": "{{name}}: jadval gorizontal aylantiriladi",
   "errors": {
-    "FORBIDDEN": "Huquq yetarli emas: integratsiyalar jurnali administrator uchun.",
+    "FORBIDDEN": "Ruxsat yetarli emas.",
     "BACKEND_UNAVAILABLE": "Domen javob bermayapti. Keyinroq takrorlang.",
     "VALIDATION_FAILED": "Filtrlarni tekshiring.",
     "DEFAULT": "Amalni bajarib bo'lmadi. Qaytadan urinib ko'ring."

@@ -29,7 +29,7 @@
     "empty": {
       "awaiting": {
         "title": "Nothing needs your decision yet",
-        "text": "New letters arrive from CRM once a request is created and from the office clerk once registered. Letters that are already decided are under the \"All\" filter.",
+        "text": "Nothing here yet.",
         "action": "Show all letters"
       },
       "other": {
@@ -39,7 +39,7 @@
       },
       "all": {
         "title": "No incoming letters yet",
-        "text": "Client letters arrive from CRM once a request is created; the office clerk registers the rest. This is where the director adds a resolution.",
+        "text": "Nothing here yet.",
         "action": "Refresh"
       }
     },
@@ -49,7 +49,7 @@
   "state": {
     "loadError": {
       "title": "Letters did not load",
-      "text": "Try again. If it keeps failing, write to the administrator."
+      "text": "Try again."
     },
     "unavailable": {
       "title": "Document flow is not responding",
@@ -57,11 +57,11 @@
     },
     "forbidden": {
       "title": "Incoming letters are not open to you",
-      "text": "The section is for roles that handle incoming letters. Need access? Write to the administrator."
+      "text": "Insufficient permissions."
     },
     "notGranted": {
       "title": "No access to document flow",
-      "text": "Your account has not been added to document flow yet. Write to the administrator."
+      "text": "Your account has not been added to document flow yet."
     },
     "notFound": {
       "title": "Letter not found",
@@ -141,7 +141,7 @@
       "letter_duplicate_linked": "Duplicate of this letter found"
     },
     "readOnly": "View only",
-    "readOnlyHint": "The director decides on the letter.",
+    "readOnlyHint": "View only.",
     "resolve": "Add resolution",
     "partial": "Request data is unavailable: the step is shown from the letter itself.",
     "onControl": "Under control",
@@ -176,11 +176,11 @@
   "panel": {
     "awaitingReadOnly": {
       "title": "The letter is waiting for the director's resolution",
-      "text": "The director adds the resolution. You can see the letter and its status; no decision is needed from you."
+      "text": "View only."
     },
     "decided": {
       "title": "A decision on the letter has been made",
-      "text": "What was decided and by whom is in the letter card, under \"Director's decision\"."
+      "text": ""
     },
     "briefOpen": "Open the letter card",
     "brief": {
@@ -229,7 +229,7 @@
       }
     },
     "directory": {
-      "forbidden": "Choosing assignees is unavailable: your roles cannot read the employee list. Write to the administrator.",
+      "forbidden": "Insufficient permissions.",
       "unavailable": "The employee list did not load. Try again.",
       "retry": "Retry"
     },
@@ -239,9 +239,9 @@
     },
     "margin": {
       "label": "Margin not below, %",
-      "hint": "Optional. The director will not be able to approve a quote with a margin below the threshold."
+      "hint": ""
     },
-    "submit": "Approve resolution → costing task",
+    "submit": "Approve resolution",
     "consequence": {
       "title": "What will happen",
       "step1": "The letter leaves \"Awaiting resolution\" and gets the status \"Resolution added\".",
@@ -252,7 +252,7 @@
     "other": {
       "title": "If no resolution is needed",
       "comment": "Comment",
-      "commentHint": "Required: the manager will see it and the request gets this reason.",
+      "commentHint": "",
       "return": "Return to manager",
       "reject": "Reject",
       "disabled": "The buttons stay inactive until there is a comment: say what to fix or why you reject.",
@@ -356,7 +356,7 @@
     },
     "addressee": {
       "label": "Addressee",
-      "hint": "Who the letter goes to for resolution. Empty — the director.",
+      "hint": "",
       "default": "Director (default)"
     },
     "urgent": "Urgent",
@@ -409,7 +409,7 @@
     },
     "draft": {
       "legend": "Draft resolution (optional)",
-      "hint": "The director approves the draft in one click or edits it.",
+      "hint": "",
       "kind": "Resolution type",
       "none": "No draft",
       "acquaint": "Acquaint",
@@ -494,7 +494,7 @@
     "other": {
       "title": "If no resolution is needed",
       "comment": "Comment",
-      "commentHint": "Required: the registrar sees it in the card.",
+      "commentHint": "",
       "return": "Return to registrar",
       "reject": "Reject",
       "disabled": "Buttons are disabled until there is a comment: write what to fix or why you reject.",
@@ -528,7 +528,7 @@
       "saveAs": "Save as template",
       "saveTitle": "Save as template",
       "name": "Template name",
-      "nameHint": "For example: “Tax office — reply by accounting”.",
+      "nameHint": "",
       "nameRequired": "Enter a name.",
       "shared": "Shared — for everyone who prepares resolutions",
       "save": "Save",
@@ -638,7 +638,7 @@
     },
     "acq": {
       "title": "Acknowledge",
-      "text": "The director added you to \"Acquaint\". Read the letter and mark it.",
+      "text": "",
       "submit": "Acknowledged",
       "done": "Marked: acknowledged"
     },
@@ -668,7 +668,7 @@
     "attachments": "Attachments: {{count}}",
     "off": {
       "title": "Mail is not connected",
-      "text": "The administrator connects the shared mailbox in Settings · Connections · Mail → “Receiving”. Letters will then appear here automatically.",
+      "text": "",
       "action": "Open Connections"
     },
     "empty": {
@@ -700,7 +700,7 @@
       },
       "history": {
         "title": "No letters from history",
-        "text": "The administrator loads old letters in Settings · Connections · Mail."
+        "text": "Nothing here yet."
       },
       "search": {
         "title": "Nothing found",
@@ -852,12 +852,12 @@
     },
     "historyEmpty": {
       "title": "No mail from history",
-      "text": "An administrator loads older mail in Settings · Connections · Mail."
+      "text": ""
     },
     "spam": {
       "title": "Suspicious mail",
       "what": "Arrived in the mailbox Spam folder. Check the sender and the text.",
-      "notSpam": "Not spam → to queue",
+      "notSpam": "Not spam",
       "notSpamDone": "The mail is in “New”",
       "discard": "Remove",
       "discardDone": "The mail is archived",
@@ -1017,7 +1017,7 @@
       "templates": "Resolution templates",
       "ai": "AI assistant"
     },
-    "readOnly": "View only: an administrator changes the lists.",
+    "readOnly": "View only.",
     "dict": {
       "title": "Lists",
       "hint": "New values appear in forms at once. A used value can only be hidden.",
@@ -1065,7 +1065,7 @@
         "name_taken": "This name is already in the list.",
         "value_in_use": "Letters already use this value — it can only be hidden.",
         "dictionary_closed": "This list can only be renamed.",
-        "FORBIDDEN": "Only an administrator can change the lists.",
+        "FORBIDDEN": "Insufficient permissions.",
         "DEFAULT": "Could not save. Try again.",
         "load": "The lists did not load."
       },
@@ -1099,7 +1099,7 @@
     },
     "templates": {
       "title": "Resolution templates",
-      "hint": "The director picks a template in the resolution and edits it. Own templates — from the resolution form.",
+      "hint": "",
       "add": "Add template",
       "name": "Name",
       "kind": "Type",
@@ -1148,7 +1148,7 @@
         "businessText": "Passport, personal ID (PINFL), card numbers and birth dates are hidden. Company details, phones, email and names stay.",
         "strict": "Strict",
         "strictText": "Phones, email, tax IDs and bank accounts are hidden too. Scans and photos are not sent to the model.",
-        "readOnly": "Only an administrator changes the policy.",
+        "readOnly": "View only.",
         "saved": "Policy saved: “{{name}}”",
         "pending": "Document flow has not applied the “{{name}}” policy yet and still works by “{{current}}”. This usually takes a few seconds; if it does not pass, reload the page or tell the system administrator."
       }
@@ -1169,7 +1169,7 @@
     "failedTag": "Not sent",
     "failed": "{{number}} did not reach the addressee: {{reason}}.",
     "failedNoReason": "{{number}} did not reach the addressee.",
-    "failedHint": "The records clerk will send it again from the outgoing letter card.",
+    "failedHint": "",
     "open": "Open",
     "prefilled": "Filled in from {{number}}: check the correspondent, email and subject.",
     "continue": "Continue the reply"

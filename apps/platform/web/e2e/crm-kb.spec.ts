@@ -259,7 +259,7 @@ test.describe("База знаний: права", () => {
     for (const email of ["manager@demo.example", "director@demo.example"]) {
       await loginAndWait(page, email);
       await openKb(page);
-      await expect(page.getByText("Только просмотр", { exact: true })).toBeVisible();
+      await expect(page.getByText(/^Только просмотр/).first()).toBeVisible();
       await expect(page.getByRole("link", { name: "Загрузить файл" })).toHaveCount(0);
       await expect(page.getByRole("radio", { name: "Песочница бота" })).toHaveCount(0);
       await page.getByRole("link", { name: "Открыть документ: Сроки и условия поставки" }).click();

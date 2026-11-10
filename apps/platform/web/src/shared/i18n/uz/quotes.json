@@ -15,7 +15,7 @@
     },
     "notGranted": {
       "title": "Hujjat aylanishiga ruxsat yo'q",
-      "text": "Hisobingiz hujjat aylanishiga hali kiritilmagan. Administratorga yozing."
+      "text": "Hisobingiz hujjat aylanishiga hali kiritilmagan."
     },
     "notFound": {
       "title": "TT topilmadi",
@@ -50,7 +50,7 @@
     "empty": {
       "mine": {
         "title": "Bosqichingizda TT yo'q",
-        "text": "Ular hisob-kitob tayyor bo'lib, barcha vizalar yig'ilganda ERPdan keladi. Direktor tasdig'isiz mijozga yuborib bo'lmaydi.",
+        "text": "Hozircha bo‘sh.",
         "action": "Barcha TTni ko'rsatish"
       },
       "all": {
@@ -66,7 +66,7 @@
     "draftTag": "Qoralama · yuborish bloklangan",
     "lateTag": "Kechikish bilan tasdiqlangan",
     "readOnly": "Faqat ko'rish",
-    "readOnlyHint": "Tasdiqlash direktorda. Siz TTni ichki maydonlarsiz ko'rasiz.",
+    "readOnlyHint": "Faqat ko‘rish.",
     "steps": "Ariza yo'li",
     "approve": "TTni tasdiqlash",
     "lines": "TT tarkibi",
@@ -224,7 +224,7 @@
     },
     "openReadOnly": {
       "title": "TT direktor qarorini kutmoqda",
-      "text": "Tasdiqlash va qayta ishlashga qaytarish direktorda. Siz TTni tannarx va margasiz ko'rasiz."
+      "text": "Faqat ko‘rish."
     },
     "decided": {
       "approved": {
@@ -300,7 +300,7 @@
       "return": "Qayta ishlashga qaytarish",
       "disabled": "Izoh bo'lmaguncha tugma faol emas."
     },
-    "submit": "TTni tasdiqlash → mijozga yuborish",
+    "submit": "TTni tasdiqlash",
     "done": {
       "approve": "{{number}} TT tasdiqlandi: {{outgoing}}",
       "return": "{{number}} TT qayta ishlashga qaytarildi"
@@ -320,7 +320,7 @@
       "validation": "izohni tekshiring",
       "unknown": "nimadir xato ketdi, kiritilgan matn shaklda qoldi"
     },
-    "submitNoChannels": "TTni tasdiqlash → Chiquvchilarga",
+    "submitNoChannels": "TTni tasdiqlash",
     "confirmVerb": "Tasdiqlash"
   },
   "superseded": "{{version}}-versiya bilan almashtirildi"

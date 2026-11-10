@@ -139,7 +139,7 @@ describe("«Создать заявку» из лида и из клиента (
     expect(await within(panel).findByText("Письмо загружено: pismo.pdf")).toBeVisible();
     fireEvent.click(within(panel).getByRole("radio", { name: "Срочная" }));
 
-    const submit = within(panel).getByRole("button", { name: /Создать заявку → директору/ });
+    const submit = within(panel).getByRole("button", { name: /Создать заявку/ });
     // Двойной клик — одна заявка: кнопка занята, а ключ формы тот же
     fireEvent.click(submit);
     fireEvent.click(submit);
@@ -173,7 +173,7 @@ describe("«Создать заявку» из лида и из клиента (
     fireEvent.change(within(panel).getByLabelText("Суть запроса"), {
       target: { value: "Шпалы, 300 шт, до конца месяца" },
     });
-    fireEvent.click(within(panel).getByRole("button", { name: /Создать заявку → директору/ }));
+    fireEvent.click(within(panel).getByRole("button", { name: /Создать заявку/ }));
     expect(
       await within(panel).findByText(
         "Не удалось создать заявку. Данные формы сохранены — повторите",
@@ -185,7 +185,7 @@ describe("«Создать заявку» из лида и из клиента (
 
     // Текст ошибки появляется раньше, чем AntD снимает с кнопки «загрузку» (отдельная перерисовка после ответа),
     // а клик по кнопке в загрузке AntD игнорирует: на загруженном раннере CI повтор терялся.
-    const submit = within(panel).getByRole("button", { name: /Создать заявку → директору/ });
+    const submit = within(panel).getByRole("button", { name: /Создать заявку/ });
     await waitFor(() => {
       expect(submit).not.toHaveClass("ant-btn-loading");
     });
@@ -204,7 +204,7 @@ describe("«Создать заявку» из лида и из клиента (
     const panel = await openForm("/crm/leads?lead=L-2044&create=1&panel=open&tab=card");
     fireEvent.change(within(panel).getByLabelText("Название компании"), { target: { value: "" } });
     fireEvent.change(within(panel).getByLabelText("Суть запроса"), { target: { value: " " } });
-    fireEvent.click(within(panel).getByRole("button", { name: /Создать заявку → директору/ }));
+    fireEvent.click(within(panel).getByRole("button", { name: /Создать заявку/ }));
     expect(
       await within(panel).findByText("Выберите клиента или впишите название компании"),
     ).toBeVisible();
@@ -219,11 +219,11 @@ describe("«Создать заявку» из лида и из клиента (
   it("лид без согласия (звонок): без отметки — отказ у поля, с отметкой «по телефону» — заявка", async () => {
     const panel = await openForm("/crm/leads?lead=L-2077&create=1&panel=open&tab=card");
     expect(within(panel).getByText("Клиент ещё не дал согласие.")).toBeVisible();
-    fireEvent.click(within(panel).getByRole("button", { name: /Создать заявку → директору/ }));
+    fireEvent.click(within(panel).getByRole("button", { name: /Создать заявку/ }));
     expect(await within(panel).findByText("Без согласия клиента заявку не создать")).toBeVisible();
 
     fireEvent.click(within(panel).getByRole("checkbox", { name: "Согласие получено" }));
-    fireEvent.click(within(panel).getByRole("button", { name: /Создать заявку → директору/ }));
+    fireEvent.click(within(panel).getByRole("button", { name: /Создать заявку/ }));
     expect(await within(panel).findByText("Заявка создана")).toBeVisible();
   });
 
@@ -239,7 +239,7 @@ describe("«Создать заявку» из лида и из клиента (
     fireEvent.change(within(panel).getByLabelText("Суть запроса"), {
       target: { value: "Накладки рельсовые" },
     });
-    fireEvent.click(within(panel).getByRole("button", { name: /Создать заявку → директору/ }));
+    fireEvent.click(within(panel).getByRole("button", { name: /Создать заявку/ }));
     expect(await within(panel).findByText("Заявка создана")).toBeVisible();
     expect(requestsOf("ООО Рельс-Сервис Демо")).toBe(before + 1);
   });
@@ -260,7 +260,7 @@ describe("письмо директору: из переписки и при с�
     });
     const panel = await panelEl();
     expect(await within(panel).findByText("Письмо загружено: письмо-директору.pdf")).toBeVisible();
-    fireEvent.click(within(panel).getByRole("button", { name: /Создать заявку → директору/ }));
+    fireEvent.click(within(panel).getByRole("button", { name: /Создать заявку/ }));
     expect(await within(panel).findByText("Заявка создана")).toBeVisible();
     const created = readLeads().clients.find((c) => c.name === "ООО Демо-Логистик");
     expect(created?.requests[0]?.letter_file_id).toBeTruthy();
@@ -295,12 +295,12 @@ describe("письмо директору: из переписки и при с�
     expect(
       await within(panel).findByText("Подходит PDF, изображение или документ Office"),
     ).toBeVisible();
-    fireEvent.click(within(panel).getByRole("button", { name: /Создать заявку → директору/ }));
+    fireEvent.click(within(panel).getByRole("button", { name: /Создать заявку/ }));
     expect(await within(panel).findByText(/Письмо не загружено — уберите его/)).toBeVisible();
     expect(requestsOf("ООО Демо-Строй")).toBe(0);
 
     fireEvent.click(within(panel).getByRole("button", { name: "Убрать письмо" }));
-    fireEvent.click(within(panel).getByRole("button", { name: /Создать заявку → директору/ }));
+    fireEvent.click(within(panel).getByRole("button", { name: /Создать заявку/ }));
     expect(await within(panel).findByText("Заявка создана")).toBeVisible();
   });
 });

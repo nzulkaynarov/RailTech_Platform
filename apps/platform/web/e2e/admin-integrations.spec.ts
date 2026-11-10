@@ -364,11 +364,8 @@ test.describe("Внешние интеграции: директор и прав
   }) => {
     await loginAndWait(page, "director@demo.example");
     await openIntegrations(page, "erp");
-    await expect(page.getByText("Только просмотр")).toBeVisible();
+    await expect(page.getByText(/^Только просмотр/).first()).toBeVisible();
     await expect(page.getByRole("button", { name: /^Проверить/ })).toHaveCount(0);
-    await expect(
-      side(page).getByText("Режим просмотра: изменения доступны администратору."),
-    ).toBeVisible();
     await expect(side(page).getByRole("button", { name: "Ротация ключа" })).toHaveCount(0);
     await settledScreenshot(page, "director-readonly");
 

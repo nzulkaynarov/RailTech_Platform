@@ -92,6 +92,8 @@ describe("i18n", () => {
               (acc, part) => (acc as Record<string, unknown>)[part],
               resources[lng][ns],
             );
+          // Пустая подсказка значит «подсказки нет» (CONVENTIONS §2 п. 17)
+          if (/(subtitle|[hH]int|[nN]ote$|\.lead$|\.text$|Text$|intro$)/.test(key)) continue;
           expect(value, `${lng}:${ns}:${key}`).not.toBe("");
         }
       }

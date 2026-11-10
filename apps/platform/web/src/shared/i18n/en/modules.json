@@ -44,11 +44,11 @@
         },
         "supply": {
           "title": "No costing tasks",
-          "text": "They arrive after the director’s resolution — we will tell you in the bell and in Telegram."
+          "text": "Nothing here yet."
         },
         "engineer": {
           "title": "No service tasks",
-          "text": "They arrive after the director’s resolution — we will tell you in the bell and in Telegram."
+          "text": "Nothing here yet."
         },
         "accountant": {
           "title": "No payments to confirm and no invoices to issue",
@@ -345,7 +345,7 @@
       "companyRequired": "Create your own company: documents are issued in its name.",
       "companyDone": "Your company is created.",
       "companyUnknown": "The server has not responded yet: a new administrator gets access with a delay. Try again in a few seconds.",
-      "companyNoRights": "Only an administrator can create the company. Sign in as an administrator.",
+      "companyNoRights": "Insufficient permissions.",
       "companyRetry": "Check again",
       "companyWaiting": "Waiting for access…",
       "companyName": "Company name",
@@ -364,7 +364,7 @@
       "companyCreated": "Company “{{name}}” created",
       "companyErrors": {
         "OWN_COMPANY_ALREADY_EXISTS": "Your company already exists.",
-        "FORBIDDEN": "Only an administrator can create the company.",
+        "FORBIDDEN": "Insufficient permissions.",
         "BACKEND_UNAVAILABLE": "The server did not respond: a new administrator gets access with a delay. Try again in a few seconds.",
         "VALIDATION_FAILED": "Check the form fields.",
         "default": "Could not create the company. Try again.",
@@ -412,7 +412,7 @@
         }
       },
       "listLabel": "Setup steps",
-      "onlyAdmin": "The first-run wizard is for the administrator. The director sees the setup read-only in Settings · Connections.",
+      "onlyAdmin": "Insufficient permissions.",
       "banner": {
         "label": "Platform setup",
         "title": "Platform setup: {{done}} of {{total}} done",
@@ -451,7 +451,7 @@
     "org": {
       "title": "Employees",
       "subtitle": "Employees, their roles and access — in one card.",
-      "readOnly": "View only: an administrator changes roles and access.",
+      "readOnly": "View only.",
       "listLabel": "Employees",
       "count": "Employees: {{count}}",
       "search": {
@@ -608,7 +608,7 @@
         "ROLES_REQUIRED": "At least one role is required. To close the employee's access, disable them.",
         "EMAIL_EXISTS": "An employee with this email already exists.",
         "ACTIVE_LEADS": "The employee has leads in progress. Pick a colleague to hand them over to and try again.",
-        "FORBIDDEN": "Not enough rights: roles are granted by an administrator.",
+        "FORBIDDEN": "Insufficient permissions.",
         "BACKEND_UNAVAILABLE": "The server is not responding. Try again later.",
         "VALIDATION_FAILED": "Check the fields.",
         "DEFAULT": "The action failed. Try again.",
@@ -642,7 +642,7 @@
         "off": "hidden"
       },
       "noModules": "No sections yet",
-      "adminNote": "Full access to Settings in this role manages employees, roles and connections, but does not make an ERP superuser: only the system role “Administrator” does — in ERP this role gets only the rights of its sections. It does not give CRM leads, clients or deals — that needs a second role.",
+      "adminNote": "",
       "employeesCount": "Employees: {{count}}",
       "create": "Create role",
       "createdToast": "Role “{{name}}” created",
@@ -650,7 +650,7 @@
       "deletedToast": "Role deleted",
       "viewOnly": "View only",
       "readOnlySubtitle": "What each role sees and can do. Roles and access are changed by the administrator.",
-      "readOnlyNote": "View only: the role and its matrix are changed by the administrator. Employee roles are in Employees.",
+      "readOnlyNote": "View only.",
       "loadError": {
         "title": "Could not load roles",
         "text": "Roles did not load. Try again; if the error stays, check Settings · Connections."
@@ -706,7 +706,7 @@
         "ROLE_SYSTEM": "A system role cannot be changed or deleted.",
         "NAME_TAKEN": "A role with this name already exists. Choose another name.",
         "LAST_ADMIN": "After this change the company would have no administrator. Keep full access to Settings or appoint an administrator.",
-        "FORBIDDEN": "Not enough rights: roles are changed by an administrator.",
+        "FORBIDDEN": "Insufficient permissions.",
         "BACKEND_UNAVAILABLE": "The server is not responding. Try again later.",
         "VALIDATION_FAILED": "Check the role name, sections and fields.",
         "ROLE_VERSION_CONFLICT": "The role was changed by someone else — refresh the page.",
@@ -792,7 +792,7 @@
     },
     "task": {
       "title": "No calculation selected",
-      "text": "Open a calculation and the director's resolution, sign-offs and project chat appear here."
+      "text": ""
     },
     "about": {
       "title": "No chat selected",

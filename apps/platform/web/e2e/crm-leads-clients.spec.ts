@@ -64,7 +64,7 @@ test.describe("Лиды → «Создать заявку» → карточка
     await expectNoViolations(page, "форма «Создать заявку»");
 
     // Двойной клик: одна заявка (кнопка занята, ключ формы тот же)
-    await form.getByRole("button", { name: /Создать заявку → директору/ }).dblclick();
+    await form.getByRole("button", { name: /Создать заявку/ }).dblclick();
     await expect(panel.getByText("Заявка создана")).toBeVisible();
     await panel.getByRole("link", { name: "Открыть карточку клиента" }).click();
 
@@ -134,7 +134,7 @@ test(
     await list.getByRole("link", { name: "Создать заявку для Азиз Демо" }).click();
     const sheet = page.getByRole("dialog", { name: "Создать заявку" });
     await expect(sheet.getByLabel("Название компании")).toHaveValue("ООО Демо-Логистик");
-    const submit = sheet.getByRole("button", { name: /Создать заявку → директору/ });
+    const submit = sheet.getByRole("button", { name: /Создать заявку/ });
     await expect(submit).toBeVisible();
     await settledScreenshot(page, "create-request");
     await expectNoViolations(page, "форма 390");

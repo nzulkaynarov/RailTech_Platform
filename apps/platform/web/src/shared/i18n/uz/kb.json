@@ -12,14 +12,22 @@
     "gaps": "Bo‘shliqlar",
     "sandbox": "Bot sinov maydoni"
   },
-  "languages": { "ru": "Ruscha", "uz": "O‘zbekcha", "en": "Inglizcha" },
+  "languages": {
+    "ru": "Ruscha",
+    "uz": "O‘zbekcha",
+    "en": "Inglizcha"
+  },
   "ingest": {
     "pending": "Navbatda",
     "processing": "Qayta ishlanmoqda",
     "done": "Tayyor",
     "failed": "Xato"
   },
-  "source": { "file": "Fayl", "manual": "Qo‘lda kiritilgan", "url": "Havola" },
+  "source": {
+    "file": "Fayl",
+    "manual": "Qo‘lda kiritilgan",
+    "url": "Havola"
+  },
   "state": {
     "loadError": {
       "title": "Ma’lumotlarni yuklab bo‘lmadi",
@@ -172,7 +180,11 @@
     "open": "Bo‘shliqni ochish: {{question}}",
     "noLead": "—",
     "total": "Jami: {{count}}",
-    "statuses": { "open": "Ochiq", "resolved": "Yopilgan", "ignored": "E’tiborsiz" },
+    "statuses": {
+      "open": "Ochiq",
+      "resolved": "Yopilgan",
+      "ignored": "E’tiborsiz"
+    },
     "columns": {
       "question": "Savol",
       "occurrences": "So‘ralgan",
@@ -206,7 +218,9 @@
       "created": "Birinchi marta",
       "updated": "Oxirgi marta"
     },
-    "create": { "button": "Savoldan hujjat yaratish" },
+    "create": {
+      "button": "Savoldan hujjat yaratish"
+    },
     "link": {
       "button": "Hujjatga bog‘lash",
       "document": "Javobi bor hujjat",

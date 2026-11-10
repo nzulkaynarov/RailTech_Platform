@@ -15,7 +15,7 @@
     },
     "notGranted": {
       "title": "No access to document flow",
-      "text": "Your account has not been added to document flow yet. Write to the administrator."
+      "text": "Your account has not been added to document flow yet."
     },
     "notFound": {
       "title": "Quote not found",
@@ -50,7 +50,7 @@
     "empty": {
       "mine": {
         "title": "No quotes on your step",
-        "text": "They arrive from ERP when costing is ready and all visas are collected. Sending to the client is impossible without the director's approval.",
+        "text": "Nothing here yet.",
         "action": "Show all quotes"
       },
       "all": {
@@ -66,7 +66,7 @@
     "draftTag": "Draft · sending is blocked",
     "lateTag": "Approved late",
     "readOnly": "View only",
-    "readOnlyHint": "Approval belongs to the director. You see the quote without internal fields.",
+    "readOnlyHint": "View only.",
     "steps": "Request path",
     "approve": "Approve quote",
     "lines": "Quote lines",
@@ -224,7 +224,7 @@
     },
     "openReadOnly": {
       "title": "The quote awaits the director's decision",
-      "text": "Approval and return for rework belong to the director. You see the quote without cost and margin."
+      "text": "View only."
     },
     "decided": {
       "approved": {
@@ -300,7 +300,7 @@
       "return": "Return for rework",
       "disabled": "The button is inactive until there is a comment."
     },
-    "submit": "Approve quote → send to client",
+    "submit": "Approve quote",
     "done": {
       "approve": "Quote {{number}} approved: {{outgoing}}",
       "return": "Quote {{number}} returned for rework"
@@ -320,7 +320,7 @@
       "validation": "check the comment",
       "unknown": "something went wrong, what you typed stays in the form"
     },
-    "submitNoChannels": "Approve quote → to Outgoing",
+    "submitNoChannels": "Approve quote",
     "confirmVerb": "Approve"
   },
   "superseded": "Superseded by version {{version}}"

@@ -197,11 +197,6 @@ describe("Dashboard · Моя очередь", () => {
     const page = await main();
 
     expect(await within(page).findByText("Заданий на расчёт нет")).toBeVisible();
-    expect(
-      within(page).getByText(
-        "Они приходят после резолюции директора — мы сообщим в колокольчике и в Telegram.",
-      ),
-    ).toBeVisible();
     expect(within(page).queryByText("Решений от вас пока не требуется")).toBeNull();
     expect(within(page).getByText(/0 решений/)).toBeVisible();
   });

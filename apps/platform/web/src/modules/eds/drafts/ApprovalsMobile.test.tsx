@@ -19,9 +19,7 @@ describe("КП и согласования на телефоне", () => {
     expect(router.state.location.search).toContain("sheet=approve");
     expect(router.state.location.search).not.toContain("panel=open");
     expect(await within(dialog).findByRole("form", { name: "Одобрение КП" })).toBeVisible();
-    expect(
-      within(dialog).getByRole("button", { name: "Одобрить КП → отправить клиенту" }),
-    ).toBeVisible();
+    expect(within(dialog).getByRole("button", { name: "Одобрить КП" })).toBeVisible();
     expect(dialog.closest(".ant-drawer-bottom")).not.toBeNull();
     expect(within(dialog).getByRole("form").querySelector(".pf-dec-actions")).not.toBeNull();
 

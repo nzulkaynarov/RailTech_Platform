@@ -1,6 +1,6 @@
 {
   "title": "Create request",
-  "intro": "The lead becomes a client, the letter goes to the director in “Documents · Incoming letters”, a project chat is created.",
+  "intro": "",
   "from": "From lead {{lead}}",
   "client": {
     "legend": "Client",
@@ -65,7 +65,7 @@
     "chat": "A project chat is created."
   },
   "clientGets": "The client gets: “Request ЗВ-… accepted, we are calculating” and an “Open portal” button — in Telegram or by email.",
-  "submit": "Create request → to the director's Inbox",
+  "submit": "Create request",
   "submitting": "Creating the request…",
   "cancel": "Cancel",
   "done": {

@@ -302,7 +302,6 @@ describe("Клиенты · Ждут ответа: директор", () => {
     expect(screen.getByText("Только просмотр")).toBeVisible();
     expect(screen.queryByRole("button", { name: /Забрать/ })).toBeNull();
     expect(screen.queryByLabelText("Сообщение клиенту")).toBeNull();
-    expect(screen.getByText("Только просмотр: отвечают менеджеры")).toBeVisible();
   });
 });
 
@@ -323,7 +322,6 @@ describe("Клиенты · Ждут ответа: делопроизводит�
     const before = readMessages().leads[0]?.messages.length;
     fireEvent.click(await screen.findByRole("button", { name: "Передать менеджеру: Азиз Демо" }));
     const dialog = await screen.findByRole("dialog", { name: "Передать менеджеру" });
-    expect(within(dialog).getByText(/Клиенту ничего не уйдёт/)).toBeInTheDocument();
     await chooseOption(within(dialog).getByLabelText("Менеджер"), "Демо Широков");
     fireEvent.click(within(dialog).getByRole("button", { name: "Передать" }));
     expect(await within(dialog).findByText(/Напишите записку/)).toBeInTheDocument();

@@ -23,9 +23,7 @@ describe("Входящие письма на телефоне", () => {
     expect(router.state.location.search).toContain("sheet=resolution");
     expect(router.state.location.search).not.toContain("panel=open");
     expect(await within(dialog).findByRole("form", { name: "Резолюция директора" })).toBeVisible();
-    expect(
-      within(dialog).getByRole("button", { name: "Утвердить резолюцию → задание в расчёт" }),
-    ).toBeVisible();
+    expect(within(dialog).getByRole("button", { name: "Утвердить резолюцию" })).toBeVisible();
     expect(within(dialog).getByRole("button", { name: "Вернуть менеджеру" })).toBeVisible();
     expect(within(dialog).getByRole("button", { name: "Отклонить" })).toBeVisible();
     // лист на всю высоту; кнопки решения закреплены внизу

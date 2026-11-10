@@ -89,9 +89,6 @@ describe("Проект: карточка", () => {
       within(panel).queryByRole("button", { name: /Отметить: согласован клиентом/ }),
     ).toBeNull();
     expect(within(panel).queryByRole("button", { name: "Клиент отклонил договор…" })).toBeNull();
-    expect(
-      within(panel).getByText(/Действия по договору доступны директору и бухгалтеру/),
-    ).toBeVisible();
   });
 
   it("проекта нет — «Проект не найден» со ссылкой на список", async () => {
@@ -139,7 +136,7 @@ describe("Проект: договор (вкладка в боковом окн�
     expect(within(panel).getByText(/Didox, № 77/)).toBeVisible();
 
     // скан: пока файла нет — кнопка неактивна, подпись говорит почему
-    const submit = within(panel).getByRole("button", { name: "Прикрепить скан → Подписан" });
+    const submit = within(panel).getByRole("button", { name: "Прикрепить скан" });
     expect(submit).toBeDisabled();
     expect(within(panel).getByText("Выберите файл скана — кнопка станет доступной.")).toBeVisible();
     pick(within(panel).getByLabelText("Скан подписанного договора"), PDF());
@@ -192,9 +189,7 @@ describe("Проект: договор (вкладка в боковом окн�
     expect(
       await within(panel).findByText("Нужен PDF или изображение: JPG, PNG, WEBP."),
     ).toBeVisible();
-    expect(
-      within(panel).getByRole("button", { name: "Прикрепить скан → Подписан" }),
-    ).toBeDisabled();
+    expect(within(panel).getByRole("button", { name: "Прикрепить скан" })).toBeDisabled();
 
     // правильное расширение, но не та сигнатура — отказ ERP словами
     // после выбора AntD Upload пересоздаёт поле файла: берём его заново
@@ -203,8 +198,8 @@ describe("Проект: договор (вкладка в боковом окн�
       new File(["not a pdf at all"], "fake.pdf", { type: "application/pdf" }),
     );
     await within(panel).findAllByText(/fake\.pdf/);
-    expect(within(panel).getByRole("button", { name: "Прикрепить скан → Подписан" })).toBeEnabled();
-    fireEvent.click(within(panel).getByRole("button", { name: "Прикрепить скан → Подписан" }));
+    expect(within(panel).getByRole("button", { name: "Прикрепить скан" })).toBeEnabled();
+    fireEvent.click(within(panel).getByRole("button", { name: "Прикрепить скан" }));
     expect(await within(panel).findByText(/Файл не похож на скан/)).toBeVisible();
     expect(within(panel).getAllByText("Выставлен у оператора").length).toBeGreaterThan(0);
   });
@@ -267,7 +262,7 @@ describe("Проект: акт (вкладка в боковом окне)", () 
     const { panel } = await openTab("accountant@demo.example", 97, "act");
 
     expect(await within(panel).findByText(/Акт у клиента на приёмке/)).toBeVisible();
-    const submit = within(panel).getByRole("button", { name: "Прикрепить скан → Подписан" });
+    const submit = within(panel).getByRole("button", { name: "Прикрепить скан" });
     expect(submit).toBeDisabled();
     pick(within(panel).getByLabelText("Скан подписанного акта"), PDF());
     await waitFor(() => {

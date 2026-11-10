@@ -219,9 +219,6 @@ test.describe("Оргструктура: директор", () => {
     await expect(page.getByRole("button", { name: "Пригласить сотрудника" })).toHaveCount(0);
     await openCard(page, "Демо Менеджеров");
     const panel = page.locator(PANEL);
-    await expect(
-      panel.getByText("Только просмотр: роли и доступ меняет администратор."),
-    ).toBeVisible();
     await expect(panel.getByRole("checkbox")).toHaveCount(0);
     await expect(panel.getByRole("button", { name: "Сохранить роли" })).toHaveCount(0);
     await settledScreenshot(page, "org-readonly");

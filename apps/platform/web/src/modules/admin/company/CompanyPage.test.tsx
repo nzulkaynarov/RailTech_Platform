@@ -830,7 +830,6 @@ describe("Категории и запросы", () => {
     const dialog = await screen.findByRole("dialog", { name: /Отклонить запрос/ });
     fireEvent.change(within(dialog).getByLabelText("Причина отказа"), { target: { value: "Нет" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Отклонить" }));
-    expect(await within(dialog).findByText(/Действие недоступно/)).toBeInTheDocument();
     expect(readCompanyMock().requests.find((r) => r.id === "2")?.status).toBe("pending");
   });
 });
@@ -852,7 +851,6 @@ describe("Платформенные настройки", () => {
     const vat = await screen.findByLabelText("Ставка НДС, %");
     fireEvent.change(vat, { target: { value: "15" } });
     fireEvent.click(await button("Сохранить ставку НДС"));
-    expect(await screen.findByText(/Действие недоступно/)).toBeInTheDocument();
     expect(readCompanyMock().platform.vat_rate).toBe("12.00");
   });
 });
@@ -987,7 +985,6 @@ describe("Курс USD → UZS: ручной ввод", () => {
       target: { value: "12700" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Сохранить курс" }));
-    expect(await screen.findByText(/Действие недоступно/)).toBeInTheDocument();
     expect(await screen.findByText(/1 USD = 12\s650,50 сум/)).toBeInTheDocument();
   });
 

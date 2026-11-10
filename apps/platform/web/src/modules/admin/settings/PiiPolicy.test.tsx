@@ -96,7 +96,6 @@ describe("Настройки · Расходы на ИИ · Защита дан�
     const card = within(await policy());
     expect(card.getByRole("radio", { name: /Деловая/ })).toBeDisabled();
     expect(card.queryByRole("button", { name: "Сохранить" })).toBeNull();
-    expect(card.getByText("Политику меняет администратор.")).toBeVisible();
     expect(await screen.findByRole("switch", { name: "Читать сканы и фото писем" })).toBeDisabled();
   });
 

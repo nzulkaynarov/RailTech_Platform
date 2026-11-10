@@ -44,11 +44,11 @@
         },
         "supply": {
           "title": "Hisob-kitob topshiriqlari yo‘q",
-          "text": "Ular direktor rezolyutsiyasidan keyin keladi — qo‘ng‘iroqcha va Telegramda xabar beramiz."
+          "text": "Hozircha bo‘sh."
         },
         "engineer": {
           "title": "Xizmatlar bo‘yicha topshiriqlar yo‘q",
-          "text": "Ular direktor rezolyutsiyasidan keyin keladi — qo‘ng‘iroqcha va Telegramda xabar beramiz."
+          "text": "Hozircha bo‘sh."
         },
         "accountant": {
           "title": "Tasdiqlash uchun to‘lov topshiriqnomalari va chiqariladigan hisoblar yo‘q",
@@ -345,7 +345,7 @@
       "companyRequired": "O‘z kompaniyangizni yarating: hujjatlar uning nomidan rasmiylashtiriladi.",
       "companyDone": "O'z kompaniyasi yaratilgan.",
       "companyUnknown": "Server hozircha javob bermadi: yangi administratorga kirish kechikib beriladi. Bir necha soniyadan keyin takrorlang.",
-      "companyNoRights": "O‘z kompaniyasini faqat administrator yarata oladi. Administrator sifatida kiring.",
+      "companyNoRights": "Ruxsat yetarli emas.",
       "companyRetry": "Qayta tekshirish",
       "companyWaiting": "Kirish berilishini kutmoqdamiz…",
       "companyName": "Kompaniya nomi",
@@ -364,7 +364,7 @@
       "companyCreated": "«{{name}}» kompaniyasi yaratildi",
       "companyErrors": {
         "OWN_COMPANY_ALREADY_EXISTS": "O'z kompaniyasi allaqachon yaratilgan.",
-        "FORBIDDEN": "O‘z kompaniyasini faqat administrator yarata oladi.",
+        "FORBIDDEN": "Ruxsat yetarli emas.",
         "BACKEND_UNAVAILABLE": "Server javob bermadi: yangi administratorga kirish kechikib beriladi. Bir necha soniyadan keyin takrorlang.",
         "VALIDATION_FAILED": "Forma maydonlarini tekshiring.",
         "default": "Kompaniyani yaratib bo'lmadi. Urinishni takrorlang.",
@@ -412,7 +412,7 @@
         }
       },
       "listLabel": "Sozlash qadamlari",
-      "onlyAdmin": "Birinchi ishga tushirish ustozi administratorga ochiq. Direktor sozlashni faqat o'qish uchun Sozlamalar · Ulanishlar bo‘limida ko'radi.",
+      "onlyAdmin": "Ruxsat yetarli emas.",
       "banner": {
         "label": "Platformani sozlash",
         "title": "Platformani sozlash: tayyor {{done}} / {{total}}",
@@ -451,7 +451,7 @@
     "org": {
       "title": "Xodimlar",
       "subtitle": "Xodimlar, ularning rollari va kirish huquqi — bitta kartochkada.",
-      "readOnly": "Faqat ko'rish: rollar va kirishni administrator o'zgartiradi.",
+      "readOnly": "Faqat ko‘rish.",
       "listLabel": "Xodimlar",
       "count": "Xodimlar soni: {{count}}",
       "search": {
@@ -608,7 +608,7 @@
         "ROLES_REQUIRED": "Kamida bitta rol kerak. Xodimga kirishni yopish uchun uni o'chiring.",
         "EMAIL_EXISTS": "Bunday pochtali xodim allaqachon bor.",
         "ACTIVE_LEADS": "Xodimda ishdagi lidlar bor. Ularni topshiradigan hamkasbni tanlang va takrorlang.",
-        "FORBIDDEN": "Huquq yetarli emas: rollarni administrator beradi.",
+        "FORBIDDEN": "Ruxsat yetarli emas.",
         "BACKEND_UNAVAILABLE": "Server javob bermayapti. Keyinroq takrorlang.",
         "VALIDATION_FAILED": "Maydonlarning to'ldirilganini tekshiring.",
         "DEFAULT": "Amalni bajarib bo'lmadi. Qayta urinib ko'ring.",
@@ -642,7 +642,7 @@
         "off": "ko'rmaydi"
       },
       "noModules": "Hozircha bo'limlar yo'q",
-      "adminNote": "Ushbu roldagi «Sozlamalar» bo‘limiga to‘liq kirish xodimlar, rollar va ulanishlarni boshqarishni beradi, lekin ERP superfoydalanuvchisi qilmaydi: buni faqat «Administrator» tizim roli beradi — ERP'da bu rol faqat o'z bo'limlari huquqlarini oladi. CRM lidlari, mijozlari va bitimlarini bu bo'lim bermaydi — ikkinchi rol kerak.",
+      "adminNote": "",
       "employeesCount": "Xodimlar: {{count}}",
       "create": "Rol yaratish",
       "createdToast": "«{{name}}» roli yaratildi",
@@ -650,7 +650,7 @@
       "deletedToast": "Rol o'chirildi",
       "viewOnly": "Faqat ko'rish",
       "readOnlySubtitle": "Har bir rol nimani ko'radi va nima qila oladi. Rollar va kirishni administrator o'zgartiradi.",
-      "readOnlyNote": "Faqat ko'rish: rolni va uning matritsasini administrator o'zgartiradi. Xodimlar rollari — «Xodimlar» bo‘limida.",
+      "readOnlyNote": "Faqat ko‘rish.",
       "loadError": {
         "title": "Rollarni yuklab bo'lmadi",
         "text": "Rollar yuklanmadi. Takrorlang; xato qolsa, «Sozlamalar · Ulanishlar»ni tekshiring."
@@ -706,7 +706,7 @@
         "ROLE_SYSTEM": "Tizim rolini o'zgartirib yoki o'chirib bo'lmaydi.",
         "NAME_TAKEN": "Bunday nomli rol allaqachon bor. Boshqa nom tanlang.",
         "LAST_ADMIN": "O'zgarishdan so'ng kompaniyada administrator qolmaydi. «Sozlamalar» bo‘limiga to‘liq kirishni saqlang yoki administrator tayinlang.",
-        "FORBIDDEN": "Huquq yetarli emas: rollarni administrator o'zgartiradi.",
+        "FORBIDDEN": "Ruxsat yetarli emas.",
         "BACKEND_UNAVAILABLE": "Server javob bermayapti. Keyinroq takrorlang.",
         "VALIDATION_FAILED": "Rol nomi, bo'limlari va maydonlarini tekshiring.",
         "ROLE_VERSION_CONFLICT": "Rolni boshqa foydalanuvchi o'zgartirgan — sahifani yangilang.",
@@ -792,7 +792,7 @@
     },
     "task": {
       "title": "Hisob-kitob tanlanmagan",
-      "text": "Ariza bo‘yicha hisob-kitobni oching — bu yerda direktor rezolyutsiyasi, vizalar va loyiha chati paydo bo‘ladi."
+      "text": ""
     },
     "about": {
       "title": "Chat tanlanmagan",

@@ -14,7 +14,7 @@ import { chooseOption, fillDate } from "./support/fields";
 // «Утвердить»; отдельно «Вернуть менеджеру» и «Отклонить»; ошибка резолюции со словами и сохранённым текстом; роли только для
 // чтения не видят кнопок решения; axe (WCAG 2.1 AA); на 390 px «Резолюция» — лист на весь экран с кнопками внизу (@mobile).
 const PANEL = "#pf-context-panel";
-const SUBMIT = "Утвердить резолюцию → задание в расчёт";
+const SUBMIT = "Утвердить резолюцию";
 
 async function expectNoViolations(page: Page, context: string): Promise<void> {
   await waitForMotionEnd(page);
@@ -211,7 +211,7 @@ test.describe("Входящие письма: роли только для чт�
       await spaGoto(page, "/eds/inbox/%D0%92%D0%A5-104%2F26");
 
       await expect(page.getByRole("heading", { level: 1, name: "Письмо ВХ-104/26" })).toBeVisible();
-      await expect(page.getByText("Только просмотр")).toBeVisible();
+      await expect(page.getByText(/^Только просмотр/).first()).toBeVisible();
       const panel = page.locator(PANEL);
       await expect(
         panel.getByRole("heading", { name: "Письмо ждёт резолюции директора" }),

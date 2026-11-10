@@ -23,7 +23,7 @@
     },
     "forbidden": {
       "title": "No access",
-      "text": "Stock is available to roles with the Stock section. Ask the administrator if you need it."
+      "text": "Insufficient permissions."
     }
   },
   "errors": {

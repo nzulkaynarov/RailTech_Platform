@@ -202,7 +202,7 @@
   },
   "tableScroll": "{{name}}: the table scrolls horizontally",
   "errors": {
-    "FORBIDDEN": "Not enough rights: the integration log is for the administrator.",
+    "FORBIDDEN": "Insufficient permissions.",
     "BACKEND_UNAVAILABLE": "The domain is not responding. Try again later.",
     "VALIDATION_FAILED": "Check the filters.",
     "DEFAULT": "The action failed. Please try again."

@@ -102,7 +102,6 @@ describe("EDS · Входящие письма: список", () => {
     expect(
       await screen.findByRole("heading", { name: "Решений от вас пока не требуется" }),
     ).toBeVisible();
-    expect(screen.getByText(/Новые письма приходят из CRM после создания заявки/)).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Показать все письма" }));
     expect(await screen.findByRole("table")).toBeVisible();
   });
