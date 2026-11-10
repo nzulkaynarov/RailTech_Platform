@@ -318,3 +318,8 @@
   color: #0958d9;
   border-bottom-color: #1668dc;
 }
+
+.pf-rail-create {
+  width: 36px;
+  height: 36px;
+}

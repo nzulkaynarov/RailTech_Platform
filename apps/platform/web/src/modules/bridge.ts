@@ -1,4 +1,4 @@
-import type { ModuleCode, ObjectKind } from "../shared/api/generated/model";
+import type { ObjectKind } from "../shared/api/generated/model";
 // Односторонняя зависимость: `registry` (карта разделов) про мост не знает, поэтому цикла `bridge` ↔ `registry` нет.
 import { matchSection } from "./registry";
 
@@ -156,13 +156,6 @@ export const NATIVE_SECTIONS: readonly string[] = [
   "admin.setup",
   "admin.tickets",
 ];
-
-/** Главные действия модулей без экрана (кнопка внизу подменю неактивна): когда появятся. Остальных модулей это не касается. */
-export const MODULE_ACTION_WHEN: Readonly<Partial<Record<ModuleCode, When>>> = {
-  eds: "soon",
-  erp: "pilot",
-  chats: "pilot",
-};
 
 export function bridgeKey(module: string, section: string): string {
   return `${module}.${section}`;

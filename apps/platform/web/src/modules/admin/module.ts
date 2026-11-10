@@ -32,7 +32,6 @@ function sectionOf(entry: SettingEntry): SectionConfig {
  */
 export const admin: ModuleConfig = {
   code: "admin",
-  action: { access: "admin", to: "/admin/org?invite=open&panel=open" },
   sections: [
     {
       key: "overview",

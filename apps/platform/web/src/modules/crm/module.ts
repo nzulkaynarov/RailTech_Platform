@@ -2,8 +2,6 @@ import type { ModuleConfig } from "../types";
 
 export const crm: ModuleConfig = {
   code: "crm",
-  // «+ Создать заявку» — из лида или клиента (D1-2b): кнопка подменю ведёт к лидам, которые просят КП.
-  action: { access: "crm.clients", to: "/crm/leads?status=wants_quote" },
   sections: [
     {
       key: "messages",

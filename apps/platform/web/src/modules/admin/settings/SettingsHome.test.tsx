@@ -141,13 +141,7 @@ describe("Настройки · индекс «Все настройки» (SET-
     const groups = within(menu)
       .getAllByRole("link")
       .map((a) => a.textContent);
-    expect(groups).toEqual([
-      "Сотрудники",
-      "Компания",
-      "Подключения",
-      "Журнал",
-      "Пригласить сотрудника",
-    ]);
+    expect(groups).toEqual(["Сотрудники", "Компания", "Подключения", "Журнал"]);
     expect(within(menu).queryByRole("link", { name: "Первый запуск" })).toBeNull();
     expect(within(menu).queryByRole("link", { name: "Обращения сотрудников" })).toBeNull();
   });

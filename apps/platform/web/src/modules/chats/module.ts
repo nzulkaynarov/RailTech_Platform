@@ -5,7 +5,6 @@ const CHATS_TABS = [{ key: "about" }, { key: "documents" }, { key: "files" }] as
 /** Фильтр списка — `?scope=internal|external` (решение архитектора по Q-PLT-12-3: `?tab=` везде только вкладка бокового окна). */
 export const chats: ModuleConfig = {
   code: "chats",
-  action: { access: "chats.internal" },
   sections: [
     {
       key: "calendar",

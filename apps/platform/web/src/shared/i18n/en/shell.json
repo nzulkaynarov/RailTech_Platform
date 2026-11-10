@@ -250,5 +250,21 @@
     },
     "settingsGroup": "Settings",
     "settingTag": "Setting"
+  },
+  "create": {
+    "label": "Create",
+    "soon": "soon",
+    "kinds": {
+      "lead": "Lead",
+      "request": "Request",
+      "incoming": "Incoming document",
+      "letter": "Letter",
+      "memo": "Memo",
+      "statement": "Application",
+      "report": "Report",
+      "purchase": "Purchase request",
+      "assignment": "Assignment",
+      "expense": "Expense"
+    }
   }
 }

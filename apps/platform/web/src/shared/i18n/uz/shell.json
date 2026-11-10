@@ -250,5 +250,21 @@
     },
     "settingsGroup": "Sozlamalar",
     "settingTag": "Sozlama"
+  },
+  "create": {
+    "label": "Yaratish",
+    "soon": "tez orada",
+    "kinds": {
+      "lead": "Lid",
+      "request": "Ariza",
+      "incoming": "Kiruvchi hujjat",
+      "letter": "Xat",
+      "memo": "Xizmat xati",
+      "statement": "Ariza-bayonnoma",
+      "report": "Hisobot",
+      "purchase": "Xarid arizasi",
+      "assignment": "Topshiriq",
+      "expense": "Xarajat"
+    }
   }
 }

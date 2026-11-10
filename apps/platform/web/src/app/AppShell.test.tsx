@@ -158,10 +158,8 @@ describe("каркас на 1440", () => {
       within(menu)
         .getAllByRole("link")
         .map((a) => a.textContent.replace(/\d+, требует действия|\d+$/, "")),
-    ).toEqual(["Лиды", "Контрагенты", "База знаний", "Создать заявку"]);
-    // «Создать заявку» — настоящий экран (D1-2b): кнопка ведёт к лидам, которые просят КП
-    const action = within(menu).getByRole("link", { name: /Создать заявку/ });
-    expect(action).toHaveAttribute("href", "/crm/leads?status=wants_quote");
+    ).toEqual(["Лиды", "Контрагенты", "База знаний"]);
+    expect(within(rail).getByRole("button", { name: "Создать" })).toBeVisible();
   });
 
   it("раздел вне роли — Forbidden, раздела нет в подменю, бокового окна нет", async () => {
@@ -291,5 +289,22 @@ describe("узкие экраны", () => {
     await screen.findByRole("heading", { level: 1, name: "Задачи" });
     expect(screen.queryByRole("tab", { name: "Сегодня" })).not.toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Модули" })).toBeVisible();
+  });
+});
+
+describe("единая кнопка «Создать»", () => {
+  it("показывает виды по правам роли; ещё не готовые неактивны", async () => {
+    signIn("manager@demo.example");
+    renderAt("/crm/leads");
+    await screen.findByRole("heading", { level: 1, name: "Лиды" });
+    const rail = screen.getByRole("navigation", { name: "Модули" });
+    fireEvent.click(within(rail).getByRole("button", { name: "Создать" }));
+    expect(await screen.findByRole("menuitem", { name: "Заявка" })).toBeVisible();
+    expect(screen.getByRole("menuitem", { name: "Служебная записка" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: /Лид · скоро/ })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    expect(screen.queryByRole("menuitem", { name: "Входящее" })).toBeNull();
   });
 });

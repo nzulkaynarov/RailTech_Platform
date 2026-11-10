@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, Outlet, useLocation } from "react-router";
 
-import { MODULE_ACTION_WHEN, bridgeEntry, isStubSection } from "../../modules/bridge";
+import { bridgeEntry, isStubSection } from "../../modules/bridge";
 import { MODULES, matchSection } from "../../modules/registry";
 import { findNavItem, visibleItems, type NavItem } from "../../modules/navigation";
 import { MODULE_SETTINGS } from "../../modules/admin/moduleSettings";
@@ -26,16 +26,14 @@ import type { MenuCounter } from "../../shared/api/generated/model";
 import { usePollQuery } from "../../shared/api/polling";
 import { useEventStream } from "../../shared/api/useEventStream";
 import { ContextPanel, ContextPanelDrawer, ContextPanelSheet } from "../../shared/ui/ContextPanel";
-import { PlusIcon } from "../../shared/ui/icons";
-import { LinkButton } from "../../shared/ui/LinkButton";
 import { ModuleMenu, ModuleMenuContent, type MenuItem } from "../../shared/ui/ModuleMenu";
 import { ModuleRail, type RailModule } from "../../shared/ui/ModuleRail";
-import { SoonButton } from "../../shared/ui/SoonButton";
 import { TopBar, type Crumb } from "../../shared/ui/TopBar";
 import "../../shared/ui/shell.css";
-import { canEdit, canSee } from "../access";
+import { canSee } from "../access";
 import { useAuth } from "../auth/useAuth";
 import { AvatarMenu } from "./AvatarMenu";
+import { CreateMenu } from "./CreateMenu";
 import { PanelContent } from "./PanelContent";
 import { usePanelSlotHost } from "./panelSlotContext";
 import { usePanels } from "./usePanels";
@@ -247,23 +245,7 @@ export function AppShell() {
   const shellTabs = activeResolved?.tabs ?? [];
   const activeItemLabel = nav ? itemLabel(nav.module, nav.item) : "";
 
-  const action =
-    activeModule.action && canEdit(me, activeModule.action.access) ? (
-      activeModule.action.to ? (
-        <LinkButton type="primary" block icon={<PlusIcon />} to={activeModule.action.to}>
-          {t(`modules:${activeModule.code}.action`)}
-        </LinkButton>
-      ) : (
-        <SoonButton
-          type="primary"
-          block
-          icon={<PlusIcon />}
-          hint={t(MODULE_ACTION_WHEN[activeModule.code] === "soon" ? "soon" : "soonPilot")}
-        >
-          {t(`modules:${activeModule.code}.action`)}
-        </SoonButton>
-      )
-    ) : undefined;
+  const action = viewport.mobile ? <CreateMenu block /> : undefined;
 
   // ⚙ в заголовке подменю модуля — его группа Настроек (SET-IA, HubSpot): только тем, кому Настройки видны.
   const settingsGroup = MODULE_SETTINGS[activeModule.code];
@@ -374,6 +356,7 @@ export function AppShell() {
             label={t("rail.label")}
             logoLabel={t("rail.logo")}
             logoTo="/"
+            create={<CreateMenu />}
             profile={profile}
             menuOpen={panels.menuOpen}
           />
