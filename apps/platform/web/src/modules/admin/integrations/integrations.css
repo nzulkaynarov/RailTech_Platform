@@ -331,3 +331,29 @@
   font-size: 14px;
   font-weight: 600;
 }
+
+.pf-int-catalog {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pf-int-catalog-group {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #595959;
+}
+
+.pf-int-catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
+  gap: 8px;
+}
+
+.pf-int-catalog-tile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}

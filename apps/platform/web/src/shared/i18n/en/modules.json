@@ -115,6 +115,25 @@
       "queue": "Tasks",
       "projects": "Projects",
       "summary": "Summary"
+    },
+    "summary": {
+      "byDue": "Tasks by due date",
+      "stuck": "Overdue",
+      "noStuck": "No overdue tasks",
+      "noData": "Data will appear here",
+      "loadError": "Could not load the summary",
+      "retry": "Retry",
+      "due": {
+        "overdue": "Overdue",
+        "today": "Today",
+        "tomorrow": "Tomorrow",
+        "later": "Later"
+      },
+      "blocks": {
+        "requests": "Requests by stage",
+        "profit": "Profit by project",
+        "targets": "12-month targets"
+      }
     }
   },
   "crm": {
@@ -213,6 +232,40 @@
       "retry": "Retry",
       "prev": "Back",
       "next": "Next"
+    },
+    "inbox": {
+      "call": "Call",
+      "search": "Find a conversation",
+      "message": "Write a message",
+      "noData": "Data will appear here",
+      "groups": {
+        "objects": "Object discussions",
+        "direct": "Direct"
+      }
+    },
+    "people": {
+      "filter": "Show",
+      "search": "Find a person",
+      "show": "Show",
+      "write": "Message",
+      "call": "Call",
+      "phone": "Phone",
+      "email": "Email",
+      "noData": "Data will appear here",
+      "kinds": {
+        "all": "All",
+        "employees": "Employees",
+        "clients": "Client people",
+        "partners": "Partner people",
+        "leads": "Leads"
+      },
+      "columns": {
+        "name": "Name",
+        "position": "Position",
+        "kind": "Type",
+        "owner": "Owner",
+        "contacts": "Contacts"
+      }
     }
   },
   "admin": {

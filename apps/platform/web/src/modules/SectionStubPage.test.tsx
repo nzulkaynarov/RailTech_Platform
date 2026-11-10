@@ -90,7 +90,7 @@ describe("SectionStubPage · раздел с мостом", () => {
 
   it("ни «пока нет», ни «фаза Pn» нет ни на одной заглушке", async () => {
     signInAs("all@demo.example");
-    for (const path of ["/crm/requests", "/chats"]) {
+    for (const path of ["/crm/requests", "/chats?scope=internal"]) {
       renderApp(path);
       await main();
       const text = document.body.textContent;
@@ -278,7 +278,7 @@ describe("Бейджи меню у заглушек", () => {
 
   it("раздел без аналога в старых экранах: бейджа нет", async () => {
     signInAs("all@demo.example");
-    renderApp("/chats");
+    renderApp("/chats?scope=internal");
     await main();
     const menu = screen.getByRole("navigation", { name: "Разделы модуля" });
     const item = within(menu).getByRole("link", { name: /^Чаты/ });
