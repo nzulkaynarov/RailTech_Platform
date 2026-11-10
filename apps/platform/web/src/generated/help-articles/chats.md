@@ -1,8 +1,8 @@
 ---
 title: Чаты
-sections: chats.all, chats.internal, chats.external, chats.contacts
+sections: chats.all, chats.internal, chats.external
 order: 95
-screens: [/chats, /chats/contacts]
+screens: [/chats]
 ---
 В разделе «Чаты» будут обсуждения на объектах и личные сообщения сотрудников. Переписка с клиентами и партнёрами — в их карточках.
 

@@ -5,8 +5,9 @@ import { ModuleRoutes } from "../ModuleRoutes";
 import { matchSection } from "../registry";
 import { CalendarPage } from "./calendar/CalendarPage";
 import { ChatsPage } from "./inbox/ChatsPage";
+import { PeoplePage } from "./people/PeoplePage";
 
-/** Маршруты Органайзера: «Календарь» и «Чаты» — настоящие экраны, остальные разделы пока заглушки модуля. */
+/** Маршруты Органайзера: «Календарь», «Чаты» и «Люди» — настоящие экраны, остальные разделы пока заглушки модуля. */
 export function Component() {
   const location = useLocation();
   const match = matchSection(location.pathname, location.search);
@@ -21,6 +22,13 @@ export function Component() {
     return (
       <RequireAccess rule={match.section.access}>
         <ChatsPage />
+      </RequireAccess>
+    );
+  }
+  if (match?.module.code === "chats" && match.section.key === "contacts") {
+    return (
+      <RequireAccess rule={match.section.access}>
+        <PeoplePage />
       </RequireAccess>
     );
   }

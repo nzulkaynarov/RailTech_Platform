@@ -103,7 +103,6 @@ export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
     when: "pilot",
     objectKind: "chat",
   },
-  "chats.contacts": { who: "chats", when: "pilot" },
 };
 
 /** Разделы с настоящим экраном: моста у них нет. Новый настоящий экран — сюда, а запись из `BRIDGE` — удалить. */
@@ -111,6 +110,7 @@ export const NATIVE_SECTIONS: readonly string[] = [
   "dashboard.queue",
   "chats.calendar",
   "chats.all",
+  "chats.contacts",
   "crm.messages",
   "crm.leads",
   "crm.clients",
