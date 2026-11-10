@@ -263,13 +263,13 @@ test.describe("узкие экраны", () => {
 
       await expect(page.getByRole("complementary", { name: "Боковое окно" })).toHaveCount(0);
       await page.getByRole("button", { name: "Показать панель" }).click();
-      await expect(page.getByRole("tab", { name: "Карточка" })).toBeVisible();
+      await expect(page.getByRole("tab", { name: "Договор" })).toBeVisible();
       await expect(page).toHaveURL(/panel=open/);
       await page
         .getByRole("dialog", { name: "Боковое окно" })
         .getByRole("button", { name: "Скрыть боковое окно" })
         .click();
-      await expect(page.getByRole("tab", { name: "Карточка" })).toBeHidden();
+      await expect(page.getByRole("tab", { name: "Договор" })).toBeHidden();
 
       const scrollWidth = await page.evaluate("document.documentElement.scrollWidth");
       expect(scrollWidth).toBeLessThanOrEqual(390);
