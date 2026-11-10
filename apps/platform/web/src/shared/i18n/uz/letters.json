@@ -218,7 +218,7 @@
     "zones": {
       "goods": {
         "name": "Ta'minotchi",
-        "hint": "ombor va yetkazib beruvchilar narxlari"
+        "hint": "ombor va hamkorlar narxlari"
       },
       "services": {
         "name": "Bosh muhandis",
@@ -309,7 +309,7 @@
   },
   "register": {
     "action": "Kiruvchi hujjatni ro‘yxatga olish",
-    "subtitle": "Soliq, bank, yetkazib beruvchi yoki davlat organi xati — qog‘ozda, soliq to‘lovchi kabinetidan yoki pochtadan. Rezolyutsiyani direktor qo‘yadi.",
+    "subtitle": "Soliq, bank, hamkor yoki davlat organi xati — qog‘ozda, soliq to‘lovchi kabinetidan yoki pochtadan. Rezolyutsiyani direktor qo‘yadi.",
     "formLabel": "Kiruvchi hujjatni ro‘yxatga olish",
     "choose": "Tanlang",
     "kind": {
@@ -791,7 +791,7 @@
       "suspiciousWhat": "Xat «Shubhali» bo‘limiga o‘tadi — u yerdan qaytarish mumkin («Spam emas»). Pochta qutisida hech narsa o‘zgarmaydi.",
       "suspiciousConfirm": "«Shubhali»ga",
       "suspiciousDone": "Xat «Shubhali»da",
-      "priceHandoverNone": "Topshiradigan kishi yo‘q: hech bir xodimda narxnomalarni yuklash va yetkazib beruvchi narxlarini ko‘rish huquqi yo‘q. Bunday rolni «Sozlamalar · Rollar»da tayinlang.",
+      "priceHandoverNone": "Topshiradigan kishi yo‘q: hech bir xodimda narxnomalarni yuklash va hamkor narxlarini ko‘rish huquqi yo‘q. Bunday rolni «Sozlamalar · Rollar»da tayinlang.",
       "priceHandoverWhat": "Xat «Yangi»dan chiqadi va tanlangan xodimning «Vazifalar»ida paydo bo‘ladi — u narxnomani yuklaydi.",
       "priceHandoverConfirm": "Yuklashga topshirish",
       "priceHandoverDone": "Xat narxnomani yuklashga topshirildi: {{name}}",

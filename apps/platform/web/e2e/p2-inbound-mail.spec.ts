@@ -87,7 +87,7 @@ test.describe("P2: входящая почта общего ящика", () => {
     for (const width of WIDTHS) {
       await signInAt(page, REGISTRAR, width);
       await spaGoto(page, "/eds/mail/17");
-      // «Документ поставщика»: основная кнопка — «Зарегистрировать как ВХ»; вид документа форма берёт из типа
+      // «Документ партнёра»: основная кнопка — «Зарегистрировать как ВХ»; вид документа форма берёт из типа
       await expect(page.getByRole("button", { name: /Другое действие/ })).toBeVisible();
       await page.getByRole("link", { name: "Зарегистрировать как ВХ" }).click();
       await expect(

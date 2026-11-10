@@ -107,10 +107,10 @@ describe("Склад · остатки и резервы", () => {
   });
 });
 
-describe("Склад · заказы поставщикам", () => {
-  it("список: ЗП-номер, поставщик, ожидаемая дата и просрочка, статус, приёмка, сумма", async () => {
+describe("Склад · заказы партнёрам", () => {
+  it("список: ЗП-номер, партнёр, ожидаемая дата и просрочка, статус, приёмка, сумма", async () => {
     await openStock("supply@demo.example", "orders");
-    const table = within(await screen.findByRole("table", { name: "Заказы поставщикам" }));
+    const table = within(await screen.findByRole("table", { name: "Заказы партнёрам" }));
     const row = within(await rowOf(ORDER));
     expect(row.getByText("ООО «Вымышленная Сталь»")).toBeVisible();
     expect(row.getByText("Подтверждён")).toBeVisible();
@@ -120,9 +120,9 @@ describe("Склад · заказы поставщикам", () => {
     expect(row.getByText(/5\s?550\s?000/)).toBeVisible();
   });
 
-  it("цены поставщиков скрыты от роли без них: нет колонки «Сумма»", async () => {
+  it("цены партнёров скрыты от роли без них: нет колонки «Сумма»", async () => {
     await openStock("engineer@demo.example", "orders");
-    const table = within(await screen.findByRole("table", { name: "Заказы поставщикам" }));
+    const table = within(await screen.findByRole("table", { name: "Заказы партнёрам" }));
     expect(table.queryByRole("columnheader", { name: "Сумма" })).not.toBeInTheDocument();
     expect(screen.queryByText(/5\s?550\s?000/)).not.toBeInTheDocument();
   });
@@ -131,7 +131,7 @@ describe("Склад · заказы поставщикам", () => {
     signIn("supply@demo.example");
     renderAt(ORDER_PATH);
     expect(
-      await screen.findByRole("heading", { level: 1, name: `Заказ поставщику ${ORDER}` }),
+      await screen.findByRole("heading", { level: 1, name: `Заказ партнёру ${ORDER}` }),
     ).toBeVisible();
     expect(screen.getByText(/просрочка 3 дн\./)).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Принять товар" }));
@@ -142,7 +142,7 @@ describe("Склад · заказы поставщикам", () => {
     fireEvent.change(within(modal).getByRole("textbox", { name: /Ячейка для/ }), {
       target: { value: "C-02-1" },
     });
-    fireEvent.change(within(modal).getByRole("textbox", { name: "Накладная поставщика" }), {
+    fireEvent.change(within(modal).getByRole("textbox", { name: "Накладная партнёра" }), {
       target: { value: "НП-77" },
     });
     fireEvent.click(within(modal).getByRole("button", { name: "Принять" }));
@@ -164,7 +164,7 @@ describe("Склад · заказы поставщикам", () => {
     await openStock("supply@demo.example", "orders");
     fireEvent.click(await screen.findByRole("button", { name: "Создать заказ" }));
     const modal = await screen.findByRole("dialog");
-    fireEvent.mouseDown(within(modal).getByRole("combobox", { name: "Поставщик" }));
+    fireEvent.mouseDown(within(modal).getByRole("combobox", { name: "Партнёр" }));
     fireEvent.click(
       await screen.findByText("ООО «Вымышленная Сталь»", {
         selector: ".ant-select-item-option-content",
@@ -186,20 +186,20 @@ describe("Склад · заказы поставщикам", () => {
 
     const year = String(new Date().getFullYear());
     expect(
-      await screen.findByRole("heading", { level: 1, name: `Заказ поставщику ЗП-${year}-030` }),
+      await screen.findByRole("heading", { level: 1, name: `Заказ партнёру ЗП-${year}-030` }),
     ).toBeVisible();
     expect(screen.getAllByText("Черновик").length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "Принять товар" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Поставщик подтвердил" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Партнёр подтвердил" })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Отправить поставщику" }));
+    fireEvent.click(screen.getByRole("button", { name: "Отправить партнёру" }));
     const send = await screen.findByRole("dialog");
     fireEvent.click(within(send).getByRole("button", { name: "Отправить письмо" }));
-    expect(await screen.findByText("Заказ отправлен поставщику")).toBeVisible();
-    await screen.findByRole("button", { name: "Поставщик подтвердил" });
+    expect(await screen.findByText("Заказ отправлен партнёру")).toBeVisible();
+    await screen.findByRole("button", { name: "Партнёр подтвердил" });
     expect(screen.getAllByText(/sales@steel\.example/).length).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getByRole("button", { name: "Поставщик подтвердил" }));
+    fireEvent.click(screen.getByRole("button", { name: "Партнёр подтвердил" }));
     const confirm = await screen.findByRole("dialog");
     const submit = within(confirm).getByRole("button", { name: "Подтвердить" });
     expect(submit).toBeDisabled();
@@ -207,14 +207,14 @@ describe("Склад · заказы поставщикам", () => {
     fireEvent.click(submit);
     expect(await screen.findByText("Заказ подтверждён")).toBeVisible();
     await screen.findByRole("button", { name: "Принять товар" });
-    expect(screen.queryByRole("button", { name: "Отправить поставщику" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Отправить партнёру" })).not.toBeInTheDocument();
   });
 
-  it("поставщик без почты: отправка требует адрес", async () => {
+  it("партнёр без почты: отправка требует адрес", async () => {
     await openStock("supply@demo.example", "orders");
     fireEvent.click(await screen.findByRole("button", { name: "Создать заказ" }));
     const modal = await screen.findByRole("dialog");
-    fireEvent.mouseDown(within(modal).getByRole("combobox", { name: "Поставщик" }));
+    fireEvent.mouseDown(within(modal).getByRole("combobox", { name: "Партнёр" }));
     fireEvent.click(
       await screen.findByText(/ООО «Пример Лес» · нет почты/, {
         selector: ".ant-select-item-option-content",
@@ -231,15 +231,15 @@ describe("Склад · заказы поставщикам", () => {
       target: { value: "2" },
     });
     fireEvent.click(within(modal).getByRole("button", { name: "Создать черновик" }));
-    await screen.findByRole("button", { name: "Отправить поставщику" });
-    fireEvent.click(screen.getByRole("button", { name: "Отправить поставщику" }));
+    await screen.findByRole("button", { name: "Отправить партнёру" });
+    fireEvent.click(screen.getByRole("button", { name: "Отправить партнёру" }));
     const send = await screen.findByRole("dialog");
     expect(within(send).getByRole("button", { name: "Отправить письмо" })).toBeDisabled();
     fireEvent.change(within(send).getByLabelText("Адрес для письма"), {
       target: { value: "orders@lumber.example" },
     });
     fireEvent.click(within(send).getByRole("button", { name: "Отправить письмо" }));
-    expect(await screen.findByText("Заказ отправлен поставщику")).toBeVisible();
+    expect(await screen.findByText("Заказ отправлен партнёру")).toBeVisible();
   });
 });
 

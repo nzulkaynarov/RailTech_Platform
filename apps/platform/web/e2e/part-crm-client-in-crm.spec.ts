@@ -9,7 +9,7 @@ import { expectNoViolations } from "./support/axe";
 const WIDTHS = [1440, 390] as const;
 
 for (const width of WIDTHS) {
-  test(`карточка поставщика: клиент в CRM, ${String(width)} px`, async ({ page }) => {
+  test(`карточка партнёра: клиент в CRM, ${String(width)} px`, async ({ page }) => {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
     await loginAndWait(page, "supply@demo.example");
 
@@ -22,7 +22,7 @@ for (const width of WIDTHS) {
     await expect(block.getByText("В кабинете: Клиент · Партнёр")).toBeVisible();
     const open = block.getByRole("link", { name: "Открыть клиента CRM №58" });
     await expect(open).toHaveAttribute("href", "/crm/clients/58");
-    await expectNoViolations(page, "Поставщик · клиент в CRM заведён");
+    await expectNoViolations(page, "Партнёр · клиент в CRM заведён");
     await block.scrollIntoViewIfNeeded();
     await settledScreenshot(page, "supplier-crm-client-linked");
 
@@ -33,7 +33,7 @@ for (const width of WIDTHS) {
     await expect(block.getByText("Конфликт", { exact: true })).toBeVisible();
     await expect(block.getByText(/Проверьте ИНН/)).toBeVisible();
     await expect(block.getByRole("link", { name: "Открыть клиента CRM №88" })).toBeVisible();
-    await expectNoViolations(page, "Поставщик · клиент в CRM, конфликт");
+    await expectNoViolations(page, "Партнёр · клиент в CRM, конфликт");
     await block.scrollIntoViewIfNeeded();
     await settledScreenshot(page, "supplier-crm-client-conflict");
 
@@ -79,7 +79,7 @@ async function stage(page: Page, supplier: number, crm: Record<string, unknown>)
 }
 
 for (const width of WIDTHS) {
-  test(`карточка поставщика: удержано и непроверенное сопоставление, ${String(width)} px`, async ({
+  test(`карточка партнёра: удержано и непроверенное сопоставление, ${String(width)} px`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
@@ -96,7 +96,7 @@ for (const width of WIDTHS) {
     let block = page.getByRole("region", { name: "Доступ в кабинет" });
     await expect(block.getByText("Удержано до сверки", { exact: true })).toBeVisible();
     await expect(block.getByText(/Удержано после передачи клиента/)).toBeVisible();
-    await expectNoViolations(page, "Поставщик · удержано до сверки");
+    await expectNoViolations(page, "Партнёр · удержано до сверки");
     await block.scrollIntoViewIfNeeded();
     await settledScreenshot(page, "supplier-crm-client-held");
 
@@ -106,7 +106,7 @@ for (const width of WIDTHS) {
       block.getByText(/Найден клиент CRM «ООО Чужой Клиент», ИНН 300000999/),
     ).toBeVisible();
     await expect(block.getByText(/Это та же компания\?/)).toBeVisible();
-    await expectNoViolations(page, "Поставщик · непроверенное сопоставление");
+    await expectNoViolations(page, "Партнёр · непроверенное сопоставление");
     await block.scrollIntoViewIfNeeded();
     await settledScreenshot(page, "supplier-crm-client-unverified");
 
@@ -116,7 +116,7 @@ for (const width of WIDTHS) {
   });
 }
 
-test("карточка поставщика: «Нет, другая компания» снимает сопоставление и запрашивает клиента заново", async ({
+test("карточка партнёра: «Нет, другая компания» снимает сопоставление и запрашивает клиента заново", async ({
   page,
 }) => {
   await loginAndWait(page, "supply@demo.example");

@@ -67,7 +67,7 @@
         "title": "Supply",
         "steps": [
           "“Tasks”: costing tasks arrive after the director's resolution.",
-          "Select items: stock, suppliers, delivery terms.",
+          "Select items: stock, partners, delivery terms.",
           "Give the “goods and stock” sign-off. When all sign-offs are in, the quote goes to the director."
         ]
       },
@@ -178,7 +178,7 @@
       },
       {
         "term": "Costing",
-        "text": "Request lines with stock and supplier data and specialists' sign-offs."
+        "text": "Request lines with stock and partner data and specialists' sign-offs."
       },
       {
         "term": "Quote (КП-2026/118)",

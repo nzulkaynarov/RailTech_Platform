@@ -76,14 +76,14 @@ describe("Dashboard · Моя очередь", () => {
     expect(loading.tagName).toBe("DIV");
   });
 
-  it("директор: подзаголовок с числом решений, четыре счётчика и строки очереди (в том числе просроченный заказ поставщику)", async () => {
+  it("директор: подзаголовок с числом решений, четыре счётчика и строки очереди (в том числе просроченный заказ партнёру)", async () => {
     signInAs("director@demo.example");
     renderApp("/dashboard/queue");
     const page = await main();
 
     // D2-8: в очереди директора только решения — строк исполнения (договор, счета, расчёт) нет
     // D26G-4: «Одобрить КП» — все КП на шаге директора в EDS (четыре в демо «КП на одобрение»)
-    expect(await within(page).findByText(/Директор · .* · 8 решений/)).toBeVisible();
+    expect(await within(page).findByText(/^[^·]+ · 8 решений$/)).toBeVisible();
     const cards = within(page).getByRole("region", { name: "Счётчики очереди" });
     expect(within(cards).getAllByRole("link")).toHaveLength(4);
     expect(within(cards).getByRole("link", { name: /Входящие без резолюции/ })).toHaveAttribute(
@@ -94,7 +94,7 @@ describe("Dashboard · Моя очередь", () => {
     const queue = await within(page).findByRole("region", { name: "Что сделать сейчас" });
     const rows = within(queue).getAllByRole("listitem");
     expect(rows).toHaveLength(8);
-    // D2-2: просроченный заказ поставщику (erp.stock: полный) — первым, он уже просрочен.
+    // D2-2: просроченный заказ партнёру (erp.stock: полный) — первым, он уже просрочен.
     expect(within(rows[0] as HTMLElement).getByText(/Просрочен заказ ЗП-\d{4}-029/)).toBeVisible();
     expect(within(rows[1] as HTMLElement).getByText("срок сегодня")).toBeVisible();
     // P8: требование ГНК, зарегистрированное делопроизводителем, — «срочно», тоже сегодня
@@ -155,11 +155,11 @@ describe("Dashboard · Моя очередь", () => {
     expect(await within(page).findByText("Взять в работу лида L-2041")).toBeVisible();
     expect(within(page).getByText("Ответить лиду L-2050")).toBeVisible();
     // третья строка — «Доработать» (D1-6b): служебку менеджера вернул директор, она лежит в его документах
-    expect(within(page).getByText(/Менеджер · .* · 3 решения/)).toBeVisible();
+    expect(within(page).getByText(/^[^·]+ · 3 решения$/)).toBeVisible();
     expect(within(page).queryByRole("status")).toBeNull();
   });
 
-  it("снабженец: просроченный заказ поставщику — строка «Моих задач» с переходом на карточку ЗП (D2-2)", async () => {
+  it("снабженец: просроченный заказ партнёру — строка «Моих задач» с переходом на карточку ЗП (D2-2)", async () => {
     signInAs("supply@demo.example");
     renderApp("/dashboard/queue");
     const page = await main();

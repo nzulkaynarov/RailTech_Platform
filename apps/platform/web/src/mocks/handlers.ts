@@ -179,7 +179,7 @@ export const handlers = [
   ...mailTypesHandlers, // MAIL-TYPES: правила отправителя
   ...inboundMailHandlers, // W18A-P2: входящая почта общего ящика и приём в «Подключениях»
   ...companyArticlesHandlers,
-  // Раньше «Создать документ»: вложения служебок к оплате (счёт поставщика, платёжка) отдаются здесь, остальное — дальше.
+  // Раньше «Создать документ»: вложения служебок к оплате (счёт партнёра, платёжка) отдаются здесь, остальное — дальше.
   ...edsPaymentsHandlers,
   ...edsDocumentsHandlers,
   ...edsInstructionsHandlers, // P8b: до писем — `*/eds/letters/*` иначе перехватил бы POST-пути

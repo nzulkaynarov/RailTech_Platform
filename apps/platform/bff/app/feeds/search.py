@@ -140,7 +140,9 @@ def _registry_hit(item: dict[str, Any]) -> SearchHit | None:
         return SearchHit(object=ref, title=number, subtitle=context)
     if not isinstance(document_id, str):
         return None
-    path = f"/eds/documents?doc={segment(document_id)}"
+    # Ящик документа: служебки, заявления, отчёты — «Внутренние», остальное — «Исходящие»
+    box = "internal" if kind in ("memo", "application", "report") else "outgoing"
+    path = f"/eds/documents?box={box}&doc={segment(document_id)}"
     ref = ObjectRef(
         kind="memo" if kind in ("memo", "application", "report") else "letter",
         number=number,

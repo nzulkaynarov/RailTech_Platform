@@ -78,10 +78,10 @@ describe("Номенклатура: позиции", () => {
     expect(within(drawer).getByText("500 шт., от 10")).toBeVisible();
     expect(within(drawer).getByText("со склада 2 дн., под заказ 14 дн.")).toBeVisible();
     expect(within(drawer).getByText("Скоро истекает")).toBeVisible();
-    expect(within(drawer).queryByText(/Цены поставщиков вам не показываются/)).toBeNull();
+    expect(within(drawer).queryByText(/Цены партнёров вам не показываются/)).toBeNull();
   });
 
-  it("гл. инженер: цен поставщиков нет, сказано словами; квота и срок видны", async () => {
+  it("гл. инженер: цен партнёров нет, сказано словами; квота и срок видны", async () => {
     await open("engineer@demo.example");
     fireEvent.click(await screen.findByRole("button", { name: /Открыть позицию Кабель/ }));
 
@@ -135,7 +135,7 @@ describe("Номенклатура: позиции", () => {
   });
 });
 
-describe("Номенклатура: поставщики", () => {
+describe("Номенклатура: партнёры", () => {
   it("сроки цен словами: истекло, истекает скоро; карточка с предложениями и ценой для снабженца", async () => {
     signIn("supply@demo.example");
     renderAt("/crm/clients?kind=partners");
@@ -167,7 +167,7 @@ describe("Номенклатура: поставщики", () => {
       }),
     );
     const form = await findModal(/Предложение: Кабель/);
-    expect(await within(form).findByText(/Цену поставщика вы не видите/)).toBeInTheDocument();
+    expect(await within(form).findByText(/Цену партнёра вы не видите/)).toBeInTheDocument();
     expect(within(form).queryByLabelText(/Цена закупки/)).toBeNull();
     fireEvent.change(await within(form).findByLabelText("Квота, шт."), {
       target: { value: "250" },

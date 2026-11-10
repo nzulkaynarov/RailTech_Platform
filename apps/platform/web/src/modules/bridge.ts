@@ -48,53 +48,17 @@ export interface BridgeEntry {
   objectKind?: ObjectKind;
 }
 
-const crm = (path: string, where: string, object?: LegacyTarget["object"]): LegacyTarget => ({
-  system: "crm",
-  path,
-  where,
-  ...(object ? { object } : {}),
-});
-const erp = (path: string, where: string, object?: LegacyTarget["object"]): LegacyTarget => ({
-  system: "erp",
-  path,
-  where,
-  ...(object ? { object } : {}),
-});
-
-const numericPath = (prefix: string) => (objectId: string) =>
-  /^\d+$/.test(objectId) ? `${prefix}${objectId}` : undefined;
-
 /** Ключ — `<модуль>.<раздел>`, как в `module.ts` модуля. */
 export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
-  // «Лиды» и «Клиенты» — настоящие экраны (D1-2b), записей моста у них нет.
-  "crm.requests": {
-    legacy: erp("#crm-deals", "erpDeals", numericPath("#request-detail/")),
-    when: "pilot",
-    objectKind: "request",
-  },
-  "crm.channels": {
-    // Бот подключается в «Настройки · Каналы связи · Telegram» (SET-IA), а не в «Подключениях»
-    internal: { to: "/admin/telegram", resource: "admin", section: "telegram" },
-    when: "pilot",
-  },
-
-  // «Все документы» и «Создать документ» (D1-5), «КП на одобрение» и «На согласовании» (D1-4), «Счета и оплаты» (D2-4) и
-  // «Проекты» (D2-5) — настоящие экраны, записей моста у них нет.
-
-  "chats.internal": { who: "chats", when: "pilot", objectKind: "chat" },
-  // B-D18-1: переписка отдельно от реестра лидов — «Входящие» старой CRM открываются только с разделом лидов; бухгалтеру
-  // (переписка по сделкам со счётом) старая CRM ничего не покажет.
-  "chats.external": {
-    legacy: crm("/inbox", "crmInbox"),
-    legacyNeeds: "crm.leads",
-    who: "chatsExternal",
-    when: "pilot",
-    objectKind: "chat",
-  },
+  // Все разделы — настоящие экраны или перенаправления на них (аудит экранов, 2026-11-11).
 };
 
 /** Разделы с настоящим экраном: моста у них нет. Новый настоящий экран — сюда, а запись из `BRIDGE` — удалить. */
 export const NATIVE_SECTIONS: readonly string[] = [
+  "crm.requests",
+  "crm.channels",
+  "chats.internal",
+  "chats.external",
   "dashboard.queue",
   "dashboard.summary",
   "dashboard.projects",

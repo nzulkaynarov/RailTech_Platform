@@ -60,10 +60,10 @@ import {
 
 /**
  * Моки «Склада» (D2-2, BFF 0.27.0) — поведение BFF и ERP вместе: доступ по разделу `erp.stock` (чтение — `read`, действия —
- * `full`), свободный остаток = остаток − резервы, резерв строки один и не больше свободного, заказ поставщику идёт
+ * `full`), свободный остаток = остаток − резервы, резерв строки один и не больше свободного, заказ партнёру идёт
  * черновик → отправлен → подтверждён → получен (недопустимый переход — 409 `transition_not_allowed`), «Отправить» пишет
  * письмо в журнал заказа, приёмка растит остаток и резервирует под проект, отгрузка уменьшает остаток и резерв, цены
- * поставщика — группе `supplier_prices`/`cost_margin` или держателю `erp.calc.goods`. Состояние — в `localStorage`.
+ * партнёра — группе `supplier_prices`/`cost_margin` или держателю `erp.calc.goods`. Состояние — в `localStorage`.
  */
 const KEY = "rt-pf-mock-stock-v1";
 let memory: MockStock | null = null;
@@ -449,7 +449,7 @@ function orderRow(order: MockOrder, user: Me): SupplierOrderRow {
   return {
     number: order.number,
     status: order.status,
-    supplier: { id: String(order.supplierId), name: supplier?.name ?? "Поставщик", email: null },
+    supplier: { id: String(order.supplierId), name: supplier?.name ?? "Партнёр", email: null },
     expected_date: order.expectedDate,
     overdue: days !== null,
     days_overdue: days,
@@ -634,7 +634,7 @@ function addToCell(product: MockProduct, cell: string | null, quantity: number):
   return true;
 }
 
-/** Очередь «Моих задач»: просроченные заказы поставщикам — тем, у кого `erp.stock` полный (вид `supplier_overdue`). */
+/** Очередь «Моих задач»: просроченные заказы партнёрам — тем, у кого `erp.stock` полный (вид `supplier_overdue`). */
 export function stockQueueItems(
   view: readonly { id: string; access: Partial<Record<string, string>> }[],
 ): QueueItem[] {
@@ -807,13 +807,10 @@ export const erpStockHandlers = [
     const number = decodeURIComponent(String(params["number"]));
     const state = read();
     const supplier = SUPPLIERS.find((s) => String(s.id) === body.supplier_id);
-    if (!supplier) return missing("supplier_not_found", "Поставщика нет.");
+    if (!supplier) return missing("supplier_not_found", "Партнёра нет.");
     const email = body.to_email ?? supplier.email;
     if (!email) {
-      return conflict(
-        "supplier_email_required",
-        "У поставщика нет почты: укажите адрес для письма.",
-      );
+      return conflict("supplier_email_required", "У партнёра нет почты: укажите адрес для письма.");
     }
     const lines = body.line_ids.map((id) => ({
       id: Number(id),
@@ -854,7 +851,7 @@ export const erpStockHandlers = [
     const state = read();
     const entry = state.priceRequests.find((p) => String(p.id) === String(params["id"]));
     if (!entry) return missing("request_not_found", "Запроса нет.");
-    if (entry.answeredAt) return conflict("already_answered", "Ответ поставщика уже отмечен.");
+    if (entry.answeredAt) return conflict("already_answered", "Ответ партнёра уже отмечен.");
     entry.answeredAt = new Date().toISOString();
     entry.answeredBy = held.user.name;
     entry.answerNote = body.note ?? null;
@@ -918,7 +915,7 @@ export const erpStockHandlers = [
     const body = (await request.json()) as SupplierOrderFromRequest;
     const state = read();
     const supplier = SUPPLIERS.find((s) => String(s.id) === body.supplier_id);
-    if (!supplier) return missing("supplier_not_found", "Поставщика нет.");
+    if (!supplier) return missing("supplier_not_found", "Партнёра нет.");
     const lines = shortageLines(state, body.request);
     if (lines === null)
       return missing("calc_task_not_found", "Заявки нет среди заявок с заданием расчёта.");
@@ -945,7 +942,7 @@ export const erpStockHandlers = [
     const body = (await request.json()) as SupplierOrderCreate;
     const state = read();
     const supplier = SUPPLIERS.find((s) => String(s.id) === body.supplier_id);
-    if (!supplier) return missing("supplier_not_found", "Поставщика нет.");
+    if (!supplier) return missing("supplier_not_found", "Партнёра нет.");
     const lines = linesFrom(state, body.lines, held.user);
     if ("error" in lines) return lines.error;
     const order = createOrder(
@@ -984,7 +981,7 @@ export const erpStockHandlers = [
       return conflict("order_closed", "Заказ закрыт: изменить его нельзя.");
     }
     if ((body.lines !== undefined || body.supplier_id !== undefined) && order.status !== "draft") {
-      return conflict("order_not_draft", "Состав и поставщика можно менять только в черновике.");
+      return conflict("order_not_draft", "Состав и партнёра можно менять только в черновике.");
     }
     if (body.supplier_id !== undefined) order.supplierId = Number(body.supplier_id);
     if ("expected_date" in body) order.expectedDate = body.expected_date ?? null;
@@ -1010,10 +1007,7 @@ export const erpStockHandlers = [
     const supplier = SUPPLIERS.find((s) => s.id === order.supplierId);
     const email = body.to_email ?? supplier?.email ?? null;
     if (!email)
-      return conflict(
-        "supplier_email_required",
-        "У поставщика нет почты: укажите адрес для письма.",
-      );
+      return conflict("supplier_email_required", "У партнёра нет почты: укажите адрес для письма.");
     order.status = "sent";
     order.sentAt = new Date().toISOString();
     order.sentTo = email;
@@ -1409,7 +1403,7 @@ function presentPriceRequest(p: ReturnType<typeof read>["priceRequests"][number]
   const supplier = SUPPLIERS.find((s) => s.id === p.supplierId);
   return {
     id: String(p.id),
-    supplier: { id: String(p.supplierId), name: supplier?.name ?? "Поставщик" },
+    supplier: { id: String(p.supplierId), name: supplier?.name ?? "Партнёр" },
     request: p.request,
     requested_at: p.requestedAt,
     requested_by: p.requestedBy,

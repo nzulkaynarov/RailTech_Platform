@@ -211,7 +211,7 @@ describe("Контрагенты: тип отношения", () => {
         HttpResponse.json({
           items: [
             { ...partnerRow, id: "7", name: "Партнёр Семь", tin: "700000007" },
-            { ...partnerRow, id: "8", name: "Клиент Два (поставщик)", tin: "100000002" },
+            { ...partnerRow, id: "8", name: "Клиент Два (партнёр)", tin: "100000002" },
           ],
           total: 2,
           page: 1,

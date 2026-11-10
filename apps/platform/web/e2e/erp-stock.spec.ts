@@ -11,7 +11,7 @@ import {
 import { fillDate } from "./support/fields";
 
 // Склад и закупки на MSW (D2-2, SPEC-v3 §7.4): сценарий снабженца целиком — резерв строки из расчёта и «Запросить цену у
-// поставщика» (письмо в журнале) → заказ поставщику ЗП: черновик → отправлен (письмо) → подтверждён → приёмка частичная и
+// партнёра» (письмо в журнале) → заказ партнёру ЗП: черновик → отправлен (письмо) → подтверждён → приёмка частичная и
 // полная (остаток растёт) → отгрузка по проекту уменьшает резерв; просроченный заказ — в «Моих задачах»; роль без раздела
 // «Склад» доступа не имеет; axe (WCAG 2.1 AA); на 390 px — карточки вместо таблиц (@mobile).
 const YEAR = String(new Date().getFullYear());
@@ -57,7 +57,7 @@ test.describe("Склад и закупки: снабженец", () => {
   }) => {
     await loginAndWait(page, "supply@demo.example");
 
-    // Расчёт: колонка «Склад» — ячейка, свободное, резерв; «Зарезервировать» и «Запросить цену у поставщика».
+    // Расчёт: колонка «Склад» — ячейка, свободное, резерв; «Зарезервировать» и «Запросить цену у партнёра».
     await spaGoto(page, `/erp/calc/${encodeURIComponent(NUMBER)}`);
     await expect(
       page.getByRole("heading", { level: 1, name: `Расчёт по заявке ${NUMBER}` }),
@@ -74,14 +74,14 @@ test.describe("Склад и закупки: снабженец", () => {
       .click();
     await expect(line(page, RAIL).getByText("Резерв · 1")).toBeVisible();
 
-    await page.getByRole("button", { name: "Запросить цену у поставщика" }).click();
-    const request = page.getByRole("dialog", { name: `Запросить цену у поставщика · ${NUMBER}` });
-    await request.getByRole("combobox", { name: "Поставщик" }).click();
+    await page.getByRole("button", { name: "Запросить цену у партнёра" }).click();
+    const request = page.getByRole("dialog", { name: `Запросить цену у партнёра · ${NUMBER}` });
+    await request.getByRole("combobox", { name: "Партнёр" }).click();
     await page.getByTitle(/ООО «Вымышленная Сталь» · sales@steel\.example/).click();
     await settledScreenshot(page, "calc-price-request");
     await request.getByRole("button", { name: "Отправить запрос" }).click();
     await expect(page.getByText("Запрос ушёл на sales@steel.example")).toBeVisible();
-    const journal = page.getByRole("list", { name: "Запросы цены у поставщиков" });
+    const journal = page.getByRole("list", { name: "Запросы цены у партнёров" });
     await expect(journal.getByText("Ждём ответ")).toBeVisible();
     await expect(journal.getByText(/Демо Снабженцев → sales@steel\.example/)).toBeVisible();
     await settledScreenshot(page, "calc-stock");
@@ -97,17 +97,17 @@ test.describe("Склад и закупки: снабженец", () => {
     await settledScreenshot(page, "stock-balances");
     await expectNoViolations(page, "остатки и резервы");
 
-    // Заказы поставщикам: просроченный ЗП виден, новый — черновик → отправлен → подтверждён.
+    // Заказы партнёрам: просроченный ЗП виден, новый — черновик → отправлен → подтверждён.
     await spaGoto(page, "/erp/stock?view=orders");
     await expect(page.getByRole("heading", { level: 1, name: "Закупки" })).toBeVisible();
     const overdueRow = page.getByRole("row").filter({ hasText: OVERDUE });
     await expect(overdueRow.getByText("Просрочен · 3 дн.")).toBeVisible();
     await settledScreenshot(page, "stock-orders");
-    await expectNoViolations(page, "заказы поставщикам");
+    await expectNoViolations(page, "заказы партнёрам");
     await page.getByRole("button", { name: "Создать заказ" }).click();
-    const create = page.getByRole("dialog", { name: "Новый заказ поставщику" });
-    await create.getByRole("combobox", { name: "Поставщик" }).click();
-    // Вариант списка поставщиков (у ячейки таблицы тоже есть `title` с полным именем — UX-1c)
+    const create = page.getByRole("dialog", { name: "Новый заказ партнёру" });
+    await create.getByRole("combobox", { name: "Партнёр" }).click();
+    // Вариант списка партнёров (у ячейки таблицы тоже есть `title` с полным именем — UX-1c)
     await page.locator(".ant-select-dropdown").getByTitle("ООО «Вымышленная Сталь»").click();
     const product = create.getByRole("combobox", { name: "Товар, строка 1" });
     await product.click();
@@ -116,19 +116,19 @@ test.describe("Склад и закупки: снабженец", () => {
     await create.getByRole("spinbutton", { name: "Количество, строка 1" }).fill("4");
     await create.getByRole("button", { name: "Создать черновик" }).click();
     await expect(
-      page.getByRole("heading", { level: 1, name: `Заказ поставщику ${NEW_ORDER}` }),
+      page.getByRole("heading", { level: 1, name: `Заказ партнёру ${NEW_ORDER}` }),
     ).toBeVisible();
     await expect(page.getByRole("button", { name: "Принять товар" })).toHaveCount(0);
     await settledScreenshot(page, "order-draft");
-    await page.getByRole("button", { name: "Отправить поставщику" }).click();
-    const send = page.getByRole("dialog", { name: `Отправить заказ ${NEW_ORDER} поставщику` });
+    await page.getByRole("button", { name: "Отправить партнёру" }).click();
+    const send = page.getByRole("dialog", { name: `Отправить заказ ${NEW_ORDER} партнёру` });
     await send.getByRole("button", { name: "Отправить письмо" }).click();
-    await expect(page.getByText("Заказ отправлен поставщику")).toBeVisible();
+    await expect(page.getByText("Заказ отправлен партнёру")).toBeVisible();
     await expect(
-      page.getByRole("list", { name: "Журнал заказа" }).getByText("Отправлен поставщику"),
+      page.getByRole("list", { name: "Журнал заказа" }).getByText("Отправлен партнёру"),
     ).toBeVisible();
-    await page.getByRole("button", { name: "Поставщик подтвердил" }).click();
-    const confirm = page.getByRole("dialog", { name: `Поставщик подтвердил заказ ${NEW_ORDER}` });
+    await page.getByRole("button", { name: "Партнёр подтвердил" }).click();
+    const confirm = page.getByRole("dialog", { name: `Партнёр подтвердил заказ ${NEW_ORDER}` });
     await fillDate(confirm.getByLabel("Подтверждённая дата поставки"), "2099-01-15");
     await confirm.getByRole("button", { name: "Подтвердить" }).click();
     await expect(page.getByRole("button", { name: "Принять товар" })).toBeVisible();
@@ -187,7 +187,7 @@ test.describe("Склад и закупки: снабженец", () => {
     await expectNoViolations(page, "Задачи с просроченным заказом");
     await row.click();
     await expect(
-      page.getByRole("heading", { level: 1, name: `Заказ поставщику ${OVERDUE}` }),
+      page.getByRole("heading", { level: 1, name: `Заказ партнёру ${OVERDUE}` }),
     ).toBeVisible();
     await expect(page.getByText(/просрочка 3 дн\./)).toBeVisible();
     await settledScreenshot(page, "order-overdue");
@@ -228,13 +228,13 @@ test.describe("Склад на телефоне @mobile", () => {
     await expectNoViolations(page, "остатки на телефоне");
 
     await spaGoto(page, "/erp/stock?view=orders");
-    await expect(page.getByRole("list", { name: "Заказы поставщикам" })).toBeVisible();
+    await expect(page.getByRole("list", { name: "Заказы партнёрам" })).toBeVisible();
     await settledScreenshot(page, "stock-orders");
     await expectNoViolations(page, "заказы на телефоне");
 
     await spaGoto(page, `/erp/stock/${encodeURIComponent(OVERDUE)}`);
     await expect(
-      page.getByRole("heading", { level: 1, name: `Заказ поставщику ${OVERDUE}` }),
+      page.getByRole("heading", { level: 1, name: `Заказ партнёру ${OVERDUE}` }),
     ).toBeVisible();
     await expect(page.getByRole("heading", { name: "Журнал заказа" })).toBeVisible();
     await settledScreenshot(page, "order-overdue");

@@ -96,7 +96,7 @@
       "minMargin": "Margin threshold from the resolution",
       "paymentTerms": "Payment terms",
       "validUntil": "Quote valid until",
-      "supplierUntil": "Supplier price valid until",
+      "supplierUntil": "Partner price valid until",
       "note": "The client will get a PDF without these fields."
     },
     "route": "Approval route",

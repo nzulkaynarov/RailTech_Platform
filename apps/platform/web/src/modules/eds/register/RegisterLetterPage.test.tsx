@@ -272,7 +272,7 @@ describe("EDS · справочники в форме регистрации (ED
 
     fireEvent.mouseDown(screen.getByLabelText("Вид документа"));
     await waitFor(() => {
-      expect(titles()).toContain("Письмо поставщика");
+      expect(titles()).toContain("Письмо партнёра");
     });
     expect(titles()).not.toContain("Письмо банка");
   });

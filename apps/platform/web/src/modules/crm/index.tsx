@@ -16,6 +16,9 @@ export function Component() {
   const match = matchSection(location.pathname, location.search);
   if (match?.module.code !== "crm") return <ModuleRoutes />;
   const key = match.section.key;
+  // Старые разделы без экрана: заявки — в «Операциях», подключение бота — в настройках Telegram
+  if (key === "requests") return <Navigate to="/erp/requests" replace />;
+  if (key === "channels") return <Navigate to="/admin/telegram" replace />;
   // «Ждут ответа» — фильтр «Лидов»: старые ссылки из колокольчика и задач ведут туда же
   if (key === "messages") {
     const lead = new URLSearchParams(location.search).get("lead");

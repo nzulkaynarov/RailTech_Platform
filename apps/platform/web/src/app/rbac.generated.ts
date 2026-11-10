@@ -315,9 +315,9 @@ export const RESTRICTED_FIELDS = {
     en: "Cost and margin",
   },
   supplier_prices: {
-    ru: "Цены поставщиков",
-    uz: "Yetkazib beruvchi narxlari",
-    en: "Supplier prices",
+    ru: "Цены партнёров",
+    uz: "Hamkor narxlari",
+    en: "Partner prices",
   },
   totals_only: {
     ru: "Только итоговые суммы расчёта (без себестоимости по строкам)",

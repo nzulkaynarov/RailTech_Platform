@@ -29,7 +29,7 @@ test.describe("Задачи", () => {
     page,
   }) => {
     await loginAndWait(page, "director@demo.example");
-    await expect(page.getByRole("main").getByText(/Директор · .* · 8 решений/)).toBeVisible();
+    await expect(page.getByRole("main").getByText(/^[^·]+ · 8 решений$/)).toBeVisible();
     // Поток подключается вместе с каркасом: ждём, пока MSW примет соединение.
     await expect
       .poll(() => page.evaluate("window.__rtMockStreamCount?.() ?? 0"), { timeout: 5_000 })
@@ -57,7 +57,7 @@ test.describe("Задачи", () => {
     const main = page.getByRole("main");
 
     // D26G-4: «Одобрить КП» — все четыре КП на шаге директора в «КП на одобрение» (EDS)
-    await expect(main.getByText(/Директор · .* · 8 решений/)).toBeVisible();
+    await expect(main.getByText(/^[^·]+ · 8 решений$/)).toBeVisible();
     const cards = main.getByRole("region", { name: "Счётчики очереди" }).getByRole("link");
     await expect(cards).toHaveCount(4);
     await expect(cards.nth(0)).toContainText("Входящие без резолюции");
@@ -67,7 +67,7 @@ test.describe("Задачи", () => {
     const rows = queue.getByRole("listitem");
     // D2-8: в очереди директора только решения — строк исполнения ERP нет
     await expect(rows).toHaveCount(8);
-    // D2-2: просроченный заказ поставщику (erp.stock: полный) — первым
+    // D2-2: просроченный заказ партнёру (erp.stock: полный) — первым
     await expect(rows.nth(0)).toContainText("Просрочен заказ");
     await expect(rows.nth(1)).toContainText("срок сегодня");
     await expect(rows.nth(1)).toContainText("Наложить резолюцию на письмо ВХ-104/26");

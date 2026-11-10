@@ -45,7 +45,7 @@ describe("Резолюция: форма", () => {
 
     expect(within(form).getByLabelText("Текст резолюции")).toBeVisible();
     const supply = within(form).getByRole("checkbox", {
-      name: /Снабженец.*склад и цены поставщиков/,
+      name: /Снабженец.*склад и цены партнёров/,
     });
     const engineer = within(form).getByRole("checkbox", {
       name: /Гл\. инженер.*услуги, ТЗ, бригада/,

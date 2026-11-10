@@ -74,7 +74,7 @@
     },
     "request": "Ariza matni",
     "requestEmpty": "Ariza matni yo‘q.",
-    "requestPrice": "Yetkazib beruvchidan narx so‘rash",
+    "requestPrice": "Hamkordan narx so‘rash",
     "rejectedComment": "Direktor TTni rad etdi: «{{comment}}». Hisob-kitob yopildi."
   },
   "lines": {
@@ -85,7 +85,7 @@
       "position": "Pozitsiya",
       "quantity": "Soni",
       "stock": "Ombor",
-      "supplier": "Yetkazib beruvchi · muddat",
+      "supplier": "Hamkor · muddat",
       "purchase": "Xarid, so‘m",
       "client": "Mijozga, so‘m",
       "markup": "Ustama, %",
@@ -104,8 +104,8 @@
     "days": "{{count}} kun",
     "supplierHint": "kvota {{qty}} dan · narx {{date}} gacha",
     "supplierHintNoDate": "kvota {{qty}} dan · narx muddati ko‘rsatilmagan",
-    "offerPrice": "Yetkazib beruvchi narxi: {{price}}",
-    "noSupplier": "Yetkazib beruvchi tanlanmagan",
+    "offerPrice": "Hamkor narxi: {{price}}",
+    "noSupplier": "Hamkor tanlanmagan",
     "service": "Brigada",
     "crewRate": "Brigada stavkasi, so‘m/kun",
     "crewDays": "Kun",

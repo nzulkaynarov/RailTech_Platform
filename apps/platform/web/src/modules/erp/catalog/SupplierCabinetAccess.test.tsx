@@ -29,7 +29,7 @@ async function block(drawer: HTMLElement): Promise<HTMLElement> {
   return region;
 }
 
-describe("Поставщик: блок «Доступ в кабинет»", () => {
+describe("Партнёр: блок «Доступ в кабинет»", () => {
   it("кабинет не открывали: статус, подсказка, разделы по умолчанию включены, роли пусты", async () => {
     const drawer = await openSupplier("supply@demo.example", "1", "ООО «Поставщик Север»");
     const section = await block(drawer);
@@ -41,7 +41,7 @@ describe("Поставщик: блок «Доступ в кабинет»", () =
     expect(catalog).toBeChecked();
     expect(
       within(section).getByText(
-        "Каталог — как у клиентов: опубликованные товары и цены, без поставщиков.",
+        "Каталог — как у клиентов: опубликованные товары и цены, без партнёров.",
       ),
     ).toBeVisible();
     expect(within(section).getByText("Азиз Тошматов")).toBeVisible();
@@ -53,7 +53,7 @@ describe("Поставщик: блок «Доступ в кабинет»", () =
     const section = await block(drawer);
     fireEvent.click(await within(section).findByRole("button", { name: "Добавить контакт" }));
 
-    const form = await findModal("Новый контакт поставщика");
+    const form = await findModal("Новый контакт партнёра");
     expect(within(form).getByRole("button", { name: "Добавить" })).toBeDisabled();
     fireEvent.change(within(form).getByLabelText("ФИО"), { target: { value: "Нодира Рахимова" } });
     fireEvent.change(within(form).getByLabelText("E-mail"), {
@@ -63,7 +63,7 @@ describe("Поставщик: блок «Доступ в кабинет»", () =
       target: { value: "+998 90 000 00 02" },
     });
     fireEvent.click(within(form).getByRole("button", { name: "Добавить" }));
-    await modalClosed("Новый контакт поставщика");
+    await modalClosed("Новый контакт партнёра");
 
     expect(await within(section).findByText("Нодира Рахимова")).toBeVisible();
     expect(within(section).getByText("nodira@sever-supply.example")).toBeVisible();
@@ -86,7 +86,7 @@ describe("Поставщик: блок «Доступ в кабинет»", () =
     });
 
     fireEvent.click(within(section).getByRole("button", { name: "Добавить контакт" }));
-    const form = await findModal("Новый контакт поставщика");
+    const form = await findModal("Новый контакт партнёра");
     const canAct = within(form).getByRole("switch");
     expect(canAct).toBeChecked();
     fireEvent.click(canAct);
@@ -95,7 +95,7 @@ describe("Поставщик: блок «Доступ в кабинет»", () =
       target: { value: "nodira@sever-supply.example" },
     });
     fireEvent.click(within(form).getByRole("button", { name: "Добавить" }));
-    await modalClosed("Новый контакт поставщика");
+    await modalClosed("Новый контакт партнёра");
     expect(
       await within(section).findByRole("switch", {
         name: "Может создавать запросы и загружать файлы: Нодира Рахимова",
@@ -107,7 +107,7 @@ describe("Поставщик: блок «Доступ в кабинет»", () =
     const drawer = await openSupplier("supply@demo.example", "1", "ООО «Поставщик Север»");
     const section = await block(drawer);
     fireEvent.click(await within(section).findByRole("button", { name: "Добавить контакт" }));
-    const form = await findModal("Новый контакт поставщика");
+    const form = await findModal("Новый контакт партнёра");
     fireEvent.change(within(form).getByLabelText("ФИО"), { target: { value: "Дубль" } });
     fireEvent.change(within(form).getByLabelText("E-mail"), {
       target: { value: "aziz@sever-supply.example" },

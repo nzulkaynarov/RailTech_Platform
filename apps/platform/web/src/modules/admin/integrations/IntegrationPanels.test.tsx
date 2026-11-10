@@ -366,7 +366,7 @@ describe("карточка «Модели ИИ»", () => {
     await waitFor(() => {
       expect(within(embed as HTMLElement).getByText("•••• 91zx")).toBeVisible();
     });
-    // у поставщика остаётся роль с проблемой («Проверка качества») — строка группы пока на месте
+    // у партнёра остаётся роль с проблемой («Проверка качества») — строка группы пока на месте
     expect(within(attention()).getByText(/Ключ OpenAI отклонён/)).toBeVisible();
 
     fireEvent.click(

@@ -36,7 +36,7 @@
   "card": {
     "partner": {
       "title": "A partner from the cabinet is waiting for confirmation",
-      "text": "A manufacturer or supplier was invited to the cabinet and its details match this client. We never merge them on our own: if it is the same company, confirm and the partner's requests will arrive in this client's card; if not, we will create a new client for the partner.",
+      "text": "A manufacturer or partner was invited to the cabinet and its details match this client. We never merge them on our own: if it is the same company, confirm and the partner's requests will arrive in this client's card; if not, we will create a new client for the partner.",
       "erp": "ERP company #",
       "matchedBy": {
         "inn": "tax ID matches",

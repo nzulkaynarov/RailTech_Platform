@@ -746,7 +746,7 @@ describe("Справочники", () => {
     expect(await within(region).findByText("Ничего не найдено")).toBeInTheDocument();
   });
 
-  it("курсы, коды ТН ВЭД и производители — в разделе «Номенклатура и поставщики», со ссылкой для тех, кому он открыт", async () => {
+  it("курсы, коды ТН ВЭД и производители — в разделе «Номенклатура и партнёры», со ссылкой для тех, кому он открыт", async () => {
     await openTab("reference");
     expect(await screen.findByText(/Коды ТН ВЭД и производители ведутся/)).toBeInTheDocument();
   });

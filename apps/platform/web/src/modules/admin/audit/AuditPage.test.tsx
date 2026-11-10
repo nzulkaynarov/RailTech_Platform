@@ -115,7 +115,7 @@ describe("Admin · Журнал аудита (экран целиком на MSW
     expect(
       await within(side).findByText(/Операции · Заявки · расчёт: Скрыто → Только чтение/),
     ).toBeVisible();
-    expect(within(side).getByText(/Поле «Цены поставщиков»: станет видно/)).toBeVisible();
+    expect(within(side).getByText(/Поле «Цены партнёров»: станет видно/)).toBeVisible();
   });
 
   it("секретные значения не показываются, запись без «до/после» объясняет это", async () => {

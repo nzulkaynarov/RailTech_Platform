@@ -34,7 +34,7 @@ describe("Документы · Входящая почта: список (W18A-
     expect(
       within(list).getByRole("link", { name: "Открыть письмо «Акт сверки за октябрь»" }),
     ).toHaveAttribute("href", "/eds/mail/17");
-    expect(within(list).getByText("Документ поставщика (договор, акт сверки)")).toBeVisible();
+    expect(within(list).getByText("Документ партнёра (договор, акт сверки)")).toBeVisible();
     expect(within(list).getAllByText("Вложений: 1").length).toBeGreaterThan(0);
   });
 

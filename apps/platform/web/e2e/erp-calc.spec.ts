@@ -142,7 +142,7 @@ test.describe("Расчёт по заявке: снабженец и гл. ин�
     await expectNoViolations(page, "расчёт у директора");
   });
 
-  test("бухгалтер: только чтение, цены клиенту и итог — без себестоимости и цен поставщика", async ({
+  test("бухгалтер: только чтение, цены клиенту и итог — без себестоимости и цен партнёра", async ({
     page,
   }) => {
     await loginAndWait(page, "accountant@demo.example");
@@ -150,7 +150,7 @@ test.describe("Расчёт по заявке: снабженец и гл. ин�
     await expect(page.getByText("275 300 000")).toBeVisible();
     await expect(page.getByText("239 000 000")).toHaveCount(0);
     await expect(page.getByText(/1 500 000/)).toHaveCount(0);
-    await expect(page.getByText(/Цена поставщика/)).toHaveCount(0);
+    await expect(page.getByText(/Цена партнёра/)).toHaveCount(0);
     await expect(page.getByRole("button", { name: /Подтвердить строку/ })).toHaveCount(0);
     await expect(page.getByRole("button", { name: READY })).toHaveCount(0);
     await settledScreenshot(page, "calc-accountant");

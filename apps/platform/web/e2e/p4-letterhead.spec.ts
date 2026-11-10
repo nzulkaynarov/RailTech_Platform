@@ -87,7 +87,7 @@ async function fillLetterBody(page: Page): Promise<void> {
   await add.getByRole("button", { name: /(^|\s)Список$/ }).click();
   await page
     .getByLabel("Блок 2: Список", { exact: true })
-    .fill("уточнённая декларация по НДС;\nреестр счетов-фактур поставщиков");
+    .fill("уточнённая декларация по НДС;\nреестр счетов-фактур партнёров");
   await add.getByRole("button", { name: /(^|\s)Таблица$/ }).click();
   await page.getByLabel("Шапка, столбец 1", { exact: true }).fill("Счёт-фактура");
   await page.getByLabel("Шапка, столбец 2", { exact: true }).fill("Сумма НДС, сум");
@@ -118,7 +118,7 @@ async function expectLetterBody(card: Locator): Promise<void> {
   const table = card.getByRole("table", { name: "Таблица в тексте письма" });
   await expect(table.getByRole("columnheader", { name: "Счёт-фактура" })).toBeVisible();
   await expect(table.getByRole("cell", { name: "14 400 000" })).toBeVisible();
-  await expect(card.getByText("реестр счетов-фактур поставщиков")).toBeVisible();
+  await expect(card.getByText("реестр счетов-фактур партнёров")).toBeVisible();
   await expect(card.getByText(/Счёт-фактура \| Сумма НДС/)).toHaveCount(0);
   await expect(card.locator("dt", { hasText: /^Сумма$/ })).toHaveCount(0);
   await table.scrollIntoViewIfNeeded();
