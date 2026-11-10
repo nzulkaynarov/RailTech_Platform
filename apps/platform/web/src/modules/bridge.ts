@@ -93,7 +93,6 @@ export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
   // «Все документы» и «Создать документ» (D1-5), «КП на одобрение» и «На согласовании» (D1-4), «Счета и оплаты» (D2-4) и
   // «Проекты» (D2-5) — настоящие экраны, записей моста у них нет.
 
-  "chats.calendar": { who: "calendar", when: "pilot" },
   "chats.all": { who: "chats", when: "pilot", objectKind: "chat" },
   "chats.internal": { who: "chats", when: "pilot", objectKind: "chat" },
   // B-D18-1: переписка отдельно от реестра лидов — «Входящие» старой CRM открываются только с разделом лидов; бухгалтеру
@@ -111,6 +110,7 @@ export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
 /** Разделы с настоящим экраном: моста у них нет. Новый настоящий экран — сюда, а запись из `BRIDGE` — удалить. */
 export const NATIVE_SECTIONS: readonly string[] = [
   "dashboard.queue",
+  "chats.calendar",
   "crm.messages",
   "crm.leads",
   "crm.clients",
