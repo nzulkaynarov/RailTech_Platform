@@ -28,32 +28,6 @@ function type(box: HTMLElement, value: string) {
   fireEvent.change(box, { target: { value } });
 }
 
-/** Объект без экрана Платформы (исходящее КП: «Исходящие» — мост в старый ERP) — для проверок «Где посмотреть». */
-function outboxQuoteFound() {
-  server.use(
-    http.get("*/search", () =>
-      HttpResponse.json({
-        groups: [
-          {
-            module: "eds",
-            items: [
-              {
-                title: "КП-2026/117",
-                object: {
-                  kind: "quote",
-                  number: "КП-2026/117",
-                  path: "/eds/outbox/%D0%9A%D0%9F-2026%2F117?panel=open&tab=card",
-                },
-              },
-            ],
-          },
-        ],
-        sources: { crm: "ok", erp: "ok" },
-      }),
-    ),
-  );
-}
-
 describe("Глобальный поиск", () => {
   it("находит сделку по номеру; результаты — группой модуля с названием вида объекта", async () => {
     signInAs("universal@demo.example");
@@ -204,24 +178,6 @@ describe("Глобальный поиск", () => {
     expect(screen.queryByRole("button", { name: /Утвердить резолюцию/ })).toBeNull();
   });
 
-  it("у объекта без экрана — «Где посмотреть» с мостом, а не заглушка: адрес не меняется, поиск остаётся открытым", async () => {
-    outboxQuoteFound();
-    signInAs("manager@demo.example");
-    const { router } = renderApp("/dashboard/queue");
-    const box = await searchBox();
-
-    type(box, "КП-2026/117");
-    fireEvent.click(await screen.findByRole("option", { name: /КП-2026\/117/ }));
-
-    const where = await screen.findByRole("region", { name: "Где посмотреть" });
-    expect(within(where).getByText(/Сейчас — в старом ERP/)).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe("/dashboard/queue");
-    expect(box).toHaveValue("КП-2026/117");
-
-    fireEvent.click(within(where).getByRole("button", { name: "Закрыть подсказку" }));
-    expect(screen.queryByRole("region", { name: "Где посмотреть" })).toBeNull();
-  });
-
   it("слова «создать заявку» добавляют группу «Действия»; без права на запись действия нет", async () => {
     signInAs("manager@demo.example");
     const { router } = renderApp("/dashboard/queue");
@@ -243,22 +199,6 @@ describe("Глобальный поиск", () => {
     await waitFor(() => {
       expect(screen.queryByRole("option", { name: /Пригласить сотрудника/ })).toBeNull();
     });
-  });
-
-  it("«Где посмотреть»: появляется в области aria-live, Escape внутри закрывает её и возвращает фокус в поле", async () => {
-    outboxQuoteFound();
-    signInAs("manager@demo.example");
-    renderApp("/dashboard/queue");
-    const box = await searchBox();
-
-    type(box, "КП-2026/117");
-    fireEvent.click(await screen.findByRole("option", { name: /КП-2026\/117/ }));
-
-    const where = await screen.findByRole("region", { name: "Где посмотреть" });
-    expect(where.parentElement).toHaveAttribute("aria-live", "polite");
-    fireEvent.keyDown(where, { key: "Escape" });
-    expect(screen.queryByRole("region", { name: "Где посмотреть" })).toBeNull();
-    expect(box).toHaveFocus();
   });
 
   it("действия — после найденных объектов; Enter при одном объекте открывает объект, а не действие", async () => {

@@ -41,62 +41,11 @@ async function shoot(page: Page, name: string): Promise<void> {
 }
 
 const STUB = "rt-pf-mock-queue-stub";
-const ROW_STUB = "Где сделать: Проверить отправку КП-2026/117";
-
-/** Директору — строка очереди без родного экрана (исходящее КП): у лидов, писем, КП на одобрение, служебок и проектов экраны уже есть. */
-async function showStubRow(page: Page): Promise<void> {
-  await loginAndWait(page, "director@demo.example");
-  await setMock(page, STUB, "1");
-  await page.reload();
-}
 
 const SIDE = { name: "Боковое окно" } as const;
 
 test.describe("Задачи: «Открыть» или «Где сделать»", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
-
-  test("директор: строка без экрана — «Где сделать» с мостом в старый ERP, ссылки на заглушку нет", async ({
-    page,
-  }) => {
-    await showStubRow(page);
-    const queue = page.getByRole("region", { name: "Что сделать сейчас" });
-    await queue.getByRole("button", { name: ROW_STUB }).click();
-    const pop = page.getByRole("region", { name: "Где сделать" });
-    await expect(pop.getByText(/Сейчас — в старом ERP: .*Коммерческие предложения/)).toBeVisible();
-    const open = pop.getByRole("link", { name: /Открыть в старом ERP/ });
-    await expect(open).toHaveAttribute("href", "http://erp.localhost:8088/#crm-quotes");
-    await expect(open).toHaveAttribute("target", "_blank");
-    expect(await open.getAttribute("rel")).toContain("noopener");
-    await expect(pop.getByText("Когда появится: к пилоту.")).toBeVisible();
-    // письма, КП и служебка рядом — «Открыть», «Где сделать» нет; плюс просроченный заказ поставщику (D2-2) и
-    // требование ГНК от делопроизводителя (P8); строк исполнения ERP у директора нет (D2-8); КП — все четыре на шаге
-    // директора в EDS (D26G-4)
-    await expect(queue.getByRole("link", { name: /^Открыть:/ })).toHaveCount(8);
-    await expect(queue.getByRole("button", { name: /^Где сделать/ })).toHaveCount(1);
-    await shoot(page, "queue-where");
-  });
-
-  test("с клавиатуры: Enter на «Где сделать» → фокус в секции → Tab доходит до «Открыть в …» → Escape возвращает на кнопку", async ({
-    page,
-  }) => {
-    await showStubRow(page);
-    const button = page.getByRole("button", { name: ROW_STUB });
-    await button.focus();
-    await page.keyboard.press("Enter");
-
-    const panel = page.getByRole("region", { name: "Где сделать" });
-    await expect(panel).toBeFocused();
-    const link = panel.getByRole("link", { name: /Открыть в старом ERP/ });
-    await expect(link).toBeVisible(); // адрес старого ERP приходит из BFF — Tab после его появления
-    await expectNoViolations(page, "где сделать: раскрыта с клавиатуры");
-    await page.keyboard.press("Tab");
-    await expect(link).toBeFocused();
-    await page.keyboard.press("Escape");
-    await expect(panel).toHaveCount(0);
-    await expect(button).toBeFocused();
-    await expect(button).toHaveAttribute("aria-expanded", "false");
-  });
-
   test("директор: письмо, КП и служебка (родные экраны) — «Открыть» открывает объект в боковом окне на вкладке решения; primary у срочных писем", async ({
     page,
   }) => {

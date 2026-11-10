@@ -221,28 +221,6 @@ describe("SectionStubPage · адрес старой системы не опр�
 });
 
 describe("SectionStubPage · карточка объекта по прямой ссылке", () => {
-  it("КП из «Исходящих» по прямой ссылке: «КП-2026/118», кнопка ведёт в раздел старого ERP (у проектов экран есть, D2-5)", async () => {
-    signInAs("all@demo.example");
-    renderApp("/eds/outbox/%D0%9A%D0%9F-2026%2F118");
-    const page = await main();
-
-    expect(within(page).getByRole("heading", { level: 1, name: "КП-2026/118" })).toBeVisible();
-    expect(await within(page).findByRole("link", { name: /Открыть в старом ERP/ })).toHaveAttribute(
-      "href",
-      "http://erp.localhost:8088/#crm-quotes",
-    );
-  });
-
-  it("очередь о нём ничего не знает — только номер и кнопка", async () => {
-    signInAs("all@demo.example");
-    renderApp("/eds/outbox/%D0%9A%D0%9F-2026%2F998");
-    const page = await main();
-
-    expect(within(page).getByRole("heading", { level: 1, name: "КП-2026/998" })).toBeVisible();
-    expect(await within(page).findByRole("link", { name: /Открыть в старом ERP/ })).toBeVisible();
-    expect(within(page).queryByRole("region", { name: /Моей очереди/ })).not.toBeInTheDocument();
-  });
-
   it("КП-2026/118 — заголовок без повтора «КП КП-…»", () => {
     expect(objectTitle("КП", "КП-2026/118")).toBe("КП-2026/118");
     expect(objectTitle("Письмо", "ВХ-104/26")).toBe("Письмо ВХ-104/26");
@@ -251,19 +229,6 @@ describe("SectionStubPage · карточка объекта по прямой �
 });
 
 describe("Бейджи меню у заглушек", () => {
-  it("«Проекты»: бейдж 4 только с подсказкой «ещё в старой системе: 4», а текст раздела не говорит «пока нет»", async () => {
-    signInAs("all@demo.example");
-    renderApp("/dashboard/projects");
-    const page = await main();
-    const menu = screen.getByRole("navigation", { name: "Разделы модуля" });
-
-    const item = await within(menu).findByRole("link", {
-      name: /Проекты.*ещё в старой системе: 4/,
-    });
-    expect(item.querySelector("[title='ещё в старой системе: 4']")).not.toBeNull();
-    expect(within(page).queryByText(/пока нет/)).not.toBeInTheDocument();
-  });
-
   it("«Лиды» — настоящий экран (D1-2b): живой бейдж без подсказки о старой системе", async () => {
     signInAs("manager@demo.example");
     renderApp("/crm/leads");

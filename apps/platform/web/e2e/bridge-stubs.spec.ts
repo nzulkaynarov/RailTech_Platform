@@ -37,23 +37,6 @@ async function shoot(page: Page, name: string): Promise<void> {
 
 test.describe("Заглушки и мост", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
-
-  test("по прямой ссылке — карточка объекта без экрана с кнопкой «Открыть в старом ERP»", async ({
-    page,
-  }) => {
-    await loginAndWait(page, "all@demo.example");
-    // «Лиды» (D1-2b), «Счета и оплаты» (D2-4) и «Проекты» (D2-5) — настоящие экраны; заглушка-карточка остаётся у разделов без экрана (исходящие КП)
-    await spaGoto(page, "/eds/outbox/%D0%9A%D0%9F-2026%2F118?panel=open&tab=card");
-    await expect(page.getByRole("heading", { level: 1, name: "КП-2026/118" })).toBeVisible();
-    const main = page.getByRole("main");
-    const open = main.getByRole("link", { name: /Открыть в старом ERP/ });
-    await expect(open).toHaveAttribute("href", "http://erp.localhost:8088/#crm-quotes");
-    await expect(open).toHaveAttribute("target", "_blank");
-    expect(await open.getAttribute("rel")).toContain("noopener");
-    await expect(main.getByText("Когда появится: к пилоту.")).toBeVisible();
-    await shoot(page, "object-from-queue-invoice");
-  });
-
   test("менеджер: прямая ссылка на лида открывает новый экран «Лиды» с карточкой (D1-2b)", async ({
     page,
   }) => {
@@ -67,38 +50,6 @@ test.describe("Заглушки и мост", () => {
       page.getByRole("main").getByRole("link", { name: /Открыть в старой CRM/ }),
     ).toHaveCount(0);
   });
-
-  test("директор: «Проекты» — мост в старый ERP; бейдж меню только с подсказкой «ещё в старой системе: 4»", async ({
-    page,
-  }) => {
-    await loginAndWait(page, "director@demo.example");
-    await spaGoto(page, "/dashboard/projects");
-    await expect(page.getByRole("heading", { level: 1, name: "Проекты" })).toBeVisible();
-    const main = page.getByRole("main");
-    await expect(
-      main.getByRole("heading", { level: 2, name: "Этот раздел ещё переносится в Платформу" }),
-    ).toBeVisible();
-    await expect(
-      main.getByText(
-        "Сейчас эта работа делается в старом ERP: раздел «Сделки». Данные не потеряны.",
-      ),
-    ).toBeVisible();
-    await expect(main.getByRole("link", { name: /Открыть в старом ERP/ })).toHaveAttribute(
-      "href",
-      "http://erp.localhost:8088/#crm-deals",
-    );
-
-    const menu = page.getByRole("navigation", { name: "Разделы модуля" });
-    await expect(menu.getByRole("link", { name: /^Проекты/ })).toHaveAccessibleName(
-      /ещё в старой системе: 4/,
-    );
-    // настоящий экран — живой бейдж без подсказки о старой системе
-    await expect(menu.getByRole("link", { name: /Задачи/ })).not.toHaveAccessibleName(
-      /ещё в старой системе/,
-    );
-    await shoot(page, "stub-with-bridge");
-  });
-
   test("«Чаты · Команда» — раздела нет в старых экранах, честно «её делает команда», «Когда появится»", async ({
     page,
   }) => {

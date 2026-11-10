@@ -43,8 +43,7 @@
     "crmLeads": "«Лиды» bo‘limi",
     "crmClients": "«Клиенты» bo‘limi",
     "erpDeals": "«Сделки» bo‘limi",
-    "erpCalc": "«Сделки» → ariza kartochkasi → TT hisob-kitobi",
-    "erpQuotes": "«Документы» → «Коммерческие предложения»"
+    "erpCalc": "«Сделки» → ariza kartochkasi → TT hisob-kitobi"
   },
   "who": {
     "memos": "direktor va buxgalter — xizmat yozuvlarini hozircha og‘zaki yoki qog‘ozda kelishadi",

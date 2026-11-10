@@ -1,4 +1,4 @@
-import { useLocation } from "react-router";
+import { Navigate, useLocation } from "react-router";
 
 import { RequireAccess } from "../../app/RequireAccess";
 import { ModuleRoutes } from "../ModuleRoutes";
@@ -69,6 +69,13 @@ export function Component() {
         <PaymentsScreen objectId={match.objectId} />
       </RequireAccess>
     );
+  }
+  if (match?.module.code === "eds" && match.section.key === "outbox") {
+    // Реестр исходящих — «Исходящие»; КП открывается своей карточкой
+    const to = match.objectId
+      ? `/eds/drafts/${encodeURIComponent(match.objectId)}${location.search}`
+      : "/eds/documents?box=outgoing";
+    return <Navigate to={to} replace />;
   }
   if (match?.module.code === "eds" && match.section.key === "documents") {
     return (
