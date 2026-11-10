@@ -12,7 +12,7 @@ import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { decisionReason, failedCodes, isTerminal, useRefreshApprovals } from "../decision/errors";
 import { type ApprovalDraft, clearDraft, readDraft, writeDraft } from "./draft";
 import { channelStates, checklistItems, defaultChannels, lateWarning, redBlockers } from "./model";
-import { shortAction, useConfirmAction } from "../../../shared/ui/useConfirmAction";
+import { useConfirmAction } from "../../../shared/ui/useConfirmAction";
 
 type Action = "approve" | "return";
 
@@ -135,7 +135,7 @@ export function ApprovalForm({ quote, variant = "panel", onDone }: ApprovalFormP
         event.preventDefault();
         if (!canApprove || decide.isPending) return;
         confirmAction({
-          action: shortAction(chosen.length > 0 ? t("form.submit") : t("form.submitNoChannels")),
+          action: t("form.confirmVerb"),
           object: quote.number,
           onConfirm: () => {
             setFailure(null);

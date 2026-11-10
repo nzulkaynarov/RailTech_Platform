@@ -320,7 +320,8 @@
       "validation": "izohni tekshiring",
       "unknown": "nimadir xato ketdi, kiritilgan matn shaklda qoldi"
     },
-    "submitNoChannels": "TTni tasdiqlash → Chiquvchilarga"
+    "submitNoChannels": "TTni tasdiqlash → Chiquvchilarga",
+    "confirmVerb": "Tasdiqlash"
   },
   "superseded": "{{version}}-versiya bilan almashtirildi"
 }
