@@ -109,17 +109,17 @@ test.describe("Настройки бота: администратор", () => {
     await settledScreenshot(page, "company-error");
 
     const menu = page.getByRole("navigation", { name: "Разделы модуля" });
-    await menu.getByRole("link", { name: "Время и сроки" }).click();
+    await menu.getByRole("link", { name: "Журнал", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Выйти без сохранения?" });
     await expect(dialog).toBeVisible();
     await dialog.getByRole("button", { name: "Остаться" }).click();
     await expect(contacts.getByLabel("Название компании")).toHaveValue("   ");
-    await menu.getByRole("link", { name: "Время и сроки" }).click();
+    await menu.getByRole("link", { name: "Журнал", exact: true }).click();
     await page
       .getByRole("dialog", { name: "Выйти без сохранения?" })
       .getByRole("button", { name: "Выйти без сохранения" })
       .click();
-    await expect(form(page, "Рабочие часы")).toBeVisible();
+    await expect(page.getByRole("region", { name: "Журнал" })).toBeVisible();
   });
 
   test("рабочие часы, поведение бота, квалификация, бюджет: поля подписаны, значения сохраняются", async ({

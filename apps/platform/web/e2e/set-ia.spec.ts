@@ -40,8 +40,7 @@ const GROUP_PAGES = [
   ["people", "/admin/roles", "Роли и права"],
   ["company", "/admin/company", "Реквизиты и бланк"],
   ["channels", "/admin/telegram", "Telegram"],
-  ["processes", "/admin/dictionaries", "Справочники"],
-  ["system", "/admin/ai-spend", "Расходы на ИИ"],
+  ["system", "/admin/audit", "Журнал"],
 ] as const;
 
 /** Старые адреса → новые: закладки, ссылки справки и «Что нового» открывают новое место. */

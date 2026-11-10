@@ -103,12 +103,10 @@ test.describe("Ролевая матрица: роли — данные", () => 
     await signOut(page);
     await login(page, "engineer@demo.example");
     await expect(page).toHaveURL(/\/crm\/messages$/);
-    await expect(railLinks(page)).toHaveText(["Клиенты", "Документы"]);
+    await expect(railLinks(page)).toHaveText(["Контакты", "Документы", "Операции"]);
     const submenu = page.getByRole("navigation", { name: "Разделы модуля" });
     await expect(submenu.getByRole("link")).toHaveText([
-      /Ждут ответа/,
       /Лиды/,
-      /Каналы связи/,
       /База знаний/,
     ]);
     await settledScreenshot(page, "roles-employee-view");
@@ -120,7 +118,7 @@ test.describe("Ролевая матрица: роли — данные", () => 
     await expect(page.getByRole("option", { name: /ИНН 300000001/ })).toHaveCount(0);
     await search.press("Escape");
     await railLinks(page).filter({ hasText: "Документы" }).click();
-    await expect(submenu.getByRole("link")).toHaveText([/Все документы/, /Финансы/]);
+    await expect(submenu.getByRole("link")).toHaveText([/Исходящие/, /Внутренние/, /Архив/]);
     // Название роли под аватаром — из данных.
     await expect(
       page.getByRole("button", { name: new RegExp(`${MIXED}: профиль и настройки`) }),
