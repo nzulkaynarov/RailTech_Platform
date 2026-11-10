@@ -13,7 +13,7 @@ test.describe("Настройки · Подключения: каталог", ()
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
       await loginAndWait(page, "admin@demo.example");
       await spaGoto(page, "/admin/integrations");
-      await expect(page.getByRole("region", { name: "Другие сервисы" })).toBeVisible();
+      await expect(page.getByRole("region", { name: "Следующие подключения" })).toBeVisible();
       await expectNoViolations(page, `connectors ${String(width)}`);
       await settledScreenshot(page, "connectors");
     });
