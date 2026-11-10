@@ -153,40 +153,8 @@ test.describe("панели", () => {
     );
     // D26G-4: четыре «Одобрить КП» из «КП на одобрение» (EDS) входят в число «Моих задач»
     await expect(menu.getByRole("link", { name: "Задачи 8, требует действия" })).toBeVisible();
-    await expect(
-      menu.getByRole("link", { name: "Проекты 4, ещё в старой системе: 4" }),
-    ).toBeVisible();
+    await expect(menu.getByRole("link", { name: /^Проекты 4/ })).toBeVisible();
     await expect(page.getByRole("button", { name: /^Центр уведомлений, 3 новых/ })).toBeVisible();
-  });
-
-  test("главное действие без экрана — неактивная кнопка с подсказкой; с экраном — ссылка", async ({
-    page,
-  }) => {
-    // ERP: главное действие модуля «Создать заявку» ещё без экрана — неактивна, подсказка «к пилоту»
-    await loginAndWait(page, "supply@demo.example");
-    await page.goto("/erp/stock");
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-    // подменю модуля может быть свёрнуто — раскрываем
-    const menu = page.getByRole("navigation", { name: "Разделы модуля" });
-    if (!(await menu.isVisible())) await page.getByRole("button", { name: "Меню" }).click();
-    const action = menu.getByRole("button", { name: /^Создать заявку/ });
-    await expect(action).toBeDisabled();
-    await expect(action).toHaveAccessibleName("Создать заявку. Появится к пилоту");
-    await menu.getByText("Создать заявку").hover({ force: true });
-    await expect(page.getByRole("tooltip")).toContainText("Появится к пилоту");
-  });
-
-  test("CRM: «Создать заявку» — настоящий экран (D1-2b), кнопка ведёт к лидам «Просят КП»", async ({
-    page,
-  }) => {
-    await loginAndWait(page, "manager@demo.example");
-    await page.goto("/crm/leads");
-    const action = page
-      .getByRole("navigation", { name: "Разделы модуля" })
-      .getByRole("link", { name: /Создать заявку/ });
-    await expect(action).toHaveAttribute("href", "/crm/leads?status=wants_quote");
-    await action.click();
-    await expect(page.getByRole("tab", { name: "Просят КП", selected: true })).toBeVisible();
   });
 });
 
@@ -290,18 +258,18 @@ test.describe("узкие экраны", () => {
       const drawerMenu = page.getByRole("navigation", { name: "Разделы модуля" });
       await expect(drawerMenu).toBeVisible();
       await drawerMenu.getByRole("link", { name: /^Проекты 4/ }).click();
-      await expect(page).toHaveURL(/\/dashboard\/projects$/);
+      await expect(page).toHaveURL(/\/eds\/projects$/);
       await expect(drawerMenu).toBeHidden();
 
       await expect(page.getByRole("complementary", { name: "Боковое окно" })).toHaveCount(0);
       await page.getByRole("button", { name: "Показать панель" }).click();
-      await expect(page.getByRole("tab", { name: "Карточка" })).toBeVisible();
+      await expect(page.getByRole("tab", { name: "Договор" })).toBeVisible();
       await expect(page).toHaveURL(/panel=open/);
       await page
         .getByRole("dialog", { name: "Боковое окно" })
         .getByRole("button", { name: "Скрыть боковое окно" })
         .click();
-      await expect(page.getByRole("tab", { name: "Карточка" })).toBeHidden();
+      await expect(page.getByRole("tab", { name: "Договор" })).toBeHidden();
 
       const scrollWidth = await page.evaluate("document.documentElement.scrollWidth");
       expect(scrollWidth).toBeLessThanOrEqual(390);

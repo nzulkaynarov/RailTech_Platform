@@ -34,6 +34,8 @@ export interface ModuleRailProps {
   label: string;
   logoLabel: string;
   logoTo: string;
+  /** Единая кнопка «Создать» под логотипом */
+  create?: ReactNode;
   /** Меню аватара с ролью под ним (низ рейла) */
   profile: ReactNode;
   /** `bottom` — нижняя панель на экранах < 768 */
@@ -173,6 +175,7 @@ export function ModuleRail({
   label,
   logoLabel,
   logoTo,
+  create,
   profile,
   variant = "side",
   menuOpen = true,
@@ -227,6 +230,7 @@ export function ModuleRail({
         >
           RT
         </Link>
+        {create ? <div style={{ marginBottom: 12 }}>{create}</div> : null}
         {modules.map((m) => (
           <RailItemWithFlyout key={m.code} module={m} menuOpen={menuOpen} />
         ))}

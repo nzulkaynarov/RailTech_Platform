@@ -43,8 +43,7 @@
     "crmLeads": "the “Лиды” section",
     "crmClients": "the “Клиенты” section",
     "erpDeals": "the “Сделки” section",
-    "erpCalc": "“Сделки” → request card → quote calculation",
-    "erpQuotes": "“Документы” → “Коммерческие предложения”"
+    "erpCalc": "“Сделки” → request card → quote calculation"
   },
   "who": {
     "memos": "the director and the accountant: memos are still approved verbally or on paper",

@@ -5,7 +5,7 @@
     "placeholder": "Name or TIN"
   },
   "columns": {
-    "name": "Client",
+    "name": "Counterparty",
     "inn": "TIN",
     "requests": "Open requests",
     "erp": "Back office",
@@ -127,5 +127,15 @@
     "erp_partner_verification": "a cabinet partner has this TIN: the handoff is held. A back-office colleague will check the TIN and invite the partner again, then confirm the link in this card — the handoff will repeat on its own",
     "enqueue_failed": "could not queue the transfer",
     "other": "reason unknown"
+  },
+  "kinds": {
+    "filter": "Counterparty type",
+    "column": "Type",
+    "all": "All",
+    "clients": "Clients",
+    "partners": "Partners",
+    "client": "Client",
+    "partner": "Partner",
+    "both": "Client and partner"
   }
 }

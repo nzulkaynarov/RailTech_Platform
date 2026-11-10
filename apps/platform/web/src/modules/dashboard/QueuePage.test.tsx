@@ -2,11 +2,7 @@ import { act, fireEvent, screen, waitFor, within } from "@testing-library/react"
 import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  MOCK_EDS_DOWN_KEY,
-  MOCK_ERP_DOWN_KEY,
-  MOCK_QUEUE_STUB_KEY,
-} from "../../mocks/feedHandlers";
+import { MOCK_EDS_DOWN_KEY, MOCK_ERP_DOWN_KEY } from "../../mocks/feedHandlers";
 import { endSession } from "../../mocks/mockSession";
 import { usePanelsStore } from "../../app/shell/panelsStore";
 import i18n from "../../shared/i18n";
@@ -262,39 +258,6 @@ describe("Dashboard · Моя очередь", () => {
       within(page).getByRole("link", { name: "Открыть: Ответить лиду L-2050" }),
     ).toHaveAttribute("href", "/crm/messages?lead=L-2050");
     expect(within(page).queryByRole("button", { name: /^Где сделать/ })).toBeNull();
-  });
-
-  it("строка без экрана (исходящее КП) — «Где сделать» с мостом, ссылки на заглушку нет; письмо, КП и служебка рядом — «Открыть»", async () => {
-    window.localStorage.setItem(MOCK_QUEUE_STUB_KEY, "1");
-    signInAs("director@demo.example");
-    renderApp("/dashboard/queue");
-    const page = await main();
-
-    const where = await within(page).findByRole("button", {
-      name: "Где сделать: Проверить отправку КП-2026/117",
-    });
-    fireEvent.click(where);
-    expect(
-      await screen.findByText(/Сейчас — в старом ERP: .*Коммерческие предложения/),
-    ).toBeInTheDocument();
-    expect(await screen.findByRole("link", { name: /Открыть в старом ERP/ })).toHaveAttribute(
-      "href",
-      "http://erp.localhost:8088/#crm-quotes",
-    );
-    // письмо, КП и служебка — «Открыть» с адресом объекта и вкладкой решения; «Где сделать» у них нет
-    const open = within(page).getAllByRole("link", { name: /^Открыть:/ });
-    expect(open.map((link) => link.getAttribute("href"))).toEqual([
-      "/erp/stock/%D0%97%D0%9F-2026-029", // просроченный заказ поставщику (D2-2) — экран «Склад»
-      "/eds/inbox/%D0%92%D0%A5-104%2F26?panel=open&tab=resolution",
-      "/eds/inbox/%D0%92%D0%A5-108%2F26?panel=open&tab=resolution",
-      "/eds/approvals/%D0%A1%D0%97-2026%2F031?panel=open&tab=agree",
-      // D26G-4: КП на шаге директора — из «КП на одобрение» (EDS)
-      "/eds/drafts/%D0%9A%D0%9F-2026%2F115?panel=open&tab=approve",
-      "/eds/drafts/%D0%9A%D0%9F-2026%2F116?panel=open&tab=approve",
-      "/eds/drafts/%D0%9A%D0%9F-2026%2F117?panel=open&tab=approve",
-      "/eds/drafts/%D0%9A%D0%9F-2026%2F118?panel=open&tab=approve",
-    ]);
-    expect(within(page).getAllByRole("button", { name: /^Где сделать/ })).toHaveLength(1);
   });
 
   it("BFF прислал короткие адреса объектов — вкладка решения достраивается в Платформе", async () => {

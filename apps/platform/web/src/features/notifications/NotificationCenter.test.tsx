@@ -168,60 +168,6 @@ describe("Центр уведомлений", () => {
     },
   );
 
-  it("уведомление об объекте без экрана: не заглушка, а «Где посмотреть» с мостом; окно остаётся открытым, прочитано", async () => {
-    // раздел без экрана (исходящие КП ещё в старом ERP): у договоров и счетов экраны уже есть, берём КП из «Исходящих»
-    server.use(
-      http.get("*/notifications", () =>
-        HttpResponse.json({
-          items: [
-            {
-              id: "erp:90",
-              tab: "decisions",
-              title: "КП-2026/118 отправлено клиенту",
-              created_at: new Date().toISOString(),
-              read: false,
-              object: {
-                kind: "quote",
-                number: "КП-2026/118",
-                path: "/eds/outbox/%D0%9A%D0%9F-2026%2F118?panel=open&tab=card",
-              },
-            },
-          ],
-          next_cursor: null,
-          unread_count: 1,
-          sources: { crm: "ok", erp: "ok" },
-        }),
-      ),
-    );
-    signInAs("director@demo.example");
-    const { router } = renderApp("/dashboard/queue");
-    const center = await openBell();
-    const requests: string[] = [];
-    server.events.on("request:start", ({ request }) => {
-      if (request.method === "POST") requests.push(new URL(request.url).pathname);
-    });
-
-    const item = await within(center).findByRole("button", {
-      name: /Где посмотреть.*КП-2026\/118/,
-    });
-    fireEvent.click(item);
-
-    expect(item).toHaveAttribute("aria-expanded", "true");
-    const where = within(center).getByRole("region", { name: "Где посмотреть" });
-    expect(within(where).getByText(/Сейчас — в старом ERP/)).toBeInTheDocument();
-    expect(
-      await within(where).findByRole("link", { name: /Открыть в старом ERP/ }),
-    ).toHaveAttribute("href", "http://erp.localhost:8088/#crm-quotes");
-    expect(router.state.location.pathname).toBe("/dashboard/queue");
-    expect(center).toBeInTheDocument();
-    await waitFor(() => {
-      expect(requests).toContain("/api/v1/notifications/erp:90/read");
-    });
-    fireEvent.click(item);
-    expect(item).toHaveAttribute("aria-expanded", "false");
-    server.events.removeAllListeners();
-  });
-
   it("«Отметить все прочитанными» сбрасывает счётчик и подсветку", async () => {
     signInAs("director@demo.example");
     renderApp("/dashboard/queue");

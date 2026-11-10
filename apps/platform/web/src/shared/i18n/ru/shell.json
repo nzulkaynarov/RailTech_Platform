@@ -250,5 +250,21 @@
     },
     "settingsGroup": "Настройки",
     "settingTag": "Настройка"
+  },
+  "create": {
+    "label": "Создать",
+    "soon": "скоро",
+    "kinds": {
+      "lead": "Лид",
+      "request": "Заявка",
+      "incoming": "Входящее",
+      "letter": "Письмо",
+      "memo": "Служебная записка",
+      "statement": "Заявление",
+      "report": "Отчёт",
+      "purchase": "Заявка на закупку",
+      "assignment": "Поручение",
+      "expense": "Расход"
+    }
   }
 }

@@ -158,7 +158,7 @@ function cardsFor(preset: PresetCode): QueueCard[] {
           key: "letters_without_resolution",
           label: "Входящие без резолюции",
           count: 1,
-          hint: "Документы · Входящие письма",
+          hint: "Документы · Входящие",
           path: "/eds/inbox",
         },
         // Число — строки «Одобрить КП» очереди (`edsQueue.ts`, D26G-4): подставляет `feedHandlers`
@@ -166,14 +166,14 @@ function cardsFor(preset: PresetCode): QueueCard[] {
           key: "quotes_to_approve",
           label: "КП на одобрение",
           count: 0,
-          hint: "Документы · КП на одобрение",
+          hint: "Документы · Исходящие",
           path: "/eds/drafts",
         },
         {
           key: "memos_to_approve",
           label: "Служебные записки",
           count: 1,
-          hint: "Документы · На согласовании",
+          hint: "Документы · Внутренние",
           path: "/eds/approvals",
         },
         PROJECTS_CARD,
@@ -184,14 +184,14 @@ function cardsFor(preset: PresetCode): QueueCard[] {
           key: "leads_without_answer",
           label: "Лиды без ответа",
           count: 1,
-          hint: "Клиенты · Ждут ответа",
+          hint: "Контакты · Лиды",
           path: "/crm/messages",
         },
         {
           key: "leads_to_take",
           label: "Лиды без менеджера",
           count: 1,
-          hint: "Клиенты · Ждут ответа",
+          hint: "Контакты · Лиды",
           path: "/crm/messages",
         },
         // D17G-1: первой линии — вместо «Лиды без ответа» и «Лиды без менеджера» (у менеджера отсекает `cardAllowed`)
@@ -199,15 +199,15 @@ function cardsFor(preset: PresetCode): QueueCard[] {
           key: "leads_to_triage",
           label: "Лиды разобрать",
           count: 3,
-          hint: "Клиенты · Ждут ответа · передать менеджеру",
+          hint: "Контакты · Лиды",
           path: "/crm/messages",
         },
-        { ...PROJECTS_CARD, hint: "Документы · Проекты: договоры и акты" },
+        { ...PROJECTS_CARD, hint: "Главная · Проекты" },
       ];
     case "ADMIN":
       return [];
     default:
-      return [{ ...PROJECTS_CARD, hint: "Документы · Проекты: договоры и акты" }];
+      return [{ ...PROJECTS_CARD, hint: "Главная · Проекты" }];
   }
 }
 

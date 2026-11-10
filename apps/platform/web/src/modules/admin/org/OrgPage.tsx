@@ -189,6 +189,13 @@ export function OrgPage({ objectId }: { objectId?: string }) {
       <PageHeader
         title={title}
         subtitle={editable ? t("modules:admin.org.subtitle") : t("modules:admin.org.readOnly")}
+        extra={
+          editable ? (
+            <Button type="primary" onClick={() => void navigate(inviteHref)}>
+              {t("modules:admin.action")}
+            </Button>
+          ) : undefined
+        }
       />
       <div ref={blockRef}>
         <Card styles={{ body: { padding: 0 } }}>

@@ -720,7 +720,7 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
             key="leads_to_triage",
             label="Лиды разобрать",
             count=triage,
-            hint="Клиенты · Ждут ответа · передать менеджеру",
+            hint="Контакты · Лиды",
             path="/crm/messages",
         )
     elif wants_inbox(view):
@@ -730,14 +730,14 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
             key="leads_without_answer",
             label="Лиды без ответа",
             count=answer,
-            hint="Клиенты · Ждут ответа",
+            hint="Контакты · Лиды",
             path="/crm/messages",
         )
         cards["leads_to_take"] = QueueCard(
             key="leads_to_take",
             label="Лиды без менеджера",
             count=take,
-            hint="Клиенты · Ждут ответа",
+            hint="Контакты · Лиды",
             path="/crm/messages",
         )
     if wants_letters(view) and snap.letters is not None:
@@ -745,7 +745,7 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
             key="letters_without_resolution",
             label="Входящие без резолюции",
             count=len(snap.letters),
-            hint="Документы · Входящие письма" + (" · не меньше" if snap.letters_more else ""),
+            hint="Документы · Входящие" + (" · не меньше" if snap.letters_more else ""),
             path="/eds/inbox",
         )
     if wants_mail(view) and snap.mail is not None:
@@ -754,7 +754,7 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
             label="Входящая почта",
             count=snap.mail_total,
             hint=(
-                "Документы · Входящая почта"
+                "Контакты · Почта"
                 if snap.mail_configured
                 else "Почта не подключена — Настройки · Подключения · Почта"
             ),
@@ -766,7 +766,7 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
             key="quotes_to_approve",
             label="КП на одобрение",
             count=sum(1 for i in queue if i.kind == "approve_quote"),
-            hint="Документы · КП на одобрение" + (" · не меньше" if snap.quotes_more else ""),
+            hint="Документы · Исходящие" + (" · не меньше" if snap.quotes_more else ""),
             path="/eds/drafts",
         )
     if wants_memos(view) and snap.memos is not None:
@@ -774,7 +774,7 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
             key="memos_to_approve",
             label="Служебные записки",
             count=len(snap.memos),
-            hint="Документы · На согласовании" + (" · не меньше" if snap.memos_more else ""),
+            hint="Документы · Внутренние" + (" · не меньше" if snap.memos_more else ""),
             path="/eds/approvals",
         )
     counts = snap.invoice_counts
@@ -783,7 +783,7 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
             key="payments_to_confirm",
             label="Платёжки на подтверждение",
             count=counts["proofs"],
-            hint="Документы · Счета и оплаты",
+            hint="Операции · Финансы",
             path="/eds/payments?show=proofs",
         )
     if counts is not None and wants_work(view, "issue_invoice"):
@@ -791,7 +791,7 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
             key="invoices_to_issue",
             label="Счета к выставлению",
             count=counts["to_issue"],
-            hint="Документы · Счета и оплаты",
+            hint="Операции · Финансы",
             path="/eds/payments?show=to_issue",
         )
     if wants_projects(view):
@@ -799,7 +799,7 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
             key="projects_in_work",
             label="Проекты в работе",
             count=projects_in_work(snap),
-            hint="Документы · Проекты: договоры и акты",
+            hint="Главная · Проекты",
             path="/eds/projects",
         )
     return list(cards.values())[:MAX_CARDS]

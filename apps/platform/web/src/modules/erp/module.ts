@@ -5,7 +5,6 @@ const CALC_TABS = [{ key: "task" }, { key: "chat" }, { key: "documents" }] as co
 
 export const erp: ModuleConfig = {
   code: "erp",
-  action: { access: "erp.calc" },
   sections: [
     {
       key: "requests",

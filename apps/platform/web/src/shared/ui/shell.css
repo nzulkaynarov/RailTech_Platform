@@ -318,3 +318,14 @@
   color: #0958d9;
   border-bottom-color: #1668dc;
 }
+
+.pf-rail-create {
+  width: 36px;
+  height: 36px;
+}
+
+/* Переключатель не шире экрана: на узком окне прокручивается внутри себя */
+.ant-layout-content .ant-segmented {
+  max-width: 100%;
+  overflow-x: auto;
+}

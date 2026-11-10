@@ -1,4 +1,4 @@
-import type { ModuleCode, ObjectKind } from "../shared/api/generated/model";
+import type { ObjectKind } from "../shared/api/generated/model";
 // Односторонняя зависимость: `registry` (карта разделов) про мост не знает, поэтому цикла `bridge` ↔ `registry` нет.
 import { matchSection } from "./registry";
 
@@ -66,12 +66,6 @@ const numericPath = (prefix: string) => (objectId: string) =>
 
 /** Ключ — `<модуль>.<раздел>`, как в `module.ts` модуля. */
 export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
-  "dashboard.projects": {
-    legacy: erp("#crm-deals", "erpDeals"),
-    when: "pilot",
-    legacyCount: true,
-  },
-
   // «Лиды» и «Клиенты» — настоящие экраны (D1-2b), записей моста у них нет.
   "crm.requests": {
     legacy: erp("#crm-deals", "erpDeals", numericPath("#request-detail/")),
@@ -84,11 +78,6 @@ export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
     when: "pilot",
   },
 
-  "eds.outbox": {
-    legacy: erp("#crm-quotes", "erpQuotes"),
-    when: "pilot",
-    objectKind: "quote",
-  },
   // «Все документы» и «Создать документ» (D1-5), «КП на одобрение» и «На согласовании» (D1-4), «Счета и оплаты» (D2-4) и
   // «Проекты» (D2-5) — настоящие экраны, записей моста у них нет.
 
@@ -108,6 +97,8 @@ export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
 export const NATIVE_SECTIONS: readonly string[] = [
   "dashboard.queue",
   "dashboard.summary",
+  "dashboard.projects",
+  "eds.outbox",
   "chats.calendar",
   "chats.all",
   "chats.contacts",
@@ -156,13 +147,6 @@ export const NATIVE_SECTIONS: readonly string[] = [
   "admin.setup",
   "admin.tickets",
 ];
-
-/** Главные действия модулей без экрана (кнопка внизу подменю неактивна): когда появятся. Остальных модулей это не касается. */
-export const MODULE_ACTION_WHEN: Readonly<Partial<Record<ModuleCode, When>>> = {
-  eds: "soon",
-  erp: "pilot",
-  chats: "pilot",
-};
 
 export function bridgeKey(module: string, section: string): string {
   return `${module}.${section}`;

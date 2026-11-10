@@ -53,7 +53,7 @@ const TECH_DOCS: readonly NavTarget[] = [{ section: "erp.docs" }];
 export const NAVIGATION: Readonly<Record<ModuleCode, readonly NavItem[]>> = {
   dashboard: [
     { key: "queue", targets: [{ section: "dashboard.queue" }], also: ["eds.tasks", "eds.mymail"] },
-    { key: "projects", targets: [{ section: "dashboard.projects" }], also: ["eds.projects"] },
+    { key: "projects", targets: [{ section: "eds.projects" }], also: ["dashboard.projects"] },
     { key: "summary", targets: [{ section: "dashboard.summary" }] },
   ],
   crm: [

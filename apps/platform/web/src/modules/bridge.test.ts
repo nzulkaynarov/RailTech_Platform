@@ -169,21 +169,6 @@ describe("исполнимость адреса: есть ли экран в П�
   ])("%s → %s", (path, expected) => {
     expect(isActionable(path)).toBe(expected);
   });
-
-  it("раздел с родным экраном исполним, а стоит убрать запись моста — адрес становится исполнимым сам", () => {
-    const key = "eds.outbox";
-    const entry = BRIDGE[key];
-    const path = "/eds/outbox/%D0%9A%D0%9F-2026%2F118";
-    expect(isActionable(path)).toBe(false);
-    // имитация переноса раздела: запись моста удалена
-    Reflect.deleteProperty(BRIDGE, key);
-    try {
-      expect(isActionable(path)).toBe(true);
-    } finally {
-      (BRIDGE as Record<string, unknown>)[key] = entry;
-    }
-  });
-
   it("routeTarget: раздел, объект из пути или ?lead=, запись моста", () => {
     expect(routeTarget("/crm/leads?lead=L-2041&panel=open")).toMatchObject({
       module: "crm",

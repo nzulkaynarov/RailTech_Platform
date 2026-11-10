@@ -49,13 +49,6 @@ export interface SectionConfig {
   sheetOnMobile?: boolean;
 }
 
-export interface ModuleAction {
-  /** Подпись берётся из `modules:<module>.action` */
-  access: string;
-  /** Куда ведёт кнопка; без поля — неактивная («появится в фазе P2») */
-  to?: string;
-}
-
 /**
  * Модуль рейла. Порядок — в `MODULES` (registry.ts). Имена переводятся (UX-оценка 2026-10-27 §6.1):
  * `modules:<code>.name` — подпись в рейле, нижней панели и хлебных крошках (≤ 10 символов),
@@ -64,8 +57,6 @@ export interface ModuleAction {
 export interface ModuleConfig {
   code: ModuleCode;
   sections: readonly SectionConfig[];
-  /** Главное действие модуля внизу подменю (SPEC-v3 §6.2); есть, если ресурс доступен на запись */
-  action?: ModuleAction;
 }
 
 export const DEFAULT_TABS: readonly PanelTab[] = [

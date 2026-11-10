@@ -12,7 +12,6 @@ const EDS_ANY = [
 
 export const eds: ModuleConfig = {
   code: "eds",
-  action: { access: "eds.memo.create", to: "/eds/new" },
   sections: [
     {
       key: "documents",
