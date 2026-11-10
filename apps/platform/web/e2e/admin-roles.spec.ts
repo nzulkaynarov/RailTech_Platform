@@ -69,11 +69,11 @@ test.describe("Ролевая матрица: роли — данные", () => 
     await expect(panel.getByRole("heading", { level: 3, name: "Новая роль" })).toBeVisible();
     await panel.getByLabel("Название").fill(MIXED);
     const leads = matrix(page).getByRole("combobox", {
-      name: `Ждут ответа, Лиды, Каналы связи, База знаний бота — роль «${MIXED}»`,
+      name: `Лиды, Ждут ответа, База знаний — роль «${MIXED}»`,
     });
     await chooseOption(leads, "Полный доступ");
     const payments = matrix(page).getByRole("combobox", {
-      name: `Счета и оплаты · подтвердить оплату, запросить платёжку — роль «${MIXED}»`,
+      name: `Финансы · подтвердить оплату, запросить платёжку — роль «${MIXED}»`,
     });
     await chooseOption(payments, "Полный доступ");
     await settledScreenshot(page, "roles-new");
@@ -145,7 +145,7 @@ test.describe("Ролевая матрица: роли — данные", () => 
     await expect(panel.getByRole("heading", { level: 3, name: "Менеджер" })).toBeVisible();
 
     const summary = matrix(page).getByRole("combobox", {
-      name: "Сводка по компании — роль «Менеджер»",
+      name: "Сводка — роль «Менеджер»",
     });
     await chooseOption(summary, "Только чтение");
     await settledScreenshot(page, "roles-edit-preview");
