@@ -60,7 +60,6 @@ test.describe("S1 · Настройки короче", () => {
       const contacts = page.getByRole("region", { name: "Контакты для клиентов", exact: true });
       await expect(contacts.getByLabel("Название компании")).toBeVisible();
       await contacts.scrollIntoViewIfNeeded();
-      await expect(contacts.getByRole("group", { name: "Что произойдёт" })).toHaveCount(0);
       await expect(page.getByRole("link", { name: /Реквизиты для документов —/ })).toHaveCount(0);
       await expectShortSubtitle(page, "Реквизиты и бланк");
       await settledScreenshot(page, "s1-bot-company");
@@ -72,7 +71,6 @@ test.describe("S1 · Настройки короче", () => {
       await expect(
         page.getByText("Новые номера пойдут по этой схеме; выданные не меняются."),
       ).toBeVisible();
-      await expect(page.getByRole("group", { name: "Что произойдёт" })).toHaveCount(0);
       await expectShortSubtitle(page, "Нумерация");
       await settledScreenshot(page, "s1-company-numbering");
       await expectNoViolations(page, `Компания ${String(width)}`);

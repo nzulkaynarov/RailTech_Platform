@@ -15,7 +15,6 @@ import {
   useRetryBusInbox,
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import {
@@ -101,13 +100,6 @@ export function DeliveryPanel({ delivery }: { delivery: BusDelivery }) {
       </p>
       {retriable ? (
         <div className="pf-bus-action">
-          <Consequence
-            items={[
-              t("panel.consequence.now"),
-              t("panel.consequence.probe"),
-              t("panel.consequence.safe"),
-            ]}
-          />
           <Button
             type="primary"
             loading={retry.isPending}
@@ -167,13 +159,6 @@ export function InboxPanel({ entry }: { entry: BusInboxEntry }) {
       </p>
       {retriable ? (
         <div className="pf-bus-action">
-          <Consequence
-            items={[
-              t("panel.consequence.inboxNow", { domain }),
-              t("panel.consequence.inboxFix"),
-              t("panel.consequence.inboxSafe"),
-            ]}
-          />
           <Button
             type="primary"
             loading={retry.isPending}
@@ -222,14 +207,6 @@ export function RetryDeadPanel({
       </p>
       {done === null ? (
         <div className="pf-bus-action">
-          <Consequence
-            items={[
-              t("panel.deadConsequence.now", { count }),
-              t("panel.deadConsequence.fix"),
-              t("panel.deadConsequence.probe"),
-              t("panel.deadConsequence.safe", { domain: publisher }),
-            ]}
-          />
           <Button
             type="primary"
             danger

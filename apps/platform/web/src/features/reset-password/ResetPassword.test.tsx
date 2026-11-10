@@ -36,13 +36,6 @@ describe("Сброс пароля сотрудника по почте (карт
     fireEvent.click(within(side).getByRole("button", { name: "Сбросить пароль" }));
 
     const group = within(side).getByRole("group", { name: "Сброс пароля" });
-    expect(within(group).getByText("Что произойдёт")).toBeVisible();
-    expect(
-      within(group).getByText(/Сотрудник получит письмо на manager@demo\.example/),
-    ).toBeVisible();
-    expect(
-      within(group).getByText(/Все его сессии в Платформе, CRM и ERP завершатся/),
-    ).toBeVisible();
     expect(within(group).getByRole("radio", { name: "По почте" })).toBeChecked();
     expect(within(group).getByRole("radio", { name: "Временным паролем" })).toBeEnabled();
 
@@ -71,7 +64,6 @@ describe("Сброс пароля сотрудника по почте (карт
     fireEvent.click(within(side).getByRole("radio", { name: "Временным паролем" }));
 
     const group = within(side).getByRole("group", { name: "Сброс пароля" });
-    expect(within(group).getByText(/Прежний пароль перестанет действовать/)).toBeVisible();
     expect(within(group).queryByText(/получит письмо/)).toBeNull();
 
     fireEvent.click(within(group).getByRole("button", { name: "Выдать пароль" }));

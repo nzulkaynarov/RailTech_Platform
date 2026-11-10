@@ -7,7 +7,6 @@ import {
   useLoseCalcRequest,
   useNewCalcQuoteVersion,
 } from "../../../shared/api/generated/platform-bff";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { calcRef, useApplySheet, useErrorText } from "./api";
 
@@ -74,7 +73,6 @@ function LostModal({ sheet, onClose }: { sheet: CalcSheet; onClose: () => void }
           />
         </FormField>
         <ErrorNote message={error} />
-        <Consequence items={t("rejection.lost.consequence", { returnObjects: true }) as string[]} />
       </div>
     </Modal>
   );
@@ -141,9 +139,6 @@ export function ClientRejection({ sheet }: { sheet: CalcSheet }) {
                 {t("rejection.lost.button")}
               </Button>
             </div>
-            <Consequence
-              items={t("rejection.newVersion.consequence", { returnObjects: true }) as string[]}
-            />
             {lost ? (
               <LostModal
                 sheet={sheet}

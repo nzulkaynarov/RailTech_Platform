@@ -77,7 +77,6 @@ test.describe("A1: решение клиента по КП по его подт�
         buffer: Buffer.from("%PDF-1.4 demo letter"),
       });
       await expect(dialog.getByText("letter.pdf")).toBeVisible();
-      await expect(dialog.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
       await expectNoViolations(page, `окно «Клиент принял» ${String(width)}`);
       await shot(page, "a1-dialog-accept", false);
 

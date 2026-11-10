@@ -7,7 +7,6 @@ import { useTranslation } from "react-i18next";
 import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { ApiError } from "../../../shared/api/errors";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { ContextualSaveBar } from "../../../shared/ui/ContextualSaveBar";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { FilePicker } from "../../../shared/ui/FileField";
@@ -348,7 +347,6 @@ export function FormModal({
 export function ConfirmModal({
   open,
   title,
-  items,
   okLabel,
   danger = false,
   loading,
@@ -359,7 +357,6 @@ export function ConfirmModal({
 }: {
   open: boolean;
   title: string;
-  items: readonly ReactNode[];
   okLabel: string;
   danger?: boolean;
   loading: boolean;
@@ -390,7 +387,6 @@ export function ConfirmModal({
         {error ? (
           <Alert type="error" showIcon role="alert" message={companyErrorText(t, error)} />
         ) : null}
-        <Consequence items={items} />
       </div>
     </Modal>
   );

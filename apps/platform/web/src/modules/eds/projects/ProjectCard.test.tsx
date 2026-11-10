@@ -114,8 +114,6 @@ describe("Проект: договор (вкладка в боковом окн�
 
     // договора нет: бухгалтер формирует проект
     expect(await within(panel).findByText("Договора ещё нет")).toBeVisible();
-    const consequence = within(panel).getByRole("group", { name: "Что произойдёт" });
-    expect(within(consequence).getAllByRole("listitem")).toHaveLength(3);
     fireEvent.click(within(panel).getByRole("button", { name: "Сформировать проект договора" }));
 
     // проект не отправлен клиенту

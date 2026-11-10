@@ -9,7 +9,6 @@ import type {
 import { useMarkEdsProjectDelivery } from "../../../shared/api/generated/platform-bff";
 import { ApiError } from "../../../shared/api/errors";
 import { companyDayKey, companyToday } from "../../../shared/lib/dates";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { DateField } from "../../../shared/ui/DateField";
 import { FileField } from "../../../shared/ui/FileField";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
@@ -188,7 +187,6 @@ function DeliveryDialog({
             />
           </FormField>
         ) : null}
-        <Consequence items={[t(`card.delivery.dialog.consequence.${action}`)]} />
         <ErrorNote message={failure} />
       </form>
     </Modal>

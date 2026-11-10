@@ -82,9 +82,6 @@ test.describe("Журнал интеграций: администратор", (
     await expect(
       panel.getByRole("heading", { name: "Повторить все недоставленные · ERP" }),
     ).toBeVisible();
-    const consequence = panel.getByRole("group", { name: "Что произойдёт" });
-    await expect(consequence.getByText(/Все доставки этого подписчика из DLQ \(3\)/)).toBeVisible();
-    await expect(consequence.getByText(/Сначала исправьте причину/)).toBeVisible();
     await tallScreenshot(page, "retry-dead");
 
     await panel.getByRole("button", { name: "Повторить 3" }).click();
@@ -144,7 +141,6 @@ test.describe("Журнал интеграций: администратор", (
     await expect(table.getByRole("row")).toHaveCount(4);
     await table.getByRole("button", { name: "Подробнее: erp.deal.won в CRM" }).click();
     const panel = side(page);
-    await expect(panel.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     await tallScreenshot(page, "inbox-entry");
     await panel.getByRole("button", { name: "Повторить обработку" }).click();
     await expect(panel.getByText(/Поставлено на повтор/)).toBeVisible();
@@ -188,7 +184,6 @@ test.describe("Журнал интеграций: axe и снимки", () => {
       await settledScreenshot(page, "a11y-subscribers");
 
       await page.getByRole("button", { name: "Повторить все dead: ERP (CRM)" }).click();
-      await expect(side(page).getByRole("group", { name: "Что произойдёт" })).toBeVisible();
       await expectNoViolations(page, `retry-dead ${String(width)}`);
       await settledScreenshot(page, "a11y-retry-dead");
 
@@ -203,7 +198,6 @@ test.describe("Журнал интеграций: axe и снимки", () => {
 
       await openJournal(page, "dlq");
       await page.getByRole("button", { name: "Подробнее: erp.invoice.issued → CRM" }).click();
-      await expect(side(page).getByRole("group", { name: "Что произойдёт" })).toBeVisible();
       await expectNoViolations(page, `delivery panel ${String(width)}`);
       await settledScreenshot(page, "a11y-delivery-panel");
     });

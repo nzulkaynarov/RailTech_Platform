@@ -140,7 +140,6 @@ describe("Документы · Входящая почта: список (W18A-
     expect(screen.getByText("Выбрано: 3")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "В архив" }));
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByRole("group", { name: "Что произойдёт" })).toBeInTheDocument();
     const confirm = within(dialog).getByRole("button", { name: "Отправить в архив" });
     expect(confirm).toBeDisabled();
     fireEvent.click(within(dialog).getByRole("button", { name: "Рассылка" }));

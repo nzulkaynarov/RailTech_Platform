@@ -29,7 +29,6 @@ describe("Проект: отметки доставки", () => {
 
     const transit = await openDialog(card, "Отправлено, в пути", "Отправлено клиенту, в пути");
     expect(within(transit).queryByLabelText("Подтверждение доставки")).toBeNull(); // файл — только к «доставлено»
-    expect(transit).toHaveTextContent("Клиент увидит в кабинете, что поставка в пути");
     fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
     await waitFor(() => {
       expect(card).toHaveTextContent("В пути");
@@ -44,7 +43,6 @@ describe("Проект: отметки доставки", () => {
     fireEvent.change(within(delivered).getByLabelText("Подтверждение доставки"), {
       target: { files: [file] },
     });
-    expect(delivered).toHaveTextContent("сможет принять поставку или написать замечания");
     fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
 
     await waitFor(() => {

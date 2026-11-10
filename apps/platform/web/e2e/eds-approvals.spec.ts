@@ -97,7 +97,6 @@ test.describe("КП на одобрение: директор", () => {
     const checklist = form.getByRole("list", { name: "Чек-лист одобрения" });
     await expect(checklist.getByRole("listitem")).toHaveCount(4);
     await expect(checklist.getByText("Демо Снабженцев")).toBeVisible();
-    await expect(form.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     await expect(form.getByRole("checkbox", { name: "Telegram-бот" })).toBeChecked();
     await expect(form.getByRole("checkbox", { name: "Почта" })).toBeChecked();
     await expect(form.getByRole("button", { name: APPROVE })).toBeEnabled();
@@ -107,9 +106,6 @@ test.describe("КП на одобрение: директор", () => {
 
     // канал «Почта» снят — в «Что произойдёт» его нет
     await form.getByRole("checkbox", { name: "Почта" }).uncheck();
-    await expect(form.getByRole("group", { name: "Что произойдёт" })).toContainText(
-      "Telegram-бот, Кабинет",
-    );
     await form.getByRole("button", { name: APPROVE }).click();
     await settledScreenshot(page, "confirm-dialog");
     await confirmDialog(page);
@@ -325,9 +321,6 @@ test.describe("На согласовании: служебные записки"
     await expect(route).toContainText("Бухгалтер");
 
     const form = memoForm(page);
-    await expect(form.getByRole("group", { name: "Что произойдёт" })).toContainText(
-      "Дальше документ получит: Бухгалтер.",
-    );
     const back = form.getByRole("button", { name: "Вернуть на доработку" });
     const reject = form.getByRole("button", { name: "Отклонить" });
     await expect(back).toBeDisabled();
@@ -419,7 +412,6 @@ test.describe("На согласовании: бухгалтер", () => {
     await expect(form.getByText(/шаг бухгалтера закрывает «Оплачено»/)).toBeVisible();
     await expect(form.getByRole("button", { name: "Вернуть", exact: true })).toBeDisabled();
     await expect(form.getByRole("button", { name: "Согласовать" })).toHaveCount(0);
-    await expect(form.getByRole("group", { name: "Что произойдёт" })).toContainText("«Оплачено»");
     await settledScreenshot(page, "accountant-agree");
     await expectNoViolations(page, "бухгалтер: «Согласование»");
 

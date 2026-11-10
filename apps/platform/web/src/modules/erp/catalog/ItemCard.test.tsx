@@ -85,8 +85,6 @@ describe("Карточка товара: фото", () => {
 
     fireEvent.click(within(drawer).getByRole("button", { name: "Удалить фото 1" }));
     const confirm = await findModal("Удалить фото 1?");
-    expect(await within(confirm).findByText("Что произойдёт")).toBeInTheDocument();
-    expect(within(confirm).getByText(/главным станет следующее/)).toBeInTheDocument();
     fireEvent.click(within(confirm).getByRole("button", { name: "Удалить" }));
     await modalClosed("Удалить фото 1?");
 

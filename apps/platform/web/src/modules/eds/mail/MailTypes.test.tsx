@@ -67,7 +67,6 @@ describe("Типы входящих писем: тег, фильтр, основ
     fireEvent.click(primary);
     // единственный кандидат — снабженец (право на каталог и цены поставщиков) — подставлен сам
     expect(await screen.findByText("Демо Снабженцев")).toBeVisible();
-    expect(screen.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Передать на загрузку" }));
     expect(
       await screen.findByText("Письмо передано на загрузку прайса: Демо Снабженцев"),
@@ -91,7 +90,6 @@ describe("Типы входящих писем: тег, фильтр, основ
       "href",
       "/erp/catalog?part=import",
     );
-    expect(screen.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Прайс загружен — убрать из очереди" }));
     expect(await screen.findByText("Письмо разобрано: прайс загружен")).toBeVisible();
     const list = await listOf("Письма, ждущие разбора");
@@ -185,7 +183,6 @@ describe("Типы входящих писем: тег, фильтр, основ
     fireEvent.click(await screen.findByTitle("Счёт поставщика"));
     fireEvent.click(await screen.findByRole("button", { name: "Передать бухгалтеру" }));
     expect(await screen.findByText("Демо Бухгалтеров")).toBeVisible();
-    expect(screen.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     const [, confirm] = screen.getAllByRole("button", { name: "Передать бухгалтеру" });
     fireEvent.click(confirm ?? screen.getByRole("button", { name: "Передать" }));
     expect(await screen.findByText("Письмо передано: Демо Бухгалтеров")).toBeVisible();

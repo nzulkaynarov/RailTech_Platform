@@ -13,7 +13,6 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { QueryState } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
@@ -105,7 +104,6 @@ function NotStarted({ sheet }: { sheet: CalcSheet }) {
       },
     },
   });
-  const consequence = t("sheet.notStarted.consequence", { returnObjects: true }) as string[];
   return (
     <Card size="small" title={<h2 className="pf-calc-title">{t("sheet.notStarted.title")}</h2>}>
       <div className="pf-calc-stack">
@@ -131,7 +129,6 @@ function NotStarted({ sheet }: { sheet: CalcSheet }) {
                 {t("sheet.notStarted.action")}
               </Button>
             </div>
-            <Consequence items={consequence} />
           </>
         ) : (
           <p className="pf-hint">{t("sheet.notStarted.noRights")}</p>
@@ -172,7 +169,6 @@ function Ready({ sheet }: { sheet: CalcSheet }) {
   const waiting = GROUPS.filter((g) => sheet.visas[g].state === "waiting").map((g) =>
     t(`groups.${g}`),
   );
-  const consequence = t("ready.consequence", { returnObjects: true }) as string[];
   return (
     <div className="pf-calc-ready">
       {blocker ? (
@@ -196,7 +192,6 @@ function Ready({ sheet }: { sheet: CalcSheet }) {
           {t("ready.button")}
         </Button>
       </div>
-      <Consequence items={consequence} />
     </div>
   );
 }

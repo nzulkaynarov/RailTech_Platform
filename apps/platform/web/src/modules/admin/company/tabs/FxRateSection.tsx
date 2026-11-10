@@ -13,7 +13,6 @@ import {
 } from "../../../../shared/api/generated/platform-bff";
 import { companyDayKey } from "../../../../shared/lib/dates";
 import { useFormat } from "../../../../shared/lib/useFormat";
-import { Consequence } from "../../../../shared/ui/Consequence";
 import { DateField } from "../../../../shared/ui/DateField";
 import { DefinitionList } from "../../../../shared/ui/DefinitionList";
 import { StatusTag } from "../../../../shared/ui/StatusTag";
@@ -187,13 +186,6 @@ function FxForm() {
               {t("platform.fx.save")}
             </Button>
           </div>
-          <Consequence
-            items={[
-              t("platform.fx.consequence.replace"),
-              t("platform.fx.consequence.quotes"),
-              t("platform.fx.consequence.older"),
-            ]}
-          />
         </div>
       </Form>
     </ReadOnlyFence>

@@ -123,14 +123,6 @@ test.describe("витрина общих компонентов", () => {
     const hide = await box("button[aria-label='Скрыть боковое окно']");
     expect(hide).toMatchObject({ width: 28, height: 28 });
 
-    // Consequence: фон #fafafa, рамка #f0f0f0, радиус 8, шрифт 13
-    expect(await box(".pf-consequence")).toMatchObject({
-      background: "rgb(250, 250, 250)",
-      border: "rgb(240, 240, 240)",
-      radius: "8px",
-      size: "13px",
-    });
-
     // QueueList: отступ строки 14/24
     const padding = await page.evaluate<string>(
       `(() => { const s = getComputedStyle(document.querySelector(".pf-queue-row")); return s.paddingTop + " " + s.paddingLeft; })()`,

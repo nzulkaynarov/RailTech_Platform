@@ -174,18 +174,11 @@ describe("EDS · Создать документ: форма", () => {
   it("«Что произойдёт» и маршрут: без суммы — директор; с суммой — ещё и бухгалтер", async () => {
     await openForm("manager@demo.example");
 
-    const block = screen.getByRole("group", { name: "Что произойдёт" });
     expect(screen.getByText("Вы → Директор")).toBeVisible();
-    expect(within(block).queryByText(/бухгалтеру/)).toBeNull();
 
     type("Сумма, сум", "1 500 000");
 
     expect(screen.getByText("Вы → Директор → Бухгалтер (есть сумма)")).toBeVisible();
-    expect(
-      within(screen.getByRole("group", { name: "Что произойдёт" })).getByText(
-        "После согласования директором документ передадут бухгалтеру — к оплате.",
-      ),
-    ).toBeVisible();
   });
 
   it("обязательные поля: пустая отправка подсвечивает тему и текст, ничего не уходит на сервер", async () => {

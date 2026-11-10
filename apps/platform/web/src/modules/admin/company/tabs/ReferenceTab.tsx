@@ -288,7 +288,6 @@ function ReferenceList({ kind }: { kind: ReferenceKind }) {
                 danger
                 loading={remove.isPending}
                 error={remove.error}
-                items={[t("reference.consequence.delete"), t("reference.consequence.disable")]}
                 onOk={() => {
                   if (removing) remove.mutate({ kind, id: removing.id });
                 }}

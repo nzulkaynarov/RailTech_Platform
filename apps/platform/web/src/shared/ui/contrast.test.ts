@@ -42,16 +42,6 @@ describe("контраст общих компонентов (ui.css)", () => {
     expect(contrast(value(".pf-hint", "color"), surface)).toBeGreaterThanOrEqual(4.5);
   });
 
-  it("Consequence: заголовок на фоне блока и цифра шага", () => {
-    const background = value(".pf-consequence", "background");
-    expect(contrast(value(".pf-consequence-title", "color"), background)).toBeGreaterThanOrEqual(
-      4.5,
-    );
-    expect(
-      contrast(value(".pf-consequence-step", "color"), value(".pf-consequence-step", "background")),
-    ).toBeGreaterThanOrEqual(4.5);
-  });
-
   it("SourceBanner: текст и значок на фоне плашки", () => {
     const background = value(".pf-source", "background");
     expect(contrast(value(".pf-source", "color"), background)).toBeGreaterThanOrEqual(4.5);

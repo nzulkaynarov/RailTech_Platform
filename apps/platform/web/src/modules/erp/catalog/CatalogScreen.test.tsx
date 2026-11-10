@@ -96,7 +96,6 @@ describe("Номенклатура: позиции", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Добавить позицию" }));
 
     const dialog = await findModal("Добавить позицию");
-    expect(await within(dialog).findByText("Что произойдёт")).toBeInTheDocument();
     fireEvent.change(await within(dialog).findByLabelText("Название"), {
       target: { value: "Монтаж шкафа управления" },
     });
@@ -301,7 +300,6 @@ describe("Номенклатура: запросы на категории", () 
     const supply = await open("supply@demo.example", "?part=requests");
     fireEvent.click(await screen.findByRole("button", { name: "Запросить категорию" }));
     const form = await findModal("Запросить новую категорию");
-    expect(await within(form).findByText("Что произойдёт")).toBeInTheDocument();
     fireEvent.change(await within(form).findByLabelText("Название категории"), {
       target: { value: "Кабельные лотки" },
     });
@@ -318,8 +316,7 @@ describe("Номенклатура: запросы на категории", () 
     fireEvent.click(
       await screen.findByRole("button", { name: "Одобрить запрос «Тормозные колодки»" }),
     );
-    const dialog = await findModal(/Одобрить запрос/);
-    expect(await within(dialog).findByText("Что произойдёт")).toBeInTheDocument();
+    await findModal(/Одобрить запрос/);
   });
 
   it("повторный запрос, пока первый на рассмотрении, — конфликт словами", async () => {

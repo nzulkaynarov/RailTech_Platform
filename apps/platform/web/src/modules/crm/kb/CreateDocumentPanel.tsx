@@ -8,7 +8,6 @@ import {
   useCreateManualKbDocument,
   useUploadKbDocument,
 } from "../../../shared/api/generated/platform-bff";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { FileField } from "../../../shared/ui/FileField";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { kbErrorText } from "./errors";
@@ -222,13 +221,6 @@ function UploadForm({ gapId }: { gapId: number | null }) {
         />
       </FormField>
       <ProductField id="kb-upload-product" value={product} onChange={setProduct} />
-      <Consequence
-        items={[
-          t(gapId === null ? "create.step1" : "create.step1Gap"),
-          t("create.step2"),
-          t("create.step3"),
-        ]}
-      />
       <ErrorNote message={upload.isError ? kbErrorText(t, upload.error, i18n.language) : null} />
       <div className="pf-fp-row">
         <Button type="primary" htmlType="submit" loading={upload.isPending} disabled={invalid}>
@@ -306,13 +298,6 @@ export function ManualForm({ draft }: { draft: DocumentDraft | null }) {
           }}
         />
       </FormField>
-      <Consequence
-        items={[
-          t(gapId === null ? "create.step1" : "create.step1Gap"),
-          t("create.step2"),
-          t("create.step3"),
-        ]}
-      />
       <ErrorNote message={create.isError ? kbErrorText(t, create.error, i18n.language) : null} />
       <div className="pf-fp-row">
         <Button type="primary" htmlType="submit" loading={create.isPending} disabled={invalid}>

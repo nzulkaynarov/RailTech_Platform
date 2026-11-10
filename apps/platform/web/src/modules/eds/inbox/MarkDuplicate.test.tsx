@@ -19,7 +19,6 @@ describe("EDS · «Это дубль ВХ-…» (EDS-DUP)", () => {
     const dialog = await screen.findByRole("dialog");
     const submit = within(dialog).getByRole("button", { name: "Отметить дублем" });
     expect(submit).toBeDisabled();
-    expect(within(dialog).getByText("Номер ВХ не освобождается")).toBeInTheDocument();
     fireEvent.change(within(dialog).getByLabelText("Номер оригинала"), {
       target: { value: "ВХ-999/26" },
     });

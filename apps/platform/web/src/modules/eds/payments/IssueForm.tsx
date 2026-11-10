@@ -6,7 +6,6 @@ import { useTranslation } from "react-i18next";
 import { ApiError } from "../../../shared/api/errors";
 import type { PaymentCard } from "../../../shared/api/generated/model";
 import { getGetPaymentQueryKey, issuePayment } from "../../../shared/api/generated/platform-bff";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { ErrorNote } from "../../../shared/ui/FormParts";
 import { errorReason, useRefreshPayments } from "./api";
 import { BankDetailsNotice } from "./BankDetailsNotice";
@@ -79,14 +78,6 @@ export function IssueForm({
       }}
     >
       <p className="pf-hint">{t("issue.lead", { number: card.number })}</p>
-      <Consequence
-        items={[
-          t("issue.consequence.step1"),
-          t("issue.consequence.step2"),
-          t("issue.consequence.step3", { client: card.client_name }),
-          t("issue.consequence.step4"),
-        ]}
-      />
       {/* D26G-6: реквизитов нет — сказано до клика, кнопка неактивна (ERP всё равно откажет) */}
       {noBank ? <BankDetailsNotice /> : null}
       <ErrorNote message={failure ? t(`issue.reasons.${failure}`) : null} />

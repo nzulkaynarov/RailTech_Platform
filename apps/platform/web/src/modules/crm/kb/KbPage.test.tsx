@@ -101,7 +101,6 @@ describe("CRM · База знаний: документы", () => {
 
     fireEvent.click(within(panel).getByRole("button", { name: "Выключить документ" }));
     const form = within(panel).getByRole("form", { name: "Выключить документ" });
-    expect(within(form).getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     fireEvent.click(within(form).getByRole("button", { name: "Выключить документ" }));
 
     expect(await screen.findByText("Документ выключен")).toBeVisible();
@@ -128,7 +127,6 @@ describe("CRM · База знаний: документы", () => {
     const panel = await panelEl();
     fireEvent.click(await within(panel).findByRole("button", { name: "Переиндексировать" }));
     const form = within(panel).getByRole("form", { name: "Переиндексировать" });
-    expect(within(form).getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     fireEvent.click(within(form).getByRole("button", { name: "Переиндексировать документ" }));
     expect(await screen.findByText("Документ поставлен на переиндексацию")).toBeVisible();
     await waitFor(() => {
@@ -179,7 +177,6 @@ describe("CRM · База знаний: загрузка и ручной вво�
     fireEvent.click(await screen.findByRole("link", { name: "Загрузить файл" }));
     const panel = await panelEl();
     const form = await within(panel).findByRole("form", { name: "Загрузить файл Markdown" });
-    expect(within(form).getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     expect(within(form).getByRole("button", { name: "Загрузить документ" })).toBeDisabled();
 
     chooseFile("faq-oplata.md");
@@ -312,7 +309,6 @@ describe("CRM · База знаний: пробелы", () => {
     );
     const form = within(panel).getByRole("form", { name: "Добавить документ вручную" });
     expect(within(form).getByLabelText("Название")).toHaveValue("Есть ли гарантия на крепёж?");
-    expect(within(form).getByText(/пробел, из которого он создан, закроется/)).toBeVisible();
     fireEvent.change(within(form).getByLabelText("Текст документа (Markdown)"), {
       target: { value: "## Гарантия на крепёж\n\n12 месяцев." },
     });
@@ -338,7 +334,6 @@ describe("CRM · База знаний: пробелы", () => {
     let panel = await panelEl();
     fireEvent.click(await within(panel).findByRole("button", { name: "Привязать к документу" }));
     const link = within(panel).getByRole("form", { name: "Привязать к документу" });
-    expect(within(link).getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     expect(within(link).getByRole("button", { name: "Привязать и закрыть пробел" })).toBeDisabled();
     fireEvent.mouseDown(within(link).getByRole("combobox", { name: "Документ с ответом" }));
     fireEvent.click(await screen.findByText("Гарантия на продукцию"));
@@ -356,7 +351,6 @@ describe("CRM · База знаний: пробелы", () => {
     panel = await panelEl();
     fireEvent.click(await within(panel).findByRole("button", { name: "Игнорировать" }));
     const ignore = within(panel).getByRole("form", { name: "Игнорировать" });
-    expect(within(ignore).getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     fireEvent.click(within(ignore).getByRole("button", { name: "Игнорировать пробел" }));
     expect(await screen.findByText("Пробел скрыт")).toBeVisible();
 
@@ -393,7 +387,6 @@ describe("CRM · База знаний: песочница", () => {
     expect(screen.getByText("Платно: ответы считаются в «Расходах» как тест.")).toBeVisible();
     const input = screen.getByLabelText("Вопрос клиента");
     fireEvent.change(input, { target: { value: "Какие сроки поставки рельсов?" } });
-    expect(screen.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: /Отправить боту/ }));
 
     const log = await screen.findByRole("log", { name: "Диалог с ботом" });
@@ -412,7 +405,6 @@ describe("CRM · База знаний: песочница", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Начать заново" }));
     const reset = screen.getByRole("form", { name: "Начать заново" });
-    expect(within(reset).getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     fireEvent.click(within(reset).getByRole("button", { name: "Очистить диалог" }));
     await waitFor(() => {
       expect(screen.queryByRole("log")).toBeNull();

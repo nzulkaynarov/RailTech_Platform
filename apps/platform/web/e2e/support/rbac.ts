@@ -75,7 +75,6 @@ export const MODULE_TITLES: Record<string, string> = {
   chats: "Органайзер",
   admin: "Настройки",
 };
-const MODULE_ORDER = ["dashboard", "crm", "eds", "erp", "chats", "admin"];
 
 /** Модули рейла роли: виден хотя бы один пункт меню (`modules/navigation.ts`). */
 export function visibleModules(role: Role): string[] {
@@ -89,16 +88,6 @@ export function visibleModules(role: Role): string[] {
   return MODULES.filter((m) => visibleItems(m.code, can).length > 0).map(
     (m) => MODULE_TITLES[m.code] ?? m.code,
   );
-}
-
-/** Модули из секции `menu` каталога: их перечисляет текст о последствиях выдачи роли. */
-export function matrixModules(role: Role): string[] {
-  const access = accessOf(role);
-  return MODULE_ORDER.filter((module) =>
-    Object.values(catalog.menu[module] ?? {}).some((sections) =>
-      sections.some((key) => access[key] !== undefined),
-    ),
-  ).map((module) => MODULE_TITLES[module] ?? module);
 }
 
 /** Адрес раздела, который открывает ресурс матрицы; у ресурсов без отдельного экрана адреса нет. */

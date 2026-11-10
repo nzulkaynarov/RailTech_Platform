@@ -13,7 +13,6 @@ import {
 import { useFormat } from "../../../shared/lib/useFormat";
 import { TableCols } from "../../../shared/ui/DataBlock";
 import { tableMinWidth } from "../../../shared/ui/tableWidth";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { ErrorNote, QueryState, ScrollRegion } from "../../../shared/ui/FormParts";
 import { clean, useErrorText, useRefreshStock, useStateLabels } from "./api";
@@ -190,9 +189,6 @@ function NewShipment({ manage }: { manage: boolean }) {
                           {t("shipments.submit")}
                         </Button>
                       </div>
-                      <Consequence
-                        items={t("shipments.consequence", { returnObjects: true }) as string[]}
-                      />
                     </>
                   ) : (
                     <p className="pf-hint">{t("shipments.readOnly")}</p>

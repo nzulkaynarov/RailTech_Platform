@@ -315,7 +315,6 @@ function DictionaryTable({ dictionary, readOnly }: { dictionary: Dictionary; rea
         okLabel={t("settings.dict.delete")}
         danger
         loading={remove.isPending}
-        items={[t("settings.dict.consequence")]}
         onOk={() => {
           if (removing) remove.mutate({ kind, code: removing.code });
         }}

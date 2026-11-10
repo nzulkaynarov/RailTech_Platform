@@ -60,9 +60,6 @@ test.describe("Лиды → «Создать заявку» → карточка
     await pickFiles(form.getByLabel("Письмо на имя директора"), LETTER);
     await expect(form.getByText(`Письмо загружено: ${LETTER.name}`)).toBeVisible();
     await form.getByRole("radio", { name: "Срочная" }).check();
-    await expect(form.getByRole("group", { name: "Что произойдёт" })).toContainText(
-      "с пометкой «Срочно»",
-    );
     await settledScreenshot(page, "create-request");
     await expectNoViolations(page, "форма «Создать заявку»");
 

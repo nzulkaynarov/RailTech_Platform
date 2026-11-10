@@ -192,7 +192,6 @@ export function ItemPhotos({ card, editable }: { card: CatalogItemDetail; editab
         <FormModal
           title={t("photos.deleteTitle", { n: removing.n })}
           okLabel={t("photos.remove")}
-          items={t("photos.deleteSteps", { returnObjects: true }) as string[]}
           loading={remove.isPending}
           error={remove.error}
           onOk={() => {

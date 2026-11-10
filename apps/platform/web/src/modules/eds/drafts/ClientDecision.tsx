@@ -12,7 +12,6 @@ import { useRecordQuoteClientDecision } from "../../../shared/api/generated/plat
 import { ApiError } from "../../../shared/api/errors";
 import { companyToday } from "../../../shared/lib/dates";
 import { useFormat } from "../../../shared/lib/useFormat";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { DateField } from "../../../shared/ui/DateField";
 import { FileField } from "../../../shared/ui/FileField";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
@@ -264,7 +263,6 @@ function ClientDecisionDialog({
             aria-describedby={`${ids.file}-hint`}
           />
         </FormField>
-        <Consequence items={[t(`card.clientDecision.dialog.consequence.${decision}`)]} />
         <ErrorNote message={failure} />
       </form>
     </Modal>

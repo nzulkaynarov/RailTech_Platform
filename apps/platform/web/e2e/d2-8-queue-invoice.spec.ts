@@ -114,10 +114,6 @@ test.describe("D2-8: «Задачи» менеджера-универсала и
       // на телефоне окно «Оплата» — лист на весь экран (ссылка очереди открывает его сразу)
       const form = page.getByRole("form", { name: "Выставить счёт" });
       await expect(form).toBeVisible();
-      const what = form.getByRole("group", { name: "Что произойдёт" });
-      await expect(what).toContainText("«Выставлен»");
-      await expect(what).toContainText("PDF с реквизитами компании");
-      await expect(what).toContainText("увидит счёт в кабинете");
       await shot(page, "invoice-issue");
       await expectNoViolations(page, `выставить счёт ${String(width)}`);
 

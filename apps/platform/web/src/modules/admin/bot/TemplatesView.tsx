@@ -12,7 +12,6 @@ import {
   useUpdateReplyTemplate,
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import {
   ActionToggle,
@@ -149,13 +148,6 @@ function TemplateForm({
                 remove.mutate({ id: template.id });
               }}
             >
-              <Consequence
-                items={[
-                  t("bot:templates.removeStep1"),
-                  t("bot:templates.removeStep2"),
-                  t("bot:templates.removeStep3"),
-                ]}
-              />
               <ErrorNote message={remove.isError ? botErrorText(t, remove.error) : null} />
               <div className="pf-fp-row">
                 <Button type="primary" danger htmlType="submit" loading={remove.isPending}>

@@ -175,52 +175,6 @@ tr > td.pf-col-num {
   }
 }
 
-/* --- Consequence: «Что произойдёт» --- */
-.pf-consequence {
-  padding: 12px;
-  background: #fafafa;
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
-  font-size: 13px;
-  line-height: 20px;
-}
-.pf-consequence-title {
-  margin: 0 0 6px;
-  color: #6e6e6e;
-  font-size: 12px;
-  line-height: 20px;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-}
-.pf-consequence-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.pf-consequence-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-}
-.pf-consequence-step {
-  flex: 0 0 18px;
-  width: 18px;
-  height: 18px;
-  margin-top: 1px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: #e6f4ff;
-  color: #0958d9;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1;
-}
-
 /* --- QueueList: «Что сделать сейчас» --- */
 .pf-queue {
   container-type: inline-size;

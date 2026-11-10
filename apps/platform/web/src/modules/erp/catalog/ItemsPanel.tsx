@@ -750,11 +750,6 @@ function ItemForm({
     <FormModal
       title={item ? t("items.form.editTitle") : t("items.form.addTitle")}
       okLabel={item ? t("save") : t("items.form.add")}
-      items={
-        t(item ? "items.form.editSteps" : "items.form.addSteps", {
-          returnObjects: true,
-        }) as string[]
-      }
       loading={mutation.isPending}
       error={mutation.error}
       disabled={name.trim() === "" || !hsValid || !monthsValid}

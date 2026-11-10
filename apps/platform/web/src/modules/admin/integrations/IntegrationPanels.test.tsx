@@ -79,7 +79,6 @@ describe("карточка ERP", () => {
     const side = await openPanel("erp");
     fireEvent.click(await within(side).findByRole("button", { name: "Подключить заново" }));
     const form = within(side).getByRole("form", { name: "Подключить ERP" });
-    expect(within(form).getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     expect(within(form).getByRole("button", { name: "Подключить ERP" })).toBeDisabled();
 
     submitPassword(form, DEMO_WRONG_PASSWORD);
@@ -120,8 +119,6 @@ describe("карточка ERP", () => {
     const side = await openPanel("erp");
     fireEvent.click(await within(side).findByRole("button", { name: "Ротация ключа" }));
     const form = within(side).getByRole("form", { name: "Ротация ключей ERP" });
-    const consequence = within(form).getByRole("group", { name: "Что произойдёт" });
-    expect(within(consequence).getByText(/Прежние ключи ещё работают/)).toBeVisible();
 
     submitPassword(form);
     press(form, "Обновить ключи");
@@ -276,11 +273,6 @@ describe("карточка «Внешние сервисы»", () => {
       within(side).getByRole("button", { name: "Выключить сервис: Telegram Bot API" }),
     );
     const form = within(side).getByRole("form", { name: "Выключить сервис: Telegram Bot API" });
-    expect(
-      within(within(form).getByRole("group", { name: "Что произойдёт" })).getByText(
-        "Бот перестанет отвечать клиентам; сообщения встанут в очередь",
-      ),
-    ).toBeVisible();
     type("Причина (попадёт в журнал)", "профилактика", form);
     submitPassword(form, DEMO_WRONG_PASSWORD);
     press(form, "Выключить сервис");
@@ -344,11 +336,6 @@ describe("карточка «Модели ИИ»", () => {
     const confirm = within(side).getByRole("form", {
       name: "Проверка модели «Поиск по базе знаний»",
     });
-    expect(
-      within(within(confirm).getByRole("group", { name: "Что произойдёт" })).getByText(
-        /один короткий платный запрос/,
-      ),
-    ).toBeVisible();
     // запроса к модели без подтверждения нет
     expect(within(side).queryByText(/не ответила/)).not.toBeInTheDocument();
     press(confirm, "Проверить модель");
@@ -360,7 +347,6 @@ describe("карточка «Модели ИИ»", () => {
       within(side).getByRole("button", { name: "Сменить модель: Поиск по базе знаний" }),
     );
     const form = within(side).getByRole("form", { name: "Сменить модель: Поиск по базе знаний" });
-    expect(within(form).getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     type("Модель", "embedding-demo-2", form);
     type("Ключ провайдера", "demo-provider-key-91zx", form);
     submitPassword(form);
@@ -387,7 +373,6 @@ describe("карточка «Модели ИИ»", () => {
       within(side).getByRole("button", { name: "Сбросить модель: Диалог с клиентом" }),
     );
     const reset = within(side).getByRole("form", { name: "Сбросить модель: Диалог с клиентом" });
-    expect(within(reset).getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     submitPassword(reset);
     press(reset, "Сбросить к значению по умолчанию");
     expect(await within(side).findByText("Используется ключ из настроек сервера.")).toBeVisible();
@@ -483,7 +468,6 @@ describe("карточка «Хранилище и бэкапы»", () => {
 
     fireEvent.click(within(side).getByRole("button", { name: "Сделать копию сейчас" }));
     const form = within(side).getByRole("form", { name: "Копия вне расписания" });
-    expect(within(form).getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     press(form, "Запросить копию");
 
     expect(await screen.findByText("Запрос на копию отправлен")).toBeVisible();

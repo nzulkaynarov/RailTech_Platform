@@ -497,7 +497,6 @@ function OfferForm({
     <FormModal
       title={t("offers.form.title", { name: offer.product.name })}
       okLabel={t("save")}
-      items={t("offers.form.steps", { returnObjects: true }) as string[]}
       loading={mutation.isPending}
       error={mutation.error}
       disabled={!valid}

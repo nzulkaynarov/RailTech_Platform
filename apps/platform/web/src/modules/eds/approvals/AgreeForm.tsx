@@ -5,12 +5,10 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "../../../app/auth/useAuth";
 import type { MemoApprovalCard } from "../../../shared/api/generated/model";
 import { useDecideMemoApproval } from "../../../shared/api/generated/platform-bff";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { decisionReason, isTerminal, useRefreshApprovals } from "../decision/errors";
 import { clearComment, readComment, writeComment } from "./draft";
-import { nextStepLabel } from "./model";
 import { useConfirmAction } from "../../../shared/ui/useConfirmAction";
 
 type Action = "approve" | "return" | "reject";
@@ -75,7 +73,6 @@ export function AgreeForm({ memo, variant = "panel", onDone }: AgreeFormProps) {
   });
 
   const text = comment.trim();
-  const next = nextStepLabel(memo.steps);
   // Шаг бухгалтера (EDS 0.5.0+, B-D24-5): решения «Принять» у него нет — шаг и маршрут закрывает «Оплачено» с датой,
   // суммой и платёжкой в «Счета и оплаты»; здесь — переход туда и «Вернуть» с комментарием.
   const accountant = memo.accountant_step;
@@ -126,25 +123,6 @@ export function AgreeForm({ memo, variant = "panel", onDone }: AgreeFormProps) {
           }}
         />
       </FormField>
-
-      <Consequence
-        title={t("form.consequence.title")}
-        items={
-          accountant
-            ? [
-                t("accountant.consequence.step1"),
-                t("accountant.consequence.step2"),
-                t("accountant.consequence.step3"),
-              ]
-            : [
-                t("form.consequence.step1"),
-                next
-                  ? t("form.consequence.step2Next", { label: next })
-                  : t("form.consequence.step2"),
-                t("form.consequence.step3"),
-              ]
-        }
-      />
 
       <ErrorNote message={failure ? failureText(failure.action, failure.error) : null} />
 

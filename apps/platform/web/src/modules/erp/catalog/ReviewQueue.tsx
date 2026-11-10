@@ -182,7 +182,6 @@ export function ReturnModal({ card, onClose }: { card: CatalogItemDetail; onClos
     <FormModal
       title={t("review.form.title")}
       okLabel={t("review.form.ok")}
-      items={t("review.form.steps", { returnObjects: true }) as string[]}
       loading={mutation.isPending}
       error={mutation.error}
       disabled={!valid}

@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 
 import { useViewport } from "../../../app/shell/useViewport";
 import type { CatalogOffer } from "../../../shared/api/generated/model";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { TableCols } from "../../../shared/ui/DataBlock";
 import { tableMinWidth } from "../../../shared/ui/tableWidth";
 import { MoneyText } from "../../../shared/ui/MoneyText";
@@ -139,7 +138,6 @@ export function Pager({
 export function FormModal({
   title,
   okLabel,
-  items,
   loading,
   error,
   disabled = false,
@@ -149,7 +147,6 @@ export function FormModal({
 }: {
   title: string;
   okLabel: string;
-  items: readonly ReactNode[];
   loading: boolean;
   error?: unknown;
   disabled?: boolean;
@@ -179,7 +176,6 @@ export function FormModal({
         {error ? (
           <Alert type="error" showIcon role="alert" message={catalogErrorText(t, error)} />
         ) : null}
-        <Consequence items={items} />
       </div>
     </Modal>
   );

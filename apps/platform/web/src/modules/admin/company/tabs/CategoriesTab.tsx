@@ -171,7 +171,6 @@ function CategoryTree() {
                 danger
                 loading={remove.isPending}
                 error={remove.error}
-                items={[t("categories.consequence.delete"), t("categories.consequence.children")]}
                 onOk={() => {
                   if (removing) remove.mutate({ id: removing.id });
                 }}
@@ -592,11 +591,6 @@ export function DecisionModal({
       danger={action === "reject"}
       loading={mutation.isPending}
       error={mutation.error}
-      items={[
-        t(`categories.requests.consequence.${action}.status`),
-        t(`categories.requests.consequence.${action}.notify`),
-        ...(action === "approve" ? [t("categories.requests.consequence.approve.create")] : []),
-      ]}
       onOk={() => {
         if (!ready) return;
         if (action === "approve" && categoryId)

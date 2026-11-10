@@ -76,10 +76,6 @@ test.describe("Ролевая матрица: роли — данные", () => 
       name: `Счета и оплаты · подтвердить оплату, запросить платёжку — роль «${MIXED}»`,
     });
     await chooseOption(payments, "Полный доступ");
-    const consequence = panel.getByRole("group", { name: "Что произойдёт" });
-    await expect(
-      consequence.getByText("Роль открывает модули: Контакты, Документы."),
-    ).toBeVisible();
     await settledScreenshot(page, "roles-new");
     await panel.getByRole("button", { name: "Создать роль" }).click();
     await expect(page.getByText(`Роль «${MIXED}» создана`)).toBeVisible();
@@ -94,7 +90,6 @@ test.describe("Ролевая матрица: роли — данные", () => 
     await expect(panel.getByRole("heading", { level: 3, name: "Демо Инженеров" })).toBeVisible();
     await panel.getByRole("checkbox", { name: /^Гл\. инженер/ }).uncheck();
     await panel.getByRole("checkbox", { name: new RegExp(`^${MIXED}`) }).check();
-    await expect(panel.getByText("Сотрудник увидит модули: Контакты, Документы.")).toBeVisible();
     await panel.getByRole("button", { name: "Сохранить роли" }).click();
     await expect(page.getByText("Сохранено")).toBeVisible();
     await expect(page.getByRole("row", { name: /Демо Инженеров/ })).toContainText(MIXED);
@@ -153,10 +148,6 @@ test.describe("Ролевая матрица: роли — данные", () => 
       name: "Сводка по компании — роль «Менеджер»",
     });
     await chooseOption(summary, "Только чтение");
-    const consequence = panel.getByRole("group", { name: "Что произойдёт" });
-    await expect(
-      consequence.getByText(/сотрудник\S* получат: Главная · Сводка по компании \(только чтение\)/),
-    ).toBeVisible();
     await settledScreenshot(page, "roles-edit-preview");
     await panel.getByRole("button", { name: "Сохранить роль" }).click();
     await expect(page.getByText("Роль сохранена")).toBeVisible();
@@ -176,7 +167,6 @@ test.describe("Ролевая матрица: роли — данные", () => 
     await expect(page.getByRole("button", { name: "Склад", exact: true })).toBeVisible();
 
     await panel.getByRole("button", { name: "Удалить роль" }).click();
-    await expect(panel.getByText(/Роль исчезнет из матрицы/)).toBeVisible();
     await panel.getByRole("button", { name: "Удалить", exact: true }).click();
     await expect(page.getByText("Роль удалена")).toBeVisible();
     await expect(page.getByRole("button", { name: "Склад", exact: true })).toHaveCount(0);

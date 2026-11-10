@@ -88,7 +88,6 @@ describe("Admin · Ролевая матрица (R-2, ADR-0012)", () => {
         name: "Только итоговые суммы расчёта (без себестоимости по строкам) — роль «Менеджер и бухгалтер» видит",
       }),
     );
-    expect(within(panel).getByText("Роль открывает модули: Контакты.")).toBeVisible();
     fireEvent.click(within(panel).getByRole("button", { name: "Создать роль" }));
 
     await waitFor(() => {
@@ -212,8 +211,6 @@ describe("Admin · Ролевая матрица (R-2, ADR-0012)", () => {
       }),
       "Скрыто",
     );
-
-    expect(await within(panel).findByText(/^1 сотрудник потеряет: /)).toBeVisible();
   });
 
   it("плюральные формы предпросмотра в ru, uz, en", () => {

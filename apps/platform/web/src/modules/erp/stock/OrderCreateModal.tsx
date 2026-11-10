@@ -9,7 +9,6 @@ import {
   useListStockSuppliers,
   useSearchCalcCatalog,
 } from "../../../shared/api/generated/platform-bff";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { DateField } from "../../../shared/ui/DateField";
 import { clean, orderPath, useErrorText, useRefreshStock } from "./api";
 
@@ -258,7 +257,6 @@ export function OrderCreateModal({ prices, onClose }: { prices: boolean; onClose
           </>
         )}
       </Form>
-      <Consequence items={t("create.consequence", { returnObjects: true }) as string[]} />
     </Modal>
   );
 }

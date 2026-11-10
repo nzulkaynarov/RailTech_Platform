@@ -29,7 +29,6 @@ describe("Карточка письма: подсказка и действия 
     expect(screen.getByText("Новое")).toBeVisible();
 
     fireEvent.click(screen.getByRole("button", { name: "Создать лид" }));
-    expect(screen.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     const [, confirm] = screen.getAllByRole("button", { name: "Создать лид" });
     if (!confirm) throw new Error("нет кнопки подтверждения");
     fireEvent.click(confirm);
@@ -97,7 +96,6 @@ describe("«В работе»: взять, перехватить, вернут�
     expect(screen.queryByLabelText("Текст ответа")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Забрать себе" }));
-    expect(screen.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     const confirm = screen.getAllByRole("button", { name: "Забрать себе" })[0];
     if (!confirm) throw new Error("нет кнопки подтверждения");
     fireEvent.click(confirm);

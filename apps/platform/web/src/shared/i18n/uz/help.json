@@ -330,12 +330,6 @@
     "bodyHint": "4000 belgigacha.",
     "auto": "Avtomatik biriktiriladi: sahifa {{page}}, rol {{role}}, Platforma versiyasi.",
     "autoNoPage": "Avtomatik biriktiriladi: rol {{role}}, Platforma versiyasi.",
-    "consequence": [
-      "Administrator murojaatni «Vazifalar»da va Telegramda oladi.",
-      "Sahifa va rolingiz o‘zi biriktiriladi.",
-      "Javob qo‘ng‘iroqchaga va (ulangan bo‘lsa) Telegramga keladi; holat «Mening murojaatlarim»da."
-    ],
-    "consequenceTitle": "Nima bo‘ladi",
     "submit": "Yuborish",
     "cancel": "Bekor qilish",
     "sending": "Yuborilmoqda…",
@@ -428,12 +422,6 @@
       "toWork": "Ishga olish",
       "resolve": "Hal qilindi deb belgilash",
       "reopen": "Ishga qaytarish",
-      "consequenceTitle": "Nima bo‘ladi",
-      "consequence": [
-        "Muallif javobni qo‘ng‘iroqchada va (ulangan bo‘lsa) Telegramda oladi.",
-        "Yangi murojaat javobdan keyin «Ishda» holatiga o‘tadi.",
-        "Holat va javob jurnalga yoziladi."
-      ],
       "resolveConsequence": "Muallif murojaat hal qilinganini bilib oladi.",
       "readOnly": "Direktor murojaatlarni o‘qiydi; administrator javob beradi va holatni o‘zgartiradi.",
       "replyRequired": "Javob yozing",

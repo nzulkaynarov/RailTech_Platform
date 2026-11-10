@@ -5,7 +5,6 @@ import { Link } from "react-router";
 
 import { useDryRunEscalation, useSaveBotSetting } from "../../../shared/api/generated/platform-bff";
 import type { EscalationDryRun } from "../../../shared/api/generated/model";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { ErrorNote } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { UnsavedGuard } from "../../../shared/ui/UnsavedGuard";
@@ -46,7 +45,6 @@ function DryRun({ body, disabled }: { body: () => Values; disabled: boolean }) {
         {t("dryRun.title")}
       </h3>
       <p className="pf-fp-sub">{t("dryRun.hint")}</p>
-      <Consequence items={[t("dryRun.step1"), t("dryRun.step2"), t("dryRun.step3")]} />
       <div className="pf-fp-row">
         <Button
           loading={run.isPending}

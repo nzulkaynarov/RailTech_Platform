@@ -166,11 +166,6 @@
     "confirm": "Parolni takrorlang",
     "mismatch": "Parollar mos kelmadi",
     "submit": "Administrator yaratish va kirish",
-    "consequence": [
-      "CRM'da shu pochtali administrator paydo bo'ladi, birinchi ishga tushirish kodi o'chadi.",
-      "Siz darhol shu hisob bilan Platformaga kirasiz.",
-      "Keyin ustoz kompaniyangizni yaratishni va bot, ERP, pochta hamda AI modellarini ulashni taklif qiladi."
-    ],
     "checking": "Tizim holatini tekshirmoqdamiz",
     "stateErrorTitle": "Tizim holatini tekshirib bo'lmadi",
     "stateErrorText": "CRM javob bermadi. Server ishlayotganini tekshiring va takrorlang.",

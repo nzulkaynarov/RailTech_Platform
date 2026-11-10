@@ -98,7 +98,6 @@ export function SupplierForm({
     <FormModal
       title={supplier ? t("supplierForm.editTitle") : t("supplierForm.addTitle")}
       okLabel={supplier ? t("save") : t("supplierForm.add")}
-      items={supplier ? [] : (t("supplierForm.steps", { returnObjects: true }) as string[])}
       loading={mutation.isPending}
       error={mutation.error}
       disabled={!valid}
@@ -271,7 +270,6 @@ export function OfferCreateForm({
     <FormModal
       title={t("offerCreate.title", { name: supplier.name })}
       okLabel={t("offerCreate.add")}
-      items={t("offerCreate.steps", { returnObjects: true }) as string[]}
       loading={mutation.isPending}
       error={mutation.error}
       disabled={!valid}

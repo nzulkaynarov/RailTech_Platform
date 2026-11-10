@@ -285,7 +285,6 @@ describe("Реквизиты и логотип", () => {
     expect(readCompanyMock().company.logo_url).toMatch(/^data:image/);
     fireEvent.click(await button("Удалить логотип"));
     const confirm = await screen.findByRole("dialog", { name: "Удалить логотип компании?" });
-    expect(within(confirm).getByText("Что произойдёт")).toBeInTheDocument();
     expect(readCompanyMock().company.logo_url).toMatch(/^data:image/);
     fireEvent.click(within(confirm).getByRole("button", { name: "Удалить логотип" }));
     expect(await screen.findByText("Логотип удалён")).toBeInTheDocument();
@@ -475,7 +474,6 @@ describe("Статьи расхода", () => {
       await screen.findByRole("button", { name: "Удалить: Таможенное оформление · DAP" }),
     );
     const confirm = await screen.findByRole("dialog", { name: /Удалить статью/ });
-    expect(within(confirm).getByText("Что произойдёт")).toBeInTheDocument();
     fireEvent.click(within(confirm).getByRole("button", { name: "Удалить" }));
     await waitFor(() => {
       expect(readCompanyMock().charges.map((c) => c.id)).toEqual(["1", "2"]);
@@ -780,7 +778,6 @@ describe("Категории и запросы", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Отклонить запрос: Тормозные колодки" }));
     const dialog = await screen.findByRole("dialog", { name: /Отклонить запрос/ });
-    expect(within(dialog).getByText("Что произойдёт")).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "Отклонить" })).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole("button", { name: "Отклонить" }));
     expect(readCompanyMock().requests.find((r) => r.id === "2")?.status).toBe("pending");
@@ -808,9 +805,6 @@ describe("Категории и запросы", () => {
       await screen.findByRole("button", { name: "Одобрить запрос: Стрелочные переводы" }),
     );
     const dialog = await screen.findByRole("dialog", { name: /Одобрить запрос/ });
-    expect(
-      within(dialog).getByText(/Сама категория в каталоге этим действием не создаётся/),
-    ).toBeInTheDocument();
 
     fireEvent.mouseDown(within(dialog).getByLabelText("Категория, которую вы завели для запроса"));
     fireEvent.click(

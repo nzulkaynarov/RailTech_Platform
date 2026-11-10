@@ -57,7 +57,6 @@ test.describe("L0-1: отметки доставки клиенту в карт�
 
       await card.getByRole("button", { name: "Отправлено, в пути" }).click();
       const transit = page.getByRole("dialog", { name: "Отправлено клиенту, в пути" });
-      await expect(transit.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
       await expect(transit.getByLabel("Подтверждение доставки")).toHaveCount(0);
       await transit.getByRole("button", { name: "Сохранить" }).click();
       await expect(transit).toHaveCount(0);

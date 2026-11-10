@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next";
 import { ApiError } from "../../../shared/api/errors";
 import type { InboundMailBulkArchiveResult } from "../../../shared/api/generated/model";
 import { bulkArchiveInboundMail } from "../../../shared/api/generated/platform-bff";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { useRefreshMail } from "./mailModel";
 
 /** Панель «Выбрано N · В архив»: причина одна на всех, подтверждение с «Что произойдёт». */
@@ -96,7 +95,6 @@ export function BulkBar({ ids, onClear }: { ids: readonly number[]; onClear: () 
               </Button>
             ))}
           </div>
-          <Consequence title={t("mail.actions.what")} items={[t("mail.bulk.what")]} />
           {error ? <Alert type="error" showIcon role="alert" message={error} /> : null}
           <div className="pf-fp-row">
             <Button

@@ -79,7 +79,6 @@ test.describe("Настройки бота: администратор", () => {
     await contacts.scrollIntoViewIfNeeded();
     await expect(contacts.getByLabel("Название компании")).toHaveValue("RailTech (демо)");
     // Сохранение настройки — без «Что произойдёт» (CONVENTIONS §2 п. 8, S1)
-    await expect(page.getByRole("group", { name: "Что произойдёт" })).toHaveCount(0);
     await settledScreenshot(page, "company");
 
     await contacts.getByLabel("Название компании").fill("RailTech Групп (демо)");
@@ -198,7 +197,6 @@ test.describe("Настройки бота: администратор", () => {
     await openBot(page, "escalation");
 
     const dry = page.getByRole("region", { name: "Пробный прогон правил передачи" });
-    await expect(dry.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     await dry.getByRole("button", { name: "Проверить на последних 50 диалогах" }).click();
     await expect(dry.getByRole("status", { name: "Итог пробного прогона" })).toContainText(
       "Изменится: 0",
@@ -228,7 +226,6 @@ test.describe("Настройки бота: администратор", () => {
     await settledScreenshot(page, "templates");
     await page.getByRole("link", { name: "Новый шаблон" }).click();
     const form = side(page).getByRole("form", { name: "Новый шаблон" });
-    await expect(form.getByRole("group", { name: "Что произойдёт" })).toHaveCount(0);
     await form.getByLabel("Название").fill("Скидка по запросу");
     await form.getByLabel("Текст — Русский").fill("{name}, скидку согласует {manager}.");
     await settledScreenshot(page, "templates-new");
@@ -248,7 +245,6 @@ test.describe("Настройки бота: администратор", () => {
 
     await side(page).getByRole("button", { name: "Удалить шаблон" }).click();
     const remove = side(page).getByRole("form", { name: "Удалить шаблон" });
-    await expect(remove.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     await settledScreenshot(page, "templates-delete");
     await remove.getByRole("button", { name: "Удалить шаблон" }).click();
     await expect(page.getByText("Шаблон удалён")).toBeVisible();
@@ -278,7 +274,6 @@ test.describe("Настройки бота: выгрузки CSV", () => {
   }) => {
     await loginAndWait(page, "admin@demo.example");
     await openBot(page, "exports");
-    await expect(page.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     for (const title of ["Лиды", "Клиенты", "Сделки"]) {
       await expect(page.getByRole("button", { name: `Скачать: ${title}` })).toBeDisabled();
     }

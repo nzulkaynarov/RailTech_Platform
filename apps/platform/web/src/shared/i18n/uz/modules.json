@@ -558,8 +558,6 @@
         "emailInvalid": "Pochtani name@company.uz ko'rinishida kiriting",
         "needRole": "Kamida bitta rolni tanlang.",
         "sent": "Taklif yuborildi: {{email}}",
-        "consequenceMail": "Ko'rsatilgan pochtaga vaqtinchalik parolli xat yuboriladi; birinchi kirishda uni almashtirish kerak.",
-        "consequenceListed": "Xodim ro'yxatda «Taklif qilingan» holatida paydo bo'ladi.",
         "notSent": "Xodim ro'yxatga «Taklif qilingan» holatida qo'shildi, lekin xat yuborilmadi: pochta ulanmagan yoki mavjud emas. Uni Sozlamalar · Ulanishlar bo‘limida ulang va xodim kartochkasidan taklifni qayta yuboring.",
         "openCard": "Kartochkani ochish",
         "notSentUnavailable": "Xodim ro'yxatga «Taklif qilingan» holatida qo'shildi, lekin CRM javob bermadi va xat yuborilmadi. Keyinroq kartochkadagi «Taklifni qayta yuborish» tugmasi bilan takrorlang.",
@@ -570,11 +568,6 @@
         "deliveryMail": "Pochtaga xat bilan",
         "deliveryPassword": "Vaqtinchalik parol bilan, pochtasiz",
         "submitPassword": "Yaratish va parolni ko'rsatish",
-        "consequencePassword": [
-          "Xodim ro'yxatda «Taklif qilingan» holatida paydo bo'ladi, xat yuborilmaydi.",
-          "Vaqtinchalik parolni bir marta ko'rasiz: uni xodimga shaxsan yoki himoyalangan chatda bering.",
-          "Birinchi kirishda xodim o'z parolini o'rnatishi shart."
-        ],
         "created": "Xodim yaratildi: {{email}}"
       },
       "password": {
@@ -593,12 +586,7 @@
           "hint": "Xatsiz yangi parol: avvalgisi amal qilmay qoladi.",
           "confirmTitle": "Vaqtinchalik parol berish",
           "confirm": "Parol berish",
-          "cancel": "Bekor qilish",
-          "consequence": [
-            "Avvalgi parol amal qilmay qoladi, xodim barcha tizimlardan chiqadi.",
-            "Yangi vaqtinchalik parolni bir marta ko'rasiz va xodimga berasiz.",
-            "Kirishda xodim o'z parolini o'rnatishi shart; ro'yxatda u «Taklif qilingan» bo'ladi."
-          ]
+          "cancel": "Bekor qilish"
         }
       },
       "disable": {

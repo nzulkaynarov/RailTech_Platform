@@ -180,8 +180,6 @@ test.describe("Сброс пароля сотрудника", () => {
 
     await side.getByRole("button", { name: "Сбросить пароль" }).click();
     const reset = side.getByRole("group", { name: "Сброс пароля" });
-    await expect(reset.getByText("Что произойдёт")).toBeVisible();
-    await expect(reset.getByText(/Сотрудник получит письмо на manager@demo.example/)).toBeVisible();
     await expect(reset.getByRole("radio", { name: "Временным паролем" })).toBeEnabled();
     await tallScreenshot(page, "org-reset-password");
 
@@ -220,7 +218,6 @@ test.describe("Сброс пароля сотрудника", () => {
     await side.getByRole("button", { name: "Сбросить пароль" }).click();
     const reset = side.getByRole("group", { name: "Сброс пароля" });
     await reset.getByRole("radio", { name: "Временным паролем" }).check();
-    await expect(reset.getByText(/Прежний пароль перестанет действовать/)).toBeVisible();
     await tallScreenshot(page, "org-temporary-password-confirm");
     await reset.getByRole("button", { name: "Выдать пароль" }).click();
 
@@ -255,9 +252,6 @@ test.describe("Сброс пароля сотрудника", () => {
       await spaGoto(page, "/admin/org?employee=u-demo-manager&panel=open");
       const side = page.locator(PANEL);
       await side.getByRole("button", { name: "Сбросить пароль" }).click();
-      await expect(
-        side.getByRole("group", { name: "Сброс пароля" }).getByText("Что произойдёт"),
-      ).toBeVisible();
       await expectNoViolations(page, `сброс пароля ${String(width)}`);
       await tallScreenshot(page, "org-reset-password");
       await side

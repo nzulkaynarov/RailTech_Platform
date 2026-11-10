@@ -330,12 +330,6 @@
     "bodyHint": "Up to 4000 characters.",
     "auto": "Attached automatically: page {{page}}, role {{role}}, Platform version.",
     "autoNoPage": "Attached automatically: role {{role}}, Platform version.",
-    "consequence": [
-      "The administrator gets the request in “Tasks” and in Telegram.",
-      "The page and your role are attached automatically.",
-      "The reply arrives in the bell and in Telegram if linked; the status is in “My requests”."
-    ],
-    "consequenceTitle": "What happens next",
     "submit": "Send",
     "cancel": "Cancel",
     "sending": "Sending…",
@@ -428,12 +422,6 @@
       "toWork": "Take into work",
       "resolve": "Mark resolved",
       "reopen": "Return to work",
-      "consequenceTitle": "What happens next",
-      "consequence": [
-        "The author gets the reply in the bell and in Telegram if linked.",
-        "A new request is taken “In progress” after a reply.",
-        "The status and the reply are written to the journal."
-      ],
       "resolveConsequence": "The author learns that the request is resolved.",
       "readOnly": "The director reads requests; the administrator replies and changes the status.",
       "replyRequired": "Write a reply",

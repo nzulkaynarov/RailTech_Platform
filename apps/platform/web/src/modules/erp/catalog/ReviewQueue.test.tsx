@@ -87,7 +87,6 @@ describe("Очередь проверки: решение в карточке", 
     const modal = await findModal("Вернуть карточку партнёру");
     const ok = within(modal).getByRole("button", { name: "Вернуть" });
     expect(ok).toBeDisabled();
-    expect(within(modal).getByText("Что произойдёт")).toBeInTheDocument();
 
     fireEvent.click(within(modal).getByRole("button", { name: "Добавить замечание" }));
     // замечание заполнено наполовину — отправлять нельзя

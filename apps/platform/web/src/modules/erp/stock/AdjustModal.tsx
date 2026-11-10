@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 
 import type { StockRow } from "../../../shared/api/generated/model";
 import { useAdjustStock } from "../../../shared/api/generated/platform-bff";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { clean, useErrorText, useRefreshStock } from "./api";
 
 interface Values {
@@ -92,7 +91,6 @@ export function AdjustModal({ row, onClose }: { row: StockRow; onClose: () => vo
           <Input maxLength={500} />
         </Form.Item>
       </Form>
-      <Consequence items={t("adjust.consequence", { returnObjects: true }) as string[]} />
     </Modal>
   );
 }

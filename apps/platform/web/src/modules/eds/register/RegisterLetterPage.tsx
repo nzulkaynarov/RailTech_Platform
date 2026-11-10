@@ -16,7 +16,6 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { DateField } from "../../../shared/ui/DateField";
 import { ErrorNote } from "../../../shared/ui/FormParts";
 import { PageHeader } from "../../../shared/ui/PageHeader";
@@ -292,10 +291,6 @@ export function RegisterLetterPage() {
           })}
           description={
             <div className="pf-mail-actions">
-              <Consequence
-                title={t("letters:mail.actions.what")}
-                items={[t("letters:mail.busy.what", { name: fromMail.holder.name })]}
-              />
               <div>
                 <Button onClick={fromMail.takeOver}>{t("letters:mail.busy.takeOver")}</Button>
               </div>
@@ -775,9 +770,6 @@ export function RegisterLetterPage() {
                   </div>
                 ) : null}
               </fieldset>
-              <Consequence
-                items={t("letters:register.consequence", { returnObjects: true }) as string[]}
-              />
             </div>
           </Card>
           <div className="pf-newdoc-actions">

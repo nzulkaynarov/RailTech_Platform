@@ -138,7 +138,6 @@ test.describe("Компания: реквизиты, бланк, нумерац�
     await expect(page.getByRole("button", { name: "Сохранить реквизиты" })).toBeHidden();
 
     await page.getByLabel("Телефон", { exact: true }).fill("+998 11 111 11 11");
-    await expect(page.getByRole("group", { name: "Что произойдёт" })).toHaveCount(0);
     await page.getByRole("button", { name: "Сохранить реквизиты" }).click();
     await expect(toast(page, "Сохранено")).toBeVisible();
 
@@ -164,7 +163,6 @@ test.describe("Компания: реквизиты, бланк, нумерац�
     await expect(page.getByLabel("Телефон", { exact: true })).toHaveValue("+998 11 111 11 11");
     await page.getByRole("button", { name: "Удалить логотип" }).click();
     const confirm = page.getByRole("dialog", { name: "Удалить логотип компании?" });
-    await expect(confirm.getByText("Что произойдёт")).toBeVisible();
     await confirm.getByRole("button", { name: "Удалить логотип" }).click();
     await expect(toast(page, "Логотип удалён")).toBeVisible();
     await expect(page.locator("#pf-co-part-details").getByText("Нет логотипа")).toBeVisible();
@@ -276,7 +274,6 @@ test.describe("Компания: статьи расхода, шаблоны, с
 
     await page.getByRole("button", { name: "Удалить: Доставка до склада · DAP" }).click();
     const confirm = page.getByRole("dialog", { name: /Удалить статью/ });
-    await expect(confirm.getByText("Что произойдёт")).toBeVisible();
     await confirm.getByRole("button", { name: "Удалить" }).click();
     await expect(page.getByRole("row", { name: /Доставка до склада/ })).toHaveCount(0);
   });
@@ -436,7 +433,6 @@ test.describe("Компания: категории, запросы, платф�
 
     await page.getByRole("button", { name: "Отклонить запрос: Тормозные колодки" }).click();
     const reject = page.getByRole("dialog", { name: /Отклонить запрос/ });
-    await expect(reject.getByText("Что произойдёт")).toBeVisible();
     await expect(reject.getByText("Причина обязательна")).toBeVisible();
     await reject.getByLabel("Причина отказа").fill("Дубль существующей категории");
     await settledScreenshot(page, "company-category-reject");
@@ -449,9 +445,6 @@ test.describe("Компания: категории, запросы, платф�
 
     await page.getByRole("button", { name: "Одобрить запрос: Стрелочные переводы" }).click();
     const approve = page.getByRole("dialog", { name: /Одобрить запрос/ });
-    await expect(
-      approve.getByText(/Сама категория в каталоге этим действием не создаётся/),
-    ).toBeVisible();
     await choose(page, approve.getByLabel("Категория, которую вы завели для запроса"), "Крепёж");
     await approve.getByRole("button", { name: "Одобрить" }).click();
     await expect(toast(page, "Запрос одобрен")).toBeVisible();

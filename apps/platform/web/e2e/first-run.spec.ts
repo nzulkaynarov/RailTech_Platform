@@ -99,7 +99,6 @@ async function inviteWithoutMail(page: Page, email: string): Promise<string> {
   await panel.getByLabel("Имя и фамилия").fill("Тест Без Почты");
   await panel.getByLabel("Электронная почта").fill(email);
   await panel.getByRole("checkbox", { name: /^Снабженец/ }).check();
-  await expect(panel.getByText(/Вы увидите временный пароль один раз/)).toBeVisible();
   await panel.getByRole("button", { name: "Создать и показать пароль" }).click();
   const field = panel.getByLabel("Временный пароль", { exact: true });
   await expect(field).toBeVisible();
@@ -123,7 +122,6 @@ test.describe("Первый запуск: полный путь", () => {
     await page.goto("/login");
     await expect(page).toHaveURL(/\/setup$/);
     await expect(page.getByRole("heading", { level: 1, name: "Первый запуск" })).toBeVisible();
-    await expect(page.getByText("Что произойдёт")).toBeVisible();
     await page.getByLabel("Код первого запуска").fill("wrong-code");
     await page.getByLabel("Имя и фамилия").fill("Первая Админова");
     await page.getByLabel("Электронная почта администратора").fill("first.admin@demo.example");

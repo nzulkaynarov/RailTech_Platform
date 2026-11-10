@@ -82,7 +82,6 @@ test.describe("База знаний: администратор", () => {
 
     await panel.getByRole("button", { name: "Выключить документ" }).click();
     const off = panel.getByRole("form", { name: "Выключить документ" });
-    await expect(off.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     await settledScreenshot(page, "document-disable");
     await off.getByRole("button", { name: "Выключить документ" }).click();
     await expect(docRow(page, "Сроки и условия поставки").getByText("Выключен")).toBeVisible();
@@ -96,7 +95,6 @@ test.describe("База знаний: администратор", () => {
 
     await panel.getByRole("button", { name: "Переиндексировать" }).click();
     const again = panel.getByRole("form", { name: "Переиндексировать" });
-    await expect(again.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     await again.getByRole("button", { name: "Переиндексировать документ" }).click();
     await expect(docRow(page, "Сроки и условия поставки").getByText("В очереди")).toBeVisible();
   });
@@ -110,7 +108,6 @@ test.describe("База знаний: администратор", () => {
     await page.getByRole("link", { name: "Загрузить файл" }).click();
     const panel = side(page);
     const form = panel.getByRole("form", { name: "Загрузить файл Markdown" });
-    await expect(form.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     await expect(form.getByRole("button", { name: "Загрузить документ" })).toBeDisabled();
 
     await pickFiles(form.getByLabel("Файл .md"), {
@@ -203,7 +200,6 @@ test.describe("База знаний: администратор", () => {
     await page.getByRole("link", { name: "Открыть пробел: Do you deliver to Samarkand?" }).click();
     await panel.getByRole("button", { name: "Игнорировать" }).click();
     const ignore = panel.getByRole("form", { name: "Игнорировать" });
-    await expect(ignore.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     await ignore.getByRole("button", { name: "Игнорировать пробел" }).click();
     await expect(page.getByText("Пробел скрыт")).toBeVisible();
 
@@ -248,7 +244,6 @@ test.describe("База знаний: администратор", () => {
 
     await page.getByRole("button", { name: "Начать заново" }).click();
     const reset = page.getByRole("form", { name: "Начать заново" });
-    await expect(reset.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     await settledScreenshot(page, "sandbox-reset");
     await reset.getByRole("button", { name: "Очистить диалог" }).click();
     await expect(page.getByRole("log")).toHaveCount(0);

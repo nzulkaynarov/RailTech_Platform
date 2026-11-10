@@ -4,17 +4,10 @@ import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { TEMPLATES } from "../../../app/rbac.generated";
-import {
-  fieldLabel,
-  isSystemAdmin,
-  lang,
-  rolesAccess,
-  sectionFullLabel,
-} from "../../../entities/role/roles";
+import { fieldLabel, lang, rolesAccess, sectionFullLabel } from "../../../entities/role/roles";
 import { moduleName } from "../../registry";
 import type { Role, RolePreview, SectionLevel } from "../../../shared/api/generated/model";
 import { usePreviewRole } from "../../../shared/api/generated/platform-bff";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { ContextualSaveBar } from "../../../shared/ui/ContextualSaveBar";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { StatusTag } from "../../../shared/ui/StatusTag";
@@ -101,20 +94,9 @@ export function SystemRoleCard({ role, readOnly = false }: { role: Role; readOnl
           role.system && !readOnly ? t("admin.roles.systemNote") : t("admin.roles.readOnlyNote")
         }
       />
-      <Consequence
-        title={t("admin.roles.gives")}
-        items={[
-          t("admin.roles.modules", { modules: modulesLine(t, draftAccess(role)) || "—" }),
-          ...(isSystemAdmin(role) ? [t("admin.org.consequence.erpAdmin")] : []),
-        ]}
-      />
       {readOnly ? null : <LinkButton to="/admin/org">{t("admin.roles.assign")}</LinkButton>}
     </div>
   );
-}
-
-function draftAccess(role: Role): RoleDraft["access"] {
-  return role.access;
 }
 
 export interface RoleEditorProps {
@@ -328,7 +310,7 @@ export function RoleEditor({
         }}
         onDiscard={onReset}
       />
-      {items.length > 0 ? <Consequence items={items} /> : null}
+      {items.length > 0 ? null : null}
       {isNew ? null : (
         <div className="pf-panel-stack" style={{ gap: 8 }}>
           {inUse ? (
@@ -343,7 +325,6 @@ export function RoleEditor({
               aria-label={t("admin.roles.deleteTitle")}
               style={{ gap: 8 }}
             >
-              <Consequence items={[t("admin.roles.deleteResult")]} />
               <div style={{ display: "flex", gap: 8 }}>
                 <Button danger loading={deleting} onClick={onDelete}>
                   {t("admin.roles.deleteConfirm")}

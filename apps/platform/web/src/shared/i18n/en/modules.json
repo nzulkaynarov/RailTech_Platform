@@ -558,8 +558,6 @@
         "emailInvalid": "Enter an email like name@company.uz",
         "needRole": "Pick at least one role.",
         "sent": "Invitation sent: {{email}}",
-        "consequenceMail": "An email with a temporary password goes to the address; it must be changed at first sign-in.",
-        "consequenceListed": "The employee appears in the list with the status “Invited”.",
         "notSent": "The employee was added with the status “Invited”, but the email was not sent: mail is not connected or unavailable. Connect it in Settings · Connections and send the invitation again from the employee card.",
         "openCard": "Open card",
         "notSentUnavailable": "The employee was added with the status “Invited”, but CRM did not respond and the email was not sent. Try again later with “Send the invitation again” in the card.",
@@ -570,11 +568,6 @@
         "deliveryMail": "By email",
         "deliveryPassword": "With a temporary password, no email",
         "submitPassword": "Create and show the password",
-        "consequencePassword": [
-          "The employee appears in the list as “Invited”; no email is sent.",
-          "You see the temporary password once: give it to the employee in person or in a secure chat.",
-          "At first sign-in the employee must set their own password."
-        ],
         "created": "Employee created: {{email}}"
       },
       "password": {
@@ -593,12 +586,7 @@
           "hint": "A new password without an email: the previous one stops working.",
           "confirmTitle": "Issue a temporary password",
           "confirm": "Issue password",
-          "cancel": "Cancel",
-          "consequence": [
-            "The previous password stops working and the employee is signed out everywhere.",
-            "You see the new temporary password once and hand it to the employee.",
-            "At sign-in the employee must set their own password; in the list they show as “Invited”."
-          ]
+          "cancel": "Cancel"
         }
       },
       "disable": {

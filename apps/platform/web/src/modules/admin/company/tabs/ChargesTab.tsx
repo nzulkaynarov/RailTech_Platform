@@ -190,7 +190,6 @@ export function ChargesTab() {
         danger
         loading={remove.isPending}
         error={remove.error}
-        items={[t("charges.consequence.delete"), t("charges.consequence.issued")]}
         onOk={() => {
           if (removing) remove.mutate({ id: removing.id });
         }}

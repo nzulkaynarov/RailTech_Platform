@@ -56,11 +56,7 @@
     "hint": "PNG, JPEG, WebP or SVG up to 2 MB.",
     "uploaded": "Logo uploaded",
     "deleted": "Logo deleted",
-    "deleteTitle": "Delete the company logo?",
-    "consequence": {
-      "card": "The logo disappears from the company card.",
-      "file": "The file is deleted from storage and cannot be restored."
-    }
+    "deleteTitle": "Delete the company logo?"
   },
   "errors": {
     "DEFAULT": "The action failed. Try again later.",
@@ -263,10 +259,6 @@
     "deleteTitle": "Delete item “{{name}}”?",
     "deleted": "Item deleted",
     "invalidField": "Check the value",
-    "consequence": {
-      "delete": "The item disappears from calculation templates for this basis.",
-      "issued": "Quotes and calculations already issued do not change."
-    },
     "empty": {
       "title": "No charge items yet",
       "text": "Add amounts and rates per delivery basis — they go into the request calculation."
@@ -310,10 +302,6 @@
       "deleteTitle": "Delete template “{{name}}”?",
       "deleted": "Template deleted",
       "invalidField": "Check the value",
-      "consequence": {
-        "delete": "The template disappears from the choice list when issuing documents.",
-        "inUse": "If documents were already issued from it, it cannot be deleted — disable the template instead."
-      },
       "empty": {
         "title": "No document templates yet",
         "text": "Create a contract or act template or copy a platform sample."
@@ -363,10 +351,6 @@
       "deleteTitle": "Delete template “{{name}}”?",
       "deleted": "Template deleted",
       "invalidField": "Check the value",
-      "consequence": {
-        "delete": "Emails of this kind return to the platform file template.",
-        "file": "Emails already sent do not change."
-      },
       "empty": {
         "title": "No email templates yet",
         "text": "For now emails use the platform file templates. Create your own template to replace the text."
@@ -414,10 +398,6 @@
     "deleted": "Row deleted",
     "codeTaken": "This code already exists",
     "invalidField": "Check the value",
-    "consequence": {
-      "delete": "The row disappears from choice lists.",
-      "disable": "If documents already use the row, it cannot be deleted — disable it instead."
-    },
     "empty": {
       "title": "No rows yet",
       "text": "Add the first row of the list."
@@ -448,10 +428,6 @@
     "invalidField": "Check the value",
     "deleteTitle": "Delete category “{{name}}”?",
     "deleted": "Category deleted",
-    "consequence": {
-      "delete": "The category disappears from the catalogue.",
-      "children": "A category with subcategories cannot be deleted — move or delete them first."
-    },
     "empty": {
       "title": "No categories yet",
       "text": "Create the top level of the tree — subcategories are added inside it."
@@ -537,11 +513,6 @@
       "rateHint": "A number above zero with up to 6 decimal places. For example, 12650.5.",
       "save": "Save rate",
       "saved": "Rate saved",
-      "consequence": {
-        "replace": "The rate for the chosen date replaces the previous one (automatic or entered earlier); the previous value stays in the journal.",
-        "quotes": "New calculations use the rate by date; rates in quotes already created do not change.",
-        "older": "A rate for a date earlier than the newest rate on record does not change the current rate — it stays in the journal and is used for calculations on that date."
-      },
       "journal": {
         "title": "Rate journal",
         "date": "Rate date",

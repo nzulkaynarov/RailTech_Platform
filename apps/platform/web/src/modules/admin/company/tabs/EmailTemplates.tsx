@@ -158,10 +158,6 @@ export function EmailTemplates() {
             danger
             loading={remove.isPending}
             error={remove.error}
-            items={[
-              t("templates.emails.consequence.delete"),
-              t("templates.emails.consequence.file"),
-            ]}
             onOk={() => {
               if (removing) remove.mutate({ id: removing.id });
             }}

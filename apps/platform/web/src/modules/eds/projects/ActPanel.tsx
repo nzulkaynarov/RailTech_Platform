@@ -8,7 +8,6 @@ import {
   useScanEdsProjectAct,
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { ActionToggle } from "../../../shared/ui/FormParts";
@@ -50,10 +49,6 @@ function NoAct({
     <div className="pf-dec-panel">
       <EmptyState level={3} compact title={t("act.none.title")} text={t("act.none.ready")} />
       <div className="pf-fp-form">
-        <Consequence
-          title={t("act.consequence.title")}
-          items={t("act.none.consequence", { returnObjects: true }) as string[]}
-        />
         {error ? (
           <p className="pf-field-error" role="alert">
             {error}
@@ -195,10 +190,6 @@ function ActBody({
 
       {may("attach_scan") ? (
         <>
-          <Consequence
-            title={t("act.consequence.title")}
-            items={t("act.consequence.attach_scan", { returnObjects: true }) as string[]}
-          />
           <ScanForm
             labels={{
               label: t("act.scan.label"),
@@ -225,10 +216,6 @@ function ActBody({
 
       {may("reissue") ? (
         <div className="pf-fp-form">
-          <Consequence
-            title={t("act.consequence.title")}
-            items={t("act.consequence.reissue", { returnObjects: true }) as string[]}
-          />
           {error ? (
             <p className="pf-field-error" role="alert">
               {error}

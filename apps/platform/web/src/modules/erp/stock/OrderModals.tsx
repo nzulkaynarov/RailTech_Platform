@@ -11,7 +11,6 @@ import {
   useSendSupplierOrder,
   useUpdateSupplierOrder,
 } from "../../../shared/api/generated/platform-bff";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { DateField } from "../../../shared/ui/DateField";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { clean, useErrorText, useRefreshStock } from "./api";
@@ -121,7 +120,6 @@ export function SendModal({ order, onClose }: { order: SupplierOrderDetail; onCl
           />
         </FormField>
         <ErrorNote message={action.error} />
-        <Consequence items={t("order.send.consequence", { returnObjects: true }) as string[]} />
       </div>
     </Modal>
   );
@@ -163,7 +161,6 @@ export function ConfirmModal({
           <DateField id={id} value={date} aria-describedby={`${id}-hint`} onChange={setDate} />
         </FormField>
         <ErrorNote message={action.error} />
-        <Consequence items={t("order.confirm.consequence", { returnObjects: true }) as string[]} />
       </div>
     </Modal>
   );
@@ -213,7 +210,6 @@ export function CancelModal({
           />
         </FormField>
         <ErrorNote message={action.error} />
-        <Consequence items={t("order.cancel.consequence", { returnObjects: true }) as string[]} />
       </div>
     </Modal>
   );
@@ -367,9 +363,6 @@ export function ReceiveModal({
                   })
                 : action.error
             }
-          />
-          <Consequence
-            items={t("order.receive.consequence", { returnObjects: true }) as string[]}
           />
         </div>
       )}

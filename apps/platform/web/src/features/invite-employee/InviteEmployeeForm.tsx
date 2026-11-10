@@ -2,14 +2,9 @@ import { Alert, App, Button, Form, Input, Radio, Space } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { accessOfRoleIds } from "../../entities/employee/access";
-import { backendConsequence } from "../../entities/employee/consequence";
 import { employeeErrorText } from "../../entities/employee/errors";
 import { ApiError } from "../../shared/api/errors";
 import type { Employee, EmployeeCredentials } from "../../shared/api/generated/model";
-import { moduleName } from "../../modules/registry";
-import { Consequence } from "../../shared/ui/Consequence";
-import { lines } from "../first-run/lines";
 import { TemporaryPasswordCard } from "../temporary-password/TemporaryPasswordCard";
 import { useCreateEmployeeWithPassword } from "../temporary-password/useTemporaryPassword";
 import { RoleCheckboxes } from "../assign-role/RoleCheckboxes";
@@ -132,20 +127,6 @@ export function InviteEmployeeForm({
     );
   };
 
-  const access = accessOfRoleIds(companyRoles, roles);
-  const modules = access.modules.map((code) => moduleName(t, code));
-  const items = [
-    ...(delivery === "password"
-      ? lines(t, "admin.org.invite.consequencePassword").slice(0, 2)
-      : [t("admin.org.invite.consequenceMail")]),
-    ...(modules.length > 0
-      ? [t("admin.org.consequence.modules", { modules: modules.join(", ") })]
-      : []),
-    ...(roles.length > 0 ? backendConsequence(t, access) : []),
-    ...(delivery === "password"
-      ? lines(t, "admin.org.invite.consequencePassword").slice(2)
-      : [t("admin.org.invite.consequenceListed")]),
-  ];
   const showRoleNote = rolesTouched && roles.length === 0;
   const failed = delivery === "password" ? create : invite;
   const fieldError =
@@ -275,7 +256,6 @@ export function InviteEmployeeForm({
           {t("admin.org.invite.cancel")}
         </Button>
       </div>
-      <Consequence items={items} />
     </Form>
   );
 }

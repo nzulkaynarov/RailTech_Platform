@@ -172,7 +172,6 @@ describe("Настройки · Telegram и разделы бота по гру�
     await openPage("admin@demo.example", "/admin/timing", "Время и сроки");
     await form("Правила передачи");
     const dry = await screen.findByRole("region", { name: "Пробный прогон правил передачи" });
-    expect(within(dry).getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     fireEvent.click(
       within(dry).getByRole("button", { name: /Проверить на последних 50 диалогах/ }),
     );
@@ -330,7 +329,6 @@ describe("Настройки · Telegram: шаблоны ответов", () => 
 
     fireEvent.click(await within(await panelEl()).findByRole("button", { name: "Удалить шаблон" }));
     const remove = within(await panelEl()).getByRole("form", { name: "Удалить шаблон" });
-    expect(within(remove).getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     fireEvent.click(within(remove).getByRole("button", { name: "Удалить шаблон" }));
     expect(await screen.findByText("Шаблон удалён")).toBeVisible();
     await waitFor(() => {
@@ -369,7 +367,6 @@ describe("Настройки · Система · Выгрузки CSV", () => {
     await openPage("admin@demo.example", "/admin/exports", "Выгрузки");
 
     expect(await screen.findByRole("heading", { level: 2, name: "Выгрузки CSV" })).toBeVisible();
-    expect(screen.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     for (const title of ["Лиды", "Клиенты", "Сделки"]) {
       expect(screen.getByRole("button", { name: `Скачать: ${title}` })).toBeDisabled();
     }

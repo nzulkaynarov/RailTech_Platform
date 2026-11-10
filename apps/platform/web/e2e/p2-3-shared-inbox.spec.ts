@@ -109,7 +109,6 @@ test.describe("P2-3: общий ящик как обращение", () => {
       await expect(page.getByText(/Письмо уже в работе у Иванов Демо с \d{2}:\d{2}/)).toBeVisible();
       await expect(page.getByRole("link", { name: "Зарегистрировать как ВХ" })).toHaveCount(0);
       await page.getByRole("button", { name: "Забрать себе" }).click();
-      await expect(page.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
       await shot(page, "card-held-takeover");
       await expectNoViolations(page, `забрать себе ${String(width)}`);
       await page.getByRole("button", { name: "Забрать себе" }).first().click();

@@ -12,7 +12,6 @@ import {
   useRejectBankChangeRequest,
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { ListSkeleton } from "../../../shared/ui/DataBlock";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { FormField } from "../../../shared/ui/FormParts";
@@ -215,9 +214,6 @@ function ApproveModal({ item, onClose }: { item: BankChangeItem; onClose: () => 
       <p>
         <strong>{item.new_bank_details}</strong>
       </p>
-      <Consequence
-        items={[t("bankChanges.approveModal.apply"), t("bankChanges.approveModal.notify")]}
-      />
       {approve.isError ? (
         <Alert type="error" showIcon role="alert" message={conflictMessage(approve.error, t)} />
       ) : null}
@@ -266,9 +262,6 @@ function RejectModal({ item, onClose }: { item: BankChangeItem; onClose: () => v
           }}
         />
       </FormField>
-      <Consequence
-        items={[t("bankChanges.rejectModal.keep"), t("bankChanges.rejectModal.notify")]}
-      />
       {reject.isError ? (
         <Alert type="error" showIcon role="alert" message={conflictMessage(reject.error, t)} />
       ) : null}

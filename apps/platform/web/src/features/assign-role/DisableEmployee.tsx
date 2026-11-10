@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next";
 import { employeeErrorText } from "../../entities/employee/errors";
 import { isSystemAdmin } from "../../entities/role/roles";
 import type { Employee } from "../../shared/api/generated/model";
-import { Consequence } from "../../shared/ui/Consequence";
 import { hasActiveLeads } from "./leads";
 import { TransferLeads } from "./TransferLeads";
 import { useEmployeeUpdate } from "./useEmployeeMutations";
@@ -76,17 +75,6 @@ export function DisableEmployee({ employee, selfId, otherActiveAdmins }: Disable
       role="group"
       aria-label={disabled ? t("admin.org.disable.enableTitle") : t("admin.org.disable.title")}
     >
-      <Consequence
-        items={
-          disabled
-            ? [t("admin.org.disable.enableResult")]
-            : [
-                t("admin.org.disable.sessions"),
-                t("admin.org.disable.terms"),
-                t("admin.org.disable.kept"),
-              ]
-        }
-      />
       {update.isError ? (
         <Alert type="error" showIcon message={employeeErrorText(t, update.error)} role="alert" />
       ) : null}

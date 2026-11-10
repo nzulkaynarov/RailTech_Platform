@@ -166,11 +166,6 @@
     "confirm": "Repeat the password",
     "mismatch": "Passwords do not match",
     "submit": "Create administrator and sign in",
-    "consequence": [
-      "CRM gets an administrator with this email; the first-run code stops working.",
-      "You are signed in to the Platform with this account right away.",
-      "Next the wizard offers to create your company and connect the bot, ERP, mail and AI models."
-    ],
     "checking": "Checking the system state",
     "stateErrorTitle": "Could not check the system state",
     "stateErrorText": "CRM did not respond. Make sure the server is running and try again.",

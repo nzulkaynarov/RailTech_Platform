@@ -56,11 +56,7 @@
     "hint": "PNG, JPEG, WebP yoki SVG, 2 MB gacha.",
     "uploaded": "Logotip yuklandi",
     "deleted": "Logotip o'chirildi",
-    "deleteTitle": "Kompaniya logotipini o'chirasizmi?",
-    "consequence": {
-      "card": "Logotip kompaniya kartasidan yo‘qoladi.",
-      "file": "Fayl ombordan o‘chiriladi, uni tiklab bo‘lmaydi."
-    }
+    "deleteTitle": "Kompaniya logotipini o'chirasizmi?"
   },
   "errors": {
     "DEFAULT": "Amalni bajarib bo'lmadi. Keyinroq qayta urinib ko'ring.",
@@ -263,10 +259,6 @@
     "deleteTitle": "«{{name}}» moddasini o'chirasizmi?",
     "deleted": "Modda o'chirildi",
     "invalidField": "Qiymatni tekshiring",
-    "consequence": {
-      "delete": "Modda shu bazis uchun hisob-kitob shablonlaridan yo'qoladi.",
-      "issued": "Allaqachon rasmiylashtirilgan TT va hisob-kitoblar o'zgarmaydi."
-    },
     "empty": {
       "title": "Hozircha xarajat moddalari yo'q",
       "text": "Yetkazib berish bazislari bo'yicha summa va stavkalarni qo'shing — ular arizani hisoblashga qo'yiladi."
@@ -310,10 +302,6 @@
       "deleteTitle": "«{{name}}» shablonini o'chirasizmi?",
       "deleted": "Shablon o'chirildi",
       "invalidField": "Qiymatni tekshiring",
-      "consequence": {
-        "delete": "Shablon hujjat rasmiylashtirishda tanlash ro'yxatidan yo'qoladi.",
-        "inUse": "Agar u bo‘yicha hujjatlar rasmiylashtirilgan bo‘lsa, o‘chirib bo‘lmaydi — u holda shablonni o‘chirib qo‘ying."
-      },
       "empty": {
         "title": "Hozircha hujjat shablonlari yo'q",
         "text": "Shartnoma yoki dalolatnoma shablonini yarating yoki platforma namunasini nusxalang."
@@ -363,10 +351,6 @@
       "deleteTitle": "«{{name}}» shablonini o'chirasizmi?",
       "deleted": "Shablon o'chirildi",
       "invalidField": "Qiymatni tekshiring",
-      "consequence": {
-        "delete": "Shu turdagi xat platformaning fayl shabloniga qaytadi.",
-        "file": "Yuborilgan xatlar o'zgarmaydi."
-      },
       "empty": {
         "title": "Hozircha xat shablonlari yo'q",
         "text": "Hozircha xatlar platformaning fayl shablonlari bo'yicha ketadi. Matnni almashtirish uchun o'z shabloningizni yarating."
@@ -414,10 +398,6 @@
     "deleted": "Qator o'chirildi",
     "codeTaken": "Bunday kod mavjud",
     "invalidField": "Qiymatni tekshiring",
-    "consequence": {
-      "delete": "Qator tanlash ro'yxatlaridan yo'qoladi.",
-      "disable": "Qatorni hujjatlar ishlatayotgan bo‘lsa, o‘chirib bo‘lmaydi — u holda uni o‘chirib qo‘ying."
-    },
     "empty": {
       "title": "Hozircha qatorlar yo'q",
       "text": "Ma'lumotnomaning birinchi qatorini qo'shing."
@@ -448,10 +428,6 @@
     "invalidField": "Qiymatni tekshiring",
     "deleteTitle": "«{{name}}» kategoriyasini o'chirasizmi?",
     "deleted": "Kategoriya o'chirildi",
-    "consequence": {
-      "delete": "Kategoriya katalogdan yo'qoladi.",
-      "children": "Ichki kategoriyali kategoriyani o‘chirib bo‘lmaydi — avval ularni ko‘chiring yoki o‘chiring."
-    },
     "empty": {
       "title": "Hozircha kategoriyalar yo'q",
       "text": "Daraxtning yuqori darajasini yarating — ichki kategoriyalar uning ichida qo'shiladi."
@@ -537,11 +513,6 @@
       "rateHint": "Noldan katta son, verguldan keyin 6 tagacha raqam. Masalan, 12650,5.",
       "save": "Kursni saqlash",
       "saved": "Kurs saqlandi",
-      "consequence": {
-        "replace": "Tanlangan sanadagi kurs oldingisini (avtomatik yoki avval kiritilgan) almashtiradi; oldingi qiymat jurnalda qoladi.",
-        "quotes": "Yangi hisob-kitoblar kursni sana bo‘yicha oladi; yaratilgan tijorat takliflaridagi kurslar o‘zgarmaydi.",
-        "older": "Eng yangi yozuvdan oldingi sana uchun kiritilgan kurs joriy kursni o‘zgartirmaydi — u jurnalda qoladi va shu sana uchun hisob-kitoblarda ishlatiladi."
-      },
       "journal": {
         "title": "Kurs jurnali",
         "date": "Kurs sanasi",

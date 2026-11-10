@@ -39,8 +39,6 @@ describe("DisableEmployee", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Отключить сотрудника" }));
     expect(sent).toEqual([]);
-    expect(screen.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
-    expect(screen.getByText("Вход во все системы закроется.")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Отключить" }));
 
     await waitFor(() => {

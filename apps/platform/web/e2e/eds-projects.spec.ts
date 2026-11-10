@@ -71,7 +71,6 @@ test.describe("Проекты: бухгалтер", () => {
     // карточка проекта без договора: «Сформировать проект договора» из принятого КП
     await openProject(page, 104, "contract");
     const panel = page.locator(PANEL);
-    await expect(panel.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     await settledScreenshot(page, "contract-none");
     await expectNoViolations(page, "договор: нет проекта");
     await panel.getByRole("button", { name: "Сформировать проект договора" }).click();

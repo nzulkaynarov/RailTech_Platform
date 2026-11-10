@@ -64,7 +64,6 @@ test.describe("Карточка товара", () => {
     // удаление главного — с подтверждением, следующее становится главным
     await card.getByRole("button", { name: "Удалить фото 3" }).click();
     const confirm = page.getByRole("dialog", { name: "Удалить фото 3?" });
-    await expect(confirm.getByText("Что произойдёт")).toBeVisible();
     await expectNoViolations(page, "карточка: удаление фото");
     await settledScreenshot(page, "card-photo-delete");
     await confirm.getByRole("button", { name: "Удалить", exact: true }).click();
@@ -112,7 +111,6 @@ test.describe("Карточка товара", () => {
     await form.getByLabel("Кем выдан").fill("Орган по сертификации (демо)");
     await fillDate(form.getByLabel("Выдан", { exact: true }), "2026-01-15");
     await fillDate(form.getByLabel("Действует до"), "2026-06-30");
-    await expect(form.getByText("Что произойдёт")).toBeVisible();
     await expectNoViolations(page, "карточка: документ");
     await settledScreenshot(page, "card-doc-form");
     await form.getByRole("button", { name: "Загрузить", exact: true }).click();

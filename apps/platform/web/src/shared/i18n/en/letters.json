@@ -390,11 +390,6 @@
         "same_file": "same file"
       }
     },
-    "consequence": [
-      "The letter gets a ВХ number and the status “Awaiting resolution”.",
-      "The director sees it in “Tasks” and adds the resolution.",
-      "The card opens in “Incoming letters”; the file is kept with the documents."
-    ],
     "submit": "Register",
     "cancel": "Cancel",
     "toast": "Registered: {{number}}",
@@ -492,23 +487,6 @@
     "approve": "Approve draft",
     "submit": "Give resolution",
     "saveDraft": "Save draft",
-    "consequence": {
-      "title": "What happens",
-      "execute": [
-        "The letter becomes \"In execution\" and goes under control.",
-        "Executors get the instruction in \"Tasks\", the bell and Telegram.",
-        "Reminders: one working day before the deadline and on the day; after it — \"Overdue\".",
-        "When everyone is done, the letter becomes \"Executed\" and you are notified."
-      ],
-      "info": [
-        "The letter becomes \"Noted\", no instruction.",
-        "People in \"Acquaint\" get an \"Acknowledge\" task."
-      ],
-      "draft": [
-        "The letter stays \"Awaiting resolution\".",
-        "The director sees the draft in the resolution form and approves it in one click or edits it."
-      ]
-    },
     "staff": {
       "unavailable": "The employee list did not load.",
       "retry": "Retry"
@@ -1079,7 +1057,6 @@
       "deleted": "Deleted",
       "required": "Enter a name",
       "deleteTitle": "Delete “{{name}}”?",
-      "consequence": "The value disappears from the list and forms. No letters use it.",
       "empty": {
         "title": "No values",
         "text": "Add the first value."
@@ -1144,7 +1121,6 @@
       "required": "Fill in the field",
       "deleted": "Template deleted",
       "deleteTitle": "Delete template “{{name}}”?",
-      "consequence": "The template disappears from “From a template”. Existing resolutions do not change.",
       "empty": {
         "title": "No templates",
         "text": "Add a shared template for typical letters."

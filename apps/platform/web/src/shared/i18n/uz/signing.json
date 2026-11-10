@@ -134,9 +134,6 @@
     "reasonRequired": "Sababni kiriting (kamida 3 belgi)",
     "ok": "Bekor qilish",
     "will": "Nima bo‘ladi",
-    "consequence1": "Xodim imzolovchi bo‘lmay qoladi: unga yangi hujjatlar imzoga kelmaydi.",
-    "consequence2": "Vakolat ro‘yxatda va jurnalda «Bekor qilingan» deb qoladi.",
-    "consequence3": "Uni qaytarib bo‘lmaydi — yangisini bering.",
     "done": "Vakolat bekor qilindi"
   },
   "journal": {

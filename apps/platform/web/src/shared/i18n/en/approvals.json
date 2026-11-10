@@ -182,11 +182,6 @@
   "accountant": {
     "submit": "Pay in “Invoices & payments”",
     "return": "Return",
-    "consequence": {
-      "step1": "This memo opens in “Invoices & payments” on the “Memos to pay” tab.",
-      "step2": "There you mark it “Paid” — date, amount and payment order; this closes the accountant step and the route.",
-      "step3": "The author is notified; the document stays in the registry marked as paid."
-    },
     "done": {
       "approve": "Document accepted for payment",
       "return": "Document returned",

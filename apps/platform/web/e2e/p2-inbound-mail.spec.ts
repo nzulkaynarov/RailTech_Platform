@@ -75,7 +75,6 @@ test.describe("P2: входящая почта общего ящика", () => {
       await expectNoViolations(page, `карточка ${String(width)}`);
 
       await page.getByRole("button", { name: "Создать лид" }).click();
-      await expect(page.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
       await page.getByRole("button", { name: "Создать лид" }).last().click();
       await expect(page.getByText(/Лид L-2068 создан/)).toBeVisible();
       await expect(list.getByRole("listitem")).toHaveCount(5);

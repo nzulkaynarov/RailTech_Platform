@@ -20,7 +20,6 @@ import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { BodyEditor } from "../../../shared/ui/BodyEditor/BodyEditor";
 import { bodyLang } from "../../../shared/ui/BodyEditor/bodyModel";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { DateField } from "../../../shared/ui/DateField";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { ErrorNote } from "../../../shared/ui/FormParts";
@@ -43,7 +42,6 @@ import {
   FIELD_ORDER,
   type FormErrors,
   type FormValues,
-  consequenceKey,
   fieldElementId,
   fromDocument,
   isLetter,
@@ -310,10 +308,6 @@ function DocumentForm({
       );
   const title = t("modules:eds.sections.new");
   useDocumentTitle(title);
-  const consequence = t(
-    `documents:form.consequence.${handover ? "letterHandover" : consequenceKey(values)}`,
-    { returnObjects: true },
-  ) as string[];
   const head = letterhead.data;
   const signatoryHint =
     head?.signatory_name && head.signatory_position
@@ -661,7 +655,6 @@ function DocumentForm({
             <span className="pf-fp-label">{t("documents:form.route.label")}</span>
             <span>{routeText}</span>
           </div>
-          <Consequence items={consequence} />
           <p className="pf-hint">{t("documents:form.consequence.draft")}</p>
         </div>
       </Card>

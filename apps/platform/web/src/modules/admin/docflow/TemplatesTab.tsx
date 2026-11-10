@@ -195,7 +195,6 @@ export function TemplatesTab({ readOnly }: { readOnly: boolean }) {
         okLabel={t("settings.dict.delete")}
         danger
         loading={remove.isPending}
-        items={[t("settings.templates.consequence")]}
         onOk={() => {
           if (removing) remove.mutate({ id: removing.id });
         }}

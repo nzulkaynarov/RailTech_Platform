@@ -64,7 +64,6 @@ describe("Первый запуск до входа", () => {
     expect(screen.getByText(/setup_code_issued/)).not.toBeVisible();
     fireEvent.click(screen.getByText("Подробнее для техспециалиста"));
     // «Что произойдёт» перед главной кнопкой
-    expect(screen.getByText("Что произойдёт")).toBeVisible();
     expect(screen.getByRole("button", { name: /Создать администратора и войти/ })).toBeVisible();
   });
 
@@ -441,7 +440,6 @@ describe("Баннер настройки и мастер", () => {
     signInAs("admin@demo.example");
     renderApp("/admin/setup");
     expect(await screen.findByRole("heading", { level: 2, name: "Ваша компания" })).toBeVisible();
-    expect(await screen.findByText("Что произойдёт")).toBeVisible();
 
     // название обязательно
     fireEvent.click(screen.getByRole("button", { name: /Создать компанию/ }));
