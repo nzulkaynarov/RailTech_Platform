@@ -55,7 +55,6 @@ describe("меню — docs/product/NAVIGATION.md", () => {
     expect(at("/erp/calc")).toBe("erp.requests.sales");
     expect(at("/crm/messages")).toBe("crm.leads");
   });
-
 });
 
 describe("имена модулей — UX-оценка 2026-10-27 §6.1", () => {
