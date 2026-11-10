@@ -162,10 +162,7 @@ test.describe("Оргструктура: приглашение", () => {
     await loginAndWait(page, "admin@demo.example");
     await openOrg(page);
     // Главная кнопка модуля в подменю ведёт к форме в боковом окне
-    await page
-      .getByRole("navigation", { name: "Разделы модуля" })
-      .getByRole("link", { name: "Пригласить сотрудника" })
-      .click();
+    await page.getByRole("button", { name: "Пригласить сотрудника" }).click();
     const panel = page.locator(PANEL);
     await expect(
       panel.getByRole("heading", { level: 3, name: "Пригласить сотрудника" }),
