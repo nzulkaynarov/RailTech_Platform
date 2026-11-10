@@ -15,6 +15,7 @@ import {
   useCreateHsCode,
   useCreateManufacturer,
   useGetCatalogLookups,
+  useListCatalogCategoryRequests,
   useListCatalogExchangeRates,
   useListHsCodes,
   useListManufacturers,
@@ -30,17 +31,23 @@ import { type Column, DataList, FormModal, PAGE_SIZE, Pager } from "./common";
 import { useDebounced } from "./useDebounced";
 import { errorFields } from "./errors";
 import { queryLabels } from "./labels";
+import { RequestsPanel } from "./RequestsPanel";
 
-const PARTS = ["rates", "hs", "brands"] as const;
+const PARTS = ["hs", "brands", "requests"] as const;
 type Part = (typeof PARTS)[number];
 
 /**
- * Расчёт · Справочники, которые раньше вели только в Django admin ERP (B-035, Q-W13A3-1 п. 2): курсы валют, коды ТН ВЭД и
- * производители. Просмотр — любому сотруднику раздела; правка — по праву ERP (`catalog.manage`, курс — `settings.edit`).
+ * Каталог · Справочники, которые раньше вели только в Django admin ERP (B-035, Q-W13A3-1 п. 2): коды ТН ВЭД, производители и
+ * запросы на новые категории. Просмотр — любому сотруднику раздела; правка — по праву ERP (`catalog.manage`, курс — `settings.edit`).
  */
-export function RefsPanel() {
+export function RefsPanel({ initial = "hs" }: { initial?: Part }) {
   const { t } = useTranslation("catalog");
-  const [part, setPart] = useState<Part>("rates");
+  const [part, setPart] = useState<Part>(initial);
+  const pending = useListCatalogCategoryRequests({ status: "pending" }).data?.items.length ?? 0;
+  const label = (key: Part): string => {
+    if (key !== "requests") return t(`refs.${key}.title`);
+    return pending > 0 ? t("tabs.requestsCount", { count: pending }) : t("tabs.requests");
+  };
   return (
     <div className="pf-cat">
       <Segmented
@@ -49,17 +56,18 @@ export function RefsPanel() {
         onChange={(value) => {
           setPart(value);
         }}
-        options={PARTS.map((p) => ({ value: p, label: t(`refs.${p}.title`) }))}
+        options={PARTS.map((p) => ({ value: p, label: label(p) }))}
       />
-      <p className="pf-cat-note">{t(`refs.${part}.hint`)}</p>
-      {part === "rates" ? <RatesView /> : part === "hs" ? <HsView /> : <BrandsView />}
+      {part === "requests" ? null : <p className="pf-cat-note">{t(`refs.${part}.hint`)}</p>}
+      {part === "requests" ? <RequestsPanel /> : part === "hs" ? <HsView /> : <BrandsView />}
     </div>
   );
 }
 
 // --- курсы -----------------------------------------------------------------------------------
 
-function RatesView() {
+/** Курсы валют: живут в «Настройки · Налоги и валюты». Список отдаёт ERP по разделу склада. */
+export function RatesView() {
   const { t } = useTranslation("catalog");
   const { date } = useFormat();
   const { me } = useAuth();

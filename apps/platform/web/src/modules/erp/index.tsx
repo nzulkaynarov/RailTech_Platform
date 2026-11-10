@@ -34,13 +34,13 @@ export function Component() {
     match?.module.code === "erp" &&
     (match.section.key === "requests" || match.section.key === "calc")
   ) {
+    // «Мои расчёты» стали фильтром списка заявок; карточка расчёта остаётся по своему адресу
+    if (match.section.key === "calc" && !match.objectId) {
+      return <Navigate to="/erp/requests?mine=1" replace />;
+    }
     return (
       <RequireAccess rule={match.section.access}>
-        {match.objectId ? (
-          <CalcScreen number={match.objectId} />
-        ) : (
-          <RequestsScreen mine={match.section.key === "calc"} />
-        )}
+        {match.objectId ? <CalcScreen number={match.objectId} /> : <RequestsScreen />}
       </RequireAccess>
     );
   }

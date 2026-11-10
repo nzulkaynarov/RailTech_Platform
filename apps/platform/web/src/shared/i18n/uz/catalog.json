@@ -234,7 +234,8 @@
     "warrantyCompany": "(kompaniyaning odatdagisi)",
     "warrantyMonths": "{{months}} oy",
     "warrantyNone": "Belgilanmagan",
-    "warrantyTerms": "Kafolat shartlari"
+    "warrantyTerms": "Kafolat shartlari",
+    "uploadPrice": "Prays yuklash"
   },
   "offers": {
     "supplier": "Yetkazib beruvchi",
@@ -1129,5 +1130,6 @@
       "reasonPlaceholder": "Masalan: mahsulot yo'nalishimizga to'g'ri kelmaydi / hujjatlar taqdim etilmadi",
       "ok": "Arizani rad etish"
     }
-  }
+  },
+  "backToItems": "Pozitsiyalarga"
 }

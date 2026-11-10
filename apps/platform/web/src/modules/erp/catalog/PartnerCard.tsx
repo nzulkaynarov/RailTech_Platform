@@ -93,6 +93,15 @@ export function PartnerCard({ id }: { id: string }) {
                   {t("offerCreate.open")}
                 </Button>
               ) : null}
+              <Button
+                onClick={() => {
+                  void navigate("/erp/catalog?part=import", {
+                    state: { supplier: { id: card.id, name: card.name } },
+                  });
+                }}
+              >
+                {t("items.uploadPrice")}
+              </Button>
             </div>
           ) : null}
           <SupplierCabinetAccess supplierId={id} />

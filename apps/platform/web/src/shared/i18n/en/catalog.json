@@ -234,7 +234,8 @@
     "warrantyCompany": "(company default)",
     "warrantyMonths": "{{months}} mo.",
     "warrantyNone": "Not set",
-    "warrantyTerms": "Warranty terms"
+    "warrantyTerms": "Warranty terms",
+    "uploadPrice": "Upload price list"
   },
   "offers": {
     "supplier": "Supplier",
@@ -1129,5 +1130,6 @@
       "reasonPlaceholder": "e.g.: irrelevant product categories / missing required documents",
       "ok": "Reject application"
     }
-  }
+  },
+  "backToItems": "Back to items"
 }

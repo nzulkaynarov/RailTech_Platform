@@ -407,7 +407,7 @@ test.describe("На согласовании: бухгалтер", () => {
     const form = memoForm(page);
     // «Принять к оплате» больше нет: шаг закрывает «Оплачено» — кнопка ведёт туда и объясняет почему
     await expect(form.getByRole("button", { name: "Принять к оплате" })).toHaveCount(0);
-    const pay = form.getByRole("link", { name: "Оплатить в «Счета и оплаты»" });
+    const pay = form.getByRole("link", { name: "Оплатить в «Финансы»" });
     await expect(pay).toBeVisible();
     await expect(form.getByRole("button", { name: "Вернуть", exact: true })).toBeDisabled();
     await expect(form.getByRole("button", { name: "Согласовать" })).toHaveCount(0);

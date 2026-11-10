@@ -98,7 +98,8 @@ test.describe("Склад и закупки: снабженец", () => {
     await expectNoViolations(page, "остатки и резервы");
 
     // Заказы поставщикам: просроченный ЗП виден, новый — черновик → отправлен → подтверждён.
-    await page.getByRole("tab", { name: "Заказы поставщикам" }).click();
+    await spaGoto(page, "/erp/stock?view=orders");
+    await expect(page.getByRole("heading", { level: 1, name: "Закупки" })).toBeVisible();
     const overdueRow = page.getByRole("row").filter({ hasText: OVERDUE });
     await expect(overdueRow.getByText("Просрочен · 3 дн.")).toBeVisible();
     await settledScreenshot(page, "stock-orders");
@@ -198,7 +199,7 @@ test.describe("Склад и закупки: снабженец", () => {
   }) => {
     await loginAndWait(page, "manager@demo.example");
     await spaGoto(page, "/erp/stock?view=orders");
-    await expect(page.getByRole("heading", { level: 1, name: "Склад" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Закупки" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Создать заказ" })).toHaveCount(0);
     await expect(
       page.getByRole("link", { name: new RegExp(`Просрочен заказ ${OVERDUE}`) }),
@@ -226,7 +227,7 @@ test.describe("Склад на телефоне @mobile", () => {
     await settledScreenshot(page, "stock-balances");
     await expectNoViolations(page, "остатки на телефоне");
 
-    await page.getByRole("tab", { name: "Заказы поставщикам" }).click();
+    await spaGoto(page, "/erp/stock?view=orders");
     await expect(page.getByRole("list", { name: "Заказы поставщикам" })).toBeVisible();
     await settledScreenshot(page, "stock-orders");
     await expectNoViolations(page, "заказы на телефоне");

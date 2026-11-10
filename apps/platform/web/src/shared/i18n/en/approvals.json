@@ -180,7 +180,7 @@
     }
   },
   "accountant": {
-    "submit": "Pay in “Invoices & payments”",
+    "submit": "Pay in “Finance”",
     "return": "Return",
     "done": {
       "approve": "Document accepted for payment",

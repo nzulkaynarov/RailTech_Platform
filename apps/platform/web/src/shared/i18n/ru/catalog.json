@@ -234,7 +234,8 @@
     "warrantyCompany": "(по умолчанию компании)",
     "warrantyMonths": "{{months}} мес.",
     "warrantyNone": "Не задана",
-    "warrantyTerms": "Условия гарантии"
+    "warrantyTerms": "Условия гарантии",
+    "uploadPrice": "Загрузить прайс"
   },
   "offers": {
     "supplier": "Поставщик",
@@ -1126,5 +1127,6 @@
       "reasonPlaceholder": "Например: не наш профиль номенклатуры / непредоставление документов",
       "ok": "Отклонить заявку"
     }
-  }
+  },
+  "backToItems": "К позициям"
 }

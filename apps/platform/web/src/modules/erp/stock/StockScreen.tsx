@@ -17,6 +17,8 @@ import "./stock.css";
 
 const VIEWS = ["balances", "orders", "receipts", "shipments", "trace"] as const;
 type View = (typeof VIEWS)[number];
+/** Заказы партнёрам — отдельный экран «Закупки» (`?view=orders`), на складе вкладки нет. */
+const STOCK_VIEWS = VIEWS.filter((key) => key !== "orders");
 
 const BODY: Record<View, () => React.ReactNode> = {
   balances: () => <BalancesTab />,
@@ -31,15 +33,27 @@ function viewOf(value: string | null): View {
 }
 
 /**
- * Расчёт · «Склад» (SPEC-v3 §7.4): остатки и резервы по номенклатуре (ячейка, свободный остаток, резерв под проект),
- * заказы поставщикам (ЗП-номер, поставщик, ожидаемая дата, статус), приёмка от поставщика по строкам и отгрузки по проектам
+ * Каталог · «Склад» (SPEC-v3 §7.4): остатки и резервы по номенклатуре (ячейка, свободный остаток, резерв под проект),
+ * приёмка от партнёра по строкам и отгрузки по проектам; `?view=orders` — экран «Заявки · Закупки» (ЗП-номер, партнёр, срок, статус)
  * (внутренняя накладная, трек). Вкладка — в адресе (`?view=`), чтобы на неё можно было сослаться из «Моих задач».
  */
 export function StockScreen() {
-  const { t } = useTranslation("stock");
+  const { t } = useTranslation(["stock", "modules"]);
   const [params, setParams] = useSearchParams();
   const view = viewOf(params.get("view"));
-  useDocumentTitle(t("title"));
+  const purchases = view === "orders";
+  const purchasesTitle = t("modules:erp.nav.purchases");
+  useDocumentTitle(purchases ? purchasesTitle : t("title"));
+  if (purchases) {
+    return (
+      <div className="pf-calc pf-stock">
+        <PageHeader title={purchasesTitle} />
+        <DataBlock>
+          <OrdersTab />
+        </DataBlock>
+      </div>
+    );
+  }
   return (
     <div className="pf-calc pf-stock">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
@@ -58,7 +72,7 @@ export function StockScreen() {
             { replace: true },
           );
         }}
-        items={VIEWS.map((key) => ({ key, label: t(`tabs.${key}`) }))}
+        items={STOCK_VIEWS.map((key) => ({ key, label: t(`tabs.${key}`) }))}
       >
         {/* Вкладка ещё не загружена — блок держит высоту прежней, пока виден скелетон (UX-1c, S8). */}
         <DataBlock>{BODY[view]()}</DataBlock>

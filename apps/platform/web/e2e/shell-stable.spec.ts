@@ -80,7 +80,7 @@ test.describe("Стабильная оболочка", () => {
     await expect(menu).toBeVisible();
     const before = await mainWidth(page);
     await page.goto("/erp/calc");
-    await expect(page.getByRole("heading", { level: 1, name: "Мои расчёты" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Заявки" })).toBeVisible();
     await expect(menu).toBeVisible();
     expect(await mainWidth(page)).toBe(before);
     await settledScreenshot(page, "calc-menu");

@@ -367,9 +367,9 @@
       "units": "Birliklar",
       "delivery-basis": "Yetkazib berish bazislari"
     },
-    "moved": "Valyuta kurslari, TIF TN kodlari va ishlab chiqaruvchilar «Hisob · Nomenklatura va yetkazib beruvchilar» → «Ma'lumotnomalar» bo'limida yuritiladi.",
+    "moved": "TIF TN kodlari va ishlab chiqaruvchilar «Katalog · Tovarlar» → «Ma'lumotnomalar» bo‘limida; valyuta kurslari — «Sozlamalar · Soliqlar va valyutalar»da.",
     "movedLink": "Ma'lumotnomalarni ochish",
-    "movedNoAccess": "Valyuta kurslari, TIF TN kodlari va ishlab chiqaruvchilar «Hisob · Nomenklatura va yetkazib beruvchilar» bo'limida yuritiladi; u ta'minot va rahbar rollariga ochiq.",
+    "movedNoAccess": "TIF TN kodlari va ishlab chiqaruvchilar «Katalog · Tovarlar» → «Ma'lumotnomalar» bo‘limida; valyuta kurslari — «Sozlamalar · Soliqlar va valyutalar»da.",
     "code": "Kod",
     "name": "Nomi",
     "alpha2": "ISO alpha-2",

@@ -157,13 +157,7 @@ test.describe("UX-2b: суммы, статусы, телефон", () => {
       await expect(page.getByText(/Свободно · \d+/).first()).toBeVisible();
       // меню «…» antd не показывается, все вкладки — в ленте и достижимы
       await expect(page.locator(".pf-tabs-bar .ant-tabs-nav-operations")).toBeHidden();
-      for (const name of [
-        "Остатки и резервы",
-        "Заказы поставщикам",
-        "Приёмка",
-        "Отгрузки",
-        "Прослеживаемость",
-      ]) {
+      for (const name of ["Остатки и резервы", "Приёмка", "Отгрузки", "Прослеживаемость"]) {
         await expect(page.getByRole("tab", { name })).toBeAttached();
       }
       if (width === 1440) {
@@ -181,9 +175,9 @@ test.describe("UX-2b: суммы, статусы, телефон", () => {
       await expectNoViolations(page, `склад ${String(width)}`);
       await settledScreenshot(page, "stock");
       if (width === 390) {
-        // пятая вкладка (L0-3) уводит ленту вбок: до «Отгрузок» — с клавиатуры, как без мыши
+        // до «Отгрузок» — с клавиатуры, как без мыши
         await page.getByRole("tab", { name: "Остатки и резервы" }).focus();
-        for (let step = 0; step < 3; step += 1) await page.keyboard.press("ArrowRight");
+        for (let step = 0; step < 2; step += 1) await page.keyboard.press("ArrowRight");
         await expect(page.getByRole("tab", { name: "Отгрузки" })).toBeFocused();
         await page.keyboard.press("Enter");
         await expect(page).toHaveURL(/view=shipments/);

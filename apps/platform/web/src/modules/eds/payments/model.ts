@@ -5,10 +5,13 @@ import type {
   PaymentRow,
 } from "../../../shared/api/generated/model";
 
-/** Вкладки «Счетов и оплат» (SPEC-v3 §7.3) и «Все счета»: параметр адреса `?show=`. */
+/** «Финансы»: статусы счёта и заявки на оплату (SPEC-v3 §7.3), параметр адреса `?show=`. */
 export const TABS = ["to_issue", "awaiting", "proofs", "overdue", "memos", "all"] as const;
 export type ShowTab = (typeof TABS)[number];
 export type InvoiceTab = Exclude<ShowTab, "memos">;
+
+/** Статусы счёта — фильтр над таблицей; служебки — отдельная вкладка над экраном. */
+export const INVOICE_TABS = TABS.filter((tab): tab is InvoiceTab => tab !== "memos");
 
 export function showTab(value: string | null): ShowTab {
   return (TABS as readonly string[]).includes(value ?? "") ? (value as ShowTab) : "awaiting";

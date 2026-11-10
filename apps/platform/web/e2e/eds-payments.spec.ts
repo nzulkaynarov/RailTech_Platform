@@ -50,15 +50,15 @@ test.describe("Счета и оплаты: бухгалтер", () => {
     await loginAndWait(page, "accountant@demo.example");
     await openPayments(page);
 
-    const nav = page.getByRole("navigation", { name: "Вкладки счетов и оплат" });
-    await expect(nav.getByRole("link", { name: /^Ждут оплаты\s*2$/ })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
-    await expect(nav.getByRole("link", { name: /^К выставлению\s*1$/ })).toBeVisible();
-    await expect(nav.getByRole("link", { name: /^Платёжки на подтверждение\s*1$/ })).toBeVisible();
-    await expect(nav.getByRole("link", { name: /^Просрочены\s*1$/ })).toBeVisible();
-    await expect(nav.getByRole("link", { name: /^Служебки к оплате\s*1$/ })).toBeVisible();
+    const status = page.getByRole("radiogroup", { name: "Статус счёта" });
+    const pick = (name: string) => status.getByText(name, { exact: false }).click();
+    await expect(status.getByRole("radio", { name: "Ждут оплаты · 2" })).toBeChecked();
+    await expect(status.getByText("К выставлению · 1")).toBeVisible();
+    await expect(status.getByText("Платёжки на подтверждение · 1")).toBeVisible();
+    await expect(status.getByText("Просрочены · 1")).toBeVisible();
+    await expect(
+      page.locator(".pf-shell-tabs").getByRole("link", { name: "Заявки на оплату" }),
+    ).toBeVisible();
 
     // «Ждут оплаты»: выставленный и частично оплаченный; остаток виден
     await expect(page.getByRole("row")).toHaveCount(1 + 2);
@@ -68,20 +68,20 @@ test.describe("Счета и оплаты: бухгалтер", () => {
     await settledScreenshot(page, "list-awaiting");
     await expectNoViolations(page, "список: Ждут оплаты");
 
-    await nav.getByRole("link", { name: /^Просрочены/ }).click();
+    await pick("Просрочены");
     await expect(row(page, "СЧ-2026/144").getByText("Просрочен", { exact: true })).toBeVisible();
     await expect(row(page, "СЧ-2026/144").getByText("просрочен на 8 дн.")).toBeVisible();
     await settledScreenshot(page, "list-overdue");
 
-    await nav.getByRole("link", { name: /^К выставлению/ }).click();
+    await pick("К выставлению");
     await expect(row(page, "СЧ-2026/143").getByText("Не выставлен")).toBeVisible();
 
-    await nav.getByRole("link", { name: /^Платёжки на подтверждение/ }).click();
+    await pick("Платёжки на подтверждение");
     await expect(row(page, "СЧ-2026/145").getByText("Платёжка получена")).toBeVisible();
     await settledScreenshot(page, "list-proofs");
     await expectNoViolations(page, "список: Платёжки на подтверждение");
 
-    await nav.getByRole("link", { name: /^Все счета/ }).click();
+    await pick("Все счета");
     await expect(page.getByRole("row")).toHaveCount(1 + 6);
     const search = page.getByRole("textbox", { name: "Поиск по номеру счёта или клиенту" });
     await search.fill("пример");
@@ -292,7 +292,7 @@ test.describe("Счета и оплаты: чтение и закрытые ро
     await expect(page.getByRole("table", { name: "Счета" })).toBeVisible();
     await expectNoViolations(page, "менеджер: счета только для чтения");
 
-    await page.getByRole("link", { name: /^Служебки к оплате/ }).click();
+    await page.getByRole("link", { name: "Заявки на оплату" }).click();
     await row(page, "СЗ-2026/015").getByText("Оплата командировочных расходов").click();
     await expect(
       page.locator(PANEL).getByRole("heading", { name: "Только просмотр" }),
@@ -339,7 +339,7 @@ test.describe("Счета и оплаты на телефоне @mobile", () => 
     await page.setViewportSize({ width: 390, height: 844 });
     await loginAndWait(page, "accountant@demo.example");
     await spaGoto(page, "/eds/payments?show=memos");
-    await expect(page.getByRole("list", { name: "Служебки к оплате" })).toBeVisible();
+    await expect(page.getByRole("list", { name: "Заявки на оплату" })).toBeVisible();
     await settledScreenshot(page, "mobile-memos");
     await expectNoViolations(page, "телефон: служебки к оплате");
 

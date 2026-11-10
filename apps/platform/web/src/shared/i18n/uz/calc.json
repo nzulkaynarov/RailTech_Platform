@@ -1,7 +1,6 @@
 {
   "list": {
     "subtitle": "Direktor rezolyutsiyasidan keyingi hisob-kitob topshiriqlari: muddat, qatorlar vizalari va mas’ul",
-    "subtitleMine": "",
     "caption": "Hisob-kitobdagi arizalar",
     "scroll": "Hisob-kitobdagi arizalar jadvali",
     "columns": {
@@ -24,6 +23,11 @@
       "mineTitle": "Sizda hisob-kitob topshiriqlari yo‘q",
       "mineText": "Hozircha bo‘sh.",
       "mineAction": "Hisob-kitobdagi barcha arizalar"
+    },
+    "scope": {
+      "label": "Kimning arizalari",
+      "all": "Barchasi",
+      "mine": "Meniki"
     }
   },
   "state": {

@@ -1,33 +1,6 @@
 /* EDS · Счета и оплаты (D2-4): вкладки, поиск, формы бокового окна. Остальное — общие правила decision.css (таблицы,
    карточки, лист на телефоне). Значения — макет v3: рамка #f0f0f0, радиус 8, без теней и градиентов; второстепенный текст
    #595959 (контраст ≥ 4.5:1 на белом). */
-.pf-pay-tabs {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0 4px;
-  border-bottom: 1px solid #f0f0f0;
-}
-.pf-pay-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 10px;
-  color: #262626;
-  white-space: nowrap;
-  border-bottom: 2px solid transparent;
-  text-decoration: none;
-}
-.pf-pay-tab:hover {
-  color: #0958d9;
-}
-.pf-pay-tab[aria-current="page"] {
-  color: #0958d9;
-  border-bottom-color: #1668dc;
-  font-weight: 600;
-}
 .pf-pay-count {
   min-width: 22px;
   padding: 0 6px;
@@ -107,18 +80,8 @@
 
 /* Таблицы счетов и служебок плотнее общих: с открытым боковым окном на 1440 px должны уместиться статус и действие */
 .pf-pay-table th,
-.pf-pay-table td {
-  padding: 10px 8px;
-  font-size: 13px;
-}
 .pf-pay-table th:first-child,
-.pf-pay-table td:first-child {
-  padding-left: 16px;
-}
 .pf-pay-table th:last-child,
-.pf-pay-table td:last-child {
-  padding-right: 16px;
-}
 
 /* Смена реквизитов контрагента (FX-4): одна колонка карточек, на телефоне тоже. */
 .pf-bank-list {

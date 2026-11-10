@@ -165,8 +165,7 @@ test.describe("Товары", () => {
     await settledScreenshot(page, "catalog-supplier");
 
     // запрос на новую категорию
-    await openCatalog(page);
-    await page.getByRole("tab", { name: /Запросы на категории/ }).click();
+    await openCatalog(page, "?part=requests");
     await page.getByRole("button", { name: "Запросить категорию" }).click();
     const form = page.getByRole("dialog", { name: "Запросить новую категорию" });
     await form.getByLabel("Название категории").fill("Кабельные лотки");
@@ -208,11 +207,9 @@ test.describe("Товары", () => {
     await settledScreenshot(page, "catalog-brigades");
 
     await openCatalog(page, "?part=refs");
-    await expect(page.getByRole("radio", { name: "Курсы валют" })).toBeChecked();
-    await expect(page.getByRole("cell", { name: "12650.5" })).toBeVisible();
-    await expectNoViolations(page, "справочники: курсы");
+    await expect(page.getByRole("radio", { name: "Коды ТН ВЭД" })).toBeChecked();
+    await expectNoViolations(page, "справочники");
     await settledScreenshot(page, "catalog-refs");
-    await pickPart(page, "Коды ТН ВЭД");
     await expect(page.getByRole("cell", { name: "Провода и кабели изолированные" })).toBeVisible();
     await pickPart(page, "Производители");
     await expect(page.getByRole("cell", { name: "Электрокабель-Тест" })).toBeVisible();
@@ -330,7 +327,7 @@ test.describe("Номенклатура и техдокументация на �
     await settledScreenshot(page, "catalog-supplier");
 
     await openCatalog(page, "?part=refs");
-    await expect(page.getByRole("radio", { name: "Курсы валют" })).toBeChecked();
+    await expect(page.getByRole("radio", { name: "Коды ТН ВЭД" })).toBeChecked();
     await expectNoViolations(page, "справочники 390");
     await settledScreenshot(page, "catalog-refs");
 
