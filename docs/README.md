@@ -1,5 +1,5 @@
 # docs/ — вся документация RailTech Platform, одна правда
-Статус: действует · Владелец: архитектор · Обновлено: 2026-10-29
+Статус: действует · Владелец: архитектор · Обновлено: 2026-11-10
 
 **Правило (владелец 2026-10-23, `docs/ORCHESTRATOR.md` §3 п. 17).** Вся правда о продукте, архитектуре, процессе и
 правилах кода живёт здесь, в `docs/`, и нигде больше. В `apps/*`, `packages/*`, `infra/` и корне — только указатели:
@@ -10,7 +10,8 @@
 ## С чего начать
 
 **Владелец продукта.**
-- Что делает продукт и для кого — [`product/SPEC-v3.md`](product/SPEC-v3.md): словарь §2, процесс §3, роли §4, экраны §6.
+- Что делает продукт и для кого — [`product/SPEC-v3.md`](product/SPEC-v3.md): словарь §2, процесс §3, роли §4, экраны §6;
+  меню и экраны по ролям — [`product/NAVIGATION.md`](product/NAVIGATION.md).
   Как это видит сотрудник, человеческим языком по экранам, — статьи помощи [`kb/help/`](kb/help/).
 - Что уже вышло — «Что нового», [`kb/help/changelog/`](kb/help/changelog/); что будет — [`kb/help/roadmap.md`](kb/help/roadmap.md).
 - Где мы и что дальше — [`HANDOFF.md`](HANDOFF.md) §1 и §3; исходный план этапов — стратегия §4 и §7, поправки к нему — в
@@ -46,13 +47,15 @@
 | Открытые вопросы (вверху — «Ждут владельца») | [`QUESTIONS.md`](QUESTIONS.md) | действует | архитектор |
 | Действия владельца вне кода | [`OWNER-CHECKLIST.md`](OWNER-CHECKLIST.md) | действует | владелец |
 | Стратегия, целевая архитектура, план этапов 0, B–H | [`strategy/2026-10-23-platform-architecture-strategy.md`](strategy/2026-10-23-platform-architecture-strategy.md) | действует | архитектор |
-| Стратегия выхода на рынок: цели на 3 года и 12 месяцев, порядок работы партиями | [`strategy/2026-11-09-market-strategy.md`](strategy/2026-11-09-market-strategy.md) |
+| Стратегия выхода на рынок: цели на 3 года и 12 месяцев, порядок работы партиями | [`strategy/2026-11-09-market-strategy.md`](strategy/2026-11-09-market-strategy.md) | действует | владелец |
+| Дорожная карта владельца: главный порядок работ до запуска и после | [`strategy/2026-11-10-owner-roadmap.md`](strategy/2026-11-10-owner-roadmap.md) | принято владельцем 2026-11-10 | владелец |
 | Стратегия экосистемы и профиль международной сертификации (кибербезопасность и качество) | [`strategy/2026-11-07-ecosystem-and-certification-strategy.md`](strategy/2026-11-07-ecosystem-and-certification-strategy.md) | действует | владелец |
 | Архитектурные решения ансамбля | [`adr/README.md`](adr/README.md) — индекс со статусами и поправками (0001…0021) | действует | архитектор |
 | Продукт: спецификация единого интерфейса (словарь, процессы, роли, экраны) | [`product/SPEC-v3.md`](product/SPEC-v3.md) (§4 — вместе с ADR-0012) | действует | владелец |
 | Продукт: ценность систем и путь клиента | [`product/BUSINESS.md`](product/BUSINESS.md) | основание; при расхождении права SPEC-v3 | владелец |
-| Модули как коробочные решения: границы, функции, статус | [`product/MODULES.md`](product/MODULES.md) | черновик | владелец |
-| Бизнес-процесс компании: процессы, шаги, модули | [`product/BUSINESS-PROCESS.md`](product/BUSINESS-PROCESS.md) | черновик | владелец |
+| Модули как коробочные решения: границы, функции, статус | [`product/MODULES.md`](product/MODULES.md) | принято владельцем 2026-11-09, пересмотр утверждён 2026-11-10 | владелец |
+| Бизнес-процесс компании: процессы, шаги, модули | [`product/BUSINESS-PROCESS.md`](product/BUSINESS-PROCESS.md) | уточнён владельцем 2026-11-09 | владелец |
+| Навигация Платформы: меню, роли, процесс → экран, сверка со стандартами | [`product/NAVIGATION.md`](product/NAVIGATION.md), правила рабочего места — [`research/2026-11-10-workspace-ux.md`](research/2026-11-10-workspace-ux.md) | принята владельцем 2026-11-10; заменяет SPEC-v3 §6.2 | владелец |
 | Продукт: кабинет контрагента — отношения, шаблоны ролей, подключаемые модули (концепция) | [`product/COUNTERPARTY-CABINET.md`](product/COUNTERPARTY-CABINET.md), бенчмарк [`research/2026-11-01-counterparty-cabinet`](research/2026-11-01-counterparty-cabinet/README.md), карта пути [`research/2026-11-04-counterparty-journey`](research/2026-11-04-counterparty-journey/README.md) | утверждено 2026-11-01; ADR и волны K0–K5 — по §9 | владелец |
 | Контракты доменов: API, события шины, MCP, портал | [`architecture/CONTRACTS.md`](architecture/CONTRACTS.md) (машиночитаемо — `packages/contracts/`) | действует | архитектор |
 | Шина `rt_bus`: публикация, подписки, доставка, приёмник (пакет `rt-bus`) | [`architecture/rt-bus.md`](architecture/rt-bus.md), решение — [ADR-0014](adr/0014-integration-bus-rt-bus.md) | действует | архитектор |
