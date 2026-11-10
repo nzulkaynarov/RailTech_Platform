@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { type Page, expect, test } from "@playwright/test";
 
-import { loginAndWait, spaGoto, waitForMotionEnd } from "./support/app";
+import { confirmDialog, loginAndWait, spaGoto, waitForMotionEnd } from "./support/app";
 
 // Находки гейта D2-6 на MSW (SPEC-v3 §3.3): D26G-2 — версия 1 КП, возвращённая на доработку, в истории «Заменена версией 2»,
 // версия 2 показывает состав и одобряется; D26G-3 — клиент отклонил КП: у менеджера строка с причиной, на расчёте — «Клиент
@@ -121,6 +121,7 @@ test.describe("D26G: жизненный цикл КП — доработка, о
         const approve = form.getByRole("button", { name: "Одобрить КП → отправить клиенту" });
         await expect(approve).toBeEnabled();
         await approve.click();
+        await confirmDialog(page);
         await expect(page.getByText("Одобрено").first()).toBeVisible();
       }
     });

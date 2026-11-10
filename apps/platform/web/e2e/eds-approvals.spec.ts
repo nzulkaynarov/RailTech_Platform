@@ -473,7 +473,6 @@ test.describe("Одобрение и согласование на телефо�
 
     await page.getByRole("button", { name: "Одобрить КП", exact: true }).click();
 
-    await confirmDialog(page);
     const sheet = page.getByRole("dialog", { name: /^Одобрение/ });
     await expect(sheet.getByRole("button", { name: APPROVE })).toBeDisabled();
     await expect(sheet.getByText(/Одобрить нельзя: нет визы гл\. инженера/)).toBeVisible();
