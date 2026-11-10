@@ -227,7 +227,7 @@ async def test_director_sees_the_quote_waiting_on_his_eds_step(
     for secret in ("margin", "23.40", "9000000"):
         assert secret not in queue.text
     card = {c["key"]: c for c in cards.json()["cards"]}["quotes_to_approve"]
-    assert (card["count"], card["hint"]) == (2, "Документы · КП на одобрение")
+    assert (card["count"], card["hint"]) == (2, "Документы · Исходящие")
     badges = {(c["module"], c["section"]): c for c in counters.json()["items"]}
     assert (badges[("eds", "drafts")]["count"], badges[("eds", "drafts")]["attention"]) == (2, True)
     assert fb.calls(fb.erp["approvals"]) == 0
@@ -343,7 +343,7 @@ async def test_director_cards_and_menu_badges_count_eds_work(
     assert cards["memos_to_approve"]["path"] == "/eds/approvals"
     # EDS отдал одну строку и ещё страницу: число — строки очереди, подсказка «не меньше»
     assert cards["quotes_to_approve"]["count"] == 1
-    assert cards["quotes_to_approve"]["hint"] == "Документы · КП на одобрение · не меньше"
+    assert cards["quotes_to_approve"]["hint"] == "Документы · Исходящие · не меньше"
     check(counters_response, "/menu-counters", "get")
     counters = {(c["module"], c["section"]): c for c in counters_response.json()["items"]}
     assert counters[("eds", "inbox")]["count"] == 3
@@ -514,8 +514,8 @@ async def test_card_says_not_fewer_when_eds_has_another_page(web: Web, fb: FeedB
 
     cards = {c["key"]: c for c in (await web.client.get("/api/v1/queue/cards")).json()["cards"]}
 
-    assert cards["letters_without_resolution"]["hint"] == "Документы · Входящие письма · не меньше"
-    assert cards["memos_to_approve"]["hint"] == "Документы · На согласовании"
+    assert cards["letters_without_resolution"]["hint"] == "Документы · Входящие · не меньше"
+    assert cards["memos_to_approve"]["hint"] == "Документы · Внутренние"
 
 
 # --- P8b: поручения, переносы срока, ознакомление ------------------------------------------------

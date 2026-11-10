@@ -1,8 +1,10 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { resetLeads } from "../../../mocks/fixtures/leads";
 import { panelEl, renderAt, setupBotTests, signIn } from "../../../test/botKit";
+import { server } from "../../../test/server";
 
 setupBotTests();
 
@@ -163,5 +165,56 @@ describe("Клиенты · Клиенты (D1-2b)", () => {
     });
     expect(within(partner).queryByRole("button", { name: "Это та же компания" })).toBeNull();
     expect(within(partner).getByText(/Решить может сотрудник/)).toBeVisible();
+  });
+});
+
+describe("Контрагенты: тип отношения", () => {
+  it("партнёр в общем списке, совпадение по ИНН — «Клиент и партнёр», фильтр сужает", async () => {
+    server.use(
+      http.get("*/crm/clients", () =>
+        HttpResponse.json({
+          items: [
+            {
+              id: 1,
+              name: "Клиент Один",
+              inn: "100000001",
+              in_erp: true,
+              open_requests: 0,
+              last_activity_at: null,
+              handoff_status: null,
+            },
+            {
+              id: 2,
+              name: "Клиент Два",
+              inn: "100000002",
+              in_erp: true,
+              open_requests: 0,
+              last_activity_at: null,
+              handoff_status: null,
+            },
+          ],
+        }),
+      ),
+      http.get("*/erp/stock/suppliers", () =>
+        HttpResponse.json({
+          items: [
+            { id: "7", name: "Партнёр Семь", inn: "700000007", email: null },
+            { id: "8", name: "Клиент Два (поставщик)", inn: "100000002", email: null },
+          ],
+        }),
+      ),
+    );
+    signIn("director@demo.example");
+    renderAt("/crm/clients");
+
+    const partner = await screen.findByRole("link", { name: /Партнёр Семь/ });
+    expect(partner).toHaveAttribute("href", "/erp/catalog?part=suppliers&supplier=7");
+    expect(screen.getAllByText("Клиент и партнёр")).toHaveLength(1);
+
+    fireEvent.click(screen.getByText("Партнёры", { selector: ".ant-segmented-item-label" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("link", { name: /Клиент Один/ })).toBeNull();
+    });
+    expect(screen.getByRole("link", { name: /Партнёр Семь/ })).toBeInTheDocument();
   });
 });

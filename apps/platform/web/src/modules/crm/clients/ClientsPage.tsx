@@ -1,10 +1,15 @@
-import { Card, Input } from "antd";
+import { Card, Input, Segmented, Tag } from "antd";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router";
 
 import { useViewport } from "../../../app/shell/useViewport";
 import type { ClientRow } from "../../../shared/api/generated/model";
-import { useListCrmClients } from "../../../shared/api/generated/platform-bff";
+import { canSee } from "../../../app/access";
+import { useAuth } from "../../../app/auth/useAuth";
+import {
+  useListCrmClients,
+  useListStockSuppliers,
+} from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { EmptyState } from "../../../shared/ui/EmptyState";
@@ -21,10 +26,25 @@ import { ClientPanel } from "./ClientPanel";
 import "../crm.css";
 
 /** Ширины колонок: название, ИНН, заявки, ERP, последняя активность (UX-1c, S9; по типу — platform-frontend.md §4.2) */
-const COLS = [null, 140, 144, 170, 184] as const;
+const COLS = [null, 140, 150, 144, 170, 184] as const;
+
+const KINDS = ["all", "clients", "partners"] as const;
+type KindFilter = (typeof KINDS)[number];
+type RelationKind = "client" | "partner" | "both";
+
+/** Партнёр без клиента: строка той же формы, отрицательный id отличает её от клиента CRM. */
+function isPartnerOnly(row: ClientRow): boolean {
+  return row.id < 0;
+}
+
+function RelationTag({ kind }: { kind: RelationKind }) {
+  const { t } = useTranslation("clients");
+  return <Tag>{t(`kinds.${kind}`)}</Tag>;
+}
 
 function ErpTag({ row }: { row: ClientRow }) {
   const { t } = useTranslation("clients");
+  if (isPartnerOnly(row)) return <span aria-hidden="true">—</span>;
   if (row.handoff_status === "failed")
     return (
       <StatusTag kind="access" status="error">
@@ -59,6 +79,17 @@ function NameLink({
 }) {
   const { t } = useTranslation("clients");
   const { mobile } = useViewport();
+  if (isPartnerOnly(row)) {
+    return (
+      <Link
+        className="pf-crm-link pf-focusable"
+        to={`/erp/catalog?part=suppliers&supplier=${String(-row.id)}`}
+        aria-label={t("open", { name: row.name })}
+      >
+        {row.name}
+      </Link>
+    );
+  }
   return (
     <Link
       className="pf-crm-link pf-focusable"
@@ -99,7 +130,36 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
   const title = t("modules:crm.sections.clients");
   useDocumentTitle(title);
   const q = params.get("q") ?? "";
+  const { me } = useAuth();
   const list = useListCrmClients(q ? { q } : {});
+  const suppliers = useListStockSuppliers(q ? { q } : undefined, {
+    query: { enabled: canSee(me, { resource: "erp.stock" }) },
+  });
+  const askedKind = params.get("kind");
+  const kind: KindFilter = KINDS.find((value) => value === askedKind) ?? "all";
+  const partnerInns = new Set((suppliers.data?.items ?? []).flatMap((s) => s.inn ?? []));
+  const relationOf = (row: ClientRow): RelationKind => {
+    if (isPartnerOnly(row)) return "partner";
+    return row.inn && partnerInns.has(row.inn) ? "both" : "client";
+  };
+  const rowsOf = (clients: readonly ClientRow[]): ClientRow[] => {
+    const clientInns = new Set(clients.flatMap((c) => c.inn ?? []));
+    const partners = (suppliers.data?.items ?? [])
+      .filter((s) => !s.inn || !clientInns.has(s.inn))
+      .map((s): ClientRow => ({
+        id: -Number(s.id),
+        name: s.name,
+        inn: s.inn,
+        in_erp: true,
+        open_requests: 0,
+        last_activity_at: null,
+        handoff_status: null,
+      }));
+    const all = [...clients, ...partners];
+    if (kind === "clients") return all.filter((row) => relationOf(row) !== "partner");
+    if (kind === "partners") return all.filter((row) => relationOf(row) !== "client");
+    return all;
+  };
   const selected = parseClientId(objectId) ?? parseClientId(params.get("client"));
   const creating = selected !== null && params.get("create") === "1";
 
@@ -123,8 +183,16 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
 
   return (
     <div className="pf-crm">
-      <PageHeader title={title} subtitle={t("clients:subtitle")} />
+      <PageHeader title={title} />
       <div className="pf-crm-controls">
+        <Segmented
+          aria-label={t("clients:kinds.filter")}
+          value={kind}
+          options={KINDS.map((value) => ({ value, label: t(`clients:kinds.${value}`) }))}
+          onChange={(value) => {
+            change({ kind: value === "all" ? null : value });
+          }}
+        />
         <div className="pf-crm-filter pf-crm-search">
           <label htmlFor="pf-clients-q">{t("clients:search.label")}</label>
           <Input.Search
@@ -141,16 +209,17 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
       <Card styles={{ body: { padding: 0 } }}>
         <QueryState query={list} labels={labels} rows={20}>
           {(data) =>
-            data.items.length === 0 ? (
+            rowsOf(data.items).length === 0 ? (
               <EmptyState
                 title={t(q ? "clients:empty.filteredTitle" : "clients:empty.title")}
                 text={t(q ? "clients:empty.filteredText" : "clients:empty.text")}
               />
             ) : mobile ? (
               <ul className="pf-crm-list" aria-label={t("clients:listLabel")}>
-                {data.items.map((row) => (
+                {rowsOf(data.items).map((row) => (
                   <li key={row.id} className="pf-crm-item" data-selected={selected === row.id}>
                     <div className="pf-crm-item-head">
+                      <RelationTag kind={relationOf(row)} />
                       <ErpTag row={row} />
                     </div>
                     <NameLink row={row} params={params} selected={selected === row.id} />
@@ -180,6 +249,7 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
                     <tr>
                       <th scope="col">{t("clients:columns.name")}</th>
                       <th scope="col">{t("clients:columns.inn")}</th>
+                      <th scope="col">{t("clients:kinds.column")}</th>
                       <th scope="col" className="pf-col-num">
                         {t("clients:columns.requests")}
                       </th>
@@ -188,12 +258,15 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.items.map((row) => (
+                    {rowsOf(data.items).map((row) => (
                       <tr key={row.id} data-selected={selected === row.id}>
                         <td className="pf-crm-wrap">
                           <NameLink row={row} params={params} selected={selected === row.id} />
                         </td>
                         <td className="pf-num">{row.inn ?? <span aria-hidden="true">—</span>}</td>
+                        <td>
+                          <RelationTag kind={relationOf(row)} />
+                        </td>
                         <td className="pf-col-num">{row.open_requests}</td>
                         <td>
                           <ErpTag row={row} />
