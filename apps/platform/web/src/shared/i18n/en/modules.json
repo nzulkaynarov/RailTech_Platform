@@ -213,6 +213,16 @@
       "retry": "Retry",
       "prev": "Back",
       "next": "Next"
+    },
+    "inbox": {
+      "call": "Call",
+      "search": "Find a conversation",
+      "message": "Write a message",
+      "noData": "Data will appear here",
+      "groups": {
+        "objects": "Object discussions",
+        "direct": "Direct"
+      }
     }
   },
   "admin": {

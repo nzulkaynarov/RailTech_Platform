@@ -1,0 +1,49 @@
+.pf-chats {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pf-chats .cs-main-container {
+  height: 560px;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+}
+
+.pf-chats-group {
+  padding: 12px 16px;
+}
+
+.pf-chats-group h2 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #595959;
+}
+
+.pf-chats .pf-chats-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #595959;
+}
+
+@media (max-width: 767px) {
+  .pf-chats .cs-main-container {
+    flex-direction: column;
+    height: auto;
+    min-height: 560px;
+  }
+
+  .pf-chats .cs-sidebar {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: none;
+    border-right: 0;
+  }
+
+  .pf-chats .cs-chat-container {
+    min-height: 360px;
+  }
+}

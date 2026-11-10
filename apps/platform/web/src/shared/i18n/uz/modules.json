@@ -213,6 +213,16 @@
       "retry": "Qayta urinish",
       "prev": "Orqaga",
       "next": "Oldinga"
+    },
+    "inbox": {
+      "call": "Qo‘ng‘iroq",
+      "search": "Muhokamani topish",
+      "message": "Xabar yozish",
+      "noData": "Ma’lumotlar shu yerda paydo bo‘ladi",
+      "groups": {
+        "objects": "Obyektlar bo‘yicha muhokamalar",
+        "direct": "Shaxsiy"
+      }
     }
   },
   "admin": {

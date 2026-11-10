@@ -4,8 +4,9 @@ import { RequireAccess } from "../../app/RequireAccess";
 import { ModuleRoutes } from "../ModuleRoutes";
 import { matchSection } from "../registry";
 import { CalendarPage } from "./calendar/CalendarPage";
+import { ChatsPage } from "./inbox/ChatsPage";
 
-/** Маршруты Органайзера: «Календарь» — экран с данными, остальные разделы пока заглушки модуля. */
+/** Маршруты Органайзера: «Календарь» и «Чаты» — настоящие экраны, остальные разделы пока заглушки модуля. */
 export function Component() {
   const location = useLocation();
   const match = matchSection(location.pathname, location.search);
@@ -13,6 +14,13 @@ export function Component() {
     return (
       <RequireAccess rule={match.section.access}>
         <CalendarPage />
+      </RequireAccess>
+    );
+  }
+  if (match?.module.code === "chats" && match.section.key === "all" && !match.objectId) {
+    return (
+      <RequireAccess rule={match.section.access}>
+        <ChatsPage />
       </RequireAccess>
     );
   }
