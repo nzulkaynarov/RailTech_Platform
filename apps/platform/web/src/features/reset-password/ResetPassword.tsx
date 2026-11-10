@@ -9,9 +9,7 @@ import {
   getListEmployeesQueryKey,
   useResetEmployeePasswordByEmail,
 } from "../../shared/api/generated/platform-bff";
-import { Consequence } from "../../shared/ui/Consequence";
 import { employeeErrorText } from "../../entities/employee/errors";
-import { lines } from "../first-run/lines";
 import { TemporaryPasswordCard } from "../temporary-password/TemporaryPasswordCard";
 import { useIssueTemporaryPasswordAction } from "../temporary-password/useTemporaryPassword";
 import { resetErrorKey } from "./errors";
@@ -102,18 +100,6 @@ export function ResetPassword({ employee, selfId }: { employee: Employee; selfId
       <p className="pf-hint" id={`${hintId}-temp`} style={{ margin: 0 }}>
         {t("resetPassword.temporaryHint")}
       </p>
-      <Consequence
-        title={t("resetPassword.whatHappens")}
-        items={
-          method === "email"
-            ? [
-                t("resetPassword.step1", { email: employee.email }),
-                t("resetPassword.step2"),
-                t("resetPassword.step3"),
-              ]
-            : lines(tm, "admin.org.password.issue.consequence")
-        }
-      />
       {method === "temporary" && issue.isError ? (
         <Alert type="error" showIcon role="alert" message={employeeErrorText(tm, issue.error)} />
       ) : null}

@@ -237,11 +237,6 @@ function BrigadeForm({ brigade, onClose }: { brigade?: Brigade | undefined; onCl
     <FormModal
       title={brigade ? t("brigades.form.editTitle") : t("brigades.form.addTitle")}
       okLabel={brigade ? t("save") : t("brigades.form.add")}
-      items={
-        t(brigade ? "brigades.form.editSteps" : "brigades.form.addSteps", {
-          returnObjects: true,
-        }) as string[]
-      }
       loading={mutation.isPending}
       error={mutation.error}
       disabled={name.trim() === "" || !validCount}

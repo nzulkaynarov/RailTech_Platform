@@ -118,9 +118,6 @@ test.describe("Счета и оплаты: бухгалтер", () => {
     ).toBeVisible();
     await expect(form.getByRole("radio", { name: "платёжка-0127.pdf" })).toBeChecked();
     await expect(form.getByLabel(/Сумма по выписке/)).toHaveValue("28000000.00");
-    await expect(form.getByRole("group", { name: "Что произойдёт" })).toContainText(
-      "Счёт СЧ-2026/145 станет «Оплачен»",
-    );
     await expect(form.getByRole("button", { name: "Подтвердить оплату" })).toBeEnabled();
     await settledScreenshot(page, "card-proof");
     await expectNoViolations(page, "карточка счёта с платёжкой");
@@ -171,9 +168,6 @@ test.describe("Счета и оплаты: бухгалтер", () => {
     await form.getByRole("button", { name: "Частичная оплата" }).click();
     await expect(amount).toBeFocused();
     await amount.fill("40 000 000");
-    const consequence = form.getByRole("group", { name: "Что произойдёт" });
-    await expect(consequence).toContainText("станет «Частично оплачен»");
-    await expect(consequence).toContainText(/остаток 72\s000\s000/);
     await settledScreenshot(page, "partial-form");
     await form.getByRole("button", { name: "Подтвердить частичную оплату" }).click();
     await confirmDialog(page);
@@ -242,9 +236,6 @@ test.describe("Счета и оплаты: бухгалтер", () => {
     await expect(panel.getByRole("link", { name: "Скачать счёт-аренда.pdf" })).toBeVisible();
     const form = memoForm(page);
     await expect(form.getByLabel(/Сумма оплаты/)).toHaveValue("4200000.00");
-    await expect(form.getByRole("group", { name: "Что произойдёт" })).toContainText(
-      "станет «Оплачена»",
-    );
     await pickFiles(form.getByLabel(/Платёжка/), {
       name: "pp-015.pdf",
       mimeType: "application/pdf",

@@ -469,7 +469,6 @@ function DocDrawer({
             <FormModal
               title={t("docs.deleteTitle", { title: doc.title })}
               okLabel={t("docs.delete")}
-              items={t("docs.deleteSteps", { returnObjects: true }) as string[]}
               loading={remove.isPending}
               error={remove.error}
               onOk={() => {
@@ -556,7 +555,6 @@ function UploadForm({
     <FormModal
       title={t("docs.form.title")}
       okLabel={t("docs.form.ok")}
-      items={t("docs.form.steps", { returnObjects: true }) as string[]}
       loading={mutation.isPending}
       error={mutation.error}
       disabled={file === null || (!product && !deal)}

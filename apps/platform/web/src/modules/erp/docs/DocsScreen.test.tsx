@@ -126,7 +126,6 @@ describe("Техдокументация: загрузка и удаление",
     const input = await within(form).findByLabelText("Файл");
     const ok = await within(form).findByRole("button", { name: "Загрузить" });
     expect(ok).toBeDisabled();
-    expect(await within(form).findByText("Что произойдёт")).toBeInTheDocument();
     fireEvent.change(input, { target: { files: [pdfFile("scheme.pdf")] } });
     fireEvent.change(within(form).getByLabelText("Название"), { target: { value: "Схема шкафа" } });
     await waitFor(() => {
@@ -202,7 +201,6 @@ describe("Техдокументация: загрузка и удаление",
     const drawer = await screen.findByRole("dialog", { name: "Регламент ПНР устройств СЦБ" });
     fireEvent.click(await within(drawer).findByRole("button", { name: "Удалить файл" }));
     const confirm = await findModal(/Удалить файл «Регламент ПНР/);
-    expect(await within(confirm).findByText("Что произойдёт")).toBeInTheDocument();
     fireEvent.click(await within(confirm).findByRole("button", { name: /Удалить файл$/ }));
     await waitFor(() => {
       expect(

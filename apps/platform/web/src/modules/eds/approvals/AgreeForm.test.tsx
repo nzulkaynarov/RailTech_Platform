@@ -25,17 +25,11 @@ describe("Согласование: форма", () => {
     const { form } = await openForm();
 
     expect(within(form).getByRole("button", { name: "Согласовать" })).toBeEnabled();
-    expect(within(form).getByRole("group", { name: "Что произойдёт" })).toHaveTextContent(
-      "Дальше документ получит: Бухгалтер.",
-    );
   });
 
   it("заявление без суммы: шага бухгалтера нет", async () => {
     const { form } = await openForm("ЗЯ-2026/003");
 
-    expect(within(form).getByRole("group", { name: "Что произойдёт" })).toHaveTextContent(
-      "Автор получит уведомление с вашим комментарием.",
-    );
     expect(within(form).queryByText(/Дальше документ получит/)).toBeNull();
   });
 
@@ -136,9 +130,6 @@ describe("Согласование: шаг бухгалтера", () => {
     expect(within(form).queryByRole("button", { name: "Принять к оплате" })).toBeNull();
     expect(within(form).getByRole("button", { name: "Вернуть" })).toBeDisabled();
     expect(within(form).queryByRole("button", { name: "Согласовать" })).toBeNull();
-    expect(within(form).getByRole("group", { name: "Что произойдёт" })).toHaveTextContent(
-      "«Оплачено»",
-    );
     expect(within(form).getByText(/шаг бухгалтера закрывает «Оплачено»/)).toBeVisible();
   });
 

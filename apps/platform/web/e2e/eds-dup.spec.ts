@@ -99,7 +99,6 @@ test.describe("EDS-DUP: одно письмо — один входящий но
       const dialog = page.getByRole("dialog");
       await dialog.getByLabel("Номер оригинала").fill("ВХ-100/26");
       await dialog.getByLabel("Комментарий").fill("Пришло дважды: почтой и курьером");
-      await expect(dialog.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
       await shot(page, "mark-dialog");
       await expectNoViolations(page, `диалог ${String(width)}`);
 

@@ -14,7 +14,6 @@ import {
   useScanEdsProjectContract,
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { ActionToggle } from "../../../shared/ui/FormParts";
@@ -115,14 +114,6 @@ function ContractBody({
         />
         {card.can_create_contract ? (
           <div className="pf-fp-form">
-            <Consequence
-              title={t("contract.none.consequence.title")}
-              items={[
-                t("contract.none.consequence.step1"),
-                t("contract.none.consequence.step2"),
-                t("contract.none.consequence.step3"),
-              ]}
-            />
             {error ? (
               <p className="pf-field-error" role="alert">
                 {error}
@@ -204,10 +195,6 @@ function ContractBody({
   if (primary === "attach_scan") {
     primaryBlock = (
       <>
-        <Consequence
-          title={t("contract.consequence.title")}
-          items={t("contract.consequence.attach_scan", { returnObjects: true }) as string[]}
-        />
         <ScanForm
           labels={{
             label: t("contract.scan.label"),
@@ -232,7 +219,6 @@ function ContractBody({
       </>
     );
   } else if (primary !== null) {
-    const lines = t(`contract.consequence.${primary}`, { returnObjects: true }) as string[];
     primaryBlock = (
       <form
         key={primary}
@@ -270,7 +256,6 @@ function ContractBody({
             onChange={setNote}
           />
         ) : null}
-        <Consequence title={t("contract.consequence.title")} items={lines} />
         {error && !rejecting ? (
           <p className="pf-field-error" role="alert">
             {error}

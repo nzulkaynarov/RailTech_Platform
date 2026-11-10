@@ -169,7 +169,6 @@ function RateForm({ onClose }: { onClose: () => void }) {
     <FormModal
       title={t("refs.rates.form.title")}
       okLabel={t("refs.rates.form.ok")}
-      items={t("refs.rates.form.steps", { returnObjects: true }) as string[]}
       loading={mutation.isPending}
       error={mutation.error}
       disabled={day === "" || rate.trim() === ""}
@@ -379,11 +378,6 @@ function HsForm({ code, onClose }: { code?: HsCode | undefined; onClose: () => v
     <FormModal
       title={code ? t("refs.hs.form.editTitle", { code: code.code }) : t("refs.hs.form.addTitle")}
       okLabel={code ? t("save") : t("refs.hs.form.add")}
-      items={
-        t(code ? "refs.hs.form.editSteps" : "refs.hs.form.addSteps", {
-          returnObjects: true,
-        }) as string[]
-      }
       loading={mutation.isPending}
       error={mutation.error}
       disabled={name.trim() === "" || (!code && !/^\d+$/.test(value.trim()))}
@@ -602,11 +596,6 @@ function BrandForm({ brand, onClose }: { brand?: Manufacturer | undefined; onClo
     <FormModal
       title={brand ? t("refs.brands.form.editTitle") : t("refs.brands.form.addTitle")}
       okLabel={brand ? t("save") : t("refs.brands.form.add")}
-      items={
-        t(brand ? "refs.brands.form.editSteps" : "refs.brands.form.addSteps", {
-          returnObjects: true,
-        }) as string[]
-      }
       loading={mutation.isPending}
       error={mutation.error}
       disabled={name.trim() === ""}

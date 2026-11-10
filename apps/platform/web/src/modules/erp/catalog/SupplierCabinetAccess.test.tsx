@@ -160,7 +160,6 @@ describe("Поставщик: блок «Доступ в кабинет»", () =
     fireEvent.click(await within(section).findByRole("button", { name: "Приостановить доступ" }));
 
     const confirm = await findModal("Приостановить доступ в кабинет");
-    expect(within(confirm).getByText(/Открытые сессии партнёра закроются/)).toBeInTheDocument();
     fireEvent.click(within(confirm).getByRole("button", { name: "Приостановить" }));
     await modalClosed("Приостановить доступ в кабинет");
 

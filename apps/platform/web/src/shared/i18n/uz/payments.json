@@ -434,12 +434,6 @@
     "name": "Hisobni chiqarish",
     "submit": "Hisobni chiqarish",
     "lead": "{{number}} hisobi — qoralama: mijoz uni hali ko‘rmaydi.",
-    "consequence": {
-      "step1": "Hisob «Chiqarilgan» holatini va bugungi chiqarilgan sanani oladi; to‘lov muddati qo‘lda belgilanmagan bo‘lsa, shu sanadan hisoblanadi.",
-      "step2": "ERP kompaniya rekvizitlari bilan PDF tayyorlaydi; hisob summalari endi o‘zgarmaydi.",
-      "step3": "{{client}} hisobni kabinetda ko‘radi, Telegram-botda xabar va pochtaga xat oladi.",
-      "step4": "Hisob «To‘lovni kutmoqda» bo‘limida paydo bo‘ladi; to‘lovni shu yerda tasdiqlash mumkin."
-    },
     "done": "{{number}} hisobi chiqarildi.",
     "reasons": {
       "already_issued": "Hisob allaqachon chiqarilgan. Karta yangilandi.",

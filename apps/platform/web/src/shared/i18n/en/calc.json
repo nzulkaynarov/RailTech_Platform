@@ -66,12 +66,7 @@
       "textLines": "The request has {{count}} line(s). Move them into costing, then add lines and match them with the catalogue.",
       "textEmpty": "The request has no lines, only text. Start costing and parse the request text into lines or add them manually.",
       "action": "Start costing",
-      "noRights": "Costing can be started by an employee with full access to “Costing”.",
-      "consequence": [
-        "Request lines move into the costing draft quote (exact part number and standard matches get a catalogue card at once).",
-        "The purchase price comes from the company's own offer when there is one; you fill in the rest.",
-        "The client gets nothing: they see “Accepted, we are costing”."
-      ]
+      "noRights": "Costing can be started by an employee with full access to “Costing”."
     },
     "request": "Request text",
     "requestEmpty": "No request text.",
@@ -204,11 +199,6 @@
       "rejected_client": "The client rejected the quote — choose above: a new quote version or a lost request."
     },
     "missingGroups": "Waiting for sign-off: {{groups}}.",
-    "consequence": [
-      "The quote gets a number and goes to the director for approval (Documents · Draft quotes).",
-      "The director sees cost, margin, line sign-offs and the margin limit from the resolution.",
-      "Lines are locked until the director decides; if returned for rework, you edit and sign off again."
-    ],
     "done": "Draft quote with the director"
   },
   "task": {
@@ -283,12 +273,7 @@
     "cancel": "Cancel",
     "newVersion": {
       "button": "New quote version",
-      "done": "Costing reopened: draft quote version {{version}}",
-      "consequence": [
-        "“New quote version”: lines and prices move to the next version draft, visas are collected again; the reservation released on the client’s rejection is set again on this screen.",
-        "The previous version stays in history as rejected by the client.",
-        "“Lost request”: the request is closed with a reason, its reservation is released, nothing goes to the client."
-      ]
+      "done": "Costing reopened: draft quote version {{version}}"
     },
     "lost": {
       "button": "Lost request",
@@ -296,12 +281,7 @@
       "reason": "Reason",
       "hint": "Required. Goes to the request log and to CRM.",
       "submit": "Close as lost",
-      "done": "Request closed as lost, reservation released",
-      "consequence": [
-        "The request moves to “Lost”; the director can return it to costing.",
-        "The goods reservation is released back to free stock.",
-        "Nothing is sent to the client."
-      ]
+      "done": "Request closed as lost, reservation released"
     }
   }
 }

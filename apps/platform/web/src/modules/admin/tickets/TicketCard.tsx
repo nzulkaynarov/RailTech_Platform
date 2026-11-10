@@ -19,7 +19,6 @@ import {
   useSetTicketStatus,
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 
@@ -195,10 +194,6 @@ export function TicketCard({ number }: { number: string }) {
               </div>
             ) : null}
           </div>
-          <Consequence
-            title={t("admin.card.consequenceTitle")}
-            items={[...(t("admin.card.consequence", { returnObjects: true }) as string[])]}
-          />
           <div className="pf-help-actions">
             <Button
               type="primary"

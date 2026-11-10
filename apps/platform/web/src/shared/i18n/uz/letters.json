@@ -390,11 +390,6 @@
         "same_file": "oʻsha fayl"
       }
     },
-    "consequence": [
-      "Xat ВХ raqamini va «Rezolyutsiya kutilmoqda» holatini oladi.",
-      "Direktor uni «Vazifalar»da ko‘radi va rezolyutsiya qo‘yadi.",
-      "Kartochka «Kiruvchi xatlar»da ochiladi; fayl hujjatlarda saqlanadi."
-    ],
     "submit": "Ro‘yxatga olish",
     "cancel": "Bekor qilish",
     "toast": "Ro‘yxatga olindi: {{number}}",
@@ -492,23 +487,6 @@
     "approve": "Loyihani tasdiqlash",
     "submit": "Rezolyutsiya qo‘yish",
     "saveDraft": "Loyihani saqlash",
-    "consequence": {
-      "title": "Nima bo‘ladi",
-      "execute": [
-        "Xat «Ijroda» holatini oladi va nazoratga qo‘yiladi.",
-        "Ijrochilarga topshiriq «Vazifalar», qo‘ng‘iroqcha va Telegramga boradi.",
-        "Eslatmalar — muddatdan bir ish kuni oldin va muddat kuni; muddat o‘tgach — «Muddati o‘tgan».",
-        "Hamma bajarganda xat «Bajarildi» bo‘ladi, sizga xabar keladi."
-      ],
-      "info": [
-        "Xat «Ma’lumot uchun qabul qilindi» holatini oladi, topshiriq yo‘q.",
-        "«Tanishtirish»da belgilanganlar «Tanishib chiqish» vazifasini oladi."
-      ],
-      "draft": [
-        "Xat «Rezolyutsiya kutilmoqda» holatida qoladi.",
-        "Direktor loyihani rezolyutsiya shaklida ko‘radi va bir bosishda tasdiqlaydi yoki tuzatadi."
-      ]
-    },
     "staff": {
       "unavailable": "Xodimlar ro‘yxati yuklanmadi.",
       "retry": "Qayta urinish"
@@ -1079,7 +1057,6 @@
       "deleted": "O‘chirildi",
       "required": "Nomini kiriting",
       "deleteTitle": "«{{name}}» o‘chirilsinmi?",
-      "consequence": "Qiymat ma’lumotnoma va shakllardan yo‘qoladi. U bilan xatlar yo‘q.",
       "empty": {
         "title": "Qiymatlar yo‘q",
         "text": "Birinchi qiymatni qo‘shing."
@@ -1144,7 +1121,6 @@
       "required": "Maydonni to‘ldiring",
       "deleted": "Shablon o‘chirildi",
       "deleteTitle": "«{{name}}» shabloni o‘chirilsinmi?",
-      "consequence": "Shablon «Shablondan» ro‘yxatidan yo‘qoladi. Qo‘yilgan rezolyutsiyalar o‘zgarmaydi.",
       "empty": {
         "title": "Shablonlar yo‘q",
         "text": "Odatiy xatlar uchun umumiy shablon qo‘shing."

@@ -138,9 +138,6 @@ describe("«Создать заявку» из лида и из клиента (
     });
     expect(await within(panel).findByText("Письмо загружено: pismo.pdf")).toBeVisible();
     fireEvent.click(within(panel).getByRole("radio", { name: "Срочная" }));
-    const consequence = within(panel).getByRole("group", { name: "Что произойдёт" });
-    expect(within(consequence).getByText(/Лид станет клиентом/)).toBeVisible();
-    expect(within(consequence).getByText(/с пометкой «Срочно»/)).toBeVisible();
 
     const submit = within(panel).getByRole("button", { name: /Создать заявку → директору/ });
     // Двойной клик — одна заявка: кнопка занята, а ключ формы тот же

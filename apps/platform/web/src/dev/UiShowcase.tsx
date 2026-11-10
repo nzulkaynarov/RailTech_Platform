@@ -6,7 +6,6 @@ import { MEANING_TONE, STATUS_KINDS, STATUS_TONE, STATUS_TONES } from "../shared
 import { formatDocNumber } from "../shared/lib/docNumber";
 import { useFormat } from "../shared/lib/useFormat";
 import { Checklist } from "../shared/ui/Checklist";
-import { Consequence } from "../shared/ui/Consequence";
 import { ContextPanel } from "../shared/ui/ContextPanel";
 import { CounterCard, CounterGrid } from "../shared/ui/CounterCard";
 import { DateField, DateRangeField } from "../shared/ui/DateField";
@@ -99,13 +98,6 @@ function Blocks() {
     <Section id="blocks" title="Consequence, History, Checklist, DefinitionList">
       <div className="dev-columns">
         <div className="dev-stack">
-          <Consequence
-            items={[
-              "Специалисты получат задание в «Расчёт · Мои расчёты» и сообщение в чат проекта.",
-              "Клиенту бот напишет: «Заявка принята, считаем».",
-              "Готовый расчёт вернётся к вам черновиком КП.",
-            ]}
-          />
           <div className="pf-card dev-card">
             <div className="pf-hint dev-caption">ИСТОРИЯ ДОГОВОРА ДОГ-2026/104</div>
             <History
@@ -187,13 +179,6 @@ function Panel() {
             <Button type="primary" block>
               Одобрить КП → Исходящие
             </Button>
-            <Consequence
-              items={[
-                "КП получит исходящий номер и PDF.",
-                "Клиенту уйдёт ссылка в выбранные каналы.",
-                "Когда клиент примет КП, откроется проект.",
-              ]}
-            />
           </div>
         </ContextPanel>
       </div>

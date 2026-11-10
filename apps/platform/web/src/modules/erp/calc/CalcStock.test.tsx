@@ -85,7 +85,6 @@ describe("Расчёт · «Запросить цену у поставщика�
     await openCalc("supply@demo.example");
     fireEvent.click(screen.getByRole("button", { name: "Запросить цену у поставщика" }));
     const modal = await screen.findByRole("dialog");
-    expect(within(modal).getByText("Что произойдёт")).toBeInTheDocument();
     const submit = within(modal).getByRole("button", { name: "Отправить запрос" });
     expect(submit).toBeDisabled();
     fireEvent.mouseDown(within(modal).getByRole("combobox", { name: "Поставщик" }));

@@ -2,13 +2,9 @@ import { Alert, App, Button, Input } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { accessOfRoleIds } from "../../entities/employee/access";
-import { backendConsequence } from "../../entities/employee/consequence";
 import { employeeErrorText } from "../../entities/employee/errors";
 import { isSystemAdmin } from "../../entities/role/roles";
 import type { Employee } from "../../shared/api/generated/model";
-import { Consequence } from "../../shared/ui/Consequence";
-import { moduleName } from "../../modules/registry";
 import { RoleCheckboxes } from "./RoleCheckboxes";
 import { useRoles } from "./useRoles";
 import { hasActiveLeads } from "./leads";
@@ -23,10 +19,6 @@ export interface AssignRoleFormProps {
   selfId: string;
   /** Активные администраторы кроме этого сотрудника: решает CRM, форма только предупреждает заранее */
   otherActiveAdmins: number;
-}
-
-function moduleList(t: (key: string) => string, codes: readonly string[]): string {
-  return codes.map((code) => moduleName(t, code)).join(", ");
 }
 
 /**
@@ -58,7 +50,6 @@ export function AssignRoleForm({ employee, selfId, otherActiveAdmins }: AssignRo
     selected.length !== current.length || selected.some((id) => !current.includes(id));
   const positionChanged = position.trim() !== (employee.position ?? "");
   const dirty = rolesChanged || positionChanged;
-  const isSelf = employee.id === selfId;
   const adminRole = roles.find(isSystemAdmin);
   const dropsLastAdmin =
     employee.roles.some(isSystemAdmin) &&
@@ -72,28 +63,6 @@ export function AssignRoleForm({ employee, selfId, otherActiveAdmins }: AssignRo
       ? t("admin.org.form.needRole")
       : null;
 
-  const before = accessOfRoleIds(roles, current);
-  const after = accessOfRoleIds(roles, selected);
-  const lost = before.modules.filter((m) => !after.modules.includes(m));
-  const items = [
-    t("admin.org.consequence.modules", { modules: moduleList(t, after.modules) || "—" }),
-    ...(lost.length > 0 ? [t("admin.org.consequence.lost", { modules: moduleList(t, lost) })] : []),
-    ...backendConsequence(t, after),
-    ...(positionChanged
-      ? [
-          position.trim()
-            ? t("admin.org.consequence.position", { position: position.trim() })
-            : t("admin.org.consequence.positionCleared"),
-        ]
-      : []),
-    ...(isSelf
-      ? [
-          t("admin.org.consequence.self"),
-          ...(lost.includes("admin") ? [t("admin.org.consequence.selfLosesAdmin")] : []),
-        ]
-      : []),
-    t("admin.org.consequence.applied"),
-  ];
   const leads = update.isError && hasActiveLeads(update.error);
 
   const save = () => {
@@ -162,7 +131,7 @@ export function AssignRoleForm({ employee, selfId, otherActiveAdmins }: AssignRo
           {leads ? t("admin.org.transfer.save") : t("admin.org.form.save")}
         </Button>
       </div>
-      {blocker ? null : <Consequence items={items} />}
+      {blocker ? null : null}
     </form>
   );
 }

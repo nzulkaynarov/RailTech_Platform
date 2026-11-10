@@ -254,13 +254,7 @@
     "none": {
       "title": "No contract yet",
       "text": "The contract draft is created from the accepted quote by the accountant or the director.",
-      "create": "Create contract draft",
-      "consequence": {
-        "title": "What will happen",
-        "step1": "A contract draft with the status “Draft” appears from the accepted quote.",
-        "step2": "The client cannot see it yet: you send it for agreement.",
-        "step3": "The project log records who created the draft and when."
-      }
+      "create": "Create contract draft"
     },
     "fields": {
       "total": "Amount",
@@ -287,33 +281,6 @@
       "attach_scan": "Attach signed scan",
       "reject": "Client rejected the contract…",
       "revise": "Return to draft"
-    },
-    "consequence": {
-      "title": "What will happen",
-      "send_to_client": [
-        "The client sees the contract draft in the cabinet: “Please agree the contract wording”.",
-        "The client gets a notification on their channels.",
-        "The log records who sent the draft and when."
-      ],
-      "client_agreed": [
-        "The contract gets the status “Agreed by client”.",
-        "Next it is issued at the e-document operator, outside the platform.",
-        "The log records who marked the agreement and when."
-      ],
-      "mark_issued": [
-        "The contract gets the status “Issued at operator”.",
-        "The client sees “Contract is being signed”.",
-        "When both sides have signed at the operator, attach the scan: the contract becomes “Signed”."
-      ],
-      "attach_scan": [
-        "The contract becomes “Signed (scan)”; the file is stored.",
-        "The project moves to payment: ERP creates a draft prepayment invoice.",
-        "The log records who attached the scan and when."
-      ],
-      "revise": [
-        "The draft returns to “Draft”; the client's agreement is reset.",
-        "Send the corrected draft to the client as a separate action."
-      ]
     },
     "note": {
       "label": "Operator or number in the e-document system",
@@ -360,12 +327,7 @@
       "noInvoice": "The act is issued against an issued invoice. No invoice has been issued yet — issue it in “Invoices & payments”.",
       "forbidden": "Acts are issued by the director and the accountant.",
       "ready": "The invoice is issued: you can issue the act.",
-      "issue": "Issue the act",
-      "consequence": [
-        "The act gets a number and the status “Issued”.",
-        "The client sees “Awaiting your acceptance”.",
-        "The act PDF is built from the invoice; the log records who issued it and when."
-      ]
+      "issue": "Issue the act"
     },
     "fields": {
       "total": "Amount",
@@ -383,18 +345,6 @@
       "attach_scan": "Attach signed scan",
       "return": "The customer returned the act…",
       "reissue": "Issue again"
-    },
-    "consequence": {
-      "title": "What will happen",
-      "attach_scan": [
-        "The act becomes “Signed (scan)”; the file is stored.",
-        "When all invoices are paid, the project becomes “Completed”.",
-        "The log records who attached the scan and when."
-      ],
-      "reissue": [
-        "The same act with the same number is issued again.",
-        "The client sees “Awaiting your acceptance”."
-      ]
     },
     "return": {
       "title": "The customer returned the act",

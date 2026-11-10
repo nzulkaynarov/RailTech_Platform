@@ -123,7 +123,6 @@ test.describe("Первый запуск: полный путь", () => {
     await page.goto("/login");
     await expect(page).toHaveURL(/\/setup$/);
     await expect(page.getByRole("heading", { level: 1, name: "Первый запуск" })).toBeVisible();
-    await expect(page.getByText("Что произойдёт")).toBeVisible();
     await page.getByLabel("Код первого запуска").fill("wrong-code");
     await page.getByLabel("Имя и фамилия").fill("Первая Админова");
     await page.getByLabel("Электронная почта администратора").fill("first.admin@demo.example");

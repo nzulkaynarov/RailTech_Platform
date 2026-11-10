@@ -51,7 +51,6 @@ describe("Обращения к администратору", () => {
     const dialog = await screen.findByRole("dialog", { name: "Написать администратору" });
     expect(within(dialog).getByText("Нужен доступ к разделу")).toBeInTheDocument();
     expect(within(dialog).getByText(/страница \/admin\/org, роль Менеджер/)).toBeInTheDocument();
-    expect(within(dialog).getByText("Что произойдёт")).toBeInTheDocument();
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Отправить" }));
     expect(await within(dialog).findByText("Опишите, что случилось")).toBeInTheDocument();

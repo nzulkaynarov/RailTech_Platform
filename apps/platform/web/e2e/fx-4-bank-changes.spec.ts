@@ -32,7 +32,6 @@ for (const width of WIDTHS) {
 
       await list.getByRole("button", { name: "Отклонить" }).click();
       const dialog = page.getByRole("dialog");
-      await expect(dialog.getByText("Что произойдёт")).toBeVisible();
       await waitForMotionEnd(page);
       await shot(page, `reject-dialog-${String(width)}`);
       await expectNoViolations(page, "отклонение");
@@ -40,7 +39,6 @@ for (const width of WIDTHS) {
 
       await list.getByRole("button", { name: "Подтвердить" }).click();
       const approve = page.getByRole("dialog");
-      await expect(approve.getByText("Что произойдёт")).toBeVisible();
       await shot(page, `approve-dialog-${String(width)}`);
       await approve.getByRole("button", { name: "Подтвердить" }).click();
 

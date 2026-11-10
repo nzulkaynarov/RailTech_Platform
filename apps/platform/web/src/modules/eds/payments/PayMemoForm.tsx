@@ -11,7 +11,6 @@ import {
   uploadPaymentReceiptFile,
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { DateField } from "../../../shared/ui/DateField";
 import { FileField } from "../../../shared/ui/FileField";
 import { ActionToggle, ErrorNote, FormField } from "../../../shared/ui/FormParts";
@@ -199,18 +198,6 @@ export function PayMemoForm({ memo, variant = "panel", onDone }: PayMemoFormProp
           }}
         />
       </FormField>
-
-      <Consequence
-        items={[
-          t("memo.form.consequence.step1", {
-            number: memo.number ?? "",
-            amount: fmt(normalized ?? approved),
-            date: date || today,
-          }),
-          t("memo.form.consequence.step2"),
-          t("memo.form.consequence.step3"),
-        ]}
-      />
 
       <ErrorNote message={failureText} />
 

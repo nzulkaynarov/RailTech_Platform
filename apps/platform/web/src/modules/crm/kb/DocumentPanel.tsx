@@ -10,7 +10,6 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import type { KbDocument } from "../../../shared/api/generated/model";
 import { useFormat } from "../../../shared/lib/useFormat";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { ActionToggle, ErrorNote, QueryState } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
@@ -100,13 +99,6 @@ function Actions({ doc }: { doc: KbDocument }) {
             update.mutate({ id: doc.id, data: { is_active: !doc.is_active } });
           }}
         >
-          <Consequence
-            items={[
-              t(turnOff ? "panel.toggle.offStep1" : "panel.toggle.onStep1"),
-              t(turnOff ? "panel.toggle.offStep2" : "panel.toggle.onStep2"),
-              t("panel.toggle.step3"),
-            ]}
-          />
           <ErrorNote
             message={update.isError ? kbErrorText(t, update.error, i18n.language) : null}
           />
@@ -132,13 +124,6 @@ function Actions({ doc }: { doc: KbDocument }) {
             reingest.mutate({ id: doc.id });
           }}
         >
-          <Consequence
-            items={[
-              t("panel.reingest.step1"),
-              t("panel.reingest.step2"),
-              t("panel.reingest.step3"),
-            ]}
-          />
           <ErrorNote
             message={reingest.isError ? kbErrorText(t, reingest.error, i18n.language) : null}
           />

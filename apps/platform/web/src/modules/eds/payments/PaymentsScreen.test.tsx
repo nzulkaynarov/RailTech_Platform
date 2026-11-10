@@ -168,9 +168,6 @@ describe("Подтвердить оплату", () => {
 
     const amount = within(form).getByLabelText(/Сумма по выписке/);
     expect(amount).toHaveValue("112000000.00");
-    expect(within(form).getByRole("group", { name: "Что произойдёт" })).toHaveTextContent(
-      "Счёт СЧ-2026/142 станет «Оплачен»",
-    );
     fireEvent.click(within(form).getByRole("button", { name: "Подтвердить оплату" }));
     await confirmDialog();
 
@@ -190,9 +187,6 @@ describe("Подтвердить оплату", () => {
     expect(
       within(form).getByRole("button", { name: "Подтвердить частичную оплату" }),
     ).toBeEnabled();
-    const consequence = within(form).getByRole("group", { name: "Что произойдёт" });
-    expect(consequence).toHaveTextContent("станет «Частично оплачен»");
-    expect(consequence).toHaveTextContent(/остаток 72\s000\s000/);
 
     fireEvent.click(within(form).getByRole("button", { name: "Подтвердить частичную оплату" }));
 

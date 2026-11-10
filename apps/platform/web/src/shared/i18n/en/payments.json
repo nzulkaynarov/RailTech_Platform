@@ -434,12 +434,6 @@
     "name": "Issue invoice",
     "submit": "Issue invoice",
     "lead": "Invoice {{number}} is a draft: the client cannot see it yet.",
-    "consequence": {
-      "step1": "The invoice becomes “Issued” with today as the issue date; the payment term counts from it unless it was set manually.",
-      "step2": "ERP renders a PDF with the company's bank details; the invoice amounts no longer change.",
-      "step3": "{{client}} sees the invoice in the client portal and gets a Telegram bot message and an email.",
-      "step4": "The invoice moves to “Awaiting payment”; you can confirm the payment right here."
-    },
     "done": "Invoice {{number}} issued.",
     "reasons": {
       "already_issued": "The invoice is already issued. The card has been refreshed.",

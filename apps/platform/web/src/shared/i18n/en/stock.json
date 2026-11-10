@@ -121,12 +121,7 @@
     "cell": "Cell",
     "note": "Reason",
     "submit": "Record",
-    "done": "Stock changed",
-    "consequence": [
-      "The cell stock changes immediately.",
-      "The item movement log gets an entry with author and time.",
-      "Project reservations are untouched: stock will not drop below their total."
-    ]
+    "done": "Stock changed"
   },
   "orders": {
     "search": "Find an order: number, supplier, item",
@@ -191,11 +186,6 @@
     "removeLine": "Remove line {{n}}",
     "submit": "Create draft",
     "done": "Draft {{number}} created",
-    "consequence": [
-      "A draft order with number PO-YYYY-NNN is created.",
-      "Nothing is sent to the supplier until you press “Send to supplier”.",
-      "Lines and prices can be edited while the order is a draft."
-    ],
     "productHint": "Type at least two letters of the name or article",
     "productSearching": "Searching…",
     "productNone": "Nothing found"
@@ -261,33 +251,18 @@
       "email": "Email address",
       "emailKnown": "Address from the supplier card; you can enter another.",
       "emailMissing": "The supplier has no email: enter an address for the letter.",
-      "submit": "Send letter",
-      "consequence": [
-        "The supplier gets a letter with the order lines; they can reply to your mailbox.",
-        "The status becomes “Sent” and the order log gets an entry.",
-        "If the letter is not sent, the status does not change."
-      ]
+      "submit": "Send letter"
     },
     "confirm": {
       "title": "Supplier confirmed order {{number}}",
       "date": "Confirmed delivery date",
       "dateHint": "The expected date is needed to track delays.",
-      "submit": "Confirm",
-      "consequence": [
-        "The status becomes “Confirmed”, the delivery date is remembered.",
-        "If goods do not arrive by this date, the order appears in Tasks as overdue.",
-        "You can then receive goods by line."
-      ]
+      "submit": "Confirm"
     },
     "cancel": {
       "title": "Cancel order {{number}}",
       "reason": "Reason",
-      "submit": "Cancel order",
-      "consequence": [
-        "The order is closed, no letter goes to the supplier.",
-        "You can cancel while nothing has been received.",
-        "The reason is saved in the order log."
-      ]
+      "submit": "Cancel order"
     },
     "receive": {
       "title": "Receive goods on order {{number}}",
@@ -297,12 +272,7 @@
       "cell": "Cell",
       "cellLabel": "Cell for “{{name}}”",
       "doc": "Supplier waybill",
-      "submit": "Receive",
-      "consequence": [
-        "Warehouse stock grows by the received quantity.",
-        "A line ordered for a project is reserved for it.",
-        "When everything is received the order becomes “Received”."
-      ]
+      "submit": "Receive"
     },
     "edit": {
       "title": "Edit order {{number}}",
@@ -368,11 +338,6 @@
     "submit": "Ship",
     "done": "Shipped, waybill {{number}}",
     "readOnly": "Shipping is done by an employee with stock rights.",
-    "consequence": [
-      "Stock and the project reservation decrease by the shipped amount.",
-      "An internal waybill SHP-YYYY-NNN with tracking is issued.",
-      "When all quote goods are shipped, project fulfilment becomes “Shipped”."
-    ],
     "listTitle": "Shipments",
     "caption": "Shipments by project",
     "scroll": "Shipments table",
@@ -400,11 +365,6 @@
     "submit": "Send request",
     "sent": "Request sent to {{email}}",
     "failed": "The letter to “{{name}}” was not sent: the request stays in the log as “not sent”.",
-    "consequence": [
-      "The supplier gets a letter with the request lines; they can reply to your mailbox.",
-      "The costing log gets an entry: who, when, to whom and which lines.",
-      "Enter the price from the reply into the costing line, then press “Reply received”."
-    ],
     "logTitle": "Supplier price requests",
     "logEmpty": "No requests yet.",
     "status": {

@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next";
 import { ApiError } from "../../../shared/api/errors";
 import type { SigningAuthorityDetail } from "../../../shared/api/generated/model";
 import { useRevokeSigningAuthority } from "../../../shared/api/generated/platform-bff";
-import { Consequence } from "../../../shared/ui/Consequence";
 
 interface Values {
   reason: string;
@@ -82,10 +81,6 @@ export function RevokeModal({
           <Input.TextArea maxLength={1000} autoSize={{ minRows: 2, maxRows: 5 }} />
         </Form.Item>
       </Form>
-      <Consequence
-        title={t("revoke.will")}
-        items={[t("revoke.consequence1"), t("revoke.consequence2"), t("revoke.consequence3")]}
-      />
     </Modal>
   );
 }

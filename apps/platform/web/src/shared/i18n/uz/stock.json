@@ -121,12 +121,7 @@
     "cell": "Katakcha",
     "note": "Asos",
     "submit": "Yozish",
-    "done": "Qoldiq o‘zgardi",
-    "consequence": [
-      "Katakchadagi qoldiq darhol o‘zgaradi.",
-      "Tovar harakatlari jurnaliga muallif va vaqt bilan yozuv qo‘shiladi.",
-      "Loyiha zaxiralariga tegilmaydi: qoldiq ularning yig‘indisidan pastga tushmaydi."
-    ]
+    "done": "Qoldiq o‘zgardi"
   },
   "orders": {
     "search": "Buyurtmani toping: raqam, yetkazib beruvchi, pozitsiya",
@@ -191,11 +186,6 @@
     "removeLine": "{{n}}-qatorni olib tashlash",
     "submit": "Qoralama yaratish",
     "done": "{{number}} qoralamasi yaratildi",
-    "consequence": [
-      "YB-YYYY-NNN raqamli buyurtma qoralamasi yaratiladi.",
-      "«Yetkazib beruvchiga yuborish» tugmasini bosmaguningizcha yetkazib beruvchiga hech narsa ketmaydi.",
-      "Buyurtma qoralama ekan, tarkib va narxlarni tahrirlash mumkin."
-    ],
     "productHint": "Nom yoki artikuldan kamida ikkita harf kiriting",
     "productSearching": "Qidirilmoqda…",
     "productNone": "Hech narsa topilmadi"
@@ -261,33 +251,18 @@
       "email": "Xat manzili",
       "emailKnown": "Manzil yetkazib beruvchi kartochkasidan; boshqasini kiritish mumkin.",
       "emailMissing": "Yetkazib beruvchida pochta yo‘q: xat uchun manzil kiriting.",
-      "submit": "Xatni yuborish",
-      "consequence": [
-        "Yetkazib beruvchiga buyurtma tarkibi bilan xat boradi; u sizning pochtangizga javob yoza oladi.",
-        "Holat «Yuborilgan» bo‘ladi, buyurtma jurnaliga yozuv qo‘shiladi.",
-        "Xat ketmasa, holat o‘zgarmaydi."
-      ]
+      "submit": "Xatni yuborish"
     },
     "confirm": {
       "title": "Yetkazib beruvchi {{number}} buyurtmasini tasdiqladi",
       "date": "Tasdiqlangan yetkazib berish sanasi",
       "dateHint": "Kechikishni kuzatish uchun kutilayotgan sana kerak.",
-      "submit": "Tasdiqlash",
-      "consequence": [
-        "Holat «Tasdiqlangan» bo‘ladi, yetkazib berish sanasi eslab qolinadi.",
-        "Tovar bu sanagacha kelmasa, buyurtma «Vazifalar»da muddati o‘tgan sifatida chiqadi.",
-        "Keyin tovarni qatorlar bo‘yicha qabul qilish mumkin."
-      ]
+      "submit": "Tasdiqlash"
     },
     "cancel": {
       "title": "{{number}} buyurtmasini bekor qilish",
       "reason": "Sabab",
-      "submit": "Buyurtmani bekor qilish",
-      "consequence": [
-        "Buyurtma yopiladi, yetkazib beruvchiga xat ketmaydi.",
-        "Buyurtma bo‘yicha hech narsa qabul qilinmagan bo‘lsa, bekor qilish mumkin.",
-        "Sabab buyurtma jurnalida saqlanadi."
-      ]
+      "submit": "Buyurtmani bekor qilish"
     },
     "receive": {
       "title": "{{number}} buyurtmasi bo‘yicha tovarni qabul qilish",
@@ -297,12 +272,7 @@
       "cell": "Katakcha",
       "cellLabel": "«{{name}}» uchun katakcha",
       "doc": "Yetkazib beruvchining yuk xati",
-      "submit": "Qabul qilish",
-      "consequence": [
-        "Ombor qoldig‘i qabul qilingan miqdorga oshadi.",
-        "Loyiha uchun buyurtma qilingan qator zaxira bilan unga biriktiriladi.",
-        "Hammasi qabul qilinganda buyurtma «Olingan» bo‘ladi."
-      ]
+      "submit": "Qabul qilish"
     },
     "edit": {
       "title": "{{number}} buyurtmasini o‘zgartirish",
@@ -368,11 +338,6 @@
     "submit": "Jo‘natish",
     "done": "Jo‘natildi, yuk xati {{number}}",
     "readOnly": "Jo‘natmani ombor huquqi bor xodim rasmiylashtiradi.",
-    "consequence": [
-      "Qoldiq va loyiha zaxirasi jo‘natilgan miqdorga kamayadi.",
-      "Trek bilan ichki yuk xati JN-YYYY-NNN beriladi.",
-      "KPning barcha tovari jo‘natilganda loyiha ijrosi «Jo‘natilgan» bo‘ladi."
-    ],
     "listTitle": "Jo‘natmalar",
     "caption": "Loyihalar bo‘yicha jo‘natmalar",
     "scroll": "Jo‘natmalar jadvali",
@@ -400,11 +365,6 @@
     "submit": "So‘rovni yuborish",
     "sent": "So‘rov {{email}} manziliga yuborildi",
     "failed": "«{{name}}» ga xat ketmadi: so‘rov jurnalda «yuborilmagan» holatida qoldi.",
-    "consequence": [
-      "Yetkazib beruvchiga so‘rov qatorlari bilan xat boradi; u sizning pochtangizga javob yoza oladi.",
-      "Hisob-kitob jurnaliga yozuv qo‘shiladi: kim, qachon, kimga va qaysi qatorlar bo‘yicha.",
-      "Javobdagi narxni hisob-kitob qatoriga kiriting, so‘ng «Javob olindi» tugmasini bosing."
-    ],
     "logTitle": "Yetkazib beruvchilardan narx so‘rovlari",
     "logEmpty": "So‘rovlar hali bo‘lmagan.",
     "status": {

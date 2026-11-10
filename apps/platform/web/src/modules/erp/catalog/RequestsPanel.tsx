@@ -183,7 +183,6 @@ function RequestForm({ onClose }: { onClose: () => void }) {
     <FormModal
       title={t("requests.form.title")}
       okLabel={t("requests.form.ok")}
-      items={t("requests.form.steps", { returnObjects: true }) as string[]}
       loading={mutation.isPending}
       error={mutation.error}
       disabled={name.trim() === ""}

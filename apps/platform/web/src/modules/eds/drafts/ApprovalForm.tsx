@@ -7,7 +7,6 @@ import type { QuoteApprovalCard, QuoteSendChannel } from "../../../shared/api/ge
 import { useDecideQuoteApproval } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { Checklist } from "../../../shared/ui/Checklist";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { decisionReason, failedCodes, isTerminal, useRefreshApprovals } from "../decision/errors";
 import { type ApprovalDraft, clearDraft, readDraft, writeDraft } from "./draft";
@@ -117,15 +116,6 @@ export function ApprovalForm({ quote, variant = "panel", onDone }: ApprovalFormP
           ? t("form.blocked.generic")
           : null;
 
-  const channelNames = chosen.map((c) => t(`form.channels.${c}.name`)).join(", ");
-  const consequence = [
-    t("form.consequence.step1"),
-    chosen.length > 0
-      ? t("form.consequence.step2", { channels: channelNames })
-      : t("form.consequence.step2None"),
-    t("form.consequence.step3"),
-  ];
-
   return (
     <form
       className={`pf-dec pf-dec--${variant}`}
@@ -194,8 +184,6 @@ export function ApprovalForm({ quote, variant = "panel", onDone }: ApprovalFormP
           </div>
         ))}
       </fieldset>
-
-      <Consequence title={t("form.consequence.title")} items={consequence} />
 
       <fieldset className="pf-dec-fieldset">
         <legend>{t("form.other.title")}</legend>

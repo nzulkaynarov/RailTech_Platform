@@ -173,7 +173,6 @@ test.describe("Товары", () => {
     const form = page.getByRole("dialog", { name: "Запросить новую категорию" });
     await form.getByLabel("Название категории").fill("Кабельные лотки");
     await form.getByLabel("Зачем нужна").fill("Кабельные лотки не попадают ни в одну категорию");
-    await expect(form.getByText("Что произойдёт")).toBeVisible();
     await form.getByRole("button", { name: "Отправить запрос" }).click();
     await expect(page.getByRole("cell", { name: "Кабельные лотки", exact: true })).toBeVisible();
     // снабженец решения не принимает

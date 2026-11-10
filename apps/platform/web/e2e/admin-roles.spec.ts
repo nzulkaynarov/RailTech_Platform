@@ -76,10 +76,6 @@ test.describe("Ролевая матрица: роли — данные", () => 
       name: `Счета и оплаты · подтвердить оплату, запросить платёжку — роль «${MIXED}»`,
     });
     await chooseOption(payments, "Полный доступ");
-    const consequence = panel.getByRole("group", { name: "Что произойдёт" });
-    await expect(
-      consequence.getByText("Роль открывает модули: Контакты, Документы."),
-    ).toBeVisible();
     await settledScreenshot(page, "roles-new");
     await panel.getByRole("button", { name: "Создать роль" }).click();
     await expect(page.getByText(`Роль «${MIXED}» создана`)).toBeVisible();
@@ -153,10 +149,6 @@ test.describe("Ролевая матрица: роли — данные", () => 
       name: "Сводка по компании — роль «Менеджер»",
     });
     await chooseOption(summary, "Только чтение");
-    const consequence = panel.getByRole("group", { name: "Что произойдёт" });
-    await expect(
-      consequence.getByText(/сотрудник\S* получат: Главная · Сводка по компании \(только чтение\)/),
-    ).toBeVisible();
     await settledScreenshot(page, "roles-edit-preview");
     await panel.getByRole("button", { name: "Сохранить роль" }).click();
     await expect(page.getByText("Роль сохранена")).toBeVisible();

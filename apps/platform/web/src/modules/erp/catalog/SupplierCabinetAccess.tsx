@@ -457,9 +457,6 @@ function ContactForm({
         contact ? t("cabinetAccess.contactForm.editTitle") : t("cabinetAccess.contactForm.addTitle")
       }
       okLabel={contact ? t("save") : t("cabinetAccess.contactForm.add")}
-      items={
-        contact ? [] : (t("cabinetAccess.contactForm.steps", { returnObjects: true }) as string[])
-      }
       loading={mutation.isPending}
       error={mutation.error}
       disabled={!valid}
@@ -642,7 +639,6 @@ function SuspendModal({
     <FormModal
       title={t("cabinetAccess.suspendForm.title")}
       okLabel={t("cabinetAccess.suspendForm.ok")}
-      items={t("cabinetAccess.suspendForm.steps", { returnObjects: true }) as string[]}
       loading={suspend.isPending}
       error={suspend.error}
       onOk={() => {

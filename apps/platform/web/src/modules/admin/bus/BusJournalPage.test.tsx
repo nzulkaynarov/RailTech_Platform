@@ -72,11 +72,6 @@ describe("Admin · Журнал интеграций: подписчики", () 
     expect(
       await within(panel).findByRole("heading", { name: "Повторить все недоставленные · ERP" }),
     ).toBeVisible();
-    const consequence = within(panel).getByRole("group", { name: "Что произойдёт" });
-    expect(
-      within(consequence).getByText(/Все доставки этого подписчика из DLQ \(3\)/),
-    ).toBeVisible();
-    expect(within(consequence).getByText(/Сначала исправьте причину/)).toBeVisible();
 
     fireEvent.click(within(panel).getByRole("button", { name: "Повторить 3" }));
     expect(await within(panel).findByText("Поставлены на повтор 3 доставки.")).toBeVisible();
@@ -106,7 +101,6 @@ describe("Admin · Журнал интеграций: доставки, DLQ и �
     const panel = await panelEl();
     expect(await within(panel).findByText("uz.railtech.erp.invoice.issued.v1")).toBeVisible();
     expect(within(panel).getByText(/Тело события в журнал не выводится/)).toBeVisible();
-    expect(within(panel).getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     fireEvent.click(within(panel).getByRole("button", { name: /Повторить доставку/ }));
     expect(await within(panel).findByText(/Поставлено на повтор/)).toBeVisible();
     await waitFor(() => {

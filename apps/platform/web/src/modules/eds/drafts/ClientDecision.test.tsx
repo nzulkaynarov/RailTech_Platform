@@ -44,7 +44,6 @@ describe("Решение клиента по отправленному КП", (
     signIn("manager@demo.example");
     renderAt(SENT);
     const { card, dialog } = await openDialog("Клиент принял");
-    expect(within(dialog).getByText(/как при принятии в кабинете/)).toBeInTheDocument();
 
     await fill(dialog, "Согласны, ждём договор");
     fireEvent.click(within(dialog).getByRole("button", { name: "Записать" }));

@@ -122,7 +122,6 @@ test.describe("Внешние интеграции: администратор",
 
     await panel.getByRole("button", { name: "Подключить заново" }).click();
     const pair = panel.getByRole("form", { name: "Подключить ERP" });
-    await expect(pair.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     await password(pair, WRONG_PASSWORD);
     await pair.getByRole("button", { name: "Подключить ERP" }).click();
     await expect(pair.getByRole("alert")).toContainText("Пароль указан неверно.");
@@ -139,7 +138,6 @@ test.describe("Внешние интеграции: администратор",
     await panel.getByRole("button", { name: "Подключить заново" }).click();
     await panel.getByRole("button", { name: "Ротация ключа" }).click();
     const rotate = panel.getByRole("form", { name: "Ротация ключей ERP" });
-    await expect(rotate.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     await tallScreenshot(page, "erp-rotate");
     await password(rotate);
     await rotate.getByRole("button", { name: "Обновить ключи" }).click();
@@ -163,7 +161,6 @@ test.describe("Внешние интеграции: администратор",
 
     await panel.getByRole("button", { name: "Сменить токен" }).click();
     const form = panel.getByRole("form", { name: "Токен бота" });
-    await expect(form.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     await form.getByLabel("Токен бота", { exact: true }).fill("bad-0000000000000000000000");
     await password(form);
     await form.getByRole("button", { name: "Сохранить токен" }).click();
@@ -293,9 +290,6 @@ test.describe("Внешние интеграции: администратор",
 
     await panel.getByRole("button", { name: "Выключить сервис: Telegram Bot API" }).click();
     const form = panel.getByRole("form", { name: "Выключить сервис: Telegram Bot API" });
-    await expect(
-      form.getByRole("group", { name: "Что произойдёт" }).getByText(/Бот перестанет отвечать/),
-    ).toBeVisible();
     await form.getByLabel("Причина (попадёт в журнал)").fill("профилактика");
     await tallScreenshot(page, "services-disable");
     await password(form);
@@ -320,9 +314,6 @@ test.describe("Внешние интеграции: администратор",
 
     await panel.getByRole("button", { name: "Проверить модель: Поиск по базе знаний" }).click();
     const confirm = panel.getByRole("form", { name: "Проверка модели «Поиск по базе знаний»" });
-    await expect(confirm.getByRole("group", { name: "Что произойдёт" })).toContainText(
-      "платный запрос",
-    );
     await confirm.getByRole("button", { name: "Проверить модель" }).click();
     await expect(panel.getByText("Модель «Поиск по базе знаний» не ответила")).toBeVisible();
 
@@ -337,7 +328,6 @@ test.describe("Внешние интеграции: администратор",
 
     await panel.getByRole("button", { name: "Сбросить модель: Диалог с клиентом" }).click();
     const reset = panel.getByRole("form", { name: "Сбросить модель: Диалог с клиентом" });
-    await expect(reset.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     await password(reset);
     await reset.getByRole("button", { name: "Сбросить к значению по умолчанию" }).click();
     await expect(panel.getByText("Используется ключ из настроек сервера.")).toBeVisible();
@@ -355,11 +345,6 @@ test.describe("Внешние интеграции: администратор",
     panel = side(page);
     await expect(panel.getByText("crm-2026-10-26.dump")).toBeVisible();
     await panel.getByRole("button", { name: "Сделать копию сейчас" }).click();
-    await expect(
-      panel
-        .getByRole("form", { name: "Копия вне расписания" })
-        .getByRole("group", { name: "Что произойдёт" }),
-    ).toBeVisible();
     await tallScreenshot(page, "storage-request");
     await panel.getByRole("button", { name: "Запросить копию" }).click();
     await expect(panel.getByText(/Копия по запросу ожидает сервис бэкапа/)).toBeVisible();

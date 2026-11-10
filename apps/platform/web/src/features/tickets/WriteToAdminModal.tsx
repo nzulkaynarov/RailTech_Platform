@@ -8,7 +8,6 @@ import { useAuth } from "../../app/auth/useAuth";
 import type { TicketSubject } from "../../shared/api/generated/model";
 import { getListMyTicketsQueryKey, useCreateTicket } from "../../shared/api/generated/platform-bff";
 import { rolesText } from "../help/startKinds";
-import { Consequence } from "../../shared/ui/Consequence";
 import { TICKET_SUBJECTS, TICKET_TEXT_MAX, ticketErrorText } from "./ticketMeta";
 
 export interface WriteToAdminModalProps {
@@ -183,10 +182,6 @@ export function WriteToAdminModal({
         <p id={ids.auto} className="pf-hint" style={{ margin: 0 }}>
           {autoText}
         </p>
-        <Consequence
-          title={t("help:write.consequenceTitle")}
-          items={t("help:write.consequence", { returnObjects: true }) as string[]}
-        />
       </div>
     </Modal>
   );

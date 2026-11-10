@@ -11,8 +11,6 @@ import {
   useResolveLetter,
   useReturnLetter,
 } from "../../../shared/api/generated/platform-bff";
-import { useFormat } from "../../../shared/lib/useFormat";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { DateField } from "../../../shared/ui/DateField";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { companyDate, fieldsOf, reasonOf, useRefreshLetters } from "./api";
@@ -61,7 +59,6 @@ export function ResolutionForm({ letter, variant = "panel", onDone }: Resolution
   const { t } = useTranslation("letters");
   const confirmAction = useConfirmAction();
   const { me } = useAuth();
-  const { date } = useFormat();
   const { message } = App.useApp();
   const refresh = useRefreshLetters();
   const ids = useId();
@@ -370,17 +367,6 @@ export function ResolutionForm({ letter, variant = "panel", onDone }: Resolution
           ) : null}
         </FormField>
       ) : null}
-
-      <Consequence
-        title={t("form.consequence.title")}
-        items={[
-          t("form.consequence.step1"),
-          state.due
-            ? t("form.consequence.step2", { due: date(state.due) })
-            : t("form.consequence.step2NoDue"),
-          t("form.consequence.step3"),
-        ]}
-      />
 
       <fieldset className="pf-res-fieldset">
         <legend>{t("form.other.title")}</legend>

@@ -193,7 +193,6 @@ describe("Склад · заказы поставщикам", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Отправить поставщику" }));
     const send = await screen.findByRole("dialog");
-    expect(within(send).getByText("Что произойдёт")).toBeInTheDocument();
     fireEvent.click(within(send).getByRole("button", { name: "Отправить письмо" }));
     expect(await screen.findByText("Заказ отправлен поставщику")).toBeVisible();
     await screen.findByRole("button", { name: "Поставщик подтвердил" });

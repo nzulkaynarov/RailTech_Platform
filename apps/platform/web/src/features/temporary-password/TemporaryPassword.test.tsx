@@ -102,7 +102,6 @@ describe("Приглашение без почты: временный паро�
     fill("Имя и фамилия", "Новый Сотрудник");
     fill("Электронная почта", "no.mail@demo.example");
     fireEvent.click(within(side).getByRole("checkbox", { name: /^Снабженец/ }));
-    expect(within(side).getByText(/Вы увидите временный пароль один раз/)).toBeVisible();
     expect(within(side).queryByText(/уйдёт письмо/)).toBeNull();
 
     fireEvent.click(within(side).getByRole("button", { name: "Создать и показать пароль" }));
@@ -189,8 +188,6 @@ describe("Карточка сотрудника: «Сбросить пароль
     await openTemporary(side);
 
     const group = await within(side).findByRole("group", { name: "Сброс пароля" });
-    expect(within(group).getByText("Что произойдёт")).toBeVisible();
-    expect(within(group).getByText(/Прежний пароль перестанет действовать/)).toBeVisible();
 
     fireEvent.click(within(group).getByRole("button", { name: "Выдать пароль" }));
 

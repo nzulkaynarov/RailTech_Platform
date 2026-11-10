@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 
 import type { Language, SandboxTurn } from "../../../shared/api/generated/model";
 import { useResetSandbox, useSendSandboxMessage } from "../../../shared/api/generated/platform-bff";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { ActionToggle, ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { kbErrorText } from "./errors";
 
@@ -160,9 +159,6 @@ export function SandboxView() {
               reset.mutate();
             }}
           >
-            <Consequence
-              items={[t("sandbox.reset.step1"), t("sandbox.reset.step2"), t("sandbox.reset.step3")]}
-            />
             <ErrorNote
               message={reset.isError ? kbErrorText(t, reset.error, i18n.language) : null}
             />
@@ -216,7 +212,6 @@ export function SandboxView() {
               }}
             />
           </FormField>
-          <Consequence items={[t("sandbox.step1"), t("sandbox.step2"), t("sandbox.step3")]} />
           <div className="pf-fp-row">
             <Button
               type="primary"

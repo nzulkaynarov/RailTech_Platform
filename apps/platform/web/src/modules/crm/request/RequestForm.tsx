@@ -15,7 +15,6 @@ import {
   useListCrmClients,
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { reasonError } from "../common/errors";
@@ -229,18 +228,6 @@ export function RequestForm({ lead, clientId, letterFrom = null, onCancel }: Req
   };
 
   const leadTelegram = ctx.leadTelegram;
-  const consequence = [
-    ...(lead && !lead.client ? [t("request:consequence.lead")] : []),
-    t("request:consequence.request"),
-    ...(state.letter?.status === "done"
-      ? [
-          t("request:consequence.letter", {
-            urgent: state.urgency === "urgent" ? t("request:consequence.urgentSuffix") : "",
-          }),
-        ]
-      : []),
-    t("request:consequence.chat"),
-  ];
 
   return (
     <form
@@ -531,7 +518,6 @@ export function RequestForm({ lead, clientId, letterFrom = null, onCancel }: Req
         </fieldset>
       ) : null}
 
-      <Consequence items={consequence} />
       <p className="pf-fp-sub">{t("request:clientGets")}</p>
       <ErrorNote message={serverError} />
 

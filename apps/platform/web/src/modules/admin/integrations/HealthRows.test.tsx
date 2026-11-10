@@ -142,7 +142,6 @@ describe("Требует внимания: одна причина — одна 
 
     fireEvent.click(within(row).getByRole("button", { name: /Ввести новый ключ/ }));
     const form = await within(row).findByRole("form", { name: "Новый ключ OpenAI" });
-    expect(within(form).getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     expect(within(form).getByText(/Поиск по базе знаний, Проверка качества/)).toBeVisible();
     expect(within(form).getByRole("button", { name: "Применить ключ" })).toBeDisabled();
 
@@ -182,8 +181,7 @@ describe("Требует внимания: одна причина — одна 
 
     fireEvent.click(within(row).getByRole("button", { name: /Выключить провайдера/ }));
 
-    const form = await within(row).findByRole("form", { name: "Выключить сервис: OpenAI" });
-    expect(within(form).getByRole("group", { name: "Что произойдёт" })).toBeVisible();
+    await within(row).findByRole("form", { name: "Выключить сервис: OpenAI" });
   });
 
   it("директор: видит причину и «Написать владельцу», но не кнопки изменения и проверки", async () => {

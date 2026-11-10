@@ -121,7 +121,6 @@ test.describe("Склад и закупки: снабженец", () => {
     await settledScreenshot(page, "order-draft");
     await page.getByRole("button", { name: "Отправить поставщику" }).click();
     const send = page.getByRole("dialog", { name: `Отправить заказ ${NEW_ORDER} поставщику` });
-    await expect(send.getByText("Что произойдёт")).toBeVisible();
     await send.getByRole("button", { name: "Отправить письмо" }).click();
     await expect(page.getByText("Заказ отправлен поставщику")).toBeVisible();
     await expect(

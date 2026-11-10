@@ -6,7 +6,6 @@ import { useAuth } from "../../../app/auth/useAuth";
 import type { InboundMail } from "../../../shared/api/generated/model";
 import { takeInboundMail } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { Assist } from "./MailAssist";
 import { MailOutcome } from "./MailOutcome";
 import { SpamActions } from "./SpamActions";
@@ -33,7 +32,6 @@ function Held({ mail, reload }: { mail: InboundMail; reload: () => void }) {
       </p>
       {asking ? (
         <>
-          <Consequence title={t("mail.actions.what")} items={[t("mail.busy.what", { name })]} />
           <div className="pf-fp-row">
             <Button
               type="primary"

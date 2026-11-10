@@ -212,10 +212,6 @@ export function DocumentTemplates() {
             danger
             loading={remove.isPending}
             error={remove.error}
-            items={[
-              t("templates.documents.consequence.delete"),
-              t("templates.documents.consequence.inUse"),
-            ]}
             onOk={() => {
               if (removing) remove.mutate({ id: removing.id });
             }}

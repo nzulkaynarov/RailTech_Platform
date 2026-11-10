@@ -6,12 +6,11 @@ import { useTranslation } from "react-i18next";
 import type { PaymentCard } from "../../../shared/api/generated/model";
 import { confirmPayment } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { DateField } from "../../../shared/ui/DateField";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { companyDate } from "../inbox/api";
 import { type InvoiceReason, invoiceReason, isStale, useRefreshPayments } from "./api";
-import { newKey, normalizeAmount, remainderAfter, toCents } from "./model";
+import { newKey, normalizeAmount, toCents } from "./model";
 import { useConfirmAction } from "../../../shared/ui/useConfirmAction";
 
 export interface ConfirmFormProps {
@@ -53,7 +52,6 @@ export function ConfirmForm({ card, variant = "panel", onDone }: ConfirmFormProp
   const partial = normalized !== null && toCents(normalized) < toCents(card.balance.amount);
   const currency = card.balance.currency;
   const fmt = (value: string) => money(value, { currency });
-  const rest = normalized ? remainderAfter(card, normalized) : card.balance.amount;
   const invalid = normalized === null ? "invalidAmount" : !dateValid ? "invalidDate" : null;
 
   const confirm = useMutation({
@@ -113,25 +111,6 @@ export function ConfirmForm({ card, variant = "panel", onDone }: ConfirmFormProp
         reason: t(`confirm.reasons.${failure.reason}`, { balance: fmt(card.balance.amount) }),
       })
     : null;
-
-  const items = partial
-    ? [
-        t("confirm.consequence.partial.step1", {
-          number: card.number,
-          amount: fmt(normalized),
-          rest: fmt(rest),
-        }),
-        t("confirm.consequence.partial.step2"),
-        t("confirm.consequence.partial.step3"),
-      ]
-    : [
-        t("confirm.consequence.full.step1", {
-          number: card.number,
-          amount: fmt(normalized ?? card.balance.amount),
-        }),
-        t("confirm.consequence.full.step2", { project: card.project_number }),
-        t("confirm.consequence.full.step3"),
-      ];
 
   return (
     <form
@@ -231,8 +210,6 @@ export function ConfirmForm({ card, variant = "panel", onDone }: ConfirmFormProp
           }}
         />
       </FormField>
-
-      <Consequence items={items} />
 
       <ErrorNote message={failureText} />
 

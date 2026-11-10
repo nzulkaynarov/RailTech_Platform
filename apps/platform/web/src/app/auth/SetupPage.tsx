@@ -11,9 +11,7 @@ import {
   useGetSession,
   useGetSetupState,
 } from "../../shared/api/generated/platform-bff";
-import { lines } from "../../features/first-run/lines";
 import { useDocumentTitle } from "../../shared/lib/useDocumentTitle";
-import { Consequence } from "../../shared/ui/Consequence";
 import { LinkButton } from "../../shared/ui/LinkButton";
 import { homePath } from "../access";
 import { AuthLayout } from "./AuthLayout";
@@ -184,9 +182,7 @@ export function SetupPage() {
         >
           <Input.Password autoComplete="new-password" />
         </Form.Item>
-        <div style={{ marginBottom: 16 }}>
-          <Consequence items={lines(t, "setup.consequence")} />
-        </div>
+        <div style={{ marginBottom: 16 }}></div>
         <Button type="primary" htmlType="submit" block loading={create.isPending}>
           {t("setup.submit")}
         </Button>

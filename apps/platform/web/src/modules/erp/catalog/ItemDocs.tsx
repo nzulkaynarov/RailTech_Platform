@@ -164,7 +164,6 @@ function AddDocForm({ card, onClose }: { card: CatalogItemDetail; onClose: () =>
     <FormModal
       title={t("cardDocs.addTitle")}
       okLabel={t("docs.form.ok")}
-      items={t("cardDocs.addSteps", { returnObjects: true }) as string[]}
       loading={mutation.isPending}
       error={mutation.error}
       disabled={file === null}
@@ -251,7 +250,6 @@ function EditDocForm({
     <FormModal
       title={t("cardDocs.editTitle")}
       okLabel={t("save")}
-      items={t("cardDocs.editSteps", { returnObjects: true }) as string[]}
       loading={mutation.isPending}
       error={mutation.error}
       disabled={title.trim() === ""}

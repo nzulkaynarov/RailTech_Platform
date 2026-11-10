@@ -123,7 +123,6 @@ describe("Настройки · Права подписи (SIGN-2, ADR-0024)", (
     // у окна и бокового окна в тестах один и тот же id заголовка (`useId`), поэтому окно ищем по тексту заголовка
     const title = await screen.findByText("Отозвать полномочие: Демо Менеджеров");
     const modal = title.closest<HTMLElement>('[role="dialog"]') as HTMLElement;
-    expect(within(modal).getByText("Что произойдёт")).toBeInTheDocument();
     fireEvent.click(within(modal).getByRole("button", { name: "Отозвать" }));
     expect(await within(modal).findByText("Укажите причину (от 3 знаков)")).toBeInTheDocument();
     fireEvent.change(within(modal).getByRole("textbox", { name: "Причина" }), {

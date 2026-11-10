@@ -6,7 +6,6 @@ import { Link } from "react-router";
 import { ApiError } from "../../../shared/api/errors";
 import type { LetterCard } from "../../../shared/api/generated/model";
 import { markLetterDuplicate } from "../../../shared/api/generated/platform-bff";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { useRefreshLetters } from "./api";
 
 const OPEN = new Set(["awaiting_resolution", "returned"]);
@@ -138,7 +137,6 @@ export function MarkDuplicateAction({ letter }: { letter: LetterCard }) {
               {t("card.dup.confirm", { count: work })}
             </Checkbox>
           ) : null}
-          <Consequence items={t("card.dup.what", { returnObjects: true }) as string[]} />
           {error ? <Alert type="error" showIcon role="alert" message={error} /> : null}
           <div className="pf-fp-row">
             <Button

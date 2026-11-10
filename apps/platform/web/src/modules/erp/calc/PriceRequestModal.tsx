@@ -7,7 +7,6 @@ import {
   useCreateCalcPriceRequest,
   useListStockSuppliers,
 } from "../../../shared/api/generated/platform-bff";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { clean, useErrorText, useRefreshStock } from "../stock/api";
 import { calcRef } from "./api";
@@ -149,7 +148,6 @@ export function PriceRequestModal({ sheet, onClose }: { sheet: CalcSheet; onClos
           />
         </FormField>
         <ErrorNote message={error} />
-        <Consequence items={t("priceRequest.consequence", { returnObjects: true }) as string[]} />
       </div>
     </Modal>
   );

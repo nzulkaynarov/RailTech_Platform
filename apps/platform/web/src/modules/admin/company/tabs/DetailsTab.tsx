@@ -141,7 +141,6 @@ function DetailsForm({ company }: { company: CompanyProfile }) {
         danger
         loading={remove.isPending}
         error={remove.error}
-        items={[t("logo.consequence.card"), t("logo.consequence.file")]}
         onOk={() => {
           remove.mutate();
         }}

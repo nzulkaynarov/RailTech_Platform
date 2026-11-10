@@ -92,7 +92,6 @@ test.describe("SIGN-2 · Права подписи", () => {
       .getByRole("button", { name: "Отозвать" })
       .click();
     const modal = page.getByRole("dialog", { name: "Отозвать полномочие: Демо Менеджеров" });
-    await expect(modal.getByText("Что произойдёт")).toBeVisible();
     await modal.getByLabel("Причина").fill("Доверенность отозвана приказом");
     await shoot(page, "signing-revoke");
     await modal.getByRole("button", { name: "Отозвать" }).click();

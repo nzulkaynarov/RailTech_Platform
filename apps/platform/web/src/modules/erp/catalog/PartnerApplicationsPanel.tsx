@@ -372,14 +372,10 @@ function SendContractModal({
     },
   });
 
-  const rawSteps = t("partnerApplications.sendContractModal.steps", { returnObjects: true });
-  const steps = Array.isArray(rawSteps) ? (rawSteps as string[]) : [];
-
   return (
     <FormModal
       title={t("partnerApplications.sendContractModal.title", { name: item.company_name })}
       okLabel={t("partnerApplications.sendContractModal.ok")}
-      items={steps}
       loading={sendContract.isPending}
       error={sendContract.error}
       disabled={needsChoice && !companyChoice}
@@ -453,14 +449,11 @@ function ApproveModal({
 
   const fields = errorFields(approve.error);
   const reasonId = useId();
-  const rawSteps = t("partnerApplications.approveModal.steps", { returnObjects: true });
-  const steps = Array.isArray(rawSteps) ? (rawSteps as string[]) : [];
 
   return (
     <FormModal
       title={t("partnerApplications.approveModal.title", { name: item.company_name })}
       okLabel={t("partnerApplications.approveModal.ok")}
-      items={steps}
       loading={approve.isPending}
       error={approve.error}
       disabled={

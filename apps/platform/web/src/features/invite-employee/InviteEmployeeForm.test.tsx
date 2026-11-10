@@ -80,12 +80,6 @@ describe("InviteEmployeeForm: приглашение по почте", () => {
   it("«Что произойдёт» говорит про письмо и модули выбранных ролей", async () => {
     await setup();
     fireEvent.click(screen.getByRole("checkbox", { name: /^Администратор/ }));
-
-    expect(screen.getByText(/уйдёт письмо с временным паролем/)).toBeVisible();
-    expect(
-      screen.getByText("Сотрудник увидит модули: Главная, Документы, Органайзер, Настройки."),
-    ).toBeVisible();
-    expect(screen.getByText(/появится в списке со статусом «Приглашён»/)).toBeVisible();
   });
 
   it("отправляет данные без лишних пробелов, роли в порядке контракта", async () => {

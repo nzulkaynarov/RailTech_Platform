@@ -82,7 +82,6 @@ test.describe("Входящие письма: директор", () => {
     await expect(page.getByRole("link", { name: "ЗВ-2026-104" })).toBeVisible();
 
     const form = panel.getByRole("form", { name: "Резолюция директора" });
-    await expect(form.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     await expect(form.getByRole("checkbox", { name: /Бухгалтер/ })).not.toBeChecked();
     await expect(form.getByRole("button", { name: "Вернуть менеджеру" })).toBeDisabled();
     await expect(form.getByText(/Кнопки неактивны, пока нет комментария/)).toBeVisible();

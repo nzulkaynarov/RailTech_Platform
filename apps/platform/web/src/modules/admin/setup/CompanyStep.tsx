@@ -2,7 +2,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Alert, App, Button, Form, Input } from "antd";
 import { useTranslation } from "react-i18next";
 
-import { lines } from "../../../features/first-run/lines";
 import { ApiError } from "../../../shared/api/errors";
 import { STEP_TARGET } from "../../../entities/setup/steps";
 import type { SetupChecklist, SetupCompanyIn } from "../../../shared/api/generated/model";
@@ -12,7 +11,6 @@ import {
   useCreateOwnCompany,
 } from "../../../shared/api/generated/platform-bff";
 import { withTimeout } from "../../../shared/api/timeout";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 
 interface Values {
@@ -206,7 +204,6 @@ export function CompanyStep({
       ) ? (
         <Alert type="error" showIcon role="alert" message={errorText(t, create.error)} />
       ) : null}
-      <Consequence items={lines(t, "admin.setup.companyConsequence")} />
       <div>
         <Button type="primary" htmlType="submit" loading={create.isPending}>
           {t("admin.setup.companySubmit")}

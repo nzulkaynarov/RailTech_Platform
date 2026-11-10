@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 
 import { ApiError } from "../../../shared/api/errors";
 import type { IntegrationStatus } from "../../../shared/api/generated/model";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { integrationErrorText, isForbidden, isWrongPassword } from "./errors";
@@ -121,7 +120,7 @@ export function ActionForm({
           />
         </Field>
       ) : null}
-      {consequence ? <Consequence items={consequence} /> : null}
+      {consequence ? null : null}
       <ErrorNote error={error} id={`${id}-error`} />
       <div className="pf-int-row">
         <Button

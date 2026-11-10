@@ -254,13 +254,7 @@
     "none": {
       "title": "Shartnoma hali yo‘q",
       "text": "Shartnoma loyihasi qabul qilingan TT dan shakllantiriladi. Buni buxgalter yoki direktor qiladi.",
-      "create": "Shartnoma loyihasini shakllantirish",
-      "consequence": {
-        "title": "Nima bo‘ladi",
-        "step1": "Qabul qilingan TT dan «Loyiha» holatidagi shartnoma loyihasi paydo bo‘ladi.",
-        "step2": "Mijozga u hali ko‘rinmaydi: kelishuvga uni siz yuborasiz.",
-        "step3": "Loyiha jurnaliga loyihani kim va qachon shakllantirgani yoziladi."
-      }
+      "create": "Shartnoma loyihasini shakllantirish"
     },
     "fields": {
       "total": "Summa",
@@ -287,33 +281,6 @@
       "attach_scan": "Imzolangan skanni biriktirish",
       "reject": "Mijoz shartnomani rad etdi…",
       "revise": "Loyihaga qaytarish"
-    },
-    "consequence": {
-      "title": "Nima bo‘ladi",
-      "send_to_client": [
-        "Mijoz shartnoma loyihasini kabinetda ko‘radi: «Shartnoma matnini kelishib oling».",
-        "Mijozga o‘z kanallari bo‘yicha xabar ketadi.",
-        "Jurnalga loyihani kim va qachon yuborgani yoziladi."
-      ],
-      "client_agreed": [
-        "Shartnoma «Mijoz bilan kelishilgan» holatini oladi.",
-        "Keyin u EHT operatorida — platformadan tashqarida rasmiylashtiriladi.",
-        "Jurnalga kelishuvni kim va qachon belgilagani yoziladi."
-      ],
-      "mark_issued": [
-        "Shartnoma «Operatorda rasmiylashtirilgan» holatini oladi.",
-        "Mijoz «Shartnoma imzolanmoqda» ni ko‘radi.",
-        "Operatorda ikki tomon imzolagach, skanni biriktiring — shartnoma «Imzolangan» bo‘ladi."
-      ],
-      "attach_scan": [
-        "Shartnoma «Imzolangan (skan)» bo‘ladi; fayl saqlanadi.",
-        "Loyiha to‘lovga o‘tadi: ERP oldindan to‘lov hisobining qoralamasini yaratadi.",
-        "Jurnalga skanni kim va qachon biriktirgani yoziladi."
-      ],
-      "revise": [
-        "Loyiha «Loyiha» holatiga qaytadi; mijozning kelishuvi bekor bo‘ladi.",
-        "To‘g‘rilangan loyihani mijozga alohida amal bilan yuboring."
-      ]
     },
     "note": {
       "label": "EHT tizimidagi operator yoki raqam",
@@ -360,12 +327,7 @@
       "noInvoice": "Dalolatnoma rasmiylashtirilgan hisob bo‘yicha chiqariladi. Hisob hali rasmiylashtirilmagan — uni «Hisoblar va to‘lovlar» bo‘limida rasmiylashtiring.",
       "forbidden": "Dalolatnomani direktor va buxgalter chiqaradi.",
       "ready": "Hisob rasmiylashtirilgan: dalolatnoma chiqarish mumkin.",
-      "issue": "Dalolatnoma chiqarish",
-      "consequence": [
-        "Dalolatnoma raqam va «Chiqarilgan» holatini oladi.",
-        "Mijoz «Qabul qilishingizni kutmoqda» ni ko‘radi.",
-        "Dalolatnoma PDF hisob bo‘yicha shakllanadi; jurnalga uni kim va qachon chiqargani yoziladi."
-      ]
+      "issue": "Dalolatnoma chiqarish"
     },
     "fields": {
       "total": "Summa",
@@ -383,18 +345,6 @@
       "attach_scan": "Imzolangan skanni biriktirish",
       "return": "Buyurtmachi dalolatnomani qaytardi…",
       "reissue": "Qaytadan chiqarish"
-    },
-    "consequence": {
-      "title": "Nima bo‘ladi",
-      "attach_scan": [
-        "Dalolatnoma «Imzolangan (skan)» bo‘ladi; fayl saqlanadi.",
-        "Barcha hisoblar to‘langanda loyiha «Bajarildi» bo‘ladi.",
-        "Jurnalga skanni kim va qachon biriktirgani yoziladi."
-      ],
-      "reissue": [
-        "Xuddi shu dalolatnoma shu raqam bilan qaytadan chiqariladi.",
-        "Mijoz «Qabul qilishingizni kutmoqda» ni ko‘radi."
-      ]
     },
     "return": {
       "title": "Buyurtmachi dalolatnomani qaytardi",

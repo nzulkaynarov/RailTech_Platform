@@ -66,12 +66,7 @@
       "textLines": "Arizada {{count}} ta qator bor. Ularni hisob-kitobga o‘tkazing, keyin qatorlarni qo‘shing va katalog bilan solishtiring.",
       "textEmpty": "Arizada qatorlar yo‘q, faqat matn. Hisob-kitobni boshlang va ariza matnini qatorlarga ajrating yoki ularni qo‘lda qo‘shing.",
       "action": "Hisob-kitobni boshlash",
-      "noRights": "Hisob-kitobni «Hisob-kitob» bo‘limiga to‘liq ruxsati bor xodim boshlaydi.",
-      "consequence": [
-        "Ariza qatorlari hisob-kitob TK qoralamasiga o‘tadi (artikul va GOST aniq mos kelsa — darhol katalog kartasi bilan).",
-        "Xarid narxi o‘z taklifidan qo‘yiladi, agar u bo‘lsa; qolganini siz to‘ldirasiz.",
-        "Mijoz hech narsa olmaydi: u «Ishga qabul qilindi, hisoblayapmiz» ni ko‘radi."
-      ]
+      "noRights": "Hisob-kitobni «Hisob-kitob» bo‘limiga to‘liq ruxsati bor xodim boshlaydi."
     },
     "request": "Ariza matni",
     "requestEmpty": "Ariza matni yo‘q.",
@@ -204,11 +199,6 @@
       "rejected_client": "Mijoz TTni rad etdi — yuqorida tanlang: TTning yangi versiyasi yoki arizadan voz kechish."
     },
     "missingGroups": "Viza kutmoqda: {{groups}}.",
-    "consequence": [
-      "TK raqam oladi va direktorga ma’qullash uchun ketadi (Hujjatlar · TK qoralamasi).",
-      "Direktor tannarx, marja, qatorlar vizalari va rezolyutsiyadagi marja chegarasini ko‘radi.",
-      "Direktor qaror qilguncha qatorlar yopiladi; qayta ishlashga qaytarsa — tuzatib, qayta tasdiqlaysiz."
-    ],
     "done": "TK qoralamasi direktorda"
   },
   "task": {
@@ -283,12 +273,7 @@
     "cancel": "Bekor qilish",
     "newVersion": {
       "button": "TTning yangi versiyasi",
-      "done": "Hisob-kitob qayta ochildi: TT qoralamasi, versiya {{version}}",
-      "consequence": [
-        "«TTning yangi versiyasi»: qatorlar va narxlar keyingi versiya qoralamasiga o‘tadi, vizalar qaytadan yig‘iladi; mijoz rad etganda bekor qilingan zaxira shu ekranda qayta qo‘yiladi.",
-        "Oldingi versiya tarixda mijoz rad etgan sifatida qoladi.",
-        "«Arizadan voz kechish»: ariza sabab bilan yopiladi, uning zaxirasi bekor qilingan, mijozga hech narsa yuborilmaydi."
-      ]
+      "done": "Hisob-kitob qayta ochildi: TT qoralamasi, versiya {{version}}"
     },
     "lost": {
       "button": "Arizadan voz kechish",
@@ -296,12 +281,7 @@
       "reason": "Voz kechish sababi",
       "hint": "Majburiy. Ariza jurnaliga va CRMga tushadi.",
       "submit": "Arizani rad bilan yopish",
-      "done": "Ariza rad bilan yopildi, zaxira bekor qilindi",
-      "consequence": [
-        "Ariza «Rad» bosqichiga o‘tadi; uni hisob-kitobga direktor qaytara oladi.",
-        "Ariza bo‘yicha tovar zaxirasi bekor qilinib, bo‘sh qoldiqqa qaytadi.",
-        "Mijozga hech narsa yuborilmaydi."
-      ]
+      "done": "Ariza rad bilan yopildi, zaxira bekor qilindi"
     }
   }
 }

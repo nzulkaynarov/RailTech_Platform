@@ -12,7 +12,6 @@ import {
   useResolveKbGap,
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { ActionToggle, ErrorNote, FormField, QueryState } from "../../../shared/ui/FormParts";
 import { ManualForm } from "./CreateDocumentPanel";
@@ -69,9 +68,6 @@ function LinkForm({ gap, onDone }: { gap: KbGap; onDone: () => void }) {
           onChange={setDocumentId}
         />
       </FormField>
-      <Consequence
-        items={[t("gapPanel.link.step1"), t("gapPanel.link.step2"), t("gapPanel.link.step3")]}
-      />
       <ErrorNote message={resolve.isError ? kbErrorText(t, resolve.error, i18n.language) : null} />
       <div className="pf-fp-row">
         <Button
@@ -120,9 +116,6 @@ function SimpleAction({
         action.mutate({ id: gap.id });
       }}
     >
-      <Consequence
-        items={[t(`gapPanel.${kind}.step1`), t(`gapPanel.${kind}.step2`), t("gapPanel.stepAudit")]}
-      />
       <ErrorNote message={action.isError ? kbErrorText(t, action.error, i18n.language) : null} />
       <div className="pf-fp-row">
         <Button

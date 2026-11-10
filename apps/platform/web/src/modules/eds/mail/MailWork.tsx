@@ -21,7 +21,6 @@ import {
   takeInboundMail,
   useListInboundMailHandoverTargets,
 } from "../../../shared/api/generated/platform-bff";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { ReleaseButton } from "./ReleaseButton";
 import { type MailRun, useMailRun } from "./useMailRun";
@@ -69,7 +68,6 @@ function LeadStep({ mail, run, pending, cancel, done }: StepProps) {
   const { t } = useTranslation("letters");
   return (
     <div className="pf-mail-actions">
-      <Consequence title={t("mail.actions.what")} items={[t("mail.actions.leadWhat")]} />
       <Buttons
         confirm={t("mail.actions.leadConfirm")}
         loading={pending}
@@ -102,7 +100,6 @@ function ArchiveStep({ mail, run, pending, cancel, done }: StepProps) {
           setReason(event.target.value);
         }}
       />
-      <Consequence title={t("mail.actions.what")} items={[t("mail.actions.archiveWhat")]} />
       <Buttons
         confirm={t("mail.actions.archiveConfirm")}
         loading={pending}
@@ -130,7 +127,6 @@ function PriceStep({ mail, run, pending, cancel, done }: StepProps) {
           {t("mail.actions.priceOpen")}
         </Button>
       </div>
-      <Consequence title={t("mail.actions.what")} items={[t("mail.actions.priceWhat")]} />
       <Buttons
         confirm={t("mail.actions.priceConfirm")}
         loading={pending}
@@ -179,7 +175,6 @@ function HandoverStep({
             options={items.map((item) => ({ value: item.id, label: item.name }))}
             onChange={setChosen}
           />
-          <Consequence title={t("mail.actions.what")} items={[t(`mail.actions.${key}What`)]} />
         </>
       )}
       <Buttons
@@ -203,7 +198,6 @@ function SuspiciousStep({ mail, run, pending, cancel, done }: StepProps) {
   const { t } = useTranslation("letters");
   return (
     <div className="pf-mail-actions">
-      <Consequence title={t("mail.actions.what")} items={[t("mail.actions.suspiciousWhat")]} />
       <Buttons
         confirm={t("mail.actions.suspiciousConfirm")}
         loading={pending}
@@ -370,7 +364,6 @@ export function OwnWork({ mail, reload }: { mail: InboundMail; reload: () => voi
         <PriceStep mail={mail} run={run} pending={pending} done={done} />
       ) : (
         <>
-          <Consequence title={t("mail.actions.what")} items={[t("mail.actions.completeWhat")]} />
           <div>
             <Button
               type="primary"

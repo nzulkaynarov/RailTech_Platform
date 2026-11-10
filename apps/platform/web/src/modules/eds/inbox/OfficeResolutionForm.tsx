@@ -11,7 +11,6 @@ import {
   useSaveResolutionDraft,
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { DateField } from "../../../shared/ui/DateField";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { useResolutionKindName } from "../dictionaries";
@@ -164,12 +163,6 @@ export function OfficeResolutionForm({
   const failureText = failure
     ? t("office.failed", { reason: t(`form.reasons.${reasonOf(failure)}`) })
     : null;
-  const consequence =
-    mode === "draft"
-      ? (t("office.consequence.draft", { returnObjects: true }) as string[])
-      : (t(`office.consequence.${values.kind === "info" ? "info" : "execute"}`, {
-          returnObjects: true,
-        }) as string[]);
   const trimmed = comment.trim();
 
   return (
@@ -362,8 +355,6 @@ export function OfficeResolutionForm({
           }}
         />
       </FormField>
-
-      <Consequence title={t("office.consequence.title")} items={consequence} />
 
       {mode === "resolve" ? (
         <fieldset className="pf-res-fieldset">

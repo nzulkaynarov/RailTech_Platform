@@ -24,10 +24,6 @@ describe("«Выставить счёт» из Платформы (B-D24-4)", ()
     const panel = await openDraft("accountant@demo.example");
 
     const form = await within(panel).findByRole("form", { name: "Выставить счёт" });
-    const what = within(form).getByRole("group", { name: "Что произойдёт" });
-    expect(what).toHaveTextContent("«Выставлен»");
-    expect(what).toHaveTextContent("PDF с реквизитами компании");
-    expect(what).toHaveTextContent("увидит счёт в кабинете");
     expect(within(form).getByRole("button", { name: "Выставить счёт" })).toBeEnabled();
   });
 

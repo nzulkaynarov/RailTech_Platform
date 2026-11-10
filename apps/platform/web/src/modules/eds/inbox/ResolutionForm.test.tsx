@@ -63,9 +63,6 @@ describe("Резолюция: форма", () => {
       companyDate(3).split("-").reverse().join("."),
     );
     expect(within(form).getByLabelText("Маржа не ниже, %")).toBeVisible();
-    const consequence = within(form).getByRole("group", { name: "Что произойдёт" });
-    expect(within(consequence).getAllByRole("listitem")).toHaveLength(3);
-    expect(within(consequence).getByText(/Клиенту ничего не отправляется/)).toBeVisible();
     expect(
       within(form).getByRole("button", { name: "Утвердить резолюцию → задание в расчёт" }),
     ).toBeEnabled();

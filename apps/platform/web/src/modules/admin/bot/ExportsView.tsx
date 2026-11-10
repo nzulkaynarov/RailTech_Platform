@@ -6,7 +6,6 @@ import { canEdit, canSee } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { downloadFile } from "../../../shared/api/download";
 import { getDownloadCsvExportUrl } from "../../../shared/api/generated/platform-bff";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { DateRangeField } from "../../../shared/ui/DateField";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { botErrorText } from "./errors";
@@ -193,11 +192,7 @@ export function ExportsView() {
         styles={{ body: { display: "flex", flexDirection: "column", gap: 16 } }}
       >
         <p className="pf-fp-sub">{t("exports.intro")}</p>
-        {editable ? (
-          <Consequence items={[t("exports.step1"), t("exports.step2"), t("exports.step3")]} />
-        ) : (
-          <p className="pf-hint">{t("exports.readOnly")}</p>
-        )}
+        {editable ? null : <p className="pf-hint">{t("exports.readOnly")}</p>}
         <div className="pf-bot-exports">
           {ENTITIES.map((entity) => (
             <ExportCard

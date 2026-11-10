@@ -82,12 +82,7 @@ test.describe("Создать документ: сотрудник", () => {
     await page.getByLabel("Связь с проектом").click();
     await page.getByLabel("Связь с проектом").fill("рельс");
     await page.getByTitle(/ЗВ-2026-104 · Поставка рельсов Р65/).click();
-
-    const block = page.getByRole("group", { name: "Что произойдёт" });
     await expect(page.getByText("Вы → Директор → Бухгалтер (есть сумма)")).toBeVisible();
-    await expect(
-      block.getByText("После согласования директором документ передадут бухгалтеру — к оплате."),
-    ).toBeVisible();
     await settledScreenshot(page, "form-filled");
 
     await page.getByRole("button", { name: "Отправить на согласование" }).click();

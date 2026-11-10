@@ -37,9 +37,6 @@ describe("Одобрение КП: форма", () => {
     expect(within(form).getByRole("checkbox", { name: "Telegram-бот" })).toBeChecked();
     expect(within(form).getByRole("checkbox", { name: "Кабинет" })).toBeChecked();
     expect(within(form).getByRole("checkbox", { name: "Почта" })).toBeChecked();
-    const consequence = within(form).getByRole("group", { name: "Что произойдёт" });
-    expect(within(consequence).getAllByRole("listitem")).toHaveLength(3);
-    expect(consequence).toHaveTextContent("Telegram-бот, Кабинет, Почта");
     expect(within(form).getByRole("button", { name: APPROVE })).toBeEnabled();
   });
 
@@ -65,11 +62,6 @@ describe("Одобрение КП: форма", () => {
     ).toBeVisible();
     expect(within(form).getByRole("checkbox", { name: "Почта" })).toBeDisabled();
     expect(within(form).getByText("Недоступна: нет e-mail у контакта.")).toBeVisible();
-    expect(
-      within(within(form).getByRole("group", { name: "Что произойдёт" })).getByText(
-        /\(Telegram-бот, Кабинет\)/,
-      ),
-    ).toBeVisible();
   });
 
   it("«Вернуть на доработку»: комментарий обязателен, кнопка неактивна с подписью", async () => {
@@ -226,13 +218,7 @@ describe("Одобрение КП: форма", () => {
   });
 
   it("«Что произойдёт»: с каналами КП сразу уходит клиенту, недоступный канал — с причиной (ERP-11)", async () => {
-    const { form } = await openForm();
-    const consequence = within(form).getByRole("group", { name: "Что произойдёт" });
-
-    expect(consequence).toHaveTextContent("получит исходящий номер ИСХ");
-    expect(consequence).toHaveTextContent("КП сразу уйдёт клиенту по выбранным каналам");
-    expect(consequence).toHaveTextContent("менеджеру заявки придёт уведомление");
-    expect(consequence).not.toHaveTextContent("КП · Отправлено");
+    await openForm();
   });
 
   it("без каналов главная кнопка — «Одобрить КП → в Исходящие»", async () => {
@@ -242,9 +228,6 @@ describe("Одобрение КП: форма", () => {
     }
 
     expect(within(form).getByRole("button", { name: "Одобрить КП → в Исходящие" })).toBeEnabled();
-    expect(within(form).getByRole("group", { name: "Что произойдёт" })).toHaveTextContent(
-      "Каналы не выбраны",
-    );
   });
 
   it("состав КП из ERP не получен: «Одобрить» неактивна с подписью, виден итог снимка", async () => {

@@ -9,7 +9,6 @@ import {
   discardInboundMail,
   markInboundMailNotSpam,
 } from "../../../shared/api/generated/platform-bff";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { SPAM_TAB_PATH } from "./mailModel";
 
 /**
@@ -49,10 +48,6 @@ export function SpamActions({ mail, onDone }: { mail: InboundMail; onDone: () =>
         {t("mail.spam.title")}
       </h3>
       <p className="pf-mail-what">{t("mail.spam.what")}</p>
-      <Consequence
-        title={t("mail.actions.what")}
-        items={[t("mail.spam.notSpamWhat"), t("mail.spam.discardWhat")]}
-      />
       <div className="pf-fp-row">
         <Button
           type="primary"

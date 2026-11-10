@@ -182,11 +182,6 @@
   "accountant": {
     "submit": "«Hisoblar va to‘lovlar»da to‘lash",
     "return": "Qaytarish",
-    "consequence": {
-      "step1": "Bu xizmat xati «Hisoblar va to‘lovlar»da «To‘lanadigan xizmat xatlari» bo‘limida ochiladi.",
-      "step2": "U yerda «To‘landi» deb belgilaysiz — sana, summa va to‘lov topshiriqnomasi; bu buxgalter qadamini va marshrutni yopadi.",
-      "step3": "Muallif xabarnoma oladi; hujjat reyestrda to‘lov belgisi bilan qoladi."
-    },
     "done": {
       "approve": "Hujjat to'lovga qabul qilindi",
       "return": "Hujjat qaytarildi",
