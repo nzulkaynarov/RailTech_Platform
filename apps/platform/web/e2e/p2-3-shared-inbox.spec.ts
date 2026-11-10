@@ -133,6 +133,8 @@ test.describe("P2-3: общий ящик как обращение", () => {
       await expectNoViolations(page, `цепочка ${String(width)}`);
 
       await spaGoto(page, "/eds/mail/17");
+      // форма прошлого письма ещё на экране, пока грузится это: ждём его переписку, иначе текст уйдёт в старую форму
+      await expect(page.getByRole("link", { name: "Скачать акт-сверки-октябрь.pdf" })).toBeVisible();
       await page.getByLabel("Текст ответа").fill("Подпишем и вернём скан.");
       await expect(page.getByText(/Копия уйдёт: buh.copy@company.example/)).toBeVisible();
       await shot(page, "card-reply-all");
