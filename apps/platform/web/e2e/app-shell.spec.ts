@@ -153,9 +153,7 @@ test.describe("панели", () => {
     );
     // D26G-4: четыре «Одобрить КП» из «КП на одобрение» (EDS) входят в число «Моих задач»
     await expect(menu.getByRole("link", { name: "Задачи 8, требует действия" })).toBeVisible();
-    await expect(
-      menu.getByRole("link", { name: "Проекты 4, ещё в старой системе: 4" }),
-    ).toBeVisible();
+    await expect(menu.getByRole("link", { name: /^Проекты 4/ })).toBeVisible();
     await expect(page.getByRole("button", { name: /^Центр уведомлений, 3 новых/ })).toBeVisible();
   });
 });
@@ -260,7 +258,7 @@ test.describe("узкие экраны", () => {
       const drawerMenu = page.getByRole("navigation", { name: "Разделы модуля" });
       await expect(drawerMenu).toBeVisible();
       await drawerMenu.getByRole("link", { name: /^Проекты 4/ }).click();
-      await expect(page).toHaveURL(/\/dashboard\/projects$/);
+      await expect(page).toHaveURL(/\/eds\/projects$/);
       await expect(drawerMenu).toBeHidden();
 
       await expect(page.getByRole("complementary", { name: "Боковое окно" })).toHaveCount(0);
