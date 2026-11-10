@@ -32,17 +32,12 @@ describe("Счета и оплаты: список", () => {
     renderAt("/eds/payments");
 
     expect(await screen.findByRole("heading", { level: 1, name: "Финансы" })).toBeVisible();
-    const nav = screen.getByRole("navigation", { name: "Вкладки счетов и оплат" });
-    expect(await within(nav).findByRole("link", { name: /^Ждут оплаты\s*2$/ })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
-    expect(within(nav).getByRole("link", { name: /^К выставлению\s*1$/ })).toBeVisible();
+    expect(await screen.findByRole("radio", { name: "Ждут оплаты · 2" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "К выставлению · 1" })).toBeInTheDocument();
     expect(
-      within(nav).getByRole("link", { name: /^Платёжки на подтверждение\s*1$/ }),
-    ).toBeVisible();
-    expect(within(nav).getByRole("link", { name: /^Просрочены\s*1$/ })).toBeVisible();
-    expect(within(nav).getByRole("link", { name: /^Служебки к оплате\s*1$/ })).toBeVisible();
+      screen.getByRole("radio", { name: "Платёжки на подтверждение · 1" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Просрочены · 1" })).toBeInTheDocument();
 
     const table = await screen.findByRole("table", { name: "Счета" });
     const rows = within(table).getAllByRole("row");
@@ -148,8 +143,8 @@ describe("Счета и оплаты: список", () => {
     expect(
       await screen.findByRole("heading", { name: "Счета клиентов вам не показываются" }),
     ).toBeVisible();
-    fireEvent.click(screen.getByRole("link", { name: /Служебки к оплате/ }));
-    const table = await screen.findByRole("table", { name: "Служебки к оплате" });
+    fireEvent.click(screen.getByRole("link", { name: "Заявки на оплату" }));
+    const table = await screen.findByRole("table", { name: "Заявки на оплату" });
     expect(within(table).getByText("СЗ-2026/015")).toBeVisible();
     expect(within(table).getByText("Приложен")).toBeVisible();
   });
@@ -307,7 +302,7 @@ describe("Служебки к оплате", () => {
     signIn("accountant@demo.example");
     renderAt("/eds/payments?show=memos");
 
-    const table = await screen.findByRole("table", { name: "Служебки к оплате" });
+    const table = await screen.findByRole("table", { name: "Заявки на оплату" });
     const row = within(table).getByRole("row", { name: /СЗ-2026\/015/ });
     expect(within(row).getByText("Передана бухгалтеру")).toBeVisible();
     fireEvent.click(

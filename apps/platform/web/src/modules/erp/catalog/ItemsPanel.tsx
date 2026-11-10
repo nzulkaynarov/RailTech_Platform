@@ -30,6 +30,7 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
+import { LinkButton } from "../../../shared/ui/LinkButton";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { FormField, QueryState } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
@@ -299,14 +300,17 @@ export function ItemsPanel() {
         )}
         <span className="pf-cat-spacer" />
         {canEdit(me, "erp.stock") ? (
-          <Button
-            type="primary"
-            onClick={() => {
-              setCreating(true);
-            }}
-          >
-            {t("items.add")}
-          </Button>
+          <>
+            <LinkButton to="/erp/catalog?part=import">{t("items.uploadPrice")}</LinkButton>
+            <Button
+              type="primary"
+              onClick={() => {
+                setCreating(true);
+              }}
+            >
+              {t("items.add")}
+            </Button>
+          </>
         ) : null}
       </div>
       <QueryState query={query} labels={queryLabels(t)} rows={PAGE_SIZE}>

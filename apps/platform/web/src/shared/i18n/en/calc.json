@@ -1,7 +1,6 @@
 {
   "list": {
     "subtitle": "Costing tasks after the director's resolution: deadline, line sign-offs and owner",
-    "subtitleMine": "",
     "caption": "Requests in costing",
     "scroll": "Table of requests in costing",
     "columns": {
@@ -24,6 +23,11 @@
       "mineTitle": "You have no costing tasks",
       "mineText": "Nothing here yet.",
       "mineAction": "All requests in costing"
+    },
+    "scope": {
+      "label": "Whose requests",
+      "all": "All",
+      "mine": "Mine"
     }
   },
   "state": {

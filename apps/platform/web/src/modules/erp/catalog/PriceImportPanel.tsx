@@ -1,7 +1,7 @@
 import { Alert, App, Button, Segmented, Select } from "antd";
 import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useSearchParams } from "react-router";
+import { useLocation, useSearchParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "../../../app/auth/useAuth";
@@ -67,7 +67,10 @@ export function PriceImportPanel() {
   const [search, setSearch] = useState("");
   const q = useDebounced(search.trim());
   const suppliers = useListCatalogSuppliers({ ...(q ? { q } : {}), page: 1, page_size: 50 });
-  const [supplier, setSupplier] = useState<{ id: string; name: string } | null>(null);
+  const location = useLocation();
+  const [supplier, setSupplier] = useState<{ id: string; name: string } | null>(
+    (location.state as { supplier?: { id: string; name: string } } | null)?.supplier ?? null,
+  );
   const [creating, setCreating] = useState(false);
   const [mode, setMode] = useState<PriceImportMode>("xlsx");
   const [files, setFiles] = useState<File[]>([]);

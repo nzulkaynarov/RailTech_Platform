@@ -11,7 +11,7 @@
     },
     "forbidden": {
       "title": "Ruxsat yo‘q",
-      "text": "«Hisoblar va to‘lovlar» bo‘limi rolingiz uchun mavjud emas."
+      "text": "«Moliya» bo‘limi rolingiz uchun mavjud emas."
     },
     "erpForbidden": {
       "title": "Mijoz hisoblari sizga ko‘rsatilmaydi",
@@ -33,14 +33,14 @@
     }
   },
   "list": {
-    "subtitle": "Mijoz hisoblari, tasdiqlanadigan to‘lov topshiriqnomalari va to‘lanadigan xizmat xatlari.",
-    "tabsLabel": "Hisob va to‘lov yorliqlari",
+    "subtitle": "Mijoz hisoblari, tasdiqlanadigan to‘lov topshiriqnomalari va to‘lov arizalari.",
+    "tabsLabel": "Hisob holati",
     "tabs": {
       "to_issue": "Rasmiylashtirish uchun",
       "awaiting": "To‘lovni kutmoqda",
       "proofs": "Tasdiqlash uchun to‘lov topshiriqnomalari",
       "overdue": "Muddati o‘tgan",
-      "memos": "To‘lanadigan xizmat xatlari",
+      "memos": "To‘lov arizalari",
       "all": "Barcha hisoblar"
     },
     "search": {
@@ -137,7 +137,7 @@
       },
       "draft": {
         "title": "Hisob hali rasmiylashtirilmagan",
-        "text": "To‘lov chiqarilgan hisob bo‘yicha tasdiqlanadi. Uni «Hisoblar va to‘lovlar»ga to‘liq ruxsati bor xodim chiqaradi."
+        "text": "To‘lov chiqarilgan hisob bo‘yicha tasdiqlanadi. Uni «Moliya»ga to‘liq ruxsati bor xodim chiqaradi."
       },
       "cancelled": {
         "title": "Hisob bekor qilingan",
@@ -302,7 +302,7 @@
     "projectLine": "{{project}} loyihasi · {{client}}"
   },
   "memo": {
-    "caption": "To‘lanadigan xizmat xatlari",
+    "caption": "To‘lov arizalari",
     "scroll": "To‘lanadigan xizmat xatlari jadvali",
     "scope": {
       "label": "Qaysi xizmat xatlarini ko‘rsatish",

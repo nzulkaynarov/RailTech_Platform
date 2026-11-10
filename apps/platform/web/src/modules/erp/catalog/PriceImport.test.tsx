@@ -20,7 +20,8 @@ setupCatalogTests();
 async function open(email: string, search: string) {
   signIn(email);
   renderAt(`/erp/catalog${search}`);
-  expect(await screen.findByRole("heading", { level: 1, name: "Товары" })).toBeVisible();
+  const heading = search.includes("import") ? "Загрузка прайса" : "Товары";
+  expect(await screen.findByRole("heading", { level: 1, name: heading })).toBeVisible();
 }
 
 const xlsx = () =>

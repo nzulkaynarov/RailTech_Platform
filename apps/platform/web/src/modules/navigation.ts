@@ -20,6 +20,8 @@ export interface NavTab {
   targets: readonly NavTarget[];
   /** Разделы без своей вкладки, которые подсвечивают эту */
   also?: readonly string[];
+  /** Разделы, карточка объекта которых относится к этой вкладке, даже если сам список живёт в другой */
+  objects?: readonly string[];
 }
 
 export interface NavItem {
@@ -46,6 +48,10 @@ const docs = (box: string): NavTarget => ({
 
 const REQUESTS: readonly NavTarget[] = [{ section: "erp.requests" }, { section: "crm.requests" }];
 const PURCHASES: readonly NavTarget[] = [{ section: "erp.stock", to: "/erp/stock?view=orders" }];
+const INVOICES: readonly NavTarget[] = [{ section: "eds.payments" }];
+const PAY_REQUESTS: readonly NavTarget[] = [
+  { section: "eds.payments", to: "/eds/payments?show=memos" },
+];
 const PRODUCTS: readonly NavTarget[] = [{ section: "erp.catalog" }];
 const STOCK: readonly NavTarget[] = [{ section: "erp.stock" }];
 const TECH_DOCS: readonly NavTarget[] = [{ section: "erp.docs" }];
@@ -76,7 +82,7 @@ export const NAVIGATION: Readonly<Record<ModuleCode, readonly NavItem[]>> = {
       also: ["erp.calc"],
       tabs: [
         { key: "sales", targets: REQUESTS, also: ["erp.calc"] },
-        { key: "purchases", targets: PURCHASES },
+        { key: "purchases", targets: PURCHASES, objects: ["erp.stock"] },
       ],
     },
     {
@@ -88,7 +94,14 @@ export const NAVIGATION: Readonly<Record<ModuleCode, readonly NavItem[]>> = {
         { key: "docs", targets: TECH_DOCS },
       ],
     },
-    { key: "finance", targets: [{ section: "eds.payments" }] },
+    {
+      key: "finance",
+      targets: INVOICES,
+      tabs: [
+        { key: "invoices", targets: INVOICES },
+        { key: "memos", targets: PAY_REQUESTS },
+      ],
+    },
   ],
   chats: [
     { key: "calendar", targets: [{ section: "chats.calendar" }] },
@@ -188,14 +201,18 @@ export function findNavItem(
   const entries = MODULES.flatMap((m) =>
     NAVIGATION[m.code].map((item) => ({ code: m.code, item })),
   );
+  const ownsObject = (tab: NavTab) => match.objectId !== undefined && tab.objects?.includes(ref);
   const hit =
     entries.find(({ item }) =>
       [item, ...(item.tabs ?? [])].some((node) => byQuery(node.targets, pathname, search)),
-    ) ?? entries.find(({ item }) => bySection(item.targets, item.also ?? [], ref));
+    ) ??
+    entries.find(({ item }) => item.tabs?.some(ownsObject)) ??
+    entries.find(({ item }) => bySection(item.targets, item.also ?? [], ref));
   if (!hit) return undefined;
   const tabs = hit.item.tabs ?? [];
   const tab =
     tabs.find((t) => byQuery(t.targets, pathname, search)) ??
+    tabs.find(ownsObject) ??
     tabs.find((t) => bySection(t.targets, t.also ?? [], ref));
   return { module: hit.code, item: hit.item, tab };
 }

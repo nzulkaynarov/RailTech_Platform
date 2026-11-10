@@ -45,7 +45,8 @@ describe("меню — docs/product/NAVIGATION.md", () => {
     expect(at("/eds/documents?box=archive")).toBe("eds.archive");
     expect(at("/eds/documents?box=internal")).toBe("eds.internal");
     expect(at("/eds/documents")).toBeUndefined();
-    expect(at("/eds/payments")).toBe("erp.finance");
+    expect(at("/eds/payments")).toBe("erp.finance.invoices");
+    expect(at("/eds/payments?show=memos")).toBe("erp.finance.memos");
     expect(at("/eds/projects")).toBe("dashboard.projects");
     expect(at("/admin/org")).toBe("admin.people");
     expect(at("/admin?group=channels")).toBe("admin.channels");

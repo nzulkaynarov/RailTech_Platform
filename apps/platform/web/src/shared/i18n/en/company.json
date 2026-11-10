@@ -367,9 +367,9 @@
       "units": "Units",
       "delivery-basis": "Delivery bases"
     },
-    "moved": "Exchange rates, customs (HS) codes and manufacturers are kept in “Costing · Items & suppliers” → “Reference lists”.",
+    "moved": "HS codes and manufacturers are kept in “Catalog · Goods” → “Reference lists”; exchange rates are in “Settings · Taxes & currencies”.",
     "movedLink": "Open the reference lists",
-    "movedNoAccess": "Exchange rates, customs (HS) codes and manufacturers are kept in “Costing · Items & suppliers”; it is open to supply and management roles.",
+    "movedNoAccess": "HS codes and manufacturers are kept in “Catalog · Goods” → “Reference lists”; exchange rates are in “Settings · Taxes & currencies”.",
     "code": "Code",
     "name": "Name",
     "alpha2": "ISO alpha-2",

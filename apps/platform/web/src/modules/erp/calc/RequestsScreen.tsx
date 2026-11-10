@@ -1,4 +1,4 @@
-import { Button, Card } from "antd";
+import { Button, Card, Segmented } from "antd";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router";
 
@@ -183,20 +183,37 @@ function Rows({ items, selected }: { items: readonly CalcRequestRow[]; selected:
  * Расчёт · «Заявки в расчёте» и «Мои расчёты» (SPEC-v3 §7.4 «Все запросы»): ЗВ-номер · клиент · стадия · срок расчёта · три
  * индикатора виз · ответственный · «Открыть расчёт». Клик по строке — «Задание» в боковом окне без перехода.
  */
-export function RequestsScreen({ mine }: { mine: boolean }) {
+export function RequestsScreen() {
   const { t } = useTranslation(["calc", "modules"]);
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
+  const mine = params.get("mine") === "1";
   const labels = useStateLabels();
-  const title = t(`modules:erp.sections.${mine ? "calc" : "requests"}`);
+  const title = t("modules:erp.sections.requests");
   useDocumentTitle(title);
   const query = useListCalcRequests(mine ? { mine: true } : undefined);
   const selected = params.get("request");
 
   return (
     <div className="pf-calc">
-      <PageHeader
-        title={title}
-        subtitle={t(mine ? "calc:list.subtitleMine" : "calc:list.subtitle")}
+      <PageHeader title={title} subtitle={t("calc:list.subtitle")} />
+      <Segmented
+        aria-label={t("calc:list.scope.label")}
+        value={mine ? "mine" : "all"}
+        options={[
+          { value: "all", label: t("calc:list.scope.all") },
+          { value: "mine", label: t("calc:list.scope.mine") },
+        ]}
+        onChange={(value) => {
+          setParams(
+            (prev) => {
+              const next = new URLSearchParams(prev);
+              if (value === "mine") next.set("mine", "1");
+              else next.delete("mine");
+              return next;
+            },
+            { replace: true },
+          );
+        }}
       />
       <Card styles={{ body: { padding: 0 } }}>
         <QueryState query={query} labels={labels} rows={10}>

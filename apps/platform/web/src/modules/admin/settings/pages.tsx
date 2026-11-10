@@ -2,7 +2,7 @@ import { Card } from "antd";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { canEdit } from "../../../app/access";
+import { canEdit, canSee } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { ExportsView } from "../bot/ExportsView";
 import { SoloSection } from "../company/solo";
@@ -13,6 +13,7 @@ import { PiiPolicyCard } from "../docflow/PiiPolicyCard";
 import { TemplatesTab as ResolutionTemplates } from "../docflow/TemplatesTab";
 import { MailPanel } from "../integrations/MailPanel";
 import { SpendPanel } from "../integrations/SpendPanel";
+import { RatesView } from "../../erp/catalog/RefsPanel";
 import { BotSettingsSections } from "./BotSettingsSections";
 import { SettingsPage } from "./SettingsPage";
 
@@ -42,11 +43,17 @@ export function NumberingPage() {
 
 /** Компания · Налоги и валюты: НДС и курс USD → валюта компании (бывшая вкладка «Платформа»). */
 export function TaxesPage() {
+  const { me } = useAuth();
   return (
     <SettingsPage sectionKey="taxes">
       <Solo>
         <PlatformTab />
       </Solo>
+      {canSee(me, { resource: "erp.stock" }) ? (
+        <Card>
+          <RatesView />
+        </Card>
+      ) : null}
     </SettingsPage>
   );
 }

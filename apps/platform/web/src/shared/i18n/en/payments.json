@@ -11,7 +11,7 @@
     },
     "forbidden": {
       "title": "No access",
-      "text": "The “Invoices & payments” section is not available to your role."
+      "text": "The “Finance” section is not available to your role."
     },
     "erpForbidden": {
       "title": "Customer invoices are not shown to you",
@@ -33,14 +33,14 @@
     }
   },
   "list": {
-    "subtitle": "Customer invoices, payment orders to confirm and memos to pay.",
-    "tabsLabel": "Invoice and payment tabs",
+    "subtitle": "Customer invoices, payment orders to confirm and payment requests.",
+    "tabsLabel": "Invoice status",
     "tabs": {
       "to_issue": "To issue",
       "awaiting": "Awaiting payment",
       "proofs": "Payment orders to confirm",
       "overdue": "Overdue",
-      "memos": "Memos to pay",
+      "memos": "Payment requests",
       "all": "All invoices"
     },
     "search": {
@@ -137,7 +137,7 @@
       },
       "draft": {
         "title": "Invoice not issued yet",
-        "text": "Payments are confirmed against an issued invoice. It is issued by an employee with full access to “Invoices & payments”."
+        "text": "Payments are confirmed against an issued invoice. It is issued by an employee with full access to “Finance”."
       },
       "cancelled": {
         "title": "Invoice cancelled",
@@ -302,7 +302,7 @@
     "projectLine": "Project {{project}} · {{client}}"
   },
   "memo": {
-    "caption": "Memos to pay",
+    "caption": "Payment requests",
     "scroll": "Memos to pay table",
     "scope": {
       "label": "Which memos to show",

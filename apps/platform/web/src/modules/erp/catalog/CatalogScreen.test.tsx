@@ -234,15 +234,10 @@ describe("Номенклатура: бригады", () => {
 });
 
 describe("Номенклатура: справочники", () => {
-  it("курсы валют: источник словами; ввести курс может только держатель «Компании»", async () => {
-    await open("supply@demo.example", "?part=refs");
+  it("директор видит курсы в налогах и валютах и вводит курс USD вручную", async () => {
+    signIn("director@demo.example");
+    renderAt("/admin/taxes");
     expect((await screen.findAllByText("Вручную")).length).toBeGreaterThan(0);
-    expect(screen.getAllByText("ЦБ").length).toBeGreaterThan(0);
-    expect(screen.queryByRole("button", { name: "Ввести курс USD" })).toBeNull();
-  });
-
-  it("директор вводит курс USD вручную; он появляется в таблице", async () => {
-    await open("director@demo.example", "?part=refs");
     fireEvent.click(await screen.findByRole("button", { name: "Ввести курс USD" }));
     const form = await findModal("Ввести курс USD на дату");
     fireEvent.change(await within(form).findByLabelText("Курс, сум за 1 USD"), {

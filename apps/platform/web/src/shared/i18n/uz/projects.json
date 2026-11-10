@@ -137,9 +137,9 @@
       "scanLabel": "{{number}} skanini yuklab olish",
       "openQuote": "Ochish",
       "openQuoteLabel": "{{number}} TT sini ochish",
-      "payments": "Hisoblar va to‘lovlar",
-      "paymentsLater": "Hisob chiqarish va to‘lov «Hisoblar va to‘lovlar» bo‘limida (bo‘lim alohida ulanadi)",
-      "invoiceHint": "Hisob chiqarish va to‘lovni tasdiqlash — «Hisoblar va to‘lovlar» bo‘limida."
+      "payments": "Moliya",
+      "paymentsLater": "Hisob chiqarish va to‘lov «Moliya» bo‘limida (bo‘lim alohida ulanadi)",
+      "invoiceHint": "Hisob chiqarish va to‘lovni tasdiqlash — «Moliya» bo‘limida."
     },
     "execution": {
       "title": "Bajarilishi",
@@ -324,7 +324,7 @@
     "number": "{{number}} dalolatnomasi",
     "none": {
       "title": "Dalolatnoma hali yo‘q",
-      "noInvoice": "Dalolatnoma rasmiylashtirilgan hisob bo‘yicha chiqariladi. Hisob hali rasmiylashtirilmagan — uni «Hisoblar va to‘lovlar» bo‘limida rasmiylashtiring.",
+      "noInvoice": "Dalolatnoma rasmiylashtirilgan hisob bo‘yicha chiqariladi. Hisob hali rasmiylashtirilmagan — uni «Moliya» bo‘limida rasmiylashtiring.",
       "forbidden": "Ruxsat yetarli emas.",
       "ready": "Hisob rasmiylashtirilgan: dalolatnoma chiqarish mumkin.",
       "issue": "Dalolatnoma chiqarish"

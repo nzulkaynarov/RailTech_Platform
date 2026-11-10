@@ -97,7 +97,8 @@ test.describe("панели", () => {
 
     // «Мои расчёты»: подменю как в других разделах (UX-1a — своего умолчания у раздела нет); окно — по кнопке «Панель»
     await page.goto("/erp/calc");
-    await expect(page.getByRole("heading", { level: 1, name: "Мои расчёты" })).toBeVisible();
+    await expect(page).toHaveURL(/\/erp\/requests\?mine=1$/);
+    await expect(page.getByRole("heading", { level: 1, name: "Заявки" })).toBeVisible();
     await expect(menu).toBeVisible();
     await expect(panel).toHaveCount(0);
     expect(await mainWidth()).toBe(listWidth);

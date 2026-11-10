@@ -23,9 +23,8 @@ import { MemoRows } from "./MemoRows";
 import { MemoSlot } from "./MemoPanel";
 import { PaymentSlot } from "./PaymentPanel";
 import { BankDetailsNotice } from "./BankDetailsNotice";
-import { TabNav } from "./TabNav";
 import { useStateLabels } from "./labels";
-import { type InvoiceTab, PAGE, showTab } from "./model";
+import { INVOICE_TABS, type InvoiceTab, PAGE, showTab } from "./model";
 
 /** Куда ведёт кнопка пустого состояния вкладки (SPEC-v3 §7: пустое состояние — словами и с действием). */
 const NEXT: Record<InvoiceTab, InvoiceTab | null> = {
@@ -251,16 +250,26 @@ export function PaymentList() {
   const counts = board.isError ? undefined : knownCounts;
   const memosToPay = board.isError ? undefined : knownMemos;
 
+  const statusLabel = (value: InvoiceTab): string => {
+    const count = value === "all" ? undefined : counts?.[value];
+    const name = t(`payments:list.tabs.${value}`);
+    return count ? `${name} · ${String(count)}` : name;
+  };
+
   return (
     <div className="pf-dec-page">
       <PageHeader title={title} subtitle={t("payments:list.subtitle")} />
-      <TabNav active={tab} counts={counts} memos={memosToPay} />
       {tab === "memos" ? (
         <Segmented
           aria-label={t("payments:memo.scope.label")}
           value={memoStatus}
           options={[
-            { value: "to_pay", label: t("payments:memo.scope.to_pay") },
+            {
+              value: "to_pay",
+              label: memosToPay
+                ? `${t("payments:memo.scope.to_pay")} · ${String(memosToPay)}`
+                : t("payments:memo.scope.to_pay"),
+            },
             { value: "paid", label: t("payments:memo.scope.paid") },
           ]}
           onChange={(value) => {
@@ -269,6 +278,17 @@ export function PaymentList() {
         />
       ) : (
         <div className="pf-pay-toolbar">
+          <Segmented
+            aria-label={t("payments:list.tabsLabel")}
+            value={tab}
+            options={INVOICE_TABS.map((value) => ({
+              value,
+              label: statusLabel(value),
+            }))}
+            onChange={(value) => {
+              go({ show: value, payment: null, memo: null, sheet: null, panel: null, tab: null });
+            }}
+          />
           <Input
             className="pf-pay-search"
             value={draft}

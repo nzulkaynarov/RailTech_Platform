@@ -137,9 +137,9 @@
       "scanLabel": "Download scan {{number}}",
       "openQuote": "Open",
       "openQuoteLabel": "Open quote {{number}}",
-      "payments": "Invoices & payments",
-      "paymentsLater": "Issuing and payment live in “Invoices & payments” (the section is connected separately)",
-      "invoiceHint": "Issuing and confirming payment are in “Invoices & payments”."
+      "payments": "Finance",
+      "paymentsLater": "Issuing and payment live in “Finance” (the section is connected separately)",
+      "invoiceHint": "Issuing and confirming payment are in “Finance”."
     },
     "execution": {
       "title": "Fulfilment",
@@ -324,7 +324,7 @@
     "number": "Act {{number}}",
     "none": {
       "title": "No act yet",
-      "noInvoice": "The act is issued against an issued invoice. No invoice has been issued yet — issue it in “Invoices & payments”.",
+      "noInvoice": "The act is issued against an issued invoice. No invoice has been issued yet — issue it in “Finance”.",
       "forbidden": "Insufficient permissions.",
       "ready": "The invoice is issued: you can issue the act.",
       "issue": "Issue the act"

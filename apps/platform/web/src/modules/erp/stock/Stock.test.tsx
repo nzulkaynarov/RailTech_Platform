@@ -13,7 +13,8 @@ const ORDER_PATH = `/erp/stock/${encodeURIComponent(ORDER)}`;
 async function openStock(email: string, view = "") {
   signIn(email);
   renderAt(`/erp/stock${view ? `?view=${view}` : ""}`);
-  expect(await screen.findByRole("heading", { level: 1, name: "Склад" })).toBeVisible();
+  const heading = view === "orders" ? "Закупки" : "Склад";
+  expect(await screen.findByRole("heading", { level: 1, name: heading })).toBeVisible();
 }
 
 async function rowOf(text: string): Promise<HTMLElement> {
