@@ -54,7 +54,7 @@
     },
     "forbidden": {
       "title": "Bu bo'lim rolingiz uchun emas",
-      "text": "Ish uchun kerak bo'lsa, administratorga yozing."
+      "text": "Ruxsat yetarli emas."
     }
   },
   "errors": {
@@ -121,7 +121,7 @@
       "valid_date_invalid": "Sana — KK.OO.YYYY formatida.",
       "rows_token_invalid": "Tekshiruv eskirgan. «Tekshirish»ni yana bosing.",
       "offer_source_invalid": "Narx manbaini tanlang.",
-      "role_not_permitted": "Katalog va ta’minot huquqlari kerak.",
+      "role_not_permitted": "Ruxsat yetarli emas.",
       "contact_exists": "Kompaniyada bunday manzilli kontakt allaqachon bor.",
       "contact_email_ambiguous": "Bu manzil kabinetdagi boshqa kompaniya kontaktida ko'rsatilgan. Boshqa manzil kiriting.",
       "email_delivery_failed": "Xat yuborilmadi. Pochta xizmatini tekshirib, qayta urinib ko'ring — kirish o'zgarmadi.",
@@ -249,7 +249,7 @@
     "noLimit": "muddatsiz",
     "inactive": "Amalda emas",
     "priceHidden": "yashirin",
-    "pricesNote": "Yetkazib beruvchi narxlari sizga ko'rsatilmaydi: ularni ta'minotchi va direktor ko'radi.",
+    "pricesNote": "",
     "quotaValue": "{{qty}} dona, {{min}} dan",
     "leadValue": "ombordan {{stock}} kun, buyurtma bo'yicha {{order}} kun",
     "openSupplier": "{{name}} yetkazib beruvchisini ochish",
@@ -326,7 +326,7 @@
     "editNamed": "O'zgartirish: {{name}}",
     "inactive": "Ishlamaydi",
     "rateHidden": "yashirin",
-    "ratesNote": "Brigada stavkalari sizga ko'rsatilmaydi: ularni bosh muhandis, ta'minotchi va direktor ko'radi.",
+    "ratesNote": "",
     "columns": {
       "name": "Nomi",
       "kind": "Turi",
@@ -366,7 +366,7 @@
     }
   },
   "requests": {
-    "hint": "Kerakli kategoriya yo'qmi? So'rang: so'rov hech narsa yaratmaydi, kategoriyani direktor yoki administrator yaratadi.",
+    "hint": "",
     "hintDecide": "Ma'qullash so'rovga yaratilgan kategoriyani bog'laydi; rad etish sabab talab qiladi. Yangi kategoriyalar «Sozlamalar · Kompaniya»da yaratiladi.",
     "add": "Kategoriya so'rash",
     "table": "Yangi kategoriyalar so'rovlari",
@@ -427,7 +427,7 @@
       },
       "empty": {
         "title": "Kurslar yo'q",
-        "text": "Kurslar Markaziy bankdan avtomatik keladi. Yuklash ishlamasa, direktor kursni qo'lda kiritadi."
+        "text": "Hozircha bo‘sh."
       },
       "form": {
         "title": "Sanaga USD kursini kiritish",
@@ -695,9 +695,9 @@
         "readOnly": "Tasdiqlash — yetkazib beruvchilarni yurituvchi xodimning vazifasi."
       },
       "hint": {
-        "linked": "Hamkor — CRM mijozi: uning so'rovlari menejerga mijoz so'rovlari sifatida boradi, tijorat takliflari va hujjatlar ishlaydi.",
-        "requested": "So'rov CRMga yuborildi, mijoz yaratilmoqda. Shu paytgacha hamkor so'rovlari shu yerda saqlanadi va menejerga o'zi boradi.",
-        "pending_confirmation": "Hamkor CRMdagi mavjud mijozga o'xshaydi. CRM menejeri mijoz kartochkasida bu bir xil kompaniya ekanini tasdiqlaydi; shu paytgacha hamkor so'rovlari shu yerda saqlanadi va o'zi ketadi. CRMda menejer tasdig'i kutilmoqda.",
+        "linked": "",
+        "requested": "",
+        "pending_confirmation": "",
         "held": "Mijoz topshirilgandan keyin ushlab turilgan: yetkazib beruvchi kartochkasida va CRMdagi mijozda STIRni tekshiring va «Qayta taklif qilish» tugmasini bosing. Bog'lanish yaratilmadi, hamkor so'rovlari shu yerda saqlanadi.",
         "unverified": "Bog'lanishni CRMdan mijoz topshirilishi STIR mos kelgani bo'yicha yaratdi. Bir xil kompaniya ekanini tasdiqlamaguningizcha hamkor so'rovlari shu yerda saqlanadi.",
         "conflict": "CRMda bunday rekvizitli mijoz bor, lekin u boshqa kompaniyaga bog'langan. Hech narsa o'zgartirilmadi. Yetkazib beruvchi kartochkasida va CRMdagi mijozda STIR yoki ro'yxatdan o'tish raqamini tekshiring, xatosini to'g'rilang va hamkorni qayta taklif qiling."
@@ -840,7 +840,7 @@
   "import": {
     "noAccess": {
       "title": "Prays yuklash mavjud emas",
-      "text": "Praysni ta’minotchi yoki direktor yuklaydi."
+      "text": "Ruxsat yetarli emas."
     },
     "supplier": "Yetkazib beruvchi",
     "supplierPlaceholder": "Nomi yoki raqami bo‘yicha toping",
@@ -958,7 +958,10 @@
       "U pozitsiya kartasida va «Texnik hujjatlar» bo‘limida paydo bo‘ladi.",
       "«Mijozga ko‘rinadi» belgisi saqlanadi; mijoz kabinetida keyinroq ko‘rinadi."
     ],
-    "editSteps": ["O‘zgarishlar hujjatda saqlanadi.", "Faylning o‘zi o‘zgarmaydi."],
+    "editSteps": [
+      "O‘zgarishlar hujjatda saqlanadi.",
+      "Faylning o‘zi o‘zgarmaydi."
+    ],
     "saved": "Hujjat saqlandi."
   },
   "queue": {
@@ -1097,7 +1100,7 @@
     },
     "empty": {
       "title": "Hamkorlik arizalari yo'q",
-      "hint": "Yangi nomzodlar arizalari ta'minot bo'limi ko'rib chiqishi va shartnomani kelishish uchun bu yerda paydo bo'ladi."
+      "hint": "Hozircha bo‘sh."
     },
     "sendContractModal": {
       "title": "Shartnoma loyihasini yuborish: {{name}}",

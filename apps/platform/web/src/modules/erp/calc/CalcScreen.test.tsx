@@ -8,7 +8,7 @@ setupCalcTests();
 
 const NUMBER = "ЗВ-2026-097";
 const PATH = `/erp/calc/${encodeURIComponent(NUMBER)}`;
-const READY = "Расчёт готов → черновик КП директору";
+const READY = "Расчёт готов";
 
 async function openCalc(email: string) {
   signIn(email);
@@ -47,13 +47,7 @@ describe("Расчёт · Заявки в расчёте", () => {
   it("«Мои расчёты» без заданий — пустое состояние словами и с действием", async () => {
     signIn("accountant@demo.example");
     renderAt("/erp/calc");
-    expect(
-      await screen.findByText(/Заданий на расчёт нет. Они приходят после резолюции директора/),
-    ).toBeVisible();
-    expect(screen.getByRole("link", { name: "Все заявки в расчёте" })).toHaveAttribute(
-      "href",
-      "/erp/requests",
-    );
+    expect(await screen.findByText("Пока пусто.")).toBeVisible();
   });
 
   it("клик по строке — «Задание» в боковом окне без перехода", async () => {
@@ -133,7 +127,6 @@ describe("Расчёт по заявке", () => {
 
   it("бухгалтер — только чтение: цены клиенту и итог, без себестоимости, ставок бригады и цен поставщика", async () => {
     await openCalc("accountant@demo.example");
-    expect(screen.getByText(/Только чтение: строки правит и визирует снабженец/)).toBeVisible();
     expect(screen.queryByRole("button", { name: /Подтвердить строку/ })).toBeNull();
     expect(screen.queryByRole("button", { name: READY })).toBeNull();
     const totals = screen.getByText("Итого").closest("tr");

@@ -10,7 +10,7 @@ import { confirmDialog } from "../../../test/confirmDialog";
 setupApprovalTests();
 
 const QUOTE = (n: number) => `/eds/drafts/${encodeURIComponent(`КП-2026/${String(n)}`)}`;
-const APPROVE = "Одобрить КП → отправить клиенту";
+const APPROVE = "Одобрить КП";
 
 async function openForm(n = 115, user = "director@demo.example") {
   signIn(user);
@@ -221,13 +221,13 @@ describe("Одобрение КП: форма", () => {
     await openForm();
   });
 
-  it("без каналов главная кнопка — «Одобрить КП → в Исходящие»", async () => {
+  it("без каналов главная кнопка — «Одобрить КП»", async () => {
     const { form } = await openForm();
     for (const name of ["Telegram-бот", "Кабинет", "Почта"]) {
       fireEvent.click(within(form).getByRole("checkbox", { name }));
     }
 
-    expect(within(form).getByRole("button", { name: "Одобрить КП → в Исходящие" })).toBeEnabled();
+    expect(within(form).getByRole("button", { name: "Одобрить КП" })).toBeEnabled();
   });
 
   it("состав КП из ERP не получен: «Одобрить» неактивна с подписью, виден итог снимка", async () => {

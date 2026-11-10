@@ -85,7 +85,6 @@ describe("Номенклатура: позиции", () => {
 
     const drawer = await screen.findByRole("dialog", { name: "Кабель силовой ВВГнг 3×2,5" });
     expect(await within(drawer).findByText("ООО «Поставщик Север»")).toBeVisible();
-    expect(within(drawer).getByText(/Цены поставщиков вам не показываются/)).toBeVisible();
     expect(within(drawer).getAllByText("скрыта").length).toBeGreaterThan(0);
     expect(within(drawer).queryByText(/12,50\s*USD/)).toBeNull();
     expect(within(drawer).getByText("500 шт., от 10")).toBeVisible();
@@ -164,7 +163,6 @@ describe("Номенклатура: поставщики", () => {
 
     const drawer = await screen.findByRole("dialog", { name: "ООО «Поставщик Север»" });
     expect(await within(drawer).findByText("Кабель силовой ВВГнг 3×2,5")).toBeVisible();
-    expect(within(drawer).getByText(/Цены поставщиков вам не показываются/)).toBeVisible();
     fireEvent.click(
       within(drawer).getByRole("button", {
         name: "Изменить предложение по позиции Кабель силовой ВВГнг 3×2,5",
@@ -231,7 +229,6 @@ describe("Номенклатура: бригады", () => {
     await open("manager@demo.example", "?part=brigades");
 
     expect(await screen.findByText("Бригада монтажа №1")).toBeVisible();
-    expect(screen.getByText(/Ставки бригад вам не показываются/)).toBeVisible();
     expect(screen.queryByText(/900\s*000/)).toBeNull();
     expect(screen.queryByRole("button", { name: "Добавить бригаду" })).toBeNull();
   });

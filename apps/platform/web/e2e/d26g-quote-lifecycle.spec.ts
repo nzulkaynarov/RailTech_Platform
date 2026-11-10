@@ -74,7 +74,7 @@ test.describe("D26G: жизненный цикл КП — доработка, о
 
       // Новая версия — тот же номер КП (SPEC-v3 §2.2): виза и «Расчёт готов» → у директора КП-2026/119
       await page.getByRole("button", { name: /Подтвердить строку «Привод/ }).click();
-      await page.getByRole("button", { name: "Расчёт готов → черновик КП директору" }).click();
+      await page.getByRole("button", { name: "Расчёт готов" }).click();
       await expect(page.getByText(/Черновик КП КП-2026\/119, версия 2, у директора/)).toBeVisible();
       await shot(page, "calc-new-version-ready");
     });
@@ -118,7 +118,7 @@ test.describe("D26G: жизненный цикл КП — доработка, о
       await expectNoViolations(page, `версия 2 ${String(width)}`);
       if (width >= 768) {
         const form = page.locator(PANEL).getByRole("form", { name: "Одобрение КП" });
-        const approve = form.getByRole("button", { name: "Одобрить КП → отправить клиенту" });
+        const approve = form.getByRole("button", { name: "Одобрить КП" });
         await expect(approve).toBeEnabled();
         await approve.click();
         await confirmDialog(page);

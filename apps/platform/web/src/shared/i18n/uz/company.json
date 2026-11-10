@@ -61,7 +61,7 @@
   "errors": {
     "DEFAULT": "Amalni bajarib bo'lmadi. Keyinroq qayta urinib ko'ring.",
     "FORBIDDEN": "Bo'lim yoki amal rolingizga berilmagan.",
-    "ERP_FORBIDDEN": "Amal mavjud emas: u administratorga yoki kompaniya sozlamalari huquqiga ega xodimga ruxsat etilgan.",
+    "ERP_FORBIDDEN": "Ruxsat yetarli emas.",
     "MARGIN_FORBIDDEN": "Marja maydonlarini tannarx va marjani ko'rish huquqiga ega rollar o'zgartiradi.",
     "COMPANY_NOT_SET": "Kompaniyangiz hali yaratilmagan.",
     "VALIDATION_FAILED": "Maydonlarni tekshiring.",

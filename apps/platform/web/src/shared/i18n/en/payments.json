@@ -15,11 +15,11 @@
     },
     "erpForbidden": {
       "title": "Customer invoices are not shown to you",
-      "text": "Money on invoices is visible to accounting and the director. Memos to pay on the neighbouring tab are available."
+      "text": "Nothing here yet."
     },
     "notGranted": {
       "title": "No access to document flow",
-      "text": "Your account has not been added to document flow yet. Contact the administrator."
+      "text": "Your account has not been added to document flow yet."
     },
     "notFound": {
       "title": "Invoice not found",
@@ -129,7 +129,7 @@
     "open": "Open invoice card",
     "readOnly": {
       "title": "View only",
-      "text": "Payments are confirmed by the accountant. You can see payment orders and the invoice history."
+      "text": "View only."
     },
     "closed": {
       "paid": {
@@ -333,7 +333,7 @@
     "empty": {
       "to_pay": {
         "title": "No memos to pay",
-        "text": "Memos with an amount appear here after the director approves them, together with the supplier invoice.",
+        "text": "Nothing here yet.",
         "action": "Paid"
       },
       "paid": {
@@ -359,11 +359,11 @@
       "receipt": "Payment order",
       "readOnly": {
         "title": "View only",
-        "text": "The accountant whose step it is pays the memo. You can see the supplier invoice and the log."
+        "text": "View only."
       },
       "notYourStep": {
         "title": "Not your step",
-        "text": "Another accountant pays this memo, and a colleague pays your own memo."
+        "text": ""
       },
       "journal": "Memo log"
     },
@@ -446,7 +446,7 @@
   },
   "bankDetails": {
     "title": "The company has no bank details — the invoice cannot be issued.",
-    "text": "An administrator fills them in: Settings · Details & letterhead.",
+    "text": "",
     "open": "Open “Details & letterhead”"
   },
   "bankChanges": {

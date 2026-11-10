@@ -103,7 +103,7 @@
     },
     "forbidden": {
       "title": "Hujjatlar sizga ochilmagan",
-      "text": "Ro‘yxat rolingizga berilmagan yoki hujjatlar xizmatida huquqingiz yo‘q. Administratorga murojaat qiling."
+      "text": "Ruxsat yetarli emas."
     },
     "inProject": "Loyihada",
     "inProjectLabel": "Loyihada ochish: {{subject}}"
@@ -251,7 +251,7 @@
     },
     "amount": {
       "label": "Summa, so‘m",
-      "hint": "Majburiy emas. Summa ko‘rsatilsa, direktordan keyin hujjat buxgalterga o‘tadi."
+      "hint": ""
     },
     "due": {
       "label": "Muddat",
@@ -381,7 +381,7 @@
       "label": "Kiruvchi xatga javoban",
       "hint": "ВХ raqami, masalan ВХ-112/26: xat ro‘yxatga olinsa, «Javob tayyorlash» topshirig‘i yopiladi."
     },
-    "subtitleLetterHandover": "Kompaniya blankidagi xat: matnni tayyorlang va PDF ni ko‘ring — ro‘yxatga olib, ish yurituvchi yuboradi.",
+    "subtitleLetterHandover": "",
     "attention": {
       "label": "Kimga (lavozimi va F.I.Sh.)",
       "hint": "Ixtiyoriy. Masalan: Mirobod tumani DSI boshlig‘i A. A. Karimovga."
@@ -398,7 +398,7 @@
       "name": "Imzolovchi",
       "position": "Imzolovchining lavozimi",
       "hint": "Bo‘sh — blankdagi imzolovchi: {{name}}, {{position}}.",
-      "hintNone": "Bo‘sh — kompaniya blankidagi imzolovchi (direktor)."
+      "hintNone": ""
     },
     "letterhead": {
       "missing": "Kompaniya blanki berilmagan — xat PDF ini qurib bo‘lmaydi. Administrator «Sozlamalar · Rekvizitlar va blanka»ni saqlaydi.",

@@ -196,7 +196,6 @@ test.describe("Ролевая матрица: директор — только 
       // Роль в боковом окне: описание и сотрудники, ни «Сохранить», ни «Удалить», ни «Назначить».
       await spaGoto(page, "/admin/roles?role=3&panel=open&tab=role");
       const panel = page.locator(PANEL);
-      await expect(panel.getByText(/Только просмотр: роль и её матрицу/)).toBeVisible();
       await expect(panel.getByRole("button", { name: "Сохранить роль" })).toHaveCount(0);
       await expect(panel.getByRole("button", { name: "Удалить роль" })).toHaveCount(0);
       // Вкладка «Журнал» (W13-A6): директор читает журнал роли, изменять его нечем.

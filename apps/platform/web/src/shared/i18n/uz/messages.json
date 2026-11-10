@@ -175,7 +175,7 @@
     "sent": "Mijozga yuborildi",
     "noteSaved": "Eslatma saqlandi",
     "takeFirst": "Javob berish uchun lidni oling",
-    "readOnly": "Faqat ko'rish: menejerlar javob beradi",
+    "readOnly": "Faqat ko‘rish.",
     "editAfterUnknown": "Matn o'zgardi — u yangi xabar bo'lib ketadi; avvalgisi yetkazilgan bo'lishi mumkin",
     "managerReplies": "Mijozga javobni menejer beradi. Lidni saralang va «Menejerga topshirish» tugmasini bosing — mijozga nima kerakligi haqida izoh bilan.",
     "selfHintCabinet": "Mijozga kabinetda yuboriladi"
@@ -245,8 +245,8 @@
     "typePlaceholder": "Ko'rsatilmagan",
     "submit": "Topshirish",
     "cancel": "Bekor qilish",
-    "hint": "Mijozga hech narsa yuborilmaydi. Menejer lidni «Vazifalar»da izohingiz bilan ko'radi va o'zi oladi.",
-    "noManagers": "Lidlarni yurituvchi xodimlar yo'q. Administratordan «Universal menejer» rolini berishni so'rang.",
+    "hint": "",
+    "noManagers": "Lidlarni yurituvchi xodimlar yo'q.",
     "managersFailed": "Menejerlar ro'yxatini yuklab bo'lmadi. Qayta urinib ko'ring"
   }
 }

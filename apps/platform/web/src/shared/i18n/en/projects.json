@@ -106,7 +106,7 @@
       "clientStatus": "Client sees"
     },
     "readOnly": "Read only",
-    "readOnlyHint": "The contract, invoice and act are handled by the director and the accountant. You see statuses and history.",
+    "readOnlyHint": "View only.",
     "documents": {
       "title": "Project documents",
       "quote": "Quote",
@@ -253,7 +253,7 @@
     "next": "Next step",
     "none": {
       "title": "No contract yet",
-      "text": "The contract draft is created from the accepted quote by the accountant or the director.",
+      "text": "",
       "create": "Create contract draft"
     },
     "fields": {
@@ -300,7 +300,7 @@
     "scan": {
       "label": "Scan of the signed contract",
       "hint": "PDF, JPG, PNG or WEBP, up to 20 MB.",
-      "submit": "Attach scan → Signed",
+      "submit": "Attach scan",
       "choose": "Choose a scan file — the button becomes available."
     },
     "history": "Contract history",
@@ -318,14 +318,14 @@
       "reject": "Rejection recorded.",
       "revise": "Draft returned to work."
     },
-    "readOnly": "Actions on the contract are available to the director and the accountant."
+    "readOnly": "View only."
   },
   "act": {
     "number": "Act {{number}}",
     "none": {
       "title": "No act yet",
       "noInvoice": "The act is issued against an issued invoice. No invoice has been issued yet — issue it in “Invoices & payments”.",
-      "forbidden": "Acts are issued by the director and the accountant.",
+      "forbidden": "Insufficient permissions.",
       "ready": "The invoice is issued: you can issue the act.",
       "issue": "Issue the act"
     },
@@ -359,7 +359,7 @@
     "scan": {
       "label": "Scan of the signed act",
       "hint": "PDF, JPG, PNG or WEBP, up to 20 MB.",
-      "submit": "Attach scan → Signed",
+      "submit": "Attach scan",
       "choose": "Choose a scan file — the button becomes available."
     },
     "history": "Act history",
@@ -375,7 +375,7 @@
       "return": "Return recorded.",
       "reissue": "Act issued again."
     },
-    "readOnly": "Actions on the act are available to the director and the accountant."
+    "readOnly": "View only."
   },
   "files": {
     "choose": "Choose file",
@@ -391,8 +391,8 @@
     "act_already_exists": "The project already has an act.",
     "no_invoice": "The act is issued against an issued invoice: there is none yet.",
     "contract_exists": "The contract draft is already created.",
-    "contract_create_not_allowed": "Only the accountant or the director can create the contract draft.",
-    "act_issue_not_allowed": "Only the accountant or the director can issue the act.",
+    "contract_create_not_allowed": "Insufficient permissions.",
+    "act_issue_not_allowed": "Insufficient permissions.",
     "reason_required": "Write a reason.",
     "scan_invalid": "The file does not look like a scan: a PDF or an image up to 20 MB is needed.",
     "scan_required": "Choose a scan file.",
@@ -415,7 +415,7 @@
     },
     "forbidden": {
       "title": "No access",
-      "text": "Projects are available to the director, accountant, manager, supply specialist and chief engineer."
+      "text": "Insufficient permissions."
     },
     "notFound": {
       "title": "Project not found",

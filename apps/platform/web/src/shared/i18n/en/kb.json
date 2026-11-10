@@ -12,14 +12,22 @@
     "gaps": "Gaps",
     "sandbox": "Bot sandbox"
   },
-  "languages": { "ru": "Russian", "uz": "Uzbek", "en": "English" },
+  "languages": {
+    "ru": "Russian",
+    "uz": "Uzbek",
+    "en": "English"
+  },
   "ingest": {
     "pending": "Queued",
     "processing": "Processing",
     "done": "Ready",
     "failed": "Error"
   },
-  "source": { "file": "File", "manual": "Entered manually", "url": "Link" },
+  "source": {
+    "file": "File",
+    "manual": "Entered manually",
+    "url": "Link"
+  },
   "state": {
     "loadError": {
       "title": "Could not load the data",
@@ -172,7 +180,11 @@
     "open": "Open gap: {{question}}",
     "noLead": "—",
     "total": "Total: {{count}}",
-    "statuses": { "open": "Open", "resolved": "Closed", "ignored": "Ignored" },
+    "statuses": {
+      "open": "Open",
+      "resolved": "Closed",
+      "ignored": "Ignored"
+    },
     "columns": {
       "question": "Question",
       "occurrences": "Asked",
@@ -206,7 +218,9 @@
       "created": "First time",
       "updated": "Last time"
     },
-    "create": { "button": "Create a document from the question" },
+    "create": {
+      "button": "Create a document from the question"
+    },
     "link": {
       "button": "Link to a document",
       "document": "Document with the answer",

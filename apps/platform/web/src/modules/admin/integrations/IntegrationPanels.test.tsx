@@ -454,9 +454,6 @@ describe("карточка «Модели ИИ»", () => {
     expect(
       within(side).queryByRole("button", { name: /^(Проверить|Сменить|Сбросить) модель/ }),
     ).not.toBeInTheDocument();
-    expect(
-      within(side).getByText("Режим просмотра: изменения доступны администратору."),
-    ).toBeVisible();
   });
 });
 

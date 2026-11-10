@@ -81,7 +81,7 @@
     "holderPlaceholder": "Выберите сотрудника",
     "kinds": "Что подписывает",
     "kindsPlaceholder": "Выберите виды документов",
-    "kindsHint": "Виды ведёт администратор в «Справочниках»",
+    "kindsHint": "",
     "basis": "Основание",
     "basisNumber": "Номер",
     "basisDate": "Дата выдачи",

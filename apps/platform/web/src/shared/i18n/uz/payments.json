@@ -15,11 +15,11 @@
     },
     "erpForbidden": {
       "title": "Mijoz hisoblari sizga ko‘rsatilmaydi",
-      "text": "Hisoblardagi pulni buxgalteriya va rahbar ko‘radi. Qo‘shni yorliqdagi to‘lanadigan xizmat xatlari mavjud."
+      "text": "Hozircha bo‘sh."
     },
     "notGranted": {
       "title": "Hujjat aylanishiga ruxsat yo‘q",
-      "text": "Hisobingiz hali hujjat aylanishiga qo‘shilmagan. Administratorga yozing."
+      "text": "Hisobingiz hali hujjat aylanishiga qo‘shilmagan."
     },
     "notFound": {
       "title": "Hisob topilmadi",
@@ -129,7 +129,7 @@
     "open": "Hisob kartochkasini ochish",
     "readOnly": {
       "title": "Faqat ko‘rish",
-      "text": "To‘lovni buxgalter tasdiqlaydi. Sizga to‘lov topshiriqnomalari va hisob tarixi ochiq."
+      "text": "Faqat ko‘rish."
     },
     "closed": {
       "paid": {
@@ -333,7 +333,7 @@
     "empty": {
       "to_pay": {
         "title": "To‘lanadigan xizmat xatlari yo‘q",
-        "text": "Summali xizmat xatlari direktor tasdiqlagandan keyin yetkazib beruvchi hisobi bilan shu yerda paydo bo‘ladi.",
+        "text": "Hozircha bo‘sh.",
         "action": "To‘langan"
       },
       "paid": {
@@ -359,11 +359,11 @@
       "receipt": "To‘lov topshiriqnomasi",
       "readOnly": {
         "title": "Faqat ko‘rish",
-        "text": "Xizmat xatini navbati kelgan buxgalter to‘laydi. Sizga yetkazib beruvchi hisobi va jurnal ochiq."
+        "text": "Faqat ko‘rish."
       },
       "notYourStep": {
         "title": "Hozir sizning qadamingiz emas",
-        "text": "Bu xizmat xatini boshqa buxgalter to‘laydi, o‘zingizning xatingizni esa hamkasbingiz to‘laydi."
+        "text": ""
       },
       "journal": "Xat jurnali"
     },
@@ -446,7 +446,7 @@
   },
   "bankDetails": {
     "title": "Kompaniyaning bank rekvizitlari yo‘q — hisob chiqarib bo‘lmaydi.",
-    "text": "Administrator to‘ldiradi: Sozlamalar · Rekvizitlar va blanka.",
+    "text": "",
     "open": "«Rekvizitlar va blanka»ni ochish"
   },
   "bankChanges": {

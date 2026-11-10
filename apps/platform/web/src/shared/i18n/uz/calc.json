@@ -1,7 +1,7 @@
 {
   "list": {
     "subtitle": "Direktor rezolyutsiyasidan keyingi hisob-kitob topshiriqlari: muddat, qatorlar vizalari va mas’ul",
-    "subtitleMine": "Siz direktor rezolyutsiyasi ijrochisi bo‘lgan arizalar",
+    "subtitleMine": "",
     "caption": "Hisob-kitobdagi arizalar",
     "scroll": "Hisob-kitobdagi arizalar jadvali",
     "columns": {
@@ -19,10 +19,10 @@
     "overdue": "Muddati o‘tgan",
     "empty": {
       "title": "Hisob-kitob topshiriqlari yo‘q",
-      "text": "Hisob-kitob topshiriqlari yo‘q. Ular direktor rezolyutsiyasidan keyin keladi — qo‘ng‘iroqchada xabar beramiz.",
+      "text": "Hozircha bo‘sh.",
       "action": "Yangilash",
       "mineTitle": "Sizda hisob-kitob topshiriqlari yo‘q",
-      "mineText": "Hisob-kitob topshiriqlari yo‘q. Ular direktor rezolyutsiyasidan keyin keladi: direktor sizni ijrochi qilib tayinlaganda topshiriq shu yerda paydo bo‘ladi.",
+      "mineText": "Hozircha bo‘sh.",
       "mineAction": "Hisob-kitobdagi barcha arizalar"
     }
   },
@@ -60,7 +60,7 @@
     "returned": "Direktor TKni qayta ishlashga qaytardi: «{{comment}}». Qatorlarni tuzating va qayta tasdiqlang.",
     "rejected": "Direktor TKni rad etdi. Hisob-kitob yopildi.",
     "approved": "Direktor TKni ma’qulladi. Hisob-kitob o‘zgartirish uchun yopiq.",
-    "readOnly": "Faqat o‘qish: qatorlarni ta’minotchi (tovarlar) yoki bosh muhandis (xizmatlar) o‘zgartiradi va tasdiqlaydi.",
+    "readOnly": "Faqat ko‘rish.",
     "notStarted": {
       "title": "Hisob-kitob hali boshlanmagan",
       "textLines": "Arizada {{count}} ta qator bor. Ularni hisob-kitobga o‘tkazing, keyin qatorlarni qo‘shing va katalog bilan solishtiring.",
@@ -147,7 +147,7 @@
     "kind": "Turi",
     "kindGoods": "Tovar",
     "kindService": "Xizmat",
-    "kindHint": "Tovarni ta’minotchi, xizmatni bosh muhandis tasdiqlaydi.",
+    "kindHint": "",
     "submit": "Qo‘shish",
     "cancel": "Bekor qilish"
   },
@@ -186,16 +186,16 @@
     "cancel": "Yopish"
   },
   "ready": {
-    "button": "Hisob-kitob tayyor → TK qoralamasi direktorga",
+    "button": "Hisob-kitob tayyor",
     "hint": {
       "visas_missing": "Barcha qatorlar tasdiqlanganda tugma faollashadi: vizasiz {{count}} ta.",
       "no_lines": "Kamida bitta qator qo‘shing.",
       "not_started": "Avval hisob-kitobni boshlang.",
       "not_draft": "Hisob-kitob allaqachon direktorga topshirilgan.",
-      "at_director": "TK qoralamasi allaqachon direktorda: qaror qabul qilinguncha qatorlar yopiq.",
-      "approved": "TK direktor tomonidan ma’qullangan — hisob-kitob yopiq. Uni TKning yangi versiyasi bilan o‘zgartirish mumkin.",
-      "rejected": "Direktor TKni rad etdi — hisob-kitob yopiq.",
-      "not_in_calculation": "Ariza yopilgan yoki hisob-kitobdan keyingi bosqichda — TKni bu yerdan direktorga yuborib bo‘lmaydi.",
+      "at_director": "",
+      "approved": "",
+      "rejected": "",
+      "not_in_calculation": "",
       "rejected_client": "Mijoz TTni rad etdi — yuqorida tanlang: TTning yangi versiyasi yoki arizadan voz kechish."
     },
     "missingGroups": "Viza kutmoqda: {{groups}}.",
@@ -235,7 +235,7 @@
     "purchase_required": "Avval xarid narxini kiriting: ustama undan hisoblanadi.",
     "client_price_below_cost": "Mijoz narxi xarid narxidan past.",
     "markup_out_of_range": "Ustama 0–500 % chegarasidan tashqarida.",
-    "zone_not_permitted": "Bu qatorni boshqa mutaxassis o‘zgartiradi: tovarlar — ta’minotchi, xizmatlar — bosh muhandis.",
+    "zone_not_permitted": "Ruxsat yetarli emas.",
     "cost_forbidden": "Xarid narxi va ustamani tannarxga ruxsati bor xodim o‘zgartiradi.",
     "forbidden": "Bu amal rolingizga ruxsat etilmagan.",
     "unavailable": "ERP javob bermadi. Bir daqiqadan keyin qayta urinib ko‘ring.",
@@ -256,11 +256,11 @@
     },
     "forbidden": {
       "title": "Bo‘lim rolingizga tegishli emas",
-      "text": "Hisob-kitobni ta’minotchi, bosh muhandis, direktor va buxgalter ko‘radi. Ruxsat kerak bo‘lsa — administratorga yozing."
+      "text": "Ruxsat yetarli emas."
     },
     "notFound": {
       "title": "Ariza hisob-kitob topshiriqlari orasida yo‘q",
-      "text": "Topshiriq direktor rezolyutsiyasidan keyin paydo bo‘ladi. Raqamni tekshiring yoki ro‘yxatni oching.",
+      "text": "",
       "action": "Hisob-kitobdagi arizalar"
     }
   },
@@ -269,7 +269,7 @@
     "clientNoReason": "Mijoz {{number}} TTni (versiya {{version}}) sababsiz rad etdi.",
     "choose": "Ariza hisob-kitobga qaytdi. Keyingi qadamni tanlang: qayta hisoblab, mijozga TTning yangi versiyasini yuborish yoki arizani rad bilan yopish.",
     "closed": "Ariza rad bilan yopildi. Uning zaxirasi bekor qilindi.",
-    "noRights": "Ariza bo‘yicha qarorni TT tuzish huquqiga ega menejer qabul qiladi.",
+    "noRights": "Ruxsat yetarli emas.",
     "cancel": "Bekor qilish",
     "newVersion": {
       "button": "TTning yangi versiyasi",

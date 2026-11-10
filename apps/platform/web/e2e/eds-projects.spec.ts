@@ -91,7 +91,7 @@ test.describe("Проекты: бухгалтер", () => {
     await expectNoViolations(page, "договор: выставлен у оператора");
 
     // скан: файл не выбран — кнопка неактивна; чужой тип не принимается; PDF — «Подписан (скан)»
-    const submit = panel.getByRole("button", { name: "Прикрепить скан → Подписан" });
+    const submit = panel.getByRole("button", { name: "Прикрепить скан" });
     await expect(submit).toBeDisabled();
     const input = panel.getByLabel("Скан подписанного договора");
     await input.setInputFiles({
@@ -118,7 +118,7 @@ test.describe("Проекты: бухгалтер", () => {
     await expect(act.getByText(/Акт у клиента на приёмке/)).toBeVisible();
     await settledScreenshot(page, "act-issued");
     await pickFiles(act.getByLabel("Скан подписанного акта"), SCAN("akt-demo.pdf"));
-    await act.getByRole("button", { name: "Прикрепить скан → Подписан" }).click();
+    await act.getByRole("button", { name: "Прикрепить скан" }).click();
     await expect(act.getByText("Акт подписан, скан сохранён.")).toBeVisible();
     await expect(
       page.getByText("Проект выполнен: акт подписан, все счета оплачены."),

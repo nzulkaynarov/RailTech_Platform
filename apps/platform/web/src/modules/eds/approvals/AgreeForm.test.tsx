@@ -130,7 +130,6 @@ describe("Согласование: шаг бухгалтера", () => {
     expect(within(form).queryByRole("button", { name: "Принять к оплате" })).toBeNull();
     expect(within(form).getByRole("button", { name: "Вернуть" })).toBeDisabled();
     expect(within(form).queryByRole("button", { name: "Согласовать" })).toBeNull();
-    expect(within(form).getByText(/шаг бухгалтера закрывает «Оплачено»/)).toBeVisible();
   });
 
   it("Enter в комментарии не отправляет решение «Принять»: на шаге бухгалтера его нет", async () => {

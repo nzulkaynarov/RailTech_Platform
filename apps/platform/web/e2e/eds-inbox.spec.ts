@@ -14,7 +14,7 @@ import { chooseOption, fillDate } from "./support/fields";
 // «Утвердить»; отдельно «Вернуть менеджеру» и «Отклонить»; ошибка резолюции со словами и сохранённым текстом; роли только для
 // чтения не видят кнопок решения; axe (WCAG 2.1 AA); на 390 px «Резолюция» — лист на весь экран с кнопками внизу (@mobile).
 const PANEL = "#pf-context-panel";
-const SUBMIT = "Утвердить резолюцию → задание в расчёт";
+const SUBMIT = "Утвердить резолюцию";
 
 async function expectNoViolations(page: Page, context: string): Promise<void> {
   await waitForMotionEnd(page);

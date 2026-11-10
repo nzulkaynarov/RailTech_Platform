@@ -1,7 +1,7 @@
 {
   "list": {
     "subtitle": "Costing tasks after the director's resolution: deadline, line sign-offs and owner",
-    "subtitleMine": "Requests where you are an assignee of the director's resolution",
+    "subtitleMine": "",
     "caption": "Requests in costing",
     "scroll": "Table of requests in costing",
     "columns": {
@@ -19,10 +19,10 @@
     "overdue": "Overdue",
     "empty": {
       "title": "No costing tasks",
-      "text": "No costing tasks. They arrive after the director's resolution — we will notify you in the bell.",
+      "text": "Nothing here yet.",
       "action": "Refresh",
       "mineTitle": "You have no costing tasks",
-      "mineText": "No costing tasks. They arrive after the director's resolution: a task appears here when the director assigns you.",
+      "mineText": "Nothing here yet.",
       "mineAction": "All requests in costing"
     }
   },
@@ -60,7 +60,7 @@
     "returned": "The director returned the quote for rework: “{{comment}}”. Fix the lines and sign them off again.",
     "rejected": "The director rejected the quote. Costing is closed.",
     "approved": "The director approved the quote. Costing is locked.",
-    "readOnly": "Read only: lines are edited and signed off by supply (goods) or the chief engineer (services).",
+    "readOnly": "View only.",
     "notStarted": {
       "title": "Costing has not started",
       "textLines": "The request has {{count}} line(s). Move them into costing, then add lines and match them with the catalogue.",
@@ -147,7 +147,7 @@
     "kind": "Type",
     "kindGoods": "Goods",
     "kindService": "Service",
-    "kindHint": "Goods are signed off by supply, services by the chief engineer.",
+    "kindHint": "",
     "submit": "Add",
     "cancel": "Cancel"
   },
@@ -186,16 +186,16 @@
     "cancel": "Close"
   },
   "ready": {
-    "button": "Costing ready → draft quote to director",
+    "button": "Costing ready",
     "hint": {
       "visas_missing": "The button becomes active when every line is signed off: {{count}} without sign-off.",
       "no_lines": "Add at least one line.",
       "not_started": "Start costing first.",
       "not_draft": "Costing has already gone to the director.",
-      "at_director": "The draft quote is already with the director: lines are locked until the decision.",
-      "approved": "The director approved the quote — costing is closed. Change it with a new quote version.",
-      "rejected": "The director rejected the quote — costing is closed.",
-      "not_in_calculation": "The request is closed or past costing — the quote cannot be sent to the director from here.",
+      "at_director": "",
+      "approved": "",
+      "rejected": "",
+      "not_in_calculation": "",
       "rejected_client": "The client rejected the quote — choose above: a new quote version or a lost request."
     },
     "missingGroups": "Waiting for sign-off: {{groups}}.",
@@ -235,7 +235,7 @@
     "purchase_required": "Enter the purchase price first: markup is calculated from it.",
     "client_price_below_cost": "The client price is below the purchase price.",
     "markup_out_of_range": "Markup is outside 0–500 %.",
-    "zone_not_permitted": "Another specialist edits this line: goods — supply, services — the chief engineer.",
+    "zone_not_permitted": "Insufficient permissions.",
     "cost_forbidden": "Purchase prices and markup are edited by employees with access to cost.",
     "forbidden": "Your role does not allow this action.",
     "unavailable": "ERP did not respond. Try again in a minute.",
@@ -256,11 +256,11 @@
     },
     "forbidden": {
       "title": "This section is not part of your role",
-      "text": "Costing is visible to supply, the chief engineer, the director and the accountant. Ask the administrator if you need access."
+      "text": "Insufficient permissions."
     },
     "notFound": {
       "title": "The request is not among costing tasks",
-      "text": "A task appears after the director's resolution. Check the number or open the list.",
+      "text": "",
       "action": "Requests in costing"
     }
   },
@@ -269,7 +269,7 @@
     "clientNoReason": "The client rejected quote {{number}} (version {{version}}) without a reason.",
     "choose": "The request is back in costing. Decide what is next: recalculate and send a new quote version, or close the request as lost.",
     "closed": "The request is closed as lost. Its reservation is released.",
-    "noRights": "A manager allowed to build quotes decides on the request.",
+    "noRights": "Insufficient permissions.",
     "cancel": "Cancel",
     "newVersion": {
       "button": "New quote version",

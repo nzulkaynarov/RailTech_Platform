@@ -143,9 +143,6 @@ describe("Admin · Оргструктура (экран целиком на MSW)
 
     await within(await panelEl()).findByRole("heading", { level: 3, name: "Демо Менеджеров" });
     expect(screen.queryByRole("button", { name: "Пригласить сотрудника" })).toBeNull();
-    expect(
-      within(await panelEl()).getByText("Только просмотр: роли и доступ меняет администратор."),
-    ).toBeVisible();
     expect(within(await panelEl()).queryAllByRole("checkbox")).toHaveLength(0);
     expect(within(await panelEl()).queryByRole("button", { name: "Сохранить роли" })).toBeNull();
   });

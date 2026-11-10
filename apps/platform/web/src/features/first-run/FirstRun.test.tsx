@@ -325,7 +325,6 @@ describe("Баннер настройки и мастер", () => {
     renderApp("/admin/setup");
 
     expect(await screen.findByRole("heading", { level: 1, name: "Первый запуск" })).toBeVisible();
-    expect(screen.getByText(/доступен администратору/)).toBeVisible();
     expect(screen.queryByRole("button", { name: /Создать компанию/ })).toBeNull();
   });
 

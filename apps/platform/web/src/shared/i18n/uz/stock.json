@@ -23,7 +23,7 @@
     },
     "forbidden": {
       "title": "Ruxsat yo‘q",
-      "text": "Ombor «Ombor» bo‘limi bor rollarga ochiq. Kerak bo‘lsa, administratorga yozing."
+      "text": "Ruxsat yetarli emas."
     }
   },
   "errors": {

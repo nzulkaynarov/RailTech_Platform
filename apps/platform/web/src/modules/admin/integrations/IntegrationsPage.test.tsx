@@ -184,9 +184,6 @@ describe("Admin · Внешние интеграции: обзор", () => {
       within(tile("Расходы")).getByRole("button", { name: "Обновить: Расходы" }),
     ).toBeEnabled();
     const side = await panelEl();
-    expect(
-      await within(side).findByText("Режим просмотра: изменения доступны администратору."),
-    ).toBeVisible();
     for (const name of ["Проверить связь", "Подключить заново", "Ротация ключа"]) {
       expect(within(side).queryByRole("button", { name })).not.toBeInTheDocument();
     }

@@ -15,7 +15,7 @@
     },
     "notGranted": {
       "title": "Hujjat aylanishiga ruxsat yo'q",
-      "text": "Hisobingiz hujjat aylanishiga hali kiritilmagan. Administratorga yozing."
+      "text": "Hisobingiz hujjat aylanishiga hali kiritilmagan."
     },
     "notFound": {
       "title": "Hujjat topilmadi",
@@ -187,7 +187,7 @@
       "return": "Hujjat qaytarildi",
       "reject": "Hujjat rad etildi"
     },
-    "hint": "Alohida «to‘lovga qabul qilish» shart emas: buxgalter qadamini «To‘landi» yopadi. Hujjatni shu yerda izoh bilan qaytarish mumkin."
+    "hint": ""
   },
   "signing": {
     "title": "Imzoingizni kutmoqda",

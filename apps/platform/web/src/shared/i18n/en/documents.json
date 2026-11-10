@@ -103,7 +103,7 @@
     },
     "forbidden": {
       "title": "Documents are not open to you",
-      "text": "The list is not granted to your role, or you have no rights in the documents service. Contact the administrator."
+      "text": "Insufficient permissions."
     },
     "inProject": "In project",
     "inProjectLabel": "Open in project: {{subject}}"
@@ -251,7 +251,7 @@
     },
     "amount": {
       "label": "Amount, UZS",
-      "hint": "Optional. With an amount, the document goes to the accountant after the director."
+      "hint": ""
     },
     "due": {
       "label": "Needed by",
@@ -381,7 +381,7 @@
       "label": "In reply to incoming",
       "hint": "Incoming number, e.g. ВХ-112/26: registering the letter closes the \"Prepare a reply\" instruction."
     },
-    "subtitleLetterHandover": "A letter on the company letterhead: prepare the text and see the PDF — the records clerk registers and sends it.",
+    "subtitleLetterHandover": "",
     "attention": {
       "label": "To (position and name)",
       "hint": "Optional. For example: To the Head of the Mirabad District Tax Inspectorate, A. A. Karimov."
@@ -398,7 +398,7 @@
       "name": "Signatory",
       "position": "Signatory position",
       "hint": "Empty — the letterhead signatory: {{name}}, {{position}}.",
-      "hintNone": "Empty — the signatory from the company letterhead (director)."
+      "hintNone": ""
     },
     "letterhead": {
       "missing": "The company letterhead is not set — the letter PDF cannot be built. An administrator saves “Settings · Details & letterhead”.",

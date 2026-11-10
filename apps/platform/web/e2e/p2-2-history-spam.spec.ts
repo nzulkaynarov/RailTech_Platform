@@ -6,7 +6,7 @@ import { loginAndWait, spaGoto, waitForMotionEnd } from "./support/app";
 // W18A-P2-2 «Входящая почта: старые письма и папка Спам» на MSW. Администратор в «Подключения · Почта · Приём» находит
 // папки ящика (флаг \Junk подсказывает «Спам»), сохраняет и загружает письма за 30 дней — фоном, с ходом и итогом
 // «загружено N». Делопроизводитель видит письма «из истории» фильтром (не строками «Моих задач») и вкладку
-// «Подозрительные»: «Не спам → в очередь». Обе ширины, axe.
+// «Подозрительные»: «Не спам». Обе ширины, axe.
 const WIDTHS = [1440, 390] as const;
 const MAIL_KEY = "rt-pf-mock-inbound-mail";
 
@@ -106,12 +106,12 @@ test.describe("P2-2: старые письма и папка «Спам»", () =
           name: "Открыть письмо «Приглашение к участию в тендере на поставку шпал»",
         })
         .click();
-      await expect(page.getByRole("button", { name: "Не спам → в очередь" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Не спам" })).toBeVisible();
       await expect(page.getByText(/отметьте его в почте «Не спам»/)).toBeVisible();
       await shot(page, "mail-spam-card");
       await expectNoViolations(page, `подозрительное ${String(width)}`);
 
-      await page.getByRole("button", { name: "Не спам → в очередь" }).click();
+      await page.getByRole("button", { name: "Не спам" }).click();
       await expect(page.getByText("Подозрительных писем нет")).toBeVisible();
       await shot(page, "mail-spam-empty");
       await openTab(page, /^Новые/);

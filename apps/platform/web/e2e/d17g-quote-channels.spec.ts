@@ -63,7 +63,7 @@ test.describe("D17G: каналы отправки КП и адрес кабин
       await expectNoViolations(page, `панель одобрения ${String(width)}`);
       await shot(page, "d17g-approve-channels");
 
-      await form.getByRole("button", { name: "Одобрить КП → отправить клиенту" }).click();
+      await form.getByRole("button", { name: "Одобрить КП" }).click();
 
       await confirmDialog(page);
       const report = page.getByRole("list", { name: "Каналы отправки" });

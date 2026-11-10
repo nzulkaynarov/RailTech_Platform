@@ -15,7 +15,7 @@ import {
 // лист на весь экран (@mobile, B-020).
 const NUMBER = "ЗВ-2026-097";
 const PANEL = "#pf-context-panel";
-const READY = "Расчёт готов → черновик КП директору";
+const READY = "Расчёт готов";
 const RAIL = "Перевод стрелочный Р65 марки 1/11";
 const DRIVE = "Привод стрелочный электромеханический СП-6М";
 const MOUNTING = "Монтаж и пусконаладка стрелочного перевода";
@@ -147,7 +147,6 @@ test.describe("Расчёт по заявке: снабженец и гл. ин�
   }) => {
     await loginAndWait(page, "accountant@demo.example");
     await openCalc(page);
-    await expect(page.getByText(/Только чтение: строки правит и визирует снабженец/)).toBeVisible();
     await expect(page.getByText("275 300 000")).toBeVisible();
     await expect(page.getByText("239 000 000")).toHaveCount(0);
     await expect(page.getByText(/1 500 000/)).toHaveCount(0);

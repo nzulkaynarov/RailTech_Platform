@@ -29,7 +29,7 @@
     "empty": {
       "awaiting": {
         "title": "Sizdan hozircha qaror talab qilinmaydi",
-        "text": "Yangi xatlar ariza yaratilgach CRMdan va ro‘yxatga olingach ish yurituvchidan keladi. Qarori qabul qilingan xatlar «Hammasi» filtrida.",
+        "text": "Hozircha bo‘sh.",
         "action": "Barcha xatlarni ko'rsatish"
       },
       "other": {
@@ -39,7 +39,7 @@
       },
       "all": {
         "title": "Kiruvchi xatlar hozircha yo'q",
-        "text": "Mijoz xatlari ariza yaratilgach CRMdan keladi, qolganlarini ish yurituvchi ro‘yxatga oladi. Direktor bu yerda rezolyutsiya qo'yadi.",
+        "text": "Hozircha bo‘sh.",
         "action": "Yangilash"
       }
     },
@@ -49,7 +49,7 @@
   "state": {
     "loadError": {
       "title": "Xatlar yuklanmadi",
-      "text": "Yana urinib ko'ring. Yordam bermasa, administratorga yozing."
+      "text": "Yana urinib ko'ring."
     },
     "unavailable": {
       "title": "Hujjat aylanishi javob bermayapti",
@@ -57,11 +57,11 @@
     },
     "forbidden": {
       "title": "Kiruvchi xatlar sizga ochiq emas",
-      "text": "Bo'lim kiruvchi xatlar bilan ishlaydigan rollar uchun. Ruxsat kerak bo'lsa, administratorga yozing."
+      "text": "Ruxsat yetarli emas."
     },
     "notGranted": {
       "title": "Hujjat aylanishiga ruxsat yo'q",
-      "text": "Hisobingiz hujjat aylanishiga hali kiritilmagan. Administratorga yozing."
+      "text": "Hisobingiz hujjat aylanishiga hali kiritilmagan."
     },
     "notFound": {
       "title": "Xat topilmadi",
@@ -141,7 +141,7 @@
       "letter_duplicate_linked": "Xatning takrori topildi"
     },
     "readOnly": "Faqat ko'rish",
-    "readOnlyHint": "Xat bo'yicha qarorni direktor qabul qiladi.",
+    "readOnlyHint": "Faqat ko‘rish.",
     "resolve": "Rezolyutsiya qo'yish",
     "partial": "Ariza ma'lumotlari mavjud emas: bosqich xatning o'zi bo'yicha ko'rsatilgan.",
     "onControl": "Nazoratda",
@@ -176,11 +176,11 @@
   "panel": {
     "awaitingReadOnly": {
       "title": "Xat direktor rezolyutsiyasini kutmoqda",
-      "text": "Rezolyutsiyani direktor qo'yadi. Siz xatni va uning holatini ko'rasiz, qaror qilish shart emas."
+      "text": "Faqat ko‘rish."
     },
     "decided": {
       "title": "Xat bo'yicha qaror qabul qilindi",
-      "text": "Nima qaror qilingani va kim qilgani xat kartochkasida, «Direktor qarori» blokida."
+      "text": ""
     },
     "briefOpen": "Xat kartochkasini ochish",
     "brief": {
@@ -229,7 +229,7 @@
       }
     },
     "directory": {
-      "forbidden": "Ijrochilarni tanlash mavjud emas: rollaringizga xodimlar ro'yxati ochiq emas. Administratorga yozing.",
+      "forbidden": "Ruxsat yetarli emas.",
       "unavailable": "Xodimlar ro'yxati yuklanmadi. Yana urinib ko'ring.",
       "retry": "Takrorlash"
     },
@@ -239,9 +239,9 @@
     },
     "margin": {
       "label": "Marja kamida, %",
-      "hint": "Majburiy emas. Marjasi chegaradan past TTni direktor tasdiqlay olmaydi."
+      "hint": ""
     },
-    "submit": "Rezolyutsiyani tasdiqlash → hisob-kitobga topshiriq",
+    "submit": "Rezolyutsiyani tasdiqlash",
     "consequence": {
       "title": "Nima bo'ladi",
       "step1": "Xat «Rezolyutsiya kutmoqda» holatidan chiqadi va «Rezolyutsiya qo'yildi» holatini oladi.",
@@ -252,7 +252,7 @@
     "other": {
       "title": "Rezolyutsiya kerak bo'lmasa",
       "comment": "Izoh",
-      "commentHint": "Majburiy: menejer uni ko'radi, ariza shu sababni oladi.",
+      "commentHint": "",
       "return": "Menejerga qaytarish",
       "reject": "Rad etish",
       "disabled": "Izoh yozilmaguncha tugmalar faol emas: nimani to'g'rilash kerakligini yoki nega rad etayotganingizni yozing.",
@@ -356,7 +356,7 @@
     },
     "addressee": {
       "label": "Adresat",
-      "hint": "Xat kimga rezolyutsiyaga. Bo‘sh — direktor.",
+      "hint": "",
       "default": "Direktor (sukut bo‘yicha)"
     },
     "urgent": "Shoshilinch",
@@ -409,7 +409,7 @@
     },
     "draft": {
       "legend": "Rezolyutsiya loyihasi (ixtiyoriy)",
-      "hint": "Direktor loyihani bir bosishda tasdiqlaydi yoki tuzatadi.",
+      "hint": "",
       "kind": "Rezolyutsiya turi",
       "none": "Loyihasiz",
       "acquaint": "Tanishtirish",
@@ -494,7 +494,7 @@
     "other": {
       "title": "Agar rezolyutsiya kerak bo‘lmasa",
       "comment": "Izoh",
-      "commentHint": "Majburiy: ish yurituvchi uni kartochkada ko‘radi.",
+      "commentHint": "",
       "return": "Ish yurituvchiga qaytarish",
       "reject": "Rad etish",
       "disabled": "Izoh yozilmaguncha tugmalar faol emas: nimani tuzatish kerakligini yoki rad etish sababini yozing.",
@@ -528,7 +528,7 @@
       "saveAs": "Shablon sifatida saqlash",
       "saveTitle": "Shablon sifatida saqlash",
       "name": "Shablon nomi",
-      "nameHint": "Masalan: «Soliq — buxgalteriya javobi».",
+      "nameHint": "",
       "nameRequired": "Nomini kiriting.",
       "shared": "Umumiy — rezolyutsiya tayyorlovchilarning barchasi uchun",
       "save": "Saqlash",
@@ -638,7 +638,7 @@
     },
     "acq": {
       "title": "Tanishib chiqish",
-      "text": "Direktor sizni «Tanishtirish»da belgiladi. Xatni o‘qing va belgilang.",
+      "text": "",
       "submit": "Tanishdim",
       "done": "Belgilandi: tanishdim"
     },
@@ -668,7 +668,7 @@
     "attachments": "Ilovalar: {{count}}",
     "off": {
       "title": "Pochta ulanmagan",
-      "text": "Administrator umumiy qutini Sozlamalar · Ulanishlar · Pochta → «Qabul» bo‘limida ulaydi. Shundan so‘ng xatlar shu yerda o‘zi paydo bo‘ladi.",
+      "text": "",
       "action": "Ulanishlarni ochish"
     },
     "empty": {
@@ -700,7 +700,7 @@
       },
       "history": {
         "title": "Tarixdan xat yo‘q",
-        "text": "Administrator eski xatlarni Sozlamalar · Ulanishlar · Pochta bo‘limida yuklaydi."
+        "text": "Hozircha bo‘sh."
       },
       "search": {
         "title": "Hech narsa topilmadi",
@@ -852,12 +852,12 @@
     },
     "historyEmpty": {
       "title": "Tarixdan xatlar yoʻq",
-      "text": "Eski xatlarni administrator Sozlamalar · Ulanishlar · Pochta boʻlimida yuklaydi."
+      "text": ""
     },
     "spam": {
       "title": "Shubhali xat",
       "what": "Pochta qutisining «Spam» jildiga kelgan. Joʻnatuvchi va matnni tekshiring.",
-      "notSpam": "Spam emas → navbatga",
+      "notSpam": "Spam emas",
       "notSpamDone": "Xat «Yangi»da",
       "discard": "Olib tashlash",
       "discardDone": "Xat arxivga olindi",
@@ -1017,7 +1017,7 @@
       "templates": "Rezolyutsiya shablonlari",
       "ai": "SI yordamchi"
     },
-    "readOnly": "Faqat ko‘rish: ma’lumotnomalarni administrator o‘zgartiradi.",
+    "readOnly": "Faqat ko‘rish.",
     "dict": {
       "title": "Ma’lumotnomalar",
       "hint": "Yangi qiymatlar shaklda darhol paydo bo‘ladi. Ishlatilganini faqat yashirish mumkin.",
@@ -1065,7 +1065,7 @@
         "name_taken": "Bunday nom ma’lumotnomada bor.",
         "value_in_use": "Qiymat xatlarda ishlatilgan — uni faqat yashirish mumkin.",
         "dictionary_closed": "Bu ro‘yxatni faqat qayta nomlash mumkin.",
-        "FORBIDDEN": "Ma’lumotnomalarni faqat administrator o‘zgartiradi.",
+        "FORBIDDEN": "Ruxsat yetarli emas.",
         "DEFAULT": "Saqlab bo‘lmadi. Qayta urinib ko‘ring.",
         "load": "Ma’lumotnomalar yuklanmadi."
       },
@@ -1099,7 +1099,7 @@
     },
     "templates": {
       "title": "Rezolyutsiya shablonlari",
-      "hint": "Direktor rezolyutsiyada shablonni tanlaydi va tuzatadi. O‘z shablonlari — rezolyutsiya shaklidan.",
+      "hint": "",
       "add": "Shablon qo‘shish",
       "name": "Nomi",
       "kind": "Turi",
@@ -1148,7 +1148,7 @@
         "businessText": "Pasport, JSHSHIR, karta raqamlari va tug‘ilgan sanalar yashiriladi. Kompaniya rekvizitlari, telefonlar, pochta va ismlar qoladi.",
         "strict": "Qat’iy",
         "strictText": "Telefonlar, pochta, STIR va hisob raqamlari ham yashiriladi. Skan va fotolar modelga yuborilmaydi.",
-        "readOnly": "Siyosatni administrator o‘zgartiradi.",
+        "readOnly": "Faqat ko‘rish.",
         "saved": "Siyosat saqlandi: «{{name}}»",
         "pending": "Hujjat aylanishi «{{name}}» siyosatini hali qo‘llamadi va hozircha «{{current}}» bo‘yicha ishlayapti. Odatda bu bir necha soniya oladi; o‘tmasa — sahifani yangilang yoki tizim administratoriga xabar bering."
       }
@@ -1169,7 +1169,7 @@
     "failedTag": "Yuborilmadi",
     "failed": "{{number}} manzilga yetib bormadi: {{reason}}.",
     "failedNoReason": "{{number}} manzilga yetib bormadi.",
-    "failedHint": "Ish yurituvchi CHIQ kartochkasidan yana yuboradi.",
+    "failedHint": "",
     "open": "Ochish",
     "prefilled": "{{number}} dan to‘ldirildi: muxbir, pochta va mavzuni tekshiring.",
     "continue": "Javobni davom ettirish"

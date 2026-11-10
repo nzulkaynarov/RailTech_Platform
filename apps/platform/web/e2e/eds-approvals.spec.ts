@@ -14,7 +14,7 @@ import {
 // «Вернуть на доработку»; служебка → «Согласовать», «Отклонить» с комментарием; менеджер видит КП без маржи и без кнопок решения;
 // axe (WCAG 2.1 AA); на 390 px «Одобрение» и «Согласование» — лист на весь экран с кнопками внизу (@mobile).
 const PANEL = "#pf-context-panel";
-const APPROVE = "Одобрить КП → отправить клиенту";
+const APPROVE = "Одобрить КП";
 
 async function expectNoViolations(page: Page, context: string): Promise<void> {
   await waitForMotionEnd(page);

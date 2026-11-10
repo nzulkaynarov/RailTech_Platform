@@ -54,7 +54,7 @@
     },
     "forbidden": {
       "title": "This section is not for your role",
-      "text": "If you need it for work, write to the administrator."
+      "text": "Insufficient permissions."
     }
   },
   "errors": {
@@ -121,7 +121,7 @@
       "valid_date_invalid": "Date format is DD.MM.YYYY.",
       "rows_token_invalid": "The check is out of date. Press “Check” again.",
       "offer_source_invalid": "Choose the price source.",
-      "role_not_permitted": "Catalog and procurement rights are needed.",
+      "role_not_permitted": "Insufficient permissions.",
       "contact_exists": "The company already has a contact with this address.",
       "contact_email_ambiguous": "This address is already used by a contact of another cabinet company. Use a different address.",
       "email_delivery_failed": "The e-mail was not sent. Check the mail service and try again — access is unchanged.",
@@ -249,7 +249,7 @@
     "noLimit": "no end date",
     "inactive": "Inactive",
     "priceHidden": "hidden",
-    "pricesNote": "Supplier prices are not shown to you: supply and the director see them.",
+    "pricesNote": "",
     "quotaValue": "{{qty}} pcs, from {{min}}",
     "leadValue": "from stock {{stock}} d, to order {{order}} d",
     "openSupplier": "Open supplier {{name}}",
@@ -326,7 +326,7 @@
     "editNamed": "Edit: {{name}}",
     "inactive": "Not working",
     "rateHidden": "hidden",
-    "ratesNote": "Crew rates are not shown to you: the chief engineer, supply and the director see them.",
+    "ratesNote": "",
     "columns": {
       "name": "Name",
       "kind": "Kind",
@@ -366,7 +366,7 @@
     }
   },
   "requests": {
-    "hint": "No suitable category? Request it: the request creates nothing, the director or administrator creates the category.",
+    "hint": "",
     "hintDecide": "Approving links a created category to the request; refusing needs a reason. New categories are created in Settings · Company.",
     "add": "Request a category",
     "table": "Requests for new categories",
@@ -427,7 +427,7 @@
       },
       "empty": {
         "title": "No rates",
-        "text": "Rates come from the central bank automatically. If the load failed, the director enters the rate by hand."
+        "text": "Nothing here yet."
       },
       "form": {
         "title": "Enter the USD rate for a date",
@@ -695,9 +695,9 @@
         "readOnly": "A colleague who can manage suppliers confirms."
       },
       "hint": {
-        "linked": "The partner is a CRM client: their requests go to the manager like client requests; quotes and documents work.",
-        "requested": "The request has gone to CRM and the client is being created. Until then the partner's requests are kept here and reach the manager on their own.",
-        "pending_confirmation": "The partner looks like an existing CRM client. A CRM manager confirms in the client's card whether it is the same company; until then the partner's requests are kept here and will go on their own. Waiting for a manager's confirmation in CRM.",
+        "linked": "",
+        "requested": "",
+        "pending_confirmation": "",
         "held": "Held after a client handoff: check the tax ID in the supplier's card and on the CRM client, then press “Invite again”. No link was created, the partner's requests are kept here.",
         "unverified": "The link was created by a client handoff from CRM by a matching TIN. The partner's requests are kept here until you confirm it is the same company.",
         "conflict": "CRM already has a client with these details, but it is linked to another company. Nothing was changed. Check the tax ID or registration number in the supplier's card and on the CRM client, fix the wrong one and invite the partner again."
@@ -840,7 +840,7 @@
   "import": {
     "noAccess": {
       "title": "Price list upload is not available",
-      "text": "Price lists are uploaded by procurement or the director."
+      "text": "Insufficient permissions."
     },
     "supplier": "Supplier",
     "supplierPlaceholder": "Find by name or number",
@@ -958,7 +958,10 @@
       "It appears on the item card and in “Technical documents”.",
       "The “Visible to client” mark is saved; the client portal will show it later."
     ],
-    "editSteps": ["The changes are saved in the document.", "The file itself does not change."],
+    "editSteps": [
+      "The changes are saved in the document.",
+      "The file itself does not change."
+    ],
     "saved": "Document saved."
   },
   "queue": {
@@ -1097,7 +1100,7 @@
     },
     "empty": {
       "title": "No partner applications",
-      "hint": "New candidate applications will appear here for supply team review and contract approval."
+      "hint": "Nothing here yet."
     },
     "sendContractModal": {
       "title": "Sending contract draft: {{name}}",

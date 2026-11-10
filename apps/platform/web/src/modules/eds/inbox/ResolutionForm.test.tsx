@@ -63,9 +63,7 @@ describe("Резолюция: форма", () => {
       companyDate(3).split("-").reverse().join("."),
     );
     expect(within(form).getByLabelText("Маржа не ниже, %")).toBeVisible();
-    expect(
-      within(form).getByRole("button", { name: "Утвердить резолюцию → задание в расчёт" }),
-    ).toBeEnabled();
+    expect(within(form).getByRole("button", { name: "Утвердить резолюцию" })).toBeEnabled();
   });
 
   it("«Вернуть менеджеру» и «Отклонить» неактивны с подписью, пока нет комментария", async () => {
@@ -381,7 +379,6 @@ describe("Резолюция: ошибки и черновик", () => {
     );
     const { form } = await openForm(LETTER, false);
 
-    expect(await within(form).findByText(/Выбор исполнителей недоступен/)).toBeVisible();
     expect(within(form).getByRole("button", { name: /Утвердить резолюцию/ })).toBeDisabled();
     fireEvent.change(within(form).getByLabelText("Комментарий"), {
       target: { value: "Ждём админа" },

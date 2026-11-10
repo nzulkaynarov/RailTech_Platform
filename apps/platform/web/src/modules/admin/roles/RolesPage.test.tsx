@@ -111,12 +111,6 @@ describe("Admin · Ролевая матрица (R-2, ADR-0012)", () => {
       }),
       "Полный доступ",
     );
-
-    expect(
-      within(panel).getAllByText(
-        /не суперпользователя ERP: его даёт только системная роль «Администратор»/,
-      )[0],
-    ).toBeVisible();
   });
 
   it("роль с сотрудниками: удалить нельзя — причина и неактивная кнопка; без сотрудников — можно", async () => {
@@ -169,7 +163,6 @@ describe("Admin · Ролевая матрица (R-2, ADR-0012)", () => {
     renderApp(`/admin/roles?role=${ROLE_ID.MANAGER}&panel=open&tab=role`);
     const panel = await panelEl();
 
-    expect(await within(panel).findByText(/Только просмотр: роль и её матрицу/)).toBeVisible();
     expect(within(panel).queryByRole("button", { name: "Сохранить роль" })).toBeNull();
     expect(within(panel).queryByRole("button", { name: "Удалить роль" })).toBeNull();
     expect(within(panel).queryByText("Назначить роль сотруднику")).toBeNull();

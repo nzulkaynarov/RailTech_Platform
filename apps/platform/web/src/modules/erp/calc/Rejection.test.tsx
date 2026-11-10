@@ -56,9 +56,6 @@ describe("Расчёт · клиент отклонил КП (D26G-3)", () => {
     await openCalc("accountant@demo.example", REJECTED);
     expect(screen.getByText(/Клиент отклонил КП КП-2026\/119/)).toBeVisible();
     expect(screen.queryByRole("button", { name: "Новая версия КП" })).toBeNull();
-    expect(
-      screen.getByText("Решение по заявке принимает менеджер с правом собирать КП."),
-    ).toBeVisible();
   });
 });
 

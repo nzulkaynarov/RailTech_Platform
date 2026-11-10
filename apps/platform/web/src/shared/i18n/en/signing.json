@@ -81,7 +81,7 @@
     "holderPlaceholder": "Choose an employee",
     "kinds": "Signs",
     "kindsPlaceholder": "Choose document types",
-    "kindsHint": "The administrator keeps the types in “Lists”",
+    "kindsHint": "",
     "basis": "Basis",
     "basisNumber": "Number",
     "basisDate": "Issue date",

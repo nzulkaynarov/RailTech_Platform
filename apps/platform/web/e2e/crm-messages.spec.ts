@@ -156,7 +156,6 @@ test.describe("Ждут ответа: менеджер", () => {
     await expect(page.getByText("Только просмотр", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: /Забрать/ })).toHaveCount(0);
     await expect(page.getByLabel("Сообщение клиенту")).toHaveCount(0);
-    await expect(page.getByText("Только просмотр: отвечают менеджеры")).toBeVisible();
     await expectNoViolations(page, "директор");
   });
 

@@ -61,7 +61,7 @@
   "errors": {
     "DEFAULT": "The action failed. Try again later.",
     "FORBIDDEN": "This section or action is not allowed for your role.",
-    "ERP_FORBIDDEN": "This action is not allowed: it is available to the administrator or an employee with company settings rights.",
+    "ERP_FORBIDDEN": "Insufficient permissions.",
     "MARGIN_FORBIDDEN": "Margin fields are changed by roles that may see cost and margin.",
     "COMPANY_NOT_SET": "Your company has not been created yet.",
     "VALIDATION_FAILED": "Check the fields.",

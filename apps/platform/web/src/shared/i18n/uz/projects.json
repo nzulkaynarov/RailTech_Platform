@@ -106,7 +106,7 @@
       "clientStatus": "Mijozga ko‘rinadi"
     },
     "readOnly": "Faqat o‘qish",
-    "readOnlyHint": "Shartnoma, hisob va dalolatnomani direktor va buxgalter yuritadi. Siz holat va tarixni ko‘rasiz.",
+    "readOnlyHint": "Faqat ko‘rish.",
     "documents": {
       "title": "Loyiha hujjatlari",
       "quote": "TT",
@@ -253,7 +253,7 @@
     "next": "Keyingi qadam",
     "none": {
       "title": "Shartnoma hali yo‘q",
-      "text": "Shartnoma loyihasi qabul qilingan TT dan shakllantiriladi. Buni buxgalter yoki direktor qiladi.",
+      "text": "",
       "create": "Shartnoma loyihasini shakllantirish"
     },
     "fields": {
@@ -300,7 +300,7 @@
     "scan": {
       "label": "Imzolangan shartnoma skani",
       "hint": "PDF, JPG, PNG yoki WEBP, 20 MB gacha.",
-      "submit": "Skanni biriktirish → Imzolangan",
+      "submit": "Skanni biriktirish",
       "choose": "Skan faylini tanlang — tugma faollashadi."
     },
     "history": "Shartnoma tarixi",
@@ -318,14 +318,14 @@
       "reject": "Rad etish yozildi.",
       "revise": "Loyiha ishga qaytarildi."
     },
-    "readOnly": "Shartnoma bo‘yicha amallar direktor va buxgalterga ochiq."
+    "readOnly": "Faqat ko‘rish."
   },
   "act": {
     "number": "{{number}} dalolatnomasi",
     "none": {
       "title": "Dalolatnoma hali yo‘q",
       "noInvoice": "Dalolatnoma rasmiylashtirilgan hisob bo‘yicha chiqariladi. Hisob hali rasmiylashtirilmagan — uni «Hisoblar va to‘lovlar» bo‘limida rasmiylashtiring.",
-      "forbidden": "Dalolatnomani direktor va buxgalter chiqaradi.",
+      "forbidden": "Ruxsat yetarli emas.",
       "ready": "Hisob rasmiylashtirilgan: dalolatnoma chiqarish mumkin.",
       "issue": "Dalolatnoma chiqarish"
     },
@@ -359,7 +359,7 @@
     "scan": {
       "label": "Imzolangan dalolatnoma skani",
       "hint": "PDF, JPG, PNG yoki WEBP, 20 MB gacha.",
-      "submit": "Skanni biriktirish → Imzolangan",
+      "submit": "Skanni biriktirish",
       "choose": "Skan faylini tanlang — tugma faollashadi."
     },
     "history": "Dalolatnoma tarixi",
@@ -375,7 +375,7 @@
       "return": "Qaytarish yozildi.",
       "reissue": "Dalolatnoma qaytadan chiqarildi."
     },
-    "readOnly": "Dalolatnoma bo‘yicha amallar direktor va buxgalterga ochiq."
+    "readOnly": "Faqat ko‘rish."
   },
   "files": {
     "choose": "Fayl tanlash",
@@ -391,8 +391,8 @@
     "act_already_exists": "Loyihada dalolatnoma allaqachon bor.",
     "no_invoice": "Dalolatnoma rasmiylashtirilgan hisob bo‘yicha chiqariladi: hisob hali yo‘q.",
     "contract_exists": "Shartnoma loyihasi allaqachon shakllantirilgan.",
-    "contract_create_not_allowed": "Shartnoma loyihasini buxgalter yoki direktor shakllantira oladi.",
-    "act_issue_not_allowed": "Dalolatnomani buxgalter yoki direktor chiqara oladi.",
+    "contract_create_not_allowed": "Ruxsat yetarli emas.",
+    "act_issue_not_allowed": "Ruxsat yetarli emas.",
     "reason_required": "Sababni yozing.",
     "scan_invalid": "Fayl skanga o‘xshamaydi: 20 MB gacha PDF yoki rasm kerak.",
     "scan_required": "Skan faylini tanlang.",
@@ -415,7 +415,7 @@
     },
     "forbidden": {
       "title": "Ruxsat yo‘q",
-      "text": "Loyihalar direktor, buxgalter, menejer, ta’minotchi va bosh muhandisga ochiq."
+      "text": "Ruxsat yetarli emas."
     },
     "notFound": {
       "title": "Loyiha topilmadi",

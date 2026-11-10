@@ -57,9 +57,6 @@ describe("«Выставить счёт» из Платформы (B-D24-4)", ()
       "Нет банковских реквизитов компании — счёт не выставить.",
     );
     expect(notice).toBeVisible();
-    expect(
-      within(main).getByText("Заполняет администратор: Настройки · Реквизиты и бланк."),
-    ).toBeVisible();
     expect(within(main).queryByRole("link", { name: "Открыть «Реквизиты и бланк»" })).toBeNull();
 
     fireEvent.click(
