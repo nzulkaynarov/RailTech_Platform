@@ -10,7 +10,7 @@ import { setupBotTests } from "./botKit";
 
 export { renderAt, signIn } from "./botKit";
 
-/** Оснастка тестов «Расчёт · Номенклатура и поставщики» и «Техдокументация»: чистые моки каталога, компании и ролей. */
+/** Оснастка тестов «Расчёт · Номенклатура и партнёры» и «Техдокументация»: чистые моки каталога, компании и ролей. */
 export function setupCatalogTests(width = 1440): void {
   setupBotTests(width);
   beforeEach(() => {

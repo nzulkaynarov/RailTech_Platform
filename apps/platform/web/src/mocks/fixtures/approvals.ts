@@ -511,7 +511,7 @@ function supersededQuote(): QuoteApprovalCard {
       step("Директор", "returned", {
         decided_by: DIRECTOR_PERSON,
         decided_at: "2026-10-28T06:30:00Z",
-        comment: "Пересчитать цену привода: у поставщика новая цена",
+        comment: "Пересчитать цену привода: у партнёра новая цена",
       }),
     ],
   };

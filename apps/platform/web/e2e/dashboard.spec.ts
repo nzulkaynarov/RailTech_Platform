@@ -67,7 +67,7 @@ test.describe("Задачи", () => {
     const rows = queue.getByRole("listitem");
     // D2-8: в очереди директора только решения — строк исполнения ERP нет
     await expect(rows).toHaveCount(8);
-    // D2-2: просроченный заказ поставщику (erp.stock: полный) — первым
+    // D2-2: просроченный заказ партнёру (erp.stock: полный) — первым
     await expect(rows.nth(0)).toContainText("Просрочен заказ");
     await expect(rows.nth(1)).toContainText("срок сегодня");
     await expect(rows.nth(1)).toContainText("Наложить резолюцию на письмо ВХ-104/26");

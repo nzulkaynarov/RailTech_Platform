@@ -33,7 +33,7 @@ interface Viewer {
   id: string;
   name: string;
   full: boolean;
-  /** Право загружать прайсы (`erp.stock: full` + цены поставщиков) — по объединению ВСЕХ ролей человека. */
+  /** Право загружать прайсы (`erp.stock: full` + цены партнёров) — по объединению ВСЕХ ролей человека. */
   stock: boolean;
 }
 

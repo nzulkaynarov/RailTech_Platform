@@ -40,7 +40,7 @@ describe("Типы входящих писем: тег, фильтр, основ
     signIn(REGISTRAR);
     renderAt("/eds/mail");
     const list = await listOf("Письма, ждущие разбора");
-    expect(within(list).getByText("КП или прайс поставщика")).toBeVisible();
+    expect(within(list).getByText("КП или прайс партнёра")).toBeVisible();
     expect(within(list).getByText("Рассылка")).toBeVisible();
     expect(screen.getByRole("tab", { name: "Новые · 6" })).toBeVisible();
 
@@ -57,7 +57,7 @@ describe("Типы входящих писем: тег, фильтр, основ
     expect(screen.getByText("Скидки недели на канцтовары")).toBeVisible();
   });
 
-  it("«КП поставщика», у сотрудника нет права на каталог: «Передать на загрузку прайса» — письмо уходит снабженцу", async () => {
+  it("«КП партнёра», у сотрудника нет права на каталог: «Передать на загрузку прайса» — письмо уходит снабженцу", async () => {
     signIn(REGISTRAR);
     renderAt("/eds/mail/28");
     expect(await heading("Коммерческое предложение на скрепления КБ-65")).toBeVisible();
@@ -65,7 +65,7 @@ describe("Типы входящих писем: тег, фильтр, основ
     expect(primary).toHaveClass("ant-btn-primary");
     expect(screen.queryByRole("button", { name: "Загрузить прайс" })).toBeNull();
     fireEvent.click(primary);
-    // единственный кандидат — снабженец (право на каталог и цены поставщиков) — подставлен сам
+    // единственный кандидат — снабженец (право на каталог и цены партнёров) — подставлен сам
     expect(await screen.findByText("Демо Снабженцев")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Передать на загрузку" }));
     expect(
@@ -75,7 +75,7 @@ describe("Типы входящих писем: тег, фильтр, основ
     expect(within(list).queryByText("Коммерческое предложение на скрепления КБ-65")).toBeNull();
   });
 
-  it("«КП поставщика», право на каталог есть: «Загрузить прайс» → «Прайс загружен» → письмо в «Разобранных», его можно вернуть", async () => {
+  it("«КП партнёра», право на каталог есть: «Загрузить прайс» → «Прайс загружен» → письмо в «Разобранных», его можно вернуть", async () => {
     // делопроизводителю в Оргструктуре выдана и роль снабженца
     writeEmployees([...readEmployees(), registrarWith(ROLE_ID.SUPPLY)]);
     signIn(REGISTRAR);
@@ -139,7 +139,7 @@ describe("Типы входящих писем: тег, фильтр, основ
     renderAt("/eds/mail/18");
     await heading("Запрос КП на стрелочные переводы");
     fireEvent.mouseDown(screen.getByRole("combobox", { name: "Сменить тип" }));
-    fireEvent.click(await screen.findByTitle("Счёт поставщика"));
+    fireEvent.click(await screen.findByTitle("Счёт партнёра"));
     fireEvent.click(await screen.findByRole("button", { name: "Передать бухгалтеру" }));
     expect(await screen.findByText("Демо Бухгалтеров")).toBeVisible();
     const [, confirm] = screen.getAllByRole("button", { name: "Передать бухгалтеру" });
@@ -175,12 +175,12 @@ describe("Типы входящих писем: тег, фильтр, основ
     expect(await screen.findByText(/сменил тип — Рассылка/)).toBeVisible();
   });
 
-  it("счёт поставщика: «Передать бухгалтеру» — письмо уходит выбранному сотруднику, из «Новых» пропадает", async () => {
+  it("счёт партнёра: «Передать бухгалтеру» — письмо уходит выбранному сотруднику, из «Новых» пропадает", async () => {
     signIn(REGISTRAR);
     renderAt("/eds/mail/18");
     await heading("Запрос КП на стрелочные переводы");
     fireEvent.mouseDown(screen.getByRole("combobox", { name: "Сменить тип" }));
-    fireEvent.click(await screen.findByTitle("Счёт поставщика"));
+    fireEvent.click(await screen.findByTitle("Счёт партнёра"));
     fireEvent.click(await screen.findByRole("button", { name: "Передать бухгалтеру" }));
     expect(await screen.findByText("Демо Бухгалтеров")).toBeVisible();
     const [, confirm] = screen.getAllByRole("button", { name: "Передать бухгалтеру" });
@@ -258,7 +258,7 @@ describe("Правило отправителя из карточки (MAIL-TYPE
     await heading("Коммерческое предложение на скрепления КБ-65");
     fireEvent.click(
       await screen.findByRole("button", {
-        name: "Всегда считать письма от rail-parts-demo.example — «КП или прайс поставщика»",
+        name: "Всегда считать письма от rail-parts-demo.example — «КП или прайс партнёра»",
       }),
     );
     expect((await screen.findAllByText(/Правило создано/)).length).toBeGreaterThan(0);

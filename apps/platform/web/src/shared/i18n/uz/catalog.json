@@ -57,8 +57,8 @@
   "errors": {
     "DEFAULT": "Amalni bajarib bo'lmadi. Qayta urinib ko'ring.",
     "FORBIDDEN": "Bu amal rolingizga ruxsat etilmagan.",
-    "ERP_FORBIDDEN": "ERP ruxsat bermadi: katalogni yoki yetkazib beruvchilarni yuritish huquqi kerak.",
-    "SUPPLIER_PRICES_REQUIRED": "Yetkazib beruvchi narxlarini faqat ularni ko'ra oladiganlar (ta'minot, direktor) o'zgartiradi.",
+    "ERP_FORBIDDEN": "ERP ruxsat bermadi: katalogni yoki hamkorlarni yuritish huquqi kerak.",
+    "SUPPLIER_PRICES_REQUIRED": "Hamkor narxlarini faqat ularni ko'ra oladiganlar (ta'minot, direktor) o'zgartiradi.",
     "CREW_RATES_REQUIRED": "Brigada stavkalarini bosh muhandis, ta'minot yoki direktor o'zgartiradi.",
     "VALIDATION_FAILED": "Maydonlarni tekshiring.",
     "CONFLICT": "Bunday yozuv allaqachon bor. Ro'yxatni yangilang.",
@@ -100,21 +100,21 @@
       "already_reviewed": "So'rov allaqachon hal qilingan. Ro'yxatni yangilang.",
       "category_required": "Yaratilgan kategoriyani tanlang.",
       "reason_required": "Rad etish sababini kiriting.",
-      "supplier_exists": "Bunday yetkazib beruvchi bor: ro‘yxatdan toping.",
-      "offer_exists": "Bu yetkazib beruvchining pozitsiyaga narxi bor — uni o‘zgartiring.",
+      "supplier_exists": "Bunday hamkor bor: ro‘yxatdan toping.",
+      "offer_exists": "Bu hamkorning pozitsiyaga narxi bor — uni o‘zgartiring.",
       "proposal_decided": "O‘zgarish allaqachon hal qilingan. Kartani yangilang.",
       "proposal_stale": "Qiymat ma’lumotnomada endi yo‘q. O‘zgarishni rad eting.",
       "product_incomplete": "Yetishmayotgan maydonlarni to‘ldiring, so‘ng e’lon qiling.",
       "supplier_id_required": "STIR yoki xorijiy ro‘yxat raqamini kiriting.",
       "tin_invalid": "STIR — 9 raqam.",
-      "supplier_name_required": "Yetkazib beruvchi nomini kiriting.",
+      "supplier_name_required": "Hamkor nomini kiriting.",
       "country_not_found": "Bunday mamlakat yo‘q.",
       "currency_not_found": "Bunday valyuta yo‘q.",
       "brand_not_found": "Bunday ishlab chiqaruvchi yo‘q.",
       "item_hs_code_invalid": "TIF TN kodi — 2, 4, 6, 8 yoki 10 raqam.",
       "delivery_basis_not_found": "Bunday yetkazish bazisi yo‘q.",
-      "supplier_not_found": "Ro‘yxatdan yetkazib beruvchi yoki ishlab chiqaruvchini tanlang.",
-      "supplier_invalid": "Ro‘yxatdan yetkazib beruvchini tanlang.",
+      "supplier_not_found": "Ro‘yxatdan hamkor yoki ishlab chiqaruvchini tanlang.",
+      "supplier_invalid": "Ro‘yxatdan hamkorni tanlang.",
       "valid_date_invalid": "Sana — KK.OO.YYYY formatida.",
       "rows_token_invalid": "Tekshiruv eskirgan. «Tekshirish»ni yana bosing.",
       "offer_source_invalid": "Narx manbaini tanlang.",
@@ -138,7 +138,7 @@
       "company_match_confirmation_required": "Shu raqamli tashkilot topildi. O‘sha kompaniya ekanini tasdiqlang.",
       "company_inn_taken": "Bunday STIRli tashkilot bor. Agar bu boshqa kompaniya bo‘lsa, arizani rad eting.",
       "candidate_agreement_required": "Nomzod hali shartnomani kelishmagan. Kelishuvsiz tasdiqlash uchun sabab ko‘rsating.",
-      "partner_suspended": "Hamkor to‘xtatilgan. To‘xtatishni yetkazib beruvchi kartasida bekor qiling.",
+      "partner_suspended": "Hamkor to‘xtatilgan. To‘xtatishni hamkor kartasida bekor qiling.",
       "inn_too_long": "Arizadagi STIR 20 belgidan uzun. Arizani rad eting yoki qayta topshirishni so‘rang.",
       "contract_render_failed": "Shartnomani yig‘ib bo‘lmadi. Hech narsa saqlanmadi, keyinroq urinib ko‘ring.",
       "company_mismatch": "Ariza boshqa tashkilotga bog‘langan. Ro‘yxatni yangilang."
@@ -191,8 +191,8 @@
       "origin": "Ishlab chiqarilgan mamlakat",
       "warranty": "Kafolat"
     },
-    "offers": "Yetkazib beruvchilar takliflari",
-    "offersTable": "Pozitsiya bo'yicha yetkazib beruvchilar takliflari",
+    "offers": "Hamkorlar takliflari",
+    "offersTable": "Pozitsiya bo'yicha hamkorlar takliflari",
     "techDocs": "Hujjatlar",
     "noDocs": "Hujjatlar yo‘q. Sertifikat, pasport yoki yo‘riqnoma qo‘shing.",
     "form": {
@@ -201,7 +201,7 @@
       "add": "Qo'shish",
       "name": "Nomi",
       "kind": "Pozitsiya turi",
-      "kindHint": "«Ombordan» yoki «buyurtma bo'yicha»ni ERP yetkazib beruvchilar takliflaridan aniqlaydi.",
+      "kindHint": "«Ombordan» yoki «buyurtma bo'yicha»ni ERP hamkorlar takliflaridan aniqlaydi.",
       "unit": "O'lchov birligi",
       "vat": "QQS, %",
       "vatHint": "Bo'sh — kompaniyaning odatdagi stavkasi.",
@@ -210,7 +210,7 @@
       "addSteps": [
         "Pozitsiya nomenklaturada qoralama sifatida paydo bo'ladi.",
         "Uni hisob-kitobda tanlash va fayllarni bog'lash mumkin.",
-        "Yetkazib beruvchi narxlarini ta'minotchi qo'shadi."
+        "Hamkor narxlarini ta'minotchi qo'shadi."
       ],
       "editSteps": [
         "O'zgarishlar pozitsiya kartasida saqlanadi.",
@@ -238,7 +238,7 @@
     "uploadPrice": "Prays yuklash"
   },
   "offers": {
-    "supplier": "Yetkazib beruvchi",
+    "supplier": "Hamkor",
     "product": "Pozitsiya",
     "price": "Xarid narxi",
     "quota": "Kvota",
@@ -250,16 +250,16 @@
     "pricesNote": "",
     "quotaValue": "{{qty}} dona, {{min}} dan",
     "leadValue": "ombordan {{stock}} kun, buyurtma bo'yicha {{order}} kun",
-    "openSupplier": "{{name}} yetkazib beruvchisini ochish",
+    "openSupplier": "{{name}} hamkorsini ochish",
     "openProduct": "{{name}} pozitsiyasini ochish",
     "edit": "O'zgartirish",
     "editNamed": "{{name}} pozitsiyasi bo'yicha taklifni o'zgartirish",
     "form": {
       "title": "Taklif: {{name}}",
       "price": "Xarid narxi, {{currency}}",
-      "noPrice": "Yetkazib beruvchi narxini ko'rmaysiz va o'zgartirmaysiz: u ta'minotchi va direktorga ochiq.",
+      "noPrice": "Hamkor narxini ko'rmaysiz va o'zgartirmaysiz: u ta'minotchi va direktorga ochiq.",
       "quota": "Kvota, dona",
-      "quotaHint": "Yetkazib beruvchi shu narxda qancha birlik jo'natishga tayyor.",
+      "quotaHint": "Hamkor shu narxda qancha birlik jo'natishga tayyor.",
       "min": "Minimal buyurtma, dona",
       "stockLead": "Ombordan muddat, kun",
       "orderLead": "Buyurtma bo'yicha muddat, kun",
@@ -267,7 +267,7 @@
       "validUntil": "Narx amal qiladi (gacha)",
       "active": "Taklif amalda",
       "steps": [
-        "Taklif shartlari yetkazib beruvchida va pozitsiyada saqlanadi.",
+        "Taklif shartlari hamkorda va pozitsiyada saqlanadi.",
         "Yangi hisob-kitoblar yangilangan muddat va kvotadan foydalanadi.",
         "Mijoz narxi qayta hisoblanmaydi."
       ]
@@ -275,12 +275,12 @@
   },
   "suppliers": {
     "search": "Nomi va STIR bo'yicha qidiruv",
-    "table": "Yetkazib beruvchilar",
-    "open": "{{name}} yetkazib beruvchisini ochish",
-    "card": "Yetkazib beruvchi",
+    "table": "Hamkorlar",
+    "open": "{{name}} hamkorsini ochish",
+    "card": "Hamkor",
     "tin": "STIR {{tin}}",
     "columns": {
-      "name": "Yetkazib beruvchi",
+      "name": "Hamkor",
       "offers": "Takliflar",
       "terms": "Narx muddatlari"
     },
@@ -289,9 +289,9 @@
     "allValid": "Barcha narxlar amalda",
     "nearest": "eng yaqin muddat {{date}}",
     "empty": {
-      "title": "Yetkazib beruvchilar yo'q",
-      "text": "Yetkazib beruvchini qo‘shing yoki praysini yuklang.",
-      "filtered": "Bu so'rov bo'yicha yetkazib beruvchilar yo'q."
+      "title": "Hamkorlar yo'q",
+      "text": "Hamkorni qo‘shing yoki praysini yuklang.",
+      "filtered": "Bu so'rov bo'yicha hamkorlar yo'q."
     },
     "fields": {
       "tin": "STIR",
@@ -308,13 +308,13 @@
       "madeBrands": "Chiqaradigan brendlar"
     },
     "offers": "Pozitsiyalar bo'yicha takliflar",
-    "offersTable": "Yetkazib beruvchi takliflari",
+    "offersTable": "Hamkor takliflari",
     "noOffers": "Takliflar yo'q.",
     "reg": "ro‘yxat № {{reg}}",
-    "add": "Yetkazib beruvchi qo‘shish",
+    "add": "Hamkor qo‘shish",
     "edit": "O‘zgartirish",
     "maker": "Ishlab chiqaruvchi",
-    "dealer": "Yetkazib beruvchi"
+    "dealer": "Hamkor"
   },
   "brigades": {
     "search": "Nomi va ixtisosligi bo'yicha qidiruv",
@@ -630,11 +630,11 @@
     }
   },
   "supplierForm": {
-    "addTitle": "Yangi yetkazib beruvchi",
-    "editTitle": "Yetkazib beruvchi",
+    "addTitle": "Yangi hamkor",
+    "editTitle": "Hamkor",
     "add": "Qo‘shish",
     "steps": [
-      "Yetkazib beruvchi ro‘yxatda va prays yuklashda paydo bo‘ladi.",
+      "Hamkor ro‘yxatda va prays yuklashda paydo bo‘ladi.",
       "Unga kirish yo‘q: kartani siz yuritasiz."
     ],
     "name": "Nomi",
@@ -663,7 +663,7 @@
     },
     "rolesLine": "Kabinetda: {{roles}}",
     "closed": "Kabinet yopiq: hamkor kira olmaydi.",
-    "notOpened": "Bu yetkazib beruvchi uchun kabinet hali ochilmagan. Kontakt qo'shing va taklif qiling: e-pochtaga kirish kodi keladi.",
+    "notOpened": "Bu hamkor uchun kabinet hali ochilmagan. Kontakt qo'shing va taklif qiling: e-pochtaga kirish kodi keladi.",
     "invitedBy": "Taklif qildi",
     "firstLogin": "Birinchi kirish",
     "noLogin": "hali kirmagan",
@@ -690,15 +690,15 @@
         "question": "Bu bir xil kompaniyami? Javob berguningizcha hamkor so'rovlari shu yerda saqlanadi va mijozga ketmaydi.",
         "yes": "Ha, bir xil kompaniya",
         "no": "Yo'q, boshqa kompaniya",
-        "readOnly": "Tasdiqlash — yetkazib beruvchilarni yurituvchi xodimning vazifasi."
+        "readOnly": "Tasdiqlash — hamkorlarni yurituvchi xodimning vazifasi."
       },
       "hint": {
         "linked": "",
         "requested": "",
         "pending_confirmation": "",
-        "held": "Mijoz topshirilgandan keyin ushlab turilgan: yetkazib beruvchi kartochkasida va CRMdagi mijozda STIRni tekshiring va «Qayta taklif qilish» tugmasini bosing. Bog'lanish yaratilmadi, hamkor so'rovlari shu yerda saqlanadi.",
+        "held": "Mijoz topshirilgandan keyin ushlab turilgan: hamkor kartochkasida va CRMdagi mijozda STIRni tekshiring va «Qayta taklif qilish» tugmasini bosing. Bog'lanish yaratilmadi, hamkor so'rovlari shu yerda saqlanadi.",
         "unverified": "Bog'lanishni CRMdan mijoz topshirilishi STIR mos kelgani bo'yicha yaratdi. Bir xil kompaniya ekanini tasdiqlamaguningizcha hamkor so'rovlari shu yerda saqlanadi.",
-        "conflict": "CRMda bunday rekvizitli mijoz bor, lekin u boshqa kompaniyaga bog'langan. Hech narsa o'zgartirilmadi. Yetkazib beruvchi kartochkasida va CRMdagi mijozda STIR yoki ro'yxatdan o'tish raqamini tekshiring, xatosini to'g'rilang va hamkorni qayta taklif qiling."
+        "conflict": "CRMda bunday rekvizitli mijoz bor, lekin u boshqa kompaniyaga bog'langan. Hech narsa o'zgartirilmadi. Hamkor kartochkasida va CRMdagi mijozda STIR yoki ro'yxatdan o'tish raqamini tekshiring, xatosini to'g'rilang va hamkorni qayta taklif qiling."
       }
     },
     "rights": "Hamkorga nima ochiladi",
@@ -709,7 +709,7 @@
       },
       "catalog_requests": {
         "label": "Katalog va so'rovlar",
-        "hint": "Katalog mijozlardagi kabi: e'lon qilingan mahsulotlar va narxlar, yetkazib beruvchilarsiz."
+        "hint": "Katalog mijozlardagi kabi: e'lon qilingan mahsulotlar va narxlar, hamkorlarsiz."
       }
     },
     "kind": {
@@ -717,12 +717,12 @@
       "hint": "Ro'yxat va hisobotlar uchun belgi, huquqlarga ta'sir qilmaydi.",
       "none": "Ko'rsatilmagan",
       "manufacturer": "Ishlab chiqaruvchi",
-      "supplier": "Yetkazib beruvchi",
+      "supplier": "Hamkor",
       "principal": "Printsipal",
       "other": "Boshqa"
     },
     "contacts": "Kompaniya kontaktlari",
-    "contactsTable": "Yetkazib beruvchi kontaktlari",
+    "contactsTable": "Hamkor kontaktlari",
     "noContacts": "Kontaktlar yo'q. Taklif keladigan odamni qo'shing: kabinetga faqat e-pochta orqali kiriladi.",
     "contact": {
       "name": "F.I.Sh.",
@@ -749,15 +749,15 @@
     "inviteNamed": "{{action}}: {{name}}",
     "inviteSent": "Kirish kodi bilan xat yuborildi.",
     "suspend": "Kirishni to'xtatish",
-    "readOnly": "Taklif qilish va huquqlarni o'zgartirishni yetkazib beruvchilarni yuritish huquqi bor xodimlar qiladi.",
+    "readOnly": "Taklif qilish va huquqlarni o'zgartirishni hamkorlarni yuritish huquqi bor xodimlar qiladi.",
     "contactForm": {
-      "addTitle": "Yetkazib beruvchining yangi kontakti",
-      "editTitle": "Yetkazib beruvchi kontakti",
+      "addTitle": "Hamkorning yangi kontakti",
+      "editTitle": "Hamkor kontakti",
       "add": "Qo'shish",
       "emailHint": "Kirish kodi shu manzilga keladi.",
       "languageHint": "Taklif xati shu tilda yuboriladi.",
       "steps": [
-        "Kontakt yetkazib beruvchi kartochkasida paydo bo'ladi",
+        "Kontakt hamkor kartochkasida paydo bo'ladi",
         "Taklif alohida «Taklif qilish» tugmasi bilan yuboriladi"
       ],
       "canAct": "So'rovlar yaratishi va fayllar yuklashi mumkin"
@@ -775,10 +775,10 @@
   },
   "offerCreate": {
     "open": "Narx qo‘shish",
-    "title": "Yetkazib beruvchi narxi: {{name}}",
+    "title": "Hamkor narxi: {{name}}",
     "add": "Qo‘shish",
     "steps": [
-      "Narx yetkazib beruvchida va pozitsiya kartasida paydo bo‘ladi.",
+      "Narx hamkorda va pozitsiya kartasida paydo bo‘ladi.",
       "Yangi hisob-kitoblar uni olishi mumkin."
     ],
     "product": "Pozitsiya",
@@ -805,7 +805,7 @@
   "proposals": {
     "count": "tasdiqlashda: {{count}}",
     "filter": "Tasdiqlashdagi o‘zgarishlar",
-    "title": "Yetkazib beruvchilardan o‘zgarishlar",
+    "title": "Hamkorlardan o‘zgarishlar",
     "current": "Hozir",
     "proposed": "Taklif",
     "accept": "Qabul qilish",
@@ -840,9 +840,9 @@
       "title": "Prays yuklash mavjud emas",
       "text": "Ruxsat yetarli emas."
     },
-    "supplier": "Yetkazib beruvchi",
+    "supplier": "Hamkor",
     "supplierPlaceholder": "Nomi yoki raqami bo‘yicha toping",
-    "newSupplier": "Yangi yetkazib beruvchi",
+    "newSupplier": "Yangi hamkor",
     "mode": "Fayl turi",
     "modes": {
       "xlsx": "Shablon (xlsx)",
@@ -1115,10 +1115,10 @@
       "overridePlaceholder": "Masalan, shartnoma qog‘ozda imzolangan",
       "ok": "Shartnomani tasdiqlash va kirishni ochish",
       "linkToExisting": "Topilgan tashkilotga bog'lash: {{name}}",
-      "createNew": "Yangi yetkazib beruvchi tashkilotini yaratish",
+      "createNew": "Yangi hamkor tashkilotini yaratish",
       "steps": [
         "«Hamkor» munosabati «Mening mahsulotlarim» va «Katalog va buyurtmalar» modullari bilan faollashtiriladi",
-        "Shartnoma raqami va sanasi yetkazib beruvchi kartasida qayd etiladi",
+        "Shartnoma raqami va sanasi hamkor kartasida qayd etiladi",
         "Aloqachi shaxs kirish kodi bilan taklifnoma oladi",
         "Kontragent CRM bilan bog'lanadi"
       ]

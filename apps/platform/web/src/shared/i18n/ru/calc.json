@@ -74,7 +74,7 @@
     },
     "request": "Текст заявки",
     "requestEmpty": "Текста заявки нет.",
-    "requestPrice": "Запросить цену у поставщика",
+    "requestPrice": "Запросить цену у партнёра",
     "rejectedComment": "Директор отклонил КП: «{{comment}}». Расчёт закрыт."
   },
   "lines": {
@@ -85,7 +85,7 @@
       "position": "Позиция",
       "quantity": "Кол-во",
       "stock": "Склад",
-      "supplier": "Поставщик · срок",
+      "supplier": "Партнёр · срок",
       "purchase": "Закупка, сум",
       "client": "Клиенту, сум",
       "markup": "Наценка, %",
@@ -104,8 +104,8 @@
     "days": "{{count}} дн.",
     "supplierHint": "квота от {{qty}} · цена до {{date}}",
     "supplierHintNoDate": "квота от {{qty}} · срок цены не указан",
-    "offerPrice": "Цена поставщика: {{price}}",
-    "noSupplier": "Поставщик не выбран",
+    "offerPrice": "Цена партнёра: {{price}}",
+    "noSupplier": "Партнёр не выбран",
     "service": "Бригада",
     "crewRate": "Ставка бригады, сум/день",
     "crewDays": "Дней",

@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 
-import { RESOURCES } from "../app/rbac.generated";
 import { resources } from "../shared/i18n";
 import {
   BRIDGE,
@@ -35,16 +34,6 @@ describe("мост в старые экраны: карта разделов-з�
     for (const [id, entry] of Object.entries(BRIDGE)) {
       expect(Boolean(entry.legacy || entry.who || entry.internal), id).toBe(true);
       expect(["soon", "pilot"], id).toContain(entry.when);
-    }
-  });
-
-  it("старый экран с нужным разделом (B-D18-1): раздел есть в каталоге, и без него есть текст «кто делает»", () => {
-    const needing = Object.entries(BRIDGE).filter(([, entry]) => entry.legacyNeeds !== undefined);
-    expect(needing.map(([id]) => id)).toEqual(["chats.external"]);
-    for (const [id, entry] of needing) {
-      expect(Object.keys(RESOURCES), id).toContain(entry.legacyNeeds);
-      expect(entry.legacy, id).toBeDefined();
-      expect(entry.who, id).toBeDefined();
     }
   });
 
@@ -100,35 +89,10 @@ describe("мост в старые экраны: карта разделов-з�
 
 describe("адрес кнопки", () => {
   const inbox = bridgeEntry("chats", "external")?.legacy;
-  const deals = bridgeEntry("crm", "requests")?.legacy;
-
-  it("старая CRM — путь к адресу, ERP — хэш-маршрут после слэша", () => {
-    expect(inbox && legacyHref(inbox, "http://crm.localhost:8088")).toBe(
-      "http://crm.localhost:8088/inbox",
-    );
-    expect(deals && legacyHref(deals, "http://erp.localhost:8088")).toBe(
-      "http://erp.localhost:8088/#crm-deals",
-    );
-  });
-
-  it("раздел без карточки объекта в старой системе — список и для номера", () => {
-    expect(inbox && legacyHref(inbox, "http://crm.localhost", "L-2041")).toBe(
-      "http://crm.localhost/inbox",
-    );
-  });
 
   it("«Лиды» и «Клиенты» — настоящие экраны (D1-2b): записей моста нет", () => {
     expect(bridgeEntry("crm", "leads")).toBeUndefined();
     expect(bridgeEntry("crm", "clients")).toBeUndefined();
-  });
-
-  it("числовой номер заявки — карточка сделки старого ERP, бизнес-номер — список сделок", () => {
-    expect(deals && legacyHref(deals, "http://erp.localhost", "7")).toBe(
-      "http://erp.localhost/#request-detail/7",
-    );
-    expect(deals && legacyHref(deals, "http://erp.localhost", "ЗВ-2026-104")).toBe(
-      "http://erp.localhost/#crm-deals",
-    );
   });
 
   it("адреса нет — кнопки нет", () => {

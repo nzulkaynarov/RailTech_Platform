@@ -32,6 +32,7 @@ function movedListPath(
       ? `/eds/drafts/${encodeURIComponent(quote)}`
       : "/eds/documents?box=outgoing&kind=quote";
   }
+  if (key === "tasks") return "/dashboard/queue";
   if (key === "approvals") {
     const memo = params.get("memo");
     return memo ? `/eds/approvals/${encodeURIComponent(memo)}` : "/eds/documents?box=internal";

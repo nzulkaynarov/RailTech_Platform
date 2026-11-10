@@ -142,7 +142,7 @@ function presentLine(line: MockLine, user: Me, editable: boolean): CalcLine {
   const kind = lineKind(line);
   const zone = zoneOf(line);
   const unit = costOf(line);
-  // Себестоимость строки — `cost_margin` или держателю зоны строки; наценка — только `cost_margin`; цены поставщика —
+  // Себестоимость строки — `cost_margin` или держателю зоны строки; наценка — только `cost_margin`; цены партнёра —
   // `supplier_prices` или держателю зоны товаров (решения по Q-D2-1-2 и Q-D2-1-4).
   const zoneCost = cost || canZone(user, zone);
   const offers = held.has("supplier_prices") || canZone(user, "goods");

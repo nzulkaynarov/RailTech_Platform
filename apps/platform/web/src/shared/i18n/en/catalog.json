@@ -57,8 +57,8 @@
   "errors": {
     "DEFAULT": "The action failed. Please retry.",
     "FORBIDDEN": "This action is not allowed for your role.",
-    "ERP_FORBIDDEN": "ERP refused: you need the right to manage the catalogue or suppliers.",
-    "SUPPLIER_PRICES_REQUIRED": "Supplier prices can only be changed by those who can see them (supply, director).",
+    "ERP_FORBIDDEN": "ERP refused: you need the right to manage the catalogue or partners.",
+    "SUPPLIER_PRICES_REQUIRED": "Partner prices can only be changed by those who can see them (supply, director).",
     "CREW_RATES_REQUIRED": "Crew rates can only be changed by the chief engineer, supply or the director.",
     "VALIDATION_FAILED": "Check the fields.",
     "CONFLICT": "This record already exists. Refresh the list.",
@@ -100,21 +100,21 @@
       "already_reviewed": "The request is already decided. Refresh the list.",
       "category_required": "Choose an existing category.",
       "reason_required": "Enter the reason for refusal.",
-      "supplier_exists": "This supplier already exists: find it in the list.",
-      "offer_exists": "This supplier already has a price for the item — edit it.",
+      "supplier_exists": "This partner already exists: find it in the list.",
+      "offer_exists": "This partner already has a price for the item — edit it.",
       "proposal_decided": "The change is already decided. Refresh the card.",
       "proposal_stale": "The value is no longer in the reference. Reject the change.",
       "product_incomplete": "Fill in the missing fields, then publish.",
       "supplier_id_required": "Enter a TIN or a foreign registration number.",
       "tin_invalid": "TIN is 9 digits.",
-      "supplier_name_required": "Enter the supplier name.",
+      "supplier_name_required": "Enter the partner name.",
       "country_not_found": "No such country.",
       "currency_not_found": "No such currency.",
       "brand_not_found": "No such manufacturer.",
       "item_hs_code_invalid": "HS code is 2, 4, 6, 8 or 10 digits.",
       "delivery_basis_not_found": "No such delivery basis.",
-      "supplier_not_found": "Choose a supplier or manufacturer from the list.",
-      "supplier_invalid": "Choose a supplier from the list.",
+      "supplier_not_found": "Choose a partner or manufacturer from the list.",
+      "supplier_invalid": "Choose a partner from the list.",
       "valid_date_invalid": "Date format is DD.MM.YYYY.",
       "rows_token_invalid": "The check is out of date. Press “Check” again.",
       "offer_source_invalid": "Choose the price source.",
@@ -138,7 +138,7 @@
       "company_match_confirmation_required": "An organization with the same number exists. Confirm whether it is the same company.",
       "company_inn_taken": "An organization with this tax ID exists. If it is a different company, reject the application.",
       "candidate_agreement_required": "The candidate has not agreed the contract yet. Give a reason to approve without agreement.",
-      "partner_suspended": "The partner is suspended. Lift the suspension in the supplier card.",
+      "partner_suspended": "The partner is suspended. Lift the suspension in the partner card.",
       "inn_too_long": "The tax ID in the application is longer than 20 characters. Reject it or ask to re-apply.",
       "contract_render_failed": "Could not build the contract. Nothing was saved, try again later.",
       "company_mismatch": "The application is already linked to another organization. Refresh the list."
@@ -191,8 +191,8 @@
       "origin": "Country of origin",
       "warranty": "Warranty"
     },
-    "offers": "Supplier offers",
-    "offersTable": "Supplier offers for the item",
+    "offers": "Partner offers",
+    "offersTable": "Partner offers for the item",
     "techDocs": "Documents",
     "noDocs": "No documents. Add a certificate, passport or manual.",
     "form": {
@@ -201,7 +201,7 @@
       "add": "Add",
       "name": "Name",
       "kind": "Item type",
-      "kindHint": "“From stock” or “to order” is decided by ERP from supplier offers.",
+      "kindHint": "“From stock” or “to order” is decided by ERP from partner offers.",
       "unit": "Unit of measure",
       "vat": "VAT, %",
       "vatHint": "Empty — the company default.",
@@ -210,7 +210,7 @@
       "addSteps": [
         "The item appears in the catalogue as a draft.",
         "It can be chosen in costing and have files linked.",
-        "Supply adds supplier prices."
+        "Supply adds partner prices."
       ],
       "editSteps": [
         "Changes are saved in the item card.",
@@ -238,7 +238,7 @@
     "uploadPrice": "Upload price list"
   },
   "offers": {
-    "supplier": "Supplier",
+    "supplier": "Partner",
     "product": "Item",
     "price": "Purchase price",
     "quota": "Quota",
@@ -250,16 +250,16 @@
     "pricesNote": "",
     "quotaValue": "{{qty}} pcs, from {{min}}",
     "leadValue": "from stock {{stock}} d, to order {{order}} d",
-    "openSupplier": "Open supplier {{name}}",
+    "openSupplier": "Open partner {{name}}",
     "openProduct": "Open item {{name}}",
     "edit": "Edit",
     "editNamed": "Edit the offer for item {{name}}",
     "form": {
       "title": "Offer: {{name}}",
       "price": "Purchase price, {{currency}}",
-      "noPrice": "You neither see nor change the supplier price: it is open to supply and the director.",
+      "noPrice": "You neither see nor change the partner price: it is open to supply and the director.",
       "quota": "Quota, pcs",
-      "quotaHint": "How many units the supplier will ship at this price.",
+      "quotaHint": "How many units the partner will ship at this price.",
       "min": "Minimum order, pcs",
       "stockLead": "Lead time from stock, days",
       "orderLead": "Lead time to order, days",
@@ -267,7 +267,7 @@
       "validUntil": "Price valid until",
       "active": "The offer is active",
       "steps": [
-        "The offer terms are saved for the supplier and the item.",
+        "The offer terms are saved for the partner and the item.",
         "New costings use the updated lead time and quota.",
         "The client price is not recalculated."
       ]
@@ -275,12 +275,12 @@
   },
   "suppliers": {
     "search": "Search by name and TIN",
-    "table": "Suppliers",
-    "open": "Open supplier {{name}}",
-    "card": "Supplier",
+    "table": "Partners",
+    "open": "Open partner {{name}}",
+    "card": "Partner",
     "tin": "TIN {{tin}}",
     "columns": {
-      "name": "Supplier",
+      "name": "Partner",
       "offers": "Offers",
       "terms": "Price validity"
     },
@@ -289,9 +289,9 @@
     "allValid": "All prices valid",
     "nearest": "nearest end {{date}}",
     "empty": {
-      "title": "No suppliers",
-      "text": "Add a supplier or upload their price list.",
-      "filtered": "No suppliers for this query."
+      "title": "No partners",
+      "text": "Add a partner or upload their price list.",
+      "filtered": "No partners for this query."
     },
     "fields": {
       "tin": "TIN",
@@ -308,13 +308,13 @@
       "madeBrands": "Makes brands"
     },
     "offers": "Offers by item",
-    "offersTable": "Supplier offers",
+    "offersTable": "Partner offers",
     "noOffers": "No offers.",
     "reg": "reg. no. {{reg}}",
-    "add": "Add supplier",
+    "add": "Add partner",
     "edit": "Edit",
     "maker": "Manufacturer",
-    "dealer": "Supplier"
+    "dealer": "Partner"
   },
   "brigades": {
     "search": "Search by name and specialisation",
@@ -630,11 +630,11 @@
     }
   },
   "supplierForm": {
-    "addTitle": "New supplier",
-    "editTitle": "Supplier",
+    "addTitle": "New partner",
+    "editTitle": "Partner",
     "add": "Add",
     "steps": [
-      "The supplier appears in the list and in price list upload.",
+      "The partner appears in the list and in price list upload.",
       "They have no login: you keep the card."
     ],
     "name": "Name",
@@ -663,7 +663,7 @@
     },
     "rolesLine": "In the cabinet: {{roles}}",
     "closed": "Cabinet closed: the partner cannot sign in.",
-    "notOpened": "The cabinet has not been opened for this supplier yet. Add a contact and invite them: a sign-in code is sent by e-mail.",
+    "notOpened": "The cabinet has not been opened for this partner yet. Add a contact and invite them: a sign-in code is sent by e-mail.",
     "invitedBy": "Invited by",
     "firstLogin": "First sign-in",
     "noLogin": "has not signed in yet",
@@ -690,15 +690,15 @@
         "question": "Is it the same company? Until you answer, the partner's requests are kept here and do not go to that client.",
         "yes": "Yes, same company",
         "no": "No, a different company",
-        "readOnly": "A colleague who can manage suppliers confirms."
+        "readOnly": "A colleague who can manage partners confirms."
       },
       "hint": {
         "linked": "",
         "requested": "",
         "pending_confirmation": "",
-        "held": "Held after a client handoff: check the tax ID in the supplier's card and on the CRM client, then press “Invite again”. No link was created, the partner's requests are kept here.",
+        "held": "Held after a client handoff: check the tax ID in the partner's card and on the CRM client, then press “Invite again”. No link was created, the partner's requests are kept here.",
         "unverified": "The link was created by a client handoff from CRM by a matching TIN. The partner's requests are kept here until you confirm it is the same company.",
-        "conflict": "CRM already has a client with these details, but it is linked to another company. Nothing was changed. Check the tax ID or registration number in the supplier's card and on the CRM client, fix the wrong one and invite the partner again."
+        "conflict": "CRM already has a client with these details, but it is linked to another company. Nothing was changed. Check the tax ID or registration number in the partner's card and on the CRM client, fix the wrong one and invite the partner again."
       }
     },
     "rights": "What the partner will see",
@@ -709,7 +709,7 @@
       },
       "catalog_requests": {
         "label": "Catalog and requests",
-        "hint": "The catalog is the same as clients see: published products and prices, no suppliers."
+        "hint": "The catalog is the same as clients see: published products and prices, no partners."
       }
     },
     "kind": {
@@ -717,12 +717,12 @@
       "hint": "A label for lists and reports; it does not affect rights.",
       "none": "Not set",
       "manufacturer": "Manufacturer",
-      "supplier": "Supplier",
+      "supplier": "Partner",
       "principal": "Principal",
       "other": "Other"
     },
     "contacts": "Company contacts",
-    "contactsTable": "Supplier contacts",
+    "contactsTable": "Partner contacts",
     "noContacts": "No contacts yet. Add the person who will get the invitation: the cabinet is entered by e-mail only.",
     "contact": {
       "name": "Full name",
@@ -749,15 +749,15 @@
     "inviteNamed": "{{action}}: {{name}}",
     "inviteSent": "The e-mail with the sign-in code has been sent.",
     "suspend": "Suspend access",
-    "readOnly": "Only staff allowed to manage suppliers can invite and change rights.",
+    "readOnly": "Only staff allowed to manage partners can invite and change rights.",
     "contactForm": {
-      "addTitle": "New supplier contact",
-      "editTitle": "Supplier contact",
+      "addTitle": "New partner contact",
+      "editTitle": "Partner contact",
       "add": "Add",
       "emailHint": "The sign-in code is sent to this address.",
       "languageHint": "The invitation e-mail is sent in this language.",
       "steps": [
-        "The contact appears on the supplier card",
+        "The contact appears on the partner card",
         "The invitation is sent by the separate Invite button"
       ],
       "canAct": "Can create requests and upload files"
@@ -775,10 +775,10 @@
   },
   "offerCreate": {
     "open": "Add price",
-    "title": "Supplier price: {{name}}",
+    "title": "Partner price: {{name}}",
     "add": "Add",
     "steps": [
-      "The price appears for the supplier and on the item card.",
+      "The price appears for the partner and on the item card.",
       "New calculations can use it."
     ],
     "product": "Item",
@@ -805,7 +805,7 @@
   "proposals": {
     "count": "to approve: {{count}}",
     "filter": "Changes to approve",
-    "title": "Changes from suppliers",
+    "title": "Changes from partners",
     "current": "Now",
     "proposed": "Proposed",
     "accept": "Accept",
@@ -840,9 +840,9 @@
       "title": "Price list upload is not available",
       "text": "Insufficient permissions."
     },
-    "supplier": "Supplier",
+    "supplier": "Partner",
     "supplierPlaceholder": "Find by name or number",
-    "newSupplier": "New supplier",
+    "newSupplier": "New partner",
     "mode": "File type",
     "modes": {
       "xlsx": "Template (xlsx)",
@@ -1115,10 +1115,10 @@
       "overridePlaceholder": "e.g.: the contract was signed on paper",
       "ok": "Confirm contract and open access",
       "linkToExisting": "Link to existing organization: {{name}}",
-      "createNew": "Create a new supplier organization",
+      "createNew": "Create a new partner organization",
       "steps": [
         "“Partner” relationship will be activated with “My products” and “Catalog & orders” modules",
-        "Contract number and date will be recorded in supplier profile",
+        "Contract number and date will be recorded in partner profile",
         "Contact person will receive invitation code",
         "Counterparty will be synced with CRM"
       ]

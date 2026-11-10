@@ -42,7 +42,7 @@ describe("Ролевая матрица · вкладка «Журнал»", () 
     expect(
       within(side).getByText(/Операции · Заявки · расчёт: Скрыто → Только чтение/),
     ).toBeVisible();
-    expect(within(side).getByText(/Поле «Цены поставщиков»: станет видно/)).toBeVisible();
+    expect(within(side).getByText(/Поле «Цены партнёров»: станет видно/)).toBeVisible();
   });
 
   it("сохранение роли добавляет запись в журнал", async () => {

@@ -96,7 +96,7 @@
       "minMargin": "Rezolyutsiyadagi marja chegarasi",
       "paymentTerms": "To'lov shartlari",
       "validUntil": "TT amal qiladi",
-      "supplierUntil": "Yetkazib beruvchi narxi amal qiladi",
+      "supplierUntil": "Hamkor narxi amal qiladi",
       "note": "Mijoz PDFni bu maydonlarsiz oladi."
     },
     "route": "Tasdiqlash marshruti",

@@ -14,7 +14,7 @@ import {
 
 setupCatalogTests();
 
-// CAT-1: поставщик, загрузка прайса (проверка → отчёт → применить), изменения карточки от поставщиков, публикация.
+// CAT-1: партнёр, загрузка прайса (проверка → отчёт → применить), изменения карточки от партнёров, публикация.
 // Названия заводов выдуманы.
 
 async function open(email: string, search: string) {
@@ -29,12 +29,12 @@ const xlsx = () =>
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   });
 
-describe("Загрузка прайса поставщика", () => {
-  it("новый иностранный поставщик без ИНН, проверка ничего не пишет, «Применить» загружает", async () => {
+describe("Загрузка прайса партнёра", () => {
+  it("новый иностранный партнёр без ИНН, проверка ничего не пишет, «Применить» загружает", async () => {
     await open("supply@demo.example", "?part=import");
 
-    fireEvent.click(await screen.findByRole("button", { name: "Новый поставщик" }));
-    const form = await findModal("Новый поставщик");
+    fireEvent.click(await screen.findByRole("button", { name: "Новый партнёр" }));
+    const form = await findModal("Новый партнёр");
     fireEvent.change(within(form).getByLabelText("Название"), {
       target: { value: "Werk Nordlicht GmbH" },
     });
@@ -43,7 +43,7 @@ describe("Загрузка прайса поставщика", () => {
       target: { value: "HRB 000001" },
     });
     fireEvent.click(within(form).getByRole("button", { name: "Добавить" }));
-    await modalClosed("Новый поставщик");
+    await modalClosed("Новый партнёр");
 
     fireEvent.change(screen.getByLabelText("Файл прайса"), { target: { files: [xlsx()] } });
     const check = screen.getByRole("button", { name: "Проверить" });
@@ -64,7 +64,7 @@ describe("Загрузка прайса поставщика", () => {
     expect(screen.getByRole("checkbox", { name: "Изменения на одобрении" })).toBeChecked();
     fireEvent.click(cable);
     const drawer = await screen.findByRole("dialog", { name: "Кабель силовой ВВГнг 3×2,5" });
-    expect(await within(drawer).findByText("Изменения от поставщиков")).toBeVisible();
+    expect(await within(drawer).findByText("Изменения от партнёров")).toBeVisible();
     expect(
       within(drawer).getByText("Werk Nordlicht GmbH", { selector: ".pf-cat-sub" }),
     ).toBeVisible();
@@ -72,29 +72,29 @@ describe("Загрузка прайса поставщика", () => {
       within(drawer).getByRole("button", { name: "Отклонить изменение: Наименование" }),
     );
     await waitFor(() => {
-      expect(within(drawer).queryByText("Изменения от поставщиков")).toBeNull();
+      expect(within(drawer).queryByText("Изменения от партнёров")).toBeNull();
     });
     expect(screen.getByRole("dialog", { name: "Кабель силовой ВВГнг 3×2,5" })).toBeVisible();
   });
 
-  it("без права на цены поставщиков загрузки нет", async () => {
+  it("без права на цены партнёров загрузки нет", async () => {
     await open("manager@demo.example", "?part=import");
     expect(await screen.findByText("Загрузка прайса недоступна")).toBeVisible();
   });
 });
 
-describe("Поставщик и его цена", () => {
+describe("Партнёр и его цена", () => {
   it("снабженец добавляет цену с Incoterms и видит историю", async () => {
     signIn("supply@demo.example");
     renderAt(partnerPath("3"));
     const drawer = await findPartnerCard("ИП «Восточный склад»");
     fireEvent.click(await within(drawer).findByRole("button", { name: "Добавить цену" }));
-    const form = await findModal(/Цена поставщика/);
+    const form = await findModal(/Цена партнёра/);
     await chooseOption(within(form).getByLabelText("Позиция"), "Реле защиты РЗ-1");
     fireEvent.change(within(form).getByLabelText(/Цена закупки/), { target: { value: "295" } });
     await chooseOption(within(form).getByLabelText("Базис поставки (Incoterms)"), "FCA");
     fireEvent.click(within(form).getByRole("button", { name: "Добавить" }));
-    await modalClosed(/Цена поставщика/);
+    await modalClosed(/Цена партнёра/);
 
     fireEvent.click(
       await within(drawer).findByRole("button", {

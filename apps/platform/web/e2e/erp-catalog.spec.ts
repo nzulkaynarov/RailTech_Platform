@@ -13,10 +13,10 @@ import {
 } from "./support/app";
 import { pickFiles } from "./support/fields";
 
-// Расчёт · Номенклатура и поставщики и Техдокументация на MSW (D2-3). Снабженец: находит позицию, открывает поставщика с ценами
+// Расчёт · Номенклатура и партнёры и Техдокументация на MSW (D2-3). Снабженец: находит позицию, открывает партнёра с ценами
 // и сроком цены, подаёт запрос на категорию; директор (company.settings) одобряет его; гл. инженер: бригады со ставками,
 // загрузка PDF с привязкой к позиции и просмотр файла (страницы в canvas), скачивание; роль без supplier_prices не видит
-// цен поставщиков; axe (WCAG 2.1 AA) на каждом экране; снимки 1440 и 390 для PR.
+// цен партнёров; axe (WCAG 2.1 AA) на каждом экране; снимки 1440 и 390 для PR.
 
 async function expectNoViolations(page: Page, context: string): Promise<void> {
   await waitForMotionEnd(page);
@@ -124,7 +124,7 @@ async function expectPdfDrawn(page: Page): Promise<void> {
 test.describe("Товары", () => {
   test.skip(({ isMobile }) => isMobile, "сценарии на десктопе; телефон — отдельный блок @mobile");
 
-  test("снабженец находит позицию, открывает поставщика с ценой и сроком, подаёт запрос на категорию; директор одобряет", async ({
+  test("снабженец находит позицию, открывает партнёра с ценой и сроком, подаёт запрос на категорию; директор одобряет", async ({
     page,
   }) => {
     await loginAndWait(page, "supply@demo.example");
@@ -156,12 +156,12 @@ test.describe("Товары", () => {
     await expectNoViolations(page, "карточка позиции");
     await settledScreenshot(page, "catalog-item-prices");
 
-    // переход к поставщику из предложения
-    await card.getByRole("button", { name: "Открыть поставщика ООО «Поставщик Север»" }).click();
+    // переход к партнёру из предложения
+    await card.getByRole("button", { name: "Открыть партнёра ООО «Поставщик Север»" }).click();
     const supplier = partnerCard(page, "ООО «Поставщик Север»");
     await expect(supplier.getByText(/310\s*USD/)).toBeVisible();
     await expect(supplier.getByText("Цена действует", { exact: true }).first()).toBeVisible();
-    await expectNoViolations(page, "поставщик");
+    await expectNoViolations(page, "партнёр");
     await settledScreenshot(page, "catalog-supplier");
 
     // запрос на новую категорию
@@ -188,7 +188,7 @@ test.describe("Товары", () => {
     await expect(page.getByText("Одобрен").first()).toBeVisible();
   });
 
-  test("гл. инженер: цен поставщиков нет, сказано словами; бригады со ставками; справочники", async ({
+  test("гл. инженер: цен партнёров нет, сказано словами; бригады со ставками; справочники", async ({
     page,
   }) => {
     await loginAndWait(page, "engineer@demo.example");
@@ -197,7 +197,7 @@ test.describe("Товары", () => {
     await expect(supplier.getByText("Кабель силовой ВВГнг 3×2,5")).toBeVisible();
     await expect(supplier.getByText(/12,50\s*USD/)).toHaveCount(0);
     await expect(supplier.getByText("500 шт., от 10")).toBeVisible();
-    await expectNoViolations(page, "поставщик без цен");
+    await expectNoViolations(page, "партнёр без цен");
     await settledScreenshot(page, "catalog-supplier-no-prices");
 
     await openCatalog(page, "?part=brigades");
@@ -323,7 +323,7 @@ test.describe("Номенклатура и техдокументация на �
 
     await spaGoto(page, "/crm/clients?partner=2&panel=open&tab=card");
     await expect(partnerCard(page, "АО «Южный Металл»")).toBeVisible();
-    await expectNoViolations(page, "поставщик 390");
+    await expectNoViolations(page, "партнёр 390");
     await settledScreenshot(page, "catalog-supplier");
 
     await openCatalog(page, "?part=refs");

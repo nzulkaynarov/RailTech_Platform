@@ -7,7 +7,7 @@ import { loginAndWait, spaGoto, waitForMotionEnd } from "./support/app";
 import { chooseOption } from "./support/fields";
 
 // MAIL-TYPES на MSW: типы входящих писем как справочник с действием по умолчанию. Делопроизводитель видит тег типа
-// в списке, фильтрует по типу; у письма «КП поставщика» основная кнопка — «Загрузить прайс», остальные действия — в
+// в списке, фильтрует по типу; у письма «КП партнёра» основная кнопка — «Загрузить прайс», остальные действия — в
 // меню; меняет тип одним щелчком. Исполняющий обязанности (все роли, в том числе первая линия почты и администратор) создаёт правило прямо из
 // карточки. Администратор настраивает справочник и правила отправителей. Обе ширины, axe (WCAG 2.1 AA), снимки.
 // Данные вымышленные; снимки — в docs/screens/mail-types/.
@@ -116,7 +116,7 @@ for (const width of WIDTHS) {
     await expect(page.getByRole("heading", { level: 1, name: "Почта" })).toBeVisible();
     const list = page.getByRole("list", { name: "Письма, ждущие разбора" });
     // тег типа в строке письма; оформленные письма во «Входящих» не висят — только требующие действия
-    await expect(list.getByText("КП или прайс поставщика", { exact: true })).toBeVisible();
+    await expect(list.getByText("КП или прайс партнёра", { exact: true })).toBeVisible();
     await expect(list.getByText("Рассылка", { exact: true })).toBeVisible();
     await expect(page.getByRole("tab", { name: "Новые · 6" })).toBeVisible();
     await expectNoViolations(page, "список с типами");
@@ -124,15 +124,12 @@ for (const width of WIDTHS) {
     await settledScreenshot(page, "mail-types-list");
 
     // фильтр по типу
-    await chooseOption(
-      page.getByRole("combobox", { name: "Тип письма" }),
-      "КП или прайс поставщика",
-    );
+    await chooseOption(page.getByRole("combobox", { name: "Тип письма" }), "КП или прайс партнёра");
     await expect(list.getByRole("listitem")).toHaveCount(1);
     await expect(page.getByRole("tab", { name: "Новые · 6" })).toBeVisible();
     await settledScreenshot(page, "mail-types-filter");
 
-    // письмо с типом «КП поставщика»: у делопроизводителя нет права на каталог — основная кнопка «Передать на загрузку прайса»
+    // письмо с типом «КП партнёра»: у делопроизводителя нет права на каталог — основная кнопка «Передать на загрузку прайса»
     await page.getByRole("link", { name: /Открыть письмо «Коммерческое предложение/ }).click();
     await expect(
       page.getByRole("heading", { level: 1, name: "Коммерческое предложение на скрепления КБ-65" }),
@@ -142,8 +139,8 @@ for (const width of WIDTHS) {
     await expect(page.getByRole("button", { name: "Загрузить прайс", exact: true })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Создать лид" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /Другое действие/ })).toBeVisible();
-    await expectNoViolations(page, "карточка КП поставщика");
-    await expectFits(page, "карточка КП поставщика");
+    await expectNoViolations(page, "карточка КП партнёра");
+    await expectFits(page, "карточка КП партнёра");
     await settledScreenshot(page, "mail-types-card-price", "Тип письма");
 
     // смена типа одним щелчком: основная кнопка следует за типом
@@ -155,10 +152,10 @@ for (const width of WIDTHS) {
     await expect(page.getByText(/сменил тип — Запрос клиента/)).toBeVisible();
     await settledScreenshot(page, "mail-types-card-changed", "Тип письма");
 
-    // вернули «КП поставщика» и передали снабженцу: письмо ушло из «Новых»
+    // вернули «КП партнёра» и передали снабженцу: письмо ушло из «Новых»
     await chooseOption(
       page.getByRole("combobox", { name: "Сменить тип" }),
-      "КП или прайс поставщика",
+      "КП или прайс партнёра",
     );
     await page.getByRole("button", { name: "Передать на загрузку прайса" }).click();
     await expect(page.getByText("Демо Снабженцев")).toBeVisible();
@@ -210,7 +207,7 @@ for (const width of WIDTHS) {
       page.getByText("Письмо передано на загрузку прайса: Демо Снабженцев"),
     ).toBeVisible();
     await spaGoto(page, "/eds/mail/18");
-    await chooseOption(page.getByRole("combobox", { name: "Сменить тип" }), "Счёт поставщика");
+    await chooseOption(page.getByRole("combobox", { name: "Сменить тип" }), "Счёт партнёра");
     await page.getByRole("button", { name: "Передать бухгалтеру" }).first().click();
     await page.getByRole("button", { name: "Передать", exact: true }).click();
     await expect(page.getByText("Письмо передано: Демо Бухгалтеров")).toBeVisible();

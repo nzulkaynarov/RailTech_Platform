@@ -48,7 +48,7 @@ describe("Моя очередь · «Доработать»", () => {
   it("у чужого — строки нет: документ принадлежит автору", async () => {
     const { page } = await queue("supply@demo.example");
 
-    // у снабженца своя очередь (просроченный заказ поставщику, D2-2), чужого документа в ней нет
+    // у снабженца своя очередь (просроченный заказ партнёру, D2-2), чужого документа в ней нет
     expect(await within(page).findByText(/Просрочен заказ ЗП-/)).toBeVisible();
     expect(within(page).queryByText(TITLE)).toBeNull();
   });

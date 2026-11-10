@@ -38,7 +38,7 @@ const ACTIONS: readonly [string, string, string, string][] = [
   ["create_lead", "Создать лид → менеджеру", "Lid yaratish → menejerga", "Create a lead → manager"],
   [
     "supplier_price",
-    "Загрузить прайс или КП поставщика",
+    "Загрузить прайс или КП партнёра",
     "Yetkazib beruvchi narxnomasini yuklash",
     "Upload supplier price list or quote",
   ],
@@ -130,7 +130,7 @@ function seed(): State {
       kindItem("bank", names("Письмо банка", "Bank xati", "Bank letter"), 20),
       kindItem(
         "supplier",
-        names("Письмо поставщика", "Yetkazib beruvchi xati", "Supplier letter"),
+        names("Письмо партнёра", "Yetkazib beruvchi xati", "Supplier letter"),
         30,
       ),
       kindItem(
@@ -202,7 +202,7 @@ function seed(): State {
       mailType(
         "supplier_price",
         names(
-          "КП или прайс поставщика",
+          "КП или прайс партнёра",
           "Yetkazib beruvchi narxnomasi",
           "Supplier quote or price list",
         ),
@@ -213,7 +213,7 @@ function seed(): State {
       ),
       mailType(
         "supplier_invoice",
-        names("Счёт поставщика", "Yetkazib beruvchi hisobi", "Supplier invoice"),
+        names("Счёт партнёра", "Yetkazib beruvchi hisobi", "Supplier invoice"),
         50,
         "gold",
         "wallet",
@@ -222,7 +222,7 @@ function seed(): State {
       mailType(
         "supplier_document",
         names(
-          "Документ поставщика (договор, акт сверки)",
+          "Документ партнёра (договор, акт сверки)",
           "Yetkazib beruvchi hujjati (shartnoma, solishtirma dalolatnoma)",
           "Supplier document (contract, reconciliation act)",
         ),

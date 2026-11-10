@@ -170,7 +170,7 @@ function ownQueue(view: readonly MockRole[]): QueueItem[] {
     ),
     ...ticketQueueItems(view), // обращения живут в CRM, как и лиды
     ...inboundMailQueueItems(view), // W18A-P2: письма общего ящика ждут разбора (CRM)
-    ...stockQueueItems(view), // просроченные заказы поставщикам (ERP, D2-2)
+    ...stockQueueItems(view), // просроченные заказы партнёрам (ERP, D2-2)
     ...registeredQueueItems(view), // P8: входящие, зарегистрированные делопроизводителем
     ...letterTaskQueueItems(view), // P8b: поручения, переносы, ознакомления
     ...erpWorkQueueItems(view), // D2-8: расчёт, счета и платёжки, договор и акт (ERP)
@@ -268,7 +268,7 @@ export const feedHandlers = [
         ...(edsDown() ? [] : quoteCounter(roles.view)),
         // «Мои расчёты» и «Счета и оплаты» (D2-8): из тех же строк, что очередь
         ...(erpDown() ? [] : erpWorkCounters(roles.view)),
-        // «Расчёт · Склад»: просроченные заказы поставщикам (D2-2)
+        // «Расчёт · Склад»: просроченные заказы партнёрам (D2-2)
         ...(stockOverdue > 0 && !erpDown()
           ? [{ module: "erp" as const, section: "stock", count: stockOverdue, attention: true }]
           : []),

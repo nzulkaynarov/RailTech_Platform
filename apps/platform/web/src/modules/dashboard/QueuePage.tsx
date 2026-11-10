@@ -20,7 +20,6 @@ import "../eds/decision/decision.css";
 import { bannerKind } from "../../shared/ui/bannerKind";
 import { SourceBanner } from "../../shared/ui/SourceBanner";
 import { matchSection } from "../registry";
-import { viewRoleNames } from "../../entities/role/roles";
 import { isActionable } from "../bridge";
 import { objectLink } from "../objectLinks";
 import { WhereToDo } from "../stub/WhereToDo";
@@ -66,10 +65,8 @@ export function QueuePage() {
   const title = t("modules:dashboard.sections.queue");
   useDocumentTitle(title);
 
-  const roles = viewRoleNames(me, t("shell:avatar.allRoles"));
   const count = queue.data?.items.length;
   const subtitle = [
-    roles,
     todayLabel(i18n.language),
     count === undefined
       ? null

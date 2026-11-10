@@ -46,14 +46,14 @@ describe("Настройки · Процессы · Справочники · Т
       "page",
     );
     expect(await rowOf("Запрос клиента")).toHaveTextContent("Создать лид → менеджеру");
-    expect(await rowOf("КП или прайс поставщика")).toHaveTextContent(
-      "Загрузить прайс или КП поставщика",
+    expect(await rowOf("КП или прайс партнёра")).toHaveTextContent(
+      "Загрузить прайс или КП партнёра",
     );
     expect(await rowOf("Спам")).toHaveTextContent("В «Подозрительные» (спам)");
     expect(readDictionaries()["mail-types"]).toHaveLength(9);
-    // «Документ поставщика» уже стоит у демо-писем — удалить нельзя, только скрыть; «Приглашение на встречу» не использовано
+    // «Документ партнёра» уже стоит у демо-писем — удалить нельзя, только скрыть; «Приглашение на встречу» не использовано
     expect(
-      screen.queryByRole("button", { name: "Удалить: Документ поставщика (договор, акт сверки)" }),
+      screen.queryByRole("button", { name: "Удалить: Документ партнёра (договор, акт сверки)" }),
     ).toBeNull();
     expect(screen.getByRole("button", { name: "Удалить: Приглашение на встречу" })).toBeEnabled();
   });

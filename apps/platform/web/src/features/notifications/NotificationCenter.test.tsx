@@ -144,7 +144,7 @@ describe("Центр уведомлений", () => {
       "/eds/approvals/%D0%A1%D0%97-2026%2F031",
       "?panel=open&tab=agree",
     ],
-    ["manager@demo.example", /Лид L-2041 просит КП/, "/crm/messages", "?lead=L-2041"],
+    ["manager@demo.example", /Лид L-2041 просит КП/, "/crm/leads", "?scope=waiting&lead=L-2041"],
   ])(
     "%s: «%s» открывает объект и вкладку решения, без «Где посмотреть» (D1-6)",
     async (email, title, pathname, search) => {

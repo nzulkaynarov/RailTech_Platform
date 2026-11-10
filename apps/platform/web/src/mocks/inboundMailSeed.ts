@@ -183,7 +183,7 @@ export function seed(): StoredMail[] {
       assist: {
         status: "done",
         kind: null,
-        summary: "Поставщик прислал акт сверки за октябрь, просит подписать до 10 ноября.",
+        summary: "Партнёр прислал акт сверки за октябрь, просит подписать до 10 ноября.",
         action: null,
       },
       type: resolveType("supplier_document", "ai"),
@@ -390,7 +390,7 @@ export function seed(): StoredMail[] {
       assist: {
         status: "done",
         kind: null,
-        summary: "Поставщик прислал КП и прайс на скрепления КБ-65, цены до 30 ноября.",
+        summary: "Партнёр прислал КП и прайс на скрепления КБ-65, цены до 30 ноября.",
         action: null,
       },
       type: resolveType("supplier_price", "ai"),

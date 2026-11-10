@@ -125,7 +125,7 @@ describe("Расчёт по заявке", () => {
     ).toBeVisible();
   });
 
-  it("бухгалтер — только чтение: цены клиенту и итог, без себестоимости, ставок бригады и цен поставщика", async () => {
+  it("бухгалтер — только чтение: цены клиенту и итог, без себестоимости, ставок бригады и цен партнёра", async () => {
     await openCalc("accountant@demo.example");
     expect(screen.queryByRole("button", { name: /Подтвердить строку/ })).toBeNull();
     expect(screen.queryByRole("button", { name: READY })).toBeNull();
@@ -134,7 +134,7 @@ describe("Расчёт по заявке", () => {
     expect(within(totals).getByText("275 300 000")).toBeVisible();
     expect(screen.queryByText("239 000 000")).toBeNull();
     expect(screen.queryByText(/1 500 000/)).toBeNull();
-    expect(screen.queryByText(/Цена поставщика/)).toBeNull();
+    expect(screen.queryByText(/Цена партнёра/)).toBeNull();
     expect(screen.queryByLabelText(/Ставка бригады/)).toBeNull();
   });
 

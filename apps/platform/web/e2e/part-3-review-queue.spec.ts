@@ -68,7 +68,7 @@ for (const width of WIDTHS) {
       block.locator(".ant-select-selection-item", { hasText: "Показывать" }),
     ).toBeVisible();
     await block.scrollIntoViewIfNeeded();
-    await expectNoViolations(page, "Поставщик · цены партнёра в каталоге");
+    await expectNoViolations(page, "Партнёр · цены партнёра в каталоге");
     await settledScreenshot(page, "partner-price");
 
     // В карточке товара партнёра каталог покажет цену-витрину

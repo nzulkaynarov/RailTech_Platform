@@ -14,7 +14,7 @@ import { chooseOption, pickFiles } from "./support/fields";
 
 // CAT-1 (L0-2) на MSW: снабженец заводит иностранный завод без ИНН, загружает его прайс по шаблону (проверка ничего не
 // пишет, отчёт с ошибками строк и изменениями на одобрение), применяет; в карточке позиции решает изменение от завода и
-// видит, чего не хватает для публикации; у поставщика добавляет цену с Incoterms и смотрит историю. Названия выдуманы.
+// видит, чего не хватает для публикации; у партнёра добавляет цену с Incoterms и смотрит историю. Названия выдуманы.
 // axe (WCAG 2.1 AA) на каждом экране; снимки 1440 и 390 в docs/screens/cat-1/.
 
 async function expectNoViolations(page: Page, context: string): Promise<void> {
@@ -53,14 +53,14 @@ async function uploadScenario(page: Page, width: number): Promise<void> {
   await settledScreenshot(page, "cat1-import-empty");
 
   // новый иностранный завод без ИНН
-  await page.getByRole("button", { name: "Новый поставщик" }).click();
-  const form = page.getByRole("dialog", { name: "Новый поставщик" });
+  await page.getByRole("button", { name: "Новый партнёр" }).click();
+  const form = page.getByRole("dialog", { name: "Новый партнёр" });
   await form.getByLabel("Название").fill("Werk Nordlicht GmbH");
   await chooseOption(form.getByLabel("Страна"), "Германия");
   await chooseOption(form.getByLabel("Валюта цен"), "EUR");
   await form.getByLabel("Рег. номер").fill("HRB 000001");
   await form.getByLabel("Сам выпускает товар (изготовитель)").check();
-  await expectNoViolations(page, "новый поставщик");
+  await expectNoViolations(page, "новый партнёр");
   await settledScreenshot(page, "cat1-new-supplier");
   await form.getByRole("button", { name: "Добавить" }).click();
   await expect(form).toBeHidden();
@@ -83,16 +83,16 @@ async function uploadScenario(page: Page, width: number): Promise<void> {
   await page.getByRole("button", { name: "Открыть позиции на одобрении" }).click();
   await page.getByRole("button", { name: /Открыть позицию Кабель силовой/ }).click();
   const card = page.getByRole("dialog", { name: "Кабель силовой ВВГнг 3×2,5" });
-  await expect(card.getByText("Изменения от поставщиков")).toBeVisible();
+  await expect(card.getByText("Изменения от партнёров")).toBeVisible();
   await expect(card.getByRole("button", { name: "Снять с публикации" })).toBeVisible();
-  await expectNoViolations(page, "изменения от поставщиков");
+  await expectNoViolations(page, "изменения от партнёров");
   await settledScreenshot(page, "cat1-item-proposals");
   await card.getByRole("button", { name: "Отклонить изменение: Наименование" }).click();
-  await expect(card.getByText("Изменения от поставщиков")).toHaveCount(0);
+  await expect(card.getByText("Изменения от партнёров")).toHaveCount(0);
   await expect(card.getByText("Кабель силовой ВВГнг 3×2,5").first()).toBeVisible();
 }
 
-test.describe("CAT-1: загрузка прайса поставщика", () => {
+test.describe("CAT-1: загрузка прайса партнёра", () => {
   test.skip(({ isMobile }) => isMobile, "1440; телефон — отдельный блок @mobile");
 
   test("иностранный завод без ИНН → прайс по шаблону → проверка → применить → решение в карточке", async ({
@@ -101,18 +101,18 @@ test.describe("CAT-1: загрузка прайса поставщика", () =>
     await uploadScenario(page, 1440);
   });
 
-  test("цена поставщика вручную с Incoterms и история; неполную карточку не опубликовать", async ({
+  test("цена партнёра вручную с Incoterms и история; неполную карточку не опубликовать", async ({
     page,
   }) => {
     await loginAndWait(page, "supply@demo.example");
     await spaGoto(page, "/crm/clients?partner=3&panel=open&tab=card");
     const supplier = partnerCard(page, "ИП «Восточный склад»");
     await supplier.getByRole("button", { name: "Добавить цену" }).click();
-    const form = page.getByRole("dialog", { name: /Цена поставщика/ });
+    const form = page.getByRole("dialog", { name: /Цена партнёра/ });
     await chooseOption(form.getByLabel("Позиция"), "Реле защиты РЗ-1 · RT-0002");
     await form.getByLabel(/Цена закупки/).fill("295");
     await chooseOption(form.getByLabel("Базис поставки (Incoterms)"), "FCA · Free Carrier");
-    await expectNoViolations(page, "цена поставщика");
+    await expectNoViolations(page, "цена партнёра");
     await settledScreenshot(page, "cat1-offer-create");
     await form.getByRole("button", { name: "Добавить" }).click();
     await expect(form).toBeHidden();

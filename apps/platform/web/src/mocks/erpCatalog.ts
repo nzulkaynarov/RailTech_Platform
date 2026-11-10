@@ -62,7 +62,7 @@ import { partnerPriceVisibility } from "./erpSupplierAccess";
 import { buildMe, readSession } from "./mockSession";
 
 /**
- * Моки «Расчёт · Номенклатура и поставщики» и «Техдокументация» (D2-3, BFF 0.26.0). Права — как в BFF: раздел `erp.stock`
+ * Моки «Расчёт · Номенклатура и партнёры» и «Техдокументация» (D2-3, BFF 0.26.0). Права — как в BFF: раздел `erp.stock`
  * (чтение — `read`, изменения — `full`); цена закупки — поле `supplier_prices`; ставка бригады — `cost_margin` или раздел
  * `erp.calc.services`. Отказы и коды причин — те же, что у настоящего ERP, чтобы экран и e2e видели настоящее поведение.
  * Запросы на категории и курс делят состояние с Admin · Компания (`fixtures/company.ts`).
@@ -193,7 +193,7 @@ function offerOf(offer: MockOffer, prices: boolean): CatalogOffer {
   const state = readErpCatalog();
   const supplier = state.suppliers.find((s) => s.id === offer.supplierId);
   const product = productRef(offer.itemId);
-  if (!supplier || !product) throw new Error(`предложение ${offer.id} без поставщика или позиции`);
+  if (!supplier || !product) throw new Error(`предложение ${offer.id} без партнёра или позиции`);
   return {
     id: offer.id,
     supplier: { id: supplier.id, name: supplier.name },
@@ -645,15 +645,9 @@ export const erpCatalogHandlers = [
     const who = guard("full");
     if (isResponse(who)) return who;
     if (!who.prices)
-      return failure(
-        403,
-        "FORBIDDEN",
-        "Прайс загружает тот, кому открыты цены поставщиков.",
-        "bff",
-        {
-          restricted: "supplier_prices",
-        },
-      );
+      return failure(403, "FORBIDDEN", "Прайс загружает тот, кому открыты цены партнёров.", "bff", {
+        restricted: "supplier_prices",
+      });
     const params = new URL(request.url).searchParams;
     const supplier = readErpCatalog().suppliers.find((s) => s.id === params.get("supplier_id"));
     if (!supplier) return invalid("supplier_id", "supplier_not_found");
@@ -915,7 +909,7 @@ export const erpCatalogHandlers = [
     return HttpResponse.json(detailOf(item, who));
   }),
 
-  // --- поставщики
+  // --- партнёры
   http.get("*/erp/catalog/suppliers", ({ request }) => {
     const who = guard("read");
     if (isResponse(who)) return who;
@@ -953,7 +947,7 @@ export const erpCatalogHandlers = [
             s.registration_number.toLowerCase() === data.registration_number.trim().toLowerCase()),
       )
     )
-      return conflict("supplier_exists", "Такой поставщик уже есть: найдите его в списке.");
+      return conflict("supplier_exists", "Такой партнёр уже есть: найдите его в списке.");
     const country = COUNTRIES.find((c) => c.id === data.country_id);
     const supplier: MockSupplier = {
       id: nextId(),
@@ -1011,7 +1005,7 @@ export const erpCatalogHandlers = [
     if (!data.price || !DECIMAL.test(data.price.amount))
       return invalid("price", "offer_price_invalid");
     if (state.offers.some((o) => o.supplierId === supplier.id && o.itemId === data.product_id))
-      return conflict("offer_exists", "Цена этого поставщика на товар уже есть — измените её.");
+      return conflict("offer_exists", "Цена этого партнёра на товар уже есть — измените её.");
     if (data.valid_from && data.valid_until && data.valid_until < data.valid_from)
       return invalid("valid_until", "offer_validity_range_invalid");
     const offer: MockOffer = {

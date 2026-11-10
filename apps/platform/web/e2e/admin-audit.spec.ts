@@ -88,7 +88,7 @@ test.describe("История действий", () => {
     await expect(
       side.getByText(/Операции · Заявки · расчёт: Скрыто → Только чтение/),
     ).toBeVisible();
-    await expect(side.getByText(/Поле «Цены поставщиков»: станет видно/)).toBeVisible();
+    await expect(side.getByText(/Поле «Цены партнёров»: станет видно/)).toBeVisible();
 
     await spaGoto(page, "/admin/audit?entry=119&panel=open");
     await expect(side.getByRole("heading", { level: 3, name: /Настроил коннектор/ })).toBeVisible();

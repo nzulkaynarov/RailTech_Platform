@@ -67,7 +67,7 @@
         "title": "Ta’minotchi",
         "steps": [
           "«Vazifalar»: hisob-kitob topshiriqlari direktor rezolyutsiyasidan keyin keladi.",
-          "Pozitsiyalarni tanlang: ombor, yetkazib beruvchilar, yetkazish muddati.",
+          "Pozitsiyalarni tanlang: ombor, hamkorlar, yetkazish muddati.",
           "«Tovarlar va ombor» vizasini qo‘ying. Vizalar yig‘ilgach, TT direktorga ketadi."
         ]
       },
@@ -178,7 +178,7 @@
       },
       {
         "term": "Hisob-kitob",
-        "text": "Ombor va yetkazib beruvchi ma’lumotlari hamda mutaxassis vizalari bilan ariza qatorlari."
+        "text": "Ombor va hamkor ma’lumotlari hamda mutaxassis vizalari bilan ariza qatorlari."
       },
       {
         "term": "TT (КП-2026/118)",

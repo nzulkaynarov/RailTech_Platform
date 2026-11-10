@@ -57,7 +57,7 @@ describe("Настройки · Процессы · Справочники пи�
     );
     // Письмо банка есть у демо-писем — удалить нельзя, только скрыть.
     expect(screen.queryByRole("button", { name: "Удалить: Письмо банка" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Удалить: Письмо поставщика" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Удалить: Письмо партнёра" })).toBeEnabled();
   });
 
   it("добавляет вид документа: код из названия, «срочный» и срок; значение в конце списка", async () => {

@@ -75,19 +75,19 @@ describe("Расчёт · колонка «Склад»: ячейка, своб�
     expect(row.getByText("Свободно · 6")).toBeVisible();
     expect(row.queryByRole("button", { name: /Зарезервировать/ })).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Запросить цену у поставщика" }),
+      screen.queryByRole("button", { name: "Запросить цену у партнёра" }),
     ).not.toBeInTheDocument();
   });
 });
 
-describe("Расчёт · «Запросить цену у поставщика»", () => {
-  it("письмо поставщику и запись в журнале: кто, когда, кому, по каким строкам; «Ответ получен»", async () => {
+describe("Расчёт · «Запросить цену у партнёра»", () => {
+  it("письмо партнёру и запись в журнале: кто, когда, кому, по каким строкам; «Ответ получен»", async () => {
     await openCalc("supply@demo.example");
-    fireEvent.click(screen.getByRole("button", { name: "Запросить цену у поставщика" }));
+    fireEvent.click(screen.getByRole("button", { name: "Запросить цену у партнёра" }));
     const modal = await screen.findByRole("dialog");
     const submit = within(modal).getByRole("button", { name: "Отправить запрос" });
     expect(submit).toBeDisabled();
-    fireEvent.mouseDown(within(modal).getByRole("combobox", { name: "Поставщик" }));
+    fireEvent.mouseDown(within(modal).getByRole("combobox", { name: "Партнёр" }));
     fireEvent.click(
       await screen.findByText(/ООО «Вымышленная Сталь» · sales@steel\.example/, {
         selector: ".ant-select-item-option-content",
@@ -97,7 +97,7 @@ describe("Расчёт · «Запросить цену у поставщика�
     fireEvent.click(submit);
     expect(await screen.findByText("Запрос ушёл на sales@steel.example")).toBeVisible();
 
-    const log = await screen.findByRole("list", { name: "Запросы цены у поставщиков" });
+    const log = await screen.findByRole("list", { name: "Запросы цены у партнёров" });
     expect(within(log).getByText("ООО «Вымышленная Сталь»")).toBeVisible();
     expect(within(log).getByText("Ждём ответ")).toBeVisible();
     expect(within(log).getByText(/Демо Снабженцев → sales@steel\.example/)).toBeVisible();
@@ -105,22 +105,22 @@ describe("Расчёт · «Запросить цену у поставщика�
 
     fireEvent.click(
       within(log).getByRole("button", {
-        name: "Ответ получен: поставщик «ООО «Вымышленная Сталь»»",
+        name: "Ответ получен: партнёр «ООО «Вымышленная Сталь»»",
       }),
     );
     await waitFor(() => {
       expect(
-        within(log).queryByRole("button", { name: /Ответ получен: поставщик/ }),
+        within(log).queryByRole("button", { name: /Ответ получен: партнёр/ }),
       ).not.toBeInTheDocument();
     });
     expect(within(log).getByText("Ответ получен")).toBeVisible();
   });
 
-  it("у поставщика нет почты: адрес для письма обязателен", async () => {
+  it("у партнёра нет почты: адрес для письма обязателен", async () => {
     await openCalc("supply@demo.example");
-    fireEvent.click(screen.getByRole("button", { name: "Запросить цену у поставщика" }));
+    fireEvent.click(screen.getByRole("button", { name: "Запросить цену у партнёра" }));
     const modal = await screen.findByRole("dialog");
-    fireEvent.mouseDown(within(modal).getByRole("combobox", { name: "Поставщик" }));
+    fireEvent.mouseDown(within(modal).getByRole("combobox", { name: "Партнёр" }));
     fireEvent.click(
       await screen.findByText(/ООО «Пример Лес» · нет почты/, {
         selector: ".ant-select-item-option-content",

@@ -74,7 +74,7 @@
     },
     "request": "Request text",
     "requestEmpty": "No request text.",
-    "requestPrice": "Request a supplier price",
+    "requestPrice": "Request a partner price",
     "rejectedComment": "The director rejected the quote: “{{comment}}”. The costing is closed."
   },
   "lines": {
@@ -85,7 +85,7 @@
       "position": "Item",
       "quantity": "Qty",
       "stock": "Stock",
-      "supplier": "Supplier · lead time",
+      "supplier": "Partner · lead time",
       "purchase": "Purchase, UZS",
       "client": "Client price, UZS",
       "markup": "Markup, %",
@@ -104,8 +104,8 @@
     "days": "{{count}} days",
     "supplierHint": "min. order {{qty}} · price valid to {{date}}",
     "supplierHintNoDate": "min. order {{qty}} · price validity not set",
-    "offerPrice": "Supplier price: {{price}}",
-    "noSupplier": "No supplier chosen",
+    "offerPrice": "Partner price: {{price}}",
+    "noSupplier": "No partner chosen",
     "service": "Crew",
     "crewRate": "Crew rate, UZS/day",
     "crewDays": "Days",

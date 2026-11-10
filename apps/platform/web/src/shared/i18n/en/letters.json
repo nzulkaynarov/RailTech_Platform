@@ -218,7 +218,7 @@
     "zones": {
       "goods": {
         "name": "Supply",
-        "hint": "stock and supplier prices"
+        "hint": "stock and partner prices"
       },
       "services": {
         "name": "Chief engineer",
@@ -309,7 +309,7 @@
   },
   "register": {
     "action": "Register incoming",
-    "subtitle": "A letter from the tax authority, a bank, a supplier or a government body — on paper, from the taxpayer cabinet or by email. The director adds the resolution.",
+    "subtitle": "A letter from the tax authority, a bank, a partner or a government body — on paper, from the taxpayer cabinet or by email. The director adds the resolution.",
     "formLabel": "Register an incoming document",
     "choose": "Select",
     "kind": {
@@ -791,7 +791,7 @@
       "suspiciousWhat": "The letter moves to the Suspicious tab — you can bring it back from there (“Not spam”). The mailbox itself is not changed.",
       "suspiciousConfirm": "To Suspicious",
       "suspiciousDone": "Letter moved to Suspicious",
-      "priceHandoverNone": "Nobody to hand over to: no employee may upload price lists and see supplier prices. Assign such a role in Settings · Roles.",
+      "priceHandoverNone": "Nobody to hand over to: no employee may upload price lists and see partner prices. Assign such a role in Settings · Roles.",
       "priceHandoverWhat": "The letter leaves “New” and appears in Tasks of the chosen colleague, who will upload the price list.",
       "priceHandoverConfirm": "Hand over for upload",
       "priceHandoverDone": "Letter handed over for price upload: {{name}}",

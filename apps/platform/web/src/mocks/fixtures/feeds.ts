@@ -306,7 +306,7 @@ export function activityToday(now = Date.now()): ActivityItem[] {
     {
       id: "act:3",
       actor: person("u-sup", "Демо Снабженцев", "ДС"),
-      text: "подтвердил цену поставщика по БКЗ-24В",
+      text: "подтвердил цену партнёра по БКЗ-24В",
       module: "erp",
       at: at(3 * HOUR),
     },

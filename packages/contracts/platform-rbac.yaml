@@ -440,7 +440,7 @@ restricted_fields:
     description: { ru: "Себестоимость и маржа", uz: "Tannarx va marja", en: "Cost and margin" }
     backend: { erp: [quote.view_cost_margin] }
   supplier_prices:
-    description: { ru: "Цены поставщиков", uz: "Yetkazib beruvchi narxlari", en: "Supplier prices" }
+    description: { ru: "Цены партнёров", uz: "Hamkor narxlari", en: "Partner prices" }
     backend: { erp: [] }
   totals_only:
     description: { ru: "Только итоговые суммы расчёта (без себестоимости по строкам)", uz: "Faqat jami summalar", en: "Totals only" }

@@ -231,7 +231,7 @@ async function uploadedFile(
 const EXT_BAD = /\.(exe|bat|cmd|js|sh)$/i;
 
 export const edsPaymentsHandlers = [
-  // Файлы вложений служебок к оплате (счёт поставщика, платёжка): демонстрационное содержимое
+  // Файлы вложений служебок к оплате (счёт партнёра, платёжка): демонстрационное содержимое
   http.get("*/eds/document-files/:id", ({ params }) => {
     const id = String(params["id"]);
     const receipt = receiptFiles.get(id);
