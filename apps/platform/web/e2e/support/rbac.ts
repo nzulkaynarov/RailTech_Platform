@@ -97,7 +97,8 @@ const ROUTE_OF: Record<string, string> = {
   "crm.clients": "/crm/clients",
   "eds.inbox": "/eds/inbox",
   "eds.inbox.register": "/eds/register",
-  "eds.drafts": "/eds/drafts",
+  // список КП переехал в «Исходящие»; права раздела проверяет карточка КП
+  "eds.drafts": `/eds/drafts/${encodeURIComponent("КП-2026/115")}`,
   "eds.projects": "/eds/projects",
   "eds.payments": "/eds/payments",
   "erp.calc": "/erp/calc",
