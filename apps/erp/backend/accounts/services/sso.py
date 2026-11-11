@@ -1,18 +1,17 @@
-"""SSO Token Service (CRM ↔ ERP, CONTRACTS §6, docs/architecture/sso-token.md, M3-CRM-06).
+"""Обмен SSO-токена сотрудника CRM на сессию ERP (CONTRACTS §6, docs/architecture/sso-token.md, M3-CRM-06).
+
+Токен обменивает BFF Платформы. Выдачи токена ERP для входа в CRM нет (служила переходу между старыми SPA).
 
 Реализует:
-1. Выпуск SSO-токена JWT HS256 для перехода в CRM (iss=erp, aud=crm).
-2. Проверку и обмен входящего SSO-токена (iss=crm, aud=erp).
-3. Проверку срока (exp − iat ≤ 60 с), допуск часов (≤ 5 с), одноразовость jti (10 мин в кэше).
-4. Поиск пользователя только по `sub` через CrmUserMapping; обмен не создаёт пользователей и не меняет права
+1. Проверку и обмен входящего SSO-токена (iss=crm, aud=erp).
+2. Проверку срока (exp − iat ≤ 60 с), допуск часов (≤ 5 с), одноразовость jti (10 мин в кэше).
+3. Поиск пользователя только по `sub` через CrmUserMapping; обмен не создаёт пользователей и не меняет права
    (FIX-10, решение владельца 2026-10-18); запись в аудит (ActivityLog).
 """
 
 from __future__ import annotations
 
 import logging
-import time
-import uuid
 from typing import Any, Dict, List, Optional, Tuple
 
 import jwt
@@ -112,45 +111,6 @@ def build_staff_user_payload(user: CustomUser, crm_user_id: int) -> Dict[str, An
 def _require_sso_enabled() -> None:
     if not getattr(settings, "PLATFORM_SSO_ENABLED", False):
         raise SsoForbiddenError("SSO_DISABLED")
-
-
-def issue_sso_token(user: CustomUser) -> Tuple[str, str]:
-    _require_sso_enabled()
-    if not user.is_active:
-        raise SsoForbiddenError("USER_INACTIVE")
-
-    secrets = get_sso_secrets()
-    if not secrets:
-        raise SsoNotConfiguredError()
-    secret = secrets[0]
-
-    mapping = CrmUserMapping.objects.filter(user=user).first()
-    if mapping is None:
-        # `sub` — только crm_user_id из сопоставления; запасного user.pk нет (docs/architecture/sso-token.md, S-2).
-        raise SsoForbiddenError("USER_NOT_PROVISIONED")
-    crm_user_id = mapping.crm_user_id
-
-    now = int(time.time())
-    jti = str(uuid.uuid4())
-
-    payload = {
-        "iss": "erp",
-        "aud": "crm",
-        "sub": str(crm_user_id),
-        "email": user.email,
-        "name": user.get_full_name() or user.username,
-        "role": "admin" if user.is_superuser else "manager",
-        "permissions": [],
-        "iat": now,
-        "exp": now + SSO_TOKEN_TTL_S,
-        "jti": jti,
-    }
-
-    token = jwt.encode(payload, secret, algorithm=SSO_ALGORITHM)
-    crm_base = getattr(settings, "CRM_FRONTEND_URL", "http://crm.localhost").rstrip("/")
-    redirect_url = f"{crm_base}/sso/exchange"
-
-    return token, redirect_url
 
 
 def verify_and_exchange_sso_token(token: str, client_ip: Optional[str] = None) -> Tuple[CustomUser, Dict[str, Any]]:

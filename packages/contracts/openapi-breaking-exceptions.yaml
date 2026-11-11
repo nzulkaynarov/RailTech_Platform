@@ -60,3 +60,17 @@ exceptions:
     text: "candidate_agreed"
     reason: "PART-PIPELINE-1: добавлен статус candidate_agreed в PartnerApplication; потребители — BFF Платформы и Cabinet"
     until: 2026-12-31
+  # Снос старых фронтов (2026-11-11): выдача токена ERP для перехода в старую CRM и адрес старой CRM (`crm_frontend_url`)
+  # нужны были только старому SPA ERP, которого больше нет. BFF Платформы эти поля и путь не читает (grep `apps/platform`).
+  # Удалить записи после слияния (проверка напечатает предупреждение, что они ничему не соответствуют).
+  - file: erp-internal.yaml
+    id: api-path-removed-without-deprecation
+    path: /api/v1/auth/sso/token/
+    operation: POST
+    reason: "Снос старых фронтов: токен ERP -> CRM служил кнопке «В CRM» старого SPA ERP; потребителей нет"
+    until: 2026-12-31
+  - file: erp-internal.yaml
+    id: response-required-property-removed
+    text: crm_frontend_url
+    reason: "Снос старых фронтов: адрес старой CRM для ссылок старого SPA ERP (настройки, сопряжение); BFF поле не читает"
+    until: 2026-12-31

@@ -1,7 +1,7 @@
 """FIX-42 (F-4): имя платформы, e-mail поддержки, логотип и домен — общие для ансамбля, ведутся в CRM.
 
 В ERP они только для чтения: PATCH с любым из них — 400 `SHARED_SETTING_READ_ONLY`, остальная часть тела не
-применяется. SPA получает адрес CRM (`crm_frontend_url`) для ссылки «Изменить в CRM».
+применяется.
 """
 
 import pytest
@@ -78,19 +78,8 @@ def test_non_admin_is_denied_before_the_field_check():
     assert response.status_code == 403
 
 
-def test_get_gives_the_spa_the_crm_address(settings):
-    settings.CRM_FRONTEND_URL = "https://crm.example.test"
-
+def test_get_shows_shared_fields_read_only():
     body = _client(superuser=False).get(URL).json()
 
-    assert body["crm_frontend_url"] == "https://crm.example.test"
     assert set(SHARED) <= set(body)  # значения по-прежнему видны для просмотра
-
-
-def test_crm_address_cannot_be_written():
-    response = _client().patch(
-        URL, {"crm_frontend_url": "https://evil.example.test", "vat_rate": "8.00"}, format="json"
-    )
-
-    assert response.status_code == 200
-    assert response.json()["crm_frontend_url"] != "https://evil.example.test"
+    assert "crm_frontend_url" not in body  # адреса старой CRM нет: интерфейс — Платформа

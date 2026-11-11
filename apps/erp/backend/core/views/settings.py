@@ -1,4 +1,3 @@
-from django.conf import settings as django_settings
 from drf_spectacular.utils import (
     OpenApiResponse,
     PolymorphicProxySerializer,
@@ -37,13 +36,6 @@ class SystemSettingSerializer(drf_serializers.ModelSerializer):
         resolved = resolve_rate("USD")
         return rate_to_str(resolved.rate) if resolved else None
 
-    crm_frontend_url = drf_serializers.SerializerMethodField(
-        help_text="Адрес CRM: туда ведёт «Изменить в CRM» для общих полей, только чтение."
-    )
-
-    def get_crm_frontend_url(self, obj) -> str:
-        return django_settings.CRM_FRONTEND_URL
-
     class Meta:
         model = SystemSetting
         # standard_margin removed from the API surface (P9): the pricing engine reads
@@ -57,7 +49,6 @@ class SystemSettingSerializer(drf_serializers.ModelSerializer):
             "support_email",
             "logo_url",
             "domain",
-            "crm_frontend_url",
             "maintenance_mode",
             "is_two_factor_required",
             "updated_at",
