@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Дрейф схемы ERP (FIX-40): перегенерирует schema.json, типы фронтенда и erp-internal.yaml и падает, если они отличаются
+# Дрейф схемы ERP (FIX-40): перегенерирует schema.json и erp-internal.yaml и падает, если они отличаются
 # от того, что лежит в рабочем дереве. Сравнение до/после по содержимому, а не `git diff`: работает и с незакоммиченными
 # правками. При дрейфе перегенерированные файлы остаются на месте — просмотрите diff и закоммитьте.
 #
@@ -9,7 +9,6 @@ set -euo pipefail
 APP="$(cd "$(dirname "$0")/.." && pwd)"
 FILES=(
   backend/schema.json
-  frontend/src/api/schema.d.ts
   ../../packages/contracts/openapi/erp-internal.yaml
 )
 BEFORE="$(mktemp -d)"
@@ -29,7 +28,7 @@ for i in "${!FILES[@]}"; do
   fi
 done
 if [ "$drift" -ne 0 ]; then
-  echo "Схема ERP устарела относительно кода: make -C apps/erp openapi и закоммитьте schema.json, schema.d.ts, erp-internal.yaml." >&2
+  echo "Схема ERP устарела относительно кода: make -C apps/erp openapi и закоммитьте schema.json и erp-internal.yaml." >&2
   exit 1
 fi
-echo "✔ схема ERP (schema.json, типы фронтенда, erp-internal.yaml) совпадает с кодом"
+echo "✔ схема ERP (schema.json, erp-internal.yaml) совпадает с кодом"

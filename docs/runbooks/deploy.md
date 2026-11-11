@@ -10,7 +10,7 @@
 ## Как устроено
 
 - **Образы** собирает `deploy.yml` (после зелёного CI на push в `main` или вручную, п. 2) параллельно, по job'у на образ, и кладёт в GHCR с тегом = полный git sha:
-  `rt-crm-backend`, `rt-crm-frontend`, `rt-erp-backend`, `rt-erp-frontend`, `rt-cabinet`, `rt-platform-bff`, `rt-platform-web`, `rt-eds` (сервис документооборота, волна 12), `rt-litellm` (свой образ LiteLLM на Debian, `infra/ai/litellm/`; официальный на прод-CPU не стартует). Деплоится только код, уже входящий в `main`.
+  `rt-crm-backend`, `rt-erp-backend`, `rt-cabinet`, `rt-platform-bff`, `rt-platform-web`, `rt-eds` (сервис документооборота, волна 12), `rt-litellm` (свой образ LiteLLM на Debian, `infra/ai/litellm/`; официальный на прод-CPU не стартует). Деплоится только код, уже входящий в `main`.
 - **Релиз** на VPS 1 — каталог `/opt/rt/releases/<sha>/` (`infra/`, `apps/crm/infra/casbin`, `packages/contracts/mcp-tools.json`), `/opt/rt/current` — ссылка на текущий.
   Состояние — `/opt/rt/state/{current_tag,previous_tag}`; хранятся пять последних релизов.
 - **Секреты приложений** лежат только на серверах: `/opt/rt/.env.prod` (VPS 1) и `/opt/rt-db/.env.db` (VPS 2), оба `chmod 600`.

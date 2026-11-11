@@ -27,7 +27,7 @@ Workflow ансамбля — `.github/workflows/ci.yml` (GitHub читает т
 | Событие | Что запускается |
 |---|---|
 | `pull_request` (не черновик) | Задания по путям изменённых файлов (таблица ниже), включая тяжёлые. Новый коммит отменяет устаревший прогон этого PR |
-| `push` в `main` (после слияния) | Только **быстрые** задания по файлам с прошлого коммита `main`: lint и unit (CRM, Platform check, Cabinet, EDS, rt-bus, ERP lint & vitest), миграции и дрейф схемы ERP, `contracts` (совместимость — с коммитом `main` до push), `infra`, gitleaks, `CPU qemu64` при правке Dockerfile/зависимостей/infra. **Не идут:** CRM integration, build, e2e и аудит зависимостей, ERP pytest, Platform e2e — они уже прошли на PR, а полностью проходят ночью. `CI ok` есть. Группа concurrency — на каждый sha, прогон не отменяется следующим слиянием |
+| `push` в `main` (после слияния) | Только **быстрые** задания по файлам с прошлого коммита `main`: lint и unit (CRM, Platform check, Cabinet, EDS, rt-bus, ERP lint), миграции и дрейф схемы ERP, `contracts` (совместимость — с коммитом `main` до push), `infra`, gitleaks, `CPU qemu64` при правке Dockerfile/зависимостей/infra. **Не идут:** CRM integration, build и аудит зависимостей, ERP pytest, Platform e2e — они уже прошли на PR, а полностью проходят ночью. `CI ok` есть. Группа concurrency — на каждый sha, прогон не отменяется следующим слиянием |
 | `schedule` (ежесуточно, 01:17 UTC) | **Полный** прогон всех заданий без фильтров, включая тяжёлые и 11 образов под qemu64. Отдельная группа concurrency: не теряется из-за слияний |
 | `workflow_dispatch` | То же, что ночной: полный прогон, вручную |
 
@@ -43,15 +43,15 @@ compose). Задание `packages · contracts` идёт на любую пра
 |---|---|
 | Только `docs/**` (кроме `docs/kb`) | gitleaks (с проверкой ссылок) |
 | `docs/kb/**` | + CRM, Platform (справку формата читают тесты CRM и `kbDocs.test`) |
-| `apps/crm/**` | CRM: lint, unit, integration\*, build\*, e2e\*, аудит зависимостей\* |
-| `apps/erp/**` | ERP: lint & vitest, миграции и схема, pytest\* |
+| `apps/crm/**` | CRM: lint, unit, integration\*, build\*, аудит зависимостей\* |
+| `apps/erp/**` | ERP: lint, миграции и схема, pytest\* |
 | `apps/cabinet/**` | Cabinet |
 | `apps/platform/**` | Platform check, e2e\* (3 шарда) |
 | `apps/platform/web/src/modules/*/module.ts`, `…/modules/*/settingsRegistry.ts` | + CRM (реестр маршрутов и настроек Платформы читает `test_platform_links`) |
 | `apps/eds/**` | EDS |
 | `packages/rt-bus/**` | rt-bus, contracts, CRM, ERP, EDS, Platform (библиотека вшита в образы) |
 | `packages/rt-docs/**` | rt-docs\*, contracts (пакет пока не вшит в образы; EDS и ERP подключат его в D-DOC2, D-DOC3 — тогда их фильтры получат путь) |
-| `packages/ui-tokens/**` | contracts, CRM, ERP, Cabinet, Platform |
+| `packages/ui-tokens/**` | contracts (там же `make -C packages/ui-tokens check`), Cabinet, Platform |
 | `packages/contracts/openapi/crm.yaml` | contracts, CRM, Cabinet (типы формы лида), Platform (модели CRM в BFF). **ERP не запускается** |
 | `…/openapi/erp-portal.yaml` | contracts, ERP, Cabinet |
 | `…/openapi/erp-integration.yaml` | contracts, ERP, CRM (клиент ERP) |
@@ -79,9 +79,9 @@ compose). Задание `packages · contracts` идёт на любую пра
 
 ## Параллельность и критический путь PR
 
-- CRM: lint, unit, integration, build, e2e и аудит стартуют сразу после `changes`; раньше integration/build/e2e ждали lint и unit (+3–5 минут
+- CRM: lint, unit, integration, build и аудит стартуют сразу после `changes`; раньше integration/build ждали lint и unit (+3–5 минут
   к каждому PR ради экономии минут runner'а при красном lint — цель волны другая: время ответа).
-- ERP: три параллельных задания вместо одного `make check-erp` — «lint & vitest» (`make -C apps/erp lint test-frontend`), «pytest»
+- ERP: три параллельных задания вместо одного `make check-erp` — «lint» (`make -C apps/erp lint`), «pytest»
   (`make -C apps/erp test-backend`), «миграции и схема» (`--migration-check`, `openapi-check`). Критический путь — pytest.
 - Platform: e2e не ждёт `Platform · check` (BFF не нужен).
 - rt-docs (D-DOC1, подключено с разрешения владельца 2026-10-28): ruff и mypy на раннере, pytest — в одноразовом контейнере

@@ -487,16 +487,6 @@ services:
       timeout: 5s
       retries: 10
 
-  crm-web:
-    build:
-      context: ../../apps/crm/frontend
-      target: prod
-    healthcheck:
-      test: ["CMD", "wget", "-Y", "off", "-q", "--spider", "http://localhost:8080/"]
-      interval: 10s
-      timeout: 3s
-      retries: 10
-
   # ─── ERP (apps/erp) — копия B2B, M1-ERP-01 ──────────────────────────────────────────────────
   # Один образ для backend (Daphne), воркеров Celery и Beat; команда выбирает процесс (как в B2B).
   # База `erp` на общем Postgres, redis-broker БД 1 (Celery) и 2 (Channels), redis-cache БД 0 (кэш). Файлы — только в RustFS (бакеты erp-*, MINIO_*);
@@ -682,20 +672,6 @@ services:
       litellm:
         condition: service_healthy
 
-  # SPA ERP: сборка Vite + nginx (как в B2B). VITE_API_URL пустой → запросы относительные, /api и /ws
-  # ведёт Caddy на erp-backend с того же домена (CORS не нужен).
-  erp-web:
-    build:
-      context: ../../apps/erp/frontend
-      args:
-        VITE_API_URL: ""
-        VITE_WS_URL: ""
-    healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1/health"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-
   # SPA Cabinet (M2-CAB-01): сборка Vite + nginx, своей логики нет (ADR-0004). VITE_API_URL пустой →
   # /api/portal/* Caddy ведёт с cabinet.* на erp-backend (cookie портала same-origin, CORS не нужен).
   cabinet-web:
@@ -840,11 +816,7 @@ services:
     depends_on:
       crm-api:
         condition: service_healthy
-      crm-web:
-        condition: service_healthy
       erp-backend:
-        condition: service_healthy
-      erp-web:
         condition: service_healthy
       cabinet-web:
         condition: service_healthy

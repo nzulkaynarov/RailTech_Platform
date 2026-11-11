@@ -51,20 +51,6 @@ services:
     build: { target: dev }
     volumes: *backend-src
 
-  web:
-    build: { target: dev }
-    environment:
-      VITE_API_PROXY_TARGET: http://api:8000
-    volumes:
-      - ../frontend:/web
-      - /web/node_modules
-    healthcheck:
-      test:
-        - CMD
-        - node
-        - -e
-        - "fetch('http://localhost:5173/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
-
   caddy:
     volumes:
       - ./Caddyfile.dev:/etc/caddy/Caddyfile:ro

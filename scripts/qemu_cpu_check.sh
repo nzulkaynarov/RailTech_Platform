@@ -44,9 +44,7 @@ fail() { printf '✘ %s\n' "$*" >&2; exit 1; }
 build_spec() {
   case "$1" in
     rt-crm-backend) echo "apps/crm/backend||prod|crm-backend" ;;
-    rt-crm-frontend) echo "apps/crm/frontend||prod|crm-frontend" ;;
     rt-erp-backend) echo "apps/erp/backend|||erp-backend" ;;
-    rt-erp-frontend) echo "apps/erp/frontend|||erp-frontend" ;;
     rt-cabinet) echo "apps/cabinet|||cabinet" ;;
     rt-litellm) echo "infra/ai/litellm|||litellm" ;;
     rt-platform-bff) echo "apps/platform/bff||prod|platform-bff" ;;

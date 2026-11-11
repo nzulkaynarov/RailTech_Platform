@@ -95,6 +95,20 @@
 	}
 }
 
+# Старые экраны CRM и ERP удалены (снос старых фронтов, 2026-11-11): на их доменах остаются API, вебхук и /media, а адреса
+# экранов ведут в Платформу (временный 302 — карта адресов может уточниться). Старые ссылки на лиды, клиентов и входящие
+# открывают тот же раздел Платформы; прочее (в том числе хэш-маршруты ERP: хэш до сервера не доходит) — её главную.
+# Аргумент — адрес Платформы со схемой.
+(legacy_redirect) {
+	@legacy_leads path /leads /leads/*
+	redir @legacy_leads {args[0]}/crm/leads 302
+	@legacy_inbox path /inbox /inbox/*
+	redir @legacy_inbox {args[0]}/crm/leads?scope=waiting 302
+	@legacy_clients path /clients /clients/*
+	redir @legacy_clients {args[0]}/crm/clients 302
+	redir * {args[0]}/ 302
+}
+
 # ─── CRM — фронт-офис (apps/crm) ───────────────────────────────────────────────────────────
 http://crm.localhost {
 	import access_log
@@ -113,7 +127,7 @@ http://crm.localhost {
 		reverse_proxy crm-api:8000
 	}
 	handle {
-		reverse_proxy crm-web:5173
+		import legacy_redirect {$PLATFORM_ORIGIN:http://platform.localhost}
 	}
 }
 
@@ -143,7 +157,7 @@ http://erp.localhost {
 		reverse_proxy erp-backend:8000
 	}
 	handle {
-		reverse_proxy erp-web:80
+		import legacy_redirect {$PLATFORM_ORIGIN:http://platform.localhost}
 	}
 }
 

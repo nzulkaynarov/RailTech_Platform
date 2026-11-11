@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 import tseslint from 'typescript-eslint';
 
 /**
- * Правила RailTech из CONVENTIONS.md §5 (те же, что в apps/erp/frontend): только семантические токены
+ * Правила RailTech из CONVENTIONS.md §5: только семантические токены
  * shadcn (`bg-primary`, `text-destructive`…) и шкала размеров Tailwind — без палитры и пикселей.
  */
 const railtechPlugin = {

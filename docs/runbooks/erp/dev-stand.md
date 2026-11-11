@@ -30,7 +30,7 @@ make smoke
 ```
 
 URL в браузере:
-- **ERP SPA**: `http://erp.localhost` (при нестандартном порте: `http://erp.localhost:${HTTP_PORT}`)
+- **Интерфейс ERP** — в Платформе: `http://platform.localhost` (при нестандартном порте: `http://platform.localhost:${HTTP_PORT}`); `http://erp.localhost` перенаправляет туда
 - **ERP Health**: `http://erp.localhost/health/` (тот же ответ у `/api/v1/health/`; проверяет подключение к БД, результат кэшируется на 10 с). Отдельной проверки готовности (`ready`) у ERP нет: миграции, Redis и воркеры проверяются командами из таблицы ниже.
 
 ---
@@ -39,7 +39,7 @@ URL в браузере:
 
 | Команда | Ожидаемая норма | Признак проблемы |
 |---|---|---|
-| `make ps` | Сервисы `erp-backend`, `erp-web`, `erp-worker`, `erp-worker-ai`, `erp-beat` в статусе `Up (healthy)` | Статус `unhealthy`, `Restarting` или `Exit 1` |
+| `make ps` | Сервисы `erp-backend`, `erp-worker`, `erp-worker-ai`, `erp-beat` в статусе `Up (healthy)` | Статус `unhealthy`, `Restarting` или `Exit 1` |
 | `curl -s http://erp.localhost/health/` | HTTP 200, `{"status":"healthy","database":"up"}` | HTTP 503 `{"status":"unhealthy","database":"down"}`, 502 Bad Gateway или Connection refused |
 | `docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env exec erp-backend python manage.py migrate --check` | код возврата 0 (все миграции применены) | ненулевой код — есть ещё не применённые миграции |
 | `docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env exec redis-broker redis-cli ping` (и `exec redis-cache redis-cli ping`; пароль подставляет `REDISCLI_AUTH` контейнера) | `PONG` | нет ответа / ошибка авторизации |
@@ -47,7 +47,7 @@ URL в браузере:
 | `make logs s=erp-backend` | Логи Daphne/ASGI, статус ответов 200/201/204 | Трейсбеки Django, `OperationalError`, `ImproperlyConfigured` |
 | `make logs s=erp-worker` | `[celery@...] ready`, приём задач из очереди `celery` | Ошибки подключения к Redis, синтаксические ошибки задач |
 | `make logs s=erp-worker-ai` | `[celery@...] ready`, ожидание очереди `ai` | Ошибки LiteLLM, сбои авторизации ключа шлюза |
-| `make logs s=caddy` | Успешный прокси-трафик к upstream `erp-web:80` и `erp-backend:8000` | Сообщения `dial tcp ... connect: connection refused` |
+| `make logs s=caddy` | Успешный прокси-трафик к upstream `erp-backend:8000` | Сообщения `dial tcp ... connect: connection refused` |
 
 ---
 
@@ -96,24 +96,13 @@ Redis два (S0-2): `redis-broker` (очереди Celery — БД 1, Channels 
 3. Перезапустите ансамбль: `make up`.
 4. ERP будет доступен по адресу: `http://erp.localhost:8080`.
 
-### 6. Белый экран или ошибка «Failed to resolve import» в браузере
-В dev-режиме анонимные тома `node_modules` контейнера `erp-web` могут содержать устаревшие зависимости после обновления пакетов.
-1. Запустите пересборку с обновлением анонимных томов:
-   ```bash
-   make up
-   ```
-2. Если зависимости менялись в `package.json`, выполните локальную установку:
-   ```bash
-   cd apps/erp/frontend && npm install
-   ```
-
 ---
 
 ## Проверка восстановления
 
 1. `make smoke` печатает `smoke: ok` — `/health` отвечает 200 на всех трёх доменах (`crm.localhost`, `erp.localhost`, `cabinet.localhost`).
 2. `curl -s http://erp.localhost/health/` возвращает HTTP 200 и `"status": "healthy"`; `migrate --check` и `celery -A core inspect ping` (таблица «Диагностика») — без ошибок.
-3. В браузере открывается экран входа ERP SPA без ошибок в консоли разработчика.
+3. В браузере `http://platform.localhost` открывается экран входа Платформы без ошибок в консоли разработчика.
 
 ---
 

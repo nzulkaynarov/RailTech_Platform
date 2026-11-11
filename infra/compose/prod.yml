@@ -282,11 +282,6 @@ services:
       litellm-seed:
         condition: service_completed_successfully
 
-  crm-web:
-    <<: [*ops, *mem-64]
-    image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-crm-frontend:${RT_IMAGE_TAG}
-    build: !reset null
-
   # ─── EDS (apps/eds, волна 12) ───────────────────────────────────────────────────────────────
   # Без портов и без маршрута в Caddy: приёмник шины и API — только внутри сети compose (BFF Платформы, шина rt_bus).
   # Память (замер гейта C1, docs/audits/c1_eds_gate_report.md §2 и C1-G-8): рабочий процесс eds-api ≈ 110 МиБ после 100+
@@ -397,11 +392,6 @@ services:
     image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-erp-backend:${RT_IMAGE_TAG}
     build: !reset null
     environment: *erp-prod-env
-
-  erp-web:
-    <<: [*ops, *mem-64]
-    image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-erp-frontend:${RT_IMAGE_TAG}
-    build: !reset null
 
   cabinet-web:
     <<: [*ops, *mem-64]

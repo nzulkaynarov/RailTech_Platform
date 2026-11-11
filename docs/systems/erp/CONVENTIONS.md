@@ -7,7 +7,7 @@
 Cabinet через портальный API этой же ERP. Продукт нейтрален к отрасли и бренду: имя и логотип — настройки.
 
 Это правила кода ERP; код ссылается на них как `CONVENTIONS.md §N`. Разделы о составе (§4), ролях (§6) и «чего здесь нет»
-(§9) описывают код на 2026-10-23. По стратегии 2026-10-23: фронтенд `apps/erp/frontend` заморожен и отключается задачей P6 волны 18a после гейтов D1-7 и D2-6 (DECISIONS 2026-10-27, 2026-10-28),
+(§9) описывают код на 2026-10-23. По стратегии 2026-10-23: фронтенд ERP удалён 2026-11-11 (интерфейс сотрудников — Платформа),
 стадии и коды переходят на словарь SPEC-v3 на этапе C3, события — через `rt_bus` (ADR-0014), согласования — в EDS (ADR-0015).
 Запуск и команды — [`README.md`](README.md); runbook'и — [`docs/runbooks/erp/`](../../runbooks/erp/README.md).
 
@@ -308,7 +308,7 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в docs/runbooks/erp/ —
 
 | Пространство | Префикс | Кто зовёт | Аутентификация | Появится в |
 |---|---|---|---|---|
-| internal | `/api/v1/` | ERP SPA | JWT сотрудника (access 30 мин, refresh в HttpOnly-cookie, как в B2B) | M1-ERP-01 (копия B2B); контракт — генерируемый срез схемы, FIX-40 |
+| internal | `/api/v1/` | BFF Платформы | JWT сотрудника (access 30 мин, refresh в HttpOnly-cookie, как в B2B) | M1-ERP-01 (копия B2B); контракт — генерируемый срез схемы, FIX-40 |
 | portal | `/api/portal/v1/` | Cabinet | сессия портала: Telegram `initData` / magic-link | M2-ERP-01 |
 | integration | `/api/integration/v1/` | CRM | `Authorization: Bearer <SERVICE_TOKEN>` (по токену на направление, два активных для ротации); токены выдаёт сопряжение по одноразовому коду (`POST /pairing/accept`, ADR-0009) и хранятся шифрованно в БД, `.env` — запасной путь | M3-ERP-01, M3-ERP-05 |
 | mcp | `/mcp/erp` (отдельный процесс `erp-mcp:8104`, не Daphne) | агент CRM | `X-Agent-Context` (HMAC, строгие claims `iat`/`exp`/одноразовый `jti`, 60 с; `prospect` — строго без компании; лимит по компании) | M3-ERP-03, FIX-12, FIX-36 |
@@ -327,10 +327,10 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в docs/runbooks/erp/ —
 | Команда | Что делает | Появится в |
 |---|---|---|
 | `make check-erp` (из корня) | делегирует в `make -C apps/erp check`: flake8/black/isort, eslint, tsc, i18n, vitest, pytest в контейнере на одноразовых Postgres 17 + Redis | есть (M1-ERP-01) |
-| `make -C apps/erp check \| test \| lint \| migrate \| openapi` | проверки, pytest, линтеры, миграции на стенде, экспорт `backend/schema.json` + `packages/contracts/openapi/erp-internal.yaml` (срез `/api/v1/`, `backend/scripts/export_internal_contract.py`) + типы фронтенда | есть (M1-ERP-01); срез в contracts — FIX-40 |
-| `make -C apps/erp openapi-check` | перегенерирует три файла выше и падает с diff, если они отличаются от рабочего дерева (дрейф схемы), и с предупреждением drf-spectacular по `/api/v1/` (`manage.py openapi_v1_check`); входит в `make ci-local erp` и в шаг CI «ERP · check» | FIX-40, D2-0 |
+| `make -C apps/erp check \| test \| lint \| migrate \| openapi` | проверки, pytest, линтеры, миграции на стенде, экспорт `backend/schema.json` + `packages/contracts/openapi/erp-internal.yaml` (срез `/api/v1/`, `backend/scripts/export_internal_contract.py`) | есть (M1-ERP-01); срез в contracts — FIX-40 |
+| `make -C apps/erp openapi-check` | перегенерирует два файла выше и падает с diff, если они отличаются от рабочего дерева (дрейф схемы), и с предупреждением drf-spectacular по `/api/v1/` (`manage.py openapi_v1_check`); входит в `make ci-local erp` и в шаг CI «ERP · check» | FIX-40, D2-0 |
 | `make contracts` (из корня) | валидация контракта, генерация типов для ERP/Cabinet и клиента CRM | есть (M0-INF-02) |
-| `make up` (из корня) | весь ансамбль: `erp.localhost` через Caddy → `erp-backend`/`erp-web`, Postgres с базой `erp`, `redis-broker` (БД 1 Celery, 2 Channels) и `redis-cache` (БД 0 кэш), LiteLLM, Langfuse, RustFS (бакет `erp`) | есть (M1-ERP-01) |
+| `make up` (из корня) | весь ансамбль: `erp.localhost` через Caddy → `erp-backend` (адреса экранов — 302 в Платформу), Postgres с базой `erp`, `redis-broker` (БД 1 Celery, 2 Channels) и `redis-cache` (БД 0 кэш), LiteLLM, Langfuse, RustFS (бакет `erp`) | есть (M1-ERP-01) |
 | `make logs s=<сервис>` / `make ps` | логи и статус стенда | есть (M0-INF-03) |
 | `make -C apps/erp eval-quick CONFIRM=yes` / `eval` | ПЛАТНО: golden-кейсы разбора запроса и сопоставления через шлюз стенда (`EVAL_MAX_USD`, по умолчанию $0.2 / $0.5) — только с согласия владельца на прогон | есть (M1-ERP-06) |
 | `make -C apps/erp ai-status` / `ai-gateway-sync` | состояние ИИ ERP без вызова моделей; перерегистрация ключа ERP в LiteLLM (бюджет, Langfuse) | есть (M1-ERP-06) |
@@ -338,7 +338,7 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в docs/runbooks/erp/ —
 | `make -C apps/erp seed` → `core_seed` | dev/demo-справочники и демо-пользователи; только `DEBUG=True`. Существующий аккаунт (по e-mail или username) **пропускается** с сообщением — e-mail, пароль, права и членства не трогаются (FIX-43) | есть |
 | `python manage.py smoke_full_cycle [--cleanup]` | сквозной цикл сделки для проверки глазами; только `DEBUG=True` (иначе `CommandError`). Работает на своей smoke-компании (ИНН `999000001/2`, курс — действующий, строка `SMOKE` только если курса нет), не трогает `own_company()`, менеджер — не суперпользователь; `--cleanup` удаляет только помеченное (FIX-43) | есть |
 
-ERP не имеет своего compose: контейнеры `erp-backend`, `erp-worker`, `erp-worker-ai`, `erp-beat`, `erp-web` и одноразовый `erp-ai-gateway`
+ERP не имеет своего compose: контейнеры `erp-backend`, `erp-worker`, `erp-worker-ai`, `erp-beat` и одноразовый `erp-ai-gateway`
 описаны в `infra/compose/base.yml` (M1-ERP-01); код бэкенда монтируется в dev, но Daphne/Celery не перезагружаются сами; `.env.example` корня уже содержит `ERP_SECRET_KEY`, `ERP_LITELLM_API_KEY`, `ERP_AI_DAILY_BUDGET_USD`, `ERP_LANGFUSE_*`, `PLATFORM_NAME`, `SUPPORT_EMAIL`, `SERVICE_TOKEN_*`, `WEBHOOK_SECRET`, `PLATFORM_SSO_SECRET`, `ERP_MCP_CONTEXT_KEY`. Миграции на проде — явным шагом после pg_dump-гейта (M5-INF-01).
 Celery не перезагружается сам — после изменения моделей и задач перезапускай воркеры.
 

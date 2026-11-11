@@ -33,17 +33,15 @@
 | `litellm` | 768 МБ | шлюз моделей, свой образ `rt-litellm` (Debian, см. «CPU прод-VPS»); его БД `litellm` — на VPS 2 |
 | `crm-api`, `crm-bot`, `crm-worker` | 512 + 512 + 512 МБ | `crm-bot` (S0-4) — Telegram отдельным процессом, реплика одна; факт на стенде ≈ 320–340 МБ у каждого из `crm-api`/`crm-bot` |
 | `crm-mcp-kb`, `crm-mcp-crm`, `crm-mcp-docs` | 3 × 256 МБ | |
-| `crm-web` | 64 МБ | статика за Caddy |
 | `erp-backend` | 768 МБ | Daphne |
 | `erp-mcp` | 256 МБ (лимит; факт ≈ 200 МБ) | инструменты ERP для агента CRM, SDK `mcp`, образ `erp-backend` (FIX-36); порт 8104 только внутри сети; файл `packages/contracts/mcp-tools.json` монтируется в контейнер (контракты шины вшиты в образ, B3); профиль `mcp` включён на проде (`RT_PROFILES=mcp`): бот CRM в сервисном режиме берёт из него данные клиента (M3-CRM-07) |
 | `erp-worker`, `erp-worker-ai`, `erp-beat` | 512 + 384 + 192 МБ | |
-| `erp-web` | 64 МБ | nginx со сборкой |
 | `platform-bff` | 256 МБ (лимит; факт ≈ 150 МБ) | BFF Платформы (INF-P0-5): uvicorn, 2 процесса; БД нет, сессии в `redis-cache` БД 3 |
 | `platform-web` | 64 МБ | статика Платформы за Caddy |
 | `eds-api`, `eds-worker` | 256 + 768 МБ (лимиты; факт гейта C1, один процесс без `--reload`: ≈ 110 + 95–100 МиБ — C1-G-8; с P4 воркер рендерит PDF писем на бланке — B-094) | сервис документооборота (волна 12, ADR-0015): образ `rt-eds`, база `eds` на VPS 2, бакет `eds-private`; **маршрута в Caddy нет** — только сеть compose (BFF Платформы, шина `rt_bus`) |
 | `offsite-backup` | 128 МБ (`GOMEMLIMIT` 96 МиБ) | внешняя копия архива WAL-G на Яндекс Диск компании (WebDAV) или Google Drive, образ `rclone/rclone` (OPS-GDRIVE, OPS-YADISK, `offsite-gdrive.md`); раз в сутки, остальное время спит |
 | `s3-init` (образ `rustfs/rc`, ≈ 20 МБ), `crm-migrate`, `eds-migrate`, `litellm-seed`, `erp-ai-gateway`, `eds-ai-gateway` (ключ EDS в LiteLLM, EDS-REG) и одноразовые `run` миграций | 256–384 МБ | одноразовые, живут секунды при деплое; в «Итого постоянно» не входят; pg_dump-гейт идёт в отдельном контейнере с `pg_dump` (без лимита, до `up`) |
-| **Итого постоянно** | **≈ 7,08 ГБ** (5,2 + `erp-mcp` ≈ 0,2 + Платформа 0,3 + `crm-bot` 0,5 + второй Redis 0,3 + EDS 0,45 + `offsite-backup` 0,13 по лимитам) | + ОС ≈ 0,5 ГБ; остаётся ≈ 0,4 ГБ из 8 по лимитам (по факту больше: лимиты заняты не целиком); при росте домена EDS лимиты пересмотреть |
+| **Итого постоянно** | **≈ 6,95 ГБ** (5,2 − старые SPA `crm-web` и `erp-web` 0,13 (удалены 2026-11-11) + `erp-mcp` ≈ 0,2 + Платформа 0,3 + `crm-bot` 0,5 + второй Redis 0,3 + EDS 0,45 + `offsite-backup` 0,13 по лимитам) | + ОС ≈ 0,5 ГБ; остаётся ≈ 0,55 ГБ из 8 по лимитам (по факту больше: лимиты заняты не целиком); при росте домена EDS лимиты пересмотреть |
 | `docling` (профиль `kb-ingest`) | 1,5 ГБ | **на проде не используется** (M5-CRM-02): база знаний принимает только Markdown (`docs/kb/FORMAT.md`), docling нужен лишь для текста документов клиентов; профиль — опция на случай, если сервер станет мощнее |
 | `clickhouse`, `langfuse-web`, `langfuse-worker` (профиль `observability`) | 768 + 768 + 512 МБ | включать, когда `docling` выключен; дашборд затрат ИИ (M3-CRM-09) не зависит от Langfuse — он читает БД LiteLLM |
 
@@ -102,7 +100,7 @@
 
 | Где | Что |
 |---|---|
-| CI, `.github/workflows/ci.yml` | задание `cpu-image` (матрица: `rt-crm-backend`, `rt-erp-backend`, `rt-platform-bff`, `rt-eds`, `rt-litellm`, `rt-crm-frontend`, `rt-erp-frontend`, `rt-cabinet`, `rt-platform-web`, `rt-db-postgres`, `rt-db-backup`) собирает образ linux/amd64 (кэш слоёв buildx gha) и запускает проверку; красное задание называет образ. Задание `cpu-common` — самопроверка механики и сторонние образы (`caddy`, `redis`, `rustfs`, `rc`, `rclone`). Запускаются при изменении Dockerfile, `uv.lock`/`pyproject.toml` CRM, BFF и EDS, `requirements*` ERP, nginx.conf, `infra/ai/litellm`, `infra/db`, `infra/compose`, самой проверки |
+| CI, `.github/workflows/ci.yml` | задание `cpu-image` (матрица: `rt-crm-backend`, `rt-erp-backend`, `rt-platform-bff`, `rt-eds`, `rt-litellm`, `rt-cabinet`, `rt-platform-web`, `rt-db-postgres`, `rt-db-backup`) собирает образ linux/amd64 (кэш слоёв buildx gha) и запускает проверку; красное задание называет образ. Задание `cpu-common` — самопроверка механики и сторонние образы (`caddy`, `redis`, `rustfs`, `rc`, `rclone`). Запускаются при изменении Dockerfile, `uv.lock`/`pyproject.toml` CRM, BFF и EDS, `requirements*` ERP, nginx.conf Cabinet, `infra/ai/litellm`, `infra/db`, `infra/compose`, самой проверки |
 | `make deploy-check` | `scripts/qemu_cpu_check.sh all --skip-missing`: проверяет образы `rt-cpu-check/<имя>:amd64`, которые есть локально, и сторонние; чего нет — печатает «пропуск» (не «ok») |
 | `make cpu-check` | собирает образы прода linux/amd64 по одному (эмуляция, на Mac arm64 — десятки минут), проверяет и удаляет; `make cpu-check args="rt-litellm"` — выборочно |
 | `make cpu-selftest` | доказательство, что механика ловит реальное: Wolfi (база официального LiteLLM) и numpy ≥ 2.4 обязаны упасть, numpy < 2.4 — пройти |

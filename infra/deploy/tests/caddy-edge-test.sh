@@ -3,7 +3,8 @@
 #  1. Домен ERP: /api/integration (машинный API, ходит только CRM по сети compose), /admin (Django admin) и /bus (приёмник шины
 #     rt_bus, B3) снаружи — 404;
 #     /api/v1/* (включая /api/v1/admin/email-templates/ — это API, не /admin), /api/portal/*, /ws/*, /static/*, /media/*,
-#     /health работают как раньше (доходят до erp-backend), остальное — SPA (erp-web).
+#     /health работают как раньше (доходят до erp-backend), остальное — 302 в Платформу (старой SPA нет, 2026-11-11);
+#     так же на домене CRM: API — в crm-api, адреса старых экранов — 302 в соответствующий раздел Платформы.
 #  2. Через домены Cabinet и Платформы эти пути до erp-backend не доходят.
 #  3. Служебные пути не обходятся через двойной слэш, регистр и кодирование.
 # Без полного стенда: один контейнер caddy из образа make deploy-check + заглушки апстримов (тот же образ, `caddy respond`)
@@ -14,7 +15,7 @@ root="$(cd "$here/../../.." && pwd)"
 image="${CADDY_IMAGE:-caddy:2.11.7-alpine}"
 tag="rt-s0-5-edge-$$"
 cleanup() {
-  docker rm -f "$tag-caddy" "$tag-erp-backend" "$tag-erp-web" "$tag-cabinet-web" "$tag-platform-web" "$tag-platform-bff" \
+  docker rm -f "$tag-caddy" "$tag-erp-backend" "$tag-cabinet-web" "$tag-platform-web" "$tag-platform-bff" \
     "$tag-crm-api" >/dev/null 2>&1 || true
   docker network rm "$tag" >/dev/null 2>&1 || true
 }
@@ -27,7 +28,6 @@ stub() { # имя сервиса (алиас в сети), порт, тело о
     caddy respond --listen ":$2" --status 200 --body "$3" >/dev/null
 }
 stub erp-backend 8000 ERP-BACKEND
-stub erp-web 80 ERP-WEB
 stub cabinet-web 80 CABINET-WEB
 stub platform-web 8080 PLATFORM-WEB
 stub platform-bff 8000 PLATFORM-BFF
@@ -63,14 +63,20 @@ expect() { # <Host> <путь> <код> [тело]
   [[ -z "${4:-}" || "${got#* }" == "$4" ]] || fail "$label: $1 $2 -> тело «${got#* }» (ожидается «$4»)"
   echo "  ok  $1 $2 -> ${got%% *} ${got#* }"
 }
+expect_redirect() { # <Host> <путь> <конец адреса Location>: 302 в Платформу
+  local loc
+  loc="$(curl -s -o /dev/null --max-time 5 -H "Host: $1" -w '%{http_code} %{redirect_url}' "http://127.0.0.1:$port$2" 2>/dev/null || true)"
+  [[ "${loc%% *}" == 302 && "${loc#* }" == *"$3" ]] || fail "$label: $1 $2 -> «$loc» (ожидается 302 на …$3)"
+  echo "  ok  $1 $2 -> $loc"
+}
 expect_not_erp() { # <Host> <путь>: код любой, но ответ не от erp-backend
   local got; got="$(get "$1" "$2")"
   [[ "${got#* }" != ERP-BACKEND ]] || fail "$label: $1 $2 дошёл до erp-backend"
   echo "  ok  $1 $2 -> ${got%% *} ${got#* } (не erp-backend)"
 }
 
-check_edge() { # <ERP-host> <Cabinet-host> <Platform-host>
-  local erp="$1" cab="$2" plat="$3" p h
+check_edge() { # <ERP-host> <Cabinet-host> <Platform-host> <CRM-host>
+  local erp="$1" cab="$2" plat="$3" crm="$4" p h
   echo "[$label]"
   # 1. ERP: закрыто снаружи.
   for p in /api/integration /api/integration/ /api/integration/v1/health /api/integration/v1/deals/1 \
@@ -82,9 +88,18 @@ check_edge() { # <ERP-host> <Cabinet-host> <Platform-host>
            /ws/notifications/ /static/admin/css/base.css /media/catalog/a.jpg /health /health/; do
     expect "$erp" "$p" 200 ERP-BACKEND
   done
-  expect "$erp" / 200 ERP-WEB
-  expect "$erp" /requests 200 ERP-WEB
-  expect "$erp" /administrator 200 ERP-WEB   # префикс по сегменту пути: /administrator — не /admin
+  # Старых экранов ERP нет: адреса ведут на главную Платформы.
+  expect_redirect "$erp" / "$plat/"
+  expect_redirect "$erp" /requests "$plat/"
+  expect_redirect "$erp" /administrator "$plat/"   # префикс по сегменту пути: /administrator — не /admin
+  # CRM: API и вебхук — как раньше, адреса старых экранов — в тот же раздел Платформы.
+  expect "$crm" /api/v1/leads/web 200 CRM-API
+  expect "$crm" /health 200 CRM-API
+  expect_redirect "$crm" / "$plat/"
+  expect_redirect "$crm" /leads/42 "$plat/crm/leads"
+  expect_redirect "$crm" /inbox "$plat/crm/leads?scope=waiting"
+  expect_redirect "$crm" /clients/7 "$plat/crm/clients"
+  expect_redirect "$crm" /dashboard "$plat/"
   # 3. Обходы: двойной слэш, регистр, кодирование, ../ — 404 либо не erp-backend.
   for p in //admin/ //api/integration/v1/health /ADMIN/ /Admin/ /API/integration/v1/health /%61dmin/ /api/%69ntegration/v1/health \
            /static/../admin/ /./admin/; do
@@ -115,10 +130,10 @@ label="Caddyfile.prod"
 start_caddy "$root/infra/caddy/Caddyfile.prod" -e ACME_EMAIL=a@example.com \
   -e CRM_DOMAIN=http://crm.example.org -e ERP_DOMAIN=http://erp.example.org \
   -e CABINET_DOMAIN=http://cabinet.example.org -e PLATFORM_DOMAIN=http://platform.example.org
-check_edge erp.example.org cabinet.example.org platform.example.org
+check_edge erp.example.org cabinet.example.org platform.example.org crm.example.org
 
 label="Caddyfile.dev"
 start_caddy "$root/infra/caddy/Caddyfile.dev"
-check_edge erp.localhost cabinet.localhost platform.localhost
+check_edge erp.localhost cabinet.localhost platform.localhost crm.localhost
 
 echo "caddy-edge-test: ok"

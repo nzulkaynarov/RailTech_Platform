@@ -5,32 +5,24 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-ALL=(lint integration e2e audit build)
-E2E_PG=rt-e2e-pg
-E2E_PG_PORT="${E2E_PG_PORT:-55442}"
-E2E_API_PORT="${E2E_API_PORT:-18000}"
-E2E_WEB_PORT=4173
-PASS=ci-only-password
-PG_IMAGE=pgvector/pgvector:0.8.7-pg17
+ALL=(lint integration audit build)
 GITLEAKS_IMAGE=ghcr.io/gitleaks/gitleaks:v8.30.1
 LOGS="$ROOT/.ci-local"
 
 usage() {
   cat <<EOF
-Локальный CI (как .github/workflows/ci.yml): lint+unit, integration, e2e, audit, build.
+Локальный CI (как .github/workflows/ci.yml): lint+unit, integration, audit, build.
 
   scripts/ci_local.sh                 все задания
-  scripts/ci_local.sh lint e2e        только выбранные
+  scripts/ci_local.sh lint audit      только выбранные
   scripts/ci_local.sh --help
 
 Задания:
-  lint         make check (ruff, mypy, eslint, prettier, tsc, unit), OpenAPI без диффа,
+  lint         make check (ruff, mypy, unit), OpenAPI без диффа,
                compose-файлы валидны, gitleaks
   integration  scripts/test_int_local.sh — одноразовые Postgres и RustFS
-  e2e          одноразовый Postgres :$E2E_PG_PORT, миграции, seed-demo, API :$E2E_API_PORT,
-               сборка фронта и preview :$E2E_WEB_PORT, Playwright (chromium + mobile)
-  audit        pip-audit (prod-зависимости backend), pnpm audit --prod --audit-level high
-  build        образы backend/frontend (prod) и backup с проверкой pg_dump 17
+  audit        pip-audit (prod-зависимости backend)
+  build        образ backend (prod) и backup с проверкой pg_dump 17
 
 Стенд и его БД не используются; ключи и токен из .env в тесты не попадают.
 Логи — .ci-local/. Итог — таблица и код выхода 1 при любом сбое.
@@ -51,24 +43,9 @@ command -v docker >/dev/null && docker info >/dev/null 2>&1 \
   || { echo "Docker не запущен: open -a Docker, затем повторите."; exit 1; }
 mkdir -p "$LOGS"
 
-# Окружение заданий e2e и audit — ровно то, что задаёт `.github/workflows/ci.yml` (задания «CRM · e2e», «CRM · dependency audit»;
-# Q-W7-T1, как для integration в Q-W6-1): APP_ENV, LOG_FORMAT, POSTGRES_*, TELEGRAM_MODE/TELEGRAM_DRY_RUN, E2E_*, а для
-# процессов бэкенда ещё JWT_SECRET (`export JWT_SECRET=$(openssl rand -hex 32)`). Больше ничего: ни пустых ключей, ни
-# LITELLM_*, ни AGENT_CONTEXT_KEY — как у раннера CI, иначе тест зелёный локально и красный в CI. `env -i` отсекает остальное
-# окружение оболочки (токены, ключи разработчика); от машины зависят и потому остаются отличиями от CI: PATH и HOME (uv, pnpm,
-# кэши), адрес и порт одноразового Postgres (127.0.0.1 вместо localhost — Docker публикует порт только на IPv4), имя БД/пользователя
-# контейнера. Менять набор переменных — только вместе с ci.yml. Настройки читают ещё .env из backend/ и apps/crm/ — в CI таких
-# файлов нет, поэтому их наличие здесь — ошибка (проверка в stage_e2e). `CI=true` (его задаёт GitHub Actions: у Playwright retries
-# и forbidOnly) локально НЕ задан намеренно: так строже — retries 0, нестабильный тест виден сразу, а не прячется повтором.
-JWT_ONCE=$(openssl rand -hex 32)
+# Окружение задания audit — как у раннера CI (`env -i` отсекает токены и ключи оболочки); от машины зависят PATH и HOME (uv, кэши).
 clean_env() {
   env -i PATH="$PATH" HOME="$HOME" "$@"
-}
-ci_job_env() {
-  clean_env APP_ENV=test LOG_FORMAT=console TELEGRAM_MODE=disabled TELEGRAM_DRY_RUN=true "$@"
-}
-backend_env() {
-  ci_job_env JWT_SECRET="$JWT_ONCE" "$@"
 }
 
 stage_lint() {
@@ -79,8 +56,8 @@ stage_lint() {
   (cd "$ROOT" && make check)
   (cd "$ROOT/backend" && uv run ruff check --config pyproject.toml ../scripts \
     && uv run ruff format --config pyproject.toml --check ../scripts)
-  (cd "$ROOT" && make openapi && git diff --exit-code -- ../../packages/contracts/openapi/crm.yaml frontend/src/api) \
-    || { echo "OpenAPI или клиент orval устарели — выполните make openapi и закоммитьте"; return 1; }
+  (cd "$ROOT" && make openapi && git diff --exit-code -- ../../packages/contracts/openapi/crm.yaml) \
+    || { echo "OpenAPI устарел — выполните make openapi и закоммитьте"; return 1; }
   local envfile
   envfile=$(mktemp)
   sed 's/CHANGE_ME/ci/; s/^IMAGE_TAG=$/IMAGE_TAG=ci/' "$ROOT/.env.example" >"$envfile"
@@ -101,77 +78,16 @@ stage_integration() {
   return $status
 }
 
-# По портам, а не по PID обёрток: `uv run`/`pnpm` запускают сервер дочерним процессом,
-# и он переживал остановку обёртки (порт оставался занят до следующего прогона).
-stop_port() {
-  local pids
-  pids=$(lsof -t -iTCP:"$1" -sTCP:LISTEN 2>/dev/null || true)
-  [ -z "$pids" ] || kill $pids 2>/dev/null || true
-}
-
-e2e_cleanup() {
-  stop_port "$E2E_API_PORT"
-  stop_port "$E2E_WEB_PORT"
-  docker rm -f "$E2E_PG" >/dev/null 2>&1 || true
-}
-
-stage_e2e() {
-  for f in "$ROOT/backend/.env" "$ROOT/.env"; do
-    [ ! -e "$f" ] || { echo "Найден $f: настройки CRM прочитают его, а в CI такого файла нет. Уберите файл и повторите."; return 1; }
-  done
-  for port in "$E2E_PG_PORT" "$E2E_API_PORT" "$E2E_WEB_PORT"; do
-    ! lsof -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1 \
-      || { echo "Порт $port занят: lsof -nP -iTCP:$port -sTCP:LISTEN"; return 1; }
-  done
-  # EXIT, а не RETURN: при сбое `set -e` завершает подоболочку задания, и RETURN не срабатывает.
-  trap e2e_cleanup EXIT
-  docker run -d --name "$E2E_PG" -p "127.0.0.1:${E2E_PG_PORT}:5432" -e POSTGRES_DB=crm_e2e \
-    -e POSTGRES_USER=rt -e POSTGRES_PASSWORD="$PASS" "$PG_IMAGE" >/dev/null
-  for _ in $(seq 1 30); do
-    docker exec "$E2E_PG" pg_isready -U rt -d crm_e2e >/dev/null 2>&1 && break
-    sleep 1
-  done
-  local db=(POSTGRES_HOST=127.0.0.1 POSTGRES_PORT="$E2E_PG_PORT" POSTGRES_DB=crm_e2e
-    POSTGRES_USER=rt POSTGRES_PASSWORD="$PASS")
-  local who=(E2E_MANAGER_EMAIL=manager@demo.local E2E_MANAGER_PASSWORD=ci-e2e-demo-42
-    E2E_ADMIN_EMAIL=admin@demo.local E2E_ADMIN_PASSWORD=ci-e2e-boss-42)
-  (
-    cd "$ROOT/backend"
-    backend_env "${db[@]}" "${who[@]}" uv run alembic upgrade head
-    backend_env "${db[@]}" "${who[@]}" uv run python -m app seed-demo --manager-password ci-e2e-demo-42
-    backend_env "${db[@]}" "${who[@]}" uv run python -m app create-admin --email admin@demo.local \
-      --password ci-e2e-boss-42
-  )
-  (cd "$ROOT/backend" && backend_env "${db[@]}" "${who[@]}" uv run python -m app api --port "$E2E_API_PORT") \
-    >"$LOGS/e2e-api.log" 2>&1 &
-  for _ in $(seq 1 60); do
-    curl -fsS "http://127.0.0.1:${E2E_API_PORT}/health" >/dev/null 2>&1 && break
-    sleep 1
-  done
-  (cd "$ROOT/frontend" && ci_job_env "${db[@]}" "${who[@]}" pnpm build >"$LOGS/e2e-build.log" 2>&1)
-  (cd "$ROOT/frontend" && ci_job_env "${db[@]}" "${who[@]}" VITE_API_PROXY_TARGET="http://127.0.0.1:${E2E_API_PORT}" \
-    pnpm preview --port "$E2E_WEB_PORT" --strictPort) >"$LOGS/e2e-preview.log" 2>&1 &
-  for _ in $(seq 1 30); do
-    curl -fsS "http://127.0.0.1:${E2E_WEB_PORT}/" >/dev/null 2>&1 && break
-    sleep 1
-  done
-  # Как в CI: свой Chromium Playwright (скачивается один раз, дальше — из кэша).
-  (cd "$ROOT/frontend" && ci_job_env "${db[@]}" "${who[@]}" pnpm exec playwright install chromium)
-  (cd "$ROOT/frontend" && ci_job_env "${db[@]}" "${who[@]}" BASE_URL="http://localhost:${E2E_WEB_PORT}" pnpm e2e)
-}
-
 stage_audit() {
   (
     cd "$ROOT/backend"
     clean_env uv export --frozen --no-dev --no-emit-project --no-emit-local --format requirements-txt -o "$LOGS/requirements.txt"
     clean_env uvx pip-audit@2.10.1 -r "$LOGS/requirements.txt" --no-deps --disable-pip --progress-spinner off
   )
-  (cd "$ROOT/frontend" && clean_env pnpm audit --prod --audit-level high)
 }
 
 stage_build() {
   docker build -q --target prod -t railtech-backend:ci "$ROOT/backend" >/dev/null
-  docker build -q --target prod -t railtech-frontend:ci "$ROOT/frontend" >/dev/null
   docker build -q --target backup -t railtech-backup:ci "$ROOT/backend" >/dev/null
   docker run --rm railtech-backup:ci /usr/lib/postgresql/17/bin/pg_dump --version \
     | grep -q "pg_dump (PostgreSQL) 17"
@@ -203,7 +119,7 @@ for s in "${STAGES[@]}"; do
 done
 echo
 printf '%s\n' "${RESULT[@]}"
-# Сборка образов и e2e делят память Docker Desktop со стендом: при нехватке Docker убивает
+# Сборка образов делит память Docker Desktop со стендом: при нехватке Docker убивает
 # контейнеры стенда (OOM, код 137). Сообщаем прямо, чтобы стенд не остался наполовину лежать.
 killed=$(docker ps -a --filter "label=com.docker.compose.project=railtech" --filter status=exited \
   --format '{{.Names}}' | while read -r name; do

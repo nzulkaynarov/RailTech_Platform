@@ -23,9 +23,13 @@ export RT_RELEASE_DATE
 log "откат $cur → $target"
 compose "$rel" config -q
 # Платформа (INF-P0-5) есть не в каждом релизе: откат на тег до неё не должен просить у compose несуществующие сервисы.
-pull_services=(crm-api crm-web erp-backend erp-web cabinet-web)
+pull_services=(crm-api erp-backend cabinet-web)
 smoke_domains=("$(env_get CRM_DOMAIN)" "$(env_get ERP_DOMAIN)" "$(env_get CABINET_DOMAIN)")
 services="$(compose "$rel" config --services)"
+# Старые SPA CRM и ERP (crm-web, erp-web) удалены 2026-11-11: есть только в релизах до сноса.
+for svc in crm-web erp-web; do
+  if grep -qx "$svc" <<<"$services"; then pull_services+=("$svc"); fi
+done
 if grep -qx platform-bff <<<"$services"; then
   pull_services+=(platform-bff platform-web)
   smoke_domains+=("$(env_get PLATFORM_DOMAIN)")

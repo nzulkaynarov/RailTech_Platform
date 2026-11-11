@@ -87,7 +87,7 @@ for svc in platform-bff platform-web; do
     || fail "caddy должен зависеть от $svc по service_started (не service_healthy: INF-P1-0)"
 done
 # Остальное, без чего вход бессмыслен, Caddy по-прежнему ждёт по здоровью.
-for svc in crm-api crm-web erp-backend erp-web cabinet-web; do
+for svc in crm-api erp-backend cabinet-web; do
   [[ "$(q --arg s "$svc" '.services.caddy.depends_on[$s].condition // "none"')" == service_healthy ]] || fail "caddy не ждёт $svc по service_healthy"
 done
 # Ничто критичное, кроме самой Платформы, не зависит от её сервисов.
