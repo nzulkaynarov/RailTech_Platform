@@ -40,7 +40,6 @@ OPEN_ENDPOINTS = {
     ("/api/v1/auth/sessions/revoke-all/", "POST"): "завершить свои другие сессии",
     ("/api/v1/auth/ws-ticket/", "POST"): "билет своего WebSocket уведомлений",
     ("/api/v1/auth/sso/exchange/", "POST"): "вход по SSO-токену из CRM — до аутентификации (CONTRACTS §6)",
-    ("/api/v1/auth/sso/token/", "POST"): "свой SSO-токен для перехода в CRM (CONTRACTS §6)",
     ("/api/v1/notifications/{pk}/mark_read/", "PATCH"): "отметить своё уведомление прочитанным",
     ("/api/v1/notifications/mark_all_read/", "PATCH"): "отметить свои уведомления прочитанными",
     ("/api/v1/public/quotes/{token}/accept/", "POST"): "публичная страница КП по токену (клиент, без входа)",

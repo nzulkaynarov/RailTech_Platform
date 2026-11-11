@@ -79,7 +79,6 @@ from accounts.views import (
     SessionsRevokeOthersView,
     SetupPasswordView,
     SsoExchangeView,
-    SsoIssueTokenView,
     SystemRoleViewSet,
     TOTPDisableView,
     TOTPLoginView,
@@ -273,7 +272,6 @@ urlpatterns = (
         path("api/v1/integration/bus/inbox/", BusInboxView.as_view(), name="bus-inbox"),
         # id события — строкой: гейт права срабатывает раньше разбора UUID (неверный id — 400 после проверки права).
         path("api/v1/integration/bus/inbox/<str:event_id>/retry/", BusInboxRetryView.as_view(), name="bus-inbox-retry"),
-        path("api/v1/auth/sso/token/", SsoIssueTokenView.as_view(), name="sso-token"),
         path("api/v1/auth/sso/exchange/", SsoExchangeView.as_view(), name="sso-exchange"),
         path("api/v1/auth/setup-password/", SetupPasswordView.as_view(), name="setup-password"),
         path("api/v1/auth/forgot-password/", ForgotPasswordView.as_view(), name="forgot-password"),

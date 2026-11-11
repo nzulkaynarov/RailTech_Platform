@@ -284,7 +284,6 @@ if _MISSING_SEAM_SECRETS and not DEBUG:
     raise ImproperlyConfigured(
         "Seam secrets are required when DJANGO_DEBUG is off: " + ", ".join(_MISSING_SEAM_SECRETS)
     )
-CRM_FRONTEND_URL = os.environ.get("CRM_FRONTEND_URL", "http://crm.localhost").rstrip("/")
-# Переход CRM ↔ ERP выключен до волны 1 исправлений (FIX-03, аудит S-2/S-3): обмен токена сейчас
-# небезопасен. Включает владелец после FIX-10/FIX-11 (PLATFORM_SSO_ENABLED=true).
+# Обмен SSO-токена CRM на сессию ERP — им BFF Платформы входит в ERP (docs/architecture/sso-token.md).
+# Выключен по умолчанию (FIX-03); на проде включён (PLATFORM_SSO_ENABLED=true).
 PLATFORM_SSO_ENABLED = os.environ.get("PLATFORM_SSO_ENABLED", "false").strip().lower() == "true"

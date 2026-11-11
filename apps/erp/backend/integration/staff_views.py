@@ -6,7 +6,6 @@
 
 from __future__ import annotations
 
-from django.conf import settings
 from drf_spectacular.utils import extend_schema
 from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated
@@ -35,7 +34,6 @@ class CrmPairingStatusSerializer(serializers.Serializer):
     webhook_secret_source = serializers.ChoiceField(choices=["db", "env", "none"])
     webhook_secret_last4 = serializers.CharField(allow_blank=True)
     code_ttl_seconds = serializers.IntegerField()
-    crm_frontend_url = serializers.CharField(allow_blank=True)
 
 
 class PairingCodeIssuedSerializer(serializers.Serializer):
@@ -69,7 +67,6 @@ class CrmPairingStatusView(RoleGatedViewMixin, APIView):
             "webhook_secret_source": st.webhook_secret_source,
             "webhook_secret_last4": st.webhook_secret_last4,
             "code_ttl_seconds": pairing.code_ttl_seconds(),
-            "crm_frontend_url": settings.CRM_FRONTEND_URL,
         }
         return Response(CrmPairingStatusSerializer(data).data, headers={"Cache-Control": "no-store"})
 

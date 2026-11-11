@@ -8030,66 +8030,6 @@
                 }
             }
         },
-        "/api/v1/auth/sso/token/": {
-            "post": {
-                "operationId": "auth_sso_token_create",
-                "description": "POST /api/v1/auth/sso/token — выдать токен для перехода в CRM.",
-                "summary": "Issue an SSO token for the jump to CRM",
-                "tags": [
-                    "Auth"
-                ],
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/SsoIssuedToken"
-                                }
-                            }
-                        },
-                        "description": ""
-                    },
-                    "403": {
-                        "description": "SSO_DISABLED / FORBIDDEN",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorDetail"
-                                }
-                            }
-                        }
-                    },
-                    "503": {
-                        "description": "SSO_NOT_CONFIGURED",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorDetail"
-                                }
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "SSO_ISSUE_FAILED",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ErrorDetail"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "$ref": "#/components/responses/UnauthorizedResponse"
-                    }
-                }
-            }
-        },
         "/api/v1/auth/token/": {
             "post": {
                 "operationId": "auth_token_create",
@@ -38439,14 +38379,10 @@
                     },
                     "code_ttl_seconds": {
                         "type": "integer"
-                    },
-                    "crm_frontend_url": {
-                        "type": "string"
                     }
                 },
                 "required": [
                     "code_ttl_seconds",
-                    "crm_frontend_url",
                     "crm_to_erp_last4",
                     "erp_to_crm_configured",
                     "paired_at",
@@ -52903,21 +52839,6 @@
                     "user"
                 ]
             },
-            "SsoIssuedToken": {
-                "type": "object",
-                "properties": {
-                    "token": {
-                        "type": "string"
-                    },
-                    "redirect_url": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "redirect_url",
-                    "token"
-                ]
-            },
             "SsoStaffUser": {
                 "type": "object",
                 "properties": {
@@ -54261,11 +54182,6 @@
                         "title": "Основной домен",
                         "description": "Доменное имя платформы для ссылок и уведомлений"
                     },
-                    "crm_frontend_url": {
-                        "type": "string",
-                        "readOnly": true,
-                        "description": "Адрес CRM: туда ведёт «Изменить в CRM» для общих полей, только чтение."
-                    },
                     "maintenance_mode": {
                         "type": "boolean",
                         "title": "Режим обслуживания",
@@ -54284,7 +54200,6 @@
                     }
                 },
                 "required": [
-                    "crm_frontend_url",
                     "domain",
                     "exchange_rate_usd_uzs",
                     "logo_url",

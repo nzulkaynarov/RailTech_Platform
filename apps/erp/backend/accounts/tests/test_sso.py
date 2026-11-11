@@ -1,13 +1,12 @@
-"""Tests for ERP SSO (Employee CRM ↔ ERP SSO, CONTRACTS §6, docs/architecture/sso-token.md, M3-CRM-06).
+"""Tests for ERP SSO exchange (employee token from CRM, CONTRACTS §6, docs/architecture/sso-token.md, M3-CRM-06).
 
 Тестирует:
-1. Выпуск SSO-токена (POST /api/v1/auth/sso/token/)
-2. Проверку и обмен токена на сессию (POST /api/v1/auth/sso/exchange/)
-3. Защиту от повторного использования jti (replay attack, 10 минут)
-4. Ротацию секретов (подпись вторым активным ключом)
-5. Обновление email/name и запись в аудит ActivityLog; обмен не создаёт пользователей и не меняет права (FIX-10)
-6. Отказ при деактивированном/непровиженном пользователе (403) и невалидной подписи/aud/exp (401)
-7. Ограничение exp − iat ≤ 60 (с допуском 5 с)
+1. Проверку и обмен токена на сессию (POST /api/v1/auth/sso/exchange/)
+2. Защиту от повторного использования jti (replay attack, 10 минут)
+3. Ротацию секретов (подпись вторым активным ключом)
+4. Обновление email/name и запись в аудит ActivityLog; обмен не создаёт пользователей и не меняет права (FIX-10)
+5. Отказ при деактивированном/непровиженном пользователе (403) и невалидной подписи/aud/exp (401)
+6. Ограничение exp − iat ≤ 60 (с допуском 5 с)
 """
 
 import time
@@ -34,7 +33,6 @@ SSO_SECRET_SECONDARY = "test-platform-sso-secret-secondary"
 def setup_sso_settings(settings):
     settings.PLATFORM_SSO_SECRET = [SSO_SECRET_PRIMARY, SSO_SECRET_SECONDARY]
     settings.PLATFORM_SSO_ENABLED = True
-    settings.CRM_FRONTEND_URL = "http://crm.localhost"
     cache.clear()
 
 
@@ -83,38 +81,6 @@ def make_sso_jwt(
         "jti": jti or str(uuid.uuid4()),
     }
     return jwt.encode(payload, secret, algorithm="HS256")
-
-
-# ─── 1. Issue SSO Token ───────────────────────────────────────────────────────
-
-
-def test_issue_sso_token_requires_authentication(client):
-    resp = client.post("/api/v1/auth/sso/token/")
-    assert resp.status_code == status.HTTP_401_UNAUTHORIZED
-
-
-def test_issue_sso_token_success(client, staff_user):
-    client.force_authenticate(user=staff_user)
-    resp = client.post("/api/v1/auth/sso/token/")
-    assert resp.status_code == status.HTTP_200_OK
-
-    data = resp.json()
-    assert "token" in data
-    assert data["redirect_url"] == "http://crm.localhost/sso/exchange"
-
-    payload = jwt.decode(
-        data["token"],
-        SSO_SECRET_PRIMARY,
-        algorithms=["HS256"],
-        audience="crm",
-        issuer="erp",
-    )
-    assert payload["sub"] == "42"
-    assert payload["email"] == "staff@example.com"
-    assert payload["iss"] == "erp"
-    assert payload["aud"] == "crm"
-    assert payload["role"] == "manager"
-    assert payload["exp"] > payload["iat"]
 
 
 # ─── 2. Exchange SSO Token ─────────────────────────────────────────────────────
@@ -264,32 +230,16 @@ def test_exchange_deactivated_user_returns_403(client):
 
 
 def test_sso_is_disabled_by_default_and_refused(client, staff_user, settings):
-    """FIX-03: до волны 1 переход выключен (PLATFORM_SSO_ENABLED=false) — обе стороны отказывают,
-    /me не показывает кнопку."""
+    """FIX-03: обмен выключен флагом PLATFORM_SSO_ENABLED (по умолчанию false)."""
     settings.PLATFORM_SSO_ENABLED = False
     client.force_authenticate(user=staff_user)
 
-    issue = client.post("/api/v1/auth/sso/token/")
     exchange = client.post("/api/v1/auth/sso/exchange/", {"token": "anything"}, format="json")
-    me = client.get("/api/v1/accounts/users/me/")
 
-    assert issue.status_code == 403 and issue.data["detail"] == "SSO_DISABLED"
     assert exchange.status_code == 403 and exchange.data["detail"] == "SSO_DISABLED"
-    assert me.status_code == 200 and me.data["capabilities"]["sso_enabled"] is False
 
 
 # ─── 3. FIX-10: sub только из сопоставления, обмен без провижининга, exp − iat ≤ 60 ───
-
-
-def test_issue_sso_token_without_mapping_is_refused(client):
-    """S-2: запасного `sub = user.pk` нет — без CrmUserMapping токен не выдаётся."""
-    unmapped = CustomUser.objects.create(username="u@example.com", email="u@example.com", is_active=True)
-    client.force_authenticate(user=unmapped)
-
-    resp = client.post("/api/v1/auth/sso/token/")
-
-    assert resp.status_code == status.HTTP_403_FORBIDDEN
-    assert resp.json() == {"detail": "USER_NOT_PROVISIONED"}
 
 
 def test_exchange_unknown_sub_is_forbidden_and_creates_no_user(client):

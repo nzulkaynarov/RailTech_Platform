@@ -8,7 +8,6 @@
   (`is_active=false`); пишет `sso.revoke` в аудит; идемпотентен;
 * повторный провижининг включает пользователя, но прежний access остаётся мёртвым;
 * `CookieTokenRefreshView` не продлевает refresh-токен того, кто больше не сотрудник;
-* переключатель «В CRM» в шапке ERP — только у пользователя с `CrmUserMapping` (`capabilities.crm_access`).
 """
 
 import time
@@ -333,23 +332,6 @@ def test_blacklisted_refresh_is_still_401_after_staff_check(staff_with_refresh):
     for token in OutstandingToken.objects.filter(user=user):
         BlacklistedToken.objects.get_or_create(token=token)
     assert client.post(REFRESH_URL, {}, format="json").status_code == 401
-
-
-# ─── Переключатель в шапке ERP — только у пользователя с сопоставлением CRM ────────────────
-
-
-def test_me_exposes_crm_access_only_for_mapped_user(service, own_company):
-    provision(service)
-    access, _ = sso_login()
-    mapped = bearer(access).get(USERS_ME_URL).json()["capabilities"]
-    assert mapped["crm_access"] is True
-    assert mapped["sso_enabled"] is True
-
-    local = CustomUser.objects.create_superuser(email="root@example.com", username="root", password=HASLO)
-    api = APIClient()
-    api.force_authenticate(local)
-    unmapped = api.get(USERS_ME_URL).json()["capabilities"]
-    assert unmapped["crm_access"] is False
 
 
 def test_openapi_keeps_the_jwt_security_scheme():

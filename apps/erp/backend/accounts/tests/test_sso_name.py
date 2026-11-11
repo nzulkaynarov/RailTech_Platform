@@ -26,7 +26,6 @@ SERVICE_TOKEN = "test-crm-to-erp-token"
 def _sso_settings(settings):
     settings.PLATFORM_SSO_SECRET = [SSO_SECRET_PRIMARY]
     settings.PLATFORM_SSO_ENABLED = True
-    settings.CRM_FRONTEND_URL = "http://crm.localhost"
     settings.SERVICE_TOKEN_CRM_TO_ERP = [SERVICE_TOKEN]
     cache.clear()
 

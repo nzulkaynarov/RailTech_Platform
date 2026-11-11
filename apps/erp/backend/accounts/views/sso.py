@@ -1,8 +1,6 @@
 """SSO API Views for ERP (CONTRACTS §6, docs/architecture/sso-token.md, M3-CRM-06).
 
-Эндпоинты:
-1. POST /api/v1/auth/sso/token — выдать токен для перехода в CRM (iss=erp, aud=crm).
-2. POST /api/v1/auth/sso/exchange — обменять токен CRM (iss=crm, aud=erp) на сессию ERP.
+Эндпоинт: POST /api/v1/auth/sso/exchange — обменять токен CRM (iss=crm, aud=erp) на сессию ERP; вызывает BFF Платформы.
 """
 
 from __future__ import annotations
@@ -21,7 +19,6 @@ from accounts.services.sso import (
     SsoNotConfiguredError,
     SsoUnavailableError,
     SsoValidationError,
-    issue_sso_token,
     verify_and_exchange_sso_token,
 )
 from accounts.services.tokens import refresh_for
@@ -52,44 +49,6 @@ _SSO_STAFF_USER = inline_serializer(
         "platform_access": serializers.ListField(child=serializers.CharField()),
     },
 )
-
-
-class SsoIssueTokenView(views.APIView):
-    """POST /api/v1/auth/sso/token — выдать токен для перехода в CRM."""
-
-    permission_classes = [permissions.IsAuthenticated]
-
-    @extend_schema(
-        summary="Issue an SSO token for the jump to CRM",
-        request=None,
-        responses={
-            200: inline_serializer(
-                "SsoIssuedToken",
-                fields={"token": serializers.CharField(), "redirect_url": serializers.CharField()},
-            ),
-            403: OpenApiResponse(description="SSO_DISABLED / FORBIDDEN"),
-            503: OpenApiResponse(description="SSO_NOT_CONFIGURED"),
-            500: OpenApiResponse(description="SSO_ISSUE_FAILED"),
-        },
-        tags=["Auth"],
-    )
-    def post(self, request, *args, **kwargs):
-        try:
-            token, redirect_url = issue_sso_token(request.user)
-            return Response(
-                {
-                    "token": token,
-                    "redirect_url": redirect_url,
-                },
-                status=status.HTTP_200_OK,
-            )
-        except SsoForbiddenError as exc:
-            return Response({"detail": exc.detail}, status=status.HTTP_403_FORBIDDEN)
-        except SsoNotConfiguredError as exc:
-            return Response({"detail": exc.detail}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-        except Exception as exc:
-            logger.exception("Failed to issue SSO token: %s", exc)
-            return Response({"detail": "SSO_ISSUE_FAILED"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class SsoExchangeView(views.APIView):
