@@ -119,7 +119,9 @@ def test_replayed_jti_is_rejected():
     assert not ServiceCredential.objects.exists()
 
 
-@pytest.mark.parametrize("shift", [-301, -3600, 301, 3600])
+# «В будущем» — 302, а не 301: метка — целые секунды (`int(time.time())` отбрасывает до секунды), и запрос на границе
+# секунды давал разницу ровно 300 — тест падал примерно в каждом двадцатом прогоне CI.
+@pytest.mark.parametrize("shift", [-301, -3600, 302, 3600])
 def test_stale_or_future_timestamp_is_expired(shift):
     body = raw()
     response = post(body, proof_for(body, ts=int(time.time()) + shift))
