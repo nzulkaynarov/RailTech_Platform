@@ -1,4 +1,5 @@
-import { Card, Skeleton } from "antd";
+import { Button, Card, Skeleton } from "antd";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { canSee } from "../../../app/access";
@@ -18,11 +19,55 @@ import { letterPath, letterRef } from "../inbox/api";
 import { InstructionsCard, OfficeDecision } from "../inbox/Instructions";
 import { useStateLabels } from "../inbox/labels";
 import { Attachments } from "../inbox/Parts";
+import { previewText } from "../mail/frameDoc";
 import { ReplyCard } from "./ReplyBlock";
 import { AcquaintAction, MyInstruction } from "./TaskActions";
 
 import "../inbox/inbox.css";
+import "../mail/mail.css";
 import "../new/new.css";
+
+/** Строк письма до «Показать полностью». */
+const BODY_PREVIEW_LINES = 12;
+
+/**
+ * Само письмо на экране поручения (решение владельца 2026-11-11): текст из «Почты», сохранённый при регистрации ВХ,
+ * и вложения. Нет текста (бумажное письмо или ВХ до 2026-11-11) — краткое содержание.
+ */
+function LetterBody({ letter }: { letter: LetterCard }) {
+  const { t } = useTranslation("letters");
+  const [full, setFull] = useState(false);
+  const text = letter.body_text ?? "";
+  const preview = previewText(text, BODY_PREVIEW_LINES);
+  return (
+    <Card size="small" title={<h2 className="pf-letters-title">{t("tasks.letter")}</h2>}>
+      {text !== "" ? (
+        <>
+          <pre className="pf-mail-text">{full ? text : preview.shown}</pre>
+          {preview.more ? (
+            <Button
+              type="link"
+              aria-expanded={full}
+              onClick={() => {
+                setFull((prev) => !prev);
+              }}
+            >
+              {t(full ? "tasks.body.collapse" : "tasks.body.showAll")}
+            </Button>
+          ) : null}
+        </>
+      ) : (
+        <p className="pf-letters-summary">{letter.summary}</p>
+      )}
+      {letter.files.length > 0 ? (
+        <>
+          <h3 className="pf-res-subhead">{t("card.files")}</h3>
+          <Attachments files={letter.files} />
+        </>
+      ) : null}
+    </Card>
+  );
+}
 
 function Content({ letter }: { letter: LetterCard }) {
   const { t } = useTranslation("letters");
@@ -54,6 +99,7 @@ function Content({ letter }: { letter: LetterCard }) {
       />
       <div className="pf-letters-grid">
         <div className="pf-letters-main">
+          <LetterBody letter={letter} />
           {mine ? <MyInstruction letter={letter} instruction={mine} /> : null}
           {acquaint ? <AcquaintAction letter={letter} /> : null}
           {!mine && !acquaint && !waitsAuthor ? (
@@ -68,8 +114,8 @@ function Content({ letter }: { letter: LetterCard }) {
           <InstructionsCard letter={letter} />
           <OfficeDecision letter={letter} />
         </div>
-        <aside className="pf-letters-side" aria-label={t("tasks.letter")}>
-          <Card size="small" title={<h2 className="pf-letters-title">{t("tasks.letter")}</h2>}>
+        <aside className="pf-letters-side" aria-label={t("tasks.details")}>
+          <Card size="small" title={<h2 className="pf-letters-title">{t("tasks.details")}</h2>}>
             <DefinitionList
               items={[
                 {
@@ -86,12 +132,10 @@ function Content({ letter }: { letter: LetterCard }) {
                 { label: t("card.fields.addressee"), value: letter.addressee.name },
               ]}
             />
-            <h3 className="pf-res-subhead">{t("card.summary")}</h3>
-            <p className="pf-letters-summary">{letter.summary}</p>
-            {letter.files.length > 0 ? (
+            {letter.body_text ? (
               <>
-                <h3 className="pf-res-subhead">{t("card.files")}</h3>
-                <Attachments files={letter.files} />
+                <h3 className="pf-res-subhead">{t("card.summary")}</h3>
+                <p className="pf-letters-summary">{letter.summary}</p>
               </>
             ) : null}
             {canOpenCard ? (

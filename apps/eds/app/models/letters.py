@@ -98,6 +98,7 @@ class Letter(Base):
     urgent: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     erp_request_id: Mapped[int | None] = mapped_column(BigInteger)
     source_mail_id: Mapped[int | None] = mapped_column(BigInteger)  # письмо общего ящика CRM
+    body_text: Mapped[str | None] = mapped_column(Text)  # текст письма общего ящика (исполнитель видит письмо)
     erp_deal_id: Mapped[int | None] = mapped_column(BigInteger)
     deal_number: Mapped[str | None] = mapped_column(String(64))
     crm_client_id: Mapped[int | None] = mapped_column(BigInteger)

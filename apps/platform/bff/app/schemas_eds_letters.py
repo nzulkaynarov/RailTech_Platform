@@ -216,12 +216,18 @@ class LetterAcquaintance(BaseModel):
     acknowledged_at: dt.datetime | None
 
 
+# Предел текста письма в карточке ВХ (`eds.yaml` `LetterSourceIn.text`)
+BODY_TEXT_MAX = 100_000
+
+
 class LetterCard(BaseModel):
     id: str
     number: str
     status: LetterStatus
     subject: str
     summary: str
+    # Текст письма из почты, если ВХ зарегистрирован из «Почты»: исполнитель видит само письмо
+    body_text: str | None = None
     urgent: bool
     received_at: dt.date
     registered_at: dt.datetime
@@ -796,6 +802,7 @@ class EdsLetter(BaseModel):
     status: LetterStatus
     subject: str
     summary: str
+    body_text: str | None = None
     sender: _Sender
     sender_ref: _SenderRef = _SenderRef()
     received_at: dt.date
@@ -1104,6 +1111,7 @@ def to_card(
         status=letter.status,
         subject=letter.subject,
         summary=letter.summary,
+        body_text=letter.body_text,
         urgent=letter.urgent,
         received_at=letter.received_at,
         registered_at=letter.registered_at,

@@ -389,6 +389,7 @@ async def test_register_from_mail_passes_the_source_and_allows_no_files(
     web: Web, be: Backends, eds: EdsFake
 ) -> None:
     mark = be.router.post(f"{CRM}/17/registration").mock(return_value=httpx.Response(204))
+    be.router.get(f"{CRM}/17").mock(return_value=httpx.Response(200, json=card()))
     await web.login(["REGISTRAR"])
 
     response = await web.client.post(
@@ -400,9 +401,31 @@ async def test_register_from_mail_passes_the_source_and_allows_no_files(
     assert response.status_code == 201, response.text
     [call] = eds.made("POST", "letters")
     body = json.loads(call.content)
-    assert body["source"] == {"crm_inbound_mail_id": 17}
+    # Текст письма — в карточку ВХ: исполнитель видит само письмо (решение владельца 2026-11-11).
+    assert body["source"] == {
+        "crm_inbound_mail_id": 17,
+        "text": "Добрый день, направляем акт сверки за октябрь.",
+    }
     assert body["file_ids"] == []
     assert [json.loads(c.request.content) for c in mark.calls] == [{"state": "start"}]
+
+
+async def test_register_from_mail_without_crm_text_still_registers(
+    web: Web, be: Backends, eds: EdsFake
+) -> None:
+    be.router.post(f"{CRM}/17/registration").mock(return_value=httpx.Response(204))
+    be.router.get(f"{CRM}/17").mock(return_value=httpx.Response(503))
+    await web.login(["REGISTRAR"])
+
+    response = await web.client.post(
+        "/api/v1/eds/letters",
+        json=FORM,
+        headers={CSRF_HEADER: web.csrf, "Idempotency-Key": "mail-17-notext"},
+    )
+
+    assert response.status_code == 201, response.text
+    [call] = eds.made("POST", "letters")
+    assert json.loads(call.content)["source"] == {"crm_inbound_mail_id": 17}
 
 
 async def test_register_from_mail_in_work_by_other_is_409_before_eds(
@@ -1149,6 +1172,7 @@ async def test_repeat_registration_after_waiting_returns_the_same_letter_not_a_s
     EDS отвечает 200 с тем
     же ВХ (одно письмо ящика — один ВХ) — экран получает ту же карточку, второго ВХ нет."""
     be.router.post(f"{CRM}/17/registration").mock(return_value=httpx.Response(204))
+    be.router.get(f"{CRM}/17").mock(return_value=httpx.Response(200, json=card()))
     await web.login(["REGISTRAR"])
     headers = {CSRF_HEADER: web.csrf}
 
@@ -1163,8 +1187,10 @@ async def test_repeat_registration_after_waiting_returns_the_same_letter_not_a_s
     assert (first.status_code, again.status_code) == (201, 201), again.text
     assert again.json()["id"] == first.json()["id"]
     assert again.json()["number"] == first.json()["number"]
-    sent = [json.loads(c.content)["source"] for c in eds.made("POST", "letters")]
-    assert sent == [{"crm_inbound_mail_id": 17}] * 2
+    sent = [
+        json.loads(c.content)["source"]["crm_inbound_mail_id"] for c in eds.made("POST", "letters")
+    ]
+    assert sent == [17, 17]
 
 
 # --- «Проверить почту» (MAIL-NOW) ----------------------------------------------------------------

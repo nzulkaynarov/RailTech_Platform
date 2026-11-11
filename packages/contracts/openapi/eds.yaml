@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — EDS API (электронный документооборот)
-  version: 0.12.0
+  version: 0.13.0
   summary: Пространство `/api/v1/` сервиса EDS — вызывает BFF Платформы от имени сотрудника.
   description: |
     Контракт сервиса EDS (`apps/eds`, ADR-0015; `docs/history/runbooks/wave12-eds-c1.md` §2). EDS — владелец реестра документов и
@@ -18,6 +18,10 @@ info:
     `sub=crm_user_id`, срок 60 с, одноразовый `jti`) и обменивает его здесь: `POST /api/v1/auth/sso/exchange` → собственный
     токен доступа EDS (JWT HS256, секрет `EDS_ACCESS_SECRET`, `iss = eds`, `aud = eds-api`, срок 15 минут, без refresh: истёк — BFF берёт у CRM новый токен
     сотрудника и обменивает снова). Каждый запрос `/api/v1/*`, кроме обмена, — `Authorization: Bearer <токен доступа EDS>`.
+
+    **0.13.0 (исполнитель видит письмо и отвечает по любому поручению, решение владельца 2026-11-11).** `LetterSourceIn.text` —
+    текст письма общего ящика при регистрации, `Letter.body_text` — он же в карточке ВХ. Регистрация ИСХ «в ответ на ВХ»
+    закрывает поручения «Подготовить ответ» и «К исполнению».
 
     **0.11.0 (SIGN-2, реестр полномочий подписи; по oasdiff ломающее — новое значение `signing.manage` в `EdsPermission` ответа
     `GET /me`, до 1.0 допустимо).** Ресурс `/signing/…` (тег `signing`): полномочия подписи с основанием (устав, приказ,
@@ -3783,6 +3787,10 @@ components:
           type: integer
           minimum: 1
           description: id письма в CRM (`inbound_mail.id`)
+        text:
+          type: [string, 'null']
+          maxLength: 100000
+          description: Текст письма; BFF берёт его из CRM при регистрации. Хранится в карточке ВХ (`Letter.body_text`), в событие шины не уходит
     LetterListItem:
       type: object
       additionalProperties: false
@@ -3869,6 +3877,9 @@ components:
           type: string
         summary:
           type: string
+        body_text:
+          type: [string, 'null']
+          description: Текст письма общего ящика, если ВХ зарегистрирован из почты; иначе `null`
         sender:
           $ref: '#/components/schemas/IncomingLetterSender'
         sender_ref:

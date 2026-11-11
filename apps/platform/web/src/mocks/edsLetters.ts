@@ -1,7 +1,7 @@
 import { HttpResponse, http } from "msw";
 
 import { activeLetterKinds, isActiveValue } from "./dictionaries";
-import { markMailRegistered } from "./inboundMail";
+import { mailText, markMailRegistered } from "./inboundMail";
 import { findDuplicates, letterNumber } from "./edsLetterDuplicates";
 import type {
   LetterCard,
@@ -436,6 +436,7 @@ export const edsLettersHandlers = [
           : []),
       ],
       sources: { crm: "ok", erp: "ok" },
+      body_text: body.source_mail_id ? mailText(body.source_mail_id) : null,
       kind: kind.code,
       receipt_method: body.receipt_method,
       signed_by: body.signed_by ?? null,

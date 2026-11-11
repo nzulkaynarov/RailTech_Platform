@@ -21,6 +21,7 @@ from app.schemas.common import (
 
 Subject = Annotated[str, Field(min_length=1, max_length=300)]
 LongText = Annotated[str, Field(min_length=1, max_length=10000)]
+BODY_TEXT_MAX = 100_000
 Comment = Annotated[str, Field(min_length=1, max_length=4000)]
 FileIds = Annotated[list[uuid.UUID], Field(max_length=50)]
 
@@ -132,6 +133,8 @@ class LetterCreate(Strict):
 
 class LetterSourceIn(Strict):  # eds.yaml LetterSourceIn
     crm_inbound_mail_id: Annotated[int, Field(ge=1)]
+    # Текст письма: BFF берёт его из CRM при регистрации; в событие шины не уходит
+    text: Annotated[str | None, Field(max_length=BODY_TEXT_MAX)] = None
 
 
 class RelatedRef(BaseModel):  # eds.yaml LetterRelatedRef
@@ -226,6 +229,7 @@ class Letter(BaseModel):
     status: LetterStatus
     subject: str
     summary: str
+    body_text: str | None = None
     sender: IncomingLetterSender
     sender_ref: SenderRef
     received_at: dt.date

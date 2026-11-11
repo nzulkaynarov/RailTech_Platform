@@ -30,6 +30,11 @@ export interface LetterCard {
   subject: string;
   /** Суть документа */
   summary: string;
+  /**
+   * Текст письма, если ВХ зарегистрирован из «Почты» (иначе `null`); исполнитель поручения видит само письмо без раздела «Почта»
+   * @nullable
+   */
+  body_text?: string | null;
   urgent: boolean;
   received_at: string;
   registered_at: string;

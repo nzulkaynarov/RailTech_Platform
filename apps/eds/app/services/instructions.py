@@ -502,7 +502,8 @@ async def complete(
 
 async def close_by_outgoing(session: AsyncSession, bus: AsyncBus, *, document: Document, actor_id: int) -> list[int]:
     """Хук регистрации ИСХ «в ответ на ВХ» (`documents._send_letter`; P4 — тот же вызов): поручения «Подготовить
-    ответ» этого письма в работе → «Исполнено» со ссылкой на ИСХ. Возвращает исполнителей закрытых поручений: им и
+    ответ» и «К исполнению» этого письма в работе → «Исполнено» со ссылкой на ИСХ (ответить можно по любому поручению,
+    решение владельца 2026-11-11). Возвращает исполнителей закрытых поручений: им и
     автору ответа `documents._send_letter` шлёт уведомление о регистрации (`reply.notify_registered`)."""
     if document.in_reply_to is None or document.kind != "letter_out":
         return []
@@ -513,7 +514,7 @@ async def close_by_outgoing(session: AsyncSession, bus: AsyncBus, *, document: D
                 select(Instruction)
                 .where(
                     Instruction.letter_id == letter.id,
-                    Instruction.kind == ResolutionKind.REPLY.value,
+                    Instruction.kind.in_((ResolutionKind.REPLY.value, ResolutionKind.EXECUTE.value)),
                     Instruction.status == IN_WORK,
                 )
                 .with_for_update()

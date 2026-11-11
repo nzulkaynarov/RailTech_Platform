@@ -104,6 +104,32 @@ describe("Рабочий экран поручения (P8b, SPEC-v3 §3.2a п. 
     expect(findLetter("ВХ-108/26")?.on_control).toBe(false);
   });
 
+  it("«К исполнению»: письмо целиком на экране и «Ответить», как у «Подготовить ответ» (решение 2026-11-11)", async () => {
+    const lines = Array.from({ length: 20 }, (_, i) => `Строка письма ${String(i + 1)}`);
+    inExecution({ body_text: lines.join("\n") });
+    signIn("universal@demo.example");
+    renderAt(PATH);
+    const heading = await screen.findByRole("heading", { level: 2, name: "Письмо" });
+    const card = heading.closest(".ant-card") as HTMLElement;
+    expect(within(card).getByText(/Строка письма 12/)).toBeVisible();
+    expect(within(card).queryByText(/Строка письма 13/)).toBeNull();
+    fireEvent.click(within(card).getByRole("button", { name: "Показать письмо полностью" }));
+    expect(within(card).getByText(/Строка письма 20/)).toBeVisible();
+    expect(screen.getByRole("link", { name: "Ответить" })).toHaveAttribute(
+      "href",
+      `/eds/new?type=letter&reply_to=${encodeURIComponent("ВХ-108/26")}&reply_id=${LETTER_ID}`,
+    );
+  });
+
+  it("письмо без текста (бумажное): вместо текста — краткое содержание", async () => {
+    inExecution({ body_text: null, summary: "Требование пояснений по НДС" });
+    signIn("universal@demo.example");
+    renderAt(PATH);
+    const heading = await screen.findByRole("heading", { level: 2, name: "Письмо" });
+    const card = heading.closest(".ant-card") as HTMLElement;
+    expect(within(card).getByText("Требование пояснений по НДС")).toBeVisible();
+  });
+
   it("срочное письмо: запросить перенос можно, с пояснением, что директор может только отклонить", async () => {
     inExecution({ urgent: true });
     signIn("universal@demo.example");
@@ -239,11 +265,11 @@ describe("Рабочий экран поручения (P8b, SPEC-v3 §3.2a п. 
     }
     const replyInstruction = () => instruction({ kind: "reply", text: "Подготовить ответ" });
 
-    it("ответа нет: «Подготовить ответ» передаёт форме id письма, чтобы она заполнилась из него", async () => {
+    it("ответа нет: «Ответить» передаёт форме id письма, чтобы она заполнилась из него", async () => {
       inExecution({ instructions: [replyInstruction()] });
       signIn("universal@demo.example");
       renderAt(PATH);
-      const link = await screen.findByRole("link", { name: "Подготовить ответ" });
+      const link = await screen.findByRole("link", { name: "Ответить" });
       expect(link).toHaveAttribute(
         "href",
         `/eds/new?type=letter&reply_to=${encodeURIComponent("ВХ-108/26")}&reply_id=${LETTER_ID}`,
@@ -257,7 +283,7 @@ describe("Рабочий экран поручения (P8b, SPEC-v3 §3.2a п. 
       signIn("universal@demo.example");
       renderAt(PATH);
       const block = await screen.findByRole("heading", { level: 2, name: "Ответ на письмо" });
-      expect(screen.queryByRole("link", { name: "Подготовить ответ" })).toBeNull();
+      expect(screen.queryByRole("link", { name: "Ответить" })).toBeNull();
       const card = block.closest(".ant-card") as HTMLElement;
       expect(within(card).getByText(/Черновик ответа/)).toBeVisible();
       const links = screen.getAllByRole("link", { name: /Продолжить ответ/ });

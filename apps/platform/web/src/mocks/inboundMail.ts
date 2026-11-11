@@ -316,6 +316,11 @@ function finish(
   }));
 }
 
+/** Текст письма ящика: BFF при регистрации ВХ кладёт его в карточку (решение владельца 2026-11-11). */
+export function mailText(id: number): string | null {
+  return read().find((m) => m.id === id)?.text || null;
+}
+
 /** Делопроизводитель зарегистрировал ВХ из письма — как CRM по событию `letter.registered`. */
 export function markMailRegistered(id: number, number: string): void {
   const v = viewer();

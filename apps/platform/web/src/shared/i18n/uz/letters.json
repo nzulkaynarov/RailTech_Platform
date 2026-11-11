@@ -623,8 +623,8 @@
       "error": "Hisobot yozing, fayl biriktiring yoki chiquvchi xat raqamini ko‘rsating."
     },
     "reply": {
-      "prepare": "Javob tayyorlash",
-      "hint": "«Hujjat yaratish → Xat» «{{number}} ga javoban»: xat ro‘yxatga olinsa, topshiriq yopiladi."
+      "prepare": "Javob berish",
+      "hint": "Javob roʻyxatdan oʻtkazilsa, topshiriq yopiladi."
     },
     "ext": {
       "title": "Ulgurmayapsizmi? Uzaytirishni so‘rang",
@@ -643,7 +643,12 @@
       "submit": "Tanishdim",
       "done": "Belgilandi: tanishdim"
     },
-    "failed": "Saqlanmadi: {{reason}}."
+    "failed": "Saqlanmadi: {{reason}}.",
+    "body": {
+      "showAll": "Xatni toʻliq koʻrsatish",
+      "collapse": "Yigʻish"
+    },
+    "details": "Rekvizitlar"
   },
   "mail": {
     "subtitle": "Umumiy qutidagi xatlar: har birini ko‘rib chiqing — kiruvchi sifatida ro‘yxatga oling, lid yarating yoki arxivga yuboring",

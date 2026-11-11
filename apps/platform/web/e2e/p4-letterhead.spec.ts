@@ -162,7 +162,7 @@ test.describe("P4: письмо на бланке", () => {
     await queueRow(page, "Подготовить ответ на письмо ВХ-109/26")
       .getByRole("link", { name: /^Открыть:/ })
       .click();
-    await page.getByRole("link", { name: "Подготовить ответ" }).click();
+    await page.getByRole("link", { name: "Ответить" }).click();
     await expect(page).toHaveURL(/\/eds\/new\?type=letter&reply_to=/);
     await expect(page.getByLabel("В ответ на входящее")).toHaveValue("ВХ-109/26");
     await page.getByLabel("Тема").fill("Пояснения по требованию № 14-02/3381");

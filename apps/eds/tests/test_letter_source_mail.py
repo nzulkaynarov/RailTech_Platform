@@ -91,3 +91,23 @@ async def test_parallel_registrations_of_one_mail_give_one_letter(
     assert first.json()["id"] == second.json()["id"]
     assert await letters_count(container) == 1
     assert len(await outbox(container, "letter.registered")) == 1
+
+
+async def test_mail_text_is_kept_in_the_letter_card_but_not_in_the_bus_event(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    """Исполнитель видит само письмо (решение владельца 2026-11-11): текст из почты — в карточке ВХ, не в событии."""
+    who = staff["registrar"]
+    payload = body(mail_id=21, sender_ref={"number": "21"})
+    payload["source"]["text"] = "Добрый день!\nПредлагаем сотрудничество."
+    created = await post(client, who, payload, "mail-21-text")
+    plain = await post(client, who, body(mail_id=None, sender_ref={"number": "22"}), "plain-22")
+
+    assert created.status_code == 201, created.text
+    validate("Letter", created.json())
+    assert created.json()["body_text"] == "Добрый день!\nПредлагаем сотрудничество."
+    card = await client.get(f"/api/v1/letters/{created.json()['id']}", headers=who.headers)
+    assert card.json()["body_text"] == "Добрый день!\nПредлагаем сотрудничество."
+    assert plain.json()["body_text"] is None
+    sources = [e["data"].get("source") for e in await outbox(container, "letter.registered")]
+    assert {"crm_inbound_mail_id": 21} in sources
