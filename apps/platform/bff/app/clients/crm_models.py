@@ -2042,7 +2042,6 @@ class SpendSlice(BaseModel):
 
 
 class SsoTokenResponse(BaseModel):
-    redirect_url: Annotated[str, Field(title="Redirect Url")]
     token: Annotated[str, Field(title="Token")]
 
 

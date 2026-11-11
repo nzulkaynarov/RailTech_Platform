@@ -54,7 +54,6 @@ async def _me_out(view: UserView, container: Container) -> MeOut:
     return MeOut(
         **base,
         platform_role_refs=refs,
-        sso_enabled=container.settings.platform_sso_enabled,
         deputy_name=await container.staff_deputy.deputy_name(view.deputy_user_id),
         whats_new_shown=view.whats_new_shown,
         whats_new_read=view.whats_new_read,

@@ -12,7 +12,6 @@ from app.schemas.auth import (
     ForgotPasswordRequest,
     LoginRequest,
     ResetPasswordRequest,
-    SsoExchangeRequest,
     SsoTokenRequest,
     SsoTokenResponse,
     TokenResponse,
@@ -125,19 +124,10 @@ async def sso_token(
 ) -> SsoTokenResponse:
     """Выдать SSO-токен текущему сотруднику (CONTRACTS §6, sso-token.md).
 
-    Без тела или с `aud = erp` — переход в ERP; `aud = eds` — токен сотрудника для обмена в EDS
-    (у EDS нет внешнего маршрута: `redirect_url` пуст).
+    Без тела или с `aud = erp` — токен для обмена на сессию ERP; `aud = eds` — для обмена в EDS.
+    Обменивает его BFF Платформы.
     """
-    token, redirect_url = await container.sso_service.issue_token(
+    token = await container.sso_service.issue_token(
         principal.user_id, aud=body.aud if body else "erp"
     )
-    return SsoTokenResponse(token=token, redirect_url=redirect_url)
-
-
-@router.post("/sso/exchange", response_model=TokenResponse)
-async def sso_exchange(
-    body: SsoExchangeRequest, request: Request, response: Response, container: ContainerDep
-) -> TokenResponse:
-    """Обменять SSO-токен из ERP на сессию CRM (CONTRACTS §6)."""
-    session = await container.sso_service.exchange_token(body.token, _client(request))
-    return respond_with_session(response, session, container.settings)
+    return SsoTokenResponse(token=token)

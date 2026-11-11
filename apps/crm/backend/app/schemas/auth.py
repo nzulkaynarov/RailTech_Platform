@@ -111,8 +111,6 @@ class MeOut(UserOut):
 
     platform_role_refs: list[PlatformRoleGrantRef] = Field(default_factory=list)  # type: ignore[assignment]
 
-    # Переход в ERP по SSO включён (PLATFORM_SSO_ENABLED, FIX-03); иначе кнопки «В бэк-офис» нет.
-    sso_enabled: bool = False
     # Имя заместителя (W15-H6), чтобы экран не ходил за справочником.
     deputy_name: str | None = None
     # «Что нового» (W-REL): дата записи, до которой показано окно «Платформа обновлена», и дата
@@ -272,9 +270,4 @@ class SsoTokenRequest(BaseModel):
 
 
 class SsoTokenResponse(BaseModel):
-    token: str
-    redirect_url: str
-
-
-class SsoExchangeRequest(BaseModel):
     token: str

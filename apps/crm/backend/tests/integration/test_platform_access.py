@@ -50,7 +50,6 @@ def client(
         update={
             "platform_sso_enabled": True,
             "platform_sso_secret": SecretStr(SSO_SECRET),
-            "erp_frontend_url": "http://erp.localhost",
         }
     )
     app = create_app(settings)

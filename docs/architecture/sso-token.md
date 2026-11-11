@@ -1,5 +1,5 @@
-# SSO-токен сотрудника (CRM ↔ ERP, CRM → EDS)
-Статус: действует · Владелец: архитектор · Обновлено: 2026-10-26
+# SSO-токен сотрудника (CRM → ERP, CRM → EDS)
+Статус: действует · Владелец: архитектор · Обновлено: 2026-11-11
 
 Источник: `docs/architecture/CONTRACTS.md` §6, ADR-0003. Версия 0 (M0-INF-02). Реализация: ERP — M3-ERP-04, CRM — M3-CRM-06.
 
@@ -10,8 +10,8 @@ JWT **HS256**, общий секрет `PLATFORM_SSO_SECRET` (секрет ок�
 
 | Claim | Тип | Значение |
 |---|---|---|
-| `iss` | string | `crm` или `erp` — кто выдал |
-| `aud` | string | `erp`, `crm` или `eds` — целевая система (приёмник отклоняет чужой `aud`; EDS — раздел «Токен сотрудника для EDS») |
+| `iss` | string | `crm` — выдаёт только CRM |
+| `aud` | string | `erp` или `eds` — целевая система (приёмник отклоняет чужой `aud`; EDS — раздел «Токен сотрудника для EDS») |
 | `sub` | string | `crm_user_id` как строка — идентификатор сотрудника в CRM (источник истины по людям) |
 | `email` | string | e-mail сотрудника |
 | `name` | string | отображаемое имя |
@@ -40,13 +40,13 @@ JWT **HS256**, общий секрет `PLATFORM_SSO_SECRET` (секрет ок�
 
 ## Передача
 
-1. Пользователь нажимает переключатель в шапке. CRM показывает его, только если `platform_access` пользователя
-   содержит `erp` (см. «Доступ»); ERP — только у пользователя с сопоставлением `CrmUserMapping`, то есть
-   провижиненного из CRM. Флаг `PLATFORM_SSO_ENABLED` должен быть включён на стороне, где нажата кнопка.
-2. Исходная система выдаёт токен (`POST /api/v1/auth/sso/token` в ERP; аналог в CRM) и перенаправляет
-   браузер на точку приёма: `https://erp.railtech.uz/sso/exchange#token=<jwt>` (фрагмент, не query:
-   токен не попадает в логи прокси).
-3. SPA приёмника читает фрагмент и вызывает `POST /api/v1/auth/sso/exchange {token}`.
+Токен получает и обменивает только BFF Платформы, браузер его не видит (`docs/architecture/platform-bff.md` §3):
+вход сотрудника → CRM `POST /api/v1/auth/sso/token` (токеном сотрудника) → ERP `POST /api/v1/auth/sso/exchange/` → сессия ERP
+в сессии BFF. Флаг `PLATFORM_SSO_ENABLED` должен быть включён в CRM и ERP: без него Платформа не получает данные ERP.
+
+Переход между старыми SPA (кнопка в шапке, точка приёма `/sso/exchange#token=` в браузере) и обратное направление
+(токен ERP `aud=crm` → сессия CRM) удалены вместе со старыми фронтами 2026-11-11: CRM 0.22.0 без `POST /auth/sso/exchange`
+и без `redirect_url` в ответе выдачи.
 
 ## Проверка приёмником (по порядку)
 
@@ -57,19 +57,17 @@ JWT **HS256**, общий секрет `PLATFORM_SSO_SECRET` (секрет ок�
 3. `exp` не прошёл; допуск часов ≤ 5 с. Срок жизни строго ограничен: **`exp − iat ≤ 60`** (с тем же допуском
    5 с, т.е. не больше 65 с) — токен с большим сроком отклоняется, даже если подпись верна.
 4. `jti` не встречался: приёмник хранит использованные `jti` 10 минут (Redis / таблица).
-5. Пользователь найден **только по `sub`** (ERP: `CrmUserMapping.crm_user_id`; CRM: `users.id`) и активен, иначе
+5. Пользователь найден **только по `sub`** (ERP: `CrmUserMapping.crm_user_id`; EDS: проекция сотрудников) и активен, иначе
    403 `USER_NOT_PROVISIONED` (неактивен — 403 `USER_INACTIVE`). Поиска по e-mail нет; обмен **не создаёт**
    пользователей и не привязывает существующих. Из токена обновляются только `email` и `name`; `role` и
    `permissions` не применяются при обмене — они приходят только провижинингом
    (`POST /api/integration/v1/users/provision`), `is_superuser` обмен не меняет.
 6. Выдаётся собственная сессия приёмника; в аудит пишется `sso.exchange` с `iss`, `sub`, `jti`, IP.
 
-Выдача токена (`POST /api/v1/auth/sso/token`): `sub` — только сопоставление сотрудника с `crm_user_id`
-(ERP: `CrmUserMapping`); нет сопоставления → 403 `USER_NOT_PROVISIONED`, запасного значения (`user.pk`) нет.
-CRM выдаёт токен только при `erp` в `platform_access` (иначе 403, `details.reason = platform_access_denied`).
+Выдача токена (CRM `POST /api/v1/auth/sso/token`, ответ `{"token"}`): `sub` — `users.id` сотрудника CRM. Токен для ERP —
+только при `erp` в `platform_access` (иначе 403, `details.reason = platform_access_denied`).
 
-Формат ошибки 403 по п. 5 у CRM — `details.reason = user_not_provisioned` (подкод `Reason.USER_NOT_PROVISIONED`,
-ADR-0017), у ERP — `{"detail": "USER_NOT_PROVISIONED"}`; неактивный — `user_inactive` / `USER_INACTIVE`.
+Формат ошибки 403 по п. 5 у ERP — `{"detail": "USER_NOT_PROVISIONED"}`, у EDS — `USER_NOT_PROVISIONED`; неактивный — `USER_INACTIVE`.
 
 ## Токен сотрудника для EDS
 

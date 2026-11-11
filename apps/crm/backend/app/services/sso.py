@@ -1,38 +1,29 @@
-"""Сервис платформенного SSO CRM ↔ ERP (CONTRACTS §6, docs/architecture/sso-token.md, M3-CRM-06).
+"""Выпуск SSO-токена сотрудника для ERP и EDS (CONTRACTS §6, docs/architecture/sso-token.md).
 
-Реализует:
-1. Выпуск SSO-токена в ERP или EDS (iss=crm, aud=erp|eds, sub=crm_user_id).
-2. Проверку и обмен SSO-токена из ERP (iss=erp, aud=crm) на сессию CRM с защитой от replay-атак.
+Токен (iss=crm, aud=erp|eds, sub=crm_user_id) обменивает BFF Платформы на сессию ERP или токен EDS.
+Обратного обмена (токен ERP -> сессия CRM) нет: он служил переходу из старого ERP в старую CRM.
 """
 
 from __future__ import annotations
 
-import contextlib
 import time
 import uuid
 from collections.abc import Mapping
-from datetime import UTC, datetime, timedelta
 from typing import Literal
 
 import jwt
 import structlog
-from sqlalchemy import delete
-from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.bus import events as bus_events
 from app.bus import snapshots
 from app.config import Settings
 from app.domain.erp_permissions import erp_access
 from app.domain.erp_sync import ERP
-from app.domain.errors import AuthError, ConflictError, ForbiddenError, Reason
-from app.models.auth import SsoReplayToken, User
+from app.domain.errors import ConflictError, ForbiddenError, Reason
+from app.models.auth import User
 from app.repositories import platform_roles as platform_roles_repo
 from app.repositories import users as repo
-from app.security import audit
-from app.security.audit import Actor
-from app.security.tokens import new_family
-from app.services.auth import AuthService, ClientInfo, Session
+from app.services.auth import AuthService
 
 logger = structlog.get_logger(__name__)
 
@@ -52,11 +43,9 @@ class SsoService:
         self._settings = settings
         self._auth_service = auth_service
 
-    async def issue_token(
-        self, user_id: int, aud: Literal["erp", "eds"] = "erp"
-    ) -> tuple[str, str]:
-        """Выпустить JWT SSO-токен: `erp` — переход текущего сотрудника в ERP; `eds` — токен
-        сотрудника для обмена в EDS (sso-token.md, «Токен сотрудника для EDS»)."""
+    async def issue_token(self, user_id: int, aud: Literal["erp", "eds"] = "erp") -> str:
+        """Выпустить JWT SSO-токен сотрудника: `erp` — для обмена на сессию ERP, `eds` — на токен
+        EDS (sso-token.md, «Токен сотрудника для EDS»)."""
         if not self._settings.platform_sso_enabled:
             raise ForbiddenError("platform sso is disabled")
         async with self._sessions() as session:
@@ -74,7 +63,7 @@ class SsoService:
                 )
                 if user is None or not eds_permissions:
                     raise ForbiddenError("no permissions in eds", reason=Reason.EDS_ACCESS_DENIED)
-                return self._encode(user, aud, {"permissions": eds_permissions}), ""
+                return self._encode(user, aud, {"permissions": eds_permissions})
             if user is None or not user.is_active:
                 raise ForbiddenError("user inactive", reason=Reason.USER_INACTIVE)
             # Переход в ERP — только тем, кому админ выдал доступ (FIX-11, S-5); истина здесь,
@@ -88,12 +77,7 @@ class SsoService:
         # Права — по карте «роль CRM → каталог ERP» (S-11): ни одного кода вне каталога ERP.
         access = erp_access(roles)
         claims = {"role": _primary_role(roles), "permissions": list(access.permissions)}
-        token = self._encode(user, aud, claims)
-
-        erp_base = self._settings.erp_frontend_url.rstrip("/")
-        redirect_url = f"{erp_base}/sso/exchange"
-
-        return token, redirect_url
+        return self._encode(user, aud, claims)
 
     def _encode(self, user: User, aud: str, claims: Mapping[str, object]) -> str:
         """JWT HS256 первым значением `PLATFORM_SSO_SECRET`; срок жизни — 60 с, `jti` — UUID v4."""
@@ -115,116 +99,6 @@ class SsoService:
             "jti": str(uuid.uuid4()),
         }
         return jwt.encode(payload, secrets[0], algorithm=SSO_ALGORITHM)
-
-    async def exchange_token(self, token: str, client: ClientInfo) -> Session:
-        """Проверить SSO-токен от ERP и обменять его на сессию CRM."""
-        if not self._settings.platform_sso_enabled:
-            raise ForbiddenError("platform sso is disabled")
-        if not token or not isinstance(token, str):
-            raise AuthError("token required")
-
-        secrets = self._settings.platform_sso_secrets
-        payload = None
-        last_err: Exception | None = None
-
-        for secret in secrets:
-            try:
-                payload = jwt.decode(
-                    token,
-                    secret,
-                    algorithms=[SSO_ALGORITHM],
-                    audience="crm",
-                    issuer="erp",
-                    leeway=SSO_CLOCK_LEEWAY_S,
-                    options={"require": ["exp", "iat", "sub", "iss", "aud", "jti"]},
-                )
-            except (
-                jwt.ExpiredSignatureError,
-                jwt.InvalidAudienceError,
-                jwt.InvalidIssuerError,
-            ) as exc:
-                last_err = exc
-                break
-            except jwt.PyJWTError as exc:
-                last_err = exc
-                continue
-
-        if payload is None:
-            logger.warning("sso_verification_failed", error=str(last_err))
-            raise AuthError("invalid sso token")
-
-        # Срок жизни: exp − iat ≤ 60 с (+ допуск часов), иначе отказ даже при верной подписи (S-7).
-        try:
-            lifetime = int(payload["exp"]) - int(payload["iat"])
-        except (ValueError, TypeError):
-            raise AuthError("invalid sso token") from None
-        if lifetime <= 0 or lifetime > SSO_TOKEN_TTL_S + SSO_CLOCK_LEEWAY_S:
-            logger.warning("sso_lifetime_exceeded", lifetime=lifetime)
-            raise AuthError("invalid sso token")
-
-        jti = payload.get("jti")
-        if not jti or not isinstance(jti, str):
-            raise AuthError("invalid jti")
-
-        now_dt = datetime.now(UTC)
-
-        async with self._sessions() as session, session.begin():
-            # Очистка устаревших jti старше 15 минут
-            await session.execute(
-                delete(SsoReplayToken).where(
-                    SsoReplayToken.created_at < now_dt - timedelta(minutes=15)
-                )
-            )
-
-            # Одноразовость jti держит сама БД: параллельный повтор ждёт первую вставку и
-            # пустой ответ ON CONFLICT DO NOTHING — тот же отказ, а не IntegrityError и 500.
-            claimed = await session.execute(
-                insert(SsoReplayToken)
-                .values(jti=jti)
-                .on_conflict_do_nothing(index_elements=[SsoReplayToken.jti])
-                .returning(SsoReplayToken.jti)
-            )
-            if claimed.scalar_one_or_none() is None:
-                logger.warning("sso_replay_detected", jti=jti)
-                raise AuthError("token already used")
-
-            # Пользователь — только по sub (id в CRM); по e-mail не ищем
-            # (docs/architecture/sso-token.md, S-3).
-            user: User | None = None
-            with contextlib.suppress(ValueError, TypeError):
-                user = await session.get(User, int(payload["sub"]))
-
-            if user is None:
-                raise ForbiddenError("user not provisioned", reason=Reason.USER_NOT_PROVISIONED)
-            if not user.is_active:
-                raise ForbiddenError("user inactive", reason=Reason.USER_INACTIVE)
-
-            name = str(payload.get("name") or "").strip()
-            if name and user.full_name != name:
-                user.full_name = name
-                await bus_events.user_updated(
-                    session, user, Actor(user.id, ip=client.ip), ["full_name"]
-                )
-
-            await audit.record(
-                session,
-                Actor(user.id, ip=client.ip),
-                "sso.exchange",
-                "user",
-                user.id,
-                after={
-                    "iss": payload.get("iss"),
-                    "sub": payload.get("sub"),
-                    "jti": jti,
-                    "ip": client.ip or "",
-                },
-            )
-
-            session_data = await self._auth_service._issue(
-                session, user, new_family(), client, now_dt
-            )
-
-        return session_data
 
 
 def _primary_role(roles: list[str]) -> str:

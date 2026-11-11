@@ -57,7 +57,6 @@ def client(
         update={
             "platform_sso_enabled": True,
             "platform_sso_secret": SecretStr(SSO_SECRET),
-            "erp_frontend_url": "http://erp.localhost",
         }
     )
     yield from make_client(sessions, settings, queue)

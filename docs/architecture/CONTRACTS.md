@@ -210,13 +210,13 @@ JSON-integer, не `true`), `iat` и `exp` обязательны, `exp − iat 
 
 ## 6. SSO-токен сотрудника
 
-JWT HS256, секрет `PLATFORM_SSO_SECRET` общий. Claims: `iss` (`crm`|`erp`), `aud` (целевая система),
+JWT HS256, секрет `PLATFORM_SSO_SECRET` общий. Выдаёт CRM, обменивает BFF Платформы. Claims: `iss` (`crm`), `aud` (`erp`|`eds`),
 `sub` (`crm_user_id`), `email`, `name`, `role`, `permissions[]`, `iat`, `exp` (= iat + 60 с), `jti`.
 Приёмник: проверяет подпись, `aud`, срок, одноразовость `jti` (хранит 10 мин), находит пользователя по `sub`
 (не создаёт), выдаёт свою сессию, пишет аудит. Доступом к ERP управляет CRM: `users.platform_access`
-(`["crm"]` по умолчанию, `["crm","erp"]` — доступ выдан). Переключатель в шапке CRM и выдача токена
-(`POST /api/v1/auth/sso/token`, иначе 403) — только при `erp` в `platform_access`; в шапке ERP — только у
-пользователя с сопоставлением `CrmUserMapping`. Выдача доступа → провижининг в ERP, снятие → отзыв сессий
+(`["crm"]` по умолчанию, `["crm","erp"]` — доступ выдан). Выдача токена для ERP (`POST /api/v1/auth/sso/token`,
+ответ `{"token"}`, иначе 403) — только при `erp` в `platform_access`. Переходов между старыми SPA и обратного направления
+(токен ERP → сессия CRM) нет с 2026-11-11. Выдача доступа → провижининг в ERP, снятие → отзыв сессий
 (очередь CRM, ошибки ERP — в центре внешних сервисов). Роль CRM → коды прав ERP: `docs/architecture/sso-token.md`.
 Токен для EDS (`aud = eds`, обмен на токен доступа EDS, права — проекция `identity.user.*`) — §10.3 и `sso-token.md`,
 «Токен сотрудника для EDS».

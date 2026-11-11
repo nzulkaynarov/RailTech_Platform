@@ -45,7 +45,6 @@ def sso_settings() -> Settings:
         postgres_password="test-password",
         platform_sso_secret=SecretStr(f"{SECRET_1},{SECRET_2}"),
         platform_sso_enabled=True,
-        erp_frontend_url="http://erp.localhost",
         jwt_secret=SecretStr("crm-jwt-secret-at-least-32-chars-long"),
     )
 
@@ -86,7 +85,7 @@ async def test_director_gets_an_eds_token_with_the_document_codes(
     user = _active_user(7)
     roles_of[7] = [make_role("DIRECTOR")]
 
-    token, redirect_url = await _service(sso_settings, user).issue_token(7, aud="eds")
+    token = await _service(sso_settings, user).issue_token(7, aud="eds")
 
     claims = _decode(token)
     assert set(claims) == {"iss", "aud", "sub", "email", "name", "permissions", "iat", "exp", "jti"}
@@ -99,7 +98,6 @@ async def test_director_gets_an_eds_token_with_the_document_codes(
     assert claims["permissions"] == sorted(
         set(EDS_PERMISSIONS) - {"bus.manage", "signing.manage", "payments.confirm"}
     )
-    assert redirect_url == "", "у EDS нет внешнего маршрута"
 
 
 @pytest.mark.asyncio
@@ -109,7 +107,7 @@ async def test_token_is_signed_with_the_first_secret_only(
     user = _active_user(7)
     roles_of[7] = [make_role("ADMIN")]
 
-    token, _ = await _service(sso_settings, user).issue_token(7, aud="eds")
+    token = await _service(sso_settings, user).issue_token(7, aud="eds")
 
     assert _decode(token)["permissions"] == ["bus.manage", "memos.create", "signing.manage"]
     with pytest.raises(jwt.InvalidSignatureError):
@@ -123,7 +121,7 @@ async def test_two_roles_give_the_union_of_their_codes(
     user = _active_user(7)
     roles_of[7] = [make_role("MANAGER"), make_role("ACCOUNTANT")]
 
-    token, _ = await _service(sso_settings, user).issue_token(7, aud="eds")
+    token = await _service(sso_settings, user).issue_token(7, aud="eds")
 
     # MANAGER (`crm.clients: full`) добавляет свой файл в EDS — письмо директору (D1-2b)
     assert _decode(token)["permissions"] == sorted([*ACCOUNTANT, "files.upload"])
@@ -137,8 +135,8 @@ async def test_each_token_has_its_own_jti(
     roles_of[7] = [make_role("MANAGER")]
     service = _service(sso_settings, user)
 
-    first, _ = await service.issue_token(7, aud="eds")
-    second, _ = await service.issue_token(7, aud="eds")
+    first = await service.issue_token(7, aud="eds")
+    second = await service.issue_token(7, aud="eds")
 
     assert _decode(first)["jti"] != _decode(second)["jti"]
 
@@ -180,12 +178,11 @@ async def test_erp_token_is_unchanged_by_the_eds_branch(
     user = _active_user(7)
     roles_of[7] = [make_role("DIRECTOR")]
 
-    token, redirect_url = await _service(sso_settings, user).issue_token(7)
+    token = await _service(sso_settings, user).issue_token(7)
 
     claims = jwt.decode(token, SECRET_1, algorithms=["HS256"], audience="erp", issuer="crm")
     assert claims["aud"] == "erp"
     assert "role" in claims
-    assert redirect_url == "http://erp.localhost/sso/exchange"
     with pytest.raises(jwt.InvalidAudienceError):
         _decode(token)
 
@@ -197,7 +194,7 @@ async def test_eds_token_needs_no_erp_access(
     user = _active_user(7, platform_access=["crm"])
     roles_of[7] = [make_role("MANAGER")]
 
-    token, _ = await _service(sso_settings, user).issue_token(7, aud="eds")
+    token = await _service(sso_settings, user).issue_token(7, aud="eds")
 
     assert _decode(token)["sub"] == "7"
 
@@ -260,7 +257,7 @@ def test_api_without_audience_or_with_erp_issues_the_erp_token(
         resp.json()["token"], SECRET_1, algorithms=["HS256"], audience="erp", issuer="crm"
     )
     assert claims["aud"] == "erp"
-    assert resp.json()["redirect_url"] == "http://erp.localhost/sso/exchange"
+    assert set(resp.json()) == {"token"}
 
 
 def test_api_without_a_body_issues_the_erp_token(
@@ -269,7 +266,12 @@ def test_api_without_a_body_issues_the_erp_token(
     resp = _client(sso_settings, _active_user(7)).post("/api/v1/auth/sso/token")
 
     assert resp.status_code == 200, resp.text
-    assert resp.json()["redirect_url"] == "http://erp.localhost/sso/exchange"
+    assert (
+        jwt.decode(
+            resp.json()["token"], SECRET_1, algorithms=["HS256"], audience="erp", issuer="crm"
+        )["aud"]
+        == "erp"
+    )
 
 
 @pytest.mark.parametrize("aud", ["crm", "ERP", "", "eds-api", 7])

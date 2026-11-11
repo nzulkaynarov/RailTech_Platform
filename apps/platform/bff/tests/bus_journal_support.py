@@ -157,9 +157,7 @@ class BusDomainsFake:
         aud = body.get("aud", "erp")
         self.sso_auds.append(aud)
         if aud != "eds":
-            return httpx.Response(
-                200, json={"token": "sso-token-1", "redirect_url": "http://erp.test/sso"}
-            )
+            return httpx.Response(200, json={"token": "sso-token-1"})
         if self.eds_sso_status != 200:
             return httpx.Response(
                 self.eds_sso_status,
@@ -169,9 +167,7 @@ class BusDomainsFake:
                     "details": {"reason": "eds_access_denied"},
                 },
             )
-        return httpx.Response(
-            200, json={"token": f"sso-eds-{len(self.sso_auds)}", "redirect_url": ""}
-        )
+        return httpx.Response(200, json={"token": f"sso-eds-{len(self.sso_auds)}"})
 
     def exchange_response(self, request: httpx.Request) -> httpx.Response:
         """Ответ обмена в EDS (тест может обернуть его, например, задержкой)."""

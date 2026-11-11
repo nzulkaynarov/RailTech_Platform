@@ -147,7 +147,6 @@ class Settings(BaseSettings):
     # Переход CRM ↔ ERP выключен до волны 1 исправлений (FIX-03, аудит S-2/S-3): сейчас обмен
     # токена небезопасен. Включает владелец после FIX-10/FIX-11.
     platform_sso_enabled: bool = False
-    erp_frontend_url: str = "http://erp.localhost"
 
     # Публичные адреса для ссылок в письмах сотрудникам (W15-H8a). Сотрудники входят в Платформу
     # (`<адрес>/login`), не в старый фронт CRM. Явный `*_PUBLIC_URL` главнее домена; compose
