@@ -581,8 +581,11 @@ jobs:
       # BFF и стенд не нужны: сборка в режиме mock, API отвечает MSW (VITE_API_MOCKING задаёт playwright.config.ts)
       - name: Playwright + axe
         working-directory: apps/platform/web
+        # Системные пакеты (шрифты и библиотеки) ставятся отдельно и не валят прогон: при сбое зеркал Ubuntu (DNS раннера,
+        # 2026-11-11) браузер работает на библиотеках образа раннера; снимки в CI попиксельно не сравниваются.
         run: |
-          pnpm exec playwright install --with-deps chromium
+          pnpm exec playwright install chromium
+          pnpm exec playwright install-deps chromium || echo "::warning::Системные пакеты Playwright не поставились (зеркала Ubuntu недоступны) — прогон на библиотеках образа раннера"
           pnpm exec playwright test --shard=${{ matrix.shard }}/3
       - uses: actions/upload-artifact@v7
         if: failure()
