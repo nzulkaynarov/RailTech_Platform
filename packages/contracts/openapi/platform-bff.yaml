@@ -1,12 +1,15 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.45.0
+  version: 0.46.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
     сессия, профиль, счётчики меню, «Моя очередь», лента «Сегодня», уведомления, поиск. Экраны фаз P2–P4 добавляются
     в этот файл до кода (`docs/architecture/integration-map.md` §1).
+
+    **0.46.0 (выгрузки) — ломающее по oasdiff (до 1.0 допустимо).** `GET /admin/bot/exports/{entity}` — только `deals`: выгрузки
+    лидов и клиентов (персональные данные) убраны по решению владельца 2026-11-11, фильтры `q`, `language`, `created_*` — с ними.
 
     **0.45.0 (снос старых фронтов) — ломающее по oasdiff (до 1.0 допустимо).** Удалены `GET /bridge` и `POST /bridge/erp-sso`
     (тег `bridge`, схемы `Bridge` и `BridgeErpSso`): старых SPA CRM и ERP больше нет, их адреса ведут в Платформу, мост не нужен.
@@ -8334,59 +8337,39 @@ paths:
     get:
       tags: [bot]
       operationId: downloadCsvExport
-      summary: 'Выгрузка CSV: лиды, клиенты или сделки'
+      summary: 'Выгрузка CSV сделок'
       description: >-
-        CRM `GET /export/{leads|clients|deals}.csv`. Нужен `admin: full` (право CRM `export:read`) **и** чтение выгружаемых данных:
-        лиды — `crm.leads`, клиенты и сделки — `crm.clients` (системная «Администратор» без второй роли бизнес-данные не
-        выгружает, R3-D-2). BFF проверяет оба раздела и отдаёт файл потоком, не накапливая его в памяти: CSV для Excel (UTF-8 с BOM,
-        разделитель `;`), до 10 000 строк, имя файла с датой в `Content-Disposition` (`leads-20261026-1530.csv`). Каждая выгрузка
-        пишется в журнал аудита CRM. Фильтры — как на экранах списков; недопустимый — 422.
+        CRM `GET /export/deals.csv`. Только сделки, без контактов (решение владельца 2026-11-11; выгрузки лидов и клиентов
+        убраны в 0.46.0). Нужен `admin: full` (право CRM `export:read`) **и** чтение `crm.clients` (системная «Администратор»
+        без второй роли бизнес-данные не выгружает, R3-D-2). BFF отдаёт файл потоком, не накапливая его в памяти: CSV для Excel
+        (UTF-8 с BOM, разделитель `;`), до 10 000 строк, имя файла с датой в `Content-Disposition` (`deals-20261026-1530.csv`).
+        Каждая выгрузка пишется в журнал аудита CRM. Недопустимый фильтр — 422.
       parameters:
         - name: entity
           in: path
           required: true
-          schema: {type: string, enum: [leads, clients, deals]}
-        - name: q
-          in: query
-          required: false
-          description: 'Поиск (лиды, клиенты), до 100 символов'
-          schema: {type: string, maxLength: 100}
+          schema: {type: string, enum: [deals]}
         - name: stage
           in: query
           required: false
-          description: 'Стадия: у сделок `open`, `won`, `lost`; у лидов — код стадии CRM'
+          description: 'Стадия сделки: `open`, `won`, `lost`'
           schema: {type: string, maxLength: 32}
-        - name: language
-          in: query
-          required: false
-          description: Лиды — язык
-          schema: {$ref: '#/components/schemas/Language'}
-        - name: created_from
-          in: query
-          required: false
-          description: Лиды — созданы не раньше (дата-время)
-          schema: {type: string, format: date-time}
-        - name: created_to
-          in: query
-          required: false
-          description: Лиды — созданы не позже (дата-время)
-          schema: {type: string, format: date-time}
         - name: closed_from
           in: query
           required: false
-          description: Сделки — закрыты не раньше
+          description: Закрыты не раньше
           schema: {type: string, format: date}
         - name: closed_to
           in: query
           required: false
-          description: Сделки — закрыты не позже
+          description: Закрыты не позже
           schema: {type: string, format: date}
       responses:
         '200':
           description: Файл CSV
           headers:
             Content-Disposition:
-              description: '`attachment; filename="leads-20261026-1530.csv"`'
+              description: '`attachment; filename="deals-20261026-1530.csv"`'
               schema:
                 type: string
           content:

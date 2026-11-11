@@ -274,29 +274,21 @@ test.describe("Настройки бота: выгрузки CSV", () => {
   }) => {
     await loginAndWait(page, "admin@demo.example");
     await openBot(page, "exports");
-    for (const title of ["Лиды", "Клиенты", "Сделки"]) {
-      await expect(page.getByRole("button", { name: `Скачать: ${title}` })).toBeDisabled();
-    }
-    await expect(page.getByText(/нужен раздел «Клиенты · Лиды»/)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Скачать: Сделки" })).toBeDisabled();
+    await expect(page.getByText(/нужен раздел «Клиенты · Клиенты»/)).toBeVisible();
     await settledScreenshot(page, "exports-admin-only");
 
     await page.evaluate("window.localStorage.clear()");
     await spaGoto(page, "/login");
     await loginAndWait(page, "all@demo.example");
     await openBot(page, "exports");
-    const leads = page.locator('article[data-entity="leads"]');
-    await leads.getByLabel("Язык").click();
-    await page.getByTitle("Узбекский").click();
-    const download = page.waitForEvent("download");
-    await leads.getByRole("button", { name: "Скачать: Лиды" }).click();
-    expect((await download).suggestedFilename()).toBe("leads-20261026-1430.csv");
-    await expect(page.getByText("Файл «leads-20261026-1430.csv» скачан")).toBeVisible();
-    await settledScreenshot(page, "exports");
-
+    await expect(page.locator('article[data-entity="leads"]')).toHaveCount(0);
     const deals = page.locator('article[data-entity="deals"]');
-    const second = page.waitForEvent("download");
+    const download = page.waitForEvent("download");
     await deals.getByRole("button", { name: "Скачать: Сделки" }).click();
-    expect((await second).suggestedFilename()).toBe("deals-20261026-1430.csv");
+    expect((await download).suggestedFilename()).toBe("deals-20261026-1430.csv");
+    await expect(page.getByText("Файл «deals-20261026-1430.csv» скачан")).toBeVisible();
+    await settledScreenshot(page, "exports");
   });
 });
 
@@ -369,7 +361,7 @@ test.describe("Настройки бота: права", () => {
       page.getByRole("link", { name: "Открыть шаблон: Пришлю КП сегодня" }),
     ).toBeVisible();
     await openBot(page, "exports");
-    await expect(page.getByRole("button", { name: "Скачать: Лиды" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Скачать: Сделки" })).toBeDisabled();
     await settledScreenshot(page, "director-view");
   });
 

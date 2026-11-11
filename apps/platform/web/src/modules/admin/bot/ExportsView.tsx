@@ -1,4 +1,4 @@
-import { App, Button, Card, Input, Select } from "antd";
+import { App, Button, Card, Select } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -10,44 +10,23 @@ import { DateRangeField } from "../../../shared/ui/DateField";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { botErrorText } from "./errors";
 
-type Entity = "leads" | "clients" | "deals";
-const ENTITIES: readonly Entity[] = ["leads", "clients", "deals"];
-/** Раздел каталога, чтение которого нужно для выгрузки (в CRM — `leads|clients|deals:read`). */
-const DATA_SECTION: Record<Entity, string> = {
-  leads: "crm.leads",
-  clients: "crm.clients",
-  deals: "crm.clients",
-};
+/** Выгружаются только сделки, без контактов (решение владельца 2026-11-11): лиды и клиенты — персональные данные. */
+const ENTITY = "deals";
+/** Раздел каталога, чтение которого нужно для выгрузки (в CRM — `deals:read`). */
+const DATA_SECTION = "crm.clients";
 
 type Filters = Record<string, string>;
 
-/** Дата без времени -> граница суток в Ташкенте (+05:00), чтобы «создан не позже 26.10» включал весь день. */
-function dayStart(day: string): string {
-  return `${day}T00:00:00+05:00`;
-}
-function dayEnd(day: string): string {
-  return `${day}T23:59:59+05:00`;
-}
-
-function query(entity: Entity, filters: Filters) {
+function query(filters: Filters) {
   const params: Record<string, string> = {};
-  const text = (filters["q"] ?? "").trim();
-  if (text && entity !== "deals") params["q"] = text;
-  if (entity === "leads") {
-    if (filters["language"]) params["language"] = filters["language"];
-    if (filters["from"]) params["created_from"] = dayStart(filters["from"]);
-    if (filters["to"]) params["created_to"] = dayEnd(filters["to"]);
-  }
-  if (entity === "deals") {
-    if (filters["stage"]) params["stage"] = filters["stage"];
-    if (filters["from"]) params["closed_from"] = filters["from"];
-    if (filters["to"]) params["closed_to"] = filters["to"];
-  }
+  if (filters["stage"]) params["stage"] = filters["stage"];
+  if (filters["from"]) params["closed_from"] = filters["from"];
+  if (filters["to"]) params["closed_to"] = filters["to"];
   return params;
 }
 
-function ExportCard({ entity, allowed }: { entity: Entity; allowed: boolean }) {
-  const { t } = useTranslation(["bot", "kb"]);
+function DealsExport({ allowed }: { allowed: boolean }) {
+  const { t } = useTranslation("bot");
   const { message } = App.useApp();
   const [filters, setFilters] = useState<Filters>({});
   const [busy, setBusy] = useState(false);
@@ -55,16 +34,17 @@ function ExportCard({ entity, allowed }: { entity: Entity; allowed: boolean }) {
   const set = (key: string, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
-  const id = `export-${entity}`;
+  const id = `export-${ENTITY}`;
+  const title = t(`exports.entities.${ENTITY}.title`);
   const run = async () => {
     setBusy(true);
     setError(null);
     try {
       const name = await downloadFile(
-        getDownloadCsvExportUrl(entity, query(entity, filters)),
-        `${entity}.csv`,
+        getDownloadCsvExportUrl(ENTITY, query(filters)),
+        `${ENTITY}.csv`,
       );
-      void message.success(t("bot:exports.done", { name }));
+      void message.success(t("exports.done", { name }));
     } catch (failure) {
       setError(botErrorText(t, failure));
     } finally {
@@ -72,103 +52,64 @@ function ExportCard({ entity, allowed }: { entity: Entity; allowed: boolean }) {
     }
   };
   return (
-    <article className="pf-bot-export" data-entity={entity} aria-labelledby={`${id}-title`}>
+    <article className="pf-bot-export" data-entity={ENTITY} aria-labelledby={`${id}-title`}>
       <h3 className="pf-bot-subtitle" id={`${id}-title`}>
-        {t(`bot:exports.entities.${entity}.title`)}
+        {title}
       </h3>
-      <p className="pf-fp-sub">{t(`bot:exports.entities.${entity}.purpose`)}</p>
+      <p className="pf-fp-sub">{t(`exports.entities.${ENTITY}.purpose`)}</p>
       <form
         className="pf-fp-form"
-        aria-label={t("bot:exports.formLabel", {
-          title: t(`bot:exports.entities.${entity}.title`),
-        })}
+        aria-label={t("exports.formLabel", { title })}
         noValidate
         onSubmit={(event) => {
           event.preventDefault();
           if (allowed && !busy) void run();
         }}
       >
-        {entity !== "deals" ? (
-          <FormField id={`${id}-q`} label={t("bot:exports.filters.q")}>
-            <Input
-              id={`${id}-q`}
-              value={filters["q"] ?? ""}
-              maxLength={100}
-              autoComplete="off"
-              disabled={!allowed}
-              onChange={(event) => {
-                set("q", event.target.value);
-              }}
-            />
-          </FormField>
-        ) : (
-          <FormField id={`${id}-stage`} label={t("bot:exports.filters.stage")}>
-            <Select
-              id={`${id}-stage`}
-              allowClear
-              disabled={!allowed}
-              value={filters["stage"] || undefined}
-              placeholder={t("bot:exports.filters.anyStage")}
-              options={(["open", "won", "lost"] as const).map((value) => ({
-                value,
-                label: t(`bot:exports.dealStages.${value}`),
-              }))}
-              onChange={(value: string | undefined) => {
-                set("stage", value ?? "");
-              }}
-            />
-          </FormField>
-        )}
-        {entity === "leads" ? (
-          <FormField id={`${id}-language`} label={t("bot:exports.filters.language")}>
-            <Select
-              id={`${id}-language`}
-              allowClear
-              disabled={!allowed}
-              value={filters["language"] || undefined}
-              placeholder={t("bot:exports.filters.anyLanguage")}
-              options={(["ru", "uz", "en"] as const).map((value) => ({
-                value,
-                label: t(`kb:languages.${value}`),
-              }))}
-              onChange={(value: string | undefined) => {
-                set("language", value ?? "");
-              }}
-            />
-          </FormField>
-        ) : null}
-        {entity !== "clients" ? (
-          <div className="pf-fp-row">
-            <DateRangeField
-              idFrom={`${id}-from`}
-              idTo={`${id}-to`}
-              labelFrom={t(`bot:exports.filters.from.${entity}`)}
-              labelTo={t(`bot:exports.filters.to.${entity}`)}
-              disabled={!allowed}
-              value={{ from: filters["from"] ?? "", to: filters["to"] ?? "" }}
-              wrap={({ id: fieldId, label, children }) => (
-                <FormField id={fieldId} label={label}>
-                  {children}
-                </FormField>
-              )}
-              onChange={(range) => {
-                if (range.from !== (filters["from"] ?? "")) set("from", range.from);
-                if (range.to !== (filters["to"] ?? "")) set("to", range.to);
-              }}
-            />
-          </div>
-        ) : null}
+        <FormField id={`${id}-stage`} label={t("exports.filters.stage")}>
+          <Select
+            id={`${id}-stage`}
+            allowClear
+            disabled={!allowed}
+            value={filters["stage"] || undefined}
+            placeholder={t("exports.filters.anyStage")}
+            options={(["open", "won", "lost"] as const).map((value) => ({
+              value,
+              label: t(`exports.dealStages.${value}`),
+            }))}
+            onChange={(value: string | undefined) => {
+              set("stage", value ?? "");
+            }}
+          />
+        </FormField>
+        <div className="pf-fp-row">
+          <DateRangeField
+            idFrom={`${id}-from`}
+            idTo={`${id}-to`}
+            labelFrom={t("exports.filters.from.deals")}
+            labelTo={t("exports.filters.to.deals")}
+            disabled={!allowed}
+            value={{ from: filters["from"] ?? "", to: filters["to"] ?? "" }}
+            wrap={({ id: fieldId, label, children }) => (
+              <FormField id={fieldId} label={label}>
+                {children}
+              </FormField>
+            )}
+            onChange={(range) => {
+              if (range.from !== (filters["from"] ?? "")) set("from", range.from);
+              if (range.to !== (filters["to"] ?? "")) set("to", range.to);
+            }}
+          />
+        </div>
         {allowed ? null : (
           <p className="pf-hint" role="note">
-            {t("bot:exports.needSection", {
-              section: t(`bot:exports.sections.${DATA_SECTION[entity]}`),
-            })}
+            {t("exports.needSection", { section: t(`exports.sections.${DATA_SECTION}`) })}
           </p>
         )}
         <ErrorNote message={error} />
         <div className="pf-fp-row">
           <Button type="primary" htmlType="submit" loading={busy} disabled={!allowed}>
-            {t("bot:exports.download", { title: t(`bot:exports.entities.${entity}.title`) })}
+            {t("exports.download", { title })}
           </Button>
         </div>
       </form>
@@ -176,7 +117,7 @@ function ExportCard({ entity, allowed }: { entity: Entity; allowed: boolean }) {
   );
 }
 
-/** Выгрузки CSV лидов, клиентов и сделок: файл идёт потоком через BFF, имя содержит дату; нужен доступ к самим данным. */
+/** Выгрузка CSV сделок: файл идёт потоком через BFF, имя содержит дату; нужен доступ к самим данным. */
 export function ExportsView() {
   const { t } = useTranslation("bot");
   const { me } = useAuth();
@@ -194,13 +135,7 @@ export function ExportsView() {
         <p className="pf-fp-sub">{t("exports.intro")}</p>
         {editable ? null : <p className="pf-hint">{t("exports.readOnly")}</p>}
         <div className="pf-bot-exports">
-          {ENTITIES.map((entity) => (
-            <ExportCard
-              key={entity}
-              entity={entity}
-              allowed={editable && canSee(me, { resource: DATA_SECTION[entity] })}
-            />
-          ))}
+          <DealsExport allowed={editable && canSee(me, { resource: DATA_SECTION })} />
         </div>
       </Card>
     </section>

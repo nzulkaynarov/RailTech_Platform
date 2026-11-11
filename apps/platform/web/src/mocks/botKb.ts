@@ -316,14 +316,11 @@ function templateProblem(body: ReplyTemplateIn): string | null {
 
 // --- выгрузки -------------------------------------------------------------------------------------------------
 
+// Выгружаются только сделки, без контактов (решение владельца 2026-11-11).
 const EXPORT_DATA: Record<string, string> = {
-  leads: "crm.leads",
-  clients: "crm.clients",
   deals: "crm.clients",
 };
 const CSV: Record<string, string> = {
-  leads: "ID;Имя;Язык;Стадия\r\n2041;Анна Демо;ru;В диалоге\r\n2038;Бахтиёр Демо;uz;Новый\r\n",
-  clients: "ID;Название;Сегмент\r\n17;ООО «Демо-Транс»;Железная дорога\r\n",
   deals: "ID;Название;Сумма;Валюта\r\n88;Поставка рельсов (демо);1500000;UZS\r\n",
 };
 

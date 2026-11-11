@@ -39,7 +39,7 @@ from app.schemas_bot import (
     ReplyTemplateList,
 )
 from app.schemas_integrations import ActionOk
-from app.schemas_kb import CreatedId, Language
+from app.schemas_kb import CreatedId
 
 router = APIRouter(tags=["bot"])
 
@@ -51,19 +51,15 @@ Admin = Annotated[Authed, Depends(require("admin", "full"))]
 TemplateReader = Annotated[Authed, Depends(require_any(("admin", "read"), ("crm.leads", "full")))]
 Exporter = Annotated[Authed, Depends(require_all(("admin", "full")))]
 TemplateId = Annotated[int, Path(ge=1)]
-Entity = Literal["leads", "clients", "deals"]
+# Только сделки, без контактов (решение владельца 2026-11-11): лиды и клиенты — персональные данные.
+Entity = Literal["deals"]
 
-# Раздел каталога, чтение которого нужно, чтобы выгружать сущность (в CRM —
-# `leads|clients|deals:read`).
+# Раздел каталога, чтение которого нужно, чтобы выгружать сущность (в CRM — `deals:read`).
 EXPORT_DATA: dict[str, str] = {
-    "leads": "crm.leads",
-    "clients": "crm.clients",
     "deals": "crm.clients",
 }
 # Фильтры, которые CRM понимает у каждой выгрузки (остальные параметры запроса BFF отбрасывает).
 EXPORT_FILTERS: dict[str, tuple[str, ...]] = {
-    "leads": ("q", "stage", "language", "created_from", "created_to"),
-    "clients": ("q",),
     "deals": ("stage", "closed_from", "closed_to"),
 }
 _FILENAME = re.compile(r'^attachment; filename="[A-Za-z0-9._-]{1,100}\.csv"$')
@@ -173,11 +169,7 @@ def _filename(header: str | None, entity: str) -> str:
 async def download_export(
     entity: Entity,
     authed: Exporter,
-    q: Annotated[str | None, Query(max_length=100)] = None,
     stage: Annotated[str | None, Query(max_length=32)] = None,
-    language: Language | None = None,
-    created_from: datetime | None = None,
-    created_to: datetime | None = None,
     closed_from: Annotated[str | None, Query(pattern=r"^\d{4}-\d{2}-\d{2}$")] = None,
     closed_to: Annotated[str | None, Query(pattern=r"^\d{4}-\d{2}-\d{2}$")] = None,
 ) -> StreamingResponse:
@@ -190,11 +182,7 @@ async def download_export(
             details={"resource": needed, "need": "read"},
         )
     given: dict[str, Any] = {
-        "q": q,
         "stage": stage,
-        "language": language,
-        "created_from": created_from.isoformat() if created_from else None,
-        "created_to": created_to.isoformat() if created_to else None,
         "closed_from": closed_from,
         "closed_to": closed_to,
     }
