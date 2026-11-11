@@ -1105,7 +1105,44 @@
       "code": "Code",
       "codeHint": "Latin letters and digits, e.g. USD or UZ. The code cannot be changed after saving.",
       "search": "Search by code or name",
-      "noMatch": "Nothing found"
+      "noMatch": "Nothing found",
+      "file": {
+        "download": "Download",
+        "upload": "Upload",
+        "title": "{{name}}: upload a file",
+        "summary": "To add: {{added}}, to change: {{updated}}, unchanged: {{unchanged}}, with errors: {{failed}}",
+        "line": "Row",
+        "action": "Result",
+        "details": "Details",
+        "apply": "Apply",
+        "cancel": "Cancel",
+        "failed": "The file was not uploaded. Try again.",
+        "done": "Uploaded: {{added}} added, {{updated}} changed",
+        "actions": {
+          "add": "Will be added",
+          "update": "Will change",
+          "unchanged": "Unchanged",
+          "error": "Error"
+        },
+        "reasons": {
+          "required": "{{field}}: empty",
+          "invalid": "{{field}}: invalid value",
+          "unknown": "no such code",
+          "duplicate": "duplicate code",
+          "closed": "this list does not accept new values",
+          "too_long": "name longer than 120 characters",
+          "rejected": "row rejected"
+        },
+        "columns": {
+          "code": "Code",
+          "name": "Name",
+          "name_ru": "Name (Russian)",
+          "name_uz": "Name (Uzbek)",
+          "name_en": "Name (English)",
+          "active": "Active",
+          "file": "File"
+        }
+      }
     },
     "templates": {
       "title": "Resolution templates",

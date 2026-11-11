@@ -35,6 +35,7 @@ import {
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { localName } from "../../eds/dictionaries";
 import { ConfirmModal, ListTable, TabHeader } from "../company/common";
+import { DictionaryFile } from "./DictionaryFile";
 import { dictionaryErrorText } from "./errors";
 
 /**
@@ -185,7 +186,10 @@ function DictionaryTable({ dictionary, readOnly }: { dictionary: Dictionary; rea
 
   return (
     <>
-      <div className="pf-co-actions">{add}</div>
+      <div className="pf-co-actions">
+        {add}
+        <DictionaryFile dictionary={dictionary} readOnly={readOnly} />
+      </div>
       {error ? (
         <Alert type="error" showIcon role="alert" message={dictionaryErrorText(t, error)} />
       ) : null}
