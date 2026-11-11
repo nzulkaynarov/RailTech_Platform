@@ -42,6 +42,7 @@ from app.feeds.snapshot import DEALS_PARAMS, DEALS_PATH
 from app.rbac import allows
 from app.schemas_eds_documents import (
     DOCUMENT_KINDS,
+    DOCUMENT_STATUSES,
     EdsDealOption,
     EdsDealOptions,
     EdsDocument,
@@ -113,9 +114,9 @@ async def list_documents(
     params: dict[str, Any] = {"limit": limit}
     if cursor:
         params["cursor"] = cursor
-    if doc_status:
-        params["status"] = doc_status
     if scope == "all":
+        if doc_status:
+            params["status"] = doc_status
         if not any(allows(authed.access, res, need) for res, need in _REGISTRY):
             raise PlatformError(
                 "FORBIDDEN",
@@ -133,6 +134,11 @@ async def list_documents(
         return EdsDocumentPage(items=[], next_cursor=None)
     if kinds:
         params["kind"] = kinds
+    statuses = [s for s in (doc_status or []) if s in DOCUMENT_STATUSES]
+    if doc_status and not statuses:
+        return EdsDocumentPage(items=[], next_cursor=None)
+    if statuses:
+        params["status"] = statuses
     params["mine"] = "true"
     return documents_page(await proxy.request("GET", f"{API}/documents", params=params))
 

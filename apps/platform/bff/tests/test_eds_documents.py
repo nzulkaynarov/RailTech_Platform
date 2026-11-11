@@ -184,6 +184,28 @@ async def test_mine_ignores_kinds_that_are_not_documents(web: Web, eds: EdsFake)
     assert eds.requests("GET", "documents") == []
 
 
+async def test_mine_drops_registry_statuses_eds_does_not_know(web: Web, eds: EdsFake) -> None:
+    """Ящик «Мои» шлёт и статусы писем реестра: EDS `GET /documents` ответил бы 422 (FR-2)."""
+    await web.login(["MANAGER"])
+
+    response = await web.client.get(
+        f"{BASE}/documents?kind=memo&status=draft&status=awaiting_resolution&status=open"
+    )
+
+    assert response.status_code == 200, response.text
+    assert eds.last("GET", "documents").url.params.get_list("status") == ["draft"]
+
+
+async def test_mine_with_only_registry_statuses_is_empty(web: Web, eds: EdsFake) -> None:
+    await web.login(["MANAGER"])
+
+    response = await web.client.get(f"{BASE}/documents?status=resolved")
+
+    assert response.status_code == 200
+    assert response.json() == {"items": [], "next_cursor": None}
+    assert eds.requests("GET", "documents") == []
+
+
 async def test_all_reads_the_registry(web: Web, eds: EdsFake, check: ContractChecker) -> None:
     await web.login(["MANAGER"])
     eds.answer(
