@@ -4609,6 +4609,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/dictionaries/{kind}/export": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Справочники · выгрузка (она же шаблон загрузки)
+     * @description Решение владельца 2026-11-11. Кто читает справочник — тот и выгружает. Все значения, и скрытые. Столбцы: `code`, `name_ru`, `name_uz`, `name_en`, `active` (да/нет), затем ключи полей вида.
+     */
+    get: operations["exportDictionary"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/dictionaries/{kind}/import": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Справочники · загрузка файла с проверкой
+     * @description Решение владельца 2026-11-11. Раздел `admin` — полный. Тело — файл xlsx или csv (UTF-8, `;` или `,`) как есть, до 1 МБ и 2000 строк. Ключ — `code`: найден — строка меняется (пустая ячейка значение не меняет); пусто — создаётся, код даёт домен из названия; неизвестный код — ошибка строки. Удалять файлом нельзя. `dry_run=true` (по умолчанию) — только проверка; `dry_run=false` применяет строки обычными действиями домена, если в файле нет ни одной ошибки. Файл целиком не подходит (пустой, не xlsx/csv, шапка) — 422, `details.reason`.
+     */
+    post: operations["importDictionary"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/dictionaries/{kind}/{code}": {
     parameters: {
       query?: never;
@@ -12111,6 +12151,32 @@ export interface components {
       name?: components["schemas"]["LocalizedNameIn"];
       attrs?: components["schemas"]["DictionaryAttrValues"];
       active?: boolean;
+    };
+    DictionaryImportError: {
+      /** @description Столбец файла или `name` */
+      field: string;
+      /** @description `required`, `invalid`, `unknown`, `duplicate`, `closed`, `too_long`, `rejected` или причина домена */
+      reason: string;
+    };
+    DictionaryImportRow: {
+      /** @description Номер строки в файле, шапка — 1 */
+      line: number;
+      code: string | null;
+      name: string;
+      /** @enum {string} */
+      action: "add" | "update" | "unchanged" | "error";
+      /** @description Какие столбцы изменятся */
+      fields: string[];
+      errors: components["schemas"]["DictionaryImportError"][];
+    };
+    DictionaryImportResult: {
+      /** @description false — проверка без записи или в файле есть ошибки */
+      applied: boolean;
+      added: number;
+      updated: number;
+      unchanged: number;
+      failed: number;
+      rows: components["schemas"]["DictionaryImportRow"][];
     };
     DictionaryOrderIn: {
       codes: string[];
@@ -23954,6 +24020,73 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["DictionaryItemList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  exportDictionary: {
+    parameters: {
+      query?: {
+        format?: "xlsx" | "csv";
+      };
+      header?: never;
+      path: {
+        /** @description Вид справочника (`letter-kinds`, `receipt-methods`, `mail-types`) */
+        kind: components["parameters"]["DictionaryKindPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Файл */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+          "text/csv": string;
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  importDictionary: {
+    parameters: {
+      query?: {
+        dry_run?: boolean;
+      };
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Вид справочника (`letter-kinds`, `receipt-methods`, `mail-types`) */
+        kind: components["parameters"]["DictionaryKindPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/octet-stream": string;
+      };
+    };
+    responses: {
+      /** @description Что добавится, изменится, не изменится и где ошибка; `applied` — записано ли */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DictionaryImportResult"];
         };
       };
       401: components["responses"]["SessionExpired"];

@@ -107,6 +107,7 @@ import type {
   CreatedId,
   CsrfFailedResponse,
   DeputyUpdate,
+  DictionaryImportResult,
   DictionaryItem,
   DictionaryItemIn,
   DictionaryItemList,
@@ -157,6 +158,7 @@ import type {
   EscalationDryRun,
   EscalationSettingsIn,
   ExchangeRatePage,
+  ExportDictionaryParams,
   ExternalChatList,
   ExternalService,
   ExternalServiceDetail,
@@ -186,6 +188,7 @@ import type {
   ImapHistory,
   ImapHistoryIn,
   ImapSettingsIn,
+  ImportDictionaryParams,
   InboundMail,
   InboundMailArchiveIn,
   InboundMailAssist,
@@ -32784,6 +32787,307 @@ export const useReorderDictionaryItems = <
   TContext
 > => {
   return useMutation(getReorderDictionaryItemsMutationOptions(options), queryClient);
+};
+
+export const getExportDictionaryUrl = (kind: string, params?: ExportDictionaryParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/dictionaries/${kind}/export?${stringifiedParams}`
+    : `/api/v1/dictionaries/${kind}/export`;
+};
+
+/**
+ * Решение владельца 2026-11-11. Кто читает справочник — тот и выгружает. Все значения, и скрытые. Столбцы: `code`, `name_ru`, `name_uz`, `name_en`, `active` (да/нет), затем ключи полей вида.
+ * @summary Справочники · выгрузка (она же шаблон загрузки)
+ */
+export const exportDictionary = async (
+  kind: string,
+  params?: ExportDictionaryParams,
+  options?: Parameters<typeof http>[1],
+): Promise<Blob> => {
+  return http<Blob>(getExportDictionaryUrl(kind, params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getExportDictionaryQueryKey = (kind: string, params?: ExportDictionaryParams) => {
+  return [`/api/v1/dictionaries/${kind}/export`, ...(params ? [params] : [])] as const;
+};
+
+export const getExportDictionaryQueryOptions = <
+  TData = Awaited<ReturnType<typeof exportDictionary>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  kind: string,
+  params?: ExportDictionaryParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof exportDictionary>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getExportDictionaryQueryKey(kind, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof exportDictionary>>> = ({ signal }) =>
+    exportDictionary(kind, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: kind !== null && kind !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof exportDictionary>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type ExportDictionaryQueryResult = NonNullable<Awaited<ReturnType<typeof exportDictionary>>>;
+export type ExportDictionaryQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useExportDictionary<
+  TData = Awaited<ReturnType<typeof exportDictionary>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  kind: string,
+  params: undefined | ExportDictionaryParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof exportDictionary>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exportDictionary>>,
+          TError,
+          Awaited<ReturnType<typeof exportDictionary>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useExportDictionary<
+  TData = Awaited<ReturnType<typeof exportDictionary>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  kind: string,
+  params?: ExportDictionaryParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof exportDictionary>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exportDictionary>>,
+          TError,
+          Awaited<ReturnType<typeof exportDictionary>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useExportDictionary<
+  TData = Awaited<ReturnType<typeof exportDictionary>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  kind: string,
+  params?: ExportDictionaryParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof exportDictionary>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Справочники · выгрузка (она же шаблон загрузки)
+ */
+
+export function useExportDictionary<
+  TData = Awaited<ReturnType<typeof exportDictionary>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  kind: string,
+  params?: ExportDictionaryParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof exportDictionary>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getExportDictionaryQueryOptions(kind, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getImportDictionaryUrl = (kind: string, params?: ImportDictionaryParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/dictionaries/${kind}/import?${stringifiedParams}`
+    : `/api/v1/dictionaries/${kind}/import`;
+};
+
+/**
+ * Решение владельца 2026-11-11. Раздел `admin` — полный. Тело — файл xlsx или csv (UTF-8, `;` или `,`) как есть, до 1 МБ и 2000 строк. Ключ — `code`: найден — строка меняется (пустая ячейка значение не меняет); пусто — создаётся, код даёт домен из названия; неизвестный код — ошибка строки. Удалять файлом нельзя. `dry_run=true` (по умолчанию) — только проверка; `dry_run=false` применяет строки обычными действиями домена, если в файле нет ни одной ошибки. Файл целиком не подходит (пустой, не xlsx/csv, шапка) — 422, `details.reason`.
+ * @summary Справочники · загрузка файла с проверкой
+ */
+export const importDictionary = async (
+  kind: string,
+  importDictionaryBody: Blob,
+  params?: ImportDictionaryParams,
+  options?: Parameters<typeof http>[1],
+): Promise<DictionaryImportResult> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<DictionaryImportResult>(getImportDictionaryUrl(kind, params), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/octet-stream", ...getHeaders(options?.headers) },
+    body: importDictionaryBody,
+  });
+};
+
+export const getImportDictionaryMutationKey = () => ["importDictionary"] as const;
+
+export const getImportDictionaryMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof importDictionary>>,
+    TError,
+    ImportDictionaryMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof importDictionary>>,
+  TError,
+  ImportDictionaryMutationVariables,
+  TContext
+> => {
+  const mutationKey = getImportDictionaryMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof importDictionary>>,
+    ImportDictionaryMutationVariables
+  > = (props) => {
+    const { kind, data, params } = props ?? {};
+
+    return importDictionary(kind, data, params, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ImportDictionaryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof importDictionary>>
+>;
+export type ImportDictionaryMutationBody = Blob;
+export type ImportDictionaryMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type ImportDictionaryMutationVariables = {
+  kind: string;
+  data: Blob;
+  params?: ImportDictionaryParams;
+};
+
+/**
+ * @summary Справочники · загрузка файла с проверкой
+ */
+export const useImportDictionary = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof importDictionary>>,
+      TError,
+      ImportDictionaryMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof importDictionary>>,
+  TError,
+  ImportDictionaryMutationVariables,
+  TContext
+> => {
+  return useMutation(getImportDictionaryMutationOptions(options), queryClient);
 };
 
 export const getUpdateDictionaryItemUrl = (kind: string, code: string) => {
