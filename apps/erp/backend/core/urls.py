@@ -159,6 +159,12 @@ from crm.views.calc import (
     CalcStartView,
     CalcTaskListView,
 )
+from master_data.dictionary_views import (
+    DictionaryCatalogView,
+    DictionaryItemsView,
+    DictionaryItemView,
+    DictionaryOrderView,
+)
 from master_data.views import (
     CountryViewSet,
     CurrencyViewSet,
@@ -250,6 +256,11 @@ urlpatterns = (
         path("admin/", admin.site.urls),
         # D2-5: Все проекты — только чтение; пути раньше роутера, чтобы `crm/projects/<id>/` не искал вьюсет.
         path("api/v1/crm/projects/", ProjectListView.as_view(), name="project-list"),
+        # Справочники «Расчёта» общим ресурсом (решение владельца 2026-11-11): тот же контракт, что у EDS и CRM.
+        path("api/v1/dictionaries", DictionaryCatalogView.as_view(), name="dictionaries"),
+        path("api/v1/dictionaries/<slug:kind>", DictionaryItemsView.as_view(), name="dictionary-items"),
+        path("api/v1/dictionaries/<slug:kind>/order", DictionaryOrderView.as_view(), name="dictionary-order"),
+        path("api/v1/dictionaries/<slug:kind>/<str:code>", DictionaryItemView.as_view(), name="dictionary-item"),
         path("api/v1/crm/projects/<int:deal_id>/", ProjectDetailView.as_view(), name="project-detail"),
         path("api/v1/crm/projects/<int:deal_id>/delivery/", ProjectDeliveryView.as_view(), name="project-delivery"),
         path("api/v1/", include(router.urls)),

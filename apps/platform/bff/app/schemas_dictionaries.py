@@ -8,7 +8,9 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
-CODE = r"^[a-z][a-z_]{0,31}$"
+# Коды EDS и CRM домен создаёт из названия (`^[a-z][a-z_]{0,31}$`); коды ERP задаёт человек:
+# `USD`, `UZ`, `pcs`.
+CODE = r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,49}$"
 KIND = r"^[a-z][a-z-]{0,31}$"
 
 Code = Annotated[str, StringConstraints(pattern=CODE)]
@@ -38,7 +40,7 @@ class DictionaryAttrOption(BaseModel):
 
 class DictionaryAttr(BaseModel):
     key: str
-    type: Literal["boolean", "integer", "choice"]
+    type: Literal["boolean", "integer", "choice", "text", "decimal"]
     name: LocalizedName
     minimum: int | None = None
     maximum: int | None = None
@@ -50,17 +52,20 @@ class DictionaryAttr(BaseModel):
 
 class Dictionary(BaseModel):
     kind: Annotated[str, StringConstraints(pattern=KIND)]
-    owner: Literal["eds", "crm"]
-    area: Literal["documents", "mail"]
+    owner: Literal["eds", "crm", "erp"]
+    area: Literal["documents", "mail", "calc"]
     name: LocalizedName
     closed: bool
+    #: `generated` — код создаёт домен из названия (EDS, CRM); `given` — код задаёт человек или
+    #: файл (ERP)
+    codes: Literal["generated", "given"] = "generated"
     attrs: list[DictionaryAttr]
 
 
 class DictionaryList(BaseModel):
     items: list[Dictionary]
     #: Домены, чьи справочники не ответили: список частичный, экран говорит об этом.
-    unavailable: list[Literal["eds", "crm"]] = []
+    unavailable: list[Literal["eds", "crm", "erp"]] = []
 
 
 class DictionaryItem(BaseModel):
@@ -77,6 +82,8 @@ class DictionaryItemList(BaseModel):
 
 
 class DictionaryItemIn(_In):
+    #: Только у справочников с `codes = given` (ERP); у остальных код создаёт домен
+    code: Annotated[str, StringConstraints(pattern=CODE)] | None = None
     name: LocalizedNameIn
     attrs: dict[str, AttrValue] = Field(default_factory=dict)
 

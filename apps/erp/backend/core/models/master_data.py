@@ -4,7 +4,18 @@ from django.utils.translation import gettext_lazy as _
 from .lookups import AbstractLookup
 
 
-class Country(AbstractLookup):
+class LocalizedNames(models.Model):
+    """Названия на узбекском и английском у справочников «Расчёта» (решение владельца 2026-11-11: справочники —
+    одним механизмом, три языка). `name` — русское название."""
+
+    name_uz = models.CharField(max_length=255, blank=True, default="", verbose_name=_("Название (узб.)"))
+    name_en = models.CharField(max_length=255, blank=True, default="", verbose_name=_("Название (англ.)"))
+
+    class Meta:
+        abstract = True
+
+
+class Country(LocalizedNames, AbstractLookup):
     """Справочник стран по ISO 3166-1.
 
     Канонический ключ — `code` = **alpha-2** («RU», «UZ»): на него смотрят FK (`Company.country`,
@@ -54,7 +65,7 @@ class Country(AbstractLookup):
         verbose_name_plural = _("Справочник: Страны")
 
 
-class Currency(AbstractLookup):
+class Currency(LocalizedNames, AbstractLookup):
     """Справочник валют (ISO 4217)."""
 
     symbol = models.CharField(
@@ -69,7 +80,7 @@ class Currency(AbstractLookup):
         verbose_name_plural = _("Справочник: Валюты")
 
 
-class UnitOfMeasure(AbstractLookup):
+class UnitOfMeasure(LocalizedNames, AbstractLookup):
     """Единицы измерения (шт, кг, км, час)."""
 
     class Meta(AbstractLookup.Meta):
@@ -77,7 +88,7 @@ class UnitOfMeasure(AbstractLookup):
         verbose_name_plural = _("Справочник: Единицы измерения")
 
 
-class DeliveryBasis(AbstractLookup):
+class DeliveryBasis(LocalizedNames, AbstractLookup):
     """Базисы поставок Incoterms (FCA, DAP, CIP, EXW)."""
 
     description = models.TextField(
