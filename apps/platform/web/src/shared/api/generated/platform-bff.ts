@@ -31422,10 +31422,7 @@ export const useDeleteReplyTemplate = <
   return useMutation(getDeleteReplyTemplateMutationOptions(options), queryClient);
 };
 
-export const getDownloadCsvExportUrl = (
-  entity: "leads" | "clients" | "deals",
-  params?: DownloadCsvExportParams,
-) => {
+export const getDownloadCsvExportUrl = (entity: "deals", params?: DownloadCsvExportParams) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -31442,11 +31439,11 @@ export const getDownloadCsvExportUrl = (
 };
 
 /**
- * CRM `GET /export/{leads|clients|deals}.csv`. Нужен `admin: full` (право CRM `export:read`) **и** чтение выгружаемых данных: лиды — `crm.leads`, клиенты и сделки — `crm.clients` (системная «Администратор» без второй роли бизнес-данные не выгружает, R3-D-2). BFF проверяет оба раздела и отдаёт файл потоком, не накапливая его в памяти: CSV для Excel (UTF-8 с BOM, разделитель `;`), до 10 000 строк, имя файла с датой в `Content-Disposition` (`leads-20261026-1530.csv`). Каждая выгрузка пишется в журнал аудита CRM. Фильтры — как на экранах списков; недопустимый — 422.
- * @summary Выгрузка CSV: лиды, клиенты или сделки
+ * CRM `GET /export/deals.csv`. Только сделки, без контактов (решение владельца 2026-11-11; выгрузки лидов и клиентов убраны в 0.46.0). Нужен `admin: full` (право CRM `export:read`) **и** чтение `crm.clients` (системная «Администратор» без второй роли бизнес-данные не выгружает, R3-D-2). BFF отдаёт файл потоком, не накапливая его в памяти: CSV для Excel (UTF-8 с BOM, разделитель `;`), до 10 000 строк, имя файла с датой в `Content-Disposition` (`deals-20261026-1530.csv`). Каждая выгрузка пишется в журнал аудита CRM. Недопустимый фильтр — 422.
+ * @summary Выгрузка CSV сделок
  */
 export const downloadCsvExport = async (
-  entity: "leads" | "clients" | "deals",
+  entity: "deals",
   params?: DownloadCsvExportParams,
   options?: Parameters<typeof http>[1],
 ): Promise<Blob> => {
@@ -31456,10 +31453,7 @@ export const downloadCsvExport = async (
   });
 };
 
-export const getDownloadCsvExportQueryKey = (
-  entity: "leads" | "clients" | "deals",
-  params?: DownloadCsvExportParams,
-) => {
+export const getDownloadCsvExportQueryKey = (entity: "deals", params?: DownloadCsvExportParams) => {
   return [`/api/v1/admin/bot/exports/${entity}`, ...(params ? [params] : [])] as const;
 };
 
@@ -31472,7 +31466,7 @@ export const getDownloadCsvExportQueryOptions = <
     | BackendUnavailableResponse
   >,
 >(
-  entity: "leads" | "clients" | "deals",
+  entity: "deals",
   params?: DownloadCsvExportParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadCsvExport>>, TError, TData>>;
@@ -31512,7 +31506,7 @@ export function useDownloadCsvExport<
     | BackendUnavailableResponse
   >,
 >(
-  entity: "leads" | "clients" | "deals",
+  entity: "deals",
   params: undefined | DownloadCsvExportParams,
   options: {
     query: Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadCsvExport>>, TError, TData>> &
@@ -31537,7 +31531,7 @@ export function useDownloadCsvExport<
     | BackendUnavailableResponse
   >,
 >(
-  entity: "leads" | "clients" | "deals",
+  entity: "deals",
   params?: DownloadCsvExportParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadCsvExport>>, TError, TData>> &
@@ -31562,7 +31556,7 @@ export function useDownloadCsvExport<
     | BackendUnavailableResponse
   >,
 >(
-  entity: "leads" | "clients" | "deals",
+  entity: "deals",
   params?: DownloadCsvExportParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadCsvExport>>, TError, TData>>;
@@ -31571,7 +31565,7 @@ export function useDownloadCsvExport<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Выгрузка CSV: лиды, клиенты или сделки
+ * @summary Выгрузка CSV сделок
  */
 
 export function useDownloadCsvExport<
@@ -31583,7 +31577,7 @@ export function useDownloadCsvExport<
     | BackendUnavailableResponse
   >,
 >(
-  entity: "leads" | "clients" | "deals",
+  entity: "deals",
   params?: DownloadCsvExportParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadCsvExport>>, TError, TData>>;
