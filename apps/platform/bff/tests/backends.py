@@ -177,9 +177,7 @@ class Backends:
             return httpx.Response(
                 self.sso_status, json={"code": "forbidden", "message": "x", "details": {}}
             )
-        return httpx.Response(
-            200, json={"token": "sso-token-1", "redirect_url": "http://erp.test/sso"}
-        )
+        return httpx.Response(200, json={"token": "sso-token-1"})
 
     async def _change_password(self, request: httpx.Request) -> httpx.Response:
         if self.change_password_response is None:

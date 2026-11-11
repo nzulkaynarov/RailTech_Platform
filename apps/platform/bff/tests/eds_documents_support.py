@@ -164,9 +164,7 @@ class EdsFake:
     def _sso(self, request: httpx.Request) -> httpx.Response:
         body = json.loads(request.content) if request.content else {}
         if body.get("aud") != "eds":
-            return httpx.Response(
-                200, json={"token": "sso-token-1", "redirect_url": "http://erp.test/sso"}
-            )
+            return httpx.Response(200, json={"token": "sso-token-1"})
         if self.sso_status != 200:
             return httpx.Response(
                 self.sso_status,
@@ -176,9 +174,7 @@ class EdsFake:
                     "details": {"reason": "eds_access_denied"},
                 },
             )
-        return httpx.Response(
-            200, json={"token": f"sso-eds-{len(self.issued) + 1}", "redirect_url": ""}
-        )
+        return httpx.Response(200, json={"token": f"sso-eds-{len(self.issued) + 1}"})
 
     def _exchange(self, request: httpx.Request) -> httpx.Response:
         token = f"{TOKEN}{len(self.issued) + 1}"

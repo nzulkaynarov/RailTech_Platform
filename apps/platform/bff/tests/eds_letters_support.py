@@ -160,9 +160,7 @@ class EdsFake:
                     "details": {"reason": "eds_access_denied"},
                 },
             )
-        return httpx.Response(
-            200, json={"token": f"sso-{aud}-{len(self.sso_auds)}", "redirect_url": ""}
-        )
+        return httpx.Response(200, json={"token": f"sso-{aud}-{len(self.sso_auds)}"})
 
     def _exchange(self, request: httpx.Request) -> httpx.Response:
         if self.exchange_status != 200:
