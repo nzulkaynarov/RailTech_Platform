@@ -1,5 +1,5 @@
 import type { ObjectKind } from "../shared/api/generated/model";
-import { routeTarget } from "./bridge";
+import { matchSection } from "./registry";
 
 /**
  * Переходы из «Моей очереди», колокольчика, поиска и ленты «Сегодня» (D1-6, SPEC-v3 §6.3, §6.4): объект открывается в
@@ -15,17 +15,62 @@ interface Native {
   tab: string;
 }
 
-/** Ключ — `<модуль>.<раздел>` как в `bridge.ts`; вкладки — из `tabs` в `module.ts` модуля. */
+/** Ключ — `<модуль>.<раздел>`; вкладки — из `tabs` в `module.ts` модуля. */
 export const DECISION_TABS: Readonly<Record<string, Native>> = {
   "eds.inbox": { kind: "letter", tab: "resolution" },
   "eds.drafts": { kind: "quote", tab: "approve" },
   "eds.approvals": { kind: "memo", tab: "agree" },
 };
 
+/** Параметры адреса, в которых лежит номер объекта, когда у раздела нет `:id` (`/crm/leads?lead=L-2041`). */
+const OBJECT_PARAMS = [
+  "lead",
+  "request",
+  "client",
+  "project",
+  "letter",
+  "quote",
+  "memo",
+  "invoice",
+];
+
+/** Номер объекта из адреса: `:id` карточки или первый из `?lead=`, `?request=`… Для списка — `undefined`. */
+export function objectIdOf(
+  match: { objectId?: string | undefined },
+  search: string,
+): string | undefined {
+  if (match.objectId !== undefined) return match.objectId;
+  const params = new URLSearchParams(search);
+  for (const name of OBJECT_PARAMS) {
+    const value = params.get(name);
+    if (value) return value;
+  }
+  return undefined;
+}
+
+export interface RouteTarget {
+  module: string;
+  section: string;
+  /** Номер объекта из адреса (`/eds/drafts/КП-2026%2F118`, `?lead=L-2041`); для списка — `undefined` */
+  objectId?: string | undefined;
+}
+
+/** Раздел и объект по адресу вида `/eds/drafts/КП-2026%2F118?panel=open`; адрес не из карты Платформы — `undefined`. */
+export function routeTarget(path: string): RouteTarget | undefined {
+  const [pathname = "", search = ""] = path.split("?");
+  const match = matchSection(pathname, search);
+  if (!match) return undefined;
+  return {
+    module: match.module.code,
+    section: match.section.key,
+    objectId: objectIdOf(match, search),
+  };
+}
+
 export function objectLink(object: { kind: ObjectKind; number: string; path: string }): string {
   const target = routeTarget(object.path);
-  // Заглушка или адрес не из карты — как прислал BFF: «Где сделать» и 404 внутри каркаса разбирают их сами.
-  if (!target || target.entry) return object.path;
+  // Адрес не из карты — как прислал BFF: 404 внутри каркаса разберёт его сам.
+  if (!target) return object.path;
   const native = DECISION_TABS[`${target.module}.${target.section}`];
   if (!native) return object.path;
 

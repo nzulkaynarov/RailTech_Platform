@@ -20,7 +20,6 @@ import { MoneyText } from "../../../shared/ui/MoneyText";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { RequestSteps } from "../../../shared/ui/RequestSteps";
 import { StatusTag } from "../../../shared/ui/StatusTag";
-import { isActionable } from "../../bridge";
 import { SigningButton } from "./SigningButton";
 import { fileUrl, projectRef } from "./api";
 import { FileLinks } from "./FileLinks";
@@ -76,7 +75,7 @@ function InvoiceRows({ card, objectId }: { card: ProjectCard; objectId: string }
   const { t } = useTranslation("projects");
   const { me } = useAuth();
   const { date } = useFormat();
-  const linkable = canSee(me, { resource: "eds.payments" }) && isActionable("/eds/payments");
+  const linkable = canSee(me, { resource: "eds.payments" });
   const action = (invoice: ProjectInvoice) => (
     <>
       {invoice.has_pdf ? (

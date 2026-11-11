@@ -1,6 +1,5 @@
 import { useTranslation } from "react-i18next";
 
-import { isStubSection } from "../../modules/bridge";
 import { NotificationsTab, TodayTab } from "../../modules/dashboard/ActivityPanel";
 import type { ModuleCode } from "../../shared/api/generated/model";
 import { EmptyState } from "../../shared/ui/EmptyState";
@@ -18,16 +17,10 @@ export function PanelContent({
   section: string | undefined;
   tab: string;
 }) {
-  const { t } = useTranslation(["modules", "bridge"]);
+  const { t } = useTranslation("modules");
   if (module === "dashboard" && section === "queue") {
     if (tab === "today") return <TodayTab />;
     if (tab === "notifications") return <NotificationsTab />;
-  }
-  // Раздел-заглушка (W15-H1): «Объект не выбран. Выберите строку в таблице» рядом с заглушкой — неправда, таблицы нет.
-  if (module && section && isStubSection(module, section)) {
-    return (
-      <EmptyState level={3} compact title={t("bridge:panel.title")} text={t("bridge:panel.text")} />
-    );
   }
   return (
     <EmptyState

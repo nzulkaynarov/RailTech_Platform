@@ -47,36 +47,6 @@ function crmDown(): boolean {
   }
 }
 
-/**
- * Строка очереди без родного экрана (исходящее КП: «Исходящие» ещё в старом ERP; у проектов экран с D2-5) для e2e и снимков «Где сделать»:
- * `localStorage["rt-pf-mock-queue-stub"] = "1"` добавляет её к очереди директора (D1-6: у лидов, писем, КП и служебок
- * экраны уже есть, а проверять мост H1 надо на строке, у которой экрана нет).
- */
-export const MOCK_QUEUE_STUB_KEY = "rt-pf-mock-queue-stub";
-
-function queueStub(): boolean {
-  try {
-    return window.localStorage.getItem(MOCK_QUEUE_STUB_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
-const STUB_ROW: QueueItem = {
-  id: "project:99:problem",
-  role_id: "",
-  kind: "problem_project",
-  title: "Проверить отправку КП-2026/117",
-  subtitle: "АО «Демо-Рейл» · клиент не открыл письмо 9 дней",
-  due_label: "later",
-  object: {
-    kind: "quote",
-    number: "КП-2026/117",
-    title: "КП-2026/117",
-    path: "/eds/outbox/%D0%9A%D0%9F-2026%2F117?panel=open&tab=card",
-  },
-};
-
 /** То же для EDS (D1-6): `localStorage["rt-pf-mock-eds-down"] = "1"` — без писем и служебок, `sources.eds = "unavailable"`. */
 export const MOCK_EDS_DOWN_KEY = "rt-pf-mock-eds-down";
 
@@ -232,8 +202,6 @@ export const feedHandlers = [
     const denied = noQueue(roles);
     if (denied) return denied;
     const own = ownQueue(roles.view);
-    const director = own.find((i) => i.kind === "resolve_letter");
-    if (queueStub() && director) own.push({ ...STUB_ROW, role_id: director.role_id });
     // Замещение (W15-H6): заместитель видит строки замещаемого с пометкой «за {имя}».
     const session = readSession();
     const userId = session ? sessionRoles(session)?.user.id : undefined;

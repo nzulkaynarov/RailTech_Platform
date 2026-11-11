@@ -69,7 +69,6 @@
       "clients": "C",
       "system": "!"
     },
-    "where": "Where to look",
     "scope": {
       "unread": "Unread",
       "unreadCount": "Unread ({{count}})",
@@ -204,9 +203,6 @@
     "text": "The link is outdated or the address has a typo. Go back to your tasks.",
     "back": "Tasks"
   },
-  "stub": {
-    "subtitle": "The section is moving to the Platform"
-  },
   "search": {
     "label": "Search results",
     "hint": "Search by letter, request, quote or invoice number, client tax ID, name or article.",
@@ -235,11 +231,8 @@
       "tag": "Action",
       "createRequest": "Create a request",
       "createDocument": "Create a memo",
-      "inviteEmployee": "Invite an employee",
-      "legacyHint": "For now done in the old system — press to see where"
+      "inviteEmployee": "Invite an employee"
     },
-    "where": "Where to look",
-    "whereClose": "Close the hint",
     "navGroup": "Sections",
     "sectionTag": "Section",
     "keywords": {

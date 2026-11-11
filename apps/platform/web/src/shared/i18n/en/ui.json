@@ -33,8 +33,6 @@
     "multi": "Some sources are not responding, data is incomplete",
     "retry": "Retry"
   },
-  "whereToDo": "Where to do it",
-  "whereToDoItem": "Where to do it: {{title}}",
   "unsavedGuard": {
     "title": "Leave without saving?",
     "text": "The form has unsaved changes — they will be lost.",

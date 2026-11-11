@@ -14,11 +14,9 @@ import { useNavigate } from "react-router";
 
 import { canSee } from "../../app/access";
 import { useAuth } from "../../app/auth/useAuth";
-import { isActionable } from "../../modules/bridge";
 import { objectLink } from "../../modules/objectLinks";
 import { MODULES, moduleName } from "../../modules/registry";
 import { GROUP_NAMES, langOf, searchSettings } from "../../modules/admin/settingsRegistry";
-import { WhereToDo } from "../../modules/stub/WhereToDo";
 import { useSearch } from "../../shared/api/generated/platform-bff";
 import { SearchIcon } from "../../shared/ui/icons";
 import { MODULE_ICONS } from "../../shared/ui/moduleIcons";
@@ -97,7 +95,6 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
   const [value, setValue] = useState("");
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
-  const [where, setWhere] = useState<Option | null>(null);
 
   const typed = value.trim();
   const debounced = useDebounced(typed, DEBOUNCE_MS);
@@ -229,8 +226,6 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
           id: `${listId}-a-${String(i)}`,
           index: next++,
           title: t(`search.actions.${action.key}`),
-          // Раздел действия ещё без экрана (до D1-2): честно, где это делается сейчас, без «фазы Pn»
-          subtitle: isActionable(action.to) ? undefined : t("search.actions.legacyHint"),
           tag: t("search.actions.tag"),
           path: action.to,
           action: true,
@@ -248,7 +243,6 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
     const onDown = (event: MouseEvent) => {
       if (root.current && event.target instanceof Node && !root.current.contains(event.target)) {
         setOpen(false);
-        setWhere(null);
       }
     };
     document.addEventListener("mousedown", onDown);
@@ -259,13 +253,7 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
 
   const go = (option: Option | undefined) => {
     if (!option) return;
-    if (!isActionable(option.path)) {
-      // У раздела нет экрана: поиск остаётся открытым и говорит, где это посмотреть сейчас.
-      setWhere(option);
-      return;
-    }
     setOpen(false);
-    setWhere(null);
     setValue("");
     setActive(-1);
     void navigate(option.path);
@@ -276,7 +264,6 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
       if (options.length === 0) return;
       event.preventDefault();
       setOpen(true);
-      setWhere(null);
       const step = event.key === "ArrowDown" ? 1 : -1;
       setActive((prev) => (prev + step + options.length) % options.length);
     } else if (event.key === "Enter") {
@@ -291,10 +278,7 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
         go(target);
       }
     } else if (event.key === "Escape") {
-      if (where) {
-        event.preventDefault();
-        setWhere(null);
-      } else if (open) {
+      if (open) {
         event.preventDefault();
         setOpen(false);
       } else if (value) {
@@ -334,7 +318,6 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
           onChange={(event) => {
             setValue(event.target.value);
             setActive(-1);
-            setWhere(null);
             setOpen(true);
           }}
           onFocus={() => {
@@ -417,37 +400,6 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
               </div>
             );
           })}
-        </div>
-        <div aria-live="polite">
-          {open && where ? (
-            <section
-              className="pf-gsearch-where"
-              aria-label={t("search.where")}
-              onKeyDown={(event) => {
-                if (event.key !== "Escape") return;
-                // Escape внутри подсказки закрывает её и возвращает фокус в поле поиска
-                event.preventDefault();
-                event.stopPropagation();
-                setWhere(null);
-                root.current?.querySelector("input")?.focus();
-              }}
-            >
-              <h2 className="pf-gsearch-where-title">
-                {t("search.where")}: {where.title}
-              </h2>
-              <WhereToDo path={where.path} />
-              <button
-                type="button"
-                className="pf-gsearch-where-close pf-focusable"
-                onClick={() => {
-                  setWhere(null);
-                  root.current?.querySelector("input")?.focus();
-                }}
-              >
-                {t("search.whereClose")}
-              </button>
-            </section>
-          ) : null}
         </div>
       </div>
       <div role="status" className="pf-sr-only">

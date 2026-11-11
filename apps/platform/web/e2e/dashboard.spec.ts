@@ -99,9 +99,7 @@ test.describe("Задачи", () => {
     await settledScreenshot(page, "dashboard-admin-today");
   });
 
-  test("«Открыть» у строки с родным экраном ведёт на объект; у строки без экрана — «Где сделать»", async ({
-    page,
-  }) => {
+  test("«Открыть» ведёт на объект", async ({ page }) => {
     await loginAndWait(page, "director@demo.example");
 
     await page

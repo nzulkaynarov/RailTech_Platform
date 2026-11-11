@@ -177,34 +177,10 @@ SPA  PUT   /api/v1/me/deputy         → CRM PUT /me/deputy {deputy_user_id, dat
   пароль по одноразовой ссылке (час): токен гасится вместе с остальными, сессии сотрудника закрываются, вход — с новым паролем.
   После успеха CRM закрывает все сессии сотрудника сразу (`password_changed_at`: выпущенные раньше access-токены не принимаются; профиль в BFF перечитывается раз в минуту). Экран `/reset-password` убирает токен из адреса и просит браузер не слать Referer. Загрузка фото читается потоком с отсечкой (413 `PAYLOAD_TOO_LARGE`), в Caddy — `request_body max_size`. Неверная, использованная или просроченная ссылка — 422 `VALIDATION_FAILED` с `details.reason = reset_token_invalid`.
 
-### 3.3. Мост в старые экраны (W15-H1, BFF 0.19.0)
+### 3.3. Мост в старые экраны (W15-H1, BFF 0.19.0) — удалён
 
-Пока раздел Платформы — заглушка, сотрудник не упирается в «пока нет»: `SectionStubPage` говорит, где эта работа делается
-сейчас, и даёт кнопку «Открыть в старой CRM / старом ERP» в новую вкладку (`target=_blank`, `rel=noopener`). Карта «раздел
-Платформы → старая система и путь в ней → когда появится» — `apps/platform/web/src/modules/bridge.ts`; запись есть, пока раздел
-заглушка (волна 16 удаляет записи по мере появления настоящих экранов). Разделы без аналога в старых фронтах говорят честно:
-«Сейчас этой работы в интерфейсе нет; её делает …», а «Когда появится» — словами («в ближайшем обновлении» — разделы волны 16,
-«к пилоту» — остальное).
-
-```
-SPA  GET  /api/v1/bridge            → {crm_url, erp_url, erp_sso}      публичные адреса старых фронтов
-SPA  POST /api/v1/bridge/erp-sso    → BFF → CRM POST /auth/sso/token   {url: "{ERP}/sso/exchange#token=…"}
-```
-
-- **Адреса без правки `.env`.** `PLATFORM_CRM_PUBLIC_URL` и `PLATFORM_ERP_PUBLIC_URL` (необязательны, не секреты); пусто —
-  адрес выводится из адреса, по которому открыта Платформа: `platform.<домен>[:порт]` → `crm.<домен>[:порт]`, `erp.<домен>[:порт]`
-  (стенд — `*.localhost:8088`, прод — `crm.railtech.uz`, `erp.railtech.uz`, как в `.env.prod.example`). Хост берётся из `Host`,
-  схема — из `X-Forwarded-Proto` только от доверенного прокси (`PLATFORM_TRUSTED_PROXIES`), хост проверяется строгим шаблоном.
-  Не задан и не выводится (Платформа открыта не на `platform.*`) — `null`: кнопки нет, текст остаётся честным.
-- **Вход в старый ERP — тот же SSO, что у кнопки «Перейти в ERP» старой CRM** (`docs/architecture/sso-token.md`): CRM выдаёт
-  токен на 60 секунд токеном сотрудника, адрес обмена берёт сама CRM (`ERP_FRONTEND_URL`). Клик по кнопке открывает пустую
-  вкладку, берёт адрес и ведёт вкладку на него; не вышло (CRM отказала, всплывающие окна закрыты) — вкладка получает обычную
-  ссылку `{ERP}/#<раздел>`, а старый ERP сам попросит войти тем же логином. После обмена старый ERP открывает главную
-  страницу (его `SsoExchangePage` не сохраняет хэш-маршрут), поэтому под кнопкой написан путь в его меню.
-- **Старая CRM — отдельный вход.** Обмена SSO в CRM нет (CRM — источник входа), поэтому под кнопкой стоит «Вход в старую CRM —
-  теми же логином и паролем».
-- Токен в журнал BFF и в ответы об ошибках не попадает; ответ `no-store`; доступ — любому сотруднику с сессией и разделами
-  (права на экраны проверяют старые системы).
+Ручки `GET /bridge` и `POST /bridge/erp-sso` и настройки `PLATFORM_CRM_PUBLIC_URL`, `PLATFORM_ERP_PUBLIC_URL` удалены в BFF 0.45.0
+(2026-11-11): у всех разделов настоящие экраны, старые SPA CRM и ERP снесены, их адреса Caddy ведёт в Платформу.
 
 ### 3.4. Помощь, первый вход и обращения к администратору (W15-H7, BFF 0.25.0)
 
@@ -482,8 +458,7 @@ Telegram не ответил вовремя — 502 `INTEGRATION_FAILED` `delive
 (`/crm/messages`, `/crm/messages/{lead}`) — только `crm.leads`; лента и вложение (`/thread`, `/attachments`) — `crm.leads` или
 `chats.external` от чтения, объект решает CRM (чужой диалог — 404 как есть, BFF его не обходит); `GET /chats/external` → CRM
 `GET /chats` — список открытых диалогов с причиной `access` (`registry` | `participant` | `invoiced`) и фильтром `erp_deal_id`
-(«Запросить платёжку» — переписка клиента заявки). Заглушка «Чаты · С клиентами» ведёт во «Входящие» старой CRM только при
-`crm.leads` (`legacyNeeds` моста), иначе честно «её делает менеджер клиента». Раздел `eds.payments` теперь значит и CRM
+(«Запросить платёжку» — переписка клиента заявки). Раздел `eds.payments` теперь значит и CRM
 (`gives_backend`), поэтому источник CRM для роли «только счета» — `ok`, а не `not_applicable`; за агрегатами BFF в CRM для неё не ходит.
 
 **W16-D1-2b: Клиенты · Лиды, Клиенты и «+ Создать заявку».** `/crm/leads*` (раздел `crm.leads`, чтение) — CRM
@@ -515,7 +490,7 @@ BFF отдаёт сам (`/admin/company/logo/image`, `/admin/company/brand/logo
 | Домен | `platform.railtech.uz` → VPS 1 (A-запись — владелец); TLS — Caddy, ACME как у остальных доменов |
 | Caddy | сайт `{$PLATFORM_DOMAIN}`: `/api/*` → `platform-bff:8000` (`flush_interval -1` для SSE), остальное → `platform-web`; заголовки безопасности и CSP как у CRM (`style-src 'unsafe-inline'` нужен Ant Design); `no_mcp` |
 | Сервисы compose | `platform-bff` (uvicorn, 2 процесса, лимит 256 МБ), `platform-web` (статика, лимит 64 МБ); образы `rt-platform-bff`, `rt-platform-web` в GHCR по тегу sha, собирает `deploy.yml` (INF-P0-5, #151). **Caddy не зависит от здоровья Платформы** (`depends_on: service_started`): сбой её образа даёт 502 только на `platform.`, остальные домены живут (INF-P1-0) |
-| Переменные | `PLATFORM_DOMAIN` (обязательна: `deploy.sh` без неё останавливается до pull — сначала DNS, потом строка в `/opt/rt/.env.prod`), `PLATFORM_SESSION_TTL_HOURS`, `PLATFORM_CRM_URL=http://crm-api:8000`, `PLATFORM_ERP_URL=http://erp-backend:8000`, `PLATFORM_EDS_URL=http://eds-api:8000` (W13-A2; значение по умолчанию совпадает с compose), `REDIS_URL`; необязательные (не секреты): `PLATFORM_LOGIN_RATE_PER_MINUTE` (10), `PLATFORM_CRM_TIMEOUT_SECONDS` (5), `PLATFORM_TRUSTED_PROXIES` (см. §8), `PLATFORM_CRM_PUBLIC_URL` и `PLATFORM_ERP_PUBLIC_URL` (адреса старых фронтов для моста, §3.2; пусто — выводятся из `platform.<домен>`); нового секрета нет (сессия — случайный идентификатор, не подписанный токен) |
+| Переменные | `PLATFORM_DOMAIN` (обязательна: `deploy.sh` без неё останавливается до pull — сначала DNS, потом строка в `/opt/rt/.env.prod`), `PLATFORM_SESSION_TTL_HOURS`, `PLATFORM_CRM_URL=http://crm-api:8000`, `PLATFORM_ERP_URL=http://erp-backend:8000`, `PLATFORM_EDS_URL=http://eds-api:8000` (W13-A2; значение по умолчанию совпадает с compose), `REDIS_URL`; необязательные (не секреты): `PLATFORM_LOGIN_RATE_PER_MINUTE` (10), `PLATFORM_CRM_TIMEOUT_SECONDS` (5), `PLATFORM_TRUSTED_PROXIES` (см. §8); нового секрета нет (сессия — случайный идентификатор, не подписанный токен) |
 | Дев-стенд | `platform.localhost` в `Caddyfile.dev`, `make up` поднимает оба сервиса; `make check-platform` |
 | Деплой | существующий `deploy.yml` + `deploy.sh` (разрешено владельцем 2026-10-22, #151); smoke — четыре домена; smoke отката — тоже четыре (INF-P1-0) |
 | Память VPS 1 | +≈ 200 МБ к текущему стеку; после T4 −≈ 60 МБ (`crm-web`, `erp-web`) |

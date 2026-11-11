@@ -1,4 +1,4 @@
-import { fireEvent, screen, within } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { renderUi } from "../../test/renderUi";
@@ -61,59 +61,6 @@ describe("QueueList", () => {
     expect(links[1]).not.toHaveClass("ant-btn-primary");
     expect(links[2]).not.toHaveClass("ant-btn-primary");
     expect(links[3]).toHaveClass("ant-btn-primary");
-  });
-
-  it("строка с `where`: вместо «Открыть» — вторичная «Где сделать» с поповером, ссылки на заглушку нет", () => {
-    renderUi(
-      <QueueList
-        title="Что сделать сейчас"
-        items={[
-          {
-            id: "5",
-            badge: { tone: "red", label: "срок сегодня" },
-            title: "Взять в работу лида L-2041",
-            to: "/crm/leads?lead=L-2041",
-            urgent: true,
-            where: <p>Сейчас — в старой CRM: раздел «Лиды».</p>,
-          },
-        ]}
-      />,
-    );
-    expect(screen.queryByRole("link")).toBeNull();
-    const button = screen.getByRole("button", { name: "Где сделать: Взять в работу лида L-2041" });
-    expect(button).not.toHaveClass("ant-btn-primary");
-    expect(button).toHaveAttribute("aria-expanded", "false");
-    fireEvent.click(button);
-    expect(button).toHaveAttribute("aria-expanded", "true");
-    const panel = screen.getByRole("region", { name: "Где сделать" });
-    expect(within(panel).getByText("Сейчас — в старой CRM: раздел «Лиды».")).toBeInTheDocument();
-    // фокус входит в секцию, чтобы Tab дошёл до «Открыть в …» внутри неё
-    expect(panel).toHaveFocus();
-    expect(button).toHaveAttribute("aria-controls", panel.id);
-  });
-
-  it("Escape в секции «Где сделать» закрывает её и возвращает фокус на кнопку", () => {
-    renderUi(
-      <QueueList
-        title="Что сделать сейчас"
-        items={[
-          {
-            id: "5",
-            badge: { tone: "red", label: "срок сегодня" },
-            title: "Взять в работу лида L-2041",
-            to: "/crm/leads?lead=L-2041",
-            where: <a href="#x">Открыть в старой CRM</a>,
-          },
-        ]}
-      />,
-    );
-    const button = screen.getByRole("button", { name: /Где сделать/ });
-    fireEvent.click(button);
-    const panel = screen.getByRole("region", { name: "Где сделать" });
-    fireEvent.keyDown(panel, { key: "Escape" });
-    expect(screen.queryByRole("region", { name: "Где сделать" })).toBeNull();
-    expect(button).toHaveFocus();
-    expect(button).toHaveAttribute("aria-expanded", "false");
   });
 
   it("без строк — пустое состояние словами", () => {

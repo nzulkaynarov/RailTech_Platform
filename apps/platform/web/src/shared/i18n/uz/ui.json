@@ -33,8 +33,6 @@
     "multi": "Ba’zi manbalar javob bermayapti, ma’lumotlar to‘liq emas",
     "retry": "Qayta urinish"
   },
-  "whereToDo": "Qayerda bajarish",
-  "whereToDoItem": "Qayerda bajarish: {{title}}",
   "unsavedGuard": {
     "title": "Saqlamasdan chiqasizmi?",
     "text": "Formada saqlanmagan o‘zgarishlar bor — ular yo‘qoladi.",

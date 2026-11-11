@@ -30,8 +30,6 @@ export function NotificationCenter({ variant, onClose }: NotificationCenterProps
   const read = useReadNotifications();
   const [readScope, setReadScope] = useState<"unread" | "all">("unread");
   const [category, setCategory] = useState<NotificationTab>("all");
-  // Защита от исчезновения уведомления при раскрытии «Где посмотреть» в режиме «Непрочитанные»
-  const [pinnedIds, setPinnedIds] = useState<string[]>([]);
 
   const page = query.data;
   const items = page?.items ?? [];
@@ -42,7 +40,7 @@ export function NotificationCenter({ variant, onClose }: NotificationCenterProps
     variant === "panel"
       ? items
       : items.filter((item) => {
-          if (readScope === "unread" && item.read && !pinnedIds.includes(item.id)) return false;
+          if (readScope === "unread" && item.read) return false;
           if (category !== "all" && item.tab !== category) return false;
           return true;
         });
@@ -96,17 +94,7 @@ export function NotificationCenter({ variant, onClose }: NotificationCenterProps
       />
     );
   } else {
-    body = (
-      <NotificationList
-        items={shown}
-        onOpen={open}
-        onRead={(item) => {
-          setPinnedIds((prev) => (prev.includes(item.id) ? prev : [...prev, item.id]));
-          read.markRead(item.id);
-        }}
-        label={t("notifications.label")}
-      />
-    );
+    body = <NotificationList items={shown} onOpen={open} label={t("notifications.label")} />;
   }
 
   const footer = (
@@ -153,7 +141,6 @@ export function NotificationCenter({ variant, onClose }: NotificationCenterProps
             size="small"
             value={readScope}
             onChange={(val) => {
-              setPinnedIds([]);
               setReadScope(val);
             }}
             options={[
@@ -182,7 +169,6 @@ export function NotificationCenter({ variant, onClose }: NotificationCenterProps
             style={{ width: 160 }}
             value={category}
             onChange={(val) => {
-              setPinnedIds([]);
               setCategory(val);
             }}
             options={[
