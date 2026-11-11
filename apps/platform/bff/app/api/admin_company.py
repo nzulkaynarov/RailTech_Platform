@@ -15,7 +15,7 @@ from typing import Annotated, Any
 import httpx
 from fastapi import APIRouter, Depends, Path, Query, Request, Response, status
 
-from app.clients.erp_company import ErpCompany
+from app.clients.erp_company import ErpCompany, rows_of
 from app.deps import Authed, require
 from app.errors import PlatformError
 from app.schemas_company import (
@@ -40,6 +40,10 @@ from app.schemas_company import (
     ChargeTemplateList,
     ChargeTemplateUpdate,
     ChargeTypeList,
+    CompanyBankAccount,
+    CompanyBankAccountIn,
+    CompanyBankAccountList,
+    CompanyBankAccountUpdate,
     CompanyProfile,
     CompanyProfileUpdate,
     DocumentPlaceholders,
@@ -74,6 +78,7 @@ from app.schemas_company import (
     foreign_reference_fields,
     labels_to_erp,
     text,
+    to_bank_account,
     to_brand,
     to_category,
     to_category_request,
@@ -353,6 +358,58 @@ async def update_quote_defaults(body: QuoteDefaultsUpdate, authed: Writer) -> Qu
     erp = _erp(authed)
     raw = await erp.data("PATCH", await erp.company_path("settings/"), json=sent)
     return to_quote_defaults(raw, authed.fields)
+
+
+# --- банковские счета (решение владельца 2026-11-11) -------------------------------------------
+
+
+@router.get(
+    "/admin/company/bank-accounts",
+    response_model=CompanyBankAccountList,
+    operation_id="listCompanyBankAccounts",
+)
+async def list_company_bank_accounts(authed: Reader) -> CompanyBankAccountList:
+    erp = _erp(authed)
+    rows = rows_of(await erp.data("GET", await erp.company_path("bank-accounts/")))
+    return CompanyBankAccountList(items=[to_bank_account(r) for r in rows])
+
+
+@router.post(
+    "/admin/company/bank-accounts",
+    response_model=CompanyBankAccount,
+    status_code=status.HTTP_201_CREATED,
+    operation_id="createCompanyBankAccount",
+)
+async def create_company_bank_account(
+    body: CompanyBankAccountIn, authed: Writer
+) -> CompanyBankAccount:
+    erp = _erp(authed)
+    path = await erp.company_path("bank-accounts/")
+    return to_bank_account(await erp.data("POST", path, json=body.sent()))
+
+
+@router.patch(
+    "/admin/company/bank-accounts/{id}",
+    response_model=CompanyBankAccount,
+    operation_id="updateCompanyBankAccount",
+)
+async def update_company_bank_account(
+    id: ItemId, body: CompanyBankAccountUpdate, authed: Writer
+) -> CompanyBankAccount:
+    erp = _erp(authed)
+    path = await erp.company_path(f"bank-accounts/{id}/")
+    return to_bank_account(await erp.data("PATCH", path, json=body.sent()))
+
+
+@router.delete(
+    "/admin/company/bank-accounts/{id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    operation_id="deleteCompanyBankAccount",
+)
+async def delete_company_bank_account(id: ItemId, authed: Writer) -> Response:
+    erp = _erp(authed)
+    await erp.request("DELETE", await erp.company_path(f"bank-accounts/{id}/"))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 # --- статьи расхода ----------------------------------------------------------------------------

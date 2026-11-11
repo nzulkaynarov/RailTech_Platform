@@ -88,23 +88,32 @@ function type(label: string | RegExp, value: string) {
 }
 
 describe("Admin · Компания: реквизиты для счетов (D26G-6)", () => {
-  it("нет р/с и МФО — предупреждение над полями; после сохранения — «Реквизиты для счетов заданы»", async () => {
+  it("нет счёта в сумах — предупреждение; добавили счёт — «Реквизиты для счетов заданы» (счета — список, 2026-11-11)", async () => {
     updateCompanyMock((state) => {
-      state.company = { ...state.company, bank_account: "", mfo: "" };
+      state.bankAccounts = [];
     });
     await openTab("details", "admin@demo.example");
 
-    expect(
-      await screen.findByText(/Нет банковских реквизитов для счетов: без расчётного счёта и МФО/),
-    ).toBeVisible();
-    type("Расчётный счёт", "20208000900000000001");
-    type("МФО банка", "00001");
-    fireEvent.click(await button(/Сохранить реквизиты/));
+    expect(await screen.findByText(/Нет основного счёта в сумах/)).toBeVisible();
+    fireEvent.click(
+      (await screen.findAllByRole("button", { name: "Добавить счёт" }))[0] as HTMLElement,
+    );
+    const dialog = await screen.findByRole("dialog", { name: "Новый банковский счёт" });
+    fireEvent.change(within(dialog).getByLabelText("Расчётный счёт"), {
+      target: { value: "20208000900000000001" },
+    });
+    fireEvent.change(within(dialog).getByLabelText("МФО"), { target: { value: "00001" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Сохранить" }));
 
     expect(
       await screen.findByText("Реквизиты для счетов заданы: «Выставить счёт» сработает."),
     ).toBeVisible();
-    expect(readCompanyMock().company.mfo).toBe("00001");
+    const [account] = readCompanyMock().bankAccounts;
+    expect([account?.account, account?.currency, account?.is_default]).toEqual([
+      "20208000900000000001",
+      "UZS",
+      true,
+    ]);
   });
 });
 

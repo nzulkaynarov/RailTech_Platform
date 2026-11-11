@@ -3,7 +3,7 @@
 openapi: 3.0.3
 info:
   title: RailTech Platform ERP — Internal API (ERP SPA)
-  version: 1.1.0
+  version: 1.2.0
   description: 'Внутренний API ERP для ERP SPA (бэк-офис), пространство `/api/v1/` (CONTRACTS §1). Файл генерируется из схемы
     бэкенда — это не отдельное описание, а её срез; расхождение с кодом невозможно: CI перегенерирует схему и падает при diff.'
   contact:
@@ -320,6 +320,256 @@ paths:
           $ref: '#/components/responses/ForbiddenResponse'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/accounts/companies/{id}/bank-accounts/:
+    get:
+      operationId: accounts_companies_bank_accounts_list
+      description: GET — счета компании (основные первыми); POST — добавить счёт. Первый счёт валюты становится основным;
+        назначение основного снимает флаг с прежнего счёта той же валюты.
+      summary: Company bank accounts
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Компания.
+        required: true
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: types__code
+        schema:
+          type: string
+      tags:
+      - Accounts
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCompanyBankAccountList'
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyBankAccount'
+          description: ''
+        '400':
+          description: 'Ошибки полей в виде DRF: {поле: [required|unknown|too_long|taken|inactive]}'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+    post:
+      operationId: accounts_companies_bank_accounts_create
+      description: GET — счета компании (основные первыми); POST — добавить счёт. Первый счёт валюты становится основным;
+        назначение основного снимает флаг с прежнего счёта той же валюты.
+      summary: Company bank accounts
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Компания.
+        required: true
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: page_size
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: types__code
+        schema:
+          type: string
+      tags:
+      - Accounts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyBankAccountWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CompanyBankAccountWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CompanyBankAccountWriteRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCompanyBankAccountList'
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyBankAccount'
+          description: ''
+        '400':
+          description: 'Ошибки полей в виде DRF: {поле: [required|unknown|too_long|taken|inactive]}'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/accounts/companies/{id}/bank-accounts/{account_id}/:
+    patch:
+      operationId: accounts_companies_bank_accounts_partial_update
+      description: PATCH — изменить счёт; DELETE — удалить.
+      summary: Company bank account
+      parameters:
+      - in: path
+        name: account_id
+        schema:
+          type: string
+          pattern: ^[0-9]+$
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Компания.
+        required: true
+      tags:
+      - Accounts
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCompanyBankAccountWriteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCompanyBankAccountWriteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCompanyBankAccountWriteRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyBankAccount'
+          description: ''
+        '204':
+          description: No response body
+        '400':
+          description: 'Ошибки полей в виде DRF: {поле: [required|unknown|too_long|taken|inactive]}'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '404':
+          description: Нет
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+    delete:
+      operationId: accounts_companies_bank_accounts_destroy
+      description: PATCH — изменить счёт; DELETE — удалить.
+      summary: Company bank account
+      parameters:
+      - in: path
+        name: account_id
+        schema:
+          type: string
+          pattern: ^[0-9]+$
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Компания.
+        required: true
+      tags:
+      - Accounts
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyBankAccount'
+          description: ''
+        '204':
+          description: No response body
+        '400':
+          description: 'Ошибки полей в виде DRF: {поле: [required|unknown|too_long|taken|inactive]}'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '404':
+          description: Нет
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
   /api/v1/accounts/companies/{id}/delete-logo/:
     delete:
       operationId: accounts_companies_delete_logo_destroy
@@ -21820,6 +22070,84 @@ components:
       - name
       - trust_score
       - user_count
+    CompanyBankAccount:
+      type: object
+      description: 'Банковский счёт компании (решение владельца 2026-11-11): валюта — кодом справочника.'
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        bank_name:
+          type: string
+          readOnly: true
+          title: Банк
+        mfo:
+          type: string
+          readOnly: true
+          title: МФО
+        account:
+          type: string
+          readOnly: true
+          title: Расчётный счёт
+        currency:
+          type: string
+          title: Код
+          description: Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')
+          readOnly: true
+        swift:
+          type: string
+          readOnly: true
+        correspondent_bank:
+          type: string
+          readOnly: true
+          title: Банк-корреспондент
+        is_default:
+          type: boolean
+          readOnly: true
+          title: Основной для валюты
+        is_active:
+          type: boolean
+          readOnly: true
+          title: Действует
+        order:
+          type: integer
+          readOnly: true
+          title: Порядок
+      required:
+      - account
+      - bank_name
+      - correspondent_bank
+      - currency
+      - id
+      - is_active
+      - is_default
+      - mfo
+      - order
+      - swift
+    CompanyBankAccountWriteRequest:
+      type: object
+      properties:
+        bank_name:
+          type: string
+        mfo:
+          type: string
+        account:
+          type: string
+          minLength: 1
+        currency:
+          type: string
+          minLength: 1
+          description: Код валюты справочника (UZS, USD, …)
+        swift:
+          type: string
+        correspondent_bank:
+          type: string
+        is_default:
+          type: boolean
+        is_active:
+          type: boolean
+        order:
+          type: integer
     CompanyDocumentProfile:
       type: object
       description: |-
@@ -28517,6 +28845,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CategoryProposal'
+    PaginatedCompanyBankAccountList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CompanyBankAccount'
     PaginatedCompanyList:
       type: object
       required:
@@ -29327,6 +29678,30 @@ components:
         is_active:
           type: boolean
           title: Активен
+    PatchedCompanyBankAccountWriteRequest:
+      type: object
+      properties:
+        bank_name:
+          type: string
+        mfo:
+          type: string
+        account:
+          type: string
+          minLength: 1
+        currency:
+          type: string
+          minLength: 1
+          description: Код валюты справочника (UZS, USD, …)
+        swift:
+          type: string
+        correspondent_bank:
+          type: string
+        is_default:
+          type: boolean
+        is_active:
+          type: boolean
+        order:
+          type: integer
     PatchedCompanyDocumentProfileRequest:
       type: object
       description: |-

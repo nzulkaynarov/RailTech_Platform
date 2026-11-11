@@ -113,7 +113,7 @@
     "save": "Rekvizitlarni saqlash",
     "invalidField": "Qiymatni tekshiring",
     "bankReady": "Hisoblar uchun rekvizitlar kiritilgan: «Hisob chiqarish» ishlaydi.",
-    "bankMissing": "Hisoblar uchun bank rekvizitlari yo‘q: hisob raqami va MFO siz mijozga hisob chiqarib bo‘lmaydi. Quyidagi maydonlarni to‘ldiring va saqlang."
+    "bankMissing": "So‘mdagi asosiy hisob yo‘q: mijozga hisob-faktura chiqarib bo‘lmaydi. Quyida hisob qo‘shing."
   },
   "brand": {
     "title": "Hujjatlar blanki va brendi",
@@ -534,5 +534,27 @@
       }
     },
     "note": "Yangi hisob-kitob va hujjatlar shu stavka bilan boradi."
+  },
+  "bank": {
+    "title": "Bank hisoblari",
+    "add": "Hisob qo‘shish",
+    "addTitle": "Yangi bank hisobi",
+    "editTitle": "Bank hisobi",
+    "deleteTitle": "{{name}} hisobini o‘chirasizmi?",
+    "deleted": "Hisob o‘chirildi",
+    "account": "Hisob raqami",
+    "currency": "Valyuta",
+    "bankName": "Bank",
+    "mfo": "MFO",
+    "swift": "SWIFT",
+    "correspondent": "Korrespondent bank",
+    "isDefault": "Asosiy",
+    "isDefaultLabel": "Bu valyuta uchun asosiy",
+    "activeLabel": "Faol",
+    "invalidField": "Qiymatni tekshiring",
+    "empty": {
+      "title": "Hozircha hisoblar yo‘q",
+      "text": "So‘mdagi asosiy hisobni qo‘shing: usiz mijozga hisob-faktura chiqarib bo‘lmaydi."
+    }
   }
 }

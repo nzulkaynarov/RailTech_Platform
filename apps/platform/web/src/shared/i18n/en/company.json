@@ -113,7 +113,7 @@
     "save": "Save details",
     "invalidField": "Check the value",
     "bankReady": "Bank details for invoices are set: “Issue invoice” will work.",
-    "bankMissing": "No bank details for invoices: without the bank account and MFO an invoice cannot be issued to a client. Fill in the fields below and save."
+    "bankMissing": "No default account in sums: an invoice cannot be issued. Add an account below."
   },
   "brand": {
     "title": "Document letterhead and brand",
@@ -534,5 +534,27 @@
       }
     },
     "note": "New calculations and documents use this rate."
+  },
+  "bank": {
+    "title": "Bank accounts",
+    "add": "Add account",
+    "addTitle": "New bank account",
+    "editTitle": "Bank account",
+    "deleteTitle": "Delete account {{name}}?",
+    "deleted": "Account deleted",
+    "account": "Account number",
+    "currency": "Currency",
+    "bankName": "Bank",
+    "mfo": "Bank code (MFO)",
+    "swift": "SWIFT",
+    "correspondent": "Correspondent bank",
+    "isDefault": "Default",
+    "isDefaultLabel": "Default for this currency",
+    "activeLabel": "Active",
+    "invalidField": "Check the value",
+    "empty": {
+      "title": "No accounts yet",
+      "text": "Add the default account in sums: without it an invoice cannot be issued."
+    }
   }
 }

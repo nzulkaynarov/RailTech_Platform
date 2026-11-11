@@ -3,6 +3,7 @@ import json
 from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
 from drf_spectacular.utils import extend_schema_field
+from parties.models import CompanyBankAccount
 from rest_framework import serializers
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
 
@@ -650,3 +651,25 @@ class OwnCompanySetupSerializer(serializers.Serializer):
         if Company.objects.filter(inn=value).exists():
             raise serializers.ValidationError("Компания с таким ИНН уже есть.")
         return value
+
+
+class CompanyBankAccountSerializer(serializers.ModelSerializer):
+    """Банковский счёт компании (решение владельца 2026-11-11): валюта — кодом справочника."""
+
+    currency = serializers.SlugRelatedField(slug_field="code", read_only=True)
+
+    class Meta:
+        model = CompanyBankAccount
+        fields = [
+            "id",
+            "bank_name",
+            "mfo",
+            "account",
+            "currency",
+            "swift",
+            "correspondent_bank",
+            "is_default",
+            "is_active",
+            "order",
+        ]
+        read_only_fields = fields
