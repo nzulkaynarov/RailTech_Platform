@@ -151,8 +151,10 @@
       "show_lead_time": "TT da yetkazib berish muddati",
       "show_fx_note": "Valyuta kursi haqida izoh"
     },
-    "inheritedTitle": "Kompaniya kartasidan quyidagilar chop etiladi:",
+    "inheritedTitle": "Hujjatlardagi rekvizitlar — kompaniya kartochkasidan",
     "inheritedKeys": {
+      "legal_name": "Nomi",
+      "inn": "STIR",
       "legal_address": "Yuridik manzil",
       "bank_details": "Bank rekvizitlari"
     },
@@ -169,7 +171,8 @@
     "previewTitle": "Hujjat namunasi",
     "previewKind": "Hujjat turi",
     "previewFrame": "Namuna: {{kind}}",
-    "previewHint": "Namunadagi ma'lumotlar xayoliy."
+    "previewHint": "Namunadagi ma'lumotlar xayoliy.",
+    "inheritedEdit": "Rekvizitlarni o‘zgartirish"
   },
   "numbering": {
     "title": "Hujjatlarni raqamlash",

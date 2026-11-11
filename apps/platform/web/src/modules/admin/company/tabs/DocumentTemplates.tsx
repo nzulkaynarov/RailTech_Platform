@@ -425,6 +425,7 @@ function DocumentEditor({
             html={preview.data?.html}
             title={t("templates.documents.previewFrame")}
             loading={preview.isPending}
+            error={preview.error}
           />
           {unknown.map((code) => (
             <p key={code} className="pf-co-hint" role="status">

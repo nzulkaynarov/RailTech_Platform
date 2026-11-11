@@ -81,9 +81,13 @@ def _text(value: Any, limit: int) -> str:
 
 
 def letterhead_data(company, profile, user=None) -> Dict[str, Any]:
-    """`data` события по профилю документов компании."""
+    """`data` события по профилю документов компании: реквизиты — уже подставленные из карточки компании, как в печати
+    (без этого при флаге по умолчанию в EDS уходили пустые ИНН, адрес и банк)."""
     from integration.services.event_builders import build_actor
 
+    from crm.services.documents.brand import resolved_profile
+
+    profile = resolved_profile(company, profile)
     logo, omitted = _logo(profile)
     accent = _text(profile.accent_color, 7)
     head: Dict[str, Any] = {
@@ -101,6 +105,17 @@ def letterhead_data(company, profile, user=None) -> Dict[str, Any]:
     if omitted:
         head["logo_omitted"] = omitted
     return {"erp_company_id": int(company.id), "actor": build_actor(user), "letterhead": head}
+
+
+def publish_company_letterhead(company, user=None):
+    """Бланк после правки реквизитов своей компании: профиль документов, если он есть, иначе значения по умолчанию."""
+    from accounts.models import CompanyDocumentProfile
+    from core.tenant import own_company_id
+
+    if own_company_id() != company.id:
+        return None
+    profile = CompanyDocumentProfile.objects.filter(company=company).first() or CompanyDocumentProfile(company=company)
+    return publish_letterhead(company, profile, user)
 
 
 def publish_letterhead(company, profile, user=None):

@@ -93,6 +93,11 @@ def create_own_company(user: CustomUser, data: Dict[str, Any]) -> Tuple[Optional
 
         attach_provisioned_users(company, actor=user)
 
+        # Компания уже своя: бланк для писем EDS — сразу, а не после первой правки реквизитов (решение 2026-11-11).
+        from .letterhead_event import publish_company_letterhead
+
+        publish_company_letterhead(company, user)
+
         log_admin_action(
             entity_type="company",
             entity_id=company.id,
