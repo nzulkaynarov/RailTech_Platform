@@ -30,6 +30,28 @@ async function horizontalOverflow(page: Page): Promise<{ page: number; main: num
   })()`);
 }
 
+/**
+ * Переполнение после того, как экран дорисовался: на холодном старте (сборка чанков, шрифт) первая отрисовка бывает шире
+ * на 1–2 px. Ждём ответа без переполнения до 5 с; не дождались — возвращаем последний замер (тест покажет его).
+ */
+async function settledOverflow(page: Page): Promise<{ page: number; main: number }> {
+  let last = await horizontalOverflow(page);
+  try {
+    await expect
+      .poll(
+        async () => {
+          last = await horizontalOverflow(page);
+          return last.page + last.main;
+        },
+        { timeout: 5_000, intervals: [100, 200, 400] },
+      )
+      .toBe(0);
+  } catch {
+    // переполнение держится — вернём его как есть
+  }
+  return last;
+}
+
 const enc = encodeURIComponent;
 
 /** Основные экраны сотрудников (учётка со всеми ролями): списки, карточки, настройки. */
@@ -99,9 +121,8 @@ test.describe("UX-2b: суммы, статусы, телефон", () => {
       await spaGoto(page, route);
       await expect(page.getByRole("heading", { level: 1 }).first(), route).toBeVisible();
       await expect(page.locator("[data-pf-skeleton]")).toHaveCount(0);
-      // экран дорисовался (ответы MSW, ленивые чанки): мерить прежний экран нельзя
-      await page.waitForTimeout(400);
-      const overflow = await horizontalOverflow(page);
+      // экран дорисовался (ответы MSW, ленивые чанки, шрифт): ширина меряется, когда перестала меняться
+      const overflow = await settledOverflow(page);
       if (overflow.page > 0 || overflow.main > 0) {
         wide.push(
           `${route}: страница +${String(overflow.page)}, область +${String(overflow.main)}`,
@@ -191,7 +212,7 @@ test.describe("UX-2b: суммы, статусы, телефон", () => {
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, "/eds/inbox");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-    expect(await horizontalOverflow(page)).toEqual({ page: 0, main: 0 });
+    expect(await settledOverflow(page)).toEqual({ page: 0, main: 0 });
     await expectNoViolations(page, "входящие 390");
     await settledScreenshot(page, "inbox");
     const filter = page.locator(".pf-letters-filter");
