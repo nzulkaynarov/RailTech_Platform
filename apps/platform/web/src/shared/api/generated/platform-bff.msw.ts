@@ -154,7 +154,10 @@ import type {
   CrewRate,
   DictionaryItem,
   DictionaryItemList,
+  DictionaryItemSource,
   DictionaryList,
+  DictionarySource,
+  DictionarySyncResult,
   DocflowSettings,
   DocumentPlaceholders,
   DocumentPreview,
@@ -14231,6 +14234,23 @@ export const getCreateMailSenderRuleResponseMock = (
   ...overrideResponse,
 });
 
+export const getListDictionariesResponseDictionarySourceMock = (
+  overrideResponse: Partial<DictionarySource> = {},
+): DictionarySource => ({
+  ...{
+    name: {
+      ru: faker.string.alpha({ length: { min: 1, max: 120 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 120 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 120 } }),
+    },
+    synced_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getListDictionariesResponseMock = (
   overrideResponse: Partial<Extract<DictionaryList, object>> = {},
 ): DictionaryList => ({
@@ -14278,8 +14298,30 @@ export const getListDictionariesResponseMock = (
         required: faker.datatype.boolean(),
       }),
     ),
+    source: faker.helpers.arrayElement([
+      { ...getListDictionariesResponseDictionarySourceMock() },
+      null,
+    ]),
   })),
   unavailable: faker.helpers.arrayElements(["eds", "crm", "erp"] as const),
+  ...overrideResponse,
+});
+
+export const getListDictionaryItemsResponseDictionaryItemSourceMock = (
+  overrideResponse: Partial<DictionaryItemSource> = {},
+): DictionaryItemSource => ({
+  ...{
+    name: {
+      ru: faker.string.alpha({ length: { min: 1, max: 120 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 120 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 120 } }),
+    },
+    synced_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    missing: faker.datatype.boolean(),
+  },
   ...overrideResponse,
 });
 
@@ -14304,7 +14346,29 @@ export const getListDictionaryItemsResponseMock = (
     active: faker.datatype.boolean(),
     position: faker.number.int(),
     used: faker.helpers.arrayElement([faker.datatype.boolean(), null]),
+    source: faker.helpers.arrayElement([
+      { ...getListDictionaryItemsResponseDictionaryItemSourceMock() },
+      null,
+    ]),
   })),
+  ...overrideResponse,
+});
+
+export const getCreateDictionaryItemResponseDictionaryItemSourceMock = (
+  overrideResponse: Partial<DictionaryItemSource> = {},
+): DictionaryItemSource => ({
+  ...{
+    name: {
+      ru: faker.string.alpha({ length: { min: 1, max: 120 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 120 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 120 } }),
+    },
+    synced_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    missing: faker.datatype.boolean(),
+  },
   ...overrideResponse,
 });
 
@@ -14328,6 +14392,28 @@ export const getCreateDictionaryItemResponseMock = (
   active: faker.datatype.boolean(),
   position: faker.number.int(),
   used: faker.helpers.arrayElement([faker.datatype.boolean(), null]),
+  source: faker.helpers.arrayElement([
+    { ...getCreateDictionaryItemResponseDictionaryItemSourceMock() },
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getReorderDictionaryItemsResponseDictionaryItemSourceMock = (
+  overrideResponse: Partial<DictionaryItemSource> = {},
+): DictionaryItemSource => ({
+  ...{
+    name: {
+      ru: faker.string.alpha({ length: { min: 1, max: 120 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 120 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 120 } }),
+    },
+    synced_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    missing: faker.datatype.boolean(),
+  },
   ...overrideResponse,
 });
 
@@ -14352,7 +14438,33 @@ export const getReorderDictionaryItemsResponseMock = (
     active: faker.datatype.boolean(),
     position: faker.number.int(),
     used: faker.helpers.arrayElement([faker.datatype.boolean(), null]),
+    source: faker.helpers.arrayElement([
+      { ...getReorderDictionaryItemsResponseDictionaryItemSourceMock() },
+      null,
+    ]),
   })),
+  ...overrideResponse,
+});
+
+export const getSyncDictionaryResponseMock = (
+  overrideResponse: Partial<Extract<DictionarySyncResult, object>> = {},
+): DictionarySyncResult => ({ queued: faker.datatype.boolean(), ...overrideResponse });
+
+export const getUpdateDictionaryItemResponseDictionaryItemSourceMock = (
+  overrideResponse: Partial<DictionaryItemSource> = {},
+): DictionaryItemSource => ({
+  ...{
+    name: {
+      ru: faker.string.alpha({ length: { min: 1, max: 120 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 120 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 120 } }),
+    },
+    synced_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    missing: faker.datatype.boolean(),
+  },
   ...overrideResponse,
 });
 
@@ -14376,6 +14488,10 @@ export const getUpdateDictionaryItemResponseMock = (
   active: faker.datatype.boolean(),
   position: faker.number.int(),
   used: faker.helpers.arrayElement([faker.datatype.boolean(), null]),
+  source: faker.helpers.arrayElement([
+    { ...getUpdateDictionaryItemResponseDictionaryItemSourceMock() },
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -35302,6 +35418,30 @@ export const getReorderDictionaryItemsMockHandler = (
   );
 };
 
+export const getSyncDictionaryMockHandler = (
+  overrideResponse?:
+    | DictionarySyncResult
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<DictionarySyncResult> | DictionarySyncResult),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/dictionaries/:kind/sync",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSyncDictionaryResponseMock(),
+        { status: 202 },
+      );
+    },
+    options,
+  );
+};
+
 export const getUpdateDictionaryItemMockHandler = (
   overrideResponse?:
     | DictionaryItem
@@ -39142,6 +39282,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getListDictionaryItemsMockHandler(),
   getCreateDictionaryItemMockHandler(),
   getReorderDictionaryItemsMockHandler(),
+  getSyncDictionaryMockHandler(),
   getUpdateDictionaryItemMockHandler(),
   getDeleteDictionaryItemMockHandler(),
   getListLetterKindsMockHandler(),

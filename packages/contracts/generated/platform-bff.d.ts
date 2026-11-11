@@ -4609,6 +4609,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/dictionaries/{kind}/sync": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Справочники · обновить из источника
+     * @description Раздел `admin` — полный. Ставит в очередь то же обновление, что идёт по расписанию (валюты — список и курсы ЦБ). Итог виден по `Dictionary.source.synced_at`. 404 — у справочника нет источника.
+     */
+    post: operations["syncDictionary"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/dictionaries/{kind}/{code}": {
     parameters: {
       query?: never;
@@ -12078,6 +12098,26 @@ export interface components {
       /** @description Закрытый список поведения — только переименовать и переставить */
       closed: boolean;
       attrs: components["schemas"]["DictionaryAttr"][];
+      /** @description Открытый источник, который ведёт список (валюты — ЦБ); нет — список ведут руками */
+      source?: components["schemas"]["DictionarySource"] | null;
+    };
+    DictionarySource: {
+      name: components["schemas"]["LocalizedName"];
+      /**
+       * Format: date-time
+       * @description Последнее обновление из источника; `null` — ещё не обновлялся
+       */
+      synced_at: string | null;
+    };
+    DictionaryItemSource: {
+      name: components["schemas"]["LocalizedName"];
+      /** Format: date-time */
+      synced_at: string | null;
+      /** @description Строки больше нет в источнике — она не удаляется */
+      missing: boolean;
+    };
+    DictionarySyncResult: {
+      queued: boolean;
     };
     DictionaryList: {
       items: components["schemas"]["Dictionary"][];
@@ -12097,6 +12137,8 @@ export interface components {
       position: number;
       /** @description Значение уже использовано (удалить нельзя, только скрыть); `null` — не считалось */
       used?: boolean | null;
+      /** @description Строку ведёт источник (название и его поля; правку руками он не перетирает); нет — строка ручная */
+      source?: components["schemas"]["DictionaryItemSource"] | null;
     };
     DictionaryItemList: {
       items: components["schemas"]["DictionaryItem"][];
@@ -23960,6 +24002,36 @@ export interface operations {
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
       422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  syncDictionary: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Вид справочника (`letter-kinds`, `receipt-methods`, `mail-types`) */
+        kind: components["parameters"]["DictionaryKindPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Обновление поставлено в очередь */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DictionarySyncResult"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

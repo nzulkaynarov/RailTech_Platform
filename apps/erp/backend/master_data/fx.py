@@ -6,9 +6,9 @@
 
 from finance.services.fx import (  # noqa: F401
     CBU_URL,
-    TRACKED_CURRENCIES,
     convert_to_uzs,
     fetch_cbu_rates,
     get_rate_to_uzs,
+    is_tracked,
     resolve_rate,
 )

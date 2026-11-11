@@ -1105,7 +1105,16 @@
       "code": "Code",
       "codeHint": "Latin letters and digits, e.g. USD or UZ. The code cannot be changed after saving.",
       "search": "Search by code or name",
-      "noMatch": "Nothing found"
+      "noMatch": "Nothing found",
+      "source": {
+        "line": "Source: {{name}} · {{when}}",
+        "never": "not updated yet",
+        "refresh": "Refresh",
+        "queued": "Refresh started. The list will update within a minute.",
+        "column": "Source",
+        "missing": "Not in source",
+        "manual": "Manual"
+      }
     },
     "templates": {
       "title": "Resolution templates",

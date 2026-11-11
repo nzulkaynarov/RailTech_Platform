@@ -378,7 +378,7 @@
       "registered": "roʻyxatga olingan {{date}} · {{subject}}",
       "open": "Ochish",
       "other": "Bu boshqa xat — roʻyxatga olish",
-      "keep": "Roʻyxatga olmaslik",
+      "keep": "Ro‘yxatga olmaslik",
       "reason": "Nega bu boshqa xat",
       "reasonRequired": "Sababini yozing — u jurnalga tushadi",
       "similarTitle": "Oʻxshash xatlar",
@@ -1105,7 +1105,16 @@
       "code": "Kod",
       "codeHint": "Lotin harflari va raqamlar, masalan USD yoki UZ. Saqlangandan keyin kod o‘zgarmaydi.",
       "search": "Kod yoki nom bo‘yicha qidirish",
-      "noMatch": "Hech narsa topilmadi"
+      "noMatch": "Hech narsa topilmadi",
+      "source": {
+        "line": "Manba: {{name}} · {{when}}",
+        "never": "hali yangilanmagan",
+        "refresh": "Yangilash",
+        "queued": "Yangilash boshlandi. Ro‘yxat bir daqiqa ichida yangilanadi.",
+        "column": "Manba",
+        "missing": "Manbada yo‘q",
+        "manual": "Qo‘lda"
+      }
     },
     "templates": {
       "title": "Rezolyutsiya shablonlari",

@@ -20,15 +20,19 @@ export function SettingsPage({
   sectionKey,
   subtitle,
   extra,
+  editable: given,
   children,
 }: {
   sectionKey: string;
+  /** Правит ли сотрудник то, что открыто (справочники «Расчёта» правит и директор); нет — по разделу Настроек. */
+  editable?: boolean;
   subtitle?: ReactNode;
   extra?: ReactNode;
   children: ReactNode;
 }) {
   const { t } = useTranslation("modules");
-  const editable = useSettingsEditable(sectionKey);
+  const bySection = useSettingsEditable(sectionKey);
+  const editable = given ?? bySection;
   const title = t(`admin.sections.${sectionKey}`);
   useDocumentTitle(title);
   // Больше одной строки — в справку (ресёрч §4.2 п. 2): «Подробнее» ведёт в статью Помощи этой страницы.

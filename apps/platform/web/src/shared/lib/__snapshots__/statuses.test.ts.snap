@@ -209,6 +209,7 @@ exports[`карты статусов > снимок карты: изменени
     "MANUAL": "gold",
     "auto": "blue",
     "manual": "gold",
+    "missing": "gold",
     "own": "default",
     "sample": "blue",
   },

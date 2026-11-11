@@ -3,7 +3,7 @@
 openapi: 3.0.3
 info:
   title: RailTech Platform ERP — Internal API (ERP SPA)
-  version: 1.3.0
+  version: 1.5.0
   description: 'Внутренний API ERP для ERP SPA (бэк-офис), пространство `/api/v1/` (CONTRACTS §1). Файл генерируется из схемы
     бэкенда — это не отдельное описание, а её срез; расхождение с кодом невозможно: CI перегенерирует схему и падает при diff.'
   contact:
@@ -14755,6 +14755,35 @@ paths:
           $ref: '#/components/responses/ForbiddenResponse'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/dictionaries/{kind}/sync:
+    post:
+      operationId: syncDictionary
+      description: Queues the scheduled source job (currencies — the central bank list and rates). 404 — no source.
+      summary: Refresh a dictionary from its open source
+      parameters:
+      - in: path
+        name: kind
+        schema:
+          type: string
+        required: true
+      tags:
+      - Master Data
+      security:
+      - jwtAuth: []
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
   /api/v1/dictionaries/{kind}/{code}:
     patch:
       operationId: updateDictionaryItem
@@ -14880,7 +14909,7 @@ paths:
         name: currency
         schema:
           type: string
-        description: Код валюты (USD, EUR, RUB); по умолчанию USD.
+        description: Код включённой валюты справочника (USD, EUR, …); по умолчанию USD.
       tags:
       - Finance
       security:
@@ -14914,7 +14943,7 @@ paths:
         name: currency
         schema:
           type: string
-        description: Код валюты (USD, EUR, RUB); по умолчанию USD.
+        description: Код включённой валюты справочника (USD, EUR, …); по умолчанию USD.
       - in: query
         name: limit
         schema:
@@ -23500,6 +23529,25 @@ components:
           type: string
           title: Название (англ.)
           maxLength: 255
+        source:
+          type: string
+          title: Источник
+          maxLength: 16
+        synced_at:
+          type: string
+          format: date-time
+          nullable: true
+          title: Обновлено из источника
+        in_source:
+          type: boolean
+          title: Есть в источнике
+        manual_fields:
+          title: Поля, изменённые руками
+        iso_numeric:
+          type: string
+          title: ISO цифровой код
+          description: Цифровой код ISO 4217 (840, 978, 643)
+          maxLength: 3
         symbol:
           type: string
           title: Символ
@@ -23542,6 +23590,25 @@ components:
           type: string
           title: Название (англ.)
           maxLength: 255
+        source:
+          type: string
+          title: Источник
+          maxLength: 16
+        synced_at:
+          type: string
+          format: date-time
+          nullable: true
+          title: Обновлено из источника
+        in_source:
+          type: boolean
+          title: Есть в источнике
+        manual_fields:
+          title: Поля, изменённые руками
+        iso_numeric:
+          type: string
+          title: ISO цифровой код
+          description: Цифровой код ISO 4217 (840, 978, 643)
+          maxLength: 3
         symbol:
           type: string
           title: Символ
@@ -30096,6 +30163,25 @@ components:
           type: string
           title: Название (англ.)
           maxLength: 255
+        source:
+          type: string
+          title: Источник
+          maxLength: 16
+        synced_at:
+          type: string
+          format: date-time
+          nullable: true
+          title: Обновлено из источника
+        in_source:
+          type: boolean
+          title: Есть в источнике
+        manual_fields:
+          title: Поля, изменённые руками
+        iso_numeric:
+          type: string
+          title: ISO цифровой код
+          description: Цифровой код ISO 4217 (840, 978, 643)
+          maxLength: 3
         symbol:
           type: string
           title: Символ

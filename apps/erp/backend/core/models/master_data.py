@@ -15,6 +15,23 @@ class LocalizedNames(models.Model):
         abstract = True
 
 
+class SourceTracked(models.Model):
+    """Строка, которую ведёт открытый источник (исследование 2026-11-11 «Справочники» §C2).
+
+    `source` — код источника (`cbu`), пусто — строку ведут руками. Источник обновляет названия и свои поля, кроме
+    тех, что человек поменял руками (`manual_fields`); «действует», порядок и поля владельца не трогает. Строка,
+    которой больше нет в источнике, не удаляется: `in_source = False`.
+    """
+
+    source = models.CharField(max_length=16, blank=True, default="", verbose_name=_("Источник"))
+    synced_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Обновлено из источника"))
+    in_source = models.BooleanField(default=True, verbose_name=_("Есть в источнике"))
+    manual_fields = models.JSONField(default=list, blank=True, verbose_name=_("Поля, изменённые руками"))
+
+    class Meta:
+        abstract = True
+
+
 class Country(LocalizedNames, AbstractLookup):
     """Справочник стран по ISO 3166-1.
 
@@ -65,8 +82,17 @@ class Country(LocalizedNames, AbstractLookup):
         verbose_name_plural = _("Справочник: Страны")
 
 
-class Currency(LocalizedNames, AbstractLookup):
-    """Справочник валют (ISO 4217)."""
+class Currency(LocalizedNames, SourceTracked, AbstractLookup):
+    """Справочник валют (ISO 4217). Список, названия и цифровой код ведёт ЦБ РУз (`master_data/cbu.py`); символ —
+    поле владельца."""
+
+    iso_numeric = models.CharField(
+        max_length=3,
+        blank=True,
+        default="",
+        verbose_name=_("ISO цифровой код"),
+        help_text=_("Цифровой код ISO 4217 (840, 978, 643)"),
+    )
 
     symbol = models.CharField(
         max_length=5,

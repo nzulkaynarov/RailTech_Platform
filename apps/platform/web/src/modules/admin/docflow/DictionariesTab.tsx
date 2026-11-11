@@ -17,6 +17,8 @@ import type { TFunction } from "i18next";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { canEdit } from "../../../app/access";
+import { useAuth } from "../../../app/auth/useAuth";
 import type {
   Dictionary,
   DictionaryAttr,
@@ -24,14 +26,17 @@ import type {
   DictionaryItem,
 } from "../../../shared/api/generated/model";
 import {
+  getListDictionariesQueryKey,
   getListDictionaryItemsQueryKey,
   useCreateDictionaryItem,
   useDeleteDictionaryItem,
   useListDictionaries,
   useListDictionaryItems,
   useReorderDictionaryItems,
+  useSyncDictionary,
   useUpdateDictionaryItem,
 } from "../../../shared/api/generated/platform-bff";
+import { useFormat } from "../../../shared/lib/useFormat";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { localName } from "../../eds/dictionaries";
 import { ConfirmModal, ListTable, TabHeader } from "../company/common";
@@ -152,6 +157,20 @@ function DictionaryTable({ dictionary, readOnly }: { dictionary: Dictionary; rea
       },
     },
   });
+  // Список с открытым источником (валюты — ЦБ): «Обновить» — только администратор (решение 2026-11-11).
+  const { me } = useAuth();
+  const { date } = useFormat();
+  const source = dictionary.source ?? null;
+  const sync = useSyncDictionary({
+    mutation: {
+      onSuccess: () => {
+        setError(null);
+        void message.success(t("settings.dict.source.queued"));
+        void queryClient.invalidateQueries({ queryKey: getListDictionariesQueryKey() });
+      },
+      onError,
+    },
+  });
   const items = query.data?.items ?? [];
   const name = (item: DictionaryItem) => localName(item.name, i18n.language);
   // Длинные списки (250 стран): поиск по коду и названиям на трёх языках и страницы по 20.
@@ -185,7 +204,29 @@ function DictionaryTable({ dictionary, readOnly }: { dictionary: Dictionary; rea
 
   return (
     <>
-      <div className="pf-co-actions">{add}</div>
+      <div className="pf-co-actions">
+        {source ? (
+          <span className="pf-co-hint">
+            {t("settings.dict.source.line", {
+              name: localName(source.name, i18n.language),
+              when: source.synced_at
+                ? date(source.synced_at, "datetime")
+                : t("settings.dict.source.never"),
+            })}
+          </span>
+        ) : null}
+        {source && canEdit(me, "admin") ? (
+          <Button
+            loading={sync.isPending}
+            onClick={() => {
+              sync.mutate({ kind });
+            }}
+          >
+            {t("settings.dict.source.refresh")}
+          </Button>
+        ) : null}
+        {add}
+      </div>
       {error ? (
         <Alert type="error" showIcon role="alert" message={dictionaryErrorText(t, error)} />
       ) : null}
@@ -241,6 +282,29 @@ function DictionaryTable({ dictionary, readOnly }: { dictionary: Dictionary; rea
               render: (_: unknown, row: DictionaryItem) =>
                 attrText(t, attr, row.attrs[attr.key], i18n.language),
             })),
+          ...(source
+            ? [
+                {
+                  title: t("settings.dict.source.column"),
+                  key: "source",
+                  render: (_: unknown, row: DictionaryItem) =>
+                    row.source?.missing ? (
+                      <StatusTag kind="origin" status="missing">
+                        {t("settings.dict.source.missing")}
+                      </StatusTag>
+                    ) : row.source ? (
+                      [
+                        localName(row.source.name, i18n.language),
+                        row.source.synced_at ? date(row.source.synced_at) : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")
+                    ) : (
+                      t("settings.dict.source.manual")
+                    ),
+                },
+              ]
+            : []),
           {
             title: t("settings.dict.status"),
             key: "active",
