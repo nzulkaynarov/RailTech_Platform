@@ -10,6 +10,7 @@ import { ApiError } from "../../../shared/api/errors";
 import { ContextualSaveBar } from "../../../shared/ui/ContextualSaveBar";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { FilePicker } from "../../../shared/ui/FileField";
+import { ErrorNote } from "../../../shared/ui/FormParts";
 import { companyErrorText, isCompanyNotSet, missingBlocks } from "./errors";
 import { SoloSection } from "./solo";
 
@@ -147,10 +148,13 @@ export function PreviewFrame({
   html: next,
   title,
   loading,
+  error,
 }: {
   html: string | undefined;
   title: string;
   loading?: boolean;
+  /** Ошибка запроса образца: показывается над рамкой, а не молча оставляет пустое место или прежний образец */
+  error?: unknown;
 }) {
   const { t } = useTranslation("company");
   // Пока считается новый образец, показывается прежний: рамка не мигает на каждый ввод.
@@ -159,6 +163,7 @@ export function PreviewFrame({
   const html = next ?? shown;
   return (
     <div className="pf-co-preview" aria-busy={loading ? "true" : "false"}>
+      {error ? <ErrorNote message={companyErrorText(t, error)} /> : null}
       {html ? (
         <iframe className="pf-co-frame" title={title} sandbox="" srcDoc={html} />
       ) : (

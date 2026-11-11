@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { App, Checkbox, Collapse, Form, Input, Segmented, Select } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router";
 
 import type {
   BrandProfile,
@@ -24,7 +25,6 @@ type Values = Omit<BrandProfile, "logo_url" | "inherited">;
 
 const KINDS: DocumentKind[] = ["quote", "contract", "invoice", "act", "letter"];
 const FLAGS = [
-  "use_company_defaults",
   "show_logo",
   "show_bank_in_header",
   "show_cover_letter",
@@ -132,8 +132,6 @@ function BrandForm({ brand }: { brand: BrandProfile }) {
     };
   }, [kind, draftKey, requestPreview]);
 
-  const inherits = Form.useWatch("use_company_defaults", form);
-
   const submit = () => {
     update.mutate(
       { data: changed },
@@ -167,19 +165,19 @@ function BrandForm({ brand }: { brand: BrandProfile }) {
           }}
         />
         <Form<Values> form={form} layout="vertical" initialValues={initial} onFinish={submit}>
+          {brand.inherited ? (
+            <div className="pf-co-inherited">
+              <p className="pf-co-hint">{t("brand.inheritedTitle")}</p>
+              <DefinitionList
+                items={Object.entries(brand.inherited).map(([key, value]) => ({
+                  label: t(`brand.inheritedKeys.${key}`, { defaultValue: key }),
+                  value: value || "—",
+                }))}
+              />
+              <Link to="/admin/company?part=details">{t("brand.inheritedEdit")}</Link>
+            </div>
+          ) : null}
           <div className="pf-co-grid">
-            <Form.Item name="legal_name" label={t("brand.legalName")} className="pf-co-wide">
-              <Input maxLength={255} disabled={inherits} />
-            </Form.Item>
-            <Form.Item name="inn" label={t("brand.inn")}>
-              <Input maxLength={20} disabled={inherits} />
-            </Form.Item>
-            <Form.Item name="legal_address" label={t("brand.legalAddress")} className="pf-co-wide">
-              <Input.TextArea rows={2} disabled={inherits} />
-            </Form.Item>
-            <Form.Item name="bank_details" label={t("brand.bankDetails")} className="pf-co-wide">
-              <Input.TextArea rows={2} disabled={inherits} />
-            </Form.Item>
             <Form.Item name="signatory_name" label={t("brand.signatoryName")}>
               <Input maxLength={255} />
             </Form.Item>
@@ -229,17 +227,6 @@ function BrandForm({ brand }: { brand: BrandProfile }) {
               </Form.Item>
             ))}
           </fieldset>
-          {inherits && brand.inherited ? (
-            <div className="pf-co-inherited">
-              <p className="pf-co-hint">{t("brand.inheritedTitle")}</p>
-              <DefinitionList
-                items={Object.entries(brand.inherited).map(([key, value]) => ({
-                  label: t(`brand.inheritedKeys.${key}`, { defaultValue: key }),
-                  value,
-                }))}
-              />
-            </div>
-          ) : null}
           <Collapse
             ghost
             items={[
@@ -281,6 +268,7 @@ function BrandForm({ brand }: { brand: BrandProfile }) {
           html={preview.data?.html}
           title={t("brand.previewFrame", { kind: t(`kinds.${kind}`) })}
           loading={preview.isPending}
+          error={preview.error}
         />
         <p className="pf-co-hint">{t("brand.previewHint")}</p>
       </div>

@@ -17,7 +17,7 @@ applied on every M2M-edit, not once per migrate.
 import logging
 
 from django.contrib.auth.signals import user_login_failed
-from django.db.models.signals import m2m_changed
+from django.db.models.signals import m2m_changed, post_save
 from django.dispatch import receiver
 from rest_framework.throttling import BaseThrottle
 
@@ -64,3 +64,25 @@ def ensure_company_has_at_least_one_type(sender, instance: Company, action: str,
         instance.pk,
         action,
     )
+
+
+# Поля карточки компании, которые печатаются в бланке EDS (решение владельца 2026-11-11: одни реквизиты).
+LETTERHEAD_FIELDS = frozenset({"name", "inn", "legal_address", "bank_account", "mfo", "logo"})
+
+
+@receiver(post_save, sender=Company)
+def publish_letterhead_on_requisites(sender, instance: Company, created: bool, update_fields=None, **kwargs):
+    """Любая правка реквизитов своей компании (Настройки, мастер первого запуска, синхронизация с CRM) обновляет бланк
+    в EDS. Раньше бланк уходил только при сохранении вкладки «Бланк», и письмо отвечало «Бланк компании не задан»."""
+    if kwargs.get("raw"):
+        return
+    if update_fields is not None and not LETTERHEAD_FIELDS & set(update_fields):
+        return
+    from django.core.exceptions import ImproperlyConfigured
+
+    from .services.letterhead_event import publish_company_letterhead
+
+    try:
+        publish_company_letterhead(instance)
+    except ImproperlyConfigured:  # своя компания не определена (несколько продавцов без OWN_COMPANY_ID) — бланка нет
+        logger.info("letterhead not published: own company is ambiguous", exc_info=True)

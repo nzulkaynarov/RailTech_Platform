@@ -151,8 +151,10 @@
       "show_lead_time": "Lead time in the quote",
       "show_fx_note": "Exchange-rate note"
     },
-    "inheritedTitle": "From the company card the document will print:",
+    "inheritedTitle": "Details in documents come from the company card",
     "inheritedKeys": {
+      "legal_name": "Name",
+      "inn": "Tax ID",
       "legal_address": "Legal address",
       "bank_details": "Bank details"
     },
@@ -169,7 +171,8 @@
     "previewTitle": "Document sample",
     "previewKind": "Document type",
     "previewFrame": "Sample: {{kind}}",
-    "previewHint": "The data in the sample is fictional."
+    "previewHint": "The data in the sample is fictional.",
+    "inheritedEdit": "Edit company details"
   },
   "numbering": {
     "title": "Document numbering",

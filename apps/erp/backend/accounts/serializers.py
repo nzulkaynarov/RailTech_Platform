@@ -161,21 +161,18 @@ class CompanyDocumentProfileSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(serializers.DictField(child=serializers.CharField(), allow_null=True))
     def get_inherited_preview(self, obj) -> dict | None:
-        """Значения, которые НАПЕЧАТАЮТСЯ при включённом наследовании из карточки компании.
+        """Значения реквизитов, которые НАПЕЧАТАЮТСЯ: всегда из карточки компании (решение владельца 2026-11-11).
 
         Считает та же функция, что и печать (`crm.services.documents.brand`), поэтому форма
         настроек и готовый документ не могут разойтись. Нужно ровно затем, что заблокированные
         поля показывали пустоту, а документ рядом печатал адрес и банковские реквизиты.
         """
-        from copy import copy
-
-        from crm.services.documents.brand import _apply_company_defaults
+        from crm.services.documents.brand import resolved_profile
 
         company = getattr(obj, "company", None)
         if company is None:
             return None
-        row = copy(obj)
-        _apply_company_defaults(company, row)
+        row = resolved_profile(company, obj)
         return {
             "legal_name": row.legal_name or "",
             "inn": row.inn or "",
