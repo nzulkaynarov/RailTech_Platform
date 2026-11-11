@@ -360,57 +360,6 @@
       }
     }
   },
-  "reference": {
-    "title": "Ma’lumotnomalar",
-    "hint": "Davlatlar, valyutalar, birliklar va bazislar. Ishlatilgan qator o‘chirib qo‘yiladi.",
-    "kind": "Ma'lumotnoma",
-    "kinds": {
-      "countries": "Davlatlar",
-      "currencies": "Valyutalar",
-      "units": "Birliklar",
-      "delivery-basis": "Yetkazib berish bazislari"
-    },
-    "moved": "TIF TN kodlari va ishlab chiqaruvchilar «Katalog · Tovarlar» → «Ma'lumotnomalar» bo‘limida; valyuta kurslari — «Sozlamalar · Soliqlar va valyutalar»da.",
-    "movedLink": "Ma'lumotnomalarni ochish",
-    "movedNoAccess": "TIF TN kodlari va ishlab chiqaruvchilar «Katalog · Tovarlar» → «Ma'lumotnomalar» bo‘limida; valyuta kurslari — «Sozlamalar · Soliqlar va valyutalar»da.",
-    "code": "Kod",
-    "name": "Nomi",
-    "alpha2": "ISO alpha-2",
-    "alpha3": "ISO alpha-3",
-    "isoNumeric": "ISO raqamli kodi",
-    "vat": "QQS, %",
-    "symbol": "Belgi",
-    "description": "Tavsif",
-    "sellerPays": "Sotuvchi to'laydi",
-    "pays": {
-      "seller_pays_freight": "Yuk tashish",
-      "seller_pays_insurance": "Sug'urta",
-      "seller_pays_import": "Import",
-      "seller_pays_delivery": "Yetkazib berish"
-    },
-    "order": "Tartib",
-    "activeLabel": "Qator amal qiladi",
-    "add": "Qator qo'shish",
-    "addTitle": "Ma'lumotnomaning yangi qatori",
-    "editTitle": "Ma'lumotnoma qatorini tahrirlash",
-    "disable": "O'chirib qo'yish",
-    "enable": "Yoqish",
-    "disableNamed": "O'chirib qo'yish: {{name}}",
-    "enableNamed": "Yoqish: {{name}}",
-    "deleteTitle": "«{{name}}» ni o'chirasizmi?",
-    "deleted": "Qator o'chirildi",
-    "codeTaken": "Bunday kod mavjud",
-    "invalidField": "Qiymatni tekshiring",
-    "empty": {
-      "title": "Hozircha qatorlar yo'q",
-      "text": "Ma'lumotnomaning birinchi qatorini qo'shing."
-    },
-    "search": "Kod va nom bo‘yicha qidirish",
-    "noMatch": {
-      "title": "Hech narsa topilmadi",
-      "text": "«{{query}}» so‘rovi bo‘yicha qatorlar yo‘q. So‘rovni o‘zgartiring yoki qidiruvni tozalang."
-    }
-  },
   "categories": {
     "title": "Katalog kategoriyalari va ular bo'yicha so'rovlar",
     "hint": "Katalog kategoriyalari daraxti. Yangi kategoriyani xodimlar so‘rov bilan so‘raydi.",

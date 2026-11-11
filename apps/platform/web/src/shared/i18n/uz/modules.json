@@ -329,7 +329,8 @@
       "partial": "Ba’zi ma’lumotnomalar yuklanmadi ({{lists}}) — qolganlari ko‘rsatilgan. Keyinroq qayta urining.",
       "domain": {
         "eds": "hujjatlar",
-        "crm": "pochta"
+        "crm": "pochta",
+        "erp": "Hisob-kitob (ERP)"
       }
     },
     "notifications": {

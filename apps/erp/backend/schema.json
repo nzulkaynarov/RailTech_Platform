@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "ERP API",
-        "version": "1.2.0",
+        "version": "1.4.0",
         "description": "ERP Platform API. Supports deal lifecycle management, quoting, product catalog (PIM), Excel imports, and real-time notifications via WebSocket.",
         "contact": {
             "name": "ERP API Support",
@@ -26367,6 +26367,361 @@
                 }
             }
         },
+        "/api/v1/dictionaries": {
+            "get": {
+                "operationId": "listDictionaries",
+                "description": "Чтение — сотрудник, запись — `settings.edit` (через `HasRolePermission`).",
+                "summary": "Dictionaries catalog",
+                "tags": [
+                    "Master Data"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/dictionaries/{kind}": {
+            "get": {
+                "operationId": "listDictionaryItems",
+                "description": "Чтение — сотрудник, запись — `settings.edit` (через `HasRolePermission`).",
+                "summary": "Dictionary values",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "include_hidden",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "in": "path",
+                        "name": "kind",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Master Data"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFoundResponse"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "createDictionaryItem",
+                "description": "Чтение — сотрудник, запись — `settings.edit` (через `HasRolePermission`).",
+                "summary": "Add a dictionary value",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "kind",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Master Data"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {}
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {}
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {}
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/BadRequestResponse"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFoundResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/dictionaries/{kind}/{code}": {
+            "patch": {
+                "operationId": "updateDictionaryItem",
+                "description": "Чтение — сотрудник, запись — `settings.edit` (через `HasRolePermission`).",
+                "summary": "Change a dictionary value",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "code",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "kind",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Master Data"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {}
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {}
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {}
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/BadRequestResponse"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFoundResponse"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "deleteDictionaryItem",
+                "description": "Чтение — сотрудник, запись — `settings.edit` (через `HasRolePermission`).",
+                "summary": "Delete a dictionary value",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "code",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "kind",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Master Data"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFoundResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/dictionaries/{kind}/order": {
+            "put": {
+                "operationId": "reorderDictionaryItems",
+                "description": "Чтение — сотрудник, запись — `settings.edit` (через `HasRolePermission`).",
+                "summary": "Reorder dictionary values",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "kind",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Master Data"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {}
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {}
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "type": "object",
+                                "additionalProperties": {}
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "$ref": "#/components/responses/BadRequestResponse"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFoundResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/exchange-rates/": {
             "get": {
                 "operationId": "exchange_rates_list",
@@ -38713,6 +39068,16 @@
                         "title": "Активен",
                         "description": "Неактивные записи скрыты в формах выбора"
                     },
+                    "name_uz": {
+                        "type": "string",
+                        "title": "Название (узб.)",
+                        "maxLength": 255
+                    },
+                    "name_en": {
+                        "type": "string",
+                        "title": "Название (англ.)",
+                        "maxLength": 255
+                    },
                     "alpha2": {
                         "type": "string",
                         "title": "ISO Alpha-2",
@@ -38774,6 +39139,16 @@
                         "type": "boolean",
                         "title": "Активен",
                         "description": "Неактивные записи скрыты в формах выбора"
+                    },
+                    "name_uz": {
+                        "type": "string",
+                        "title": "Название (узб.)",
+                        "maxLength": 255
+                    },
+                    "name_en": {
+                        "type": "string",
+                        "title": "Название (англ.)",
+                        "maxLength": 255
                     },
                     "alpha2": {
                         "type": "string",
@@ -38938,6 +39313,16 @@
                         "title": "Активен",
                         "description": "Неактивные записи скрыты в формах выбора"
                     },
+                    "name_uz": {
+                        "type": "string",
+                        "title": "Название (узб.)",
+                        "maxLength": 255
+                    },
+                    "name_en": {
+                        "type": "string",
+                        "title": "Название (англ.)",
+                        "maxLength": 255
+                    },
                     "symbol": {
                         "type": "string",
                         "title": "Символ",
@@ -38979,6 +39364,16 @@
                         "type": "boolean",
                         "title": "Активен",
                         "description": "Неактивные записи скрыты в формах выбора"
+                    },
+                    "name_uz": {
+                        "type": "string",
+                        "title": "Название (узб.)",
+                        "maxLength": 255
+                    },
+                    "name_en": {
+                        "type": "string",
+                        "title": "Название (англ.)",
+                        "maxLength": 255
                     },
                     "symbol": {
                         "type": "string",
@@ -39429,6 +39824,16 @@
                         "title": "Активен",
                         "description": "Неактивные записи скрыты в формах выбора"
                     },
+                    "name_uz": {
+                        "type": "string",
+                        "title": "Название (узб.)",
+                        "maxLength": 255
+                    },
+                    "name_en": {
+                        "type": "string",
+                        "title": "Название (англ.)",
+                        "maxLength": 255
+                    },
                     "description": {
                         "type": "string",
                         "title": "Описание",
@@ -39489,6 +39894,16 @@
                         "type": "boolean",
                         "title": "Активен",
                         "description": "Неактивные записи скрыты в формах выбора"
+                    },
+                    "name_uz": {
+                        "type": "string",
+                        "title": "Название (узб.)",
+                        "maxLength": 255
+                    },
+                    "name_en": {
+                        "type": "string",
+                        "title": "Название (англ.)",
+                        "maxLength": 255
                     },
                     "description": {
                         "type": "string",
@@ -47359,6 +47774,16 @@
                         "title": "Активен",
                         "description": "Неактивные записи скрыты в формах выбора"
                     },
+                    "name_uz": {
+                        "type": "string",
+                        "title": "Название (узб.)",
+                        "maxLength": 255
+                    },
+                    "name_en": {
+                        "type": "string",
+                        "title": "Название (англ.)",
+                        "maxLength": 255
+                    },
                     "alpha2": {
                         "type": "string",
                         "title": "ISO Alpha-2",
@@ -47415,6 +47840,16 @@
                         "type": "boolean",
                         "title": "Активен",
                         "description": "Неактивные записи скрыты в формах выбора"
+                    },
+                    "name_uz": {
+                        "type": "string",
+                        "title": "Название (узб.)",
+                        "maxLength": 255
+                    },
+                    "name_en": {
+                        "type": "string",
+                        "title": "Название (англ.)",
+                        "maxLength": 255
                     },
                     "symbol": {
                         "type": "string",
@@ -47493,6 +47928,16 @@
                         "type": "boolean",
                         "title": "Активен",
                         "description": "Неактивные записи скрыты в формах выбора"
+                    },
+                    "name_uz": {
+                        "type": "string",
+                        "title": "Название (узб.)",
+                        "maxLength": 255
+                    },
+                    "name_en": {
+                        "type": "string",
+                        "title": "Название (англ.)",
+                        "maxLength": 255
                     },
                     "description": {
                         "type": "string",
@@ -48747,6 +49192,16 @@
                         "type": "boolean",
                         "title": "Активен",
                         "description": "Неактивные записи скрыты в формах выбора"
+                    },
+                    "name_uz": {
+                        "type": "string",
+                        "title": "Название (узб.)",
+                        "maxLength": 255
+                    },
+                    "name_en": {
+                        "type": "string",
+                        "title": "Название (англ.)",
+                        "maxLength": 255
                     }
                 }
             },
@@ -55100,6 +55555,16 @@
                         "type": "boolean",
                         "title": "Активен",
                         "description": "Неактивные записи скрыты в формах выбора"
+                    },
+                    "name_uz": {
+                        "type": "string",
+                        "title": "Название (узб.)",
+                        "maxLength": 255
+                    },
+                    "name_en": {
+                        "type": "string",
+                        "title": "Название (англ.)",
+                        "maxLength": 255
                     }
                 },
                 "required": [
@@ -55136,6 +55601,16 @@
                         "type": "boolean",
                         "title": "Активен",
                         "description": "Неактивные записи скрыты в формах выбора"
+                    },
+                    "name_uz": {
+                        "type": "string",
+                        "title": "Название (узб.)",
+                        "maxLength": 255
+                    },
+                    "name_en": {
+                        "type": "string",
+                        "title": "Название (англ.)",
+                        "maxLength": 255
                     }
                 },
                 "required": [

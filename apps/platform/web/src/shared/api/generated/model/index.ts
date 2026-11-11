@@ -251,6 +251,7 @@ export * from "./dictionaryAttr";
 export * from "./dictionaryAttrOption";
 export * from "./dictionaryAttrType";
 export * from "./dictionaryAttrValues";
+export * from "./dictionaryCodes";
 export * from "./dictionaryItem";
 export * from "./dictionaryItemIn";
 export * from "./dictionaryItemList";

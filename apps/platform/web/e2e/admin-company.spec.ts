@@ -360,31 +360,30 @@ test.describe("Компания: статьи расхода, шаблоны, с
     await expect(page.getByRole("row", { name: /act_issued/ })).toHaveCount(0);
   });
 
-  test("справочники: добавить страну, отключить валюту, используемую строку не удалить", async ({
+  test("справочники: добавить страну, скрыть валюту, используемую строку не удалить", async ({
     page,
   }) => {
+    // Директор с «Настройками компании» правит справочники «Расчёта», как и раньше (общий ресурс, 2026-11-11).
     await loginAndWait(page, "director@demo.example");
     await openCompany(page, "reference");
-    await page.getByRole("button", { name: "Добавить строку" }).click();
-    const dialog = page.getByRole("dialog", { name: "Новая строка справочника" });
+    await page.getByRole("button", { name: "Добавить значение" }).click();
+    const dialog = page.getByRole("dialog", { name: "Новое значение" });
     await dialog.getByLabel("Код", { exact: true }).fill("TR");
-    await dialog.getByLabel("Название").fill("Турция");
+    await dialog.getByLabel("Название по-русски").fill("Турция");
     await dialog.getByRole("button", { name: "Сохранить" }).click();
     await expect(page.getByRole("row", { name: /Турция/ })).toBeVisible();
 
     await page.getByRole("button", { name: "Удалить: Узбекистан" }).click();
     const confirm = page.getByRole("dialog", { name: /Удалить/ });
     await confirm.getByRole("button", { name: "Удалить" }).click();
-    await expect(
-      confirm.getByText("Строка используется в документах и данных. Отключите её вместо удаления."),
-    ).toBeVisible();
+    await expect(confirm.getByText(/можно только скрыть/)).toBeVisible();
     await confirm.getByRole("button", { name: "Отмена" }).click();
 
     await pickList(page, "Валюты");
-    await page.getByRole("button", { name: "Отключить: Евро" }).click();
-    await expect(page.getByRole("row", { name: /Евро/ })).toContainText("Отключена");
-    await page.getByRole("button", { name: "Включить: Евро" }).click();
-    await expect(page.getByRole("row", { name: /Евро/ })).toContainText("Активна");
+    await page.getByRole("button", { name: "Скрыть: Евро" }).click();
+    await expect(page.getByRole("row", { name: /Евро/ })).toContainText("Скрыто");
+    await page.getByRole("button", { name: "Вернуть: Евро" }).click();
+    await expect(page.getByRole("row", { name: /Евро/ })).toContainText("Действует");
     await settledScreenshot(page, "company-reference-currencies");
   });
 });

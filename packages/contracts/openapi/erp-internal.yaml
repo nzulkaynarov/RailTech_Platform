@@ -3,7 +3,7 @@
 openapi: 3.0.3
 info:
   title: RailTech Platform ERP — Internal API (ERP SPA)
-  version: 1.2.0
+  version: 1.4.0
   description: 'Внутренний API ERP для ERP SPA (бэк-офис), пространство `/api/v1/` (CONTRACTS §1). Файл генерируется из схемы
     бэкенда — это не отдельное описание, а её срез; расхождение с кодом невозможно: CI перегенерирует схему и падает при diff.'
   contact:
@@ -14862,6 +14862,227 @@ paths:
           $ref: '#/components/responses/ForbiddenResponse'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/dictionaries:
+    get:
+      operationId: listDictionaries
+      description: Чтение — сотрудник, запись — `settings.edit` (через `HasRolePermission`).
+      summary: Dictionaries catalog
+      tags:
+      - Master Data
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+  /api/v1/dictionaries/{kind}:
+    get:
+      operationId: listDictionaryItems
+      description: Чтение — сотрудник, запись — `settings.edit` (через `HasRolePermission`).
+      summary: Dictionary values
+      parameters:
+      - in: query
+        name: include_hidden
+        schema:
+          type: boolean
+      - in: path
+        name: kind
+        schema:
+          type: string
+        required: true
+      tags:
+      - Master Data
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+    post:
+      operationId: createDictionaryItem
+      description: Чтение — сотрудник, запись — `settings.edit` (через `HasRolePermission`).
+      summary: Add a dictionary value
+      parameters:
+      - in: path
+        name: kind
+        schema:
+          type: string
+        required: true
+      tags:
+      - Master Data
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '400':
+          $ref: '#/components/responses/BadRequestResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/dictionaries/{kind}/order:
+    put:
+      operationId: reorderDictionaryItems
+      description: Чтение — сотрудник, запись — `settings.edit` (через `HasRolePermission`).
+      summary: Reorder dictionary values
+      parameters:
+      - in: path
+        name: kind
+        schema:
+          type: string
+        required: true
+      tags:
+      - Master Data
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '400':
+          $ref: '#/components/responses/BadRequestResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/dictionaries/{kind}/{code}:
+    patch:
+      operationId: updateDictionaryItem
+      description: Чтение — сотрудник, запись — `settings.edit` (через `HasRolePermission`).
+      summary: Change a dictionary value
+      parameters:
+      - in: path
+        name: code
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: kind
+        schema:
+          type: string
+        required: true
+      tags:
+      - Master Data
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: {}
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              additionalProperties: {}
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: {}
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
+        '400':
+          $ref: '#/components/responses/BadRequestResponse'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+    delete:
+      operationId: deleteDictionaryItem
+      description: Чтение — сотрудник, запись — `settings.edit` (через `HasRolePermission`).
+      summary: Delete a dictionary value
+      parameters:
+      - in: path
+        name: code
+        schema:
+          type: string
+        required: true
+      - in: path
+        name: kind
+        schema:
+          type: string
+        required: true
+      tags:
+      - Master Data
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
   /api/v1/exchange-rates/:
     get:
       operationId: exchange_rates_list
@@ -23399,6 +23620,14 @@ components:
           type: boolean
           title: Активен
           description: Неактивные записи скрыты в формах выбора
+        name_uz:
+          type: string
+          title: Название (узб.)
+          maxLength: 255
+        name_en:
+          type: string
+          title: Название (англ.)
+          maxLength: 255
         alpha2:
           type: string
           title: ISO Alpha-2
@@ -23450,6 +23679,14 @@ components:
           type: boolean
           title: Активен
           description: Неактивные записи скрыты в формах выбора
+        name_uz:
+          type: string
+          title: Название (узб.)
+          maxLength: 255
+        name_en:
+          type: string
+          title: Название (англ.)
+          maxLength: 255
         alpha2:
           type: string
           title: ISO Alpha-2
@@ -23583,6 +23820,14 @@ components:
           type: boolean
           title: Активен
           description: Неактивные записи скрыты в формах выбора
+        name_uz:
+          type: string
+          title: Название (узб.)
+          maxLength: 255
+        name_en:
+          type: string
+          title: Название (англ.)
+          maxLength: 255
         symbol:
           type: string
           title: Символ
@@ -23617,6 +23862,14 @@ components:
           type: boolean
           title: Активен
           description: Неактивные записи скрыты в формах выбора
+        name_uz:
+          type: string
+          title: Название (узб.)
+          maxLength: 255
+        name_en:
+          type: string
+          title: Название (англ.)
+          maxLength: 255
         symbol:
           type: string
           title: Символ
@@ -23969,6 +24222,14 @@ components:
           type: boolean
           title: Активен
           description: Неактивные записи скрыты в формах выбора
+        name_uz:
+          type: string
+          title: Название (узб.)
+          maxLength: 255
+        name_en:
+          type: string
+          title: Название (англ.)
+          maxLength: 255
         description:
           type: string
           title: Описание
@@ -24018,6 +24279,14 @@ components:
           type: boolean
           title: Активен
           description: Неактивные записи скрыты в формах выбора
+        name_uz:
+          type: string
+          title: Название (узб.)
+          maxLength: 255
+        name_en:
+          type: string
+          title: Название (англ.)
+          maxLength: 255
         description:
           type: string
           title: Описание
@@ -30139,6 +30408,14 @@ components:
           type: boolean
           title: Активен
           description: Неактивные записи скрыты в формах выбора
+        name_uz:
+          type: string
+          title: Название (узб.)
+          maxLength: 255
+        name_en:
+          type: string
+          title: Название (англ.)
+          maxLength: 255
         alpha2:
           type: string
           title: ISO Alpha-2
@@ -30186,6 +30463,14 @@ components:
           type: boolean
           title: Активен
           description: Неактивные записи скрыты в формах выбора
+        name_uz:
+          type: string
+          title: Название (узб.)
+          maxLength: 255
+        name_en:
+          type: string
+          title: Название (англ.)
+          maxLength: 255
         symbol:
           type: string
           title: Символ
@@ -30249,6 +30534,14 @@ components:
           type: boolean
           title: Активен
           description: Неактивные записи скрыты в формах выбора
+        name_uz:
+          type: string
+          title: Название (узб.)
+          maxLength: 255
+        name_en:
+          type: string
+          title: Название (англ.)
+          maxLength: 255
         description:
           type: string
           title: Описание
@@ -31261,6 +31554,14 @@ components:
           type: boolean
           title: Активен
           description: Неактивные записи скрыты в формах выбора
+        name_uz:
+          type: string
+          title: Название (узб.)
+          maxLength: 255
+        name_en:
+          type: string
+          title: Название (англ.)
+          maxLength: 255
     PatchedUserRequest:
       type: object
       properties:
@@ -36127,6 +36428,14 @@ components:
           type: boolean
           title: Активен
           description: Неактивные записи скрыты в формах выбора
+        name_uz:
+          type: string
+          title: Название (узб.)
+          maxLength: 255
+        name_en:
+          type: string
+          title: Название (англ.)
+          maxLength: 255
       required:
       - code
       - id
@@ -36156,6 +36465,14 @@ components:
           type: boolean
           title: Активен
           description: Неактивные записи скрыты в формах выбора
+        name_uz:
+          type: string
+          title: Название (узб.)
+          maxLength: 255
+        name_en:
+          type: string
+          title: Название (англ.)
+          maxLength: 255
       required:
       - code
       - name

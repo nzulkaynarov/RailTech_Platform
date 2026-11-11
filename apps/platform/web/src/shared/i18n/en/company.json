@@ -360,57 +360,6 @@
       }
     }
   },
-  "reference": {
-    "title": "Reference lists",
-    "hint": "Countries, currencies, units and bases. A row in use is disabled, not deleted.",
-    "kind": "Reference list",
-    "kinds": {
-      "countries": "Countries",
-      "currencies": "Currencies",
-      "units": "Units",
-      "delivery-basis": "Delivery bases"
-    },
-    "moved": "HS codes and manufacturers are kept in “Catalog · Goods” → “Reference lists”; exchange rates are in “Settings · Taxes & currencies”.",
-    "movedLink": "Open the reference lists",
-    "movedNoAccess": "HS codes and manufacturers are kept in “Catalog · Goods” → “Reference lists”; exchange rates are in “Settings · Taxes & currencies”.",
-    "code": "Code",
-    "name": "Name",
-    "alpha2": "ISO alpha-2",
-    "alpha3": "ISO alpha-3",
-    "isoNumeric": "ISO numeric code",
-    "vat": "VAT, %",
-    "symbol": "Symbol",
-    "description": "Description",
-    "sellerPays": "Seller pays",
-    "pays": {
-      "seller_pays_freight": "Freight",
-      "seller_pays_insurance": "Insurance",
-      "seller_pays_import": "Import",
-      "seller_pays_delivery": "Delivery"
-    },
-    "order": "Order",
-    "activeLabel": "Row is active",
-    "add": "Add row",
-    "addTitle": "New reference row",
-    "editTitle": "Edit reference row",
-    "disable": "Disable",
-    "enable": "Enable",
-    "disableNamed": "Disable: {{name}}",
-    "enableNamed": "Enable: {{name}}",
-    "deleteTitle": "Delete “{{name}}”?",
-    "deleted": "Row deleted",
-    "codeTaken": "This code already exists",
-    "invalidField": "Check the value",
-    "empty": {
-      "title": "No rows yet",
-      "text": "Add the first row of the list."
-    },
-    "search": "Search by code and name",
-    "noMatch": {
-      "title": "Nothing found",
-      "text": "No rows match “{{query}}”. Change the query or clear the search."
-    }
-  },
   "categories": {
     "title": "Catalogue categories and requests for them",
     "hint": "The catalogue category tree. Employees request new categories.",

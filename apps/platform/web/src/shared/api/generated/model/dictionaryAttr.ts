@@ -12,6 +12,7 @@ import type { LocalizedName } from "./localizedName";
 export interface DictionaryAttr {
   /** @pattern ^[a-z][a-z_]{0,31}$ */
   key: string;
+  /** `text` — строка, `decimal` — число строкой (ставка НДС) */
   type: DictionaryAttrType;
   name: LocalizedName;
   /** @nullable */

@@ -9,4 +9,5 @@ export type DictionaryListUnavailableItem =
 export const DictionaryListUnavailableItem = {
   eds: "eds",
   crm: "crm",
+  erp: "erp",
 } as const;

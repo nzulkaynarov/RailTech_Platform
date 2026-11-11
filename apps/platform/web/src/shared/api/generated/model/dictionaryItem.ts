@@ -6,7 +6,7 @@ import type { DictionaryAttrValues } from "./dictionaryAttrValues";
 import type { LocalizedName } from "./localizedName";
 
 export interface DictionaryItem {
-  /** @pattern ^[a-z][a-z_]{0,31}$ */
+  /** @pattern ^[A-Za-z0-9][A-Za-z0-9_.-]{0,49}$ */
   code: string;
   name: LocalizedName;
   attrs: DictionaryAttrValues;

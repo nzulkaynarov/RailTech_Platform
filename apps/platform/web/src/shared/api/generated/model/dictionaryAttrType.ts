@@ -3,10 +3,15 @@
  * RailTech Platform — BFF API (Платформа → CRM и ERP)
  */
 
+/**
+ * `text` — строка, `decimal` — число строкой (ставка НДС)
+ */
 export type DictionaryAttrType = (typeof DictionaryAttrType)[keyof typeof DictionaryAttrType];
 
 export const DictionaryAttrType = {
   boolean: "boolean",
   integer: "integer",
   choice: "choice",
+  text: "text",
+  decimal: "decimal",
 } as const;
