@@ -4,7 +4,7 @@ import { type Page, expect, test } from "@playwright/test";
 import { loginAndWait, settledScreenshot, spaGoto, waitForMotionEnd } from "./support/app";
 
 // «Задачи», поиск и колокольчик без тупиков (W15-H2, UX-оценка P0-3, P1-8, P2-9) на MSW: строка с экраном — «Открыть»
-// (primary у всех срочных; строки лидов — «Ждут ответа», D1-6), строка без экрана — «Где сделать», пустые состояния по ролям, частичный результат при отказе
+// (primary у всех срочных; строки лидов — «Ждут ответа», D1-6), пустые состояния по ролям, частичный результат при отказе
 // CRM или ERP, действия в поиске; axe (WCAG 2.1 AA) на каждом экране; снимки 1440 и 390 для PR (`E2E_SCREENSHOT_DIR=<каталог>`).
 const WIDTHS = [1440, 390] as const;
 
@@ -42,7 +42,7 @@ async function shoot(page: Page, name: string): Promise<void> {
 
 const SIDE = { name: "Боковое окно" } as const;
 
-test.describe("Задачи: «Открыть» или «Где сделать»", () => {
+test.describe("Задачи: «Открыть»", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
   test("директор: письмо, КП и служебка (родные экраны) — «Открыть» открывает объект в боковом окне на вкладке решения; primary у срочных писем", async ({
     page,
@@ -179,7 +179,7 @@ test.describe("Задачи: EDS не отвечает", () => {
   });
 });
 
-test.describe("Поиск: объект, «Где посмотреть», действия", () => {
+test.describe("Поиск: объект и действия", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
 
   test("номер ЗВ в поиске открывает заявку, а не «Где посмотреть» (B-UIA-1)", async ({ page }) => {

@@ -3,7 +3,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, Outlet, useLocation } from "react-router";
 
-import { bridgeEntry, isStubSection } from "../../modules/bridge";
 import { MODULES, matchSection } from "../../modules/registry";
 import { findNavItem, visibleItems, type NavItem } from "../../modules/navigation";
 import { MODULE_SETTINGS } from "../../modules/admin/moduleSettings";
@@ -55,7 +54,7 @@ function isMac(): boolean {
  */
 export function AppShell() {
   const { me } = useAuth();
-  const { t } = useTranslation(["shell", "modules", "bridge"]);
+  const { t } = useTranslation(["shell", "modules"]);
   const location = useLocation();
   const viewport = useViewport();
   const [menuDrawer, setMenuDrawer] = useState(false);
@@ -67,11 +66,7 @@ export function AppShell() {
   const match = matchSection(location.pathname, location.search);
   // В списках и таблицах боковое окно закрыто по умолчанию (открывается по ?panel=open);
   // на карточке конкретного объекта (:id) открыто на широком экране, если не закрыто явно.
-  const panels = usePanels(
-    me.id,
-    match?.section,
-    Boolean(match?.objectId && !isStubSection(match.module.code, match.section.key)),
-  );
+  const panels = usePanels(me.id, match?.section, Boolean(match?.objectId));
   const setupKnown = useSetupKnown();
   const setupBannerLate = useLateSetupBanner(setupKnown);
   const { attach: attachPanelSlot, claimed: panelClaimed } = usePanelSlotHost(panels.tab);
@@ -176,36 +171,23 @@ export function AppShell() {
 
   if (!activeModule) return null;
 
-  const badgeFor = (item: MenuCounter | undefined, moduleCode: string, section: SectionConfig) => {
+  const badgeFor = (item: MenuCounter | undefined) => {
     if (!item || item.count <= 0) return undefined;
-    // Раздел-заглушка (W15-H1): бейдж только с нейтральной подсказкой «ещё в старой системе: N» (названия систем — на самой заглушке), если то же число видно в старой системе;
-    // иначе бейджа нет — рядом с честной заглушкой число без дела только путает.
-    if (isStubSection(moduleCode, section.key)) {
-      const entry = bridgeEntry(moduleCode, section.key);
-      if (!entry?.legacyCount || !entry.legacy) return undefined;
-      return {
-        count: item.count,
-        attention: false,
-        hint: t("bridge:badgeHint", { count: item.count }),
-      };
-    }
     return { count: item.count, attention: item.attention };
   };
 
-  const badgeOfItem = (code: string, targets: readonly string[]) => {
+  const badgeOfItem = (targets: readonly string[]) => {
     const badges = targets.flatMap((ref) => {
       const [module = "", key = ""] = ref.split(".");
       const section = MODULES.find((m) => m.code === module)?.sections.find((s) => s.key === key);
       if (!section) return [];
       const counter = counters.data?.items.find((c) => c.module === module && c.section === key);
-      return badgeFor(counter, code === module ? code : module, section) ?? [];
+      return badgeFor(counter) ?? [];
     });
     if (badges.length === 0) return undefined;
-    const hint = badges.find((b) => b.hint)?.hint;
     return {
       count: badges.reduce((sum, b) => sum + b.count, 0),
       attention: badges.some((b) => b.attention),
-      ...(hint ? { hint } : {}),
     };
   };
   const refsOf = (item: NavItem) => [...item.targets.map((x) => x.section), ...(item.also ?? [])];
@@ -219,7 +201,7 @@ export function AppShell() {
       path: to,
       label: itemLabel(module.code, item),
       active: isActiveItem(module.code, item),
-      badge: badgeOfItem(module.code, [...new Set(refsOf(item))]),
+      badge: badgeOfItem([...new Set(refsOf(item))]),
     }));
     return {
       code: module.code,
@@ -237,7 +219,7 @@ export function AppShell() {
     to,
     label: itemLabel(activeModule.code, item),
     active: isActiveItem(activeModule.code, item),
-    badge: badgeOfItem(activeModule.code, [...new Set(refsOf(item))]),
+    badge: badgeOfItem([...new Set(refsOf(item))]),
   }));
   const activeResolved = nav
     ? activeItems.find(({ item }) => item.key === nav.item.key)

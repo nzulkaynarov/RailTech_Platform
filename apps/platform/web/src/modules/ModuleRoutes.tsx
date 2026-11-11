@@ -3,11 +3,10 @@ import { useLocation } from "react-router";
 import { RequireAccess } from "../app/RequireAccess";
 import { NotFoundPage } from "../app/NotFoundPage";
 import { matchSection } from "./registry";
-import { SectionStubPage } from "./SectionStubPage";
 
 /**
- * Содержимое маршрутов модуля: раздел по адресу (SPEC-v3 §6.3) → страница под `RequireAccess`. Модуль грузится лениво
- * (`lazy` в router.tsx); реальные экраны фаз P2+ подменят `SectionStubPage` по ключу раздела.
+ * Запасной маршрут модуля: экраны разделов модуль выбирает сам (`index.tsx`); сюда попадает адрес, для которого экрана нет
+ * (например, карточка по номеру в разделе без карточек). Права раздела проверяются, дальше — «Страница не найдена».
  */
 export function ModuleRoutes() {
   const location = useLocation();
@@ -15,7 +14,7 @@ export function ModuleRoutes() {
   if (!match) return <NotFoundPage />;
   return (
     <RequireAccess rule={match.section.access}>
-      <SectionStubPage module={match.module} section={match.section} objectId={match.objectId} />
+      <NotFoundPage />
     </RequireAccess>
   );
 }

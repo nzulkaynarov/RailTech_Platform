@@ -20,9 +20,7 @@ import "../eds/decision/decision.css";
 import { bannerKind } from "../../shared/ui/bannerKind";
 import { SourceBanner } from "../../shared/ui/SourceBanner";
 import { matchSection } from "../registry";
-import { isActionable } from "../bridge";
 import { objectLink } from "../objectLinks";
-import { WhereToDo } from "../stub/WhereToDo";
 import { dueBadge, isUrgent, pluralForm, queueEmptyKind } from "./queue";
 import { useCardsCount } from "./useCardsCount";
 import "./dashboard.css";
@@ -92,8 +90,6 @@ export function QueuePage() {
         : item.subtitle,
       to,
       urgent: isUrgent(item),
-      // У цели нет экрана в Платформе (договор, счёт, акт, расчёт) — «Где сделать» вместо ссылки на заглушку (W15-H2).
-      ...(isActionable(to) ? {} : { where: <WhereToDo path={to} /> }),
     };
   });
 

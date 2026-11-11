@@ -109,8 +109,6 @@ import type {
   BotProfileState,
   BotSettings,
   BrandProfile,
-  Bridge,
-  BridgeErpSso,
   Brigade,
   BrigadePage,
   BusDeliveryPage,
@@ -602,22 +600,6 @@ export const getCreateOwnCompanyResponseMock = (
 ): SetupCompanyCreated => ({
   id: faker.number.int(),
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-  ...overrideResponse,
-});
-
-export const getGetBridgeResponseMock = (
-  overrideResponse: Partial<Extract<Bridge, object>> = {},
-): Bridge => ({
-  crm_url: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
-  erp_url: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
-  erp_sso: faker.datatype.boolean(),
-  ...overrideResponse,
-});
-
-export const getCreateBridgeErpSsoResponseMock = (
-  overrideResponse: Partial<Extract<BridgeErpSso, object>> = {},
-): BridgeErpSso => ({
-  url: faker.string.alpha({ length: { min: 10, max: 20 } }),
   ...overrideResponse,
 });
 
@@ -29456,51 +29438,6 @@ export const getCreateOwnCompanyMockHandler = (
   );
 };
 
-export const getGetBridgeMockHandler = (
-  overrideResponse?:
-    Bridge | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Bridge> | Bridge),
-  options?: RequestHandlerOptions,
-) => {
-  return http.get(
-    "*/bridge",
-    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
-      return HttpResponse.json(
-        overrideResponse !== undefined
-          ? typeof overrideResponse === "function"
-            ? await overrideResponse(info)
-            : overrideResponse
-          : getGetBridgeResponseMock(),
-        { status: 200 },
-      );
-    },
-    options,
-  );
-};
-
-export const getCreateBridgeErpSsoMockHandler = (
-  overrideResponse?:
-    | BridgeErpSso
-    | ((
-        info: Parameters<Parameters<typeof http.post>[1]>[0],
-      ) => Promise<BridgeErpSso> | BridgeErpSso),
-  options?: RequestHandlerOptions,
-) => {
-  return http.post(
-    "*/bridge/erp-sso",
-    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
-      return HttpResponse.json(
-        overrideResponse !== undefined
-          ? typeof overrideResponse === "function"
-            ? await overrideResponse(info)
-            : overrideResponse
-          : getCreateBridgeErpSsoResponseMock(),
-        { status: 200 },
-      );
-    },
-    options,
-  );
-};
-
 export const getGetMeMockHandler = (
   overrideResponse?:
     Me | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Me> | Me),
@@ -38894,8 +38831,6 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getSaveSetupCabinetMockHandler(),
   getCheckSetupCabinetMockHandler(),
   getCreateOwnCompanyMockHandler(),
-  getGetBridgeMockHandler(),
-  getCreateBridgeErpSsoMockHandler(),
   getGetMeMockHandler(),
   getUpdateMeMockHandler(),
   getGetNotificationSettingsMockHandler(),

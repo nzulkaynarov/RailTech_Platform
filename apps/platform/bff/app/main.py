@@ -19,7 +19,6 @@ from app.api import (
     admin_roles,
     admin_users,
     auth,
-    bridge,
     chats,
     company_articles,
     consoles,
@@ -119,7 +118,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(about.router, prefix=API_PREFIX)
     app.include_router(auth.router, prefix=API_PREFIX)
     app.include_router(me.router, prefix=API_PREFIX)
-    app.include_router(bridge.router, prefix=API_PREFIX)
     app.include_router(me_notifications.router, prefix=API_PREFIX)
     app.include_router(tickets.router, prefix=API_PREFIX)
     app.include_router(company_articles.router, prefix=API_PREFIX)

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isActionable } from "./bridge";
-import { objectLink } from "./objectLinks";
+import { objectIdOf, objectLink, routeTarget } from "./objectLinks";
 
 const seg = encodeURIComponent;
 const UUID = "5f0c7a52-3b1e-4c53-9d0a-1c6a1f0e2b77";
@@ -102,22 +101,20 @@ describe("переходы: адрес и вкладка бокового окн
     expect(objectLink(object)).toBe("/eds/inbox");
   });
 
-  it("у письма, КП, служебки, диалога и своих документов есть экран — «Где сделать» им не нужно", () => {
-    for (const object of [
-      { kind: "letter", number: "ВХ-104/26", path: `/eds/inbox/${seg("ВХ-104/26")}` },
-      { kind: "quote", number: "КП-2026/118", path: `/eds/drafts/${seg("КП-2026/118")}` },
-      { kind: "memo", number: "СЗ-2026/031", path: `/eds/approvals/${seg("СЗ-2026/031")}` },
-      { kind: "lead", number: "L-2041", path: "/crm/messages?lead=L-2041" },
-      { kind: "memo", number: "СЗ-2026/040", path: `/eds/documents?doc=${UUID}` },
-      { kind: "memo", number: "СЗ-2026/040", path: "/eds/new?type=memo" },
-      { kind: "supplier_order", number: "ЗП-2026-029", path: "/erp/stock/ЗП-2026-029" },
-    ] as const) {
-      expect(isActionable(objectLink(object)), object.path).toBe(true);
-    }
+  it("номер объекта из адреса: карточка — :id, список — ?lead= / ?request=, иначе нет объекта", () => {
+    expect(objectIdOf({ objectId: "ВХ-104/26" }, "")).toBe("ВХ-104/26");
+    expect(objectIdOf({}, "?lead=L-2041&panel=open")).toBe("L-2041");
+    expect(objectIdOf({}, "?request=ЗВ-2026-104")).toBe("ЗВ-2026-104");
+    expect(objectIdOf({}, "?panel=open")).toBeUndefined();
   });
 
-  it("проект, договор и акт открываются в «Проектах» (D2-5), счёт — в «Счетах и оплатах» (D2-4); исходящие КП пока без экрана", () => {
-    expect(isActionable("/eds/projects/%D0%9F%D0%A0-2026-099?panel=open&tab=contract")).toBe(true);
-    expect(isActionable(`/eds/payments/${seg("СЧ-2026/142")}`)).toBe(true);
+  it("routeTarget: раздел и объект из пути или ?lead=; адрес не из карты — undefined", () => {
+    expect(routeTarget("/crm/leads?lead=L-2041&panel=open")).toMatchObject({
+      module: "crm",
+      section: "leads",
+      objectId: "L-2041",
+    });
+    expect(routeTarget("/eds/drafts/%D0%9A%D0%9F-2026%2F118")?.objectId).toBe("КП-2026/118");
+    expect(routeTarget("/nowhere")).toBeUndefined();
   });
 });

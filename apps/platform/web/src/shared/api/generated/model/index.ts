@@ -70,8 +70,6 @@ export * from "./brandProfileLayoutPreset";
 export * from "./brandProfileUpdate";
 export * from "./brandProfileUpdateFontFamily";
 export * from "./brandProfileUpdateLayoutPreset";
-export * from "./bridge";
-export * from "./bridgeErpSso";
 export * from "./brigade";
 export * from "./brigadeCreate";
 export * from "./brigadeCreateRateUnit";

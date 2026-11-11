@@ -22,7 +22,6 @@ import { edsBankChangesHandlers } from "./edsBankChanges";
 import { erpPartnerApplicationsHandlers } from "./erpPartnerApplications";
 import { erpSupplierAccessHandlers } from "./erpSupplierAccess";
 import { edsPaymentsHandlers } from "./edsPayments";
-import { bridgeHandlers } from "./bridgeHandlers";
 import { edsInstructionsHandlers } from "./edsInstructions";
 import { dictionariesHandlers } from "./dictionaries";
 import { edsLettersHandlers } from "./edsLetters";
@@ -174,7 +173,6 @@ export const handlers = [
   ...botKbHandlers,
   ...crmMessagesHandlers,
   ...crmLeadsHandlers,
-  ...bridgeHandlers,
   ...ticketsHandlers,
   ...mailTypesHandlers, // MAIL-TYPES: правила отправителя
   ...inboundMailHandlers, // W18A-P2: входящая почта общего ящика и приём в «Подключениях»
