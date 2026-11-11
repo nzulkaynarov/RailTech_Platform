@@ -152,6 +152,7 @@ import type {
   ConversationThread,
   CreatedId,
   CrewRate,
+  DictionaryImportResult,
   DictionaryItem,
   DictionaryItemList,
   DictionaryList,
@@ -14345,6 +14346,38 @@ export const getReorderDictionaryItemsResponseMock = (
     active: faker.datatype.boolean(),
     position: faker.number.int(),
     used: faker.helpers.arrayElement([faker.datatype.boolean(), null]),
+  })),
+  ...overrideResponse,
+});
+
+export const getExportDictionaryResponseMock = (): Blob =>
+  faker.helpers.arrayElement([
+    new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]),
+    new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]),
+  ]);
+
+export const getImportDictionaryResponseMock = (
+  overrideResponse: Partial<Extract<DictionaryImportResult, object>> = {},
+): DictionaryImportResult => ({
+  applied: faker.datatype.boolean(),
+  added: faker.number.int(),
+  updated: faker.number.int(),
+  unchanged: faker.number.int(),
+  failed: faker.number.int(),
+  rows: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    line: faker.number.int(),
+    code: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    action: faker.helpers.arrayElement(["add", "update", "unchanged", "error"] as const),
+    fields: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    errors: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        field: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
   })),
   ...overrideResponse,
 });
@@ -35295,6 +35328,53 @@ export const getReorderDictionaryItemsMockHandler = (
   );
 };
 
+export const getExportDictionaryMockHandler = (
+  overrideResponse?:
+    Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/dictionaries/:kind/export",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      const binaryBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getExportDictionaryResponseMock();
+      return new HttpResponse(binaryBody, {
+        status: 200,
+        headers: { "Content-Type": "application/octet-stream" },
+      });
+    },
+    options,
+  );
+};
+
+export const getImportDictionaryMockHandler = (
+  overrideResponse?:
+    | DictionaryImportResult
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<DictionaryImportResult> | DictionaryImportResult),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/dictionaries/:kind/import",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getImportDictionaryResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getUpdateDictionaryItemMockHandler = (
   overrideResponse?:
     | DictionaryItem
@@ -39135,6 +39215,8 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getListDictionaryItemsMockHandler(),
   getCreateDictionaryItemMockHandler(),
   getReorderDictionaryItemsMockHandler(),
+  getExportDictionaryMockHandler(),
+  getImportDictionaryMockHandler(),
   getUpdateDictionaryItemMockHandler(),
   getDeleteDictionaryItemMockHandler(),
   getListLetterKindsMockHandler(),

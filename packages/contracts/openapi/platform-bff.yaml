@@ -1,12 +1,16 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.47.0
+  version: 0.50.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
     сессия, профиль, счётчики меню, «Моя очередь», лента «Сегодня», уведомления, поиск. Экраны фаз P2–P4 добавляются
     в этот файл до кода (`docs/architecture/integration-map.md` §1).
+
+    **0.50.0 (справочники файлом, решение владельца 2026-11-11).** `GET /dictionaries/{kind}/export` — выгрузка
+    xlsx или csv, она же шаблон; `POST /dictionaries/{kind}/import` — загрузка файла с проверкой без записи и
+    применением через обычные действия домена.
 
     **0.47.0 (исполнитель видит письмо и отвечает по любому поручению, решение владельца 2026-11-11).** `LetterCard.body_text` — текст
     письма из «Почты», сохранённый при регистрации ВХ. Регистрация ИСХ «в ответ на ВХ» закрывает поручения «Подготовить ответ»
@@ -8691,6 +8695,78 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DictionaryItemList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /dictionaries/{kind}/export:
+    get:
+      tags: [dictionaries]
+      operationId: exportDictionary
+      summary: 'Справочники · выгрузка (она же шаблон загрузки)'
+      description: >-
+        Решение владельца 2026-11-11. Кто читает справочник — тот и выгружает. Все значения, и скрытые. Столбцы:
+        `code`, `name_ru`, `name_uz`, `name_en`, `active` (да/нет), затем ключи полей вида.
+      parameters:
+        - $ref: '#/components/parameters/DictionaryKindPath'
+        - name: format
+          in: query
+          required: false
+          schema: {type: string, enum: [xlsx, csv], default: xlsx}
+      responses:
+        '200':
+          description: Файл
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema: {type: string, format: binary}
+            text/csv:
+              schema: {type: string, format: binary}
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /dictionaries/{kind}/import:
+    post:
+      tags: [dictionaries]
+      operationId: importDictionary
+      summary: 'Справочники · загрузка файла с проверкой'
+      description: >-
+        Решение владельца 2026-11-11. Раздел `admin` — полный. Тело — файл xlsx или csv (UTF-8, `;` или `,`) как есть,
+        до 1 МБ и 2000 строк. Ключ — `code`: найден — строка меняется (пустая ячейка значение не меняет); пусто —
+        создаётся, код даёт домен из названия; неизвестный код — ошибка строки. Удалять файлом нельзя. `dry_run=true`
+        (по умолчанию) — только проверка; `dry_run=false` применяет строки обычными действиями домена, если в файле нет
+        ни одной ошибки. Файл целиком не подходит (пустой, не xlsx/csv, шапка) — 422, `details.reason`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/DictionaryKindPath'
+        - name: dry_run
+          in: query
+          required: false
+          schema: {type: boolean, default: true}
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: {type: string, format: binary}
+      responses:
+        '200':
+          description: Что добавится, изменится, не изменится и где ошибка; `applied` — записано ли
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DictionaryImportResult'
         '401':
           $ref: '#/components/responses/SessionExpired'
         '403':
@@ -21279,6 +21355,46 @@ components:
         attrs: {$ref: '#/components/schemas/DictionaryAttrValues'}
         active: {type: boolean}
 
+    DictionaryImportError:
+      type: object
+      additionalProperties: false
+      required: [field, reason]
+      properties:
+        field: {type: string, description: 'Столбец файла или `name`'}
+        reason:
+          type: string
+          description: '`required`, `invalid`, `unknown`, `duplicate`, `closed`, `too_long`, `rejected` или причина домена'
+    DictionaryImportRow:
+      type: object
+      additionalProperties: false
+      required: [line, code, name, action, fields, errors]
+      properties:
+        line: {type: integer, description: 'Номер строки в файле, шапка — 1'}
+        code: {type: [string, 'null']}
+        name: {type: string}
+        action: {type: string, enum: [add, update, unchanged, error]}
+        fields:
+          type: array
+          items: {type: string}
+          description: Какие столбцы изменятся
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/DictionaryImportError'
+    DictionaryImportResult:
+      type: object
+      additionalProperties: false
+      required: [applied, added, updated, unchanged, failed, rows]
+      properties:
+        applied: {type: boolean, description: 'false — проверка без записи или в файле есть ошибки'}
+        added: {type: integer}
+        updated: {type: integer}
+        unchanged: {type: integer}
+        failed: {type: integer}
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/DictionaryImportRow'
     DictionaryOrderIn:
       type: object
       additionalProperties: false

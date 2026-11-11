@@ -1101,6 +1101,43 @@
           "load": "Qoidalar yuklanmadi."
         },
         "publicDomain": "Bu umumiy pochta xizmati — qoida istalgan kishining xatini ushlaydi. Aniq manzilni ko‘rsatgan ma’qul."
+      },
+      "file": {
+        "download": "Yuklab olish",
+        "upload": "Yuklash",
+        "title": "{{name}}: faylni yuklash",
+        "summary": "Qo‘shiladi: {{added}}, o‘zgaradi: {{updated}}, o‘zgarishsiz: {{unchanged}}, xato bilan: {{failed}}",
+        "line": "Qator",
+        "action": "Natija",
+        "details": "Batafsil",
+        "apply": "Qo‘llash",
+        "cancel": "Bekor qilish",
+        "failed": "Fayl yuklanmadi. Qayta urinib ko‘ring.",
+        "done": "Yuklandi: {{added}} qo‘shildi, {{updated}} o‘zgardi",
+        "actions": {
+          "add": "Qo‘shiladi",
+          "update": "O‘zgaradi",
+          "unchanged": "O‘zgarishsiz",
+          "error": "Xato"
+        },
+        "reasons": {
+          "required": "{{field}}: to‘ldirilmagan",
+          "invalid": "{{field}}: noto‘g‘ri qiymat",
+          "unknown": "bunday kod yo‘q",
+          "duplicate": "kod takrorlangan",
+          "closed": "bu ro‘yxatga qo‘shib bo‘lmaydi",
+          "too_long": "nom 120 belgidan uzun",
+          "rejected": "qator qabul qilinmadi"
+        },
+        "columns": {
+          "code": "Kod",
+          "name": "Nomi",
+          "name_ru": "Nomi (rus.)",
+          "name_uz": "Nomi (o‘zb.)",
+          "name_en": "Nomi (ingl.)",
+          "active": "Faol",
+          "file": "Fayl"
+        }
       }
     },
     "templates": {

@@ -529,6 +529,146 @@ export const dictionariesHandlers = [
     });
   }),
 
+  // Файл справочника (решение владельца 2026-11-11): мок понимает csv; правила — как у BFF.
+  http.get("*/dictionaries/:kind/export", ({ params }) => {
+    if (!isKind(params["kind"])) return failure(404, "NOT_FOUND", "Такого справочника нет.");
+    const kind = params["kind"];
+    const attrs = catalogWithKinds().find((d) => d.kind === kind)?.attrs ?? [];
+    const header = ["code", "name_ru", "name_uz", "name_en", "active", ...attrs.map((a) => a.key)];
+    const lines = sorted(readDictionaries()[kind]).map((item) =>
+      [
+        item.code,
+        item.name.ru,
+        item.name.uz,
+        item.name.en,
+        item.active ? "да" : "нет",
+        ...attrs.map((a) => String(item.attrs[a.key] ?? "")),
+      ].join(";"),
+    );
+    return new HttpResponse([header.join(";"), ...lines].join("\n"), {
+      headers: {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": `attachment; filename="${kind}.csv"`,
+      },
+    });
+  }),
+  http.post("*/dictionaries/:kind/import", async ({ params, request }) => {
+    if (!isKind(params["kind"])) return failure(404, "NOT_FOUND", "Такого справочника нет.");
+    if (!isAdmin()) return failure(403, "FORBIDDEN", "Раздел или действие не положены вашей роли.");
+    const kind = params["kind"];
+    const apply = new URL(request.url).searchParams.get("dry_run") === "false";
+    const text = (await request.text()).replace(/^\uFEFF/, "");
+    const table = text
+      .split(/\r?\n/)
+      .filter((line) => line.trim())
+      .map((line) => line.split(";").map((cell) => cell.trim()));
+    const header = (table[0] ?? []).map((h) => h.toLowerCase());
+    if (!header.includes("code") || !header.includes("name_ru")) {
+      return failure(422, "VALIDATION_FAILED", "В шапке нет столбцов: code, name_ru.", {
+        fields: ["file"],
+        reason: "missing_columns",
+      });
+    }
+    const state = readDictionaries();
+    const items = [...state[kind]];
+    const yes = (v: string) => ["да", "1", "true", "yes", "ha"].includes(v.toLowerCase());
+    const rows = table.slice(1).map((cells, index) => {
+      const cell = (name: string) => cells[header.indexOf(name)] ?? "";
+      const code = cell("code").toLowerCase() || null;
+      const name = { ru: cell("name_ru"), uz: cell("name_uz"), en: cell("name_en") };
+      const current = code ? items.find((i) => i.code === code) : undefined;
+      if (code && !current) {
+        return {
+          line: index + 2,
+          code,
+          name: name.ru,
+          action: "error" as const,
+          fields: [],
+          errors: [{ field: "code", reason: "unknown" }],
+        };
+      }
+      if (!current && !name.ru) {
+        return {
+          line: index + 2,
+          code,
+          name: "",
+          action: "error" as const,
+          fields: [],
+          errors: [{ field: "name_ru", reason: "required" }],
+        };
+      }
+      if (!current) {
+        return {
+          line: index + 2,
+          code: null,
+          name: name.ru,
+          action: "add" as const,
+          fields: [],
+          errors: [],
+          name3: name,
+        };
+      }
+      const fields: string[] = [];
+      for (const lang of ["ru", "uz", "en"] as const) {
+        if (name[lang] && name[lang] !== current.name[lang]) fields.push(`name_${lang}`);
+      }
+      if (cell("active") && yes(cell("active")) !== current.active) fields.push("active");
+      return {
+        line: index + 2,
+        code,
+        name: name.ru || current.name.ru,
+        action: fields.length ? ("update" as const) : ("unchanged" as const),
+        fields,
+        errors: [],
+        name3: name,
+        active: cell("active") ? yes(cell("active")) : current.active,
+      };
+    });
+    const failed = rows.filter((r) => r.action === "error").length;
+    const applied = apply && failed === 0;
+    if (applied) {
+      for (const row of rows) {
+        if (row.action === "add" && "name3" in row) {
+          const base = slug(row.name3.en || row.name3.ru);
+          items.push({
+            code: base,
+            name: row.name3,
+            attrs: {},
+            active: true,
+            position: items.length * 10 + 10,
+            used: false,
+          });
+        }
+        if (row.action === "update" && "name3" in row) {
+          const current = items.find((i) => i.code === row.code);
+          if (current) {
+            current.name = {
+              ru: row.name3.ru || current.name.ru,
+              uz: row.name3.uz || current.name.uz,
+              en: row.name3.en || current.name.en,
+            };
+            if ("active" in row && typeof row.active === "boolean") current.active = row.active;
+          }
+        }
+      }
+      writeDictionaries({ ...state, [kind]: items });
+    }
+    return HttpResponse.json({
+      applied,
+      added: rows.filter((r) => r.action === "add").length,
+      updated: rows.filter((r) => r.action === "update").length,
+      unchanged: rows.filter((r) => r.action === "unchanged").length,
+      failed,
+      rows: rows.map(({ line, code, name, action, fields, errors }) => ({
+        line,
+        code,
+        name,
+        action,
+        fields,
+        errors,
+      })),
+    });
+  }),
   http.post("*/dictionaries/:kind", async ({ params, request }) => {
     if (!isKind(params["kind"])) return failure(404, "NOT_FOUND", "Такого справочника нет.");
     if (!isAdmin()) return failure(403, "FORBIDDEN", "Раздел или действие не положены вашей роли.");
