@@ -244,7 +244,7 @@ describe("Admin · Компания: доступ и каркас", () => {
     );
     fireEvent.click(await screen.findByRole("link", { name: /Справочники/ }));
     expect(await screen.findByText("Казахстан")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Добавить строку" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Добавить значение" })).toBeDisabled();
     fireEvent.click(screen.getByRole("link", { name: "Валюты" }));
     expect(await screen.findByText("Евро")).toBeInTheDocument();
   });
@@ -675,21 +675,27 @@ describe("Шаблоны документов и писем", () => {
   });
 });
 
-describe("Справочники", () => {
-  it("добавление страны и отключение валюты", async () => {
-    await openTab("reference");
+describe("Справочники «Расчёта» на общем ресурсе (решение владельца 2026-11-11)", () => {
+  it("добавление страны с кодом и скрытие валюты", async () => {
+    await openTab("reference", "admin@demo.example");
     expect(await screen.findByText("Казахстан")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Добавить строку" }));
-    const dialog = await screen.findByRole("dialog", { name: "Новая строка справочника" });
-    fireEvent.change(within(dialog).getByLabelText("Код"), { target: { value: "TR" } });
-    fireEvent.change(within(dialog).getByLabelText("Название"), { target: { value: "Турция" } });
+    fireEvent.click(screen.getByRole("button", { name: "Добавить значение" }));
+    const dialog = await screen.findByRole("dialog", { name: "Новое значение" });
+    fireEvent.change(within(dialog).getByLabelText("Код"), { target: { value: "tr" } });
+    fireEvent.change(within(dialog).getByLabelText("Название по-русски"), {
+      target: { value: "Турция" },
+    });
+    fireEvent.change(within(dialog).getByLabelText("Название по-английски"), {
+      target: { value: "Turkey" },
+    });
     fireEvent.click(within(dialog).getByRole("button", { name: "Сохранить" }));
     expect(await screen.findByText("Турция")).toBeInTheDocument();
-    expect(readCompanyMock().reference.countries.map((c) => c.code)).toContain("TR");
+    const turkey = readCompanyMock().reference.countries.find((c) => c.code === "TR");
+    expect(turkey && (turkey as unknown as { name_en: string }).name_en).toBe("Turkey");
 
     fireEvent.click(screen.getByRole("link", { name: "Валюты" }));
     expect(await screen.findByText("Евро")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Отключить: Евро" }));
+    fireEvent.click(screen.getByRole("button", { name: "Скрыть: Евро" }));
     await waitFor(() => {
       expect(readCompanyMock().reference.currencies.find((c) => c.code === "EUR")?.is_active).toBe(
         false,
@@ -697,20 +703,16 @@ describe("Справочники", () => {
     });
   });
 
-  it("строку, которую используют документы, удалить нельзя: сказано, что делать", async () => {
-    await openTab("reference");
+  it("строку, которую используют данные, удалить нельзя: сказано, что делать", async () => {
+    await openTab("reference", "admin@demo.example");
     fireEvent.click(await screen.findByRole("button", { name: "Удалить: Узбекистан" }));
     const dialog = await screen.findByRole("dialog", { name: /Удалить/ });
     fireEvent.click(within(dialog).getByRole("button", { name: "Удалить" }));
-    expect(
-      await within(dialog).findByText(
-        "Строка используется в документах и данных. Отключите её вместо удаления.",
-      ),
-    ).toBeInTheDocument();
-    expect(readCompanyMock().reference.countries).toHaveLength(3);
+    expect(await screen.findByText(/можно только скрыть/)).toBeInTheDocument();
+    expect(readCompanyMock().reference.countries.some((c) => c.code === "UZ")).toBe(true);
   });
 
-  it("250 стран не одной страницей: поиск по названию и коду, страницы по 20", async () => {
+  it("длинный список не одной страницей: поиск по названию и коду, страницы по 20", async () => {
     updateCompanyMock((state) => {
       for (let n = 4; n <= 120; n += 1) {
         const code = `X${String(n).padStart(3, "0")}`;
@@ -722,13 +724,13 @@ describe("Справочники", () => {
           alpha3: null,
           iso_numeric: null,
           vat_rate: null,
-          sort_order: n,
+          sort_order: n * 10,
           is_active: true,
           updated_at: "2026-10-27T10:00:00Z",
         } as never);
       }
     });
-    await openTab("reference");
+    await openTab("reference", "admin@demo.example");
     const region = await screen.findByRole("region", { name: "Страны" });
     expect(await within(region).findByText("Узбекистан")).toBeInTheDocument();
     expect(within(region).queryByText("Страна X120")).not.toBeInTheDocument();
@@ -744,11 +746,6 @@ describe("Справочники", () => {
       target: { value: "нет такой" },
     });
     expect(await within(region).findByText("Ничего не найдено")).toBeInTheDocument();
-  });
-
-  it("курсы, коды ТН ВЭД и производители — в разделе «Номенклатура и партнёры», со ссылкой для тех, кому он открыт", async () => {
-    await openTab("reference");
-    expect(await screen.findByText(/Коды ТН ВЭД и производители ведутся/)).toBeInTheDocument();
   });
 });
 

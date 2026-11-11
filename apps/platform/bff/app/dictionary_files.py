@@ -3,16 +3,18 @@
 Исследование — `docs/research/2026-11-11-reference-data/README.md` §C1. Шаблон — это выгрузка самого
 списка: `code`, `name_ru`, `name_uz`, `name_en`, `active`, затем поля вида. Загрузка сначала
 проверяется без записи (что добавится, изменится, не изменится, где ошибка), применяются ровно
-проверенные строки через обычные действия домена. Ключ — код: есть и найден — строка меняется;
-пусто — создаётся (код даёт домен из названия). Пустая ячейка у существующей строки значение не
-меняет. Удалять файлом нельзя: строк, которых нет в файле, загрузка не касается. xlsx читает и пишет
-openpyxl, csv — стандартная библиотека.
+проверенные строки через обычные действия домена. Ключ — код (регистр не важен): есть и найден —
+строка меняется; пусто — создаётся (код даёт домен из названия). У списков, где код задаёт человек
+(`codes = given`, ERP), новый код — новая строка с этим кодом, пустой код — ошибка. Пустая
+ячейка у существующей строки значение не меняет. Удалять файлом нельзя: строк, которых нет в файле,
+загрузка не касается. xlsx читает и пишет openpyxl, csv — стандартная библиотека.
 """
 
 import csv
 import io
 import zipfile
 from dataclasses import dataclass, field
+from decimal import Decimal, InvalidOperation
 from typing import Any, Literal
 
 from openpyxl import Workbook, load_workbook
@@ -170,9 +172,30 @@ def _attr(attr: DictionaryAttr, text: str) -> AttrValue:
         ):
             raise ValueError(text)
         return number
+    if attr.type == "decimal":
+        try:
+            amount = Decimal(text.replace(" ", "").replace(",", "."))
+        except InvalidOperation as exc:
+            raise ValueError(text) from exc
+        if not amount.is_finite() or (
+            (attr.minimum is not None and amount < attr.minimum)
+            or (attr.maximum is not None and amount > attr.maximum)
+        ):
+            raise ValueError(text)
+        return str(amount)
     if attr.options is not None and text not in {o.value for o in attr.options}:
         raise ValueError(text)
     return text
+
+
+def _same(attr: DictionaryAttr, old: AttrValue, new: AttrValue) -> bool:
+    """Десятичные сравниваются числом: `12.00` в ERP и `12` в файле — одно значение."""
+    if attr.type == "decimal" and old not in (None, "") and new not in (None, ""):
+        try:
+            return Decimal(str(old)) == Decimal(str(new))
+        except InvalidOperation:
+            return False
+    return old == new
 
 
 def plan(
@@ -188,12 +211,14 @@ def plan(
     extra = [c for c in header if c and c not in known]
     if extra:
         raise FileProblemError("unknown_columns", ", ".join(extra))
-    existing = {item.code: item for item in items}
+    given = dictionary.codes == "given"
+    existing = {item.code.lower(): item for item in items}
     attrs = {a.key: a for a in dictionary.attrs}
     seen: set[str] = set()
     plans: list[RowPlan] = []
     for line, row in rows:
-        code = row.get("code", "").strip().lower() or None
+        raw_code = row.get("code", "").strip()
+        code = raw_code.lower() or None
         names = {lang: row.get(f"name_{lang}", "").strip() for lang in ("ru", "uz", "en")}
         result = RowPlan(line=line, code=code, name=names["ru"], action="error")
         errors = result.errors
@@ -219,13 +244,15 @@ def plan(
         if code is not None:
             seen.add(code)
         current = existing.get(code) if code else None
-        if code is not None and current is None:
+        if code is not None and current is None and not given:
             errors.append(("code", "unknown"))
+        if code is None and given:
+            errors.append(("code", "required"))
         if current is None and not names["ru"]:
             errors.append(("name_ru", "required"))
         if current is None and dictionary.closed:
             errors.append(("code", "closed"))
-        if current is None and code is None:
+        if current is None:
             for key, attr in attrs.items():
                 if attr.type == "choice" and attr.required and key not in values:
                     errors.append((key, "required"))
@@ -235,6 +262,9 @@ def plan(
         if current is None:
             result.action = "add"
             result.create = {"name": names, "attrs": values}
+            if given:
+                result.code = raw_code
+                result.create["code"] = raw_code
             plans.append(result)
             continue
         result.code = current.code
@@ -250,7 +280,9 @@ def plan(
                 changed.append(f"name_{lang}")
         if changed:
             patch["name"] = name
-        changed_attrs = {k: v for k, v in values.items() if current.attrs.get(k) != v}
+        changed_attrs = {
+            k: v for k, v in values.items() if not _same(attrs[k], current.attrs.get(k), v)
+        }
         if changed_attrs:
             patch["attrs"] = changed_attrs
             changed.extend(changed_attrs)

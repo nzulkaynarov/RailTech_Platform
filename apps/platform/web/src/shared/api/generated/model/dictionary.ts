@@ -4,6 +4,7 @@
  */
 import type { DictionaryArea } from "./dictionaryArea";
 import type { DictionaryAttr } from "./dictionaryAttr";
+import type { DictionaryCodes } from "./dictionaryCodes";
 import type { DictionaryOwner } from "./dictionaryOwner";
 import type { LocalizedName } from "./localizedName";
 
@@ -12,8 +13,10 @@ export interface Dictionary {
   kind: string;
   /** Домен-владелец значений */
   owner: DictionaryOwner;
-  /** Область экрана (`documents` — документооборот, `mail` — входящая почта) */
+  /** Область экрана (`documents` — документооборот, `mail` — входящая почта, `calc` — расчёт) */
   area: DictionaryArea;
+  /** `generated` — код создаёт домен из названия (EDS, CRM); `given` — код задаёт человек или файл (ERP) */
+  codes?: DictionaryCodes;
   name: LocalizedName;
   /** Закрытый список поведения — только переименовать и переставить */
   closed: boolean;

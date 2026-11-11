@@ -4554,7 +4554,7 @@ export interface paths {
     };
     /**
      * Справочники · каталог
-     * @description Справочники всех доменов для экрана администратора: вид, домен-владелец, область (`documents` — документооборот, `mail` — типы входящих писем, MAIL-TYPES), название, закрытый ли список (только переименовать и переставить), дополнительные поля (`attrs`). Раздел `admin` — чтение. Домен не ответил — 503.
+     * @description Справочники всех доменов для экрана администратора: вид, домен-владелец, область (`documents` — документооборот, `mail` — типы входящих писем, MAIL-TYPES), название, закрытый ли список (только переименовать и переставить), дополнительные поля (`attrs`), `calc` — справочники «Расчёта» ERP. Сотрудник видит те справочники, что ему положено читать (письма — `eds.inbox` или `eds.inbox.register`, почта — `crm.leads.triage`, расчёт — `company.settings`, все — `admin`); ни одного — 403. Домен не ответил — 503.
      */
     get: operations["listDictionaries"];
     put?: never;
@@ -4580,7 +4580,7 @@ export interface paths {
     put?: never;
     /**
      * Справочники · добавить значение
-     * @description Раздел `admin` — полный. Код создаёт домен из названия; значение встаёт в конец. Название уже есть — 409 `name_taken`; закрытый справочник — 409 `dictionary_closed`.
+     * @description Раздел `admin` — полный (справочники «Расчёта» — ещё `company.settings` полный). Код создаёт домен из названия; у справочников с `codes = given` код передаёт человек (`code`), занятый — 409 `code_taken`. Значение встаёт в конец. Название уже есть — 409 `name_taken`; закрытый справочник — 409 `dictionary_closed`.
      */
     post: operations["createDictionaryItem"];
     delete?: never;
@@ -12074,8 +12074,11 @@ export interface components {
     DictionaryAttr: {
       /** @example due_days */
       key: string;
-      /** @enum {string} */
-      type: "boolean" | "integer" | "choice";
+      /**
+       * @description `text` — строка, `decimal` — число строкой (ставка НДС)
+       * @enum {string}
+       */
+      type: "boolean" | "integer" | "choice" | "text" | "decimal";
       name: components["schemas"]["LocalizedName"];
       minimum?: number | null;
       maximum?: number | null;
@@ -12099,12 +12102,18 @@ export interface components {
        * @description Домен-владелец значений
        * @enum {string}
        */
-      owner: "eds" | "crm";
+      owner: "eds" | "crm" | "erp";
       /**
-       * @description Область экрана (`documents` — документооборот, `mail` — входящая почта)
+       * @description Область экрана (`documents` — документооборот, `mail` — входящая почта, `calc` — расчёт)
        * @enum {string}
        */
-      area: "documents" | "mail";
+      area: "documents" | "mail" | "calc";
+      /**
+       * @description `generated` — код создаёт домен из названия (EDS, CRM); `given` — код задаёт человек или файл (ERP)
+       * @default generated
+       * @enum {string}
+       */
+      codes: "generated" | "given";
       name: components["schemas"]["LocalizedName"];
       /** @description Закрытый список поведения — только переименовать и переставить */
       closed: boolean;
@@ -12113,7 +12122,7 @@ export interface components {
     DictionaryList: {
       items: components["schemas"]["Dictionary"][];
       /** @description Домены, чьи справочники не ответили — список частичный (экран говорит об этом) */
-      unavailable: ("eds" | "crm")[];
+      unavailable: ("eds" | "crm" | "erp")[];
     };
     /** @description Значения полей `attrs` (`urgent`, `due_days` у видов документа; `default_action`, `color`, `icon` у типов писем — строки из `options`); `null` — не задано */
     DictionaryAttrValues: {
@@ -12133,6 +12142,8 @@ export interface components {
       items: components["schemas"]["DictionaryItem"][];
     };
     DictionaryItemIn: {
+      /** @description Только у справочников с `codes = given` (ERP); у остальных код создаёт домен */
+      code?: string | null;
       name: components["schemas"]["LocalizedNameIn"];
       attrs?: components["schemas"]["DictionaryAttrValues"];
     };
@@ -15669,6 +15680,7 @@ export interface components {
     CatalogImageId: components["schemas"]["CompanyItemRef"];
     /** @description Вид справочника (`letter-kinds`, `receipt-methods`, `mail-types`) */
     DictionaryKindPath: string;
+    /** @description Код значения (EDS и CRM — из названия строчными, ERP — как задал человек, например `USD`) */
     DictionaryCodePath: string;
     /** @description Справочник ERP */
     ReferenceKindPath: components["schemas"]["ReferenceKind"];
@@ -24094,6 +24106,7 @@ export interface operations {
       path: {
         /** @description Вид справочника (`letter-kinds`, `receipt-methods`, `mail-types`) */
         kind: components["parameters"]["DictionaryKindPath"];
+        /** @description Код значения (EDS и CRM — из названия строчными, ERP — как задал человек, например `USD`) */
         code: components["parameters"]["DictionaryCodePath"];
       };
       cookie?: never;
@@ -24124,6 +24137,7 @@ export interface operations {
       path: {
         /** @description Вид справочника (`letter-kinds`, `receipt-methods`, `mail-types`) */
         kind: components["parameters"]["DictionaryKindPath"];
+        /** @description Код значения (EDS и CRM — из названия строчными, ERP — как задал человек, например `USD`) */
         code: components["parameters"]["DictionaryCodePath"];
       };
       cookie?: never;

@@ -21,6 +21,7 @@ from app.clients.base import Backend
 from app.clients.eds import eds_error
 from app.deps import Authed, AuthedDep, Rule, require, require_any
 from app.errors import PlatformError, backend_reason, backend_unavailable, from_backend
+from app.rbac import allows
 from app.schemas_dictionaries import (
     CODE,
     KIND,
@@ -45,6 +46,8 @@ class Owner:
     domain: Backend
     area: str
     readers: tuple[Rule, ...]
+    #: Кто правит вручную; загрузку файла запускает только администратор (решение 2026-11-11)
+    writers: tuple[Rule, ...] = (("admin", "full"),)
 
 
 # Справочники документооборота читают те, кто работает с письмами, и администратор;
@@ -56,7 +59,19 @@ _DOCUMENTS = Owner(
 _MAIL = Owner("crm", "mail", (("crm.leads.triage", "read"), ("admin", "read")))
 # Виды документов полномочий подписи (SIGN-2): читает держатель реестра, правит администратор.
 _SIGNING = Owner("eds", "documents", (("eds.signing.manage", "full"), ("admin", "read")))
+# Справочники «Расчёта» (ERP; решение владельца 2026-11-11 — один механизм): читает тот, кто
+# видит настройки компании, и администратор; правит администратор (ERP проверяет `settings.edit`).
+_CALC = Owner(
+    "erp",
+    "calc",
+    (("company.settings", "read"), ("admin", "read")),
+    (("admin", "full"), ("company.settings", "full")),
+)
 OWNERS: Final[dict[str, Owner]] = {
+    "countries": _CALC,
+    "currencies": _CALC,
+    "units": _CALC,
+    "delivery-basis": _CALC,
     "signing-kinds": _SIGNING,
     "letter-kinds": _DOCUMENTS,
     "receipt-methods": _DOCUMENTS,
@@ -67,11 +82,15 @@ OWNERS: Final[dict[str, Owner]] = {
 _CRM_REASONS: Final = {"mail_type_name_taken": "name_taken", "mail_type_in_use": "value_in_use"}
 
 Admin = Annotated[Authed, Depends(require("admin", "full"))]
-CatalogReader = Annotated[Authed, Depends(require("admin", "read"))]
 Kind = Annotated[str, Path(pattern=KIND)]
 Code = Annotated[str, Path(pattern=CODE)]
 # Проверка разделов по владельцу вида: зависимость строится один раз на набор правил.
 _READERS = {kind: require_any(*owner.readers) for kind, owner in OWNERS.items()}
+_WRITERS = {kind: require_any(*owner.writers) for kind, owner in OWNERS.items()}
+
+
+def _can_read(authed: Authed, owner: Owner) -> bool:
+    return any(allows(authed.access, res, need) for res, need in owner.readers)
 
 
 def _owner(kind: str) -> Owner:
@@ -108,21 +127,30 @@ def _parse[M: BaseModel](model: type[M], response: httpx.Response, owner: Owner)
 
 
 @router.get("", response_model=DictionaryList, operation_id="listDictionaries")
-async def list_dictionaries(authed: CatalogReader) -> DictionaryList:
+async def list_dictionaries(authed: AuthedDep) -> DictionaryList:
     """Каталог справочников доменов; BFF добавляет домен-владельца и область экрана.
 
     Домен не ответил — справочники остальных всё равно показываются, недоступный назван в
     `unavailable` (все домены не ответили — ошибка). Варианты поля «вид документа» у типов писем
-    (`letter_kind`) BFF берёт из справочника EDS «Виды входящих документов»."""
+    (`letter_kind`) BFF берёт из справочника EDS «Виды входящих документов». Сотрудник видит те
+    справочники, которые ему положено читать; ни одного — 403."""
+    owners = [o for o in (_DOCUMENTS, _MAIL, _CALC) if _can_read(authed, o)]
+    if not owners:
+        raise PlatformError(
+            "FORBIDDEN",
+            "Раздел или действие не положены вашей роли.",
+            status_code=403,
+            details={"resource": "admin", "need": "read"},
+        )
     items: list[Dictionary] = []
-    unavailable: list[Literal["eds", "crm"]] = []
+    unavailable: list[Literal["eds", "crm", "erp"]] = []
     failure: PlatformError | None = None
-    for owner in (_DOCUMENTS, _MAIL):  # по одному запросу на домен-владельца
+    for owner in owners:  # по одному запросу на домен-владельца
         try:
             raw = (await _call(authed, owner, "GET", "")).json()
             for entry in raw["items"]:
                 found = OWNERS.get(entry.get("kind"))
-                if found is not None and found.domain == owner.domain:
+                if found is not None and found.domain == owner.domain and _can_read(authed, found):
                     items.append(
                         Dictionary.model_validate(
                             {**entry, "owner": found.domain, "area": found.area}
@@ -130,10 +158,10 @@ async def list_dictionaries(authed: CatalogReader) -> DictionaryList:
                     )
         except PlatformError as exc:
             failure = failure or exc
-            unavailable.append(owner.domain)  # type: ignore[arg-type]
+            unavailable.append(owner.domain)
         except (KeyError, TypeError, AttributeError, ValidationError, ValueError):
             failure = failure or backend_unavailable(owner.domain, "bad_dictionary")
-            unavailable.append(owner.domain)  # type: ignore[arg-type]
+            unavailable.append(owner.domain)
     if failure is not None and not items:
         raise failure
     if "eds" not in unavailable:
@@ -292,10 +320,14 @@ async def import_dictionary(
     "/{kind}", response_model=DictionaryItem, status_code=201, operation_id="createDictionaryItem"
 )
 async def create_dictionary_item(
-    authed: Admin, kind: Kind, body: DictionaryItemIn
+    authed: AuthedDep, kind: Kind, body: DictionaryItemIn
 ) -> DictionaryItem:
     owner = _owner(kind)
-    response = await _call(authed, owner, "POST", f"/{kind}", ok=201, json=body.model_dump())
+    await _WRITERS[kind](authed)
+    payload = body.model_dump()
+    if payload.get("code") is None:
+        payload.pop("code", None)  # код создаёт домен из названия (EDS, CRM)
+    response = await _call(authed, owner, "POST", f"/{kind}", ok=201, json=payload)
     return _parse(DictionaryItem, response, owner)
 
 
@@ -303,18 +335,20 @@ async def create_dictionary_item(
     "/{kind}/order", response_model=DictionaryItemList, operation_id="reorderDictionaryItems"
 )
 async def reorder_dictionary_items(
-    authed: Admin, kind: Kind, body: DictionaryOrderIn
+    authed: AuthedDep, kind: Kind, body: DictionaryOrderIn
 ) -> DictionaryItemList:
     owner = _owner(kind)
+    await _WRITERS[kind](authed)
     response = await _call(authed, owner, "PUT", f"/{kind}/order", json=body.model_dump())
     return _parse(DictionaryItemList, response, owner)
 
 
 @router.patch("/{kind}/{code}", response_model=DictionaryItem, operation_id="updateDictionaryItem")
 async def update_dictionary_item(
-    authed: Admin, kind: Kind, code: Code, body: DictionaryItemPatch
+    authed: AuthedDep, kind: Kind, code: Code, body: DictionaryItemPatch
 ) -> DictionaryItem:
     owner = _owner(kind)
+    await _WRITERS[kind](authed)
     payload = body.model_dump(exclude_unset=True)
     response = await _call(authed, owner, "PATCH", f"/{kind}/{code}", json=payload)
     return _parse(DictionaryItem, response, owner)
@@ -323,7 +357,8 @@ async def update_dictionary_item(
 @router.delete(
     "/{kind}/{code}", status_code=204, response_class=Response, operation_id="deleteDictionaryItem"
 )
-async def delete_dictionary_item(authed: Admin, kind: Kind, code: Code) -> Response:
+async def delete_dictionary_item(authed: AuthedDep, kind: Kind, code: Code) -> Response:
     owner = _owner(kind)
+    await _WRITERS[kind](authed)
     await _call(authed, owner, "DELETE", f"/{kind}/{code}", ok=204)
     return Response(status_code=204)

@@ -107,8 +107,13 @@ function attrText(
     if (option) return localName(option.name, language);
     return typeof value === "string" ? value : t("settings.dict.no");
   }
+  if (attr.type === "text" || attr.type === "decimal") {
+    return typeof value === "string" && value !== "" ? value : "—";
+  }
   return typeof value === "number" ? String(value) : t("settings.dict.generalRule");
 }
+
+const PAGE_SIZE = 20;
 
 function DictionaryTable({ dictionary, readOnly }: { dictionary: Dictionary; readOnly: boolean }) {
   const { t, i18n } = useTranslation("letters");
@@ -150,6 +155,16 @@ function DictionaryTable({ dictionary, readOnly }: { dictionary: Dictionary; rea
   });
   const items = query.data?.items ?? [];
   const name = (item: DictionaryItem) => localName(item.name, i18n.language);
+  // Длинные списки (250 стран): поиск по коду и названиям на трёх языках и страницы по 20.
+  const [search, setSearch] = useState("");
+  const needle = search.trim().toLowerCase();
+  const shown = needle
+    ? items.filter((item) =>
+        [item.code, item.name.ru, item.name.uz, item.name.en].some((v) =>
+          v.toLowerCase().includes(needle),
+        ),
+      )
+    : items;
   const move = (index: number, step: -1 | 1) => {
     const codes = items.map((item) => item.code);
     const [code] = codes.splice(index, 1);
@@ -181,19 +196,41 @@ function DictionaryTable({ dictionary, readOnly }: { dictionary: Dictionary; rea
       {query.isError ? (
         <Alert type="error" showIcon role="alert" message={t("settings.dict.errors.load")} />
       ) : null}
+      {items.length > PAGE_SIZE ? (
+        <Input.Search
+          allowClear
+          className="pf-co-search"
+          aria-label={t("settings.dict.search")}
+          placeholder={t("settings.dict.search")}
+          value={search}
+          onChange={(event) => {
+            setSearch(event.target.value);
+          }}
+        />
+      ) : null}
       <ListTable<DictionaryItem>
         wrap
+        pageSize={PAGE_SIZE}
         label={localName(dictionary.name, i18n.language)}
-        data={items}
+        data={shown}
         loading={query.isPending}
         rowKey={(row) => row.code}
         empty={{
-          title: t("settings.dict.empty.title"),
-          text: t("settings.dict.empty.text"),
+          title: needle ? t("settings.dict.noMatch") : t("settings.dict.empty.title"),
+          text: needle ? "" : t("settings.dict.empty.text"),
           // Пока список грузится, antd показывает пустое состояние под спиннером: без второй кнопки «Добавить».
           action: query.isPending ? undefined : add,
         }}
         columns={[
+          ...(dictionary.codes === "given"
+            ? [
+                {
+                  title: t("settings.dict.code"),
+                  key: "code",
+                  render: (_: unknown, row: DictionaryItem) => row.code,
+                },
+              ]
+            : []),
           {
             title: t("settings.dict.name"),
             key: "name",
@@ -220,28 +257,32 @@ function DictionaryTable({ dictionary, readOnly }: { dictionary: Dictionary; rea
           {
             title: t("settings.dict.order"),
             key: "order",
-            render: (_: unknown, row, index) => (
-              <span className="pf-co-actions">
-                <Button
-                  size="small"
-                  icon={<ArrowUpOutlined />}
-                  aria-label={t("settings.dict.up", { name: name(row) })}
-                  disabled={readOnly || index === 0 || reorder.isPending}
-                  onClick={() => {
-                    move(index, -1);
-                  }}
-                />
-                <Button
-                  size="small"
-                  icon={<ArrowDownOutlined />}
-                  aria-label={t("settings.dict.down", { name: name(row) })}
-                  disabled={readOnly || index === items.length - 1 || reorder.isPending}
-                  onClick={() => {
-                    move(index, 1);
-                  }}
-                />
-              </span>
-            ),
+            render: (_: unknown, row) => {
+              // Номер в полном списке, а не на странице или в отборе поиска
+              const index = items.indexOf(row);
+              return (
+                <span className="pf-co-actions">
+                  <Button
+                    size="small"
+                    icon={<ArrowUpOutlined />}
+                    aria-label={t("settings.dict.up", { name: name(row) })}
+                    disabled={readOnly || index === 0 || reorder.isPending}
+                    onClick={() => {
+                      move(index, -1);
+                    }}
+                  />
+                  <Button
+                    size="small"
+                    icon={<ArrowDownOutlined />}
+                    aria-label={t("settings.dict.down", { name: name(row) })}
+                    disabled={readOnly || index === items.length - 1 || reorder.isPending}
+                    onClick={() => {
+                      move(index, 1);
+                    }}
+                  />
+                </span>
+              );
+            },
           },
           {
             title: t("settings.dict.actions"),
@@ -278,7 +319,7 @@ function DictionaryTable({ dictionary, readOnly }: { dictionary: Dictionary; rea
                     {t(row.active ? "settings.dict.hide" : "settings.dict.show")}
                   </Button>
                 )}
-                {dictionary.closed || row.used !== false ? null : (
+                {dictionary.closed || row.used === true ? null : (
                   <Button
                     type="link"
                     size="small"
@@ -342,6 +383,7 @@ function DictionaryTable({ dictionary, readOnly }: { dictionary: Dictionary; rea
 /** Значение поля по умолчанию: флаг выключен, число пусто, выбор — без значения, кроме цвета и значка (нейтральные). */
 function initialAttr(attr: DictionaryAttr): boolean | null | string {
   if (attr.type === "boolean") return false;
+  if (attr.type === "text") return "";
   if (attr.type === "choice") {
     const neutral = attr.key === "color" ? "default" : attr.key === "icon" ? "mail" : null;
     return neutral && attr.options?.some((o) => o.value === neutral) ? neutral : null;
@@ -350,6 +392,7 @@ function initialAttr(attr: DictionaryAttr): boolean | null | string {
 }
 
 interface Values {
+  code: string;
   ru: string;
   uz: string;
   en: string;
@@ -374,7 +417,9 @@ function ItemModal({
   const create = useCreateDictionaryItem({ mutation: { onSuccess: onSaved } });
   const update = useUpdateDictionaryItem({ mutation: { onSuccess: onSaved } });
   const mutation = item ? update : create;
+  const given = dictionary.codes === "given";
   const initial: Values = {
+    code: item?.code ?? "",
     ru: item?.name.ru ?? "",
     uz: item?.name.uz ?? "",
     en: item?.name.en ?? "",
@@ -388,7 +433,11 @@ function ItemModal({
       dictionary.attrs.map((a) => [a.key, values.attrs[a.key] ?? initialAttr(a)]),
     );
     if (item) update.mutate({ kind: dictionary.kind, code: item.code, data: { name, attrs } });
-    else create.mutate({ kind: dictionary.kind, data: { name, attrs } });
+    else
+      create.mutate({
+        kind: dictionary.kind,
+        data: { name, attrs, ...(given ? { code: values.code.trim() } : {}) },
+      });
   };
 
   return (
@@ -429,6 +478,16 @@ function ItemModal({
         initialValues={initial}
         onFinish={submit}
       >
+        {given && !item ? (
+          <Form.Item
+            name="code"
+            label={t("settings.dict.code")}
+            extra={t("settings.dict.codeHint")}
+            rules={[{ required: true, whitespace: true, message: t("settings.dict.required") }]}
+          >
+            <Input maxLength={50} autoComplete="off" />
+          </Form.Item>
+        ) : null}
         <Form.Item
           name="ru"
           label={t("settings.dict.nameRu")}
@@ -474,6 +533,22 @@ function ItemModal({
           ) : attr.type === "boolean" ? (
             <Form.Item key={attr.key} name={["attrs", attr.key]} valuePropName="checked">
               <Checkbox>{localName(attr.name, i18n.language)}</Checkbox>
+            </Form.Item>
+          ) : attr.type === "text" ? (
+            <Form.Item
+              key={attr.key}
+              name={["attrs", attr.key]}
+              label={localName(attr.name, i18n.language)}
+            >
+              <Input autoComplete="off" />
+            </Form.Item>
+          ) : attr.type === "decimal" ? (
+            <Form.Item
+              key={attr.key}
+              name={["attrs", attr.key]}
+              label={localName(attr.name, i18n.language)}
+            >
+              <InputNumber stringMode min="0" step="0.01" style={{ width: "100%" }} />
             </Form.Item>
           ) : (
             <Form.Item

@@ -14237,8 +14237,9 @@ export const getListDictionariesResponseMock = (
 ): DictionaryList => ({
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     kind: faker.helpers.fromRegExp("^[a-z][a-z-]{0,31}$"),
-    owner: faker.helpers.arrayElement(["eds", "crm"] as const),
-    area: faker.helpers.arrayElement(["documents", "mail"] as const),
+    owner: faker.helpers.arrayElement(["eds", "crm", "erp"] as const),
+    area: faker.helpers.arrayElement(["documents", "mail", "calc"] as const),
+    codes: faker.helpers.arrayElement(["generated", "given"] as const),
     name: {
       ru: faker.string.alpha({ length: { min: 1, max: 120 } }),
       uz: faker.string.alpha({ length: { min: 10, max: 120 } }),
@@ -14248,7 +14249,13 @@ export const getListDictionariesResponseMock = (
     attrs: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => ({
         key: faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
-        type: faker.helpers.arrayElement(["boolean", "integer", "choice"] as const),
+        type: faker.helpers.arrayElement([
+          "boolean",
+          "integer",
+          "choice",
+          "text",
+          "decimal",
+        ] as const),
         name: {
           ru: faker.string.alpha({ length: { min: 1, max: 120 } }),
           uz: faker.string.alpha({ length: { min: 10, max: 120 } }),
@@ -14273,7 +14280,7 @@ export const getListDictionariesResponseMock = (
       }),
     ),
   })),
-  unavailable: faker.helpers.arrayElements(["eds", "crm"] as const),
+  unavailable: faker.helpers.arrayElements(["eds", "crm", "erp"] as const),
   ...overrideResponse,
 });
 
@@ -14281,7 +14288,7 @@ export const getListDictionaryItemsResponseMock = (
   overrideResponse: Partial<Extract<DictionaryItemList, object>> = {},
 ): DictionaryItemList => ({
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
-    code: faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
+    code: faker.helpers.fromRegExp("^[A-Za-z0-9][A-Za-z0-9_.-]{0,49}$"),
     name: {
       ru: faker.string.alpha({ length: { min: 1, max: 120 } }),
       uz: faker.string.alpha({ length: { min: 10, max: 120 } }),
@@ -14305,7 +14312,7 @@ export const getListDictionaryItemsResponseMock = (
 export const getCreateDictionaryItemResponseMock = (
   overrideResponse: Partial<Extract<DictionaryItem, object>> = {},
 ): DictionaryItem => ({
-  code: faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
+  code: faker.helpers.fromRegExp("^[A-Za-z0-9][A-Za-z0-9_.-]{0,49}$"),
   name: {
     ru: faker.string.alpha({ length: { min: 1, max: 120 } }),
     uz: faker.string.alpha({ length: { min: 10, max: 120 } }),
@@ -14329,7 +14336,7 @@ export const getReorderDictionaryItemsResponseMock = (
   overrideResponse: Partial<Extract<DictionaryItemList, object>> = {},
 ): DictionaryItemList => ({
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
-    code: faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
+    code: faker.helpers.fromRegExp("^[A-Za-z0-9][A-Za-z0-9_.-]{0,49}$"),
     name: {
       ru: faker.string.alpha({ length: { min: 1, max: 120 } }),
       uz: faker.string.alpha({ length: { min: 10, max: 120 } }),
@@ -14385,7 +14392,7 @@ export const getImportDictionaryResponseMock = (
 export const getUpdateDictionaryItemResponseMock = (
   overrideResponse: Partial<Extract<DictionaryItem, object>> = {},
 ): DictionaryItem => ({
-  code: faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
+  code: faker.helpers.fromRegExp("^[A-Za-z0-9][A-Za-z0-9_.-]{0,49}$"),
   name: {
     ru: faker.string.alpha({ length: { min: 1, max: 120 } }),
     uz: faker.string.alpha({ length: { min: 10, max: 120 } }),

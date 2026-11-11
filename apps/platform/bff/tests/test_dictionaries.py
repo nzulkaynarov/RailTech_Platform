@@ -9,9 +9,12 @@ import httpx
 import pytest
 from openpyxl import load_workbook
 
+from app import dictionary_files as files
+from app.cookies import CSRF_HEADER
+from app.schemas_dictionaries import Dictionary, DictionaryItem
 from tests.backends import Backends
-from tests.conftest import CSRF_HEADER, ContractChecker, Web
-from tests.consts import CRM_URL
+from tests.conftest import ContractChecker, Web
+from tests.consts import CRM_URL, ERP_URL
 from tests.eds_letters_support import EdsFake, eds_error_body
 
 BASE = "/api/v1/dictionaries"
@@ -68,10 +71,34 @@ CRM_CATALOG = {
 }
 
 
+ERP_CATALOG = {
+    "items": [
+        {
+            "kind": "currencies",
+            "name": {"ru": "Валюты", "uz": "Valyutalar", "en": "Currencies"},
+            "closed": False,
+            "codes": "given",
+            "attrs": [{"key": "symbol", "type": "text", "name": NAME, "required": False}],
+        }
+    ]
+}
+ERP_ITEM: dict[str, Any] = {
+    "code": "USD",
+    "name": {"ru": "Доллар США", "uz": "AQSH dollari", "en": "US dollar"},
+    "attrs": {"symbol": "$"},
+    "active": True,
+    "position": 10,
+    "used": None,
+}
+
+
 @pytest.fixture
 def eds(be: Backends) -> EdsFake:
     be.router.get(f"{CRM_URL}/api/v1/dictionaries").mock(
         return_value=httpx.Response(200, json=CRM_CATALOG)
+    )
+    be.router.get(f"{ERP_URL}/api/v1/dictionaries").mock(
+        return_value=httpx.Response(200, json=ERP_CATALOG)
     )
     fake = EdsFake(be)
     fake.answer("GET", "dictionaries", httpx.Response(200, json=CATALOG))
@@ -93,10 +120,18 @@ async def test_catalog_adds_owner_and_area(web: Web, eds: EdsFake, check: Contra
     assert [(d["kind"], d["owner"], d["area"]) for d in response.json()["items"]] == [
         ("letter-kinds", "eds", "documents"),
         ("mail-types", "crm", "mail"),
+        ("currencies", "erp", "calc"),
     ]
+    erp = response.json()["items"][2]
+    assert (erp["codes"], erp["attrs"][0]["type"]) == ("given", "text")
     [choice] = response.json()["items"][1]["attrs"]
     assert (choice["type"], choice["options"][0]["value"]) == ("choice", "create_lead")
+    # Каждый видит те справочники, что ему положено читать: делопроизводитель — писем и почты,
+    # снабженец без писем и настроек — ни одного (403).
     assert (await web.login(["REGISTRAR"])).status_code == 200
+    registrar = await web.client.get(BASE)
+    assert [d["kind"] for d in registrar.json()["items"]] == ["letter-kinds", "mail-types"]
+    assert (await web.login(["SUPPLY"])).status_code == 200
     assert (await web.client.get(BASE)).status_code == 403
 
 
@@ -111,7 +146,7 @@ async def test_items_for_letter_workers_and_admin(
     assert eds.made("GET", "dictionaries/letter-kinds")[-1].url.params["include_hidden"] == "true"
     assert (await web.login(["SUPPLY"])).status_code == 200
     assert (await web.client.get(f"{BASE}/letter-kinds")).status_code == 403
-    assert (await web.client.get(f"{BASE}/currencies")).status_code == 404
+    assert (await web.client.get(f"{BASE}/secret-kinds")).status_code == 404
 
 
 async def test_admin_changes_and_the_body_goes_to_eds(
@@ -175,10 +210,11 @@ async def test_catalog_is_partial_when_crm_is_down_and_all_down_is_an_error(
     assert (await web.login(["ADMIN"])).status_code == 200
     response = await web.client.get(BASE)
     assert response.status_code == 200
-    assert [d["kind"] for d in response.json()["items"]] == ["letter-kinds"]
+    assert [d["kind"] for d in response.json()["items"]] == ["letter-kinds", "currencies"]
     assert response.json()["unavailable"] == ["crm"]
 
     eds.answer("GET", "dictionaries", httpx.Response(503))
+    be.router.get(f"{ERP_URL}/api/v1/dictionaries").mock(return_value=httpx.Response(503))
     assert (await web.client.get(BASE)).status_code == 503
 
 
@@ -222,6 +258,50 @@ async def test_catalog_gives_the_letter_kind_field_options_from_eds(web: Web, ed
     mail = next(d for d in response.json()["items"] if d["kind"] == "mail-types")
     [attr] = mail["attrs"]
     assert (attr["required"], [o["value"] for o in attr["options"]]) == (False, ["bank"])
+
+
+async def test_erp_values_have_codes_given_by_people(
+    web: Web, be: Backends, eds: EdsFake, check: ContractChecker
+) -> None:
+    """Справочники «Расчёта» ERP (решение 2026-11-11): код задаёт человек и уходит в ERP."""
+    listed = be.router.get(f"{ERP_URL}/api/v1/dictionaries/currencies").mock(
+        return_value=httpx.Response(200, json={"items": [ERP_ITEM]})
+    )
+    created = be.router.post(f"{ERP_URL}/api/v1/dictionaries/currencies").mock(
+        return_value=httpx.Response(201, json={**ERP_ITEM, "code": "KZT"})
+    )
+    patched = be.router.patch(f"{ERP_URL}/api/v1/dictionaries/currencies/USD").mock(
+        return_value=httpx.Response(200, json=ERP_ITEM)
+    )
+    assert (await web.login(["ADMIN"])).status_code == 200
+    response = await web.client.get(f"{BASE}/currencies", params={"include_hidden": "true"})
+    check(response, "/dictionaries/{kind}", "get")
+    assert response.json()["items"][0]["code"] == "USD"
+    assert listed.calls.last.request.url.params["include_hidden"] == "true"
+    made = await web.send(
+        "POST", f"{BASE}/currencies", json={"code": "KZT", "name": {"ru": "Тенге"}, "attrs": {}}
+    )
+    check(made, "/dictionaries/{kind}", "post")
+    assert json.loads(created.calls.last.request.content)["code"] == "KZT"
+    changed = await web.send("PATCH", f"{BASE}/currencies/USD", json={"name": {"ru": "Доллар"}})
+    check(changed, "/dictionaries/{kind}/{code}", "patch")
+    assert patched.call_count == 1
+
+
+async def test_company_settings_holder_edits_calc_lists_but_not_letter_lists(
+    web: Web, be: Backends, eds: EdsFake
+) -> None:
+    """Директор правил валюты и единицы и раньше (`company.settings: full`) — правит и теперь."""
+    be.router.patch(f"{ERP_URL}/api/v1/dictionaries/currencies/USD").mock(
+        return_value=httpx.Response(200, json=ERP_ITEM)
+    )
+    assert (await web.login(["DIRECTOR"])).status_code == 200
+    kinds = [d["kind"] for d in (await web.client.get(BASE)).json()["items"]]
+    assert "currencies" in kinds
+    ok = await web.send("PATCH", f"{BASE}/currencies/USD", json={"name": {"ru": "Доллар"}})
+    assert ok.status_code == 200, ok.text
+    refused = await web.send("PATCH", f"{BASE}/letter-kinds/bank", json={"active": False})
+    assert refused.status_code == 403
 
 
 # --- файл: выгрузка и загрузка с проверкой (решение владельца 2026-11-11) -------------------------
@@ -307,3 +387,73 @@ async def test_bad_file_names_the_problem_and_only_admin_uploads(web: Web, eds: 
     assert empty.json()["details"]["reason"] == "empty_file"
     assert (await web.login(["DIRECTOR"])).status_code == 200
     assert (await _upload(web, CSV)).status_code == 403
+
+
+async def test_given_codes_add_by_code_and_need_a_code(
+    web: Web, be: Backends, eds: EdsFake
+) -> None:
+    """Списки ERP (`codes = given`): новый код — новая строка с этим кодом, без кода — ошибка;
+    код ищется без учёта регистра."""
+    be.router.get(f"{ERP_URL}/api/v1/dictionaries/currencies").mock(
+        return_value=httpx.Response(200, json={"items": [ERP_ITEM]})
+    )
+    created = be.router.post(f"{ERP_URL}/api/v1/dictionaries/currencies").mock(
+        return_value=httpx.Response(201, json={**ERP_ITEM, "code": "KZT"})
+    )
+    patched = be.router.patch(f"{ERP_URL}/api/v1/dictionaries/currencies/USD").mock(
+        return_value=httpx.Response(200, json=ERP_ITEM)
+    )
+    assert (await web.login(["ADMIN"])).status_code == 200
+
+    async def upload(body: str, *, dry_run: bool = True) -> httpx.Response:
+        return await web.client.post(
+            f"{BASE}/currencies/import",
+            params={"dry_run": str(dry_run).lower()},
+            content=body.encode(),
+            headers={CSRF_HEADER: web.csrf, "Content-Type": "application/octet-stream"},
+        )
+
+    head = "code;name_ru;symbol\n"
+    checked = (await upload(head + "usd;;US$\nKZT;Тенге;₸\n;Без кода;\n")).json()
+    update, add, bad = checked["rows"]
+    assert (update["code"], update["action"], update["fields"]) == ("USD", "update", ["symbol"])
+    assert (add["code"], add["action"]) == ("KZT", "add")
+    assert bad["errors"] == [{"field": "code", "reason": "required"}]
+    applied = await upload(head + "usd;;US$\nKZT;Тенге;₸\n", dry_run=False)
+    assert applied.json()["applied"] is True, applied.text
+    assert json.loads(created.calls.last.request.content) == {
+        "code": "KZT",
+        "name": {"ru": "Тенге", "uz": "", "en": ""},
+        "attrs": {"symbol": "₸"},
+    }
+    assert json.loads(patched.calls.last.request.content) == {"attrs": {"symbol": "US$"}}
+
+
+def test_decimal_cells_compare_as_numbers() -> None:
+    """Десятичное поле: запятая допустима, `12` и `12.00` — одно значение, текст — ошибка."""
+    countries = Dictionary.model_validate(
+        {
+            "kind": "countries",
+            "owner": "erp",
+            "area": "calc",
+            "codes": "given",
+            "closed": False,
+            "name": NAME,
+            "attrs": [{"key": "vat_rate", "type": "decimal", "name": NAME, "required": False}],
+        }
+    )
+    uz = DictionaryItem.model_validate({**ERP_ITEM, "code": "UZ", "attrs": {"vat_rate": "12.00"}})
+    header = ["code", "name_ru", "vat_rate"]
+    rows = [
+        (2, {"code": "UZ", "name_ru": "", "vat_rate": "12"}),
+        (3, {"code": "KZ", "name_ru": "Казахстан", "vat_rate": "12,5"}),
+        (4, {"code": "RU", "name_ru": "Россия", "vat_rate": "двадцать"}),
+    ]
+    same, added, bad = files.plan(countries, [uz], header, rows)
+    assert same.action == "unchanged"
+    assert added.create == {
+        "name": {"ru": "Казахстан", "uz": "", "en": ""},
+        "attrs": {"vat_rate": "12.5"},
+        "code": "KZ",
+    }
+    assert bad.errors == [("vat_rate", "invalid")]
