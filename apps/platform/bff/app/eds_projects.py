@@ -286,7 +286,8 @@ class ErpProjects:
         if document_id not in allowed[kind]:
             raise not_found()
         slug = {"contract": "contracts", "invoice": "invoices", "act": "acts"}[kind]
-        await self._json("POST", f"{API}/{slug}/{document_id}/request-signing/")
+        # ERP отвечает 201 (запрос создан), в контракте `erp-internal` — 200: принимаем оба.
+        await self._json("POST", f"{API}/{slug}/{document_id}/request-signing/", ok=(200, 201))
         return await self.card(ref)
 
     async def act_action(self, ref: str, body: ActActionIn) -> ProjectCard:

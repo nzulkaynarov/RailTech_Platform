@@ -739,3 +739,32 @@ async def test_the_card_never_reveals_cost_or_supplier_fields(web: Web, erp: Pro
         assert word not in text
     assert "фактур" not in text, "собственные PDF не называются счёт-фактурой"
     assert json.loads(text)["number"] == NUMBER.lower() or True
+
+
+@pytest.mark.parametrize(
+    ("kind", "doc_id", "slug"),
+    [
+        ("contract", CONTRACT_ID, "contracts"),
+        ("act", ACT_ID, "acts"),
+        ("invoice", INVOICE_ID, "invoices"),
+    ],
+)
+async def test_signing_request_created_by_erp_with_201_is_success(
+    web: Web, erp: ProjectsFake, check: ContractChecker, kind: str, doc_id: int, slug: str
+) -> None:
+    """ERP создаёт запрос подписи и отвечает 201: это успех, не 503 (FR-1 полного прогона)."""
+    await _as(web, "ACCOUNTANT")
+    erp.cards[DEAL] = card(contract=contract_card(), act=act_card(), invoices=[invoice_card()])
+    erp.answer(
+        "POST",
+        rf"{slug}/{doc_id}/request-signing/",
+        httpx.Response(201, json={"status": "pending"}),
+    )
+
+    response = await web.send(
+        "POST", f"{BASE}/{NUMBER}/signing", json={"kind": kind, "document_id": doc_id}
+    )
+
+    check(response, "/eds/projects/{ref}/signing", "post")
+    assert response.status_code == 200, response.text
+    assert len(erp.calls_to("POST", rf"{slug}/{doc_id}/request-signing/")) == 1

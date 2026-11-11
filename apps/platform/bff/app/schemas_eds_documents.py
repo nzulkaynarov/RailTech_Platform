@@ -10,7 +10,7 @@ documents`).
 """
 
 from datetime import UTC, date, datetime
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, get_args
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -40,6 +40,9 @@ Decision = Literal["approve", "return", "reject"]
 StatusFilter = Annotated[str, StringConstraints(pattern=r"^[a-z_]+$", max_length=32)]
 
 DOCUMENT_KINDS: tuple[str, ...] = ("memo", "application", "report", "letter_out")
+# Статусы «моих» документов EDS (`GET /documents`): статусы писем реестра (`open`, `resolved`, …)
+# этот список не знает и отвечает на них 422.
+DOCUMENT_STATUSES: tuple[str, ...] = get_args(DocumentStatus)
 
 
 class EdsPerson(BaseModel):
