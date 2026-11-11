@@ -15,7 +15,6 @@ import pytest
 from app.clients.base import PROBE_TIMEOUT_SECONDS
 from tests.backends import Backends
 from tests.conftest import ContractChecker, Web
-from tests.consts import ERP_URL
 from tests.integrations_support import (
     EARLIER,
     CrmIntegrationsFake,
@@ -283,15 +282,12 @@ async def test_erp_pair_passes_password_and_code_only_to_crm(
     assert response.json()["check_error"] is None
 
 
-ERP_CODE_PATH = "/api/v1/integration/crm-pairing/code/"
-
-
 async def test_erp_pair_without_code_takes_one_from_erp_for_the_admin(
     web: Web, crm: CrmIntegrationsFake, be: Backends
 ) -> None:
     """Экрана старого ERP нет: код сопряжения BFF выпускает в ERP сам, сессией администратора."""
     code = "731" + fresh_secret("c", 4)
-    issued = be.router.post(f"{ERP_URL}{ERP_CODE_PATH}").mock(
+    issued = be.erp_pairing_code.mock(
         return_value=httpx.Response(
             200, json={"code": code, "expires_at": "2026-11-11T10:00:00Z", "ttl_seconds": 600}
         )
@@ -316,9 +312,7 @@ async def test_erp_pair_without_code_takes_one_from_erp_for_the_admin(
 async def test_erp_pair_without_a_code_from_erp_falls_back_to_the_platform_secret(
     web: Web, crm: CrmIntegrationsFake, be: Backends, erp_answer: int
 ) -> None:
-    be.router.post(f"{ERP_URL}{ERP_CODE_PATH}").mock(
-        return_value=httpx.Response(erp_answer, json={"detail": "FORBIDDEN"})
-    )
+    be.erp_pairing_code.mock(return_value=httpx.Response(erp_answer, json={"detail": "FORBIDDEN"}))
     await web.login(["ADMIN"])
 
     response = await web.send(
