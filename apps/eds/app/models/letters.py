@@ -46,7 +46,7 @@ class Letter(Base):
     __table_args__ = (
         CheckConstraint(
             "status IN ('awaiting_resolution', 'resolved', 'returned', 'rejected', "
-            "'in_execution', 'executed', 'noted', 'duplicate')",
+            "'in_execution', 'executed', 'noted', 'duplicate', 'closed')",
             name="status",
         ),
         CheckConstraint(
@@ -132,6 +132,9 @@ class Letter(Base):
     # {kind, responsible, due, text, co_executors, acquaint, by, at} — проект резолюции делопроизводителя
     resolution_draft: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     executed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # «Закрыто без ответа» (решение владельца 2026-11-11): код справочника `close-reasons` и пояснение ответственного.
+    close_reason: Mapped[str | None] = mapped_column(String(32))
+    close_comment: Mapped[str | None] = mapped_column(Text)
     # EDS-DUP: ключ точного совпадения (`services/letter_dedup.exact_key`) и оригинал письма-дубля.
     dedup_key: Mapped[str | None] = mapped_column(String(400))
     duplicate_of_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("letters.id", ondelete="SET NULL"))

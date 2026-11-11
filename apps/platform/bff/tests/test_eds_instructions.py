@@ -579,3 +579,52 @@ async def test_outgoing_of_another_letter_is_refused_with_a_reason(web: Web, eds
 
     assert response.status_code == 409
     assert response.json()["details"]["reason"] == "outgoing_linked_elsewhere"
+
+
+# --- исходы письма (решение владельца 2026-11-11) -----------------------------------------------
+
+
+async def test_any_employee_closes_or_returns_eds_decides_responsible(
+    web: Web, eds: EdsFake, check: ContractChecker
+) -> None:
+    closed = {
+        **office_letter(),
+        "status": "closed",
+        "close_reason": "advertising",
+        "close_comment": None,
+    }
+    eds.answer("POST", f"letters/{LETTER_ID}/close", httpx.Response(200, json=closed))
+    path = f"instructions/{INSTRUCTION_ID}"
+    eds.answer("POST", f"{path}/return", httpx.Response(200, json=office_letter()))
+    assert (await web.login(["SUPPLY"])).status_code == 200
+
+    done = await web.send("POST", f"{CARD}/close", json={"reason": "advertising", "comment": "  "})
+    assert done.status_code == 200, done.text
+    check(done, "/eds/letters/{id}/close", "post")
+    assert (done.json()["status"], done.json()["close_reason"]) == ("closed", "advertising")
+    assert json.loads(eds.made("POST", f"letters/{LETTER_ID}/close")[0].content) == {
+        "reason": "advertising",
+        "comment": None,
+    }
+
+    returned = await web.send("POST", f"{BASE}/{path}/return", json={"reason": " Не моё. "})
+    assert returned.status_code == 200, returned.text
+    check(returned, "/eds/instructions/{id}/return", "post")
+    assert json.loads(eds.made("POST", f"{path}/return")[0].content) == {"reason": "Не моё."}
+
+    blank = await web.send("POST", f"{BASE}/{path}/return", json={"reason": "   "})
+    assert blank.status_code == 422
+    assert blank.json()["details"]["fields"]["reason"] == "required"
+
+
+async def test_reopen_needs_the_resolution_section(
+    web: Web, eds: EdsFake, check: ContractChecker
+) -> None:
+    eds.answer("POST", f"letters/{LETTER_ID}/reopen", httpx.Response(200, json=office_letter()))
+    assert (await web.login(["SUPPLY"])).status_code == 200
+    assert (await web.send("POST", f"{CARD}/reopen")).status_code == 403
+
+    assert (await web.login(["DIRECTOR"])).status_code == 200
+    reopened = await web.send("POST", f"{CARD}/reopen")
+    assert reopened.status_code == 200, reopened.text
+    check(reopened, "/eds/letters/{id}/reopen", "post")

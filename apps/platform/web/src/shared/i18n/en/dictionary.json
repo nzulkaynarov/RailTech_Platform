@@ -19,7 +19,8 @@
       "in_execution": "In execution",
       "executed": "Executed",
       "noted": "Noted",
-      "duplicate": "Duplicate"
+      "duplicate": "Duplicate",
+      "closed": "Closed without reply"
     },
     "quote": {
       "draft": "Draft",

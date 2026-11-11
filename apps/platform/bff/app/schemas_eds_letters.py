@@ -22,7 +22,7 @@ from pydantic import (
     field_validator,
 )
 
-from app.errors import backend_unavailable
+from app.errors import PlatformError, backend_unavailable
 from app.feeds.models import PersonRef, Sources, StepCode
 from app.feeds.numbers import deal_kind, deal_step, outgoing_document_path, request_path
 from app.schemas import initials_of
@@ -38,6 +38,8 @@ LetterStatus = Literal[
     "noted",
     # EDS-DUP: письмо зарегистрировано повторно и закрыто («Дубль ВХ-…»)
     "duplicate",
+    # «Закрыто без ответа» с причиной (решение владельца 2026-11-11)
+    "closed",
 ]
 # P8b: путь резолюции (решает EDS) и тип резолюции делопроизводства.
 LetterTrack = Literal["calc", "office"]
@@ -261,6 +263,9 @@ class LetterCard(BaseModel):
     instructions: list[LetterInstruction] = []
     acquaintances: list[LetterAcquaintance] = []
     executed_at: dt.datetime | None = None
+    # «Закрыто без ответа»: код справочника `close-reasons` и пояснение ответственного
+    close_reason: str | None = None
+    close_comment: str | None = None
     duplicate_of: "LetterDuplicateOf | None" = None
     # EDS-REPLY-1: ответы на это входящее — черновик, передан на регистрацию, ИСХ и итог отправки.
     replies: "list[LetterReply]" = []
@@ -450,6 +455,38 @@ class OfficeResolutionIn(BaseModel):
             "co_executor_ids": _ids(self.co_executor_ids),
             "acquaint_ids": _ids(self.acquaint_ids),
         }
+
+
+class LetterCloseIn(BaseModel):
+    """«Закрыть без ответа»: код справочника `close-reasons` и пояснение (нужно ли — решает EDS)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    reason: str = Field(pattern=r"^[a-z][a-z_]{0,31}$")
+    comment: str | None = Field(default=None, max_length=2000)
+
+    def for_eds(self) -> dict[str, Any]:
+        comment = self.comment.strip() if self.comment is not None else None
+        return {"reason": self.reason, "comment": comment or None}
+
+
+class InstructionReturnIn(BaseModel):
+    """«Вернуть автору резолюции»: причина обязательна."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    reason: str = Field(min_length=1, max_length=4000)
+
+    def for_eds(self) -> dict[str, Any]:
+        reason = self.reason.strip()
+        if not reason:
+            raise PlatformError(
+                "VALIDATION_FAILED",
+                "Напишите причину.",
+                status_code=422,
+                details={"fields": {"reason": "required"}},
+            )
+        return {"reason": reason}
 
 
 class InstructionCompleteIn(BaseModel):
@@ -830,6 +867,8 @@ class EdsLetter(BaseModel):
     instructions: list[_Instruction] = []
     acquaintances: list[_Acquaintance] = []
     executed_at: dt.datetime | None = None
+    close_reason: str | None = None
+    close_comment: str | None = None
     duplicate_of: _DuplicateRef | None = None
     replies: list[_Reply] = []
 
@@ -1156,6 +1195,8 @@ def to_card(
             for a in letter.acquaintances
         ],
         executed_at=letter.executed_at,
+        close_reason=letter.close_reason,
+        close_comment=letter.close_comment,
         duplicate_of=(
             LetterDuplicateOf(
                 number=letter.duplicate_of.number, path=letter_path(letter.duplicate_of.number)

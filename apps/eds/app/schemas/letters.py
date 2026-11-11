@@ -36,6 +36,7 @@ class LetterStatus(StrEnum):
     EXECUTED = "executed"
     NOTED = "noted"
     DUPLICATE = "duplicate"  # «Дубль ВХ-…» (EDS-DUP)
+    CLOSED = "closed"  # «Закрыто без ответа» с причиной (решение владельца 2026-11-11)
 
 
 class LetterTrack(StrEnum):
@@ -257,6 +258,8 @@ class Letter(BaseModel):
     instructions: "list[InstructionOut]" = Field(default_factory=list)
     acquaintances: "list[AcquaintanceOut]" = Field(default_factory=list)
     executed_at: dt.datetime | None = None
+    close_reason: str | None = None
+    close_comment: str | None = None
     duplicate_of: LetterDuplicateRef | None = None
     replies: "list[LetterReply]" = Field(default_factory=list)
 
@@ -396,6 +399,19 @@ class InstructionOut(BaseModel):
 class AcquaintanceOut(BaseModel):
     person: PersonRef
     acknowledged_at: dt.datetime | None
+
+
+class LetterCloseIn(Strict):
+    """«Закрыть без ответа»: код справочника `close-reasons`; пояснение обязательно, если причина его требует."""
+
+    reason: Annotated[str, Field(pattern=r"^[a-z][a-z_]{0,31}$")]
+    comment: Annotated[str | None, Field(max_length=2000)] = None
+
+
+class InstructionReturnIn(Strict):
+    """«Вернуть автору резолюции»: «не моё» или нужна другая резолюция — причина обязательна."""
+
+    reason: Comment
 
 
 class InstructionCompleteIn(Strict):

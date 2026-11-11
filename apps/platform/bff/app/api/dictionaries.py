@@ -18,7 +18,7 @@ from pydantic import BaseModel, ValidationError
 
 from app.clients.base import Backend
 from app.clients.eds import eds_error
-from app.deps import Authed, AuthedDep, Rule, require, require_any
+from app.deps import Authed, AuthedDep, Rule, require, require_any, require_any_section
 from app.errors import PlatformError, backend_reason, backend_unavailable, from_backend
 from app.schemas_dictionaries import (
     CODE,
@@ -52,8 +52,11 @@ _DOCUMENTS = Owner(
 _MAIL = Owner("crm", "mail", (("crm.leads.triage", "read"), ("admin", "read")))
 # Виды документов полномочий подписи (SIGN-2): читает держатель реестра, правит администратор.
 _SIGNING = Owner("eds", "documents", (("eds.signing.manage", "full"), ("admin", "read")))
+# Причины «Закрыть без ответа» читает любой сотрудник (исполнитель поручения), правит администратор.
+_CLOSE_REASONS = Owner("eds", "documents", ())
 OWNERS: Final[dict[str, Owner]] = {
     "signing-kinds": _SIGNING,
+    "close-reasons": _CLOSE_REASONS,
     "letter-kinds": _DOCUMENTS,
     "receipt-methods": _DOCUMENTS,
     "resolution-kinds": _DOCUMENTS,
@@ -67,7 +70,10 @@ CatalogReader = Annotated[Authed, Depends(require("admin", "read"))]
 Kind = Annotated[str, Path(pattern=KIND)]
 Code = Annotated[str, Path(pattern=CODE)]
 # Проверка разделов по владельцу вида: зависимость строится один раз на набор правил.
-_READERS = {kind: require_any(*owner.readers) for kind, owner in OWNERS.items()}
+_READERS = {
+    kind: require_any(*owner.readers) if owner.readers else require_any_section
+    for kind, owner in OWNERS.items()
+}
 
 
 def _owner(kind: str) -> Owner:

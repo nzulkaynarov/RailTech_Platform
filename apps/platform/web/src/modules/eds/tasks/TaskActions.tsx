@@ -17,6 +17,7 @@ import { useResolutionKindName } from "../dictionaries";
 import { fieldsOf, reasonOf, useRefreshLetters } from "../inbox/api";
 import { AttachmentsField } from "../new/AttachmentsField";
 import type { Attachment } from "../new/formModel";
+import { OutcomeMenu } from "./LetterOutcomes";
 import { ownDraftReply } from "./replyModel";
 import { completeBody } from "./taskModel";
 
@@ -306,6 +307,9 @@ export function MyInstruction({
       ) : null}
       <CompleteForm instruction={instruction} />
       <ExtensionForm instruction={instruction} urgent={letter.urgent} />
+      <div className="pf-fp-row">
+        <OutcomeMenu letter={letter} instruction={instruction} />
+      </div>
     </Card>
   );
 }

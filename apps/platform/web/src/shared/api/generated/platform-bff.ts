@@ -204,6 +204,7 @@ import type {
   InstructionCompleteIn,
   InstructionExtensionDecisionIn,
   InstructionExtensionIn,
+  InstructionReturnIn,
   IntegrationConflictResponse,
   IntegrationFailedResponse,
   IntegrationInvalidResponse,
@@ -224,6 +225,7 @@ import type {
   LeadManagerList,
   LeadPage,
   LetterCard,
+  LetterCloseIn,
   LetterConflictResponse,
   LetterDuplicateCheckIn,
   LetterDuplicateList,
@@ -34724,6 +34726,378 @@ export const useAcknowledgeLetter = <
   TContext
 > => {
   return useMutation(getAcknowledgeLetterMutationOptions(options), queryClient);
+};
+
+export const getCloseLetterWithoutReplyUrl = (id: string) => {
+  return `/api/v1/eds/letters/${id}/close`;
+};
+
+/**
+ * EDS `POST /letters/{id}/close` (решение владельца 2026-11-11). Любой сотрудник; закрывает только ответственный исполнитель (решает EDS: иначе 403, `details.reason = not_responsible`; не в работе — 409 `invalid_state`). Причина — код справочника `close-reasons` (`GET /dictionaries/close-reasons`); неизвестная — 422 `details.fields.reason`; у причины с `comment_required` без пояснения — 422 `details.fields.comment`. Письмо «Закрыто без ответа», поручения соисполнителей отменены, автору резолюции — уведомление. Ответ — карточка.
+ * @summary EDS · Закрыть письмо без ответа
+ */
+export const closeLetterWithoutReply = async (
+  id: string,
+  letterCloseIn: LetterCloseIn,
+  options?: Parameters<typeof http>[1],
+): Promise<LetterCard> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<LetterCard>(getCloseLetterWithoutReplyUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(letterCloseIn),
+  });
+};
+
+export const getCloseLetterWithoutReplyMutationKey = () => ["closeLetterWithoutReply"] as const;
+
+export const getCloseLetterWithoutReplyMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | LetterConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof closeLetterWithoutReply>>,
+    TError,
+    CloseLetterWithoutReplyMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof closeLetterWithoutReply>>,
+  TError,
+  CloseLetterWithoutReplyMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCloseLetterWithoutReplyMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof closeLetterWithoutReply>>,
+    CloseLetterWithoutReplyMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return closeLetterWithoutReply(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CloseLetterWithoutReplyMutationResult = NonNullable<
+  Awaited<ReturnType<typeof closeLetterWithoutReply>>
+>;
+export type CloseLetterWithoutReplyMutationBody = LetterCloseIn;
+export type CloseLetterWithoutReplyMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | LetterConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type CloseLetterWithoutReplyMutationVariables = { id: string; data: LetterCloseIn };
+
+/**
+ * @summary EDS · Закрыть письмо без ответа
+ */
+export const useCloseLetterWithoutReply = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | LetterConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof closeLetterWithoutReply>>,
+      TError,
+      CloseLetterWithoutReplyMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof closeLetterWithoutReply>>,
+  TError,
+  CloseLetterWithoutReplyMutationVariables,
+  TContext
+> => {
+  return useMutation(getCloseLetterWithoutReplyMutationOptions(options), queryClient);
+};
+
+export const getReopenLetterUrl = (id: string) => {
+  return `/api/v1/eds/letters/${id}/reopen`;
+};
+
+/**
+ * EDS `POST /letters/{id}/reopen`. Раздел `eds.inbox: full`; вернуть может только автор резолюции (иначе 403, `details.reason = not_resolution_author`), только письмо «Закрыто без ответа» (иначе 409 `invalid_state`). Поручения снова в работе, исполнителям — уведомление. Ответ — карточка.
+ * @summary EDS · Вернуть закрытое без ответа письмо в работу
+ */
+export const reopenLetter = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<LetterCard> => {
+  return http<LetterCard>(getReopenLetterUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getReopenLetterMutationKey = () => ["reopenLetter"] as const;
+
+export const getReopenLetterMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | LetterConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof reopenLetter>>,
+    TError,
+    ReopenLetterMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof reopenLetter>>,
+  TError,
+  ReopenLetterMutationVariables,
+  TContext
+> => {
+  const mutationKey = getReopenLetterMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof reopenLetter>>,
+    ReopenLetterMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return reopenLetter(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReopenLetterMutationResult = NonNullable<Awaited<ReturnType<typeof reopenLetter>>>;
+
+export type ReopenLetterMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | LetterConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type ReopenLetterMutationVariables = { id: string };
+
+/**
+ * @summary EDS · Вернуть закрытое без ответа письмо в работу
+ */
+export const useReopenLetter = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | LetterConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof reopenLetter>>,
+      TError,
+      ReopenLetterMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof reopenLetter>>,
+  TError,
+  ReopenLetterMutationVariables,
+  TContext
+> => {
+  return useMutation(getReopenLetterMutationOptions(options), queryClient);
+};
+
+export const getReturnInstructionToAuthorUrl = (id: string) => {
+  return `/api/v1/eds/instructions/${id}/return`;
+};
+
+/**
+ * EDS `POST /instructions/{id}/return`. Любой сотрудник; возвращает только ответственный (иначе 403, `details.reason = not_responsible`), пока никто не исполнил своё поручение (иначе 409, `details.reason = instruction_executed`). Причина обязательна (пустая — 422 `details.fields.reason`). Поручения сняты, письмо снова «Ждёт резолюции», автору резолюции — уведомление. Ответ — карточка.
+ * @summary EDS · Вернуть письмо автору резолюции
+ */
+export const returnInstructionToAuthor = async (
+  id: string,
+  instructionReturnIn: InstructionReturnIn,
+  options?: Parameters<typeof http>[1],
+): Promise<LetterCard> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<LetterCard>(getReturnInstructionToAuthorUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(instructionReturnIn),
+  });
+};
+
+export const getReturnInstructionToAuthorMutationKey = () => ["returnInstructionToAuthor"] as const;
+
+export const getReturnInstructionToAuthorMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | LetterConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof returnInstructionToAuthor>>,
+    TError,
+    ReturnInstructionToAuthorMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof returnInstructionToAuthor>>,
+  TError,
+  ReturnInstructionToAuthorMutationVariables,
+  TContext
+> => {
+  const mutationKey = getReturnInstructionToAuthorMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof returnInstructionToAuthor>>,
+    ReturnInstructionToAuthorMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return returnInstructionToAuthor(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReturnInstructionToAuthorMutationResult = NonNullable<
+  Awaited<ReturnType<typeof returnInstructionToAuthor>>
+>;
+export type ReturnInstructionToAuthorMutationBody = InstructionReturnIn;
+export type ReturnInstructionToAuthorMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | LetterConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type ReturnInstructionToAuthorMutationVariables = { id: string; data: InstructionReturnIn };
+
+/**
+ * @summary EDS · Вернуть письмо автору резолюции
+ */
+export const useReturnInstructionToAuthor = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | LetterConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof returnInstructionToAuthor>>,
+      TError,
+      ReturnInstructionToAuthorMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof returnInstructionToAuthor>>,
+  TError,
+  ReturnInstructionToAuthorMutationVariables,
+  TContext
+> => {
+  return useMutation(getReturnInstructionToAuthorMutationOptions(options), queryClient);
 };
 
 export const getCompleteInstructionUrl = (id: string) => {
