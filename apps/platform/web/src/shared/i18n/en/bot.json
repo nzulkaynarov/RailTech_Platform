@@ -139,7 +139,7 @@
   },
   "exports": {
     "title": "CSV exports",
-    "intro": "An Excel file with what you see in the lists: leads, customers, deals.",
+    "intro": "An Excel file with deals: customer, amount, stage and dates — no contact details.",
     "step1": "A CSV file (UTF-8, \";\" separator) of up to 10,000 rows is downloaded to your device.",
     "step2": "The export goes to the audit log: who, what and how many rows.",
     "step3": "The file contains customers' personal data: keep it only on a work device and do not forward it in messengers.",
@@ -149,31 +149,18 @@
     "download": "Download: {{title}}",
     "needSection": "The export needs access to the data: the \"{{section}}\" section is required — give the administrator a second role.",
     "entities": {
-      "leads": {
-        "title": "Leads",
-        "purpose": "Name, language, stage, score, owner, need, last message."
-      },
-      "clients": {
-        "title": "Customers",
-        "purpose": "Name, tax ID, segment, owner, open deals, last activity."
-      },
       "deals": {
         "title": "Deals",
         "purpose": "Title, customer, product, amount, stage, dates, rejection reason, owner."
       }
     },
     "filters": {
-      "q": "Search (name, title)",
       "stage": "Stage",
       "anyStage": "Any stage",
-      "language": "Language",
-      "anyLanguage": "Any language",
       "from": {
-        "leads": "Created from",
         "deals": "Closed from"
       },
       "to": {
-        "leads": "Created to",
         "deals": "Closed to"
       }
     },
@@ -184,7 +171,6 @@
     },
     "sections": {
       "crm": {
-        "leads": "Clients · Leads",
         "clients": "Clients · Clients"
       }
     }

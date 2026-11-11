@@ -459,9 +459,9 @@ export const SETTINGS: readonly SettingEntry[] = [
     access: ADMIN,
     name: { ru: "Выгрузки", uz: "Eksport", en: "Exports" },
     description: {
-      ru: "Лиды, клиенты и сделки в файл для Excel",
-      uz: "Lidlar, mijozlar va bitimlar Excel fayliga",
-      en: "Leads, clients and deals to a file for Excel",
+      ru: "Сделки в файл для Excel, без контактов",
+      uz: "Bitimlar Excel fayliga, kontaktlarsiz",
+      en: "Deals to a file for Excel, no contact details",
     },
     keywords: {
       ru: ["экспорт", "csv", "excel", "выгрузить"],

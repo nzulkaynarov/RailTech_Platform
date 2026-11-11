@@ -4465,8 +4465,8 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * Выгрузка CSV: лиды, клиенты или сделки
-     * @description CRM `GET /export/{leads|clients|deals}.csv`. Нужен `admin: full` (право CRM `export:read`) **и** чтение выгружаемых данных: лиды — `crm.leads`, клиенты и сделки — `crm.clients` (системная «Администратор» без второй роли бизнес-данные не выгружает, R3-D-2). BFF проверяет оба раздела и отдаёт файл потоком, не накапливая его в памяти: CSV для Excel (UTF-8 с BOM, разделитель `;`), до 10 000 строк, имя файла с датой в `Content-Disposition` (`leads-20261026-1530.csv`). Каждая выгрузка пишется в журнал аудита CRM. Фильтры — как на экранах списков; недопустимый — 422.
+     * Выгрузка CSV сделок
+     * @description CRM `GET /export/deals.csv`. Только сделки, без контактов (решение владельца 2026-11-11; выгрузки лидов и клиентов убраны в 0.46.0). Нужен `admin: full` (право CRM `export:read`) **и** чтение `crm.clients` (системная «Администратор» без второй роли бизнес-данные не выгружает, R3-D-2). BFF отдаёт файл потоком, не накапливая его в памяти: CSV для Excel (UTF-8 с BOM, разделитель `;`), до 10 000 строк, имя файла с датой в `Content-Disposition` (`deals-20261026-1530.csv`). Каждая выгрузка пишется в журнал аудита CRM. Недопустимый фильтр — 422.
      */
     get: operations["downloadCsvExport"];
     put?: never;
@@ -23639,24 +23639,16 @@ export interface operations {
   downloadCsvExport: {
     parameters: {
       query?: {
-        /** @description Поиск (лиды, клиенты), до 100 символов */
-        q?: string;
-        /** @description Стадия: у сделок `open`, `won`, `lost`; у лидов — код стадии CRM */
+        /** @description Стадия сделки: `open`, `won`, `lost` */
         stage?: string;
-        /** @description Лиды — язык */
-        language?: components["schemas"]["Language"];
-        /** @description Лиды — созданы не раньше (дата-время) */
-        created_from?: string;
-        /** @description Лиды — созданы не позже (дата-время) */
-        created_to?: string;
-        /** @description Сделки — закрыты не раньше */
+        /** @description Закрыты не раньше */
         closed_from?: string;
-        /** @description Сделки — закрыты не позже */
+        /** @description Закрыты не позже */
         closed_to?: string;
       };
       header?: never;
       path: {
-        entity: "leads" | "clients" | "deals";
+        entity: "deals";
       };
       cookie?: never;
     };
@@ -23665,7 +23657,7 @@ export interface operations {
       /** @description Файл CSV */
       200: {
         headers: {
-          /** @description `attachment; filename="leads-20261026-1530.csv"` */
+          /** @description `attachment; filename="deals-20261026-1530.csv"` */
           "Content-Disposition"?: string;
           [name: string]: unknown;
         };

@@ -139,7 +139,7 @@
   },
   "exports": {
     "title": "CSV yuklamalar",
-    "intro": "Ro‘yxatlarda ko‘rinadigan narsalar bilan Excel uchun fayl: lidlar, mijozlar, bitimlar.",
+    "intro": "Bitimlar bilan Excel uchun fayl: mijoz, summa, bosqich va muddatlar — kontaktlarsiz.",
     "step1": "CSV fayl (UTF-8, ajratgich «;») 10 000 qatorgacha qurilmangizga yuklab olinadi.",
     "step2": "Yuklama audit jurnaliga tushadi: kim, nima va nechta qator.",
     "step3": "Faylda mijozlarning shaxsiy ma’lumotlari bor: uni faqat ish qurilmasida saqlang va messenjerlarda yubormang.",
@@ -149,31 +149,18 @@
     "download": "Yuklab olish: {{title}}",
     "needSection": "Yuklama ma’lumotlarga kirishni talab qiladi: «{{section}}» bo‘limi kerak — administratorga ikkinchi rol bering.",
     "entities": {
-      "leads": {
-        "title": "Lidlar",
-        "purpose": "Ism, til, bosqich, baho, mas’ul, ehtiyoj, oxirgi xabar."
-      },
-      "clients": {
-        "title": "Mijozlar",
-        "purpose": "Nomi, STIR, segment, mas’ul, ochiq bitimlar, oxirgi faollik."
-      },
       "deals": {
         "title": "Bitimlar",
         "purpose": "Nomi, mijoz, mahsulot, summa, bosqich, muddatlar, rad etish sababi, mas’ul."
       }
     },
     "filters": {
-      "q": "Qidiruv (ism, nom)",
       "stage": "Bosqich",
       "anyStage": "Istalgan bosqich",
-      "language": "Til",
-      "anyLanguage": "Istalgan til",
       "from": {
-        "leads": "Yaratilgan (dan)",
         "deals": "Yopilgan (dan)"
       },
       "to": {
-        "leads": "Yaratilgan (gacha)",
         "deals": "Yopilgan (gacha)"
       }
     },
@@ -184,7 +171,6 @@
     },
     "sections": {
       "crm": {
-        "leads": "Mijozlar · Lidlar",
         "clients": "Mijozlar · Mijozlar"
       }
     }

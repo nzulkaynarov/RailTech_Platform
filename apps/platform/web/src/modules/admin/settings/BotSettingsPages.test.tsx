@@ -367,29 +367,24 @@ describe("Настройки · Система · Выгрузки CSV", () => {
     await openPage("admin@demo.example", "/admin/exports", "Выгрузки");
 
     expect(await screen.findByRole("heading", { level: 2, name: "Выгрузки CSV" })).toBeVisible();
-    for (const title of ["Лиды", "Клиенты", "Сделки"]) {
-      expect(screen.getByRole("button", { name: `Скачать: ${title}` })).toBeDisabled();
-    }
-    expect(screen.getAllByText(/нужен раздел «Клиенты · Лиды»/)).not.toHaveLength(0);
+    expect(screen.getByRole("button", { name: "Скачать: Сделки" })).toBeDisabled();
+    expect(screen.getByText(/нужен раздел «Клиенты · Клиенты»/)).toBeVisible();
+    // выгружаются только сделки, без контактов (решение владельца 2026-11-11)
+    expect(screen.queryByRole("heading", { level: 3, name: "Лиды" })).toBeNull();
+    expect(screen.queryByRole("heading", { level: 3, name: "Клиенты" })).toBeNull();
   });
 
   it("роль с данными: файл скачивается под именем с датой, фильтры уходят в запрос", async () => {
     const saved = stubDownload();
     await openPage("all@demo.example", "/admin/exports", "Выгрузки");
 
-    const leads = (await screen.findByRole("heading", { level: 3, name: "Лиды" })).closest(
+    const deals = (await screen.findByRole("heading", { level: 3, name: "Сделки" })).closest(
       "article",
     );
-    if (!leads) throw new Error("нет карточки лидов");
-    fireEvent.change(within(leads).getByLabelText("Язык"), { target: { value: "uz" } });
-    fireEvent.click(within(leads).getByRole("button", { name: /Скачать: Лиды/ }));
-    expect(await screen.findByText("Файл «leads-20261026-1430.csv» скачан")).toBeVisible();
-    expect(saved).toContain("leads-20261026-1430.csv");
-
-    const deals = screen.getByRole("heading", { level: 3, name: "Сделки" }).closest("article");
     if (!deals) throw new Error("нет карточки сделок");
     fireEvent.click(within(deals).getByRole("button", { name: /Скачать: Сделки/ }));
     expect(await screen.findByText("Файл «deals-20261026-1430.csv» скачан")).toBeVisible();
+    expect(saved).toContain("deals-20261026-1430.csv");
     vi.restoreAllMocks();
   });
 
@@ -399,9 +394,7 @@ describe("Настройки · Система · Выгрузки CSV", () => {
     expect(
       await screen.findByText("Только просмотр: выгружает данные администратор."),
     ).toBeVisible();
-    for (const title of ["Лиды", "Клиенты", "Сделки"]) {
-      expect(screen.getByRole("button", { name: `Скачать: ${title}` })).toBeDisabled();
-    }
+    expect(screen.getByRole("button", { name: "Скачать: Сделки" })).toBeDisabled();
   });
 });
 

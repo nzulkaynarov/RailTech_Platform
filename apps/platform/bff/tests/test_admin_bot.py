@@ -39,7 +39,7 @@ WRITES: tuple[tuple[str, str, str, dict[str, Any] | None], ...] = (
     ("PUT", f"{BASE}/reply-templates/4", "/admin/bot/reply-templates/{id}", TEMPLATE),
     ("DELETE", f"{BASE}/reply-templates/4", "/admin/bot/reply-templates/{id}", None),
 )
-ENTITIES = ("leads", "clients", "deals")
+ENTITIES = ("deals",)
 
 
 @pytest.fixture
@@ -340,13 +340,9 @@ async def test_admin_alone_cannot_export_business_data(web: Web, crm: CrmBotFake
     """Системная «Администратор» без второй роли бизнес-данные не выгружает (R3-D-2): 403 до CRM."""
     await web.login(["ADMIN"])
 
-    leads = await web.client.get(f"{BASE}/exports/leads")
-    clients = await web.client.get(f"{BASE}/exports/clients")
     deals = await web.client.get(f"{BASE}/exports/deals")
 
-    assert leads.status_code == 403
-    assert leads.json()["details"] == {"resource": "crm.leads", "need": "read"}
-    assert clients.json()["details"] == {"resource": "crm.clients", "need": "read"}
+    assert deals.status_code == 403
     assert deals.json()["details"] == {"resource": "crm.clients", "need": "read"}
     assert crm.count == 0
 
@@ -375,21 +371,12 @@ async def test_admin_with_data_role_downloads_csv_as_a_stream(
     assert sent.extensions["timeout"]["read"] == PROBE_TIMEOUT_SECONDS
 
 
-async def test_each_export_forwards_only_its_own_filters(web: Web, crm: CrmBotFake) -> None:
+async def test_deals_export_forwards_only_its_own_filters(web: Web, crm: CrmBotFake) -> None:
     await web.login(["ADMIN", "MANAGER"])
-    query = (
-        "q=Анна&stage=won&language=uz&created_from=2026-10-01T00:00:00Z"
-        "&created_to=2026-10-26T00:00:00Z&closed_from=2026-09-01&closed_to=2026-09-30"
-    )
+    query = "q=Анна&stage=won&language=uz&closed_from=2026-09-01&closed_to=2026-09-30"
 
-    await web.client.get(f"{BASE}/exports/leads?{query}")
-    await web.client.get(f"{BASE}/exports/clients?{query}")
     await web.client.get(f"{BASE}/exports/deals?{query}")
 
-    leads = dict(crm.last("GET", "export/leads.csv").url.params)
-    assert set(leads) == {"q", "stage", "language", "created_from", "created_to"}
-    assert leads["q"] == "Анна"
-    assert dict(crm.last("GET", "export/clients.csv").url.params) == {"q": "Анна"}
     assert dict(crm.last("GET", "export/deals.csv").url.params) == {
         "stage": "won",
         "closed_from": "2026-09-01",
@@ -400,10 +387,12 @@ async def test_each_export_forwards_only_its_own_filters(web: Web, crm: CrmBotFa
 async def test_export_filters_are_validated_before_crm(web: Web, crm: CrmBotFake) -> None:
     await web.login(["ADMIN", "MANAGER"])
 
-    for query in ("language=de", "created_from=вчера", "closed_to=30.09.2026", "q=" + "я" * 101):
-        response = await web.client.get(f"{BASE}/exports/leads?{query}")
+    for query in ("closed_from=вчера", "closed_to=30.09.2026", "stage=" + "я" * 33):
+        response = await web.client.get(f"{BASE}/exports/deals?{query}")
         assert response.status_code == 422, query
-    assert (await web.client.get(f"{BASE}/exports/orders")).status_code == 422
+    # выгрузок лидов и клиентов нет (решение 2026-11-11): персональные данные не выгружаются
+    for entity in ("leads", "clients", "orders"):
+        assert (await web.client.get(f"{BASE}/exports/{entity}")).status_code == 422, entity
     assert crm.count == 0
 
 
@@ -413,18 +402,18 @@ async def test_export_filename_gets_a_date_when_crm_gives_none_or_something_odd(
     await web.login(["ADMIN", "MANAGER"])
     crm.answer(
         "GET",
-        "export/leads.csv",
+        "export/deals.csv",
         200,
         None,
         content=b"ID\r\n1\r\n",
         headers={"content-type": "text/csv", "content-disposition": 'attachment; filename="../x"'},
     )
 
-    response = await web.client.get(f"{BASE}/exports/leads")
+    response = await web.client.get(f"{BASE}/exports/deals")
 
     assert response.status_code == 200
     disposition = response.headers["content-disposition"]
-    assert disposition.startswith('attachment; filename="leads-')
+    assert disposition.startswith('attachment; filename="deals-')
     assert disposition.endswith('.csv"')
     assert ".." not in disposition
     assert response.content == b"ID\r\n1\r\n"
@@ -433,10 +422,10 @@ async def test_export_filename_gets_a_date_when_crm_gives_none_or_something_odd(
 async def test_export_refused_by_crm_is_an_error_and_the_stream_is_closed(
     web: Web, crm: CrmBotFake, check: ContractChecker
 ) -> None:
-    crm.error("GET", "export/leads.csv", 403, "forbidden")
+    crm.error("GET", "export/deals.csv", 403, "forbidden")
     await web.login(["ADMIN", "MANAGER"])
 
-    response = await web.client.get(f"{BASE}/exports/leads")
+    response = await web.client.get(f"{BASE}/exports/deals")
 
     assert response.status_code == 403
     check(response, "/admin/bot/exports/{entity}", "get")
@@ -445,26 +434,20 @@ async def test_export_refused_by_crm_is_an_error_and_the_stream_is_closed(
 
 
 async def test_export_when_crm_is_down_is_503(web: Web, crm: CrmBotFake) -> None:
-    crm.error("GET", "export/clients.csv", 500, "internal")
+    crm.error("GET", "export/deals.csv", 500, "internal")
     await web.login(["ADMIN", "MANAGER"])
 
-    response = await web.client.get(f"{BASE}/exports/clients")
+    response = await web.client.get(f"{BASE}/exports/deals")
 
     assert response.status_code == 503
     assert response.json()["code"] == "BACKEND_UNAVAILABLE"
 
 
-async def test_role_with_admin_and_clients_exports_clients_but_not_leads(
-    web: Web, crm: CrmBotFake
-) -> None:
+async def test_role_with_admin_and_clients_exports_deals(web: Web, crm: CrmBotFake) -> None:
     role = custom(21, "Администратор и клиенты", {"admin": "full", "crm.clients": "read"})
     await web.login([role])
 
-    clients = await web.client.get(f"{BASE}/exports/clients")
-    deals = await web.client.get(f"{BASE}/exports/deals")
-    leads = await web.client.get(f"{BASE}/exports/leads")
-
-    assert (clients.status_code, deals.status_code, leads.status_code) == (200, 200, 403)
+    assert (await web.client.get(f"{BASE}/exports/deals")).status_code == 200
 
 
 # --- выгрузка: обрыв клиента и сжатие ответа CRM -------------------------------------------------
@@ -522,19 +505,19 @@ async def test_export_of_a_compressed_crm_answer_reaches_the_browser_as_plain_te
     csv = CSV_LEADS.encode("utf-8")
     crm.answer(
         "GET",
-        "export/leads.csv",
+        "export/deals.csv",
         200,
         None,
         content=gzip.compress(csv),
         headers={
             "content-type": "text/csv",
             "content-encoding": "gzip",
-            "content-disposition": 'attachment; filename="leads-20261026-1430.csv"',
+            "content-disposition": 'attachment; filename="deals-20261026-1430.csv"',
         },
     )
     await web.login(["ADMIN", "MANAGER"])
 
-    response = await web.client.get(f"{BASE}/exports/leads")
+    response = await web.client.get(f"{BASE}/exports/deals")
 
     assert response.status_code == 200
     assert response.content == csv
