@@ -52,12 +52,12 @@ crm-models-check: ## Модели CRM совпадают с crm.yaml
 # (флаги --no-* не трогают сгенерированные файлы CRM, Cabinet и ERP).
 .PHONY: tokens
 tokens: ## packages/ui-tokens → web/src/app/tokens.generated.ts
-	node $(TOKENS)/build.mjs --no-crm --no-cabinet --no-erp
+	node $(TOKENS)/build.mjs --no-cabinet
 	cp $(TOKENS)/dist/antd.ts $(WEB)/src/app/tokens.generated.ts
 
 .PHONY: tokens-check
 tokens-check: ## Копия токенов совпадает с packages/ui-tokens
-	node $(TOKENS)/build.mjs --no-crm --no-cabinet --no-erp >/dev/null
+	node $(TOKENS)/build.mjs --no-cabinet >/dev/null
 	cmp -s $(TOKENS)/dist/antd.ts $(WEB)/src/app/tokens.generated.ts \
 	  || { echo "tokens.generated.ts устарел — make -C apps/platform tokens и закоммитьте"; exit 1; }
 

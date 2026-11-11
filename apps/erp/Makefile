@@ -1,11 +1,10 @@
 # apps/erp — ERP (бэк-офис). Копия B2B (M1-ERP-01); команды — те же проверки, что были в legacy/b2b,
 # но без привязки к стенду: бэкенд-тесты идут на одноразовых контейнерах (scripts/test_backend_local.sh),
-# линтеры — в локальном venv версий CI, фронтенд — npm на хосте. Вызывается из корня: make check-erp.
+# линтеры — в локальном venv версий CI. Вызывается из корня: make check-erp.
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
 BACKEND  := backend
-FRONTEND := frontend
 # Пины линтеров = CI (black>=24,<25, isort>=5,<6, flake8). uv создаёт venv быстро и без системного pip.
 TOOLS_VENV := .venv-tools
 TOOLS_BIN  := $(TOOLS_VENV)/bin
@@ -19,8 +18,7 @@ help: ## Список целей
 # --- Зависимости -----------------------------------------------------------------
 
 .PHONY: install
-install: $(TOOLS_STAMP) ## Линтеры бэкенда (uv venv) и зависимости фронтенда (npm ci)
-	cd $(FRONTEND) && npm ci --legacy-peer-deps
+install: $(TOOLS_STAMP) ## Линтеры бэкенда (uv venv)
 
 $(TOOLS_STAMP):
 	rm -rf $(TOOLS_VENV)
@@ -29,8 +27,8 @@ $(TOOLS_STAMP):
 	@printf '%s\n' "$(TOOLS_PINS)" > $(TOOLS_STAMP)
 
 .PHONY: clean
-clean: ## Удалить venv линтеров, node_modules и сборки
-	rm -rf $(TOOLS_VENV) $(FRONTEND)/node_modules $(FRONTEND)/dist $(BACKEND)/htmlcov $(BACKEND)/.pytest_cache
+clean: ## Удалить venv линтеров и кэши тестов
+	rm -rf $(TOOLS_VENV) $(BACKEND)/htmlcov $(BACKEND)/.pytest_cache
 
 # --- Качество ----------------------------------------------------------------------
 
@@ -45,39 +43,22 @@ format: $(TOOLS_STAMP) ## black + isort
 	$(TOOLS_BIN)/black $(BACKEND)/
 	$(TOOLS_BIN)/isort $(BACKEND)/
 
-.PHONY: lint-frontend
-lint-frontend: ## eslint
-	cd $(FRONTEND) && npm run lint
-
-.PHONY: typecheck
-typecheck: ## tsc -b
-	cd $(FRONTEND) && npm run lint:tsc
-
-.PHONY: i18n-check
-i18n-check: ## Симметрия ru.json / en.json
-	python3 scripts/check_i18n_symmetry.py
-
 .PHONY: lint
-lint: lint-backend lint-frontend typecheck i18n-check ## Все линтеры
-
-.PHONY: test-frontend
-test-frontend: ## vitest
-	cd $(FRONTEND) && npm run test
+lint: lint-backend ## Все линтеры
 
 .PHONY: test-backend
 test-backend: ## pytest в контейнере на одноразовых Postgres 17 + Redis (как CI B2B): make test-backend args="-k quotes"
 	./scripts/test_backend_local.sh $(args)
 
 .PHONY: test
-test: test-frontend test-backend ## Все тесты
+test: test-backend ## Все тесты
 
 .PHONY: check
 check: lint test ## Всё — обязательно перед PR (make check-erp из корня)
 
 .PHONY: openapi
-openapi: ## Экспорт OpenAPI: backend/schema.json, packages/contracts/openapi/erp-internal.yaml (срез /api/v1) и типы фронтенда (FIX-40)
+openapi: ## Экспорт OpenAPI: backend/schema.json и packages/contracts/openapi/erp-internal.yaml (срез /api/v1, FIX-40)
 	./scripts/test_backend_local.sh --openapi
-	cd $(FRONTEND) && npm run gen:api-types
 
 .PHONY: openapi-check
 openapi-check: ## Дрейф схемы: перегенерирует выгрузку и падает, если она отличается от закоммитченной (CI, ci-local)

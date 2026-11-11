@@ -6,10 +6,10 @@
 # Красный CI, ночной прогон (schedule) и ручной прогон CI (workflow_dispatch) деплой не запускают. ci.yml не трогает.
 #
 # prepare:  без environment и секретов — sha, «sha входит в main» (deploy), зелёная проверка «CI ok» на этом sha (deploy), матрица образов.
-# build:    девять образов параллельно (matrix, по job'у на образ), каждый со своим кэшем type=gha,scope=<образ>; push в GHCR с тегом =
+# build:    семь образов параллельно (matrix, по job'у на образ), каждый со своим кэшем type=gha,scope=<образ>; push в GHCR с тегом =
 #           полный git sha (только при deploy). Без environment: нужны лишь packages: write и GITHUB_TOKEN.
 #           Образ rt-cabinet в режиме deploy собирает job deploy (build-args берутся из variables environment production, а в job
-#           без environment они недоступны), поэтому в матрице deploy — восемь образов.
+#           без environment они недоступны), поэтому в матрице deploy — шесть образов.
 # deploy:   environment production (одобрение владельца) -> образ rt-cabinet -> загрузка infra/ на VPS 1 по SSH -> deploy.sh на сервере
 #           (pg_dump-гейт баз crm, erp и eds, миграции, up) -> smoke четырёх доменов с раннера.
 # build:    (action = build) только сборка без выкладки: любой ref (ветка задачи), push в GHCR НЕТ (push: false), SSH и production не
@@ -142,16 +142,14 @@ jobs:
           # (шина rt_bus и контракты, L14). scope кэша прежние — кэш не теряется.
           images='[
             {"image":"rt-crm-backend","context":"apps/crm/backend","target":"prod","contexts":"rtbus=packages/rt-bus\ncontracts=packages/contracts","args":"","scope":"crm-backend"},
-            {"image":"rt-crm-frontend","context":"apps/crm/frontend","target":"prod","contexts":"","args":"","scope":"crm-frontend"},
             {"image":"rt-erp-backend","context":"apps/erp/backend","target":"","contexts":"rtbus=packages/rt-bus\ncontracts=packages/contracts","args":"","scope":"erp-backend"},
-            {"image":"rt-erp-frontend","context":"apps/erp/frontend","target":"","contexts":"","args":"VITE_API_URL=\nVITE_WS_URL=","scope":"erp-frontend"},
             {"image":"rt-cabinet","context":"apps/cabinet","target":"","contexts":"","args":"VITE_API_URL=","scope":"cabinet"},
             {"image":"rt-litellm","context":"infra/ai/litellm","target":"","contexts":"","args":"","scope":"litellm"},
             {"image":"rt-platform-bff","context":"apps/platform/bff","target":"prod","contexts":"rtbus=packages/rt-bus\ncontracts=packages/contracts","args":"","scope":"platform-bff"},
             {"image":"rt-platform-web","context":"apps/platform/web","target":"prod","contexts":"","args":"","scope":"platform-web"},
             {"image":"rt-eds","context":"apps/eds","target":"prod","contexts":"rtbus=packages/rt-bus\ncontracts=packages/contracts\nrtdocs=packages/rt-docs","args":"","scope":"eds"}
           ]'
-          # deploy: rt-cabinet собирает job deploy (его build-args — из variables environment production); build: все девять
+          # deploy: rt-cabinet собирает job deploy (его build-args — из variables environment production); build: все семь
           echo "matrix=$(jq -c --arg a "$ACTION" '{include: (if $a == "build" then . else map(select(.image != "rt-cabinet")) end)}' <<<"$images")" >> "$GITHUB_OUTPUT"
 
   build:

@@ -21,7 +21,6 @@ ROOT = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=Tr
 os.chdir(ROOT)
 
 SKIP_PREFIX = (
-    "apps/crm/frontend/src/generated/kb-docs/",
     "apps/platform/web/src/generated/kb-docs/",
     "docs/screens/",
 )

@@ -4,19 +4,18 @@
 Один файл `tokens.json` задаёт цвета, шрифт, радиусы и плотность для всех фронтендов ансамбля
 (ансамбль выглядит одной семьёй; унификация компонентов — не цель; темы и семантические токены — ADR-0018). Версия 0.2.0 — токены
 SPEC-v3 §5.2 (`docs/architecture/platform-frontend.md` §3); значения 0.1.0 были из темы CRM (дизайн-аудит 2026-10-11).
-Контраст WCAG 2.1 AA ≥ 4.5:1 для пар «текст / фон» проверяют `contrast.test.mjs` (здесь) и
-`apps/crm/frontend/src/app/theme.test.ts`.
+Контраст WCAG 2.1 AA ≥ 4.5:1 для пар «текст / фон» проверяет `contrast.test.mjs`.
 
 | Файл | Кто читает |
 |---|---|
 | `tokens.json` | **источник**, правится только он |
-| `dist/antd.ts` → копия `apps/crm/frontend/src/app/tokens.generated.ts` | AntD-тема CRM и Платформы: `RT_TOKENS` (`theme.token`), `RT_TAG_TEXT`, `RT_TABLE_CELL_PADDING` (плотность таблиц CRM), `RT_COMPONENTS` (`theme.components` Платформы; CRM не подключает). Копия нужна, потому что фронтенд CRM собирается в контейнере без доступа к `packages/`; Платформа (`apps/platform/web`) возьмёт файл тем же способом (INF-P0-3) |
-| `dist/shadcn.css` | ERP — переменные shadcn (`--primary`, `--destructive`, `--success`…) и `@theme inline` для Tailwind 4. Копия `apps/erp/frontend/src/styles/tokens.generated.css` (образ собирается без `packages/`) |
+| `dist/antd.ts` → копия `apps/platform/web/src/app/tokens.generated.ts` (`make -C apps/platform tokens`) | AntD-тема Платформы: `RT_TOKENS` (`theme.token`), `RT_TAG_TEXT`, `RT_TABLE_CELL_PADDING`, `RT_COMPONENTS` (`theme.components`). Копия нужна, потому что образ собирается без доступа к `packages/` |
+| `dist/shadcn.css` | переменные shadcn (`--primary`, `--destructive`, `--success`…) и `@theme inline` для Tailwind 4 в общей теме; копий нет (читал удалённый фронтенд ERP) |
 | `dist/cabinet.css` | Cabinet — те же переменные shadcn со значениями темы `shadcnThemes.cabinet` (светлая `:root` и тёмная `.dark` Mini App). Копия `apps/cabinet/src/styles/tokens.generated.css` |
 | `dist/tokens.css` | CSS-переменные `--rt-*` для любого другого потребителя (письма, PDF-шаблоны) |
 
 ```
-make tokens                        # из корня: регенерировать всё (dist/ и копии в apps/crm, apps/cabinet, apps/erp)
+make tokens                        # из корня: регенерировать всё (dist/ и копии в apps/cabinet, apps/platform)
 make -C packages/ui-tokens test    # контраст пар «текст / фон» (node --test, без зависимостей)
 make -C packages/ui-tokens check   # CI: контраст + сгенерированное совпадает с закоммиченным
 ```

@@ -3,8 +3,8 @@
 
 Ты работаешь над **RailTech CRM** — доменом фронт-офиса ансамбля: лиды, клиенты и контакты, каналы и переписка, база
 знаний, клиентский Telegram-бот (диалоговый агент + асинхронный квалификатор, сервисный режим через `erp-mcp`), консоль
-администратора; до этапа F — вход, роли и общие настройки (идентичность v1). Интерфейс сотрудников — Платформа; фронтенд
-`apps/crm/frontend` заморожен и отключается задачей P6 волны 18a после гейтов D1-7 и D2-6 (DECISIONS 2026-10-27, 2026-10-28). Это правила кода CRM; код ссылается на них
+администратора; до этапа F — вход, роли и общие настройки (идентичность v1). Интерфейс сотрудников — Платформа; свой
+фронтенд CRM удалён 2026-11-11. Это правила кода CRM; код ссылается на них
 как `CONVENTIONS.md §N`, нумерация разделов сохранена.
 
 Среда: локальная среда полная — Docker, стенд и одноразовые контейнеры для integration есть (правило владельца —
@@ -61,7 +61,7 @@ infra/     Docker Compose (base/dev/prod) · Caddy · LiteLLM · Langfuse · Rus
 | `make migration m="..."` | файл миграции Alembic |
 | `make up` из корня | стенд ансамбля (для проверки глазами) |
 
-Один тест: `cd apps/crm/backend && uv run pytest tests/<файл>.py -x -q`; фронтенд — `cd apps/crm/frontend && pnpm test -- <шаблон>`. Unit-тесты не требуют Postgres (домен изолирован от БД; репозитории тестируются в integration).
+Один тест: `cd apps/crm/backend && uv run pytest tests/<файл>.py -x -q`. Unit-тесты не требуют Postgres (домен изолирован от БД; репозитории тестируются в integration).
 
 **Шаблоны писем и образы (W13C-F3, C2A-G-3).** `backend/templates/email/` нужен каждому сервису CRM, который пишет письма. Прод-образ (`target: prod`, и `backup` поверх него) копирует каталог (`COPY templates ./templates`); dev-образ (`target: dev`) не содержит ни кода, ни шаблонов, поэтому `infra/compose/dev.yml` монтирует `apps/crm/backend/templates:/app/templates:ro` в `crm-migrate`, `crm-api`, `crm-worker` и MCP-сервисы (общий якорь `crm-src`) — как `prompts/`. Новый сервис CRM на target `dev`, который рендерит письма, получает тот же том. Нет файла шаблона → `MailService.send` отвечает 500 с кодом `mail_template_missing` без путей (`TemplateMissingError` в лог). Страховка в unit-тестах (`tests/unit/test_mail_templates.py`): все шаблоны, на которые ссылается код, есть и рендерятся; `Dockerfile` копирует `templates`, `.dockerignore` их не исключает; `dev.yml` монтирует том. Ручная проверка собранного образа (скрипты CI не трогают): `docker build --target prod --build-context rtbus=packages/rt-bus --build-context contracts=packages/contracts -t rt-crm-check apps/crm/backend && docker run --rm rt-crm-check python -c "from app.services import mail_templates as m; print(m.render('invite', 'ru', full_name='x', email='x', temporary_password='x', platform_url='x', company='x').subject)"`.
 

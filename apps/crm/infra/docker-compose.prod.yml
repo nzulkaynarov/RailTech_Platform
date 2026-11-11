@@ -67,10 +67,6 @@ services:
     <<: [*backend-image, *small]
     build: !reset null
     environment: { APP_ENV: prod }
-  web:
-    <<: [*ops, *small]
-    image: ${IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/railtech-frontend:${IMAGE_TAG:?IMAGE_TAG (git sha) не задан}
-    build: !reset null
   backup:
     <<: [*ops, *small]
     image: ${IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/railtech-backup:${IMAGE_TAG:?IMAGE_TAG (git sha) не задан}

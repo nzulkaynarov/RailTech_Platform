@@ -11,7 +11,7 @@ CPU_PY_NATIVE='import importlib.util as u; [__import__(m) for m in ("numpy","pan
 
 # cpu_baseline_names — имена образов, для которых есть правило (одно на строку).
 cpu_baseline_names() {
-  printf '%s\n' rt-crm-backend rt-erp-backend rt-platform-bff rt-eds rt-litellm rt-crm-frontend rt-erp-frontend rt-cabinet rt-platform-web \
+  printf '%s\n' rt-crm-backend rt-erp-backend rt-platform-bff rt-eds rt-litellm rt-cabinet rt-platform-web \
     rt-db-postgres rt-db-backup caddy redis rustfs rc rclone
 }
 
@@ -29,8 +29,8 @@ cpu_baseline_rules() {
       ;;
     rt-litellm) "$run" python -c "import numpy; import litellm.proxy.proxy_server" ;;
     # Статика: Caddy (Go, GOAMD64 определяется при старте) и nginx; -t разбирает конфигурацию образа (pcre, openssl).
-    rt-crm-frontend | rt-platform-web | caddy) "$run" caddy version ;;
-    rt-erp-frontend | rt-cabinet) "$run" nginx -t ;;
+    rt-platform-web | caddy) "$run" caddy version ;;
+    rt-cabinet) "$run" nginx -t ;;
     redis) "$run" redis-server --version ;;
     rustfs) "$run" rustfs --version ;;
     # Клиент RustFS в одноразовом s3-init (S0-9): пользователи, политики, правило erp-temp.

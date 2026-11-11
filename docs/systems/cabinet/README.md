@@ -6,7 +6,7 @@ SPA клиента RailTech Platform без собственного бэкен�
 как сайт `cabinet.railtech.uz` и как Telegram Mini App клиентского бота CRM. Правила кода — [`CONVENTIONS.md`](CONVENTIONS.md);
 каналы клиента — `docs/product/SPEC-v3.md` §8.
 
-Стек: React 18 · TypeScript · Vite 7 · Tailwind CSS 4 · shadcn/ui (примитивы из `apps/erp/frontend`) ·
+Стек: React 18 · TypeScript · Vite 7 · Tailwind CSS 4 · shadcn/ui ·
 React Query · react-router 7 · i18next (ru / uz — латиница / en) · openapi-typescript · MSW · Vitest + Testing Library + axe.
 
 ## Команды

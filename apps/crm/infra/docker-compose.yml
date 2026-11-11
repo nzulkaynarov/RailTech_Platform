@@ -297,22 +297,10 @@ services:
       timeout: 5s
       retries: 10
 
-  web:
-    build:
-      context: ../frontend
-      target: prod
-    healthcheck:
-      test: ["CMD", "wget", "-Y", "off", "-q", "--spider", "http://localhost:8080/"]
-      interval: 10s
-      timeout: 3s
-      retries: 10
-
   caddy:
     image: caddy:2.11.7-alpine
     depends_on:
       api:
-        condition: service_healthy
-      web:
         condition: service_healthy
     volumes:
       - caddy_data:/data

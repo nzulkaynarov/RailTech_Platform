@@ -63,7 +63,7 @@ worktree.
 | `apps/erp/backend/**.py` | black и isort из `apps/erp/.venv-tools` (как `make -C apps/erp format`) |
 | `apps/crm/scripts/**.py` | ruff бэкенда CRM с его `pyproject.toml` (как pre-commit) |
 | прочий `.py` | `ruff format` из `.venv` ближайшего каталога с `pyproject.toml` (CRM, EDS, BFF, rt-bus, rt-docs, contracts) |
-| `.ts/.tsx/.js/.jsx/.mjs/.cjs/.css` | prettier пакета, где `format:check` = `prettier --check` (`apps/crm/frontend`, `apps/platform/web`) |
+| `.ts/.tsx/.js/.jsx/.mjs/.cjs/.css` | prettier пакета, где `format:check` = `prettier --check` (`apps/platform/web`) |
 
 Нет окружения (не сделан `make install`) — хук молчит.
 

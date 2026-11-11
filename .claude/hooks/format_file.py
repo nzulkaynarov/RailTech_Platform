@@ -9,7 +9,7 @@
 - прочий `.py` — `ruff format` из `.venv` ближайшего каталога с `pyproject.toml` (CRM, EDS, BFF, rt-bus, rt-docs,
   contracts);
 - `.ts/.tsx/.js/.jsx/.mjs/.cjs/.css` — prettier ближайшего пакета, где `format:check` входит в lint
-  (`apps/crm/frontend`, `apps/platform/web`); `.prettierignore` пакета соблюдается.
+  (`apps/platform/web`); `.prettierignore` пакета соблюдается.
 Нет окружения (не сделан `make install`) или форматтер упал на незаконченном коде — тихо выходим: проверку сделает
 `make check-<приложение>`. Только stdlib, Python ≥ 3.9.
 """

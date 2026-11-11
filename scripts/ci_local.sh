@@ -9,7 +9,7 @@ set -euo pipefail
 unset MAKEFLAGS MFLAGS MAKELEVEL args
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-ALL=(gitleaks crm contracts tokens infra erp cabinet platform eds rt-bus rt-docs crm-integration crm-build crm-e2e crm-audit platform-e2e cpu-baseline)
+ALL=(gitleaks crm contracts tokens infra erp cabinet platform eds rt-bus rt-docs crm-integration crm-build crm-audit platform-e2e cpu-baseline)
 GITLEAKS_IMAGE=ghcr.io/gitleaks/gitleaks:v8.30.1
 CADDY_IMAGE=caddy:2.11.7-alpine
 LOGS="$ROOT/.ci-local"
@@ -18,8 +18,8 @@ usage() {
   cat <<EOF
 Локальный CI ансамбля (как .github/workflows/ci.yml).
 
-  scripts/ci_local.sh                      все задания, кроме crm-e2e, crm-audit, platform-e2e и cpu-baseline
-  scripts/ci_local.sh --full               всё, включая crm-e2e и platform-e2e (Playwright), crm-audit и cpu-baseline
+  scripts/ci_local.sh                      все задания, кроме crm-audit, platform-e2e и cpu-baseline
+  scripts/ci_local.sh --full               всё, включая platform-e2e (Playwright), crm-audit и cpu-baseline
   scripts/ci_local.sh crm contracts        только выбранные
   scripts/ci_local.sh --quick              без crm-integration и crm-build (быстрый гейт)
   scripts/ci_local.sh --force              не пропускать уже зелёные на этом дереве задания (или CI_LOCAL_FORCE=1);
@@ -43,9 +43,8 @@ usage() {
   rt-bus            make check-rt-bus — библиотека шины: ruff, mypy, миграция Django, pytest на одноразовом postgres:17
   rt-docs           make check-rt-docs — документы: ruff, mypy, pytest с эталонными PDF в одноразовом контейнере (без сети)
   crm-integration   apps/crm/scripts/test_int_local.sh — одноразовые Postgres 17 и RustFS
-  crm-build         образы CRM backend/frontend (prod) и backup с проверкой pg_dump 17
-  crm-e2e           apps/crm/scripts/ci_local.sh e2e — одноразовый Postgres, API, preview, Playwright
-  crm-audit         apps/crm/scripts/ci_local.sh audit — pip-audit и pnpm audit
+  crm-build         образ CRM backend (prod) и backup с проверкой pg_dump 17
+  crm-audit         apps/crm/scripts/ci_local.sh audit — pip-audit
   platform-e2e      make -C apps/platform e2e — Playwright + axe на MSW (BFF и стенд не нужны); chromium
                     ставится при первом запуске (pnpm exec playwright install chromium)
   cpu-baseline      как cpu-common и cpu-image в ci.yml (S0-7): самопроверка механики + сборка каждого образа прода linux/amd64
@@ -142,8 +141,8 @@ stage_crm() {
   (cd "$ROOT" && make check-crm)
   (cd "$ROOT/apps/crm/backend" && uv run ruff check --config pyproject.toml ../scripts \
     && uv run ruff format --config pyproject.toml --check ../scripts)
-  (cd "$ROOT/apps/crm" && make openapi && git diff --exit-code -- ../../packages/contracts/openapi/crm.yaml frontend/src/api) \
-    || { echo "OpenAPI CRM или клиент orval устарели — make -C apps/crm openapi и закоммитьте"; return 1; }
+  (cd "$ROOT/apps/crm" && make openapi && git diff --exit-code -- ../../packages/contracts/openapi/crm.yaml) \
+    || { echo "OpenAPI CRM устарел — make -C apps/crm openapi и закоммитьте"; return 1; }
 }
 
 # База совместимости контракта локально — точка ответвления HEAD от origin/main (DECISIONS 2026-10-28): ветка, отставшая от
@@ -192,9 +191,9 @@ stage_infra() {
 
 stage_erp() {
   (cd "$ROOT" && make check-erp)
-  # Дрейф схемы ERP (FIX-40): schema.json, типы фронтенда и erp-internal.yaml совпадают с выгрузкой из кода.
+  # Дрейф схемы ERP (FIX-40): schema.json и erp-internal.yaml совпадают с выгрузкой из кода.
   (cd "$ROOT" && make -C apps/erp openapi-check) \
-    || { echo "Схема ERP устарела — make -C apps/erp openapi и закоммитьте schema.json, schema.d.ts, erp-internal.yaml"; return 1; }
+    || { echo "Схема ERP устарела — make -C apps/erp openapi и закоммитьте schema.json и erp-internal.yaml"; return 1; }
 }
 stage_cabinet() { (cd "$ROOT" && make check-cabinet); }
 stage_platform() { (cd "$ROOT" && make check-platform); }
@@ -216,14 +215,12 @@ stage_crm-build() {
   # Шина событий rt_bus (L14): пакет и контракт — именованные контексты Dockerfile CRM.
   local bus_contexts=(--build-context "rtbus=$ROOT/packages/rt-bus" --build-context "contracts=$ROOT/packages/contracts")
   docker build -q --target prod "${bus_contexts[@]}" -t rt-platform-crm-backend:ci "$ROOT/apps/crm/backend" >/dev/null
-  docker build -q --target prod -t rt-platform-crm-frontend:ci "$ROOT/apps/crm/frontend" >/dev/null
   docker build -q --target backup "${bus_contexts[@]}" -t rt-platform-crm-backup:ci "$ROOT/apps/crm/backend" >/dev/null
   docker run --rm rt-platform-crm-backup:ci /usr/lib/postgresql/17/bin/pg_dump --version \
     | grep -q "pg_dump (PostgreSQL) 17"
   docker run --rm rt-platform-crm-backup:ci /app/ops/backup.sh --help >/dev/null
 }
 
-stage_crm-e2e() { "$ROOT/apps/crm/scripts/ci_local.sh" e2e; }
 stage_crm-audit() { "$ROOT/apps/crm/scripts/ci_local.sh" audit; }
 
 # Как job platform-e2e в ci.yml: браузер Playwright ставится (быстро, если уже есть), vite --mode mock поднимает сам playwright.config.ts.

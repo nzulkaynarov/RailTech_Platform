@@ -3,7 +3,7 @@
 //   dist/tokens.css   — CSS-переменные --rt-* (любой фронтенд)
 //   dist/shadcn.css   — переменные shadcn/ui (--primary, --destructive, --radius…) + @theme для Tailwind 4 (ERP)
 //   dist/cabinet.css  — те же переменные со значениями темы shadcnThemes.cabinet (светлая и .dark) — Cabinet
-//   dist/antd.ts      — token и components для ThemeConfig AntD (CRM, Платформа); копия — apps/crm/frontend/src/app/tokens.generated.ts
+//   dist/antd.ts      — token и components для ThemeConfig AntD Платформы; копию в apps/platform делает её Makefile
 // Без зависимостей: node ≥ 20. Запуск: make tokens (корень) или make -C packages/ui-tokens build.
 // Вывод TS намеренно в формате prettier (двойные кавычки, запятые в конце), чтобы проходить prettier --check в CRM.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -223,7 +223,7 @@ export const RT_STATUS_FILL = ${tsObject({ error: c.error.default, warning: c.wa
 /** Плотность таблиц CRM: отступы ячеек обычной таблицы = small (paddingXS). У Платформы — RT_COMPONENTS.Table. */
 export const RT_TABLE_CELL_PADDING = ${tokens.density.tableCellPadding};
 
-/** Компонентные токены Платформы (ConfigProvider theme.components; docs/architecture/platform-frontend.md §3). CRM их не подключает. */
+/** Компонентные токены Платформы (ConfigProvider theme.components; docs/architecture/platform-frontend.md §3). */
 export const RT_COMPONENTS = ${tsConst(tokens.antdComponents)} as const;
 `;
 
@@ -234,14 +234,7 @@ writeFileSync(join(dist, "shadcn.css"), shadcnCss);
 writeFileSync(join(dist, "cabinet.css"), cabinetCss);
 writeFileSync(join(dist, "antd.ts"), antdTs);
 
-// Копия для CRM: фронтенд CRM собирается в контейнере, куда packages/ не монтируется, поэтому файл коммитится рядом с кодом.
-const crmTarget = resolve(here, "../../apps/crm/frontend/src/app/tokens.generated.ts");
-if (process.argv.includes("--no-crm")) {
-  console.log("dist/ готов (без копии в apps/crm)");
-} else {
-  writeFileSync(crmTarget, antdTs);
-  console.log(`dist/ готов; CRM: ${crmTarget}`);
-}
+console.log("dist/ готов");
 
 // Копия для Cabinet (M2-CAB-01): образ cabinet-web собирается с контекстом apps/cabinet, без packages/.
 // С CAB-FIX-2 — тема кабинета (dist/cabinet.css), а не общий shadcn.css.
@@ -249,12 +242,4 @@ const cabinetTarget = resolve(here, "../../apps/cabinet/src/styles/tokens.genera
 if (!process.argv.includes("--no-cabinet")) {
   writeFileSync(cabinetTarget, cabinetCss);
   console.log(`Cabinet: ${cabinetTarget}`);
-}
-
-// Копия для ERP (M1-ERP-04): образ erp-web собирается с контекстом apps/erp/frontend, без packages/.
-const erpTarget = resolve(here, "../../apps/erp/frontend/src/styles/tokens.generated.css");
-if (!process.argv.includes("--no-erp")) {
-  mkdirSync(dirname(erpTarget), { recursive: true });
-  writeFileSync(erpTarget, shadcnCss);
-  console.log(`ERP: ${erpTarget}`);
 }

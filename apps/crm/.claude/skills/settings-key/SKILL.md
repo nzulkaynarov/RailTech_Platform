@@ -12,11 +12,8 @@ description: Добавить или изменить бизнес-правил�
 1. Выбери ключ (`SPEC §5.7`: `company`, `business_hours`, `texts`, `bot`, `kb`, `stop_words`, `competitors`, `escalation`, `qualification`, `notifications`, `budget`, `terms`) или обоснуй новый (новый ключ — правка `SPEC §5.7`, вопрос владельцу, если это новое бизнес-понятие).
 2. Схема — `backend/app/schemas/settings.py`: поле в модели `_Strict` с `Field(description=…)`, разумным дефолтом и ограничениями (`ge/le`, `Literal`, `min_length`). Текст для клиента — `LocalizedText` (ru/uz/en, узбекский — латиница `oʻ`/`gʻ`); плейсхолдеры `{name}` — единообразно с соседними текстами. Новый ключ → добавить в реестр ключей и в `AppSettings`.
 3. Код читает настройку через `AppSettings` (сервис/домен получают значение параметром — доменные функции остаются чистыми); тесты домена — таблицы кейсов с разными значениями настройки.
-4. Фронт (форма строится по JSON-схеме, `components/SchemaFields.tsx`; фронтенд CRM заморожен, но подписи нужны — без них
-   падает `settingsLabels.test.ts` в задании `crm`, #378, #388):
-   - подпись поля — `frontend/src/i18n/ru/settings.ts` (`fields`), текст бота — `botTexts` с `label` и `when` (когда отправляется); тест-сторож `i18n/settingsLabels.test.ts` падает на поле без подписи;
-   - новый ключ — название в `keys`, раздел в `domain/settingsLayout.ts SECTION_GROUPS` (иначе попадёт в «Другое»); особый виджет (время, дни недели, пользователи, триггеры) — `widgetFor`;
-   - для текстов с плейсхолдерами — пример в `settings.samples` для предпросмотра.
+4. Интерфейс — экран «Настройки» Платформы (`apps/platform/web/src/modules/admin/settings/`, подписи на ru/uz/en в
+   `shared/i18n/<язык>/`): новое поле, которое видит админ, — там же и в том же PR (скилл корня `contract-change`, если меняется BFF).
 5. Документация: `SPEC §5.7` (список полей ключа), docs/systems/crm/BUSINESS.md, если меняется формулировка правила (как в ADR CRM-0016), и ADR, если правило переносится из кода.
 6. Стенд: сохранённое ранее значение ключа скрывает новые дефолты — после смены дефолтов проверь `make settings key=<key>` и при необходимости `make settings key=<key> reset=1` (runbook `dev-stand.md` п. 12); опиши это в «Проверить на dev».
-7. `make check`; e2e админа (`frontend/e2e/admin.spec.ts`) проходит, если менялся раздел «Тексты бота».
+7. `make check`; при правке экрана Настроек — затронутые тесты и e2e Платформы.

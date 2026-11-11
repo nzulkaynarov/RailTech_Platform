@@ -6,7 +6,6 @@ SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
 BACKEND  := backend
-FRONTEND := frontend
 COMPOSE_BASE := docker compose -f infra/docker-compose.yml --env-file .env
 COMPOSE      := $(COMPOSE_BASE) -f infra/docker-compose.dev.yml
 COMPOSE_PROD := $(COMPOSE_BASE) -f infra/docker-compose.prod.yml
@@ -18,31 +17,26 @@ help: ## Список целей
 # --- Зависимости ---------------------------------------------------------------
 
 .PHONY: install
-install: ## Установить зависимости backend (uv) и frontend (pnpm)
+install: ## Установить зависимости backend (uv)
 	cd $(BACKEND) && uv sync --frozen
-	cd $(FRONTEND) && pnpm install --frozen-lockfile
 
 .PHONY: clean
 clean: ## Удалить .venv, node_modules и кэши (единственный разрешённый способ rm -rf)
 	rm -rf $(BACKEND)/.venv $(BACKEND)/.mypy_cache $(BACKEND)/.ruff_cache $(BACKEND)/.pytest_cache
-	rm -rf $(FRONTEND)/node_modules $(FRONTEND)/dist $(FRONTEND)/coverage
 
 # --- Качество (без Docker) -----------------------------------------------------
 
 .PHONY: lint
-lint: ## ruff + eslint + prettier --check
+lint: ## ruff check + ruff format --check
 	cd $(BACKEND) && uv run ruff check . && uv run ruff format --check .
-	cd $(FRONTEND) && pnpm lint && pnpm format:check
 
 .PHONY: typecheck
-typecheck: ## mypy + tsc
+typecheck: ## mypy
 	cd $(BACKEND) && uv run mypy app tests evals promptfoo alembic
-	cd $(FRONTEND) && pnpm typecheck
 
 .PHONY: test
-test: ## Unit-тесты backend (pytest) и frontend (vitest)
+test: ## Unit-тесты backend (pytest)
 	cd $(BACKEND) && uv run pytest
-	cd $(FRONTEND) && pnpm test
 
 .PHONY: check
 check: lint typecheck test ## Всё вышеперечисленное — обязательно перед коммитом
@@ -83,9 +77,8 @@ promptfoo: ## ПЛАТНО: матрица промпт × модель чере
 		npx -y promptfoo@$(PROMPTFOO_VERSION) eval -c promptfoo/promptfooconfig.yaml --no-cache
 
 .PHONY: openapi
-openapi: ## Экспорт OpenAPI → packages/contracts/openapi/crm.yaml и генерация клиента orval (frontend/src/api/generated)
+openapi: ## Экспорт OpenAPI → packages/contracts/openapi/crm.yaml
 	cd $(BACKEND) && PYTHONPATH=. uv run python ../scripts/export_openapi.py ../../../packages/contracts/openapi/crm.yaml
-	cd $(FRONTEND) && pnpm api:generate
 
 .PHONY: platform-roles
 platform-roles: ## Пересоздать app/domain/platform_roles_generated.py из packages/contracts/platform-rbac.yaml
@@ -153,10 +146,6 @@ create-admin: ## Первый администратор: make create-admin emai
 .PHONY: settings
 settings: ## Настройки: make settings key=notifications [value='{"channel_id": -100123}'] [reset=1]
 	$(COMPOSE) run --rm --no-deps api python -m app settings '$(or $(key),all)' $(if $(value),'$(value)',) $(if $(reset),--reset,)
-
-.PHONY: test-e2e-local
-test-e2e-local: ## E2E Playwright против запущенного стенда (BASE_URL=http://localhost)
-	cd $(FRONTEND) && BASE_URL=$(or $(BASE_URL),http://localhost) pnpm e2e
 
 .PHONY: smoke-dev
 smoke-dev: ## Smoke-проверка dev-стенда (/health, /ready)

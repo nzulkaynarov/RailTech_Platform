@@ -30,11 +30,11 @@ docs-backlog: ## Сводка docs/BACKLOG.md: всего, по приорите
 	python3 scripts/backlog.py
 
 .PHONY: check-crm
-check-crm: ## CRM: ruff, mypy, eslint, tsc, pytest, vitest (apps/crm/Makefile)
+check-crm: ## CRM: ruff, mypy, pytest (apps/crm/Makefile)
 	$(MAKE) -C $(CRM) check
 
 .PHONY: check-erp
-check-erp: ## ERP: flake8, black, isort, eslint, tsc, i18n, vitest, pytest в Docker (apps/erp/Makefile)
+check-erp: ## ERP: flake8, black, isort, pytest в Docker (apps/erp/Makefile)
 	@if [ -f $(ERP)/Makefile ]; then $(MAKE) -C $(ERP) check; else echo "check-erp: $(ERP) ещё без кода (M1-ERP-01) — пропуск"; fi
 
 .PHONY: check-cabinet
@@ -58,7 +58,7 @@ check-rt-docs: ## Документы (rt-docs): ruff, mypy, pytest с этало
 	$(MAKE) -C packages/rt-docs check
 
 .PHONY: tokens
-tokens: ## Токены дизайна: tokens.json → dist/, копии в apps/crm (tokens.generated.ts), apps/cabinet (tokens.generated.css), apps/platform (tokens.generated.ts)
+tokens: ## Токены дизайна: tokens.json → dist/, копии в apps/cabinet (tokens.generated.css) и apps/platform (tokens.generated.ts)
 	$(MAKE) -C packages/ui-tokens build
 	$(MAKE) -C $(PLATFORM) tokens
 

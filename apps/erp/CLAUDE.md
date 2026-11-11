@@ -1,6 +1,6 @@
 # CLAUDE.md — `apps/erp` (указатель)
 
-ERP — домен бэк-офиса: каталог, расчёт, КП, договор, счёт, акт, оплаты, исполнение, склад, портальный и интеграционный API. Django · DRF · Celery. Фронтенд `frontend/` заморожен и отключается задачей P6 волны 18a.
+ERP — домен бэк-офиса: каталог, расчёт, КП, договор, счёт, акт, оплаты, исполнение, склад, портальный и интеграционный API. Django · DRF · Celery. Своего фронтенда нет (удалён 2026-11-11): интерфейс сотрудников — Платформа, клиента — Cabinet.
 
 **Прочитай:** `docs/systems/erp/CONVENTIONS.md` (правила кода; в коде ссылки `CONVENTIONS.md §N` ведут туда) и
 `docs/ORCHESTRATOR.md` (процесс, инварианты, протокол сессии); правило среды, тестов и CI — `CLAUDE.md` корня.
@@ -10,7 +10,7 @@ ERP — домен бэк-офиса: каталог, расчёт, КП, дог
 
 Главные команды:
 
-- `make -C apps/erp install` — линтеры бэкенда и npm ci
-- `make check-erp` из корня — lint, typecheck, i18n, vitest, pytest
+- `make -C apps/erp install` — линтеры бэкенда
+- `make check-erp` из корня — lint и pytest
 - `ERP_TEST_NS=<задача> make -C apps/erp test-backend args="<app>/tests/<файл>.py -x -q"` — один тест
 - `make -C apps/erp openapi` / `openapi-check` — схема и `erp-internal.yaml`

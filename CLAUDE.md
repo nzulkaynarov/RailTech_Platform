@@ -9,8 +9,8 @@ PROGRESS, QUESTIONS, DECISIONS; исполнитель — то, что в ег�
 запрет `push`/`merge` в `main`, одна сессия — одна система, скриншоты в PR, `docs/PROGRESS.md` ведёт лид) — ORCHESTRATOR §4 и §7.
 
 ```
-apps/crm/            домен CRM: FastAPI · SQLAlchemy · Procrastinate · aiogram · LangGraph (фронтенд заморожен, отключается в P6 волны 18a)
-apps/erp/            домен ERP: Django · DRF · Celery · Channels (фронтенд заморожен, отключается в P6 волны 18a)
+apps/crm/            домен CRM: FastAPI · SQLAlchemy · Procrastinate · aiogram · LangGraph (без своего фронтенда: интерфейс сотрудников — Платформа)
+apps/erp/            домен ERP: Django · DRF · Celery · Channels (без своего фронтенда: интерфейс сотрудников — Платформа)
 apps/cabinet/        кабинет клиента: React · shadcn, без бэкенда, портальный API ERP
 apps/platform/       Платформа: SPA (React · AntD) + BFF (FastAPI) без БД
 apps/eds/            домен EDS: FastAPI · SQLAlchemy · Procrastinate (без фронтенда и без внешнего маршрута)
@@ -38,8 +38,8 @@ docs/                вся документация: ORCHESTRATOR, HANDOFF, str
 | Worktree задачи (ORCHESTRATOR §4.1) | только `.claude/worktrees/<задача>`: `git worktree add .claude/worktrees/<задача> -b <ветка> origin/main` или `EnterWorktree`; имя задачи = `ERP_TEST_NS` |
 | Git-хуки (gitleaks, сообщение коммита) и хуки Claude Code | один раз на клон `make hooks`; что проверяют — `docs/systems/infra/claude-code.md` |
 | Зависимости (в новом worktree — первым шагом) | `make -C apps/<crm\|erp\|cabinet\|platform\|eds> install`; контракты — `cd packages/contracts && pnpm install --frozen-lockfile` |
-| Один тест CRM | `cd apps/crm/backend && uv run pytest tests/<файл>.py -x -q`; замороженный фронтенд — `cd apps/crm/frontend && pnpm test -- <шаблон>` |
-| Один тест ERP (одноразовые Postgres + Redis в Docker) | `ERP_TEST_NS=<задача> make -C apps/erp test-backend args="<app>/tests/<файл>.py -x -q"`; замороженный фронтенд — `cd apps/erp/frontend && npm run test -- <шаблон>` |
+| Один тест CRM | `cd apps/crm/backend && uv run pytest tests/<файл>.py -x -q` |
+| Один тест ERP (одноразовые Postgres + Redis в Docker) | `ERP_TEST_NS=<задача> make -C apps/erp test-backend args="<app>/tests/<файл>.py -x -q"` |
 | Один тест Cabinet | `cd apps/cabinet && npm run test -- <шаблон>` |
 | Один спек e2e Платформы | `cd apps/platform/web && pnpm exec playwright test e2e/<спек>.spec.ts` |
 | Приложение целиком (линтер, типы, все тесты) | `make check-crm\|erp\|cabinet\|platform\|eds`; контракт и OpenAPI — `make contracts`. Всё это уже внутри `ci-local` |

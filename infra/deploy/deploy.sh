@@ -36,7 +36,7 @@ compose "$rel" config -q
 
 log "pull образов"
 # Сбой сети к ghcr.io плавающий (TLS handshake timeout): до пяти попыток с паузами 5/10/20/40 с, затем прежнее поведение — ошибка (set -e).
-retry "pull образов" compose "$rel" pull crm-api crm-web erp-backend erp-web cabinet-web litellm platform-bff platform-web eds-api offsite-backup
+retry "pull образов" compose "$rel" pull crm-api erp-backend cabinet-web litellm platform-bff platform-web eds-api offsite-backup
 
 # Прод-CPU — база x86-64 v1 (servers.md): образ, которому нужен v2, ловим здесь, до дампа и миграций.
 log "проверка базы CPU образов (cpu-baseline-check.sh)"

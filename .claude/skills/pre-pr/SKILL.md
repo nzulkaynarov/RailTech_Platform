@@ -38,8 +38,7 @@ description: Подготовить и открыть PR задачи RailTech P
      генерации `git status --porcelain` чист; `cabinet` падал, потому что тронут был только `crm.yaml` (#389);
    - новое поле или значение в контракте → моки MSW и фикстуры тестов обновлены; vitest типов не проверяет, `tsc -b`
      (`make -C apps/platform typecheck`) — да (#382, #389);
-   - новое действие аудита или ключ настроек CRM → подпись в замороженном фронтенде CRM (`apps/crm/frontend/src/i18n/labels.ru.ts`,
-     `i18n/ru/settings.ts`; сторожа `domain/auditLabels.test.ts`, `i18n/settingsLabels.test.ts`) и в Платформе
+   - новое действие аудита или ключ настроек CRM → подпись в Платформе
      (`entities/audit/labels.ts`, `shared/i18n/{ru,uz,en}/audit.json`) (#378, #385, #388);
    - линт и формат: `make -C apps/<приложение> lint`; в EDS строка ≤ 120 знаков (#376, #388);
    - после **каждого** `git merge origin/main`: одна голова миграций (`db-migration`), версия контракта (`contract-change` п. 2),
