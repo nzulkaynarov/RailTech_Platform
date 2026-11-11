@@ -4,12 +4,10 @@ import { useNavigate, useSearchParams } from "react-router";
 
 import { canEdit, canSee } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
-import type { ReferenceKind } from "../../../shared/api/generated/model";
 import { useListDictionaries } from "../../../shared/api/generated/platform-bff";
 import { localName } from "../../eds/dictionaries";
 import { CategoriesTab } from "../company/tabs/CategoriesTab";
 import { ChargesTab } from "../company/tabs/ChargesTab";
-import { REFERENCE_KINDS, ReferenceTab } from "../company/tabs/ReferenceTab";
 import { DictionariesTab } from "../docflow/DictionariesTab";
 import { MailRules } from "../docflow/MailRules";
 import { BotSettingsSections } from "./BotSettingsSections";
@@ -28,7 +26,7 @@ const DOC_PREFIX = "doc:";
  * Продажи — причины отказа и валюта сделок (раздел `deals` настроек бота); Документы — справочники писем (каталог BFF);
  * Почта — «Типы входящих писем» и правила отправителей (MAIL-TYPES, данные CRM, тот же каталог BFF);
  * Расчёт — страны, валюты, единицы, базисы поставки, категории каталога и статьи расхода (нужен `company.settings`).
- * Данные не переносятся: каждый список хранит прежняя часть платформы (этап 2 — общий ресурс справочников, BACKLOG).
+ * Справочники всех доменов — общим ресурсом BFF `/dictionaries` (решение владельца 2026-11-11), в том числе «Расчёт» ERP.
  */
 export function DictionariesPage() {
   const { t, i18n } = useTranslation(["modules", "company", "bot"]);
@@ -36,8 +34,11 @@ export function DictionariesPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const withAdmin = canSee(me, { resource: "admin" });
-  const catalog = useListDictionaries({ query: { staleTime: 5 * 60_000, enabled: withAdmin } });
   const withCalc = canSee(me, { resource: "company.settings" });
+  // Каталог BFF сам оставляет справочники, которые сотруднику положено читать (решение 2026-11-11).
+  const catalog = useListDictionaries({
+    query: { staleTime: 5 * 60_000, enabled: withAdmin || withCalc },
+  });
 
   const groups: NavGroup[] = [
     {
@@ -65,10 +66,12 @@ export function DictionariesPage() {
             key: "calc",
             label: t("modules:admin.dictionaries.calc"),
             items: [
-              ...REFERENCE_KINDS.map((kind) => ({
-                key: kind,
-                label: t(`company:reference.kinds.${kind}`),
-              })),
+              ...(catalog.data?.items ?? [])
+                .filter((d) => d.area === "calc")
+                .map((d) => ({
+                  key: `${DOC_PREFIX}${d.kind}`,
+                  label: localName(d.name, i18n.language),
+                })),
               { key: "categories", label: t("company:tabs.categories") },
               { key: "charges", label: t("company:tabs.charges") },
             ],
@@ -78,7 +81,10 @@ export function DictionariesPage() {
   ].filter((group) => group.items.length > 0);
 
   const all = groups.flatMap((group) => group.items.map((item) => item.key));
-  const asked = params.get("list");
+  // Старые адреса «Расчёта» (`?list=currencies`) — тот же справочник на общем ресурсе.
+  const rawList = params.get("list");
+  const asked =
+    rawList && all.includes(`${DOC_PREFIX}${rawList}`) ? `${DOC_PREFIX}${rawList}` : rawList;
   // `?list=doc` (старый адрес «Документооборот · Справочники») — первый справочник писем.
   const firstDoc = all.find((key) => key.startsWith(DOC_PREFIX));
   const current =
@@ -94,10 +100,13 @@ export function DictionariesPage() {
     body = <BotSettingsSections page="dictionaries" />;
   } else if (current.startsWith(DOC_PREFIX)) {
     const kind = current.slice(DOC_PREFIX.length);
+    const area = catalog.data?.items.find((d) => d.kind === kind)?.area;
+    // «Расчёт» правит и держатель настроек компании — как раньше (решение 2026-11-11)
+    const editable = canEdit(me, "admin") || (area === "calc" && canEdit(me, "company.settings"));
     body = (
       <>
         <Card styles={{ body: { padding: 0 } }}>
-          <DictionariesTab readOnly={!canEdit(me, "admin")} kind={kind} />
+          <DictionariesTab readOnly={!editable} kind={kind} />
         </Card>
         {kind === "mail-types" ? (
           <Card styles={{ body: { padding: 0 } }}>
@@ -119,11 +128,7 @@ export function DictionariesPage() {
       </Card>
     );
   } else {
-    body = (
-      <Card styles={{ body: { padding: 0 } }}>
-        <ReferenceTab kind={current as ReferenceKind} />
-      </Card>
-    );
+    body = null;
   }
 
   const unavailable = catalog.data?.unavailable ?? [];

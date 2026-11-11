@@ -9,6 +9,7 @@ import type {
   DictionaryOrderIn,
   LetterKindList,
 } from "../shared/api/generated/model";
+import { ERP_CATALOG, canReadErpDictionaries } from "./erpDictionaries";
 import { readLetters } from "./fixtures/letters";
 import { buildMe, readSession } from "./mockSession";
 
@@ -565,9 +566,12 @@ const sorted = (items: DictionaryItem[]) => [...items].sort((a, b) => a.position
 export const dictionariesHandlers = [
   http.get("*/dictionaries", () => {
     if (!readSession()) return failure(401, "SESSION_EXPIRED", "Сессия истекла");
-    if (!isAdmin() && !canRead())
+    // Как BFF: каждый видит справочники, которые ему положено читать (решение 2026-11-11)
+    const own = isAdmin() || canRead() ? catalogWithKinds() : [];
+    const erp = canReadErpDictionaries() ? ERP_CATALOG : [];
+    if (own.length + erp.length === 0)
       return failure(403, "FORBIDDEN", "Раздел или действие не положены вашей роли.");
-    return HttpResponse.json({ items: catalogWithKinds(), unavailable: [] });
+    return HttpResponse.json({ items: [...own, ...erp], unavailable: [] });
   }),
 
   http.get("*/dictionaries/:kind", ({ params, request }) => {

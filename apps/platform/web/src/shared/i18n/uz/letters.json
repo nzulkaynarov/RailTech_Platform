@@ -1101,7 +1101,11 @@
           "load": "Qoidalar yuklanmadi."
         },
         "publicDomain": "Bu umumiy pochta xizmati — qoida istalgan kishining xatini ushlaydi. Aniq manzilni ko‘rsatgan ma’qul."
-      }
+      },
+      "code": "Kod",
+      "codeHint": "Lotin harflari va raqamlar, masalan USD yoki UZ. Saqlangandan keyin kod o‘zgarmaydi.",
+      "search": "Kod yoki nom bo‘yicha qidirish",
+      "noMatch": "Hech narsa topilmadi"
     },
     "templates": {
       "title": "Rezolyutsiya shablonlari",

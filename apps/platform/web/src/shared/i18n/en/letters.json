@@ -1101,7 +1101,11 @@
           "load": "Rules did not load."
         },
         "publicDomain": "This is a public mail service — the rule will catch letters from anyone. An exact address is better."
-      }
+      },
+      "code": "Code",
+      "codeHint": "Latin letters and digits, e.g. USD or UZ. The code cannot be changed after saving.",
+      "search": "Search by code or name",
+      "noMatch": "Nothing found"
     },
     "templates": {
       "title": "Resolution templates",
