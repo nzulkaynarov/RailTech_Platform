@@ -125,12 +125,12 @@ test.describe("Внешние интеграции: администратор",
     await password(pair, WRONG_PASSWORD);
     await pair.getByRole("button", { name: "Подключить ERP" }).click();
     await expect(pair.getByRole("alert")).toContainText("Пароль указан неверно.");
-    await pair.getByLabel("Одноразовый код сопряжения").fill("000000");
+    await pair.getByLabel("Адрес ERP").fill("erp.local");
     await password(pair);
     await pair.getByRole("button", { name: "Подключить ERP" }).click();
-    await expect(pair.getByRole("alert")).toContainText("Код сопряжения не подошёл.");
+    await expect(pair.getByRole("alert")).toContainText("Адрес ERP указан неверно.");
     await tallScreenshot(page, "erp-pair-error");
-    await pair.getByLabel("Одноразовый код сопряжения").fill("428193");
+    await pair.getByLabel("Адрес ERP").fill("http://erp-backend:8000");
     await pair.getByRole("button", { name: "Подключить ERP" }).click();
     await expect(panel.getByText("Сопряжение выполнено.")).toBeVisible();
     await expect(panel.getByText("•••• 5a1d")).toBeVisible();

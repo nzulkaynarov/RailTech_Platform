@@ -75,7 +75,7 @@ describe("карточка ERP", () => {
     expect(within(side).getByText(/версия 1\.9\.0/)).toBeVisible();
   });
 
-  it("подключить ERP: неверный пароль и неверный код — словами у формы; успех — сопряжение и проверка", async () => {
+  it("подключить ERP: неверный пароль и неверный адрес — словами у формы; поля для кода нет; успех — сопряжение и проверка", async () => {
     const side = await openPanel("erp");
     fireEvent.click(await within(side).findByRole("button", { name: "Подключить заново" }));
     const form = within(side).getByRole("form", { name: "Подключить ERP" });
@@ -89,14 +89,16 @@ describe("карточка ERP", () => {
       "true",
     );
 
-    type("Одноразовый код сопряжения", "000000", form);
+    // код сопряжения Платформа берёт у ERP сама: поля для него нет
+    expect(within(form).queryByLabelText(/код сопряжения/i)).toBeNull();
+    type("Адрес ERP", "erp.local", form);
     submitPassword(form);
     press(form, "Подключить ERP");
     await waitFor(() => {
-      expect(within(form).getByRole("alert")).toHaveTextContent("Код сопряжения не подошёл.");
+      expect(within(form).getByRole("alert")).toHaveTextContent("Адрес ERP указан неверно.");
     });
 
-    type("Одноразовый код сопряжения", "123456", form);
+    type("Адрес ERP", "http://erp-backend:8000", form);
     press(form, "Подключить ERP");
     expect(await within(side).findByText("Сопряжение выполнено.")).toBeVisible();
     expect(await within(side).findByText("ERP отвечает")).toBeVisible();
@@ -104,14 +106,12 @@ describe("карточка ERP", () => {
     await waitFor(() => {
       expect(within(side).getByText("•••• 5a1d")).toBeVisible();
     });
-    expect(document.body.textContent).not.toContain("123456");
-    // форма закрыта, код и пароль из неё ушли: при повторном открытии поля пустые
+    // форма закрыта, пароль из неё ушёл: при повторном открытии поле пустое
     expect(within(side).queryByRole("form", { name: "Подключить ERP" })).not.toBeInTheDocument();
     // итог остаётся на панели и после закрытия формы
     expect(within(side).getByText("Сопряжение выполнено.")).toBeVisible();
     fireEvent.click(within(side).getByRole("button", { name: "Подключить заново" }));
     const again = within(side).getByRole("form", { name: "Подключить ERP" });
-    expect(within(again).getByLabelText("Одноразовый код сопряжения")).toHaveValue("");
     expect(within(again).getByLabelText("Ваш пароль администратора")).toHaveValue("");
   });
 

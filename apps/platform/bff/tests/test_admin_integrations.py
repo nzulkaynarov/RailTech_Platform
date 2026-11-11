@@ -282,6 +282,62 @@ async def test_erp_pair_passes_password_and_code_only_to_crm(
     assert response.json()["check_error"] is None
 
 
+async def test_erp_pair_without_code_takes_one_from_erp_for_the_admin(
+    web: Web, crm: CrmIntegrationsFake, be: Backends
+) -> None:
+    """Экрана старого ERP нет: код сопряжения BFF выпускает в ERP сам, сессией администратора."""
+    code = "731" + fresh_secret("c", 4)
+    issued = be.erp_pairing_code.mock(
+        return_value=httpx.Response(
+            200, json={"code": code, "expires_at": "2026-11-11T10:00:00Z", "ttl_seconds": 600}
+        )
+    )
+    await web.login(["ADMIN"])
+
+    response = await web.send(
+        "POST", f"{BASE}/erp/pair", json={"base_url": "http://erp.test", "password": PASSWORD}
+    )
+
+    assert response.status_code == 200
+    assert issued.call_count == 1
+    assert crm.body("POST", "integrations/erp/pair") == {
+        "base_url": "http://erp.test",
+        "code": code,
+        "password": PASSWORD,
+    }
+    assert code not in response.text
+
+
+@pytest.mark.parametrize("erp_answer", [403, 500])
+async def test_erp_pair_without_a_code_from_erp_falls_back_to_the_platform_secret(
+    web: Web, crm: CrmIntegrationsFake, be: Backends, erp_answer: int
+) -> None:
+    be.erp_pairing_code.mock(return_value=httpx.Response(erp_answer, json={"detail": "FORBIDDEN"}))
+    await web.login(["ADMIN"])
+
+    response = await web.send(
+        "POST", f"{BASE}/erp/pair", json={"base_url": "http://erp.test", "password": PASSWORD}
+    )
+
+    assert response.status_code == 200
+    assert crm.body("POST", "integrations/erp/pair")["code"] is None
+
+
+async def test_erp_pair_before_first_pairing_has_no_erp_session_and_uses_the_platform_secret(
+    web: Web, crm: CrmIntegrationsFake, be: Backends
+) -> None:
+    """Первое подключение: в ERP сотрудника ещё нет, сессии ERP нет — CRM идёт по общему секрету."""
+    be.exchange_status = 403
+    await web.login(["ADMIN"])
+
+    response = await web.send(
+        "POST", f"{BASE}/erp/pair", json={"base_url": "http://erp.test", "password": PASSWORD}
+    )
+
+    assert response.status_code == 200
+    assert crm.body("POST", "integrations/erp/pair")["code"] is None
+
+
 async def test_erp_rotate_returns_rotation_pending_without_secrets(
     web: Web, crm: CrmIntegrationsFake
 ) -> None:
