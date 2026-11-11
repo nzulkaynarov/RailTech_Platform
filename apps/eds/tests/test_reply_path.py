@@ -245,3 +245,22 @@ async def test_complete_with_outgoing_links_or_refuses_foreign_reply(
     card_doc = (await client.get(f"/api/v1/documents/{free_id}", headers=registrar.headers)).json()
     assert card_doc["reply_to"]["number"] == incoming["number"]
     assert "document.reply_linked" in [e["action"] for e in card_doc["journal"]]
+
+
+async def test_reply_closes_an_execute_instruction_too(
+    client: httpx.AsyncClient, staff: dict[str, Person], container: Container, deferred: list[str]
+) -> None:
+    """Ответить можно по любому поручению (решение 2026-11-11): ИСХ «в ответ на» закрывает и «К исполнению»."""
+    registrar, manager = staff["registrar"], staff["manager"]
+    await deliver_letterhead(client, container)
+    incoming = await incoming_for(client, staff, kind="execute")
+    plain = letter_json(in_reply_to=incoming["id"])
+    plain["letter"]["recipient_email"] = None
+    doc = (await client.post("/api/v1/documents", json=plain, headers=manager.headers)).json()
+    await client.post(f"/api/v1/documents/{doc['id']}/registration-request", headers=manager.headers)
+    registered = await client.post(f"/api/v1/documents/{doc['id']}/submit", headers=registrar.headers)
+    assert registered.status_code == 200, registered.text
+    card = (await get(client, manager, incoming["id"])).json()
+    assert card["status"] == "executed"
+    [instruction] = card["instructions"]
+    assert (instruction["status"], instruction["outgoing"]["number"]) == ("executed", registered.json()["number"])

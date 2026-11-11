@@ -205,6 +205,7 @@ async def present(session: AsyncSession, letter: Letter, viewer: Employee | None
         status=LetterStatus(letter.status),
         subject=letter.subject,
         summary=letter.summary,
+        body_text=letter.body_text,
         sender=sender_of(letter),
         sender_ref=SenderRef(number=letter.sender_ref_number, date=letter.sender_ref_date),
         received_at=letter.received_at,

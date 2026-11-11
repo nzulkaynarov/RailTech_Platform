@@ -265,7 +265,7 @@ function ExtensionForm({
   );
 }
 
-/** Моё поручение: «Подготовить ответ» (письмо с «в ответ на»), «Исполнено», «Запросить перенос». */
+/** Моё поручение: «Ответить» (письмо «в ответ на» у любого поручения, решение владельца 2026-11-11), «Исполнено», «Запросить перенос». */
 export function MyInstruction({
   letter,
   instruction,
@@ -285,7 +285,7 @@ export function MyInstruction({
         {instruction.overdue ? ` · ${t("instr.overdue")}` : ""}
       </p>
       <p className="pf-letters-summary">{instruction.text}</p>
-      {instruction.kind === "reply" ? (
+      {instruction.kind !== "info" ? (
         <div className="pf-instr-reply">
           {/* P4 (B-P8B-4): письмо-ответ готовит любой исполнитель; без права регистрировать — передаёт делопроизводителю.
               EDS-REPLY-1: форма берёт корреспондента, ИНН, почту и тему из письма; начатый ответ продолжается, а не дублируется. */}
@@ -295,6 +295,7 @@ export function MyInstruction({
             </LinkButton>
           ) : (letter.replies ?? []).some((r) => r.state === "registration_requested") ? null : (
             <LinkButton
+              type="primary"
               to={`/eds/new?type=letter&reply_to=${encodeURIComponent(letter.number)}&reply_id=${encodeURIComponent(letter.id)}`}
             >
               {t("tasks.reply.prepare")}

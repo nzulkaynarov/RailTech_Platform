@@ -11484,6 +11484,8 @@ export interface components {
       subject: string;
       /** @description Суть документа */
       summary: string;
+      /** @description Текст письма, если ВХ зарегистрирован из «Почты» (иначе `null`); исполнитель поручения видит само письмо без раздела «Почта» */
+      body_text?: string | null;
       urgent: boolean;
       /** Format: date */
       received_at: string;

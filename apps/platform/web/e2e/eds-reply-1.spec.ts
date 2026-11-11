@@ -111,7 +111,7 @@ async function executorHandsOver(page: Page, email: string, screens: boolean): P
   await queueRow(page, `Подготовить ответ на письмо ${NUMBER}`)
     .getByRole("link", { name: /^Открыть:/ })
     .click();
-  await page.getByRole("link", { name: "Подготовить ответ" }).click();
+  await page.getByRole("link", { name: "Ответить" }).click();
   await expect(page).toHaveURL(/\/eds\/new\?type=letter&reply_to=.*&reply_id=[0-9a-f-]{36}/);
 
   // Поля заполнены из входящего (корреспондент, ИНН, тема); почты в письме нет — пусто, вводит исполнитель.
@@ -136,12 +136,12 @@ async function executorHandsOver(page: Page, email: string, screens: boolean): P
   await page.getByRole("button", { name: "Передать на регистрацию" }).click();
   await expect(page.getByText("Передано на регистрацию делопроизводителю.")).toBeVisible();
 
-  // На рабочем экране поручения: ответ передан, второго «Подготовить ответ» нет.
+  // На рабочем экране поручения: ответ передан, второго «Ответить» нет.
   await spaGoto(page, `/eds/tasks/${encodeURIComponent(NUMBER)}`);
   const block = page.getByRole("heading", { level: 2, name: "Ответ на письмо" });
   await expect(block).toBeVisible();
   await expect(page.getByText("Черновик передан на регистрацию делопроизводителю.")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Подготовить ответ" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Ответить" })).toHaveCount(0);
   if (screens) await both(page, "task-reply-handed");
 }
 
@@ -248,5 +248,40 @@ test.describe("EDS-REPLY-1: ответ на входящее", () => {
     await expect(
       side(page).getByRole("button", { name: "Отправить адресату ещё раз" }),
     ).toBeVisible();
+  });
+});
+
+test.describe("Исполнение письма из почты (решение владельца 2026-11-11)", () => {
+  test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
+
+  test("«К исполнению»: исполнитель видит само письмо и «Ответить»", async ({ page }) => {
+    await at(page, WIDE);
+    await loginAndWait(page, "registrar@demo.example");
+    await spaGoto(page, "/eds/mail/17");
+    await page.getByRole("link", { name: "Зарегистрировать как ВХ" }).click();
+    await expect(page.getByText("акт-сверки-октябрь.pdf")).toBeVisible();
+    await chooseOption(page.getByLabel("Тип резолюции"), "К исполнению");
+    await chooseOption(page.getByLabel("Ответственный"), "Демо Широков · Менеджер-универсал");
+    await fillDate(page.getByLabel("Срок исполнения"), companyDay(3));
+    await page.getByRole("button", { name: "Зарегистрировать", exact: true }).click();
+    const done = page.getByText(/Зарегистрировано: ВХ-\d+\/\d+/);
+    await expect(done).toBeVisible();
+    const number = /ВХ-\d+\/\d+/.exec((await done.textContent()) ?? "")?.[0] ?? "";
+
+    await switchTo(page, "director@demo.example");
+    await spaGoto(page, `/eds/inbox/${encodeURIComponent(number)}?panel=open&tab=resolution`);
+    await page.getByRole("button", { name: "Утвердить проект" }).click();
+    await expect(page.getByText("Резолюция наложена: поручение ушло исполнителям")).toBeVisible();
+
+    await switchTo(page, "universal@demo.example");
+    await spaGoto(page, `/eds/tasks/${encodeURIComponent(number)}`);
+    const letter = page.getByRole("heading", { level: 2, name: "Письмо" });
+    await expect(letter).toBeVisible();
+    await expect(page.getByText(/акт сверки взаимных расчётов/).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: "Ответить" })).toHaveAttribute(
+      "href",
+      /\/eds\/new\?type=letter&reply_to=/,
+    );
+    await both(page, "task-execute-letter");
   });
 });

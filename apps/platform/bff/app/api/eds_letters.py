@@ -28,7 +28,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import ValidationError
 from starlette.types import Send
 
-from app.api.inbound_mail import mail_registration
+from app.api.inbound_mail import mail_card, mail_registration
 from app.clients.eds import EdsLetters, eds_error
 from app.deps import Authed, require, require_any, require_any_section
 from app.errors import PlatformError, backend_unavailable
@@ -36,6 +36,7 @@ from app.feeds.feed import Feed
 from app.rbac import strip_restricted
 from app.rbac_generated import RESOURCE_MODULE
 from app.schemas_eds_letters import (
+    BODY_TEXT_MAX,
     NUMBER_RE,
     UUID_RE,
     ZONES,
@@ -195,12 +196,29 @@ async def register_letter(
     if mail_id is not None:
         await mail_registration(authed, mail_id, "start")
     try:
-        raw = await _letters(authed).register(body.for_eds(), idempotency_key)
+        payload = body.for_eds()
+        if mail_id is not None:
+            text = await _mail_text(authed, mail_id)
+            if text:
+                payload["source"]["text"] = text
+        raw = await _letters(authed).register(payload, idempotency_key)
     except BaseException:
         if mail_id is not None:
             await mail_registration(authed, mail_id, "cancel", quiet=True)
         raise
     return await _card(authed, raw)
+
+
+async def _mail_text(authed: Authed, mail_id: int) -> str | None:
+    """Текст письма для карточки ВХ: исполнитель поручения видит само письмо без раздела «Почта»
+    (решение владельца 2026-11-11). CRM не ответил — ВХ регистрируется без текста, как раньше."""
+    try:
+        card = await mail_card(authed, mail_id)
+    except PlatformError as exc:
+        if exc.body.code == "SESSION_EXPIRED":
+            raise
+        return None
+    return card.text[:BODY_TEXT_MAX] or None
 
 
 @router.get("/letter-kinds", response_model=LetterKindList, operation_id="listLetterKinds")

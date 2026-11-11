@@ -1962,6 +1962,8 @@ export interface components {
     LetterSourceIn: {
       /** @description id письма в CRM (`inbound_mail.id`) */
       crm_inbound_mail_id: number;
+      /** @description Текст письма; BFF берёт его из CRM при регистрации. Хранится в карточке ВХ (`Letter.body_text`), в событие шины не уходит */
+      text?: string | null;
     };
     LetterListItem: {
       id: components["schemas"]["Uuid"];
@@ -1998,6 +2000,8 @@ export interface components {
       status: components["schemas"]["LetterStatus"];
       subject: string;
       summary: string;
+      /** @description Текст письма общего ящика, если ВХ зарегистрирован из почты; иначе `null` */
+      body_text?: string | null;
       sender: components["schemas"]["IncomingLetterSender"];
       sender_ref?: components["schemas"]["SenderRef"];
       /** Format: date */

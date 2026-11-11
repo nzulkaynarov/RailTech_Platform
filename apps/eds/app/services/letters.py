@@ -287,9 +287,10 @@ async def register(session: AsyncSession, bus: AsyncBus, *, actor_id: int, data:
     forced = await _check_duplicate(session, same, data)
     values["dedup_key"] = None if forced is not None else same.key
     try:
-        source = data.source.model_dump() if data.source is not None else None
+        source = data.source.model_dump(exclude={"text"}) if data.source is not None else None
         if data.source is not None:
             values["source_mail_id"] = data.source.crm_inbound_mail_id
+            values["body_text"] = data.source.text
         async with session.begin_nested():
             letter = await _insert(
                 session, bus, actor_id=actor_id, values=values, file_ids=data.file_ids, source=source

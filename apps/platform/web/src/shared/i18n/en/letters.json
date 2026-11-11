@@ -623,8 +623,8 @@
       "error": "Write a report, attach a file or enter the outgoing number."
     },
     "reply": {
-      "prepare": "Prepare a reply",
-      "hint": "\"New document → Letter\" \"in reply to {{number}}\": registering the letter closes the instruction."
+      "prepare": "Reply",
+      "hint": "Registering the reply closes the instruction."
     },
     "ext": {
       "title": "Running late? Request an extension",
@@ -643,7 +643,12 @@
       "submit": "Acknowledged",
       "done": "Marked: acknowledged"
     },
-    "failed": "Not saved: {{reason}}."
+    "failed": "Not saved: {{reason}}.",
+    "body": {
+      "showAll": "Show the whole letter",
+      "collapse": "Collapse"
+    },
+    "details": "Details"
   },
   "mail": {
     "subtitle": "Shared mailbox letters: handle each — register it as incoming, create a lead or archive it",

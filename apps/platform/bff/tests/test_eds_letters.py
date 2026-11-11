@@ -194,6 +194,21 @@ async def test_card_by_id_collects_details_links_and_the_step(
     assert erp_call.url.path == "/api/v1/crm/deals/5/"
 
 
+async def test_card_carries_the_mail_text_for_the_executor(
+    web: Web, eds: EdsFake, check: ContractChecker
+) -> None:
+    """Текст письма из «Почты» в карточке ВХ (решение владельца 2026-11-11); без него — `null`."""
+    await _director(web)
+    eds.answer(
+        "GET", f"letters/{LETTER_ID}", httpx.Response(200, json=letter(body_text="Добрый день!"))
+    )
+
+    response = await web.client.get(CARD)
+
+    check(response, "/eds/letters/{ref}", "get")
+    assert response.json()["body_text"] == "Добрый день!"
+
+
 @pytest.mark.parametrize(
     "ref",
     [
