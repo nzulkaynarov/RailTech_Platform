@@ -6,6 +6,12 @@ import type { DictionaryAttrValues } from "./dictionaryAttrValues";
 import type { LocalizedNameIn } from "./localizedNameIn";
 
 export interface DictionaryItemIn {
+  /**
+   * Только у справочников с `codes = given` (ERP); у остальных код создаёт домен
+   * @nullable
+   * @pattern ^[A-Za-z0-9][A-Za-z0-9_.-]{0,49}$
+   */
+  code?: string | null;
   name: LocalizedNameIn;
   attrs?: DictionaryAttrValues;
 }

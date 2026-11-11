@@ -1,12 +1,17 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.47.0
+  version: 0.51.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
     сессия, профиль, счётчики меню, «Моя очередь», лента «Сегодня», уведомления, поиск. Экраны фаз P2–P4 добавляются
     в этот файл до кода (`docs/architecture/integration-map.md` §1).
+
+    **0.51.0 (справочники ERP на общем ресурсе, решение владельца 2026-11-11) — ломающее по oasdiff (до 1.0 допустимо):
+    шаблон кода значения шире.** `/dictionaries` отдаёт и справочники «Расчёта» ERP (`owner = erp`, `area = calc`):
+    страны, валюты, единицы, базисы поставки — названия на трёх языках; `Dictionary.codes` (`given` — код задаёт человек),
+    `DictionaryItemIn.code`; типы полей `text` и `decimal`.
 
     **0.47.0 (исполнитель видит письмо и отвечает по любому поручению, решение владельца 2026-11-11).** `LetterCard.body_text` — текст
     письма из «Почты», сохранённый при регистрации ВХ. Регистрация ИСХ «в ответ на ВХ» закрывает поручения «Подготовить ответ»
@@ -8587,8 +8592,10 @@ paths:
       description: >-
         Справочники всех доменов для экрана администратора: вид, домен-владелец, область (`documents` — документооборот,
         `mail` — типы входящих писем, MAIL-TYPES),
-        название, закрытый ли список (только переименовать и переставить), дополнительные поля (`attrs`). Раздел `admin`
-        — чтение. Домен не ответил — 503.
+        название, закрытый ли список (только переименовать и переставить), дополнительные поля (`attrs`), `calc` —
+        справочники «Расчёта» ERP. Сотрудник видит те справочники, что ему положено читать (письма — `eds.inbox` или
+        `eds.inbox.register`, почта — `crm.leads.triage`, расчёт — `company.settings`, все — `admin`); ни одного — 403.
+        Домен не ответил — 503.
       responses:
         '200':
           description: Каталог
@@ -8638,8 +8645,9 @@ paths:
       operationId: createDictionaryItem
       summary: 'Справочники · добавить значение'
       description: >-
-        Раздел `admin` — полный. Код создаёт домен из названия; значение встаёт в конец. Название уже есть — 409
-        `name_taken`; закрытый справочник — 409 `dictionary_closed`.
+        Раздел `admin` — полный (справочники «Расчёта» — ещё `company.settings` полный). Код создаёт домен из названия;
+        у справочников с `codes = given` код передаёт человек (`code`), занятый — 409 `code_taken`. Значение встаёт в
+        конец. Название уже есть — 409 `name_taken`; закрытый справочник — 409 `dictionary_closed`.
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
         - $ref: '#/components/parameters/DictionaryKindPath'
@@ -13647,7 +13655,8 @@ components:
       name: code
       in: path
       required: true
-      schema: {type: string, pattern: '^[a-z][a-z_]{0,31}$'}
+      description: Код значения (EDS и CRM — из названия строчными, ERP — как задал человек, например `USD`)
+      schema: {type: string, pattern: '^[A-Za-z0-9][A-Za-z0-9_.-]{0,49}$'}
     ReferenceKindPath:
       name: kind
       in: path
@@ -21187,7 +21196,7 @@ components:
       description: Дополнительное поле значения (поведение — код, значение — данные)
       properties:
         key: {type: string, pattern: '^[a-z][a-z_]{0,31}$', examples: [due_days]}
-        type: {type: string, enum: [boolean, integer, choice]}
+        type: {type: string, enum: [boolean, integer, choice, text, decimal], description: '`text` — строка, `decimal` — число строкой (ставка НДС)'}
         name: {$ref: '#/components/schemas/LocalizedName'}
         minimum: {type: [integer, 'null']}
         maximum: {type: [integer, 'null']}
@@ -21211,8 +21220,13 @@ components:
       required: [kind, owner, area, name, closed, attrs]
       properties:
         kind: {type: string, pattern: '^[a-z][a-z-]{0,31}$', examples: [letter-kinds]}
-        owner: {type: string, enum: [eds, crm], description: Домен-владелец значений}
-        area: {type: string, enum: [documents, mail], description: 'Область экрана (`documents` — документооборот, `mail` — входящая почта)'}
+        owner: {type: string, enum: [eds, crm, erp], description: Домен-владелец значений}
+        area: {type: string, enum: [documents, mail, calc], description: 'Область экрана (`documents` — документооборот, `mail` — входящая почта, `calc` — расчёт)'}
+        codes:
+          type: string
+          enum: [generated, given]
+          default: generated
+          description: '`generated` — код создаёт домен из названия (EDS, CRM); `given` — код задаёт человек или файл (ERP)'
         name: {$ref: '#/components/schemas/LocalizedName'}
         closed: {type: boolean, description: Закрытый список поведения — только переименовать и переставить}
         attrs:
@@ -21229,7 +21243,7 @@ components:
           items: {$ref: '#/components/schemas/Dictionary'}
         unavailable:
           type: array
-          items: {type: string, enum: [eds, crm]}
+          items: {type: string, enum: [eds, crm, erp]}
           description: Домены, чьи справочники не ответили — список частичный (экран говорит об этом)
 
     DictionaryAttrValues:
@@ -21245,7 +21259,7 @@ components:
       additionalProperties: false
       required: [code, name, attrs, active, position]
       properties:
-        code: {type: string, pattern: '^[a-z][a-z_]{0,31}$'}
+        code: {type: string, pattern: '^[A-Za-z0-9][A-Za-z0-9_.-]{0,49}$'}
         name: {$ref: '#/components/schemas/LocalizedName'}
         attrs: {$ref: '#/components/schemas/DictionaryAttrValues'}
         active: {type: boolean, description: '`false` — скрыто: в формах не предлагается'}
@@ -21268,6 +21282,10 @@ components:
       additionalProperties: false
       required: [name]
       properties:
+        code:
+          type: [string, 'null']
+          pattern: '^[A-Za-z0-9][A-Za-z0-9_.-]{0,49}$'
+          description: Только у справочников с `codes = given` (ERP); у остальных код создаёт домен
         name: {$ref: '#/components/schemas/LocalizedNameIn'}
         attrs: {$ref: '#/components/schemas/DictionaryAttrValues'}
 

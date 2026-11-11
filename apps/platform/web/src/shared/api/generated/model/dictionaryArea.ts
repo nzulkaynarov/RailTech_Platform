@@ -4,11 +4,12 @@
  */
 
 /**
- * Область экрана (`documents` — документооборот, `mail` — входящая почта)
+ * Область экрана (`documents` — документооборот, `mail` — входящая почта, `calc` — расчёт)
  */
 export type DictionaryArea = (typeof DictionaryArea)[keyof typeof DictionaryArea];
 
 export const DictionaryArea = {
   documents: "documents",
   mail: "mail",
+  calc: "calc",
 } as const;
