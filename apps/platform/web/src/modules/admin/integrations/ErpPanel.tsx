@@ -93,13 +93,10 @@ function PairForm({
   const { t } = useTranslation("integrations");
   const refresh = useRefreshIntegrations();
   const [baseUrl, setBaseUrl] = useState(erp.configured ? erp.base_url : erp.suggested_base_url);
-  const [code, setCode] = useState("");
   const pair = usePairErp({
     mutation: {
       onSuccess: (data) => {
         refresh();
-        // Форма закрывается и размонтируется: код сопряжения и пароль не остаются в состоянии.
-        setCode("");
         onSaved({ kind: "pair", data });
       },
     },
@@ -119,7 +116,6 @@ function PairForm({
           pair.mutate({
             data: {
               base_url: baseUrl.trim(),
-              ...(code.trim() ? { code: code.trim() } : {}),
               password,
             },
           });
@@ -133,17 +129,6 @@ function PairForm({
             autoComplete="off"
             onChange={(event) => {
               setBaseUrl(event.target.value);
-            }}
-          />
-        </Field>
-        <Field id="erp-pair-code" label={t("erp.pair.code")} hint={t("erp.pair.codeHint")}>
-          <Input
-            id="erp-pair-code"
-            type="password"
-            autoComplete="off"
-            value={code}
-            onChange={(event) => {
-              setCode(event.target.value);
             }}
           />
         </Field>

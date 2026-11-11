@@ -94,6 +94,10 @@ class Backends:
         self.erp_ping = router.get(f"{ERP_URL}/api/v1/notifications/").mock(
             return_value=httpx.Response(200, json={"results": []})
         )
+        # Код сопряжения с CRM: по умолчанию ERP отказывает — CRM идёт по общему секрету.
+        self.erp_pairing_code = router.post(f"{ERP_URL}/api/v1/integration/crm-pairing/code/").mock(
+            return_value=httpx.Response(403, json={"detail": "FORBIDDEN"})
+        )
 
     def set_roles(self, roles: list[Role]) -> None:
         """Роли сотрудника в `/me` CRM (коды предустановок или `custom`)."""

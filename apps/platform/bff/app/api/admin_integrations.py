@@ -220,15 +220,42 @@ async def check_erp(authed: Admin) -> ErpCheck:
     return _to(ErpCheck, out)
 
 
+# Код сопряжения выпускает ERP (только администратор ERP). Раньше его брали на экране старого ERP;
+# теперь BFF берёт его сам от имени администратора, у которого уже есть сессия ERP.
+ERP_PAIRING_CODE_PATH = "/api/v1/integration/crm-pairing/code/"
+
+
+async def _erp_pairing_code(authed: Authed) -> str | None:
+    """Одноразовый код у ERP от имени администратора.
+
+    Нет сессии ERP (первое подключение) или отказ — `None`: тогда CRM сопрягается по общему секрету
+    платформы, а если он уже использован, скажет об этом сама.
+    """
+    try:
+        resp = await authed.call("erp", "POST", ERP_PAIRING_CODE_PATH)
+    except PlatformError as exc:
+        if exc.body.code == "SESSION_EXPIRED":
+            raise
+        return None
+    if resp.status_code != 200:
+        return None
+    try:
+        code = resp.json().get("code")
+    except ValueError:
+        return None
+    return code if isinstance(code, str) and code else None
+
+
 @router.post("/erp/pair", response_model=ErpPairing, operation_id="pairErp")
 async def pair_erp(body: ErpPairIn, authed: Admin) -> ErpPairing:
+    code = secret(body.code) or await _erp_pairing_code(authed)
     out = await _crm(authed).get_model(
         crm.ErpPairingOut,
         "POST",
         f"{API}/integrations/erp/pair",
         json={
             "base_url": body.base_url.strip(),
-            "code": secret(body.code),
+            "code": code,
             "password": secret(body.password),
         },
         probe=True,
