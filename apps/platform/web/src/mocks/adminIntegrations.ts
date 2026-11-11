@@ -429,7 +429,6 @@ export const adminIntegrationsHandlers = [
     const wrong = wrongPassword(body.password);
     if (wrong) return wrong;
     if (!/^https?:\/\//.test(body.base_url)) return invalid("base_url", "erp_invalid_url");
-    if (body.code === "000000") return invalid("code", "erp_pairing_code_invalid");
     const state = update((s) => {
       s.erp = {
         ...s.erp,

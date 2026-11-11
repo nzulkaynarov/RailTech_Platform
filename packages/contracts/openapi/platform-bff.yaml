@@ -3776,6 +3776,8 @@ paths:
       description: >-
         CRM `POST /integrations/erp/pair`: CRM сама генерирует токены обоих направлений и секрет вебхуков, передаёт их ERP
         по коду, сохраняет зашифрованными и сразу проверяет связь. Пароль администратора обязателен и уходит только в CRM.
+        Без `code` BFF сам выпускает одноразовый код в ERP сессией администратора (ERP `POST /integration/crm-pairing/code/`);
+        сессии ERP нет (первое подключение) или ERP отказала — CRM сопрягается по общему секрету платформы.
         Сопряжение удалось, даже если проверка не прошла: `check = null`, `check_error` — причина.
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
@@ -14738,7 +14740,7 @@ components:
           format: password
           writeOnly: true
           maxLength: 64
-          description: Одноразовый код из настроек ERP; без него — сопряжение без кода (если ERP его разрешает)
+          description: Одноразовый код ERP; обычно не передаётся — BFF выпускает его в ERP сам (см. описание операции)
         password: {type: string, format: password, writeOnly: true, minLength: 1, maxLength: 256}
 
     TelegramTokenIn:

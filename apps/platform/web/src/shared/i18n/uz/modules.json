@@ -427,7 +427,7 @@
         "bank": "Hisoblar uchun bank rekvizitlari yo‘q."
       },
       "erpTitle": "ERP ulanishi",
-      "erpLead": "Kompaniya ERP'da yaratiladi, shuning uchun ERP birinchi ulanadi. Yangi o'rnatishda juftlash kodi kerak emas — «ERP ni ulash» tugmasi yetarli.",
+      "erpLead": "Kompaniya ERP'da yaratiladi, shuning uchun ERP birinchi ulanadi: «ERP ni ulash» tugmasi yetarli.",
       "erpDone": "ERP ulangan. Aloqani qadam shaklida yoki Sozlamalar · Ulanishlarda tekshirish mumkin.",
       "erpUnknown": "ERP holati noma’lum: server javob bermadi. ERP sozlamalarini oching va aloqani tekshiring.",
       "erpOpen": "ERP sozlamalarini ochish",
