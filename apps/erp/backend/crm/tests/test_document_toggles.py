@@ -121,13 +121,10 @@ def test_brand_context_safe_defaults_without_profile():
 # ── live preview ─────────────────────────────────────────────────────
 @pytest.mark.django_db
 def test_preview_html_reflects_profile_branding_and_toggles():
-    seller = Company.objects.create(name="Seller LLC", inn="3000000002")
-    # use_company_defaults=False → the hand-entered legal_name is honored (with defaults ON the live
-    # Company name would authoritatively override it — see the single-source-of-truth tests below).
+    # Одни реквизиты (решение владельца 2026-11-11): имя печатается из карточки компании.
+    seller = Company.objects.create(name="ООО «Превью Тест»", inn="3000000002")
     CompanyDocumentProfile.objects.create(
         company=seller,
-        use_company_defaults=False,
-        legal_name="ООО «Превью Тест»",
         show_lead_time=False,
         show_fx_note=True,
     )
@@ -192,20 +189,21 @@ def test_company_defaults_fall_back_to_profile_when_company_blank():
 
 
 @pytest.mark.django_db
-def test_manual_profile_values_kept_when_defaults_off():
-    """use_company_defaults=False → the seller's hand-entered profile values are preserved verbatim
-    and the Company data does NOT override them."""
+def test_company_card_wins_even_when_defaults_off_and_profile_fills_only_blanks():
+    """Одни реквизиты (решение владельца 2026-11-11): флаг `use_company_defaults` не читается — карточка компании
+    печатается всегда, значение профиля — только там, где поле карточки пусто."""
     seller = Company.objects.create(name="ООО «Компания»", inn="3000000012")
     CompanyDocumentProfile.objects.create(
         company=seller,
         use_company_defaults=False,
         legal_name="ООО «Ручное Имя»",
         inn="1234567890",
+        legal_address="Адрес из профиля",
     )
     ctx = document_brand_context(seller)
     profile = ctx["seller_profile"]
-    assert profile.legal_name == "ООО «Ручное Имя»"
-    assert profile.inn == "1234567890"
+    assert (profile.legal_name, profile.inn) == ("ООО «Компания»", "3000000012")
+    assert profile.legal_address == "Адрес из профиля"
 
 
 @pytest.mark.django_db

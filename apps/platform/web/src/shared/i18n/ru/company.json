@@ -151,8 +151,10 @@
       "show_lead_time": "Срок поставки в КП",
       "show_fx_note": "Примечание о курсе валют"
     },
-    "inheritedTitle": "Из карточки компании напечатается:",
+    "inheritedTitle": "Реквизиты в документах — из карточки компании",
     "inheritedKeys": {
+      "legal_name": "Название",
+      "inn": "ИНН",
       "legal_address": "Юридический адрес",
       "bank_details": "Банковские реквизиты"
     },
@@ -169,7 +171,8 @@
     "previewTitle": "Образец документа",
     "previewKind": "Вид документа",
     "previewFrame": "Образец: {{kind}}",
-    "previewHint": "Данные в образце вымышленные."
+    "previewHint": "Данные в образце вымышленные.",
+    "inheritedEdit": "Изменить реквизиты"
   },
   "numbering": {
     "title": "Нумерация документов",

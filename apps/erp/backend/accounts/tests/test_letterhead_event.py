@@ -67,8 +67,10 @@ def test_saving_requisites_publishes_full_letterhead_snapshot(own):
     assert_matches_contract(envelope)
     head_data = envelope["data"]["letterhead"]
     assert envelope["data"]["erp_company_id"] == company.id and envelope["subject"] == f"company/{company.id}"
-    assert (head_data["company_name"], head_data["signatory_name"], head_data["logo"]) == (
-        "ООО «РемПуть»",
+    # Одни реквизиты (решение 2026-11-11): имя и ИНН — из карточки компании; профиль — только если в карточке пусто.
+    assert (head_data["company_name"], head_data["inn"], head_data["signatory_name"], head_data["logo"]) == (
+        "РемПуть",
+        "305123456",
         "Каримов А. А.",
         None,
     )
@@ -109,3 +111,31 @@ def test_logo_goes_as_bytes_and_large_one_is_downscaled(own, settings, tmp_path)
     profile.show_logo = False
     hidden = letterhead_data(company, profile, head)["letterhead"]
     assert hidden["logo"] is None and hidden["logo_omitted"] == "hidden"
+
+
+@pytest.mark.django_db
+def test_company_requisites_reach_eds_without_saving_the_letterhead(own):
+    """Правка реквизитов в карточке компании сама обновляет бланк EDS — с ИНН, адресом и банком из карточки."""
+    company, _head = own
+    before = len(_letterheads())
+    company.inn = "305999888"
+    company.legal_address = "Ташкент, ул. Демо, 1"
+    company.bank_account = "20208000900001234567"
+    company.mfo = "00873"
+    company.save()
+    envelopes = _letterheads()
+    assert len(envelopes) == before + 1
+    assert_matches_contract(envelopes[-1])
+    head_data = envelopes[-1]["data"]["letterhead"]
+    assert (head_data["inn"], head_data["legal_address"]) == ("305999888", "Ташкент, ул. Демо, 1")
+    assert head_data["bank_details"] == "р/с: 20208000900001234567, МФО: 00873"
+
+
+@pytest.mark.django_db
+def test_saving_unrelated_company_fields_or_another_company_does_not_publish(own):
+    company, _head = own
+    before = len(_letterheads())
+    company.save(update_fields=["phone"])
+    other = Company.objects.create(name="Клиент", inn="301111111")
+    other.save()
+    assert len(_letterheads()) == before

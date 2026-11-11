@@ -163,6 +163,16 @@ def _apply_company_defaults(seller_company, row) -> None:
     # пусто там — документ печатает «Подпись / дата», а не чужое имя.
 
 
+def resolved_profile(seller_company, row):
+    """Копия профиля с реквизитами из карточки компании — то, что печатается (печать, образец, бланк EDS)."""
+    from copy import copy
+
+    resolved = copy(row)
+    if seller_company is not None:
+        _apply_company_defaults(seller_company, resolved)
+    return resolved
+
+
 def _brand_context_from_row(seller_company, row) -> dict:
     """Build the brand context from an ALREADY-FETCHED profile row (may be mutated in-memory by
     the caller — the draft-preview path applies unsaved overrides before delegating here).
@@ -174,7 +184,9 @@ def _brand_context_from_row(seller_company, row) -> dict:
     """
     from ..quotes import _profile_has_branding
 
-    if row and getattr(row, "use_company_defaults", False) and seller_company:
+    if row and seller_company:
+        # Одни реквизиты (решение владельца 2026-11-11): имя, ИНН, адрес и банк — из карточки компании всегда;
+        # значение профиля печатается, только если в карточке поле пусто. Флаг `use_company_defaults` больше не читается.
         _apply_company_defaults(seller_company, row)
 
     branded = row if _profile_has_branding(row) else None

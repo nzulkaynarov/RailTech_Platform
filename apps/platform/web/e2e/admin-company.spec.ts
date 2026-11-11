@@ -173,6 +173,13 @@ test.describe("Компания: реквизиты, бланк, нумерац�
   }) => {
     await loginAndWait(page, "director@demo.example");
     await openCompany(page, "brand");
+    // Одни реквизиты (решение 2026-11-11): в «Бланке» они только показаны, правятся в карточке компании.
+    await expect(page.getByText("Реквизиты в документах — из карточки компании")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Изменить реквизиты" })).toHaveAttribute(
+      "href",
+      "/admin/company?part=details",
+    );
+    await expect(page.getByLabel("Банковские реквизиты", { exact: true })).toHaveCount(0);
     const frame = page.frameLocator('iframe[title="Образец: КП"]');
     await expect(frame.getByText("Коммерческое предложение", { exact: false })).toBeVisible();
 

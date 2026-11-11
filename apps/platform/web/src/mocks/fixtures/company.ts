@@ -109,8 +109,10 @@ function seed(): CompanyMock {
       show_fx_note: false,
       logo_url: null,
       inherited: {
+        legal_name: "ООО «Демо Рейл»",
+        inn: "123456789",
         legal_address: "г. Демоград, ул. Вымышленная, д. 1",
-        bank_details: "р/с 20208000900000000001, МФО 00001",
+        bank_details: "р/с: 20208000900000000001, МФО: 00001",
       },
     },
     numbering: {
