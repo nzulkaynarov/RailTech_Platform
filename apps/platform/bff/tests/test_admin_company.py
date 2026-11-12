@@ -2063,3 +2063,86 @@ async def test_fx_rate_bad_body_is_422_and_erp_is_not_called(
 
     assert response.status_code == 422
     assert route.call_count == 0
+
+
+# --- банковские счета (решение владельца 2026-11-11) ------------------------------------------
+
+
+def bank_account_json(**extra: Any) -> dict[str, Any]:
+    return {
+        "id": 7,
+        "bank_name": "Банк Демо",
+        "mfo": "00873",
+        "account": "20208000900001234567",
+        "currency": "UZS",
+        "swift": "",
+        "correspondent_bank": "",
+        "is_default": True,
+        "is_active": True,
+        "order": 0,
+        **extra,
+    }
+
+
+async def test_bank_accounts_crud_on_own_company(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    await web.login(["DIRECTOR"])
+    erp.get(f"{COMPANY}/bank-accounts/").mock(
+        return_value=httpx.Response(200, json=[bank_account_json()])
+    )
+    create = erp.post(f"{COMPANY}/bank-accounts/").mock(
+        return_value=httpx.Response(201, json=bank_account_json(id=8, currency="USD"))
+    )
+    patch = erp.patch(f"{COMPANY}/bank-accounts/7/").mock(
+        return_value=httpx.Response(200, json=bank_account_json(bank_name="Новый банк"))
+    )
+    delete = erp.delete(f"{COMPANY}/bank-accounts/7/").mock(return_value=httpx.Response(204))
+
+    listed = await web.client.get("/api/v1/admin/company/bank-accounts")
+    created = await web.send(
+        "POST",
+        "/api/v1/admin/company/bank-accounts",
+        json={"account": "20208840900001111111", "currency": "USD", "swift": "NBFAUZ2X"},
+    )
+    changed = await web.send(
+        "PATCH", "/api/v1/admin/company/bank-accounts/7", json={"bank_name": "Новый банк"}
+    )
+    removed = await web.send("DELETE", "/api/v1/admin/company/bank-accounts/7")
+
+    check(listed, "/admin/company/bank-accounts", "get")
+    assert listed.json()["items"][0] == {**bank_account_json(), "id": "7"}
+    assert created.status_code == 201
+    check(created, "/admin/company/bank-accounts", "post")
+    check(changed, "/admin/company/bank-accounts/{id}", "patch")
+    assert removed.status_code == 204
+    assert sent(create) == {
+        "account": "20208840900001111111",
+        "currency": "USD",
+        "swift": "NBFAUZ2X",
+    }
+    assert sent(patch) == {"bank_name": "Новый банк"}
+    assert delete.call_count == 1
+
+
+async def test_bank_account_field_errors_and_read_only_role(
+    web: Web, erp: respx.MockRouter
+) -> None:
+    await web.login(["DIRECTOR"])
+    erp.post(f"{COMPANY}/bank-accounts/").mock(
+        return_value=httpx.Response(400, json={"account": ["taken"]})
+    )
+    taken = await web.send(
+        "POST",
+        "/api/v1/admin/company/bank-accounts",
+        json={"account": "1", "currency": "UZS"},
+    )
+    assert taken.status_code == 422
+    assert taken.json()["details"]["fields"] == ["account"]
+    bad = await web.send(
+        "POST", "/api/v1/admin/company/bank-accounts", json={"account": "1", "currency": "usd"}
+    )
+    assert bad.status_code == 422
+
+    await web.login(["MANAGER"])
+    assert (await web.client.get("/api/v1/admin/company/bank-accounts")).status_code == 403

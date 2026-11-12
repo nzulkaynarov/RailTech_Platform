@@ -78,17 +78,16 @@ def _seller_and_bank_details(invoice):
     seller = _invoice_seller_company(invoice)
     if seller is None:
         return None, ""
-    return seller, _bank_details_line(seller)
+    currency = getattr(getattr(invoice, "currency", None), "code", None)
+    return seller, _bank_details_line(seller, currency)
 
 
-def _bank_details_line(company) -> str:
-    """Платёжные реквизиты компании строкой («р/с: …, МФО: …»); пусто — платить не по чему."""
-    parts = []
-    if getattr(company, "bank_account", ""):
-        parts.append(f"р/с: {company.bank_account}")
-    if getattr(company, "mfo", ""):
-        parts.append(f"МФО: {company.mfo}")
-    return ", ".join(parts)
+def _bank_details_line(company, currency_code=None) -> str:
+    """Платёжные реквизиты строкой: основной счёт валюты счёта, без него — основной в сумах; пусто — платить не по чему
+    (решение владельца 2026-11-11: счета компании — список)."""
+    from accounts.services.bank_accounts import bank_details_text
+
+    return bank_details_text(company, currency_code)
 
 
 def invoice_bank_details_ready(invoice) -> bool:
@@ -114,7 +113,7 @@ def own_company_bank_details_ready() -> bool:
     from accounts.services.own_company_setup import own_company_id_or_none
 
     company_id = own_company_id_or_none()
-    company = Company.objects.filter(pk=company_id).only("bank_account", "mfo").first() if company_id else None
+    company = Company.objects.filter(pk=company_id).first() if company_id else None
     return company is None or bool(_bank_details_line(company))
 
 

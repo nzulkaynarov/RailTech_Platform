@@ -17,7 +17,7 @@ applied on every M2M-edit, not once per migrate.
 import logging
 
 from django.contrib.auth.signals import user_login_failed
-from django.db.models.signals import m2m_changed, post_save
+from django.db.models.signals import m2m_changed, post_delete, post_save
 from django.dispatch import receiver
 from rest_framework.throttling import BaseThrottle
 
@@ -86,3 +86,23 @@ def publish_letterhead_on_requisites(sender, instance: Company, created: bool, u
         publish_company_letterhead(instance)
     except ImproperlyConfigured:  # своя компания не определена (несколько продавцов без OWN_COMPANY_ID) — бланка нет
         logger.info("letterhead not published: own company is ambiguous", exc_info=True)
+
+
+def _publish_for(company) -> None:
+    from django.core.exceptions import ImproperlyConfigured
+
+    from .services.letterhead_event import publish_company_letterhead
+
+    try:
+        publish_company_letterhead(company)
+    except ImproperlyConfigured:
+        logger.info("letterhead not published: own company is ambiguous", exc_info=True)
+
+
+@receiver(post_save, sender="parties.CompanyBankAccount")
+@receiver(post_delete, sender="parties.CompanyBankAccount")
+def publish_letterhead_on_bank_account(sender, instance, **kwargs):
+    """Счета своей компании — тоже реквизиты бланка (решение владельца 2026-11-11)."""
+    if kwargs.get("raw"):
+        return
+    _publish_for(instance.company)

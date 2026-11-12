@@ -99,6 +99,10 @@ import type {
   CompanyArticleCreate,
   CompanyArticleList,
   CompanyArticleUpdate,
+  CompanyBankAccount,
+  CompanyBankAccountIn,
+  CompanyBankAccountList,
+  CompanyBankAccountUpdate,
   CompanyItemRef,
   CompanyProfile,
   CompanyProfileUpdate,
@@ -25295,6 +25299,458 @@ export function useListChargeTypes<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getListCompanyBankAccountsUrl = () => {
+  return `/api/v1/admin/company/bank-accounts`;
+};
+
+/**
+ * Раздел `company.settings` — чтение.
+ * @summary Банковские счета компании
+ */
+export const listCompanyBankAccounts = async (
+  options?: Parameters<typeof http>[1],
+): Promise<CompanyBankAccountList> => {
+  return http<CompanyBankAccountList>(getListCompanyBankAccountsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListCompanyBankAccountsQueryKey = () => {
+  return [`/api/v1/admin/company/bank-accounts`] as const;
+};
+
+export const getListCompanyBankAccountsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listCompanyBankAccounts>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof listCompanyBankAccounts>>, TError, TData>
+  >;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListCompanyBankAccountsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listCompanyBankAccounts>>> = ({
+    signal,
+  }) => listCompanyBankAccounts({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listCompanyBankAccounts>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListCompanyBankAccountsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listCompanyBankAccounts>>
+>;
+export type ListCompanyBankAccountsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse
+>;
+
+export function useListCompanyBankAccounts<
+  TData = Awaited<ReturnType<typeof listCompanyBankAccounts>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCompanyBankAccounts>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCompanyBankAccounts>>,
+          TError,
+          Awaited<ReturnType<typeof listCompanyBankAccounts>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCompanyBankAccounts<
+  TData = Awaited<ReturnType<typeof listCompanyBankAccounts>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCompanyBankAccounts>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCompanyBankAccounts>>,
+          TError,
+          Awaited<ReturnType<typeof listCompanyBankAccounts>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCompanyBankAccounts<
+  TData = Awaited<ReturnType<typeof listCompanyBankAccounts>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCompanyBankAccounts>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Банковские счета компании
+ */
+
+export function useListCompanyBankAccounts<
+  TData = Awaited<ReturnType<typeof listCompanyBankAccounts>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCompanyBankAccounts>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListCompanyBankAccountsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateCompanyBankAccountUrl = () => {
+  return `/api/v1/admin/company/bank-accounts`;
+};
+
+/**
+ * Раздел `company.settings` — полный (решение владельца 2026-11-11: счета — список). Первый счёт валюты становится основным; «Основной для валюты» снимает флаг с прежнего счёта той же валюты. Номер счёта у компании уникален (`details.fields = [account]`); неизвестная валюта — `details.fields = [currency]`.
+ * @summary Добавить банковский счёт
+ */
+export const createCompanyBankAccount = async (
+  companyBankAccountIn: CompanyBankAccountIn,
+  options?: Parameters<typeof http>[1],
+): Promise<CompanyBankAccount> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CompanyBankAccount>(getCreateCompanyBankAccountUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(companyBankAccountIn),
+  });
+};
+
+export const getCreateCompanyBankAccountMutationKey = () => ["createCompanyBankAccount"] as const;
+
+export const getCreateCompanyBankAccountMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCompanyBankAccount>>,
+    TError,
+    CreateCompanyBankAccountMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createCompanyBankAccount>>,
+  TError,
+  CreateCompanyBankAccountMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateCompanyBankAccountMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createCompanyBankAccount>>,
+    CreateCompanyBankAccountMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createCompanyBankAccount(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateCompanyBankAccountMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createCompanyBankAccount>>
+>;
+export type CreateCompanyBankAccountMutationBody = CompanyBankAccountIn;
+export type CreateCompanyBankAccountMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse
+>;
+export type CreateCompanyBankAccountMutationVariables = { data: CompanyBankAccountIn };
+
+/**
+ * @summary Добавить банковский счёт
+ */
+export const useCreateCompanyBankAccount = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createCompanyBankAccount>>,
+      TError,
+      CreateCompanyBankAccountMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createCompanyBankAccount>>,
+  TError,
+  CreateCompanyBankAccountMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateCompanyBankAccountMutationOptions(options), queryClient);
+};
+
+export const getUpdateCompanyBankAccountUrl = (id: string) => {
+  return `/api/v1/admin/company/bank-accounts/${id}`;
+};
+
+/**
+ * Раздел `company.settings` — полный.
+ * @summary Изменить банковский счёт
+ */
+export const updateCompanyBankAccount = async (
+  id: string,
+  companyBankAccountUpdate: CompanyBankAccountUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<CompanyBankAccount> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CompanyBankAccount>(getUpdateCompanyBankAccountUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(companyBankAccountUpdate),
+  });
+};
+
+export const getUpdateCompanyBankAccountMutationKey = () => ["updateCompanyBankAccount"] as const;
+
+export const getUpdateCompanyBankAccountMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateCompanyBankAccount>>,
+    TError,
+    UpdateCompanyBankAccountMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateCompanyBankAccount>>,
+  TError,
+  UpdateCompanyBankAccountMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateCompanyBankAccountMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateCompanyBankAccount>>,
+    UpdateCompanyBankAccountMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateCompanyBankAccount(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateCompanyBankAccountMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateCompanyBankAccount>>
+>;
+export type UpdateCompanyBankAccountMutationBody = CompanyBankAccountUpdate;
+export type UpdateCompanyBankAccountMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | ValidationFailedResponse
+>;
+export type UpdateCompanyBankAccountMutationVariables = {
+  id: string;
+  data: CompanyBankAccountUpdate;
+};
+
+/**
+ * @summary Изменить банковский счёт
+ */
+export const useUpdateCompanyBankAccount = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateCompanyBankAccount>>,
+      TError,
+      UpdateCompanyBankAccountMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateCompanyBankAccount>>,
+  TError,
+  UpdateCompanyBankAccountMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateCompanyBankAccountMutationOptions(options), queryClient);
+};
+
+export const getDeleteCompanyBankAccountUrl = (id: string) => {
+  return `/api/v1/admin/company/bank-accounts/${id}`;
+};
+
+/**
+ * Раздел `company.settings` — полный.
+ * @summary Удалить банковский счёт
+ */
+export const deleteCompanyBankAccount = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getDeleteCompanyBankAccountUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteCompanyBankAccountMutationKey = () => ["deleteCompanyBankAccount"] as const;
+
+export const getDeleteCompanyBankAccountMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteCompanyBankAccount>>,
+    TError,
+    DeleteCompanyBankAccountMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteCompanyBankAccount>>,
+  TError,
+  DeleteCompanyBankAccountMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteCompanyBankAccountMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteCompanyBankAccount>>,
+    DeleteCompanyBankAccountMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteCompanyBankAccount(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteCompanyBankAccountMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteCompanyBankAccount>>
+>;
+
+export type DeleteCompanyBankAccountMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse
+>;
+export type DeleteCompanyBankAccountMutationVariables = { id: string };
+
+/**
+ * @summary Удалить банковский счёт
+ */
+export const useDeleteCompanyBankAccount = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteCompanyBankAccount>>,
+      TError,
+      DeleteCompanyBankAccountMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteCompanyBankAccount>>,
+  TError,
+  DeleteCompanyBankAccountMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteCompanyBankAccountMutationOptions(options), queryClient);
+};
 
 export const getListChargeTemplatesUrl = () => {
   return `/api/v1/admin/company/charge-templates`;
