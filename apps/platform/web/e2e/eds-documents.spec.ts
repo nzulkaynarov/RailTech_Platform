@@ -63,7 +63,9 @@ test.describe("Создать документ: сотрудник", () => {
       .getByRole("link", { name: /^Внутренний документ/ })
       .click();
     await expect(page).toHaveURL(/\/eds\/new\?type=memo$/);
-    await expect(page.getByRole("heading", { level: 1, name: "Создать документ" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Внутренний документ" }),
+    ).toBeVisible();
     await expect(page.getByLabel("Кому")).toHaveValue("Директор");
 
     await fillMemo(
@@ -300,7 +302,9 @@ test.describe("Создать документ: axe и снимки", () => {
       await loginAndWait(page, "director@demo.example");
 
       await spaGoto(page, "/eds/new");
-      await expect(page.getByRole("heading", { level: 1, name: "Создать документ" })).toBeVisible();
+      await expect(
+        page.getByRole("heading", { level: 1, name: "Внутренний документ" }),
+      ).toBeVisible();
       await expectNoViolations(page, `форма ${String(width)}`);
       await settledScreenshot(page, "a11y-form");
 
@@ -373,7 +377,9 @@ test.describe("Создать документ: телефон", () => {
       await expect(page.getByRole("dialog", { name: "Документ" })).toHaveCount(0);
 
       await spaGoto(page, "/eds/new");
-      await expect(page.getByRole("heading", { level: 1, name: "Создать документ" })).toBeVisible();
+      await expect(
+        page.getByRole("heading", { level: 1, name: "Внутренний документ" }),
+      ).toBeVisible();
       await fillMemo(page, "Заказ воды для офиса", "Прошу согласовать заказ питьевой воды.");
       const submit = page.getByRole("button", { name: "Отправить на согласование" });
       await expect(submit).toBeVisible();
