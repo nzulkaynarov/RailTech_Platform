@@ -409,6 +409,20 @@
     "title": {
       "letter": "Outgoing letter",
       "internal": "Internal document"
+    },
+    "steps": {
+      "aboutLetter": "Subject and addressee",
+      "aboutInternal": "Subject",
+      "body": "Text and attachments",
+      "routeLetter": "Approval and signature",
+      "routeInternal": "Approval",
+      "check": "Review and send",
+      "replyTo": "reply to {{number}}",
+      "currency": "UZS",
+      "textFilled": "Text written",
+      "textEmpty": "No text yet",
+      "files_one": "{{count}} attachment",
+      "files_other": "{{count}} attachments"
     }
   },
   "preview": {

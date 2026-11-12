@@ -64,6 +64,19 @@ function type(label: string | RegExp, value: string) {
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
 }
 
+/** Открыть секцию формы (секции по шагам, platform-frontend.md §4.1a) щелчком по её заголовку. */
+function step(title: RegExp) {
+  fireEvent.click(screen.getByRole("button", { name: title, expanded: false }));
+}
+
+/** Нажать кнопку шага «Проверка и отправка». */
+async function press(name: string) {
+  const head = screen.queryByRole("button", { name: /Проверка и отправка/, expanded: false });
+  if (head) fireEvent.click(head);
+  // Значок загрузки уходит с анимацией, которой в jsdom нет: имя кнопки на миг содержит «loading».
+  fireEvent.click(await screen.findByRole("button", { name: new RegExp(`${name}$`) }));
+}
+
 function fillMemo(subject = "Закупка канцтоваров", text = "Прошу согласовать закупку.") {
   type("Тема", subject);
   type("Текст", text);
@@ -73,18 +86,24 @@ describe("EDS · Создать документ: форма", () => {
   it("служебная записка по умолчанию: тема, кому (директор), текст, сумма, срок, вложения, главная и вторичная кнопки", async () => {
     await openForm("manager@demo.example");
 
+    // шаг 1 «О чём» открыт: тип, тема, кому, сумма, срок, связь с проектом
     expect(screen.getByLabelText("Тип документа")).toBeInTheDocument();
     expect(screen.getByLabelText("Тема")).toBeVisible();
     expect(screen.getByLabelText("Кому")).toHaveValue("Директор");
     expect(screen.getByLabelText("Кому")).toHaveAttribute("readonly");
-    expect(screen.getByLabelText("Текст")).toBeVisible();
     expect(screen.getByLabelText("Сумма, сум")).toBeVisible();
     expect(screen.getByLabelText("Нужно до")).toBeVisible();
-    expect(screen.getByLabelText("Вложения")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Отправить на согласование" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "Сохранить черновик" })).toBeVisible();
     // менеджеру открыты заявки: поле «Связь с проектом» есть
     expect(screen.getByLabelText("Связь с проектом")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Сохранить черновик" })).toBeVisible();
+    // шаг 2 «Текст и вложения»
+    step(/Текст и вложения/);
+    expect(screen.getByLabelText("Текст")).toBeVisible();
+    expect(screen.getByLabelText("Вложения")).toBeVisible();
+    expect(screen.getByLabelText("Тема")).not.toBeVisible();
+    // шаг 4 «Проверка и отправка»: главная кнопка — в конце
+    step(/Проверка и отправка/);
+    expect(screen.getByRole("button", { name: "Отправить на согласование" })).toBeVisible();
   });
 
   it("?type=letter у роли с доступом к входящим: письмо на бланке — адресат, почта, «кому», блоки, подписант; без суммы и срока", async () => {
@@ -96,11 +115,14 @@ describe("EDS · Создать документ: форма", () => {
     expect(screen.queryByLabelText("Кому")).toBeNull();
     expect(screen.queryByLabelText("Сумма, сум")).toBeNull();
     expect(screen.queryByLabelText("Нужно до")).toBeNull();
+    step(/Текст и вложения/);
     expect(screen.getByLabelText("Текст")).toBeVisible();
-    // подписант по умолчанию — из бланка компании
+    // подписант по умолчанию — из бланка компании (шаг «Согласование и подпись»)
+    step(/Согласование и подпись/);
     expect(
       await screen.findByText("Пусто — подписант бланка: Каримов А. А., Директор."),
     ).toBeVisible();
+    step(/Проверка и отправка/);
     expect(screen.getByRole("button", { name: "Зарегистрировать письмо" })).toBeVisible();
     type("Почта адресата", "gni@example.uz");
     expect(screen.getByRole("button", { name: "Зарегистрировать и отправить" })).toBeVisible();
@@ -118,7 +140,7 @@ describe("EDS · Создать документ: форма", () => {
     type("Тема", "Ответ на требование");
     type("Адресат (организация)", "ГНИ Мирабадского района");
     type("Текст", "Направляем пояснения.");
-    fireEvent.click(screen.getByRole("button", { name: "Передать на регистрацию" }));
+    await press("Передать на регистрацию");
 
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/eds/documents");
@@ -164,7 +186,7 @@ describe("EDS · Создать документ: форма", () => {
 
     type("Тема", "Пояснения по требованию");
     type("Текст", "Направляем пояснения.");
-    fireEvent.click(screen.getByRole("button", { name: "Передать на регистрацию" }));
+    await press("Передать на регистрацию");
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/eds/documents");
     });
@@ -211,19 +233,25 @@ describe("EDS · Создать документ: форма", () => {
   it("«Что произойдёт» и маршрут: без суммы — директор; с суммой — ещё и бухгалтер", async () => {
     await openForm("manager@demo.example");
 
-    expect(screen.getByText("Вы → Директор")).toBeVisible();
+    // маршрут — в свёрнутой строке шага «Согласование» и внутри него
+    step(/Согласование/);
+    const route = screen.getByRole("region", { name: /Согласование/ });
+    expect(within(route).getByText("Вы → Директор")).toBeVisible();
 
     type("Сумма, сум", "1 500 000");
 
-    expect(screen.getByText("Вы → Директор → Бухгалтер (есть сумма)")).toBeVisible();
+    expect(within(route).getByText("Вы → Директор → Бухгалтер (есть сумма)")).toBeVisible();
   });
 
   it("обязательные поля: пустая отправка подсвечивает тему и текст, ничего не уходит на сервер", async () => {
     await openForm("manager@demo.example");
 
-    fireEvent.click(screen.getByRole("button", { name: "Отправить на согласование" }));
+    await press("Отправить на согласование");
 
+    // ошибка открывает свою секцию: тема — шаг 1; у шага 2 отметка «Нужно исправить»
     expect(await screen.findByText("Укажите тему.")).toBeVisible();
+    expect(screen.getByRole("button", { name: /Текст и вложения.*Нужно исправить/ })).toBeVisible();
+    step(/Текст и вложения/);
     expect(screen.getByText("Напишите текст документа.")).toBeVisible();
     expect(screen.getByLabelText("Тема")).toHaveAttribute("aria-invalid", "true");
     await waitFor(() => {
@@ -265,7 +293,7 @@ describe("EDS · Создать документ: форма", () => {
     fillMemo("Закупка мебели для переговорной", "Прошу согласовать закупку трёх столов.");
     type("Сумма, сум", "3 600 000");
 
-    fireEvent.click(screen.getByRole("button", { name: "Отправить на согласование" }));
+    await press("Отправить на согласование");
 
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/eds/documents");
@@ -286,7 +314,7 @@ describe("EDS · Создать документ: форма", () => {
     fillMemo("Командировка", "Нужна командировка. [сбой]");
     type("Сумма, сум", "500 000");
 
-    fireEvent.click(screen.getByRole("button", { name: "Отправить на согласование" }));
+    await press("Отправить на согласование");
 
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent(
@@ -301,8 +329,7 @@ describe("EDS · Создать документ: форма", () => {
     expect(screen.getByLabelText("Тип документа")).toBeDisabled();
 
     type("Текст", "Нужна командировка.");
-    // Значок загрузки уходит с анимацией, которой в jsdom нет: имя кнопки на миг содержит «loading».
-    fireEvent.click(await screen.findByRole("button", { name: /Отправить на согласование/ }));
+    await press("Отправить на согласование");
 
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/eds/documents");
@@ -338,6 +365,7 @@ describe("EDS · Создать документ: форма", () => {
 
   it("вложение: файл загружается сразу, его можно убрать; слишком большой не отправляется", async () => {
     await openForm("manager@demo.example");
+    step(/Текст и вложения/);
     const input = screen.getByLabelText("Вложения");
 
     fireEvent.change(input, {
@@ -368,7 +396,10 @@ describe("EDS · Создать документ: форма", () => {
     // черновик менеджера из демо-данных: «Ремонт кондиционера в переговорной», № СЗ-2026/033
     await openForm("manager@demo.example", "?draft=00000000-0000-4000-8000-000000000004");
 
-    expect(await screen.findByDisplayValue("Ремонт кондиционера в переговорной")).toBeVisible();
+    // черновик открывается на шаге «Проверка и отправка»; поля заполнены
+    expect(
+      await screen.findByDisplayValue("Ремонт кондиционера в переговорной"),
+    ).toBeInTheDocument();
     expect(screen.getByLabelText("Текст")).toHaveValue(
       "Нужно заменить компрессор в кондиционере переговорной комнаты.",
     );
@@ -376,6 +407,7 @@ describe("EDS · Создать документ: форма", () => {
     expect(
       screen.getByText("Черновик СЗ-2026/033: правки сохраняются, отправить можно в любой момент."),
     ).toBeVisible();
+    step(/О чём/);
     expect(screen.getByText("Тип нельзя менять после создания.")).toBeVisible();
   });
 
@@ -417,7 +449,7 @@ describe("EDS · Создать документ: форма", () => {
     fillMemo("Командировка", "Нужна командировка.");
 
     const send = async () => {
-      fireEvent.click(await screen.findByRole("button", { name: /Отправить на согласование/ }));
+      await press("Отправить на согласование");
       await waitFor(() => {
         expect(keys.length).toBeGreaterThan(sent);
       });
@@ -447,6 +479,6 @@ describe("два экрана: исходящее письмо и внутрен
     await openForm("manager@demo.example", "?type=report");
     expect(screen.getByRole("heading", { level: 1, name: "Внутренний документ" })).toBeVisible();
     expect(screen.getByLabelText("Тип документа")).toBeInTheDocument();
-    expect(screen.getByText("Отчёт")).toBeInTheDocument();
+    expect(screen.getAllByText("Отчёт").length).toBeGreaterThan(0);
   });
 });

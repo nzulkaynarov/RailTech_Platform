@@ -409,6 +409,22 @@
     "title": {
       "letter": "Исходящее письмо",
       "internal": "Внутренний документ"
+    },
+    "steps": {
+      "aboutLetter": "О чём и кому",
+      "aboutInternal": "О чём",
+      "body": "Текст и вложения",
+      "routeLetter": "Согласование и подпись",
+      "routeInternal": "Согласование",
+      "check": "Проверка и отправка",
+      "replyTo": "в ответ на {{number}}",
+      "currency": "сум",
+      "textFilled": "Текст заполнен",
+      "textEmpty": "Текста ещё нет",
+      "files_one": "{{count}} вложение",
+      "files_few": "{{count}} вложения",
+      "files_many": "{{count}} вложений",
+      "files_other": "{{count}} вложения"
     }
   },
   "preview": {

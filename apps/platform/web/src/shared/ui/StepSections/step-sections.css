@@ -1,0 +1,106 @@
+/* Секции по шагам (platform-frontend.md §4.1a) */
+.pf-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pf-step {
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+}
+.pf-step[data-open] {
+  border-color: #91caff;
+}
+.pf-step[data-invalid] {
+  border-color: #ffccc7;
+}
+.pf-step-heading {
+  margin: 0;
+  font-size: inherit;
+  font-weight: inherit;
+}
+.pf-step-head {
+  width: 100%;
+  min-height: 52px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  color: #1f1f1f;
+  font: inherit;
+}
+.pf-step-badge {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  border-radius: 12px;
+  border: 1px solid #d9d9d9;
+  color: #595959;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+}
+.pf-step[data-open] .pf-step-badge {
+  background: #1668dc;
+  border-color: #1668dc;
+  color: #fff;
+}
+.pf-step:not([data-open]) .pf-step-badge:has(.anticon-check) {
+  background: #237804;
+  border-color: #237804;
+  color: #fff;
+}
+.pf-step[data-invalid] .pf-step-badge {
+  background: #fff2f0;
+  border-color: #a8071a;
+  color: #a8071a;
+}
+.pf-step-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.pf-step-title {
+  font-weight: 600;
+}
+.pf-step-summary {
+  font-size: 12px;
+  color: #595959;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pf-step-error {
+  font-size: 12px;
+  color: #a8071a;
+}
+.pf-step-edit {
+  color: #0958d9;
+  font-size: 13px;
+  flex: 0 0 auto;
+}
+.pf-step-body {
+  padding: 0 16px 16px 52px;
+}
+.pf-step-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+@media (max-width: 767px) {
+  .pf-step-body {
+    padding: 0 12px 12px;
+  }
+}
