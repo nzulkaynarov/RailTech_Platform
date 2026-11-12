@@ -27,6 +27,7 @@ import { DateField } from "../../../shared/ui/DateField";
 import { FormField, QueryState } from "../../../shared/ui/FormParts";
 import { FormModal, PriceCell } from "./common";
 import { errorFields } from "./errors";
+import { localName } from "../../eds/dictionaries";
 import { queryLabels } from "./labels";
 import { OFFER_SOURCES } from "./kinds";
 import { useDebounced } from "./useDebounced";
@@ -45,7 +46,7 @@ export function SupplierForm({
   onClose: () => void;
   onSaved: (supplier: SupplierDetail) => void;
 }) {
-  const { t } = useTranslation("catalog");
+  const { t, i18n } = useTranslation("catalog");
   const queryClient = useQueryClient();
   const lookups = useGetCatalogLookups();
   const [name, setName] = useState(supplier?.name ?? "");
@@ -126,7 +127,10 @@ export function SupplierForm({
             onChange={(value: string | null | undefined) => {
               setCountry(value ?? null);
             }}
-            options={(lookups.data?.countries ?? []).map((c) => ({ value: c.id, label: c.name }))}
+            options={(lookups.data?.countries ?? []).map((c) => ({
+              value: c.id,
+              label: localName(c.names, i18n.language),
+            }))}
           />
         </FormField>
         <FormField id={ids.currency} label={t("supplierForm.currency")}>

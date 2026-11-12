@@ -11151,6 +11151,8 @@ export interface components {
       name: string;
       sort_order: number;
       is_active: boolean;
+      /** @description Название на трёх языках — у справочников, которые их хранят */
+      names?: components["schemas"]["LocalizedName"];
       /** @description Валюта: знак */
       symbol?: string;
       /** @description Страна: ISO alpha-2 */
@@ -14882,7 +14884,13 @@ export interface components {
         code: string;
         symbol: string;
       }[];
-      countries: components["schemas"]["CatalogNamedRef"][];
+      countries: components["schemas"]["CatalogCountryRef"][];
+    };
+    /** @description Страна для выбора; название на языке интерфейса выбирает экран */
+    CatalogCountryRef: {
+      id: components["schemas"]["CompanyItemRef"];
+      name: string;
+      names: components["schemas"]["LocalizedName"];
     };
     SupplierRow: {
       id: components["schemas"]["CompanyItemRef"];

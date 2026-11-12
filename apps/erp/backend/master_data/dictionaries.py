@@ -17,6 +17,7 @@ from typing import Any, Literal, Optional
 from django.db import IntegrityError, models, transaction
 from django.db.models import ProtectedError
 
+from .country_names import fill_missing_names
 from .models import Country, Currency, DeliveryBasis, UnitOfMeasure
 
 AttrType = Literal["boolean", "text", "decimal"]
@@ -259,6 +260,8 @@ def create(kind: str, data: dict[str, Any]) -> dict[str, Any]:
     _apply(spec, row, data)
     if spec.model is Country:
         row.alpha2 = code[:2]
+        # Названия, которые не ввели, — из CLDR: страна по коду сразу видна на трёх языках.
+        fill_missing_names(row)
     last = spec.model.objects.order_by("-sort_order").values_list("sort_order", flat=True).first() or 0
     row.sort_order = last + 10
     try:

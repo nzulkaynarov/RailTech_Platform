@@ -4,8 +4,9 @@
 домен и область экрана и проверяет ответ домена по этим схемам.
 """
 
+from collections.abc import Mapping
 from datetime import datetime
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
@@ -26,6 +27,15 @@ class LocalizedName(BaseModel):
     ru: str
     uz: str
     en: str
+
+
+def localized(raw: Mapping[str, Any]) -> LocalizedName:
+    """Название строки ERP из `name`, `name_uz`, `name_en` — у справочников «Расчёта»."""
+    return LocalizedName(
+        ru=str(raw.get("name") or ""),
+        uz=str(raw.get("name_uz") or ""),
+        en=str(raw.get("name_en") or ""),
+    )
 
 
 class LocalizedNameIn(_In):

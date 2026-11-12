@@ -1419,6 +1419,8 @@ async def test_reference_lists_include_inactive_and_only_kind_fields(
                     "id": 2,
                     "code": "UZ",
                     "name": "Узбекистан",
+                    "name_uz": "O‘zbekiston",
+                    "name_en": "Uzbekistan",
                     "sort_order": 0,
                     "is_active": False,
                     "alpha2": "UZ",
@@ -1466,6 +1468,12 @@ async def test_reference_lists_include_inactive_and_only_kind_fields(
     assert cou.json()["items"][0]["vat_rate"] is None
     assert cou.json()["items"][0]["is_active"] is False
     assert "symbol" not in cou.json()["items"][0]
+    assert cou.json()["items"][0]["names"] == {
+        "ru": "Узбекистан",
+        "uz": "O‘zbekiston",
+        "en": "Uzbekistan",
+    }
+    assert "names" not in cur.json()["items"][0]  # у ERP без name_uz названий на трёх языках нет
     assert bas.json()["items"][0]["seller_pays_freight"] is False
     assert bad.status_code == 422
 

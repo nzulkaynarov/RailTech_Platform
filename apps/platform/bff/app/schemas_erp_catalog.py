@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.feeds.numbers import deal_number
 from app.schemas_company import Body, Patch, dec, ident, opt_ident, text
+from app.schemas_dictionaries import LocalizedName
 
 ItemKind = Literal["stock", "on_order", "service_fixed", "service_milestones", "service_time"]
 BrigadeKindName = Literal["brigade", "person", "subcontractor"]
@@ -1110,11 +1111,16 @@ class DocumentKindRef(Out):
     client_visible_default: bool
 
 
+class CountryRef(NamedRef):
+    #: Название на языке интерфейса выбирает экран
+    names: LocalizedName
+
+
 class Lookups(Out):
     units: list[Unit]
     categories: list[LookupCategory]
     currencies: list[LookupCurrency]
-    countries: list[NamedRef]
+    countries: list[CountryRef]
     delivery_bases: list[DeliveryBasisRef]
     document_kinds: list[DocumentKindRef]
 

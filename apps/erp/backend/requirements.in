@@ -49,6 +49,8 @@ numpy>=1.26,<2
 pandas>=2.2,<2.3
 openpyxl>=3.1.5
 XlsxWriter>=3.2
+# Country names in ru/uz/en from Unicode CLDR (reference-data plan, PR 6); BSD-3-Clause
+Babel>=2.17
 
 # PDF
 weasyprint>=68.0

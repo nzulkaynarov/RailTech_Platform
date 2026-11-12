@@ -142,6 +142,7 @@ export * from "./catalogCategoryIn";
 export * from "./catalogCategoryList";
 export * from "./catalogCategoryUpdate";
 export * from "./catalogConflictResponse";
+export * from "./catalogCountryRef";
 export * from "./catalogDocumentKind";
 export * from "./catalogImage";
 export * from "./catalogImageUpdate";

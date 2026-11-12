@@ -742,7 +742,18 @@ export const adminCompanyHandlers = [
   http.get("*/admin/company/reference/:kind", ({ params }) => {
     const kind = params["kind"];
     if (!isKind(kind)) return validation(["kind"]);
-    return read("read", (_c, s) => ({ items: s.reference[kind] }));
+    // Как BFF: у справочников ERP с названиями на трёх языках — `names` (план справочников, PR 6).
+    return read("read", (_c, s) => ({
+      items: s.reference[kind].map((row) => {
+        const { name_uz, name_en, ...rest } = row as typeof row & {
+          name_uz?: string;
+          name_en?: string;
+        };
+        return name_uz === undefined
+          ? rest
+          : { ...rest, names: { ru: row.name, uz: name_uz, en: name_en ?? "" } };
+      }),
+    }));
   }),
   http.post("*/admin/company/reference/:kind", ({ request, params }) => {
     const kind = params["kind"];

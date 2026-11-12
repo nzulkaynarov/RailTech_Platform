@@ -4,6 +4,7 @@
  */
 import type { CompanyItemRef } from "./companyItemRef";
 import type { DecimalString } from "./decimalString";
+import type { LocalizedName } from "./localizedName";
 
 /**
  * Строка справочника; поля вне вида справочника не приходят.
@@ -22,6 +23,8 @@ export interface ReferenceItem {
   name: string;
   sort_order: number;
   is_active: boolean;
+  /** Название на трёх языках — у справочников, которые их хранят */
+  names?: LocalizedName;
   /** Валюта: знак */
   symbol?: string;
   /** Страна: ISO alpha-2 */
