@@ -123,5 +123,16 @@
   },
   "confirm": {
     "cancel": "Cancel"
+  },
+  "table": {
+    "columns": "Columns",
+    "reset": "Reset",
+    "pin": "Pin to the left: {{name}}",
+    "unpin": "Unpin: {{name}}",
+    "moveUp": "Move up: {{name}}",
+    "moveDown": "Move down: {{name}}",
+    "resize": "Width of “{{name}}”: drag, double-click to fit content",
+    "narrower": "Narrower: {{name}}",
+    "wider": "Wider: {{name}}"
   }
 }

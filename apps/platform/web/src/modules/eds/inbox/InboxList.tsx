@@ -16,10 +16,9 @@ import { getListLettersQueryKey, listLetters } from "../../../shared/api/generat
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { useShownKey } from "../../../shared/lib/useShownKey";
-import { DataBlock, ListSkeleton, TableCols } from "../../../shared/ui/DataBlock";
-import { tableMinWidth } from "../../../shared/ui/tableWidth";
+import { DataBlock, ListSkeleton } from "../../../shared/ui/DataBlock";
+import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTable";
 import { EmptyState } from "../../../shared/ui/EmptyState";
-import { ScrollRegion } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { StatusTag } from "../../../shared/ui/StatusTag";
@@ -34,7 +33,15 @@ const PAGE = 25;
  * карточке на телефоне), исполнитель, срок, получено, статус, действие. На 1440 с открытым подменю таблица помещается в
  * рабочую область (1111 px) без прокрутки вбок (T1).
  */
-const COLS = [108, null, 160, 136, 104, 104, 168, 104] as const;
+const COLS = {
+  number: 108,
+  correspondent: 160,
+  executor: 136,
+  due: 104,
+  received: 104,
+  status: 168,
+  action: 104,
+};
 /** Фильтры журнала (P8b, SPEC-v3 §3.2a п. 6): «На контроле» и «Просрочено» — признаки EDS, не статусы. */
 type Flag = "on_control" | "overdue";
 type Filter = LetterStatus | Flag | "all";
@@ -144,94 +151,122 @@ function Rows({ items, selected }: { items: readonly LetterRow[]; selected: stri
       </ul>
     );
   }
+  // Ширины по типу (COLS, T1); остальное — настройка сотрудника в «Столбцах» (пункт «Т»).
+  const columns: DataColumn<LetterRow>[] = [
+    {
+      id: "number",
+      header: t("list.columns.number"),
+      width: COLS.number,
+      cellClassName: "pf-num",
+      cell: (row) => (
+        <Link
+          className="pf-focusable pf-letters-number"
+          to={select(row.number)}
+          replace
+          aria-label={t("list.select", { number: row.number })}
+          aria-current={selected === row.number ? "true" : undefined}
+        >
+          {row.number}
+        </Link>
+      ),
+    },
+    {
+      id: "subject",
+      header: t("list.columns.subject"),
+      width: null,
+      cell: (row) => (
+        <>
+          {row.subject}
+          {row.urgent ? (
+            <>
+              {" "}
+              <StatusTag tone="red">{t("list.urgent")}</StatusTag>
+            </>
+          ) : null}
+        </>
+      ),
+    },
+    {
+      id: "correspondent",
+      header: t("list.columns.correspondent"),
+      width: COLS.correspondent,
+      cell: (row) => (
+        <>
+          <div className="pf-ell" title={row.client_name ?? undefined}>
+            {row.client_name ?? "—"}
+          </div>
+          {row.request_number ? (
+            <div className="pf-hint pf-num pf-ell">
+              <span className="pf-sr-only">{t("list.columns.request")}: </span>
+              {row.request_number}
+            </div>
+          ) : null}
+        </>
+      ),
+    },
+    {
+      id: "executor",
+      header: t("list.columns.executor"),
+      width: COLS.executor,
+      cellClassName: "pf-ell",
+      cellTitle: (row) => row.executor?.name ?? undefined,
+      cell: (row) => row.executor?.name ?? "—",
+    },
+    {
+      id: "due",
+      header: t("list.columns.due"),
+      width: COLS.due,
+      cellClassName: "pf-num",
+      cell: (row) => <Due row={row} />,
+    },
+    {
+      id: "received",
+      header: t("list.columns.received"),
+      width: COLS.received,
+      cellClassName: "pf-num",
+      cell: (row) => date(row.received_at),
+    },
+    {
+      id: "status",
+      header: t("list.columns.status"),
+      width: COLS.status,
+      cell: (row) => <StatusTag kind="incoming" status={row.status} />,
+    },
+    {
+      id: "action",
+      header: t("list.columns.action"),
+      headerHidden: true,
+      width: COLS.action,
+      cell: (row) => (
+        <LinkButton
+          size="small"
+          to={letterPath(row.number)}
+          aria-label={t("list.openLabel", { number: row.number })}
+        >
+          {t("list.open")}
+        </LinkButton>
+      ),
+    },
+  ];
   return (
-    <ScrollRegion label={t("list.scroll")}>
-      <table
-        className="pf-letters-table pf-fixed-table"
-        style={{ minWidth: tableMinWidth(COLS, 224) }}
-      >
-        <caption className="pf-sr-only">{t("list.caption")}</caption>
-        <TableCols widths={COLS} />
-        <thead>
-          <tr>
-            <th scope="col">{t("list.columns.number")}</th>
-            <th scope="col">{t("list.columns.subject")}</th>
-            <th scope="col">{t("list.columns.correspondent")}</th>
-            <th scope="col">{t("list.columns.executor")}</th>
-            <th scope="col">{t("list.columns.due")}</th>
-            <th scope="col">{t("list.columns.received")}</th>
-            <th scope="col">{t("list.columns.status")}</th>
-            <th scope="col">
-              <span className="pf-sr-only">{t("list.columns.action")}</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((row) => (
-            <tr
-              key={row.id}
-              data-selected={selected === row.number}
-              onClick={(event) => {
-                // Клик по строке — письмо в боковом окне; ссылки и кнопки внутри работают сами.
-                if ((event.target as HTMLElement).closest("a,button")) return;
-                void navigate(select(row.number), { replace: true });
-              }}
-            >
-              <td className="pf-num">
-                <Link
-                  className="pf-focusable pf-letters-number"
-                  to={select(row.number)}
-                  replace
-                  aria-label={t("list.select", { number: row.number })}
-                  aria-current={selected === row.number ? "true" : undefined}
-                >
-                  {row.number}
-                </Link>
-              </td>
-              <td>
-                {row.subject}
-                {row.urgent ? (
-                  <>
-                    {" "}
-                    <StatusTag tone="red">{t("list.urgent")}</StatusTag>
-                  </>
-                ) : null}
-              </td>
-              <td>
-                <div className="pf-ell" title={row.client_name ?? undefined}>
-                  {row.client_name ?? "—"}
-                </div>
-                {row.request_number ? (
-                  <div className="pf-hint pf-num pf-ell">
-                    <span className="pf-sr-only">{t("list.columns.request")}: </span>
-                    {row.request_number}
-                  </div>
-                ) : null}
-              </td>
-              <td className="pf-ell" title={row.executor?.name ?? undefined}>
-                {row.executor?.name ?? "—"}
-              </td>
-              <td className="pf-num">
-                <Due row={row} />
-              </td>
-              <td className="pf-num">{date(row.received_at)}</td>
-              <td>
-                <StatusTag kind="incoming" status={row.status} />
-              </td>
-              <td>
-                <LinkButton
-                  size="small"
-                  to={letterPath(row.number)}
-                  aria-label={t("list.openLabel", { number: row.number })}
-                >
-                  {t("list.open")}
-                </LinkButton>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </ScrollRegion>
+    <DataTable
+      tableId="eds.inbox"
+      caption={t("list.caption")}
+      scrollLabel={t("list.scroll")}
+      className="pf-letters-table"
+      flexMin={224}
+      columns={columns}
+      rows={items}
+      rowKey={(row) => row.id}
+      rowAttrs={(row) => ({
+        "data-selected": selected === row.number,
+        onClick: (event) => {
+          // Клик по строке — письмо в боковом окне; ссылки и кнопки внутри работают сами.
+          if ((event.target as HTMLElement).closest("a,button")) return;
+          void navigate(select(row.number), { replace: true });
+        },
+      })}
+    />
   );
 }
 

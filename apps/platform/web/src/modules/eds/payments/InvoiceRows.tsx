@@ -5,9 +5,7 @@ import { useAuth } from "../../../app/auth/useAuth";
 import { useViewport } from "../../../app/shell/useViewport";
 import type { PaymentRow } from "../../../shared/api/generated/model";
 import { useFormat } from "../../../shared/lib/useFormat";
-import { TableCols } from "../../../shared/ui/DataBlock";
-import { tableMinWidth } from "../../../shared/ui/tableWidth";
-import { ScrollRegion } from "../../../shared/ui/FormParts";
+import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTable";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { withParams } from "../inbox/api";
@@ -15,7 +13,14 @@ import { InvoiceStatus } from "./InvoiceStatus";
 import { invoicePath, moneyProps, rowAction } from "./model";
 
 /** Ширины колонок: номер и проект, клиент (гибкая), сумма, выставлен, срок, статус, действие (UX-1c, S9) */
-const COLS = [140, null, 150, 110, 140, 170, 140] as const;
+const COLS = {
+  number: 140,
+  amount: 150,
+  issued: 110,
+  due: 140,
+  status: 170,
+  action: 140,
+};
 
 function useSelect() {
   const [params] = useSearchParams();
@@ -129,72 +134,104 @@ export function InvoiceRows({
       </ul>
     );
   }
+  // Ширины по типу (COLS, T1); остальное — настройка сотрудника в «Столбцах» (пункт «Т»).
+  const columns: DataColumn<PaymentRow>[] = [
+    {
+      id: "number",
+      header: t("list.columns.number"),
+      width: COLS.number,
+      cellClassName: "pf-num",
+      cell: (row) => (
+        <>
+          <Link
+            className="pf-focusable pf-dec-number"
+            to={select(row)}
+            replace
+            aria-label={t("list.select", { number: row.number })}
+            aria-current={isSelected(row) ? "true" : undefined}
+          >
+            {row.number}
+          </Link>
+          <div className="pf-hint">{row.project_number}</div>
+        </>
+      ),
+    },
+    {
+      id: "client",
+      header: t("list.columns.client"),
+      width: null,
+      cellClassName: "pf-ell",
+      cellTitle: (row) => row.client_name,
+      cell: (row) => row.client_name,
+    },
+    {
+      id: "amount",
+      header: t("list.columns.amount"),
+      width: COLS.amount,
+      numeric: true,
+      cell: (row) => (
+        <>
+          <Amount row={row} />
+        </>
+      ),
+    },
+    {
+      id: "issued",
+      header: t("list.columns.issued"),
+      width: COLS.issued,
+      cellClassName: "pf-num",
+      cell: (row) => (row.issued_at ? date(row.issued_at) : "—"),
+    },
+    {
+      id: "due",
+      header: t("list.columns.due"),
+      width: COLS.due,
+      cellClassName: "pf-num",
+      cell: (row) => (
+        <>
+          <Due row={row} />
+        </>
+      ),
+    },
+    {
+      id: "status",
+      header: t("list.columns.status"),
+      width: COLS.status,
+      cell: (row) => (
+        <>
+          <InvoiceStatus status={row.status} />
+        </>
+      ),
+    },
+    {
+      id: "action",
+      header: t("list.columns.action"),
+      headerHidden: true,
+      width: COLS.action,
+      cell: (row) => (
+        <>
+          <ActionButton row={row} />
+        </>
+      ),
+    },
+  ];
   return (
-    <ScrollRegion label={t("list.scroll")}>
-      <table
-        className="pf-dec-table pf-pay-table pf-fixed-table"
-        style={{ minWidth: tableMinWidth(COLS, 200) }}
-      >
-        <caption className="pf-sr-only">{t("list.caption")}</caption>
-        <TableCols widths={COLS} />
-        <thead>
-          <tr>
-            <th scope="col">{t("list.columns.number")}</th>
-            <th scope="col">{t("list.columns.client")}</th>
-            <th scope="col" className="pf-col-num">
-              {t("list.columns.amount")}
-            </th>
-            <th scope="col">{t("list.columns.issued")}</th>
-            <th scope="col">{t("list.columns.due")}</th>
-            <th scope="col">{t("list.columns.status")}</th>
-            <th scope="col">
-              <span className="pf-sr-only">{t("list.columns.action")}</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((row) => (
-            <tr
-              key={row.id}
-              data-row
-              data-selected={isSelected(row)}
-              onClick={(event) => {
-                if ((event.target as HTMLElement).closest("a,button")) return;
-                void navigate(select(row), { replace: true });
-              }}
-            >
-              <td className="pf-num">
-                <Link
-                  className="pf-focusable pf-dec-number"
-                  to={select(row)}
-                  replace
-                  aria-label={t("list.select", { number: row.number })}
-                  aria-current={isSelected(row) ? "true" : undefined}
-                >
-                  {row.number}
-                </Link>
-                <div className="pf-hint">{row.project_number}</div>
-              </td>
-              <td className="pf-ell" title={row.client_name}>
-                {row.client_name}
-              </td>
-              <td className="pf-col-num">
-                <Amount row={row} />
-              </td>
-              <td className="pf-num">{row.issued_at ? date(row.issued_at) : "—"}</td>
-              <td className="pf-num">
-                <Due row={row} />
-              </td>
-              <td>
-                <InvoiceStatus status={row.status} />
-              </td>
-              <td>
-                <ActionButton row={row} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </ScrollRegion>
+    <DataTable
+      tableId="eds.payments"
+      caption={t("list.caption")}
+      scrollLabel={t("list.scroll")}
+      className="pf-dec-table pf-pay-table"
+      flexMin={200}
+      columns={columns}
+      rows={items}
+      rowKey={(row) => String(row.id)}
+      rowAttrs={(row) => ({
+        "data-selected": isSelected(row),
+        onClick: (event) => {
+          if ((event.target as HTMLElement).closest("a,button")) return;
+          void navigate(select(row), { replace: true });
+        },
+      })}
+    />
   );
 }

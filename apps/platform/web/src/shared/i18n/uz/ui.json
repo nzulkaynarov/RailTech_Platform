@@ -123,5 +123,16 @@
   },
   "confirm": {
     "cancel": "Bekor qilish"
+  },
+  "table": {
+    "columns": "Ustunlar",
+    "reset": "Tiklash",
+    "pin": "Chapga mahkamlash: {{name}}",
+    "unpin": "Mahkamlashni olib tashlash: {{name}}",
+    "moveUp": "Yuqoriga: {{name}}",
+    "moveDown": "Pastga: {{name}}",
+    "resize": "«{{name}}» ustuni kengligi: torting, ikki marta bosish — mazmunga moslash",
+    "narrower": "Torroq: {{name}}",
+    "wider": "Kengroq: {{name}}"
   }
 }
