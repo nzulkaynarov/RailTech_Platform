@@ -1,6 +1,14 @@
 {
   "open": "Открыть",
   "openItem": "Открыть: {{title}}",
+  "steps": {
+    "label": "Путь заявки",
+    "labelNumber": "Путь заявки {{number}}",
+    "done": "пройден",
+    "current": "текущий шаг",
+    "upcoming": "впереди",
+    "lostAt": "остановлена на шаге {{step}}"
+  },
   "consequence": {
     "title": "Что произойдёт"
   },
@@ -116,13 +124,16 @@
   "confirm": {
     "cancel": "Отмена"
   },
-  "steps": {
-    "label": "Путь заявки",
-    "labelNumber": "Путь заявки {{number}}",
-    "done": "пройден",
-    "current": "текущий шаг",
-    "upcoming": "впереди",
-    "lostAt": "остановлена на шаге {{step}}"
+  "table": {
+    "columns": "Столбцы",
+    "reset": "Сбросить",
+    "pin": "Закрепить слева: {{name}}",
+    "unpin": "Открепить: {{name}}",
+    "moveUp": "Выше: {{name}}",
+    "moveDown": "Ниже: {{name}}",
+    "resize": "Ширина столбца «{{name}}»: тяните, двойной щелчок — по содержимому",
+    "narrower": "Уже: {{name}}",
+    "wider": "Шире: {{name}}"
   },
   "formSteps": {
     "next": "Далее: {{title}}",

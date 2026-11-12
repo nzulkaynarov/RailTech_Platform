@@ -18,9 +18,8 @@ import { useShownValue } from "../../../shared/lib/useShownKey";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DocNumber } from "../../../shared/ui/DocNumber";
 import { EmptyState } from "../../../shared/ui/EmptyState";
-import { TableCols } from "../../../shared/ui/DataBlock";
-import { tableMinWidth } from "../../../shared/ui/tableWidth";
-import { QueryState, ScrollRegion } from "../../../shared/ui/FormParts";
+import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTable";
+import { QueryState } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { PageHeader } from "../../../shared/ui/PageHeader";
@@ -37,10 +36,15 @@ const PAGE_SIZE = 25;
  * тема (гибкая), статус, сумма, срок, [ответственный — в реестре «Все»], создан, действие. На 1440 с открытым подменю —
  * без прокрутки вбок (T1).
  */
-const colsOf = (scope: Scope) =>
-  scope === "all"
-    ? ([148, null, 172, 144, 104, 136, 104, 128] as const)
-    : ([148, null, 196, 144, 104, 104, 128] as const);
+const colsOf = (scope: Scope) => ({
+  number: 148,
+  status: scope === "all" ? 172 : 196,
+  amount: 144,
+  due: 104,
+  responsible: 136,
+  created: 104,
+  action: 128,
+});
 const KIND_TABS = [
   "all",
   "memo",
@@ -232,69 +236,92 @@ function DocumentsTable({
   const { t } = useTranslation("documents");
   const { date } = useFormat();
   const isOwn = useIsOwn(scope);
-  const cols = colsOf(scope);
+  const widths = colsOf(scope);
+  const all = scope === "all";
+  // Ширины по типу — те же `colsOf` (T1); остальное — настройка сотрудника в «Столбцах» (пункт «Т»).
+  const columns: DataColumn<EdsDocumentRow>[] = [
+    {
+      id: "number",
+      header: t("list.columns.number"),
+      width: widths.number,
+      cell: (row) => (
+        <>
+          {row.number ? (
+            <DocNumber number={row.number} />
+          ) : (
+            <span className="pf-hint">{t("list.noNumber")}</span>
+          )}
+          <div className="pf-hint pf-ell" title={t(`kinds.${row.kind}`)}>
+            <span className="pf-sr-only">{t("list.columns.kind")}: </span>
+            {t(`kinds.${row.kind}`)}
+          </div>
+        </>
+      ),
+    },
+    {
+      id: "subject",
+      header: t("list.columns.subject"),
+      width: null,
+      cellClassName: "pf-docs-subject",
+      cell: (row) => <SubjectCell row={row} params={params} selected={selected === row.id} />,
+    },
+    {
+      id: "status",
+      header: t("list.columns.status"),
+      width: widths.status,
+      cell: (row) => <DocumentStatusTag kind={row.kind} status={row.status} />,
+    },
+    {
+      id: "amount",
+      header: t("list.columns.amount"),
+      width: widths.amount,
+      numeric: true,
+      cell: (row) => <Amount row={row} />,
+    },
+    {
+      id: "due",
+      header: t("list.columns.due"),
+      width: widths.due,
+      cellClassName: "pf-num",
+      cell: (row) => (row.due_date ? date(row.due_date) : <span aria-hidden="true">—</span>),
+    },
+    ...(all
+      ? [
+          {
+            id: "responsible",
+            header: t("list.columns.responsible"),
+            width: widths.responsible,
+            cellClassName: "pf-ell",
+            cellTitle: (row: EdsDocumentRow) => row.author?.full_name ?? undefined,
+            cell: (row: EdsDocumentRow) => row.author?.full_name ?? "—",
+          },
+        ]
+      : []),
+    {
+      id: "created",
+      header: t("list.columns.created"),
+      width: widths.created,
+      cellClassName: "pf-num",
+      cell: (row) => date(row.created_at),
+    },
+    {
+      id: "action",
+      header: t("list.columns.action"),
+      width: widths.action,
+      cell: (row) => <RowAction row={row} own={isOwn(row)} />,
+    },
+  ];
   return (
-    <ScrollRegion label={t("list.tableScroll")}>
-      <table
-        className="pf-docs-table pf-fixed-table"
-        style={{ minWidth: tableMinWidth(cols, 170) }}
-      >
-        <caption className="pf-sr-only">{t("list.caption")}</caption>
-        <TableCols widths={cols} />
-        <thead>
-          <tr>
-            <th scope="col">{t("list.columns.number")}</th>
-            <th scope="col">{t("list.columns.subject")}</th>
-            <th scope="col">{t("list.columns.status")}</th>
-            <th scope="col" className="pf-col-num">
-              {t("list.columns.amount")}
-            </th>
-            <th scope="col">{t("list.columns.due")}</th>
-            {scope === "all" ? <th scope="col">{t("list.columns.responsible")}</th> : null}
-            <th scope="col">{t("list.columns.created")}</th>
-            <th scope="col">{t("list.columns.action")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((row) => (
-            <tr key={`${row.kind}-${row.id}`} data-selected={selected === row.id}>
-              <td>
-                {row.number ? (
-                  <DocNumber number={row.number} />
-                ) : (
-                  <span className="pf-hint">{t("list.noNumber")}</span>
-                )}
-                <div className="pf-hint pf-ell" title={t(`kinds.${row.kind}`)}>
-                  <span className="pf-sr-only">{t("list.columns.kind")}: </span>
-                  {t(`kinds.${row.kind}`)}
-                </div>
-              </td>
-              <td className="pf-docs-subject">
-                <SubjectCell row={row} params={params} selected={selected === row.id} />
-              </td>
-              <td>
-                <DocumentStatusTag kind={row.kind} status={row.status} />
-              </td>
-              <td className="pf-col-num">
-                <Amount row={row} />
-              </td>
-              <td className="pf-num">
-                {row.due_date ? date(row.due_date) : <span aria-hidden="true">—</span>}
-              </td>
-              {scope === "all" ? (
-                <td className="pf-ell" title={row.author?.full_name ?? undefined}>
-                  {row.author?.full_name ?? "—"}
-                </td>
-              ) : null}
-              <td className="pf-num">{date(row.created_at)}</td>
-              <td>
-                <RowAction row={row} own={isOwn(row)} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </ScrollRegion>
+    <DataTable
+      tableId="eds.documents"
+      caption={t("list.caption")}
+      scrollLabel={t("list.tableScroll")}
+      className="pf-docs-table"
+      columns={columns}
+      rows={items}
+      rowKey={(row) => `${row.kind}-${row.id}`}
+      rowAttrs={(row) => ({ "data-selected": selected === row.id })}
+    />
   );
 }
 

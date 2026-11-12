@@ -4,9 +4,7 @@ import { Link, useNavigate, useSearchParams } from "react-router";
 import { useViewport } from "../../../app/shell/useViewport";
 import type { PaymentMemoRow } from "../../../shared/api/generated/model";
 import { useFormat } from "../../../shared/lib/useFormat";
-import { TableCols } from "../../../shared/ui/DataBlock";
-import { tableMinWidth } from "../../../shared/ui/tableWidth";
-import { ScrollRegion } from "../../../shared/ui/FormParts";
+import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTable";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { StatusTag } from "../../../shared/ui/StatusTag";
@@ -14,7 +12,14 @@ import { withParams } from "../inbox/api";
 import { memoPath, moneyProps } from "./model";
 
 /** Ширины колонок: номер и тема (гибкая), автор, сумма, срок, счёт, статус, действие (UX-1c, S9) */
-const COLS = [null, 170, 150, 110, 140, 170, 140] as const;
+const COLS = {
+  author: 170,
+  amount: 150,
+  due: 110,
+  invoice: 140,
+  status: 170,
+  action: 140,
+};
 
 function useSelect() {
   const [params] = useSearchParams();
@@ -110,70 +115,95 @@ export function MemoRows({
       </ul>
     );
   }
+  // Ширины по типу (COLS, T1); остальное — настройка сотрудника в «Столбцах» (пункт «Т»).
+  const columns: DataColumn<PaymentMemoRow>[] = [
+    {
+      id: "number",
+      header: t("memo.columns.number"),
+      width: null,
+      cellClassName: "pf-num",
+      cell: (row) => (
+        <>
+          <Link
+            className="pf-focusable pf-dec-number"
+            to={select(row)}
+            replace
+            aria-label={t("memo.select", { number: label(row) })}
+            aria-current={isSelected(row) ? "true" : undefined}
+          >
+            {label(row)}
+          </Link>
+          <div className="pf-hint">{row.subject}</div>
+        </>
+      ),
+    },
+    {
+      id: "author",
+      header: t("memo.columns.author"),
+      width: COLS.author,
+      cellClassName: "pf-ell",
+      cellTitle: (row) => row.author.full_name,
+      cell: (row) => row.author.full_name,
+    },
+    {
+      id: "amount",
+      header: t("memo.columns.amount"),
+      width: COLS.amount,
+      numeric: true,
+      cell: (row) => <>{row.amount ? <MoneyText {...moneyProps(row.amount)} /> : "—"}</>,
+    },
+    {
+      id: "due",
+      header: t("memo.columns.due"),
+      width: COLS.due,
+      cellClassName: "pf-num",
+      cell: (row) => (row.due_date ? date(row.due_date) : "—"),
+    },
+    {
+      id: "invoice",
+      header: t("memo.columns.invoice"),
+      width: COLS.invoice,
+      cell: (row) => (
+        <>
+          <InvoiceMark row={row} />
+        </>
+      ),
+    },
+    {
+      id: "status",
+      header: t("memo.columns.status"),
+      width: COLS.status,
+      cell: (row) => (
+        <>
+          <Status row={row} />
+        </>
+      ),
+    },
+    {
+      id: "action",
+      header: t("memo.columns.action"),
+      headerHidden: true,
+      width: COLS.action,
+      cell: (row) => open(row),
+    },
+  ];
   return (
-    <ScrollRegion label={t("memo.scroll")}>
-      <table
-        className="pf-dec-table pf-pay-table pf-fixed-table"
-        style={{ minWidth: tableMinWidth(COLS, 200) }}
-      >
-        <caption className="pf-sr-only">{t("memo.caption")}</caption>
-        <TableCols widths={COLS} />
-        <thead>
-          <tr>
-            <th scope="col">{t("memo.columns.number")}</th>
-            <th scope="col">{t("memo.columns.author")}</th>
-            <th scope="col" className="pf-col-num">
-              {t("memo.columns.amount")}
-            </th>
-            <th scope="col">{t("memo.columns.due")}</th>
-            <th scope="col">{t("memo.columns.invoice")}</th>
-            <th scope="col">{t("memo.columns.status")}</th>
-            <th scope="col">
-              <span className="pf-sr-only">{t("memo.columns.action")}</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((row) => (
-            <tr
-              key={row.id}
-              data-row
-              data-selected={isSelected(row)}
-              onClick={(event) => {
-                if ((event.target as HTMLElement).closest("a,button")) return;
-                void navigate(select(row), { replace: true });
-              }}
-            >
-              <td className="pf-num">
-                <Link
-                  className="pf-focusable pf-dec-number"
-                  to={select(row)}
-                  replace
-                  aria-label={t("memo.select", { number: label(row) })}
-                  aria-current={isSelected(row) ? "true" : undefined}
-                >
-                  {label(row)}
-                </Link>
-                <div className="pf-hint">{row.subject}</div>
-              </td>
-              <td className="pf-ell" title={row.author.full_name}>
-                {row.author.full_name}
-              </td>
-              <td className="pf-col-num">
-                {row.amount ? <MoneyText {...moneyProps(row.amount)} /> : "—"}
-              </td>
-              <td className="pf-num">{row.due_date ? date(row.due_date) : "—"}</td>
-              <td>
-                <InvoiceMark row={row} />
-              </td>
-              <td>
-                <Status row={row} />
-              </td>
-              <td>{open(row)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </ScrollRegion>
+    <DataTable
+      tableId="eds.payments.memos"
+      caption={t("memo.caption")}
+      scrollLabel={t("memo.scroll")}
+      className="pf-dec-table pf-pay-table"
+      flexMin={200}
+      columns={columns}
+      rows={items}
+      rowKey={(row) => row.id}
+      rowAttrs={(row) => ({
+        "data-selected": isSelected(row),
+        onClick: (event) => {
+          if ((event.target as HTMLElement).closest("a,button")) return;
+          void navigate(select(row), { replace: true });
+        },
+      })}
+    />
   );
 }

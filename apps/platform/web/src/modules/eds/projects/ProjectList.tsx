@@ -11,10 +11,9 @@ import { useListEdsProjects } from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { useShownKey } from "../../../shared/lib/useShownKey";
-import { DataBlock, ListSkeleton, TableCols } from "../../../shared/ui/DataBlock";
-import { tableMinWidth } from "../../../shared/ui/tableWidth";
+import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTable";
+import { DataBlock, ListSkeleton } from "../../../shared/ui/DataBlock";
 import { EmptyState } from "../../../shared/ui/EmptyState";
-import { ScrollRegion } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { PageHeader } from "../../../shared/ui/PageHeader";
@@ -30,7 +29,15 @@ import "./projects.css";
  * Ширины колонок: номер и сумма, клиент и название (гибкая), шаг, статус клиента, документы, срок, ответственный, действие
  * (UX-1c, S9). Ширина — по типу колонки (platform-frontend.md §4.2), на 1440 с открытым подменю — без прокрутки вбок (T1).
  */
-const COLS = [132, null, 184, 116, 180, 100, 136, 104] as const;
+const COLS = {
+  number: 132,
+  step: 184,
+  status: 116,
+  documents: 180,
+  due: 100,
+  responsible: 136,
+  action: 104,
+};
 
 const STEPS: readonly ProjectStage[] = ["CONTRACT", "PAYMENT", "DONE"];
 
@@ -129,66 +136,106 @@ function Rows({ items }: { items: readonly ProjectRow[] }) {
       </ul>
     );
   }
+  // Ширины по типу (COLS, T1); остальное — настройка сотрудника в «Столбцах» (пункт «Т»).
+  const columns: DataColumn<ProjectRow>[] = [
+    {
+      id: "number",
+      header: t("list.columns.number"),
+      width: COLS.number,
+      cellClassName: "pf-num",
+      cell: (row) => (
+        <>
+          <Link className="pf-focusable pf-dec-number" to={projectPath(row.number)}>
+            {row.number}
+          </Link>
+          <div className="pf-hint">
+            <Total row={row} />
+          </div>
+        </>
+      ),
+    },
+    {
+      id: "client",
+      header: t("list.columns.client"),
+      width: null,
+      cell: (row) => (
+        <>
+          {row.client_name}
+          <div className="pf-hint">{row.title}</div>
+        </>
+      ),
+    },
+    {
+      id: "step",
+      header: t("list.columns.step"),
+      width: COLS.step,
+      cell: (row) => (
+        <>
+          <StepTag step={row.step} />
+          <Problems row={row} />
+        </>
+      ),
+    },
+    {
+      id: "status",
+      header: t("list.columns.status"),
+      width: COLS.status,
+      cell: (row) => <>{t(`clientStatus.${row.client_status}`)}</>,
+    },
+    {
+      id: "documents",
+      header: t("list.columns.documents"),
+      width: COLS.documents,
+      cell: (row) => (
+        <>
+          <Documents row={row} />
+        </>
+      ),
+    },
+    {
+      id: "due",
+      header: t("list.columns.due"),
+      width: COLS.due,
+      cellClassName: "pf-num",
+      cell: (row) => (row.due_date ? date(row.due_date) : "—"),
+    },
+    {
+      id: "responsible",
+      header: t("list.columns.responsible"),
+      width: COLS.responsible,
+      cellClassName: "pf-ell",
+      cellTitle: (row) => row.responsible?.name ?? undefined,
+      cell: (row) => row.responsible?.name ?? "—",
+    },
+    {
+      id: "action",
+      header: t("list.columns.action"),
+      headerHidden: true,
+      width: COLS.action,
+      cell: (row) => (
+        <>
+          <LinkButton
+            size="small"
+            to={projectPath(row.number)}
+            aria-label={t("list.openLabel", { number: row.number })}
+          >
+            {t("list.open")}
+          </LinkButton>
+        </>
+      ),
+    },
+  ];
   return (
-    <ScrollRegion label={t("list.scroll")}>
-      <table className="pf-dec-table pf-fixed-table" style={{ minWidth: tableMinWidth(COLS, 150) }}>
-        <caption className="pf-sr-only">{t("list.caption")}</caption>
-        <TableCols widths={COLS} />
-        <thead>
-          <tr>
-            <th scope="col">{t("list.columns.number")}</th>
-            <th scope="col">{t("list.columns.client")}</th>
-            <th scope="col">{t("list.columns.step")}</th>
-            <th scope="col">{t("list.columns.status")}</th>
-            <th scope="col">{t("list.columns.documents")}</th>
-            <th scope="col">{t("list.columns.due")}</th>
-            <th scope="col">{t("list.columns.responsible")}</th>
-            <th scope="col">
-              <span className="pf-sr-only">{t("list.columns.action")}</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((row) => (
-            <tr key={row.number}>
-              <td className="pf-num">
-                <Link className="pf-focusable pf-dec-number" to={projectPath(row.number)}>
-                  {row.number}
-                </Link>
-                <div className="pf-hint">
-                  <Total row={row} />
-                </div>
-              </td>
-              <td>
-                {row.client_name}
-                <div className="pf-hint">{row.title}</div>
-              </td>
-              <td>
-                <StepTag step={row.step} />
-                <Problems row={row} />
-              </td>
-              <td>{t(`clientStatus.${row.client_status}`)}</td>
-              <td>
-                <Documents row={row} />
-              </td>
-              <td className="pf-num">{row.due_date ? date(row.due_date) : "—"}</td>
-              <td className="pf-ell" title={row.responsible?.name ?? undefined}>
-                {row.responsible?.name ?? "—"}
-              </td>
-              <td>
-                <LinkButton
-                  size="small"
-                  to={projectPath(row.number)}
-                  aria-label={t("list.openLabel", { number: row.number })}
-                >
-                  {t("list.open")}
-                </LinkButton>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </ScrollRegion>
+    <DataTable
+      tableId="eds.projects"
+      caption={t("list.caption")}
+      scrollLabel={t("list.scroll")}
+      className="pf-dec-table"
+      flexMin={150}
+      columns={columns}
+      rows={items}
+      rowKey={(row) => row.number}
+    />
   );
 }
 
