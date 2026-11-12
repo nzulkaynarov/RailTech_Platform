@@ -15,6 +15,37 @@ vi.mock("../../../shared/ui/PdfViewer", () => ({
   default: ({ name }: { name: string }) => <div data-testid="pdf-pages">{name}</div>,
 }));
 
+// Редактор письма в jsdom не принимает ввод (contenteditable): здесь — поле текста с тем же id и подписью; сам редактор
+// проверяют BodyEditor.test и e2e в браузере.
+vi.mock("../../../shared/ui/BodyEditor/BodyEditor", async () => {
+  const { paragraphOf } = await import("../../../shared/ui/BodyEditor/bodyModel");
+  return {
+    BodyEditor: ({
+      id,
+      label,
+      onChange,
+      invalid,
+      describedBy,
+    }: {
+      id: string;
+      label: string;
+      onChange: (doc: unknown) => void;
+      invalid?: boolean;
+      describedBy?: string;
+    }) => (
+      <textarea
+        id={id}
+        aria-label={label}
+        aria-invalid={invalid || undefined}
+        aria-describedby={describedBy}
+        onChange={(event) => {
+          onChange({ type: "doc", content: event.target.value.split("\n\n").map(paragraphOf) });
+        }}
+      />
+    ),
+  };
+});
+
 setupEdsTests();
 
 async function openForm(email: string, search = "") {
@@ -60,7 +91,7 @@ describe("EDS · Создать документ: форма", () => {
     expect(screen.queryByLabelText("Кому")).toBeNull();
     expect(screen.queryByLabelText("Сумма, сум")).toBeNull();
     expect(screen.queryByLabelText("Нужно до")).toBeNull();
-    expect(screen.getByRole("group", { name: "Добавить блок" })).toBeVisible();
+    expect(screen.getByLabelText("Текст")).toBeVisible();
     // подписант по умолчанию — из бланка компании
     expect(
       await screen.findByText("Пусто — подписант бланка: Каримов А. А., Директор."),

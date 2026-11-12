@@ -76,23 +76,34 @@ function side(page: Page): Locator {
   return page.locator("#pf-context-panel");
 }
 
-/** Письмо блоками: абзац, маркированный список, таблица с шапкой. */
+/** Письмо в редакторе: абзац, список набором «- », таблица кнопкой (переход по ячейкам — Tab). */
 async function fillLetterBody(page: Page): Promise<void> {
+  const box = page.getByRole("textbox", { name: "Текст", exact: true });
+  await box.click();
+  await page.keyboard.type(
+    "На требование № 14-02/3381 о представлении пояснений сообщаем: расхождения в декларации по НДС за III квартал вызваны поступлением счетов-фактур после отчётной даты.",
+  );
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("- уточнённая декларация по НДС;");
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("реестр счетов-фактур партнёров");
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("Enter");
   await page
-    .getByLabel("Текст", { exact: true })
-    .fill(
-      "На требование № 14-02/3381 о представлении пояснений сообщаем: расхождения в декларации по НДС за III квартал вызваны поступлением счетов-фактур после отчётной даты.",
-    );
-  const add = page.getByRole("group", { name: "Добавить блок" });
-  await add.getByRole("button", { name: /(^|\s)Список$/ }).click();
-  await page
-    .getByLabel("Блок 2: Список", { exact: true })
-    .fill("уточнённая декларация по НДС;\nреестр счетов-фактур партнёров");
-  await add.getByRole("button", { name: /(^|\s)Таблица$/ }).click();
-  await page.getByLabel("Шапка, столбец 1", { exact: true }).fill("Счёт-фактура");
-  await page.getByLabel("Шапка, столбец 2", { exact: true }).fill("Сумма НДС, сум");
-  await page.getByLabel("Строка 1, столбец 1", { exact: true }).fill("№ 118 от 29.09.2026");
-  await page.getByLabel("Строка 1, столбец 2", { exact: true }).fill("14 400 000");
+    .getByRole("toolbar", { name: "Оформление текста" })
+    .getByRole("button", { name: "Таблица" })
+    .click();
+  for (const [index, value] of [
+    "Счёт-фактура",
+    "Сумма НДС, сум",
+    "",
+    "№ 118 от 29.09.2026",
+    "14 400 000",
+  ].entries()) {
+    if (index > 0) await page.keyboard.press("Tab");
+    if (value) await page.keyboard.type(value);
+  }
+  await expect(box.getByRole("list")).toContainText("реестр счетов-фактур партнёров");
 }
 
 async function pdfReady(page: Page): Promise<void> {

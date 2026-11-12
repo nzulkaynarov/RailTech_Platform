@@ -331,11 +331,12 @@ function DocumentForm({
     >
       <BodyEditor
         id={ids.text}
-        value={values.blocks}
+        label={t("documents:form.body.label")}
+        value={values.body}
         invalid={Boolean(errors.text)}
         describedBy={describedBy(ids.text, true, Boolean(errors.text))}
-        onChange={(blocks) => {
-          set("blocks", blocks);
+        onChange={(body) => {
+          set("body", body);
         }}
       />
     </Field>

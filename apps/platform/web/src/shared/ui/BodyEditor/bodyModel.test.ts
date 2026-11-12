@@ -1,61 +1,92 @@
 import { describe, expect, it } from "vitest";
 
-import { type Block, bodyLang, bodyText, fromBody, isBlank, toBody } from "./bodyModel";
+import {
+  type BodyNode,
+  bodyLang,
+  bodyText,
+  emptyDoc,
+  fromBody,
+  isBlank,
+  normalizeDoc,
+  paragraphOf,
+  toBody,
+} from "./bodyModel";
 
-const BLOCKS: Block[] = [
-  { id: "1", kind: "paragraph", text: "Уважаемый Алишер Алиевич!\nСообщаем следующее." },
-  { id: "2", kind: "bullet", items: ["декларация", "  ", "реестр"] },
-  { id: "3", kind: "ordered", items: ["первое"] },
-  {
-    id: "4",
-    kind: "table",
-    rows: [
-      ["Счёт", "Сумма"],
-      ["№ 118", ""],
-      ["", ""],
-    ],
-  },
-  { id: "5", kind: "paragraph", text: "   " },
-];
+const text = (value: string, marks?: BodyNode["marks"]): BodyNode => ({
+  type: "text",
+  text: value,
+  ...(marks ? { marks } : {}),
+});
+const p = (...content: BodyNode[]): BodyNode => ({ type: "paragraph", content });
 
-describe("bodyModel", () => {
-  it("блоки → тело контракта: абзац с переводом строки, списки без пустых пунктов, таблица с шапкой; пустое отброшено", () => {
-    const body = toBody(BLOCKS, "ru");
-    expect(body.version).toBe(1);
-    expect(body.lang).toBe("ru");
-    expect(body.doc).toEqual({
-      type: "doc",
+// Так отдаёт документ редактор Tiptap: лишние атрибуты, пустые абзацы, метки, которых нет в схеме.
+const EDITOR_DOC: BodyNode = {
+  type: "doc",
+  content: [
+    { type: "paragraph" },
+    { type: "heading", attrs: { level: 2, textAlign: null }, content: [text("Сведения")] },
+    {
+      type: "paragraph",
+      attrs: { textAlign: null },
+      content: [
+        text("Уважаемый "),
+        text("Алишер Алиевич", [{ type: "bold" }, { type: "strike" }]),
+        { type: "hardBreak" },
+        text("сайт", [{ type: "link", attrs: { href: "https://example.uz", target: "_blank" } }]),
+        text(" и ", [{ type: "link", attrs: { href: "javascript:alert(1)" } }]),
+      ],
+    },
+    {
+      type: "orderedList",
+      attrs: { start: 1, type: null },
+      content: [
+        { type: "listItem", content: [p(text("первое"))] },
+        { type: "listItem", content: [{ type: "paragraph" }] },
+      ],
+    },
+    {
+      type: "table",
       content: [
         {
-          type: "paragraph",
-          content: [
-            { type: "text", text: "Уважаемый Алишер Алиевич!" },
-            { type: "hardBreak" },
-            { type: "text", text: "Сообщаем следующее." },
-          ],
-        },
-        {
-          type: "bulletList",
+          type: "tableRow",
           content: [
             {
-              type: "listItem",
-              content: [{ type: "paragraph", content: [{ type: "text", text: "декларация" }] }],
+              type: "tableHeader",
+              attrs: { colspan: 1, rowspan: 1, colwidth: null },
+              content: [p(text("Счёт"))],
             },
             {
-              type: "listItem",
-              content: [{ type: "paragraph", content: [{ type: "text", text: "реестр" }] }],
+              type: "tableHeader",
+              attrs: { colspan: 2, rowspan: 1, colwidth: null },
+              content: [p(text("Сумма"))],
             },
           ],
         },
         {
-          type: "orderedList",
-          content: [
-            {
-              type: "listItem",
-              content: [{ type: "paragraph", content: [{ type: "text", text: "первое" }] }],
-            },
-          ],
+          type: "tableRow",
+          content: [{ type: "tableCell", attrs: { colspan: 1 }, content: [{ type: "paragraph" }] }],
         },
+      ],
+    },
+    { type: "blockquote", content: [p(text("цитата"))] },
+    { type: "paragraph" },
+  ],
+};
+
+describe("bodyModel: дерево редактора → тело контракта", () => {
+  it("лишние атрибуты и метки отброшены, ссылка только с допустимой схемой, пустые края убраны", () => {
+    expect(normalizeDoc(EDITOR_DOC)).toEqual({
+      type: "doc",
+      content: [
+        { type: "heading", attrs: { level: 2 }, content: [text("Сведения")] },
+        p(
+          text("Уважаемый "),
+          text("Алишер Алиевич", [{ type: "bold" }]),
+          { type: "hardBreak" },
+          text("сайт", [{ type: "link", attrs: { href: "https://example.uz" } }]),
+          text(" и "),
+        ),
+        { type: "orderedList", content: [{ type: "listItem", content: [p(text("первое"))] }] },
         {
           type: "table",
           attrs: { variant: "grid" },
@@ -63,52 +94,41 @@ describe("bodyModel", () => {
             {
               type: "tableRow",
               content: [
-                {
-                  type: "tableHeader",
-                  content: [{ type: "paragraph", content: [{ type: "text", text: "Счёт" }] }],
-                },
-                {
-                  type: "tableHeader",
-                  content: [{ type: "paragraph", content: [{ type: "text", text: "Сумма" }] }],
-                },
+                { type: "tableHeader", content: [p(text("Счёт"))] },
+                { type: "tableHeader", attrs: { colspan: 2 }, content: [p(text("Сумма"))] },
               ],
             },
             {
               type: "tableRow",
-              content: [
-                {
-                  type: "tableCell",
-                  content: [{ type: "paragraph", content: [{ type: "text", text: "№ 118" }] }],
-                },
-                // пустая ячейка — абзац без текста (в схеме текст не короче 1 знака)
-                { type: "tableCell", content: [{ type: "paragraph" }] },
-              ],
+              content: [{ type: "tableCell", content: [{ type: "paragraph" }] }],
             },
           ],
         },
+        // незнакомый узел — абзац с его текстом
+        p(text("цитата")),
       ],
     });
   });
 
-  it("тело → блоки (продолжить черновик) и обратно — то же тело", () => {
-    const body = toBody(BLOCKS, "uz");
-    const back = fromBody(body);
-    expect(back.map((b) => b.kind)).toEqual(["paragraph", "bullet", "ordered", "table"]);
-    expect(toBody(back, "uz")).toEqual(body);
+  it("тело → редактор (продолжить черновик) и обратно — то же тело", () => {
+    const body = toBody(EDITOR_DOC, "uz");
+    expect(toBody(fromBody(body), "uz")).toEqual(body);
+    expect(body.lang).toBe("uz");
   });
 
-  it("плоский текст: абзацы через пустую строку, пункты с «•» и номером, ячейки через « | »", () => {
-    expect(bodyText(toBody(BLOCKS, "ru"))).toBe(
-      "Уважаемый Алишер Алиевич!\nСообщаем следующее.\n\n• декларация\n• реестр\n\n1. первое\n\nСчёт | Сумма\n№ 118 | ",
+  it("плоский текст: заголовок, абзац, пункты с номером, ячейки через « | »", () => {
+    expect(bodyText(toBody(EDITOR_DOC, "ru"))).toBe(
+      "Сведения\n\nУважаемый Алишер Алиевич\nсайт и \n\n1. первое\n\nСчёт | Сумма\n\n\nцитата",
     );
   });
 
-  it("пустое тело и язык документа по языку интерфейса", () => {
-    expect(isBlank([{ id: "x", kind: "paragraph", text: " " }])).toBe(true);
-    expect(isBlank(BLOCKS)).toBe(false);
-    expect(fromBody(null)).toHaveLength(1);
+  it("пустое тело, абзац из текста и язык документа", () => {
+    expect(isBlank(emptyDoc())).toBe(true);
+    expect(isBlank({ type: "doc", content: [p(text(" "))] })).toBe(true);
+    expect(isBlank(EDITOR_DOC)).toBe(false);
+    expect(fromBody(null)).toEqual(emptyDoc());
+    expect(paragraphOf("а\nб")).toEqual(p(text("а"), { type: "hardBreak" }, text("б")));
     expect(bodyLang("uz-Latn")).toBe("uz");
-    expect(bodyLang("en")).toBe("en");
     expect(bodyLang("de")).toBe("ru");
   });
 });

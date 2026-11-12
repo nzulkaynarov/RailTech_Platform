@@ -15,6 +15,7 @@ import {
   toUpdateBody,
   validate,
 } from "./formModel";
+import { paragraphOf } from "../../../shared/ui/BodyEditor/bodyModel";
 
 const FILLED: FormValues = { ...EMPTY_FORM, subject: "Закупка", text: "Прошу согласовать." };
 
@@ -64,7 +65,7 @@ describe("formModel", () => {
     const filled: FormValues = {
       ...letter,
       recipientName: "ООО «Пример»",
-      blocks: [{ id: "p", kind: "paragraph", text: "Сообщаем." }],
+      body: { type: "doc", content: [paragraphOf("Сообщаем.")] },
     };
     expect(validate(filled, "2026-10-27")).toEqual({});
     expect(validate({ ...filled, recipientEmail: "не адрес" }, "2026-10-27")).toEqual({
@@ -83,10 +84,16 @@ describe("formModel", () => {
       recipientEmail: "gni@example.uz",
       signatoryName: "",
       inReplyTo: "ВХ-112/26",
-      blocks: [
-        { id: "a", kind: "paragraph", text: "Сообщаем следующее." },
-        { id: "b", kind: "bullet", items: ["декларация", ""] },
-      ],
+      body: {
+        type: "doc",
+        content: [
+          paragraphOf("Сообщаем следующее."),
+          {
+            type: "bulletList",
+            content: [{ type: "listItem", content: [paragraphOf("декларация")] }],
+          },
+        ],
+      },
     };
     const body = toCreateBody(form, { submit: true, send: true }, "uz");
     expect(body).toMatchObject({
