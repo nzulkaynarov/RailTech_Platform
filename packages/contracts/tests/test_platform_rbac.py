@@ -47,6 +47,10 @@ ANY_EMPLOYEE = {
     ("post", "/api/v1/instructions/{instruction_id}/complete"),
     ("post", "/api/v1/instructions/{instruction_id}/extension"),
     ("post", "/api/v1/instructions/{instruction_id}/extension/decision"),
+    # Исходы письма (решение владельца 2026-11-11): право решает EDS по роли в поручении и авторству резолюции
+    ("post", "/api/v1/letters/{letter_id}/close"),
+    ("post", "/api/v1/letters/{letter_id}/reopen"),
+    ("post", "/api/v1/instructions/{instruction_id}/return"),
     ("get", "/api/v1/letter-tasks"),
     # P4: бланк компании для формы письма — любой сотрудник (черновик письма создаёт любой с `memos.create`)
     ("get", "/api/v1/letterhead"),
@@ -245,6 +249,7 @@ def test_eds_api_global_security_is_the_eds_access_token() -> None:
     assert EDS_YAML["security"] == [{"edsAccess": []}]
     scheme = EDS_YAML["components"]["securitySchemes"]["edsAccess"]
     assert (scheme["type"], scheme["scheme"], scheme["bearerFormat"]) == ("http", "bearer", "JWT")
+    # 0.14.0 — «Закрыть без ответа», «Вернуть в работу», «Вернуть автору», справочник close-reasons;
     # 0.13.0 — текст письма из почты в карточке ВХ (`body_text`), ответ закрывает и «К исполнению»;
     # 0.12.0 — маршрут подписи signing и поля signing_* в ApprovalObject (SIGN-4, FX-10);
     # 0.11.0 — код signing.manage в перечне ответов EdsPermission и ресурс /signing (SIGN-2);
@@ -253,7 +258,7 @@ def test_eds_api_global_security_is_the_eds_access_token() -> None:
     # 0.8.0 — статусы пути делопроизводства и поручения (P8b); 0.7.0 — договоры, счета, акты в реестре (D2-5);
     # 0.6.0 — код files.upload в перечне ответов EdsPermission (D1-2b);
     # 0.5.0 — зона исполнителя резолюции (D1-8); 0.4.0 — PATCH /documents/{id} (D1-5); 0.3.0 — журнал шины (W13-A2)
-    assert EDS_YAML["info"]["version"] == "0.13.0"
+    assert EDS_YAML["info"]["version"] == "0.14.0"
 
 
 # Коды справочников (EDS-REG) — слаги `^[a-z][a-z_-]…$` без «/», поэтому могут быть в пути.

@@ -14,7 +14,9 @@ from app.schemas.letters import (
     ExtensionDecisionIn,
     ExtensionRequestIn,
     InstructionCompleteIn,
+    InstructionReturnIn,
     Letter,
+    LetterCloseIn,
     LetterCreate,
     LetterDuplicateCheck,
     LetterDuplicateCheckIn,
@@ -239,6 +241,38 @@ async def resolve_office_letter(
 async def acknowledge_letter(letter_id: uuid.UUID, employee: Anyone, session: Session) -> Letter:
     async with session.begin():
         letter = await instructions.acknowledge(session, actor_id=employee.crm_user_id, letter_id=letter_id)
+        return await letters_read.present(session, letter, employee)
+
+
+@router.post("/letters/{letter_id}/close", response_model=Letter, operation_id="closeLetterWithoutReply")
+async def close_letter(
+    letter_id: uuid.UUID, body: LetterCloseIn, employee: Anyone, session: Session, bus: Bus
+) -> Letter:
+    """«Закрыть без ответа» — ответственный исполнитель, причина из справочника `close-reasons`."""
+    async with session.begin():
+        letter = await instructions.close_letter(
+            session, bus, actor_id=employee.crm_user_id, letter_id=letter_id, data=body
+        )
+        return await letters_read.present(session, letter, employee)
+
+
+@router.post("/letters/{letter_id}/reopen", response_model=Letter, operation_id="reopenLetter")
+async def reopen_letter(letter_id: uuid.UUID, employee: Anyone, session: Session, bus: Bus) -> Letter:
+    """«Вернуть в работу» закрытое без ответа письмо — автор резолюции."""
+    async with session.begin():
+        letter = await instructions.reopen_letter(session, bus, actor_id=employee.crm_user_id, letter_id=letter_id)
+        return await letters_read.present(session, letter, employee)
+
+
+@router.post("/instructions/{instruction_id}/return", response_model=Letter, operation_id="returnInstructionToAuthor")
+async def return_instruction(
+    instruction_id: uuid.UUID, body: InstructionReturnIn, employee: Anyone, session: Session, bus: Bus
+) -> Letter:
+    """«Вернуть автору резолюции» — ответственный исполнитель, с причиной; письмо снова ждёт резолюции."""
+    async with session.begin():
+        letter = await instructions.return_to_author(
+            session, bus, actor_id=employee.crm_user_id, instruction_id=instruction_id, data=body
+        )
         return await letters_read.present(session, letter, employee)
 
 

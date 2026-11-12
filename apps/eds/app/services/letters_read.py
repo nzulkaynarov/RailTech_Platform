@@ -272,6 +272,8 @@ async def present(session: AsyncSession, letter: Letter, viewer: Employee | None
             AcquaintanceOut(person=directory.person(a.crm_user_id), acknowledged_at=a.acknowledged_at) for a in acquaint
         ],
         executed_at=letter.executed_at,
+        close_reason=letter.close_reason,
+        close_comment=letter.close_comment,
         duplicate_of=await _duplicate_of(session, letter),
         replies=await reply.replies_for(session, viewer, letter),
     )

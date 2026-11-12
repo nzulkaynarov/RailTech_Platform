@@ -1220,5 +1220,31 @@
     "open": "Open",
     "prefilled": "Filled in from {{number}}: check the correspondent, email and subject.",
     "continue": "Continue the reply"
+  },
+  "outcome": {
+    "more": "More",
+    "cancel": "Cancel",
+    "failed": "Failed. Try again.",
+    "close": {
+      "action": "Close without reply",
+      "title": "{{number}}: close without reply",
+      "reason": "Reason",
+      "comment": "Comment",
+      "commentRequired": "Comment (required)",
+      "submit": "Close",
+      "done": "{{number}} closed without reply"
+    },
+    "return": {
+      "action": "Return to the resolution author",
+      "title": "{{number}}: return to the resolution author",
+      "reason": "Reason",
+      "submit": "Return",
+      "done": "{{number}} returned to the resolution author"
+    },
+    "reopen": {
+      "action": "Reopen",
+      "done": "{{number}} is back in work"
+    },
+    "closedBanner": "Closed without reply: {{reason}}"
   }
 }

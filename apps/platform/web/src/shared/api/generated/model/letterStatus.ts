@@ -4,7 +4,7 @@
  */
 
 /**
- * Статус входящего письма (SPEC-v3 §2.4; EDS `LetterStatus`): `awaiting_resolution` — «Ждёт резолюции» (зарегистрировано), `resolved` — «Резолюция наложена», `returned` — «Возвращено» менеджеру, `rejected` — «Отклонено»; путь делопроизводства (P8b, §3.2a): `in_execution` — «На исполнении», `executed` — «Исполнено», `noted` — «Принято к сведению»; `duplicate` — «Дубль» (EDS-DUP: письмо зарегистрировано повторно и закрыто, оригинал — `duplicate_of`). Слова — в словаре интерфейса, не в API.
+ * Статус входящего письма (SPEC-v3 §2.4; EDS `LetterStatus`): `awaiting_resolution` — «Ждёт резолюции» (зарегистрировано), `resolved` — «Резолюция наложена», `returned` — «Возвращено» менеджеру, `rejected` — «Отклонено»; путь делопроизводства (P8b, §3.2a): `in_execution` — «На исполнении», `executed` — «Исполнено», `noted` — «Принято к сведению»; `duplicate` — «Дубль» (EDS-DUP: письмо зарегистрировано повторно и закрыто, оригинал — `duplicate_of`). `closed` — «Закрыто без ответа» (причина `LetterCard.close_reason`). Слова — в словаре интерфейса, не в API.
  */
 export type LetterStatus = (typeof LetterStatus)[keyof typeof LetterStatus];
 
@@ -17,4 +17,5 @@ export const LetterStatus = {
   executed: "executed",
   noted: "noted",
   duplicate: "duplicate",
+  closed: "closed",
 } as const;

@@ -45,7 +45,9 @@ from app.schemas_eds_letters import (
     InstructionCompleteIn,
     InstructionExtensionDecisionIn,
     InstructionExtensionIn,
+    InstructionReturnIn,
     LetterCard,
+    LetterCloseIn,
     LetterDuplicate,
     LetterDuplicateCheckIn,
     LetterDuplicateList,
@@ -396,6 +398,42 @@ async def complete_instruction(
     id: InstructionId, body: InstructionCompleteIn, authed: Participant
 ) -> LetterCard:
     return await _card(authed, await _letters(authed).complete(str(id), body.for_eds()))
+
+
+@router.post(
+    "/letters/{id}/close",
+    response_model=LetterCard,
+    response_model_exclude_unset=True,
+    operation_id="closeLetterWithoutReply",
+)
+async def close_letter(id: LetterId, body: LetterCloseIn, authed: Participant) -> LetterCard:
+    """«Закрыть без ответа» (решение владельца 2026-11-11): ответственного проверяет EDS."""
+    return await _card(authed, await _letters(authed).close(str(id), body.for_eds()))
+
+
+@router.post(
+    "/letters/{id}/reopen",
+    response_model=LetterCard,
+    response_model_exclude_unset=True,
+    operation_id="reopenLetter",
+)
+async def reopen_letter(id: LetterId, authed: Resolver) -> LetterCard:
+    """«Вернуть в работу» закрытое без ответа письмо: автора резолюции проверяет EDS."""
+    return await _card(authed, await _letters(authed).reopen(str(id)))
+
+
+@router.post(
+    "/instructions/{id}/return",
+    response_model=LetterCard,
+    response_model_exclude_unset=True,
+    operation_id="returnInstructionToAuthor",
+)
+async def return_instruction(
+    id: InstructionId, body: InstructionReturnIn, authed: Participant
+) -> LetterCard:
+    """«Вернуть автору резолюции»: письмо снова ждёт резолюции."""
+    raw = await _letters(authed).return_to_author(str(id), body.for_eds())
+    return await _card(authed, raw)
 
 
 @router.post(

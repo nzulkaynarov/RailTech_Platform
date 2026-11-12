@@ -19,7 +19,7 @@ from pydantic import BaseModel, ValidationError
 from app import dictionary_files as files
 from app.clients.base import Backend
 from app.clients.eds import eds_error
-from app.deps import Authed, AuthedDep, Rule, require, require_any
+from app.deps import Authed, AuthedDep, Rule, require, require_any, require_any_section
 from app.errors import PlatformError, backend_reason, backend_unavailable, from_backend
 from app.rbac import allows
 from app.schemas_dictionaries import (
@@ -59,6 +59,8 @@ _DOCUMENTS = Owner(
 _MAIL = Owner("crm", "mail", (("crm.leads.triage", "read"), ("admin", "read")))
 # Виды документов полномочий подписи (SIGN-2): читает держатель реестра, правит администратор.
 _SIGNING = Owner("eds", "documents", (("eds.signing.manage", "full"), ("admin", "read")))
+# Причины «Закрыть без ответа» читает любой сотрудник (исполнитель поручения), правит администратор.
+_CLOSE_REASONS = Owner("eds", "documents", ())
 # Справочники «Расчёта» (ERP; решение владельца 2026-11-11 — один механизм): читает тот, кто
 # видит настройки компании, и администратор; правит администратор (ERP проверяет `settings.edit`).
 _CALC = Owner(
@@ -73,6 +75,7 @@ OWNERS: Final[dict[str, Owner]] = {
     "units": _CALC,
     "delivery-basis": _CALC,
     "signing-kinds": _SIGNING,
+    "close-reasons": _CLOSE_REASONS,
     "letter-kinds": _DOCUMENTS,
     "receipt-methods": _DOCUMENTS,
     "resolution-kinds": _DOCUMENTS,
@@ -85,11 +88,17 @@ Admin = Annotated[Authed, Depends(require("admin", "full"))]
 Kind = Annotated[str, Path(pattern=KIND)]
 Code = Annotated[str, Path(pattern=CODE)]
 # Проверка разделов по владельцу вида: зависимость строится один раз на набор правил.
-_READERS = {kind: require_any(*owner.readers) for kind, owner in OWNERS.items()}
+_READERS = {
+    kind: require_any(*owner.readers) if owner.readers else require_any_section
+    for kind, owner in OWNERS.items()
+}
 _WRITERS = {kind: require_any(*owner.writers) for kind, owner in OWNERS.items()}
 
 
 def _can_read(authed: Authed, owner: Owner) -> bool:
+    # Без списка читающих справочник читает любой сотрудник (вход уже проверен).
+    if not owner.readers:
+        return True
     return any(allows(authed.access, res, need) for res, need in owner.readers)
 
 

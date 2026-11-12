@@ -1220,5 +1220,31 @@
     "open": "Ochish",
     "prefilled": "{{number}} dan to‘ldirildi: muxbir, pochta va mavzuni tekshiring.",
     "continue": "Javobni davom ettirish"
+  },
+  "outcome": {
+    "more": "Yana",
+    "cancel": "Bekor qilish",
+    "failed": "Bajarilmadi. Qayta urinib ko‘ring.",
+    "close": {
+      "action": "Javobsiz yopish",
+      "title": "{{number}}: javobsiz yopish",
+      "reason": "Sabab",
+      "comment": "Izoh",
+      "commentRequired": "Izoh (majburiy)",
+      "submit": "Yopish",
+      "done": "{{number}} javobsiz yopildi"
+    },
+    "return": {
+      "action": "Rezolyutsiya muallifiga qaytarish",
+      "title": "{{number}}: rezolyutsiya muallifiga qaytarish",
+      "reason": "Sabab",
+      "submit": "Qaytarish",
+      "done": "{{number}} rezolyutsiya muallifiga qaytarildi"
+    },
+    "reopen": {
+      "action": "Ishga qaytarish",
+      "done": "{{number}} yana ishda"
+    },
+    "closedBanner": "Javobsiz yopildi: {{reason}}"
   }
 }

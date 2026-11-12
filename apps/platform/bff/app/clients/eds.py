@@ -225,6 +225,22 @@ class EdsLetters:
         letter: dict[str, Any] = await self._json("POST", f"/api/v1/letters/{letter_id}/acquaint")
         return letter
 
+    async def close(self, letter_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        letter: dict[str, Any] = await self._json(
+            "POST", f"/api/v1/letters/{letter_id}/close", json=body
+        )
+        return letter
+
+    async def reopen(self, letter_id: str) -> dict[str, Any]:
+        letter: dict[str, Any] = await self._json("POST", f"/api/v1/letters/{letter_id}/reopen")
+        return letter
+
+    async def return_to_author(self, instruction_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        letter: dict[str, Any] = await self._json(
+            "POST", f"/api/v1/instructions/{instruction_id}/return", json=body
+        )
+        return letter
+
     async def complete(self, instruction_id: str, body: dict[str, Any]) -> dict[str, Any]:
         letter: dict[str, Any] = await self._json(
             "POST", f"/api/v1/instructions/{instruction_id}/complete", json=body

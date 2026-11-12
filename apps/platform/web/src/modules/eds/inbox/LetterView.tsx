@@ -24,6 +24,7 @@ import { letterRef } from "./api";
 import { useStateLabels } from "./labels";
 import { ReplyCard } from "../tasks/ReplyBlock";
 import { InstructionsCard, OfficeDecision } from "./Instructions";
+import { ClosedBanner } from "../tasks/LetterOutcomes";
 import { DuplicateBanner, MarkDuplicateAction } from "./MarkDuplicate";
 import { Attachments } from "./Parts";
 import { ResolutionSlot } from "./ResolutionPanel";
@@ -239,6 +240,7 @@ function Content({
       />
       <SourceBanner sources={letter.sources} onRetry={refetch} />
       <DuplicateBanner letter={letter} />
+      <ClosedBanner letter={letter} />
       {/* Путь заявки (7 шагов) — только у письма по заявке клиента; у делопроизводства своих шагов нет (P8b). */}
       {letter.track === "office" ? null : (
         <section className="pf-card pf-letters-steps" aria-label={t("card.steps")}>

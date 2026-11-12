@@ -39,6 +39,7 @@ LETTER_KINDS: Final = "letter-kinds"
 RECEIPT_METHODS: Final = "receipt-methods"
 RESOLUTION_KINDS: Final = "resolution-kinds"
 SIGNING_KINDS: Final = "signing-kinds"
+CLOSE_REASONS: Final = "close-reasons"
 POSITION_STEP = 10
 
 
@@ -104,6 +105,14 @@ SPECS: Final[dict[str, Spec]] = {
         ),
         # Виды документов, которые подписывают по полномочию (SIGN-2, ADR-0024 п. 1): открытый каталог — вид добавляет
         # администратор; использованный в полномочии вид не удаляется, а скрывается.
+        # Причины «Закрыть без ответа» (решение владельца 2026-11-11): открытый справочник; `comment_required` —
+        # ответственный обязан пояснить (недобросовестный контрагент, другое).
+        Spec(
+            CLOSE_REASONS,
+            ("Причины закрытия без ответа", "Javobsiz yopish sabablari", "Reasons to close without reply"),
+            Letter.close_reason,
+            attrs=(Attr("comment_required", "boolean", ("Нужно пояснение", "Izoh kerak", "Comment required")),),
+        ),
         Spec(
             SIGNING_KINDS,
             ("Виды документов для подписи", "Imzolanadigan hujjat turlari", "Document types for signing"),
