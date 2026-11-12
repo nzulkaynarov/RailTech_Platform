@@ -48,7 +48,7 @@ for svc in platform-bff platform-web; do
   [[ "$(q --arg s "$svc" '.services[$s].healthcheck.test | length')" -gt 0 ]] || fail "$svc: нет healthcheck"
   [[ "$(q --arg s "$svc" '.services[$s].ports // "none"')" == none ]] || fail "$svc: порты наружу не публикуются"
 done
-[[ "$(q '.services["platform-bff"].deploy.resources.limits.memory')" == 268435456 ]] || fail "platform-bff: лимит памяти не 256M"
+[[ "$(q '.services["platform-bff"].deploy.resources.limits.memory')" == 536870912 ]] || fail "platform-bff: лимит памяти не 512M (servers.md, с 2026-11-12)"
 [[ "$(q '.services["platform-web"].deploy.resources.limits.memory')" == 67108864 ]] || fail "platform-web: лимит памяти не 64M"
 [[ "$(q '.services["platform-bff"].environment.PLATFORM_CRM_URL')" == http://crm-api:8000 ]] || fail "platform-bff: PLATFORM_CRM_URL"
 [[ "$(q '.services["platform-bff"].environment.PLATFORM_ERP_URL')" == http://erp-backend:8000 ]] || fail "platform-bff: PLATFORM_ERP_URL"

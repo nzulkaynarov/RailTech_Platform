@@ -363,6 +363,36 @@ async def test_key_sync_registers_budget_and_aliases(monkeypatch: pytest.MonkeyP
     assert "sk-eds" not in calls[0][1]  # значение ключа не попадает в адрес
 
 
+async def test_key_sync_attaches_langfuse_callback(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.cli import ai_cli
+
+    calls: list[tuple[str, dict[str, Any]]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append((request.url.path, json.loads(request.content) if request.content else {}))
+        return httpx.Response(200, json={"info": {"key_alias": "eds"}} if request.url.path == "/key/info" else {})
+
+    monkeypatch.setattr(provision, "TRANSPORT", httpx.MockTransport(handler))
+    monkeypatch.setenv("EDS_LITELLM_API_KEY", "sk-eds")
+    monkeypatch.setenv("LITELLM_MASTER_KEY", "sk-master")
+    monkeypatch.setenv("EDS_LANGFUSE_PUBLIC_KEY", "pk-lf-x")
+    monkeypatch.setenv("EDS_LANGFUSE_SECRET_KEY", "sk-lf-x")
+    monkeypatch.delenv("EDS_LANGFUSE_HOST", raising=False)
+    assert await ai_cli.run() == 0
+    path, body = calls[-1]
+    assert path == "/key/update"
+    [callback] = body["metadata"]["logging"]
+    assert callback["callback_name"] == "langfuse"
+    assert callback["callback_vars"] == {
+        "langfuse_public_key": "pk-lf-x",
+        "langfuse_secret_key": "sk-lf-x",
+        "langfuse_host": "http://langfuse-web:3000",
+    }
+    monkeypatch.delenv("EDS_LANGFUSE_SECRET_KEY")
+    assert await ai_cli.run() == 0
+    assert "logging" not in calls[-1][1]["metadata"]  # без ключей Langfuse — без колбэка
+
+
 async def test_key_sync_cli_skips_without_keys(monkeypatch: pytest.MonkeyPatch) -> None:
     from app.cli import ai_cli
 

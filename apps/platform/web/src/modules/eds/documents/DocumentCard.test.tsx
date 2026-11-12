@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -147,7 +147,7 @@ describe("EDS · карточка письма: текст блоками, бе�
     const card = await openCard();
 
     expect(card.getByText("Сумма")).toBeVisible();
-    expect(screen.getByText("1 500 000 сум")).toBeVisible();
+    expect(card.getByText("1 500 000 сум")).toBeVisible();
   });
 
   it("ответ на входящее: «В ответ на ВХ-…» со ссылкой; не ушло адресату — метка «Не отправлено» и «Отправить адресату ещё раз» (EDS-REPLY-1)", async () => {

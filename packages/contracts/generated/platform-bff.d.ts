@@ -17561,6 +17561,8 @@ export interface operations {
         kind?: components["schemas"]["EdsRegistryKind"][];
         /** @description Статусы (повтором); значения — статусы документа, письма или маршрута КП */
         status?: string[];
+        /** @description `open` — документ ждёт чьего-то действия, в том числе контрагента («Исходящие», «Внутренние»); `done` — путь завершён («Архив»). Конечные статусы по виду решает EDS */
+        stage?: "open" | "done";
         /** @description Поиск по номеру и теме (только `scope=all`) */
         q?: string;
         cursor?: string;

@@ -135,6 +135,7 @@ def registry_item(item_id: str = DOC_ID, **over: Any) -> dict[str, Any]:
         "responsible": DIRECTOR,
         "client": None,
         "links": {},
+        "amount": None,
         **over,
     }
 
