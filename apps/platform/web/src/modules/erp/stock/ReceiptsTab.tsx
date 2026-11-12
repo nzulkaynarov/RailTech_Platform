@@ -7,16 +7,21 @@ import { useViewport } from "../../../app/shell/useViewport";
 import type { StockPendingReceiptLine } from "../../../shared/api/generated/model";
 import { useListStockReceipts } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
-import { TableCols } from "../../../shared/ui/DataBlock";
-import { tableMinWidth } from "../../../shared/ui/tableWidth";
+import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTable";
 import { EmptyState } from "../../../shared/ui/EmptyState";
-import { QueryState, ScrollRegion } from "../../../shared/ui/FormParts";
+import { QueryState } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { useStateLabels } from "./api";
 import { ReceiveModal } from "./OrderModals";
 
 /** Ширины колонок: заказ, поставщик, позиция (гибкая), осталось, ожидается, действие (UX-1c, S9) */
-const COLS = [140, 200, null, 156, 140, 150] as const;
+const COLS = {
+  order: 140,
+  supplier: 200,
+  left: 156,
+  expected: 140,
+  action: 150,
+};
 
 function Pending({
   items,
@@ -76,56 +81,79 @@ function Pending({
       </ul>
     );
   }
+  // Ширины по типу (COLS, T1); остальное — настройка сотрудника в «Столбцах» (пункт «Т»).
+  const columns: DataColumn<StockPendingReceiptLine>[] = [
+    {
+      id: "order",
+      header: t("receipts.columns.order"),
+      width: COLS.order,
+      cellClassName: "pf-num",
+      cell: (line) => (
+        <>
+          <Link className="pf-focusable pf-calc-number" to={line.order_path}>
+            {line.order_number}
+          </Link>
+        </>
+      ),
+    },
+    {
+      id: "supplier",
+      header: t("receipts.columns.supplier"),
+      width: COLS.supplier,
+      cellClassName: "pf-ell",
+      cellTitle: (line) => line.supplier,
+      cell: (line) => line.supplier,
+    },
+    {
+      id: "position",
+      header: t("receipts.columns.position"),
+      width: null,
+      cell: (line) => (
+        <>
+          <div>{line.name}</div>
+          <div className="pf-hint pf-num">{line.article}</div>
+        </>
+      ),
+    },
+    {
+      id: "left",
+      header: t("receipts.columns.left"),
+      width: COLS.left,
+      numeric: true,
+      cell: (line) => (
+        <>
+          {t("receipts.left", {
+            left: line.quantity - line.received_quantity,
+            total: line.quantity,
+          })}
+        </>
+      ),
+    },
+    {
+      id: "expected",
+      header: t("receipts.columns.expected"),
+      width: COLS.expected,
+      cell: (line) => when(line),
+    },
+    {
+      id: "action",
+      header: t("receipts.columns.action"),
+      headerHidden: true,
+      width: COLS.action,
+      cell: (line) => action(line),
+    },
+  ];
   return (
-    <ScrollRegion label={t("receipts.pendingScroll")}>
-      <table
-        className="pf-calc-table pf-fixed-table"
-        style={{ minWidth: tableMinWidth(COLS, 220) }}
-      >
-        <caption className="pf-sr-only">{t("receipts.pendingCaption")}</caption>
-        <TableCols widths={COLS} />
-        <thead>
-          <tr>
-            <th scope="col">{t("receipts.columns.order")}</th>
-            <th scope="col">{t("receipts.columns.supplier")}</th>
-            <th scope="col">{t("receipts.columns.position")}</th>
-            <th scope="col" className="pf-col-num">
-              {t("receipts.columns.left")}
-            </th>
-            <th scope="col">{t("receipts.columns.expected")}</th>
-            <th scope="col">
-              <span className="pf-sr-only">{t("receipts.columns.action")}</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((line) => (
-            <tr key={`${line.order_number}:${line.order_line_id}`}>
-              <td className="pf-num">
-                <Link className="pf-focusable pf-calc-number" to={line.order_path}>
-                  {line.order_number}
-                </Link>
-              </td>
-              <td className="pf-ell" title={line.supplier}>
-                {line.supplier}
-              </td>
-              <td>
-                <div>{line.name}</div>
-                <div className="pf-hint pf-num">{line.article}</div>
-              </td>
-              <td className="pf-col-num">
-                {t("receipts.left", {
-                  left: line.quantity - line.received_quantity,
-                  total: line.quantity,
-                })}
-              </td>
-              <td>{when(line)}</td>
-              <td>{action(line)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </ScrollRegion>
+    <DataTable
+      tableId="erp.stock.receipts"
+      caption={t("receipts.pendingCaption")}
+      scrollLabel={t("receipts.pendingScroll")}
+      className="pf-calc-table"
+      flexMin={220}
+      columns={columns}
+      rows={items}
+      rowKey={(line) => `${line.order_number}:${line.order_line_id}`}
+    />
   );
 }
 

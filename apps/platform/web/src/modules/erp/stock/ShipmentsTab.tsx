@@ -11,10 +11,9 @@ import {
   useShipFromStock,
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
-import { TableCols } from "../../../shared/ui/DataBlock";
-import { tableMinWidth } from "../../../shared/ui/tableWidth";
+import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTable";
 import { EmptyState } from "../../../shared/ui/EmptyState";
-import { ErrorNote, QueryState, ScrollRegion } from "../../../shared/ui/FormParts";
+import { ErrorNote, QueryState } from "../../../shared/ui/FormParts";
 import { clean, useErrorText, useRefreshStock, useStateLabels } from "./api";
 import { ShipUnits } from "./Tracking";
 
@@ -25,7 +24,12 @@ function unitsText(units: readonly { number: string; quantity: number }[]): stri
 }
 
 /** Ширины колонок: накладная, заявка, строки (гибкая), трек, когда (UX-1c, S9) */
-const COLS = [130, 180, null, 180, 170] as const;
+const COLS = {
+  number: 130,
+  request: 180,
+  tracking: 180,
+  when: 170,
+};
 
 function NewShipment({ manage }: { manage: boolean }) {
   const { t } = useTranslation("stock");
@@ -231,57 +235,80 @@ function Rows({ items }: { items: readonly StockShipment[] }) {
       </ul>
     );
   }
-  return (
-    <ScrollRegion label={t("shipments.scroll")}>
-      <table
-        className="pf-calc-table pf-fixed-table"
-        style={{ minWidth: tableMinWidth(COLS, 240) }}
-      >
-        <caption className="pf-sr-only">{t("shipments.caption")}</caption>
-        <TableCols widths={COLS} />
-        <thead>
-          <tr>
-            <th scope="col">{t("shipments.columns.number")}</th>
-            <th scope="col">{t("shipments.columns.request")}</th>
-            <th scope="col">{t("shipments.columns.lines")}</th>
-            <th scope="col">{t("shipments.columns.tracking")}</th>
-            <th scope="col">{t("shipments.columns.when")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((s) => (
-            <tr key={s.id}>
-              <td className="pf-num">{s.number}</td>
-              <td>
-                <Link className="pf-focusable" to={s.request.path}>
-                  {s.request.number}
-                </Link>
-                <div className="pf-hint">{s.request.client ?? "—"}</div>
-              </td>
-              <td>
-                {s.lines.map((l, index) => (
-                  <div key={index}>
-                    {l.name} · <span className="pf-num">{l.quantity}</span>
-                    {l.cell ? <span className="pf-hint"> ({l.cell})</span> : null}
-                    {l.units.length > 0 ? (
-                      <div className="pf-hint pf-num">{unitsText(l.units).slice(3)}</div>
-                    ) : null}
-                  </div>
-                ))}
-              </td>
-              <td>
-                {s.tracking ?? "—"}
-                {s.carrier ? <div className="pf-hint">{s.carrier}</div> : null}
-              </td>
-              <td>
-                {activity(s.shipped_at)}
-                {s.shipped_by ? <div className="pf-hint">{s.shipped_by}</div> : null}
-              </td>
-            </tr>
+  // Ширины по типу (COLS, T1); остальное — настройка сотрудника в «Столбцах» (пункт «Т»).
+  const columns: DataColumn<StockShipment>[] = [
+    {
+      id: "number",
+      header: t("shipments.columns.number"),
+      width: COLS.number,
+      cellClassName: "pf-num",
+      cell: (s) => s.number,
+    },
+    {
+      id: "request",
+      header: t("shipments.columns.request"),
+      width: COLS.request,
+      cell: (s) => (
+        <>
+          <Link className="pf-focusable" to={s.request.path}>
+            {s.request.number}
+          </Link>
+          <div className="pf-hint">{s.request.client ?? "—"}</div>
+        </>
+      ),
+    },
+    {
+      id: "lines",
+      header: t("shipments.columns.lines"),
+      width: null,
+      cell: (s) => (
+        <>
+          {s.lines.map((l, index) => (
+            <div key={index}>
+              {l.name} · <span className="pf-num">{l.quantity}</span>
+              {l.cell ? <span className="pf-hint"> ({l.cell})</span> : null}
+              {l.units.length > 0 ? (
+                <div className="pf-hint pf-num">{unitsText(l.units).slice(3)}</div>
+              ) : null}
+            </div>
           ))}
-        </tbody>
-      </table>
-    </ScrollRegion>
+        </>
+      ),
+    },
+    {
+      id: "tracking",
+      header: t("shipments.columns.tracking"),
+      width: COLS.tracking,
+      cell: (s) => (
+        <>
+          {s.tracking ?? "—"}
+          {s.carrier ? <div className="pf-hint">{s.carrier}</div> : null}
+        </>
+      ),
+    },
+    {
+      id: "when",
+      header: t("shipments.columns.when"),
+      width: COLS.when,
+      cell: (s) => (
+        <>
+          {activity(s.shipped_at)}
+          {s.shipped_by ? <div className="pf-hint">{s.shipped_by}</div> : null}
+        </>
+      ),
+    },
+  ];
+  return (
+    <DataTable
+      tableId="erp.stock.shipments"
+      caption={t("shipments.caption")}
+      scrollLabel={t("shipments.scroll")}
+      className="pf-calc-table"
+      flexMin={240}
+      columns={columns}
+      rows={items}
+      rowKey={(s) => s.id}
+    />
   );
 }
 
