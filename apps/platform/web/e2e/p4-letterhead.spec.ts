@@ -2,7 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { type Locator, type Page, expect, test } from "@playwright/test";
 
 import { loginAndWait, openAvatarMenu, spaGoto, waitForMotionEnd } from "./support/app";
-import { chooseOption, fillDate, pickFiles } from "./support/fields";
+import { chooseOption, fillDate, openStep, pickFiles } from "./support/fields";
 
 // P4 «Письмо на бланке» на MSW (SPEC-v3 §3.2a п. 3; план 2026-11-01 §6 п. 6): требование ГНК → поручение «Подготовить ответ»
 // исполнителю без права регистрировать → письмо на бланке блоками (абзац, список, таблица) → настоящий PDF (демо — рендер
@@ -78,6 +78,7 @@ function side(page: Page): Locator {
 
 /** Письмо в редакторе: абзац, список набором «- », таблица кнопкой (переход по ячейкам — Tab). */
 async function fillLetterBody(page: Page): Promise<void> {
+  await openStep(page, "Текст и вложения");
   const box = page.getByRole("textbox", { name: "Текст", exact: true });
   await box.click();
   await page.keyboard.type(
@@ -183,6 +184,7 @@ test.describe("P4: письмо на бланке", () => {
       .getByLabel("Кому (должность и ФИО)")
       .fill("Начальнику ГНИ Мирабадского района Каримову А. А.");
     await fillLetterBody(page);
+    await openStep(page, "Согласование и подпись");
     await expect(
       page.getByText("Пусто — подписант бланка: Каримов А. А., Директор."),
     ).toBeVisible();
@@ -192,6 +194,7 @@ test.describe("P4: письмо на бланке", () => {
     await pdfReady(page);
     await both(page, "pdf-preview", pdfReady);
 
+    await openStep(page, "Проверка и отправка");
     await page.getByRole("button", { name: "Передать на регистрацию" }).click();
     await expect(page.getByText("Передано на регистрацию делопроизводителю.")).toBeVisible();
     await expect(side(page).getByText(/Передано на регистрацию: Демо Широков/)).toBeVisible();
@@ -243,7 +246,9 @@ test.describe("P4: письмо на бланке", () => {
     await page.getByLabel("Тема").fill("О сроках поставки");
     await page.getByLabel("Адресат (организация)").fill("ООО «Демо-Путь»");
     await page.getByLabel("Почта адресата").fill("office@nosmtp.example");
+    await openStep(page, "Текст и вложения");
     await page.getByLabel("Текст", { exact: true }).fill("Сообщаем о переносе отгрузки на неделю.");
+    await openStep(page, "Проверка и отправка");
     await page.getByRole("button", { name: "Зарегистрировать и отправить" }).click();
     await expect(
       page.getByText(/Письмо зарегистрировано: ИСХ-\d{3}\/26\. Отправляем адресату\./),
