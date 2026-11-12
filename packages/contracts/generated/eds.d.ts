@@ -3188,6 +3188,8 @@ export interface components {
       responsible: components["schemas"]["PersonRef"] | null;
       client: components["schemas"]["LetterSender"] | null;
       links: components["schemas"]["ErpLinks"];
+      /** @description Сумма строки (0.15.0); у письма и документа без суммы — `null` */
+      amount: components["schemas"]["Money"] | null;
     };
     RegistryPage: {
       items: components["schemas"]["RegistryItem"][];
@@ -3262,6 +3264,8 @@ export interface components {
     IdempotencyKey: string;
     /** @description Вкладки реестра (несколько — повтором параметра) */
     RegistryKind: components["schemas"]["RegistryKind"][];
+    /** @description `open` — документ ждёт чьего-то действия, в том числе контрагента («Исходящие», «Внутренние»); `done` — путь завершён («Архив»). Конечные статусы по виду: входящее — `executed`, `noted`, `duplicate`, `closed`, `rejected`; документ — `approved`, `rejected`, `paid`, `sent`; КП — `rejected`; договор — `signed`, `rejected`; счёт — `paid`; акт — `signed`. */
+    RegistryStage: "open" | "done";
     /** @description Статус объекта (значения — `LetterStatus`, `DocumentStatus`, `RouteStatus` по типу) */
     RegistryStatus: string[];
     /** @description Дата регистрации с (включительно, `Asia/Tashkent`) */
@@ -4673,6 +4677,8 @@ export interface operations {
         status?: components["schemas"]["DocumentStatus"][];
         /** @description Только документы, где сотрудник — автор (`1`/`true`) */
         mine?: boolean;
+        /** @description `open` — документ ждёт чьего-то действия, в том числе контрагента («Исходящие», «Внутренние»); `done` — путь завершён («Архив»). Конечные статусы по виду: входящее — `executed`, `noted`, `duplicate`, `closed`, `rejected`; документ — `approved`, `rejected`, `paid`, `sent`; КП — `rejected`; договор — `signed`, `rejected`; счёт — `paid`; акт — `signed`. */
+        stage?: components["parameters"]["RegistryStage"];
         /** @description Непрозрачный курсор из `next_cursor` */
         cursor?: components["parameters"]["Cursor"];
         limit?: components["parameters"]["Limit"];
@@ -5127,6 +5133,8 @@ export interface operations {
         kind?: components["parameters"]["RegistryKind"];
         /** @description Статус объекта (значения — `LetterStatus`, `DocumentStatus`, `RouteStatus` по типу) */
         status?: components["parameters"]["RegistryStatus"];
+        /** @description `open` — документ ждёт чьего-то действия, в том числе контрагента («Исходящие», «Внутренние»); `done` — путь завершён («Архив»). Конечные статусы по виду: входящее — `executed`, `noted`, `duplicate`, `closed`, `rejected`; документ — `approved`, `rejected`, `paid`, `sent`; КП — `rejected`; договор — `signed`, `rejected`; счёт — `paid`; акт — `signed`. */
+        stage?: components["parameters"]["RegistryStage"];
         /** @description Дата регистрации с (включительно, `Asia/Tashkent`) */
         date_from?: components["parameters"]["RegistryDateFrom"];
         /** @description Дата регистрации по (включительно) */
@@ -5170,6 +5178,8 @@ export interface operations {
         kind?: components["parameters"]["RegistryKind"];
         /** @description Статус объекта (значения — `LetterStatus`, `DocumentStatus`, `RouteStatus` по типу) */
         status?: components["parameters"]["RegistryStatus"];
+        /** @description `open` — документ ждёт чьего-то действия, в том числе контрагента («Исходящие», «Внутренние»); `done` — путь завершён («Архив»). Конечные статусы по виду: входящее — `executed`, `noted`, `duplicate`, `closed`, `rejected`; документ — `approved`, `rejected`, `paid`, `sent`; КП — `rejected`; договор — `signed`, `rejected`; счёт — `paid`; акт — `signed`. */
+        stage?: components["parameters"]["RegistryStage"];
         /** @description Дата регистрации с (включительно, `Asia/Tashkent`) */
         date_from?: components["parameters"]["RegistryDateFrom"];
         /** @description Дата регистрации по (включительно) */

@@ -925,3 +925,37 @@ async def test_document_card_says_which_incoming_letter_it_answers(
     eds.answer("GET", f"documents/{DOC_ID}", body=document(kind="letter_out"))
     plain = await web.client.get(f"{BASE}/documents/{DOC_ID}")
     assert plain.json()["in_reply_to"] is None
+
+
+async def test_stage_goes_to_eds_and_registry_rows_carry_amounts(
+    web: Web, eds: EdsFake, check: ContractChecker
+) -> None:
+    """«Исходящие» и «Архив» (план 2026-11-12 п. 0.9, FR-5): ящик — стадия EDS, у КП — сумма."""
+    await web.login(["MANAGER"])
+    eds.answer(
+        "GET",
+        "registry",
+        200,
+        {
+            "items": [
+                registry_item(
+                    "40000000-0000-4000-8000-000000000002",
+                    kind="quote",
+                    number="КП-2026/115",
+                    title="Колёсные пары",
+                    status="approved",
+                    amount={"amount": "125000000.00", "currency": "UZS"},
+                ),
+            ],
+            "next_cursor": None,
+        },
+    )
+    response = await web.client.get(f"{BASE}/documents?scope=all&stage=open")
+    check(response, "/eds/documents", "get")
+    (quote,) = response.json()["items"]
+    assert quote["amount"] == {"amount": "125000000.00", "currency": "UZS"}
+    assert eds.last("GET", "registry").url.params["stage"] == "open"
+
+    await web.client.get(f"{BASE}/documents?stage=done")
+    assert eds.last("GET", "documents").url.params["stage"] == "done"
+    assert (await web.client.get(f"{BASE}/documents?stage=later")).status_code == 422

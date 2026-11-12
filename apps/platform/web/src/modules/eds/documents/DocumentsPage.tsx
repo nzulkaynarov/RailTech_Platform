@@ -12,6 +12,7 @@ import type {
   ListEdsDocumentsParams,
 } from "../../../shared/api/generated/model";
 import { useListEdsDocuments } from "../../../shared/api/generated/platform-bff";
+import { quotePath } from "../drafts/api";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useShownValue } from "../../../shared/lib/useShownKey";
 import { useFormat } from "../../../shared/lib/useFormat";
@@ -38,8 +39,8 @@ const PAGE_SIZE = 25;
  */
 const colsOf = (scope: Scope) =>
   scope === "all"
-    ? ([148, null, 196, 120, 104, 136, 104, 128] as const)
-    : ([148, null, 196, 120, 104, 104, 128] as const);
+    ? ([148, null, 172, 144, 104, 136, 104, 128] as const)
+    : ([148, null, 196, 144, 104, 104, 128] as const);
 const KIND_TABS = [
   "all",
   "memo",
@@ -85,16 +86,15 @@ const BOX_TABS: Record<Box, readonly KindTab[]> = {
   internal: ["all", "memo", "application", "report"],
   archive: KIND_TABS,
 };
-/** Конечные статусы (SPEC-v3 §2.4): документ больше не ждёт ничьего действия и лежит в «Архиве» */
-const ARCHIVE_STATUSES = ["approved", "rejected", "paid", "sent", "resolved"] as const;
-const OPEN_STATUSES = [
-  "draft",
-  "on_approval",
-  "returned",
-  "to_accountant",
-  "awaiting_resolution",
-  "open",
-] as const;
+/**
+ * Стадия ящика (план 2026-11-12 п. 0.9, FR-5): «Исходящие» и «Внутренние» — документы, которые ещё ждут чьего-то действия,
+ * в том числе контрагента; «Архив» — путь завершён. Какие статусы конечные у каждого вида, решает EDS (`stage`).
+ */
+const BOX_STAGE: Record<Box, "open" | "done"> = {
+  outgoing: "open",
+  internal: "open",
+  archive: "done",
+};
 
 function boxOf(value: string | null): Box | undefined {
   return BOXES.find((box) => box === value);
@@ -116,7 +116,6 @@ const BOX_NAV: Record<Box, string> = {
 /** Куда ведут строки реестра, которые не открываются в этом окне: пункт меню EDS и его ключ в `modules` */
 const SECTION_OF: Partial<Record<EdsRegistryKind, { key: string; path: string }>> = {
   letter_in: { key: "inbox", path: "/eds/inbox" },
-  quote: { key: "drafts", path: "/eds/drafts" },
 };
 
 type Scope = "mine" | "all";
@@ -160,6 +159,18 @@ function RowAction({ row, own }: { row: EdsDocumentRow; own: boolean }) {
         aria-label={t("documents:list.inProjectLabel", { subject: row.subject })}
       >
         {t("documents:list.inProject")}
+      </Link>
+    );
+  }
+  // КП — своя карточка одобрения (`/eds/drafts/<id>`): раздела «КП на одобрение» в меню нет (FR-5).
+  if (row.kind === "quote") {
+    return (
+      <Link
+        className="pf-docs-link pf-focusable"
+        to={quotePath(row.id)}
+        aria-label={t("documents:list.openQuoteLabel", { subject: row.subject })}
+      >
+        {t("documents:list.openQuote")}
       </Link>
     );
   }
@@ -370,20 +381,21 @@ export function DocumentsPage() {
   const cursor = cursors[cursors.length - 1];
 
   const kinds = useMemo(() => kindsOf(tab, box), [tab, box]);
-  const statusFilter = useMemo<string[] | undefined>(() => {
-    if (status) return [status];
-    if (box === "archive") return [...ARCHIVE_STATUSES];
-    return box ? [...OPEN_STATUSES] : undefined;
-  }, [status, box]);
+  const statusFilter = useMemo<string[] | undefined>(
+    () => (status ? [status] : undefined),
+    [status],
+  );
+  const stage = box ? BOX_STAGE[box] : undefined;
   const query: ListEdsDocumentsParams = useMemo(
     () => ({
       scope,
       ...(kinds ? { kind: kinds } : {}),
       ...(statusFilter ? { status: statusFilter } : {}),
+      ...(stage ? { stage } : {}),
       limit: PAGE_SIZE,
       ...(cursor ? { cursor } : {}),
     }),
-    [scope, kinds, statusFilter, cursor],
+    [scope, kinds, statusFilter, stage, cursor],
   );
   const list = useListEdsDocuments(query);
   // Колонки, подписи и подзаголовок — по реестру, к которому относятся строки на экране (UX-1c, S8)
@@ -407,9 +419,7 @@ export function DocumentsPage() {
     ...DOCUMENT_STATUSES,
     ...(scope === "all" ? REGISTRY_STATUSES : []),
   ] as readonly string[];
-  const boxStatuses: readonly string[] | undefined =
-    box === "archive" ? ARCHIVE_STATUSES : box ? OPEN_STATUSES : undefined;
-  const statuses = boxStatuses ? allStatuses.filter((s) => boxStatuses.includes(s)) : allStatuses;
+  const statuses = allStatuses;
   const filtered = tab !== "all" || status !== "";
 
   const labels = {

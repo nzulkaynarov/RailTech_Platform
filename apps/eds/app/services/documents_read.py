@@ -23,7 +23,8 @@ from app.schemas.documents import (
 )
 from app.schemas.documents import DocumentPayment as PaymentOut
 from app.schemas.pagination import decode_cursor
-from app.services import access, files, journal, letter_mail, paging, renders, reply
+from app.schemas.registry import RegistryStage
+from app.services import access, files, journal, letter_mail, paging, registry, renders, reply
 from app.services.people import Directory, load_directory
 
 _DECISION = {"approved": Decision.APPROVE, "returned": Decision.RETURN, "rejected": Decision.REJECT}
@@ -201,6 +202,7 @@ async def list_page(
     mine: bool,
     cursor: str | None,
     limit: int,
+    stage: RegistryStage | None = None,
 ) -> DocumentPage:
     stmt = select(Document).where(access.document_visible(employee))
     if kinds:
@@ -209,6 +211,10 @@ async def list_page(
         stmt = stmt.where(Document.status.in_([s.value for s in statuses]))
     if mine:
         stmt = stmt.where(Document.author_crm_user_id == employee.crm_user_id)
+    if stage is not None:
+        # Тот же словарь конечных статусов, что у реестра (eds.yaml 0.15.0): у всех видов документа он один.
+        done = Document.status.in_(registry.DONE_STATUSES["memo"])
+        stmt = stmt.where(done if stage == RegistryStage.DONE else ~done)
     stmt = paging.apply(stmt, Document.created_at, Document.id, decode_cursor(cursor), limit)
     rows = list((await session.execute(stmt)).scalars().all())
     page, next_cursor = paging.cut(rows, limit, lambda r: r.created_at, lambda r: r.id)

@@ -16,14 +16,19 @@ from typing import Any
 
 from sqlalchemy import (
     BigInteger,
+    ColumnElement,
     CompoundSelect,
     Date,
+    Numeric,
     Select,
     String,
+    and_,
     cast,
     func,
     literal_column,
+    not_,
     null,
+    or_,
     select,
     union_all,
 )
@@ -31,20 +36,35 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.clock import COMPANY_TZ
 from app.models import ApprovalRoute, ApprovalStep, Document, Employee, Letter, ProjectDocument
-from app.schemas.common import ErpLinks, LetterSender
+from app.schemas.common import ErpLinks, LetterSender, Money
 from app.schemas.pagination import decode_cursor
-from app.schemas.registry import RegistryItem, RegistryKind, RegistryPage
+from app.schemas.registry import RegistryItem, RegistryKind, RegistryPage, RegistryStage
 from app.services import access, paging
 from app.services.letters_read import escape_like
 from app.services.people import Directory, load_directory
 
 EXPORT_LIMIT = 10_000
 
+#: Конечные статусы по виду (eds.yaml 0.15.0, `RegistryStage`): документ больше не ждёт ничьего действия — «Архив».
+#: Остальные — «открыт»: ждёт сотрудника или контрагента (одобренное КП ждёт клиента, выставленный счёт — оплаты).
+DONE_STATUSES: dict[str, tuple[str, ...]] = {
+    "letter_in": ("executed", "noted", "duplicate", "closed", "rejected"),
+    "letter_out": ("approved", "rejected", "paid", "sent"),
+    "memo": ("approved", "rejected", "paid", "sent"),
+    "application": ("approved", "rejected", "paid", "sent"),
+    "report": ("approved", "rejected", "paid", "sent"),
+    "quote": ("rejected",),
+    "contract": ("signed", "rejected"),
+    "invoice": ("paid",),
+    "act": ("signed",),
+}
+
 
 @dataclass(frozen=True)
 class Filters:
     kinds: list[RegistryKind] = field(default_factory=list)
     statuses: list[str] = field(default_factory=list)
+    stage: RegistryStage | None = None
     date_from: dt.date | None = None
     date_to: dt.date | None = None
     responsible: int | None = None
@@ -85,6 +105,8 @@ def _union(employee: Employee) -> CompoundSelect[Any]:
         Letter.deal_number.label("deal_number"),
         Letter.crm_client_id.label("crm_client_id"),
         Letter.erp_company_id.label("erp_company_id"),
+        cast(null(), Numeric).label("amount"),
+        cast(null(), String).label("currency"),
     )
     documents = select(
         cast(literal_column("documents.kind"), String).label("kind"),
@@ -101,6 +123,8 @@ def _union(employee: Employee) -> CompoundSelect[Any]:
         Document.deal_number.label("deal_number"),
         _big().label("crm_client_id"),
         _big().label("erp_company_id"),
+        cast(Document.amount, Numeric).label("amount"),
+        Document.currency.label("currency"),
     ).where(access.document_visible(employee))  # письма и чужие черновики отсекает сам предикат видимости
     quotes = select(
         cast(literal_column("'quote'"), String).label("kind"),
@@ -117,6 +141,8 @@ def _union(employee: Employee) -> CompoundSelect[Any]:
         ApprovalRoute.deal_number,
         ApprovalRoute.crm_client_id,
         ApprovalRoute.erp_company_id,
+        cast(ApprovalRoute.quote_snapshot["total"].astext, Numeric),
+        ApprovalRoute.quote_snapshot["currency"].astext,
     ).where(ApprovalRoute.template == "quote", access.route_visible(employee))
     parts = [documents, quotes]
     # Входящие письма — метаданные отправителя (имя, ИНН) — только с `letters.read`, как `/letters`.
@@ -144,7 +170,13 @@ def _project_documents() -> Select[Any]:
         ProjectDocument.deal_number,
         ProjectDocument.crm_client_id,
         ProjectDocument.erp_company_id,
+        cast(ProjectDocument.amount, Numeric),
+        ProjectDocument.currency,
     )
+
+
+def _done(kind: Any, status: Any) -> ColumnElement[bool]:
+    return or_(*(and_(kind == k, status.in_(statuses)) for k, statuses in DONE_STATUSES.items()))
 
 
 def _filtered(employee: Employee, filters: Filters) -> Select[Any]:
@@ -155,6 +187,9 @@ def _filtered(employee: Employee, filters: Filters) -> Select[Any]:
         stmt = stmt.where(c.kind.in_([k.value for k in filters.kinds]))
     if filters.statuses:
         stmt = stmt.where(c.status.in_(filters.statuses))
+    if filters.stage is not None:
+        done = _done(c.kind, c.status)
+        stmt = stmt.where(done if filters.stage == RegistryStage.DONE else not_(done))
     local_day = cast(func.timezone(COMPANY_TZ.key, c.registered_at), Date)
     if filters.date_from:
         stmt = stmt.where(local_day >= filters.date_from)
@@ -189,6 +224,11 @@ def _item(row: Any, directory: Directory) -> RegistryItem:
             deal_number=row.deal_number,
             crm_client_id=row.crm_client_id,
             erp_company_id=row.erp_company_id,
+        ),
+        amount=(
+            Money(amount=f"{row.amount:.2f}", currency=row.currency)
+            if row.amount is not None and row.currency
+            else None
         ),
     )
 

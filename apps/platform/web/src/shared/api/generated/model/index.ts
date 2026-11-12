@@ -593,6 +593,7 @@ export * from "./listDictionaryItemsParams";
 export * from "./listEdsDealOptionsParams";
 export * from "./listEdsDocumentsParams";
 export * from "./listEdsDocumentsScope";
+export * from "./listEdsDocumentsStage";
 export * from "./listEdsProjectsParams";
 export * from "./listEmployeesParams";
 export * from "./listExternalChatsParams";

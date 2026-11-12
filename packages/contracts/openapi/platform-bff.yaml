@@ -1,12 +1,16 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.58.0
+  version: 0.59.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
     сессия, профиль, счётчики меню, «Моя очередь», лента «Сегодня», уведомления, поиск. Экраны фаз P2–P4 добавляются
     в этот файл до кода (`docs/architecture/integration-map.md` §1).
+
+    **0.59.0 (реестр «Исходящие», план 2026-11-12 п. 0.9, находка FR-5).** `GET /eds/documents` принимает `stage`:
+    `open` — ждёт чьего-то действия («Исходящие», «Внутренние»), `done` — путь завершён («Архив»); конечные статусы по виду
+    решает EDS. У строк реестра (`scope=all`) приходит сумма: у КП — с НДС, у договора, счёта и акта — из ERP.
 
     **0.58.0 (окно «Создать», план 2026-11-12 п. 0.1).** `POST /crm/leads` — новый лид вручную: звонок, письмо,
     рекомендация; создавший становится ответственным.
@@ -2000,6 +2004,15 @@ paths:
             items: {type: string, pattern: '^[a-z_]+$', maxLength: 32}
           style: form
           explode: true
+        - name: stage
+          in: query
+          required: false
+          description: >-
+            `open` — документ ждёт чьего-то действия, в том числе контрагента («Исходящие», «Внутренние»); `done` — путь
+            завершён («Архив»). Конечные статусы по виду решает EDS
+          schema:
+            type: string
+            enum: [open, done]
         - name: q
           in: query
           required: false

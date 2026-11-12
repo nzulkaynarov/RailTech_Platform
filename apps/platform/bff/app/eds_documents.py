@@ -277,6 +277,7 @@ class _RawRegistryItem(BaseModel):
     registered_at: Any
     responsible: EdsPerson | None
     links: dict[str, Any] | None = None
+    amount: dict[str, Any] | None = None
 
 
 def _parse[T: BaseModel](model: type[T], body: Any, path: str) -> T:
@@ -421,7 +422,7 @@ def _project_ref(item: _RawRegistryItem) -> str | None:
 
 
 def registry_page(body: Any) -> EdsDocumentPage:
-    """`GET /registry` EDS -> страница реестра «Все документы» (суммы и сроков в реестре нет)."""
+    """`GET /registry` EDS -> страница «Все документы»; сумма — из EDS (0.15.0), сроков нет."""
     items = body.get("items") if isinstance(body, dict) else None
     if not isinstance(items, list):
         raise backend_unavailable("eds", "bad_response")
@@ -437,7 +438,7 @@ def registry_page(body: Any) -> EdsDocumentPage:
                     "subject": item.title,
                     "status": item.status,
                     "author": item.responsible,
-                    "amount": None,
+                    "amount": item.amount,
                     "due_date": None,
                     "created_at": item.registered_at,
                     "openable": item.kind in DOCUMENT_KINDS,
