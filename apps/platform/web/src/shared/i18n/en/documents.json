@@ -407,7 +407,11 @@
       "open": "Open “Details & letterhead”"
     },
     "replySubject": "Re {{number}} dated {{date}}",
-    "replyPrefilled": "Filled in from {{number}}: check the correspondent, email and subject."
+    "replyPrefilled": "Filled in from {{number}}: check the correspondent, email and subject.",
+    "title": {
+      "letter": "Outgoing letter",
+      "internal": "Internal document"
+    }
   },
   "preview": {
     "title": "Letterhead PDF",

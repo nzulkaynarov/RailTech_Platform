@@ -82,7 +82,9 @@ test.describe("Доработать возвращённый документ", 
     // «Открыть» ведёт в форму «Продолжить» — текст на месте, тип нельзя менять
     await queue.getByRole("link", { name: `Открыть: ${ROW}` }).click();
     await expect(page).toHaveURL(/\/eds\/new\?draft=/);
-    await expect(page.getByRole("heading", { level: 1, name: "Создать документ" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Внутренний документ" }),
+    ).toBeVisible();
     await expect(page.getByLabel("Тема")).toHaveValue("Оплата аренды склада за ноябрь");
     await expect(page.getByText("Тип нельзя менять после создания.")).toBeVisible();
     await shoot(page, "rework-continue");

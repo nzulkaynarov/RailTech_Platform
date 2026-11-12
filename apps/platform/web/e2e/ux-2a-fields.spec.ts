@@ -57,7 +57,9 @@ test.describe("UX-2a: поля даты, файла и выбора", () => {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
       await loginAndWait(page, "manager@demo.example");
       await spaGoto(page, "/eds/new");
-      await expect(page.getByRole("heading", { level: 1, name: "Создать документ" })).toBeVisible();
+      await expect(
+        page.getByRole("heading", { level: 1, name: "Внутренний документ" }),
+      ).toBeVisible();
       await page.getByLabel("Тема").fill("Закупка мебели для переговорной");
       await page.getByLabel("Текст").fill("Прошу согласовать закупку трёх столов.");
       await page.getByLabel("Сумма, сум").fill("3 600 000");

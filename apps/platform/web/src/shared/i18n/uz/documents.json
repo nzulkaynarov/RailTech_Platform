@@ -407,7 +407,11 @@
       "open": "«Rekvizitlar va blanka»ni ochish"
     },
     "replySubject": "{{number}} ({{date}}) ga javob",
-    "replyPrefilled": "{{number}} dan to‘ldirildi: muxbir, pochta va mavzuni tekshiring."
+    "replyPrefilled": "{{number}} dan to‘ldirildi: muxbir, pochta va mavzuni tekshiring.",
+    "title": {
+      "letter": "Chiquvchi xat",
+      "internal": "Ichki hujjat"
+    }
   },
   "preview": {
     "title": "Blankdagi PDF",

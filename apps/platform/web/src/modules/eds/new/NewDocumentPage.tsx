@@ -58,7 +58,8 @@ import {
 import "../documents/documents.css";
 import "./new.css";
 
-const KINDS: readonly EdsDocumentKind[] = ["memo", "application", "report", "letter_out"];
+/** Типы внутреннего документа; исходящее письмо — отдельный экран без выбора типа (план 2026-11-12 п. 0.2). */
+const INTERNAL_KINDS: readonly EdsDocumentKind[] = ["memo", "application", "report"];
 
 function Field({
   id,
@@ -306,7 +307,7 @@ function DocumentForm({
             : "documents:form.subtitleLetter"
           : "documents:form.subtitle",
       );
-  const title = t("modules:eds.sections.new");
+  const title = t(letter ? "documents:form.title.letter" : "documents:form.title.internal");
   useDocumentTitle(title);
   const head = letterhead.data;
   const signatoryHint =
@@ -373,28 +374,32 @@ function DocumentForm({
     >
       <Card>
         <div className="pf-fp-form">
-          <Field
-            id={ids.kind}
-            label={t("documents:form.type.label")}
-            hint={
-              draft || savedId
-                ? t("documents:form.type.locked")
-                : letter && !canRegister
-                  ? t("documents:form.type.letterHandover")
-                  : undefined
-            }
-          >
-            <Select
+          {letter && handover ? (
+            <p className="pf-hint" style={{ margin: 0 }}>
+              {t("documents:form.type.letterHandover")}
+            </p>
+          ) : null}
+          {letter ? null : (
+            <Field
               id={ids.kind}
-              value={values.kind}
-              disabled={draft !== null || savedId !== null}
-              options={KINDS.map((kind) => ({ value: kind, label: t(`documents:kinds.${kind}`) }))}
-              onChange={(kind) => {
-                setErrors({});
-                set("kind", kind);
-              }}
-            />
-          </Field>
+              label={t("documents:form.type.label")}
+              hint={draft || savedId ? t("documents:form.type.locked") : undefined}
+            >
+              <Select
+                id={ids.kind}
+                value={values.kind}
+                disabled={draft !== null || savedId !== null}
+                options={INTERNAL_KINDS.map((kind) => ({
+                  value: kind,
+                  label: t(`documents:kinds.${kind}`),
+                }))}
+                onChange={(kind) => {
+                  setErrors({});
+                  set("kind", kind);
+                }}
+              />
+            </Field>
+          )}
           {letter && letterhead.data && !letterhead.data.configured ? (
             <Alert
               type="warning"
@@ -727,7 +732,7 @@ function ReplyDraft({ id, number }: { id: string; number: string }) {
   const { date } = useFormat();
   const query = useGetLetter(id);
   if (query.isPending) {
-    const title = t("modules:eds.sections.new");
+    const title = t("documents:form.title.letter");
     return (
       <div className="pf-newdoc">
         <PageHeader title={title} subtitle={t("documents:form.loadDraft")} />
