@@ -117,3 +117,34 @@ class DictionaryItemPatch(_In):
 
 class DictionaryOrderIn(_In):
     codes: Annotated[list[Code], Field(min_length=1, max_length=500)]
+
+
+# --- файл справочника (решение владельца 2026-11-11) ----------------------------------------------
+
+
+class DictionaryImportError(BaseModel):
+    #: Столбец файла (`code`, `name_ru`, `active`, ключ поля вида) или `name`/`file`
+    field: str
+    #: `required`, `invalid`, `unknown`, `duplicate`, `closed`, `too_long`, `rejected`
+    reason: str
+
+
+class DictionaryImportRow(BaseModel):
+    #: Номер строки в файле (шапка — 1)
+    line: int
+    code: str | None
+    name: str
+    action: Literal["add", "update", "unchanged", "error"]
+    #: Какие столбцы изменятся (у `update`)
+    fields: list[str] = []
+    errors: list[DictionaryImportError] = []
+
+
+class DictionaryImportResult(BaseModel):
+    #: `False` — проверка без записи или в файле есть ошибки (ничего не записано)
+    applied: bool
+    added: int
+    updated: int
+    unchanged: int
+    failed: int
+    rows: list[DictionaryImportRow]

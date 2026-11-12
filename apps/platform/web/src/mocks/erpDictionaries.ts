@@ -291,4 +291,110 @@ export const erpDictionaryHandlers = [
       return new HttpResponse(null, { status: 204 });
     });
   }),
+  // Файл справочника (решение владельца 2026-11-11): мок понимает csv; код задаёт человек.
+  http.get("*/dictionaries/:kind/export", ({ params }) => {
+    const kind = guard(params["kind"], false);
+    if (kind === undefined || kind instanceof Response) return kind;
+    const attrs = ERP_CATALOG.find((d) => d.kind === kind)?.attrs ?? [];
+    const header = ["code", "name_ru", "name_uz", "name_en", "active", ...attrs.map((a) => a.key)];
+    const lines = [...(readCompanyMock().reference[kind] as Row[])]
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((row) => {
+        const item = present(kind, row);
+        return [
+          item.code,
+          item.name.ru,
+          item.name.uz,
+          item.name.en,
+          item.active ? "да" : "нет",
+          ...attrs.map((a) => String(item.attrs[a.key] ?? "")),
+        ].join(";");
+      });
+    return new HttpResponse([header.join(";"), ...lines].join("\n"), {
+      headers: {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": `attachment; filename="${kind}.csv"`,
+      },
+    });
+  }),
+  http.post("*/dictionaries/:kind/import", async ({ params, request }) => {
+    if (!isErpKind(params["kind"])) return undefined;
+    const kind = guard(params["kind"], true);
+    if (kind === undefined || kind instanceof Response) return kind;
+    const commit = new URL(request.url).searchParams.get("dry_run") === "false";
+    const table = (await request.text())
+      .replace(/^\uFEFF/, "")
+      .split(/\r?\n/)
+      .filter((line) => line.trim())
+      .map((line) => line.split(";").map((cell) => cell.trim()));
+    const header = (table[0] ?? []).map((h) => h.toLowerCase());
+    if (!header.includes("code") || !header.includes("name_ru")) {
+      return failure(422, "VALIDATION_FAILED", "В шапке нет столбцов: code, name_ru.", {
+        fields: ["file"],
+        reason: "missing_columns",
+      });
+    }
+    const rows = readCompanyMock().reference[kind] as Row[];
+    const plans = table.slice(1).map((cells, index) => {
+      const cell = (name: string) => cells[header.indexOf(name)] ?? "";
+      const code = cell("code").toUpperCase();
+      const names = { ru: cell("name_ru"), uz: cell("name_uz"), en: cell("name_en") };
+      const current = rows.find((r) => r.code.toUpperCase() === code);
+      const line = index + 2;
+      if (!code || (!current && !names.ru)) {
+        const field = code ? "name_ru" : "code";
+        const errors = [{ field, reason: "required" }];
+        return { line, code: code || null, names, action: "error" as const, fields: [], errors };
+      }
+      if (!current) return { line, code, names, action: "add" as const, fields: [], errors: [] };
+      const shown = present(kind, current).name;
+      const fields = (["ru", "uz", "en"] as const)
+        .filter((lang) => names[lang] && names[lang] !== shown[lang])
+        .map((lang) => `name_${lang}`);
+      const action = fields.length ? ("update" as const) : ("unchanged" as const);
+      const merged = {
+        ru: names.ru || shown.ru,
+        uz: names.uz || shown.uz,
+        en: names.en || shown.en,
+      };
+      return { line, code: current.code, names: merged, action, fields, errors: [] };
+    });
+    const failed = plans.filter((p) => p.action === "error").length;
+    const applied = commit && failed === 0;
+    if (applied) {
+      updateCompanyMock((s) => {
+        const list = s.reference[kind] as Row[];
+        for (const plan of plans) {
+          if (plan.action === "add" && plan.code) {
+            const row = {
+              id: `${plan.code}-${String(plan.line)}`,
+              code: plan.code,
+              name: plan.names.ru,
+              sort_order: Math.max(0, ...list.map((r) => r.sort_order)) + 10,
+              is_active: true,
+            } as Row;
+            apply(row, { name: plan.names });
+            list.push(row);
+          }
+          const row = list.find((r) => r.code === plan.code);
+          if (plan.action === "update" && row) apply(row, { name: plan.names });
+        }
+      });
+    }
+    return HttpResponse.json({
+      applied,
+      added: plans.filter((p) => p.action === "add").length,
+      updated: plans.filter((p) => p.action === "update").length,
+      unchanged: plans.filter((p) => p.action === "unchanged").length,
+      failed,
+      rows: plans.map(({ line, code, names, action, fields, errors }) => ({
+        line,
+        code,
+        name: names.ru,
+        action,
+        fields,
+        errors,
+      })),
+    });
+  }),
 ];

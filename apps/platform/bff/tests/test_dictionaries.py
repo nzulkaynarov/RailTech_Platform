@@ -1,12 +1,17 @@
 """Справочники как данные (EDS-REG): каталог «вид → домен», чтение по разделам владельца, правка —
 `admin: full`, тело и ответы EDS как есть, ошибки EDS в формате `Error`. EDS — на respx."""
 
+import io
 import json
 from typing import Any
 
 import httpx
 import pytest
+from openpyxl import load_workbook
 
+from app import dictionary_files as files
+from app.cookies import CSRF_HEADER
+from app.schemas_dictionaries import Dictionary, DictionaryItem
 from tests.backends import Backends
 from tests.conftest import ContractChecker, Web
 from tests.consts import CRM_URL, ERP_URL
@@ -334,3 +339,158 @@ async def test_source_is_shown_and_only_admin_refreshes(
     assert (await web.login(["DIRECTOR"])).status_code == 200
     assert (await web.send("POST", f"{BASE}/currencies/sync")).status_code == 403
     assert synced.call_count == 1
+
+
+# --- файл: выгрузка и загрузка с проверкой (решение владельца 2026-11-11) -------------------------
+
+
+async def _upload(web: Web, body: bytes, *, dry_run: bool = True) -> httpx.Response:
+    return await web.client.post(
+        f"{BASE}/letter-kinds/import",
+        params={"dry_run": str(dry_run).lower()},
+        content=body,
+        headers={CSRF_HEADER: web.csrf, "Content-Type": "application/octet-stream"},
+    )
+
+
+CSV = (
+    "code;name_ru;name_uz;name_en;active;urgent;due_days\n"
+    "bank;Письмо банка;Bank xati;Bank notice;да;да;\n"
+    ";Претензия;;;;нет;10\n"
+).encode()
+
+
+async def test_export_is_the_import_template(web: Web, eds: EdsFake) -> None:
+    assert (await web.login(["ADMIN"])).status_code == 200
+    xlsx = await web.client.get(f"{BASE}/letter-kinds/export")
+    assert xlsx.status_code == 200
+    assert xlsx.headers["content-disposition"] == 'attachment; filename="letter-kinds.xlsx"'
+    sheet = load_workbook(io.BytesIO(xlsx.content)).worksheets[0]
+    rows = [list(r) for r in sheet.iter_rows(values_only=True)]
+    assert rows[0] == ["code", "name_ru", "name_uz", "name_en", "active", "urgent", "due_days"]
+    assert rows[1][:5] == ["bank", "Письмо банка", "Bank xati", "Bank letter", "да"]
+    csv_file = await web.client.get(f"{BASE}/letter-kinds/export", params={"format": "csv"})
+    assert csv_file.content.decode("utf-8-sig").splitlines()[1].startswith("bank;Письмо банка;")
+    assert (await web.login(["SUPPLY"])).status_code == 200
+    assert (await web.client.get(f"{BASE}/letter-kinds/export")).status_code == 403
+
+
+async def test_dry_run_shows_the_difference_and_writes_nothing(
+    web: Web, eds: EdsFake, check: ContractChecker
+) -> None:
+    assert (await web.login(["ADMIN"])).status_code == 200
+    response = await _upload(web, CSV + b"nope;X;;;;;\n")
+    check(response, "/dictionaries/{kind}/import", "post")
+    body = response.json()
+    assert (body["applied"], body["added"], body["updated"], body["failed"]) == (False, 1, 1, 1)
+    update, add, bad = body["rows"]
+    assert (update["code"], update["action"], update["fields"]) == (
+        "bank",
+        "update",
+        ["name_en", "urgent"],
+    )
+    assert (add["line"], add["action"], add["name"]) == (3, "add", "Претензия")
+    assert bad["errors"] == [{"field": "code", "reason": "unknown"}]
+    # С ошибкой в файле «Применить» ничего не пишет.
+    applied = await _upload(web, CSV + b"nope;X;;;;;\n", dry_run=False)
+    assert applied.json()["applied"] is False
+    assert eds.made("POST", "dictionaries/letter-kinds") == []
+    assert eds.made("PATCH", "dictionaries/letter-kinds/bank") == []
+
+
+async def test_apply_goes_through_the_usual_domain_actions(web: Web, eds: EdsFake) -> None:
+    assert (await web.login(["ADMIN"])).status_code == 200
+    response = await _upload(web, CSV, dry_run=False)
+    assert response.status_code == 200, response.text
+    assert response.json()["applied"] is True
+    [created] = eds.made("POST", "dictionaries/letter-kinds")
+    assert json.loads(created.read()) == {
+        "name": {"ru": "Претензия", "uz": "", "en": ""},
+        "attrs": {"urgent": False, "due_days": 10},
+    }
+    [patched] = eds.made("PATCH", "dictionaries/letter-kinds/bank")
+    assert json.loads(patched.read()) == {
+        "name": {"ru": "Письмо банка", "uz": "Bank xati", "en": "Bank notice"},
+        "attrs": {"urgent": True},
+    }
+
+
+async def test_bad_file_names_the_problem_and_only_admin_uploads(web: Web, eds: EdsFake) -> None:
+    assert (await web.login(["ADMIN"])).status_code == 200
+    wrong = await _upload(web, b"code;title\nbank;X\n")
+    assert wrong.status_code == 422
+    assert wrong.json()["details"]["reason"] == "missing_columns"
+    empty = await _upload(web, b"")
+    assert empty.json()["details"]["reason"] == "empty_file"
+    assert (await web.login(["DIRECTOR"])).status_code == 200
+    assert (await _upload(web, CSV)).status_code == 403
+
+
+async def test_given_codes_add_by_code_and_need_a_code(
+    web: Web, be: Backends, eds: EdsFake
+) -> None:
+    """Списки ERP (`codes = given`): новый код — новая строка с этим кодом, без кода — ошибка;
+    код ищется без учёта регистра."""
+    be.router.get(f"{ERP_URL}/api/v1/dictionaries/currencies").mock(
+        return_value=httpx.Response(200, json={"items": [ERP_ITEM]})
+    )
+    created = be.router.post(f"{ERP_URL}/api/v1/dictionaries/currencies").mock(
+        return_value=httpx.Response(201, json={**ERP_ITEM, "code": "KZT"})
+    )
+    patched = be.router.patch(f"{ERP_URL}/api/v1/dictionaries/currencies/USD").mock(
+        return_value=httpx.Response(200, json=ERP_ITEM)
+    )
+    assert (await web.login(["ADMIN"])).status_code == 200
+
+    async def upload(body: str, *, dry_run: bool = True) -> httpx.Response:
+        return await web.client.post(
+            f"{BASE}/currencies/import",
+            params={"dry_run": str(dry_run).lower()},
+            content=body.encode(),
+            headers={CSRF_HEADER: web.csrf, "Content-Type": "application/octet-stream"},
+        )
+
+    head = "code;name_ru;symbol\n"
+    checked = (await upload(head + "usd;;US$\nKZT;Тенге;₸\n;Без кода;\n")).json()
+    update, add, bad = checked["rows"]
+    assert (update["code"], update["action"], update["fields"]) == ("USD", "update", ["symbol"])
+    assert (add["code"], add["action"]) == ("KZT", "add")
+    assert bad["errors"] == [{"field": "code", "reason": "required"}]
+    applied = await upload(head + "usd;;US$\nKZT;Тенге;₸\n", dry_run=False)
+    assert applied.json()["applied"] is True, applied.text
+    assert json.loads(created.calls.last.request.content) == {
+        "code": "KZT",
+        "name": {"ru": "Тенге", "uz": "", "en": ""},
+        "attrs": {"symbol": "₸"},
+    }
+    assert json.loads(patched.calls.last.request.content) == {"attrs": {"symbol": "US$"}}
+
+
+def test_decimal_cells_compare_as_numbers() -> None:
+    """Десятичное поле: запятая допустима, `12` и `12.00` — одно значение, текст — ошибка."""
+    countries = Dictionary.model_validate(
+        {
+            "kind": "countries",
+            "owner": "erp",
+            "area": "calc",
+            "codes": "given",
+            "closed": False,
+            "name": NAME,
+            "attrs": [{"key": "vat_rate", "type": "decimal", "name": NAME, "required": False}],
+        }
+    )
+    uz = DictionaryItem.model_validate({**ERP_ITEM, "code": "UZ", "attrs": {"vat_rate": "12.00"}})
+    header = ["code", "name_ru", "vat_rate"]
+    rows = [
+        (2, {"code": "UZ", "name_ru": "", "vat_rate": "12"}),
+        (3, {"code": "KZ", "name_ru": "Казахстан", "vat_rate": "12,5"}),
+        (4, {"code": "RU", "name_ru": "Россия", "vat_rate": "двадцать"}),
+    ]
+    same, added, bad = files.plan(countries, [uz], header, rows)
+    assert same.action == "unchanged"
+    assert added.create == {
+        "name": {"ru": "Казахстан", "uz": "", "en": ""},
+        "attrs": {"vat_rate": "12.5"},
+        "code": "KZ",
+    }
+    assert bad.errors == [("vat_rate", "invalid")]

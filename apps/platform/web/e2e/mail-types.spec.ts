@@ -306,4 +306,26 @@ for (const width of WIDTHS) {
     await expectFits(page, "правила отправителей");
     await settledScreenshot(page, "mail-types-settings-rules");
   });
+
+  test(`справочник файлом: скачать, загрузить, проверить, применить · ${String(width)}`, async ({
+    page,
+  }) => {
+    await signInAt(page, width, ADMIN);
+    await spaGoto(page, "/admin/dictionaries?list=doc%3Amail-types");
+    await expect(page.getByRole("button", { name: "Скачать" })).toBeVisible();
+    await page.locator('input[type="file"]').setInputFiles({
+      name: "mail-types.csv",
+      mimeType: "text/csv",
+      buffer: Buffer.from(
+        "code;name_ru;name_uz;name_en\nspam;Спам;Spam;Junk mail\n;Жалоба покупателя;;\nnope;Ошибка;;\n",
+      ),
+    });
+    const dialog = page.getByRole("dialog", { name: "Типы входящих писем: загрузка файла" });
+    await expect(
+      dialog.getByText("Добавится: 1, изменится: 1, без изменений: 0, с ошибкой: 1"),
+    ).toBeVisible();
+    await expect(dialog.getByRole("button", { name: /Применить/ })).toBeDisabled();
+    await expectNoViolations(page, "загрузка справочника");
+    await settledScreenshot(page, "dictionary-import-preview");
+  });
 }

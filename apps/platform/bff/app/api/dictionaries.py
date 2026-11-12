@@ -13,9 +13,10 @@ from dataclasses import dataclass
 from typing import Annotated, Any, Final, Literal
 
 import httpx
-from fastapi import APIRouter, Depends, Path, Query, Response
+from fastapi import APIRouter, Depends, Path, Query, Request, Response
 from pydantic import BaseModel, ValidationError
 
+from app import dictionary_files as files
 from app.clients.base import Backend
 from app.clients.eds import eds_error
 from app.deps import Authed, AuthedDep, Rule, require, require_any
@@ -26,6 +27,9 @@ from app.schemas_dictionaries import (
     KIND,
     Dictionary,
     DictionaryAttrOption,
+    DictionaryImportError,
+    DictionaryImportResult,
+    DictionaryImportRow,
     DictionaryItem,
     DictionaryItemIn,
     DictionaryItemList,
@@ -192,6 +196,125 @@ async def list_dictionary_items(
     params = {"include_hidden": "true"} if include_hidden else None
     response = await _call(authed, owner, "GET", f"/{kind}", params=params)
     return _parse(DictionaryItemList, response, owner)
+
+
+# --- файл: выгрузка и загрузка с проверкой (решение владельца 2026-11-11) ---------------------
+
+_XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+_FILE_REASONS: Final = {
+    "empty_file": "Файл пустой.",
+    "file_too_large": "Файл больше 1 МБ.",
+    "unreadable_file": "Файл не читается: нужен xlsx или csv.",
+    "not_utf8": "csv должен быть в кодировке UTF-8.",
+    "too_many_rows": "В файле больше {detail} строк.",
+    "missing_columns": "В шапке нет столбцов: {detail}.",
+    "unknown_columns": "В шапке лишние столбцы: {detail}. Скачайте шаблон — это выгрузка списка.",
+}
+
+
+async def _dictionary(authed: Authed, kind: str) -> tuple[Owner, Dictionary]:
+    """Описание вида у домена-владельца (поля, закрыт ли); у типов писем — варианты вида
+    документа."""
+    owner = _owner(kind)
+    raw = (await _call(authed, owner, "GET", "")).json()
+    entry = next((e for e in raw.get("items", []) if e.get("kind") == kind), None)
+    if entry is None:
+        raise PlatformError("NOT_FOUND", "Такого справочника нет.", status_code=404)
+    try:
+        found = Dictionary.model_validate({**entry, "owner": owner.domain, "area": owner.area})
+    except ValidationError as exc:
+        raise backend_unavailable(owner.domain, "bad_dictionary") from exc
+    await _letter_kind_options(authed, [found])
+    return owner, found
+
+
+async def _rows(authed: Authed, owner: Owner, kind: str) -> list[DictionaryItem]:
+    response = await _call(authed, owner, "GET", f"/{kind}", params={"include_hidden": "true"})
+    return _parse(DictionaryItemList, response, owner).items
+
+
+@router.get(
+    "/{kind}/export",
+    response_class=Response,
+    operation_id="exportDictionary",
+    responses={200: {"content": {_XLSX: {}, "text/csv": {}}}},
+)
+async def export_dictionary(
+    authed: AuthedDep, kind: Kind, format: Annotated[Literal["xlsx", "csv"], Query()] = "xlsx"
+) -> Response:
+    """Выгрузка списка — она же шаблон загрузки (все строки, и скрытые)."""
+    _owner(kind)
+    await _READERS[kind](authed)
+    owner, dictionary = await _dictionary(authed, kind)
+    body = files.export(dictionary, await _rows(authed, owner, kind), format)
+    return Response(
+        content=body,
+        media_type=_XLSX if format == "xlsx" else "text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{kind}.{format}"'},
+    )
+
+
+@router.post(
+    "/{kind}/import", response_model=DictionaryImportResult, operation_id="importDictionary"
+)
+async def import_dictionary(
+    authed: Admin,
+    kind: Kind,
+    request: Request,
+    dry_run: Annotated[bool, Query()] = True,
+) -> DictionaryImportResult:
+    """Загрузка файла (тело — xlsx или csv как есть). `dry_run` — только проверка; иначе
+    применяются строки, если в файле нет ни одной ошибки. Пишет домен своими обычными действиями;
+    строк, которых нет в файле, загрузка не касается."""
+    owner, dictionary = await _dictionary(authed, kind)
+    raw = await request.body()
+    try:
+        header, rows = files.read(raw)
+        plans = files.plan(dictionary, await _rows(authed, owner, kind), header, rows)
+    except files.FileProblemError as exc:
+        message = _FILE_REASONS.get(exc.reason, "Файл не подходит.").format(detail=exc.detail)
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            message,
+            status_code=422,
+            details={"fields": ["file"], "reason": exc.reason},
+        ) from exc
+    failed = sum(1 for p in plans if p.action == "error")
+    applied = False
+    if not dry_run and failed == 0:
+        applied = True
+        for item in plans:
+            try:
+                if item.create is not None:
+                    created = await _call(
+                        authed, owner, "POST", f"/{kind}", ok=201, json=item.create
+                    )
+                    item.code = _parse(DictionaryItem, created, owner).code
+                elif item.patch is not None and item.code:
+                    await _call(authed, owner, "PATCH", f"/{kind}/{item.code}", json=item.patch)
+            except PlatformError as exc:
+                item.action = "error"
+                reason = (exc.body.details or {}).get("reason")
+                item.errors.append(("name", str(reason) if reason else "rejected"))
+        failed = sum(1 for p in plans if p.action == "error")
+    return DictionaryImportResult(
+        applied=applied,
+        added=sum(1 for p in plans if p.action == "add"),
+        updated=sum(1 for p in plans if p.action == "update"),
+        unchanged=sum(1 for p in plans if p.action == "unchanged"),
+        failed=failed,
+        rows=[
+            DictionaryImportRow(
+                line=p.line,
+                code=p.code,
+                name=p.name,
+                action=p.action,
+                fields=p.fields,
+                errors=[DictionaryImportError(field=f, reason=r) for f, r in p.errors],
+            )
+            for p in plans
+        ],
+    )
 
 
 @router.post(
