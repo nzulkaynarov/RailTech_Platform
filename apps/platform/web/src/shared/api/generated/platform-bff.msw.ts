@@ -152,6 +152,7 @@ import type {
   CompanyProfile,
   ConversationCard,
   ConversationThread,
+  CounterpartyPersonPage,
   CreatedId,
   CrewRate,
   DictionaryImportResult,
@@ -28813,6 +28814,31 @@ export const getRejectCatalogProposalResponseMock = (
   ...overrideResponse,
 });
 
+export const getListCounterpartyPeopleResponseMock = (
+  overrideResponse: Partial<Extract<CounterpartyPersonPage, object>> = {},
+): CounterpartyPersonPage => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    position: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    phone: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    is_primary: faker.datatype.boolean(),
+    company: {
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    kind: faker.helpers.arrayElement(["client", "partner"] as const),
+  })),
+  total: faker.number.int({ min: 0 }),
+  page: faker.number.int({ min: 1 }),
+  page_size: faker.number.int({ min: 1 }),
+  ...overrideResponse,
+});
+
 export const getListCatalogSuppliersResponseMock = (
   overrideResponse: Partial<Extract<SupplierPage, object>> = {},
 ): SupplierPage => ({
@@ -39680,6 +39706,30 @@ export const getRejectCatalogProposalMockHandler = (
   );
 };
 
+export const getListCounterpartyPeopleMockHandler = (
+  overrideResponse?:
+    | CounterpartyPersonPage
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<CounterpartyPersonPage> | CounterpartyPersonPage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/people/contacts",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListCounterpartyPeopleResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getListCatalogSuppliersMockHandler = (
   overrideResponse?:
     | SupplierPage
@@ -41050,6 +41100,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getReturnCatalogItemMockHandler(),
   getAcceptCatalogProposalMockHandler(),
   getRejectCatalogProposalMockHandler(),
+  getListCounterpartyPeopleMockHandler(),
   getListCatalogSuppliersMockHandler(),
   getCreateCatalogSupplierMockHandler(),
   getGetCatalogSupplierMockHandler(),

@@ -21,6 +21,7 @@ import { erpCatalogHandlers } from "./erpCatalog";
 import { edsBankChangesHandlers } from "./edsBankChanges";
 import { erpPartnerApplicationsHandlers } from "./erpPartnerApplications";
 import { erpSupplierAccessHandlers } from "./erpSupplierAccess";
+import { peopleContactsHandlers } from "./peopleContacts";
 import { edsPaymentsHandlers } from "./edsPayments";
 import { edsInstructionsHandlers } from "./edsInstructions";
 import { dictionariesHandlers } from "./dictionaries";
@@ -162,6 +163,7 @@ export const handlers = [
     return me ? HttpResponse.json(me) : sessionExpired();
   }),
 
+  ...peopleContactsHandlers,
   ...profileHandlers,
   ...aboutHandlers,
   ...adminUsersHandlers,

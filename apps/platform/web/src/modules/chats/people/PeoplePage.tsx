@@ -5,7 +5,11 @@ import { useTranslation } from "react-i18next";
 
 import { canSee } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
-import { useListCrmLeads, useListEdsStaff } from "../../../shared/api/generated/platform-bff";
+import {
+  useListCounterpartyPeople,
+  useListCrmLeads,
+  useListEdsStaff,
+} from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { SoonButton } from "../../../shared/ui/SoonButton";
@@ -20,6 +24,10 @@ interface Person {
   kind: Exclude<Kind, "all">;
   position: string | null;
   owner: string | null;
+  /** Компания контрагента (люди клиентов и партнёров) */
+  company: string | null;
+  phone: string | null;
+  email: string | null;
 }
 
 const STAFF_RULE = {
@@ -28,6 +36,8 @@ const STAFF_RULE = {
 } as const;
 const LEADS_RULE = { anyOf: ["crm.leads", "crm.leads.triage"] } as const;
 const LEADS_LIMIT = 100;
+/** Люди клиентов и партнёров (FR-11): первые 200 по имени; поиск по остальным — на сервере, когда понадобится */
+const CONTACTS_LIMIT = 200;
 
 /** Органайзер · Люди: единый список поверх источников, открытых роли. */
 export function PeoplePage() {
@@ -40,6 +50,7 @@ export function PeoplePage() {
   useDocumentTitle(title);
 
   const staff = useListEdsStaff({ query: { enabled: canSee(me, STAFF_RULE) } });
+  const contacts = useListCounterpartyPeople({ page_size: CONTACTS_LIMIT });
   const leads = useListCrmLeads(
     { limit: LEADS_LIMIT },
     { query: { enabled: canSee(me, LEADS_RULE) } },
@@ -53,6 +64,19 @@ export function PeoplePage() {
         kind: "employees" as const,
         position: row.position,
         owner: null,
+        company: null,
+        phone: null,
+        email: null,
+      })),
+      ...(contacts.data?.items ?? []).map((row) => ({
+        key: `contact-${row.id}`,
+        name: row.name,
+        kind: row.kind === "client" ? ("clients" as const) : ("partners" as const),
+        position: row.position,
+        owner: null,
+        company: row.company.name,
+        phone: row.phone,
+        email: row.email,
       })),
       ...(leads.data?.items ?? []).map((row) => ({
         key: `lead-${row.lead}`,
@@ -60,20 +84,24 @@ export function PeoplePage() {
         kind: "leads" as const,
         position: null,
         owner: row.assigned?.name ?? null,
+        company: null,
+        phone: null,
+        email: null,
       })),
     ],
-    [staff.data, leads.data],
+    [staff.data, contacts.data, leads.data],
   );
 
   const needle = search.trim().toLocaleLowerCase();
   const rows = people.filter(
     (person) =>
       (kind === "all" || person.kind === kind) &&
-      (needle === "" || person.name.toLocaleLowerCase().includes(needle)),
+      (needle === "" ||
+        person.name.toLocaleLowerCase().includes(needle) ||
+        (person.company ?? "").toLocaleLowerCase().includes(needle)),
   );
 
   const kindLabel = (value: Kind) => t(`modules:chats.people.kinds.${value}`);
-  const show = t("modules:chats.people.show");
   const columns: ColumnsType<Person> = [
     {
       title: t("modules:chats.people.columns.name"),
@@ -96,6 +124,11 @@ export function PeoplePage() {
       render: (value: string | null) => value ?? "—",
     },
     {
+      title: t("modules:chats.people.columns.company"),
+      dataIndex: "company",
+      render: (value: string | null) => value ?? "—",
+    },
+    {
       title: t("modules:chats.people.columns.kind"),
       dataIndex: "kind",
       render: (value: Kind) => kindLabel(value),
@@ -108,7 +141,7 @@ export function PeoplePage() {
     {
       title: t("modules:chats.people.columns.contacts"),
       key: "contacts",
-      render: () => <SoonButton size="small">{show}</SoonButton>,
+      render: (_, person) => person.phone ?? person.email ?? "—",
     },
   ];
 
@@ -137,7 +170,7 @@ export function PeoplePage() {
         rowKey="key"
         columns={columns}
         dataSource={rows}
-        loading={staff.isFetching || leads.isFetching}
+        loading={staff.isFetching || contacts.isFetching || leads.isFetching}
         pagination={{ pageSize: 20, hideOnSinglePage: true }}
         scroll={{ x: "max-content" }}
         locale={{ emptyText: t("modules:chats.people.noData") }}
@@ -161,6 +194,11 @@ export function PeoplePage() {
                   children: selected.position ?? "—",
                 },
                 {
+                  key: "company",
+                  label: t("modules:chats.people.columns.company"),
+                  children: selected.company ?? "—",
+                },
+                {
                   key: "kind",
                   label: t("modules:chats.people.columns.kind"),
                   children: kindLabel(selected.kind),
@@ -168,12 +206,20 @@ export function PeoplePage() {
                 {
                   key: "phone",
                   label: t("modules:chats.people.phone"),
-                  children: <SoonButton size="small">{show}</SoonButton>,
+                  children: selected.phone ? (
+                    <a href={`tel:${selected.phone}`}>{selected.phone}</a>
+                  ) : (
+                    "—"
+                  ),
                 },
                 {
                   key: "email",
                   label: t("modules:chats.people.email"),
-                  children: <SoonButton size="small">{show}</SoonButton>,
+                  children: selected.email ? (
+                    <a href={`mailto:${selected.email}`}>{selected.email}</a>
+                  ) : (
+                    "—"
+                  ),
                 },
               ]}
             />

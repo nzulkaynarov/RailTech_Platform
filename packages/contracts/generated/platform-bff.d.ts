@@ -6762,6 +6762,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/people/contacts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Органайзер · Люди: контакты клиентов и партнёров
+     * @description ERP `parties/people/` (FR-11): контакты клиентов своей компании (с контактами клиентов CRM) и партнёров (поставщики, изготовители, отношение «партнёр»). Своя компания не входит; компания и клиент, и поставщик — `client`. Раздел `chats.internal` — чтение.
+     */
+    get: operations["listCounterpartyPeople"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/erp/catalog/suppliers": {
     parameters: {
       query?: never;
@@ -14937,6 +14957,27 @@ export interface components {
       expiring_count: number;
       /** Format: date */
       nearest_valid_until: string | null;
+    };
+    CounterpartyPerson: {
+      id: components["schemas"]["CompanyItemRef"];
+      name: string;
+      position: string | null;
+      email: string | null;
+      phone: string | null;
+      is_primary: boolean;
+      company: components["schemas"]["CounterpartyRef"];
+      /** @enum {string} */
+      kind: "client" | "partner";
+    };
+    CounterpartyRef: {
+      id: components["schemas"]["CompanyItemRef"];
+      name: string;
+    };
+    CounterpartyPersonPage: {
+      items: components["schemas"]["CounterpartyPerson"][];
+      total: number;
+      page: number;
+      page_size: number;
     };
     SupplierPage: {
       items: components["schemas"]["SupplierRow"][];
@@ -28114,6 +28155,35 @@ export interface operations {
       404: components["responses"]["NotFound"];
       409: components["responses"]["CatalogConflict"];
       503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listCounterpartyPeople: {
+    parameters: {
+      query?: {
+        kind?: "client" | "partner";
+        /** @description Поиск по имени, компании, должности */
+        q?: string;
+        page?: number;
+        page_size?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CounterpartyPersonPage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
     };
   };
   listCatalogSuppliers: {

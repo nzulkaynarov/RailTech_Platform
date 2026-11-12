@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.59.0
+  version: 0.60.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -12439,6 +12439,46 @@ paths:
           $ref: '#/components/responses/CatalogConflict'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+  /people/contacts:
+    get:
+      tags: [chats]
+      operationId: listCounterpartyPeople
+      summary: 'Органайзер · Люди: контакты клиентов и партнёров'
+      description: >-
+        ERP `parties/people/` (FR-11): контакты клиентов своей компании (с контактами клиентов CRM) и партнёров (поставщики,
+        изготовители, отношение «партнёр»). Своя компания не входит; компания и клиент, и поставщик — `client`. Раздел
+        `chats.internal` — чтение.
+      parameters:
+        - name: kind
+          in: query
+          required: false
+          schema: {type: string, enum: [client, partner]}
+        - name: q
+          in: query
+          required: false
+          description: Поиск по имени, компании, должности
+          schema: {type: string, maxLength: 100}
+        - name: page
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, default: 1}
+        - name: page_size
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, maximum: 200, default: 100}
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CounterpartyPersonPage'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
   /erp/catalog/suppliers:
     get:
       tags: [erp-catalog]
@@ -25106,6 +25146,35 @@ components:
         expired_count: {type: integer, minimum: 0, description: Действующих предложений с истёкшим сроком цены}
         expiring_count: {type: integer, minimum: 0, description: Срок цены истекает в ближайшие 14 дней}
         nearest_valid_until: {type: [string, 'null'], format: date}
+    CounterpartyPerson:
+      type: object
+      additionalProperties: false
+      required: [id, name, position, email, phone, is_primary, company, kind]
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        name: {type: string}
+        position: {type: [string, 'null']}
+        email: {type: [string, 'null']}
+        phone: {type: [string, 'null']}
+        is_primary: {type: boolean}
+        company: {$ref: '#/components/schemas/CounterpartyRef'}
+        kind: {type: string, enum: [client, partner]}
+    CounterpartyRef:
+      type: object
+      additionalProperties: false
+      required: [id, name]
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        name: {type: string}
+    CounterpartyPersonPage:
+      type: object
+      additionalProperties: false
+      required: [items, total, page, page_size]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/CounterpartyPerson'}}
+        total: {type: integer, minimum: 0}
+        page: {type: integer, minimum: 1}
+        page_size: {type: integer, minimum: 1}
     SupplierPage:
       type: object
       additionalProperties: false

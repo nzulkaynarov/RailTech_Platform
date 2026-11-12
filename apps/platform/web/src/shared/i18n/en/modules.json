@@ -266,7 +266,8 @@
         "position": "Position",
         "kind": "Type",
         "owner": "Owner",
-        "contacts": "Contacts"
+        "contacts": "Contacts",
+        "company": "Company"
       }
     }
   },
