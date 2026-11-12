@@ -80,27 +80,28 @@
     "truncated": "Showing {{shown}} pages of {{total}}. The rest is in the downloaded file."
   },
   "bodyEditor": {
-    "blocks": "Text blocks",
-    "kinds": {
-      "paragraph": "Paragraph",
-      "bullet": "List",
-      "ordered": "Numbered list",
-      "table": "Table"
-    },
-    "blockLabel": "Block {{n}}: {{kind}}",
-    "moveUp": "Move up: {{block}}",
-    "moveDown": "Move down: {{block}}",
-    "remove": "Delete: {{block}}",
-    "add": "Add a block",
-    "listHint": "One item per line.",
-    "tableLabel": "Table {{n}}",
-    "headerCell": "Header, column {{col}}",
-    "cell": "Row {{row}}, column {{col}}",
     "addRow": "+ row",
     "addColumn": "+ column",
     "removeRow": "− row",
     "removeColumn": "− column",
-    "tableHint": "The first row is the header: it repeats on every PDF page."
+    "tableHint": "The first row is the header: it repeats on every PDF page.",
+    "toolbar": "Text formatting",
+    "tableActions": "Table",
+    "removeTable": "Delete table",
+    "tools": {
+      "heading": "Heading",
+      "bold": "Bold",
+      "italic": "Italic",
+      "underline": "Underline",
+      "bullet": "Bulleted list",
+      "ordered": "Numbered list",
+      "table": "Table",
+      "link": "Link"
+    },
+    "link": {
+      "label": "Link address",
+      "apply": "Done"
+    }
   },
   "onBehalf": {
     "tag": "Recorded by staff",

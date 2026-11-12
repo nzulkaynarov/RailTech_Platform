@@ -9,14 +9,14 @@ import type {
 import { COMPANY_TIME_ZONE } from "../../../shared/lib/format";
 import { HOME_CURRENCY } from "../../../shared/lib/money";
 import {
-  type Block,
   type Body,
   type BodyLang,
-  blockId,
+  type BodyNode,
   bodyText,
-  emptyBlocks,
+  emptyDoc,
   fromBody,
   isBlank,
+  paragraphOf,
   toBody,
 } from "../../../shared/ui/BodyEditor/bodyModel";
 import type { FieldKey } from "../documents/errors";
@@ -64,8 +64,8 @@ export interface FormValues {
   attachments: Attachment[];
   /** Только письмо (P8b): «в ответ на» — номер входящего ВХ; регистрация закрывает поручение «Подготовить ответ» */
   inReplyTo: string;
-  /** Письмо на бланке (P4): тело блоками, «кому», почта адресата, подписант (пусто — подписант бланка) */
-  blocks: Block[];
+  /** Письмо на бланке (P4): тело — дерево редактора, «кому», почта адресата, подписант (пусто — подписант бланка) */
+  body: BodyNode;
   recipientAttention: string;
   recipientEmail: string;
   signatoryName: string;
@@ -83,7 +83,7 @@ export const EMPTY_FORM: FormValues = {
   deal: null,
   attachments: [],
   inReplyTo: "",
-  blocks: emptyBlocks(),
+  body: emptyDoc(),
   recipientAttention: "",
   recipientEmail: "",
   signatoryName: "",
@@ -158,7 +158,7 @@ export function validate(values: FormValues, today: string = todayInCompanyZone(
   const errors: FormErrors = {};
   if (values.subject.trim() === "") errors.subject = true;
   if (isLetter(values.kind)) {
-    if (isBlank(values.blocks)) errors.text = true;
+    if (isBlank(values.body)) errors.text = true;
     if (values.recipientName.trim() === "") errors.recipient = true;
     if (values.recipientEmail.trim() !== "" && !isEmail(values.recipientEmail)) {
       errors.recipient_email = true;
@@ -224,7 +224,7 @@ export function toPayload(
   const letter = isLetter(values.kind);
   const parsed = letter ? null : parseAmount(values.amount);
   const amount = parsed?.ok ? parsed.value : null;
-  const body = letter ? toBody(values.blocks, lang) : null;
+  const body = letter ? toBody(values.body, lang) : null;
   // У письма `text` — производный от тела (поиск и показ без PDF); поле обязательно, поэтому запасной — тема.
   const text = body ? bodyText(body).trim() || values.subject.trim() : values.text.trim();
   return {
@@ -301,11 +301,11 @@ export function fromDocument(doc: EdsDocument): FormValues {
     })),
     inReplyTo: "",
     // Письмо без тела (до P4) открывается с его текстом в одном абзаце.
-    blocks: doc.letter?.body
+    body: doc.letter?.body
       ? fromBody(doc.letter.body)
       : doc.kind === "letter_out" && doc.text
-        ? [{ id: blockId(), kind: "paragraph" as const, text: doc.text }]
-        : emptyBlocks(),
+        ? { type: "doc", content: [paragraphOf(doc.text)] }
+        : emptyDoc(),
     recipientAttention: doc.letter?.recipient_attention ?? "",
     recipientEmail: doc.letter?.recipient_email ?? "",
     signatoryName: doc.letter?.signatory_name ?? "",

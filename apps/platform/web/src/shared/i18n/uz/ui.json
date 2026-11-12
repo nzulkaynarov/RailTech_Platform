@@ -80,27 +80,28 @@
     "truncated": "{{total}} sahifadan {{shown}} tasi ko'rsatilgan. Qolgani yuklab olingan faylda."
   },
   "bodyEditor": {
-    "blocks": "Matn bloklari",
-    "kinds": {
-      "paragraph": "Xatboshi",
-      "bullet": "Ro‘yxat",
-      "ordered": "Raqamli ro‘yxat",
-      "table": "Jadval"
-    },
-    "blockLabel": "{{n}}-blok: {{kind}}",
-    "moveUp": "Yuqoriga: {{block}}",
-    "moveDown": "Pastga: {{block}}",
-    "remove": "O‘chirish: {{block}}",
-    "add": "Blok qo‘shish",
-    "listHint": "Har bir band — yangi qatordan.",
-    "tableLabel": "{{n}}-jadval",
-    "headerCell": "Sarlavha, {{col}}-ustun",
-    "cell": "{{row}}-qator, {{col}}-ustun",
     "addRow": "+ qator",
     "addColumn": "+ ustun",
     "removeRow": "− qator",
     "removeColumn": "− ustun",
-    "tableHint": "Birinchi qator — sarlavha: u PDF ning har bir sahifasida takrorlanadi."
+    "tableHint": "Birinchi qator — sarlavha: u PDF ning har bir sahifasida takrorlanadi.",
+    "toolbar": "Matnni bezash",
+    "tableActions": "Jadval",
+    "removeTable": "Jadvalni o‘chirish",
+    "tools": {
+      "heading": "Sarlavha",
+      "bold": "Qalin",
+      "italic": "Kursiv",
+      "underline": "Tagi chizilgan",
+      "bullet": "Ro‘yxat",
+      "ordered": "Raqamli ro‘yxat",
+      "table": "Jadval",
+      "link": "Havola"
+    },
+    "link": {
+      "label": "Havola manzili",
+      "apply": "Tayyor"
+    }
   },
   "onBehalf": {
     "tag": "Xodim belgilagan",
