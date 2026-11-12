@@ -424,6 +424,8 @@
       "textFilled": "Text written",
       "textEmpty": "No text yet",
       "files_one": "{{count}} attachment",
+      "files_few": "{{count}} attachments",
+      "files_many": "{{count}} attachments",
       "files_other": "{{count}} attachments"
     }
   },

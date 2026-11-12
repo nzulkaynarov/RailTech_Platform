@@ -424,6 +424,8 @@
       "textFilled": "Matn yozilgan",
       "textEmpty": "Matn hali yo‘q",
       "files_one": "{{count}} ta ilova",
+      "files_few": "{{count}} ta ilova",
+      "files_many": "{{count}} ta ilova",
       "files_other": "{{count}} ta ilova"
     }
   },
