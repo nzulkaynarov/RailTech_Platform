@@ -19,12 +19,13 @@ import {
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { BodyEditor } from "../../../shared/ui/BodyEditor/BodyEditor";
-import { bodyLang } from "../../../shared/ui/BodyEditor/bodyModel";
+import { bodyLang, isBlank } from "../../../shared/ui/BodyEditor/bodyModel";
 import { DateField } from "../../../shared/ui/DateField";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { ErrorNote } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { PageHeader } from "../../../shared/ui/PageHeader";
+import { type StepSection, StepSections } from "../../../shared/ui/StepSections/StepSections";
 import {
   type FieldKey,
   fieldText,
@@ -114,6 +115,7 @@ interface ServerNote {
   saved: boolean;
 }
 
+type SectionKey = "about" | "body" | "route" | "check";
 type Action = "draft" | "submit" | "handover";
 
 /**
@@ -146,6 +148,8 @@ function DocumentForm({
   const canCompany = canEdit(me, "company.settings");
   const [values, setValues] = useState<FormValues>(initial);
   const [errors, setErrors] = useState<FormErrors>({});
+  // Секции по шагам (platform-frontend.md §4.1a): новый документ — с первой, черновик — с проверки.
+  const [active, setActive] = useState<SectionKey>(draft ? "check" : "about");
   const [note, setNote] = useState<ServerNote | null>(null);
   const [savedId, setSavedId] = useState<string | null>(draft?.id ?? null);
   // Id сохранённого черновика без ожидания перерисовки: «Показать PDF» сразу после создания идёт по тому же документу.
@@ -200,6 +204,8 @@ function DocumentForm({
     setNote(null);
     const first = FIELD_ORDER.find((field) => found[field]);
     if (first) {
+      // Ошибка открывает свою секцию (platform-frontend.md §4.1a), фокус — после отрисовки.
+      setActive(first === "text" ? "body" : "about");
       focusField(first);
       return false;
     }
@@ -215,6 +221,7 @@ function DocumentForm({
     if (id || savedRef.current) refresh();
     const fields = serverFields(error);
     setErrors(Object.fromEntries(fields.map((field) => [field, true])));
+    if (fields.length > 0) setActive(fields.every((field) => field === "text") ? "body" : "about");
     setNote({
       text: t(submit ? "documents:form.error.send" : "documents:form.error.save", {
         reason: reasonText(t, error),
@@ -363,16 +370,70 @@ function DocumentForm({
     </Field>
   );
 
-  const form = (
-    <form
-      aria-label={t("documents:form.formLabel")}
-      noValidate
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (!pending && !uploading) void run(handover ? "handover" : "submit");
+  const sectionOf = (field: string): SectionKey => (field === "text" ? "body" : "about");
+  const invalid = (key: SectionKey) =>
+    Object.keys(errors).some((field) => sectionOf(field) === key);
+
+  const aboutSummary = letter
+    ? [
+        values.recipientName,
+        values.recipientEmail,
+        values.inReplyTo ? t("documents:form.steps.replyTo", { number: values.inReplyTo }) : "",
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : [
+        t(`documents:kinds.${values.kind}`),
+        values.subject,
+        values.amount ? `${values.amount} ${t("documents:form.steps.currency")}` : "",
+      ]
+        .filter(Boolean)
+        .join(" · ");
+  const filesDone = values.attachments.filter((a) => a.status === "done").length;
+  const bodyFilled = letter ? !isBlank(values.body) : values.text.trim() !== "";
+  const bodySummary = [
+    t(bodyFilled ? "documents:form.steps.textFilled" : "documents:form.steps.textEmpty"),
+    filesDone > 0 ? t("documents:form.steps.files", { count: filesDone }) : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const aboutDone = values.subject.trim() !== "" && (!letter || values.recipientName.trim() !== "");
+
+  const draftButton = (
+    <Button
+      htmlType="button"
+      disabled={pending || uploading}
+      onClick={() => {
+        void run("draft");
       }}
     >
-      <Card>
+      {t("documents:form.submit.draft")}
+    </Button>
+  );
+
+  const reviewRows: { key: SectionKey; title: string; summary: string }[] = [
+    {
+      key: "about",
+      title: t(letter ? "documents:form.steps.aboutLetter" : "documents:form.steps.aboutInternal"),
+      summary: aboutSummary,
+    },
+    { key: "body", title: t("documents:form.steps.body"), summary: bodySummary },
+    {
+      key: "route",
+      title: t(letter ? "documents:form.steps.routeLetter" : "documents:form.steps.routeInternal"),
+      summary: routeText,
+    },
+  ];
+
+  const sections: StepSection[] = [
+    {
+      key: "about",
+      title: t(letter ? "documents:form.steps.aboutLetter" : "documents:form.steps.aboutInternal"),
+      summary: aboutSummary,
+      complete: aboutDone,
+      invalid: invalid("about"),
+      footer: draftButton,
+      content: (
         <div className="pf-fp-form">
           {letter && handover ? (
             <p className="pf-hint" style={{ margin: 0 }}>
@@ -542,20 +603,118 @@ function DocumentForm({
               )}
             </>
           ) : (
-            <Field
-              id="doc-to"
-              label={t("documents:form.to.label")}
-              hint={t("documents:form.to.hint")}
-            >
-              <Input
+            <>
+              <Field
                 id="doc-to"
-                value={t("documents:form.to.director")}
-                readOnly
-                aria-describedby="doc-to-hint"
+                label={t("documents:form.to.label")}
+                hint={t("documents:form.to.hint")}
+              >
+                <Input
+                  id="doc-to"
+                  value={t("documents:form.to.director")}
+                  readOnly
+                  aria-describedby="doc-to-hint"
+                />
+              </Field>
+              <div className="pf-newdoc-row">
+                <Field
+                  id={ids.amount}
+                  label={t("documents:form.amount.label")}
+                  hint={t(
+                    values.kind === "memo"
+                      ? "documents:form.amount.hint"
+                      : "documents:form.due.hint",
+                  )}
+                  error={errors.amount ? fieldText(t, "amount") : undefined}
+                >
+                  <Input
+                    id={ids.amount}
+                    value={values.amount}
+                    inputMode="decimal"
+                    autoComplete="off"
+                    placeholder="1 500 000"
+                    status={errors.amount ? "error" : undefined}
+                    aria-invalid={errors.amount || undefined}
+                    aria-describedby={describedBy(ids.amount, true, Boolean(errors.amount))}
+                    onChange={(event) => {
+                      set("amount", event.target.value);
+                    }}
+                  />
+                </Field>
+                <Field
+                  id={ids.due}
+                  label={t("documents:form.due.label")}
+                  hint={t("documents:form.due.hint")}
+                  error={errors.due_date ? fieldText(t, "due_date") : undefined}
+                >
+                  <DateField
+                    id={ids.due}
+                    min={today}
+                    value={values.dueDate}
+                    status={errors.due_date ? "error" : undefined}
+                    aria-invalid={errors.due_date || undefined}
+                    aria-describedby={describedBy(ids.due, true, Boolean(errors.due_date))}
+                    onChange={(next) => {
+                      set("dueDate", next);
+                    }}
+                  />
+                </Field>
+              </div>
+            </>
+          )}
+          {canLink ? (
+            <Field
+              id={ids.deal}
+              label={t("documents:form.deal.label")}
+              hint={t("documents:form.deal.hint")}
+              error={errors.erp_deal_id ? fieldText(t, "erp_deal_id") : undefined}
+            >
+              <DealField
+                id={ids.deal}
+                value={values.deal}
+                onChange={(choice) => {
+                  set("deal", choice);
+                }}
+                describedBy={describedBy(ids.deal, true, Boolean(errors.erp_deal_id)) ?? ""}
+                invalid={Boolean(errors.erp_deal_id)}
               />
             </Field>
-          )}
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      key: "body",
+      title: t("documents:form.steps.body"),
+      summary: bodySummary,
+      complete: bodyFilled,
+      invalid: invalid("body"),
+      footer: draftButton,
+      content: (
+        <div className="pf-fp-form">
           {textField}
+          <Field
+            id={ids.files}
+            label={t("documents:form.files.label")}
+            hint={t("documents:form.files.hint")}
+          >
+            <AttachmentsField id={ids.files} value={values.attachments} onChange={setAttachments} />
+          </Field>
+        </div>
+      ),
+    },
+    {
+      key: "route",
+      title: t(letter ? "documents:form.steps.routeLetter" : "documents:form.steps.routeInternal"),
+      summary: routeText,
+      complete: true,
+      footer: draftButton,
+      content: (
+        <div className="pf-fp-form">
+          <div className="pf-newdoc-route">
+            <span className="pf-fp-label">{t("documents:form.route.label")}</span>
+            <span>{routeText}</span>
+          </div>
           {letter ? (
             <div className="pf-newdoc-row">
               <Field
@@ -588,114 +747,80 @@ function DocumentForm({
                 />
               </Field>
             </div>
-          ) : (
-            <div className="pf-newdoc-row">
-              <Field
-                id={ids.amount}
-                label={t("documents:form.amount.label")}
-                hint={t(
-                  values.kind === "memo" ? "documents:form.amount.hint" : "documents:form.due.hint",
-                )}
-                error={errors.amount ? fieldText(t, "amount") : undefined}
-              >
-                <Input
-                  id={ids.amount}
-                  value={values.amount}
-                  inputMode="decimal"
-                  autoComplete="off"
-                  placeholder="1 500 000"
-                  status={errors.amount ? "error" : undefined}
-                  aria-invalid={errors.amount || undefined}
-                  aria-describedby={describedBy(ids.amount, true, Boolean(errors.amount))}
-                  onChange={(event) => {
-                    set("amount", event.target.value);
-                  }}
-                />
-              </Field>
-              <Field
-                id={ids.due}
-                label={t("documents:form.due.label")}
-                hint={t("documents:form.due.hint")}
-                error={errors.due_date ? fieldText(t, "due_date") : undefined}
-              >
-                <DateField
-                  id={ids.due}
-                  min={today}
-                  value={values.dueDate}
-                  status={errors.due_date ? "error" : undefined}
-                  aria-invalid={errors.due_date || undefined}
-                  aria-describedby={describedBy(ids.due, true, Boolean(errors.due_date))}
-                  onChange={(next) => {
-                    set("dueDate", next);
-                  }}
-                />
-              </Field>
-            </div>
-          )}
-          <Field
-            id={ids.files}
-            label={t("documents:form.files.label")}
-            hint={t("documents:form.files.hint")}
-          >
-            <AttachmentsField id={ids.files} value={values.attachments} onChange={setAttachments} />
-          </Field>
-          {canLink ? (
-            <Field
-              id={ids.deal}
-              label={t("documents:form.deal.label")}
-              hint={t("documents:form.deal.hint")}
-              error={errors.erp_deal_id ? fieldText(t, "erp_deal_id") : undefined}
-            >
-              <DealField
-                id={ids.deal}
-                value={values.deal}
-                onChange={(choice) => {
-                  set("deal", choice);
-                }}
-                describedBy={describedBy(ids.deal, true, Boolean(errors.erp_deal_id)) ?? ""}
-                invalid={Boolean(errors.erp_deal_id)}
-              />
-            </Field>
           ) : null}
-          <div className="pf-newdoc-route">
-            <span className="pf-fp-label">{t("documents:form.route.label")}</span>
-            <span>{routeText}</span>
-          </div>
+        </div>
+      ),
+    },
+    {
+      key: "check",
+      title: t("documents:form.steps.check"),
+      content: (
+        <div className="pf-fp-form">
+          <dl className="pf-newdoc-review">
+            {reviewRows.map((row) => (
+              <div key={row.key} className="pf-newdoc-review-row">
+                <dt>{row.title}</dt>
+                <dd>{row.summary || "—"}</dd>
+                <dd>
+                  <Button
+                    type="link"
+                    size="small"
+                    onClick={() => {
+                      setActive(row.key);
+                    }}
+                  >
+                    {t("ui:formSteps.edit")}
+                  </Button>
+                </dd>
+              </div>
+            ))}
+          </dl>
           <p className="pf-hint">{t("documents:form.consequence.draft")}</p>
+          <div className="pf-newdoc-actions">
+            {Object.keys(errors).length > 0 && !note ? (
+              <ErrorNote message={t("documents:form.validation.summary")} />
+            ) : null}
+            {note ? (
+              <ErrorNote
+                message={
+                  note.saved ? `${note.text}. ${t("documents:form.error.savedNote")}` : note.text
+                }
+              />
+            ) : null}
+            <div className="pf-fp-row">
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={pending}
+                disabled={uploading}
+                title={uploading ? t("documents:form.submit.uploadWait") : undefined}
+              >
+                {primaryLabel}
+              </Button>
+              {draftButton}
+            </div>
+          </div>
         </div>
-      </Card>
-      <div className="pf-newdoc-actions">
-        {Object.keys(errors).length > 0 && !note ? (
-          <ErrorNote message={t("documents:form.validation.summary")} />
-        ) : null}
-        {note ? (
-          <ErrorNote
-            message={
-              note.saved ? `${note.text}. ${t("documents:form.error.savedNote")}` : note.text
-            }
-          />
-        ) : null}
-        <div className="pf-fp-row">
-          <Button
-            type="primary"
-            htmlType="submit"
-            loading={pending}
-            disabled={uploading}
-            title={uploading ? t("documents:form.submit.uploadWait") : undefined}
-          >
-            {primaryLabel}
-          </Button>
-          <Button
-            htmlType="button"
-            disabled={pending || uploading}
-            onClick={() => {
-              void run("draft");
-            }}
-          >
-            {t("documents:form.submit.draft")}
-          </Button>
-        </div>
-      </div>
+      ),
+    },
+  ];
+
+  const form = (
+    <form
+      aria-label={t("documents:form.formLabel")}
+      noValidate
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!pending && !uploading) void run(handover ? "handover" : "submit");
+      }}
+    >
+      <StepSections
+        sections={sections}
+        active={active}
+        onActiveChange={(key) => {
+          setActive(key as SectionKey);
+        }}
+      />
     </form>
   );
 

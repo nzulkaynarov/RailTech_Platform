@@ -411,6 +411,22 @@
     "title": {
       "letter": "Chiquvchi xat",
       "internal": "Ichki hujjat"
+    },
+    "steps": {
+      "aboutLetter": "Mavzu va qabul qiluvchi",
+      "aboutInternal": "Mavzu",
+      "body": "Matn va ilovalar",
+      "routeLetter": "Kelishish va imzo",
+      "routeInternal": "Kelishish",
+      "check": "Tekshirish va yuborish",
+      "replyTo": "{{number}} ga javob",
+      "currency": "so‘m",
+      "textFilled": "Matn yozilgan",
+      "textEmpty": "Matn hali yo‘q",
+      "files_one": "{{count}} ta ilova",
+      "files_few": "{{count}} ta ilova",
+      "files_many": "{{count}} ta ilova",
+      "files_other": "{{count}} ta ilova"
     }
   },
   "preview": {

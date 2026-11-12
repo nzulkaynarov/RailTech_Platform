@@ -1,14 +1,6 @@
 {
   "open": "Ochish",
   "openItem": "Ochish: {{title}}",
-  "steps": {
-    "label": "Ariza yo‘li",
-    "labelNumber": "Ariza yo‘li {{number}}",
-    "done": "o‘tilgan",
-    "current": "joriy qadam",
-    "upcoming": "oldinda",
-    "lostAt": "{{step}}-qadamda to‘xtatilgan"
-  },
   "consequence": {
     "title": "Nima bo‘ladi"
   },
@@ -123,5 +115,18 @@
   },
   "confirm": {
     "cancel": "Bekor qilish"
+  },
+  "steps": {
+    "label": "Ariza yo‘li",
+    "labelNumber": "Ariza yo‘li {{number}}",
+    "done": "o‘tilgan",
+    "current": "joriy qadam",
+    "upcoming": "oldinda",
+    "lostAt": "{{step}}-qadamda to‘xtatilgan"
+  },
+  "formSteps": {
+    "next": "Keyingi: {{title}}",
+    "edit": "O‘zgartirish",
+    "invalid": "Tuzatish kerak"
   }
 }

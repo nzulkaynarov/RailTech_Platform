@@ -1,14 +1,6 @@
 {
   "open": "Открыть",
   "openItem": "Открыть: {{title}}",
-  "steps": {
-    "label": "Путь заявки",
-    "labelNumber": "Путь заявки {{number}}",
-    "done": "пройден",
-    "current": "текущий шаг",
-    "upcoming": "впереди",
-    "lostAt": "остановлена на шаге {{step}}"
-  },
   "consequence": {
     "title": "Что произойдёт"
   },
@@ -123,5 +115,18 @@
   },
   "confirm": {
     "cancel": "Отмена"
+  },
+  "steps": {
+    "label": "Путь заявки",
+    "labelNumber": "Путь заявки {{number}}",
+    "done": "пройден",
+    "current": "текущий шаг",
+    "upcoming": "впереди",
+    "lostAt": "остановлена на шаге {{step}}"
+  },
+  "formSteps": {
+    "next": "Далее: {{title}}",
+    "edit": "Изменить",
+    "invalid": "Нужно исправить"
   }
 }

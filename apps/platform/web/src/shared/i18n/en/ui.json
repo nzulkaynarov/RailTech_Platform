@@ -1,14 +1,6 @@
 {
   "open": "Open",
   "openItem": "Open: {{title}}",
-  "steps": {
-    "label": "Request path",
-    "labelNumber": "Request path {{number}}",
-    "done": "completed",
-    "current": "current step",
-    "upcoming": "upcoming",
-    "lostAt": "stopped at step {{step}}"
-  },
   "consequence": {
     "title": "What will happen"
   },
@@ -123,5 +115,18 @@
   },
   "confirm": {
     "cancel": "Cancel"
+  },
+  "steps": {
+    "label": "Request path",
+    "labelNumber": "Request path {{number}}",
+    "done": "completed",
+    "current": "current step",
+    "upcoming": "upcoming",
+    "lostAt": "stopped at step {{step}}"
+  },
+  "formSteps": {
+    "next": "Next: {{title}}",
+    "edit": "Change",
+    "invalid": "Needs fixing"
   }
 }
