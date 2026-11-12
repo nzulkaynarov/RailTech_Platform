@@ -1,3 +1,4 @@
+import type { CompanyBankAccount } from "../../shared/api/generated/model";
 import type {
   BrandProfile,
   CatalogCategory,
@@ -42,6 +43,8 @@ export interface CompanyMock {
   quote: MockQuoteDefaults;
   chargeTypes: ChargeType[];
   charges: ChargeTemplate[];
+  /** Банковские счета своей компании (решение владельца 2026-11-11) */
+  bankAccounts: CompanyBankAccount[];
   docTemplates: DocumentTemplate[];
   emailTemplates: EmailTemplate[];
   reference: Record<ReferenceKind, ReferenceItem[]>;
@@ -145,6 +148,20 @@ function seed(): CompanyMock {
       { id: "2", code: "INSURANCE", name: "Страхование груза" },
       { id: "3", code: "CUSTOMS", name: "Таможенное оформление" },
       { id: "4", code: "INLAND", name: "Доставка до склада" },
+    ],
+    bankAccounts: [
+      {
+        id: "901",
+        bank_name: "АКБ «Демо Банк»",
+        mfo: "00001",
+        account: "20208000900000000001",
+        currency: "UZS",
+        swift: "",
+        correspondent_bank: "",
+        is_default: true,
+        is_active: true,
+        order: 0,
+      },
     ],
     charges: [
       {
@@ -388,7 +405,7 @@ export const MOCK_NO_BANK_KEY = "rt-pf-mock-no-bank";
 function readStored(): CompanyMock {
   try {
     const raw = window.localStorage.getItem(KEY);
-    if (raw) return JSON.parse(raw) as CompanyMock;
+    if (raw) return { ...seed(), ...(JSON.parse(raw) as Partial<CompanyMock>) };
     const fresh = seed();
     window.localStorage.setItem(KEY, JSON.stringify(fresh));
     return fresh;
@@ -404,6 +421,7 @@ export function readCompanyMock(): CompanyMock {
     if (window.localStorage.getItem(MOCK_NO_BANK_KEY) === "1") {
       window.localStorage.removeItem(MOCK_NO_BANK_KEY);
       state.company = { ...state.company, bank_account: "", mfo: "" };
+      state.bankAccounts = [];
       writeCompanyMock(state);
     }
   } catch {
@@ -412,10 +430,11 @@ export function readCompanyMock(): CompanyMock {
   return state;
 }
 
-/** Реквизиты для счетов есть (р/с или МФО) — тот же признак, что ERP `seller_bank_details_ready` (D26G-6). */
+/** Есть основной действующий счёт в сумах — тот же признак, что ERP `seller_bank_details_ready` (решение 2026-11-11). */
 export function companyBankReady(): boolean {
-  const { company } = readCompanyMock();
-  return Boolean(company.bank_account.trim() || company.mfo.trim());
+  return readCompanyMock().bankAccounts.some(
+    (a) => a.is_active && a.is_default && a.currency === "UZS",
+  );
 }
 
 export function writeCompanyMock(state: CompanyMock): void {

@@ -143,13 +143,12 @@ def _apply_company_defaults(seller_company, row) -> None:
     row.legal_address = seller_company.legal_address or row.legal_address
     if seller_company.logo:
         row.logo = seller_company.logo
-    bank_parts = []
-    if seller_company.bank_account:
-        bank_parts.append(f"р/с: {seller_company.bank_account}")
-    if seller_company.mfo:
-        bank_parts.append(f"МФО: {seller_company.mfo}")
-    if bank_parts:
-        row.bank_details = ", ".join(bank_parts)
+    from accounts.services.bank_accounts import bank_details_text
+
+    # Основной счёт в сумах из списка счетов компании (решение владельца 2026-11-11); счёт документа — REQ-2b.
+    bank = bank_details_text(seller_company)
+    if bank:
+        row.bank_details = bank
     # ПОДПИСАНТ СЮДА НЕ ПОДСТАВЛЯЕТСЯ.
     #
     # `Company.contact_person` — это «с кем связаться», а подписант — «кто подписывает»; в

@@ -3663,6 +3663,54 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/admin/company/bank-accounts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Банковские счета компании
+     * @description Раздел `company.settings` — чтение.
+     */
+    get: operations["listCompanyBankAccounts"];
+    put?: never;
+    /**
+     * Добавить банковский счёт
+     * @description Раздел `company.settings` — полный (решение владельца 2026-11-11: счета — список). Первый счёт валюты становится основным; «Основной для валюты» снимает флаг с прежнего счёта той же валюты. Номер счёта у компании уникален (`details.fields = [account]`); неизвестная валюта — `details.fields = [currency]`.
+     */
+    post: operations["createCompanyBankAccount"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/company/bank-accounts/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Удалить банковский счёт
+     * @description Раздел `company.settings` — полный.
+     */
+    delete: operations["deleteCompanyBankAccount"];
+    options?: never;
+    head?: never;
+    /**
+     * Изменить банковский счёт
+     * @description Раздел `company.settings` — полный.
+     */
+    patch: operations["updateCompanyBankAccount"];
+    trace?: never;
+  };
   "/admin/company/charge-templates": {
     parameters: {
       query?: never;
@@ -10827,6 +10875,46 @@ export interface components {
     };
     ChargeTypeList: {
       items: components["schemas"]["ChargeType"][];
+    };
+    /** @description Банковский счёт своей компании (решение владельца 2026-11-11); печать берёт основной счёт валюты документа */
+    CompanyBankAccount: {
+      id: string;
+      bank_name: string;
+      mfo: string;
+      account: string;
+      /** @description Код валюты справочника: UZS, USD и т. д. */
+      currency: string;
+      swift: string;
+      correspondent_bank: string;
+      /** @description Основной для своей валюты, один на валюту */
+      is_default: boolean;
+      is_active: boolean;
+      order: number;
+    };
+    CompanyBankAccountList: {
+      items: components["schemas"]["CompanyBankAccount"][];
+    };
+    CompanyBankAccountIn: {
+      bank_name?: string | null;
+      mfo?: string | null;
+      account: string;
+      currency: string;
+      swift?: string | null;
+      correspondent_bank?: string | null;
+      is_default?: boolean | null;
+      is_active?: boolean | null;
+      order?: number | null;
+    };
+    CompanyBankAccountUpdate: {
+      bank_name?: string;
+      mfo?: string;
+      account?: string;
+      currency?: string;
+      swift?: string;
+      correspondent_bank?: string;
+      is_default?: boolean;
+      is_active?: boolean;
+      order?: number;
     };
     ChargeTemplate: {
       id: components["schemas"]["CompanyItemRef"];
@@ -22163,6 +22251,119 @@ export interface operations {
       };
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
+    };
+  };
+  listCompanyBankAccounts: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Счета (основные первыми) */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CompanyBankAccountList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  createCompanyBankAccount: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CompanyBankAccountIn"];
+      };
+    };
+    responses: {
+      /** @description Создан */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CompanyBankAccount"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  deleteCompanyBankAccount: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Удалён */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+    };
+  };
+  updateCompanyBankAccount: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CompanyBankAccountUpdate"];
+      };
+    };
+    responses: {
+      /** @description Сохранён */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CompanyBankAccount"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
     };
   };
   listChargeTemplates: {

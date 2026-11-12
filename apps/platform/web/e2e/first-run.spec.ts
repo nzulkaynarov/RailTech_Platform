@@ -409,14 +409,16 @@ test.describe("Первый запуск: банковские реквизит�
 
       await card.getByRole("link", { name: "Открыть «Реквизиты и бланк»" }).click();
       await expect(page).toHaveURL(/\/admin\/company$/);
-      await expect(
-        page.getByText(/Нет банковских реквизитов для счетов: без расчётного/),
-      ).toBeVisible();
+      // Счета — список (решение владельца 2026-11-11): основной счёт в сумах добавляется в разделе «Банковские счета».
+      await expect(page.getByText(/Нет основного счёта в сумах/)).toBeVisible();
       await screenShot(page, "company-bank-missing");
       await expectNoViolations(page, `компания: реквизитов нет ${String(width)}`);
-      await page.getByLabel("Расчётный счёт").fill("20208000900000000001");
-      await page.getByLabel("МФО банка").fill("00001");
-      await page.getByRole("button", { name: /Сохранить реквизиты/ }).click();
+      await page.getByRole("button", { name: "Добавить счёт" }).first().click();
+      const dialog = page.getByRole("dialog", { name: "Новый банковский счёт" });
+      await dialog.getByLabel("Расчётный счёт").fill("20208000900000000001");
+      await dialog.getByLabel("МФО").fill("00001");
+      await screenShot(page, "company-bank-add");
+      await dialog.getByRole("button", { name: "Сохранить" }).click();
       await expect(
         page.getByText("Реквизиты для счетов заданы: «Выставить счёт» сработает."),
       ).toBeVisible();

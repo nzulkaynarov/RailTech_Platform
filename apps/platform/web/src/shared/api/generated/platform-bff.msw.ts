@@ -147,6 +147,8 @@ import type {
   Colleague,
   CompanyArticle,
   CompanyArticleList,
+  CompanyBankAccount,
+  CompanyBankAccountList,
   CompanyProfile,
   ConversationCard,
   ConversationThread,
@@ -12875,6 +12877,56 @@ export const getListChargeTypesResponseMock = (
     code: faker.string.alpha({ length: { min: 10, max: 20 } }),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   })),
+  ...overrideResponse,
+});
+
+export const getListCompanyBankAccountsResponseMock = (
+  overrideResponse: Partial<Extract<CompanyBankAccountList, object>> = {},
+): CompanyBankAccountList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    bank_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    mfo: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    account: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    currency: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    swift: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    correspondent_bank: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    is_default: faker.datatype.boolean(),
+    is_active: faker.datatype.boolean(),
+    order: faker.number.int(),
+  })),
+  ...overrideResponse,
+});
+
+export const getCreateCompanyBankAccountResponseMock = (
+  overrideResponse: Partial<Extract<CompanyBankAccount, object>> = {},
+): CompanyBankAccount => ({
+  id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  bank_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  mfo: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  account: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  currency: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  swift: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  correspondent_bank: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  is_default: faker.datatype.boolean(),
+  is_active: faker.datatype.boolean(),
+  order: faker.number.int(),
+  ...overrideResponse,
+});
+
+export const getUpdateCompanyBankAccountResponseMock = (
+  overrideResponse: Partial<Extract<CompanyBankAccount, object>> = {},
+): CompanyBankAccount => ({
+  id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  bank_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  mfo: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  account: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  currency: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  swift: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  correspondent_bank: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  is_default: faker.datatype.boolean(),
+  is_active: faker.datatype.boolean(),
+  order: faker.number.int(),
   ...overrideResponse,
 });
 
@@ -34016,6 +34068,96 @@ export const getListChargeTypesMockHandler = (
   );
 };
 
+export const getListCompanyBankAccountsMockHandler = (
+  overrideResponse?:
+    | CompanyBankAccountList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<CompanyBankAccountList> | CompanyBankAccountList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/company/bank-accounts",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListCompanyBankAccountsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateCompanyBankAccountMockHandler = (
+  overrideResponse?:
+    | CompanyBankAccount
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<CompanyBankAccount> | CompanyBankAccount),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/company/bank-accounts",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateCompanyBankAccountResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateCompanyBankAccountMockHandler = (
+  overrideResponse?:
+    | CompanyBankAccount
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<CompanyBankAccount> | CompanyBankAccount),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/admin/company/bank-accounts/:id",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateCompanyBankAccountResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeleteCompanyBankAccountMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete(
+    "*/admin/company/bank-accounts/:id",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
 export const getListChargeTemplatesMockHandler = (
   overrideResponse?:
     | ChargeTemplateList
@@ -39299,6 +39441,10 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getGetQuoteDefaultsMockHandler(),
   getUpdateQuoteDefaultsMockHandler(),
   getListChargeTypesMockHandler(),
+  getListCompanyBankAccountsMockHandler(),
+  getCreateCompanyBankAccountMockHandler(),
+  getUpdateCompanyBankAccountMockHandler(),
+  getDeleteCompanyBankAccountMockHandler(),
   getListChargeTemplatesMockHandler(),
   getCreateChargeTemplateMockHandler(),
   getUpdateChargeTemplateMockHandler(),

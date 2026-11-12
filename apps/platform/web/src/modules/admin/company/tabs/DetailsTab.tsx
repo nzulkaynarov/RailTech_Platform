@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Alert, App, Checkbox, Form, Input, Select } from "antd";
+import { App, Checkbox, Form, Input, Select } from "antd";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -15,13 +15,12 @@ import {
 import { ConfirmModal, LogoField, QueryGate, SaveBlock, TabHeader, ReadOnlyFence } from "../common";
 import { changedFields, isEmptyObject } from "../diff";
 import { errorFields } from "../errors";
+import { BankAccounts } from "./BankAccounts";
 
 interface Values {
   name: string;
   inn: string;
   legal_address: string;
-  bank_account: string;
-  mfo: string;
   phone: string;
   contact_person: string;
   email: string;
@@ -34,8 +33,6 @@ const toValues = (c: CompanyProfile): Values => ({
   name: c.name,
   inn: c.inn ?? "",
   legal_address: c.legal_address,
-  bank_account: c.bank_account,
-  mfo: c.mfo,
   phone: c.phone,
   contact_person: c.contact_person,
   email: c.email,
@@ -57,6 +54,7 @@ export function DetailsTab() {
             <DetailsForm key={JSON.stringify({ ...company, logo_url: null })} company={company} />
           )}
         </QueryGate>
+        <BankAccounts />
       </ReadOnlyFence>
     </div>
   );
@@ -72,7 +70,6 @@ function DetailsForm({ company }: { company: CompanyProfile }) {
   const changed = changedFields(initial, watched);
   const countries = useListReferenceItems("countries");
   const [removing, setRemoving] = useState(false);
-  const bankReady = Boolean(company.bank_account.trim() || company.mfo.trim());
 
   const keep = (next: CompanyProfile) => {
     queryClient.setQueryData(getGetCompanyQueryKey(), next);
@@ -180,21 +177,6 @@ function DetailsForm({ company }: { company: CompanyProfile }) {
           </Form.Item>
           <Form.Item name="legal_address" label={t("details.legalAddress")} className="pf-co-wide">
             <Input.TextArea rows={2} autoComplete="street-address" />
-          </Form.Item>
-          {/* D26G-6: без р/с и МФО ERP не выставит счёт (гейт «Выставить счёт»); состояние — по сохранённым реквизитам */}
-          <div className="pf-co-wide">
-            <Alert
-              type={bankReady ? "success" : "warning"}
-              showIcon
-              role="status"
-              message={t(bankReady ? "details.bankReady" : "details.bankMissing")}
-            />
-          </div>
-          <Form.Item name="bank_account" label={t("details.bankAccount")}>
-            <Input maxLength={50} autoComplete="off" inputMode="numeric" />
-          </Form.Item>
-          <Form.Item name="mfo" label={t("details.mfo")}>
-            <Input maxLength={10} autoComplete="off" inputMode="numeric" />
           </Form.Item>
           <Form.Item name="phone" label={t("details.phone")}>
             <Input maxLength={50} type="tel" autoComplete="tel" />

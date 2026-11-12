@@ -8,6 +8,8 @@ import type {
   CategoryRequestApproveIn,
   CategoryRequestRejectIn,
   ChargeTemplateIn,
+  CompanyBankAccountIn,
+  CompanyBankAccountUpdate,
   ChargeTemplateUpdate,
   CompanyProfileUpdate,
   DocumentKind,
@@ -452,6 +454,62 @@ export const adminCompanyHandlers = [
   ),
 
   // --- статьи расхода
+  // --- банковские счета (решение владельца 2026-11-11): один основной на валюту, первый счёт валюты — основной
+  http.get("*/admin/company/bank-accounts", () =>
+    read("read", (_c, s) => ({ items: s.bankAccounts })),
+  ),
+  http.post("*/admin/company/bank-accounts", ({ request }) =>
+    write<CompanyBankAccountIn>(
+      request,
+      (body, s) => {
+        if (!s.reference.currencies.some((c) => c.code === body.currency)) {
+          return validation(["currency"]);
+        }
+        if (s.bankAccounts.some((a) => a.account === body.account)) return validation(["account"]);
+        const first = !s.bankAccounts.some((a) => a.currency === body.currency && a.is_default);
+        const created = {
+          id: nextId(s),
+          bank_name: body.bank_name ?? "",
+          mfo: body.mfo ?? "",
+          account: body.account,
+          currency: body.currency,
+          swift: body.swift ?? "",
+          correspondent_bank: body.correspondent_bank ?? "",
+          is_default: first || Boolean(body.is_default),
+          is_active: body.is_active ?? true,
+          order: body.order ?? s.bankAccounts.length,
+        };
+        if (created.is_default) {
+          for (const a of s.bankAccounts) if (a.currency === created.currency) a.is_default = false;
+        }
+        s.bankAccounts.push(created);
+        return created;
+      },
+      201,
+    ),
+  ),
+  http.patch("*/admin/company/bank-accounts/:id", ({ request, params }) =>
+    write<CompanyBankAccountUpdate>(request, (body, s) => {
+      const row = s.bankAccounts.find((a) => a.id === params["id"]);
+      if (!row) return notFound();
+      Object.assign(row, body);
+      if (body.is_default) {
+        for (const a of s.bankAccounts) {
+          if (a !== row && a.currency === row.currency) a.is_default = false;
+        }
+      }
+      return row;
+    }),
+  ),
+  http.delete("*/admin/company/bank-accounts/:id", ({ params }) => {
+    const caller = guard("full");
+    if (isResponse(caller)) return caller;
+    return updateCompanyMock((s) => {
+      if (!s.bankAccounts.some((a) => a.id === params["id"])) return notFound();
+      s.bankAccounts = s.bankAccounts.filter((a) => a.id !== params["id"]);
+      return noContent();
+    });
+  }),
   http.get("*/admin/company/charge-types", () =>
     read("read", (_c, s) => ({ items: s.chargeTypes })),
   ),

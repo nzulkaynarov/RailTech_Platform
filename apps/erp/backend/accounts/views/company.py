@@ -20,6 +20,7 @@ from accounts import services
 from accounts.models import Company, CompanyMember
 from accounts.serializers import CompanySerializer
 from accounts.services.permissions import member_has_permission
+from accounts.views.company_bank_accounts import CompanyBankAccountsMixin
 from accounts.views.company_documents import CompanyDocumentsMixin
 from accounts.views.company_team import CompanyTeamMixin
 from core.permissions import ADMIN_ONLY, IsPlatformAdmin, RoleGatedViewMixin
@@ -57,7 +58,9 @@ from core.permissions import ADMIN_ONLY, IsPlatformAdmin, RoleGatedViewMixin
         tags=["Accounts"],
     ),
 )
-class CompanyViewSet(RoleGatedViewMixin, CompanyDocumentsMixin, CompanyTeamMixin, viewsets.ModelViewSet):
+class CompanyViewSet(
+    RoleGatedViewMixin, CompanyDocumentsMixin, CompanyBankAccountsMixin, CompanyTeamMixin, viewsets.ModelViewSet
+):
     """
     CRUD operations for companies.
 
@@ -77,6 +80,8 @@ class CompanyViewSet(RoleGatedViewMixin, CompanyDocumentsMixin, CompanyTeamMixin
         "document_profile_preview": "settings.edit",
         "upload_document_profile_logo": "settings.edit",
         "company_settings": "settings.edit",
+        "bank_accounts": "settings.edit",
+        "bank_account": "settings.edit",
         "invite": "team.manage",
         "remove_member": "team.manage",
         "set_member_role": "team.manage",
@@ -121,6 +126,8 @@ class CompanyViewSet(RoleGatedViewMixin, CompanyDocumentsMixin, CompanyTeamMixin
         "document_profile_preview",
         "upload_document_profile_logo",
         "company_settings",
+        "bank_accounts",
+        "bank_account",
         "team",
         "invite",
         "update_member_capabilities",
