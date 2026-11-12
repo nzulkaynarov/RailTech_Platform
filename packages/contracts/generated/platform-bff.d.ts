@@ -4981,6 +4981,66 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/eds/letters/{id}/close": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Закрыть письмо без ответа
+     * @description EDS `POST /letters/{id}/close` (решение владельца 2026-11-11). Любой сотрудник; закрывает только ответственный исполнитель (решает EDS: иначе 403, `details.reason = not_responsible`; не в работе — 409 `invalid_state`). Причина — код справочника `close-reasons` (`GET /dictionaries/close-reasons`); неизвестная — 422 `details.fields.reason`; у причины с `comment_required` без пояснения — 422 `details.fields.comment`. Письмо «Закрыто без ответа», поручения соисполнителей отменены, автору резолюции — уведомление. Ответ — карточка.
+     */
+    post: operations["closeLetterWithoutReply"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/letters/{id}/reopen": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Вернуть закрытое без ответа письмо в работу
+     * @description EDS `POST /letters/{id}/reopen`. Раздел `eds.inbox: full`; вернуть может только автор резолюции (иначе 403, `details.reason = not_resolution_author`), только письмо «Закрыто без ответа» (иначе 409 `invalid_state`). Поручения снова в работе, исполнителям — уведомление. Ответ — карточка.
+     */
+    post: operations["reopenLetter"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/instructions/{id}/return": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Вернуть письмо автору резолюции
+     * @description EDS `POST /instructions/{id}/return`. Любой сотрудник; возвращает только ответственный (иначе 403, `details.reason = not_responsible`), пока никто не исполнил своё поручение (иначе 409, `details.reason = instruction_executed`). Причина обязательна (пустая — 422 `details.fields.reason`). Поручения сняты, письмо снова «Ждёт резолюции», автору резолюции — уведомление. Ответ — карточка.
+     */
+    post: operations["returnInstructionToAuthor"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/eds/instructions/{id}/complete": {
     parameters: {
       query?: never;
@@ -11484,7 +11544,7 @@ export interface components {
       text: components["schemas"]["LocalizedText"];
     };
     /**
-     * @description Статус входящего письма (SPEC-v3 §2.4; EDS `LetterStatus`): `awaiting_resolution` — «Ждёт резолюции» (зарегистрировано), `resolved` — «Резолюция наложена», `returned` — «Возвращено» менеджеру, `rejected` — «Отклонено»; путь делопроизводства (P8b, §3.2a): `in_execution` — «На исполнении», `executed` — «Исполнено», `noted` — «Принято к сведению»; `duplicate` — «Дубль» (EDS-DUP: письмо зарегистрировано повторно и закрыто, оригинал — `duplicate_of`). Слова — в словаре интерфейса, не в API.
+     * @description Статус входящего письма (SPEC-v3 §2.4; EDS `LetterStatus`): `awaiting_resolution` — «Ждёт резолюции» (зарегистрировано), `resolved` — «Резолюция наложена», `returned` — «Возвращено» менеджеру, `rejected` — «Отклонено»; путь делопроизводства (P8b, §3.2a): `in_execution` — «На исполнении», `executed` — «Исполнено», `noted` — «Принято к сведению»; `duplicate` — «Дубль» (EDS-DUP: письмо зарегистрировано повторно и закрыто, оригинал — `duplicate_of`). `closed` — «Закрыто без ответа» (причина `LetterCard.close_reason`). Слова — в словаре интерфейса, не в API.
      * @enum {string}
      */
     LetterStatus:
@@ -11495,7 +11555,8 @@ export interface components {
       | "in_execution"
       | "executed"
       | "noted"
-      | "duplicate";
+      | "duplicate"
+      | "closed";
     /**
      * @description Зона исполнителя резолюции: `goods` — товары, склад, цены поставщиков (снабженец), `services` — услуги, ТЗ, бригада (гл. инженер), `payment_terms` — условия оплаты (бухгалтер).
      * @enum {string}
@@ -11612,6 +11673,10 @@ export interface components {
       subject: string;
       /** @description Суть документа */
       summary: string;
+      /** @description Код справочника `close-reasons` («Настройки · Справочники»), если письмо закрыто без ответа */
+      close_reason?: string | null;
+      /** @description Пояснение ответственного к закрытию без ответа */
+      close_comment?: string | null;
       /** @description Текст письма, если ВХ зарегистрирован из «Почты» (иначе `null`); исполнитель поручения видит само письмо без раздела «Почта» */
       body_text?: string | null;
       urgent: boolean;
@@ -11904,6 +11969,15 @@ export interface components {
       text: string;
       co_executor_ids?: string[];
       acquaint_ids?: string[];
+    };
+    LetterCloseIn: {
+      /** @description Код действующего значения справочника `close-reasons` */
+      reason: string;
+      /** @description Пояснение; обязательно, если у причины `comment_required` */
+      comment?: string | null;
+    };
+    InstructionReturnIn: {
+      reason: string;
     };
     /** @description Отчёт (текст, файлы) или номер отправленного ИСХ — хотя бы что-то одно */
     InstructionCompleteIn: {
@@ -24768,6 +24842,110 @@ export interface operations {
       };
       401: components["responses"]["SessionExpired"];
       404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  closeLetterWithoutReply: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description UUID входящего письма (EDS) */
+        id: components["parameters"]["LetterIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LetterCloseIn"];
+      };
+    };
+    responses: {
+      /** @description Закрыто — карточка письма */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["LetterConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  reopenLetter: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description UUID входящего письма (EDS) */
+        id: components["parameters"]["LetterIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description В работе — карточка письма */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["LetterConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  returnInstructionToAuthor: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description UUID поручения (EDS, P8b) */
+        id: components["parameters"]["InstructionIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["InstructionReturnIn"];
+      };
+    };
+    responses: {
+      /** @description Возвращено — карточка письма */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["LetterConflict"];
+      422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

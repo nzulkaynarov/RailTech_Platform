@@ -46,6 +46,7 @@ describe("карты статусов", () => {
         "executed",
         "noted",
         "duplicate",
+        "closed",
       ],
       quote: ["draft", "revision", "approved", "sent", "accepted", "declined", "expired"],
       contract: ["draft", "agreed", "issued", "signed", "rejected"],

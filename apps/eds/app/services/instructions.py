@@ -41,7 +41,9 @@ from app.schemas.letters import (
     ExtensionRequestIn,
     ExtensionTask,
     InstructionCompleteIn,
+    InstructionReturnIn,
     InstructionTask,
+    LetterCloseIn,
     LetterStatus,
     LetterTaskLetter,
     LetterTasks,
@@ -51,13 +53,14 @@ from app.schemas.letters import (
     ResolutionKind,
 )
 from app.security.permissions import EdsPermission as P
-from app.services import access, events, files, journal
+from app.services import access, dictionaries, events, files, journal
 from app.services.people import active_ids, load_directory
 
 log = structlog.get_logger(__name__)
 
 IN_WORK = "in_work"
 EXECUTED = "executed"
+CANCELLED = "cancelled"
 # Подсказка срока (бенчмарк §6.4): «срочно» — 3 дня, обычный — 10 дней от регистрации.
 URGENT_DAYS, NORMAL_DAYS = 3, 10
 # Срок длиннее этого (в днях от выдачи поручения) — ещё напоминание за 3 дня.
@@ -373,8 +376,13 @@ async def resolve_office(
         letter.status, letter.on_control = LetterStatus.IN_EXECUTION.value, True
     else:
         letter.status, letter.on_control = LetterStatus.NOTED.value, False
+    # Повторная резолюция (письмо вернули автору): уже ознакомленных не добавляем второй раз.
+    known = set(
+        (await session.execute(select(Acquaintance.crm_user_id).where(Acquaintance.letter_id == letter.id))).scalars()
+    )
     for uid in data.acquaint_ids:
-        session.add(Acquaintance(id=uuid.uuid4(), letter_id=letter.id, crm_user_id=uid, created_at=now))
+        if uid not in known:
+            session.add(Acquaintance(id=uuid.uuid4(), letter_id=letter.id, crm_user_id=uid, created_at=now))
     await session.flush()
     await journal.record(session, "letter.resolved", by=actor_id, letter_id=letter.id, comment=data.text)
     for instruction in created:
@@ -497,6 +505,163 @@ async def complete(
     comment = report if outgoing is None else f"Ответ {outgoing.number}" + (f". {report}" if report else "")
     await journal.record(session, "instruction.executed", by=actor_id, letter_id=letter.id, comment=comment)
     await _finish_if_done(session, bus, letter, actor_id)
+    return letter
+
+
+# --- исходы письма: «Закрыть без ответа», «Вернуть в работу», «Вернуть автору» (решение владельца 2026-11-11) -------
+
+
+async def _responsible(session: AsyncSession, letter: Letter, actor_id: int) -> Instruction:
+    """Поручение ответственного этого сотрудника в работе: исход письма выбирает только ответственный."""
+    row = (
+        await session.execute(
+            select(Instruction)
+            .where(
+                Instruction.letter_id == letter.id,
+                Instruction.crm_user_id == actor_id,
+                Instruction.role == "responsible",
+            )
+            .with_for_update()
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        raise forbidden_reason("not_responsible", "Исход письма выбирает ответственный исполнитель.")
+    if row.status != IN_WORK or letter.status != LetterStatus.IN_EXECUTION.value:
+        raise conflict("invalid_state", "Поручение уже закрыто.", status=row.status, expected=IN_WORK)
+    return row
+
+
+async def close_letter(
+    session: AsyncSession, bus: AsyncBus, *, actor_id: int, letter_id: uuid.UUID, data: LetterCloseIn
+) -> Letter:
+    """«Закрыть без ответа»: письмо закрыто сразу с причиной, поручения соисполнителей отменены; автору резолюции —
+    уведомление, он может «Вернуть в работу» (отступление от Росархива 5.16, решение владельца 2026-11-11)."""
+    letter = await _letter_for_update(session, letter_id)
+    mine = await _responsible(session, letter, actor_id)
+    reason = await dictionaries.find(session, dictionaries.CLOSE_REASONS, data.reason)
+    if reason is None:
+        raise invalid_fields("Выберите причину из списка.", reason="unknown")
+    comment = (data.comment or "").strip() or None
+    if comment is None and (reason.attrs or {}).get("comment_required"):
+        raise invalid_fields("Поясните причину.", comment="required")
+    now = clock.now()
+    others = (
+        await session.execute(
+            select(Instruction)
+            .where(Instruction.letter_id == letter.id, Instruction.status == IN_WORK, Instruction.id != mine.id)
+            .with_for_update()
+        )
+    ).scalars()
+    for row in others:
+        row.status, row.executed_at, row.updated_at = CANCELLED, now, now
+    report = f"Закрыто без ответа: {reason.name_ru}" + (f". {comment}" if comment else "")
+    mine.status, mine.report, mine.executed_at, mine.updated_at = EXECUTED, report, now, now
+    letter.status, letter.on_control, letter.executed_at, letter.updated_at = (
+        LetterStatus.CLOSED.value,
+        False,
+        now,
+        now,
+    )
+    letter.close_reason, letter.close_comment = reason.code, comment
+    await journal.record(session, "letter.closed", by=actor_id, letter_id=letter.id, comment=report)
+    await notify(
+        session,
+        bus,
+        letter=letter,
+        kind="letter_executed",  # вид события v1; что случилось — в заголовке
+        key=f"letter:{letter.id}:closed:{int(now.timestamp() * 1000)}",
+        recipients=[letter.resolution_decided_by],
+        title=f"Закрыто без ответа: {letter.number}",
+        subtitle=report,
+        actor_id=actor_id,
+    )
+    return letter
+
+
+async def reopen_letter(session: AsyncSession, bus: AsyncBus, *, actor_id: int, letter_id: uuid.UUID) -> Letter:
+    """«Вернуть в работу» закрытое без ответа письмо — решает автор резолюции; поручения, закрытые вместе с письмом,
+    снова в работе."""
+    letter = await _letter_for_update(session, letter_id)
+    if letter.resolution_decided_by != actor_id:
+        raise forbidden_reason("not_resolution_author", "Вернуть письмо в работу может автор резолюции.")
+    if letter.status != LetterStatus.CLOSED.value:
+        raise conflict(
+            "invalid_state", "Письмо не закрыто без ответа.", status=letter.status, expected=LetterStatus.CLOSED.value
+        )
+    closed_at = letter.executed_at
+    now = clock.now()
+    rows = list(
+        (
+            await session.execute(
+                select(Instruction)
+                .where(Instruction.letter_id == letter.id, Instruction.executed_at == closed_at)
+                .with_for_update()
+            )
+        ).scalars()
+    )
+    for row in rows:
+        row.status, row.report, row.executed_at, row.updated_at = IN_WORK, None, None, now
+    letter.status, letter.on_control, letter.executed_at, letter.updated_at = (
+        LetterStatus.IN_EXECUTION.value,
+        True,
+        None,
+        now,
+    )
+    letter.close_reason, letter.close_comment = None, None
+    await journal.record(session, "letter.reopened", by=actor_id, letter_id=letter.id)
+    await notify(
+        session,
+        bus,
+        letter=letter,
+        kind="instruction_assigned",
+        key=f"letter:{letter.id}:reopened:{int(now.timestamp() * 1000)}",
+        recipients=[r.crm_user_id for r in rows],
+        title=f"Письмо снова в работе: {letter.number}",
+        subtitle=letter.subject,
+        actor_id=actor_id,
+    )
+    return letter
+
+
+async def return_to_author(
+    session: AsyncSession, bus: AsyncBus, *, actor_id: int, instruction_id: uuid.UUID, data: InstructionReturnIn
+) -> Letter:
+    """«Вернуть автору резолюции»: письмо снова ждёт резолюции, поручения сняты (история — в журнале). Нельзя, если
+    кто-то уже исполнил своё поручение: отчёт пропал бы."""
+    instruction, letter = await _instruction_for_update(session, instruction_id)
+    await _responsible(session, letter, actor_id)
+    if instruction.crm_user_id != actor_id:
+        raise forbidden_reason("not_responsible", "Вернуть письмо может ответственный исполнитель.")
+    rows = list(
+        (
+            await session.execute(select(Instruction).where(Instruction.letter_id == letter.id).with_for_update())
+        ).scalars()
+    )
+    if any(r.status == EXECUTED for r in rows):
+        raise conflict(
+            "instruction_executed", "Часть поручений уже исполнена: закройте письмо или отметьте исполнение."
+        )
+    author = letter.resolution_decided_by
+    for row in rows:
+        await session.delete(row)
+    now = clock.now()
+    letter.status, letter.on_control, letter.updated_at = LetterStatus.AWAITING_RESOLUTION.value, False, now
+    letter.resolution_kind = letter.resolution_text = None
+    letter.resolution_due = None
+    letter.resolution_decided_by = letter.resolution_decided_at = None
+    reason = data.reason.strip()
+    await journal.record(session, "letter.returned_to_author", by=actor_id, letter_id=letter.id, comment=reason)
+    await notify(
+        session,
+        bus,
+        letter=letter,
+        kind="instruction_assigned",  # вид v1 из «Решений»: автору снова решать резолюцию
+        key=f"letter:{letter.id}:returned:{int(now.timestamp() * 1000)}",
+        recipients=[author],
+        title=f"Вернули письмо: {letter.number}",
+        subtitle=reason,
+        actor_id=actor_id,
+    )
     return letter
 
 
@@ -722,7 +887,11 @@ async def my_tasks(session: AsyncSession, *, crm_user_id: int, today: date | Non
             select(InstructionExtension, Instruction, Letter)
             .join(Instruction, Instruction.id == InstructionExtension.instruction_id)
             .join(Letter, Letter.id == Instruction.letter_id)
-            .where(InstructionExtension.status == "pending", Letter.resolution_decided_by == crm_user_id)
+            .where(
+                InstructionExtension.status == "pending",
+                Letter.resolution_decided_by == crm_user_id,
+                Instruction.status == IN_WORK,  # письмо закрыли без ответа — перенос решать уже не нужно
+            )
             .order_by(InstructionExtension.requested_at)
             .limit(TASKS_LIMIT)
         )

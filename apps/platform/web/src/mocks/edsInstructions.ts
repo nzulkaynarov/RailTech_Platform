@@ -3,9 +3,11 @@ import { HttpResponse, http } from "msw";
 import type {
   EdsStaffList,
   InstructionCompleteIn,
+  InstructionReturnIn,
   InstructionExtensionDecisionIn,
   InstructionExtensionIn,
   LetterCard,
+  LetterCloseIn,
   LetterInstruction,
   LetterReply,
   LetterResolutionDraft,
@@ -19,6 +21,7 @@ import { QUEUE, allows } from "../app/rbac.generated";
 import { COMPANY_TIME_ZONE } from "../shared/lib/format";
 import { DEMO_USERS } from "./fixtures/users";
 import { type MockDocument, readEds, writeEds } from "./fixtures/edsDocuments";
+import { readDictionaries } from "./dictionaries";
 import { findLetter, readLetters, writeLetters } from "./fixtures/letters";
 import type { MockRole } from "./fixtures/roles";
 import { buildMe, readSession, sessionRoles } from "./mockSession";
@@ -706,6 +709,114 @@ export const edsInstructionsHandlers = [
         journal: [...letter.journal, entry("letter.acknowledged", user)],
       }),
     );
+  }),
+
+  // Исходы письма (решение владельца 2026-11-11) — правила как у EDS.
+  http.post("*/eds/letters/:id/close", async ({ request, params }) => {
+    const user = me();
+    if (!user) return expired();
+    const letter = readLetters().find((l) => l.id === String(params["id"]));
+    if (!letter) return notFound();
+    const mine = (letter.instructions ?? []).find(
+      (i) => i.person.id === user.id && i.role === "responsible",
+    );
+    if (!mine) {
+      return failure(403, "FORBIDDEN", "Исход письма выбирает ответственный.", {
+        reason: "not_responsible",
+      });
+    }
+    if (mine.status !== "in_work" || letter.status !== "in_execution") {
+      return conflict("invalid_state", "Поручение уже закрыто.");
+    }
+    const body = (await request.json()) as LetterCloseIn;
+    const reason = readDictionaries()["close-reasons"].find(
+      (r) => r.code === body.reason && r.active,
+    );
+    if (!reason) return invalid("reason", "unknown", "Выберите причину из списка.");
+    const comment = body.comment?.trim() || null;
+    if (!comment && reason.attrs["comment_required"] === true) {
+      return invalid("comment", "required", "Поясните причину.");
+    }
+    const now = new Date().toISOString();
+    const report = `Закрыто без ответа: ${reason.name.ru}${comment ? `. ${comment}` : ""}`;
+    const next: LetterCard = {
+      ...letter,
+      status: "closed",
+      on_control: false,
+      executed_at: now,
+      close_reason: reason.code,
+      close_comment: comment,
+      instructions: (letter.instructions ?? []).map((i) =>
+        i.id === mine.id
+          ? { ...i, status: "executed", report, executed_at: now }
+          : i.status === "in_work"
+            ? { ...i, status: "cancelled", executed_at: now }
+            : i,
+      ),
+      journal: [...letter.journal, entry("letter.closed", user, report)],
+    };
+    const author = letter.office_resolution?.decided_by.id;
+    if (author) notify([author], `Закрыто без ответа: ${letter.number}`, letter, report);
+    return HttpResponse.json(save(next));
+  }),
+
+  http.post("*/eds/letters/:id/reopen", ({ params }) => {
+    const user = me();
+    if (!user) return expired();
+    const letter = readLetters().find((l) => l.id === String(params["id"]));
+    if (!letter) return notFound();
+    if (letter.office_resolution?.decided_by.id !== user.id) {
+      return failure(403, "FORBIDDEN", "Вернуть письмо в работу может автор резолюции.", {
+        reason: "not_resolution_author",
+      });
+    }
+    if (letter.status !== "closed") return conflict("invalid_state", "Письмо не закрыто.");
+    const closedAt = letter.executed_at;
+    const next: LetterCard = {
+      ...letter,
+      status: "in_execution",
+      on_control: true,
+      executed_at: null,
+      close_reason: null,
+      close_comment: null,
+      instructions: (letter.instructions ?? []).map((i) =>
+        i.executed_at === closedAt
+          ? { ...i, status: "in_work", report: null, executed_at: null }
+          : i,
+      ),
+      journal: [...letter.journal, entry("letter.reopened", user)],
+    };
+    return HttpResponse.json(save(next));
+  }),
+
+  http.post("*/eds/instructions/:id/return", async ({ request, params }) => {
+    const user = me();
+    if (!user) return expired();
+    const found = findInstruction(String(params["id"]));
+    if (!found) return notFound();
+    const { letter, instruction } = found;
+    if (instruction.person.id !== user.id || instruction.role !== "responsible") {
+      return failure(403, "FORBIDDEN", "Вернуть письмо может ответственный.", {
+        reason: "not_responsible",
+      });
+    }
+    if ((letter.instructions ?? []).some((i) => i.status === "executed")) {
+      return conflict("instruction_executed", "Часть поручений уже исполнена.");
+    }
+    const body = (await request.json()) as InstructionReturnIn;
+    const reason = body.reason.trim();
+    if (!reason) return invalid("reason", "required", "Напишите причину.");
+    const author = letter.office_resolution?.decided_by.id;
+    const next: LetterCard = {
+      ...letter,
+      status: "awaiting_resolution",
+      on_control: false,
+      office_resolution: null,
+      instructions: [],
+      journal: [...letter.journal, entry("letter.returned_to_author", user, reason)],
+    };
+    if (author) notify([author], `Вернули письмо: ${letter.number}`, letter, reason);
+    return HttpResponse.json(save(next));
   }),
 
   http.post("*/eds/instructions/:id/complete", async ({ request, params }) => {

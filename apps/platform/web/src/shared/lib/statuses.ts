@@ -95,6 +95,8 @@ export const STATUS_TONE = {
     noted: OK,
     // EDS-DUP: «Дубль» — закрыто, работа по оригиналу
     duplicate: OFF,
+    // «Закрыто без ответа» с причиной (решение владельца 2026-11-11)
+    closed: OFF,
   },
   /**
    * КП — одна карта для EDS («КП на одобрение», реестр, проект) и ERP (состояние КП в расчёте): «у директора» и «черновик ·
@@ -300,6 +302,7 @@ export const DICTIONARY_STATUS = {
     "executed",
     "noted",
     "duplicate",
+    "closed",
   ],
   quote: ["draft", "revision", "approved", "sent", "accepted", "declined", "expired"],
   contract: ["draft", "agreed", "issued", "signed", "rejected"],
