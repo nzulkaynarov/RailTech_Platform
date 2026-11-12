@@ -28,6 +28,7 @@ from app.schemas_company import (
     text,
     to_category_request,
 )
+from app.schemas_dictionaries import localized
 from app.schemas_erp_catalog import (
     KIND_CODE,
     Brigade,
@@ -35,6 +36,7 @@ from app.schemas_erp_catalog import (
     BrigadePage,
     BrigadeUpdate,
     CategoryProposalIn,
+    CountryRef,
     DeliveryBasisRef,
     DocumentKindRef,
     ExchangeRatePage,
@@ -54,7 +56,6 @@ from app.schemas_erp_catalog import (
     ManufacturerCreate,
     ManufacturerPage,
     ManufacturerUpdate,
-    NamedRef,
     Offer,
     OfferCreate,
     OfferHistory,
@@ -158,7 +159,10 @@ async def get_lookups(authed: Reader) -> Lookups:
             LookupCurrency(code=text(c.get("code")), symbol=text(c.get("symbol")))
             for c in currencies
         ],
-        countries=[NamedRef(id=ident(c.get("id")), name=text(c.get("name"))) for c in countries],
+        countries=[
+            CountryRef(id=ident(c.get("id")), name=text(c.get("name")), names=localized(c))
+            for c in countries
+        ],
         delivery_bases=[
             DeliveryBasisRef(code=text(b.get("code")), name=text(b.get("name")))
             for b in bases

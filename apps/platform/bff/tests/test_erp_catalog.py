@@ -671,7 +671,18 @@ async def test_lookups_collect_units_categories_currencies_and_countries(
         return_value=httpx.Response(200, json=[{"id": 1, "code": "USD", "symbol": "$"}])
     )
     router.get(f"{API}/master-data/countries/").mock(
-        return_value=httpx.Response(200, json=[{"id": 3, "code": "UZ", "name": "Узбекистан"}])
+        return_value=httpx.Response(
+            200,
+            json=[
+                {
+                    "id": 3,
+                    "code": "UZ",
+                    "name": "Узбекистан",
+                    "name_uz": "O‘zbekiston",
+                    "name_en": "Uzbekistan",
+                }
+            ],
+        )
     )
     router.get(f"{API}/master-data/delivery-basis/").mock(
         return_value=httpx.Response(
@@ -704,7 +715,14 @@ async def test_lookups_collect_units_categories_currencies_and_countries(
     assert body["units"] == [{"id": "1", "code": "pcs", "name": "шт"}]
     assert body["categories"] == [{"id": "2", "name": "Электро", "parent_id": None}]
     assert body["currencies"] == [{"code": "USD", "symbol": "$"}]
-    assert body["countries"] == [{"id": "3", "name": "Узбекистан"}]
+    # Название на языке интерфейса выбирает экран (план справочников, PR 6)
+    assert body["countries"] == [
+        {
+            "id": "3",
+            "name": "Узбекистан",
+            "names": {"ru": "Узбекистан", "uz": "O‘zbekiston", "en": "Uzbekistan"},
+        }
+    ]
     assert body["delivery_bases"] == [{"code": "FCA", "name": "Free Carrier"}]
     assert body["document_kinds"] == [
         {

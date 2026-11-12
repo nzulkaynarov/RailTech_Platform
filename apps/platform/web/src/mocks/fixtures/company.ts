@@ -57,6 +57,10 @@ export interface CompanyMock {
   nextId: number;
 }
 
+/** Названия на узбекском и английском — как у стран ERP из CLDR (план справочников, PR 6). */
+const localized = (uz: string, en: string) =>
+  ({ name_uz: uz, name_en: en }) as Partial<ReferenceItem>;
+
 const item = (
   id: number,
   code: string,
@@ -269,18 +273,26 @@ function seed(): CompanyMock {
     reference: {
       countries: [
         item(1, "UZ", "Узбекистан", {
+          ...localized("O‘zbekiston", "Uzbekistan"),
           alpha2: "UZ",
           alpha3: "UZB",
           iso_numeric: "860",
           vat_rate: "12.00",
         }),
         item(2, "KZ", "Казахстан", {
+          ...localized("Qozog‘iston", "Kazakhstan"),
           alpha2: "KZ",
           alpha3: "KAZ",
           iso_numeric: "398",
           vat_rate: "12.00",
         }),
-        item(3, "CN", "Китай", { alpha2: "CN", alpha3: "CHN", iso_numeric: "156", vat_rate: null }),
+        item(3, "CN", "Китай", {
+          ...localized("Xitoy", "China"),
+          alpha2: "CN",
+          alpha3: "CHN",
+          iso_numeric: "156",
+          vat_rate: null,
+        }),
       ],
       currencies: [
         item(1, "UZS", "Узбекский сум", { symbol: "сум" }),

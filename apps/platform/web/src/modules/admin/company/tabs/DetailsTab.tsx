@@ -13,6 +13,7 @@ import {
   useUploadCompanyLogo,
 } from "../../../../shared/api/generated/platform-bff";
 import { ConfirmModal, LogoField, QueryGate, SaveBlock, TabHeader, ReadOnlyFence } from "../common";
+import { localName } from "../../../eds/dictionaries";
 import { changedFields, isEmptyObject } from "../diff";
 import { errorFields } from "../errors";
 import { BankAccounts } from "./BankAccounts";
@@ -61,7 +62,7 @@ export function DetailsTab() {
 }
 
 function DetailsForm({ company }: { company: CompanyProfile }) {
-  const { t } = useTranslation("company");
+  const { t, i18n } = useTranslation("company");
   const { message } = App.useApp();
   const queryClient = useQueryClient();
   const [form] = Form.useForm<Values>();
@@ -171,7 +172,7 @@ function DetailsForm({ company }: { company: CompanyProfile }) {
               loading={countries.isPending}
               options={(countries.data?.items ?? []).map((c) => ({
                 value: Number(c.id),
-                label: c.name,
+                label: c.names ? localName(c.names, i18n.language) : c.name,
               }))}
             />
           </Form.Item>

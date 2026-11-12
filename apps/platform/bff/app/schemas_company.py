@@ -14,6 +14,7 @@ from typing import Any, ClassVar, Literal, Self
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.clients.erp_company import media_path
+from app.schemas_dictionaries import LocalizedName, localized
 
 DocumentKind = Literal["quote", "contract", "invoice", "act", "letter"]
 ResetPeriod = Literal["never", "yearly", "monthly"]
@@ -778,6 +779,8 @@ class ReferenceItem(BaseModel):
     name: str
     sort_order: int
     is_active: bool
+    #: Название на трёх языках — у справочников «Расчёта», которые их хранят
+    names: LocalizedName | None = None
     symbol: str | None = None
     alpha2: str | None = None
     alpha3: str | None = None
@@ -844,6 +847,8 @@ def to_reference_item(kind: str, raw: Mapping[str, Any]) -> ReferenceItem:
         "sort_order": whole(raw.get("sort_order")),
         "is_active": flag(raw.get("is_active", True)),
     }
+    if "name_uz" in raw:
+        values["names"] = localized(raw)
     for name in REFERENCE_EXTRAS[kind]:
         if name in raw:
             value = raw[name]

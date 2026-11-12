@@ -1,12 +1,16 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.54.0
+  version: 0.57.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
     сессия, профиль, счётчики меню, «Моя очередь», лента «Сегодня», уведомления, поиск. Экраны фаз P2–P4 добавляются
     в этот файл до кода (`docs/architecture/integration-map.md` §1).
+
+    **0.57.0 (страны на трёх языках, план справочников PR 6).** `CatalogLookups.countries` — `CatalogCountryRef` с
+    названиями `names` на ru, uz, en; `ReferenceItem.names` — то же у справочников, которые хранят три языка. Экран
+    показывает название на языке интерфейса.
 
     **0.54.0 (счета компании, решение владельца 2026-11-11).** `GET/POST /admin/company/bank-accounts`,
     `PATCH/DELETE /admin/company/bank-accounts/{id}`: банковские счета своей компании списком — основной, дополнительные,
@@ -19747,6 +19751,9 @@ components:
           type: integer
         is_active:
           type: boolean
+        names:
+          $ref: '#/components/schemas/LocalizedName'
+          description: Название на трёх языках — у справочников, которые их хранят
         symbol:
           type: string
           description: 'Валюта: знак'
@@ -24807,7 +24814,16 @@ components:
             properties:
               code: {type: string}
               symbol: {type: string}
-        countries: {type: array, items: {$ref: '#/components/schemas/CatalogNamedRef'}}
+        countries: {type: array, items: {$ref: '#/components/schemas/CatalogCountryRef'}}
+    CatalogCountryRef:
+      type: object
+      additionalProperties: false
+      required: [id, name, names]
+      description: Страна для выбора; название на языке интерфейса выбирает экран
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        name: {type: string}
+        names: {$ref: '#/components/schemas/LocalizedName'}
     SupplierRow:
       type: object
       additionalProperties: false

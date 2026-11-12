@@ -13172,6 +13172,14 @@ export const getListReferenceItemsResponseMock = (
     name: faker.string.alpha({ length: { min: 1, max: 255 } }),
     sort_order: faker.number.int(),
     is_active: faker.datatype.boolean(),
+    names: faker.helpers.arrayElement([
+      {
+        ru: faker.string.alpha({ length: { min: 1, max: 120 } }),
+        uz: faker.string.alpha({ length: { min: 10, max: 120 } }),
+        en: faker.string.alpha({ length: { min: 10, max: 120 } }),
+      },
+      undefined,
+    ]),
     symbol: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       undefined,
@@ -13212,6 +13220,14 @@ export const getCreateReferenceItemResponseMock = (
   name: faker.string.alpha({ length: { min: 1, max: 255 } }),
   sort_order: faker.number.int(),
   is_active: faker.datatype.boolean(),
+  names: faker.helpers.arrayElement([
+    {
+      ru: faker.string.alpha({ length: { min: 1, max: 120 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 120 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 120 } }),
+    },
+    undefined,
+  ]),
   symbol: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     undefined,
@@ -13248,6 +13264,14 @@ export const getUpdateReferenceItemResponseMock = (
   name: faker.string.alpha({ length: { min: 1, max: 255 } }),
   sort_order: faker.number.int(),
   is_active: faker.datatype.boolean(),
+  names: faker.helpers.arrayElement([
+    {
+      ru: faker.string.alpha({ length: { min: 1, max: 120 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 120 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 120 } }),
+    },
+    undefined,
+  ]),
   symbol: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     undefined,
@@ -25570,6 +25594,11 @@ export const getGetCatalogLookupsResponseMock = (
     () => ({
       id: faker.helpers.fromRegExp("^[0-9]+$"),
       name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      names: {
+        ru: faker.string.alpha({ length: { min: 1, max: 120 } }),
+        uz: faker.string.alpha({ length: { min: 10, max: 120 } }),
+        en: faker.string.alpha({ length: { min: 10, max: 120 } }),
+      },
     }),
   ),
   ...overrideResponse,

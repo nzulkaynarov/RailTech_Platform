@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -1046,5 +1046,18 @@ describe("Курс USD → UZS: ручной ввод", () => {
     expect(screen.getByLabelText("Курс, сум за 1 USD")).toBeDisabled();
     expect(screen.getByRole("button", { name: "Сохранить курс" })).toBeDisabled();
     expect(screen.getByText("Ввод вручную")).toBeInTheDocument();
+  });
+});
+
+describe("Admin · Компания: страна на языке интерфейса (план справочников, PR 6)", () => {
+  it("страна регистрации — на языке интерфейса: «Узбекистан», «O‘zbekiston», «Uzbekistan»", async () => {
+    signInAs("admin@demo.example");
+    renderApp("/admin/company?tab=details");
+    expect(await screen.findByText("Узбекистан")).toBeVisible();
+    await act(() => i18n.changeLanguage("uz"));
+    expect(await screen.findByText("O‘zbekiston")).toBeVisible();
+    await act(() => i18n.changeLanguage("en"));
+    expect(await screen.findByText("Uzbekistan")).toBeVisible();
+    expect(screen.queryByText("Узбекистан")).not.toBeInTheDocument();
   });
 });

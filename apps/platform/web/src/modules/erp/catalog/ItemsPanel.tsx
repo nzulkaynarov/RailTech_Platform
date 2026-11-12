@@ -46,6 +46,7 @@ import {
 import { catalogErrorText, errorFields } from "./errors";
 import { useDebounced } from "./useDebounced";
 import { KINDS } from "./kinds";
+import { localName } from "../../eds/dictionaries";
 import { ItemDocs } from "./ItemDocs";
 import { ItemPhotos } from "./ItemPhotos";
 import { queryLabels } from "./labels";
@@ -667,7 +668,7 @@ function ItemForm({
   onClose: () => void;
   onSaved: (item: CatalogItemDetail) => void;
 }) {
-  const { t } = useTranslation("catalog");
+  const { t, i18n } = useTranslation("catalog");
   const queryClient = useQueryClient();
   const lookups = useGetCatalogLookups();
   const [name, setName] = useState(item?.name ?? "");
@@ -866,7 +867,7 @@ function ItemForm({
                 }}
                 options={(lookups.data?.countries ?? []).map((c) => ({
                   value: c.id,
-                  label: c.name,
+                  label: localName(c.names, i18n.language),
                 }))}
               />
             </FormField>
