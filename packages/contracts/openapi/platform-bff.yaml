@@ -1,17 +1,20 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.53.0
+  version: 0.55.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
     сессия, профиль, счётчики меню, «Моя очередь», лента «Сегодня», уведомления, поиск. Экраны фаз P2–P4 добавляются
     в этот файл до кода (`docs/architecture/integration-map.md` §1).
 
-    **0.53.0 (исходы письма, решение владельца 2026-11-11) — ломающее по oasdiff (до 1.0 допустимо): новое значение
+    **0.55.0 (исходы письма, решение владельца 2026-11-11) — ломающее по oasdiff (до 1.0 допустимо): новое значение
     `LetterStatus.closed` в ответах.** `POST /eds/letters/{id}/close` «Закрыть без ответа» с причиной из справочника
     `close-reasons`, `POST /eds/letters/{id}/reopen` «Вернуть в работу», `POST /eds/instructions/{id}/return` «Вернуть
     автору»; `LetterCard.close_reason`, `close_comment`.
+    **0.54.0 (счета компании, решение владельца 2026-11-11).** `GET/POST /admin/company/bank-accounts`,
+    `PATCH/DELETE /admin/company/bank-accounts/{id}`: банковские счета своей компании списком — основной, дополнительные,
+    валютные; один основной на валюту.
 
     **0.52.0 (справочники файлом, решение владельца 2026-11-11).** `GET /dictionaries/{kind}/export` — выгрузка
     xlsx или csv, она же шаблон; `POST /dictionaries/{kind}/import` — загрузка файла с проверкой без записи и
@@ -6908,6 +6911,103 @@ paths:
           $ref: '#/components/responses/SessionExpired'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /admin/company/bank-accounts:
+    get:
+      tags:
+        - admin
+      operationId: listCompanyBankAccounts
+      summary: Банковские счета компании
+      description: Раздел `company.settings` — чтение.
+      responses:
+        '200':
+          description: Счета (основные первыми)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyBankAccountList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+        - admin
+      operationId: createCompanyBankAccount
+      summary: Добавить банковский счёт
+      description: >-
+        Раздел `company.settings` — полный (решение владельца 2026-11-11: счета — список). Первый счёт валюты становится
+        основным; «Основной для валюты» снимает флаг с прежнего счёта той же валюты. Номер счёта у компании уникален
+        (`details.fields = [account]`); неизвестная валюта — `details.fields = [currency]`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyBankAccountIn'
+      responses:
+        '201':
+          description: Создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyBankAccount'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /admin/company/bank-accounts/{id}:
+    patch:
+      tags:
+        - admin
+      operationId: updateCompanyBankAccount
+      summary: Изменить банковский счёт
+      description: Раздел `company.settings` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyBankAccountUpdate'
+      responses:
+        '200':
+          description: Сохранён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyBankAccount'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+    delete:
+      tags:
+        - admin
+      operationId: deleteCompanyBankAccount
+      summary: Удалить банковский счёт
+      description: Раздел `company.settings` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+      responses:
+        '204':
+          description: Удалён
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /admin/company/charge-templates:
     get:
       tags:
@@ -19291,6 +19391,59 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ChargeType'
+    CompanyBankAccount:
+      type: object
+      additionalProperties: false
+      description: Банковский счёт своей компании (решение владельца 2026-11-11); печать берёт основной счёт валюты документа
+      required: [id, bank_name, mfo, account, currency, swift, correspondent_bank, is_default, is_active, order]
+      properties:
+        id: {type: string}
+        bank_name: {type: string}
+        mfo: {type: string}
+        account: {type: string}
+        currency: {type: string, description: 'Код валюты справочника: UZS, USD и т. д.'}
+        swift: {type: string}
+        correspondent_bank: {type: string}
+        is_default: {type: boolean, description: 'Основной для своей валюты, один на валюту'}
+        is_active: {type: boolean}
+        order: {type: integer}
+    CompanyBankAccountList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CompanyBankAccount'
+    CompanyBankAccountIn:
+      type: object
+      additionalProperties: false
+      required: [account, currency]
+      properties:
+        bank_name: {type: [string, 'null'], maxLength: 255}
+        mfo: {type: [string, 'null'], maxLength: 10}
+        account: {type: string, minLength: 1, maxLength: 50}
+        currency: {type: string, pattern: '^[A-Z]{3}$'}
+        swift: {type: [string, 'null'], maxLength: 11}
+        correspondent_bank: {type: [string, 'null'], maxLength: 2000}
+        is_default: {type: [boolean, 'null']}
+        is_active: {type: [boolean, 'null']}
+        order: {type: [integer, 'null'], minimum: 0}
+    CompanyBankAccountUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        bank_name: {type: string, maxLength: 255}
+        mfo: {type: string, maxLength: 10}
+        account: {type: string, minLength: 1, maxLength: 50}
+        currency: {type: string, pattern: '^[A-Z]{3}$'}
+        swift: {type: string, maxLength: 11}
+        correspondent_bank: {type: string, maxLength: 2000}
+        is_default: {type: boolean}
+        is_active: {type: boolean}
+        order: {type: integer, minimum: 0}
     ChargeTemplate:
       type: object
       additionalProperties: false

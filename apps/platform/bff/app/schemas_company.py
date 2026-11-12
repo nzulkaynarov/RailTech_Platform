@@ -520,6 +520,67 @@ def to_charge_template(raw: Mapping[str, Any]) -> ChargeTemplate:
     )
 
 
+# --- банковские счета компании (решение владельца 2026-11-11) ----------------------------------
+
+_CURRENCY = r"^[A-Z]{3}$"
+
+
+class CompanyBankAccount(BaseModel):
+    id: str
+    bank_name: str
+    mfo: str
+    account: str
+    currency: str
+    swift: str
+    correspondent_bank: str
+    is_default: bool
+    is_active: bool
+    order: int
+
+
+class CompanyBankAccountList(BaseModel):
+    items: list[CompanyBankAccount]
+
+
+class CompanyBankAccountIn(Body):
+    bank_name: str | None = Field(default=None, max_length=255)
+    mfo: str | None = Field(default=None, max_length=10)
+    account: str = Field(min_length=1, max_length=50)
+    currency: str = Field(pattern=_CURRENCY)
+    swift: str | None = Field(default=None, max_length=11)
+    correspondent_bank: str | None = Field(default=None, max_length=2000)
+    is_default: bool | None = None
+    is_active: bool | None = None
+    order: int | None = Field(default=None, ge=0)
+
+
+class CompanyBankAccountUpdate(Patch):
+    bank_name: str | None = Field(default=None, max_length=255)
+    mfo: str | None = Field(default=None, max_length=10)
+    account: str | None = Field(default=None, min_length=1, max_length=50)
+    currency: str | None = Field(default=None, pattern=_CURRENCY)
+    swift: str | None = Field(default=None, max_length=11)
+    correspondent_bank: str | None = Field(default=None, max_length=2000)
+    is_default: bool | None = None
+    is_active: bool | None = None
+    order: int | None = Field(default=None, ge=0)
+
+
+def to_bank_account(raw: Mapping[str, Any]) -> CompanyBankAccount:
+    return CompanyBankAccount(
+        id=ident(raw.get("id")),
+        bank_name=text(raw.get("bank_name")),
+        mfo=text(raw.get("mfo")),
+        account=text(raw.get("account")),
+        currency=text(raw.get("currency")),
+        swift=text(raw.get("swift")),
+        correspondent_bank=text(raw.get("correspondent_bank")),
+        is_default=flag(raw.get("is_default")),
+        is_active=flag(raw.get("is_active", True)),
+        order=whole(raw.get("order")),
+    )
+
+
 # --- шаблоны документов ------------------------------------------------------------------------
 
 
