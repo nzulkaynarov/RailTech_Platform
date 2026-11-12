@@ -75,33 +75,35 @@ describe("Настройки · Telegram и разделы бота по гру�
     expect(screen.queryByRole("region", { name: "Причины отказа" })).toBeNull();
   });
 
-  it("каждый раздел бота — на странице своей группы и подписан на языке сотрудника", async () => {
-    const pages: [string, string, string, string][] = [
-      ["/admin/timing", "Время и сроки", "Рабочие часы", "Начало рабочего дня"],
-      ["/admin/timing", "Время и сроки", "Правила передачи", "Оценка лида для передачи"],
-      ["/admin/notifications", "Уведомления", "Канал команды", "Дежурные"],
-      [
-        "/admin/notifications",
-        "Уведомления",
-        "Оповещения о сбоях сервисов",
-        "Личное сообщение админам в Telegram",
-      ],
-      [
-        "/admin/web-forms",
-        "Формы сайта",
-        "Форма «Заявка» с сайта",
-        "Минимальное время заполнения формы",
-      ],
-      ["/admin/dictionaries?list=deals", "Справочники", "Причины отказа", "Причины отказа"],
-      ["/admin/ai-spend", "Расходы на ИИ", "Бюджет моделей", "Дневной бюджет"],
-      ["/admin/company", "Реквизиты и бланк", "Контакты для клиентов", "Название компании"],
-    ];
-    for (const [path, title, section, label] of pages) {
+  // По тесту на страницу: восемь открытий подряд в одном тесте под полной нагрузкой не укладывались в 20 с.
+  const BOT_PAGES: [string, string, string, string][] = [
+    ["/admin/timing", "Время и сроки", "Рабочие часы", "Начало рабочего дня"],
+    ["/admin/timing", "Время и сроки", "Правила передачи", "Оценка лида для передачи"],
+    ["/admin/notifications", "Уведомления", "Канал команды", "Дежурные"],
+    [
+      "/admin/notifications",
+      "Уведомления",
+      "Оповещения о сбоях сервисов",
+      "Личное сообщение админам в Telegram",
+    ],
+    [
+      "/admin/web-forms",
+      "Формы сайта",
+      "Форма «Заявка» с сайта",
+      "Минимальное время заполнения формы",
+    ],
+    ["/admin/dictionaries?list=deals", "Справочники", "Причины отказа", "Причины отказа"],
+    ["/admin/ai-spend", "Расходы на ИИ", "Бюджет моделей", "Дневной бюджет"],
+    ["/admin/company", "Реквизиты и бланк", "Контакты для клиентов", "Название компании"],
+  ];
+  it.each(BOT_PAGES)(
+    "раздел бота на странице своей группы и подписан на языке сотрудника: %s · %s",
+    async (path, title, section, label) => {
       const { router } = await openPage("admin@demo.example", path, title);
       expect(await within(await form(section)).findAllByText(label)).not.toHaveLength(0);
       router.dispose();
-    }
-  });
+    },
+  );
 
   it("канал команды выбирается в «Telegram · Подключение» — ссылка туда из «Уведомлений»", async () => {
     await openPage("admin@demo.example", "/admin/notifications", "Уведомления");
