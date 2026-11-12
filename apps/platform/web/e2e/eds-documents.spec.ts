@@ -2,7 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { type Locator, type Page, expect, test } from "@playwright/test";
 
 import { loginAndWait, settledScreenshot, spaGoto, waitForMotionEnd } from "./support/app";
-import { fillDate, pickFiles } from "./support/fields";
+import { fillDate, openStep, pickFiles } from "./support/fields";
 
 // EDS · Создать документ и «Мои документы» на MSW (D1-5): сотрудник создаёт служебную записку с суммой и вложением и отправляет
 // её на согласование — документ виден в «Мои» со статусом «На согласовании»; черновик → «Продолжить» → отправка; сбой сервера
@@ -39,9 +39,24 @@ async function openDocuments(page: Page, query = "?scope=mine"): Promise<void> {
   await expect(page.getByRole("heading", { level: 1, name: "Все документы" })).toBeVisible();
 }
 
+// Форма по шагам (platform-frontend.md §4.1a): «О чём» → «Текст и вложения» → «Согласование» → «Проверка и отправка».
+// Текст заголовка начинается с номера шага, поэтому подстрока, а не «^…».
+const ABOUT = "О чём";
+const BODY = "Текст и вложения";
+const ROUTE = "Согласование";
+const CHECK = "Проверка и отправка";
+
 async function fillMemo(page: Page, subject: string, text: string): Promise<void> {
+  await openStep(page, ABOUT);
   await page.getByLabel("Тема").fill(subject);
+  await openStep(page, BODY);
   await page.getByLabel("Текст", { exact: true }).fill(text);
+}
+
+/** Шаг «Проверка и отправка» и кнопка отправки на нём. */
+async function send(page: Page, name: string): Promise<void> {
+  await openStep(page, CHECK);
+  await page.getByRole("button", { name }).click();
 }
 
 test.describe("Создать документ: сотрудник", () => {
@@ -73,9 +88,11 @@ test.describe("Создать документ: сотрудник", () => {
       "Закупка мебели для переговорной",
       "Прошу согласовать закупку трёх столов и десяти стульев.",
     );
+    await openStep(page, ABOUT);
     await page.getByLabel("Сумма, сум").fill("3 600 000");
     await fillDate(page.getByLabel("Нужно до"), inDays(7));
-    await pickFiles(page.getByLabel("Вложения"), {
+    await openStep(page, BODY);
+    await pickFiles(page.getByLabel("Вложения", { exact: true }), {
       name: "schet-mebel.pdf",
       mimeType: "application/pdf",
       buffer: Buffer.from("%PDF-1.4 демонстрационный счёт"),
@@ -84,13 +101,20 @@ test.describe("Создать документ: сотрудник", () => {
     await expect(files.getByText("schet-mebel.pdf")).toBeVisible();
     await expect(files.getByText("загружен")).toBeVisible();
 
+    await openStep(page, ABOUT);
     await page.getByLabel("Связь с проектом").click();
     await page.getByLabel("Связь с проектом").fill("рельс");
     await page.getByTitle(/ЗВ-2026-104 · Поставка рельсов Р65/).click();
-    await expect(page.getByText("Вы → Директор → Бухгалтер (есть сумма)")).toBeVisible();
+    await openStep(page, ROUTE);
+    await expect(
+      page
+        .getByRole("region", { name: "Согласование" })
+        .getByText("Вы → Директор → Бухгалтер (есть сумма)"),
+    ).toBeVisible();
+    await openStep(page, CHECK);
     await settledScreenshot(page, "form-filled");
 
-    await page.getByRole("button", { name: "Отправить на согласование" }).click();
+    await send(page, "Отправить на согласование");
 
     await expect(page).toHaveURL(/\/eds\/documents\?box=internal&scope=mine&doc=/);
     const panel = side(page);
@@ -135,11 +159,13 @@ test.describe("Создать документ: сотрудник", () => {
     await expect(page).toHaveURL(/\/eds\/new\?draft=/);
     await expect(page.getByLabel("Тема")).toHaveValue("Ремонт кондиционера в переговорной");
     await expect(page.getByLabel("Сумма, сум")).toHaveValue("1200000");
+    await openStep(page, ABOUT);
     await expect(page.getByText("Тип нельзя менять после создания.")).toBeVisible();
     await settledScreenshot(page, "draft-continue");
 
+    await openStep(page, ABOUT);
     await page.getByLabel("Тема").fill("Ремонт кондиционера: замена компрессора");
-    await page.getByRole("button", { name: "Отправить на согласование" }).click();
+    await send(page, "Отправить на согласование");
 
     const panel = side(page);
     await expect(
@@ -157,9 +183,10 @@ test.describe("Создать документ: сотрудник", () => {
     await loginAndWait(page, "manager@demo.example");
     await spaGoto(page, "/eds/new");
     await fillMemo(page, "Командировка в Бухару", "Нужна командировка на два дня. [сбой]");
+    await openStep(page, ABOUT);
     await page.getByLabel("Сумма, сум").fill("750 000");
 
-    await page.getByRole("button", { name: "Отправить на согласование" }).click();
+    await send(page, "Отправить на согласование");
 
     const alert = page.getByRole("alert").filter({ hasText: "Не отправлено" });
     await expect(alert).toContainText("сервис документов не отвечает, повторите чуть позже");
@@ -168,8 +195,9 @@ test.describe("Создать документ: сотрудник", () => {
     await expect(page.getByLabel("Сумма, сум")).toHaveValue("750 000");
     await settledScreenshot(page, "send-error");
 
-    await page.getByLabel("Текст").fill("Нужна командировка на два дня.");
-    await page.getByRole("button", { name: "Отправить на согласование" }).click();
+    await openStep(page, BODY);
+    await page.getByLabel("Текст", { exact: true }).fill("Нужна командировка на два дня.");
+    await send(page, "Отправить на согласование");
 
     await expect(
       side(page).getByRole("heading", { level: 3, name: "Командировка в Бухару" }),
@@ -184,12 +212,18 @@ test.describe("Создать документ: сотрудник", () => {
     await loginAndWait(page, "manager@demo.example");
     await spaGoto(page, "/eds/new");
 
-    await page.getByRole("button", { name: "Отправить на согласование" }).click();
+    await send(page, "Отправить на согласование");
+    // ошибка открывает первый шаг с ошибкой; у шага с текстом — отметка «Нужно исправить»
     await expect(page.getByText("Укажите тему.")).toBeVisible();
-    await expect(page.getByText("Напишите текст документа.")).toBeVisible();
     await expect(page.getByLabel("Тема")).toBeFocused();
+    await expect(page.locator("button[aria-expanded]", { hasText: BODY })).toContainText(
+      "Нужно исправить",
+    );
+    await openStep(page, BODY);
+    await expect(page.getByText("Напишите текст документа.")).toBeVisible();
 
     await fillMemo(page, "Тема", "Текст");
+    await openStep(page, ABOUT);
     await page.getByLabel("Сумма, сум").fill("0");
     await page.getByRole("button", { name: "Сохранить черновик" }).click();
     await expect(
@@ -209,7 +243,8 @@ test.describe("Создать документ: сотрудник", () => {
     await loginAndWait(page, "manager@demo.example");
     await spaGoto(page, "/eds/new");
 
-    await pickFiles(page.getByLabel("Вложения"), {
+    await openStep(page, BODY);
+    await pickFiles(page.getByLabel("Вложения", { exact: true }), {
       name: "virus.exe",
       mimeType: "application/x-msdownload",
       buffer: Buffer.from("MZ"),
@@ -257,8 +292,9 @@ test.describe("Создать документ: директор и реестр
     await expect(page.getByLabel("Сумма, сум")).toHaveCount(0);
     await page.getByLabel("Адресат (организация)").fill("ООО «Демо-Путь»");
     await fillMemo(page, "Ответ на запрос цен", "Направляем коммерческие условия.");
+    await openStep(page, CHECK);
     await settledScreenshot(page, "letter-form");
-    await page.getByRole("button", { name: "Зарегистрировать письмо" }).click();
+    await send(page, "Зарегистрировать письмо");
 
     const panel = side(page);
     await expect(
@@ -278,6 +314,7 @@ test.describe("Создать документ: директор и реестр
     await expect(
       page.getByText("Письмо подготовите вы, зарегистрирует и отправит делопроизводитель."),
     ).toBeVisible();
+    await openStep(page, CHECK);
     await expect(page.getByRole("button", { name: "Передать на регистрацию" })).toBeVisible();
   });
 
@@ -309,6 +346,7 @@ test.describe("Создать документ: axe и снимки", () => {
       await settledScreenshot(page, "a11y-form");
 
       await fillMemo(page, "Тема", "Текст");
+      await openStep(page, ABOUT);
       await page.getByLabel("Сумма, сум").fill("0");
       await page.getByRole("button", { name: "Сохранить черновик" }).click();
       await expect(
@@ -381,6 +419,7 @@ test.describe("Создать документ: телефон", () => {
         page.getByRole("heading", { level: 1, name: "Внутренний документ" }),
       ).toBeVisible();
       await fillMemo(page, "Заказ воды для офиса", "Прошу согласовать заказ питьевой воды.");
+      await openStep(page, CHECK);
       const submit = page.getByRole("button", { name: "Отправить на согласование" });
       await expect(submit).toBeVisible();
       // кнопки прижаты к низу экрана (над нижней панелью модулей)

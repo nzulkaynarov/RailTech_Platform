@@ -2,7 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { type Locator, type Page, expect, test } from "@playwright/test";
 
 import { loginAndWait, settledScreenshot, spaGoto, waitForMotionEnd } from "./support/app";
-import { chooseOption, fillDate, pickFiles } from "./support/fields";
+import { chooseOption, fillDate, openStep, pickFiles } from "./support/fields";
 
 // UX-2a «Единые поля даты, файла и выбора» на MSW: системных `input type="date|file"` и `<select>` в экранах нет — дата
 // `ДД.ММ.ГГГГ` с календарём на русском, файл — кнопкой «Выбрать файл» со списком, выбор — antd Select. Четыре экрана аудита
@@ -60,8 +60,8 @@ test.describe("UX-2a: поля даты, файла и выбора", () => {
       await expect(
         page.getByRole("heading", { level: 1, name: "Внутренний документ" }),
       ).toBeVisible();
+      // форма по шагам: тема, сумма и срок — «О чём», текст и файлы — «Текст и вложения»
       await page.getByLabel("Тема").fill("Закупка мебели для переговорной");
-      await page.getByLabel("Текст").fill("Прошу согласовать закупку трёх столов.");
       await page.getByLabel("Сумма, сум").fill("3 600 000");
 
       const due = page.getByLabel("Нужно до");
@@ -74,8 +74,12 @@ test.describe("UX-2a: поля даты, файла и выбора", () => {
       await fillDate(due, inDays(7));
       await expect(due).toHaveValue(shown(inDays(7)));
 
+      await openStep(page, "Текст и вложения");
+      await page
+        .getByLabel("Текст", { exact: true })
+        .fill("Прошу согласовать закупку трёх столов.");
       await expect(page.getByRole("button", { name: "Выбрать файлы" })).toBeVisible();
-      await pickFiles(page.getByLabel("Вложения"), [
+      await pickFiles(page.getByLabel("Вложения", { exact: true }), [
         {
           name: "schet-mebel.pdf",
           mimeType: "application/pdf",

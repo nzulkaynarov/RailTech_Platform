@@ -8,6 +8,7 @@ import {
   spaGoto,
   waitForMotionEnd,
 } from "./support/app";
+import { openStep } from "./support/fields";
 
 // «Доработать» в «Моих задачах» автора на MSW (D1-6b): директор возвращает служебку → автор видит «Доработать: СЗ-…» с тем,
 // кто и что написал → «Открыть» → форма «Продолжить» (D1-5) → правит → «Отправить на согласование» → строки больше нет.
@@ -86,10 +87,13 @@ test.describe("Доработать возвращённый документ", 
       page.getByRole("heading", { level: 1, name: "Внутренний документ" }),
     ).toBeVisible();
     await expect(page.getByLabel("Тема")).toHaveValue("Оплата аренды склада за ноябрь");
+    // черновик открывается на шаге «Проверка и отправка»; поля — на шаге «О чём»
+    await openStep(page, "О чём");
     await expect(page.getByText("Тип нельзя менять после создания.")).toBeVisible();
     await shoot(page, "rework-continue");
 
     await page.getByLabel("Тема").fill("Оплата аренды склада за ноябрь (два счёта)");
+    await openStep(page, "Проверка и отправка");
     await page.getByRole("button", { name: "Отправить на согласование" }).click();
     const panel = page.locator("#pf-context-panel");
     await expect(

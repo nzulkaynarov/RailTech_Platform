@@ -33,7 +33,7 @@ export function StepSections({ sections, active, onActiveChange }: StepSectionsP
   const { t } = useTranslation("ui");
   const base = useId();
   return (
-    <ol className="pf-steps">
+    <ol className="pf-fsteps">
       {sections.map((section, index) => {
         const open = section.key === active;
         const next = sections[index + 1];
@@ -42,22 +42,22 @@ export function StepSections({ sections, active, onActiveChange }: StepSectionsP
         return (
           <li
             key={section.key}
-            className="pf-step"
+            className="pf-fstep"
             data-open={open || undefined}
             data-invalid={section.invalid || undefined}
           >
-            <h2 className="pf-step-heading">
+            <h2 className="pf-fstep-heading">
               <button
                 type="button"
                 id={headId}
-                className="pf-step-head pf-focusable"
+                className="pf-fstep-head pf-focusable"
                 aria-expanded={open}
                 aria-controls={bodyId}
                 onClick={() => {
                   onActiveChange(section.key);
                 }}
               >
-                <span className="pf-step-badge" aria-hidden="true">
+                <span className="pf-fstep-badge" aria-hidden="true">
                   {section.invalid ? (
                     <ExclamationOutlined />
                   ) : section.complete && !open ? (
@@ -66,28 +66,28 @@ export function StepSections({ sections, active, onActiveChange }: StepSectionsP
                     index + 1
                   )}
                 </span>
-                <span className="pf-step-text">
-                  <span className="pf-step-title">{section.title}</span>
+                <span className="pf-fstep-text">
+                  <span className="pf-fstep-title">{section.title}</span>
                   {!open && section.summary ? (
-                    <span className="pf-step-summary">{section.summary}</span>
+                    <span className="pf-fstep-summary">{section.summary}</span>
                   ) : null}
                   {section.invalid ? (
-                    <span className="pf-step-error">{t("formSteps.invalid")}</span>
+                    <span className="pf-fstep-error">{t("formSteps.invalid")}</span>
                   ) : null}
                 </span>
-                {!open ? <span className="pf-step-edit">{t("formSteps.edit")}</span> : null}
+                {!open ? <span className="pf-fstep-edit">{t("formSteps.edit")}</span> : null}
               </button>
             </h2>
             <div
               id={bodyId}
               role="region"
               aria-labelledby={headId}
-              className="pf-step-body"
+              className="pf-fstep-body"
               hidden={!open}
             >
               {section.content}
               {next || section.footer ? (
-                <div className="pf-step-footer">
+                <div className="pf-fstep-footer">
                   {next ? (
                     <Button
                       type="primary"

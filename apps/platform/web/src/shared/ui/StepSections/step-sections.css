@@ -1,5 +1,6 @@
 /* Секции по шагам (platform-frontend.md §4.1a) */
-.pf-steps {
+.pf-fsteps {
+  min-width: 0;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -7,23 +8,25 @@
   flex-direction: column;
   gap: 8px;
 }
-.pf-step {
+.pf-fstep {
+  /* Свои имена классов: `.pf-step*` занят шкалой этапов (ui.css), его `display: flex` сдвигал шаг за край экрана на 390 */
+  min-width: 0;
   background: #fff;
   border: 1px solid #f0f0f0;
   border-radius: 8px;
 }
-.pf-step[data-open] {
+.pf-fstep[data-open] {
   border-color: #91caff;
 }
-.pf-step[data-invalid] {
+.pf-fstep[data-invalid] {
   border-color: #ffccc7;
 }
-.pf-step-heading {
+.pf-fstep-heading {
   margin: 0;
   font-size: inherit;
   font-weight: inherit;
 }
-.pf-step-head {
+.pf-fstep-head {
   width: 100%;
   min-height: 52px;
   border: 0;
@@ -37,7 +40,7 @@
   color: #1f1f1f;
   font: inherit;
 }
-.pf-step-badge {
+.pf-fstep-badge {
   width: 24px;
   height: 24px;
   flex: 0 0 24px;
@@ -50,57 +53,57 @@
   font-size: 12px;
   font-weight: 600;
 }
-.pf-step[data-open] .pf-step-badge {
+.pf-fstep[data-open] .pf-fstep-badge {
   background: #1668dc;
   border-color: #1668dc;
   color: #fff;
 }
-.pf-step:not([data-open]) .pf-step-badge:has(.anticon-check) {
+.pf-fstep:not([data-open]) .pf-fstep-badge:has(.anticon-check) {
   background: #237804;
   border-color: #237804;
   color: #fff;
 }
-.pf-step[data-invalid] .pf-step-badge {
+.pf-fstep[data-invalid] .pf-fstep-badge {
   background: #fff2f0;
   border-color: #a8071a;
   color: #a8071a;
 }
-.pf-step-text {
+.pf-fstep-text {
   display: flex;
   flex-direction: column;
   min-width: 0;
   flex: 1 1 auto;
 }
-.pf-step-title {
+.pf-fstep-title {
   font-weight: 600;
 }
-.pf-step-summary {
+.pf-fstep-summary {
   font-size: 12px;
   color: #595959;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.pf-step-error {
+.pf-fstep-error {
   font-size: 12px;
   color: #a8071a;
 }
-.pf-step-edit {
+.pf-fstep-edit {
   color: #0958d9;
   font-size: 13px;
   flex: 0 0 auto;
 }
-.pf-step-body {
+.pf-fstep-body {
   padding: 0 16px 16px 52px;
 }
-.pf-step-footer {
+.pf-fstep-footer {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 16px;
 }
 @media (max-width: 767px) {
-  .pf-step-body {
+  .pf-fstep-body {
     padding: 0 12px 12px;
   }
 }
