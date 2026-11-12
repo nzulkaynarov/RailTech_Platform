@@ -494,6 +494,76 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/letters/{letter_id}/close": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Закрыть письмо без ответа
+     * @description Ответственный исполнитель закрывает письмо с причиной из справочника `close-reasons` (решение владельца 2026-11-11).
+     *     Причина неизвестна или скрыта — 422 `details.fields.reason = unknown`; у причины `comment_required` без пояснения —
+     *     422 `details.fields.comment = required`. Не ответственный — 403 `details.reason = not_responsible`; письмо не
+     *     `in_execution` или поручение не `in_work` — 409 `invalid_state`. Поручение ответственного — `executed` с отчётом
+     *     «Закрыто без ответа: …», поручения соисполнителей — `cancelled`, письмо — `closed`, контроль снят;
+     *     `notice.requested` (вид `letter_executed`, заголовок «Закрыто без ответа: …») автору резолюции. Журнал `letter.closed`.
+     */
+    post: operations["closeLetterWithoutReply"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/letters/{letter_id}/reopen": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Вернуть закрытое без ответа письмо в работу
+     * @description Только автор резолюции (иначе 403 `details.reason = not_resolution_author`), только письмо `closed` (иначе 409
+     *     `invalid_state`). Поручения, закрытые вместе с письмом, снова `in_work`; письмо `in_execution`, на контроле;
+     *     исполнителям — `notice.requested`. Журнал `letter.reopened`.
+     */
+    post: operations["reopenLetter"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/instructions/{instruction_id}/return": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Вернуть письмо автору резолюции
+     * @description Ответственный исполнитель возвращает письмо с причиной: «не моё» или нужна другая резолюция. Не ответственный — 403
+     *     `details.reason = not_responsible`; часть поручений уже исполнена — 409 `details.reason = instruction_executed`.
+     *     Поручения письма удаляются (история — в журнале `letter.returned_to_author`), резолюция снимается, письмо снова
+     *     `awaiting_resolution`; `notice.requested` (вид `instruction_assigned`, заголовок «Вернули письмо: …») автору резолюции.
+     */
+    post: operations["returnInstructionToAuthor"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/instructions/{instruction_id}/complete": {
     parameters: {
       query?: never;
@@ -1759,7 +1829,8 @@ export interface components {
      *     регистратора; `rejected` — отклонено. Путь делопроизводства (P8b, SPEC-v3 §3.2a): `in_execution` — «На исполнении»
      *     (поручения в работе, на контроле), `executed` — «Исполнено» (все поручения исполнены, контроль снят), `noted` —
      *     «Принято к сведению». `duplicate` — «Дубль ВХ-…» (EDS-DUP): письмо зарегистрировано повторно, закрыто, ссылка на
-     *     оригинал — `Letter.duplicate_of`. Переходы — таблица в описании API.
+     *     оригинал — `Letter.duplicate_of`. `closed` — «Закрыто без ответа» (причина `Letter.close_reason`, решение владельца
+     *     2026-11-11). Переходы — таблица в описании API.
      * @enum {string}
      */
     LetterStatus:
@@ -1770,7 +1841,8 @@ export interface components {
       | "in_execution"
       | "executed"
       | "noted"
-      | "duplicate";
+      | "duplicate"
+      | "closed";
     /**
      * @description Зона исполнителя резолюции: `goods` — товары, склад, цены поставщиков (снабженец); `services` — услуги, ТЗ, бригада (гл. инженер); `payment_terms` — условия оплаты (бухгалтер)
      * @enum {string}
@@ -2047,6 +2119,10 @@ export interface components {
        * @description Когда исполнены все поручения
        */
       executed_at?: string | null;
+      /** @description Код справочника `close-reasons`, если письмо закрыто без ответа */
+      close_reason?: string | null;
+      /** @description Пояснение ответственного к закрытию без ответа */
+      close_comment?: string | null;
       /** @description Оригинал, если письмо закрыто как дубль (`status = duplicate`, EDS-DUP) */
       duplicate_of?: components["schemas"]["LetterDuplicateRef"] | null;
       /**
@@ -2492,6 +2568,15 @@ export interface components {
        * @description «Ознакомлен»; `null` — ждёт
        */
       acknowledged_at: string | null;
+    };
+    LetterCloseIn: {
+      /** @description Код действующего значения справочника `close-reasons` */
+      reason: string;
+      /** @description Пояснение; обязательно, если у причины `comment_required` */
+      comment?: string | null;
+    };
+    InstructionReturnIn: {
+      reason: string;
     };
     InstructionCompleteIn: {
       report?: string | null;
@@ -3159,7 +3244,7 @@ export interface components {
   parameters: {
     TemplateId: components["schemas"]["Uuid"];
     AuthorityId: components["schemas"]["Uuid"];
-    /** @description Вид справочника (`letter-kinds`, `receipt-methods`); неизвестный — 404 */
+    /** @description Вид справочника (`letter-kinds`, `receipt-methods`, `resolution-kinds`, `signing-kinds`, `close-reasons`); неизвестный — 404 */
     DictionaryKind: string;
     DictionaryCode: components["schemas"]["DictionaryCode"];
     LetterId: components["schemas"]["Uuid"];
@@ -3342,7 +3427,7 @@ export interface operations {
       };
       header?: never;
       path: {
-        /** @description Вид справочника (`letter-kinds`, `receipt-methods`); неизвестный — 404 */
+        /** @description Вид справочника (`letter-kinds`, `receipt-methods`, `resolution-kinds`, `signing-kinds`, `close-reasons`); неизвестный — 404 */
         kind: components["parameters"]["DictionaryKind"];
       };
       cookie?: never;
@@ -3368,7 +3453,7 @@ export interface operations {
       query?: never;
       header?: never;
       path: {
-        /** @description Вид справочника (`letter-kinds`, `receipt-methods`); неизвестный — 404 */
+        /** @description Вид справочника (`letter-kinds`, `receipt-methods`, `resolution-kinds`, `signing-kinds`, `close-reasons`); неизвестный — 404 */
         kind: components["parameters"]["DictionaryKind"];
       };
       cookie?: never;
@@ -3400,7 +3485,7 @@ export interface operations {
       query?: never;
       header?: never;
       path: {
-        /** @description Вид справочника (`letter-kinds`, `receipt-methods`); неизвестный — 404 */
+        /** @description Вид справочника (`letter-kinds`, `receipt-methods`, `resolution-kinds`, `signing-kinds`, `close-reasons`); неизвестный — 404 */
         kind: components["parameters"]["DictionaryKind"];
       };
       cookie?: never;
@@ -3431,7 +3516,7 @@ export interface operations {
       query?: never;
       header?: never;
       path: {
-        /** @description Вид справочника (`letter-kinds`, `receipt-methods`); неизвестный — 404 */
+        /** @description Вид справочника (`letter-kinds`, `receipt-methods`, `resolution-kinds`, `signing-kinds`, `close-reasons`); неизвестный — 404 */
         kind: components["parameters"]["DictionaryKind"];
         code: components["parameters"]["DictionaryCode"];
       };
@@ -3457,7 +3542,7 @@ export interface operations {
       query?: never;
       header?: never;
       path: {
-        /** @description Вид справочника (`letter-kinds`, `receipt-methods`); неизвестный — 404 */
+        /** @description Вид справочника (`letter-kinds`, `receipt-methods`, `resolution-kinds`, `signing-kinds`, `close-reasons`); неизвестный — 404 */
         kind: components["parameters"]["DictionaryKind"];
         code: components["parameters"]["DictionaryCode"];
       };
@@ -3880,6 +3965,94 @@ export interface operations {
       };
       401: components["responses"]["Unauthorized"];
       404: components["responses"]["NotFound"];
+    };
+  };
+  closeLetterWithoutReply: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        letter_id: components["parameters"]["LetterId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LetterCloseIn"];
+      };
+    };
+    responses: {
+      /** @description Закрыто — карточка письма */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Letter"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  reopenLetter: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        letter_id: components["parameters"]["LetterId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description В работе — карточка письма */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Letter"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+    };
+  };
+  returnInstructionToAuthor: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        instruction_id: components["parameters"]["InstructionId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["InstructionReturnIn"];
+      };
+    };
+    responses: {
+      /** @description Возвращено — карточка письма */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Letter"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationFailed"];
     };
   };
   completeInstruction: {

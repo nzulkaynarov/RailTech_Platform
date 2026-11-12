@@ -494,3 +494,24 @@ def test_decimal_cells_compare_as_numbers() -> None:
         "code": "KZ",
     }
     assert bad.errors == [("vat_rate", "invalid")]
+
+
+async def test_close_reasons_are_read_by_any_employee_and_listed_for_admin(
+    web: Web, eds: EdsFake
+) -> None:
+    """«Закрыть без ответа»: причины читает любой исполнитель, администратор видит их в каталоге."""
+    reasons = {
+        "kind": "close-reasons",
+        "name": {"ru": "Причины закрытия без ответа", "uz": "", "en": ""},
+        "closed": False,
+        "attrs": [],
+    }
+    eds.answer(
+        "GET", "dictionaries", httpx.Response(200, json={"items": [*CATALOG["items"], reasons]})
+    )
+    eds.answer("GET", "dictionaries/close-reasons", httpx.Response(200, json={"items": []}))
+    assert (await web.login(["ADMIN"])).status_code == 200
+    kinds = [d["kind"] for d in (await web.client.get(BASE)).json()["items"]]
+    assert "close-reasons" in kinds
+    assert (await web.login(["SUPPLY"])).status_code == 200
+    assert (await web.client.get(f"{BASE}/close-reasons")).status_code == 200

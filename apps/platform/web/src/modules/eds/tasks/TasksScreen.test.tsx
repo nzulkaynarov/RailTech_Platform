@@ -15,7 +15,7 @@ import {
 import { findLetter, readLetters, writeLetters } from "../../../mocks/fixtures/letters";
 import { letterTaskQueueItems } from "../../../mocks/edsInstructions";
 import { sessionRoles, readSession } from "../../../mocks/mockSession";
-import { fillDate } from "../../../test/fields";
+import { chooseOption, fillDate } from "../../../test/fields";
 import { renderAt, setupLetterTests, signIn } from "../../../test/lettersKit";
 import { completeBody } from "./taskModel";
 
@@ -366,5 +366,69 @@ describe("Рабочий экран поручения (P8b, SPEC-v3 §3.2a п. 
       writeEds(state);
       expect(rows("registrar@demo.example").filter((r) => r.kind === "register_reply")).toEqual([]);
     });
+  });
+});
+
+describe("Исходы письма (решение владельца 2026-11-11)", () => {
+  it("ответственный закрывает без ответа: причина из справочника, пояснение обязательно, если причина требует", async () => {
+    inExecution();
+    signIn("universal@demo.example");
+    renderAt(PATH);
+    fireEvent.click(await screen.findByRole("button", { name: "Ещё" }));
+    fireEvent.click(await screen.findByText("Закрыть без ответа"));
+    const dialog = await screen.findByRole("dialog", { name: "ВХ-108/26: закрыть без ответа" });
+    await chooseOption(within(dialog).getByLabelText("Причина"), "Недобросовестный контрагент");
+    const submit = within(dialog).getByRole("button", { name: "Закрыть" });
+    expect(submit).toBeDisabled();
+    fireEvent.change(within(dialog).getByLabelText("Пояснение (обязательно)"), {
+      target: { value: "Срывал поставки" },
+    });
+    fireEvent.click(submit);
+    await waitFor(() => {
+      expect(findLetter("ВХ-108/26")?.status).toBe("closed");
+    });
+    expect(findLetter("ВХ-108/26")?.close_comment).toBe("Срывал поставки");
+    expect(
+      await screen.findByText("Закрыто без ответа: Недобросовестный контрагент"),
+    ).toBeVisible();
+  });
+
+  it("автор резолюции возвращает закрытое письмо в работу", async () => {
+    inExecution({
+      status: "closed",
+      close_reason: "advertising",
+      close_comment: null,
+      executed_at: "2026-11-02T05:00:00Z",
+      instructions: [
+        instruction({ status: "executed", executed_at: "2026-11-02T05:00:00Z", report: "Закрыто" }),
+      ],
+    });
+    signIn("director@demo.example");
+    renderAt(PATH);
+    expect(await screen.findByText("Закрыто без ответа: Реклама или рассылка")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Вернуть в работу" }));
+    await waitFor(() => {
+      expect(findLetter("ВХ-108/26")?.status).toBe("in_execution");
+    });
+    expect(findLetter("ВХ-108/26")?.instructions?.[0]?.status).toBe("in_work");
+  });
+
+  it("ответственный возвращает письмо автору резолюции с причиной", async () => {
+    inExecution();
+    signIn("universal@demo.example");
+    renderAt(PATH);
+    fireEvent.click(await screen.findByRole("button", { name: "Ещё" }));
+    fireEvent.click(await screen.findByText("Вернуть автору резолюции"));
+    const dialog = await screen.findByRole("dialog", {
+      name: "ВХ-108/26: вернуть автору резолюции",
+    });
+    fireEvent.change(within(dialog).getByLabelText("Причина"), {
+      target: { value: "Это вопрос бухгалтерии" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Вернуть" }));
+    await waitFor(() => {
+      expect(findLetter("ВХ-108/26")?.status).toBe("awaiting_resolution");
+    });
+    expect(findLetter("ВХ-108/26")?.instructions).toEqual([]);
   });
 });

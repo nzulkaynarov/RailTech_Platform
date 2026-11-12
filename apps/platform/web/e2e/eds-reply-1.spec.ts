@@ -251,27 +251,33 @@ test.describe("EDS-REPLY-1: ответ на входящее", () => {
   });
 });
 
+/** Письмо из почты зарегистрировано с проектом «К исполнению» универсалу, директор утвердил — номер ВХ. */
+async function mailLetterInExecution(page: Page): Promise<string> {
+  await at(page, WIDE);
+  await loginAndWait(page, "registrar@demo.example");
+  await spaGoto(page, "/eds/mail/17");
+  await page.getByRole("link", { name: "Зарегистрировать как ВХ" }).click();
+  await expect(page.getByText("акт-сверки-октябрь.pdf")).toBeVisible();
+  await chooseOption(page.getByLabel("Тип резолюции"), "К исполнению");
+  await chooseOption(page.getByLabel("Ответственный"), "Демо Широков · Менеджер-универсал");
+  await fillDate(page.getByLabel("Срок исполнения"), companyDay(3));
+  await page.getByRole("button", { name: "Зарегистрировать", exact: true }).click();
+  const done = page.getByText(/Зарегистрировано: ВХ-\d+\/\d+/);
+  await expect(done).toBeVisible();
+  const number = /ВХ-\d+\/\d+/.exec((await done.textContent()) ?? "")?.[0] ?? "";
+
+  await switchTo(page, "director@demo.example");
+  await spaGoto(page, `/eds/inbox/${encodeURIComponent(number)}?panel=open&tab=resolution`);
+  await page.getByRole("button", { name: "Утвердить проект" }).click();
+  await expect(page.getByText("Резолюция наложена: поручение ушло исполнителям")).toBeVisible();
+  return number;
+}
+
 test.describe("Исполнение письма из почты (решение владельца 2026-11-11)", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
 
   test("«К исполнению»: исполнитель видит само письмо и «Ответить»", async ({ page }) => {
-    await at(page, WIDE);
-    await loginAndWait(page, "registrar@demo.example");
-    await spaGoto(page, "/eds/mail/17");
-    await page.getByRole("link", { name: "Зарегистрировать как ВХ" }).click();
-    await expect(page.getByText("акт-сверки-октябрь.pdf")).toBeVisible();
-    await chooseOption(page.getByLabel("Тип резолюции"), "К исполнению");
-    await chooseOption(page.getByLabel("Ответственный"), "Демо Широков · Менеджер-универсал");
-    await fillDate(page.getByLabel("Срок исполнения"), companyDay(3));
-    await page.getByRole("button", { name: "Зарегистрировать", exact: true }).click();
-    const done = page.getByText(/Зарегистрировано: ВХ-\d+\/\d+/);
-    await expect(done).toBeVisible();
-    const number = /ВХ-\d+\/\d+/.exec((await done.textContent()) ?? "")?.[0] ?? "";
-
-    await switchTo(page, "director@demo.example");
-    await spaGoto(page, `/eds/inbox/${encodeURIComponent(number)}?panel=open&tab=resolution`);
-    await page.getByRole("button", { name: "Утвердить проект" }).click();
-    await expect(page.getByText("Резолюция наложена: поручение ушло исполнителям")).toBeVisible();
+    const number = await mailLetterInExecution(page);
 
     await switchTo(page, "universal@demo.example");
     await spaGoto(page, `/eds/tasks/${encodeURIComponent(number)}`);
@@ -283,5 +289,28 @@ test.describe("Исполнение письма из почты (решение
       /\/eds\/new\?type=letter&reply_to=/,
     );
     await both(page, "task-execute-letter");
+  });
+  test("«Закрыть без ответа» с причиной, автор резолюции возвращает в работу", async ({ page }) => {
+    const number = await mailLetterInExecution(page);
+
+    await switchTo(page, "universal@demo.example");
+    await spaGoto(page, `/eds/tasks/${encodeURIComponent(number)}`);
+    await page.getByRole("button", { name: "Ещё" }).click();
+    await page.getByRole("menuitem", { name: "Закрыть без ответа" }).click();
+    const dialog = page.getByRole("dialog", { name: `${number}: закрыть без ответа` });
+    await chooseOption(dialog.getByLabel("Причина"), "Недобросовестный контрагент");
+    await dialog.getByLabel("Пояснение (обязательно)").fill("Срывал поставки в 2025 году");
+    await both(page, "task-close-dialog");
+    await dialog.getByRole("button", { name: "Закрыть", exact: true }).click();
+    await expect(
+      page.getByText("Закрыто без ответа: Недобросовестный контрагент", { exact: true }),
+    ).toBeVisible();
+
+    await switchTo(page, "director@demo.example");
+    await spaGoto(page, `/eds/tasks/${encodeURIComponent(number)}`);
+    await expect(page.getByText("Срывал поставки в 2025 году", { exact: true })).toBeVisible();
+    await both(page, "task-closed-author");
+    await page.getByRole("button", { name: "Вернуть в работу" }).click();
+    await expect(page.getByText(`${number} снова в работе`)).toBeVisible();
   });
 });

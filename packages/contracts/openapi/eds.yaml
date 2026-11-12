@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — EDS API (электронный документооборот)
-  version: 0.13.0
+  version: 0.14.0
   summary: Пространство `/api/v1/` сервиса EDS — вызывает BFF Платформы от имени сотрудника.
   description: |
     Контракт сервиса EDS (`apps/eds`, ADR-0015; `docs/history/runbooks/wave12-eds-c1.md` §2). EDS — владелец реестра документов и
@@ -18,6 +18,11 @@ info:
     `sub=crm_user_id`, срок 60 с, одноразовый `jti`) и обменивает его здесь: `POST /api/v1/auth/sso/exchange` → собственный
     токен доступа EDS (JWT HS256, секрет `EDS_ACCESS_SECRET`, `iss = eds`, `aud = eds-api`, срок 15 минут, без refresh: истёк — BFF берёт у CRM новый токен
     сотрудника и обменивает снова). Каждый запрос `/api/v1/*`, кроме обмена, — `Authorization: Bearer <токен доступа EDS>`.
+
+    **0.14.0 (исходы письма, решение владельца 2026-11-11; по oasdiff ломающее — новое значение `LetterStatus.closed` в ответах, до 1.0 допустимо).**
+    `POST /letters/{id}/close` «Закрыть без ответа» с причиной из нового справочника `close-reasons`, `POST /letters/{id}/reopen`
+    «Вернуть в работу» (автор резолюции), `POST /instructions/{id}/return` «Вернуть автору»; `Letter.close_reason`,
+    `close_comment`; уведомления — существующими видами события `notice.requested` v1.
 
     **0.13.0 (исполнитель видит письмо и отвечает по любому поручению, решение владельца 2026-11-11).** `LetterSourceIn.text` —
     текст письма общего ящика при регистрации, `Letter.body_text` — он же в карточке ВХ. Регистрация ИСХ «в ответ на ВХ»
@@ -118,6 +123,9 @@ info:
     | `awaiting_resolution` (путь `office`) | `POST …/office-resolution`, `info` | `noted` | `letters.resolve` | `notice.requested` («ознакомить») |
     | любой, кроме `duplicate` | `POST …/duplicate` («Это дубль ВХ-…») | `duplicate` | `letters.register` | — (журнал `letter.marked_duplicate`) |
     | `in_execution` | последнее поручение исполнено (`POST /instructions/{id}/complete` или ИСХ «в ответ на») | `executed`, контроль снят | исполнитель | `notice.requested` |
+    | `in_execution` | `POST …/close` («Закрыть без ответа», причина `close-reasons`) | `closed`, контроль снят | ответственный | `notice.requested` (`letter_executed`, заголовок «Закрыто без ответа») |
+    | `closed` | `POST …/reopen` («Вернуть в работу») | `in_execution`, на контроле | автор резолюции | `notice.requested` |
+    | `in_execution` | `POST /instructions/{id}/return` («Вернуть автору», ничего не исполнено) | `awaiting_resolution`, поручения сняты | ответственный | `notice.requested` (`instruction_assigned`, заголовок «Вернули письмо») |
 
     `resolved`, `rejected`, `executed`, `noted` и `duplicate` — конечные. **Путь резолюции** (`Letter.track`, P8b): `calc` — письмо по
     заявке клиента (`links.erp_request_id`, или нет вида документа и есть `links.erp_deal_id`), резолюция «расчёт по
@@ -965,6 +973,107 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/v1/letters/{letter_id}/close:
+    post:
+      tags: [letters]
+      operationId: closeLetterWithoutReply
+      summary: Закрыть письмо без ответа
+      description: |
+        Ответственный исполнитель закрывает письмо с причиной из справочника `close-reasons` (решение владельца 2026-11-11).
+        Причина неизвестна или скрыта — 422 `details.fields.reason = unknown`; у причины `comment_required` без пояснения —
+        422 `details.fields.comment = required`. Не ответственный — 403 `details.reason = not_responsible`; письмо не
+        `in_execution` или поручение не `in_work` — 409 `invalid_state`. Поручение ответственного — `executed` с отчётом
+        «Закрыто без ответа: …», поручения соисполнителей — `cancelled`, письмо — `closed`, контроль снят;
+        `notice.requested` (вид `letter_executed`, заголовок «Закрыто без ответа: …») автору резолюции. Журнал `letter.closed`.
+      x-rt-permissions: []
+      parameters:
+        - $ref: '#/components/parameters/LetterId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LetterCloseIn'
+      responses:
+        '200':
+          description: Закрыто — карточка письма
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Letter'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /api/v1/letters/{letter_id}/reopen:
+    post:
+      tags: [letters]
+      operationId: reopenLetter
+      summary: Вернуть закрытое без ответа письмо в работу
+      description: |
+        Только автор резолюции (иначе 403 `details.reason = not_resolution_author`), только письмо `closed` (иначе 409
+        `invalid_state`). Поручения, закрытые вместе с письмом, снова `in_work`; письмо `in_execution`, на контроле;
+        исполнителям — `notice.requested`. Журнал `letter.reopened`.
+      x-rt-permissions: []
+      parameters:
+        - $ref: '#/components/parameters/LetterId'
+      responses:
+        '200':
+          description: В работе — карточка письма
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Letter'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/v1/instructions/{instruction_id}/return:
+    post:
+      tags: [letters]
+      operationId: returnInstructionToAuthor
+      summary: Вернуть письмо автору резолюции
+      description: |
+        Ответственный исполнитель возвращает письмо с причиной: «не моё» или нужна другая резолюция. Не ответственный — 403
+        `details.reason = not_responsible`; часть поручений уже исполнена — 409 `details.reason = instruction_executed`.
+        Поручения письма удаляются (история — в журнале `letter.returned_to_author`), резолюция снимается, письмо снова
+        `awaiting_resolution`; `notice.requested` (вид `instruction_assigned`, заголовок «Вернули письмо: …») автору резолюции.
+      x-rt-permissions: []
+      parameters:
+        - $ref: '#/components/parameters/InstructionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstructionReturnIn'
+      responses:
+        '200':
+          description: Возвращено — карточка письма
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Letter'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
   /api/v1/instructions/{instruction_id}/complete:
     post:
       tags: [letters]
@@ -2655,7 +2764,7 @@ components:
       name: kind
       in: path
       required: true
-      description: Вид справочника (`letter-kinds`, `receipt-methods`); неизвестный — 404
+      description: Вид справочника (`letter-kinds`, `receipt-methods`, `resolution-kinds`, `signing-kinds`, `close-reasons`); неизвестный — 404
       schema:
         type: string
         pattern: '^[a-z][a-z-]{0,31}$'
@@ -3390,14 +3499,15 @@ components:
 
     LetterStatus:
       type: string
-      enum: [awaiting_resolution, resolved, returned, rejected, in_execution, executed, noted, duplicate]
+      enum: [awaiting_resolution, resolved, returned, rejected, in_execution, executed, noted, duplicate, closed]
       description: |
         SPEC-v3 §2.4 («Зарегистрировано → Ждёт резолюции» — одним шагом): `awaiting_resolution` — зарегистрировано и ждёт
         резолюции директора; `resolved` — резолюция «расчёт» наложена (путь `calc`); `returned` — возвращено, письмо у
         регистратора; `rejected` — отклонено. Путь делопроизводства (P8b, SPEC-v3 §3.2a): `in_execution` — «На исполнении»
         (поручения в работе, на контроле), `executed` — «Исполнено» (все поручения исполнены, контроль снят), `noted` —
         «Принято к сведению». `duplicate` — «Дубль ВХ-…» (EDS-DUP): письмо зарегистрировано повторно, закрыто, ссылка на
-        оригинал — `Letter.duplicate_of`. Переходы — таблица в описании API.
+        оригинал — `Letter.duplicate_of`. `closed` — «Закрыто без ответа» (причина `Letter.close_reason`, решение владельца
+        2026-11-11). Переходы — таблица в описании API.
     Zone:
       type: string
       enum: [goods, services, payment_terms]
@@ -3971,6 +4081,12 @@ components:
           type: [string, 'null']
           format: date-time
           description: Когда исполнены все поручения
+        close_reason:
+          type: [string, 'null']
+          description: Код справочника `close-reasons`, если письмо закрыто без ответа
+        close_comment:
+          type: [string, 'null']
+          description: Пояснение ответственного к закрытию без ответа
         duplicate_of:
           oneOf:
             - $ref: '#/components/schemas/LetterDuplicateRef'
@@ -4690,6 +4806,28 @@ components:
           type: [string, 'null']
           format: date-time
           description: '«Ознакомлен»; `null` — ждёт'
+    LetterCloseIn:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          pattern: '^[a-z][a-z_]{0,31}$'
+          description: Код действующего значения справочника `close-reasons`
+        comment:
+          type: [string, 'null']
+          maxLength: 2000
+          description: Пояснение; обязательно, если у причины `comment_required`
+    InstructionReturnIn:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 4000
     InstructionCompleteIn:
       type: object
       additionalProperties: false

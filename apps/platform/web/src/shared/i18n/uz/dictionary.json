@@ -19,7 +19,8 @@
       "in_execution": "Ijroda",
       "executed": "Bajarildi",
       "noted": "Ma’lumot uchun qabul qilindi",
-      "duplicate": "Takror"
+      "duplicate": "Takror",
+      "closed": "Javobsiz yopildi"
     },
     "quote": {
       "draft": "Qoralama",

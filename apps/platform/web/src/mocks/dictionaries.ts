@@ -22,7 +22,12 @@ import { buildMe, readSession } from "./mockSession";
 const KEY = "rt-pf-mock-dictionaries";
 
 type Kind =
-  "letter-kinds" | "receipt-methods" | "resolution-kinds" | "mail-types" | "signing-kinds";
+  | "letter-kinds"
+  | "receipt-methods"
+  | "resolution-kinds"
+  | "mail-types"
+  | "signing-kinds"
+  | "close-reasons";
 const CLOSED: ReadonlySet<Kind> = new Set<Kind>(["resolution-kinds"]);
 type State = Record<Kind, DictionaryItem[]>;
 
@@ -262,6 +267,31 @@ function seed(): State {
       methodItem("reply", names("Подготовить ответ", "Javob tayyorlash", "Prepare a reply"), 20),
       methodItem("info", names("Для сведения", "Ma’lumot uchun", "For information"), 30),
     ],
+    // Причины «Закрыть без ответа» (решение владельца 2026-11-11): как засевает миграция EDS.
+    "close-reasons": [
+      methodItem(
+        "no_reply_needed",
+        names("Ответ не требуется", "Javob talab qilinmaydi", "No reply needed"),
+        10,
+      ),
+      methodItem(
+        "advertising",
+        names("Реклама или рассылка", "Reklama yoki tarqatma", "Advertising or mailing"),
+        20,
+      ),
+      {
+        ...methodItem(
+          "unreliable_counterparty",
+          names("Недобросовестный контрагент", "Insofsiz kontragent", "Unreliable counterparty"),
+          30,
+        ),
+        attrs: { comment_required: true },
+      },
+      {
+        ...methodItem("other", names("Другое", "Boshqa", "Other"), 40),
+        attrs: { comment_required: true },
+      },
+    ],
   };
 }
 
@@ -340,6 +370,24 @@ const CATALOG: Dictionary[] = [
     ),
     closed: false,
     attrs: [],
+  },
+  {
+    kind: "close-reasons",
+    owner: "eds",
+    area: "documents",
+    name: names(
+      "Причины закрытия без ответа",
+      "Javobsiz yopish sabablari",
+      "Reasons to close without reply",
+    ),
+    closed: false,
+    attrs: [
+      {
+        key: "comment_required",
+        type: "boolean",
+        name: names("Нужно пояснение", "Izoh kerak", "Comment required"),
+      },
+    ],
   },
   {
     kind: "resolution-kinds",
@@ -430,6 +478,10 @@ export function setSigningKindUsage(fn: () => Set<string>): void {
 function usedCodes(kind: Kind): Set<string> {
   if (kind === "mail-types") return mailTypeUsage();
   if (kind === "signing-kinds") return signingKindUsage();
+  if (kind === "close-reasons")
+    return new Set(
+      readLetters().flatMap((letter) => (letter.close_reason ? [letter.close_reason] : [])),
+    );
   return new Set(
     readLetters().flatMap((letter) => {
       const code =
@@ -475,6 +527,7 @@ const isKind = (value: unknown): value is Kind =>
   value === "receipt-methods" ||
   value === "resolution-kinds" ||
   value === "mail-types" ||
+  value === "close-reasons" ||
   value === "signing-kinds";
 
 const closedFailure = () =>
@@ -524,7 +577,9 @@ export const dictionariesHandlers = [
   http.get("*/dictionaries/:kind", ({ params, request }) => {
     if (!readSession()) return failure(401, "SESSION_EXPIRED", "Сессия истекла");
     if (!isKind(params["kind"])) return failure(404, "NOT_FOUND", "Такого справочника нет.");
-    if (!canRead()) return failure(403, "FORBIDDEN", "Раздел или действие не положены вашей роли.");
+    // Причины закрытия читает любой сотрудник (исполнитель поручения), как в BFF.
+    if (params["kind"] !== "close-reasons" && !canRead())
+      return failure(403, "FORBIDDEN", "Раздел или действие не положены вашей роли.");
     const kind = params["kind"];
     const all = new URL(request.url).searchParams.get("include_hidden") === "true";
     const items = sorted(readDictionaries()[kind]);

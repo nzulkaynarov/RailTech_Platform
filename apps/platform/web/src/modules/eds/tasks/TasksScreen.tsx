@@ -20,6 +20,7 @@ import { InstructionsCard, OfficeDecision } from "../inbox/Instructions";
 import { useStateLabels } from "../inbox/labels";
 import { Attachments } from "../inbox/Parts";
 import { previewText } from "../mail/frameDoc";
+import { ClosedBanner } from "./LetterOutcomes";
 import { ReplyCard } from "./ReplyBlock";
 import { AcquaintAction, MyInstruction } from "./TaskActions";
 
@@ -99,6 +100,7 @@ function Content({ letter }: { letter: LetterCard }) {
       />
       <div className="pf-letters-grid">
         <div className="pf-letters-main">
+          <ClosedBanner letter={letter} />
           <LetterBody letter={letter} />
           {mine ? <MyInstruction letter={letter} instruction={mine} /> : null}
           {acquaint ? <AcquaintAction letter={letter} /> : null}

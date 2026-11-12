@@ -14035,6 +14035,14 @@ export const getRegisterLetterResponseMock = (
   status: faker.helpers.arrayElement(Object.values(LetterStatus)),
   subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
   summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  close_reason: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  close_comment: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   body_text: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     null,
@@ -14802,6 +14810,14 @@ export const getGetLetterResponseMock = (
   status: faker.helpers.arrayElement(Object.values(LetterStatus)),
   subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
   summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  close_reason: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  close_comment: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   body_text: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     null,
@@ -15172,6 +15188,14 @@ export const getResolveLetterResponseMock = (
   status: faker.helpers.arrayElement(Object.values(LetterStatus)),
   subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
   summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  close_reason: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  close_comment: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   body_text: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     null,
@@ -15548,6 +15572,14 @@ export const getReturnLetterResponseMock = (
   status: faker.helpers.arrayElement(Object.values(LetterStatus)),
   subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
   summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  close_reason: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  close_comment: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   body_text: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     null,
@@ -15924,6 +15956,14 @@ export const getRejectLetterResponseMock = (
   status: faker.helpers.arrayElement(Object.values(LetterStatus)),
   subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
   summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  close_reason: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  close_comment: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   body_text: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     null,
@@ -16330,6 +16370,14 @@ export const getMarkLetterDuplicateResponseMock = (
   status: faker.helpers.arrayElement(Object.values(LetterStatus)),
   subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
   summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  close_reason: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  close_comment: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   body_text: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     null,
@@ -16724,6 +16772,14 @@ export const getSaveResolutionDraftResponseMock = (
   status: faker.helpers.arrayElement(Object.values(LetterStatus)),
   subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
   summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  close_reason: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  close_comment: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   body_text: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     null,
@@ -17118,6 +17174,14 @@ export const getResolveOfficeLetterResponseMock = (
   status: faker.helpers.arrayElement(Object.values(LetterStatus)),
   subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
   summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  close_reason: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  close_comment: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   body_text: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     null,
@@ -17512,6 +17576,14 @@ export const getAcknowledgeLetterResponseMock = (
   status: faker.helpers.arrayElement(Object.values(LetterStatus)),
   subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
   summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  close_reason: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  close_comment: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   body_text: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     null,
@@ -17735,6 +17807,1206 @@ export const getAcknowledgeLetterResponseMock = (
   ...overrideResponse,
 });
 
+export const getCloseLetterWithoutReplyResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getCloseLetterWithoutReplyResponseLetterClientMock = (
+  overrideResponse: Partial<LetterClient> = {},
+): LetterClient => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getCloseLetterWithoutReplyResponseLetterRequestMock = (
+  overrideResponse: Partial<LetterRequest> = {},
+): LetterRequest => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    title: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getCloseLetterWithoutReplyResponseLetterResolutionMock = (
+  overrideResponse: Partial<LetterResolution> = {},
+): LetterResolution => ({
+  ...{
+    text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    assignees: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        person: {
+          id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+        },
+        zone: faker.helpers.arrayElement(Object.values(LetterZone)),
+      }),
+    ),
+    due: faker.date.past().toISOString().slice(0, 10),
+    min_margin_pct: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    decided_by: {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    },
+    decided_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  },
+  ...overrideResponse,
+});
+
+export const getCloseLetterWithoutReplyResponseLetterRelatedMock = (
+  overrideResponse: Partial<LetterRelated> = {},
+): LetterRelated => ({
+  ...{
+    kind: faker.helpers.arrayElement(["letter_in", "letter_out"] as const),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getCloseLetterWithoutReplyResponseLetterResolutionDraftMock = (
+  overrideResponse: Partial<LetterResolutionDraft> = {},
+): LetterResolutionDraft => ({
+  ...{
+    kind: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(LetterResolutionKind)),
+      null,
+    ]),
+    responsible: faker.helpers.arrayElement([
+      { ...getCloseLetterWithoutReplyResponsePersonRefMock() },
+      null,
+    ]),
+    due: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    text: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    co_executors: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    })),
+    acquaint: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      }),
+    ),
+    drafted_by: {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    },
+    drafted_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  },
+  ...overrideResponse,
+});
+
+export const getCloseLetterWithoutReplyResponseLetterOfficeResolutionMock = (
+  overrideResponse: Partial<LetterOfficeResolution> = {},
+): LetterOfficeResolution => ({
+  ...{
+    kind: faker.helpers.arrayElement(Object.values(LetterResolutionKind)),
+    text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    due: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    responsible: faker.helpers.arrayElement([
+      { ...getCloseLetterWithoutReplyResponsePersonRefMock() },
+      null,
+    ]),
+    co_executors: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    })),
+    acquaint: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      }),
+    ),
+    decided_by: {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    },
+    decided_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  },
+  ...overrideResponse,
+});
+
+export const getCloseLetterWithoutReplyResponseLetterDuplicateOfMock = (
+  overrideResponse: Partial<LetterDuplicateOf> = {},
+): LetterDuplicateOf => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getCloseLetterWithoutReplyResponseMock = (
+  overrideResponse: Partial<Extract<LetterCard, object>> = {},
+): LetterCard => ({
+  id: faker.string.uuid(),
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  status: faker.helpers.arrayElement(Object.values(LetterStatus)),
+  subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  close_reason: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  close_comment: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  body_text: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  urgent: faker.datatype.boolean(),
+  received_at: faker.date.past().toISOString().slice(0, 10),
+  registered_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  registered_by: faker.helpers.arrayElement([
+    { ...getCloseLetterWithoutReplyResponsePersonRefMock() },
+    null,
+  ]),
+  addressee: {
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  manager: faker.helpers.arrayElement([
+    { ...getCloseLetterWithoutReplyResponsePersonRefMock() },
+    null,
+  ]),
+  sender: {
+    name: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    contact: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  sender_ref: {
+    number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
+  client: faker.helpers.arrayElement([
+    { ...getCloseLetterWithoutReplyResponseLetterClientMock() },
+    null,
+  ]),
+  request: faker.helpers.arrayElement([
+    { ...getCloseLetterWithoutReplyResponseLetterRequestMock() },
+    null,
+  ]),
+  stage: faker.helpers.arrayElement(Object.values(StepCode)),
+  lost_at_step: faker.helpers.arrayElement([faker.number.int({ min: 1, max: 7 }), null]),
+  files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.uuid(),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    size: faker.number.int({ min: 0 }),
+    uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  })),
+  resolution: faker.helpers.arrayElement([
+    { ...getCloseLetterWithoutReplyResponseLetterResolutionMock() },
+    null,
+  ]),
+  return_comment: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  reject_reason: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  journal: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      action: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      by: faker.helpers.arrayElement([
+        { ...getCloseLetterWithoutReplyResponsePersonRefMock() },
+        null,
+      ]),
+      comment: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  sources: {
+    crm: faker.helpers.arrayElement(Object.values(SourceState)),
+    erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
+  },
+  kind: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  receipt_method: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
+    null,
+  ]),
+  signed_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  document_due: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  related: faker.helpers.arrayElement([
+    { ...getCloseLetterWithoutReplyResponseLetterRelatedMock() },
+    null,
+  ]),
+  track: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(Object.values(LetterTrack)),
+    undefined,
+  ]),
+  on_control: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  suggested_due: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  resolution_draft: faker.helpers.arrayElement([
+    { ...getCloseLetterWithoutReplyResponseLetterResolutionDraftMock() },
+    null,
+  ]),
+  office_resolution: faker.helpers.arrayElement([
+    { ...getCloseLetterWithoutReplyResponseLetterOfficeResolutionMock() },
+    null,
+  ]),
+  instructions: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      id: faker.string.uuid(),
+      kind: faker.helpers.arrayElement(Object.values(LetterResolutionKind)),
+      role: faker.helpers.arrayElement(["responsible", "co_executor"] as const),
+      person: {
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      },
+      due: faker.date.past().toISOString().slice(0, 10),
+      text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      status: faker.helpers.arrayElement(["in_work", "executed", "cancelled"] as const),
+      overdue: faker.datatype.boolean(),
+      report: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => ({
+          id: faker.string.uuid(),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          size: faker.number.int({ min: 0 }),
+          uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+        }),
+      ),
+      outgoing: faker.helpers.arrayElement([
+        {
+          number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        null,
+      ]),
+      executed_at: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+      extensions: Array.from(
+        { length: faker.number.int({ min: 1, max: 10 }) },
+        (_, i) => i + 1,
+      ).map(() => ({
+        id: faker.string.uuid(),
+        old_due: faker.date.past().toISOString().slice(0, 10),
+        new_due: faker.date.past().toISOString().slice(0, 10),
+        reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        status: faker.helpers.arrayElement(["pending", "approved", "rejected"] as const),
+        requested_by: {
+          id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+        },
+        requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+        decided_by: faker.helpers.arrayElement([
+          { ...getCloseLetterWithoutReplyResponsePersonRefMock() },
+          null,
+        ]),
+        decided_at: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 19) + "Z",
+          null,
+        ]),
+        comment: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+      })),
+    })),
+    undefined,
+  ]),
+  acquaintances: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      person: {
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      },
+      acknowledged_at: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+    })),
+    undefined,
+  ]),
+  executed_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  duplicate_of: faker.helpers.arrayElement([
+    { ...getCloseLetterWithoutReplyResponseLetterDuplicateOfMock() },
+    null,
+  ]),
+  replies: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      document_id: faker.string.uuid(),
+      number: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      state: faker.helpers.arrayElement(["draft", "registration_requested", "registered"] as const),
+      author: {
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      },
+      mail: faker.helpers.arrayElement(["none", "sending", "sent", "failed"] as const),
+      mail_reason: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    })),
+    undefined,
+  ]),
+  ...overrideResponse,
+});
+
+export const getReopenLetterResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getReopenLetterResponseLetterClientMock = (
+  overrideResponse: Partial<LetterClient> = {},
+): LetterClient => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getReopenLetterResponseLetterRequestMock = (
+  overrideResponse: Partial<LetterRequest> = {},
+): LetterRequest => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    title: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getReopenLetterResponseLetterResolutionMock = (
+  overrideResponse: Partial<LetterResolution> = {},
+): LetterResolution => ({
+  ...{
+    text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    assignees: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        person: {
+          id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+        },
+        zone: faker.helpers.arrayElement(Object.values(LetterZone)),
+      }),
+    ),
+    due: faker.date.past().toISOString().slice(0, 10),
+    min_margin_pct: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    decided_by: {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    },
+    decided_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  },
+  ...overrideResponse,
+});
+
+export const getReopenLetterResponseLetterRelatedMock = (
+  overrideResponse: Partial<LetterRelated> = {},
+): LetterRelated => ({
+  ...{
+    kind: faker.helpers.arrayElement(["letter_in", "letter_out"] as const),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getReopenLetterResponseLetterResolutionDraftMock = (
+  overrideResponse: Partial<LetterResolutionDraft> = {},
+): LetterResolutionDraft => ({
+  ...{
+    kind: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(LetterResolutionKind)),
+      null,
+    ]),
+    responsible: faker.helpers.arrayElement([{ ...getReopenLetterResponsePersonRefMock() }, null]),
+    due: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    text: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    co_executors: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    })),
+    acquaint: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      }),
+    ),
+    drafted_by: {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    },
+    drafted_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  },
+  ...overrideResponse,
+});
+
+export const getReopenLetterResponseLetterOfficeResolutionMock = (
+  overrideResponse: Partial<LetterOfficeResolution> = {},
+): LetterOfficeResolution => ({
+  ...{
+    kind: faker.helpers.arrayElement(Object.values(LetterResolutionKind)),
+    text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    due: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    responsible: faker.helpers.arrayElement([{ ...getReopenLetterResponsePersonRefMock() }, null]),
+    co_executors: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    })),
+    acquaint: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      }),
+    ),
+    decided_by: {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    },
+    decided_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  },
+  ...overrideResponse,
+});
+
+export const getReopenLetterResponseLetterDuplicateOfMock = (
+  overrideResponse: Partial<LetterDuplicateOf> = {},
+): LetterDuplicateOf => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getReopenLetterResponseMock = (
+  overrideResponse: Partial<Extract<LetterCard, object>> = {},
+): LetterCard => ({
+  id: faker.string.uuid(),
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  status: faker.helpers.arrayElement(Object.values(LetterStatus)),
+  subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  close_reason: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  close_comment: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  body_text: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  urgent: faker.datatype.boolean(),
+  received_at: faker.date.past().toISOString().slice(0, 10),
+  registered_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  registered_by: faker.helpers.arrayElement([{ ...getReopenLetterResponsePersonRefMock() }, null]),
+  addressee: {
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  manager: faker.helpers.arrayElement([{ ...getReopenLetterResponsePersonRefMock() }, null]),
+  sender: {
+    name: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    contact: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  sender_ref: {
+    number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
+  client: faker.helpers.arrayElement([{ ...getReopenLetterResponseLetterClientMock() }, null]),
+  request: faker.helpers.arrayElement([{ ...getReopenLetterResponseLetterRequestMock() }, null]),
+  stage: faker.helpers.arrayElement(Object.values(StepCode)),
+  lost_at_step: faker.helpers.arrayElement([faker.number.int({ min: 1, max: 7 }), null]),
+  files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.uuid(),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    size: faker.number.int({ min: 0 }),
+    uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  })),
+  resolution: faker.helpers.arrayElement([
+    { ...getReopenLetterResponseLetterResolutionMock() },
+    null,
+  ]),
+  return_comment: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  reject_reason: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  journal: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      action: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      by: faker.helpers.arrayElement([{ ...getReopenLetterResponsePersonRefMock() }, null]),
+      comment: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  sources: {
+    crm: faker.helpers.arrayElement(Object.values(SourceState)),
+    erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
+  },
+  kind: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  receipt_method: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
+    null,
+  ]),
+  signed_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  document_due: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  related: faker.helpers.arrayElement([{ ...getReopenLetterResponseLetterRelatedMock() }, null]),
+  track: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(Object.values(LetterTrack)),
+    undefined,
+  ]),
+  on_control: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  suggested_due: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  resolution_draft: faker.helpers.arrayElement([
+    { ...getReopenLetterResponseLetterResolutionDraftMock() },
+    null,
+  ]),
+  office_resolution: faker.helpers.arrayElement([
+    { ...getReopenLetterResponseLetterOfficeResolutionMock() },
+    null,
+  ]),
+  instructions: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      id: faker.string.uuid(),
+      kind: faker.helpers.arrayElement(Object.values(LetterResolutionKind)),
+      role: faker.helpers.arrayElement(["responsible", "co_executor"] as const),
+      person: {
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      },
+      due: faker.date.past().toISOString().slice(0, 10),
+      text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      status: faker.helpers.arrayElement(["in_work", "executed", "cancelled"] as const),
+      overdue: faker.datatype.boolean(),
+      report: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => ({
+          id: faker.string.uuid(),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          size: faker.number.int({ min: 0 }),
+          uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+        }),
+      ),
+      outgoing: faker.helpers.arrayElement([
+        {
+          number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        null,
+      ]),
+      executed_at: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+      extensions: Array.from(
+        { length: faker.number.int({ min: 1, max: 10 }) },
+        (_, i) => i + 1,
+      ).map(() => ({
+        id: faker.string.uuid(),
+        old_due: faker.date.past().toISOString().slice(0, 10),
+        new_due: faker.date.past().toISOString().slice(0, 10),
+        reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        status: faker.helpers.arrayElement(["pending", "approved", "rejected"] as const),
+        requested_by: {
+          id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+        },
+        requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+        decided_by: faker.helpers.arrayElement([
+          { ...getReopenLetterResponsePersonRefMock() },
+          null,
+        ]),
+        decided_at: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 19) + "Z",
+          null,
+        ]),
+        comment: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+      })),
+    })),
+    undefined,
+  ]),
+  acquaintances: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      person: {
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      },
+      acknowledged_at: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+    })),
+    undefined,
+  ]),
+  executed_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  duplicate_of: faker.helpers.arrayElement([
+    { ...getReopenLetterResponseLetterDuplicateOfMock() },
+    null,
+  ]),
+  replies: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      document_id: faker.string.uuid(),
+      number: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      state: faker.helpers.arrayElement(["draft", "registration_requested", "registered"] as const),
+      author: {
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      },
+      mail: faker.helpers.arrayElement(["none", "sending", "sent", "failed"] as const),
+      mail_reason: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    })),
+    undefined,
+  ]),
+  ...overrideResponse,
+});
+
+export const getReturnInstructionToAuthorResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getReturnInstructionToAuthorResponseLetterClientMock = (
+  overrideResponse: Partial<LetterClient> = {},
+): LetterClient => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getReturnInstructionToAuthorResponseLetterRequestMock = (
+  overrideResponse: Partial<LetterRequest> = {},
+): LetterRequest => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    title: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getReturnInstructionToAuthorResponseLetterResolutionMock = (
+  overrideResponse: Partial<LetterResolution> = {},
+): LetterResolution => ({
+  ...{
+    text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    assignees: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        person: {
+          id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+        },
+        zone: faker.helpers.arrayElement(Object.values(LetterZone)),
+      }),
+    ),
+    due: faker.date.past().toISOString().slice(0, 10),
+    min_margin_pct: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    decided_by: {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    },
+    decided_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  },
+  ...overrideResponse,
+});
+
+export const getReturnInstructionToAuthorResponseLetterRelatedMock = (
+  overrideResponse: Partial<LetterRelated> = {},
+): LetterRelated => ({
+  ...{
+    kind: faker.helpers.arrayElement(["letter_in", "letter_out"] as const),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getReturnInstructionToAuthorResponseLetterResolutionDraftMock = (
+  overrideResponse: Partial<LetterResolutionDraft> = {},
+): LetterResolutionDraft => ({
+  ...{
+    kind: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(LetterResolutionKind)),
+      null,
+    ]),
+    responsible: faker.helpers.arrayElement([
+      { ...getReturnInstructionToAuthorResponsePersonRefMock() },
+      null,
+    ]),
+    due: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    text: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    co_executors: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    })),
+    acquaint: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      }),
+    ),
+    drafted_by: {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    },
+    drafted_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  },
+  ...overrideResponse,
+});
+
+export const getReturnInstructionToAuthorResponseLetterOfficeResolutionMock = (
+  overrideResponse: Partial<LetterOfficeResolution> = {},
+): LetterOfficeResolution => ({
+  ...{
+    kind: faker.helpers.arrayElement(Object.values(LetterResolutionKind)),
+    text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    due: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    responsible: faker.helpers.arrayElement([
+      { ...getReturnInstructionToAuthorResponsePersonRefMock() },
+      null,
+    ]),
+    co_executors: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    })),
+    acquaint: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      }),
+    ),
+    decided_by: {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    },
+    decided_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  },
+  ...overrideResponse,
+});
+
+export const getReturnInstructionToAuthorResponseLetterDuplicateOfMock = (
+  overrideResponse: Partial<LetterDuplicateOf> = {},
+): LetterDuplicateOf => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getReturnInstructionToAuthorResponseMock = (
+  overrideResponse: Partial<Extract<LetterCard, object>> = {},
+): LetterCard => ({
+  id: faker.string.uuid(),
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  status: faker.helpers.arrayElement(Object.values(LetterStatus)),
+  subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  close_reason: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  close_comment: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  body_text: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  urgent: faker.datatype.boolean(),
+  received_at: faker.date.past().toISOString().slice(0, 10),
+  registered_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  registered_by: faker.helpers.arrayElement([
+    { ...getReturnInstructionToAuthorResponsePersonRefMock() },
+    null,
+  ]),
+  addressee: {
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  manager: faker.helpers.arrayElement([
+    { ...getReturnInstructionToAuthorResponsePersonRefMock() },
+    null,
+  ]),
+  sender: {
+    name: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    contact: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  sender_ref: {
+    number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
+  client: faker.helpers.arrayElement([
+    { ...getReturnInstructionToAuthorResponseLetterClientMock() },
+    null,
+  ]),
+  request: faker.helpers.arrayElement([
+    { ...getReturnInstructionToAuthorResponseLetterRequestMock() },
+    null,
+  ]),
+  stage: faker.helpers.arrayElement(Object.values(StepCode)),
+  lost_at_step: faker.helpers.arrayElement([faker.number.int({ min: 1, max: 7 }), null]),
+  files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.uuid(),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    size: faker.number.int({ min: 0 }),
+    uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  })),
+  resolution: faker.helpers.arrayElement([
+    { ...getReturnInstructionToAuthorResponseLetterResolutionMock() },
+    null,
+  ]),
+  return_comment: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  reject_reason: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  journal: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      action: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      by: faker.helpers.arrayElement([
+        { ...getReturnInstructionToAuthorResponsePersonRefMock() },
+        null,
+      ]),
+      comment: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  sources: {
+    crm: faker.helpers.arrayElement(Object.values(SourceState)),
+    erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
+  },
+  kind: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  receipt_method: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
+    null,
+  ]),
+  signed_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  document_due: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  related: faker.helpers.arrayElement([
+    { ...getReturnInstructionToAuthorResponseLetterRelatedMock() },
+    null,
+  ]),
+  track: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(Object.values(LetterTrack)),
+    undefined,
+  ]),
+  on_control: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  suggested_due: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  resolution_draft: faker.helpers.arrayElement([
+    { ...getReturnInstructionToAuthorResponseLetterResolutionDraftMock() },
+    null,
+  ]),
+  office_resolution: faker.helpers.arrayElement([
+    { ...getReturnInstructionToAuthorResponseLetterOfficeResolutionMock() },
+    null,
+  ]),
+  instructions: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      id: faker.string.uuid(),
+      kind: faker.helpers.arrayElement(Object.values(LetterResolutionKind)),
+      role: faker.helpers.arrayElement(["responsible", "co_executor"] as const),
+      person: {
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      },
+      due: faker.date.past().toISOString().slice(0, 10),
+      text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      status: faker.helpers.arrayElement(["in_work", "executed", "cancelled"] as const),
+      overdue: faker.datatype.boolean(),
+      report: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => ({
+          id: faker.string.uuid(),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          size: faker.number.int({ min: 0 }),
+          uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+        }),
+      ),
+      outgoing: faker.helpers.arrayElement([
+        {
+          number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        null,
+      ]),
+      executed_at: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+      extensions: Array.from(
+        { length: faker.number.int({ min: 1, max: 10 }) },
+        (_, i) => i + 1,
+      ).map(() => ({
+        id: faker.string.uuid(),
+        old_due: faker.date.past().toISOString().slice(0, 10),
+        new_due: faker.date.past().toISOString().slice(0, 10),
+        reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        status: faker.helpers.arrayElement(["pending", "approved", "rejected"] as const),
+        requested_by: {
+          id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+        },
+        requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+        decided_by: faker.helpers.arrayElement([
+          { ...getReturnInstructionToAuthorResponsePersonRefMock() },
+          null,
+        ]),
+        decided_at: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 19) + "Z",
+          null,
+        ]),
+        comment: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+      })),
+    })),
+    undefined,
+  ]),
+  acquaintances: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      person: {
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      },
+      acknowledged_at: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+    })),
+    undefined,
+  ]),
+  executed_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  duplicate_of: faker.helpers.arrayElement([
+    { ...getReturnInstructionToAuthorResponseLetterDuplicateOfMock() },
+    null,
+  ]),
+  replies: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      document_id: faker.string.uuid(),
+      number: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      state: faker.helpers.arrayElement(["draft", "registration_requested", "registered"] as const),
+      author: {
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      },
+      mail: faker.helpers.arrayElement(["none", "sending", "sent", "failed"] as const),
+      mail_reason: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    })),
+    undefined,
+  ]),
+  ...overrideResponse,
+});
+
 export const getCompleteInstructionResponsePersonRefMock = (
   overrideResponse: Partial<PersonRef> = {},
 ): PersonRef => ({
@@ -17903,6 +19175,14 @@ export const getCompleteInstructionResponseMock = (
   status: faker.helpers.arrayElement(Object.values(LetterStatus)),
   subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
   summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  close_reason: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  close_comment: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   body_text: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     null,
@@ -18297,6 +19577,14 @@ export const getRequestInstructionExtensionResponseMock = (
   status: faker.helpers.arrayElement(Object.values(LetterStatus)),
   subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
   summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  close_reason: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  close_comment: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   body_text: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     null,
@@ -18697,6 +19985,14 @@ export const getDecideInstructionExtensionResponseMock = (
   status: faker.helpers.arrayElement(Object.values(LetterStatus)),
   subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
   summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  close_reason: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  close_comment: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   body_text: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     null,
@@ -36001,6 +37297,72 @@ export const getAcknowledgeLetterMockHandler = (
   );
 };
 
+export const getCloseLetterWithoutReplyMockHandler = (
+  overrideResponse?:
+    | LetterCard
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<LetterCard> | LetterCard),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/letters/:id/close",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCloseLetterWithoutReplyResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getReopenLetterMockHandler = (
+  overrideResponse?:
+    | LetterCard
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<LetterCard> | LetterCard),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/letters/:id/reopen",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getReopenLetterResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getReturnInstructionToAuthorMockHandler = (
+  overrideResponse?:
+    | LetterCard
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<LetterCard> | LetterCard),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/instructions/:id/return",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getReturnInstructionToAuthorResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getCompleteInstructionMockHandler = (
   overrideResponse?:
     | LetterCard
@@ -39526,6 +40888,9 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getSaveResolutionDraftMockHandler(),
   getResolveOfficeLetterMockHandler(),
   getAcknowledgeLetterMockHandler(),
+  getCloseLetterWithoutReplyMockHandler(),
+  getReopenLetterMockHandler(),
+  getReturnInstructionToAuthorMockHandler(),
   getCompleteInstructionMockHandler(),
   getRequestInstructionExtensionMockHandler(),
   getDecideInstructionExtensionMockHandler(),

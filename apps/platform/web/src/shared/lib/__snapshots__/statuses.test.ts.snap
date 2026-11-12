@@ -107,6 +107,7 @@ exports[`карты статусов > снимок карты: изменени
   },
   "incoming": {
     "awaiting_resolution": "gold",
+    "closed": "default",
     "duplicate": "default",
     "executed": "green",
     "in_execution": "blue",
