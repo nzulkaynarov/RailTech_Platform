@@ -21,6 +21,7 @@ x-mem-256: &mem-256 { deploy: { resources: { limits: { memory: 256M } } } }
 x-mem-384: &mem-384 { deploy: { resources: { limits: { memory: 384M } } } }
 x-mem-512: &mem-512 { deploy: { resources: { limits: { memory: 512M } } } }
 x-mem-768: &mem-768 { deploy: { resources: { limits: { memory: 768M } } } }
+x-mem-1024: &mem-1024 { deploy: { resources: { limits: { memory: 1024M } } } }
 x-mem-1536: &mem-1536 { deploy: { resources: { limits: { memory: 1536M } } } }
 
 # Окружение CRM: внешняя база (роль crm_app, TLS через libpq-переменную PGSSLMODE), prod-режим.
@@ -434,8 +435,9 @@ services:
   clickhouse:
     <<: [*ops, *mem-768]
 
+  # Node.js берёт кучу ≈ половину лимита контейнера: на 512/768 МБ Langfuse падал «JavaScript heap out of memory» при старте.
   langfuse-worker:
-    <<: [*ops, *mem-512]
+    <<: [*ops, *mem-1024]
     depends_on: !override
       s3-init:
         condition: service_completed_successfully
@@ -445,9 +447,10 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://langfuse_app:${DB_LANGFUSE_PASSWORD:?set in .env}@${DB_INTERNAL_IP}:5432/langfuse?sslmode=require&sslaccept=accept_invalid_certs
+      NODE_OPTIONS: --max-old-space-size=768
 
   langfuse-web:
-    <<: [*ops, *mem-768]
+    <<: [*ops, *mem-1536]
     depends_on: !override
       s3-init:
         condition: service_completed_successfully
@@ -457,6 +460,7 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://langfuse_app:${DB_LANGFUSE_PASSWORD}@${DB_INTERNAL_IP}:5432/langfuse?sslmode=require&sslaccept=accept_invalid_certs
+      NODE_OPTIONS: --max-old-space-size=1152
       # Без ручной настройки (headless init): организация, проект с ключами CRM_LANGFUSE_* (их же берут CRM, ERP и EDS через LiteLLM)
       # и администратор. Ключи и пароль создаёт деплой (make-env-prod.sh ensure-secrets); при каждом старте Langfuse только
       # досоздаёт недостающее, существующее не меняет.
