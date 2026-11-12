@@ -10,7 +10,8 @@
 #                                      (в отличие от init не возвращает переменные VPS 2, удалённые drop-db-only). Его же зовёт reset-prod.sh
 #   make-env-prod.sh ensure-secrets [файл] только недостающие автоматические секреты (REDIS_PROBE_PASSWORD — пароль пробы «Состояния
 #                                      системы», W15-H8b; S3_OFFSITE_ACCESS_KEY/SECRET_KEY — ключ S3 сервиса внешней копии на Google
-#                                      Drive, OPS-GDRIVE; EDS_LITELLM_API_KEY — виртуальный ключ EDS в LiteLLM с префиксом sk-, EDS-REG):
+#                                      Drive, OPS-GDRIVE; EDS_LITELLM_API_KEY — виртуальный ключ EDS в LiteLLM с префиксом sk-, EDS-REG;
+#                                      CRM_LANGFUSE_PUBLIC_KEY/SECRET_KEY (pk-lf-/sk-lf-) и LANGFUSE_ADMIN_PASSWORD — проект и вход Langfuse):
 #                                      отсутствующий, пустой или CHANGE_ME создаётся случайным, заданный не меняется;
 #                                      остальное в файле не трогает. Его зовёт deploy.sh на каждом деплое (руками секрет не вписывают)
 #   make-env-prod.sh extract-s3 [файл] печатает 4 переменные ключей S3 для VPS 2 (WAL_S3_*, BACKUP_RUSTFS_*) из ключей сервисов
@@ -107,7 +108,9 @@ case "$cmd" in
     command -v openssl >/dev/null || { echo "openssl не найден" >&2; exit 1; }
     [[ -f "$file" ]] || { echo "нет $file — сначала init" >&2; exit 1; }
     # Имя или имя:префикс (ключи LiteLLM начинаются с sk-).
-    for entry in REDIS_PROBE_PASSWORD S3_OFFSITE_ACCESS_KEY S3_OFFSITE_SECRET_KEY EDS_LITELLM_API_KEY:sk-; do
+    # Ключи проекта Langfuse (pk-lf-/sk-lf-) и пароль его администратора — для headless init в prod.yml (профиль observability).
+    for entry in REDIS_PROBE_PASSWORD S3_OFFSITE_ACCESS_KEY S3_OFFSITE_SECRET_KEY EDS_LITELLM_API_KEY:sk- \
+        CRM_LANGFUSE_PUBLIC_KEY:pk-lf- CRM_LANGFUSE_SECRET_KEY:sk-lf- LANGFUSE_ADMIN_PASSWORD; do
       name="${entry%%:*}"; prefix=""; [[ "$entry" == *:* ]] && prefix="${entry#*:}"
       current="$(grep -E "^${name}=" "$file" | tail -n1 | cut -d= -f2- || true)"
       [[ -z "$current" || "$current" == CHANGE_ME || "$current" == sk-CHANGE_ME ]] || continue

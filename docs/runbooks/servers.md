@@ -47,11 +47,12 @@
 | `offsite-backup` | 128 МБ (`GOMEMLIMIT` 96 МиБ) | внешняя копия архива WAL-G на Яндекс Диск компании (WebDAV) или Google Drive, образ `rclone/rclone` (OPS-GDRIVE, OPS-YADISK, `offsite-gdrive.md`); раз в сутки, остальное время спит |
 | `s3-init` (образ `rustfs/rc`, ≈ 20 МБ), `crm-migrate`, `eds-migrate`, `litellm-seed`, `erp-ai-gateway`, `eds-ai-gateway` (ключ EDS в LiteLLM, EDS-REG) и одноразовые `run` миграций | 256–384 МБ (`litellm-seed` — 384: пик 264 МБ на новом CPU) | одноразовые, живут секунды при деплое; в «Итого постоянно» не входят; pg_dump-гейт идёт в отдельном контейнере с `pg_dump` (без лимита, до `up`) |
 | **Итого постоянно** | **≈ 11,8 ГБ** по лимитам (было ≈ 6,95 ГБ на 8 ГБ; 2026-11-12 подняты лимиты сервисов на Python, см. «CPU прод-VPS») | + ОС ≈ 0,5 ГБ из 16; факт после переезда ≈ 5,7 ГБ занято |
-| `docling` (профиль `kb-ingest`) | 1,5 ГБ | **на проде не используется** (M5-CRM-02): база знаний принимает только Markdown (`docs/kb/FORMAT.md`), docling нужен лишь для текста документов клиентов; профиль — опция на случай, если сервер станет мощнее |
-| `clickhouse`, `langfuse-web`, `langfuse-worker` (профиль `observability`) | 768 + 768 + 512 МБ | включать, когда `docling` выключен; дашборд затрат ИИ (M3-CRM-09) не зависит от Langfuse — он читает БД LiteLLM |
+| `docling` (профиль `kb-ingest`) | 1,5 ГБ | **включён с 2026-11-12**: текст документов клиентов (PDF, сканы, таблицы) для CRM, `DOCLING_URL=http://docling:5001`; база знаний по-прежнему принимает только Markdown (`docs/kb/FORMAT.md`) |
+| `clickhouse`, `langfuse-web`, `langfuse-worker` (профиль `observability`) | 768 + 768 + 512 МБ | **включены с 2026-11-12**: трейсы ИИ CRM, ERP и EDS в одном проекте Langfuse (проект, ключи и администратор создаются сами — headless init в `prod.yml`); дашборд затрат ИИ (M3-CRM-09) от Langfuse не зависит — он читает БД LiteLLM |
 
-На 8 ГБ `docling` и Langfuse одновременно не помещались. С 2026-11-12 на VPS 1 16 ГБ и процессор с SSE4.2/AVX: включение
-Langfuse и `docling` — отдельное решение владельца, сначала лимиты пересчитать по факту.
+На 8 ГБ `docling` и Langfuse одновременно не помещались. С 2026-11-12 (16 ГБ, процессор с SSE4.2/AVX) включены оба:
+`RT_PROFILES=mcp,observability,kb-ingest`. Сумма лимитов с ними ≈ 15,4 ГБ из 16 — лимиты не резерв, но пересчитать их по факту
+через неделю работы; если факт подойдёт к 12 ГБ — добавить памяти VPS 1.
 
 **VPS 2 (`infra/compose/db.yml`, проект `rt-db`):**
 
@@ -89,8 +90,8 @@ Langfuse и `docling` — отдельное решение владельца, 
 |---|---|
 | Официальный `ghcr.io/berriai/litellm` (Wolfi) | **не работает**: `Fatal glibc error: CPU does not support x86-64-v2`. Вместо него — свой образ `rt-litellm` на `python:3.12-slim-bookworm` (`infra/ai/litellm/Dockerfile`, та же версия `litellm[proxy]`, prisma сгенерирован при сборке) |
 | numpy 2.4+ (в CRM приходит через docling-core → pandas) | **не работает**: `NumPy was built with baseline optimizations: (X86_V2)`. В CRM ограничение `numpy<2.4` (`constraint-dependencies` в `apps/crm/backend/pyproject.toml`); 2.3.5 и 2.2.6 проверены, ERP на numpy 1.26.4 |
-| ClickHouse / Langfuse (профиль `observability`) | **недоступен**: ClickHouse требует SSE4.2. Трейсы Langfuse на этих VPS не включать; расходы ИИ (M3-CRM-09) читаются из БД LiteLLM и от Langfuse не зависят |
-| docling / torch (профиль `kb-ingest`) | **не проверено**: при первом включении запустить `import torch, numpy` в образе `docling-serve-cpu`; колёса torch под AVX на базовом CPU могут падать |
+| ClickHouse / Langfuse (профиль `observability`) | на Eskiz **не запускался**: ClickHouse требует SSE4.2. С 2026-11-12 (PRO DATA) работает |
+| docling / torch (профиль `kb-ingest`) | на Eskiz не проверялся; с 2026-11-12 (PRO DATA, AVX2) включён |
 | redis 7.4.11, rustfs 1.0.1, caddy 2.11.7, pgvector pg17, образы erp-backend, веб-образы, миграции CRM | работают |
 
 **Правило:** новые образы и нативные колёса (numpy, scipy, torch, onnx и т. п.) — только с базой x86-64 v1. Перед добавлением образа или обновлением

@@ -3,9 +3,8 @@
 Прямого SDK провайдера нет: OpenAI-совместимый `POST {LITELLM_BASE_URL}/v1/chat/completions` своим виртуальным ключом
 EDS (`EDS_LITELLM_API_KEY`, бюджет на ключе — `ai-key-sync`). Что стоит за алиасом — решает LiteLLM; код знает только
 функцию → алиас (`FUNCTION_ALIASES`, новых алиасов EDS не заводит). Каждый вызов несёт `metadata.tags`
-(`system=eds`, `feature`, `model`) — строки EDS попадают в журнал расходов LiteLLM («Расходы» консоли). Трейсов
-Langfuse у EDS нет: колбэк на ключе EDS не настроен (B-EDSREG-5); имена `trace_*` в метаданных — задел, шлюз без
-колбэка их не пишет.
+(`system=eds`, `feature`, `model`) — строки EDS попадают в журнал расходов LiteLLM («Расходы» консоли). Трейсы
+Langfuse пишет сам шлюз колбэком на ключе EDS (`ai-key-sync`, `EDS_LANGFUSE_*`) по полям `trace_*` и `session_id`.
 
 Структурный вывод — `response_format: json_schema`; ошибка — результат со статусом, исключений наружу нет.
 """

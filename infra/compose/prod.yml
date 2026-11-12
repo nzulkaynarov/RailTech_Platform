@@ -5,7 +5,7 @@
 # PostgreSQL — внешний, на VPS 2 (infra/compose/db.yml), по внутреннему IP ${DB_INTERNAL_IP} с TLS (sslmode=require)
 # и отдельной ролью на каждую базу. Prisma (LiteLLM, Langfuse) при самоподписанном сертификате требует sslaccept=accept_invalid_certs
 # (шифрование есть, проверки цепочки нет) — до выпуска собственного CA (verify-ca после пилота). Локальные `postgres` и `db-init` из base.yml под профилем `local-db` — не стартуют.
-# Профили: `observability` (clickhouse, langfuse-*) и `kb-ingest` (docling) — по очереди, вместе в 8 ГБ не помещаются.
+# Профили: `observability` (clickhouse, langfuse-*) и `kb-ingest` (docling) включены на проде с 2026-11-12 (VPS 1 — 16 ГБ, CPU с SSE4.2/AVX).
 
 x-ops: &ops
   restart: unless-stopped
@@ -32,9 +32,9 @@ x-crm-prod-env: &crm-prod-env
   POSTGRES_USER: crm_app
   POSTGRES_PASSWORD: ${DB_CRM_PASSWORD:?set in .env}
   PGSSLMODE: require
-  # docling-serve на проде не используется (M5-CRM-02): база знаний — только Markdown
-  # по docs/kb/FORMAT.md, встроенный конвертер; docling нужен лишь тексту документов клиентов.
-  DOCLING_URL: ""
+  # docling-serve (профиль kb-ingest): текст документов клиентов (PDF, сканы, таблицы). База знаний по-прежнему — Markdown
+  # по docs/kb/FORMAT.md, встроенный конвертер. Профиля нет в RT_PROFILES — документ помечается failed (как при пустом адресе).
+  DOCLING_URL: http://docling:5001
   # Ссылка «Вход» в письмах сотрудникам — Платформа (W15-H8a): из PLATFORM_DOMAIN; PLATFORM_PUBLIC_URL в .env.prod — переопределение.
   PLATFORM_PUBLIC_URL: ${PLATFORM_PUBLIC_URL:-https://${PLATFORM_DOMAIN:?set in .env}}
   CRM_PUBLIC_URL: https://${CRM_DOMAIN:?set in .env}
@@ -457,6 +457,20 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://langfuse_app:${DB_LANGFUSE_PASSWORD}@${DB_INTERNAL_IP}:5432/langfuse?sslmode=require&sslaccept=accept_invalid_certs
+      # Без ручной настройки (headless init): организация, проект с ключами CRM_LANGFUSE_* (их же берут CRM, ERP и EDS через LiteLLM)
+      # и администратор. Ключи и пароль создаёт деплой (make-env-prod.sh ensure-secrets); при каждом старте Langfuse только
+      # досоздаёт недостающее, существующее не меняет.
+      LANGFUSE_INIT_ORG_ID: railtech
+      LANGFUSE_INIT_ORG_NAME: RailTech
+      LANGFUSE_INIT_PROJECT_ID: platform
+      LANGFUSE_INIT_PROJECT_NAME: Platform
+      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: ${CRM_LANGFUSE_PUBLIC_KEY:?set in .env}
+      LANGFUSE_INIT_PROJECT_SECRET_KEY: ${CRM_LANGFUSE_SECRET_KEY:?set in .env}
+      LANGFUSE_INIT_USER_EMAIL: ${LANGFUSE_ADMIN_EMAIL:-admin@${PLATFORM_DOMAIN:?set in .env}}
+      LANGFUSE_INIT_USER_NAME: Admin
+      LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_ADMIN_PASSWORD:?set in .env}
+      # Регистрация новых пользователей закрыта: вход только у администратора, остальных он приглашает сам.
+      AUTH_DISABLE_SIGNUP: "true"
     ports: ["127.0.0.1:3000:3000"]
 
 volumes:
