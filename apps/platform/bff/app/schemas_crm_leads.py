@@ -306,3 +306,21 @@ class RequestFileFromMessageIn(BaseModel):
     lead: str = Field(pattern=LEAD_PATTERN)
     message: int = Field(ge=1)
     index: int = Field(ge=0)
+
+
+class LeadIn(BaseModel):
+    """«Создать · Лид»: звонок, письмо, рекомендация; нужен телефон или почта — решает CRM."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    source: Literal["phone", "email", "referral"]
+    name: str = Field(min_length=1, max_length=255)
+    company: str | None = Field(default=None, max_length=255)
+    phone: str | None = Field(default=None, max_length=32)
+    email: str | None = Field(default=None, max_length=255)
+    need: str | None = Field(default=None, max_length=4000)
+    language: Language = "ru"
+
+
+class LeadCreated(BaseModel):
+    lead: str

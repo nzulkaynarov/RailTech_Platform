@@ -225,7 +225,9 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
         options: actions.map((action, i) => ({
           id: `${listId}-a-${String(i)}`,
           index: next++,
-          title: t(`search.actions.${action.key}`),
+          title: action.create
+            ? t("search.actions.create", { kind: t(`create.kinds.${action.key}`) })
+            : t(`search.actions.${action.key}`),
           tag: t("search.actions.tag"),
           path: action.to,
           action: true,

@@ -34,6 +34,7 @@ import {
   withParams,
 } from "../common/params";
 import { CreateRequest } from "../request/CreateRequest";
+import { NewLeadForm } from "./NewLeadForm";
 import { Conversations } from "../messages/MessagesPage";
 import { LeadPanel } from "./LeadPanel";
 
@@ -304,6 +305,8 @@ export function LeadsPage({ objectId }: { objectId?: string | undefined }) {
   const offset = Math.max(0, Number(params.get("offset") ?? "0") || 0);
   const lead = parseLead(objectId) ?? parseLead(params.get("lead"));
   const creating = lead !== null && params.get("create") === "1";
+  // «Создать · Лид» из окна «Создать» (план 2026-11-12 п. 0.1)
+  const newLead = lead === null && params.get("new") === "1";
   // «В заявку» у файла клиента в «Ждут ответа»: `letter=<сообщение>-<вложение>`
   const letterHit = /^(\d{1,12})-(\d{1,3})$/.exec(params.get("letter") ?? "");
   const letterFrom = letterHit
@@ -497,6 +500,20 @@ export function LeadsPage({ objectId }: { objectId?: string | undefined }) {
           </TabsBar>
         )}
       </Card>
+      {newLead ? (
+        <Sheet
+          label={t("leads:newLead.title")}
+          onClose={() => {
+            change({ new: null, panel: null, tab: null });
+          }}
+        >
+          <NewLeadForm
+            onCancel={() => {
+              change({ new: null, panel: null, tab: null });
+            }}
+          />
+        </Sheet>
+      ) : null}
       {lead ? (
         <Sheet label={t(creating ? "request:title" : "leads:card.label")} onClose={close}>
           {creating ? (

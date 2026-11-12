@@ -84,7 +84,7 @@ test.describe("PD-BIZ · политика защиты данных для ИИ"
     await loginAndWait(page, "registrar@demo.example");
     await spaGoto(page, "/eds/register");
     await expect(
-      page.getByRole("heading", { level: 1, name: "Зарегистрировать входящее" }),
+      page.getByRole("heading", { level: 1, name: "Регистрация входящего документа" }),
     ).toBeVisible();
     const hint = page.getByText(/Паспорта и личные документы не загружайте/);
     await expect(hint).toBeVisible();

@@ -293,18 +293,31 @@ describe("узкие экраны", () => {
 });
 
 describe("единая кнопка «Создать»", () => {
-  it("показывает виды по правам роли; ещё не готовые неактивны", async () => {
+  it("окно с группами: виды по правам роли, у вида строка «что получится», неготовое приглушено", async () => {
     signIn("manager@demo.example");
     renderAt("/crm/leads");
     await screen.findByRole("heading", { level: 1, name: "Лиды" });
     const rail = screen.getByRole("navigation", { name: "Модули" });
     fireEvent.click(within(rail).getByRole("button", { name: "Создать" }));
-    expect(await screen.findByRole("menuitem", { name: "Заявка" })).toBeInTheDocument();
-    expect(screen.getByRole("menuitem", { name: "Служебная записка" })).toBeInTheDocument();
-    expect(screen.getByRole("menuitem", { name: /Лид · скоро/ })).toHaveAttribute(
+    const dialog = await screen.findByRole("dialog", { name: "Создать" });
+    expect(within(dialog).getByRole("heading", { name: "Продажи" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("link", { name: /^Лид/ })).toHaveAttribute(
+      "href",
+      "/crm/leads?new=1&panel=open&tab=card",
+    );
+    expect(within(dialog).getByRole("link", { name: /^Заявка/ })).toHaveAttribute(
+      "href",
+      "/crm/clients?create=1&panel=open&tab=card",
+    );
+    expect(within(dialog).getByRole("link", { name: /^Внутренний документ/ })).toHaveAccessibleName(
+      /Служебная записка, заявление, отчёт/,
+    );
+    expect(within(dialog).getByText("Сообщение").closest("[aria-disabled]")).toHaveAttribute(
       "aria-disabled",
       "true",
     );
-    expect(screen.queryByRole("menuitem", { name: "Входящее" })).toBeNull();
+    // чего роли нельзя — того в окне нет
+    expect(within(dialog).queryByText("Входящий документ")).toBeNull();
+    expect(within(dialog).queryByText("Расчёт")).toBeNull();
   });
 });

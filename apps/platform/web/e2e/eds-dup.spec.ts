@@ -54,7 +54,7 @@ test.describe("EDS-DUP: одно письмо — один входящий но
       await signInAt(page, width);
       await spaGoto(page, "/eds/register");
       await expect(
-        page.getByRole("heading", { level: 1, name: "Зарегистрировать входящее" }),
+        page.getByRole("heading", { level: 1, name: "Регистрация входящего документа" }),
       ).toBeVisible();
       await page.getByLabel("Корреспондент", { exact: true }).fill('акб "Демо-Банк"');
       await page.getByLabel("Исходящий номер отправителя").fill("№ 12-07/881");

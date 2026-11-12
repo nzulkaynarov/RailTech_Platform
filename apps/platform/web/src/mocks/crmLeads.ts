@@ -6,6 +6,8 @@ import type {
   ClientRequestRow,
   EdsFile,
   InvitationResendIn,
+  LeadCreated,
+  LeadIn,
   LeadPage,
   RequestCreatedView,
   RequestFileFromMessageIn,
@@ -20,10 +22,12 @@ import {
   type LeadsMock,
   MOCK_ERP_DOWN_KEY,
   clientRow,
+  lead as buildLead,
   readLeads,
   writeLeads,
 } from "./fixtures/leads";
 import { buildMe, currentActor, readSession } from "./mockSession";
+import { initialsOf } from "./profileStore";
 
 /**
  * Моки «Клиенты · Лиды, Клиенты и „Создать заявку“» (D1-2b). Права — как в BFF: лиды — `crm.leads`, клиенты и
@@ -133,6 +137,58 @@ export const crmLeadsHandlers = [
       .sort((a, b) => (b.last_message_at ?? "").localeCompare(a.last_message_at ?? ""));
     const page: LeadPage = { items: rows.slice(offset, offset + limit), total: rows.length };
     return HttpResponse.json(page);
+  }),
+
+  // «Создать · Лид» (план 2026-11-12 п. 0.1): как CRM — нужен контакт по каналу, дубль по телефону или почте — 409.
+  http.post("*/api/v1/crm/leads", async ({ request }) => {
+    const denied = guard("crm.leads", "full");
+    if (denied) return denied;
+    const body = (await request.json()) as LeadIn;
+    const phone = body.phone?.replace(/[^\d+]/g, "") || null;
+    const email = body.email?.trim().toLowerCase() || null;
+    const missing =
+      body.source === "phone" && !phone
+        ? "phone"
+        : body.source === "email" && !email
+          ? "email"
+          : !phone && !email
+            ? "phone"
+            : null;
+    if (missing) return rejected(422, "contact_required", "Укажите телефон или почту.", [missing]);
+    const state = readLeads();
+    const same = state.leads.find(
+      (l) =>
+        (phone && l.card.contacts.phone?.replace(/[^\d+]/g, "") === phone) ||
+        (email && l.card.contacts.email?.toLowerCase() === email),
+    );
+    if (same) {
+      return failure(409, "CONFLICT", "Лид с этим контактом уже есть.", "crm", {
+        reason: "lead_exists",
+        lead: same.row.lead,
+        fields: [phone && same.card.contacts.phone ? "phone" : "email"],
+      });
+    }
+    const id = Math.max(0, ...state.leads.map((l) => Number(l.row.lead.slice(2)))) + 1;
+    const actor = currentActor();
+    const created = buildLead(Date.now(), {
+      id,
+      name: body.name,
+      status: "dialog",
+      channel: body.source,
+      need: body.need ?? null,
+      minutes: 0,
+      consent: false,
+      ...(phone ? { phone } : {}),
+      ...(email ? { email } : {}),
+      ...(body.company ? { company: body.company } : {}),
+      ...(actor
+        ? { assigned: { id: actor.id, name: actor.name, initials: initialsOf(actor.name) } }
+        : {}),
+    });
+    state.leads.unshift(created);
+    writeLeads(state);
+    const out: LeadCreated = { lead: created.row.lead };
+    return HttpResponse.json(out, { status: 201 });
   }),
 
   http.get("*/api/v1/crm/leads/:lead", ({ params }) => {

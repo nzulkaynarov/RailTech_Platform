@@ -78,7 +78,7 @@ function handoff(base: number, over: Partial<HandoffInfo>): HandoffInfo {
   };
 }
 
-interface Spec {
+export interface Spec {
   id: number;
   name: string;
   status: LeadPlatformStatus;
@@ -98,7 +98,7 @@ interface Spec {
   interest?: string[];
 }
 
-function lead(base: number, spec: Spec): LeadMockRow {
+export function lead(base: number, spec: Spec): LeadMockRow {
   const number = `L-${String(spec.id).padStart(4, "0")}`;
   const lastAt = ago(base, spec.minutes);
   const info = spec.handoff ? handoff(base, spec.handoff) : null;

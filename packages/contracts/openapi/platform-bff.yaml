@@ -1,12 +1,15 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.57.0
+  version: 0.58.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
     сессия, профиль, счётчики меню, «Моя очередь», лента «Сегодня», уведомления, поиск. Экраны фаз P2–P4 добавляются
     в этот файл до кода (`docs/architecture/integration-map.md` §1).
+
+    **0.58.0 (окно «Создать», план 2026-11-12 п. 0.1).** `POST /crm/leads` — новый лид вручную: звонок, письмо,
+    рекомендация; создавший становится ответственным.
 
     **0.57.0 (страны на трёх языках, план справочников PR 6).** `CatalogLookups.countries` — `CatalogCountryRef` с
     названиями `names` на ru, uz, en; `ReferenceItem.names` — то же у справочников, которые хранят три языка. Экран
@@ -11631,6 +11634,38 @@ paths:
           $ref: '#/components/responses/SessionExpired'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    post:
+      tags: [leads]
+      operationId: createCrmLead
+      summary: 'Создать · Лид: звонок, письмо, рекомендация'
+      description: >-
+        CRM `POST /leads`. Раздел `crm.leads` — полный. Создавший становится ответственным. 409 `CONFLICT`: такой телефон или
+        почта уже есть — `details.reason` `lead_exists` (`details.lead_id`) или `client_exists` (`details.client_id`).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeadIn'
+      responses:
+        '201':
+          description: Лид создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeadCreated'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/IntegrationConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
@@ -24305,6 +24340,25 @@ components:
         overdue: {type: boolean, description: 'Истёк срок ответа по передаче'}
         client_id: {type: [integer, 'null'], description: 'Клиент, если лид уже стал клиентом'}
 
+    LeadIn:
+      type: object
+      additionalProperties: false
+      required: [source, name]
+      description: Новый лид вручную; нужен телефон или почта
+      properties:
+        source: {type: string, enum: [phone, email, referral], description: 'Откуда: звонок, письмо, рекомендация'}
+        name: {type: string, minLength: 1, maxLength: 255}
+        company: {type: [string, 'null'], maxLength: 255}
+        phone: {type: [string, 'null'], maxLength: 32}
+        email: {type: [string, 'null'], maxLength: 255}
+        need: {type: [string, 'null'], maxLength: 4000, description: Что нужно клиенту}
+        language: {$ref: '#/components/schemas/Language'}
+    LeadCreated:
+      type: object
+      additionalProperties: false
+      required: [lead]
+      properties:
+        lead: {type: string, examples: [L-0042], description: Номер лида}
     LeadPage:
       type: object
       additionalProperties: false
