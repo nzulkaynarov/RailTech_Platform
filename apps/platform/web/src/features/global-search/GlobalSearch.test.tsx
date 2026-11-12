@@ -184,15 +184,15 @@ describe("Глобальный поиск", () => {
     const box = await searchBox();
 
     type(box, "создать заявку");
-    const action = await screen.findByRole("option", { name: /Создать заявку/ });
+    const action = await screen.findByRole("option", { name: /Создать · Заявка/ });
     expect(within(action).getByText("Действие")).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Действия" })).toBeInTheDocument();
-    // «Лиды» — настоящий экран (D1-2b): действие ведёт к лидам, которые просят КП
+    // Вид окна «Создать» (план 2026-11-12 п. 0.1): действие открывает форму заявки, а не список
     fireEvent.click(action);
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/crm/leads");
+      expect(router.state.location.pathname).toBe("/crm/clients");
     });
-    expect(router.state.location.search).toBe("?status=wants_quote");
+    expect(router.state.location.search).toBe("?create=1&panel=open&tab=card");
     expect(screen.queryByRole("region", { name: /Где посмотреть/ })).toBeNull();
 
     type(box, "пригласить");
@@ -232,7 +232,7 @@ describe("Глобальный поиск", () => {
     await screen.findByRole("option", { name: /Письмо ВХ-104\/26/ });
     const groups = screen.getAllByRole("group").map((g) => g.textContent);
     expect(groups.findIndex((g) => g.includes("Письмо"))).toBeLessThan(
-      groups.findIndex((g) => g.includes("Создать заявку")),
+      groups.findIndex((g) => g.includes("Создать · Заявка")),
     );
 
     fireEvent.keyDown(box, { key: "Enter" });
@@ -325,7 +325,7 @@ describe("Глобальный поиск", () => {
     const box = await searchBox();
 
     type(box, "служебка");
-    const action = await screen.findByRole("option", { name: /Создать служебную записку/ });
+    const action = await screen.findByRole("option", { name: /Создать · Внутренний документ/ });
     expect(action).not.toHaveTextContent("Пока делается в старой системе");
     fireEvent.click(action);
     await waitFor(() => {

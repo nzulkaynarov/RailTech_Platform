@@ -229,9 +229,8 @@
     "actions": {
       "group": "Actions",
       "tag": "Action",
-      "createRequest": "Create a request",
-      "createDocument": "Create a memo",
-      "inviteEmployee": "Invite an employee"
+      "inviteEmployee": "Invite an employee",
+      "create": "Create · {{kind}}"
     },
     "navGroup": "Sections",
     "sectionTag": "Section",
@@ -246,18 +245,36 @@
   },
   "create": {
     "label": "Create",
+    "title": "Create",
+    "search": "Find: letter, lead, application…",
+    "frequent": "You often create",
     "soon": "soon",
+    "withChats": "with chats",
+    "empty": "Nothing found",
+    "groups": {
+      "sales": "Sales",
+      "documents": "Documents",
+      "talk": "Messages"
+    },
     "kinds": {
       "lead": "Lead",
       "request": "Request",
+      "calc": "Costing",
       "incoming": "Incoming document",
-      "letter": "Letter",
-      "memo": "Memo",
-      "statement": "Application",
-      "report": "Report",
-      "purchase": "Purchase request",
-      "assignment": "Assignment",
-      "expense": "Expense"
+      "letter": "Outgoing letter",
+      "internal": "Internal document",
+      "message": "Message",
+      "assignment": "Assignment"
+    },
+    "hints": {
+      "lead": "New enquiry: call, email, referral",
+      "request": "A client asks for a quote: pick the client and describe the request",
+      "calc": "From a request, a file or the last similar one",
+      "incoming": "Register a letter received by the company",
+      "letter": "On the company letterhead, with a number and signature",
+      "internal": "Memo, application, report",
+      "message": "Write to a colleague",
+      "assignment": "A task with a deadline and an assignee"
     }
   }
 }

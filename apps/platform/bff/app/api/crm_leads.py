@@ -10,14 +10,17 @@ import asyncio
 from datetime import UTC, datetime
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Path, Query
+import httpx
+from fastapi import APIRouter, Depends, Path, Query, status
 
 from app.api.crm_messages import _Crm, _lead_id
 from app.clients import crm_models as crm
+from app.clients.crm_proxy import CrmProxy, crm_error
 from app.crm_leads_view import client_short, lead_card, lead_row, list_params
-from app.deps import Authed, require_any
-from app.errors import PlatformError
-from app.schemas_crm_leads import LeadCard, LeadPage, LeadScope, LeadTab
+from app.deps import Authed, require, require_any
+from app.errors import PlatformError, backend_unavailable
+from app.feeds.numbers import lead_number
+from app.schemas_crm_leads import LeadCard, LeadCreated, LeadIn, LeadPage, LeadScope, LeadTab
 
 router = APIRouter(tags=["leads"])
 
@@ -27,6 +30,7 @@ Reader = Annotated[
     Authed, Depends(require_any(("crm.leads", "read"), ("crm.leads.triage", "full")))
 ]
 LeadParam = Annotated[str, Path(pattern=r"^[Ll]-?\d{1,9}$")]
+Creator = Annotated[Authed, Depends(require("crm.leads", "full"))]
 
 
 @router.get("/crm/leads", response_model=LeadPage, operation_id="listCrmLeads")
@@ -80,3 +84,48 @@ async def get_lead(lead: LeadParam, authed: Reader) -> LeadCard:
 
 async def _none() -> None:
     return None
+
+
+def _create_error(response: httpx.Response) -> PlatformError:
+    """Отказ CRM на «новый лид»: поле — в `fields`, дубль — номер лида или id клиента."""
+    error = crm_error(response)
+    try:
+        raw = response.json()["details"]
+    except (ValueError, KeyError, TypeError):
+        raw = None
+    details = raw if isinstance(raw, dict) else {}
+    extra: dict[str, Any] = {}
+    field = details.get("field")
+    if isinstance(field, str) and field in ("phone", "email", "name", "company", "need"):
+        extra["fields"] = [field]
+    lead_id = details.get("lead_id")
+    if isinstance(lead_id, int) and not isinstance(lead_id, bool):
+        extra["lead"] = lead_number(lead_id)
+    client_id = details.get("client_id")
+    if isinstance(client_id, int) and not isinstance(client_id, bool):
+        extra["client_id"] = client_id
+    if extra:
+        error.body.details = {**(error.body.details or {}), **extra}
+    return error
+
+
+@router.post(
+    "/crm/leads",
+    response_model=LeadCreated,
+    status_code=status.HTTP_201_CREATED,
+    operation_id="createCrmLead",
+)
+async def create_lead(body: LeadIn, authed: Creator) -> LeadCreated:
+    """«Создать · Лид» (план 2026-11-12 п. 0.1): CRM `POST /leads`, создавший — ответственный."""
+    response = await CrmProxy(authed.call).raw(
+        "POST", f"{API}/leads", json=body.model_dump(exclude_none=True)
+    )
+    if response.status_code not in (200, 201):
+        raise _create_error(response)
+    try:
+        created = response.json()["id"]
+    except (ValueError, KeyError, TypeError) as exc:
+        raise backend_unavailable("crm", "bad_response") from exc
+    if not isinstance(created, int) or isinstance(created, bool):
+        raise backend_unavailable("crm", "bad_response")
+    return LeadCreated(lead=lead_number(created))

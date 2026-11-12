@@ -58,7 +58,10 @@ test.describe("Создать документ: сотрудник", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Входящие" })).toBeVisible();
 
     await page.getByRole("button", { name: "Создать", exact: true }).click();
-    await page.getByRole("menuitem", { name: "Служебная записка" }).click();
+    await page
+      .getByRole("dialog", { name: "Создать" })
+      .getByRole("link", { name: /^Внутренний документ/ })
+      .click();
     await expect(page).toHaveURL(/\/eds\/new\?type=memo$/);
     await expect(
       page.getByRole("heading", { level: 1, name: "Внутренний документ" }),

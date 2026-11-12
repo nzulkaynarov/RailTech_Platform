@@ -200,13 +200,14 @@ test.describe("Поиск: объект и действия", () => {
     await loginAndWait(page, "manager@demo.example");
     const search = page.getByRole("combobox", { name: "Глобальный поиск" });
     await search.fill("создать заявку");
-    const action = page.getByRole("option", { name: /Создать заявку/ });
+    const action = page.getByRole("option", { name: /Создать · Заявка/ });
     await expect(action).toContainText("Действие");
     await expect(page.getByRole("group", { name: "Действия" })).toBeVisible();
     await expectNoViolations(page, "search actions");
-    // «Создать заявку» — настоящий экран (D1-2b): действие ведёт к лидам «Просят КП»
+    // Вид окна «Создать» (план 2026-11-12 п. 0.1): действие открывает форму заявки, а не список
     await action.click();
-    await expect(page).toHaveURL(/\/crm\/leads\?status=wants_quote$/);
+    await expect(page).toHaveURL(/\/crm\/clients\?create=1&panel=open&tab=card$/);
+    await expect(page.getByRole("form", { name: "Создать заявку" })).toBeVisible();
 
     await search.fill("пригласить");
     await expect(page.getByRole("option", { name: /Пригласить сотрудника/ })).toHaveCount(0);

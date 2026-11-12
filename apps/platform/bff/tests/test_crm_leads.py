@@ -178,3 +178,54 @@ async def test_unknown_lead_is_404(web: Web, crm: CrmLeadsFake, check: ContractC
     response = check(await web.client.get(f"{BASE}/L-9999"), "/crm/leads/{lead}", "get")
     assert response.status_code == 404
     assert response.json()["code"] == "NOT_FOUND"
+
+
+# --- «Создать · Лид» (план 2026-11-12 п. 0.1) ---------------------------------------------------
+
+
+async def test_create_lead_passes_the_form_and_returns_the_lead_number(
+    web: Web, crm: CrmLeadsFake, check: ContractChecker
+) -> None:
+    await web.login(["MANAGER"])
+    crm.answer("POST", "leads", 201, {"id": 42})
+    form = {"source": "phone", "name": "Азиз", "phone": "+998901234567", "need": "Колёсные пары"}
+    response = check(await web.send("POST", BASE, json=form), BASE.removeprefix("/api/v1"), "post")
+    assert (response.status_code, response.json()) == (201, {"lead": "L-0042"})
+    assert crm.body("POST", "leads") == {**form, "language": "ru"}
+
+
+async def test_create_lead_needs_full_leads_section_before_crm(web: Web, crm: CrmLeadsFake) -> None:
+    await web.login(["DIRECTOR"])  # лиды — только чтение
+    assert (
+        await web.send("POST", BASE, json={"source": "referral", "name": "X"})
+    ).status_code == 403
+    assert not [c for c in crm.calls if c.method == "POST"]
+
+
+async def test_create_lead_duplicate_names_the_lead_and_the_field(
+    web: Web, crm: CrmLeadsFake, check: ContractChecker
+) -> None:
+    await web.login(["MANAGER"])
+    crm.error("POST", "leads", 409, "conflict", reason="lead_exists", lead_id=7, field="phone")
+    response = check(
+        await web.send(
+            "POST", BASE, json={"source": "phone", "name": "A", "phone": "+998901234567"}
+        ),
+        BASE.removeprefix("/api/v1"),
+        "post",
+    )
+    assert response.status_code == 409
+    details = response.json()["details"]
+    assert (details["reason"], details["lead"], details["fields"]) == (
+        "lead_exists",
+        "L-0007",
+        ["phone"],
+    )
+
+
+async def test_create_lead_missing_contact_points_at_the_field(web: Web, crm: CrmLeadsFake) -> None:
+    await web.login(["MANAGER"])
+    crm.error("POST", "leads", 422, "validation_failed", reason="contact_required", field="email")
+    response = await web.send("POST", BASE, json={"source": "email", "name": "A"})
+    assert response.status_code == 422
+    assert response.json()["details"]["fields"] == ["email"]

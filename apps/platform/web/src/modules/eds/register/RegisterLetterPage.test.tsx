@@ -13,7 +13,7 @@ import { emptyRegister, toRegisterBody, validateRegister } from "./registerModel
 
 setupLetterTests();
 
-const TITLE = "Зарегистрировать входящее";
+const TITLE = "Регистрация входящего документа";
 
 async function openForm(email = "registrar@demo.example") {
   resetEds();
@@ -38,7 +38,7 @@ describe("EDS · Зарегистрировать входящее (P8)", () => 
   it("делопроизводитель видит кнопку «Зарегистрировать входящее» во «Входящих письмах»", async () => {
     signIn("registrar@demo.example");
     renderAt("/eds/inbox");
-    expect(await screen.findByRole("link", { name: TITLE })).toHaveAttribute(
+    expect(await screen.findByRole("link", { name: "Зарегистрировать входящее" })).toHaveAttribute(
       "href",
       "/eds/register",
     );
