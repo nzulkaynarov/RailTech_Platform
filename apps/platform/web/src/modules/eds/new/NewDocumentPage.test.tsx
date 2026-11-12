@@ -20,7 +20,12 @@ setupEdsTests();
 async function openForm(email: string, search = "") {
   signIn(email);
   const view = renderAt(`/eds/new${search}`);
-  expect(await screen.findByRole("heading", { level: 1, name: "Создать документ" })).toBeVisible();
+  expect(
+    await screen.findByRole("heading", {
+      level: 1,
+      name: /^(Внутренний документ|Исходящее письмо|Новый документ)$/,
+    }),
+  ).toBeVisible();
   return view;
 }
 
@@ -168,7 +173,8 @@ describe("EDS · Создать документ: форма", () => {
     expect(screen.getByRole("button", { name: "Скачать PDF" })).toBeVisible();
     // черновик создан один раз; тип больше не меняется
     expect(readEds().documents.filter((d) => d.subject === "Ответ на требование")).toHaveLength(1);
-    expect(screen.getByText("Тип нельзя менять после создания.")).toBeVisible();
+    // у письма выбора типа нет вовсе: экран «Исходящее письмо» (план 2026-11-12 п. 0.2)
+    expect(screen.queryByLabelText("Тип документа")).toBeNull();
   });
 
   it("«Что произойдёт» и маршрут: без суммы — директор; с суммой — ещё и бухгалтер", async () => {
@@ -396,5 +402,20 @@ describe("EDS · Создать документ: форма", () => {
     expect(keys[0]).toMatch(/.{8,}/);
     expect(keys[1]).toBe(keys[0]);
     expect(keys[2]).not.toBe(keys[0]);
+  });
+});
+
+describe("два экрана: исходящее письмо и внутренний документ (план 2026-11-12 п. 0.2)", () => {
+  it("письмо — свой заголовок и без выбора типа; внутренний документ — тип из трёх внутренних", async () => {
+    await openForm("registrar@demo.example", "?type=letter");
+    expect(screen.getByRole("heading", { level: 1, name: "Исходящее письмо" })).toBeVisible();
+    expect(screen.queryByLabelText("Тип документа")).toBeNull();
+  });
+
+  it("внутренний документ: заголовок и поле «Тип документа»", async () => {
+    await openForm("manager@demo.example", "?type=report");
+    expect(screen.getByRole("heading", { level: 1, name: "Внутренний документ" })).toBeVisible();
+    expect(screen.getByLabelText("Тип документа")).toBeInTheDocument();
+    expect(screen.getByText("Отчёт")).toBeInTheDocument();
   });
 });

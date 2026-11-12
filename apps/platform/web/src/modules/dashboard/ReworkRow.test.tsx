@@ -35,7 +35,7 @@ describe("Моя очередь · «Доработать»", () => {
     fireEvent.click(open);
 
     expect(
-      await screen.findByRole("heading", { level: 1, name: "Создать документ" }),
+      await screen.findByRole("heading", { level: 1, name: "Внутренний документ" }),
     ).toBeVisible();
     await waitFor(() => {
       expect(screen.getByLabelText("Тема")).toHaveValue("Командировка в Самарканд");
