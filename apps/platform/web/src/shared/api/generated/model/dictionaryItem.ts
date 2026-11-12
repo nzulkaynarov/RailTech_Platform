@@ -3,6 +3,7 @@
  * RailTech Platform — BFF API (Платформа → CRM и ERP)
  */
 import type { DictionaryAttrValues } from "./dictionaryAttrValues";
+import type { DictionaryItemSource } from "./dictionaryItemSource";
 import type { LocalizedName } from "./localizedName";
 
 export interface DictionaryItem {
@@ -18,4 +19,6 @@ export interface DictionaryItem {
    * @nullable
    */
   used?: boolean | null;
+  /** Строку ведёт источник (название и его поля; правку руками он не перетирает); нет — строка ручная */
+  source?: DictionaryItemSource | null;
 }

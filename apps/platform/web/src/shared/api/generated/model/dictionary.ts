@@ -6,6 +6,7 @@ import type { DictionaryArea } from "./dictionaryArea";
 import type { DictionaryAttr } from "./dictionaryAttr";
 import type { DictionaryCodes } from "./dictionaryCodes";
 import type { DictionaryOwner } from "./dictionaryOwner";
+import type { DictionarySource } from "./dictionarySource";
 import type { LocalizedName } from "./localizedName";
 
 export interface Dictionary {
@@ -21,4 +22,6 @@ export interface Dictionary {
   /** Закрытый список поведения — только переименовать и переставить */
   closed: boolean;
   attrs: DictionaryAttr[];
+  /** Открытый источник, который ведёт список (валюты — ЦБ); нет — список ведут руками */
+  source?: DictionarySource | null;
 }

@@ -22,6 +22,13 @@ const KINDS: readonly ReferenceKind[] = ["countries", "currencies", "units", "de
 const IN_USE = new Set(["UZS", "USD", "UZ", "PCS", "FCA"]);
 
 const names = (ru: string, uz: string, en: string) => ({ ru, uz, en });
+/** Валюты ведёт ЦБ (источник, решение 2026-11-11): в моке — последнее обновление сегодня в 09:00. */
+const CBU = names("ЦБ", "MB", "CBU");
+const cbuSyncedAt = () => {
+  const at = new Date();
+  at.setHours(9, 0, 0, 0);
+  return at.toISOString();
+};
 const flag = (key: string, ru: string, uz: string, en: string) => ({
   key,
   type: "boolean" as const,
@@ -67,7 +74,14 @@ export const ERP_CATALOG: Dictionary[] = [
     name: names("Валюты", "Valyutalar", "Currencies"),
     attrs: [
       { key: "symbol", type: "text", name: names("Символ", "Belgi", "Symbol"), required: false },
+      {
+        key: "iso_numeric",
+        type: "text",
+        name: names("Цифровой код ISO", "ISO raqamli kodi", "ISO numeric"),
+        required: false,
+      },
     ],
+    source: { name: CBU, synced_at: null },
   },
   {
     kind: "units",
@@ -152,6 +166,11 @@ function present(kind: ReferenceKind, row: Row): DictionaryItem {
     active: row.is_active,
     position: row.sort_order,
     used: null,
+    // UZS — база, её ведут руками; остальные валюты пришли из ЦБ.
+    source:
+      kind === "currencies" && row.code !== "UZS"
+        ? { name: CBU, synced_at: cbuSyncedAt(), missing: false }
+        : null,
   };
 }
 
@@ -175,7 +194,26 @@ function guard(kind: unknown, write: boolean): Response | ReferenceKind | undefi
   return kind;
 }
 
+/** Каталог ERP мока: у валют — источник с датой обновления. */
+export function erpCatalog(): Dictionary[] {
+  return ERP_CATALOG.map((d) =>
+    d.source ? { ...d, source: { ...d.source, synced_at: cbuSyncedAt() } } : d,
+  );
+}
+
 export const erpDictionaryHandlers = [
+  http.post("*/dictionaries/:kind/sync", ({ params }) => {
+    const kind = guard(params["kind"], true);
+    if (kind === undefined || kind instanceof Response) return kind;
+    const session = readSession();
+    const me = session ? buildMe({ ...session, activeRole: null }) : null;
+    if (!allows(me?.resources ?? {}, "admin", "full")) {
+      return failure(403, "FORBIDDEN", "Раздел или действие не положены вашей роли.");
+    }
+    if (kind !== "currencies")
+      return failure(404, "NOT_FOUND", "У этого справочника нет источника.");
+    return HttpResponse.json({ queued: true }, { status: 202 });
+  }),
   http.get("*/dictionaries/:kind", ({ params, request }) => {
     const kind = guard(params["kind"], false);
     if (kind === undefined || kind instanceof Response) return kind;

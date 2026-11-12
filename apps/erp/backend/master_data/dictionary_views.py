@@ -120,3 +120,19 @@ class DictionaryItemView(_Base):
         except svc.DictionaryError as exc:
             return _error(exc)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class DictionarySyncView(_Base):
+    @extend_schema(
+        operation_id="syncDictionary",
+        summary="Refresh a dictionary from its open source",
+        description="Queues the scheduled source job (currencies — the central bank list and rates). 404 — no source.",
+        request=None,
+        responses={202: OpenApiTypes.OBJECT},
+        tags=_TAGS,
+    )
+    def post(self, request, kind):
+        try:
+            return Response(svc.sync(kind), status=status.HTTP_202_ACCEPTED)
+        except svc.DictionaryError as exc:
+            return _error(exc)

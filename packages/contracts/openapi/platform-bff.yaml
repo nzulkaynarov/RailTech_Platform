@@ -1,13 +1,16 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.55.0
+  version: 0.56.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
     сессия, профиль, счётчики меню, «Моя очередь», лента «Сегодня», уведомления, поиск. Экраны фаз P2–P4 добавляются
     в этот файл до кода (`docs/architecture/integration-map.md` §1).
 
+    **0.56.0 (источник «ЦБ» для валют, решение владельца 2026-11-11).** `Dictionary.source` и `DictionaryItem.source` —
+    откуда список и строка и когда обновлены (`missing` — строки больше нет в источнике); `POST /dictionaries/{kind}/sync`
+    «Обновить» — ставит в очередь обновление из источника (только администратор).
     **0.55.0 (исходы письма, решение владельца 2026-11-11) — ломающее по oasdiff (до 1.0 допустимо): новое значение
     `LetterStatus.closed` в ответах.** `POST /eds/letters/{id}/close` «Закрыть без ответа» с причиной из справочника
     `close-reasons`, `POST /eds/letters/{id}/reopen` «Вернуть в работу», `POST /eds/instructions/{id}/return` «Вернуть
@@ -8816,6 +8819,33 @@ paths:
           $ref: '#/components/responses/NotFound'
         '422':
           $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /dictionaries/{kind}/sync:
+    post:
+      tags: [dictionaries]
+      operationId: syncDictionary
+      summary: 'Справочники · обновить из источника'
+      description: >-
+        Раздел `admin` — полный. Ставит в очередь то же обновление, что идёт по расписанию (валюты — список и курсы ЦБ).
+        Итог виден по `Dictionary.source.synced_at`. 404 — у справочника нет источника.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/DictionaryKindPath'
+      responses:
+        '202':
+          description: Обновление поставлено в очередь
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DictionarySyncResult'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
@@ -21593,6 +21623,38 @@ components:
         attrs:
           type: array
           items: {$ref: '#/components/schemas/DictionaryAttr'}
+        source:
+          oneOf:
+            - $ref: '#/components/schemas/DictionarySource'
+            - type: 'null'
+          description: Открытый источник, который ведёт список (валюты — ЦБ); нет — список ведут руками
+
+    DictionarySource:
+      type: object
+      additionalProperties: false
+      required: [name, synced_at]
+      properties:
+        name: {$ref: '#/components/schemas/LocalizedName'}
+        synced_at:
+          type: [string, 'null']
+          format: date-time
+          description: Последнее обновление из источника; `null` — ещё не обновлялся
+
+    DictionaryItemSource:
+      type: object
+      additionalProperties: false
+      required: [name, synced_at, missing]
+      properties:
+        name: {$ref: '#/components/schemas/LocalizedName'}
+        synced_at: {type: [string, 'null'], format: date-time}
+        missing: {type: boolean, description: Строки больше нет в источнике — она не удаляется}
+
+    DictionarySyncResult:
+      type: object
+      additionalProperties: false
+      required: [queued]
+      properties:
+        queued: {type: boolean}
 
     DictionaryList:
       type: object
@@ -21628,6 +21690,11 @@ components:
         used:
           type: [boolean, 'null']
           description: Значение уже использовано (удалить нельзя, только скрыть); `null` — не считалось
+        source:
+          oneOf:
+            - $ref: '#/components/schemas/DictionaryItemSource'
+            - type: 'null'
+          description: Строку ведёт источник (название и его поля; правку руками он не перетирает); нет — строка ручная
 
     DictionaryItemList:
       type: object

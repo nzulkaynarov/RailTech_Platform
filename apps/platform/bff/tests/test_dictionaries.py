@@ -142,7 +142,7 @@ async def test_items_for_letter_workers_and_admin(
         assert (await web.login([code])).status_code == 200
         response = await web.client.get(f"{BASE}/letter-kinds", params={"include_hidden": "true"})
         check(response, "/dictionaries/{kind}", "get")
-        assert response.json() == {"items": [ITEM]}
+        assert response.json() == {"items": [{**ITEM, "source": None}]}
     assert eds.made("GET", "dictionaries/letter-kinds")[-1].url.params["include_hidden"] == "true"
     assert (await web.login(["SUPPLY"])).status_code == 200
     assert (await web.client.get(f"{BASE}/letter-kinds")).status_code == 403
@@ -302,6 +302,43 @@ async def test_company_settings_holder_edits_calc_lists_but_not_letter_lists(
     assert ok.status_code == 200, ok.text
     refused = await web.send("PATCH", f"{BASE}/letter-kinds/bank", json={"active": False})
     assert refused.status_code == 403
+
+
+async def test_source_is_shown_and_only_admin_refreshes(
+    web: Web, be: Backends, eds: EdsFake, check: ContractChecker
+) -> None:
+    """Источник «ЦБ» (решение 2026-11-11): список и строка показывают источник и дату, «Обновить» —
+    только администратор, домен ставит обновление в очередь."""
+    cbu = {"name": {"ru": "ЦБ", "uz": "MB", "en": "CBU"}, "synced_at": "2026-11-11T09:00:00+05:00"}
+    be.router.get(f"{ERP_URL}/api/v1/dictionaries").mock(
+        return_value=httpx.Response(
+            200, json={"items": [{**ERP_CATALOG["items"][0], "source": cbu}]}
+        )
+    )
+    be.router.get(f"{ERP_URL}/api/v1/dictionaries/currencies").mock(
+        return_value=httpx.Response(
+            200, json={"items": [{**ERP_ITEM, "source": {**cbu, "missing": False}}]}
+        )
+    )
+    synced = be.router.post(f"{ERP_URL}/api/v1/dictionaries/currencies/sync").mock(
+        return_value=httpx.Response(202, json={"queued": True})
+    )
+    assert (await web.login(["ADMIN"])).status_code == 200
+    catalog = await web.client.get(BASE)
+    check(catalog, "/dictionaries", "get")
+    currencies = next(d for d in catalog.json()["items"] if d["kind"] == "currencies")
+    assert currencies["source"]["name"]["ru"] == "ЦБ"
+    letters = next(d for d in catalog.json()["items"] if d["kind"] == "letter-kinds")
+    assert letters["source"] is None
+    rows = await web.client.get(f"{BASE}/currencies")
+    check(rows, "/dictionaries/{kind}", "get")
+    assert rows.json()["items"][0]["source"]["missing"] is False
+    queued = await web.send("POST", f"{BASE}/currencies/sync")
+    check(queued, "/dictionaries/{kind}/sync", "post")
+    assert (queued.status_code, queued.json(), synced.call_count) == (202, {"queued": True}, 1)
+    assert (await web.login(["DIRECTOR"])).status_code == 200
+    assert (await web.send("POST", f"{BASE}/currencies/sync")).status_code == 403
+    assert synced.call_count == 1
 
 
 # --- файл: выгрузка и загрузка с проверкой (решение владельца 2026-11-11) -------------------------

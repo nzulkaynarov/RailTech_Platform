@@ -2,7 +2,8 @@
 
 Откуда курсы: справочник `core.ExchangeRate` (1 единица валюты = `rate_to_uzs` сум). Его наполняет
 ежедневная задача Beat `master_data.tasks.refresh_exchange_rates` из открытого JSON ЦБ РУз
-(`fetch_cbu_rates`, источник `CBU`); оператор может ввести курс вручную (`set_manual_rate`, источник `MANUAL`,
+(`fetch_cbu_rates`, источник `CBU`) — по каждой включённой валюте справочника, с делением на номинал ЦБ; тот же ответ
+обновляет и сам список валют (`master_data.cbu`, решение владельца 2026-11-11); оператор может ввести курс вручную (`set_manual_rate`, источник `MANUAL`,
 экран «Компания» Платформы, W13C-F6) — на случай, когда автозагрузка не сработала. Ручной курс на дату автозагрузка
 не перетирает (`fetch_cbu_rates`): она пишет в журнал, что не применила курс ЦБ.
 Договорной курс конкретного КП — не здесь: он живёт на самом КП (`Quote.fx_manual`, право
@@ -28,8 +29,15 @@ logger = logging.getLogger(__name__)
 
 BASE_CURRENCY = "UZS"
 CBU_URL = "https://cbu.uz/ru/arkhiv-kursov-valyut/json/"
-# Валюты, в которых реально идут закупки (UZS — база = 1, не хранится).
-TRACKED_CURRENCIES = {"USD", "EUR", "RUB"}
+
+
+def is_tracked(currency_code) -> bool:
+    """У валюты ведётся курс: она есть в справочнике и включена (UZS — база = 1, не хранится)."""
+    from core.models import Currency
+
+    code = normalize_code(currency_code)
+    return code != BASE_CURRENCY and Currency.objects.filter(code=code, is_active=True).exists()
+
 
 # Деньги — копейки, курс — 6 знаков (как `ExchangeRate.rate_to_uzs`), округление — к ближайшему, 0.5 вверх.
 MONEY_QUANT = Decimal("0.01")
@@ -176,35 +184,29 @@ def _apply_cbu_rate(currency, rate_date: datetime.date, rate: Decimal) -> bool:
 
 
 def fetch_cbu_rates(timeout: int = 15) -> int:
-    """Забрать текущие курсы ЦБ РУз и обновить `ExchangeRate` (источник CBU). Возвращает число строк.
+    """Забрать ответ ЦБ РУз: обновить список валют и курсы `ExchangeRate` (источник CBU). Возвращает число курсов.
 
-    JSON ЦБ: по строке на валюту `{"Ccy": "USD", "Rate": "12013.52", "Date": "26.06.2026", ...}`,
-    где Rate — сум за 1 единицу. Вызывается только задачей Beat (не в пути запроса).
+    JSON ЦБ: по строке на валюту `{"Ccy": "USD", "Nominal": "1", "Rate": "12013.52", "Date": "26.06.2026", ...}`, где
+    Rate — сум за `Nominal` единиц. Курс пишется по каждой включённой валюте. Вызывается задачей Beat и кнопкой
+    «Обновить» (через ту же задачу), не в пути запроса.
     """
     import httpx
 
     from core.models import Currency
+    from master_data.cbu import parse, sync_currencies
 
     response = httpx.get(CBU_URL, timeout=timeout)
     response.raise_for_status()
+    rows = parse(response.json())
+    sync_currencies(rows)
+    active = {c.code: c for c in Currency.objects.filter(is_active=True).exclude(code=BASE_CURRENCY)}
     upserted = 0
-    for row in response.json():
-        code = (row.get("Ccy") or "").upper()
-        if code not in TRACKED_CURRENCIES:
+    for row in rows:
+        currency = active.get(row.code)
+        if currency is None:
             continue
-        try:
-            rate = Decimal(str(row.get("Rate")))
-        except (InvalidOperation, TypeError):
-            logger.warning("FX: bad rate for %s: %r", code, row.get("Rate"))
-            continue
-        try:
-            rate_date = datetime.datetime.strptime(row.get("Date"), "%d.%m.%Y").date()
-        except (ValueError, TypeError):
-            rate_date = timezone.localdate()
-        currency = Currency.objects.filter(code=code).first()
-        if not currency:
-            continue
-        if _apply_cbu_rate(currency, rate_date, rate):
+        rate = row.rate_per_unit.quantize(RATE_QUANT, rounding=ROUND_HALF_UP)
+        if _apply_cbu_rate(currency, row.rate_date or timezone.localdate(), rate):
             upserted += 1
     return upserted
 
@@ -297,9 +299,7 @@ def set_manual_rate(*, currency_code, rate_date, rate, actor, today: Optional[da
     from core.models import Currency, ExchangeRate
 
     code = normalize_code(currency_code)
-    if code not in TRACKED_CURRENCIES:
-        return None, "FX_CURRENCY_UNSUPPORTED"
-    currency = Currency.objects.filter(code=code).first()
+    currency = Currency.objects.filter(code=code, is_active=True).exclude(code=BASE_CURRENCY).first()
     if currency is None:
         return None, "FX_CURRENCY_UNSUPPORTED"
 

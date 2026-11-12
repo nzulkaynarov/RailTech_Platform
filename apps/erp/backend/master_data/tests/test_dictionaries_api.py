@@ -43,7 +43,7 @@ def test_add_change_names_hide_and_reorder(operator):  # noqa: F811
         format="json",
     )
     assert created.status_code == 201, created.content
-    assert created.json()["code"] == "KZT" and created.json()["attrs"] == {"symbol": "₸"}
+    assert created.json()["code"] == "KZT" and created.json()["attrs"] == {"symbol": "₸", "iso_numeric": ""}
     again = api.post(f"{BASE}/currencies", {"code": "KZT", "name": {"ru": "Дубль"}}, format="json")
     assert again.status_code == 409 and again.json()["details"]["reason"] == "code_taken"
 

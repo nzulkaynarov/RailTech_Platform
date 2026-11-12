@@ -96,13 +96,15 @@ export function DictionariesPage() {
   const hrefOf = (key: string) => `?${new URLSearchParams({ list: key }).toString()}`;
 
   let body;
+  // Плашка «Только просмотр» — по открытому списку: «Расчёт» правит и держатель настроек компании.
+  let editable = canEdit(me, "admin");
   if (current === "deals") {
     body = <BotSettingsSections page="dictionaries" />;
   } else if (current.startsWith(DOC_PREFIX)) {
     const kind = current.slice(DOC_PREFIX.length);
     const area = catalog.data?.items.find((d) => d.kind === kind)?.area;
     // «Расчёт» правит и держатель настроек компании — как раньше (решение 2026-11-11)
-    const editable = canEdit(me, "admin") || (area === "calc" && canEdit(me, "company.settings"));
+    editable = editable || (area === "calc" && canEdit(me, "company.settings"));
     body = (
       <>
         <Card styles={{ body: { padding: 0 } }}>
@@ -116,12 +118,14 @@ export function DictionariesPage() {
       </>
     );
   } else if (current === "categories") {
+    editable = canEdit(me, "company.settings");
     body = (
       <Card styles={{ body: { padding: 0 } }}>
         <CategoriesTab />
       </Card>
     );
   } else if (current === "charges") {
+    editable = canEdit(me, "company.settings");
     body = (
       <Card styles={{ body: { padding: 0 } }}>
         <ChargesTab />
@@ -133,7 +137,7 @@ export function DictionariesPage() {
 
   const unavailable = catalog.data?.unavailable ?? [];
   return (
-    <SettingsPage sectionKey="dictionaries">
+    <SettingsPage sectionKey="dictionaries" editable={editable}>
       {unavailable.length > 0 ? (
         <Alert
           type="warning"

@@ -164,6 +164,7 @@ from master_data.dictionary_views import (
     DictionaryItemsView,
     DictionaryItemView,
     DictionaryOrderView,
+    DictionarySyncView,
 )
 from master_data.views import (
     CountryViewSet,
@@ -260,6 +261,7 @@ urlpatterns = (
         path("api/v1/dictionaries", DictionaryCatalogView.as_view(), name="dictionaries"),
         path("api/v1/dictionaries/<slug:kind>", DictionaryItemsView.as_view(), name="dictionary-items"),
         path("api/v1/dictionaries/<slug:kind>/order", DictionaryOrderView.as_view(), name="dictionary-order"),
+        path("api/v1/dictionaries/<slug:kind>/sync", DictionarySyncView.as_view(), name="dictionary-sync"),
         path("api/v1/dictionaries/<slug:kind>/<str:code>", DictionaryItemView.as_view(), name="dictionary-item"),
         path("api/v1/crm/projects/<int:deal_id>/", ProjectDetailView.as_view(), name="project-detail"),
         path("api/v1/crm/projects/<int:deal_id>/delivery/", ProjectDeliveryView.as_view(), name="project-delivery"),

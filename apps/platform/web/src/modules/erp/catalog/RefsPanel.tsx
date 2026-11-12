@@ -17,11 +17,13 @@ import {
   useGetCatalogLookups,
   useListCatalogCategoryRequests,
   useListCatalogExchangeRates,
+  useListDictionaryItems,
   useListHsCodes,
   useListManufacturers,
   useUpdateHsCode,
   useUpdateManufacturer,
 } from "../../../shared/api/generated/platform-bff";
+import { HOME_CURRENCY } from "../../../shared/lib/money";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DateField } from "../../../shared/ui/DateField";
 import { EmptyState } from "../../../shared/ui/EmptyState";
@@ -75,6 +77,10 @@ export function RatesView() {
   const [page, setPage] = useState(1);
   const [entering, setEntering] = useState(false);
   const id = useId();
+  // Курс ведётся по каждой включённой валюте справочника (источник «ЦБ», решение 2026-11-11), UZS — база.
+  const currencies = (useListDictionaryItems("currencies").data?.items ?? [])
+    .map((item) => item.code)
+    .filter((code) => code !== HOME_CURRENCY);
   const query = useListCatalogExchangeRates({
     ...(currency ? { currency } : {}),
     page,
@@ -114,7 +120,7 @@ export function RatesView() {
               setCurrency(value);
               setPage(1);
             }}
-            options={["USD", "EUR", "RUB"].map((c) => ({ value: c, label: c }))}
+            options={currencies.map((c) => ({ value: c, label: c }))}
           />
         </div>
         <span className="pf-cat-spacer" />
