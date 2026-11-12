@@ -95,7 +95,7 @@ services:
     <<: [*ops, *mem-192]
 
   rustfs:
-    <<: [*ops, *mem-512]
+    <<: [*ops, *mem-768]
     # Порт S3 — только на внутреннем IP VPS 1: сюда с VPS 2 ходит backup (бакет `backups`).
     # Файрвол VPS 1 разрешает 9000/tcp только с внутреннего IP VPS 2 (runbook deploy.md).
     ports: ["${APP_INTERNAL_IP:?set in .env}:9000:9000"]
@@ -154,7 +154,7 @@ services:
       start_period: 30s
 
   litellm:
-    <<: [*ops, *mem-768]
+    <<: [*ops, *mem-1536]
     image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-litellm:${RT_IMAGE_TAG:?set RT_IMAGE_TAG}
     build: !reset null
     environment:
@@ -162,7 +162,7 @@ services:
     depends_on: !override {}
 
   litellm-seed:
-    <<: [*ops, *mem-256]
+    <<: [*ops, *mem-384]
     restart: "no"
     image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-crm-backend:${RT_IMAGE_TAG}
     build: !reset null
@@ -186,7 +186,7 @@ services:
     depends_on: !override {}
 
   crm-api:
-    <<: [*ops, *mem-512]
+    <<: [*ops, *mem-768]
     image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-crm-backend:${RT_IMAGE_TAG:?set RT_IMAGE_TAG}
     build: !reset null
     environment:
@@ -205,7 +205,7 @@ services:
   # crm-bot (S0-4): приём Telegram отдельно от crm-api. 512 МБ — как у crm-api: те же зависимости (aiogram, LangGraph,
   # агент диалога) в памяти постоянно. Реплика одна.
   crm-bot:
-    <<: [*ops, *mem-512]
+    <<: [*ops, *mem-768]
     image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-crm-backend:${RT_IMAGE_TAG}
     build: !reset null
     environment: *crm-prod-env
@@ -220,7 +220,7 @@ services:
         condition: service_completed_successfully
 
   crm-worker:
-    <<: [*ops, *mem-512]
+    <<: [*ops, *mem-768]
     image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-crm-backend:${RT_IMAGE_TAG}
     build: !reset null
     environment: *crm-prod-env
@@ -236,7 +236,7 @@ services:
         condition: service_completed_successfully
 
   crm-mcp-kb:
-    <<: [*ops, *mem-256]
+    <<: [*ops, *mem-512]
     image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-crm-backend:${RT_IMAGE_TAG}
     build: !reset null
     environment: *crm-prod-env
@@ -251,7 +251,7 @@ services:
         condition: service_completed_successfully
 
   crm-mcp-crm:
-    <<: [*ops, *mem-256]
+    <<: [*ops, *mem-512]
     image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-crm-backend:${RT_IMAGE_TAG}
     build: !reset null
     environment: *crm-prod-env
@@ -266,7 +266,7 @@ services:
         condition: service_completed_successfully
 
   crm-mcp-docs:
-    <<: [*ops, *mem-256]
+    <<: [*ops, *mem-512]
     image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-crm-backend:${RT_IMAGE_TAG}
     build: !reset null
     environment: *crm-prod-env
@@ -297,7 +297,7 @@ services:
     depends_on: !override {}
 
   eds-api:
-    <<: [*ops, *mem-256]
+    <<: [*ops, *mem-512]
     image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-eds:${RT_IMAGE_TAG:?set RT_IMAGE_TAG}
     build: !reset null
     environment:
@@ -353,7 +353,7 @@ services:
   # Вручную:
   #   docker compose -f base.yml -f prod.yml --profile mcp up -d erp-mcp
   erp-mcp:
-    <<: [*ops, *mem-256]
+    <<: [*ops, *mem-512]
     profiles: ["mcp"]
     image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-erp-backend:${RT_IMAGE_TAG}
     build: !reset null
@@ -367,19 +367,19 @@ services:
 
   # erp-worker, erp-worker-ai, erp-beat: тот же образ; контракты шины вшиты (раскладку и доставку событий ведёт воркер).
   erp-worker:
-    <<: [*ops, *mem-512]
+    <<: [*ops, *mem-1536]
     image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-erp-backend:${RT_IMAGE_TAG}
     build: !reset null
     environment: *erp-prod-env
 
   erp-worker-ai:
-    <<: [*ops, *mem-384]
+    <<: [*ops, *mem-768]
     image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-erp-backend:${RT_IMAGE_TAG}
     build: !reset null
     environment: *erp-prod-env
 
   erp-beat:
-    <<: [*ops, *mem-192]
+    <<: [*ops, *mem-384]
     image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-erp-backend:${RT_IMAGE_TAG}
     build: !reset null
     environment: *erp-prod-env
@@ -400,7 +400,7 @@ services:
   # Объявлены в base.yml (окружение, healthcheck, зависимость от redis-cache); здесь — образы GHCR и лимиты памяти.
   # BFF ходит в CRM и ERP по сети compose (PLATFORM_CRM_URL / PLATFORM_ERP_URL), БД у него нет, сессии — redis-cache БД 3.
   platform-bff:
-    <<: [*ops, *mem-256]
+    <<: [*ops, *mem-512]
     image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-platform-bff:${RT_IMAGE_TAG:?set RT_IMAGE_TAG}
     build: !reset null
     environment:
