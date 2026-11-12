@@ -11,7 +11,7 @@ def fill(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("core", "0006_lookup_localized_names"),
+        ("core", "0007_currency_source"),
     ]
 
     operations = [

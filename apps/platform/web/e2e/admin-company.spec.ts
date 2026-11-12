@@ -384,7 +384,23 @@ test.describe("Компания: статьи расхода, шаблоны, с
     await expect(page.getByRole("row", { name: /Евро/ })).toContainText("Скрыто");
     await page.getByRole("button", { name: "Вернуть: Евро" }).click();
     await expect(page.getByRole("row", { name: /Евро/ })).toContainText("Действует");
+    // Валюты ведёт ЦБ (2026-11-11): источник и дата видны, «Обновить» — только у администратора.
+    await expect(page.getByText(/^Источник: ЦБ · /)).toBeVisible();
+    await expect(page.getByRole("row", { name: /Евро/ })).toContainText("ЦБ · ");
+    await expect(page.getByRole("button", { name: "Обновить" })).toHaveCount(0);
     await settledScreenshot(page, "company-reference-currencies");
+  });
+
+  test("валюты из ЦБ: администратор обновляет список, ручная валюта помечена «Вручную»", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "admin@demo.example");
+    await page.goto("/admin/dictionaries?list=currencies");
+    await expect(page.getByText(/^Источник: ЦБ · /)).toBeVisible();
+    await expect(page.getByRole("row", { name: /UZS/ })).toContainText("Вручную");
+    await page.getByRole("button", { name: "Обновить" }).click();
+    await expect(page.getByText(/Обновление запущено/)).toBeVisible();
+    await settledScreenshot(page, "currencies-cbu-refresh");
   });
 });
 

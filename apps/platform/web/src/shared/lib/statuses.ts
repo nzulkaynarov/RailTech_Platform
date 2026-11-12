@@ -209,8 +209,8 @@ export const STATUS_TONE = {
     service_milestones: EXT,
     service_time: EXT,
   },
-  /** Происхождение записи: курс ЦБ / вручную, образец / свой шаблон */
-  origin: { auto: GO, CBU: GO, sample: GO, manual: W, MANUAL: W, own: NONE },
+  /** Происхождение записи: курс ЦБ / вручную, образец / свой шаблон; строки справочника нет в источнике */
+  origin: { auto: GO, CBU: GO, sample: GO, manual: W, MANUAL: W, own: NONE, missing: W },
   /** Запись справочника включена или выключена */
   activity: { active: OK, inactive: OFF },
   /** Доступ сотрудника к системе и привязка Telegram */

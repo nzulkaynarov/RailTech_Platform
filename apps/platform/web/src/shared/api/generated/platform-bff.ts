@@ -118,6 +118,7 @@ import type {
   DictionaryItemPatch,
   DictionaryList,
   DictionaryOrderIn,
+  DictionarySyncResult,
   DocflowSettings,
   DocflowSettingsPatch,
   DocumentPlaceholders,
@@ -33245,6 +33246,99 @@ export const useReorderDictionaryItems = <
   TContext
 > => {
   return useMutation(getReorderDictionaryItemsMutationOptions(options), queryClient);
+};
+
+export const getSyncDictionaryUrl = (kind: string) => {
+  return `/api/v1/dictionaries/${kind}/sync`;
+};
+
+/**
+ * Раздел `admin` — полный. Ставит в очередь то же обновление, что идёт по расписанию (валюты — список и курсы ЦБ). Итог виден по `Dictionary.source.synced_at`. 404 — у справочника нет источника.
+ * @summary Справочники · обновить из источника
+ */
+export const syncDictionary = async (
+  kind: string,
+  options?: Parameters<typeof http>[1],
+): Promise<DictionarySyncResult> => {
+  return http<DictionarySyncResult>(getSyncDictionaryUrl(kind), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getSyncDictionaryMutationKey = () => ["syncDictionary"] as const;
+
+export const getSyncDictionaryMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof syncDictionary>>,
+    TError,
+    SyncDictionaryMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof syncDictionary>>,
+  TError,
+  SyncDictionaryMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSyncDictionaryMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof syncDictionary>>,
+    SyncDictionaryMutationVariables
+  > = (props) => {
+    const { kind } = props ?? {};
+
+    return syncDictionary(kind, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SyncDictionaryMutationResult = NonNullable<Awaited<ReturnType<typeof syncDictionary>>>;
+
+export type SyncDictionaryMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+export type SyncDictionaryMutationVariables = { kind: string };
+
+/**
+ * @summary Справочники · обновить из источника
+ */
+export const useSyncDictionary = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof syncDictionary>>,
+      TError,
+      SyncDictionaryMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof syncDictionary>>,
+  TError,
+  SyncDictionaryMutationVariables,
+  TContext
+> => {
+  return useMutation(getSyncDictionaryMutationOptions(options), queryClient);
 };
 
 export const getExportDictionaryUrl = (kind: string, params?: ExportDictionaryParams) => {

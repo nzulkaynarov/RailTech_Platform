@@ -10,8 +10,8 @@
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from finance.services.fx import (
     AUTO_SKIPPED_EVENT,
-    TRACKED_CURRENCIES,
     fx_journal,
+    is_tracked,
     max_rate_age_days,
     normalize_code,
     rate_to_str,
@@ -26,7 +26,9 @@ from core.permissions import RoleGatedViewMixin
 
 JOURNAL_DEFAULT_LIMIT = 20
 JOURNAL_MAX_LIMIT = 100
-_CURRENCY_PARAM = OpenApiParameter("currency", str, description="Код валюты (USD, EUR, RUB); по умолчанию USD.")
+_CURRENCY_PARAM = OpenApiParameter(
+    "currency", str, description="Код включённой валюты справочника (USD, EUR, …); по умолчанию USD."
+)
 
 
 class _RateSerializer(serializers.Serializer):
@@ -129,7 +131,7 @@ class CurrentRateView(APIView):
     )
     def get(self, request):
         code = _currency(request)
-        if code not in TRACKED_CURRENCIES:
+        if not is_tracked(code):
             return _bad_currency()
         resolved = resolve_rate(code)
         current = (
@@ -164,7 +166,7 @@ class ExchangeRateJournalView(APIView):
     )
     def get(self, request):
         code = _currency(request)
-        if code not in TRACKED_CURRENCIES:
+        if not is_tracked(code):
             return _bad_currency()
         try:
             limit = int(request.query_params.get("limit") or JOURNAL_DEFAULT_LIMIT)

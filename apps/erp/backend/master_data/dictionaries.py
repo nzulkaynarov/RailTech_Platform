@@ -4,6 +4,10 @@
 строки, добавить, изменить, порядок, удалить. Отличие ERP — код задаёт человек или файл (`USD`, `UZ`, `FCA`), а не
 система из названия. Использованную строку удалить нельзя (`on_delete=PROTECT`), её отключают. Сброс кэша списков —
 сигналом на запись модели (`master_data/signals.py`), как у прежних вьюсетов.
+
+Список с источником (`Spec.source`; валюты — ЦБ, `master_data/cbu.py`): строка показывает источник и дату обновления,
+правка поля источника руками запоминается (`manual_fields`), и источник его больше не перетирает. «Обновить» ставит
+в очередь ту же задачу, что идёт по расписанию.
 """
 
 from dataclasses import dataclass
@@ -41,6 +45,8 @@ class Spec:
     name: tuple[str, str, str]
     attrs: tuple[Attr, ...] = ()
     code_upper: bool = True
+    #: Код открытого источника, который ведёт список (`master_data/cbu.py`); None — список ведут руками.
+    source: Optional[str] = None
 
 
 SPECS: dict[str, Spec] = {
@@ -60,7 +66,11 @@ SPECS: dict[str, Spec] = {
             "currencies",
             Currency,
             ("Валюты", "Valyutalar", "Currencies"),
-            attrs=(Attr("symbol", "text", ("Символ", "Belgi", "Symbol"), 10),),
+            attrs=(
+                Attr("symbol", "text", ("Символ", "Belgi", "Symbol"), 10),
+                Attr("iso_numeric", "text", ("Цифровой код ISO", "ISO raqamli kodi", "ISO numeric"), 3),
+            ),
+            source="cbu",
         ),
         Spec("units", UnitOfMeasure, ("Единицы измерения", "O‘lchov birliklari", "Units"), code_upper=False),
         Spec(
@@ -104,6 +114,23 @@ def spec_of(kind: str) -> Spec:
     return spec
 
 
+#: Поля строки, которые ведёт источник: правка руками их «закрепляет» (`manual_fields`).
+SOURCE_FIELDS = ("name", "name_uz", "name_en", "iso_numeric")
+
+
+def _source_names(source: str) -> dict[str, str]:
+    from .cbu import SOURCE, SOURCE_NAMES
+
+    return dict(SOURCE_NAMES) if source == SOURCE else {"ru": source, "uz": source, "en": source}
+
+
+def _catalog_source(spec: Spec) -> Optional[dict[str, Any]]:
+    if spec.source is None:
+        return None
+    last = spec.model.objects.filter(source=spec.source).aggregate(last=models.Max("synced_at"))["last"]
+    return {"name": _source_names(spec.source), "synced_at": last.isoformat() if last else None}
+
+
 def catalog() -> dict[str, Any]:
     return {
         "items": [
@@ -115,6 +142,7 @@ def catalog() -> dict[str, Any]:
                 "attrs": [
                     {"key": a.key, "type": a.type, "name": _names(a.name), "required": False} for a in spec.attrs
                 ],
+                "source": _catalog_source(spec),
             }
             for spec in SPECS.values()
         ]
@@ -137,6 +165,19 @@ def present(spec: Spec, row: models.Model) -> dict[str, Any]:
         "active": row.is_active,
         "position": row.sort_order,
         "used": None,
+        "source": _row_source(row),
+    }
+
+
+def _row_source(row: models.Model) -> Optional[dict[str, Any]]:
+    source = getattr(row, "source", "")
+    if not source:
+        return None
+    synced = row.synced_at
+    return {
+        "name": _source_names(source),
+        "synced_at": synced.isoformat() if synced else None,
+        "missing": not row.in_source,
     }
 
 
@@ -241,9 +282,24 @@ def _get(spec: Spec, code: str) -> models.Model:
 def update(kind: str, code: str, data: dict[str, Any]) -> dict[str, Any]:
     spec = spec_of(kind)
     row = _get(spec, code)
+    before = {f: getattr(row, f, None) for f in SOURCE_FIELDS}
     _apply(spec, row, data)
+    if getattr(row, "source", ""):
+        touched = {f for f, value in before.items() if getattr(row, f, None) != value}
+        row.manual_fields = sorted(set(row.manual_fields or []) | touched)
     row.save()
     return present(spec, row)
+
+
+def sync(kind: str) -> dict[str, Any]:
+    """«Обновить» список с источником: ставит в очередь задачу расписания (курсы и список валют ЦБ)."""
+    spec = spec_of(kind)
+    if spec.source is None:
+        raise DictionaryError(404, "NOT_FOUND", "У этого справочника нет источника.")
+    from .tasks import refresh_exchange_rates
+
+    refresh_exchange_rates.delay()
+    return {"queued": True}
 
 
 @transaction.atomic

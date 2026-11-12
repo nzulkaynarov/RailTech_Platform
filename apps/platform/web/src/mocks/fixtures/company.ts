@@ -296,9 +296,9 @@ function seed(): CompanyMock {
       ],
       currencies: [
         item(1, "UZS", "Узбекский сум", { symbol: "сум" }),
-        item(2, "USD", "Доллар США", { symbol: "$" }),
-        item(3, "EUR", "Евро", { symbol: "€" }),
-        item(4, "RUB", "Российский рубль", { symbol: "₽", is_active: false }),
+        item(2, "USD", "Доллар США", { symbol: "$", iso_numeric: "840" }),
+        item(3, "EUR", "Евро", { symbol: "€", iso_numeric: "978" }),
+        item(4, "RUB", "Российский рубль", { symbol: "₽", iso_numeric: "643", is_active: false }),
       ],
       units: [
         item(1, "PCS", "шт."),

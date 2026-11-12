@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "ERP API",
-        "version": "1.4.0",
+        "version": "1.5.0",
         "description": "ERP Platform API. Supports deal lifecycle management, quoting, product catalog (PIM), Excel imports, and real-time notifications via WebSocket.",
         "contact": {
             "name": "ERP API Support",
@@ -26722,6 +26722,53 @@
                 }
             }
         },
+        "/api/v1/dictionaries/{kind}/sync": {
+            "post": {
+                "operationId": "syncDictionary",
+                "description": "Queues the scheduled source job (currencies — the central bank list and rates). 404 — no source.",
+                "summary": "Refresh a dictionary from its open source",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "kind",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Master Data"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFoundResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/exchange-rates/": {
             "get": {
                 "operationId": "exchange_rates_list",
@@ -26793,7 +26840,7 @@
                         "schema": {
                             "type": "string"
                         },
-                        "description": "Код валюты (USD, EUR, RUB); по умолчанию USD."
+                        "description": "Код включённой валюты справочника (USD, EUR, …); по умолчанию USD."
                     }
                 ],
                 "tags": [
@@ -26846,7 +26893,7 @@
                         "schema": {
                             "type": "string"
                         },
-                        "description": "Код валюты (USD, EUR, RUB); по умолчанию USD."
+                        "description": "Код включённой валюты справочника (USD, EUR, …); по умолчанию USD."
                     },
                     {
                         "in": "query",
@@ -39323,6 +39370,30 @@
                         "title": "Название (англ.)",
                         "maxLength": 255
                     },
+                    "source": {
+                        "type": "string",
+                        "title": "Источник",
+                        "maxLength": 16
+                    },
+                    "synced_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true,
+                        "title": "Обновлено из источника"
+                    },
+                    "in_source": {
+                        "type": "boolean",
+                        "title": "Есть в источнике"
+                    },
+                    "manual_fields": {
+                        "title": "Поля, изменённые руками"
+                    },
+                    "iso_numeric": {
+                        "type": "string",
+                        "title": "ISO цифровой код",
+                        "description": "Цифровой код ISO 4217 (840, 978, 643)",
+                        "maxLength": 3
+                    },
                     "symbol": {
                         "type": "string",
                         "title": "Символ",
@@ -39374,6 +39445,30 @@
                         "type": "string",
                         "title": "Название (англ.)",
                         "maxLength": 255
+                    },
+                    "source": {
+                        "type": "string",
+                        "title": "Источник",
+                        "maxLength": 16
+                    },
+                    "synced_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true,
+                        "title": "Обновлено из источника"
+                    },
+                    "in_source": {
+                        "type": "boolean",
+                        "title": "Есть в источнике"
+                    },
+                    "manual_fields": {
+                        "title": "Поля, изменённые руками"
+                    },
+                    "iso_numeric": {
+                        "type": "string",
+                        "title": "ISO цифровой код",
+                        "description": "Цифровой код ISO 4217 (840, 978, 643)",
+                        "maxLength": 3
                     },
                     "symbol": {
                         "type": "string",
@@ -47850,6 +47945,30 @@
                         "type": "string",
                         "title": "Название (англ.)",
                         "maxLength": 255
+                    },
+                    "source": {
+                        "type": "string",
+                        "title": "Источник",
+                        "maxLength": 16
+                    },
+                    "synced_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true,
+                        "title": "Обновлено из источника"
+                    },
+                    "in_source": {
+                        "type": "boolean",
+                        "title": "Есть в источнике"
+                    },
+                    "manual_fields": {
+                        "title": "Поля, изменённые руками"
+                    },
+                    "iso_numeric": {
+                        "type": "string",
+                        "title": "ISO цифровой код",
+                        "description": "Цифровой код ISO 4217 (840, 978, 643)",
+                        "maxLength": 3
                     },
                     "symbol": {
                         "type": "string",

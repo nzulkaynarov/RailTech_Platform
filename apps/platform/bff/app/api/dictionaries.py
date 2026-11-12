@@ -36,6 +36,7 @@ from app.schemas_dictionaries import (
     DictionaryItemPatch,
     DictionaryList,
     DictionaryOrderIn,
+    DictionarySyncResult,
 )
 
 router = APIRouter(prefix="/dictionaries", tags=["dictionaries"])
@@ -350,6 +351,20 @@ async def reorder_dictionary_items(
     await _WRITERS[kind](authed)
     response = await _call(authed, owner, "PUT", f"/{kind}/order", json=body.model_dump())
     return _parse(DictionaryItemList, response, owner)
+
+
+@router.post(
+    "/{kind}/sync",
+    response_model=DictionarySyncResult,
+    status_code=202,
+    operation_id="syncDictionary",
+)
+async def sync_dictionary(authed: Admin, kind: Kind) -> DictionarySyncResult:
+    """«Обновить» список из источника (решение владельца 2026-11-11: только администратор). Домен
+    ставит в очередь то же обновление, что идёт по расписанию; итог — `Dictionary.source`."""
+    owner = _owner(kind)
+    response = await _call(authed, owner, "POST", f"/{kind}/sync", ok=202)
+    return _parse(DictionarySyncResult, response, owner)
 
 
 @router.patch("/{kind}/{code}", response_model=DictionaryItem, operation_id="updateDictionaryItem")

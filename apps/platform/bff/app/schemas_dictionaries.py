@@ -5,6 +5,7 @@
 """
 
 from collections.abc import Mapping
+from datetime import datetime
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
@@ -60,6 +61,22 @@ class DictionaryAttr(BaseModel):
     required: bool = True
 
 
+class DictionarySource(BaseModel):
+    """Открытый источник списка (валюты — ЦБ) и его последнее обновление."""
+
+    name: LocalizedName
+    synced_at: datetime | None = None
+
+
+class DictionaryItemSource(DictionarySource):
+    #: Строки больше нет в источнике — она не удаляется.
+    missing: bool = False
+
+
+class DictionarySyncResult(BaseModel):
+    queued: bool
+
+
 class Dictionary(BaseModel):
     kind: Annotated[str, StringConstraints(pattern=KIND)]
     owner: Literal["eds", "crm", "erp"]
@@ -70,6 +87,8 @@ class Dictionary(BaseModel):
     #: файл (ERP)
     codes: Literal["generated", "given"] = "generated"
     attrs: list[DictionaryAttr]
+    #: Открытый источник, который ведёт список; нет — список ведут руками
+    source: DictionarySource | None = None
 
 
 class DictionaryList(BaseModel):
@@ -85,6 +104,8 @@ class DictionaryItem(BaseModel):
     active: bool
     position: int
     used: bool | None = None
+    #: Строку ведёт источник (правку руками он не перетирает); нет — строка ручная
+    source: DictionaryItemSource | None = None
 
 
 class DictionaryItemList(BaseModel):
