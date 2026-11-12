@@ -229,9 +229,8 @@
     "actions": {
       "group": "Amallar",
       "tag": "Amal",
-      "createRequest": "Ariza yaratish",
-      "createDocument": "Xizmat xatini yaratish",
-      "inviteEmployee": "Xodimni taklif qilish"
+      "inviteEmployee": "Xodimni taklif qilish",
+      "create": "Yaratish · {{kind}}"
     },
     "navGroup": "Bo‘limlar",
     "sectionTag": "Bo‘lim",
@@ -246,18 +245,36 @@
   },
   "create": {
     "label": "Yaratish",
+    "title": "Yaratish",
+    "search": "Topish: xat, lid, ariza…",
+    "frequent": "Ko‘p yaratasiz",
     "soon": "tez orada",
+    "withChats": "chatlar bilan",
+    "empty": "Hech narsa topilmadi",
+    "groups": {
+      "sales": "Savdo",
+      "documents": "Hujjatlar",
+      "talk": "Muloqot"
+    },
     "kinds": {
       "lead": "Lid",
       "request": "Ariza",
+      "calc": "Hisob-kitob",
       "incoming": "Kiruvchi hujjat",
-      "letter": "Xat",
-      "memo": "Xizmat xati",
-      "statement": "Ariza-bayonnoma",
-      "report": "Hisobot",
-      "purchase": "Xarid arizasi",
-      "assignment": "Topshiriq",
-      "expense": "Xarajat"
+      "letter": "Chiquvchi xat",
+      "internal": "Ichki hujjat",
+      "message": "Xabar",
+      "assignment": "Topshiriq"
+    },
+    "hints": {
+      "lead": "Yangi murojaat: qo‘ng‘iroq, xat, tavsiya",
+      "request": "Mijoz tijorat taklifini so‘rayapti: mijozni tanlang va so‘rovni yozing",
+      "calc": "Ariza, fayl yoki oldingi o‘xshash hisob bo‘yicha",
+      "incoming": "Kompaniyaga kelgan xatni ro‘yxatga olish",
+      "letter": "Kompaniya blankasida, raqam va imzo bilan",
+      "internal": "Xizmat xati, ariza, hisobot",
+      "message": "Hamkasbga yozish",
+      "assignment": "Muddat va ijrochi bilan vazifa"
     }
   }
 }

@@ -95,7 +95,7 @@ test.describe("P8b: поручения по входящим", () => {
     await loginAndWait(page, "registrar@demo.example");
     await spaGoto(page, "/eds/register");
     await expect(
-      page.getByRole("heading", { level: 1, name: "Зарегистрировать входящее" }),
+      page.getByRole("heading", { level: 1, name: "Регистрация входящего документа" }),
     ).toBeVisible();
     // Требование ГНК: «срочно» и кабинет налогоплательщика подставляются сами.
     await chooseOption(page.getByLabel("Вид документа"), "Требование или уведомление ГНК");

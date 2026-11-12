@@ -90,7 +90,7 @@ test.describe("P8: роли пилота и регистрация входящ�
       await expect(page.getByRole("heading", { level: 1, name: "Входящие" })).toBeVisible();
       await page.getByRole("link", { name: "Зарегистрировать входящее" }).click();
       await expect(
-        page.getByRole("heading", { level: 1, name: "Зарегистрировать входящее" }),
+        page.getByRole("heading", { level: 1, name: "Регистрация входящего документа" }),
       ).toBeVisible();
       await shot(page, "register-form-empty");
       await expectNoViolations(page, `форма ${String(width)}`);

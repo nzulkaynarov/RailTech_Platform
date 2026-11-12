@@ -6,17 +6,18 @@ import { matchActions } from "./actions";
 const me = (resources: Record<string, "read" | "full">): Me =>
   ({ resources, modules: [], roles: [] }) as unknown as Me;
 const ADMIN = me({ admin: "full", "crm.clients": "full", "eds.memo.create": "full" });
+const REGISTRAR = me({ "eds.inbox.register": "full" });
 
 const keys = (query: string, who: Me = ADMIN) => matchActions(who, query).map((a) => a.key);
 
 describe("действия поиска: совпадение по началу слова от четырёх символов", () => {
   it.each([
-    ["заяв", ["createRequest"]],
-    ["заявк", ["createRequest"]],
-    ["создать заявку", ["createRequest"]],
-    ["создать заявку на ремонт", ["createRequest"]],
-    ["служе", ["createDocument"]],
-    ["служебка", ["createDocument"]],
+    ["заяв", ["request", "internal"]],
+    ["заявк", ["request"]],
+    ["создать заявку", ["request"]],
+    ["создать заявку на ремонт", ["request"]],
+    ["служе", ["internal"]],
+    ["служебка", ["internal"]],
     ["приглас", ["inviteEmployee"]],
     ["invite", ["inviteEmployee"]],
   ])("«%s»", (query, expected) => {
@@ -37,6 +38,13 @@ describe("действия поиска: совпадение по началу 
   it("только действия, доступные роли (право записи в разделе)", () => {
     expect(keys("пригласить", me({ "crm.clients": "full" }))).toEqual([]);
     expect(keys("создать заявку", me({ "crm.clients": "read" }))).toEqual([]);
-    expect(keys("служебка", me({ "eds.memo.create": "full" }))).toEqual(["createDocument"]);
+    expect(keys("служебка", me({ "eds.memo.create": "full" }))).toEqual(["internal"]);
+  });
+});
+
+describe("виды «Создать» — из реестра окна", () => {
+  it("готовый вид находится, неготовый — нет", () => {
+    expect(keys("зарегистрировать", REGISTRAR)).toEqual(["incoming"]);
+    expect(keys("расчёт", me({ "erp.calc": "full" }))).toEqual([]);
   });
 });

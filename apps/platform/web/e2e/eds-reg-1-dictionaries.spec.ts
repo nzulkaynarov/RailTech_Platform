@@ -89,7 +89,7 @@ test.describe("EDS-REG · справочники документооборот�
     await loginAndWait(page, "registrar@demo.example");
     await page.goto("/eds/register");
     await expect(
-      page.getByRole("heading", { level: 1, name: "Зарегистрировать входящее" }),
+      page.getByRole("heading", { level: 1, name: "Регистрация входящего документа" }),
     ).toBeVisible();
     await page.getByLabel("Способ получения").click();
     const options = page.locator(".ant-select-dropdown:not(.ant-select-dropdown-hidden)");

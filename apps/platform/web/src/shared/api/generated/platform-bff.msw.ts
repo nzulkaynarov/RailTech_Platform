@@ -226,6 +226,7 @@ import type {
   KbProductList,
   KbSearchResult,
   LeadCard,
+  LeadCreated,
   LeadManagerList,
   LeadNotice,
   LeadPage,
@@ -26505,6 +26506,13 @@ export const getListCrmLeadsResponseMock = (
   ...overrideResponse,
 });
 
+export const getCreateCrmLeadResponseMock = (
+  overrideResponse: Partial<Extract<LeadCreated, object>> = {},
+): LeadCreated => ({
+  lead: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
 export const getGetCrmLeadResponsePersonRefMock = (
   overrideResponse: Partial<PersonRef> = {},
 ): PersonRef => ({
@@ -39092,6 +39100,30 @@ export const getListCrmLeadsMockHandler = (
   );
 };
 
+export const getCreateCrmLeadMockHandler = (
+  overrideResponse?:
+    | LeadCreated
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<LeadCreated> | LeadCreated),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/leads",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateCrmLeadResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
 export const getGetCrmLeadMockHandler = (
   overrideResponse?:
     | LeadCard
@@ -40993,6 +41025,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getSearchStockTraceMockHandler(),
   getListOverdueSupplierOrdersMockHandler(),
   getListCrmLeadsMockHandler(),
+  getCreateCrmLeadMockHandler(),
   getGetCrmLeadMockHandler(),
   getListCrmClientsMockHandler(),
   getGetCrmClientMockHandler(),

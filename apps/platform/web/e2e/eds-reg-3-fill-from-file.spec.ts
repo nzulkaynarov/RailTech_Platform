@@ -47,7 +47,7 @@ async function fillFromFile(page: Page, name: string, mimeType: string): Promise
   await expect(page.getByRole("heading", { level: 1, name: "Входящие" })).toBeVisible();
   await spaGoto(page, "/eds/register");
   await expect(
-    page.getByRole("heading", { level: 1, name: "Зарегистрировать входящее" }),
+    page.getByRole("heading", { level: 1, name: "Регистрация входящего документа" }),
   ).toBeVisible();
   await pickFiles(page.getByLabel("Файл документа"), {
     name,

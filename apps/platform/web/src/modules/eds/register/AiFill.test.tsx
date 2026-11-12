@@ -24,7 +24,7 @@ async function openForm() {
   signIn("registrar@demo.example");
   renderAt("/eds/register");
   expect(
-    await screen.findByRole("heading", { level: 1, name: "Зарегистрировать входящее" }),
+    await screen.findByRole("heading", { level: 1, name: "Регистрация входящего документа" }),
   ).toBeVisible();
 }
 

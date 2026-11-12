@@ -6319,7 +6319,11 @@ export interface paths {
      */
     get: operations["listCrmLeads"];
     put?: never;
-    post?: never;
+    /**
+     * Создать · Лид: звонок, письмо, рекомендация
+     * @description CRM `POST /leads`. Раздел `crm.leads` — полный. Создавший становится ответственным. 409 `CONFLICT`: такой телефон или почта уже есть — `details.reason` `lead_exists` (`details.lead_id`) или `client_exists` (`details.client_id`).
+     */
+    post: operations["createCrmLead"];
     delete?: never;
     options?: never;
     head?: never;
@@ -14237,6 +14241,28 @@ export interface components {
       overdue: boolean;
       /** @description Клиент, если лид уже стал клиентом */
       client_id: number | null;
+    };
+    /** @description Новый лид вручную; нужен телефон или почта */
+    LeadIn: {
+      /**
+       * @description Откуда: звонок, письмо, рекомендация
+       * @enum {string}
+       */
+      source: "phone" | "email" | "referral";
+      name: string;
+      company?: string | null;
+      phone?: string | null;
+      email?: string | null;
+      /** @description Что нужно клиенту */
+      need?: string | null;
+      language?: components["schemas"]["Language"];
+    };
+    LeadCreated: {
+      /**
+       * @description Номер лида
+       * @example L-0042
+       */
+      lead: string;
     };
     LeadPage: {
       items: components["schemas"]["LeadRow"][];
@@ -27279,6 +27305,38 @@ export interface operations {
       };
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createCrmLead: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LeadIn"];
+      };
+    };
+    responses: {
+      /** @description Лид создан */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LeadCreated"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["IntegrationConflict"];
+      422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

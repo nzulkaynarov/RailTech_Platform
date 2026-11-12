@@ -222,6 +222,8 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
     ? suppliers.data?.items.find((row) => row.tin === selectedInn)
     : undefined;
   const creating = selected !== null && params.get("create") === "1";
+  // «Создать · Заявка» из окна «Создать» (план 2026-11-12 п. 0.1): клиент выбирается в самой форме.
+  const newRequest = selected === null && params.get("create") === "1";
 
   const isOpen = (row: ClientRow): boolean =>
     isPartnerOnly(row) ? partner === String(-row.id) : selected === row.id;
@@ -388,6 +390,11 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
             });
           }}
         />
+      ) : null}
+      {newRequest ? (
+        <Sheet label={t("request:title")} onClose={close}>
+          <CreateRequest key="create-new" lead={null} clientId={null} onCancel={close} />
+        </Sheet>
       ) : null}
       {selected !== null ? (
         <Sheet label={t(creating ? "request:title" : "clients:card.label")} onClose={close}>

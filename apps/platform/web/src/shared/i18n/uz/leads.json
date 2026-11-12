@@ -110,5 +110,38 @@
       "channel": "kanal: {{channel}}"
     },
     "none": "ma’lumot yo‘q"
+  },
+  "newLead": {
+    "title": "Yangi lid",
+    "submit": "Lid yaratish",
+    "cancel": "Bekor qilish",
+    "fields": {
+      "source": "Manba",
+      "name": "Ism",
+      "company": "Kompaniya",
+      "phone": "Telefon",
+      "email": "Pochta",
+      "need": "Nima kerak",
+      "language": "Muloqot tili"
+    },
+    "sources": {
+      "phone": "Qo‘ng‘iroq",
+      "email": "Xat",
+      "referral": "Tavsiya"
+    },
+    "languages": {
+      "ru": "Русский",
+      "uz": "O‘zbekcha",
+      "en": "English"
+    },
+    "errors": {
+      "name": "Ismni kiriting",
+      "phone": "Telefonni kiriting",
+      "email": "Pochtani kiriting",
+      "leadExists": "Bu kontaktli lid allaqachon bor:",
+      "clientExists": "Bu telefonli mijoz allaqachon bor.",
+      "openClient": "Mijozni ochish",
+      "generic": "Lid yaratilmadi. Qayta urinib ko‘ring."
+    }
   }
 }

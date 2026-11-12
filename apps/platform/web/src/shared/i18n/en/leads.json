@@ -110,5 +110,38 @@
       "channel": "channel: {{channel}}"
     },
     "none": "no data"
+  },
+  "newLead": {
+    "title": "New lead",
+    "submit": "Create lead",
+    "cancel": "Cancel",
+    "fields": {
+      "source": "Source",
+      "name": "Name",
+      "company": "Company",
+      "phone": "Phone",
+      "email": "Email",
+      "need": "What they need",
+      "language": "Language"
+    },
+    "sources": {
+      "phone": "Call",
+      "email": "Email",
+      "referral": "Referral"
+    },
+    "languages": {
+      "ru": "Русский",
+      "uz": "O‘zbekcha",
+      "en": "English"
+    },
+    "errors": {
+      "name": "Enter a name",
+      "phone": "Enter a phone number",
+      "email": "Enter an email",
+      "leadExists": "A lead with this contact already exists:",
+      "clientExists": "A client with this phone already exists.",
+      "openClient": "Open the client",
+      "generic": "The lead was not created. Try again."
+    }
   }
 }
