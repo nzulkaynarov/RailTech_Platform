@@ -61,6 +61,10 @@ bash "$root/infra/deploy/make-env-prod.sh" ensure-secrets "$envf" >/dev/null
 printf 'A=1\n' >"$envf"; bash "$root/infra/deploy/make-env-prod.sh" ensure-secrets "$envf" >/dev/null
 grep -qE '^REDIS_PROBE_PASSWORD=[0-9a-f]{48}$' "$envf" || fail "ensure-secrets: отсутствующий пароль не добавлен"
 [[ "$(grep -c '^A=1$' "$envf")" == 1 ]] || fail "ensure-secrets: тронул чужие переменные"
+# Langfuse (headless init в prod.yml): ключи проекта с префиксами Langfuse и пароль администратора создаёт деплой.
+grep -qE '^CRM_LANGFUSE_PUBLIC_KEY=pk-lf-[0-9a-f]{48}$' "$envf" || fail "ensure-secrets: нет публичного ключа Langfuse pk-lf-"
+grep -qE '^CRM_LANGFUSE_SECRET_KEY=sk-lf-[0-9a-f]{48}$' "$envf" || fail "ensure-secrets: нет секретного ключа Langfuse sk-lf-"
+grep -qE '^LANGFUSE_ADMIN_PASSWORD=[0-9a-f]{48}$' "$envf" || fail "ensure-secrets: нет пароля администратора Langfuse"
 ens="$(grep -nE 'ensure-secrets' "$deploy" | grep -v '^[0-9]*:#' | head -1 | cut -d: -f1)"
 req="$(grep -nE '^require_env_file$' "$deploy" | head -1 | cut -d: -f1)"
 [[ -n "$ens" && "$ens" -lt "$req" ]] || fail "deploy.sh: ensure-secrets должен идти до require_env_file (иначе CHANGE_ME остановит деплой)"

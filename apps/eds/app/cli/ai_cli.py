@@ -1,7 +1,8 @@
 """`python -m app ai-key-sync` — регистрация виртуального ключа EDS в LiteLLM (сервис compose `eds-ai-gateway`).
 
 Читает только своё окружение — без базы и секретов EDS (сервису не нужны ни БД, ни S3): `EDS_LITELLM_API_KEY`,
-`LITELLM_BASE_URL`, `EDS_AI_DAILY_BUDGET_USD` и мастер-ключ `LITELLM_MASTER_KEY` (он есть только здесь). Нет ключа EDS
+`LITELLM_BASE_URL`, `EDS_AI_DAILY_BUDGET_USD`, `EDS_LANGFUSE_PUBLIC_KEY`/`SECRET_KEY`/`HOST` (трейсы; пусто — без них) и
+мастер-ключ `LITELLM_MASTER_KEY` (он есть только здесь). Нет ключа EDS
 или мастер-ключа, шлюз не ответил — сообщение и код 0: стенд поднимается, помощник «Заполнить из файла» выключен.
 """
 
@@ -13,6 +14,17 @@ import structlog
 from app.ai import provision
 
 log = structlog.get_logger(__name__)
+
+DEFAULT_LANGFUSE_HOST = "http://langfuse-web:3000"
+
+
+def _langfuse() -> provision.LangfuseTarget | None:
+    public_key = os.environ.get("EDS_LANGFUSE_PUBLIC_KEY", "").strip()
+    secret_key = os.environ.get("EDS_LANGFUSE_SECRET_KEY", "").strip()
+    if not (public_key and secret_key):
+        return None
+    host = os.environ.get("EDS_LANGFUSE_HOST", "").strip() or DEFAULT_LANGFUSE_HOST
+    return provision.LangfuseTarget(public_key=public_key, secret_key=secret_key, host=host)
 
 
 def _budget() -> float | None:
@@ -32,9 +44,10 @@ async def run() -> int:
         log.warning("ai.key_sync_skipped", reason="no_eds_key" if not key else "no_master_key")
         return 0
     try:
-        outcome = await provision.sync_key(base, master, key, _budget())
+        langfuse = _langfuse()
+        outcome = await provision.sync_key(base, master, key, _budget(), langfuse)
     except (RuntimeError, OSError, httpx.HTTPError) as exc:
         log.warning("ai.key_sync_failed", error=str(exc))
         return 0
-    log.info("ai.key_synced", outcome=outcome, budget_usd=_budget())
+    log.info("ai.key_synced", outcome=outcome, budget_usd=_budget(), langfuse=langfuse is not None)
     return 0

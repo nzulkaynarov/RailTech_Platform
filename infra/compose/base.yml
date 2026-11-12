@@ -790,6 +790,10 @@ services:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
       EDS_LITELLM_API_KEY: ${EDS_LITELLM_API_KEY:-}
       EDS_AI_DAILY_BUDGET_USD: ${EDS_AI_DAILY_BUDGET_USD:-1}
+      # Трейсы Langfuse колбэком на ключе EDS: тот же проект, что у CRM и ERP (пусто — без трейсов).
+      EDS_LANGFUSE_PUBLIC_KEY: ${EDS_LANGFUSE_PUBLIC_KEY:-${CRM_LANGFUSE_PUBLIC_KEY:-}}
+      EDS_LANGFUSE_SECRET_KEY: ${EDS_LANGFUSE_SECRET_KEY:-${CRM_LANGFUSE_SECRET_KEY:-}}
+      EDS_LANGFUSE_HOST: http://langfuse-web:3000
     restart: "no"
     depends_on:
       litellm:
