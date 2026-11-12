@@ -106,7 +106,9 @@
       "text": "Ruxsat yetarli emas."
     },
     "inProject": "Loyihada",
-    "inProjectLabel": "Loyihada ochish: {{subject}}"
+    "inProjectLabel": "Loyihada ochish: {{subject}}",
+    "openQuote": "Taklifni ochish",
+    "openQuoteLabel": "Taklifni ochish: {{subject}}"
   },
   "panel": {
     "label": "Hujjat",

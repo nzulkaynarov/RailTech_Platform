@@ -27,6 +27,7 @@ from app.schemas.documents import (
     LetterheadOut,
 )
 from app.schemas.pagination import Cursor, Limit
+from app.schemas.registry import RegistryStage
 from app.security.permissions import EdsPermission as P
 from app.services import documents, documents_read, idempotency, letterhead, payments, renders
 from app.services.storage import ObjectStorage
@@ -56,11 +57,12 @@ async def list_documents(
     kind: Annotated[list[DocumentKind] | None, Query()] = None,
     status: Annotated[list[DocumentStatus] | None, Query()] = None,
     mine: bool = False,
+    stage: RegistryStage | None = None,
     cursor: Cursor = None,
     limit: Limit = 50,
 ) -> DocumentPage:
     return await documents_read.list_page(
-        session, employee, kinds=kind, statuses=status, mine=mine, cursor=cursor, limit=limit
+        session, employee, kinds=kind, statuses=status, mine=mine, cursor=cursor, limit=limit, stage=stage
     )
 
 

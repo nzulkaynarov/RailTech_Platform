@@ -81,6 +81,8 @@ export interface MockRegistryRow {
   responsible: EdsPerson | null;
   /** Договор, счёт и акт проекта: id сделки для ссылки на карточку проекта (0.26.0) */
   project_ref?: string;
+  /** Сумма строки реестра (BFF 0.59.0): КП — с НДС, договор, счёт, акт — из ERP */
+  amount?: EdsMoney | null;
 }
 
 export interface MockDeal {
@@ -264,6 +266,17 @@ function initial(): EdsMock {
         status: "open",
         registered_at: "2026-10-25T15:00:00Z",
         responsible: DIRECTOR,
+        amount: { amount: "125000000.00", currency: "UZS" },
+      },
+      {
+        kind: "quote",
+        id: documentId(802),
+        number: "КП-2026/112",
+        title: "КП · Колёсные пары, 10 шт.",
+        status: "approved",
+        registered_at: "2026-10-22T10:00:00Z",
+        responsible: DIRECTOR,
+        amount: { amount: "197993600.00", currency: "UZS" },
       },
       {
         kind: "contract",
@@ -274,6 +287,7 @@ function initial(): EdsMock {
         registered_at: "2026-10-24T09:00:00Z",
         responsible: { crm_user_id: 1, full_name: "Демо Менеджеров" },
         project_ref: "105",
+        amount: { amount: "125000000.00", currency: "UZS" },
       },
       {
         kind: "act",

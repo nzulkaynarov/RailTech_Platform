@@ -106,6 +106,7 @@ async def list_documents(
     scope: Literal["mine", "all"] = "mine",
     kind: Annotated[list[RegistryKind] | None, Query(max_length=9)] = None,
     doc_status: Annotated[list[StatusFilter] | None, Query(alias="status", max_length=10)] = None,
+    stage: Literal["open", "done"] | None = None,
     q: Annotated[str | None, Query(max_length=200)] = None,
     cursor: Annotated[str | None, Query(max_length=2000)] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
@@ -114,6 +115,10 @@ async def list_documents(
     params: dict[str, Any] = {"limit": limit}
     if cursor:
         params["cursor"] = cursor
+    if stage:
+        # «Исходящие», «Внутренние» — `open`, «Архив» — `done`;
+        # конечные статусы по виду решает EDS (eds.yaml 0.15.0)
+        params["stage"] = stage
     if scope == "all":
         if doc_status:
             params["status"] = doc_status

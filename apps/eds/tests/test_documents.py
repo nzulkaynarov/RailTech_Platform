@@ -388,6 +388,11 @@ async def test_document_visibility_author_participant_registry(
         "/api/v1/documents", params=[("kind", "memo"), ("status", "on_approval")], headers=staff["director"].headers
     )
     assert subjects(kinds) == ["На маршруте"]
+    # «Внутренние» и «Архив» (0.15.0): черновик и документ на маршруте ещё открыты, завершённых пока нет
+    opened = await client.get("/api/v1/documents", params={"stage": "open"}, headers=staff["manager"].headers)
+    assert sorted(subjects(opened)) == ["На маршруте", "Своя"]
+    done = await client.get("/api/v1/documents", params={"stage": "done"}, headers=staff["manager"].headers)
+    assert subjects(done) == []
 
 
 async def test_documents_cursor_pagination(client: httpx.AsyncClient, staff: dict[str, Person]) -> None:

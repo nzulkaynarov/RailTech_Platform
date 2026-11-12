@@ -4,6 +4,7 @@
  */
 import type { EdsRegistryKind } from "./edsRegistryKind";
 import type { ListEdsDocumentsScope } from "./listEdsDocumentsScope";
+import type { ListEdsDocumentsStage } from "./listEdsDocumentsStage";
 
 export type ListEdsDocumentsParams = {
   scope?: ListEdsDocumentsScope;
@@ -17,6 +18,10 @@ export type ListEdsDocumentsParams = {
    * @items.pattern ^[a-z_]+$
    */
   status?: string[];
+  /**
+   * `open` — документ ждёт чьего-то действия, в том числе контрагента («Исходящие», «Внутренние»); `done` — путь завершён («Архив»). Конечные статусы по виду решает EDS
+   */
+  stage?: ListEdsDocumentsStage;
   /**
    * Поиск по номеру и теме (только `scope=all`)
    * @maxLength 200

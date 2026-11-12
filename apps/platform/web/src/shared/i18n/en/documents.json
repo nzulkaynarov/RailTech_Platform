@@ -106,7 +106,9 @@
       "text": "Insufficient permissions."
     },
     "inProject": "In project",
-    "inProjectLabel": "Open in project: {{subject}}"
+    "inProjectLabel": "Open in project: {{subject}}",
+    "openQuote": "Open quote",
+    "openQuoteLabel": "Open quote: {{subject}}"
   },
   "panel": {
     "label": "Document",

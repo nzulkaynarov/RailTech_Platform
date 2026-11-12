@@ -502,6 +502,25 @@ export async function parseUploadedFile(
   return null;
 }
 
+/** Конечные статусы по виду — как в EDS (eds.yaml 0.15.0, `stage`). */
+const DONE_STATUSES: Record<string, readonly string[]> = {
+  letter_in: ["executed", "noted", "duplicate", "closed", "rejected"],
+  letter_out: ["approved", "rejected", "paid", "sent"],
+  memo: ["approved", "rejected", "paid", "sent"],
+  application: ["approved", "rejected", "paid", "sent"],
+  report: ["approved", "rejected", "paid", "sent"],
+  quote: ["rejected"],
+  contract: ["signed", "rejected"],
+  invoice: ["paid"],
+  act: ["signed"],
+};
+
+function inStage(row: EdsDocumentRow, stage: string | null): boolean {
+  if (stage !== "open" && stage !== "done") return true;
+  const done = (DONE_STATUSES[row.kind] ?? []).includes(row.status);
+  return stage === "done" ? done : !done;
+}
+
 export const edsDocumentsHandlers = [
   http.get("*/eds/documents", ({ request }) => {
     const held = resources();
@@ -511,14 +530,15 @@ export const edsDocumentsHandlers = [
     const scope = url.searchParams.get("scope") ?? "mine";
     const kinds = url.searchParams.getAll("kind");
     const statuses = url.searchParams.getAll("status");
+    const stage = url.searchParams.get("stage");
     const cursor = url.searchParams.get("cursor");
     const limit = Number(url.searchParams.get("limit") ?? "50");
     const state = readEds();
     if (scope === "all") {
       if (!allows(held, REGISTRY)) return forbidden("eds.inbox", "read");
-      // Реестр EDS сумм и сроков не отдаёт (`RegistryItem`): только номер, тема, статус и ответственный.
+      // Реестр EDS сроков не отдаёт; сумма строки — с 0.15.0 (КП, договор, счёт, акт, документ с суммой).
       const rows: EdsDocumentRow[] = [
-        ...state.documents.map((doc) => ({ ...rowOf(doc), amount: null, due_date: null })),
+        ...state.documents.map((doc) => ({ ...rowOf(doc), due_date: null })),
         ...state.registry.map((entry): EdsDocumentRow => ({
           kind: entry.kind,
           id: entry.id,
@@ -526,7 +546,7 @@ export const edsDocumentsHandlers = [
           subject: entry.title,
           status: entry.status,
           author: entry.responsible,
-          amount: null,
+          amount: entry.amount ?? null,
           due_date: null,
           created_at: entry.registered_at,
           openable: false,
@@ -534,7 +554,13 @@ export const edsDocumentsHandlers = [
         })),
       ];
       return HttpResponse.json(
-        page(rows.filter((row) => matches(row, kinds, statuses)).sort(newestFirst), cursor, limit),
+        page(
+          rows
+            .filter((row) => matches(row, kinds, statuses) && inStage(row, stage))
+            .sort(newestFirst),
+          cursor,
+          limit,
+        ),
       );
     }
     const onlyDocuments = kinds.filter((kind) => DOCUMENT_KINDS.includes(kind as EdsRegistryKind));
@@ -545,7 +571,7 @@ export const edsDocumentsHandlers = [
     const rows = state.documents
       .filter((doc) => doc.ownerId === me)
       .map(rowOf)
-      .filter((row) => matches(row, onlyDocuments, statuses))
+      .filter((row) => matches(row, onlyDocuments, statuses) && inStage(row, stage))
       .sort(newestFirst);
     return HttpResponse.json(page(rows, cursor, limit));
   }),

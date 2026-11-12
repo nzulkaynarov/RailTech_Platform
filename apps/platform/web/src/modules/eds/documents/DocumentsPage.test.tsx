@@ -388,3 +388,21 @@ describe("EDS · Документы: карточка в боковом окне
     cleanup();
   });
 });
+
+describe("«Исходящие» и «Архив» по стадии (план 2026-11-12 п. 0.9, FR-5)", () => {
+  it("одобренное КП ждёт клиента — в «Исходящих» с суммой и «Открыть КП»; в «Архиве» его нет", async () => {
+    signIn("director@demo.example");
+    renderAt("/eds/documents?box=outgoing&scope=all");
+    const row = (await screen.findByText("КП · Колёсные пары, 10 шт.")).closest("tr");
+    expect(row).not.toBeNull();
+    const cells = within(row as HTMLElement);
+    expect(cells.getByText("197 993 600 сум")).toBeInTheDocument();
+    expect(
+      cells.getByRole("link", { name: "Открыть КП: КП · Колёсные пары, 10 шт." }),
+    ).toHaveAttribute("href", expect.stringMatching(/^\/eds\/drafts\//));
+    cleanup();
+    renderAt("/eds/documents?box=archive&scope=all");
+    await listSettled();
+    expect(screen.queryByText("КП · Колёсные пары, 10 шт.")).toBeNull();
+  });
+});

@@ -372,3 +372,33 @@ async def test_registry_export_follows_the_same_visibility(
     # экспорт без `registry.read`, но с `registry.export`: только свои объекты и маршруты, где участник
     export_only = await extra_person(container, 21, ["registry.export"])
     assert (await kinds(export_only))[0] == []
+
+
+async def test_registry_stage_splits_open_and_done_by_kind_and_shows_amounts(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    """«Исходящие» и «Архив» (0.15.0, FR-5): КП на одобрении и выставленный счёт ждут действия — открыты;
+    отправленное письмо и оплаченный счёт — завершены. Сумма строки — у документа, КП и счёта; у письма — нет."""
+    await fill(client, container, staff)
+    await deliver_erp(client, container, erp_event("erp/invoice.issued.v1"))
+    who = staff["accountant"]
+
+    async def pairs(**params: Any) -> set[tuple[str, str]]:
+        return {(i["kind"], i["status"]) for i in await listing(client, who, **params)}
+
+    opened = await pairs(stage="open")
+    assert ("quote", "open") in opened and ("invoice", "issued") in opened
+    assert ("letter_in", "awaiting_resolution") in opened
+    assert ("letter_out", "sent") not in opened
+    assert await pairs(stage="done") == {("letter_out", "sent")}
+
+    await deliver_erp(client, container, erp_event("erp/invoice.paid.v1", erp_invoice_id=4410))
+    assert ("invoice", "paid") in await pairs(stage="done")
+    assert ("invoice", "paid") not in await pairs(stage="open")
+
+    by_kind = {i["kind"]: i["amount"] for i in await listing(client, who)}
+    assert by_kind["quote"] == {"amount": "125000000.00", "currency": "UZS"}
+    assert by_kind["invoice"] == {"amount": "62500000.00", "currency": "UZS"}
+    assert by_kind["letter_in"] is None
+    bad = await client.get("/api/v1/registry", params={"stage": "later"}, headers=who.headers)
+    assert bad.status_code == 422

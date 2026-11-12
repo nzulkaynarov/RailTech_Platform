@@ -106,7 +106,9 @@
       "text": "Недостаточно прав."
     },
     "inProject": "В проекте",
-    "inProjectLabel": "Открыть в проекте: {{subject}}"
+    "inProjectLabel": "Открыть в проекте: {{subject}}",
+    "openQuote": "Открыть КП",
+    "openQuoteLabel": "Открыть КП: {{subject}}"
   },
   "panel": {
     "label": "Документ",

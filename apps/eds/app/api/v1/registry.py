@@ -14,7 +14,7 @@ from app.api.deps import get_session, require_permission
 from app.errors import EdsError
 from app.models import Employee
 from app.schemas.pagination import Cursor, Limit
-from app.schemas.registry import RegistryKind, RegistryPage
+from app.schemas.registry import RegistryKind, RegistryPage, RegistryStage
 from app.security.permissions import EdsPermission as P
 from app.services import journal, registry, registry_export
 
@@ -27,6 +27,7 @@ Status = Annotated[str, StringConstraints(pattern=r"^[a-z_]+$")]
 async def filters(
     kind: Annotated[list[RegistryKind] | None, Query()] = None,
     status: Annotated[list[Status] | None, Query()] = None,
+    stage: RegistryStage | None = None,
     date_from: dt.date | None = None,
     date_to: dt.date | None = None,
     responsible: int | None = None,
@@ -37,6 +38,7 @@ async def filters(
     return registry.Filters(
         kinds=kind or [],
         statuses=status or [],
+        stage=stage,
         date_from=date_from,
         date_to=date_to,
         responsible=responsible,
