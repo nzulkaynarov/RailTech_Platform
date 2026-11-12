@@ -134,5 +134,10 @@
     "resize": "Width of “{{name}}”: drag, double-click to fit content",
     "narrower": "Narrower: {{name}}",
     "wider": "Wider: {{name}}"
+  },
+  "formSteps": {
+    "next": "Next: {{title}}",
+    "edit": "Change",
+    "invalid": "Needs fixing"
   }
 }

@@ -134,5 +134,10 @@
     "resize": "«{{name}}» ustuni kengligi: torting, ikki marta bosish — mazmunga moslash",
     "narrower": "Torroq: {{name}}",
     "wider": "Kengroq: {{name}}"
+  },
+  "formSteps": {
+    "next": "Keyingi: {{title}}",
+    "edit": "O‘zgartirish",
+    "invalid": "Tuzatish kerak"
   }
 }

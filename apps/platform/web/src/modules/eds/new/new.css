@@ -78,3 +78,33 @@
     position: static;
   }
 }
+/* Шаг «Проверка и отправка»: сводка секций с «Изменить» (platform-frontend.md §4.1a) */
+.pf-newdoc-review {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pf-newdoc-review-row {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: baseline;
+  padding: 6px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+.pf-newdoc-review-row dt {
+  color: #595959;
+}
+.pf-newdoc-review-row dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 767px) {
+  .pf-newdoc-review-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .pf-newdoc-review-row dt {
+    grid-column: 1 / -1;
+  }
+}

@@ -1,4 +1,4 @@
-import type { Locator } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 
 /**
@@ -72,4 +72,14 @@ export async function chooseOption(field: Locator, label: string): Promise<void>
     }
     await expect(selected).toHaveAttribute("title", label, { timeout: 2_000 });
   }).toPass({ timeout: 30_000 });
+}
+
+/**
+ * Открыть шаг формы по секциям (`StepSections`, platform-frontend.md §4.1a): щелчок по заголовку секции, если она свёрнута.
+ * Заголовок — кнопка с `aria-expanded`; кнопка «Далее: <шаг>» его не имеет, поэтому с ней не путается.
+ */
+export async function openStep(page: Page, title: string | RegExp): Promise<void> {
+  const head = page.locator("button[aria-expanded]", { hasText: title }).first();
+  if ((await head.getAttribute("aria-expanded")) !== "true") await head.click();
+  await expect(head).toHaveAttribute("aria-expanded", "true");
 }
