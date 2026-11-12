@@ -7,10 +7,9 @@ import { useViewport } from "../../../app/shell/useViewport";
 import type { SupplierOrderRow, SupplierOrderStatus } from "../../../shared/api/generated/model";
 import { useListSupplierOrders } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
-import { TableCols } from "../../../shared/ui/DataBlock";
-import { tableMinWidth } from "../../../shared/ui/tableWidth";
+import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTable";
 import { EmptyState } from "../../../shared/ui/EmptyState";
-import { QueryState, ScrollRegion } from "../../../shared/ui/FormParts";
+import { QueryState } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { ORDER_STATUSES, useStateLabels } from "./api";
@@ -18,11 +17,6 @@ import { OrderCreateModal } from "./OrderCreateModal";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 
 /** Ширины колонок: номер, поставщик (гибкая), заявки, ожидается, статус, приёмка, [сумма], действие (UX-1c, S9) */
-const colsOf = (prices: boolean) =>
-  prices
-    ? ([120, null, 160, 148, 148, 110, 140, 120] as const)
-    : ([120, null, 160, 148, 148, 110, 120] as const);
-
 export function OrderStatusTag({ status }: { status: SupplierOrderStatus }) {
   const { t } = useTranslation("stock");
   return (
@@ -111,74 +105,91 @@ function Rows({ items, prices }: { items: readonly SupplierOrderRow[]; prices: b
       </ul>
     );
   }
+  // Ширины по типу (T1); сумма — только у тех, кому видны цены; остальное — настройка сотрудника в «Столбцах» (пункт «Т»).
+  const columns: DataColumn<SupplierOrderRow>[] = [
+    {
+      id: "number",
+      header: t("orders.columns.number"),
+      width: 120,
+      cellClassName: "pf-num",
+      cell: (row) => (
+        <Link className="pf-focusable pf-calc-number" to={row.path}>
+          {row.number}
+        </Link>
+      ),
+    },
+    {
+      id: "supplier",
+      header: t("orders.columns.supplier"),
+      width: null,
+      cellClassName: "pf-ell",
+      cellTitle: (row) => row.supplier.name,
+      cell: (row) => row.supplier.name,
+    },
+    {
+      id: "requests",
+      header: t("orders.columns.requests"),
+      width: 160,
+      cell: (row) => <Requests row={row} />,
+    },
+    {
+      id: "expected",
+      header: t("orders.columns.expected"),
+      width: 148,
+      cell: (row) => <Expected row={row} />,
+    },
+    {
+      id: "status",
+      header: t("orders.columns.status"),
+      width: 148,
+      cell: (row) => <OrderStatusTag status={row.status} />,
+    },
+    {
+      id: "receipt",
+      header: t("orders.columns.receipt"),
+      width: 110,
+      cell: (row) => <Receipt row={row} />,
+    },
+    ...(prices
+      ? [
+          {
+            id: "total",
+            header: t("orders.columns.total"),
+            width: 140,
+            numeric: true,
+            cell: (row: SupplierOrderRow) => (
+              <MoneyText value={row.total} currency={row.currency} />
+            ),
+          },
+        ]
+      : []),
+    {
+      id: "action",
+      header: t("orders.columns.action"),
+      headerHidden: true,
+      width: 120,
+      cell: (row) => (
+        <LinkButton
+          size="small"
+          to={row.path}
+          aria-label={t("orders.openLabel", { number: row.number })}
+        >
+          {t("orders.open")}
+        </LinkButton>
+      ),
+    },
+  ];
   return (
-    <ScrollRegion label={t("orders.scroll")}>
-      <table
-        className="pf-calc-table pf-fixed-table"
-        style={{ minWidth: tableMinWidth(colsOf(prices), 160) }}
-      >
-        <caption className="pf-sr-only">{t("orders.caption")}</caption>
-        <TableCols widths={colsOf(prices)} />
-        <thead>
-          <tr>
-            <th scope="col">{t("orders.columns.number")}</th>
-            <th scope="col">{t("orders.columns.supplier")}</th>
-            <th scope="col">{t("orders.columns.requests")}</th>
-            <th scope="col">{t("orders.columns.expected")}</th>
-            <th scope="col">{t("orders.columns.status")}</th>
-            <th scope="col">{t("orders.columns.receipt")}</th>
-            {prices ? (
-              <th scope="col" className="pf-col-num">
-                {t("orders.columns.total")}
-              </th>
-            ) : null}
-            <th scope="col">
-              <span className="pf-sr-only">{t("orders.columns.action")}</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((row) => (
-            <tr key={row.number}>
-              <td className="pf-num">
-                <Link className="pf-focusable pf-calc-number" to={row.path}>
-                  {row.number}
-                </Link>
-              </td>
-              <td className="pf-ell" title={row.supplier.name}>
-                {row.supplier.name}
-              </td>
-              <td>
-                <Requests row={row} />
-              </td>
-              <td>
-                <Expected row={row} />
-              </td>
-              <td>
-                <OrderStatusTag status={row.status} />
-              </td>
-              <td>
-                <Receipt row={row} />
-              </td>
-              {prices ? (
-                <td className="pf-col-num">
-                  <MoneyText value={row.total} currency={row.currency} />
-                </td>
-              ) : null}
-              <td>
-                <LinkButton
-                  size="small"
-                  to={row.path}
-                  aria-label={t("orders.openLabel", { number: row.number })}
-                >
-                  {t("orders.open")}
-                </LinkButton>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </ScrollRegion>
+    <DataTable
+      tableId="erp.stock.orders"
+      caption={t("orders.caption")}
+      scrollLabel={t("orders.scroll")}
+      className="pf-calc-table"
+      flexMin={160}
+      columns={columns}
+      rows={items}
+      rowKey={(row) => row.number}
+    />
   );
 }
 
