@@ -80,6 +80,7 @@ export function DocumentTemplates() {
         <>
           {items.length > 0 ? <div>{add}</div> : null}
           <ListTable<DocumentTemplate>
+            tableId="admin.company.documentTemplates"
             label={t("templates.parts.documents")}
             data={items}
             rowKey={(row) => row.id}
@@ -89,16 +90,23 @@ export function DocumentTemplates() {
               action: add,
             }}
             columns={[
-              { title: t("templates.documents.name"), dataIndex: "name" },
               {
-                title: t("templates.documents.kind"),
-                dataIndex: "kind_name",
-                responsive: ["md"],
+                id: "name",
+                header: t("templates.documents.name"),
+                width: null,
+                cell: (row) => row.name,
               },
               {
-                title: t("status"),
-                key: "status",
-                render: (_: unknown, row) => (
+                id: "kind_name",
+                header: t("templates.documents.kind"),
+                width: null,
+                cell: (row) => row.kind_name,
+              },
+              {
+                id: "status",
+                header: t("status"),
+                width: null,
+                cell: (row) => (
                   <span className="pf-co-actions">
                     <StatusTag kind="origin" status={row.is_sample ? "sample" : "own"}>
                       {t(row.is_sample ? "templates.documents.sample" : "templates.documents.own")}
@@ -112,9 +120,10 @@ export function DocumentTemplates() {
                 ),
               },
               {
-                title: t("actions"),
-                key: "actions",
-                render: (_: unknown, row) =>
+                id: "actions",
+                header: t("actions"),
+                width: 160,
+                cell: (row) =>
                   readOnly ? (
                     <Button
                       type="link"

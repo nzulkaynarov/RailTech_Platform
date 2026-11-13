@@ -57,7 +57,7 @@ def document_visible(employee: Employee) -> ColumnElement[bool]:
     Не шире прав на вид документа, даже у держателя `registry.read`: чужой черновик (`draft`) видит только автор
     (черновик письма, переданный на регистрацию, — ещё держатель `letters.register`), чужое исходящее письмо
     (`letter_out`) — только с `letters.read`. Дальше: `registry.read` — остальное видно, иначе — автор, участник
-    маршрута или делопроизводитель переданного ему письма.
+    маршрута, получатель копии (пункт 1.6) или делопроизводитель переданного ему письма.
     """
     mine = Document.author_crm_user_id == employee.crm_user_id
     # P4, B-P8B-4: черновик письма, переданный на регистрацию, видит держатель `letters.register`.
@@ -78,7 +78,9 @@ def document_visible(employee: Employee) -> ColumnElement[bool]:
         .join(ApprovalRoute, ApprovalRoute.id == ApprovalStep.approval_id)
         .where(ApprovalRoute.document_id == Document.id, participates_in(employee))
     )
-    return and_(base, or_(mine, in_route, handed_over))
+    # Пункт 1.6: получатель копии видит документ (не решает).
+    watching = Document.watchers.contains([employee.crm_user_id])
+    return and_(base, or_(mine, in_route, handed_over, watching))
 
 
 def route_visible(employee: Employee) -> ColumnElement[bool]:

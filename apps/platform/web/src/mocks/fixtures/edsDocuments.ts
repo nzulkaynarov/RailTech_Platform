@@ -54,6 +54,9 @@ export interface MockDocument {
   acting_for_user_id?: string | null;
   verification_code?: string | null;
   dispatch_method?: "email" | "paper" | "courier" | "edo" | "other" | null;
+  /** Пункт 1.6: согласующие от автора (по порядку) и получатели копии — `crm_user_id` */
+  approvers?: string[];
+  watchers?: string[];
   can_sign?: boolean;
 }
 

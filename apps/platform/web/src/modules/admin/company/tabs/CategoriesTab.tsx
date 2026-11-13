@@ -428,6 +428,7 @@ function RequestList() {
           return (
             <>
               <ListTable<CategoryRequest>
+                tableId="admin.company.categoryRequests"
                 label={t("categories.parts.requestsPlain")}
                 data={sorted}
                 rowKey={(row) => row.id}
@@ -437,11 +438,12 @@ function RequestList() {
                 }}
                 columns={[
                   {
-                    title: t("categories.requests.name"),
-                    dataIndex: "proposed_name",
-                    render: (value: string, row) => (
+                    id: "proposed_name",
+                    header: t("categories.requests.name"),
+                    width: null,
+                    cell: (row) => (
                       <>
-                        <b>{value}</b>
+                        <b>{row.proposed_name}</b>
                         {row.parent_name ? (
                           <div className="pf-hint">
                             {t("categories.requests.under", { name: row.parent_name })}
@@ -451,44 +453,46 @@ function RequestList() {
                     ),
                   },
                   {
-                    title: t("categories.requests.why"),
-                    dataIndex: "justification",
-                    responsive: ["md"],
-                    render: (v?: string) => v ?? "—",
+                    id: "justification",
+                    header: t("categories.requests.why"),
+                    width: null,
+                    cell: (row) => row.justification ?? "—",
                   },
                   {
-                    title: t("categories.requests.author"),
-                    dataIndex: "requested_by",
-                    responsive: ["md"],
-                    render: (v?: string) => v ?? "—",
+                    id: "requested_by",
+                    header: t("categories.requests.author"),
+                    width: null,
+                    cell: (row) => row.requested_by ?? "—",
                   },
                   {
-                    title: t("categories.requests.created"),
-                    dataIndex: "created_at",
-                    responsive: ["md"],
-                    render: (value: string) => <span className="pf-num">{date(value)}</span>,
+                    id: "created_at",
+                    header: t("categories.requests.created"),
+                    width: null,
+                    cell: (row) => <span className="pf-num">{date(row.created_at)}</span>,
                   },
                   {
-                    title: t("status"),
-                    dataIndex: "status",
-                    render: (value: CategoryRequest["status"], row) => (
+                    id: "status",
+                    header: t("status"),
+                    width: null,
+                    cell: (row) => (
                       <>
-                        <StatusTag kind="categoryRequest" status={value}>
-                          {t(`categories.requests.statuses.${value}`)}
+                        <StatusTag kind="categoryRequest" status={row.status}>
+                          {t(`categories.requests.statuses.${row.status}`)}
                         </StatusTag>
-                        {value === "approved" && row.resulting_category_name ? (
+                        {row.status === "approved" && row.resulting_category_name ? (
                           <div className="pf-hint">{row.resulting_category_name}</div>
                         ) : null}
-                        {value === "rejected" && row.review_notes ? (
+                        {row.status === "rejected" && row.review_notes ? (
                           <div className="pf-hint">{row.review_notes}</div>
                         ) : null}
                       </>
                     ),
                   },
                   {
-                    title: t("actions"),
-                    key: "actions",
-                    render: (_: unknown, row) =>
+                    id: "actions",
+                    header: t("actions"),
+                    width: 160,
+                    cell: (row) =>
                       row.status === "pending" ? (
                         <span className="pf-co-actions">
                           <Button

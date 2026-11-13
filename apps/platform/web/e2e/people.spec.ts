@@ -14,7 +14,7 @@ test.describe("Органайзер · Люди", () => {
       await loginAndWait(page, "director@demo.example");
       await spaGoto(page, "/chats/contacts");
       await expect(page.getByRole("heading", { level: 1, name: "Люди" })).toBeVisible();
-      await expect(page.locator(".pf-people .ant-table-row").first()).toBeVisible();
+      await expect(page.locator(".pf-people tbody tr").first()).toBeVisible();
       await expectNoViolations(page, `people ${String(width)}`);
       await settledScreenshot(page, "people");
     });
