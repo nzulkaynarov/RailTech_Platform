@@ -1,5 +1,5 @@
 import { Alert, Button } from "antd";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ApiError } from "../../../shared/api/errors";
@@ -71,9 +71,10 @@ function DealSuggestion({
 }
 
 /**
- * «Заполнить из файла» (EDS-REG; стандарт ИИ-помощника — исследование 2026-11-02 §4.1): только по кнопке, форма всегда
- * заполняется и вручную. Помощник берёт первый загруженный файл, предлагает поля — их помечает «Предложено ИИ», человек
- * проверяет и регистрирует. Помощник не настроен — кнопки нет.
+ * «Заполнить из файла» (EDS-REG; стандарт ИИ-помощника — исследование 2026-11-02 §4.1). Форма начинается с загрузки (ВХ,
+ * правило владельца 2026-11-11): загрузка первого файла сама запускает распознавание — это и есть нажатие кнопки (юрист
+ * 2026-11-11), кнопка остаётся для повтора. Предложенные поля помечены «Предложено ИИ», заполняются только пустые; человек
+ * проверяет и регистрирует. Помощник не настроен или выключен администратором — кнопки и распознавания нет.
  */
 export function AiFillBar({
   attachments,
@@ -96,8 +97,8 @@ export function AiFillBar({
   const settings = useGetDocflowSettings({ query: { staleTime: 60_000 } });
   const [pending, setPending] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
-  if (!settings.data?.ai_available) return null;
   const file = attachments.find((item) => item.status === "done" && item.id);
+  const available = Boolean(settings.data?.ai_available);
 
   const fill = async () => {
     if (!file?.id) return;
@@ -111,6 +112,19 @@ export function AiFillBar({
       setPending(false);
     }
   };
+
+  // Первый загруженный файл распознаётся сам, один раз на файл; уже заполненная форма (из почты, предложение есть) — нет.
+  const tried = useRef<string | null>(null);
+  const fileId = file?.id ?? null;
+  useEffect(() => {
+    if (!available || !fileId || applied > 0 || tried.current === fileId) return;
+    tried.current = fileId;
+    void fill();
+    // fill — свежая функция на каждой отрисовке; запуск — по новому файлу
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [available, fileId]);
+
+  if (!available || !settings.data) return null;
 
   return (
     <div className="pf-reg-ai" role="group" aria-label={t("register.ai.group")}>
@@ -133,6 +147,11 @@ export function AiFillBar({
               : t("register.ai.hintText")}
         </span>
       </div>
+      {pending ? (
+        <p className="pf-hint" role="status">
+          {t("register.ai.reading")}
+        </p>
+      ) : null}
       {failure ? <Alert type="warning" showIcon role="alert" message={failure} /> : null}
       {applied > 0 ? (
         <Alert
