@@ -5,8 +5,17 @@ import { CheckCircle2, Clock, FileSignature, FileText, Loader2, Mail, MessageCir
 import { toast } from '@/lib/toast';
 
 import { apiErrorKey } from '@/api/errors';
-import { isPortalApiError, type AcceptanceCodeSent, type Quote, type QuoteComment, type QuoteLine, type QuoteListItem } from '@/api/portal';
-import { useAcceptQuote, useAddQuoteComment, useContracts, useQuote, useQuotes, useRejectQuote, useRequestQuoteCode } from '@/api/queries';
+import { isPortalApiError, type AcceptanceCodeSent, type CodeDelivery, type Quote, type QuoteComment, type QuoteLine, type QuoteListItem } from '@/api/portal';
+import {
+  useAcceptQuote,
+  useAddQuoteComment,
+  useContracts,
+  useQuote,
+  useQuoteCodeDelivery,
+  useQuotes,
+  useRejectQuote,
+  useRequestQuoteCode,
+} from '@/api/queries';
 import { ActionDialog } from '@/components/ActionDialog';
 import { ConsequenceCallout } from '@/components/ConsequenceCallout';
 import { DealLink, DetailList, SectionTitle, SummaryNote } from '@/components/Details';
@@ -376,6 +385,26 @@ function AcceptedPanel({ dealId }: { dealId: number }) {
   );
 }
 
+type T = ReturnType<typeof useTranslation>['t'];
+const KNOWN_REASONS = ['smtp_not_configured', 'rejected', 'unavailable'];
+
+/**
+ * Строка о коде (0.10, FR-12): письмо ушло — «Код отправлен»; в очереди — «Отправляем код…», дольше минуты — подсказка;
+ * не ушло — причина словами и куда обратиться. Telegram (без журнала доставки) — как раньше.
+ */
+function codeStatusText(t: T, sent: AcceptanceCodeSent, delivery: CodeDelivery | undefined, waitedTooLong: boolean): string {
+  const minutes = Math.max(1, Math.round(sent.expires_in / 60));
+  if (sent.channel !== 'email' || delivery?.state === 'sent') return t(codeSentKey(sent), { to: sent.sent_to, minutes });
+  if (delivery?.state === 'failed') {
+    const reason = delivery.reason && KNOWN_REASONS.includes(delivery.reason) ? delivery.reason : 'other';
+    return t('pages.quoteDetail.codeDelivery.notSent', { reason: t(`pages.quoteDetail.codeDelivery.reasons.${reason}`) });
+  }
+  if (sent.delivery !== null && delivery?.state === 'queued' && waitedTooLong) {
+    return t('pages.quoteDetail.codeDelivery.queuedLong');
+  }
+  return t('pages.quoteDetail.codeDelivery.sending', { to: sent.sent_to });
+}
+
 /** Текст про отправленный код: у Telegram адрес бывает просто «Telegram» — не повторяем его дважды. */
 function codeSentKey(sent: AcceptanceCodeSent): string {
   if (sent.channel === 'email') return 'pages.quoteDetail.codeSent.email';
@@ -397,6 +426,9 @@ function AcceptDialog({ quote, open, onOpenChange }: { quote: Quote; open: boole
   // Последний полученный ответ хранится отдельно: повторный `mutate` обнуляет `requestCode.data`, а упавший повтор
   // (429 из общего лимита) не должен отнимать у клиента поле для уже пришедшего кода.
   const [sent, setSent] = useState<AcceptanceCodeSent | null>(null);
+  // 0.10 (FR-12): итог письма с кодом — от почтового сервиса компании; «отправлен» не пишем заранее.
+  const [sentAt, setSentAt] = useState(0);
+  const delivery = useQuoteCodeDelivery(quote.id, sent?.delivery ?? null, sentAt);
 
   const close = (next: boolean) => {
     if (!next) {
@@ -415,6 +447,7 @@ function AcceptDialog({ quote, open, onOpenChange }: { quote: Quote; open: boole
       onSuccess: (result) => {
         setCode('');
         setSent(result);
+        setSentAt(Date.now());
       },
     });
   };
@@ -458,7 +491,7 @@ function AcceptDialog({ quote, open, onOpenChange }: { quote: Quote; open: boole
               <Mail className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
             )}
             <span className="min-w-0 break-words">
-              {t(codeSentKey(sent), { to: sent.sent_to, minutes: Math.max(1, Math.round(sent.expires_in / 60)) })}
+              {codeStatusText(t, sent, delivery.data, delivery.dataUpdatedAt - sentAt >= 60_000)}
             </span>
           </p>
           <div className="flex flex-col gap-2">

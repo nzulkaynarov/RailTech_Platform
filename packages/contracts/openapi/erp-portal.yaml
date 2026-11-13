@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Portal API (Cabinet → ERP)
-  version: 0.12.0
+  version: 0.13.0
   summary: Пространство `/api/portal/v1/` — вызывает Cabinet SPA от имени клиента.
   description: |
     Контракт по `docs/architecture/CONTRACTS.md` §4 и ADR-0004 (Cabinet без бэкенда). Версия 0 (M0-INF-02):
@@ -878,7 +878,7 @@ paths:
         - $ref: '#/components/parameters/Id'
       responses:
         '202':
-          description: Код отправлен
+          description: Код выпущен и передан на отправку; итог письма — `code-delivery`
           content:
             application/json:
               schema:
@@ -903,6 +903,38 @@ paths:
                 $ref: '#/components/schemas/Error'
         '400':
           $ref: '#/components/responses/IdempotencyKeyRequired'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /quotes/{id}/code-delivery/{delivery}:
+    get:
+      tags: [quotes]
+      operationId: getQuoteCodeDelivery
+      summary: Итог письма с кодом акцепта
+      description: |
+        0.10 (FR-12): Cabinet не пишет «код отправлен» заранее — после `request-code` он опрашивает итог письма (раз в 2 с,
+        не дольше минуты). Только письмо с кодом контакта этой сессии; чужое — 404.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - name: delivery
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9]+$'
+      responses:
+        '200':
+          description: Итог письма
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CodeDelivery'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
@@ -4624,7 +4656,7 @@ components:
 
     AcceptanceCodeSent:
       type: object
-      required: [channel, sent_to, expires_in]
+      required: [channel, sent_to, expires_in, delivery]
       properties:
         channel:
           type: string
@@ -4636,6 +4668,28 @@ components:
           type: integer
           minimum: 1
           description: Срок действия кода, секунд
+        delivery:
+          type: [string, 'null']
+          pattern: '^[0-9]+$'
+          description: >-
+            Письмо с кодом (0.10, FR-12): по нему Cabinet узнаёт итог доставки — `GET /quotes/{id}/code-delivery/{delivery}`.
+            `null` — канал без журнала доставки (Telegram) или письмо передать не удалось.
+      additionalProperties: false
+
+    CodeDelivery:
+      type: object
+      required: [state, reason]
+      description: >-
+        Итог письма с кодом (0.10, FR-12): письмо уходит через почтовый сервис компании, итог приходит позже. `queued` — в
+        очереди, `sent` — отправлено, `failed` — не отправлено, `reason` — код причины (`smtp_not_configured`, `rejected`,
+        `unavailable`…; список открытый).
+      properties:
+        state:
+          type: string
+          enum: [queued, sent, failed]
+        reason:
+          type: [string, 'null']
+          pattern: '^[a-z][a-z0-9_]{0,63}$'
       additionalProperties: false
 
     ActAccept:

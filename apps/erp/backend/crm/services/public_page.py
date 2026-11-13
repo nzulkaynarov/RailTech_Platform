@@ -145,15 +145,16 @@ def issue_acceptance_code(quote, request_ip: str = "", *, contact=None, send=Non
     return True
 
 
-def _send_code_email(quote, email: str, code: str, language=None) -> None:
+def _send_code_email(quote, email: str, code: str, language=None):
     """Best-effort delivery of the acceptance code. A transport failure must NOT change the
-    neutral public response, so it is logged and swallowed here (fail_silently)."""
+    neutral public response, so it is logged and swallowed here (fail_silently).
+    Returns the ``EmailLog`` row (or None): the cabinet follows the real result by it (0.10, FR-12)."""
     from notifications.emails import email_brand, send_templated_email
 
     seller_name = getattr(quote.seller_company, "name", None) or "Поставщик"
     deal_ref = quote.deal.title or f"#{quote.deal_id}"
     try:
-        send_templated_email(
+        return send_templated_email(
             "quote_acceptance_code",
             {
                 "code": code,
@@ -171,6 +172,7 @@ def _send_code_email(quote, email: str, code: str, language=None) -> None:
         )
     except Exception:  # noqa: BLE001 — public endpoint: never surface a transport fault
         logger.exception("Acceptance-code email failed for quote %s", quote.pk)
+        return None
 
 
 def verify_code_and_accept(quote, code: str, request_ip: str = "", *, contact=None):
