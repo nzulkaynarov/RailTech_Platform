@@ -438,7 +438,8 @@
         "nothing_recognized": "Yordamchi faylda hech narsa topmadi. Qo‘lda to‘ldiring.",
         "unsupported_file": "PDF yoki xat fotosidan to‘ldirish mumkin.",
         "DEFAULT": "Fayldan to‘ldirib bo‘lmadi. Qo‘lda to‘ldiring."
-      }
+      },
+      "reading": "Fayl o‘qilmoqda va maydonlar to‘ldirilmoqda — yozishda davom etishingiz mumkin."
     }
   },
   "office": {
