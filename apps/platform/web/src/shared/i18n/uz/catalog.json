@@ -647,7 +647,11 @@
     "contact": "Aloqa shaxsi",
     "email": "Pochta",
     "phone": "Telefon",
-    "maker": "Tovarni o‘zi chiqaradi (ishlab chiqaruvchi)"
+    "maker": "Tovarni o‘zi chiqaradi (ishlab chiqaruvchi)",
+    "sections": {
+      "company": "Kompaniya",
+      "contact": "Kontakt"
+    }
   },
   "cabinetAccess": {
     "title": "Kabinetga kirish",
