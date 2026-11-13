@@ -40,9 +40,11 @@ _COUNTED = frozenset({"SETUP_CODE_INVALID", "SETUP_LOCKED"})
 
 @router.get("/setup/state", response_model=SetupState, operation_id="getSetupState")
 async def get_setup_state(request: Request, response: Response) -> SetupState:
-    needs = await crm_setup.fetch_state(request.app.state.crm)
+    state = await crm_setup.fetch_state(request.app.state.crm)
     response.headers["Cache-Control"] = "no-store"
-    return SetupState(needs_admin=needs)
+    return SetupState(
+        needs_admin=state.needs_setup, company_name=(state.company_name or "").strip() or None
+    )
 
 
 @router.post("/setup/admin", response_model=SessionOut, operation_id="createFirstAdmin")

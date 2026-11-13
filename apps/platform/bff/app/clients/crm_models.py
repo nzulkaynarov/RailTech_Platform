@@ -1921,6 +1921,7 @@ class SetupChecklist(BaseModel):
 
 
 class SetupState(BaseModel):
+    company_name: Annotated[str | None, Field(title="Company Name")] = ""
     needs_setup: Annotated[bool, Field(title="Needs Setup")]
 
 

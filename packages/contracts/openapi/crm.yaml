@@ -8921,6 +8921,10 @@ components:
       type: object
     SetupState:
       properties:
+        company_name:
+          default: ''
+          title: Company Name
+          type: string
         needs_setup:
           title: Needs Setup
           type: boolean
@@ -10211,7 +10215,7 @@ components:
       type: http
 info:
   title: RailTech CRM API
-  version: 0.23.0
+  version: 0.24.0
 openapi: 3.1.0
 paths:
   /api/v1/admin/ai-spend:
@@ -17078,7 +17082,10 @@ paths:
       - setup
   /api/v1/setup/state:
     get:
-      description: 'Публично: нужен ли мастер первого запуска (в CRM ещё нет активного администратора).'
+      description: 'Публично: нужен ли мастер первого запуска (в CRM ещё нет активного администратора) и название компании
+        для
+
+        заголовка и экрана входа Платформы (задача «Н3»).'
       operationId: get_setup_state
       responses:
         '200':

@@ -22,6 +22,9 @@ ChecklistKey = Literal[
 
 class SetupState(BaseModel):
     needs_setup: bool
+    # Название компании из настроек (`company.name`; задача «Н3»): заголовок и экран входа
+    # Платформы — до входа, поэтому в публичном ответе. Не секрет: его видит любой на входе.
+    company_name: str = ""
 
 
 class SetupAdminRequest(BaseModel):

@@ -138,6 +138,10 @@ describe("каркас на 1440", () => {
     expect(await screen.findByRole("heading", { level: 1, name: "Лиды" })).toBeVisible();
 
     const rail = screen.getByRole("navigation", { name: "Модули" });
+    // буквы логотипа — из названия компании в настройках (задача «Н3»), приходят с `/setup/state`
+    expect(await within(rail).findByRole("link", { name: "RailTech (демо)" })).toHaveTextContent(
+      "RT",
+    );
     expect(
       within(rail)
         .getAllByRole("link")

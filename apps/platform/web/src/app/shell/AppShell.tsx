@@ -37,6 +37,7 @@ import { PanelContent } from "./PanelContent";
 import { usePanelSlotHost } from "./panelSlotContext";
 import { usePanels } from "./usePanels";
 import { useDockFits, useViewport } from "./useViewport";
+import { useProductName } from "../../shared/lib/useProductName";
 
 const PANEL_ID = "pf-context-panel";
 const MOBILE_BAR_HEIGHT = 60;
@@ -55,6 +56,7 @@ function isMac(): boolean {
 export function AppShell() {
   const { me } = useAuth();
   const { t } = useTranslation(["shell", "modules"]);
+  const product = useProductName();
   const location = useLocation();
   const viewport = useViewport();
   const [menuDrawer, setMenuDrawer] = useState(false);
@@ -338,7 +340,8 @@ export function AppShell() {
           <ModuleRail
             modules={railItems}
             label={t("rail.label")}
-            logoLabel={t("rail.logo")}
+            logoLabel={t("rail.logo", { name: product.name })}
+            logoText={product.initials}
             logoTo="/"
             create={<CreateMenu />}
             profile={profile}
@@ -487,7 +490,8 @@ export function AppShell() {
             variant="bottom"
             modules={railItems}
             label={t("rail.label")}
-            logoLabel={t("rail.logo")}
+            logoLabel={t("rail.logo", { name: product.name })}
+            logoText={product.initials}
             logoTo="/"
             profile={profile}
           />
