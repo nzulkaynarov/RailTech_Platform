@@ -251,6 +251,28 @@ describe("EDS · Создать документ: форма", () => {
     expect(within(route).getByText("Вы → Директор → Бухгалтер (есть сумма)")).toBeVisible();
   });
 
+  it("согласующие и получатели копии (пункт 1.6): выбор в шаге «Согласование», после отправки — в маршруте", async () => {
+    await openForm("manager@demo.example");
+    type("Тема", "Закупка с согласованием");
+    step(/Текст и вложения/);
+    type("Текст", "Прошу согласовать.");
+    step(/Согласование/);
+    fireEvent.mouseDown(screen.getByLabelText("Согласующие"));
+    fireEvent.click(await screen.findByText(/Демо Снабженцев/));
+    fireEvent.mouseDown(screen.getByLabelText("Получатели копии"));
+    const watcher = (await screen.findAllByText(/Демо Инженеров/)).at(-1);
+    if (!watcher) throw new Error("no watcher option");
+    fireEvent.click(watcher);
+
+    await press("Отправить на согласование");
+
+    await waitFor(() => {
+      const saved = readEds().documents.find((d) => d.subject === "Закупка с согласованием");
+      expect(saved?.approvers).toEqual(["u-demo-supply"]);
+      expect(saved?.watchers).toEqual(["u-demo-engineer"]);
+    });
+  });
+
   it("обязательные поля: пустая отправка подсвечивает тему и текст, ничего не уходит на сервер", async () => {
     await openForm("manager@demo.example");
 

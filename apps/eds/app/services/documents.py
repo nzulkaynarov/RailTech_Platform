@@ -50,6 +50,7 @@ from app.services import (
     reply,
     signing_resolve,
 )
+from app.services.employees import get_employee
 from app.services.people import holds_permission, load_directory
 from app.services.storage import ObjectStorage
 
@@ -64,6 +65,9 @@ _TEMPLATE = {
     DocumentKind.APPLICATION: ApprovalTemplate.APPLICATION,
     DocumentKind.REPORT: ApprovalTemplate.REPORT,
 }
+
+# Пункт 1.6 плана: подпись шага согласующего, которого добавил автор (шаблонные — «Директор», «Бухгалтер»).
+APPROVER = "Согласующий"
 
 
 def required_permission(kind: DocumentKind) -> P:
@@ -377,6 +381,8 @@ async def submit(
     changes = edits or DocumentSubmitIn()
     _check_amount(changes.amount)
     _apply_edits(document, changes)
+    if kind is not DocumentKind.LETTER_OUT:
+        await _apply_route_people(session, document, changes)
     if changes.file_ids:
         await files.attach(session, changes.file_ids, actor_id=employee.crm_user_id, document_id=document.id)
     if kind is DocumentKind.LETTER_OUT:
@@ -606,6 +612,22 @@ async def _send_letter(session: AsyncSession, bus: AsyncBus, document: Document,
     await reply.notify_registered(session, bus, document, closed_executors=closed, actor_id=employee.crm_user_id)
 
 
+async def _apply_route_people(session: AsyncSession, document: Document, changes: DocumentSubmitIn) -> None:
+    """Пункт 1.6 плана: согласующие и получатели копии от автора. Не переданы — остаются прежние (повторная отправка
+    после возврата). Только активные сотрудники, без повторов и без самого автора; иначе 422 с полем."""
+    for field, wanted in (("approvers", changes.approvers), ("watchers", changes.watchers)):
+        if wanted is None:
+            continue
+        people = list(dict.fromkeys(wanted))
+        if document.author_crm_user_id in people:
+            raise invalid_fields("Автор не может быть в этом списке.", **{field: "author_not_allowed"})
+        for uid in people:
+            person = await get_employee(session, uid)
+            if person is None or not person.is_active:
+                raise invalid_fields("Выберите действующего сотрудника.", **{field: "not_active_employee"})
+        setattr(document, "extra_approvers" if field == "approvers" else "watchers", people)
+
+
 async def _open_approval(
     session: AsyncSession, bus: AsyncBus, document: Document, employee: Employee, kind: DocumentKind
 ) -> None:
@@ -623,7 +645,9 @@ async def _open_approval(
         bus,
         template=template,
         title=f"{document.number} · {document.subject}",
-        steps=approvals.steps_for(
+        # Пункт 1.6: согласующие автора — перед шагами шаблона, по порядку.
+        steps=[approvals.StepSpec(APPROVER, crm_user_id=uid) for uid in document.extra_approvers or []]
+        + approvals.steps_for(
             template, addressee=document.addressee_crm_user_id, with_amount=document.amount is not None
         ),
         actor_id=employee.crm_user_id,

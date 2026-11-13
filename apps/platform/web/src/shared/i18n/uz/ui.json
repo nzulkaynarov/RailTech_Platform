@@ -133,7 +133,8 @@
     "moveDown": "Pastga: {{name}}",
     "resize": "«{{name}}» ustuni kengligi: torting, ikki marta bosish — mazmunga moslash",
     "narrower": "Torroq: {{name}}",
-    "wider": "Kengroq: {{name}}"
+    "wider": "Kengroq: {{name}}",
+    "pages": "Sahifalar: {{name}}"
   },
   "formSteps": {
     "next": "Keyingi: {{title}}",

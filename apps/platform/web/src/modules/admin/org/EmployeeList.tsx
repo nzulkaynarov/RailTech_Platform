@@ -1,9 +1,9 @@
-import { Table } from "antd";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import type { Employee } from "../../../shared/api/generated/model";
 import { AccessTags, EmployeeStatusTag, Initials, RoleTags } from "./EmployeeCells";
+import { DataTable } from "../../../shared/ui/DataTable/DataTable";
 
 export interface EmployeeListProps {
   items: readonly Employee[];
@@ -72,19 +72,19 @@ export function EmployeeList({ items, selectedId, hrefOf, compact }: EmployeeLis
   }
 
   return (
-    <Table<Employee>
-      rowKey="id"
-      dataSource={[...items]}
-      pagination={false}
-      tableLayout="fixed"
-      rowClassName={(employee) => (employee.id === selectedId ? "pf-org-table-row-selected" : "")}
-      aria-label={label}
+    <DataTable<Employee>
+      tableId="admin.org.employees"
+      caption={label}
+      scrollLabel={label}
+      rows={items}
+      rowKey={(row) => row.id}
+      rowAttrs={(row) => ({ className: row.id === selectedId ? "pf-org-table-row-selected" : "" })}
       columns={[
         {
-          title: t("admin.org.columns.employee"),
-          key: "employee",
-          width: "26%",
-          render: (_, employee) => (
+          id: "employee",
+          header: t("admin.org.columns.employee"),
+          width: 286,
+          cell: (employee) => (
             <div>
               <NameLink
                 employee={employee}
@@ -96,29 +96,29 @@ export function EmployeeList({ items, selectedId, hrefOf, compact }: EmployeeLis
           ),
         },
         {
-          title: t("admin.org.columns.position"),
-          key: "position",
-          width: "19%",
-          render: (_, employee) =>
+          id: "position",
+          header: t("admin.org.columns.position"),
+          width: 209,
+          cell: (employee) =>
             employee.position ?? <span className="pf-hint">{t("admin.org.noPosition")}</span>,
         },
         {
-          title: t("admin.org.columns.roles"),
-          key: "roles",
-          width: "19%",
-          render: (_, employee) => <RoleTags roles={employee.roles} />,
+          id: "roles",
+          header: t("admin.org.columns.roles"),
+          width: 209,
+          cell: (employee) => <RoleTags roles={employee.roles} />,
         },
         {
-          title: t("admin.org.columns.access"),
-          key: "access",
-          width: "20%",
-          render: (_, employee) => <AccessTags employee={employee} />,
+          id: "access",
+          header: t("admin.org.columns.access"),
+          width: 220,
+          cell: (employee) => <AccessTags employee={employee} />,
         },
         {
-          title: t("admin.org.columns.status"),
-          key: "status",
-          width: "16%",
-          render: (_, employee) => <EmployeeStatusTag status={employee.status} />,
+          id: "status",
+          header: t("admin.org.columns.status"),
+          width: 176,
+          cell: (employee) => <EmployeeStatusTag status={employee.status} />,
         },
       ]}
     />

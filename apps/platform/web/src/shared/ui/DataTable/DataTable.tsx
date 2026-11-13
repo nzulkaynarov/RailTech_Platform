@@ -9,6 +9,7 @@ import {
   tableFeatures,
   useTable,
 } from "@tanstack/react-table";
+import { Pagination } from "antd";
 import {
   type HTMLAttributes,
   type PointerEvent,
@@ -67,6 +68,8 @@ export interface DataTableProps<Row> {
   className?: string;
   /** Минимум гибкого столбца, px: ниже суммы таблица прокручивается в своей области */
   flexMin?: number;
+  /** Страницы на клиенте: строк больше — под таблицей переключатель страниц (справочник стран на 250 строк) */
+  pageSize?: number;
 }
 
 const features = tableFeatures({
@@ -102,6 +105,7 @@ export function DataTable<Row extends RowData>({
   rowAttrs,
   className,
   flexMin = 170,
+  pageSize,
 }: DataTableProps<Row>) {
   const { t } = useTranslation("ui");
   const userId = useContext(AuthContext)?.me.id ?? "-";
@@ -144,10 +148,19 @@ export function DataTable<Row extends RowData>({
     };
   }, [saved, byId, columns, firstId]);
 
+  // Номер страницы держится в пределах: после фильтра строк меньше — показываем последнюю страницу, а не пустоту.
+  const [page, setPage] = useState(1);
+  const pages = pageSize ? Math.max(1, Math.ceil(rows.length / pageSize)) : 1;
+  const current = Math.min(page, pages);
+  const shown = useMemo(
+    () => (pageSize ? rows.slice((current - 1) * pageSize, current * pageSize) : rows),
+    [rows, pageSize, current],
+  );
+
   const table = useTable({
     features,
     columns: defs,
-    data: rows,
+    data: shown,
     getRowId: (row: Row) => rowKey(row),
     state,
   });
@@ -403,6 +416,18 @@ export function DataTable<Row extends RowData>({
           })}
         </div>
       </ScrollRegion>
+      {pageSize && pages > 1 ? (
+        <Pagination
+          className="pf-dt-pager"
+          current={current}
+          pageSize={pageSize}
+          total={rows.length}
+          showSizeChanger={false}
+          size="small"
+          aria-label={t("table.pages", { name: caption })}
+          onChange={setPage}
+        />
+      ) : null}
     </div>
   );
 }

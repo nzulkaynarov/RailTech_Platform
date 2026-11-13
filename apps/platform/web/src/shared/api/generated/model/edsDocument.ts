@@ -29,6 +29,10 @@ export interface EdsDocument {
   author: EdsPerson;
   /** `null` — директор (любой, кто согласует служебные записки) */
   addressee: EdsPerson | null;
+  /** Согласующие, которых добавил автор (пункт 1.6), по порядку; их шаги — в `route` */
+  approvers?: EdsPerson[];
+  /** Получатели копии (пункт 1.6); не решают */
+  watchers?: EdsPerson[];
   amount: EdsMoney | null;
   /** @nullable */
   due_date: string | null;

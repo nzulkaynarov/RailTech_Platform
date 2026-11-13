@@ -144,15 +144,19 @@ test.describe("Шапка и бар несохранённого", () => {
       const save = page.getByRole("button", { name: "Сохранить реквизиты" });
       await expect(save).toBeHidden();
 
+      // реквизиты — секциями (§4.1a): телефон — в «Контактах»
+      await page.getByRole("button", { name: /^Контакты/, expanded: false }).click();
       await page.getByLabel("Телефон", { exact: true }).fill("+998 11 111 11 11");
       await expect(save).toBeVisible();
       await expect(page.getByRole("button", { name: "Сохранить реквизиты" })).toHaveCount(1);
       await settledScreenshot(page, "company-savebar");
       await expectNoViolations(page, "Компания, бар");
       // Tab по полям реквизитов: ни одно поле в фокусе не уходит под бар
+      await page.getByRole("button", { name: /^Компания/, expanded: false }).click();
       expect(
         await tabThroughForm(page, page.getByLabel("Полное наименование")),
-      ).toBeGreaterThanOrEqual(8);
+      ).toBeGreaterThanOrEqual(6);
+      await page.getByRole("button", { name: /^Контакты/, expanded: false }).click();
       await page.getByLabel("Телефон", { exact: true }).focus();
 
       // Уход со страницы с правками (рейлом «Настройки» — на первую страницу группы «Сотрудники») спрашивает

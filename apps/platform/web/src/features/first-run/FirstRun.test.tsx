@@ -836,7 +836,7 @@ describe("Банковские реквизиты для счетов (D26G-6)",
     ).toBeVisible();
     expect(within(card).getByRole("link", { name: "Открыть «Реквизиты и бланк»" })).toHaveAttribute(
       "href",
-      "/admin/company",
+      "/admin/company?section=bank",
     );
   });
 

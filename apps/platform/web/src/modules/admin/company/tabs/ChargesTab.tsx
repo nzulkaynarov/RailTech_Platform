@@ -91,6 +91,7 @@ export function ChargesTab() {
             <>
               {items.length > 0 ? <div>{add}</div> : null}
               <ListTable<ChargeTemplate>
+                tableId="admin.company.charges"
                 label={t("charges.title")}
                 data={items}
                 rowKey={(row) => row.id}
@@ -100,41 +101,58 @@ export function ChargesTab() {
                   action: add,
                 }}
                 columns={[
-                  { title: t("charges.basis"), dataIndex: "delivery_basis_name" },
-                  { title: t("charges.type"), dataIndex: "charge_type_name" },
                   {
-                    title: t("charges.amount"),
-                    dataIndex: "default_amount",
-                    align: "right",
-                    render: (value: string) => <span className="pf-num">{value}</span>,
+                    id: "delivery_basis_name",
+                    header: t("charges.basis"),
+                    width: null,
+                    cell: (row) => row.delivery_basis_name,
                   },
                   {
-                    title: t("charges.rate"),
-                    dataIndex: "default_rate_percent",
-                    align: "right",
-                    responsive: ["md"],
-                    render: (value: string | null) =>
-                      value === null ? "—" : <span className="pf-num">{value} %</span>,
+                    id: "charge_type_name",
+                    header: t("charges.type"),
+                    width: null,
+                    cell: (row) => row.charge_type_name,
                   },
                   {
-                    title: t("charges.deduction"),
-                    dataIndex: "is_deduction",
-                    responsive: ["md"],
-                    render: (value: boolean) => (value ? t("yes") : t("no")),
+                    id: "default_amount",
+                    header: t("charges.amount"),
+                    width: null,
+                    numeric: true,
+                    cell: (row) => <span className="pf-num">{row.default_amount}</span>,
                   },
                   {
-                    title: t("status"),
-                    dataIndex: "is_active",
-                    render: (value: boolean) => (
-                      <StatusTag kind="activity" status={value ? "active" : "inactive"}>
-                        {value ? t("active") : t("inactive")}
+                    id: "default_rate_percent",
+                    header: t("charges.rate"),
+                    width: null,
+                    numeric: true,
+                    cell: (row) =>
+                      row.default_rate_percent === null ? (
+                        "—"
+                      ) : (
+                        <span className="pf-num">{row.default_rate_percent} %</span>
+                      ),
+                  },
+                  {
+                    id: "is_deduction",
+                    header: t("charges.deduction"),
+                    width: null,
+                    cell: (row) => (row.is_deduction ? t("yes") : t("no")),
+                  },
+                  {
+                    id: "is_active",
+                    header: t("status"),
+                    width: null,
+                    cell: (row) => (
+                      <StatusTag kind="activity" status={row.is_active ? "active" : "inactive"}>
+                        {row.is_active ? t("active") : t("inactive")}
                       </StatusTag>
                     ),
                   },
                   {
-                    title: t("actions"),
-                    key: "actions",
-                    render: (_: unknown, row) => {
+                    id: "actions",
+                    header: t("actions"),
+                    width: 160,
+                    cell: (row) => {
                       const name = `${row.charge_type_name} · ${row.delivery_basis}`;
                       return (
                         <span className="pf-co-actions">
