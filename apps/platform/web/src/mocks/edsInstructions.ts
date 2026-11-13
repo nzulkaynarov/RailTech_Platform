@@ -77,6 +77,8 @@ function access() {
     register: built?.resources["eds.inbox.register"] === "full",
     read: Boolean(built?.resources["eds.inbox"] || built?.resources["eds.inbox.register"]),
     admin: built?.resources["admin"] === "full",
+    // пункт 1.6: автор документа выбирает согласующих и получателей копии
+    author: built?.resources["eds.memo.create"] === "full",
   };
 }
 
@@ -574,7 +576,8 @@ export const edsInstructionsHandlers = [
     const held = access();
     if (!me()) return expired();
     // EDS-REG: администратору — люди общих шаблонов резолюций.
-    if (!held.resolve && !held.register && !held.admin) return forbiddenBff("eds.inbox");
+    if (!held.resolve && !held.register && !held.admin && !held.author)
+      return forbiddenBff("eds.inbox");
     const list: EdsStaffList = {
       items: STAFF.map((u) => ({ id: u.id, name: u.name, position: u.position })).sort((a, b) =>
         a.name.localeCompare(b.name, "ru"),

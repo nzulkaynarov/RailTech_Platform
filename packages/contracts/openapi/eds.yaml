@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — EDS API (электронный документооборот)
-  version: 0.16.0
+  version: 0.17.0
   summary: Пространство `/api/v1/` сервиса EDS — вызывает BFF Платформы от имени сотрудника.
   description: |
     Контракт сервиса EDS (`apps/eds`, ADR-0015; `docs/history/runbooks/wave12-eds-c1.md` §2). EDS — владелец реестра документов и
@@ -1763,7 +1763,7 @@ paths:
         пути делопроизводства: исполнитель — любой активный сотрудник, без проверки зоны (SPEC-v3 §3.2a п. 2). Администратору
         (`bus.manage`) — для общих шаблонов резолюций (EDS-REG); держателю `signing.manage` — выбрать сотрудника для
         полномочия подписи (SIGN-2).
-      x-rt-permissions: [letters.register, letters.resolve, bus.manage, signing.manage]
+      x-rt-permissions: [letters.register, letters.resolve, bus.manage, signing.manage, memos.create]
       responses:
         '200':
           description: Сотрудники
@@ -5389,6 +5389,22 @@ components:
           maxItems: 50
           items:
             $ref: '#/components/schemas/Uuid'
+        approvers:
+          type: array
+          maxItems: 10
+          items:
+            type: integer
+            minimum: 1
+          description: >-
+            `crm_user_id` согласующих перед шагами шаблона, по порядку (пункт 1.6 плана); не передано — прежние. Не
+            активный сотрудник — 422 `not_active_employee`, автор в списке — 422 `author_not_allowed`. Письму не нужно
+        watchers:
+          type: array
+          maxItems: 20
+          items:
+            type: integer
+            minimum: 1
+          description: '`crm_user_id` получателей копии — видят документ, не решают; не передано — прежние'
         send:
           type: boolean
           default: false
@@ -5633,6 +5649,16 @@ components:
             - $ref: '#/components/schemas/PersonRef'
             - type: 'null'
           description: '`null` — директор (любой с `memos.approve`)'
+        approvers:
+          type: array
+          items:
+            $ref: '#/components/schemas/PersonRef'
+          description: Согласующие, которых автор добавил перед шагами шаблона, по порядку (пункт 1.6 плана)
+        watchers:
+          type: array
+          items:
+            $ref: '#/components/schemas/PersonRef'
+          description: Получатели копии — видят документ, не решают (пункт 1.6 плана)
         amount:
           oneOf:
             - $ref: '#/components/schemas/Money'

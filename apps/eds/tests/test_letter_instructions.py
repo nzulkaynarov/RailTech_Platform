@@ -448,4 +448,7 @@ async def test_draft_and_employees_rights(
     validate("EmployeeList", people.json())
     names = [p["full_name"] for p in people.json()["items"]]
     assert "Уволенный" not in names and names == sorted(names)
-    assert_error(await client.get("/api/v1/employees", headers=staff["supplier"].headers), 403, "FORBIDDEN")
+    # 1.6: список нужен любому автору документа (согласующие и копии), без прав — по-прежнему нет
+    supplier = await client.get("/api/v1/employees", headers=staff["supplier"].headers)
+    assert supplier.status_code == 200, supplier.text
+    assert_error(await client.get("/api/v1/employees", headers=staff["nobody"].headers), 403, "FORBIDDEN")

@@ -93,6 +93,10 @@ describe("Admin · Компания: реквизиты для счетов (D26
       state.bankAccounts = [];
     });
     await openTab("details", "admin@demo.example");
+    // реквизиты — секциями (§4.1a): счета — третья секция
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Банковские счета/, expanded: false }),
+    );
 
     expect(await screen.findByText(/Нет основного счёта в сумах/)).toBeVisible();
     fireEvent.click(
@@ -759,7 +763,9 @@ describe("Справочники «Расчёта» на общем ресурс
     fireEvent.change(screen.getByRole("searchbox", { name: "Поиск по коду и названию" }), {
       target: { value: "нет такой" },
     });
-    expect(await within(region).findByText("Ничего не найдено")).toBeInTheDocument();
+    // пусто — словами вместо таблицы (ListTable на DataTable, пункт «Т»)
+    expect(await screen.findByText("Ничего не найдено")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Страны" })).toBeNull();
   });
 });
 

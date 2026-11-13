@@ -156,6 +156,12 @@ function Details({ doc }: { doc: EdsDocument }) {
       ) : null,
     },
     { key: "due", label: t("panel.fields.due"), value: doc.due_date ? date(doc.due_date) : null },
+    // Пункт 1.6: получатели копии (согласующие автора — шаги маршрута ниже)
+    {
+      key: "watchers",
+      label: t("panel.fields.watchers"),
+      value: doc.watchers?.length ? doc.watchers.map((p) => p.full_name).join(", ") : null,
+    },
     {
       key: "deal",
       label: t("panel.fields.deal"),

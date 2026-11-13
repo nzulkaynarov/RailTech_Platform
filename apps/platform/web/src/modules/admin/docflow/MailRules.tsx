@@ -115,6 +115,7 @@ export function MailRules({ readOnly }: { readOnly: boolean }) {
         <Alert type="error" showIcon role="alert" message={t("settings.dict.rules.errors.load")} />
       ) : null}
       <ListTable<MailSenderRule>
+        tableId="admin.docflow.mailRules"
         label={t("settings.dict.rules.title")}
         data={rules.data?.items ?? []}
         loading={rules.isPending}
@@ -125,24 +126,28 @@ export function MailRules({ readOnly }: { readOnly: boolean }) {
         }}
         columns={[
           {
-            title: t("settings.dict.rules.pattern"),
-            key: "pattern",
-            render: (_: unknown, row) => <b>{row.pattern}</b>,
+            id: "pattern",
+            header: t("settings.dict.rules.pattern"),
+            width: null,
+            cell: (row) => <b>{row.pattern}</b>,
           },
           {
-            title: t("settings.dict.rules.type"),
-            key: "type",
-            render: (_: unknown, row) => typeName(row.type_code),
+            id: "type",
+            header: t("settings.dict.rules.type"),
+            width: null,
+            cell: (row) => typeName(row.type_code),
           },
           {
-            title: t("settings.dict.rules.createdBy"),
-            key: "by",
-            render: (_: unknown, row) => row.created_by ?? "—",
+            id: "by",
+            header: t("settings.dict.rules.createdBy"),
+            width: null,
+            cell: (row) => row.created_by ?? "—",
           },
           {
-            title: t("settings.dict.actions"),
-            key: "actions",
-            render: (_: unknown, row) => (
+            id: "actions",
+            header: t("settings.dict.actions"),
+            width: 160,
+            cell: (row) => (
               <Button
                 type="link"
                 size="small"

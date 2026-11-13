@@ -5,7 +5,7 @@ import uuid
 from enum import StrEnum
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, PositiveInt, model_validator
 
 from app.schemas.approvals import Decision
 from app.schemas.common import FileRef, JournalEntry, LetterSender, Money, PersonRef, Strict
@@ -122,6 +122,9 @@ class DocumentSubmitIn(Strict):
     amount: Money | None = None
     due_date: dt.date | None = None
     file_ids: FileIds | None = None
+    # Пункт 1.6 плана: согласующие перед шагами шаблона (по порядку) и получатели копии; не передано — прежние.
+    approvers: Annotated[list[PositiveInt], Field(max_length=10)] | None = None
+    watchers: Annotated[list[PositiveInt], Field(max_length=20)] | None = None
     send: bool = False
     dispatch_method: Literal["email", "paper", "courier", "edo", "other"] | None = "email"
 
@@ -208,6 +211,8 @@ class Document(BaseModel):
     text: str
     author: PersonRef
     addressee: PersonRef | None
+    approvers: list[PersonRef] = []
+    watchers: list[PersonRef] = []
     amount: Money | None
     due_date: dt.date | None
     files: list[FileRef]
