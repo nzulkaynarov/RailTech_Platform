@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Alert, App, Button, Modal, Table, Upload } from "antd";
+import { Alert, App, Button, Modal, Upload } from "antd";
 import type { TFunction } from "i18next";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -17,6 +17,7 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { downloadFile } from "../../../shared/api/download";
 import { localName } from "../../eds/dictionaries";
+import { DataTable } from "../../../shared/ui/DataTable/DataTable";
 
 const ACCEPT =
   ".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv";
@@ -149,25 +150,37 @@ export function DictionaryFile({
             />
           ) : null}
           {shown.length > 0 ? (
-            <Table<DictionaryImportRow>
-              size="small"
+            <DataTable<DictionaryImportRow>
+              tableId="admin.docflow.dictionaryFile"
+              caption={t("settings.dict.file.title", { name: title })}
+              scrollLabel={t("settings.dict.file.title", { name: title })}
+              rows={shown}
               rowKey={(row) => String(row.line)}
-              dataSource={shown}
-              pagination={shown.length > 20 ? { pageSize: 20 } : false}
-              scroll={{ x: true }}
+              pageSize={20}
               columns={[
-                { title: t("settings.dict.file.line"), dataIndex: "line", width: 72 },
-                { title: t("settings.dict.name"), dataIndex: "name" },
                 {
-                  title: t("settings.dict.file.action"),
-                  dataIndex: "action",
-                  render: (value: DictionaryImportRow["action"]) =>
-                    t(`settings.dict.file.actions.${value}`),
+                  id: "line",
+                  header: t("settings.dict.file.line"),
+                  width: 72,
+                  cell: (row) => row.line,
                 },
                 {
-                  title: t("settings.dict.file.details"),
-                  key: "details",
-                  render: (_: unknown, row) => rowText(t, dictionary, row, i18n.language),
+                  id: "name",
+                  header: t("settings.dict.name"),
+                  width: null,
+                  cell: (row) => row.name,
+                },
+                {
+                  id: "action",
+                  header: t("settings.dict.file.action"),
+                  width: null,
+                  cell: (row) => t(`settings.dict.file.actions.${row.action}`),
+                },
+                {
+                  id: "details",
+                  header: t("settings.dict.file.details"),
+                  width: null,
+                  cell: (row) => rowText(t, dictionary, row, i18n.language),
                 },
               ]}
             />

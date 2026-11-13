@@ -763,7 +763,9 @@ describe("Справочники «Расчёта» на общем ресурс
     fireEvent.change(screen.getByRole("searchbox", { name: "Поиск по коду и названию" }), {
       target: { value: "нет такой" },
     });
-    expect(await within(region).findByText("Ничего не найдено")).toBeInTheDocument();
+    // пусто — словами вместо таблицы (ListTable на DataTable, пункт «Т»)
+    expect(await screen.findByText("Ничего не найдено")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Страны" })).toBeNull();
   });
 });
 

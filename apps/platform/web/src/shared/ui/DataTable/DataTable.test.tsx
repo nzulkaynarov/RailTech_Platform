@@ -130,4 +130,42 @@ describe("sanitizeSettings", () => {
     expect(sanitizeSettings(null)).toEqual({});
     expect(sanitizeSettings([1])).toEqual({});
   });
+
+  it("страницы на клиенте: строк больше pageSize — переключатель под таблицей, меньше — без него", () => {
+    const many: Doc[] = Array.from({ length: 5 }, (_, i) => ({
+      id: String(i + 1),
+      number: `СЗ-00${String(i + 1)}`,
+      subject: `Тема ${String(i + 1)}`,
+      amount: "1",
+    }));
+    const { rerender } = render(
+      <DataTable
+        tableId="test.pages"
+        caption="Документы"
+        scrollLabel="Таблица документов"
+        columns={COLUMNS}
+        rows={many}
+        rowKey={(row) => row.id}
+        pageSize={2}
+      />,
+    );
+    expect(screen.getAllByRole("row")).toHaveLength(3);
+    const pager = screen.getByRole("list", { name: "Страницы: Документы" });
+    fireEvent.click(within(pager).getByTitle("3"));
+    expect(screen.getByText("СЗ-005")).toBeInTheDocument();
+    // после фильтра строк меньше: остаётся последняя страница, а не пустая таблица; одна страница — без переключателя
+    rerender(
+      <DataTable
+        tableId="test.pages"
+        caption="Документы"
+        scrollLabel="Таблица документов"
+        columns={COLUMNS}
+        rows={many.slice(0, 2)}
+        rowKey={(row) => row.id}
+        pageSize={2}
+      />,
+    );
+    expect(screen.getByText("СЗ-002")).toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: "Страницы: Документы" })).toBeNull();
+  });
 });

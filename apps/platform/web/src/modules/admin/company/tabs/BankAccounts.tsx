@@ -103,37 +103,51 @@ export function BankAccounts() {
               />
               {items.length > 0 ? <div>{add}</div> : null}
               <ListTable<CompanyBankAccount>
+                tableId="admin.company.bankAccounts"
                 label={t("bank.title")}
                 data={items}
                 rowKey={(row) => row.id}
                 empty={{ title: t("bank.empty.title"), text: t("bank.empty.text"), action: add }}
                 columns={[
                   {
-                    title: t("bank.account"),
-                    dataIndex: "account",
-                    render: (value: string) => <span className="pf-num">{value}</span>,
-                  },
-                  { title: t("bank.currency"), dataIndex: "currency" },
-                  { title: t("bank.bankName"), dataIndex: "bank_name", responsive: ["md"] },
-                  {
-                    title: t("bank.isDefault"),
-                    dataIndex: "is_default",
-                    render: (value: boolean) => (value ? t("yes") : t("no")),
+                    id: "account",
+                    header: t("bank.account"),
+                    width: null,
+                    cell: (row) => <span className="pf-num">{row.account}</span>,
                   },
                   {
-                    title: t("status"),
-                    dataIndex: "is_active",
-                    responsive: ["md"],
-                    render: (value: boolean) => (
-                      <StatusTag kind="activity" status={value ? "active" : "inactive"}>
-                        {value ? t("active") : t("inactive")}
+                    id: "currency",
+                    header: t("bank.currency"),
+                    width: null,
+                    cell: (row) => row.currency,
+                  },
+                  {
+                    id: "bank_name",
+                    header: t("bank.bankName"),
+                    width: null,
+                    cell: (row) => row.bank_name,
+                  },
+                  {
+                    id: "is_default",
+                    header: t("bank.isDefault"),
+                    width: null,
+                    cell: (row) => (row.is_default ? t("yes") : t("no")),
+                  },
+                  {
+                    id: "is_active",
+                    header: t("status"),
+                    width: null,
+                    cell: (row) => (
+                      <StatusTag kind="activity" status={row.is_active ? "active" : "inactive"}>
+                        {row.is_active ? t("active") : t("inactive")}
                       </StatusTag>
                     ),
                   },
                   {
-                    title: t("actions"),
-                    key: "actions",
-                    render: (_: unknown, row) => (
+                    id: "actions",
+                    header: t("actions"),
+                    width: 160,
+                    cell: (row) => (
                       <span className="pf-co-actions">
                         <Button
                           type="link"
