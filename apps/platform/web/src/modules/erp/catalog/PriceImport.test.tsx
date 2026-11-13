@@ -34,7 +34,8 @@ describe("Загрузка прайса партнёра", () => {
     await open("supply@demo.example", "?part=import");
 
     fireEvent.click(await screen.findByRole("button", { name: "Новый партнёр" }));
-    const form = await findModal("Новый партнёр");
+    // форма секциями в боковом окне (§4.1a)
+    const form = await screen.findByRole("region", { name: "Новый партнёр" });
     fireEvent.change(within(form).getByLabelText("Название"), {
       target: { value: "Werk Nordlicht GmbH" },
     });
@@ -43,7 +44,9 @@ describe("Загрузка прайса партнёра", () => {
       target: { value: "HRB 000001" },
     });
     fireEvent.click(within(form).getByRole("button", { name: "Добавить" }));
-    await modalClosed("Новый партнёр");
+    await waitFor(() => {
+      expect(screen.queryByRole("region", { name: "Новый партнёр" })).toBeNull();
+    });
 
     fireEvent.change(screen.getByLabelText("Файл прайса"), { target: { files: [xlsx()] } });
     const check = screen.getByRole("button", { name: "Проверить" });

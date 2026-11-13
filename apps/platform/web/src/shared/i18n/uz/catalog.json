@@ -647,7 +647,11 @@
     "contact": "Aloqa shaxsi",
     "email": "Pochta",
     "phone": "Telefon",
-    "maker": "Tovarni o‘zi chiqaradi (ishlab chiqaruvchi)"
+    "maker": "Tovarni o‘zi chiqaradi (ishlab chiqaruvchi)",
+    "sections": {
+      "company": "Kompaniya",
+      "contact": "Kontakt"
+    }
   },
   "cabinetAccess": {
     "title": "Kabinetga kirish",
@@ -956,7 +960,10 @@
       "U pozitsiya kartasida va «Texnik hujjatlar» bo‘limida paydo bo‘ladi.",
       "«Mijozga ko‘rinadi» belgisi saqlanadi; mijoz kabinetida keyinroq ko‘rinadi."
     ],
-    "editSteps": ["O‘zgarishlar hujjatda saqlanadi.", "Faylning o‘zi o‘zgarmaydi."],
+    "editSteps": [
+      "O‘zgarishlar hujjatda saqlanadi.",
+      "Faylning o‘zi o‘zgarmaydi."
+    ],
     "saved": "Hujjat saqlandi."
   },
   "queue": {
