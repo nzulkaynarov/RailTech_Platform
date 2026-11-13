@@ -129,7 +129,7 @@ test.describe("Настройки без переброса", () => {
       );
       await expect(page.getByRole("complementary", { name: "Боковое окно" })).toHaveCount(0);
       await expect(page.getByText("Записей: 13")).toBeVisible();
-      await expect(page).toHaveTitle("История · Действия людей — RailTech Platform");
+      await expect(page).toHaveTitle("История · Действия людей — RailTech (демо)");
       await expectNoViolations(page, `journal people ${String(width)}`);
       await shot(page, "journal-people");
       await filter.getByRole("link", { name: "Обмен между системами" }).click();
@@ -139,7 +139,7 @@ test.describe("Настройки без переброса", () => {
       await expect(
         page.getByRole("heading", { level: 1, name: "Обмен между системами" }),
       ).toBeVisible();
-      await expect(page).toHaveTitle("Обмен между системами — RailTech Platform");
+      await expect(page).toHaveTitle("Обмен между системами — RailTech (демо)");
       await expectNoViolations(page, `journal systems ${String(width)}`);
       await shot(page, "journal-systems");
 

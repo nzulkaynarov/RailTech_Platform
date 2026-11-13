@@ -8929,6 +8929,8 @@ export interface components {
     SetupState: {
       /** @description В CRM ещё нет активного администратора — нужен экран «Первый запуск» */
       needs_admin: boolean;
+      /** @description Название компании из «Настройки · Компания» (задача «Н3»): Платформа показывает его в заголовке вкладки, у логотипа и на экране входа, а не зашитое в код. `null` — не задано, Платформа пишет нейтральное «Платформа» */
+      company_name?: string | null;
     };
     SetupAdminIn: {
       /** @description Одноразовый код первого запуска из журнала `crm-api` (`setup_code_issued`) */

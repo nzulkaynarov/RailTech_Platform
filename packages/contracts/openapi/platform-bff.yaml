@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.64.0
+  version: 0.65.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -16443,6 +16443,11 @@ components:
         needs_admin:
           type: boolean
           description: В CRM ещё нет активного администратора — нужен экран «Первый запуск»
+        company_name:
+          type: [string, 'null']
+          description: >-
+            Название компании из «Настройки · Компания» (задача «Н3»): Платформа показывает его в заголовке вкладки, у
+            логотипа и на экране входа, а не зашитое в код. `null` — не задано, Платформа пишет нейтральное «Платформа»
 
     SetupAdminIn:
       type: object
