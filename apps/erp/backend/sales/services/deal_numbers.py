@@ -19,15 +19,24 @@ from typing import Optional
 from django.db import transaction
 from django.utils import timezone
 
+# Префиксы до 2026-11-13 (SPEC-v3 §2.2): выданные номера не меняются, поиск их находит. Новые — из схемы нумерации
+# («Настройки · Нумерация», виды REQ и PRJ, по умолчанию RQ и PRJ; задача «Н»).
 REQUEST_PREFIX = "ЗВ"
 PROJECT_PREFIX = "ПР"
-_WIDTH = 3
-_LATIN = {"zv": REQUEST_PREFIX, "pr": PROJECT_PREFIX}
-_QUERY = re.compile(r"(?P<prefix>[^\W\d_]{2})?[\s\-–—/]*(?P<year>\d{4})[\s\-–—/]+(?P<seq>\d{1,9})")
+_LEGACY = {"зв", "пр", "zv", "pr"}
+_QUERY = re.compile(r"(?P<prefix>[^\W\d_]{1,8})?[\s\-–—/]*(?P<year>\d{4})[\s\-–—/]+(?P<seq>\d{1,9})")
+
+
+def _label(kind: str) -> str:
+    from crm.services.numbering import type_label
+
+    return type_label(kind)
 
 
 def format_number(prefix: str, year: int, seq: int) -> str:
-    return f"{prefix}-{year:04d}-{seq:0{_WIDTH}d}"
+    from crm.services.numbering import own_format_number
+
+    return own_format_number(prefix, year, seq)
 
 
 def _next_seq(year: int) -> int:
@@ -47,7 +56,7 @@ def assign(deal) -> None:
     year = timezone.localdate().year
     seq = _next_seq(year)
     deal.number_year, deal.number_seq = year, seq
-    deal.number = format_number(REQUEST_PREFIX, year, seq)
+    deal.number = format_number(_label("REQ"), year, seq)
 
 
 def promote_to_project(deal) -> bool:
@@ -57,7 +66,7 @@ def promote_to_project(deal) -> bool:
     if not deal.is_project:
         deal.is_project = fields["is_project"] = True
     number = (
-        format_number(PROJECT_PREFIX, deal.number_year, deal.number_seq) if deal.number_seq and deal.number_year else ""
+        format_number(_label("PRJ"), deal.number_year, deal.number_seq) if deal.number_seq and deal.number_year else ""
     )
     renumbered = bool(number) and deal.number != number
     if renumbered:
@@ -68,11 +77,12 @@ def promote_to_project(deal) -> bool:
 
 
 def parse_query(text: str) -> Optional[tuple[int, int]]:
-    """`ЗВ-2026-104`, `ПР-2026-104`, `zv 2026 104`, `2026-104` → (2026, 104); не номер — None."""
+    """`RQ-2026-104`, `PRJ-2026-104`, `ЗВ-2026-104`, `zv 2026 104`, `2026-104` → (2026, 104); не номер сделки — None.
+    Префикс — нынешние метки заявки и проекта из схемы или прежние ЗВ/ПР; регистр не важен."""
     match = _QUERY.fullmatch((text or "").strip())
     if match is None:
         return None
     prefix = (match["prefix"] or "").casefold()
-    if prefix and _LATIN.get(prefix, prefix.upper()) not in (REQUEST_PREFIX, PROJECT_PREFIX):
+    if prefix and prefix not in _LEGACY | {_label("REQ").casefold(), _label("PRJ").casefold()}:
         return None
     return int(match["year"]), int(match["seq"])

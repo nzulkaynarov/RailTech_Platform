@@ -73,7 +73,7 @@ def default_warehouse() -> Warehouse:
 
 
 @transaction.atomic
-def next_number(kind: str, prefix: str) -> tuple[str, int, int]:
+def next_number(kind: str) -> tuple[str, int, int]:
     """(номер, год, NNN) из счётчика вида и года под блокировкой: без пропусков, откат транзакции возвращает номер.
     Вызывать внутри транзакции."""
     year = timezone.localdate().year
@@ -81,7 +81,10 @@ def next_number(kind: str, prefix: str) -> tuple[str, int, int]:
     counter = DocumentCounter.objects.select_for_update().get(kind=kind, year=year)
     counter.last_value += 1
     counter.save(update_fields=["last_value"])
-    return f"{prefix}-{year:04d}-{counter.last_value:03d}", year, counter.last_value
+    from crm.services.numbering import own_format_number, type_label
+
+    # Метка — вид `kind` схемы нумерации (SHP, PO; задача «Н»), не константа в коде.
+    return own_format_number(type_label(kind), year, counter.last_value), year, counter.last_value
 
 
 @transaction.atomic
@@ -538,7 +541,7 @@ def ship(
     for line in lines:
         if line.reservation_id not in reservations:
             raise StockError("RESERVATION_NOT_FOUND", 404)
-    number, year, seq = next_number("SHP", "ОТГ")
+    number, year, seq = next_number("SHP")
     shipment = Shipment.objects.create(
         number=number,
         number_year=year,

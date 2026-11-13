@@ -19,19 +19,19 @@ def _next_invoice_number(seller_company=None) -> str:
     # load). Carries the seller company so the invoice gets THEIR prefix + counter.
     from .numbering import next_document_number
 
-    return next_document_number("INV", "СЧ", company=seller_company)
+    return next_document_number("INV", company=seller_company)
 
 
 def _next_receipt_number(seller_company=None) -> str:
-    from .numbering import RECEIPT_LABEL, next_document_number
+    from .numbering import next_document_number
 
-    return next_document_number("RCP", RECEIPT_LABEL, company=seller_company)
+    return next_document_number("RCP", company=seller_company)
 
 
 def _next_act_number(seller_company=None) -> str:
     from .numbering import next_document_number
 
-    return next_document_number("ACT", "АКТ", company=seller_company)
+    return next_document_number("ACT", company=seller_company)
 
 
 def _istatus(code: str):

@@ -1,10 +1,10 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Alert, App, Form, Input, InputNumber, Radio, Select } from "antd";
+import { App, Form, Input, InputNumber, Radio, Select } from "antd";
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
 import type {
-  DocumentKind,
+  NumberingKind,
   NumberingResetPeriod,
   NumberingScheme,
   NumberingUpdate,
@@ -19,7 +19,21 @@ import { QueryGate, SaveBlock, TabHeader, ReadOnlyFence } from "../common";
 import { changedFields, isEmptyObject } from "../diff";
 import { errorFields } from "../errors";
 
-const KINDS: DocumentKind[] = ["quote", "contract", "invoice", "act", "letter"];
+// Все виды номеров ERP (задача «Н»): обозначения — здесь, в коде их нет.
+const KINDS: NumberingKind[] = [
+  "request",
+  "project",
+  "quote",
+  "contract",
+  "invoice",
+  "act",
+  "receipt",
+  "delivery_note",
+  "purchase_order",
+  "shipment",
+  "partner_contract",
+  "letter",
+];
 const RESET: NumberingResetPeriod[] = ["never", "yearly", "monthly"];
 // «Стандартный» — умолчание SPEC-v3 §2.2 (`КП-2026/042`); «Через дефис» — прежнее умолчание, его маски у компаний остаются.
 const PRESETS = [
@@ -144,14 +158,6 @@ function NumberingForm({ scheme }: { scheme: NumberingScheme }) {
         >
           <Input maxLength={16} className="pf-co-mono" autoComplete="off" />
         </Form.Item>
-        {values.prefix.trim() === "" ? (
-          <Alert
-            type="info"
-            showIcon
-            style={{ marginBottom: 16 }}
-            message={t("numbering.prefixlessBanner")}
-          />
-        ) : null}
         <Form.Item label={t("numbering.format")} style={{ marginBottom: 8 }}>
           <Radio.Group
             aria-label={t("numbering.format")}
@@ -223,7 +229,7 @@ function NumberingForm({ scheme }: { scheme: NumberingScheme }) {
           disabled={isEmptyObject(changed) || !maskOk}
           dirty={!isEmptyObject(changed)}
           error={update.error}
-          note={values.prefix.trim() === "" ? t("numbering.noteNoPrefix") : t("numbering.note")}
+          note={t("numbering.note")}
           onDiscard={() => {
             form.resetFields();
             update.reset();

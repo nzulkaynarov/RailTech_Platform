@@ -36,8 +36,8 @@ def _deal(title="Заявка"):
 def test_new_deals_get_request_numbers_in_a_row():
     first, second = _deal(), _deal()
 
-    assert first.number == f"ЗВ-{YEAR}-001" and (first.number_year, first.number_seq) == (YEAR, 1)
-    assert second.number == f"ЗВ-{YEAR}-002"
+    assert first.number == f"RQ-{YEAR}-001" and (first.number_year, first.number_seq) == (YEAR, 1)
+    assert second.number == f"RQ-{YEAR}-002"
     assert DealNumberCounter.objects.get(year=YEAR).last_value == 2
 
 
@@ -49,7 +49,7 @@ def test_rolled_back_deal_returns_its_number():
         _deal("откатится")
         raise RuntimeError("rollback")
 
-    assert _deal().number == f"ЗВ-{YEAR}-002"
+    assert _deal().number == f"RQ-{YEAR}-002"
 
 
 @pytest.mark.django_db
@@ -58,7 +58,7 @@ def test_existing_number_is_kept_on_save():
     deal.title = "Новое название"
     deal.save()
     deal.refresh_from_db()
-    assert deal.number == f"ЗВ-{YEAR}-001"
+    assert deal.number == f"RQ-{YEAR}-001"
 
 
 @pytest.mark.django_db
@@ -70,7 +70,7 @@ def test_project_stage_turns_the_request_into_a_project_with_the_same_number(sta
 
     assert error is None
     deal.refresh_from_db()
-    assert deal.number == f"ПР-{YEAR}-001" and deal.number_seq == 1
+    assert deal.number == f"PRJ-{YEAR}-001" and deal.number_seq == 1
     assert deal.is_project, "стадия — полем, а не по префиксу (задача «Н»)"
     assert deal_numbers.promote_to_project(deal) is False, "повтор ничего не меняет"
 
@@ -95,10 +95,14 @@ def test_new_deal_is_a_request_and_a_numberless_deal_still_becomes_a_project():
         ("pr-2026-0104", (2026, 104)),
         ("2026-104", (2026, 104)),
         ("КП-2026-104", None),
+        ("RQ-2026-104", (2026, 104)),
+        ("prj 2026 104", (2026, 104)),
+        ("QT-2026-104", None),
         ("рельсы", None),
         ("", None),
     ],
 )
+@pytest.mark.django_db  # метки заявки и проекта читаются из схемы нумерации
 def test_parse_query(text, parsed):
     assert deal_numbers.parse_query(text) == parsed
 
@@ -172,7 +176,9 @@ def test_0008_numbers_old_deals_by_creation_order_and_sets_the_counter():
     OldDeal = old.get_model("sales", "Deal")
     Stage = old.get_model("sales", "DealStage")
     first = OldDeal.objects.create(title="старая 1")
-    second = OldDeal.objects.create(title="старая 2", stage=Stage.objects.get(code="CONTRACT_SIGNED"))
+    # Транзакционный тест до этого мог очистить справочник стадий — нужная стадия создаётся, если её нет.
+    signed, _ = Stage.objects.get_or_create(code="CONTRACT_SIGNED", defaults={"name": "Договор подписан"})
+    second = OldDeal.objects.create(title="старая 2", stage=signed)
 
     executor = MigrationExecutor(connection)
     executor.loader.build_graph()
@@ -185,7 +191,7 @@ def test_0008_numbers_old_deals_by_creation_order_and_sets_the_counter():
     assert at_0008.get_model("sales", "DealNumberCounter").objects.get(year=YEAR).last_value == 2
 
     _migrate_to_latest()
-    assert _deal().number == f"ЗВ-{YEAR}-003"
+    assert _deal().number == f"RQ-{YEAR}-003"
 
 
 def _migrate_to_latest():

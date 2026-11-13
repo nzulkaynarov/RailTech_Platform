@@ -107,7 +107,7 @@ def test_request_is_a_v3_deal_with_a_number_urgency_and_the_request_manager_as_o
     data = response.json()
     deal = Deal.objects.get(pk=data["erp_request_id"])
     assert data == {"erp_company_id": handed["erp_company_id"], "erp_request_id": deal.pk, "number": deal.number}
-    assert deal.number.startswith("ЗВ-") and deal.process == "v3" and deal.urgency == "urgent"
+    assert deal.number.startswith("RQ-") and deal.process == "v3" and deal.urgency == "urgent"
     assert deal.crm_request_id == 318 and deal.manager_id == manager.pk, "владелец сделки — менеджер заявки (B-008)"
     assert deal.stage.code == "DRAFT" and deal.notes == "Нужны 20 комплектов, срок — ноябрь"
     assert deal.contact.name == "Иван Иванов", "без контакта в теле — основной контакт компании"

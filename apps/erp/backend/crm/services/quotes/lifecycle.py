@@ -200,7 +200,7 @@ class QuoteLifecycleService:
         if not quote.number:
             from crm.services.numbering import next_document_number
 
-            quote.number = next_document_number("KP", "КП", seller_company)
+            quote.number = next_document_number("KP", company=seller_company)
 
         # Default offer validity (Odoo Default Validity): a sent КП should carry an expiry. If
         # valid_until is still unset and the ISSUING company configured default_offer_validity_days,
