@@ -289,3 +289,12 @@ def test_outcome_contacts_are_optional_and_unknown_ids_do_not_matter() -> None:
     assert REGISTRY.validate_data(event_type, data, tolerant=True) == []
     payload = parse_erp_event(event_of(event_type, data=data)).payload
     assert (payload.erp_contact_id, payload.crm_contact_id) == (None, None)
+
+
+def test_eds_events_with_labeled_numbers_go_to_the_same_handlers_in_v1_and_v2() -> None:
+    """Задача «Н»: EDS публикует v2 с номером из настроек нумерации; CRM обрабатывает обе версии."""
+    for name in ("letter.registered", "notice.requested"):
+        v1 = default_registry.match(f"uz.railtech.eds.{name}.v1")
+        v2 = default_registry.match(f"uz.railtech.eds.{name}.v2")
+        assert v1
+        assert [h.func for h in v1] == [h.func for h in v2]

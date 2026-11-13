@@ -316,7 +316,7 @@ async def test_executor_hands_over_registrar_registers_closes_instruction_and_ma
     assert registered.status_code == 200, registered.text
     card = registered.json()
     validate("Document", card)
-    assert card["status"] == "sent" and card["number"].startswith("ИСХ-")
+    assert card["status"] == "sent" and card["number"].startswith("OUT-")
     assert card["letter"]["pdf"]["final"] is True and card["letter"]["pdf"]["status"] == "pending"
     [mailing] = card["letter"]["mailings"]
     assert (mailing["status"], mailing["to"]) == ("awaiting_pdf", ["gni@example.org"])

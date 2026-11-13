@@ -10,9 +10,10 @@ from typing import Any, Optional, Tuple
 from django.db import IntegrityError, transaction
 from parties.models import Company, CompanyBankAccount
 
+from core.currency import BASE_CURRENCY
 from core.models import Currency
 
-DEFAULT_CURRENCY = "UZS"
+DEFAULT_CURRENCY = BASE_CURRENCY
 _TEXT_FIELDS = ("bank_name", "mfo", "account", "swift", "correspondent_bank")
 _LIMITS = {"bank_name": 255, "mfo": 10, "account": 50, "swift": 11, "correspondent_bank": 2000}
 

@@ -1,5 +1,7 @@
 """The uniform VAT bridge shared by every transactional PDF (КП / договор / инвойс / акт)."""
 
+from core.currency import BASE_CURRENCY
+
 
 def document_totals(
     *,
@@ -43,7 +45,7 @@ def document_totals(
     if (rate is None or rate == 0) and subtotal_d and vat_d and subtotal_d > 0:
         rate = (vat_d / subtotal_d * Decimal(100)).quantize(Decimal("1"), ROUND_HALF_UP)
     return {
-        "ccy": ccy or "UZS",
+        "ccy": ccy or BASE_CURRENCY,
         "vat_rate": rate or Decimal(0),
         "subtotal": subtotal_d,
         "vat_amount": vat_d,
@@ -60,7 +62,7 @@ def quote_document_totals(quote) -> dict:
     строки КП показываются без НДС, `subtotal + vat = total`, статьи расходов уже внутри `subtotal`.
     """
     return document_totals(
-        ccy=quote.quote_currency.code if quote.quote_currency else "UZS",
+        ccy=quote.quote_currency.code if quote.quote_currency else BASE_CURRENCY,
         vat_rate=quote.vat_rate,
         subtotal=quote.total_excl_vat,
         vat_amount=quote.vat_amount,

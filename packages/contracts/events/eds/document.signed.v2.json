@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/eds/document.signed.v2.json",
+  "title": "Документ подписан",
+  "description": "Тип uz.railtech.eds.document.signed.v2, источник rt://eds. v2 (задача «Н», 2026-11-13): номер с обозначением из настроек нумерации, иначе как v1. Поле data конверта (envelope.v1.json). Официальный документ подписан уполномоченным лицом из реестра полномочий (SIGN-3, ADR-0024): присвоен номер ИСХ, сгенерирован код проверки, снята плашка «ПРОЕКТ». Подписчики: erp (проекция для публичной проверки в кабинете по /v/<код>), crm.",
+  "type": "object",
+  "required": [
+    "document",
+    "actor"
+  ],
+  "properties": {
+    "document": {
+      "type": "object",
+      "required": [
+        "eds_document_id",
+        "kind",
+        "number",
+        "subject",
+        "author",
+        "signer",
+        "basis",
+        "signed_at",
+        "verification_code",
+        "verification_url"
+      ],
+      "properties": {
+        "eds_document_id": {
+          "$ref": "_defs.v2.json#/$defs/Uuid"
+        },
+        "kind": {
+          "$ref": "_defs.v2.json#/$defs/DocumentKind"
+        },
+        "number": {
+          "$ref": "_defs.v2.json#/$defs/RegistryNumber"
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "author": {
+          "$ref": "_defs.v2.json#/$defs/PersonRef"
+        },
+        "signer": {
+          "$ref": "_defs.v2.json#/$defs/PersonRef"
+        },
+        "authority_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "basis": {
+          "type": "string",
+          "enum": [
+            "charter",
+            "order",
+            "power_of_attorney"
+          ]
+        },
+        "basis_text": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "acting_for": {
+          "oneOf": [
+            {
+              "$ref": "_defs.v2.json#/$defs/PersonRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "signed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "verification_code": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{8,32}$"
+        },
+        "verification_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "pdf_hash": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "dispatch_method": {
+          "type": "string",
+          "enum": [
+            "email",
+            "paper",
+            "courier",
+            "edo",
+            "other"
+          ]
+        },
+        "in_reply_to": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "erp_deal_id": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "deal_number": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64
+        }
+      },
+      "additionalProperties": false
+    },
+    "actor": {
+      "$ref": "_defs.v2.json#/$defs/Actor"
+    }
+  },
+  "additionalProperties": false
+}

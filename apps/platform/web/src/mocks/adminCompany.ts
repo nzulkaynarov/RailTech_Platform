@@ -194,7 +194,25 @@ const KIND_CODE: Record<NumberingKind, string> = {
   shipment: "SHP",
   partner_contract: "PA",
   letter: "DOC",
+  // документооборот (EDS, задача «Н2»)
+  letter_in: "IN",
+  outgoing: "OUT",
+  memo: "MEMO",
+  application: "APP",
+  report: "REP",
 };
+// Номера EDS: входящее и исходящее — `{обозначение}-NNN/ГГ`, прочие — `{обозначение}-ГГГГ/NNN`.
+const EDS_YEAR_SUFFIX: ReadonlySet<NumberingKind> = new Set<NumberingKind>([
+  "letter_in",
+  "outgoing",
+]);
+const EDS_KINDS: ReadonlySet<NumberingKind> = new Set<NumberingKind>([
+  "letter_in",
+  "outgoing",
+  "memo",
+  "application",
+  "report",
+]);
 const NUMBER_KINDS = Object.keys(KIND_CODE) as NumberingKind[];
 // Свой счётчик и формат `{обозначение}-{ГГГГ}-{NNN}` (сделка, склад, договор партнёра) — как в ERP.
 const OWN_FORMAT: Partial<Record<NumberingKind, number>> = {
@@ -424,9 +442,13 @@ export const adminCompanyHandlers = [
         return {
           kind,
           label,
-          number: width
-            ? `${label}-${year}-${"1".padStart(width, "0")}`
-            : renderNumber(body, label),
+          number: EDS_YEAR_SUFFIX.has(kind)
+            ? `${label}-001/${year.slice(2)}`
+            : EDS_KINDS.has(kind)
+              ? `${label}-${year}/001`
+              : width
+                ? `${label}-${year}-${"1".padStart(width, "0")}`
+                : renderNumber(body, label),
         };
       }),
     });

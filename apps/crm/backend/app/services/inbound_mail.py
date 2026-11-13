@@ -69,6 +69,8 @@ from app.services.settings import SettingsService
 logger = structlog.get_logger(__name__)
 
 LETTER_REGISTERED = "uz.railtech.eds.letter.registered.v1"
+# v2 (задача «Н», 2026-11-13): номер ВХ с обозначением из настроек нумерации; данные те же.
+LETTER_REGISTERED_V2 = "uz.railtech.eds.letter.registered.v2"
 PAGE_LIMIT = 200
 SPAM_REASON = "Спам"
 _NOTE_MARK = "[почта] "

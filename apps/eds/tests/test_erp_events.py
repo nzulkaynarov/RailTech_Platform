@@ -1,4 +1,4 @@
-"""Обработчик `erp.request.created` (pg): письмо по заявке, ВХ-номер, идемпотентность, дальнейшая резолюция."""
+"""Обработчик `erp.request.created` (pg): письмо по заявке, IN-номер, идемпотентность, дальнейшая резолюция."""
 
 from typing import Any
 
@@ -32,7 +32,7 @@ async def test_request_created_registers_letter_with_links_and_event(
     [item] = page["items"]
     letter = (await client.get(f"/api/v1/letters/{item['id']}", headers=staff["manager"].headers)).json()
     validate("Letter", letter)
-    assert (letter["number"], letter["status"]) == ("ВХ-001/26", "awaiting_resolution")
+    assert (letter["number"], letter["status"]) == ("IN-001/26", "awaiting_resolution")
     assert letter["subject"] == "Поставка оборудования, партия 1"
     assert letter["summary"] == "Нужны 20 комплектов, срок — ноябрь"
     # C1-G-7: отправитель (компания, ИНН, контакт) и менеджер — из payload заявки
@@ -119,7 +119,7 @@ async def test_repeat_of_the_event_does_not_create_second_letter_or_number(
         json={"subject": "Другое", "summary": "Суть", "sender": {"name": "ООО «Другое»"}, "received_at": "2026-10-26"},
         headers=staff["registrar"].headers,
     )
-    assert registered.json()["number"] == "ВХ-002/26"
+    assert registered.json()["number"] == "IN-002/26"
 
 
 async def test_event_without_request_id_is_deduplicated_by_deal(
@@ -142,7 +142,7 @@ async def test_two_requests_make_two_letters_and_director_can_resolve_with_links
     other["data"]["deal"].update({"erp_deal_id": 906, "number": "D-2026-0906", "title": ""})
     await deliver_erp(client, container, other)
     page = (await client.get("/api/v1/letters", headers=staff["director"].headers)).json()
-    assert [i["number"] for i in page["items"]] == ["ВХ-002/26", "ВХ-001/26"]
+    assert [i["number"] for i in page["items"]] == ["IN-002/26", "IN-001/26"]
     assert page["items"][0]["subject"] == "Заявка D-2026-0906"  # у заявки нет темы — по номеру сделки
 
     resolved = await client.post(
@@ -158,7 +158,7 @@ async def test_two_requests_make_two_letters_and_director_can_resolve_with_links
     assert resolved.status_code == 200
     [event] = await outbox(container, "letter.resolved")
     assert event["data"]["links"]["erp_request_id"] == 77 and event["data"]["links"]["erp_deal_id"] == 905
-    assert event["data"]["letter"]["number"] == "ВХ-001/26"
+    assert event["data"]["letter"]["number"] == "IN-001/26"
 
 
 async def _letter(client: httpx.AsyncClient, staff: dict[str, Person]) -> dict[str, Any]:
@@ -200,7 +200,7 @@ async def test_file_of_another_employee_is_not_attached_and_the_letter_is_still_
     assert await deliver_erp(client, container, request_created(letter_file_id=ref["id"])) == "processed"
 
     letter = await _letter(client, staff)
-    assert letter["files"] == [] and letter["number"] == "ВХ-001/26"
+    assert letter["files"] == [] and letter["number"] == "IN-001/26"
 
 
 async def test_normal_urgency_gives_an_ordinary_letter(

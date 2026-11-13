@@ -19219,10 +19219,16 @@ components:
         - shipment
         - partner_contract
         - letter
+        - letter_in
+        - outgoing
+        - memo
+        - application
+        - report
       description: >-
         Вид номера в «Настройки · Нумерация» (задача «Н»): заявка, проект, КП, договор, счёт, акт, квитанция, накладная,
         заказ поставщику, отгрузка, договор партнёра, документ по шаблону (ERP `REQ`, `PRJ`, `KP`, `CT`, `INV`, `ACT`,
-        `RCP`, `DN`, `PO`, `SHP`, `PART`, `DOC`)
+        `RCP`, `DN`, `PO`, `SHP`, `PART`, `DOC`); документооборота (задача «Н2», EDS): входящее, исходящее, служебная
+        записка, заявление, отчёт
     BrandPreviewIn:
       type: object
       additionalProperties: false

@@ -65,7 +65,7 @@ async def test_registering_a_letter_rolled_back_leaves_no_event_row_or_number(
         letter = await letters.register(
             session, bus, actor_id=who.crm_user_id, data=LetterCreate.model_validate(NEW_LETTER)
         )
-        assert letter.number == "ВХ-001/26"
+        assert letter.number == "IN-001/26"
 
     await rolled_back(container, 4, op)
     assert await outbox(container) == []
@@ -73,7 +73,7 @@ async def test_registering_a_letter_rolled_back_leaves_no_event_row_or_number(
         letter = await letters.register(
             session, container.bus, actor_id=4, data=LetterCreate.model_validate(NEW_LETTER)
         )
-        assert letter.number == "ВХ-001/26"
+        assert letter.number == "IN-001/26"
     assert len(await outbox(container, "letter.registered")) == 1
 
 
@@ -166,7 +166,7 @@ async def test_failure_of_a_later_event_rolls_back_the_whole_request(
     original = AsyncBus.publish
 
     async def failing(self: AsyncBus, session: AsyncSession, event_type: str, *args: Any, **kwargs: Any) -> Any:
-        if event_type.endswith("document.archived.v1"):
+        if event_type.endswith("document.archived.v2"):
             raise RuntimeError("шина недоступна")
         return await original(self, session, event_type, *args, **kwargs)
 
@@ -199,7 +199,7 @@ async def test_failing_publish_in_http_request_leaves_no_letter_and_keeps_the_nu
         await client.post("/api/v1/letters", json=NEW_LETTER, headers=staff["registrar"].headers)
     monkeypatch.undo()
     assert (await client.get("/api/v1/letters", headers=staff["director"].headers)).json()["items"] == []
-    assert (await register(client, staff["registrar"]))["number"] == "ВХ-001/26"
+    assert (await register(client, staff["registrar"]))["number"] == "IN-001/26"
 
 
 async def test_quote_route_rolled_back(container: Container, staff: dict[str, Person]) -> None:

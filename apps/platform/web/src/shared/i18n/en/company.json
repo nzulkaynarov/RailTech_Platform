@@ -41,7 +41,12 @@
     "purchase_order": "Purchase order",
     "shipment": "Shipment",
     "partner_contract": "Partner agreement",
-    "letter": "Letter"
+    "letter": "Letter",
+    "letter_in": "Incoming letter",
+    "outgoing": "Outgoing number",
+    "memo": "Memo",
+    "application": "Application",
+    "report": "Report"
   },
   "notSet": {
     "title": "Your company has not been created yet",

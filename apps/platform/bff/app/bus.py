@@ -29,8 +29,10 @@ USER_EVENTS = "uz.railtech.identity.user.*.v1"
 # `document.registered|archived`): письмо ждёт резолюции, служебка или КП пришли на шаг, решение
 # снимает строку с очереди.
 EDS_EVENTS = "uz.railtech.eds.*.v1"
-SUBSCRIBED = (ERP_EVENTS, LEAD_EVENTS, USER_EVENTS, EDS_EVENTS)
-HANDLED = (ERP_EVENTS, LEAD_EVENTS, USER_EVENTS, EDS_EVENTS)
+# v2 (задача «Н»): регистрация, решение и подпись с номером из настроек нумерации — те же подсказки.
+EDS_EVENTS_V2 = "uz.railtech.eds.*.v2"
+SUBSCRIBED = (ERP_EVENTS, LEAD_EVENTS, USER_EVENTS, EDS_EVENTS, EDS_EVENTS_V2)
+HANDLED = (ERP_EVENTS, LEAD_EVENTS, USER_EVENTS, EDS_EVENTS, EDS_EVENTS_V2)
 
 # Новое сообщение в переписке лида (D1-1): очередь «Ждут ответа» и открытая лента; если лид не у
 # бота (`handoff`), ещё бейдж «Ждут ответа» и «Моя очередь» (непрочитанное). Диалог с ботом
@@ -53,6 +55,7 @@ _TOPICS_BY_MASK: tuple[tuple[str, tuple[str, ...]], ...] = (
     (LEAD_EVENTS, ("counters", "queue", "activity", "messages")),
     (USER_EVENTS, ("counters", "queue")),
     (EDS_EVENTS, ("notifications", "counters", "queue")),
+    (EDS_EVENTS_V2, ("notifications", "counters", "queue")),
 )
 
 

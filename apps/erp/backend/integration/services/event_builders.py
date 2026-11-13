@@ -16,6 +16,8 @@ from typing import Any, Dict, Optional, Union
 from django.conf import settings
 from django.utils import timezone
 
+from core.currency import BASE_CURRENCY
+
 from ..models import CrmClientMapping, CrmContactMapping, CrmUserMapping
 from . import stages
 
@@ -95,7 +97,7 @@ def build_deal_ref(deal: Any) -> Dict[str, Any]:
             "title": str(deal.get("title") or f"Сделка #{erp_deal_id}"),
             "stage": _check_stage(deal.get("stage")),
             "amount": _format_amount(deal.get("amount")),
-            "currency": str(deal.get("currency", "UZS")).upper(),
+            "currency": str(deal.get("currency", BASE_CURRENCY)).upper(),
         }
 
     # Django Deal Model: номер ЗВ/ПР выдаёт ERP (ERP-09); сделка без номера (не сохранена) — прежний `D-<id>`.

@@ -10,6 +10,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from django.db import models, transaction
 
+from core.currency import BASE_CURRENCY
 from crm.models import Quote, QuoteItem, QuoteItemHistory
 
 from ._shared import _quote_owner_company_id
@@ -171,7 +172,7 @@ class QuoteCalculationService:
         #    and per-currency rate once so the Incoterm flag-gating + FX conversion run
         #    without an N+1 on item.quote / rate lookup (M1/M2).
         for item in items:
-            line_code = (item.frozen_currency.code if item.frozen_currency_id else "UZS").upper()
+            line_code = (item.frozen_currency.code if item.frozen_currency_id else BASE_CURRENCY).upper()
             cls.calculate_item_prices(
                 item,
                 commit=False,

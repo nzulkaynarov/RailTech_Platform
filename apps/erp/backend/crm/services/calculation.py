@@ -39,6 +39,7 @@ from sales.services import deal_numbers
 
 from accounts.constants import Permission
 from accounts.services.permissions import is_seller, member_has_permission
+from core.currency import BASE_CURRENCY
 
 from ..constants import DealStageCode, QuoteStatusCode
 from ..models import ActivityLog, CalcLine, CalcLineKind, CalcPriceBasis, CalcTask
@@ -368,7 +369,11 @@ def line_payload(item: QuoteItem, ctx: _Context, *, show_cost: bool, rights: dic
         "lead_days": item.lead_time_days or None,
         "purchase_price": _money(item.frozen_base_price) if zone_cost and not services else None,
         "purchase_currency": (
-            ((item.frozen_currency.code if item.frozen_currency_id else "UZS") if not services else "UZS")
+            (
+                (item.frozen_currency.code if item.frozen_currency_id else BASE_CURRENCY)
+                if not services
+                else BASE_CURRENCY
+            )
             if zone_cost
             else None
         ),
@@ -1022,7 +1027,7 @@ def update_line(deal_id: int, item_id: int, user, data: dict) -> dict:
             item.frozen_base_price = (calc.crew_rate * calc.crew_days).quantize(_CENT, rounding=ROUND_HALF_UP)
         else:
             item.frozen_base_price = Decimal("0")
-        item.frozen_currency = _currency("UZS") if _has_currency("UZS") else None
+        item.frozen_currency = _currency(BASE_CURRENCY) if _has_currency(BASE_CURRENCY) else None
     # Зона строки ПОСЛЕ правки (карточка или тип строки): правит тот, у кого право и прежней, и новой зоны.
     final_zone = (
         (Zone.SERVICES if item.product.is_service else Zone.GOODS)
@@ -1093,8 +1098,8 @@ def _apply_price(item: QuoteItem, calc: CalcLine, changes: dict, user) -> None:
 
 def _price_quantum(item: QuoteItem) -> Decimal:
     currency = item.quote.quote_currency if item.quote.quote_currency_id else None
-    code = (getattr(currency, "code", "") or "UZS").upper()
-    return Decimal("1") if code == "UZS" else _CENT
+    code = (getattr(currency, "code", "") or BASE_CURRENCY).upper()
+    return Decimal("1") if code == BASE_CURRENCY else _CENT
 
 
 def _price_for(item: QuoteItem, markup: Decimal) -> Decimal:

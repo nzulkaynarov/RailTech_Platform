@@ -22,7 +22,7 @@ pytestmark = pytest.mark.pg
 
 
 async def fill(client: httpx.AsyncClient, container: Container, staff: dict[str, Person]) -> dict[str, Any]:
-    """ВХ-001 (клиент 42, менеджер 5), ВХ-002, СЗ (менеджер), ОТ (снабженец), ИСХ (отправлено), КП-2026/115."""
+    """IN-001 (клиент 42, менеджер 5), IN-002, СЗ (менеджер), ОТ (снабженец), ИСХ (отправлено), КП-2026/115."""
     made: dict[str, Any] = {}
     reg = staff["registrar"].headers
     made["l1"] = (
@@ -67,11 +67,11 @@ async def test_registry_unites_all_kinds_newest_first(
     items = await listing(client, staff["manager"])
     assert [(i["kind"], i["number"]) for i in items] == [
         ("quote", "КП-2026/115"),
-        ("letter_out", "ИСХ-001/26"),
-        ("report", "ОТ-2026/001"),
-        ("memo", "СЗ-2026/001"),
-        ("letter_in", "ВХ-002/26"),
-        ("letter_in", "ВХ-001/26"),
+        ("letter_out", "OUT-001/26"),
+        ("report", "REP-2026/001"),
+        ("memo", "MEMO-2026/001"),
+        ("letter_in", "IN-002/26"),
+        ("letter_in", "IN-001/26"),
     ]
     quote = items[0]
     assert quote["status"] == "open" and quote["links"]["erp_deal_id"] == 905 and quote["links"]["crm_client_id"] == 42
@@ -95,17 +95,17 @@ async def test_registry_filters(client: httpx.AsyncClient, container: Container,
     async def numbers(**params: Any) -> list[str]:
         return [i["number"] for i in await listing(client, who, **params)]
 
-    assert await numbers(kind="letter_in") == ["ВХ-002/26", "ВХ-001/26"]
-    assert await numbers(kind=["memo", "report"]) == ["ОТ-2026/001", "СЗ-2026/001"]
-    assert await numbers(status="on_approval") == ["ОТ-2026/001"]
-    assert await numbers(status=["draft", "sent"]) == ["ИСХ-001/26", "СЗ-2026/001"]
-    assert [i["number"] for i in await listing(client, staff["accountant"], status=["draft", "sent"])] == ["ИСХ-001/26"]
-    assert await numbers(number="ВХ-001/26") == ["ВХ-001/26"]  # номер с «/» ищется параметром, не путём
-    assert await numbers(number="ВХ-999/26") == []
-    assert await numbers(q="канцтоваров") == ["СЗ-2026/001"]
-    assert await numbers(q="СЗ-2026") == ["СЗ-2026/001"]
-    assert await numbers(responsible=5) == ["СЗ-2026/001", "ВХ-001/26"]
-    assert await numbers(crm_client_id=43) == ["ВХ-002/26"]
+    assert await numbers(kind="letter_in") == ["IN-002/26", "IN-001/26"]
+    assert await numbers(kind=["memo", "report"]) == ["REP-2026/001", "MEMO-2026/001"]
+    assert await numbers(status="on_approval") == ["REP-2026/001"]
+    assert await numbers(status=["draft", "sent"]) == ["OUT-001/26", "MEMO-2026/001"]
+    assert [i["number"] for i in await listing(client, staff["accountant"], status=["draft", "sent"])] == ["OUT-001/26"]
+    assert await numbers(number="IN-001/26") == ["IN-001/26"]  # номер с «/» ищется параметром, не путём
+    assert await numbers(number="IN-999/26") == []
+    assert await numbers(q="канцтоваров") == ["MEMO-2026/001"]
+    assert await numbers(q="MEMO-2026") == ["MEMO-2026/001"]
+    assert await numbers(responsible=5) == ["MEMO-2026/001", "IN-001/26"]
+    assert await numbers(crm_client_id=43) == ["IN-002/26"]
     assert await numbers(crm_client_id=42, kind="quote") == ["КП-2026/115"]
     assert await numbers(q="100%") == [] and await numbers(q="_") == []  # шаблонные символы не работают как маска
 
@@ -116,7 +116,7 @@ async def test_registry_period_uses_tashkent_dates(
     """31.12 19:30 UTC — уже 01.01 по Ташкенту: документ попадает в период нового года."""
     clock.set(datetime(2026, 12, 31, 19, 30, tzinfo=UTC))
     letter = await client.post("/api/v1/letters", json=NEW_LETTER, headers=staff["registrar"].headers)
-    assert letter.json()["number"] == "ВХ-001/27"
+    assert letter.json()["number"] == "IN-001/27"
     who = staff["manager"]
     assert len(await listing(client, who, date_from="2027-01-01")) == 1
     assert len(await listing(client, who, date_to="2026-12-31")) == 0
@@ -137,7 +137,7 @@ async def test_registry_cursor_pagination_over_the_union(
         cursor = page["next_cursor"]
         if cursor is None:
             break
-    assert seen == ["КП-2026/115", "ИСХ-001/26", "ОТ-2026/001", "СЗ-2026/001", "ВХ-002/26", "ВХ-001/26"]
+    assert seen == ["КП-2026/115", "OUT-001/26", "REP-2026/001", "MEMO-2026/001", "IN-002/26", "IN-001/26"]
     assert cursor is None
 
 
@@ -163,14 +163,14 @@ async def test_export_csv_and_xlsx_with_filters_and_journal(
     )
     text = csv_response.content.decode("utf-8-sig").splitlines()
     assert text[0] == "Тип,Номер,Тема,Статус,Зарегистрирован,Ответственный,Клиент,Сделка ERP"
-    assert len(text) == 3 and text[1].startswith("letter_in,ВХ-002/26,") and text[2].startswith("letter_in,ВХ-001/26,")
+    assert len(text) == 3 and text[1].startswith("letter_in,IN-002/26,") and text[2].startswith("letter_in,IN-001/26,")
 
     xlsx = await client.get("/api/v1/registry/export", params={"kind": "report", "q": "складу"}, headers=who.headers)
     assert xlsx.status_code == 200
     assert xlsx.headers["content-type"].startswith("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     rows = sheet_rows(xlsx.content)
     assert rows[0][:3] == ["Тип", "Номер", "Тема"]
-    assert rows[1][:4] == ["report", "ОТ-2026/001", "Отчёт по складу", "on_approval"]
+    assert rows[1][:4] == ["report", "REP-2026/001", "Отчёт по складу", "on_approval"]
     assert len(rows) == 2
 
     async with container.session_factory() as session:
@@ -237,11 +237,11 @@ async def test_export_neutralizes_formulas(client: httpx.AsyncClient, staff: dic
 # --- D1-10: реестр не шире прав на вид документа -------------------------------------------------------------------
 
 KIND_ROWS = {
-    "letter_in": "ВХ-001/26",
-    "letter_out": "ИСХ-001/26",
+    "letter_in": "IN-001/26",
+    "letter_out": "OUT-001/26",
     "quote": "КП-2026/115",
-    "memo": "СЗ-2026/001",  # отправленная служебка менеджера
-    "report": "ОТ-2026/001",
+    "memo": "MEMO-2026/001",  # отправленная служебка менеджера
+    "report": "REP-2026/001",
 }
 
 
@@ -285,7 +285,7 @@ async def test_registry_kind_follows_view_permission(
     if "letter_in" not in visible:
         for kind in ("letter_in", "letter_out"):
             assert await listing(client, staff[who], kind=kind) == []
-        assert await listing(client, staff[who], number="ВХ-001/26") == []
+        assert await listing(client, staff[who], number="IN-001/26") == []
         assert await listing(client, staff[who], q="Ответ") == []
         assert await listing(client, staff[who], crm_client_id=42) == [
             i for i in items if i["links"]["crm_client_id"] == 42
@@ -333,7 +333,7 @@ async def test_registry_draft_filter_applies_before_cursor_and_limit(
         cursor = page["next_cursor"]
         if cursor is None:
             break
-    assert seen == ["КП-2026/115", "ОТ-2026/001", "СЗ-2026/001"]
+    assert seen == ["КП-2026/115", "REP-2026/001", "MEMO-2026/001"]
     assert cursor is None
 
 

@@ -10843,7 +10843,7 @@ export interface components {
      */
     DocumentKind: "quote" | "contract" | "invoice" | "act" | "letter";
     /**
-     * @description Вид номера в «Настройки · Нумерация» (задача «Н»): заявка, проект, КП, договор, счёт, акт, квитанция, накладная, заказ поставщику, отгрузка, договор партнёра, документ по шаблону (ERP `REQ`, `PRJ`, `KP`, `CT`, `INV`, `ACT`, `RCP`, `DN`, `PO`, `SHP`, `PART`, `DOC`)
+     * @description Вид номера в «Настройки · Нумерация» (задача «Н»): заявка, проект, КП, договор, счёт, акт, квитанция, накладная, заказ поставщику, отгрузка, договор партнёра, документ по шаблону (ERP `REQ`, `PRJ`, `KP`, `CT`, `INV`, `ACT`, `RCP`, `DN`, `PO`, `SHP`, `PART`, `DOC`); документооборота (задача «Н2», EDS): входящее, исходящее, служебная записка, заявление, отчёт
      * @enum {string}
      */
     NumberingKind:
@@ -10858,7 +10858,12 @@ export interface components {
       | "purchase_order"
       | "shipment"
       | "partner_contract"
-      | "letter";
+      | "letter"
+      | "letter_in"
+      | "outgoing"
+      | "memo"
+      | "application"
+      | "report";
     BrandPreviewIn: {
       kind: components["schemas"]["DocumentKind"];
       /** @description Несохранённые правки бланка — предпросмотр накладывает их в памяти, ничего не сохраняя */

@@ -37,8 +37,27 @@ def erp_links(
     }
 
 
+# Типы с номером реестра — v2: обозначение из настроек нумерации (задача «Н», 2026-11-13); подписчики принимают v1 и v2.
+VERSION = dict.fromkeys(
+    (
+        "letter.registered",
+        "letter.resolved",
+        "letter.returned",
+        "letter.rejected",
+        "document.registered",
+        "document.archived",
+        "document.signed",
+        "approval.requested",
+        "approval.decided",
+        "notice.requested",
+    ),
+    2,
+)
+
+
 async def publish(
     bus: AsyncBus, session: AsyncSession, name: str, data: dict[str, Any], *, subject: str | uuid.UUID
 ) -> None:
-    """Событие `uz.railtech.eds.<name>.v1` в outbox транзакции `session`; `subject` — номер или id объекта."""
-    await bus.publish(session, f"{PREFIX}{name}.v1", data, subject=str(subject))
+    """Событие `uz.railtech.eds.<name>.v<N>` в outbox транзакции `session`; `subject` — номер или id объекта.
+    Типы с номером реестра — v2 (задача «Н»): шаблон v1 знает только прежние ВХ, ИСХ, СЗ, ЗЯ, ОТ."""
+    await bus.publish(session, f"{PREFIX}{name}.v{VERSION.get(name, 1)}", data, subject=str(subject))

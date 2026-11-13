@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/eds/letter.registered.v2.json",
+  "title": "Входящее письмо зарегистрировано",
+  "description": "Тип uz.railtech.eds.letter.registered.v2, источник rt://eds. v2 (задача «Н», 2026-11-13): номер с обозначением из настроек нумерации, иначе как v1. Поле data конверта (envelope.v1.json). Письмо получило номер ВХ-NNN/ГГ в реестре EDS и ждёт резолюции директора: вручную (POST /api/v1/letters) или автоматически по uz.railtech.erp.request.created.v1 (связь с заявкой — links). Подписчики v1: platform-bff; crm — только письма из очереди «Входящая почта» (`source`, W18A-P2).",
+  "type": "object",
+  "required": [
+    "letter",
+    "links",
+    "actor"
+  ],
+  "properties": {
+    "letter": {
+      "type": "object",
+      "required": [
+        "eds_letter_id",
+        "number",
+        "subject",
+        "received_at",
+        "registered_at",
+        "sender"
+      ],
+      "properties": {
+        "eds_letter_id": {
+          "$ref": "_defs.v2.json#/$defs/Uuid"
+        },
+        "number": {
+          "$ref": "_defs.v2.json#/$defs/LetterNumber"
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "received_at": {
+          "type": "string",
+          "format": "date",
+          "description": "Дата получения письма"
+        },
+        "registered_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "sender": {
+          "type": "object",
+          "description": "Отправитель — организация клиента. Письмо, зарегистрированное автоматически по uz.railtech.erp.request.created.v1, берёт имя, ИНН и контакт из payload заявки (company_name, company_inn, contact_name); старое событие без них — имя null, клиент — по links.crm_client_id",
+          "required": [
+            "name"
+          ],
+          "properties": {
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            },
+            "inn": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^\\d{9,14}$"
+            },
+            "contact": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255,
+              "description": "Контактное лицо отправителя (для письма по заявке — из payload.contact_name события erp.request.created). Необязательное, с 2026-10-26 (C1-G-7)"
+            }
+          },
+          "additionalProperties": false
+        },
+        "addressee": {
+          "$ref": "_defs.v2.json#/$defs/PersonRef",
+          "description": "На чьё имя (по умолчанию — директор)"
+        },
+        "urgent": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "links": {
+      "$ref": "_defs.v2.json#/$defs/ErpLinks"
+    },
+    "actor": {
+      "$ref": "_defs.v2.json#/$defs/Actor"
+    },
+    "source": {
+      "type": "object",
+      "description": "Откуда письмо (W18A-P2, необязательное, с 2026-11-02): письмо общего ящика CRM, зарегистрированное из очереди «Входящая почта», — CRM снимает его с очереди и пишет номер ВХ. Нет поля — регистрация не из очереди.",
+      "required": [
+        "crm_inbound_mail_id"
+      ],
+      "properties": {
+        "crm_inbound_mail_id": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "id письма в CRM (`inbound_mail.id`)"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
