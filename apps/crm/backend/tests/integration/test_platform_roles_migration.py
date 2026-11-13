@@ -133,18 +133,21 @@ def test_codes_become_roles_the_column_goes_and_downgrade_brings_the_codes_back(
         assert (director[0]["crm.leads"], director[0]["chats.external"]) == ("read", "read")
         assert director[0]["eds.payments"] == "read"
         assert director[0]["eds.inbox.register"] == "full"
-        assert director[1] == 4
+        # 0.3 (FR-10): + `crm.mail: read` — вся очередь «Почты» без действий (версия 5).
+        assert director[0]["crm.mail"] == "read"
+        assert director[1] == 5
         # Остальные роли — версия 1; «Бухгалтер» — 2 (0044: без цен поставщиков, D2-1);
         # «Делопроизводитель» — 2 (D17G-1: разбор и передача лидов вместо `crm.leads: full`);
-        # «Администратор» — 2 (SIGN-2: реестр полномочий подписи `eds.signing.manage: full`).
+        # «Администратор» — 2 (SIGN-2: реестр полномочий подписи `eds.signing.manage: full`);
+        # «Менеджер» и «Снабженец» — 2 (0.3: расчёт менеджеру, снабженцу — без клиентов CRM).
+        twice = ["ADMIN", "tpl:ACCOUNTANT", "tpl:REGISTRAR", "tpl:MANAGER", "tpl:SUPPLY"]
         assert conn.execute(
-            "SELECT DISTINCT version FROM platform_roles "
-            "WHERE code NOT IN ('DIRECTOR', 'ADMIN', 'tpl:ACCOUNTANT', 'tpl:REGISTRAR')"
+            "SELECT DISTINCT version FROM platform_roles WHERE NOT (code = ANY(%s))",
+            (["DIRECTOR", *twice],),
         ).fetchall() == [(1,)]
         assert conn.execute(
-            "SELECT version FROM platform_roles "
-            "WHERE code IN ('ADMIN', 'tpl:ACCOUNTANT', 'tpl:REGISTRAR')"
-        ).fetchall() == [(2,), (2,), (2,)]
+            "SELECT DISTINCT version FROM platform_roles WHERE code = ANY(%s)", (twice,)
+        ).fetchall() == [(2,)]
         # Столбец с кодами удалён, связь по роли не даёт её удалить.
         columns = conn.execute(
             "SELECT column_name FROM information_schema.columns "
@@ -210,8 +213,8 @@ def test_a_migrated_manager_and_accountant_keeps_the_same_rights(
         [RoleGrant(dict(r.access), tuple(r.restricted_fields), r.code) for r in roles]
     )
     assert derived.crm_role == "manager"
-    # Матрица разделов = объединение колонок версии 1.
-    assert dict(derived.access) == _v1_union(["MANAGER", "ACCOUNTANT"])
+    # Матрица разделов = объединение колонок версии 1; 0.3 (FR-7): у менеджера расчёт — `full`.
+    assert dict(derived.access) == {**_v1_union(["MANAGER", "ACCOUNTANT"]), "erp.calc": "full"}
     for resource, actions in crm_before.items():
         for action, allowed in actions.items():
             assert crm_after[resource][action] or not allowed, (resource, action)
@@ -228,7 +231,14 @@ def test_a_migrated_manager_and_accountant_keeps_the_same_rights(
     erp_after = set(derived.erp_permissions)
     # quote.send — менеджер отправляет одобренное КП клиенту (C1-G-4, архитектор 2026-10-26)
     # finance.view — чтение счетов и оплат без права действовать (Q-D2-4-1 п. 2, D2-4)
-    assert erp_after - erp_before == {"contract.sign", "quote.send", "finance.view"}
+    # 0.3 (FR-7): менеджер ведёт расчёт — `erp.calc: full` даёт сборку и цены клиенту
+    assert erp_after - erp_before == {
+        "contract.sign",
+        "quote.send",
+        "finance.view",
+        "quote.build",
+        "quote.edit_pricing",
+    }
     assert erp_before - erp_after == {"quote.view_cost_margin"}
 
 

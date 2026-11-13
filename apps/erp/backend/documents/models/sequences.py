@@ -11,7 +11,20 @@ NUMBERING_TYPE_CODES = ("REQ", "PRJ", "KP", "CT", "INV", "ACT", "RCP", "DN", "PO
 # (LEGACY_* ниже — их знает миграция documents/0004 и поиск по номеру).
 # Умолчания — латиницей (владелец 2026-11-13): номер читают и набирают иностранные партнёры; переводятся только подписи
 # вокруг номера. Выданные номера (`КП-2026/042`, `ЗВ-2026-001`, …) не меняются, поиск находит оба вида.
-DEFAULT_TYPE_LABELS = {"REQ": "RQ", "PRJ": "PRJ", "KP": "QT", "CT": "CT", "INV": "INV", "ACT": "ACT", "RCP": "RCP", "DN": "DN", "PO": "PO", "SHP": "SHP", "PART": "PA", "DOC": "DOC"}
+DEFAULT_TYPE_LABELS = {
+    "REQ": "RQ",
+    "PRJ": "PRJ",
+    "KP": "QT",
+    "CT": "CT",
+    "INV": "INV",
+    "ACT": "ACT",
+    "RCP": "RCP",
+    "DN": "DN",
+    "PO": "PO",
+    "SHP": "SHP",
+    "PART": "PA",
+    "DOC": "DOC",
+}
 # Кириллические умолчания SPEC-v3 §2.2 до 2026-11-13 — их знают поиск по номеру и тесты истории.
 CYRILLIC_TYPE_LABELS = {"KP": "КП", "CT": "ДОГ", "INV": "СЧ", "ACT": "АКТ", "DOC": "ДОК", "RCP": "КВ", "DN": "НАК"}
 LEGACY_DEFAULT_TYPE_LABELS = {"KP": "КП", "CT": "CT", "INV": "INV", "ACT": "ACT", "DOC": "DOC"}

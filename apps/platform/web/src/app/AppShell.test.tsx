@@ -158,7 +158,7 @@ describe("каркас на 1440", () => {
       within(menu)
         .getAllByRole("link")
         .map((a) => a.textContent.replace(/\d+, требует действия|\d+$/, "")),
-    ).toEqual(["Лиды", "Контрагенты", "База знаний"]);
+    ).toEqual(["Лиды", "Контрагенты", "Почта", "База знаний"]); // 0.3 (FR-10): почта менеджера
     expect(within(rail).getByRole("button", { name: "Создать" })).toBeVisible();
   });
 
@@ -316,8 +316,11 @@ describe("единая кнопка «Создать»", () => {
       "aria-disabled",
       "true",
     );
-    // чего роли нельзя — того в окне нет
+    // чего роли нельзя — того в окне нет; расчёт у менеджера есть с 0.3 (FR-7), пока «скоро»
     expect(within(dialog).queryByText("Входящий документ")).toBeNull();
-    expect(within(dialog).queryByText("Расчёт")).toBeNull();
+    expect(within(dialog).getByText("Расчёт").closest("[aria-disabled]")).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
   });
 });

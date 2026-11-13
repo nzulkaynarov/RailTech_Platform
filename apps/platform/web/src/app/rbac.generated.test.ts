@@ -51,7 +51,10 @@ const ORACLE: Record<string, string> = {
   // D17G-1: делопроизводитель — лиды только чтение + разбор и передача (`crm.leads.triage`)
   "crm.leads": "HRFHHHRF",
   "crm.leads.triage": "HHHHHHFH",
-  "crm.clients": "HFFRRRRF",
+  // 0.3 (FR-10): вся очередь «Почты» без действий — директор
+  "crm.mail": "HRHHHHHH",
+  // 0.3 (FR-13): снабженец видит в «Контрагентах» только партнёров — `crm.clients` у него нет
+  "crm.clients": "HFFHRRRF",
   "eds.inbox": "HFRHHRRR",
   // P8: регистрация входящих отдельно от резолюции
   "eds.inbox.register": "HFHHHHFH",
@@ -62,7 +65,8 @@ const ORACLE: Record<string, string> = {
   "eds.memo.approve": "HFHHHHHH",
   // SIGN-2: реестр полномочий подписи ведёт администратор
   "eds.signing.manage": "FHHHHHHH",
-  "erp.calc": "HFHFFRHF",
+  // 0.3 (FR-7): менеджер ведёт расчёт и КП
+  "erp.calc": "HFFFFRHF",
   "erp.calc.goods": "HFHFHHHF",
   "erp.calc.services": "HFHHFHHF",
   "erp.stock": "HFRFFRHF",
@@ -185,7 +189,8 @@ describe("rbac.generated: доступ по матрицам ролей", () => 
   it("пункты меню: виден любой из разделов пункта", () => {
     const mixed: Access = { "crm.leads": "full", "eds.payments": "full" };
     expect(visibleMenuItems(mixed, "crm")).toEqual(["messages", "leads", "channels", "kb"]);
-    expect(visibleMenuItems(mixed, "eds")).toEqual(["documents", "payments"]);
+    // 0.3 (FR-10): «Почта» — и держателям лидов (менеджеру — свои письма)
+    expect(visibleMenuItems(mixed, "eds")).toEqual(["documents", "mail", "payments"]);
     expect(menuItemVisible(catalog.ACCOUNTANT.access, "dashboard", "summary")).toBe(true);
     expect(menuItemVisible(catalog.MANAGER.access, "dashboard", "summary")).toBe(false);
     expect(menuItemVisible(mixed, "crm", "no-such-item")).toBe(false);

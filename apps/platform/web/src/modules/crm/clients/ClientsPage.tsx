@@ -165,12 +165,23 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
   const q = params.get("q") ?? "";
   const { me } = useAuth();
   const seesPartners = canSee(me, { resource: "erp.stock" });
+  // 0.3 (FR-13): снабженец без `crm.clients` — только партнёры каталога; клиентов CRM не запрашиваем.
+  const seesClients = canSee(me, { resource: "crm.clients" });
   const seesBankChanges = canSee(me, { resource: "eds.payments" });
-  const list = useListCrmClients(q ? { q } : {});
+  const list = useListCrmClients(q ? { q } : {}, { query: { enabled: seesClients } });
   const suppliers = useListCatalogSuppliers(
     { ...(q ? { q } : {}), page: 1, page_size: 200 },
     { query: { enabled: seesPartners } },
   );
+  // Без `crm.clients` список строится только из партнёров каталога: ожидание и сбой — по запросу поставщиков.
+  const partnersOnly = {
+    isPending: suppliers.isPending,
+    isError: suppliers.isError,
+    error: suppliers.error,
+    data: suppliers.data ? { items: [] as ClientRow[] } : undefined,
+    refetch: suppliers.refetch,
+    queryKey: suppliers.queryKey,
+  };
   const termsOf = new Map((suppliers.data?.items ?? []).map((row) => [row.id, row]));
   const applications = useListPartnerApplications(
     { status: "submitted" },
@@ -184,10 +195,11 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
   const shownKinds = KINDS.filter((value) => {
     if (value === "partners" || value === "applications") return seesPartners;
     if (value === "bank_changes") return seesBankChanges;
-    return true;
+    return seesClients; // «Все» и «Клиенты» — только тем, кто видит клиентов
   });
   const askedKind = params.get("kind");
-  const kind: KindFilter = shownKinds.find((value) => value === askedKind) ?? "all";
+  const kind: KindFilter =
+    shownKinds.find((value) => value === askedKind) ?? shownKinds[0] ?? "all";
   const kindLabel = (value: KindFilter): string => {
     if (value === "applications" && applications.data?.pending_count) {
       return `${t("clients:kinds.applications")} · ${String(applications.data.pending_count)}`;
@@ -355,7 +367,7 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
       {kind === "bank_changes" ? <BankChangesPanel /> : null}
       {queue ? null : (
         <Card styles={{ body: { padding: 0 } }}>
-          <QueryState query={list} labels={labels} rows={20}>
+          <QueryState query={seesClients ? list : partnersOnly} labels={labels} rows={20}>
             {(data) =>
               rowsOf(data.items).length === 0 ? (
                 <EmptyState
