@@ -1597,7 +1597,7 @@ class RequestCreated(BaseModel):
     """
     request_number: Annotated[str | None, Field(pattern="^ЗВ-\\d{4}-\\d{3,}$")] = None
     """
-    Номер заявки ЗВ-ГГГГ-NNN (Deal.number ERP, ERP-09; тот же, что deal.number при публикации). Необязательное, с 2026-10-28 (W16-D1-2); старое событие без него принимается
+    Устарело с 2026-11-13 (задача «Н»): ERP поле не заполняет — номер заявки в deal.number, его обозначение задаёт владелец. Было: номер заявки ЗВ-ГГГГ-NNN (Deal.number ERP, ERP-09; тот же, что deal.number при публикации). Необязательное, с 2026-10-28 (W16-D1-2); старое событие без него принимается
     """
     urgency: Urgency | None = None
     """

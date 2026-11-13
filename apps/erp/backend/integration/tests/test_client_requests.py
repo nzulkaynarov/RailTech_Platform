@@ -116,7 +116,7 @@ def test_request_is_a_v3_deal_with_a_number_urgency_and_the_request_manager_as_o
     bus_support.assert_matches_contract(event)
     payload = event["data"]["payload"]
     assert payload["source"] == "crm" and payload["erp_request_id"] == deal.pk
-    assert payload["request_number"] == deal.number and event["data"]["deal"]["number"] == deal.number
+    assert "request_number" not in payload and event["data"]["deal"]["number"] == deal.number
     assert (payload["urgency"], payload["process"], payload["letter_file_id"], payload["crm_request_id"]) == (
         "urgent",
         "v3",

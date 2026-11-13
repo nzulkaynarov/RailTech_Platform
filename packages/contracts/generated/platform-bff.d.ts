@@ -10840,6 +10840,23 @@ export interface components {
      * @enum {string}
      */
     DocumentKind: "quote" | "contract" | "invoice" | "act" | "letter";
+    /**
+     * @description Вид номера в «Настройки · Нумерация» (задача «Н»): заявка, проект, КП, договор, счёт, акт, квитанция, накладная, заказ поставщику, отгрузка, договор партнёра, документ по шаблону (ERP `REQ`, `PRJ`, `KP`, `CT`, `INV`, `ACT`, `RCP`, `DN`, `PO`, `SHP`, `PART`, `DOC`)
+     * @enum {string}
+     */
+    NumberingKind:
+      | "request"
+      | "project"
+      | "quote"
+      | "contract"
+      | "invoice"
+      | "act"
+      | "receipt"
+      | "delivery_note"
+      | "purchase_order"
+      | "shipment"
+      | "partner_contract"
+      | "letter";
     BrandPreviewIn: {
       kind: components["schemas"]["DocumentKind"];
       /** @description Несохранённые правки бланка — предпросмотр накладывает их в памяти, ничего не сохраняя */
@@ -10856,7 +10873,7 @@ export interface components {
      * @enum {string}
      */
     NumberingResetPeriod: "never" | "yearly" | "monthly";
-    /** @description Что подставляется в `{type}` для каждого вида документа; ключи — `DocumentKind` */
+    /** @description Обозначение каждого вида номера (по умолчанию латиницей); ключи — `NumberingKind` */
     NumberingLabels: {
       [key: string]: string;
     };
@@ -10871,7 +10888,7 @@ export interface components {
       type_labels: components["schemas"]["NumberingLabels"];
       /** @description Префикс нумерации компании */
       prefix: string;
-      /** @description Своя схема применяется только с непустым префиксом */
+      /** @description Схема, которую показывает редактор, всегда действует (задача «Н»); поле оставлено для совместимости */
       is_effective: boolean;
     };
     NumberingUpdate: {
@@ -10897,7 +10914,7 @@ export interface components {
       prefix?: string;
     };
     NumberingPreviewItem: {
-      kind: components["schemas"]["DocumentKind"];
+      kind: components["schemas"]["NumberingKind"];
       label: string;
       number: string;
     };
