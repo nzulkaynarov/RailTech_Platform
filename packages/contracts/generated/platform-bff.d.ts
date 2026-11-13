@@ -4123,13 +4123,13 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * Курс USD→UZS: текущий и журнал ручных вводов
-     * @description Раздел `company.settings` — чтение. Журнал — последние 20 записей, новые первыми.
+     * Курс валюты к суму: текущий, список валют и журнал ручных вводов
+     * @description Раздел `company.settings` — чтение. Валюта — любая включённая в справочнике (пункт 1.7 плана), по умолчанию USD; список выбора — `currencies`. Журнал — последние 20 записей этой валюты, новые первыми.
      */
     get: operations["getFxRate"];
     put?: never;
     /**
-     * Ввести курс USD→UZS на дату вручную
+     * Ввести курс валюты к суму на дату вручную
      * @description Раздел `company.settings` — полный; в ERP — право `settings.edit` или администратор, иначе 403 `FORBIDDEN` (`source = erp`).
      *     Строка на дату заменяется (курс ЦБ или прежний ручной), прежнее значение остаётся в журнале. Повтор того же значения ничего
      *     не пишет. Дата — не позже сегодня и не старше 366 дней; курс — больше 0, не более 6 знаков после запятой, меньше миллиарда.
@@ -11403,8 +11403,10 @@ export interface components {
       entered_at: string;
     };
     FxRateOverview: {
-      /** @enum {string} */
-      currency: "USD";
+      /** @description Валюта ответа (пункт 1.7 — любая включённая) */
+      currency: string;
+      /** @description Валюты, у которых ведётся курс (включены в справочнике, кроме валюты учёта) — выбор в форме */
+      currencies: components["schemas"]["FxCurrency"][];
       /** @description Курс на сегодня (не старше допустимого возраста); `null` — курса нет */
       current: components["schemas"]["FxRate"] | null;
       /** @description Допустимый возраст курса в днях (настройка компании в ERP) */
@@ -11415,12 +11417,21 @@ export interface components {
     };
     FxRateIn: {
       /**
+       * @description Код валюты ISO 4217 (пункт 1.7); по умолчанию USD
+       * @default USD
+       */
+      currency: string;
+      /**
        * Format: date
        * @description Дата курса; по умолчанию в форме — сегодня
        */
       rate_date: string;
-      /** @description Сумов за 1 USD; больше 0, не более 6 знаков после запятой */
+      /** @description Сумов за 1 единицу валюты; больше 0, не более 6 знаков после запятой */
       rate_to_uzs: components["schemas"]["DecimalString"];
+    };
+    FxCurrency: {
+      code: string;
+      name: string;
     };
     /** @description Объект создан в CRM. */
     CreatedId: {
@@ -23468,7 +23479,10 @@ export interface operations {
   };
   getFxRate: {
     parameters: {
-      query?: never;
+      query?: {
+        /** @description Код валюты ISO 4217; не включена в справочнике — 422 */
+        currency?: string;
+      };
       header?: never;
       path?: never;
       cookie?: never;

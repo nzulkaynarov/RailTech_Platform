@@ -55,7 +55,7 @@ async function fillFromFile(page: Page, name: string, mimeType: string): Promise
     buffer: Buffer.from("%PDF-1.4 demo"),
   });
   await expect(page.getByText("загружен")).toBeVisible();
-  await page.getByRole("button", { name: "Заполнить из файла" }).click();
+  // ВХ: загрузка сама запускает распознавание — кнопку не нажимаем
 }
 
 test.describe("EDS-REG · «Заполнить из файла»", () => {

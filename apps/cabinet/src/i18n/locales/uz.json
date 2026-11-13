@@ -1,12 +1,13 @@
 {
   "app": {
-    "name": "RailTech Cabinet",
+    "name": "{{operator}} kabineti",
     "tagline": "Mijoz kabineti",
     "skipToContent": "Asosiy qismga oʻtish",
     "loading": "Yuklanmoqda…",
     "mainNav": "Asosiy boʻlimlar",
     "sideNav": "Kabinet boʻlimlari",
-    "breadcrumbs": "Sahifaga yoʻl"
+    "breadcrumbs": "Sahifaga yoʻl",
+    "operatorFallback": "Platforma"
   },
   "help": {
     "trigger": "Yordam va koʻrsatmalar",
@@ -206,7 +207,7 @@
       "newClient": "Men yangi mijozman",
       "newClientHint": "Biz bilan hali ishlamaganmisiz? Soʻrov qoldiring — menejer siz bilan bogʻlanadi.",
       "partnerOnboarding": "Yetkazib beruvchilar va ishlab chiqaruvchilarga",
-      "partnerOnboardingHint": "RailTech Platform orqali mahsulot yetkazib bering va assortimentni kabinetda boshqaring.",
+      "partnerOnboardingHint": "{{operator}} orqali mahsulot yetkazib bering va assortimentni kabinetda boshqaring.",
       "becomePartner": "Hamkor bo‘lish",
       "telegram": "Telegram orqali kirish",
       "telegramHint": "Bot ochiladi, kirish taklifnoma orqali.",
@@ -471,7 +472,7 @@
       "sent": "{{number}} soʻrovi yuborildi",
       "viewOnlyTitle": "Soʻrovni tasdiqlash huquqiga ega kontakt yarata oladi",
       "viewOnlyText": "Bu huquqqa ega hamkasbingiz yoki menejerdan soʻrov yuborishni soʻrang.",
-      "consequence": "Soʻrovga raqam beriladi va u RailTech menejeriga yuboriladi. Menejer tijorat taklifini tayyorlaydi — u «Takliflar» boʻlimida paydo boʻladi, biz esa sizga Telegram yoki elektron pochta orqali xabar beramiz."
+      "consequence": "Soʻrovga raqam beriladi va u {{operator}} menejeriga yuboriladi. Menejer tijorat taklifini tayyorlaydi — u «Takliflar» boʻlimida paydo boʻladi, biz esa sizga Telegram yoki elektron pochta orqali xabar beramiz."
     },
     "requestDetail": {
       "title": "{{number}} soʻrovi",
@@ -873,9 +874,9 @@
         "alreadyPartnerTitle": "Hamkorlik shartnomasi faol",
         "alreadyPartnerDesc": "Kompaniyangiz vakolatli hamkor hisoblanadi. Katalogingizni boshqarish uchun «Mening mahsulotlarim» boʻlimi mavjud.",
         "toMyProducts": "«Mening mahsulotlarim»ga oʻtish",
-        "applicationPendingDesc": "Hamkor maqomini olish uchun ariza topshirilgan va RailTech tomonidan koʻrib chiqilmoqda.",
+        "applicationPendingDesc": "Hamkor maqomini olish uchun ariza topshirilgan va {{operator}} tomonidan koʻrib chiqilmoqda.",
         "contractSentDesc": "Hamkorlik shartnomasi tayyorlandi va kompaniyangizga kelishish uchun yuborildi.",
-        "contractAgreedDesc": "Shartnoma loyihasi siz tomoningizdan ma’qullandi va RailTech rahbariyati imzolashini kutmoqda.",
+        "contractAgreedDesc": "Shartnoma loyihasi siz tomoningizdan ma’qullandi va {{operator}} rahbariyati imzolashini kutmoqda.",
         "status": {
           "submitted": "Ko‘rib chiqilmoqda",
           "contract_sent": "Shartnoma yuborildi",
@@ -888,7 +889,7 @@
         "downloadDraftPdf": "Shartnoma loyihasini yuklab olish (PDF)",
         "agreeContractBtn": "Shartnoma loyihasini ma’qullash",
         "agreeDialogTitle": "Shartnoma loyihasini ma’qullash",
-        "agreeDialogDesc": "Kelishuvni tasdiqlash orqali siz hamkorlik shartnomasi va RailTech platformasi qoidalariga rozilik bildirasiz.",
+        "agreeDialogDesc": "Kelishuvni tasdiqlash orqali siz hamkorlik shartnomasi va {{operator}} platformasi qoidalariga rozilik bildirasiz.",
         "agreeNotesLabel": "Kelishuvga izoh yoki fikr (ixtiyoriy)",
         "agreeSubmit": "Rozilikni tasdiqlash",
         "agreeSuccess": "Shartnoma loyihasi muvaffaqiyatli ma’qullandi! Ariza tasdiqlash uchun rahbariyatga yuborildi.",
@@ -898,7 +899,7 @@
           "director": "Tasdiqlash",
           "active": "Hamkorlik"
         },
-        "notPartnerDesc": "RailTech Platform orqali mahsulot yetkazib berishni xohlaysizmi? Hamkorlik shartnomasini tuzish uchun ariza yuboring.",
+        "notPartnerDesc": "{{operator}} orqali mahsulot yetkazib berishni xohlaysizmi? Hamkorlik shartnomasini tuzish uchun ariza yuboring.",
         "onlyCanAct": "Faqat tasdiqlash huquqiga ega vakil ariza topshirishi mumkin.",
         "applyBtn": "Hamkorlikka ariza berish",
         "dialogTitle": "Hamkor maqomiga ariza",
@@ -919,7 +920,7 @@
     },
     "becomePartner": {
       "title": "Hamkorlikka ariza",
-      "subtitle": "Yetkazib beruvchi yoki ishlab chiqaruvchi sifatida RailTech platformasiga qo‘shiling",
+      "subtitle": "Yetkazib beruvchi yoki ishlab chiqaruvchi sifatida {{operator}} platformasiga qo‘shiling",
       "backToLogin": "Kirish sahifasiga qaytish",
       "errors": {
         "companyNameRequired": "Kompaniya nomini koʻrsating.",
@@ -956,7 +957,7 @@
       "submit": "Arizani yuborish",
       "submitting": "Ariza yuborilmoqda…",
       "successTitle": "Ariza qabul qilindi",
-      "successSubtitle": "RailTech Platform bilan hamkorlikka qiziqish bildirganingiz uchun rahmat!",
+      "successSubtitle": "{{operator}} bilan hamkorlikka qiziqish bildirganingiz uchun rahmat!",
       "nextStepsTitle": "Keyin nima bo‘ladi?",
       "step1Title": "Maʼlumotlarni tekshirish",
       "step1Desc": "Bizning taʼminot va komplayens bo‘limimiz kompaniya rekvizitlari va mahsulot nomenklaturasini tekshiradi.",
@@ -1083,7 +1084,7 @@
       "send": "Yuborish",
       "infoLabel": "Yozishma haqida",
       "responder": "{{name}}, menejeringiz javob beradi",
-      "responderTeam": "RailTech jamoasi javob beradi",
+      "responderTeam": "{{operator}} jamoasi javob beradi",
       "visibleToCompany": "Yozishmani kompaniyangizning kabinetdagi barcha xodimlari ko‘radi",
       "attachHint": "Hozircha chatga fayl biriktirilmaydi — uni so‘rovga biriktiring.",
       "attachLink": "So‘rovlarga o‘tish",
@@ -1664,7 +1665,7 @@
   "verify": {
     "pageTitle": "Hujjat haqiqiyligini tekshirish",
     "verifiedBadge": "Haqiqiyligi tasdiqlandi",
-    "verifiedSub": "Rasmiy hujjat RailTech Platform tizimida chiqarilgan va imzolangan",
+    "verifiedSub": "Rasmiy hujjat {{operator}} tizimida chiqarilgan va imzolangan",
     "revokedBadge": "Hujjat bekor qilingan",
     "revokedSub": "Ushbu hujjat bekor qilingan va oʻz kuchini yoʻqotgan",
     "revokedReason": "Bekor qilish sababi",

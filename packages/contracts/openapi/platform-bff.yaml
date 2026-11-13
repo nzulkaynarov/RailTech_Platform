@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.66.0
+  version: 0.70.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -7786,8 +7786,19 @@ paths:
       tags:
         - admin
       operationId: getFxRate
-      summary: 'Курс USD→UZS: текущий и журнал ручных вводов'
-      description: Раздел `company.settings` — чтение. Журнал — последние 20 записей, новые первыми.
+      summary: 'Курс валюты к суму: текущий, список валют и журнал ручных вводов'
+      description: >-
+        Раздел `company.settings` — чтение. Валюта — любая включённая в справочнике (пункт 1.7 плана), по умолчанию USD;
+        список выбора — `currencies`. Журнал — последние 20 записей этой валюты, новые первыми.
+      parameters:
+        - name: currency
+          in: query
+          required: false
+          schema:
+            type: string
+            pattern: '^[A-Z]{3}$'
+            default: USD
+          description: Код валюты ISO 4217; не включена в справочнике — 422
       responses:
         '200':
           description: Курс и журнал
@@ -7803,7 +7814,7 @@ paths:
       tags:
         - admin
       operationId: createFxRate
-      summary: Ввести курс USD→UZS на дату вручную
+      summary: Ввести курс валюты к суму на дату вручную
       description: |-
         Раздел `company.settings` — полный; в ERP — право `settings.edit` или администратор, иначе 403 `FORBIDDEN` (`source = erp`).
         Строка на дату заменяется (курс ЦБ или прежний ручной), прежнее значение остаётся в журнале. Повтор того же значения ничего
@@ -20429,11 +20440,17 @@ components:
     FxRateOverview:
       type: object
       additionalProperties: false
-      required: [currency, current, max_age_days, journal, journal_available]
+      required: [currency, currencies, current, max_age_days, journal, journal_available]
       properties:
         currency:
           type: string
-          enum: [USD]
+          pattern: '^[A-Z]{3}$'
+          description: Валюта ответа (пункт 1.7 — любая включённая)
+        currencies:
+          type: array
+          description: Валюты, у которых ведётся курс (включены в справочнике, кроме валюты учёта) — выбор в форме
+          items:
+            $ref: '#/components/schemas/FxCurrency'
         current:
           oneOf:
             - $ref: '#/components/schemas/FxRate'
@@ -20454,13 +20471,27 @@ components:
       additionalProperties: false
       required: [rate_date, rate_to_uzs]
       properties:
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+          default: USD
+          description: Код валюты ISO 4217 (пункт 1.7); по умолчанию USD
         rate_date:
           type: string
           format: date
           description: Дата курса; по умолчанию в форме — сегодня
         rate_to_uzs:
           $ref: '#/components/schemas/DecimalString'
-          description: Сумов за 1 USD; больше 0, не более 6 знаков после запятой
+          description: Сумов за 1 единицу валюты; больше 0, не более 6 знаков после запятой
+    FxCurrency:
+      type: object
+      additionalProperties: false
+      required: [code, name]
+      properties:
+        code:
+          type: string
+        name:
+          type: string
     CreatedId:
       type: object
       additionalProperties: false

@@ -15,7 +15,13 @@ from uuid import UUID
 
 from rt_bus import Event, subscribe
 
-from .services import crm_projections, eds_inbound, partner_client
+from .services import company_profile, crm_projections, eds_inbound, partner_client
+
+
+@subscribe("uz.railtech.crm.company_profile.changed.v1")
+def on_company_profile_changed(event: Event) -> None:
+    """Задача «Н3a2»: название компании из CRM — в письма, документы и кабинет."""
+    company_profile.apply_company_profile(event.data)
 
 
 @subscribe("uz.railtech.crm.client.updated.v1")

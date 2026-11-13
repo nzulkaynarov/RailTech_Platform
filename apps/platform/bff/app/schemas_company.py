@@ -1057,8 +1057,15 @@ class FxRateJournalEntry(BaseModel):
     entered_at: str
 
 
+class FxCurrency(BaseModel):
+    code: str
+    name: str
+
+
 class FxRateOverview(BaseModel):
-    currency: Literal["USD"] = "USD"
+    currency: str = "USD"
+    # Пункт 1.7 плана: курс любой включённой валюты; список выбора — от ERP (без валюты учёта).
+    currencies: list[FxCurrency] = Field(default_factory=list)
     current: FxRate | None
     max_age_days: int
     journal: list[FxRateJournalEntry]
@@ -1066,12 +1073,13 @@ class FxRateOverview(BaseModel):
 
 
 class FxRateIn(Body):
+    currency: str = Field(default="USD", pattern=r"^[A-Z]{3}$")
     rate_date: datetime.date
     rate_to_uzs: str = Field(pattern=_DECIMAL)
 
     def to_erp(self) -> dict[str, Any]:
         return {
-            "currency": "USD",
+            "currency": self.currency,
             "rate_date": self.rate_date.isoformat(),
             "rate_to_uzs": self.rate_to_uzs,
         }
@@ -1101,7 +1109,14 @@ def to_fx_overview(
         )
         for item in journal
     ]
+    currencies = [
+        FxCurrency(code=text(c.get("code")), name=text(c.get("name")) or text(c.get("code")))
+        for c in current.get("currencies") or []
+        if isinstance(c, Mapping) and c.get("code")
+    ]
     return FxRateOverview(
+        currency=text(current.get("currency")) or "USD",
+        currencies=currencies,
         current=(
             FxRate(
                 rate_to_uzs=text(row.get("rate_to_uzs")),

@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "ERP API",
-        "version": "1.9.0",
+        "version": "1.12.0",
         "description": "ERP Platform API. Supports deal lifecycle management, quoting, product catalog (PIM), Excel imports, and real-time notifications via WebSocket.",
         "contact": {
             "name": "ERP API Support",
@@ -1749,6 +1749,34 @@
             "patch": {
                 "operationId": "api_portal_v1_notifications_settings_partial_update_2",
                 "description": "GET/PATCH /notifications/settings — Настройки каналов уведомлений контакта (J3, ADR-0023).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/operator": {
+            "get": {
+                "operationId": "api_portal_v1_operator_retrieve",
+                "description": "GET /operator — название оператора платформы для кабинета до входа (задача «Н3a2»): ведётся в CRM\n(«Настройки · Компания»), проекция в ERP — `SystemSetting.platform_name`. Ничего, кроме названия, не отдаёт.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/operator/": {
+            "get": {
+                "operationId": "api_portal_v1_operator_retrieve_2",
+                "description": "GET /operator — название оператора платформы для кабинета до входа (задача «Н3a2»): ведётся в CRM\n(«Настройки · Компания»), проекция в ERP — `SystemSetting.platform_name`. Ничего, кроме названия, не отдаёт.",
                 "tags": [
                     "api"
                 ],
@@ -39671,6 +39699,13 @@
                     "currency": {
                         "type": "string"
                     },
+                    "currencies": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/_TrackedCurrency"
+                        },
+                        "description": "Валюты, у которых ведётся курс (включены, кроме валюты учёта) — выбор при ручном вводе."
+                    },
                     "current": {
                         "allOf": [
                             {
@@ -39685,6 +39720,7 @@
                     }
                 },
                 "required": [
+                    "currencies",
                     "currency",
                     "current",
                     "max_age_days"
@@ -56461,6 +56497,21 @@
                 "required": [
                     "message",
                     "reason"
+                ]
+            },
+            "_TrackedCurrency": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "code",
+                    "name"
                 ]
             },
             "_Warranty": {
