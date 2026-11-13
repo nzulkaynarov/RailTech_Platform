@@ -84,7 +84,8 @@ describe("Расчёт · «Запросить цену у партнёра»", 
   it("письмо партнёру и запись в журнале: кто, когда, кому, по каким строкам; «Ответ получен»", async () => {
     await openCalc("supply@demo.example");
     fireEvent.click(screen.getByRole("button", { name: "Запросить цену у партнёра" }));
-    const modal = await screen.findByRole("dialog");
+    // форма — в боковом окне (§4.1a)
+    const modal = await screen.findByRole("region", { name: /^Запросить цену у партнёра/ });
     const submit = within(modal).getByRole("button", { name: "Отправить запрос" });
     expect(submit).toBeDisabled();
     fireEvent.mouseDown(within(modal).getByRole("combobox", { name: "Партнёр" }));
@@ -119,7 +120,8 @@ describe("Расчёт · «Запросить цену у партнёра»", 
   it("у партнёра нет почты: адрес для письма обязателен", async () => {
     await openCalc("supply@demo.example");
     fireEvent.click(screen.getByRole("button", { name: "Запросить цену у партнёра" }));
-    const modal = await screen.findByRole("dialog");
+    // форма — в боковом окне (§4.1a)
+    const modal = await screen.findByRole("region", { name: /^Запросить цену у партнёра/ });
     fireEvent.mouseDown(within(modal).getByRole("combobox", { name: "Партнёр" }));
     fireEvent.click(
       await screen.findByText(/ООО «Пример Лес» · нет почты/, {
@@ -134,5 +136,25 @@ describe("Расчёт · «Запросить цену у партнёра»", 
     expect(submit).toBeEnabled();
     fireEvent.click(submit);
     expect(await screen.findByText("Запрос ушёл на orders@lumber.example")).toBeVisible();
+  });
+});
+
+describe("Расчёт · «Добавить строку» в боковом окне (§4.1a)", () => {
+  it("форма в окне задачи вместо задачи; добавленная строка — в таблице, окно снова показывает задачу", async () => {
+    await openCalc("supply@demo.example");
+    fireEvent.click(screen.getByRole("button", { name: "Добавить строку" }));
+    const form = await screen.findByRole("region", { name: "Новая строка расчёта" });
+    fireEvent.change(within(form).getByLabelText("Наименование"), {
+      target: { value: "Болт закладной М22" },
+    });
+    fireEvent.click(within(form).getByRole("button", { name: "Добавить" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("region", { name: "Новая строка расчёта" })).toBeNull();
+    });
+    expect(
+      await within(
+        screen.getByRole("table", { name: `Строки расчёта по заявке ${NUMBER}` }),
+      ).findByText("Болт закладной М22"),
+    ).toBeVisible();
   });
 });

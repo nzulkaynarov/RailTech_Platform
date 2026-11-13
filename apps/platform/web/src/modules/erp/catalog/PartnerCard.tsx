@@ -47,200 +47,202 @@ export function PartnerCard({ id }: { id: string }) {
   const editable = canEdit(me, "erp.stock");
   return (
     <QueryState query={query} labels={queryLabels(t)} level={3} compact>
-      {(card) => (
-        <div className="pf-cat">
-          <h3 className="pf-fp-title">{card.name}</h3>
-          <DefinitionList
-            items={[
-              { label: t("suppliers.fields.tin"), value: card.tin },
-              { label: t("suppliers.fields.reg"), value: card.registration_number },
-              { label: t("suppliers.fields.country"), value: card.country },
-              { label: t("suppliers.fields.currency"), value: card.currency },
-              {
-                label: t("suppliers.fields.kind"),
-                value: card.is_manufacturer ? t("suppliers.maker") : t("suppliers.dealer"),
-              },
-              {
-                label: t("suppliers.fields.brands"),
-                value: card.brands.map((b) => b.name).join(", "),
-              },
-              {
-                label: t("suppliers.fields.madeBrands"),
-                value: card.manufactured_brands.map((b) => b.name).join(", "),
-              },
-              { label: t("suppliers.fields.contact"), value: card.contact_person },
-              { label: t("suppliers.fields.phone"), value: card.phone },
-              { label: t("suppliers.fields.email"), value: card.email },
-              { label: t("suppliers.fields.website"), value: card.website },
-              { label: t("suppliers.fields.address"), value: card.legal_address },
-            ]}
+      {(card) =>
+        // Правка карточки — секциями на месте карточки, в том же боковом окне (§4.1a), а не окном поверх.
+        editCard ? (
+          <SupplierForm
+            supplier={card}
+            onClose={() => {
+              setEditCard(false);
+            }}
+            onSaved={() => {
+              setEditCard(false);
+            }}
           />
-          {editable ? (
-            <div className="pf-cat-actions">
-              <Button
-                onClick={() => {
-                  setEditCard(true);
-                }}
-              >
-                {t("suppliers.edit")}
-              </Button>
-              {card.prices_visible ? (
+        ) : (
+          <div className="pf-cat">
+            <h3 className="pf-fp-title">{card.name}</h3>
+            <DefinitionList
+              items={[
+                { label: t("suppliers.fields.tin"), value: card.tin },
+                { label: t("suppliers.fields.reg"), value: card.registration_number },
+                { label: t("suppliers.fields.country"), value: card.country },
+                { label: t("suppliers.fields.currency"), value: card.currency },
+                {
+                  label: t("suppliers.fields.kind"),
+                  value: card.is_manufacturer ? t("suppliers.maker") : t("suppliers.dealer"),
+                },
+                {
+                  label: t("suppliers.fields.brands"),
+                  value: card.brands.map((b) => b.name).join(", "),
+                },
+                {
+                  label: t("suppliers.fields.madeBrands"),
+                  value: card.manufactured_brands.map((b) => b.name).join(", "),
+                },
+                { label: t("suppliers.fields.contact"), value: card.contact_person },
+                { label: t("suppliers.fields.phone"), value: card.phone },
+                { label: t("suppliers.fields.email"), value: card.email },
+                { label: t("suppliers.fields.website"), value: card.website },
+                { label: t("suppliers.fields.address"), value: card.legal_address },
+              ]}
+            />
+            {editable ? (
+              <div className="pf-cat-actions">
                 <Button
                   onClick={() => {
-                    setAdding(true);
+                    setEditCard(true);
                   }}
                 >
-                  {t("offerCreate.open")}
+                  {t("suppliers.edit")}
                 </Button>
-              ) : null}
-              <Button
-                onClick={() => {
-                  void navigate("/erp/catalog?part=import", {
-                    state: { supplier: { id: card.id, name: card.name } },
-                  });
-                }}
+                {card.prices_visible ? (
+                  <Button
+                    onClick={() => {
+                      setAdding(true);
+                    }}
+                  >
+                    {t("offerCreate.open")}
+                  </Button>
+                ) : null}
+                <Button
+                  onClick={() => {
+                    void navigate("/erp/catalog?part=import", {
+                      state: { supplier: { id: card.id, name: card.name } },
+                    });
+                  }}
+                >
+                  {t("items.uploadPrice")}
+                </Button>
+              </div>
+            ) : null}
+            <SupplierCabinetAccess supplierId={id} />
+            <h3 className="pf-cat-section">{t("suppliers.offers")}</h3>
+            {!card.prices_visible ? <p className="pf-cat-note">{t("offers.pricesNote")}</p> : null}
+            {card.offers.length === 0 ? (
+              <p className="pf-cat-note">{t("suppliers.noOffers")}</p>
+            ) : (
+              <div
+                className="pf-fp-scroll"
+                role="region"
+                tabIndex={0}
+                aria-label={t("suppliers.offersTable")}
               >
-                {t("items.uploadPrice")}
-              </Button>
-            </div>
-          ) : null}
-          <SupplierCabinetAccess supplierId={id} />
-          <h3 className="pf-cat-section">{t("suppliers.offers")}</h3>
-          {!card.prices_visible ? <p className="pf-cat-note">{t("offers.pricesNote")}</p> : null}
-          {card.offers.length === 0 ? (
-            <p className="pf-cat-note">{t("suppliers.noOffers")}</p>
-          ) : (
-            <div
-              className="pf-fp-scroll"
-              role="region"
-              tabIndex={0}
-              aria-label={t("suppliers.offersTable")}
-            >
-              <table className="pf-cat-offers">
-                <caption className="pf-sr-only">{t("suppliers.offersTable")}</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">{t("offers.product")}</th>
-                    <th scope="col">{t("offers.price")}</th>
-                    <th scope="col">{t("offers.quota")}</th>
-                    <th scope="col">{t("offers.lead")}</th>
-                    <th scope="col">{t("offers.validUntil")}</th>
-                    {canEdit(me, "erp.stock") ? <th scope="col">{t("actions")}</th> : null}
-                  </tr>
-                </thead>
-                <tbody>
-                  {card.offers.map((offer) => (
-                    <tr key={offer.id}>
-                      <td>
-                        <Button
-                          type="link"
-                          className="pf-cat-linkbtn"
-                          aria-label={t("offers.openProduct", { name: offer.product.name })}
-                          onClick={() => {
-                            void navigate(`/erp/catalog?part=items&item=${offer.product.id}`);
-                          }}
-                        >
-                          {offer.product.name}
-                        </Button>
-                        <span className="pf-cat-sub">{offer.product.sku}</span>
-                      </td>
-                      <td>
-                        <PriceCell price={offer.price} />
-                        <span className="pf-cat-sub">
-                          {[offer.delivery_basis, t(`offerSource.${offer.source}`)]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </span>
-                      </td>
-                      <td>
-                        {t("offers.quotaValue", {
-                          qty: offer.quota_qty,
-                          min: offer.min_order_qty,
-                        })}
-                      </td>
-                      <td>
-                        {t("offers.leadValue", {
-                          stock: offer.in_stock_lead_days,
-                          order: offer.order_lead_days,
-                        })}
-                      </td>
-                      <td>
-                        {offer.valid_until ? date(offer.valid_until) : t("offers.noLimit")}{" "}
-                        <ValidityTag validity={offer.validity} />
-                        {!offer.is_active ? (
-                          <span className="pf-cat-sub">{t("offers.inactive")}</span>
-                        ) : null}
-                      </td>
-                      {canEdit(me, "erp.stock") ? (
-                        <td>
-                          <div className="pf-cat-actions">
-                            <Button
-                              size="small"
-                              aria-label={t("offers.editNamed", { name: offer.product.name })}
-                              onClick={() => {
-                                setEditing(offer);
-                              }}
-                            >
-                              {t("offers.edit")}
-                            </Button>
-                            <Button
-                              size="small"
-                              aria-label={t("history.openNamed", { name: offer.product.name })}
-                              onClick={() => {
-                                setHistory(offer);
-                              }}
-                            >
-                              {t("history.open")}
-                            </Button>
-                          </div>
-                        </td>
-                      ) : null}
+                <table className="pf-cat-offers">
+                  <caption className="pf-sr-only">{t("suppliers.offersTable")}</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">{t("offers.product")}</th>
+                      <th scope="col">{t("offers.price")}</th>
+                      <th scope="col">{t("offers.quota")}</th>
+                      <th scope="col">{t("offers.lead")}</th>
+                      <th scope="col">{t("offers.validUntil")}</th>
+                      {canEdit(me, "erp.stock") ? <th scope="col">{t("actions")}</th> : null}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          {history ? (
-            <OfferHistoryModal
-              supplierId={id}
-              offer={history}
-              onClose={() => {
-                setHistory(null);
-              }}
-            />
-          ) : null}
-          {editCard ? (
-            <SupplierForm
-              supplier={card}
-              onClose={() => {
-                setEditCard(false);
-              }}
-              onSaved={() => {
-                setEditCard(false);
-              }}
-            />
-          ) : null}
-          {adding ? (
-            <OfferCreateForm
-              supplier={card}
-              onClose={() => {
-                setAdding(false);
-              }}
-            />
-          ) : null}
-          {editing ? (
-            <OfferForm
-              supplierId={id}
-              offer={editing}
-              pricesVisible={card.prices_visible}
-              onClose={() => {
-                setEditing(null);
-              }}
-            />
-          ) : null}
-        </div>
-      )}
+                  </thead>
+                  <tbody>
+                    {card.offers.map((offer) => (
+                      <tr key={offer.id}>
+                        <td>
+                          <Button
+                            type="link"
+                            className="pf-cat-linkbtn"
+                            aria-label={t("offers.openProduct", { name: offer.product.name })}
+                            onClick={() => {
+                              void navigate(`/erp/catalog?part=items&item=${offer.product.id}`);
+                            }}
+                          >
+                            {offer.product.name}
+                          </Button>
+                          <span className="pf-cat-sub">{offer.product.sku}</span>
+                        </td>
+                        <td>
+                          <PriceCell price={offer.price} />
+                          <span className="pf-cat-sub">
+                            {[offer.delivery_basis, t(`offerSource.${offer.source}`)]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </span>
+                        </td>
+                        <td>
+                          {t("offers.quotaValue", {
+                            qty: offer.quota_qty,
+                            min: offer.min_order_qty,
+                          })}
+                        </td>
+                        <td>
+                          {t("offers.leadValue", {
+                            stock: offer.in_stock_lead_days,
+                            order: offer.order_lead_days,
+                          })}
+                        </td>
+                        <td>
+                          {offer.valid_until ? date(offer.valid_until) : t("offers.noLimit")}{" "}
+                          <ValidityTag validity={offer.validity} />
+                          {!offer.is_active ? (
+                            <span className="pf-cat-sub">{t("offers.inactive")}</span>
+                          ) : null}
+                        </td>
+                        {canEdit(me, "erp.stock") ? (
+                          <td>
+                            <div className="pf-cat-actions">
+                              <Button
+                                size="small"
+                                aria-label={t("offers.editNamed", { name: offer.product.name })}
+                                onClick={() => {
+                                  setEditing(offer);
+                                }}
+                              >
+                                {t("offers.edit")}
+                              </Button>
+                              <Button
+                                size="small"
+                                aria-label={t("history.openNamed", { name: offer.product.name })}
+                                onClick={() => {
+                                  setHistory(offer);
+                                }}
+                              >
+                                {t("history.open")}
+                              </Button>
+                            </div>
+                          </td>
+                        ) : null}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {history ? (
+              <OfferHistoryModal
+                supplierId={id}
+                offer={history}
+                onClose={() => {
+                  setHistory(null);
+                }}
+              />
+            ) : null}
+            {adding ? (
+              <OfferCreateForm
+                supplier={card}
+                onClose={() => {
+                  setAdding(false);
+                }}
+              />
+            ) : null}
+            {editing ? (
+              <OfferForm
+                supplierId={id}
+                offer={editing}
+                pricesVisible={card.prices_visible}
+                onClose={() => {
+                  setEditing(null);
+                }}
+              />
+            ) : null}
+          </div>
+        )
+      }
     </QueryState>
   );
 }
