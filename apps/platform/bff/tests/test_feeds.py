@@ -242,7 +242,9 @@ async def test_other_roles_have_an_empty_queue(
     response = await web.client.get("/api/v1/queue")
 
     check(response, "/queue", "get")
-    assert response.json() == {"items": [], "sources": {"crm": "ok", "erp": "ok", "eds": "ok"}}
+    # 0.3 (FR-13): у снабженца разделов CRM нет — источник CRM ему не нужен
+    crm = "not_applicable" if role == "SUPPLY" else "ok"
+    assert response.json() == {"items": [], "sources": {"crm": crm, "erp": "ok", "eds": "ok"}}
     assert fb.calls(fb.crm["inbox"]) == 0
     assert fb.calls(fb.erp["approvals"]) == 0
 
@@ -1311,7 +1313,7 @@ async def test_request_hits_need_the_costing_section_where_the_request_opens(
     чужой экран не получает."""
     search_data(fb)
     fb.state["documents"] = {"results": []}
-    await web.login(["MANAGER"])
+    await web.login(["REGISTRAR"])  # 0.3: у менеджера расчёт есть; у делопроизводителя — нет
 
     response = await web.client.get("/api/v1/search", params={"q": "ЗВ-2027-104"})
 

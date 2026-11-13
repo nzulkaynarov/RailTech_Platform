@@ -290,6 +290,8 @@ function MailList({ own }: { own: boolean }) {
 /**
  * Документы · Входящая почта (W18A-P2, W18A-P2-3): очередь `/eds/mail` или карточка `/eds/mail/:id` у первой линии; у
  * сотрудника без раздела первой линии (`own`) те же экраны по `/eds/my-mail` — только его письма.
+ * 0.3 плана 2026-11-12 (FR-10): «Почту» в меню видят и менеджер (`crm.leads`), и директор (`crm.mail`) — без действий первой
+ * линии, в режиме «своих писем»: что попадает в «Все», решает CRM (менеджеру — его письма, директору — вся очередь).
  */
 export function MailScreen({
   objectId,
@@ -298,10 +300,12 @@ export function MailScreen({
   objectId?: string | undefined;
   own?: boolean;
 }) {
+  const { me } = useAuth();
+  const mode = own || !canSee(me, { resource: "crm.leads.triage" });
   const id = Number(objectId);
   return objectId && Number.isInteger(id) && id > 0 ? (
-    <MailView id={id} own={own} />
+    <MailView id={id} own={mode} />
   ) : (
-    <MailList own={own} />
+    <MailList own={mode} />
   );
 }

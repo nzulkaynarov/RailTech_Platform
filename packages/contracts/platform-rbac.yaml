@@ -30,6 +30,7 @@ system_roles:
     access:
       dashboard.queue: full
       dashboard.summary: full
+      crm.mail: read  # 0.3, FR-10: вся очередь «Почты» без действий
       crm.leads: read
       crm.clients: full
       eds.inbox: full
@@ -56,10 +57,13 @@ system_roles:
 templates:
   MANAGER:
     name: { ru: Менеджер, uz: Menejer, en: Manager }
+    # 0.3 плана 2026-11-12 (FR-7): менеджер ведёт заявку, расчёт и КП — `erp.calc: full`; визы товаров и услуг остаются у
+    # инженеров. Существующим ролям `tpl:MANAGER` раздел добавляет миграция CRM.
     access:
       dashboard.queue: full
       crm.leads: full
       crm.clients: full
+      erp.calc: full
       eds.inbox: read
       eds.drafts: read
       eds.projects: read
@@ -71,9 +75,10 @@ templates:
     restricted_fields: []
   SUPPLY:
     name: { ru: Снабженец, uz: Ta'minotchi, en: Supply specialist }
+    # 0.3 плана 2026-11-12 (FR-13, решение владельца 2026-11-13): снабженец видит в «Контрагентах» только партнёров — через
+    # каталог (`erp.stock`), клиентов CRM (`crm.clients`) у него нет. Существующим ролям `tpl:SUPPLY` раздел снимает миграция CRM.
     access:
       dashboard.queue: full
-      crm.clients: read
       eds.projects: read
       eds.memo.create: full
       erp.calc: full
@@ -199,6 +204,16 @@ resources:
     backend:
       crm:
         full: [leads:read, leads:triage, stream:read, dashboard:read, kb:read, mail_inbox:read, mail_inbox:work]
+  # 0.3 плана 2026-11-12 (FR-10, решение владельца 2026-11-13): директор видит в «Почте» всю очередь общего ящика без
+  # действий (взять, архив, лид — у первой линии `crm.leads.triage`). Отдельный раздел, а не `crm.leads: read`: полный
+  # уровень лидов повторяет чтение, и менеджер получил бы чужие письма; менеджер видит в «Почте» свои (решает CRM).
+  - key: crm.mail
+    module: crm
+    levels: [read]
+    label: { ru: "Контакты · Почта · вся очередь, чтение", uz: "Kontaktlar · Pochta · butun navbat, o‘qish", en: "Contacts · Mail · whole queue, read" }
+    backend:
+      crm:
+        read: [mail_inbox:read]
   - key: crm.clients
     module: crm
     label: { ru: "Контакты · Контрагенты, создать заявку", uz: "Kontaktlar · Kontragentlar, ariza yaratish", en: "Contacts · Counterparties, new request" }
@@ -376,7 +391,8 @@ menu:
   crm:
     messages: [crm.leads, crm.leads.triage]
     leads: [crm.leads, crm.leads.triage]
-    clients: [crm.clients]
+    # «Контрагенты»: снабженец без `crm.clients` видит в них партнёров каталога (0.3, FR-13).
+    clients: [crm.clients, erp.stock]
     requests: [crm.clients]
     channels: [crm.leads]
     # W15-H4: в подменю Клиентов база знаний — для ролей с лидами (чтение); администратор (kb:write у раздела admin) входит
@@ -385,8 +401,9 @@ menu:
   eds:
     documents: [eds.inbox, eds.inbox.register, eds.drafts, eds.projects, eds.payments, eds.memo.create, eds.memo.approve]
     inbox: [eds.inbox, eds.inbox.register]
-    # W18A-P2: «Входящая почта» — письма общего ящика до регистрации (первая линия, `crm.leads.triage`).
-    mail: [crm.leads.triage]
+    # W18A-P2: «Входящая почта» — письма общего ящика до регистрации (первая линия, `crm.leads.triage`). 0.3 (FR-10): ещё и
+    # держатели `crm.leads` (менеджер — свои письма) и `crm.mail` (директор — вся очередь без действий).
+    mail: [crm.leads.triage, crm.leads, crm.mail]
     outbox: [eds.drafts]
     projects: [eds.projects]
     drafts: [eds.drafts]

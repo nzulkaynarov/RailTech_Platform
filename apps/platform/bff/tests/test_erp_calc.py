@@ -214,7 +214,7 @@ async def test_requests_list(web: Web, erp: respx.MockRouter, check: ContractChe
     assert erp.calls.last.request.url.params["mine"] == "1"
 
 
-@pytest.mark.parametrize("role", ["MANAGER", "ADMIN"])
+@pytest.mark.parametrize("role", ["REGISTRAR", "ADMIN"])  # 0.3: у менеджера расчёт есть
 async def test_without_calc_section_everything_is_403_and_erp_is_untouched(
     web: Web, erp: respx.MockRouter, role: str
 ) -> None:
