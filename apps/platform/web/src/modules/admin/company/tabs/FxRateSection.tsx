@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Alert, App, Button, Form, Input } from "antd";
+import { Alert, App, Button, Form, Input, Select } from "antd";
 import type { TableColumnsType } from "antd";
-import { useId } from "react";
+import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { FxRate, FxRateJournalEntry } from "../../../../shared/api/generated/model";
@@ -35,14 +35,17 @@ function decimals(rate: string) {
 }
 
 /**
- * Курс USD → UZS на вкладке «Платформа» (W13C-F6): текущий курс с датой и источником и ручной ввод курса на дату — на
+ * Курс валюты к суму на вкладке «Платформа» (W13C-F6; любая включённая валюта — пункт 1.7 плана): текущий курс с датой и источником и ручной ввод курса на дату — на
  * случай, если автозагрузка курса ЦБ (`erp-beat`) не сработала. Ниже — журнал последних записей: кто, когда и что ввёл;
  * без права `settings.edit` в ERP (`journal_available = false`) журнала нет — в нём имена и почта коллег.
  */
 export function FxRateSection() {
   const { t } = useTranslation("company");
-  const query = useGetFxRate();
+  // Пункт 1.7 плана: курс вручную по любой включённой валюте; список — от ERP (`currencies`).
+  const [currency, setCurrency] = useState("USD");
+  const query = useGetFxRate({ currency });
   const headingId = useId();
+  const currencyId = useId();
   return (
     <section aria-labelledby={headingId} className="pf-co-fx">
       <h3 id={headingId} className="pf-co-title" style={{ fontSize: 16, lineHeight: "24px" }}>
@@ -51,8 +54,31 @@ export function FxRateSection() {
       <QueryGate query={query}>
         {(overview) => (
           <>
-            <CurrentRate current={overview.current} maxAgeDays={overview.max_age_days} />
-            <FxForm />
+            {overview.currencies.length > 1 ? (
+              <div style={{ marginBottom: 16 }}>
+                <label htmlFor={currencyId} style={{ display: "block", marginBottom: 4 }}>
+                  {t("platform.fx.currency")}
+                </label>
+                <Select
+                  id={currencyId}
+                  value={currency}
+                  onChange={setCurrency}
+                  style={{ minWidth: 240 }}
+                  showSearch
+                  optionFilterProp="label"
+                  options={overview.currencies.map((c) => ({
+                    value: c.code,
+                    label: `${c.code} — ${c.name}`,
+                  }))}
+                />
+              </div>
+            ) : null}
+            <CurrentRate
+              currency={currency}
+              current={overview.current}
+              maxAgeDays={overview.max_age_days}
+            />
+            <FxForm key={currency} currency={currency} />
             {overview.journal_available ? <FxJournal rows={overview.journal} /> : null}
           </>
         )}
@@ -61,7 +87,15 @@ export function FxRateSection() {
   );
 }
 
-function CurrentRate({ current, maxAgeDays }: { current: FxRate | null; maxAgeDays: number }) {
+function CurrentRate({
+  currency,
+  current,
+  maxAgeDays,
+}: {
+  currency: string;
+  current: FxRate | null;
+  maxAgeDays: number;
+}) {
   const { t } = useTranslation("company");
   const { number, date } = useFormat();
   if (current === null) {
@@ -79,7 +113,7 @@ function CurrentRate({ current, maxAgeDays }: { current: FxRate | null; maxAgeDa
       items={[
         {
           label: t("platform.fx.current"),
-          value: `1 USD = ${number(current.rate_to_uzs, { fractionDigits: decimals(current.rate_to_uzs) })} ${t("platform.currencyUzs")}`,
+          value: `1 ${currency} = ${number(current.rate_to_uzs, { fractionDigits: decimals(current.rate_to_uzs) })} ${t("platform.currencyUzs")}`,
         },
         { label: t("platform.fx.date"), value: date(current.rate_date) },
         { label: t("platform.fx.source"), value: <SourceTag source={current.source} /> },
@@ -97,7 +131,7 @@ function SourceTag({ source }: { source: "auto" | "manual" }) {
   );
 }
 
-function FxForm() {
+function FxForm({ currency }: { currency: string }) {
   const { t } = useTranslation("company");
   const { message } = App.useApp();
   const queryClient = useQueryClient();
@@ -107,7 +141,7 @@ function FxForm() {
   const create = useCreateFxRate({
     mutation: {
       onSuccess: (next) => {
-        queryClient.setQueryData(getGetFxRateQueryKey(), next);
+        queryClient.setQueryData(getGetFxRateQueryKey({ currency }), next);
         void queryClient.invalidateQueries({ queryKey: getGetPlatformSettingsQueryKey() });
         form.setFieldValue("rate_to_uzs", "");
         void message.success(t("platform.fx.saved"));
@@ -126,7 +160,13 @@ function FxForm() {
         aria-label={t("platform.fx.formLabel")}
         onFinish={(values) => {
           create.mutate(
-            { data: { rate_date: values.rate_date, rate_to_uzs: normalize(values.rate_to_uzs) } },
+            {
+              data: {
+                currency,
+                rate_date: values.rate_date,
+                rate_to_uzs: normalize(values.rate_to_uzs),
+              },
+            },
             {
               onError: (error) => {
                 const reason = companyErrorText(t, error);
@@ -159,7 +199,7 @@ function FxForm() {
           </Form.Item>
           <Form.Item
             name="rate_to_uzs"
-            label={t("platform.fx.rateField")}
+            label={t("platform.fx.rateField", { currency })}
             extra={t("platform.fx.rateHint")}
             rules={[
               { required: true, message: t("required") },

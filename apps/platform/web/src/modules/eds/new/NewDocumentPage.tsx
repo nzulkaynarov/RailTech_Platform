@@ -280,6 +280,18 @@ function DocumentForm({
   };
 
   /** «Показать PDF»: сохранить черновик (без перехода) и отдать его id блоку PDF. */
+  // Страницы строятся сами (пункт «Ш»): незаполненная форма — молча ждём, без ошибок у полей.
+  const prepareQuiet = async (): Promise<string | null> => {
+    if (Object.keys(validate(values, today)).length > 0 || uploading) return null;
+    try {
+      const doc = await persist({ submit: false });
+      refresh();
+      return doc.id;
+    } catch {
+      return null;
+    }
+  };
+
   const prepare = async (): Promise<string | null> => {
     if (!check()) return null;
     try {
@@ -885,6 +897,7 @@ function DocumentForm({
               prepare={prepare}
               canBuild={!uploading}
               subject={values.subject}
+              auto={{ key: JSON.stringify(values), prepare: prepareQuiet }}
             />
           </Card>
         </div>

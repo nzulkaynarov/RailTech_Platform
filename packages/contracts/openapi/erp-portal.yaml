@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Portal API (Cabinet → ERP)
-  version: 0.14.0
+  version: 0.15.0
   summary: Пространство `/api/portal/v1/` — вызывает Cabinet SPA от имени клиента.
   description: |
     Контракт по `docs/architecture/CONTRACTS.md` §4 и ADR-0004 (Cabinet без бэкенда). Версия 0 (M0-INF-02):
@@ -410,6 +410,24 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PortalCountry'
+
+  /operator:
+    get:
+      tags: [lookups]
+      operationId: getOperator
+      summary: Название оператора платформы (задача «Н3a2»)
+      description: >-
+        Название компании-оператора для кабинета до входа: заголовок вкладки, экран входа, тексты. Ведётся в CRM
+        («Настройки · Компания»), в ERP — проекция из события `crm.company_profile.changed`. `null` — ещё не задано,
+        кабинет пишет нейтральные слова. Других данных нет.
+      security: []
+      responses:
+        '200':
+          description: Название оператора
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortalOperator'
 
   /me:
     get:
@@ -4659,6 +4677,15 @@ components:
         title:
           type: [string, 'null']
       additionalProperties: false
+
+    PortalOperator:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: [string, 'null']
+          description: Название компании-оператора; `null` — не задано
 
     DealStage:
       type: string

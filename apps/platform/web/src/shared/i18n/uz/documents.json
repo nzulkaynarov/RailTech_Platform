@@ -450,6 +450,8 @@
     "download": "PDF ni yuklab olish",
     "name": "«{{subject}}» xati",
     "requestFailed": "PDF so‘ralmadi: {{reason}}",
-    "loadFailed": "PDF ni yuklab bo‘lmadi. Qayta urining."
+    "loadFailed": "PDF ni yuklab bo‘lmadi. Qayta urining.",
+    "updating": "Yangilanmoqda…",
+    "emptyAuto": "Mavzu, qabul qiluvchi va matnni to‘ldiring — xat qoralama sifatida saqlanadi va blankda paydo bo‘ladi."
   }
 }
