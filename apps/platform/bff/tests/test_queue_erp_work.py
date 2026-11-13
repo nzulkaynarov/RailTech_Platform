@@ -58,6 +58,7 @@ def receivable(inv_id: int, status: str, **over: Any) -> dict[str, Any]:
         "id": inv_id,
         "number": f"СЧ-2027/{inv_id}",
         "deal_id": 97,
+        "deal_number": "ПР-2027-097",
         "deal_year": 2027,
         "client_name": "ООО «Север-Путь»",
         "currency": "UZS",
@@ -87,6 +88,7 @@ def project(
     """Строка ERP `GET /crm/projects/` (`ProjectRow`)."""
     return {
         "deal_id": deal_id,
+        "number": f"ПР-2027-{deal_id:03d}",
         "title": "Автоблокировка",
         "company_name": "АО «Тест-Логистика»",
         "created_at": "2027-01-02T08:00:00Z",

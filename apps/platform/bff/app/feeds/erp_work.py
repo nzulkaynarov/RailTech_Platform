@@ -122,13 +122,14 @@ def calc_rows(snap: Snapshot, now: datetime, view: View, role_of: RoleOf) -> lis
 def _invoice(raw: dict[str, Any]) -> tuple[int, str, str, str | None] | None:
     """(id, номер, ПР, клиент) строки доски ERP или `None` — строка битая."""
     invoice_id, number = raw.get("id"), raw.get("number")
-    deal_id, year = raw.get("deal_id"), raw.get("deal_year")
+    deal_id, deal_number = raw.get("deal_id"), raw.get("deal_number")
     if not isinstance(invoice_id, int) or not isinstance(number, str) or not number:
         return None
-    if not isinstance(deal_id, int) or not isinstance(year, int):
+    if not isinstance(deal_id, int):
         return None
     client = str(raw.get("client_name") or "") or None
-    return invoice_id, number, invoice_project_number(deal_id, year), client
+    project = invoice_project_number(deal_id, deal_number if isinstance(deal_number, str) else "")
+    return invoice_id, number, project, client
 
 
 def invoice_rows(snap: Snapshot, now: datetime, view: View, role_of: RoleOf) -> list[Work]:
@@ -251,7 +252,7 @@ def project_rows(snap: Snapshot, now: datetime, view: View, role_of: RoleOf) -> 
         if step is None or not wants_work(view, step[0]):
             continue
         kind, action, why = step
-        project = project_number(row.deal_id, row.created_at)
+        project = project_number(row)
         contract = row.documents.contract
         client = row.company_name or None
         ref = (
@@ -278,7 +279,7 @@ def project_rows(snap: Snapshot, now: datetime, view: View, role_of: RoleOf) -> 
             if act_step is None:
                 continue
             action, why = act_step
-            project = project_number(row.deal_id, row.created_at)
+            project = project_number(row)
             client = row.company_name or None
             act = row.documents.act
             ref = (

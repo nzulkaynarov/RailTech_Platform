@@ -54,7 +54,8 @@ class ProjectListView(APIView):
                 "problems", bool, description="Только с проблемами: договор отклонён, акт возвращён, счёт просрочен"
             ),
             OpenApiParameter("step", str, enum=["CONTRACT", "PAYMENT", "DONE"], description="Шаг пути заявки"),
-            OpenApiParameter("deal_id", int, description="Одна сделка (точный поиск по номеру ПР)"),
+            OpenApiParameter("deal_id", int, description="Одна сделка по id"),
+            OpenApiParameter("number", str, description="Одна сделка по номеру (год и NNN, префикс не важен)"),
             OpenApiParameter("limit", int, description="Размер страницы, 1–100 (по умолчанию 25)"),
             OpenApiParameter("offset", int, description="Сдвиг"),
         ],
@@ -73,6 +74,7 @@ class ProjectListView(APIView):
             problems=str(params.get("problems", "")).lower() in ("1", "true"),
             step=step if step in projects.STEPS else "",
             deal_id=_int(params.get("deal_id"), 0, low=0, high=2**31 - 1) or None,
+            number=params.get("number", "")[:64],
         )
         rows, total = projects.list_projects(
             request.user,

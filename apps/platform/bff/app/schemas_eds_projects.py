@@ -286,6 +286,7 @@ class _Raw(BaseModel):
 
 class RawRow(_Raw):
     deal_id: int
+    number: str = ""  # `Deal.number` из ERP (erp-internal 1.8.0); BFF номер не составляет
     title: str = ""
     company_name: str = ""
     created_at: dt.datetime

@@ -344,7 +344,6 @@ function Requisites({ card }: { card: ProjectCard }) {
     <DefinitionList
       items={[
         { label: t("card.fields.client"), value: card.client_name },
-        { label: t("card.fields.request"), value: card.request_number },
         { label: t("card.fields.total"), value: card.total ? <Money value={card.total} /> : null },
         { label: t("card.fields.manager"), value: card.manager?.name },
         { label: t("card.fields.responsible"), value: card.responsible?.name },

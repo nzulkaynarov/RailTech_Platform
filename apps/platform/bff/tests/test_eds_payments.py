@@ -732,3 +732,11 @@ async def test_memo_counter_is_exact_across_eds_pages(
     board = (await web.client.get(f"{BASE}/payments")).json()
 
     assert board["memos_to_pay"] == 5
+
+
+def test_project_number_is_the_erp_deal_number_never_composed() -> None:
+    """Номер проекта счёта — от ERP как есть (префиксы задаёт владелец); нет — `D-<id>`."""
+    from app.eds_payments import project_number
+
+    assert project_number(7, "PRJ-2026-031") == "PRJ-2026-031"
+    assert project_number(7, "") == "D-7"

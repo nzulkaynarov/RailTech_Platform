@@ -96,7 +96,6 @@
     "doneRule": "Dalolatnoma imzolanib, barcha hisoblar to‘langanda loyiha «Bajarildi» bo‘ladi.",
     "fields": {
       "client": "Mijoz",
-      "request": "Ariza",
       "total": "QQS bilan summa",
       "manager": "Menejer",
       "responsible": "Yuritadi",
