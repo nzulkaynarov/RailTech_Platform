@@ -139,9 +139,9 @@ describe("каркас на 1440", () => {
 
     const rail = screen.getByRole("navigation", { name: "Модули" });
     // буквы логотипа — из названия компании в настройках (задача «Н3»), приходят с `/setup/state`
-    expect(await within(rail).findByRole("link", { name: "RailTech (демо)" })).toHaveTextContent(
-      "RT",
-    );
+    expect(
+      await within(rail).findByRole("link", { name: "RT — RailTech (демо)" }),
+    ).toHaveTextContent("RT");
     expect(
       within(rail)
         .getAllByRole("link")

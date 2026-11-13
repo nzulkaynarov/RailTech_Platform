@@ -340,7 +340,7 @@ export function AppShell() {
           <ModuleRail
             modules={railItems}
             label={t("rail.label")}
-            logoLabel={t("rail.logo", { name: product.name })}
+            logoLabel={t("rail.logo", { name: product.name, initials: product.initials })}
             logoText={product.initials}
             logoTo="/"
             create={<CreateMenu />}
@@ -490,7 +490,7 @@ export function AppShell() {
             variant="bottom"
             modules={railItems}
             label={t("rail.label")}
-            logoLabel={t("rail.logo", { name: product.name })}
+            logoLabel={t("rail.logo", { name: product.name, initials: product.initials })}
             logoText={product.initials}
             logoTo="/"
             profile={profile}

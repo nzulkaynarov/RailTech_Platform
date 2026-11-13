@@ -6,7 +6,7 @@
   "loading": "Загружаем…",
   "rail": {
     "label": "Модули",
-    "logo": "{{name}}"
+    "logo": "{{initials}} — {{name}}"
   },
   "menu": {
     "nav": "Разделы модуля",
