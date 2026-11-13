@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { type Locator, type Page, expect, test } from "@playwright/test";
 
-import { loginAndWait, openAvatarMenu, spaGoto, waitForMotionEnd } from "./support/app";
+import { loginAndWait, openAvatarMenu, reveal, spaGoto, waitForMotionEnd } from "./support/app";
 import { chooseOption, fillDate, openStep, pickFiles } from "./support/fields";
 
 // P4 «Письмо на бланке» на MSW (SPEC-v3 §3.2a п. 3; план 2026-11-01 §6 п. 6): требование ГНК → поручение «Подготовить ответ»
@@ -58,8 +58,8 @@ async function switchTo(page: Page, email: string): Promise<void> {
   await openAvatarMenu(page);
   await page.getByRole("menuitem", { name: "Выйти" }).click();
   await expect(page).toHaveURL(/\/login/);
-  await page.getByLabel("Электронная почта").fill(email);
-  await page.getByLabel("Пароль").fill("demo-pass-1");
+  await (await reveal(page.getByLabel("Электронная почта"))).fill(email);
+  await (await reveal(page.getByLabel("Пароль"))).fill("demo-pass-1");
   await page.getByRole("button", { name: "Войти" }).click();
   await expect(page).toHaveURL(/\/dashboard\/queue$/);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
@@ -147,19 +147,31 @@ test.describe("P4: письмо на бланке", () => {
     await at(page, WIDE);
     await loginAndWait(page, "registrar@demo.example");
     await spaGoto(page, "/eds/register");
-    await chooseOption(page.getByLabel("Вид документа"), "Требование или уведомление ГНК");
-    await page.getByLabel("Корреспондент", { exact: true }).fill("ГНИ Мирабадского района");
-    await page.getByLabel("Исходящий номер отправителя").fill("14-02/3381");
-    await page.getByLabel("Тема").fill("Требование о представлении пояснений по НДС");
-    await pickFiles(page.getByLabel("Файл документа"), {
+    await chooseOption(
+      await reveal(page.getByLabel("Вид документа")),
+      "Требование или уведомление ГНК",
+    );
+    await (
+      await reveal(page.getByLabel("Корреспондент", { exact: true }))
+    ).fill("ГНИ Мирабадского района");
+    await (await reveal(page.getByLabel("Исходящий номер отправителя"))).fill("14-02/3381");
+    await (
+      await reveal(page.getByLabel("Тема", { exact: true }))
+    ).fill("Требование о представлении пояснений по НДС");
+    await pickFiles(await reveal(page.getByLabel("Файл документа")), {
       name: "trebovanie.pdf",
       mimeType: "application/pdf",
       buffer: Buffer.from("%PDF-1.4 demo"),
     });
     await expect(page.getByText("загружен")).toBeVisible();
-    await chooseOption(page.getByLabel("Тип резолюции"), "Подготовить ответ");
-    await chooseOption(page.getByLabel("Ответственный"), "Демо Широков · Менеджер-универсал");
+    await openStep(page, "Срок, адресат и резолюция");
+    await chooseOption(await reveal(page.getByLabel("Тип резолюции")), "Подготовить ответ");
+    await chooseOption(
+      await reveal(page.getByLabel("Ответственный")),
+      "Демо Широков · Менеджер-универсал",
+    );
     await fillDate(page.getByLabel("Срок исполнения"), companyDay(3));
+    await openStep(page, "Проверка и регистрация");
     await page.getByRole("button", { name: "Зарегистрировать", exact: true }).click();
     await expect(page.getByText(/Зарегистрировано: ВХ-109\/26/)).toBeVisible();
 
@@ -177,12 +189,14 @@ test.describe("P4: письмо на бланке", () => {
     await page.getByRole("link", { name: "Ответить" }).click();
     await expect(page).toHaveURL(/\/eds\/new\?type=letter&reply_to=/);
     await expect(page.getByLabel("В ответ на входящее")).toHaveValue("ВХ-109/26");
-    await page.getByLabel("Тема").fill("Пояснения по требованию № 14-02/3381");
-    await page.getByLabel("Адресат (организация)").fill("ГНИ Мирабадского района");
-    await page.getByLabel("Почта адресата").fill("gni-mirabad@example.uz");
-    await page
-      .getByLabel("Кому (должность и ФИО)")
-      .fill("Начальнику ГНИ Мирабадского района Каримову А. А.");
+    await (
+      await reveal(page.getByLabel("Тема", { exact: true }))
+    ).fill("Пояснения по требованию № 14-02/3381");
+    await (await reveal(page.getByLabel("Адресат (организация)"))).fill("ГНИ Мирабадского района");
+    await (await reveal(page.getByLabel("Почта адресата"))).fill("gni-mirabad@example.uz");
+    await (
+      await reveal(page.getByLabel("Кому (должность и ФИО)"))
+    ).fill("Начальнику ГНИ Мирабадского района Каримову А. А.");
     await fillLetterBody(page);
     await openStep(page, "Согласование и подпись");
     await expect(
@@ -243,11 +257,13 @@ test.describe("P4: письмо на бланке", () => {
     await at(page, WIDE);
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, "/eds/new?type=letter");
-    await page.getByLabel("Тема").fill("О сроках поставки");
-    await page.getByLabel("Адресат (организация)").fill("ООО «Демо-Путь»");
-    await page.getByLabel("Почта адресата").fill("office@nosmtp.example");
+    await (await reveal(page.getByLabel("Тема", { exact: true }))).fill("О сроках поставки");
+    await (await reveal(page.getByLabel("Адресат (организация)"))).fill("ООО «Демо-Путь»");
+    await (await reveal(page.getByLabel("Почта адресата"))).fill("office@nosmtp.example");
     await openStep(page, "Текст и вложения");
-    await page.getByLabel("Текст", { exact: true }).fill("Сообщаем о переносе отгрузки на неделю.");
+    await (
+      await reveal(page.getByLabel("Текст", { exact: true }))
+    ).fill("Сообщаем о переносе отгрузки на неделю.");
     await openStep(page, "Проверка и отправка");
     await page.getByRole("button", { name: "Зарегистрировать и отправить" }).click();
     await expect(

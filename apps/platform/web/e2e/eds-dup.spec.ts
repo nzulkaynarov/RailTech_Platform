@@ -2,7 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { type Page, expect, test } from "@playwright/test";
 
 import { fillDate } from "./support/fields";
-import { loginAndWait, spaGoto, waitForMotionEnd } from "./support/app";
+import { loginAndWait, reveal, spaGoto, waitForMotionEnd } from "./support/app";
 
 // EDS-DUP «Одно письмо — один входящий номер» на MSW: форма «Зарегистрировать входящее» в фоне находит то же письмо
 // (корреспондент + исх. № + дата) и похожие; «Это другое письмо — зарегистрировать» просит причину; в карточке ВХ —
@@ -56,8 +56,10 @@ test.describe("EDS-DUP: одно письмо — один входящий но
       await expect(
         page.getByRole("heading", { level: 1, name: "Регистрация входящего документа" }),
       ).toBeVisible();
-      await page.getByLabel("Корреспондент", { exact: true }).fill('акб "Демо-Банк"');
-      await page.getByLabel("Исходящий номер отправителя").fill("№ 12-07/881");
+      await (
+        await reveal(page.getByLabel("Корреспондент", { exact: true }))
+      ).fill('акб "Демо-Банк"');
+      await (await reveal(page.getByLabel("Исходящий номер отправителя"))).fill("№ 12-07/881");
       await fillDate(page.getByLabel("Дата у отправителя"), "2026-10-18");
 
       const exact = page
@@ -73,9 +75,9 @@ test.describe("EDS-DUP: одно письмо — один входящий но
 
       await exact.getByRole("button", { name: "Это другое письмо — зарегистрировать" }).click();
       await expect(page.getByLabel("Почему это другое письмо")).toBeVisible();
-      await page
-        .getByLabel("Почему это другое письмо")
-        .fill("Повторное письмо с исправленной суммой");
+      await (
+        await reveal(page.getByLabel("Почему это другое письмо"))
+      ).fill("Повторное письмо с исправленной суммой");
       await shot(page, "register-force");
       await expectNoViolations(page, `причина ${String(width)}`);
 
@@ -97,8 +99,10 @@ test.describe("EDS-DUP: одно письмо — один входящий но
       await expect(page.getByRole("heading", { level: 1, name: "Письмо ВХ-108/26" })).toBeVisible();
       await page.getByRole("button", { name: "Это дубль" }).click();
       const dialog = page.getByRole("dialog");
-      await dialog.getByLabel("Номер оригинала").fill("ВХ-100/26");
-      await dialog.getByLabel("Комментарий").fill("Пришло дважды: почтой и курьером");
+      await (await reveal(dialog.getByLabel("Номер оригинала"))).fill("ВХ-100/26");
+      await (
+        await reveal(dialog.getByLabel("Комментарий"))
+      ).fill("Пришло дважды: почтой и курьером");
       await shot(page, "mark-dialog");
       await expectNoViolations(page, `диалог ${String(width)}`);
 

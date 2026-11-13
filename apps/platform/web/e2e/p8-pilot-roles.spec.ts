@@ -1,8 +1,8 @@
 import AxeBuilder from "@axe-core/playwright";
 import { type Page, expect, test } from "@playwright/test";
 
-import { loginAndWait, railLinks, spaGoto, waitForMotionEnd } from "./support/app";
-import { chooseOption, pickFiles } from "./support/fields";
+import { loginAndWait, railLinks, reveal, spaGoto, waitForMotionEnd } from "./support/app";
+import { chooseOption, openStep, pickFiles } from "./support/fields";
 import { PILOT_ROLES, ROLE_NAMES, type Role, visibleModules } from "./support/rbac";
 
 // P8 «Роли пилота и регистрация входящих» на MSW (SPEC-v3 §3.2a п. 1, §4.1): меню четырёх ролей пилота; делопроизводитель
@@ -95,21 +95,28 @@ test.describe("P8: роли пилота и регистрация входящ�
       await shot(page, "register-form-empty");
       await expectNoViolations(page, `форма ${String(width)}`);
 
-      await chooseOption(page.getByLabel("Вид документа"), "Требование или уведомление ГНК");
-      await expect(page.getByRole("checkbox", { name: "Срочно" })).toBeChecked();
-      await page.getByLabel("Корреспондент", { exact: true }).fill("ГНИ Демо-района");
-      await page.getByLabel("Исходящий номер отправителя").fill("04-12/3456");
+      await chooseOption(
+        await reveal(page.getByLabel("Вид документа")),
+        "Требование или уведомление ГНК",
+      );
+      await expect(await reveal(page.getByLabel("Срочно", { exact: true }))).toBeChecked();
+      await (
+        await reveal(page.getByLabel("Корреспондент", { exact: true }))
+      ).fill("ГНИ Демо-района");
+      await (await reveal(page.getByLabel("Исходящий номер отправителя"))).fill("04-12/3456");
       // EDS-DUP: тот же корреспондент и исх. № (дата у отправителя не указана) — «Похожие письма» со ссылкой на ВХ-108/26;
       // подсказка, а не запрет. Другой номер — блок уходит, регистрация без «Это другое письмо».
       const similar = page.getByRole("status").filter({ hasText: "Похожие письма" });
       await expect(similar).toBeVisible();
       await expect(similar.getByRole("link", { name: "ВХ-108/26" })).toBeVisible();
-      await page.getByLabel("Исходящий номер отправителя").fill("04-12/4100");
+      await (await reveal(page.getByLabel("Исходящий номер отправителя"))).fill("04-12/4100");
       await expect(similar).toHaveCount(0);
       await expect(page.getByText("Похоже, это письмо уже зарегистрировано")).toHaveCount(0);
-      await page.getByLabel("Подписал").fill("Начальник инспекции Демо Налогов");
-      await page.getByLabel("Тема").fill("Требование о представлении пояснений по НДС за октябрь");
-      await pickFiles(page.getByLabel("Файл документа"), {
+      await (await reveal(page.getByLabel("Подписал"))).fill("Начальник инспекции Демо Налогов");
+      await (
+        await reveal(page.getByLabel("Тема", { exact: true }))
+      ).fill("Требование о представлении пояснений по НДС за октябрь");
+      await pickFiles(await reveal(page.getByLabel("Файл документа")), {
         name: "trebovanie.pdf",
         mimeType: "application/pdf",
         buffer: Buffer.from("%PDF-1.4 demo"),
@@ -119,6 +126,7 @@ test.describe("P8: роли пилота и регистрация входящ�
       await expectNoViolations(page, `заполненная форма ${String(width)}`);
 
       const started = Date.now();
+      await openStep(page, "Проверка и регистрация");
       await page.getByRole("button", { name: "Зарегистрировать", exact: true }).click();
       await expect(page.getByText(/Зарегистрировано: ВХ-109\/26/)).toBeVisible();
       expect(Date.now() - started).toBeLessThan(60_000);
