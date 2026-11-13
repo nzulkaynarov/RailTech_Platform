@@ -437,6 +437,10 @@ class QuoteDefaults(BaseModel):
     catalog_price_visibility: Literal["cabinet", "on_request"]
     catalog_publish_threshold: int
     fx_rate_max_age_days: int
+    # Сроки (задача «Н3c»): подтверждение и окончание цен партнёров, пауза напоминаний об акте.
+    offer_confirm_days: int
+    offer_expiring_days: int
+    act_reminder_hours: int
 
 
 class QuoteDefaultsUpdate(Patch):
@@ -466,6 +470,9 @@ class QuoteDefaultsUpdate(Patch):
     catalog_price_visibility: Literal["cabinet", "on_request"] | None = None
     catalog_publish_threshold: int | None = Field(default=None, ge=1, le=100)
     fx_rate_max_age_days: int | None = Field(default=None, ge=1, le=90)
+    offer_confirm_days: int | None = Field(default=None, ge=1, le=365)
+    offer_expiring_days: int | None = Field(default=None, ge=1, le=90)
+    act_reminder_hours: int | None = Field(default=None, ge=1, le=720)
 
 
 def to_quote_defaults(raw: Mapping[str, Any], visible_groups: Collection[str]) -> QuoteDefaults:
@@ -483,6 +490,9 @@ def to_quote_defaults(raw: Mapping[str, Any], visible_groups: Collection[str]) -
         "catalog_price_visibility": visibility if visibility == "cabinet" else "on_request",
         "catalog_publish_threshold": whole(raw.get("catalog_publish_threshold"), 70),
         "fx_rate_max_age_days": whole(raw.get("fx_rate_max_age_days"), 7),
+        "offer_confirm_days": whole(raw.get("offer_confirm_days"), 30),
+        "offer_expiring_days": whole(raw.get("offer_expiring_days"), 14),
+        "act_reminder_hours": whole(raw.get("act_reminder_hours"), 24),
     }
     if COST_MARGIN_GROUP in visible_groups:
         for name in MARGIN_FIELDS:

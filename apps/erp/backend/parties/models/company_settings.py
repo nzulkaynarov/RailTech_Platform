@@ -4,7 +4,12 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from catalog.constants import DEFAULT_OFFER_CONFIRM_DAYS, DEFAULT_PUBLISH_THRESHOLD, PriceVisibility
+from catalog.constants import (
+    DEFAULT_OFFER_CONFIRM_DAYS,
+    DEFAULT_OFFER_EXPIRING_DAYS,
+    DEFAULT_PUBLISH_THRESHOLD,
+    PriceVisibility,
+)
 
 
 class CompanySettings(models.Model):
@@ -131,6 +136,19 @@ class CompanySettings(models.Model):
         validators=[MinValueValidator(1), MaxValueValidator(365)],
         verbose_name=_("Срок подтверждения цен поставщика (дней)"),
         help_text=_("Цена поставщика без подтверждения дольше этого срока помечается «устарела»."),
+    )
+    #: Задача «Н3c»: за сколько дней до окончания срока цена партнёра помечается «истекает» (каталог и кабинет партнёра).
+    offer_expiring_days = models.PositiveSmallIntegerField(
+        default=DEFAULT_OFFER_EXPIRING_DAYS,
+        validators=[MinValueValidator(1), MaxValueValidator(90)],
+        verbose_name=_("Предупреждать об окончании цены (дней)"),
+        help_text=_("Цена поставщика со сроком действия ближе этого числа дней помечается «истекает»."),
+    )
+    #: Задача «Н3c»: не чаще одного напоминания клиенту об акте за столько часов.
+    act_reminder_hours = models.PositiveSmallIntegerField(
+        default=24,
+        validators=[MinValueValidator(1), MaxValueValidator(720)],
+        verbose_name=_("Пауза между напоминаниями об акте (часов)"),
     )
 
     # ── Политика курса и уведомления (M1-ERP-09, ARCHITECTURE §7) ────────────

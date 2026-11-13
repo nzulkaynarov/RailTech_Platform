@@ -136,3 +136,22 @@ def test_fx_rate_max_age_and_notifications_round_trip(company_a):
     bad_resp_zero = client.patch(url, {"fx_rate_max_age_days": 0}, format="json")
     assert bad_resp_zero.status_code == 400
     assert bad_resp_zero.data["detail"] == "BAD_FX_RATE_MAX_AGE_DAYS"
+
+
+@pytest.mark.parametrize(
+    ("field", "good", "bad"),
+    [("offer_confirm_days", 45, 0), ("offer_expiring_days", 10, 91), ("act_reminder_hours", 48, 721)],
+)
+def test_term_settings_round_trip_and_bounds(company_a, field, good, bad):
+    """Задача «Н3c» (аудит захардкоженного): сроки — настройки компании, а не константы в коде."""
+    owner = _owner(f"owner.{field}@example.com", company_a)
+    client = _client(owner)
+    url = f"/api/v1/accounts/companies/{company_a.id}/settings/"
+
+    resp = client.patch(url, {field: good}, format="json")
+    assert resp.status_code == 200, resp.data
+    assert resp.data[field] == good
+
+    refused = client.patch(url, {field: bad}, format="json")
+    assert refused.status_code == 400
+    assert refused.data["detail"] == "BAD_NUMBER"
