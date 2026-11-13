@@ -24,7 +24,7 @@ import { StatusTag } from "../../../shared/ui/StatusTag";
 import { TabsBar } from "../../../shared/ui/TabsBar";
 import { actionError, channelLabel } from "../messages/labels";
 import { canCreateFromLead } from "../common/access";
-import { Sheet } from "../common/Sheet";
+import { Sheet } from "../../../shared/ui/Sheet";
 import {
   clientPath,
   parseLead,

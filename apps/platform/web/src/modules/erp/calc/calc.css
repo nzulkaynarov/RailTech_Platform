@@ -349,3 +349,9 @@
 .pf-col-num > .pf-calc-crew {
   align-items: flex-end;
 }
+/* Короткие формы расчёта в боковом окне (§4.1a): кнопки в конце формы */
+.pf-calc-panel-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
