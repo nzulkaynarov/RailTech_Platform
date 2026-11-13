@@ -266,8 +266,11 @@
         "position": "Position",
         "kind": "Type",
         "owner": "Owner",
-        "contacts": "Contacts"
-      }
+        "contacts": "Contacts",
+        "company": "Company"
+      },
+      "showFor": "Show phone and e-mail: {{name}}",
+      "revealFailed": "Contacts not shown: the log is unavailable, try again shortly."
     }
   },
   "admin": {

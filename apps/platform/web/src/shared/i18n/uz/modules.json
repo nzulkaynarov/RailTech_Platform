@@ -266,8 +266,11 @@
         "position": "Lavozim",
         "kind": "Kim",
         "owner": "Mas’ul",
-        "contacts": "Kontaktlar"
-      }
+        "contacts": "Kontaktlar",
+        "company": "Kompaniya"
+      },
+      "showFor": "Telefon va pochtani ko‘rsatish: {{name}}",
+      "revealFailed": "Kontaktlar ko‘rsatilmadi: jurnal mavjud emas, birozdan so‘ng qayta urinib ko‘ring."
     }
   },
   "admin": {

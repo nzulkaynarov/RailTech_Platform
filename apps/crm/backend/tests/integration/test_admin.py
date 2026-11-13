@@ -399,3 +399,26 @@ async def test_console_open_is_audited_for_admin_only(
         "user",
     )
     assert item["actor_user_id"] is not None
+
+
+async def test_contact_reveal_is_audited_for_any_staff(
+    harness: Harness, admin: dict[str, str], sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    """FR-11: показ телефона и почты человека в «Людях» — запись журнала «кто, когда, чьи»."""
+    viewer, password = await make_user(sessions, "viewer3@railtech.uz", ["viewer"])
+    viewer_headers = login(harness.client, viewer.email, password)
+    url = "/api/v1/audit/contact-reveal"
+    assert harness.client.post(url, json={"contact": "41", "name": "Демо"}).status_code == 401
+    bad = harness.client.post(url, headers=viewer_headers, json={"contact": "x", "name": "Демо"})
+    assert bad.status_code == 422
+
+    ok = harness.client.post(
+        url, headers=viewer_headers, json={"contact": "41", "name": "Демо Клиентов"}
+    )
+    assert ok.status_code == 204
+
+    page = harness.client.get("/api/v1/audit?action=contact.reveal", headers=admin).json()
+    assert page["total"] == 1
+    item = page["items"][0]
+    assert (item["entity_type"], item["entity_id"]) == ("erp_contact", "41")
+    assert item["after"] == {"name": "Демо Клиентов"}
