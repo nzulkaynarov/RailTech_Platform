@@ -1759,6 +1759,34 @@
                 }
             }
         },
+        "/api/portal/v1/operator": {
+            "get": {
+                "operationId": "api_portal_v1_operator_retrieve",
+                "description": "GET /operator — название оператора платформы для кабинета до входа (задача «Н3a2»): ведётся в CRM\n(«Настройки · Компания»), проекция в ERP — `SystemSetting.platform_name`. Ничего, кроме названия, не отдаёт.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/operator/": {
+            "get": {
+                "operationId": "api_portal_v1_operator_retrieve_2",
+                "description": "GET /operator — название оператора платформы для кабинета до входа (задача «Н3a2»): ведётся в CRM\n(«Настройки · Компания»), проекция в ERP — `SystemSetting.platform_name`. Ничего, кроме названия, не отдаёт.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/portal/v1/partner/finance": {
             "get": {
                 "operationId": "api_portal_v1_partner_finance_retrieve",
