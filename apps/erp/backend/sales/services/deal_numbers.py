@@ -76,11 +76,10 @@ def promote_to_project(deal) -> bool:
     return renumbered
 
 
-def stage_of(number: str) -> str:
-    """Стадия сделки по её номеру — `request` (заявка, до принятия КП) или `project`: единственное место, где смысл
-    префикса известен (здесь же он выдаётся), — экраны и портал читают стадию отсюда, а не разбирают номер сами.
-    Номер без префикса заявки (старые сделки `D-<id>`) — проект, как раньше."""
-    return "request" if (number or "").startswith(f"{REQUEST_PREFIX}-") else "project"
+def stage_of(deal) -> str:
+    """Стадия сделки — `request` (заявка, до принятия КП) или `project`: полем `is_project`, а не по префиксу номера
+    (префиксы задаёт владелец в настройках нумерации, задача «Н»)."""
+    return "project" if deal.is_project else "request"
 
 
 def parse_query(text: str) -> Optional[tuple[int, int]]:
