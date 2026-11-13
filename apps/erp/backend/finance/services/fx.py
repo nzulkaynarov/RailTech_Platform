@@ -27,7 +27,8 @@ from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
-BASE_CURRENCY = "UZS"
+from core.currency import BASE_CURRENCY  # noqa: E402,F401 — валюта учёта (задача «Н3b»)
+
 CBU_URL = "https://cbu.uz/ru/arkhiv-kursov-valyut/json/"
 
 

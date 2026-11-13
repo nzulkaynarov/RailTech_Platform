@@ -22,6 +22,7 @@ from decimal import Decimal
 
 from django.http import HttpResponse
 
+from core.currency import BASE_CURRENCY
 from core.exporters import export_queryset_csv, export_queryset_xlsx
 
 from ..models import Quote
@@ -40,7 +41,7 @@ def _money(value) -> str:
 
 def _pres_currency(quote: Quote) -> str:
     """Presentation currency code of the КП (what the client sees). UZS by default."""
-    return quote.quote_currency.code if quote.quote_currency_id else "UZS"
+    return quote.quote_currency.code if quote.quote_currency_id else BASE_CURRENCY
 
 
 def _line_name(item) -> str:
@@ -105,7 +106,7 @@ def _cost_columns(pres_ccy: str):
             "base_ccy",
             "Валюта себест.",
             lambda row: (
-                (row["item"].frozen_currency.code if row["item"].frozen_currency_id else "UZS")
+                (row["item"].frozen_currency.code if row["item"].frozen_currency_id else BASE_CURRENCY)
                 if _is_priced(row["item"])
                 else ""
             ),

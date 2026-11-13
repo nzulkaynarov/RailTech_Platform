@@ -19,13 +19,14 @@ from typing import Iterable, Optional
 from django.db.models import Q
 from django.utils import timezone
 
+from core.currency import BASE_CURRENCY
 from crm.constants import ActStatusCode, ContractStatusCode, DealStageCode, InvoiceStatusCode, QuoteStatusCode
 from crm.models import ActivityLog
 from crm.services.documents.projection import client_projection_items
 from crm.services.documents.totals import quote_document_totals
 from crm.services.quotes.access import _EXPIRED_STATUS_CODE
 
-DEFAULT_CURRENCY = "UZS"
+DEFAULT_CURRENCY = BASE_CURRENCY
 _CENT = Decimal("0.01")
 
 #: КП, которые видит клиент: ушедшие к нему (`SENT`), решённые им и просроченные (`EXPIRED` ставит ночная задача

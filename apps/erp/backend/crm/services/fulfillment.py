@@ -3,6 +3,7 @@ from typing import Optional, Tuple
 from django.db import transaction
 
 from accounts.models import CustomUser
+from core.currency import BASE_CURRENCY
 from crm.services.pdf_storage import save_rendered_pdf
 
 from ..constants import FULFILLMENT_NOTE_ISSUED_STATUSES, DealStageCode, FulfillmentStatusCode
@@ -269,7 +270,7 @@ def _render_delivery_note_pdf(fulfillment) -> None:
     supplier = _delivery_note_supplier(fulfillment)
     number = ensure_delivery_note_number(fulfillment, supplier)
     brand = document_brand_context(supplier)
-    ccy = contract.currency.code if (contract and contract.currency_id) else "UZS"
+    ccy = contract.currency.code if (contract and contract.currency_id) else BASE_CURRENCY
     items = quote.items.billable().select_related("product") if quote else []
     template = company_template_for(supplier, "DELIVERY_NOTE")
     body = render_delivery_note_body(

@@ -17,6 +17,7 @@ import { readEmployees, writeEmployees } from "./fixtures/employees";
 import { registerUser } from "./fixtures/users";
 import { buildSession, startSession } from "./mockSession";
 import { type SetupMock, readSetup, writeSetup } from "./setupState";
+import { readKb } from "./fixtures/kb";
 
 const STEPS: readonly SetupStepKey[] = ["erp", "bot", "mail", "models", "first_employee"];
 
@@ -56,7 +57,14 @@ function weakPassword(password: string, email: string): boolean {
 
 /** Моки `/setup/*` (W13-A4): те же отказы, что у BFF, состояние — в `setupState`. */
 export const setupHandlers = [
-  http.get("*/setup/state", () => HttpResponse.json({ needs_admin: readSetup().needsAdmin })),
+  // Название — из той же настройки «Компания» (CRM `company.name`), что правит «Настройки · Компания» (задача «Н3»).
+  http.get("*/setup/state", () => {
+    const company = readKb().settings["company"] as { name?: string } | undefined;
+    return HttpResponse.json({
+      needs_admin: readSetup().needsAdmin,
+      company_name: company?.name?.trim() || null,
+    });
+  }),
 
   http.post("*/setup/admin", async ({ request }) => {
     const body = (await request.json()) as SetupAdminIn;

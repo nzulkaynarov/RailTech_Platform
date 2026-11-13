@@ -21,6 +21,8 @@ _EMAIL = r"^[^@\s]+@[^@\s]+$"
 
 class SetupState(BaseModel):
     needs_admin: bool
+    # «Настройки · Компания» (CRM `company.name`, задача «Н3»): заголовок и вход; пусто — `None`.
+    company_name: str | None = None
 
 
 class SetupAdminIn(BaseModel):

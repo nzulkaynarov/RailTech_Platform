@@ -46,12 +46,14 @@ async def _connector_set(resolve: Callable[[], Awaitable[Any]], name: str) -> bo
 
 @router.get("/state", response_model=SetupState)
 async def get_setup_state(container: ContainerDep) -> SetupState:
-    """Публично: нужен ли мастер первого запуска (в CRM ещё нет активного администратора)."""
+    """Публично: нужен ли мастер первого запуска (в CRM ещё нет активного администратора)
+    и название компании для заголовка и экрана входа Платформы (задача «Н3»)."""
     service = container.setup_service
     needs = await service.needs_setup()
     if needs:
         await service.ensure_code()
-    return SetupState(needs_setup=needs)
+    cfg = await container.settings_service.get()
+    return SetupState(needs_setup=needs, company_name=cfg.company.name.strip())
 
 
 @router.post("/admin", response_model=TokenResponse)

@@ -486,7 +486,14 @@ export const getGetSessionResponseMock = (
 
 export const getGetSetupStateResponseMock = (
   overrideResponse: Partial<Extract<SetupState, object>> = {},
-): SetupState => ({ needs_admin: faker.datatype.boolean(), ...overrideResponse });
+): SetupState => ({
+  needs_admin: faker.datatype.boolean(),
+  company_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  ...overrideResponse,
+});
 
 export const getCreateFirstAdminResponseMock = (
   overrideResponse: Partial<Extract<Session, object>> = {},

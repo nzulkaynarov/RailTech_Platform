@@ -133,8 +133,9 @@ def setup_error(response: httpx.Response) -> PlatformError:
     return base
 
 
-async def fetch_state(client: CrmClient) -> bool:
-    """`True` — администратора ещё нет (нужен экран «Первый запуск»). Без токена."""
+async def fetch_state(client: CrmClient) -> crm.SetupState:
+    """Нужен ли экран «Первый запуск» и название компании для заголовка (задача «Н3»).
+    Без токена."""
     try:
         response = await client.send("GET", f"{SETUP}/state")
     except BackendUnavailableError as exc:
@@ -142,7 +143,7 @@ async def fetch_state(client: CrmClient) -> bool:
     if response.status_code != 200:
         raise from_backend("crm", response)
     try:
-        return crm.SetupState.model_validate(response.json()).needs_setup
+        return crm.SetupState.model_validate(response.json())
     except (ValueError, ValidationError) as exc:
         raise backend_unavailable("crm", "bad_setup_state") from exc
 
@@ -179,7 +180,7 @@ async def create_admin(
 async def _admin_exists(client: CrmClient) -> bool:
     """После таймаута `/setup/admin`: CRM отвечает на `/setup/state` и администратор уже есть."""
     try:
-        return not await fetch_state(client)
+        return not (await fetch_state(client)).needs_setup
     except PlatformError:
         return False
 

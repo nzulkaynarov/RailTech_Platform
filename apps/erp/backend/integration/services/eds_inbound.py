@@ -124,7 +124,7 @@ def apply_document_signed(data: dict[str, Any], event_id: Optional[UUID] = None)
     from core.tenant import own_company
 
     company = own_company()
-    company_name = company.name if company else "RailTech"
+    company_name = company.name if company else ""  # своей компании ещё нет — без названия, не зашитое (задача «Н3»)
 
     signer = doc.get("signer") or {}
     signed_at_str = doc.get("signed_at")
@@ -299,7 +299,7 @@ def apply_signing_decided(data: dict[str, Any], event_id: Optional[UUID] = None)
                 "kind": kind,
                 "number": obj.get("number") or "",
                 "date": signed_at.date(),
-                "company_name": company.name if company else "RailTech",
+                "company_name": company.name if company else "",
                 "signatory_name": signer_name,
                 "signatory_position": signer_position,
                 "signatory_basis": basis_text,
