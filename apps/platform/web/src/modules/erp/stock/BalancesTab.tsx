@@ -6,16 +6,21 @@ import { useViewport } from "../../../app/shell/useViewport";
 import type { StockRow } from "../../../shared/api/generated/model";
 import { useListStockBalances } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
-import { TableCols } from "../../../shared/ui/DataBlock";
-import { tableMinWidth } from "../../../shared/ui/tableWidth";
+import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTable";
 import { EmptyState } from "../../../shared/ui/EmptyState";
-import { QueryState, ScrollRegion } from "../../../shared/ui/FormParts";
+import { QueryState } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { useStateLabels } from "./api";
 import { ProductDrawer } from "./ProductDrawer";
 
 /** Ширины колонок: номенклатура (гибкая), на складе, резерв, свободно, в пути, ячейки (UX-1c, S9) */
-const COLS = [null, 120, 100, 140, 160, 160] as const;
+const COLS = {
+  onHand: 120,
+  reserved: 100,
+  free: 140,
+  incoming: 160,
+  cells: 160,
+};
 
 function Incoming({ row }: { row: StockRow }) {
   const { t } = useTranslation("stock");
@@ -89,62 +94,88 @@ function Rows({ items, onOpen }: { items: readonly StockRow[]; onOpen: (row: Sto
       </ul>
     );
   }
+  // Ширины по типу (COLS, T1); остальное — настройка сотрудника в «Столбцах» (пункт «Т»).
+  const columns: DataColumn<StockRow>[] = [
+    {
+      id: "product",
+      header: t("balances.columns.product"),
+      width: null,
+      cell: (row) => (
+        <>
+          <Button
+            type="link"
+            className="pf-calc-link"
+            aria-label={t("balances.open", { name: row.name })}
+            onClick={() => {
+              onOpen(row);
+            }}
+          >
+            {row.name}
+          </Button>
+          <div className="pf-hint pf-num">{row.article}</div>
+        </>
+      ),
+    },
+    {
+      id: "onHand",
+      header: t("balances.columns.onHand"),
+      width: COLS.onHand,
+      numeric: true,
+      cell: (row) => (
+        <>
+          {row.on_hand} <span className="pf-hint">{row.unit}</span>
+        </>
+      ),
+    },
+    {
+      id: "reserved",
+      header: t("balances.columns.reserved"),
+      width: COLS.reserved,
+      numeric: true,
+      cell: (row) => row.reserved,
+    },
+    {
+      id: "free",
+      header: t("balances.columns.free"),
+      width: COLS.free,
+      cell: (row) => (
+        <>
+          <Free row={row} />
+        </>
+      ),
+    },
+    {
+      id: "incoming",
+      header: t("balances.columns.incoming"),
+      width: COLS.incoming,
+      cell: (row) => (
+        <>
+          <Incoming row={row} />
+        </>
+      ),
+    },
+    {
+      id: "cells",
+      header: t("balances.columns.cells"),
+      width: COLS.cells,
+      cell: (row) => (
+        <>
+          <Cells row={row} />
+        </>
+      ),
+    },
+  ];
   return (
-    <ScrollRegion label={t("balances.scroll")}>
-      <table
-        className="pf-calc-table pf-fixed-table"
-        style={{ minWidth: tableMinWidth(COLS, 240) }}
-      >
-        <caption className="pf-sr-only">{t("balances.caption")}</caption>
-        <TableCols widths={COLS} />
-        <thead>
-          <tr>
-            <th scope="col">{t("balances.columns.product")}</th>
-            <th scope="col" className="pf-col-num">
-              {t("balances.columns.onHand")}
-            </th>
-            <th scope="col" className="pf-col-num">
-              {t("balances.columns.reserved")}
-            </th>
-            <th scope="col">{t("balances.columns.free")}</th>
-            <th scope="col">{t("balances.columns.incoming")}</th>
-            <th scope="col">{t("balances.columns.cells")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((row) => (
-            <tr key={row.product_id}>
-              <td>
-                <Button
-                  type="link"
-                  className="pf-calc-link"
-                  aria-label={t("balances.open", { name: row.name })}
-                  onClick={() => {
-                    onOpen(row);
-                  }}
-                >
-                  {row.name}
-                </Button>
-                <div className="pf-hint pf-num">{row.article}</div>
-              </td>
-              <td className="pf-col-num">
-                {row.on_hand} <span className="pf-hint">{row.unit}</span>
-              </td>
-              <td className="pf-col-num">{row.reserved}</td>
-              <td>
-                <Free row={row} />
-              </td>
-              <td>
-                <Incoming row={row} />
-              </td>
-              <td>
-                <Cells row={row} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </ScrollRegion>
+    <DataTable
+      tableId="erp.stock.balances"
+      caption={t("balances.caption")}
+      scrollLabel={t("balances.scroll")}
+      className="pf-calc-table"
+      flexMin={240}
+      columns={columns}
+      rows={items}
+      rowKey={(row) => row.product_id}
+    />
   );
 }
 

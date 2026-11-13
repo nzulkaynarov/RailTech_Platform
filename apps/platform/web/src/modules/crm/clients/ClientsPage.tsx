@@ -15,10 +15,9 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
+import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTable";
 import { EmptyState } from "../../../shared/ui/EmptyState";
-import { TableCols } from "../../../shared/ui/DataBlock";
-import { tableMinWidth } from "../../../shared/ui/tableWidth";
-import { QueryState, ScrollRegion } from "../../../shared/ui/FormParts";
+import { QueryState } from "../../../shared/ui/FormParts";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { BankChangesPanel } from "../../eds/payments/BankChangesPanel";
@@ -35,7 +34,13 @@ import "../../erp/catalog/catalog.css";
 import "../crm.css";
 
 /** Ширины колонок: название, ИНН, заявки, ERP, последняя активность (UX-1c, S9; по типу — platform-frontend.md §4.2) */
-const COLS = [null, 140, 150, 144, 170, 184] as const;
+const COLS = {
+  inn: 140,
+  kind: 150,
+  requests: 144,
+  erp: 170,
+  last: 184,
+};
 
 const KINDS = ["all", "clients", "partners", "applications", "bank_changes"] as const;
 type KindFilter = (typeof KINDS)[number];
@@ -260,6 +265,64 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
     forbidden: { title: t("clients:loadError.title"), text: t("clients:loadError.text") },
   };
 
+  // Ширины по типу (COLS, T1); остальное — настройка сотрудника в «Столбцах» (пункт «Т»).
+  const columns: DataColumn<ClientRow>[] = [
+    {
+      id: "name",
+      header: t("clients:columns.name"),
+      width: null,
+      cellClassName: "pf-crm-wrap",
+      cell: (row) => (
+        <>
+          <NameLink row={row} params={params} selected={isOpen(row)} />
+        </>
+      ),
+    },
+    {
+      id: "inn",
+      header: t("clients:columns.inn"),
+      width: COLS.inn,
+      cellClassName: "pf-num",
+      cell: (row) => row.inn ?? <span aria-hidden="true">—</span>,
+    },
+    {
+      id: "kind",
+      header: t("clients:kinds.column"),
+      width: COLS.kind,
+      cell: (row) => (
+        <>
+          <RelationTag kind={relationOf(row)} />
+        </>
+      ),
+    },
+    {
+      id: "requests",
+      header: t("clients:columns.requests"),
+      width: COLS.requests,
+      numeric: true,
+      cell: (row) => (isPartnerOnly(row) ? "—" : row.open_requests),
+    },
+    {
+      id: "erp",
+      header: t("clients:columns.erp"),
+      width: COLS.erp,
+      cell: (row) => (
+        <>
+          <StateTag row={row} terms={termsOf.get(String(-row.id))} />
+        </>
+      ),
+    },
+    {
+      id: "last",
+      header: t("clients:columns.last"),
+      width: COLS.last,
+      cell: (row) => (
+        <>
+          <Activity row={row} />
+        </>
+      ),
+    },
+  ];
   return (
     <div className="pf-crm">
       <PageHeader
@@ -335,49 +398,19 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
                   ))}
                 </ul>
               ) : (
-                <ScrollRegion label={t("clients:tableScroll")}>
-                  <table
-                    className="pf-crm-table pf-fixed-table"
-                    style={{ minWidth: tableMinWidth(COLS, 240) }}
-                  >
-                    <caption className="pf-sr-only">{t("clients:caption")}</caption>
-                    <TableCols widths={COLS} />
-                    <thead>
-                      <tr>
-                        <th scope="col">{t("clients:columns.name")}</th>
-                        <th scope="col">{t("clients:columns.inn")}</th>
-                        <th scope="col">{t("clients:kinds.column")}</th>
-                        <th scope="col" className="pf-col-num">
-                          {t("clients:columns.requests")}
-                        </th>
-                        <th scope="col">{t("clients:columns.erp")}</th>
-                        <th scope="col">{t("clients:columns.last")}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {rowsOf(data.items).map((row) => (
-                        <tr key={row.id} data-selected={isOpen(row)}>
-                          <td className="pf-crm-wrap">
-                            <NameLink row={row} params={params} selected={isOpen(row)} />
-                          </td>
-                          <td className="pf-num">{row.inn ?? <span aria-hidden="true">—</span>}</td>
-                          <td>
-                            <RelationTag kind={relationOf(row)} />
-                          </td>
-                          <td className="pf-col-num">
-                            {isPartnerOnly(row) ? "—" : row.open_requests}
-                          </td>
-                          <td>
-                            <StateTag row={row} terms={termsOf.get(String(-row.id))} />
-                          </td>
-                          <td>
-                            <Activity row={row} />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </ScrollRegion>
+                <DataTable
+                  tableId="crm.clients"
+                  caption={t("clients:caption")}
+                  scrollLabel={t("clients:tableScroll")}
+                  className="pf-crm-table"
+                  flexMin={240}
+                  columns={columns}
+                  rows={rowsOf(data.items)}
+                  rowKey={(row) => String(row.id)}
+                  rowAttrs={(row) => ({
+                    "data-selected": isOpen(row),
+                  })}
+                />
               )
             }
           </QueryState>

@@ -8,10 +8,9 @@ import { useListCalcRequests } from "../../../shared/api/generated/platform-bff"
 import { COMPANY_TIME_ZONE } from "../../../shared/lib/format";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
-import { TableCols } from "../../../shared/ui/DataBlock";
-import { tableMinWidth } from "../../../shared/ui/tableWidth";
+import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTable";
 import { EmptyState } from "../../../shared/ui/EmptyState";
-import { QueryState, ScrollRegion } from "../../../shared/ui/FormParts";
+import { QueryState } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { StatusTag } from "../../../shared/ui/StatusTag";
@@ -24,7 +23,14 @@ import "./calc.css";
 /**
  * Ширины колонок: номер, клиент и тема (гибкая), этап, срок, визы, ответственный, действие (UX-1c, S9). Ширина — по типу колонки (platform-frontend.md §4.2), на 1440 с открытым подменю — без прокрутки вбок (T1).
  */
-const COLS = [128, null, 164, 120, 180, 136, 156] as const;
+const COLS = {
+  number: 128,
+  stage: 164,
+  due: 120,
+  visas: 180,
+  responsible: 136,
+  action: 156,
+};
 
 function companyToday(): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -103,79 +109,113 @@ function Rows({ items, selected }: { items: readonly CalcRequestRow[]; selected:
       </ul>
     );
   }
+  // Ширины по типу (COLS, T1); остальное — настройка сотрудника в «Столбцах» (пункт «Т»).
+  const columns: DataColumn<CalcRequestRow>[] = [
+    {
+      id: "number",
+      header: t("list.columns.number"),
+      width: COLS.number,
+      cellClassName: "pf-num",
+      cell: (row) => (
+        <>
+          <Link
+            className="pf-focusable pf-calc-number"
+            to={selectHref(params, row.number)}
+            replace
+            aria-label={t("list.select", { number: row.number })}
+            aria-current={selected === row.number ? "true" : undefined}
+          >
+            {row.number}
+          </Link>
+        </>
+      ),
+    },
+    {
+      id: "client",
+      header: t("list.columns.client"),
+      width: null,
+      cell: (row) => (
+        <>
+          <div>{row.client ?? "—"}</div>
+          <div className="pf-hint">{row.title}</div>
+        </>
+      ),
+    },
+    {
+      id: "stage",
+      header: t("list.columns.stage"),
+      width: COLS.stage,
+      cell: (row) => (
+        <>
+          <Stage row={row} />
+        </>
+      ),
+    },
+    {
+      id: "due",
+      header: t("list.columns.due"),
+      width: COLS.due,
+      cell: (row) => (
+        <>
+          <Due due={row.due} />
+        </>
+      ),
+    },
+    {
+      id: "visas",
+      header: t("list.columns.visas"),
+      width: COLS.visas,
+      cell: (row) => (
+        <>
+          <VisaIndicators visas={row.visas} />
+        </>
+      ),
+    },
+    {
+      id: "responsible",
+      header: t("list.columns.responsible"),
+      width: COLS.responsible,
+      cellClassName: "pf-ell",
+      cellTitle: (row) => row.responsible ?? undefined,
+      cell: (row) => row.responsible ?? "—",
+    },
+    {
+      id: "action",
+      header: t("list.columns.action"),
+      headerHidden: true,
+      width: COLS.action,
+      cell: (row) => (
+        <>
+          <LinkButton
+            size="small"
+            to={calcPath(row.number)}
+            aria-label={t("list.openLabel", { number: row.number })}
+          >
+            {t("list.open")}
+          </LinkButton>
+        </>
+      ),
+    },
+  ];
   return (
-    <ScrollRegion label={t("list.scroll")}>
-      <table
-        className="pf-calc-table pf-fixed-table"
-        style={{ minWidth: tableMinWidth(COLS, 220) }}
-      >
-        <caption className="pf-sr-only">{t("list.caption")}</caption>
-        <TableCols widths={COLS} />
-        <thead>
-          <tr>
-            <th scope="col">{t("list.columns.number")}</th>
-            <th scope="col">{t("list.columns.client")}</th>
-            <th scope="col">{t("list.columns.stage")}</th>
-            <th scope="col">{t("list.columns.due")}</th>
-            <th scope="col">{t("list.columns.visas")}</th>
-            <th scope="col">{t("list.columns.responsible")}</th>
-            <th scope="col">
-              <span className="pf-sr-only">{t("list.columns.action")}</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((row) => (
-            <tr
-              key={row.number}
-              data-selected={selected === row.number}
-              onClick={(event) => {
-                // Клик по строке — задание в боковом окне без перехода; ссылки и кнопки работают сами.
-                if ((event.target as HTMLElement).closest("a,button")) return;
-                void navigate(selectHref(params, row.number), { replace: true });
-              }}
-            >
-              <td className="pf-num">
-                <Link
-                  className="pf-focusable pf-calc-number"
-                  to={selectHref(params, row.number)}
-                  replace
-                  aria-label={t("list.select", { number: row.number })}
-                  aria-current={selected === row.number ? "true" : undefined}
-                >
-                  {row.number}
-                </Link>
-              </td>
-              <td>
-                <div>{row.client ?? "—"}</div>
-                <div className="pf-hint">{row.title}</div>
-              </td>
-              <td>
-                <Stage row={row} />
-              </td>
-              <td>
-                <Due due={row.due} />
-              </td>
-              <td>
-                <VisaIndicators visas={row.visas} />
-              </td>
-              <td className="pf-ell" title={row.responsible ?? undefined}>
-                {row.responsible ?? "—"}
-              </td>
-              <td>
-                <LinkButton
-                  size="small"
-                  to={calcPath(row.number)}
-                  aria-label={t("list.openLabel", { number: row.number })}
-                >
-                  {t("list.open")}
-                </LinkButton>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </ScrollRegion>
+    <DataTable
+      tableId="erp.requests"
+      caption={t("list.caption")}
+      scrollLabel={t("list.scroll")}
+      className="pf-calc-table"
+      flexMin={220}
+      columns={columns}
+      rows={items}
+      rowKey={(row) => row.number}
+      rowAttrs={(row) => ({
+        "data-selected": selected === row.number,
+        onClick: (event) => {
+          // Клик по строке — задание в боковом окне без перехода; ссылки и кнопки работают сами.
+          if ((event.target as HTMLElement).closest("a,button")) return;
+          void navigate(selectHref(params, row.number), { replace: true });
+        },
+      })}
+    />
   );
 }
 

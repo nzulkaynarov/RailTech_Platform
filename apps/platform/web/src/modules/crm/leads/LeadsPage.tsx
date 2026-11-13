@@ -15,10 +15,9 @@ import type {
 import { useListCrmLeads, useTakeCrmLead } from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
+import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTable";
 import { EmptyState } from "../../../shared/ui/EmptyState";
-import { TableCols } from "../../../shared/ui/DataBlock";
-import { tableMinWidth } from "../../../shared/ui/tableWidth";
-import { ErrorNote, QueryState, ScrollRegion } from "../../../shared/ui/FormParts";
+import { ErrorNote, QueryState } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { StatusTag } from "../../../shared/ui/StatusTag";
@@ -54,7 +53,12 @@ const VIEWS = ["all", "mine", "waiting", "overdue"] as const;
 type View = (typeof VIEWS)[number];
 const CHANNELS = ["telegram", "cabinet", "web", "email", "phone", "referral"] as const;
 /** Ширины колонок: имя, статус, что нужно, ответственный, последнее, действие (UX-1c, S9) */
-const COLS = [null, 150, null, 170, 130, 170] as const;
+const COLS = {
+  status: 150,
+  assigned: 170,
+  last: 130,
+  action: 170,
+};
 
 function pick<T extends string>(list: readonly T[], value: string | null, fallback: T): T {
   return list.find((item) => item === value) ?? fallback;
@@ -200,48 +204,81 @@ function LeadsTable({
   onError: (text: string | null) => void;
 }) {
   const { t } = useTranslation(["leads", "messages"]);
+  // Ширины по типу (COLS, T1); остальное — настройка сотрудника в «Столбцах» (пункт «Т»).
+  const columns: DataColumn<LeadRow>[] = [
+    {
+      id: "name",
+      header: t("leads:columns.name"),
+      width: null,
+      cell: (row) => (
+        <>
+          <NameCell row={row} params={params} selected={selected === row.lead} />
+          <div className="pf-hint">
+            {row.lead} · {channelLabel(t, row.channel)}
+          </div>
+        </>
+      ),
+    },
+    {
+      id: "status",
+      header: t("leads:columns.status"),
+      width: COLS.status,
+      cell: (row) => (
+        <>
+          <StatusTag kind="lead" status={row.status} />
+        </>
+      ),
+    },
+    {
+      id: "need",
+      header: t("leads:columns.need"),
+      width: null,
+      cellClassName: "pf-crm-need",
+      cell: (row) => row.need ?? <span aria-hidden="true">—</span>,
+    },
+    {
+      id: "assigned",
+      header: t("leads:columns.assigned"),
+      width: COLS.assigned,
+      cellClassName: "pf-ell",
+      cellTitle: (row) => row.assigned?.name ?? t("leads:nobody"),
+      cell: (row) => row.assigned?.name ?? t("leads:nobody"),
+    },
+    {
+      id: "last",
+      header: t("leads:columns.last"),
+      width: COLS.last,
+      cell: (row) => (
+        <>
+          <LastMessage row={row} />
+        </>
+      ),
+    },
+    {
+      id: "action",
+      header: t("leads:columns.action"),
+      width: COLS.action,
+      cell: (row) => (
+        <>
+          <RowAction row={row} onError={onError} />
+        </>
+      ),
+    },
+  ];
   return (
-    <ScrollRegion label={t("leads:tableScroll")}>
-      <table className="pf-crm-table pf-fixed-table" style={{ minWidth: tableMinWidth(COLS) }}>
-        <caption className="pf-sr-only">{t("leads:caption")}</caption>
-        <TableCols widths={COLS} />
-        <thead>
-          <tr>
-            <th scope="col">{t("leads:columns.name")}</th>
-            <th scope="col">{t("leads:columns.status")}</th>
-            <th scope="col">{t("leads:columns.need")}</th>
-            <th scope="col">{t("leads:columns.assigned")}</th>
-            <th scope="col">{t("leads:columns.last")}</th>
-            <th scope="col">{t("leads:columns.action")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((row) => (
-            <tr key={row.lead} data-selected={selected === row.lead}>
-              <td>
-                <NameCell row={row} params={params} selected={selected === row.lead} />
-                <div className="pf-hint">
-                  {row.lead} · {channelLabel(t, row.channel)}
-                </div>
-              </td>
-              <td>
-                <StatusTag kind="lead" status={row.status} />
-              </td>
-              <td className="pf-crm-need">{row.need ?? <span aria-hidden="true">—</span>}</td>
-              <td className="pf-ell" title={row.assigned?.name ?? t("leads:nobody")}>
-                {row.assigned?.name ?? t("leads:nobody")}
-              </td>
-              <td>
-                <LastMessage row={row} />
-              </td>
-              <td>
-                <RowAction row={row} onError={onError} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </ScrollRegion>
+    <DataTable
+      tableId="crm.leads"
+      caption={t("leads:caption")}
+      scrollLabel={t("leads:tableScroll")}
+      className="pf-crm-table"
+      flexMin={200}
+      columns={columns}
+      rows={items}
+      rowKey={(row) => row.lead}
+      rowAttrs={(row) => ({
+        "data-selected": selected === row.lead,
+      })}
+    />
   );
 }
 
