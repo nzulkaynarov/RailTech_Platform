@@ -282,11 +282,26 @@ const PLACEHOLDER_GROUPS = [
 
 const DECIMAL = /^-?\d+(\.\d+)?$/;
 
-/** Ответ `GET /admin/company/fx-rate`: курс и последние 20 записей журнала. */
-function fxOverview(state: CompanyMock) {
-  const { fx } = state;
+/** Валюты, у которых ведётся курс (как `tracked_currencies` ERP): выбор в форме, пункт 1.7. */
+const FX_CURRENCIES = [
+  { code: "USD", name: "Доллар США" },
+  { code: "EUR", name: "Евро" },
+  { code: "RUB", name: "Российский рубль" },
+];
+
+function fxOf(state: CompanyMock, currency: string) {
+  if (currency === "USD") return state.fx;
+  state.fxOthers ??= {};
+  state.fxOthers[currency] ??= { current: null, journal: [] };
+  return state.fxOthers[currency];
+}
+
+/** Ответ `GET /admin/company/fx-rate`: курс и последние 20 записей журнала выбранной валюты. */
+function fxOverview(state: CompanyMock, currency = "USD") {
+  const fx = fxOf(state, currency);
   return {
-    currency: "USD" as const,
+    currency,
+    currencies: FX_CURRENCIES,
     current: fx.current,
     max_age_days: 7,
     journal: fx.journal.slice(0, 20),
@@ -967,7 +982,10 @@ export const adminCompanyHandlers = [
   ),
 
   // --- курс USD→UZS: ручной ввод и журнал (W13C-F6)
-  http.get("*/admin/company/fx-rate", () => read("read", (_c, s) => fxOverview(s))),
+  http.get("*/admin/company/fx-rate", ({ request }) => {
+    const currency = new URL(request.url).searchParams.get("currency") ?? "USD";
+    return read("read", (_c, s) => fxOverview(s, currency));
+  }),
   http.post("*/admin/company/fx-rate", ({ request }) =>
     write<FxRateIn>(
       request,
@@ -978,7 +996,8 @@ export const adminCompanyHandlers = [
         if (body.rate_date > today) return validation(["rate_date"], "fx_rate_date_in_future");
         if (!/^\d+(\.\d{1,6})?$/.test(body.rate_to_uzs) || Number(body.rate_to_uzs) <= 0)
           return validation(["rate_to_uzs"], "fx_rate_invalid");
-        const { fx } = s;
+        const currency = body.currency ?? "USD";
+        const fx = fxOf(s, currency);
         const rate = String(Number(body.rate_to_uzs));
         const previous = fx.current?.rate_date === body.rate_date ? fx.current : null;
         fx.journal.unshift({
@@ -993,8 +1012,8 @@ export const adminCompanyHandlers = [
         });
         if (!fx.current || body.rate_date >= fx.current.rate_date)
           fx.current = { rate_to_uzs: rate, rate_date: body.rate_date, source: "manual" };
-        s.platform = { ...s.platform, exchange_rate_usd_uzs: rate };
-        return fxOverview(s);
+        if (currency === "USD") s.platform = { ...s.platform, exchange_rate_usd_uzs: rate };
+        return fxOverview(s, currency);
       },
       201,
     ),

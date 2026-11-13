@@ -183,6 +183,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/operator": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Название оператора платформы (задача «Н3a2»)
+     * @description Название компании-оператора для кабинета до входа: заголовок вкладки, экран входа, тексты. Ведётся в CRM («Настройки · Компания»), в ERP — проекция из события `crm.company_profile.changed`. `null` — ещё не задано, кабинет пишет нейтральные слова. Других данных нет.
+     */
+    get: operations["getOperator"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/me": {
     parameters: {
       query?: never;
@@ -2248,6 +2268,10 @@ export interface components {
       stage: components["schemas"]["DealStage"];
       title?: string | null;
     };
+    PortalOperator: {
+      /** @description Название компании-оператора; `null` — не задано */
+      name: string | null;
+    };
     /**
      * @description Стадия сделки для подписи (0.12): `request` — заявка до принятия КП, `project` — проект после. Подпись берётся отсюда, а не из префикса номера: префиксы задаёт владелец в настройках нумерации.
      * @enum {string}
@@ -3502,6 +3526,26 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["PortalCountry"][];
+        };
+      };
+    };
+  };
+  getOperator: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Название оператора */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PortalOperator"];
         };
       };
     };

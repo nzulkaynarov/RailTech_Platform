@@ -299,6 +299,8 @@ ANY_ROLE_PATHS |= {"/auth/sessions", "/auth/sessions/revoke-others"}
 ANY_ROLE_PATHS |= {"/auth/partner-application"}
 #: Справочник стран для онбординга и профиля (COUNTRY-MASK-1): доступен публично.
 ANY_ROLE_PATHS |= {"/countries"}
+#: Название оператора до входа (задача «Н3a2»): публично, без данных клиента.
+ANY_ROLE_PATHS |= {"/operator"}
 #: Своя заявка на партнёрство (FX-1): кандидат работает с ней до появления модулей; подача новой — по-прежнему модуль `company`.
 CANDIDATE_OPERATIONS = {
     ("GET", "/company/partner-application"),

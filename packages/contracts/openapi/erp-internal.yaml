@@ -3,7 +3,7 @@
 openapi: 3.0.3
 info:
   title: RailTech Platform ERP — Internal API (ERP SPA)
-  version: 1.8.0
+  version: 1.10.0
   description: 'Внутренний API ERP для ERP SPA (бэк-офис), пространство `/api/v1/` (CONTRACTS §1). Файл генерируется из схемы
     бэкенда — это не отдельное описание, а её срез; расхождение с кодом невозможно: CI перегенерирует схему и падает при diff.'
   contact:
@@ -24031,6 +24031,11 @@ components:
       properties:
         currency:
           type: string
+        currencies:
+          type: array
+          items:
+            $ref: '#/components/schemas/_TrackedCurrency'
+          description: Валюты, у которых ведётся курс (включены, кроме валюты учёта) — выбор при ручном вводе.
         current:
           allOf:
           - $ref: '#/components/schemas/_Rate'
@@ -24039,6 +24044,7 @@ components:
         max_age_days:
           type: integer
       required:
+      - currencies
       - currency
       - current
       - max_age_days
@@ -37050,6 +37056,16 @@ components:
       required:
       - message
       - reason
+    _TrackedCurrency:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+      required:
+      - code
+      - name
     _Warranty:
       type: object
       properties:

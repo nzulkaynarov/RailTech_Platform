@@ -53,6 +53,8 @@ export interface CompanyMock {
   platform: PlatformSettings;
   /** Курс USD→UZS: текущий и журнал ручных вводов (новые первыми) */
   fx: { current: FxRate | null; journal: FxRateJournalEntry[] };
+  /** Курсы других включённых валют (пункт 1.7): по коду; нет записи — курса ещё нет. */
+  fxOthers?: Record<string, { current: FxRate | null; journal: FxRateJournalEntry[] }>;
   /** Следующий свободный id для новых строк */
   nextId: number;
 }
