@@ -444,6 +444,8 @@
     "download": "Download PDF",
     "name": "Letter “{{subject}}”",
     "requestFailed": "PDF not requested: {{reason}}",
-    "loadFailed": "Could not load the PDF. Retry."
+    "loadFailed": "Could not load the PDF. Retry.",
+    "updating": "Updating…",
+    "emptyAuto": "Fill in the subject, addressee and text — the letter is saved as a draft and appears on the letterhead."
   }
 }
