@@ -284,7 +284,7 @@
       "submit": "Save"
     },
     "notice": {
-      "sent": "Order sent to the partner",
+      "sent": "Order placed. The e-mail to the partner is queued; the result will be on the order card.",
       "confirmed": "Order confirmed",
       "received": "Goods received",
       "cancelled": "Order cancelled",
@@ -295,6 +295,13 @@
       "incoterms": "basis {{code}}",
       "validUntil": "valid until {{date}}",
       "expired": "expired {{date}}"
+    },
+    "mail": {
+      "label": "E-mail to the partner",
+      "queued": "queued — the result will appear here",
+      "sent": "sent",
+      "failed": "not sent: {{reason}}",
+      "failedUnknown": "not sent"
     }
   },
   "receipts": {

@@ -603,12 +603,21 @@ export const handlers = [
         if (!viaTelegram && !contact.email) return error(422, 'CONTACT_CHANNEL_REQUIRED');
         db.quoteCodes.set(quote.id, fixtures.MOCK_ACCEPT_CODE);
         const sent: Schemas['AcceptanceCodeSent'] = viaTelegram
-          ? { channel: 'telegram', sent_to: 'Telegram', expires_in: 900 }
-          : { channel: 'email', sent_to: maskEmail(contact.email ?? ''), expires_in: 900 };
+          ? { channel: 'telegram', sent_to: 'Telegram', expires_in: 900, delivery: null }
+          : { channel: 'email', sent_to: maskEmail(contact.email ?? ''), expires_in: 900, delivery: '1' };
         return json(sent, 202);
       },
       { action: true },
     ),
+  ),
+  // 0.10 (FR-12): итог письма с кодом — на стенде MSW почта работает, письмо «отправлено».
+  http.get<IdParams & { delivery: string }>(
+    `${API}/quotes/:id/code-delivery/:delivery`,
+    withSession<IdParams & { delivery: string }>(({ db, params }) => {
+      if (!byId(db.quotes, params.id)) return error(404, 'NOT_FOUND');
+      const result: Schemas['CodeDelivery'] = { state: 'sent', reason: null };
+      return json(result);
+    }),
   ),
   http.post<IdParams>(
     `${API}/quotes/:id/accept`,

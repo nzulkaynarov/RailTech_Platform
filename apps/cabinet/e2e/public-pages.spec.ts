@@ -19,7 +19,7 @@ test.describe('публичные экраны кабинета', () => {
 
     await page.getByLabel('E-mail').fill('neznakomets@example.com');
     await page.getByRole('button', { name: 'Войти', exact: true }).click();
-    await expect(page.getByRole('heading', { level: 1, name: 'Если адрес зарегистрирован, мы отправили письмо' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Если адрес зарегистрирован, мы отправим письмо' })).toBeVisible();
     await expect(
       page.getByText('Если адрес neznakomets@example.com зарегистрирован, в письме — код и ссылка для входа. Они действуют 60 минут.'),
     ).toBeVisible();
@@ -67,8 +67,8 @@ test.describe('публичные экраны кабинета', () => {
     await page.goto('/login');
     await page.getByLabel('E-mail').fill('a.karimov@toshlog.example');
     await page.getByRole('button', { name: 'Войти', exact: true }).click();
-    await expect(page.getByRole('heading', { level: 1, name: 'Если адрес зарегистрирован, мы отправили письмо' })).toBeVisible();
-    await expect(page.getByText('Письмо может идти несколько минут. Проверьте папку «Спам».')).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Если адрес зарегистрирован, мы отправим письмо' })).toBeVisible();
+    await expect(page.getByText('Письмо может идти несколько минут. Проверьте папку «Спам». Не пришло за 10 минут — свяжитесь с вашим менеджером: возможно, почта компании временно не работает.')).toBeVisible();
     await expect(page.getByRole('button', { name: /Отправить ещё раз через \d+ с/ })).toBeDisabled();
     await expect(page.getByRole('link', { name: 'Войти через Telegram' })).toBeVisible();
     await expect(page.getByLabel('Код из письма')).toHaveAttribute('autocomplete', 'one-time-code');
@@ -87,7 +87,7 @@ test.describe('публичные экраны кабинета', () => {
     await snap(page, 'mail1-03-code-locked-resend');
 
     await page.getByRole('button', { name: 'Отправить ещё раз', exact: true }).click();
-    await expect(page.getByText('Если адрес зарегистрирован, мы отправили новое письмо. Код из прежнего больше не действует.')).toBeVisible();
+    await expect(page.getByText('Если адрес зарегистрирован, мы отправим новое письмо. Код из прежнего больше не действует.')).toBeVisible();
     await page.getByLabel('Код из письма').fill('429173');
     await page.getByRole('form', { name: 'Вход по коду из письма' }).getByRole('button', { name: 'Войти' }).click();
     await expect(page).toHaveURL(/\/requests$/);

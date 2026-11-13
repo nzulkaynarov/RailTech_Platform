@@ -217,15 +217,15 @@
       "haveCode": "Xatdagi kod bormi? Kod bilan kirish"
     },
     "sent": {
-      "title": "Agar manzil roʻyxatdan oʻtgan boʻlsa, xat yubordik",
+      "title": "Agar manzil roʻyxatdan oʻtgan boʻlsa, xat yuboramiz",
       "text": "Agar {{email}} manzili roʻyxatdan oʻtgan boʻlsa, xatda kirish kodi va havola bor. Ular 60 daqiqa amal qiladi.",
       "back": "Boshqa manzil kiritish",
       "mockLink": "Xatdagi havolani ochish (mok)",
       "newClientLink": "Yangi mijozmisiz? Soʻrov qoldiring",
-      "hint": "Xat bir necha daqiqada kelishi mumkin. «Spam» jildini tekshiring.",
+      "hint": "Xat bir necha daqiqa kelishi mumkin. «Spam» jildini tekshiring. 10 daqiqada kelmasa — menejeringizga murojaat qiling: kompaniya pochtasi vaqtincha ishlamayotgan boʻlishi mumkin.",
       "resend": "Qayta yuborish",
       "resendIn": "{{seconds}} soniyadan keyin qayta yuborish",
-      "resent": "Agar manzil roʻyxatdan oʻtgan boʻlsa, yangi xat yubordik. Oldingi xatdagi kod endi ishlamaydi."
+      "resent": "Agar manzil roʻyxatdan oʻtgan boʻlsa, yangi xat yuboramiz. Oldingi xatdagi kod endi ishlamaydi."
     },
     "magic": {
       "exchanging": "Havola orqali kirilmoqda…",
@@ -580,7 +580,18 @@
       "commentSend": "Izohni yuborish",
       "commentSent": "Izoh menejerga yuborildi",
       "commentConsequence": "Izohni menejeringiz oladi. Taklif oʻzgarmaydi — izohdan keyin ham uni qabul qilish yoki rad etish mumkin.",
-      "commentRequired": "Izoh matnini yozing."
+      "commentRequired": "Izoh matnini yozing.",
+      "codeDelivery": {
+        "sending": "Kod {{to}} manziliga yuborilmoqda — xat kompaniya pochtasi orqali ketadi.",
+        "queuedLong": "Kodli xat hali navbatda. Bir-ikki daqiqadan so‘ng pochtangizni tekshiring yoki kodni qayta so‘rang.",
+        "notSent": "Kod yuborilmadi: {{reason}}. Menejeringizga murojaat qiling — u TKni siz uchun qabul qiladi yoki pochta bilan yordam beradi.",
+        "reasons": {
+          "smtp_not_configured": "kompaniya pochtasi sozlanmagan",
+          "rejected": "pochta serveri xatni rad etdi",
+          "unavailable": "pochta serveri mavjud emas",
+          "other": "xat ketmadi"
+        }
+      }
     },
     "contracts": {
       "title": "Shartnomalar",

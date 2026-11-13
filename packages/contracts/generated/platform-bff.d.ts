@@ -13941,6 +13941,12 @@ export interface components {
       by: string | null;
       detail: string | null;
     };
+    /** @description Итог письма партнёру (0.10 плана 2026-11-12, FR-12): письмо уходит через почтовый сервис CRM, итог приходит событием — `queued` (в очереди почты), `sent` (отправлено), `failed` с кодом причины (`smtp_not_configured`, `rejected`, `auth_failed`, `unavailable`…; список открытый). Экран не пишет «отправлено» раньше `sent`. */
+    SupplierOrderMail: {
+      /** @enum {string} */
+      state: "queued" | "sent" | "failed";
+      reason: string | null;
+    };
     /** @description Карточка заказа поставщику */
     SupplierOrderDetail: {
       /**
@@ -13976,6 +13982,8 @@ export interface components {
       sent_at: string | null;
       /** @description Адрес, на который ушло письмо */
       sent_to: string | null;
+      /** @description Итог письма партнёру; `null` — заказ ещё не отправлялся */
+      mail: components["schemas"]["SupplierOrderMail"] | null;
       /** Format: date-time */
       confirmed_at: string | null;
       /** Format: date-time */

@@ -123,7 +123,9 @@ test.describe("Склад и закупки: снабженец", () => {
     await page.getByRole("button", { name: "Отправить партнёру" }).click();
     const send = page.getByRole("dialog", { name: `Отправить заказ ${NEW_ORDER} партнёру` });
     await send.getByRole("button", { name: "Отправить письмо" }).click();
-    await expect(page.getByText("Заказ отправлен партнёру")).toBeVisible();
+    await expect(
+      page.getByText(/^Заказ оформлен\. Письмо партнёру — в очереди почты/),
+    ).toBeVisible();
     await expect(
       page.getByRole("list", { name: "Журнал заказа" }).getByText("Отправлен партнёру"),
     ).toBeVisible();

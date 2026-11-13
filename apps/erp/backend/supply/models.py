@@ -51,6 +51,16 @@ class SupplierOrder(models.Model):
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )
     sent_to = models.EmailField(blank=True, default="", verbose_name=_("Отправлен на адрес"))
+    # 0.10 плана 2026-11-12 (FR-12): письмо партнёру уходит через почтовый сервис CRM; итог (отправлено / не отправлено и
+    # почему) приходит событием в журнал писем — карточка заказа показывает его, а не «отправлено» заранее.
+    sent_mail = models.ForeignKey(
+        "core.EmailLog",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        verbose_name=_("Письмо партнёру"),
+    )
     confirmed_at = models.DateTimeField(null=True, blank=True)
     confirmed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"

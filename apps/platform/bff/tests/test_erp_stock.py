@@ -66,6 +66,7 @@ def order_detail(**extra: Any) -> dict[str, Any]:
         "note": "",
         "sent_at": "2026-10-21T09:00:00+00:00",
         "sent_to": "sales@vendor.example",
+        "mail": {"state": "sent", "reason": None},
         "confirmed_at": "2026-10-22T09:00:00+00:00",
         "received_at": None,
         "cancelled_at": None,
@@ -576,6 +577,28 @@ async def test_orders_list_and_card_found_by_number(
     assert body["receipts"][0]["lines"][0]["cell"] == "B-02"
     # заказ нашли отбором по номеру, id из номера не разбирался
     assert any(c.request.url.params.get("number") == ORDER for c in stock_calls(erp))
+
+
+async def test_order_card_tells_the_real_mail_result(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    """0.10 (FR-12): итог письма партнёру — из ERP, мусорный код причины не проходит."""
+    await web.login(["SUPPLY"])
+    failed = order_detail(mail={"state": "failed", "reason": "smtp_not_configured"})
+    erp.get(f"{STOCK}/orders/31/").mock(return_value=httpx.Response(200, json=failed))
+    card = await web.client.get(f"/api/v1/erp/stock/orders/{ORDER_ENCODED}")
+    check(card, "/erp/stock/orders/{order_number}", "get")
+    assert card.json()["mail"] == {"state": "failed", "reason": "smtp_not_configured"}
+
+    odd = order_detail(mail={"state": "failed", "reason": "Bad Reason!"})
+    erp.get(f"{STOCK}/orders/31/").mock(return_value=httpx.Response(200, json=odd))
+    card = await web.client.get(f"/api/v1/erp/stock/orders/{ORDER_ENCODED}")
+    assert card.json()["mail"] == {"state": "failed", "reason": None}
+
+    draft = order_detail(mail=None)
+    erp.get(f"{STOCK}/orders/31/").mock(return_value=httpx.Response(200, json=draft))
+    card = await web.client.get(f"/api/v1/erp/stock/orders/{ORDER_ENCODED}")
+    assert card.json()["mail"] is None
 
 
 async def test_unknown_order_number_is_404(web: Web, be: Backends) -> None:

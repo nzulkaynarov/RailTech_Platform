@@ -3,7 +3,7 @@
 openapi: 3.0.3
 info:
   title: RailTech Platform ERP — Internal API (ERP SPA)
-  version: 1.6.0
+  version: 1.7.0
   description: 'Внутренний API ERP для ERP SPA (бэк-офис), пространство `/api/v1/` (CONTRACTS §1). Файл генерируется из схемы
     бэкенда — это не отдельное описание, а её срез; расхождение с кодом невозможно: CI перегенерирует схему и падает при diff.'
   contact:
@@ -28760,6 +28760,10 @@ components:
         sent_to:
           type: string
           nullable: true
+        mail:
+          allOf:
+          - $ref: '#/components/schemas/OrderMail'
+          nullable: true
         confirmed_at:
           type: string
           format: date-time
@@ -28803,6 +28807,7 @@ components:
       - lines
       - lines_count
       - log
+      - mail
       - note
       - number
       - overdue
@@ -29015,6 +29020,20 @@ components:
         * `received` - received
         * `cancelled` - cancelled
         * `overdue` - overdue
+    OrderMail:
+      type: object
+      description: 'Итог письма партнёру (0.10, FR-12): в очереди почтового сервиса, отправлено или не отправлено с кодом
+        причины.'
+      properties:
+        state:
+          $ref: '#/components/schemas/InviteDeliveryEnum'
+        reason:
+          type: string
+          nullable: true
+          description: 'Код причины неудачи: smtp_not_configured, rejected, auth_failed, unavailable…'
+      required:
+      - reason
+      - state
     OrderReceipt:
       type: object
       properties:

@@ -151,11 +151,16 @@ def test_request_code_by_email_is_202_with_masked_address_and_works_end_to_end(
     response = post(portal_client, f"/quotes/{quote.pk}/request-code")
 
     assert response.status_code == 202
-    assert response.json() == {"channel": "email", "sent_to": "a***@example.uz", "expires_in": 900}
+    log = EmailLog.objects.get(template="quote_acceptance_code")
+    assert response.json() == {
+        "channel": "email",
+        "sent_to": "a***@example.uz",
+        "expires_in": 900,
+        "delivery": str(log.pk),
+    }
     assert not check_response(response.json(), response_schema("/quotes/{id}/request-code", "post", "202"))
     # письмо через шаблон ERP: в `EmailLog` и в почте клиента — по адресу контакта сессии
     assert mail.outbox[-1].to == [client_contact.email]
-    log = EmailLog.objects.get(template="quote_acceptance_code")
     assert log.status == EmailLog.STATUS_QUEUED and log.to_emails == [client_contact.email]
     row = QuoteAcceptanceCode.objects.get(quote=quote)
     assert row.email == client_contact.email and row.consumed_at is None
@@ -163,6 +168,36 @@ def test_request_code_by_email_is_202_with_masked_address_and_works_end_to_end(
     accepted = post(portal_client, f"/quotes/{quote.pk}/accept", {"code": emailed_code()})
     assert accepted.status_code == 200 and accepted.json()["status"] == "accepted"
     assert not check_response(accepted.json(), response_schema("/quotes/{id}/accept", "post", "200"))
+
+
+def test_code_delivery_tells_the_real_result_of_the_code_email(contract_world, portal_client):
+    """0.10 (FR-12): «код отправлен» — только по итогу почтового сервиса; без почты — причина."""
+    from notifications import mail_bus
+
+    quote = contract_world["quotes"]["sent"]
+    delivery = post(portal_client, f"/quotes/{quote.pk}/request-code").json()["delivery"]
+    url = f"{API}/quotes/{quote.pk}/code-delivery/{delivery}"
+    queued = portal_client.get(url)
+    assert queued.status_code == 200 and queued.json() == {"state": "queued", "reason": None}
+    assert not check_response(queued.json(), response_schema("/quotes/{id}/code-delivery/{delivery}", "get", "200"))
+
+    mail_bus.apply_mail_result(
+        mail_bus.MAIL_FAILED,
+        {
+            "requester": "erp",
+            "request_key": f"erp:email_log:{delivery}",
+            "purpose": "erp_mail",
+            "reason": "smtp_not_configured",
+            "detail": "",
+            "attempts": 0,
+        },
+    )
+    assert portal_client.get(url).json() == {"state": "failed", "reason": "smtp_not_configured"}
+
+    # чужое письмо и несуществующее — 404
+    other = EmailLog.objects.create(template="quote_acceptance_code", to_emails=["someone@else.uz"], subject="x")
+    assert portal_client.get(f"{API}/quotes/{quote.pk}/code-delivery/{other.pk}").status_code == 404
+    assert portal_client.get(f"{API}/quotes/{quote.pk}/code-delivery/999999").status_code == 404
 
 
 def test_new_request_replaces_the_previous_code(contract_world, portal_client):

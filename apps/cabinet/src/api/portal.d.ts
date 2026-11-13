@@ -467,6 +467,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/quotes/{id}/code-delivery/{delivery}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Итог письма с кодом акцепта
+         * @description 0.10 (FR-12): Cabinet не пишет «код отправлен» заранее — после `request-code` он опрашивает итог письма (раз в 2 с,
+         *     не дольше минуты). Только письмо с кодом контакта этой сессии; чужое — 404.
+         */
+        get: operations["getQuoteCodeDelivery"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/quotes/{id}/accept": {
         parameters: {
             query?: never;
@@ -2195,6 +2216,14 @@ export interface components {
             sent_to: string;
             /** @description Срок действия кода, секунд */
             expires_in: number;
+            /** @description Письмо с кодом (0.10, FR-12): по нему Cabinet узнаёт итог доставки — `GET /quotes/{id}/code-delivery/{delivery}`. `null` — канал без журнала доставки (Telegram) или письмо передать не удалось. */
+            delivery: string | null;
+        };
+        /** @description Итог письма с кодом (0.10, FR-12): письмо уходит через почтовый сервис компании, итог приходит позже. `queued` — в очереди, `sent` — отправлено, `failed` — не отправлено, `reason` — код причины (`smtp_not_configured`, `rejected`, `unavailable`…; список открытый). */
+        CodeDelivery: {
+            /** @enum {string} */
+            state: "queued" | "sent" | "failed";
+            reason: string | null;
         };
         ActAccept: {
             /** @description Скан подписанного акта из `POST /uploads` (PDF или изображение, ≤ 10 МБ) */
@@ -3844,7 +3873,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Код отправлен */
+            /** @description Код выпущен и передан на отправку; итог письма — `code-delivery` */
             202: {
                 headers: {
                     [name: string]: unknown;
@@ -3875,6 +3904,33 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    getQuoteCodeDelivery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+                delivery: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Итог письма */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CodeDelivery"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             429: components["responses"]["TooManyRequests"];
         };
     };

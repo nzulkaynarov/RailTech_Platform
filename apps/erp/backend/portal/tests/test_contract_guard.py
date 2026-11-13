@@ -42,6 +42,14 @@ def pks(items):
 
 #: Какие URL опрашивает сторож по каждому GET-пути контракта. Новый GET в контракте без строки здесь роняет
 #: `test_every_contract_get_is_covered`: новый эндпоинт нельзя добавить, не заведя для него фикстур.
+def _code_mail(world):
+    from notifications.models import EmailLog
+
+    return EmailLog.objects.create(
+        template="quote_acceptance_code", to_emails=[world["contact"].email], subject="Код акцепта"
+    )
+
+
 GET_CASES = {
     "/me": lambda w: ["/me"],
     "/notifications": lambda w: ["/notifications", "/notifications?limit=2"],
@@ -52,6 +60,10 @@ GET_CASES = {
     ],
     "/quotes": lambda w: ["/quotes"],
     "/quotes/{id}": lambda w: [f"/quotes/{q.pk}" for q in w["quotes"].values()],
+    # 0.10 (FR-12): итог письма с кодом — письмо контакта сессии
+    "/quotes/{id}/code-delivery/{delivery}": lambda w: [
+        f"/quotes/{w['quotes']['sent'].pk}/code-delivery/{_code_mail(w).pk}"
+    ],
     "/contracts": lambda w: ["/contracts"],
     "/invoices": lambda w: ["/invoices"],
     "/acts": lambda w: ["/acts"],
@@ -132,7 +144,7 @@ def fetch(client, anon_client, contract_path: str, url: str):
 def test_contract_is_mounted_and_readable():
     path = find_contract_path()
     assert path.name == "erp-portal.yaml"
-    assert load_contract()["info"]["version"] == "0.12.0"
+    assert load_contract()["info"]["version"] == "0.13.0"
 
 
 #: GET раздела «Мои товары» партнёра (PART-2): сессия клиента сюда не допущена (403 `MODULE_REQUIRED`), поэтому их
@@ -183,6 +195,7 @@ def _portal_get_routes() -> set[str]:
             .replace("<str:token>", "{token}")
             .replace("<str:task_id>", "{task_id}")
             .replace("<str:code>", "{code}")
+            .replace("<int:delivery>", "{delivery}")
             .rstrip("/")
             or "/"
         )
