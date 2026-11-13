@@ -136,7 +136,7 @@ def _create_in_thread(results, errors, index, barrier):
         connections.close_all()
 
 
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db(transaction=True, serialized_rollback=True)
 def test_parallel_deals_get_distinct_numbers_without_gaps(monkeypatch):
     """Четыре сделки одновременно: номера 1–4 без повторов и пропусков. Между чтением и записью счётчика — пауза,
     чтобы без блокировки потоки гарантированно прочитали одно значение (мутационная проверка)."""
@@ -162,7 +162,7 @@ def test_parallel_deals_get_distinct_numbers_without_gaps(monkeypatch):
     assert DealNumberCounter.objects.get(year=YEAR).last_value == 4
 
 
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db(transaction=True, serialized_rollback=True)
 def test_0008_numbers_old_deals_by_creation_order_and_sets_the_counter():
     """Миграция 0008 на данных: старые сделки получают NNN по порядку создания в году, проект — префикс ПР."""
     executor = MigrationExecutor(connection)
@@ -194,7 +194,7 @@ def _migrate_to_latest():
     executor.migrate(executor.loader.graph.leaf_nodes())
 
 
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db(transaction=True, serialized_rollback=True)
 def test_0016_marks_existing_projects_by_their_number():
     """Миграция 0016: стадия номера — полем; существующие проекты (`ПР-…`) отмечены, заявки — нет."""
     executor = MigrationExecutor(connection)
