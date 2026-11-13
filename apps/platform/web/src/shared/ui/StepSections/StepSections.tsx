@@ -23,14 +23,25 @@ export interface StepSectionsProps {
   sections: readonly StepSection[];
   active: string;
   onActiveChange: (key: string) => void;
+  /**
+   * Уровень заголовков секций: 2 — на странице документа, 3 — внутри вкладки с заголовком `h2` (настройки), 4 — в боковом
+   * окне под заголовком формы `h3`
+   */
+  headingLevel?: 2 | 3 | 4;
 }
 
 /**
  * Секции по шагам для длинных форм (platform-frontend.md §4.1a): пронумерованы, открыта одна; свёрнутая показывает строку
  * итога; вернуться можно к любой. Содержимое скрытых секций остаётся в разметке (`hidden`), поэтому набранное не теряется.
  */
-export function StepSections({ sections, active, onActiveChange }: StepSectionsProps) {
+export function StepSections({
+  sections,
+  active,
+  onActiveChange,
+  headingLevel = 2,
+}: StepSectionsProps) {
   const { t } = useTranslation("ui");
+  const Heading = headingLevel === 4 ? "h4" : headingLevel === 3 ? "h3" : "h2";
   const base = useId();
   return (
     <ol className="pf-fsteps">
@@ -46,7 +57,7 @@ export function StepSections({ sections, active, onActiveChange }: StepSectionsP
             data-open={open || undefined}
             data-invalid={section.invalid || undefined}
           >
-            <h2 className="pf-fstep-heading">
+            <Heading className="pf-fstep-heading">
               <button
                 type="button"
                 id={headId}
@@ -77,7 +88,7 @@ export function StepSections({ sections, active, onActiveChange }: StepSectionsP
                 </span>
                 {!open ? <span className="pf-fstep-edit">{t("formSteps.edit")}</span> : null}
               </button>
-            </h2>
+            </Heading>
             <div
               id={bodyId}
               role="region"

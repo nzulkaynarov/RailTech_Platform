@@ -94,5 +94,9 @@
     "request_not_retryable": "Retrying will not help: the request data changed after sending — create the request again",
     "enqueue_failed": "Could not queue the sending — try again a bit later",
     "generic": "Could not create the request. The form data is kept — try again"
+  },
+  "sections": {
+    "request": "Request",
+    "review": "Review and send"
   }
 }
