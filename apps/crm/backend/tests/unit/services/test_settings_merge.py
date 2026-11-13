@@ -6,6 +6,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
+from app.bus import events as bus_events
 from app.domain.language import Language
 from app.schemas.settings import AppSettings, BusinessHoursSettings, CompanySettings, KbSettings
 from app.services.settings import SettingsService, _merge, _with_env_defaults
@@ -137,9 +138,17 @@ async def test_saving_company_form_does_not_persist_derived_address(
         written.append(payload)
 
     monkeypatch.setattr(SettingsService, "_upsert", staticmethod(upsert))
+    published: list[dict[str, Any]] = []
+
+    async def company_profile_changed(_session: Any, company: dict[str, Any], _actor: Any) -> None:
+        published.append(company)
+
+    # Н3a2: сохранение «Компании» публикует профиль для ERP в той же транзакции
+    monkeypatch.setattr(bus_events, "company_profile_changed", company_profile_changed)
     service = SettingsService(lambda: _Session([]), crm_base_url_default=ENV_CRM)  # type: ignore[arg-type]
     form = (await service.raw())["company"]
     await service.update("company", {**form, "phone": "+998 71 000 00 00"}, user_id=1)
+    assert [p["phone"] for p in published] == ["+998 71 000 00 00"]
     (payload,) = written
     assert payload["phone"] == "+998 71 000 00 00"
     assert ENV_CRM not in payload["crm_base_url"]

@@ -8,6 +8,7 @@ import { AppModeContext, type AppMode } from '@/session/mode';
 import { isMiniApp } from '@/telegram/webapp';
 import { createQueryClient } from './queryClient';
 import { routes } from './routes';
+import { useOperatorName } from '@/i18n/operator';
 
 type AppRouter = ReturnType<typeof createBrowserRouter> | ReturnType<typeof createMemoryRouter>;
 
@@ -15,6 +16,12 @@ type AppRouter = ReturnType<typeof createBrowserRouter> | ReturnType<typeof crea
  * Корень: режим (Mini App / веб) определяется один раз, React Query — единственное хранилище
  * данных, маршрутизатор — react-router (тесты подставляют memory-router и свой QueryClient).
  */
+/** Название оператора в текстах (`{{operator}}`) — из настроек компании (задача «Н3a2»). */
+function OperatorName(): null {
+  useOperatorName();
+  return null;
+}
+
 export function App({ router, queryClient }: { router?: AppRouter; queryClient?: QueryClient }) {
   const [mode] = useState<AppMode>(() => (isMiniApp() ? 'miniapp' : 'web'));
   const [client] = useState(() => queryClient ?? createQueryClient());
@@ -25,6 +32,7 @@ export function App({ router, queryClient }: { router?: AppRouter; queryClient?:
   return (
     <AppModeContext.Provider value={mode}>
       <QueryClientProvider client={client}>
+        <OperatorName />
         <RouterProvider router={appRouter} />
         <Toaster position={sideNav ? 'bottom-right' : 'top-center'} visibleToasts={3} />
       </QueryClientProvider>

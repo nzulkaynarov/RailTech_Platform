@@ -17,6 +17,7 @@ from finance.services.fx import (
     rate_to_str,
     resolve_rate,
     set_manual_rate,
+    tracked_currencies,
 )
 from rest_framework import permissions, serializers, status
 from rest_framework.response import Response
@@ -38,8 +39,16 @@ class _RateSerializer(serializers.Serializer):
     source = serializers.CharField(help_text="CBU (автозагрузка ЦБ РУз) или MANUAL (вручную).")
 
 
+class _TrackedCurrencySerializer(serializers.Serializer):
+    code = serializers.CharField()
+    name = serializers.CharField()
+
+
 class CurrentRateSerializer(serializers.Serializer):
     currency = serializers.CharField()
+    currencies = _TrackedCurrencySerializer(
+        many=True, help_text="Валюты, у которых ведётся курс (включены, кроме валюты учёта) — выбор при ручном вводе."
+    )
     current = _RateSerializer(
         allow_null=True, help_text="Курс на сегодня по правилу «не старше лимита»; null — курса нет."
     )
@@ -145,7 +154,14 @@ class CurrentRateView(APIView):
             else None
         )
         return Response(
-            CurrentRateSerializer({"currency": code, "current": current, "max_age_days": max_rate_age_days()}).data
+            CurrentRateSerializer(
+                {
+                    "currency": code,
+                    "currencies": tracked_currencies(),
+                    "current": current,
+                    "max_age_days": max_rate_age_days(),
+                }
+            ).data
         )
 
 

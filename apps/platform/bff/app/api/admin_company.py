@@ -847,13 +847,15 @@ async def update_platform_settings(
 FX_JOURNAL_LIMIT = 20
 
 
-async def _fx_overview(erp: ErpCompany) -> FxRateOverview:
-    current = await erp.data("GET", "exchange-rates/current/", params={"currency": "USD"})
+async def _fx_overview(erp: ErpCompany, currency: str = "USD") -> FxRateOverview:
+    current = await erp.data("GET", "exchange-rates/current/", params={"currency": currency})
     journal: Any = []
     available = True
     try:
         journal = await erp.data(
-            "GET", "exchange-rates/journal/", params={"currency": "USD", "limit": FX_JOURNAL_LIMIT}
+            "GET",
+            "exchange-rates/journal/",
+            params={"currency": currency, "limit": FX_JOURNAL_LIMIT},
         )
     except PlatformError as error:
         # Журнал с именами и почтой коллег ERP отдаёт только с `settings.edit` (W15-H8).
@@ -869,8 +871,11 @@ async def _fx_overview(erp: ErpCompany) -> FxRateOverview:
 
 
 @router.get("/admin/company/fx-rate", response_model=FxRateOverview, operation_id="getFxRate")
-async def get_fx_rate(authed: Reader) -> FxRateOverview:
-    return await _fx_overview(_erp(authed))
+async def get_fx_rate(
+    authed: Reader,
+    currency: Annotated[str, Query(pattern=r"^[A-Z]{3}$")] = "USD",
+) -> FxRateOverview:
+    return await _fx_overview(_erp(authed), currency)
 
 
 @router.post(
@@ -882,4 +887,4 @@ async def get_fx_rate(authed: Reader) -> FxRateOverview:
 async def create_fx_rate(body: FxRateIn, authed: Writer) -> FxRateOverview:
     erp = _erp(authed)
     await erp.request("POST", "exchange-rates/manual/", json=body.to_erp())
-    return await _fx_overview(erp)
+    return await _fx_overview(erp, body.currency)
