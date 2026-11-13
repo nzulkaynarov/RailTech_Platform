@@ -1,4 +1,4 @@
-import { Button, Card, Table } from "antd";
+import { Button, Card } from "antd";
 import { useTranslation } from "react-i18next";
 
 import { useViewport } from "../../../app/shell/useViewport";
@@ -10,7 +10,7 @@ import type {
 import { useFormat } from "../../../shared/lib/useFormat";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { ageText, domainName, subscriberName } from "./format";
-import { ScrollRegion } from "./parts";
+import { DataTable } from "../../../shared/ui/DataTable/DataTable";
 
 export interface SubscribersViewProps {
   domains: readonly BusDomainOverview[];
@@ -139,72 +139,75 @@ function DomainCard({
     );
   } else {
     body = (
-      <ScrollRegion label={caption}>
-        <Table<BusSubscriber>
-          rowKey="name"
-          dataSource={[...overview.subscribers]}
-          pagination={false}
-          size="middle"
-          aria-labelledby={titleId}
-          rowClassName={(s) => (isSelected(s) ? "pf-bus-row-selected" : "")}
-          columns={[
-            {
-              title: t("subscribers.columns.subscriber"),
-              key: "name",
-              width: 200,
-              render: (_, s) => <SubscriberName subscriber={s} />,
-            },
-            {
-              title: t("subscribers.columns.state"),
-              key: "state",
-              render: (_, s) => <StateCell subscriber={s} />,
-            },
-            {
-              title: t("subscribers.columns.queue"),
-              key: "queue",
-              align: "right",
-              render: (_, s) => (
-                <div className="pf-bus-cell-stack">
-                  <span className="pf-num">{number(s.pending)}</span>
-                  {s.in_flight > 0 ? (
-                    <span className="pf-hint">{t("subscribers.inFlight", { n: s.in_flight })}</span>
-                  ) : null}
-                </div>
-              ),
-            },
-            {
-              title: t("subscribers.columns.dead"),
-              key: "dead",
-              align: "right",
-              render: (_, s) => (
-                <span className="pf-bus-dead">
-                  <span className="pf-num">{number(s.dead)}</span>
-                  <RetryDeadButton
-                    domain={overview.domain}
-                    subscriber={s}
-                    onRetryDead={onRetryDead}
-                    short
-                  />
-                </span>
-              ),
-            },
-            {
-              title: t("subscribers.columns.oldest"),
-              key: "oldest",
-              render: (_, s) => (
-                <span className="pf-num">
-                  {ageText(t, s.oldest_undelivered_age_seconds) ?? "—"}
-                </span>
-              ),
-            },
-            {
-              title: t("subscribers.columns.lastError"),
-              key: "error",
-              render: (_, s) => <ErrorCell subscriber={s} />,
-            },
-          ]}
-        />
-      </ScrollRegion>
+      <DataTable<BusSubscriber>
+        tableId="admin.bus.subscribers"
+        caption={caption}
+        scrollLabel={caption}
+        rows={overview.subscribers}
+        rowKey={(row) => row.name}
+        rowAttrs={(row) => ({
+          className: isSelected(row) ? "pf-bus-row-selected" : "",
+        })}
+        columns={[
+          {
+            id: "name",
+            header: t("subscribers.columns.subscriber"),
+            width: 200,
+            cell: (s) => <SubscriberName subscriber={s} />,
+          },
+          {
+            id: "state",
+            header: t("subscribers.columns.state"),
+            width: null,
+            cell: (s) => <StateCell subscriber={s} />,
+          },
+          {
+            id: "queue",
+            header: t("subscribers.columns.queue"),
+            width: null,
+            numeric: true,
+            cell: (s) => (
+              <div className="pf-bus-cell-stack">
+                <span className="pf-num">{number(s.pending)}</span>
+                {s.in_flight > 0 ? (
+                  <span className="pf-hint">{t("subscribers.inFlight", { n: s.in_flight })}</span>
+                ) : null}
+              </div>
+            ),
+          },
+          {
+            id: "dead",
+            header: t("subscribers.columns.dead"),
+            width: null,
+            numeric: true,
+            cell: (s) => (
+              <span className="pf-bus-dead">
+                <span className="pf-num">{number(s.dead)}</span>
+                <RetryDeadButton
+                  domain={overview.domain}
+                  subscriber={s}
+                  onRetryDead={onRetryDead}
+                  short
+                />
+              </span>
+            ),
+          },
+          {
+            id: "oldest",
+            header: t("subscribers.columns.oldest"),
+            width: null,
+            cell: (s) => (
+              <span className="pf-num">{ageText(t, s.oldest_undelivered_age_seconds) ?? "—"}</span>
+            ),
+          },
+          {
+            id: "error",
+            header: t("subscribers.columns.lastError"),
+            width: null,
+            cell: (s) => <ErrorCell subscriber={s} />,
+          },
+        ]}
+      />
     );
   }
 

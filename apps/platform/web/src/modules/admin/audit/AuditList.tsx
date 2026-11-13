@@ -1,4 +1,3 @@
-import { Table } from "antd";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
@@ -8,6 +7,7 @@ import { useFormat } from "../../../shared/lib/useFormat";
 import { actorText, entityText } from "./describe";
 
 import "./audit.css";
+import { DataTable } from "../../../shared/ui/DataTable/DataTable";
 
 export interface AuditListProps {
   items: readonly AuditEntry[];
@@ -57,37 +57,39 @@ export function AuditList({ items, selectedId, hrefOf, names, compact }: AuditLi
   }
 
   return (
-    <Table<AuditEntry>
-      rowKey="id"
-      dataSource={[...items]}
-      pagination={false}
-      tableLayout="fixed"
-      aria-label={t("listLabel")}
-      rowClassName={(entry) => (entry.id === selectedId ? "pf-audit-table-row-selected" : "")}
+    <DataTable<AuditEntry>
+      tableId="admin.audit"
+      caption={t("listLabel")}
+      scrollLabel={t("listLabel")}
+      rows={items}
+      rowKey={(row) => row.id}
+      rowAttrs={(row) => ({
+        className: row.id === selectedId ? "pf-audit-table-row-selected" : "",
+      })}
       columns={[
         {
-          title: t("columns.when"),
-          key: "when",
+          id: "when",
+          header: t("columns.when"),
           width: 172,
-          render: (_, entry) => <span className="pf-num">{format.date(entry.at, "datetime")}</span>,
+          cell: (entry) => <span className="pf-num">{format.date(entry.at, "datetime")}</span>,
         },
         {
-          title: t("columns.actor"),
-          key: "actor",
-          width: "20%",
-          render: (_, entry) => actorText(t, entry, names),
+          id: "actor",
+          header: t("columns.actor"),
+          width: 220,
+          cell: (entry) => actorText(t, entry, names),
         },
         {
-          title: t("columns.action"),
-          key: "action",
-          width: "32%",
-          render: (_, entry) => link(entry),
+          id: "action",
+          header: t("columns.action"),
+          width: 352,
+          cell: (entry) => link(entry),
         },
         {
-          title: t("columns.entity"),
-          key: "entity",
-          width: "28%",
-          render: (_, entry) => entityText(t, entry, names),
+          id: "entity",
+          header: t("columns.entity"),
+          width: 308,
+          cell: (entry) => entityText(t, entry, names),
         },
       ]}
     />
