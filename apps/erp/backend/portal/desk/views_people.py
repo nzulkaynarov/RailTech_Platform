@@ -7,7 +7,6 @@
 (`retrieve`): Платформа открывает их по нажатию и пишет показ в журнал. Массовой выгрузки контактов нет.
 """
 
-from accounts.services.clients import seller_clients
 from django.db.models import Q
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from parties.models import Company, Contact
@@ -16,6 +15,7 @@ from portal.desk.serializers import DeskPeoplePage, DeskPersonContacts
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 
+from accounts.services.clients import seller_clients
 from catalog.desk import suppliers
 from catalog.desk.views_base import NOT_FOUND, DeskViewSet
 

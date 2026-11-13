@@ -34,9 +34,9 @@ from inventory.views import (
     StockTraceView,
 )
 from portal.desk.views import SupplierAccessViewSet
-from portal.desk.views_people import PeopleDeskViewSet
 from portal.desk.views_bank_changes import BankChangeDeskViewSet
 from portal.desk.views_partner_applications import PartnerApplicationDeskViewSet
+from portal.desk.views_people import PeopleDeskViewSet
 from portal.exceptions import portal_not_found
 from portal.public_views import (
     PublicDocumentView,

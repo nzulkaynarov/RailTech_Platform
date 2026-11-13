@@ -84,9 +84,12 @@ describe("Органайзер · Люди", () => {
     fireEvent.click(screen.getByRole("button", { name: "Демо Партнёров" }));
     const card = await screen.findByRole("dialog", { name: "Демо Партнёров" });
     expect(within(card).getByText("ООО «Поставщик Север»")).toBeVisible();
-    fireEvent.click(
-      within(card).getAllByRole("button", { name: "Показать телефон и почту: Демо Партнёров" })[0],
-    );
+    // «Показать» стоит у телефона и у почты — достаточно первой
+    const [show] = within(card).getAllByRole("button", {
+      name: "Показать телефон и почту: Демо Партнёров",
+    });
+    if (!show) throw new Error("нет кнопки «Показать»");
+    fireEvent.click(show);
     expect(await within(card).findByRole("link", { name: "partner@demo.example" })).toHaveAttribute(
       "href",
       "mailto:partner@demo.example",
