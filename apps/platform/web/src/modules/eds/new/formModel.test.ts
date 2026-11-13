@@ -155,7 +155,14 @@ describe("formModel", () => {
       due_date: "2026-11-05",
       file_ids: ["f-1"],
       erp_deal_id: 904,
+      approvers: [],
+      watchers: [],
       submit: true,
+    });
+    // пункт 1.6: согласующие и получатели копии уходят при отправке числами, по порядку выбора
+    expect(toCreateBody({ ...form, approvers: ["11", "7"], watchers: ["9"] }, true)).toMatchObject({
+      approvers: ["11", "7"],
+      watchers: ["9"],
     });
     expect(toUpdateBody(FILLED, false)).toEqual({
       subject: "Закупка",

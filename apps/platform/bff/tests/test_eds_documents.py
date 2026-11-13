@@ -486,6 +486,20 @@ async def test_create_with_submit_opens_the_route(
     assert order == [("POST", "documents"), ("POST", f"documents/{DOC_ID}/submit")]
 
 
+async def test_submit_passes_approvers_and_watchers(web: Web, eds: EdsFake) -> None:
+    """Пункт 1.6: согласующие и получатели копии уходят в EDS при отправке, не при создании."""
+    await web.login(["MANAGER"])
+    form = {**FORM, "submit": True, "approvers": ["11"], "watchers": ["9", "12"]}
+
+    assert (await web.send("POST", f"{BASE}/documents", json=form)).status_code == 201
+
+    assert "approvers" not in eds.body("POST", "documents")
+    assert eds.body("POST", f"documents/{DOC_ID}/submit") == {
+        "approvers": [11],
+        "watchers": [9, 12],
+    }
+
+
 async def test_create_letter_sends_recipient(web: Web, eds: EdsFake) -> None:
     await web.login(["MANAGER"])
     form = {**FORM, "kind": "letter_out", "recipient": {"name": "ООО «Пример»", "inn": None}}

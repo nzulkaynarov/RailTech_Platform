@@ -140,6 +140,8 @@ async def present(session: AsyncSession, document: Document) -> DocumentOut:
             document.signed_by_crm_user_id,
             document.acting_for_crm_user_id,
             *routes,
+            *(document.extra_approvers or []),
+            *(document.watchers or []),
         ],
     )
     decisions = await _decisions(session, document.id, directory)
@@ -164,6 +166,8 @@ async def present(session: AsyncSession, document: Document) -> DocumentOut:
         text=document.text,
         author=directory.person(document.author_crm_user_id),
         addressee=directory.person_or_none(document.addressee_crm_user_id),
+        approvers=[directory.person(uid) for uid in document.extra_approvers or []],
+        watchers=[directory.person(uid) for uid in document.watchers or []],
         amount=money_of(document),
         due_date=document.due_date,
         files=await files.refs_for(session, document_id=document.id),
