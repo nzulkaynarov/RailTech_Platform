@@ -12,7 +12,7 @@ from typing import Any
 
 import httpx
 import structlog
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, Field, ValidationError
 
 from app.clients.base import Backend
 from app.errors import PlatformError, backend_unavailable
@@ -221,6 +221,8 @@ class _RawDocument(BaseModel):
     text: str
     author: EdsPerson
     addressee: EdsPerson | None
+    approvers: list[EdsPerson] = Field(default_factory=list)
+    watchers: list[EdsPerson] = Field(default_factory=list)
     amount: EdsMoney | None
     due_date: str | None
     files: list[EdsFile]
@@ -334,6 +336,8 @@ async def present(
             "text": raw.text,
             "author": raw.author,
             "addressee": raw.addressee,
+            "approvers": raw.approvers,
+            "watchers": raw.watchers,
             "amount": raw.amount,
             "due_date": raw.due_date,
             "files": [EdsFile.model_validate(f.model_dump()) for f in raw.files],

@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Button, Card, Input, Table } from "antd";
+import { Button, Card, Input } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -30,7 +30,8 @@ import {
   shortType,
   subscriberName,
 } from "./format";
-import { BusSourcesNote, FilterSelect, ScrollRegion } from "./parts";
+import { BusSourcesNote, FilterSelect } from "./parts";
+import { DataTable } from "../../../shared/ui/DataTable/DataTable";
 
 const STATUSES: readonly BusDeliveryStatus[] = ["dead", "pending", "in_flight", "delivered"];
 const PAGE = 50;
@@ -205,29 +206,34 @@ export function DeliveriesView({ mode, subscribers, selectedKey, onOpen }: Deliv
     );
   } else {
     body = (
-      <ScrollRegion label={caption}>
-        <Table<BusDelivery>
-          rowKey={(d) => deliveryKey(d)}
-          dataSource={items}
-          pagination={false}
-          size="middle"
-          aria-label={caption}
-          rowClassName={(d) => (deliveryKey(d) === selectedKey ? "pf-bus-row-selected" : "")}
+      <>
+        <DataTable<BusDelivery>
+          tableId="admin.bus.deliveries"
+          caption={caption}
+          scrollLabel={caption}
+          rows={items}
+          rowKey={deliveryKey}
+          rowAttrs={(row) => ({
+            className: deliveryKey(row) === selectedKey ? "pf-bus-row-selected" : "",
+          })}
           columns={[
             {
-              title: t("deliveries.columns.time"),
-              key: "time",
-              render: (_, d) => <span className="pf-num">{date(d.created_at, "datetime")}</span>,
+              id: "time",
+              header: t("deliveries.columns.time"),
+              width: null,
+              cell: (d) => <span className="pf-num">{date(d.created_at, "datetime")}</span>,
             },
             {
-              title: t("deliveries.columns.domain"),
-              key: "domain",
-              render: (_, d) => domainName(t, d.domain),
+              id: "domain",
+              header: t("deliveries.columns.domain"),
+              width: null,
+              cell: (d) => domainName(t, d.domain),
             },
             {
-              title: t("deliveries.columns.event"),
-              key: "event",
-              render: (_, d) => (
+              id: "event",
+              header: t("deliveries.columns.event"),
+              width: null,
+              cell: (d) => (
                 <div className="pf-bus-cell-stack">
                   <button
                     type="button"
@@ -248,14 +254,16 @@ export function DeliveriesView({ mode, subscribers, selectedKey, onOpen }: Deliv
               ),
             },
             {
-              title: t("deliveries.columns.subscriber"),
-              key: "subscriber",
-              render: (_, d) => subscriberName(t, d.subscriber),
+              id: "subscriber",
+              header: t("deliveries.columns.subscriber"),
+              width: null,
+              cell: (d) => subscriberName(t, d.subscriber),
             },
             {
-              title: t("deliveries.columns.status"),
-              key: "status",
-              render: (_, d) => {
+              id: "status",
+              header: t("deliveries.columns.status"),
+              width: null,
+              cell: (d) => {
                 const word = deliveryWord(d);
                 return (
                   <StatusTag kind="busDelivery" status={word}>
@@ -265,20 +273,22 @@ export function DeliveriesView({ mode, subscribers, selectedKey, onOpen }: Deliv
               },
             },
             {
-              title: t("deliveries.columns.attempts"),
-              key: "attempts",
-              align: "right",
-              render: (_, d) => <span className="pf-num">{number(d.attempts)}</span>,
+              id: "attempts",
+              header: t("deliveries.columns.attempts"),
+              width: null,
+              numeric: true,
+              cell: (d) => <span className="pf-num">{number(d.attempts)}</span>,
             },
             {
-              title: t("deliveries.columns.answer"),
-              key: "answer",
-              render: (_, d) => <span className="pf-bus-error">{d.last_error ?? "—"}</span>,
+              id: "answer",
+              header: t("deliveries.columns.answer"),
+              width: null,
+              cell: (d) => <span className="pf-bus-error">{d.last_error ?? "—"}</span>,
             },
           ]}
         />
         {more}
-      </ScrollRegion>
+      </>
     );
   }
 

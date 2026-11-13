@@ -1,6 +1,5 @@
 import type { UseQueryResult } from "@tanstack/react-query";
-import { Alert, Button, Modal, Skeleton, Table } from "antd";
-import type { TableColumnsType } from "antd";
+import { Alert, Button, Modal, Skeleton } from "antd";
 import { type ReactNode, useContext, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -8,6 +7,7 @@ import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { ApiError } from "../../../shared/api/errors";
 import { ContextualSaveBar } from "../../../shared/ui/ContextualSaveBar";
+import { type DataColumn, DataTable } from "../../../shared/ui/DataTable/DataTable";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { FilePicker } from "../../../shared/ui/FileField";
 import { ErrorNote } from "../../../shared/ui/FormParts";
@@ -398,10 +398,12 @@ export function ConfirmModal({
 }
 
 /**
- * Таблица настройки: прокручиваемая область доступна с клавиатуры (регион с именем), пусто — словами с действием
- * (SPEC-v3 §7); страницы — только когда задан `pageSize` (справочник стран на 250 строк), иначе без пагинации.
+ * Таблица настройки на общем `DataTable` (пункт «Т»): столбцы сотрудник настраивает сам, широкая таблица прокручивается в
+ * своей области; пусто — словами с действием (SPEC-v3 §7); страницы — только когда задан `pageSize` (справочник стран на
+ * 250 строк).
  */
 export function ListTable<T extends object>({
+  tableId,
   label,
   columns,
   data,
@@ -409,41 +411,33 @@ export function ListTable<T extends object>({
   loading,
   empty,
   pageSize,
-  wrap,
 }: {
+  /** Идентификатор для настроек столбцов сотрудника, например `admin.company.charges` */
+  tableId: string;
   label: string;
-  columns: TableColumnsType<T>;
+  columns: readonly DataColumn<T>[];
   data: readonly T[];
   rowKey: (row: T) => string;
   loading?: boolean;
   empty: { title: string; text: string; action?: ReactNode };
   pageSize?: number;
-  /** Текст в ячейках переносится, таблица не шире окна (без горизонтальной прокрутки): справочники с длинными названиями. */
-  wrap?: boolean;
 }) {
+  if (loading) return <Skeleton active paragraph={{ rows: 3 }} />;
+  if (data.length === 0) {
+    return (
+      <EmptyState level={3} compact title={empty.title} text={empty.text} action={empty.action} />
+    );
+  }
   return (
-    <div className="pf-co-table-wrap" tabIndex={0} role="region" aria-label={label}>
-      <Table<T>
-        size="middle"
-        pagination={pageSize ? { pageSize, hideOnSinglePage: true, showSizeChanger: false } : false}
-        scroll={wrap ? undefined : { x: "max-content" }}
-        loading={loading}
-        columns={columns}
-        dataSource={data}
-        rowKey={rowKey}
-        locale={{
-          emptyText: (
-            <EmptyState
-              level={3}
-              compact
-              title={empty.title}
-              text={empty.text}
-              action={empty.action}
-            />
-          ),
-        }}
-      />
-    </div>
+    <DataTable<T>
+      tableId={tableId}
+      caption={label}
+      scrollLabel={label}
+      columns={columns}
+      rows={data}
+      rowKey={rowKey}
+      pageSize={pageSize}
+    />
   );
 }
 

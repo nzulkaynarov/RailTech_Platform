@@ -72,3 +72,7 @@
   display: inline-flex;
   flex: 0 0 auto;
 }
+.pf-dt-pager {
+  margin-top: 16px;
+  justify-content: flex-end;
+}
