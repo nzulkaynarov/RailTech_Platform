@@ -6,7 +6,7 @@ import { Link } from "react-router";
 import { PanelPortal } from "../../../app/shell/PanelSlot";
 import { useViewport } from "../../../app/shell/useViewport";
 import { ApiError } from "../../../shared/api/errors";
-import type { SupplierOrderDetail } from "../../../shared/api/generated/model";
+import type { SupplierOrderDetail, SupplierOrderMail } from "../../../shared/api/generated/model";
 import { useGetSupplierOrder } from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
@@ -167,8 +167,22 @@ function Receipts({ order }: { order: SupplierOrderDetail }) {
   );
 }
 
+/** Итог письма партнёру словами (0.10, FR-12); причина — из общего словаря журнала почты (`integrations:mail.reason`). */
+function useMailText() {
+  const { t, i18n } = useTranslation(["stock", "integrations"]);
+  return (mail: SupplierOrderMail): string => {
+    if (mail.state === "queued") return t("stock:order.mail.queued");
+    if (mail.state === "sent") return t("stock:order.mail.sent");
+    const key = `mail.reason.${mail.reason ?? ""}`;
+    return mail.reason && i18n.exists(key, { ns: "integrations" })
+      ? t("stock:order.mail.failed", { reason: t(`integrations:${key}`) })
+      : t("stock:order.mail.failedUnknown");
+  };
+}
+
 function Content({ order }: { order: SupplierOrderDetail }) {
   const { t } = useTranslation("stock");
+  const mailText = useMailText();
   const { date, activity } = useFormat();
   const { mobile } = useViewport();
   const [dialog, setDialog] = useState<Dialog>(null);
@@ -258,6 +272,8 @@ function Content({ order }: { order: SupplierOrderDetail }) {
                 ? `${activity(order.sent_at)}${order.sent_to ? ` · ${order.sent_to}` : ""}`
                 : null,
             },
+            // 0.10 (FR-12): итог письма приходит от почтового сервиса — «отправлено» только после него.
+            { label: t("order.mail.label"), value: order.mail ? mailText(order.mail) : null },
             {
               label: t("order.confirmed"),
               value: order.confirmed_at ? activity(order.confirmed_at) : null,

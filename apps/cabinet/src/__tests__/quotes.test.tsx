@@ -122,12 +122,41 @@ describe('КП', () => {
     expect(screen.getByRole('link', { name: 'К договорам' })).toHaveAttribute('href', '/contracts');
   });
 
+  it('0.10 (FR-12): почта компании не настроена — «Код не отправлен» с причиной, а не «отправлен»', async () => {
+    signedIn();
+    portalServer.use(
+      http.post('*/api/portal/v1/quotes/301/request-code', () =>
+        HttpResponse.json(
+          { channel: 'email', sent_to: 'a***@toshlog.example', expires_in: 900, delivery: '8' },
+          { status: 202 },
+        ),
+      ),
+      http.get('*/api/portal/v1/quotes/301/code-delivery/8', () =>
+        HttpResponse.json({ state: 'failed', reason: 'smtp_not_configured' }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderApp('/quotes/301');
+    await heading('КП KP-2026-0042');
+    await user.click(screen.getByRole('button', { name: 'Принять' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Получить код' }));
+    expect(
+      await within(dialog).findByText(/^Код не отправлен: почта компании не настроена\. Свяжитесь с менеджером/),
+    ).toBeInTheDocument();
+    expect(within(dialog).queryByText(/Код отправлен на/)).toBeNull();
+  });
+
   it('канал e-mail: показан замаскированный адрес из ответа ERP', async () => {
     signedIn();
     portalServer.use(
       http.post('*/api/portal/v1/quotes/301/request-code', () =>
-        HttpResponse.json({ channel: 'email', sent_to: 'a***@toshlog.example', expires_in: 900 }, { status: 202 }),
+        HttpResponse.json(
+          { channel: 'email', sent_to: 'a***@toshlog.example', expires_in: 900, delivery: '7' },
+          { status: 202 },
+        ),
       ),
+      http.get('*/api/portal/v1/quotes/301/code-delivery/7', () => HttpResponse.json({ state: 'sent', reason: null })),
     );
     const user = userEvent.setup();
     renderApp('/quotes/301');
@@ -140,7 +169,7 @@ describe('КП', () => {
     // Telegram с маскированным именем — адрес показывается.
     portalServer.use(
       http.post('*/api/portal/v1/quotes/301/request-code', () =>
-        HttpResponse.json({ channel: 'telegram', sent_to: '@a***', expires_in: 600 }, { status: 202 }),
+        HttpResponse.json({ channel: 'telegram', sent_to: '@a***', expires_in: 600, delivery: null }, { status: 202 }),
       ),
     );
     await user.click(within(dialog).getByRole('button', { name: 'Отправить код ещё раз' }));

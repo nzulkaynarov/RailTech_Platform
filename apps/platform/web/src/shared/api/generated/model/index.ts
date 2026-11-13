@@ -1073,6 +1073,8 @@ export * from "./supplierOrderLineOffer";
 export * from "./supplierOrderList";
 export * from "./supplierOrderLogEntry";
 export * from "./supplierOrderLogEntryKind";
+export * from "./supplierOrderMail";
+export * from "./supplierOrderMailState";
 export * from "./supplierOrderPatch";
 export * from "./supplierOrderReceipt";
 export * from "./supplierOrderReceiptIn";

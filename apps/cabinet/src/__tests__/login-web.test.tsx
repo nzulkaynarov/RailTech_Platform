@@ -24,7 +24,7 @@ describe('вход с веба', () => {
     expect(screen.getByRole('link', { name: 'Я новый клиент' })).toHaveAttribute('href', '/new-client');
   });
 
-  it('«Войти»: magic-link → «Если адрес зарегистрирован, мы отправили письмо»', async () => {
+  it('«Войти»: magic-link → «Если адрес зарегистрирован, мы отправим письмо»', async () => {
     const user = userEvent.setup();
     let sentBody: unknown;
     portalServer.events.on('request:start', async ({ request }) => {
@@ -35,7 +35,7 @@ describe('вход с веба', () => {
     await user.type(await screen.findByLabelText('E-mail'), 'a.karimov@toshlog.example');
     await user.click(screen.getByRole('button', { name: 'Войти' }));
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Если адрес зарегистрирован, мы отправили письмо' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Если адрес зарегистрирован, мы отправим письмо' })).toBeInTheDocument();
     expect(screen.getByText(/a\.karimov@toshlog\.example/)).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/login/sent');
     expect(sentBody).toEqual({ email: 'a.karimov@toshlog.example' });
@@ -49,7 +49,7 @@ describe('вход с веба', () => {
     await user.type(await screen.findByLabelText('E-mail'), 'unknown@example.com');
     await user.click(screen.getByRole('button', { name: 'Войти' }));
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Если адрес зарегистрирован, мы отправили письмо' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Если адрес зарегистрирован, мы отправим письмо' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/login/sent');
     expect(screen.queryByText(/не зарегистрирован/)).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Вы новый клиент? Оставьте запрос' })).toHaveAttribute(
@@ -63,9 +63,9 @@ describe('вход с веба', () => {
   });
 
   it.each([
-    ['ru', 'Войти', 'Если адрес зарегистрирован, мы отправили письмо'],
-    ['uz', 'Kirish', 'Agar manzil roʻyxatdan oʻtgan boʻlsa, xat yubordik'],
-    ['en', 'Sign in', 'If this address is registered, we sent an email'],
+    ['ru', 'Войти', 'Если адрес зарегистрирован, мы отправим письмо'],
+    ['uz', 'Kirish', 'Agar manzil roʻyxatdan oʻtgan boʻlsa, xat yuboramiz'],
+    ['en', 'Sign in', 'If this address is registered, we will send an email'],
   ])('заголовок после запроса не утверждает, что адрес есть (%s)', async (lang, submit, title) => {
     window.localStorage.setItem('cabinet.language', lang);
     await i18n.changeLanguage(lang);
@@ -327,14 +327,14 @@ describe('вход с веба', () => {
       await user.type(await screen.findByLabelText('E-mail'), 'neznakomets@example.com');
       await user.click(screen.getByRole('button', { name: 'Войти' }));
 
-      expect(await screen.findByRole('heading', { level: 1, name: 'Если адрес зарегистрирован, мы отправили письмо' })).toBeInTheDocument();
+      expect(await screen.findByRole('heading', { level: 1, name: 'Если адрес зарегистрирован, мы отправим письмо' })).toBeInTheDocument();
       expect(
         screen.getByText(
           'Если адрес neznakomets@example.com зарегистрирован, в письме — код и ссылка для входа. Они действуют 60 минут.',
         ),
       ).toBeInTheDocument();
       expect(screen.queryByText(/есть в кабинете/)).not.toBeInTheDocument();
-      expect(screen.getByText('Письмо может идти несколько минут. Проверьте папку «Спам».')).toBeInTheDocument();
+      expect(screen.getByText('Письмо может идти несколько минут. Проверьте папку «Спам». Не пришло за 10 минут — свяжитесь с вашим менеджером: возможно, почта компании временно не работает.')).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Вы новый клиент? Оставьте запрос' })).toHaveAttribute(
         'href',
         '/new-client?email=neznakomets%40example.com',

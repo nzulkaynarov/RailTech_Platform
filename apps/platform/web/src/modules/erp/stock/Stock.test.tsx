@@ -195,9 +195,13 @@ describe("Склад · заказы партнёрам", () => {
     fireEvent.click(screen.getByRole("button", { name: "Отправить партнёру" }));
     const send = await screen.findByRole("dialog");
     fireEvent.click(within(send).getByRole("button", { name: "Отправить письмо" }));
-    expect(await screen.findByText("Заказ отправлен партнёру")).toBeVisible();
+    // 0.10 (FR-12): «отправлено» не пишем заранее — письмо в очереди почтового сервиса, итог в карточке
+    expect(
+      await screen.findByText(/^Заказ оформлен\. Письмо партнёру — в очереди почты/),
+    ).toBeVisible();
     await screen.findByRole("button", { name: "Партнёр подтвердил" });
     expect(screen.getAllByText(/sales@steel\.example/).length).toBeGreaterThan(0);
+    expect(screen.getByText("в очереди почты — итог появится здесь")).toBeVisible();
 
     fireEvent.click(screen.getByRole("button", { name: "Партнёр подтвердил" }));
     const confirm = await screen.findByRole("dialog");
@@ -239,7 +243,9 @@ describe("Склад · заказы партнёрам", () => {
       target: { value: "orders@lumber.example" },
     });
     fireEvent.click(within(send).getByRole("button", { name: "Отправить письмо" }));
-    expect(await screen.findByText("Заказ отправлен партнёру")).toBeVisible();
+    expect(
+      await screen.findByText(/^Заказ оформлен\. Письмо партнёру — в очереди почты/),
+    ).toBeVisible();
   });
 });
 

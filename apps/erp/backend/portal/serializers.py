@@ -519,6 +519,14 @@ class AcceptanceCodeSentSerializer(serializers.Serializer):
     channel = serializers.ChoiceField(choices=["telegram", "email"])
     sent_to = serializers.CharField()
     expires_in = serializers.IntegerField(min_value=1)
+    delivery = serializers.CharField(allow_null=True)
+
+
+class CodeDeliverySerializer(serializers.Serializer):
+    """`CodeDelivery` (0.10, FR-12): итог письма с кодом — в очереди почты, отправлено или не отправлено с причиной."""
+
+    state = serializers.ChoiceField(choices=["queued", "sent", "failed"])
+    reason = serializers.CharField(allow_null=True)
 
 
 class ActAcceptSerializer(serializers.Serializer):

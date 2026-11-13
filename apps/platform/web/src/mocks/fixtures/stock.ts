@@ -119,6 +119,8 @@ export interface MockOrder {
   createdBy: string;
   sentAt: string | null;
   sentTo: string | null;
+  /** 0.10 (FR-12): итог письма партнёру; нет — у отправленного демо-заказа «отправлено» */
+  mail?: { state: "queued" | "sent" | "failed"; reason: string | null };
   confirmedAt: string | null;
   receivedAt: string | null;
   cancelledAt: string | null;

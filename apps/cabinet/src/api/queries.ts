@@ -186,6 +186,17 @@ export const useAcceptQuote = (id: number) =>
   );
 /** Запрос кода акцепта: ERP отправляет код контакту; кэш не меняется. */
 export const useRequestQuoteCode = (id: number) => useMutation({ mutationFn: () => portal.requestQuoteCode(id) });
+/** Опрос итога письма с кодом: раз в 2 с, пока письмо в очереди, не дольше минуты (0.10, FR-12). */
+const CODE_POLL_MS = 2000;
+const CODE_POLL_LIMIT_MS = 60_000;
+export const useQuoteCodeDelivery = (id: number, delivery: string | null, since: number) =>
+  useQuery({
+    queryKey: ['quote-code-delivery', id, delivery],
+    queryFn: () => portal.getQuoteCodeDelivery(id, delivery ?? ''),
+    enabled: delivery !== null,
+    refetchInterval: (query) =>
+      query.state.data?.state === 'queued' && Date.now() - since < CODE_POLL_LIMIT_MS ? CODE_POLL_MS : false,
+  });
 export const useRejectQuote = (id: number) =>
   useInvalidatingMutation(
     (reason: string) => portal.rejectQuote(id, reason),

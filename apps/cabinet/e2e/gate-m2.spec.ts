@@ -137,7 +137,7 @@ async function signInByForm(page: Page, address: string): Promise<void> {
   await page.goto(`${CABINET_URL}/login`);
   await page.getByLabel('E-mail').fill(address);
   await page.getByRole('button', { name: 'Войти' }).click();
-  await expect(page.getByRole('heading', { name: 'Если адрес зарегистрирован, мы отправили письмо' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Если адрес зарегистрирован, мы отправим письмо' })).toBeVisible();
   const token = await waitNewMagicToken(address, known);
   await page.goto(`${CABINET_URL}/auth/magic#token=${token}`);
   await expectSignedInAs(page, address);
@@ -814,7 +814,7 @@ test.describe('I. Права, изоляция, выход и повторный
     const known = magicTokens(email);
     await client.getByLabel('E-mail').fill(email);
     await client.getByRole('button', { name: 'Войти' }).click();
-    await expect(client.getByRole('heading', { name: 'Если адрес зарегистрирован, мы отправили письмо' })).toBeVisible();
+    await expect(client.getByRole('heading', { name: 'Если адрес зарегистрирован, мы отправим письмо' })).toBeVisible();
     await snap(client, 'login-sent');
     const token = await waitNewMagicToken(email, known);
     await client.goto(`${CABINET_URL}/auth/magic#token=${token}`);

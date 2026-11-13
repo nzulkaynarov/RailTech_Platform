@@ -17,7 +17,7 @@ async function sendLetter(user: ReturnType<typeof userEvent.setup>, address = 'a
   renderApp('/login');
   await user.type(await screen.findByLabelText('E-mail'), address);
   await user.click(screen.getByRole('button', { name: 'Войти' }));
-  return screen.findByRole('heading', { level: 1, name: 'Если адрес зарегистрирован, мы отправили письмо' });
+  return screen.findByRole('heading', { level: 1, name: 'Если адрес зарегистрирован, мы отправим письмо' });
 }
 
 function codeForm() {
@@ -89,7 +89,7 @@ describe('вход по коду из письма', () => {
     await user.click(ready);
 
     expect(
-      await screen.findByText('Если адрес зарегистрирован, мы отправили новое письмо. Код из прежнего больше не действует.'),
+      await screen.findByText('Если адрес зарегистрирован, мы отправим новое письмо. Код из прежнего больше не действует.'),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Отправить ещё раз через \d+ с/ })).toBeDisabled();
     expect(requests).toEqual([{ email: 'a.karimov@toshlog.example' }, { email: 'a.karimov@toshlog.example' }]);
@@ -99,7 +99,7 @@ describe('вход по коду из письма', () => {
   it('подсказка о задержке письма и «Спаме», вход через Telegram', async () => {
     const user = userEvent.setup();
     await sendLetter(user);
-    expect(screen.getByText('Письмо может идти несколько минут. Проверьте папку «Спам».')).toBeInTheDocument();
+    expect(screen.getByText('Письмо может идти несколько минут. Проверьте папку «Спам». Не пришло за 10 минут — свяжитесь с вашим менеджером: возможно, почта компании временно не работает.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Войти через Telegram' })).toHaveAttribute(
       'href',
       expect.stringMatching(/^https:\/\/t\.me\//),

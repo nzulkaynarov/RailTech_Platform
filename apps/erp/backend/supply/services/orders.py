@@ -107,7 +107,7 @@ def get_supplier(supplier_id: int):
 
 
 def _order_or_404(order_id: int, *, lock: bool = False) -> SupplierOrder:
-    qs = SupplierOrder.objects.select_related("supplier", "currency", "created_by")
+    qs = SupplierOrder.objects.select_related("supplier", "currency", "created_by", "sent_mail")
     if lock:
         qs = qs.select_for_update(of=("self",))
     order = qs.filter(pk=order_id).first()
@@ -384,6 +384,19 @@ def update_order(user, order_id: int, data: OrderInput) -> SupplierOrder:
     return order
 
 
+def _mail_state(order: SupplierOrder) -> Optional[dict]:
+    """Итог письма партнёру (0.10, FR-12): `queued` — в очереди почтового сервиса CRM, `sent`, `failed` с кодом причины
+    (`smtp_not_configured`, `rejected`, …) — из журнала писем, куда CRM возвращает итог событием."""
+    from core.models import EmailLog
+
+    log = order.sent_mail
+    if log is None:
+        return None
+    state = {EmailLog.STATUS_SENT: "sent", EmailLog.STATUS_FAILED: "failed"}.get(log.status, "queued")
+    reason = (log.error or "").split(":", 1)[0].strip() if state == "failed" else ""
+    return {"state": state, "reason": reason or None}
+
+
 # ── статусы ────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 
@@ -424,7 +437,7 @@ def send_order(user, order_id: int, *, to_email: str = "") -> SupplierOrder:
         "with_prices": any(line.unit_price is not None for line in lines),
     }
     try:
-        send_templated_email(
+        mail = send_templated_email(
             "supplier_order",
             context,
             to=[recipient],
@@ -440,7 +453,8 @@ def send_order(user, order_id: int, *, to_email: str = "") -> SupplierOrder:
     order.sent_at = timezone.now()
     order.sent_by = user if getattr(user, "pk", None) else None
     order.sent_to = recipient
-    order.save(update_fields=["status", "sent_at", "sent_by", "sent_to", "updated_at"])
+    order.sent_mail = mail
+    order.save(update_fields=["status", "sent_at", "sent_by", "sent_to", "sent_mail", "updated_at"])
     _log(order, OrderLogKind.SENT, user, recipient)
     try:
         from portal.services import notice_sources
@@ -682,6 +696,7 @@ def present_order(order: SupplierOrder, user, *, detail: bool = False) -> dict:
             "note": order.note,
             "sent_at": order.sent_at.isoformat() if order.sent_at else None,
             "sent_to": order.sent_to or None,
+            "mail": _mail_state(order),
             "confirmed_at": order.confirmed_at.isoformat() if order.confirmed_at else None,
             "received_at": order.received_at.isoformat() if order.received_at else None,
             "cancelled_at": order.cancelled_at.isoformat() if order.cancelled_at else None,

@@ -58,6 +58,7 @@ from portal.serializers import (
     CatalogPageSerializer,
     ClientRequestCreateSerializer,
     ClientRequestSerializer,
+    CodeDeliverySerializer,
     CompanySerializer,
     CompanyUpdateSerializer,
     ContractSerializer,
@@ -695,6 +696,28 @@ class QuoteRequestCodeView(BasePortalView):
         except ContactChannelRequired:
             raise PortalValidationError("CONTACT_CHANNEL_REQUIRED")
         return Response(AcceptanceCodeSentSerializer(sent).data, status=status.HTTP_202_ACCEPTED)
+
+
+class QuoteCodeDeliveryView(BasePortalView):
+    """GET /quotes/{id}/code-delivery/{delivery} — итог письма с кодом акцепта (0.10, FR-12).
+
+    Только письмо с кодом этой сессии: шаблон кода акцепта и адрес контакта сессии; чужое — 404.
+    """
+
+    required_module = "quotes"
+    throttle_classes = [PortalSessionRateThrottle]
+
+    def get(self, request, pk, delivery):
+        from core.models import EmailLog
+
+        _quote_or_404(request, pk)
+        email = (request.portal_contact.email or "").strip().lower()
+        log = EmailLog.objects.filter(pk=delivery, template="quote_acceptance_code").first()
+        if log is None or not email or email not in [str(a).lower() for a in (log.to_emails or [])]:
+            raise Http404
+        state = {EmailLog.STATUS_SENT: "sent", EmailLog.STATUS_FAILED: "failed"}.get(log.status, "queued")
+        reason = (log.error or "").split(":", 1)[0].strip() if state == "failed" else ""
+        return Response(CodeDeliverySerializer({"state": state, "reason": reason or None}).data)
 
 
 class QuoteAcceptView(BasePortalView):

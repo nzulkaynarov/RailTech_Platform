@@ -79,7 +79,8 @@ def test_telegram_contact_matched_in_crm_gets_the_event_and_no_email(
     response = post(portal_client, f"/quotes/{sent_quote.pk}/request-code")
 
     assert response.status_code == 202
-    assert response.json() == {"channel": "telegram", "sent_to": "@a***", "expires_in": 900}
+    # у Telegram журнала доставки нет — `delivery: null` (0.10)
+    assert response.json() == {"channel": "telegram", "sent_to": "@a***", "expires_in": 900, "delivery": None}
     assert not mail.outbox and not EmailLog.objects.filter(template="quote_acceptance_code").exists()
     event = bus_support.only(CODE_EVENT)
     assert event["type"] == "uz.railtech.erp.quote.acceptance_code_requested.v1"
