@@ -1,5 +1,13 @@
 import { Alert, App, Button, Card, Checkbox, Input, Select } from "antd";
-import { type ReactNode, createContext, useCallback, useContext, useRef, useState } from "react";
+import {
+  type ReactNode,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router";
 
@@ -180,6 +188,11 @@ export function RegisterLetterPage() {
   useDocumentTitle(title);
 
   // «Заполнить из файла» (EDS-REG): id предложения, заполненные поля и те, что человек ещё не правил.
+  // Последние значения формы — для предложения из файла, которое приходит через секунды (ВХ)
+  const latest = useRef(values);
+  useEffect(() => {
+    latest.current = values;
+  }, [values]);
   const [ai, setAi] = useState<{ id: string; filled: AiField[]; left: Set<AiField> } | null>(null);
   const touch = (key: keyof RegisterValues) => {
     setAi((prev) => {
@@ -332,6 +345,50 @@ export function RegisterLetterPage() {
         >
           <Card>
             <div className="pf-fp-form">
+              <Field
+                id={id("file_ids")}
+                label={t("letters:register.files.label")}
+                hint={t("letters:register.files.hint")}
+                error={fieldError("file_ids")}
+              >
+                <AttachmentsField
+                  id={id("file_ids")}
+                  value={values.attachments}
+                  onChange={setAttachments}
+                />
+              </Field>
+              <AiFillBar
+                attachments={values.attachments}
+                applied={ai?.left.size ?? 0}
+                linkQuery={
+                  canLink && !values.deal && ai
+                    ? { inn: values.senderInn.trim(), name: values.senderName.trim() }
+                    : null
+                }
+                onSuggestion={(suggestion) => {
+                  // Распознавание идёт секунды: человек мог уже ввести поля — они главнее, заполняются только пустые.
+                  const result = applySuggestion(
+                    latest.current,
+                    suggestion.fields,
+                    kinds.data?.items ?? [],
+                  );
+                  setValues(result.values);
+                  setAi({
+                    id: suggestion.suggestion_id,
+                    filled: result.filled,
+                    left: new Set(result.filled),
+                  });
+                }}
+                onRevert={() => {
+                  if (!ai) return;
+                  setValues((prev) => revertSuggestion(prev, [...ai.left]));
+                  report("manual");
+                  setAi(null);
+                }}
+                onLinkDeal={(choice) => {
+                  set("deal", choice);
+                }}
+              />
               <div className="pf-newdoc-row">
                 <Field
                   id={id("kind")}
@@ -583,50 +640,6 @@ export function RegisterLetterPage() {
               >
                 {t("letters:register.urgent")}
               </Checkbox>
-              <Field
-                id={id("file_ids")}
-                label={t("letters:register.files.label")}
-                hint={t("letters:register.files.hint")}
-                error={fieldError("file_ids")}
-              >
-                <AttachmentsField
-                  id={id("file_ids")}
-                  value={values.attachments}
-                  onChange={setAttachments}
-                />
-              </Field>
-              <AiFillBar
-                attachments={values.attachments}
-                applied={ai?.left.size ?? 0}
-                linkQuery={
-                  canLink && !values.deal && ai
-                    ? { inn: values.senderInn.trim(), name: values.senderName.trim() }
-                    : null
-                }
-                onSuggestion={(suggestion) => {
-                  const result = applySuggestion(
-                    values,
-                    suggestion.fields,
-                    kinds.data?.items ?? [],
-                  );
-                  setValues(result.values);
-                  setAi({
-                    id: suggestion.suggestion_id,
-                    filled: result.filled,
-                    left: new Set(result.filled),
-                  });
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                }}
-                onRevert={() => {
-                  if (!ai) return;
-                  setValues((prev) => revertSuggestion(prev, [...ai.left]));
-                  report("manual");
-                  setAi(null);
-                }}
-                onLinkDeal={(choice) => {
-                  set("deal", choice);
-                }}
-              />
               {canLink ? (
                 <Field
                   id="reg-deal"
