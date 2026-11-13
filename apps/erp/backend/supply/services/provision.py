@@ -76,7 +76,7 @@ def _create_draft(deal, quote, supplier, rows: list[tuple[Any, int, Any]]) -> Su
         for item, quantity, offer in rows
     ]
     resolved = orders._resolve_lines(lines)
-    number, year, seq = stock.next_number("PO", "ЗП")
+    number, year, seq = stock.next_number("PO")
     note = f"Дефицит проекта {deal.number or ''} по принятому КП {quote.number or f'v{quote.version}'}".replace(
         "  ", " "
     )

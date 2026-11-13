@@ -281,7 +281,7 @@ def test_shipping_reduces_stock_and_reservation_and_numbers_the_waybill(world):
     assert shipped.status_code == 201, shipped.json()
     body = shipped.json()
     year = Shipment.objects.get().number_year
-    assert body["number"] == f"ОТГ-{year}-001" and body["tracking"] == "TRK-001"
+    assert body["number"] == f"SHP-{year}-001" and body["tracking"] == "TRK-001"
     assert [(line["quantity"], line["cell"]) for line in body["lines"]] == [(3, "A-01")]
     row = _row(world, world["rail"])
     assert (row["on_hand"], row["reserved"], row["free"]) == (7, 1, 6)
@@ -293,7 +293,7 @@ def test_shipping_reduces_stock_and_reservation_and_numbers_the_waybill(world):
         {"deal_id": deal.pk, "lines": [{"reservation_id": reservation["id"], "quantity": 1}], "tracking": "TRK-002"},
         format="json",
     )
-    assert last.status_code == 201 and last.json()["number"] == f"ОТГ-{year}-002"
+    assert last.status_code == 201 and last.json()["number"] == f"SHP-{year}-002"
     assert Reservation.objects.get(pk=reservation["id"]).status == ReservationStatus.FULFILLED
     fulfillment = Fulfillment.objects.get(deal=deal)
     assert (

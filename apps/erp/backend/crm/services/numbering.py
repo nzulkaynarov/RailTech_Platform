@@ -52,11 +52,21 @@ DEFAULT_START_VALUE = 0
 # Used as the fallback when a company's scheme leaves a code unset — nothing is hardcoded at
 # the call sites: each caller passes the doc's default label, but the scheme's editable
 # type_labels override it.
-DEFAULT_TYPE_LABELS = {"KP": "КП", "CT": "ДОГ", "INV": "СЧ", "ACT": "АКТ", "DOC": "ДОК"}
-# Labels of the kinds the Settings editor does not offer (квитанция, накладная): the callers pass
-# them as the fallback of `label_for`.
-RECEIPT_LABEL = "КВ"
-DELIVERY_NOTE_LABEL = "НАК"
+# Latin by default (owner 2026-11-13, task «Н»): every number kind of ERP is editable in Settings · Numbering.
+DEFAULT_TYPE_LABELS = {
+    "REQ": "RQ",
+    "PRJ": "PRJ",
+    "KP": "QT",
+    "CT": "CT",
+    "INV": "INV",
+    "ACT": "ACT",
+    "RCP": "RCP",
+    "DN": "DN",
+    "PO": "PO",
+    "SHP": "SHP",
+    "PART": "PA",
+    "DOC": "DOC",
+}
 
 
 @dataclass(frozen=True)
@@ -79,16 +89,33 @@ class SchemeSpec:
             type_labels=dict(row.type_labels or {}),
         )
 
-    def label_for(self, doc_type: str, fallback: str) -> str:
+    def label_for(self, doc_type: str, fallback: str = "") -> str:
         """The editable {type} label for a doc kind — company override → shipped default → the
         caller's fallback. Never hardcoded downstream."""
         value = self.type_labels.get(doc_type)
         if isinstance(value, str) and value.strip():
             return value
-        return DEFAULT_TYPE_LABELS.get(doc_type, fallback)
+        return DEFAULT_TYPE_LABELS.get(doc_type, fallback or doc_type)
 
 
 DEFAULT_SCHEME = SchemeSpec()
+
+
+# Kinds with their own counter and format `{label}-{YYYY}-{NNN}` (only the label comes from the scheme): a deal keeps one
+# NNN from request to project, the stock counters are per kind and year, a partner contract uses its application id.
+OWN_FORMAT_WIDTH = {"REQ": 3, "PRJ": 3, "PO": 3, "SHP": 3, "PART": 4}
+
+
+def own_format_number(label: str, year: int, seq: int, width: int = 3) -> str:
+    return f"{label}-{year:04d}-{seq:0{width}d}"
+
+
+def type_label(doc_type: str, company=None) -> str:
+    """The editable label of a number kind in the scheme that mints for `company` (None → platform scheme): deal numbers
+    (REQ/PRJ), supplier orders (PO), shipments (SHP) and partner contracts (PART) keep their own counters and formats
+    but take the label from here — nothing is hardcoded at the call sites (task «Н»)."""
+    prefix = _company_prefix(company)
+    return _resolve_scheme(_scheme_company_id(company, prefix)).label_for(doc_type)
 
 
 def _company_prefix(company) -> str:
@@ -154,7 +181,7 @@ def _render_number(scheme: SchemeSpec, *, prefix: str, label: str, now, displaye
     return result
 
 
-def next_document_number(doc_type: str, label: str, company=None) -> str:
+def next_document_number(doc_type: str, label: str = "", company=None) -> str:
     """Return the next gap-free document number from a locked counter.
 
     The FORMAT comes from the effective DocumentNumberingScheme (company → platform →
@@ -203,7 +230,7 @@ def next_document_number(doc_type: str, label: str, company=None) -> str:
 # The doc kinds shown in the live preview, in order — the editable {type} codes. The label
 # for each is resolved from the scheme's type_labels (single source of truth: the SAME token
 # renderer + label resolution as `next_document_number`, so the editor can never drift).
-PREVIEW_TYPE_CODES = ("KP", "CT", "INV", "ACT", "DOC")
+PREVIEW_TYPE_CODES = ("REQ", "PRJ", "KP", "CT", "INV", "ACT", "RCP", "DN", "PO", "SHP", "PART", "DOC")
 
 
 @dataclass(frozen=True)
@@ -238,7 +265,8 @@ def get_company_scheme_view(company) -> SchemeView:
         start_value=scheme.start_value,
         type_labels=merged_labels,
     )
-    return SchemeView(scheme=scheme, prefix=prefix, is_effective=bool(prefix))
+    # The editor edits the scheme that mints for the company, so it is always effective (task «Н»).
+    return SchemeView(scheme=scheme, prefix=prefix, is_effective=True)
 
 
 def preview_scheme_numbers(
@@ -276,16 +304,15 @@ def preview_scheme_numbers(
     effective_prefix = prefix.strip() if prefix is not None else _company_prefix(company)
     now = timezone.now()
     displayed = spec.start_value + 1
-    return [
-        {
-            "type_code": type_code,
-            "label": spec.label_for(type_code, type_code),
-            "number": _render_number(
-                spec, prefix=effective_prefix, label=spec.label_for(type_code, type_code), now=now, displayed=displayed
-            ),
-        }
-        for type_code in PREVIEW_TYPE_CODES
-    ]
+    rows = []
+    for type_code in PREVIEW_TYPE_CODES:
+        label = spec.label_for(type_code)
+        if type_code in OWN_FORMAT_WIDTH:
+            number = own_format_number(label, now.year, 1, OWN_FORMAT_WIDTH[type_code])
+        else:
+            number = _render_number(spec, prefix=effective_prefix, label=label, now=now, displayed=displayed)
+        rows.append({"type_code": type_code, "label": label, "number": number})
+    return rows
 
 
 def get_company_scheme(company) -> SchemeSpec:
@@ -305,14 +332,15 @@ def set_company_scheme(company, *, pattern=None, padding=None, reset_period=None
 
     Business logic lives here (Rule 8); the N2 DRF view is a thin wrapper. Runs
     `full_clean()` so an invalid pattern (missing {seq}, empty) or empty type label raises
-    ValidationError before save. Effectiveness for minting still requires the company to carry
-    a prefix (global-unique invariant) — the caller/UX surfaces that.
+    ValidationError before save. The row written is the one that MINTS for this company (task «Н»,
+    2026-11-13): a prefixed company — its own row; a prefix-less company — the platform row, which
+    is what its numbers use (before, a prefix-less company's own row was saved but never applied).
     """
     from ..models import DocumentNumberingScheme
 
     if company is None:
         raise ValueError("set_company_scheme requires a company")
-    company_id = getattr(company, "pk", company)
+    company_id = _scheme_company_id(company, _company_prefix(company))
 
     row = DocumentNumberingScheme.objects.filter(company_id=company_id).first()
     if row is None:

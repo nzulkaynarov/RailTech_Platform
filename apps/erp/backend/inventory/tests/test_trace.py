@@ -292,7 +292,7 @@ def test_search_by_serial_shows_where_it_came_from_and_where_it_went(world, clas
     [row] = found.json()["results"]
     assert (row["kind"], row["number"], row["status"]) == ("serial", "ENG-0002", "shipped")
     origin = row["origin"]
-    assert origin["supplier_name"] == world["vendor"].name and origin["order_number"].startswith("ЗП-")
+    assert origin["supplier_name"] == world["vendor"].name and origin["order_number"].startswith("PO-")
     assert origin["manufacturer"] == "Завод Вымышленный" and origin["doc_number"] == "СЕРТ-0001"
     assert origin["deal"]["id"] == deal.pk
     [dest] = row["destinations"]

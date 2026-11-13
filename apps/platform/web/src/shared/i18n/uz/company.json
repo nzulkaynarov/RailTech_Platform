@@ -30,10 +30,17 @@
     "platform": "Platforma"
   },
   "kinds": {
+    "request": "Ariza",
+    "project": "Loyiha",
     "quote": "TT",
     "contract": "Shartnoma",
     "invoice": "Hisob",
     "act": "Dalolatnoma",
+    "receipt": "Kvitansiya",
+    "delivery_note": "Yuk xati",
+    "purchase_order": "Yetkazib beruvchiga buyurtma",
+    "shipment": "Jo‘natma",
+    "partner_contract": "Hamkor shartnomasi",
     "letter": "Xat"
   },
   "notSet": {
@@ -176,12 +183,11 @@
   },
   "numbering": {
     "title": "Hujjatlarni raqamlash",
-    "hint": "Kompaniyangizning TT, shartnoma, hisob, dalolatnoma va xatlari raqamlari formati va prefiksi.",
+    "hint": "Barcha raqamlarning formati va belgilari: arizalar, loyihalar, hujjatlar, buyurtmalar va jo‘natmalar.",
     "prefix": "Raqamlash prefiksi",
     "prefixHint": "16 belgigacha: harf, raqam, «-» va «_».",
     "prefixInvalid": "Faqat lotin harflari, raqamlar, «-» va «_»",
     "prefixTaken": "Prefiks boshqa kompaniyada band",
-    "prefixlessBanner": "Oʻz sxemangiz faqat prefiks bilan ishlaydi. Hozir platforma formati qo'llanmoqda — prefiksni kiriting.",
     "format": "Raqam formati",
     "presets": {
       "standard": "Standart",
@@ -203,15 +209,14 @@
     },
     "start": "Boshlang'ich qiymat",
     "startHint": "Birinchi raqam = qiymat + 1",
-    "labelsTitle": "Hujjat turlari belgilari",
-    "labelsHint": "Har bir hujjat turi uchun {type} ga nima qo'yiladi.",
+    "labelsTitle": "Raqam turlarining belgilari",
+    "labelsHint": "Raqam barcha tillarda bir xil — lotin harflaridan foydalaning.",
     "save": "Raqamlashni saqlash",
     "saved": "Raqamlash saqlandi",
     "previewTitle": "Raqamlar namunasi",
     "previewUnavailable": "{seq} tokenli to'g'ri niqobni kiriting.",
     "previewHint": "Namuna sxema qoralamasi bo‘yicha; hisoblagichlar o‘zgarmaydi.",
-    "note": "Yangi raqamlar shu sxema bo‘yicha beriladi; berilganlari o‘zgarmaydi.",
-    "noteNoPrefix": "Prefikssiz raqamlar standart formatda beriladi."
+    "note": "Yangi raqamlar shu sxema bo‘yicha beriladi; berilganlari o‘zgarmaydi."
   },
   "quote": {
     "title": "TT bo'yicha standart shartlar",

@@ -215,12 +215,12 @@ test.describe("Компания: реквизиты, бланк, нумерац�
     await loginAndWait(page, "director@demo.example");
     await openCompany(page, "numbering");
     const samples = page.getByRole("list", { name: "Образец номеров" });
-    await expect(samples.getByText(/DEMO-КП-\d{4}\/001/)).toBeVisible();
+    await expect(samples.getByText(/DEMO-QT-\d{4}\/001/)).toBeVisible();
 
     await page.getByLabel("Префикс нумерации").fill("ACME");
-    await expect(samples.getByText(/ACME-КП-\d{4}\/001/)).toBeVisible();
+    await expect(samples.getByText(/ACME-QT-\d{4}\/001/)).toBeVisible();
     await page.getByLabel("Ширина счётчика").fill("6");
-    await expect(samples.getByText(/ACME-КП-\d{4}\/000001/)).toBeVisible();
+    await expect(samples.getByText(/ACME-QT-\d{4}\/000001/)).toBeVisible();
     await expect(
       page.getByText("Новые номера пойдут по этой схеме; выданные не меняются."),
     ).toBeVisible();

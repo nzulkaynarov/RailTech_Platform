@@ -30,10 +30,17 @@
     "platform": "Platform"
   },
   "kinds": {
+    "request": "Request",
+    "project": "Project",
     "quote": "Quote",
     "contract": "Contract",
     "invoice": "Invoice",
     "act": "Act",
+    "receipt": "Receipt",
+    "delivery_note": "Delivery note",
+    "purchase_order": "Purchase order",
+    "shipment": "Shipment",
+    "partner_contract": "Partner agreement",
     "letter": "Letter"
   },
   "notSet": {
@@ -176,12 +183,11 @@
   },
   "numbering": {
     "title": "Document numbering",
-    "hint": "Format and prefix of your company's quote, contract, invoice, act and letter numbers.",
+    "hint": "Format and labels of all numbers: requests, projects, documents, orders and shipments.",
     "prefix": "Numbering prefix",
     "prefixHint": "Up to 16 characters: letters, digits, “-” and “_”.",
     "prefixInvalid": "Latin letters, digits, “-” and “_” only",
     "prefixTaken": "The prefix is taken by another company",
-    "prefixlessBanner": "Your own scheme works only with a prefix. The platform format applies now — set a prefix.",
     "format": "Number format",
     "presets": {
       "standard": "Standard",
@@ -203,15 +209,14 @@
     },
     "start": "Start value",
     "startHint": "First number = value + 1",
-    "labelsTitle": "Document type labels",
-    "labelsHint": "What is put into {type} for each document type.",
+    "labelsTitle": "Number labels",
+    "labelsHint": "A number is the same in every language — use Latin letters.",
     "save": "Save numbering",
     "saved": "Numbering saved",
     "previewTitle": "Number samples",
     "previewUnavailable": "Enter a valid mask containing {seq}.",
     "previewHint": "The sample follows the draft scheme; counters do not change.",
-    "note": "New numbers follow this scheme; issued ones do not change.",
-    "noteNoPrefix": "Without a prefix, numbers use the default format."
+    "note": "New numbers follow this scheme; issued ones do not change."
   },
   "quote": {
     "title": "Default quote terms",

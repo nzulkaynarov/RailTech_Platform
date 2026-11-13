@@ -378,14 +378,16 @@ describe("Нумерация", () => {
     await openTab("numbering");
     const list = await screen.findByRole("list", { name: "Образец номеров" });
     await waitFor(() => {
-      expect(within(list).getByText(/DEMO-КП-\d{4}\/001/)).toBeInTheDocument();
+      expect(within(list).getByText(/DEMO-QT-\d{4}\/001/)).toBeInTheDocument();
     });
 
     type("Префикс нумерации", "ACME");
     await waitFor(() => {
-      expect(screen.getByText(/ACME-КП-\d{4}\/001/)).toBeInTheDocument();
+      expect(screen.getByText(/ACME-QT-\d{4}\/001/)).toBeInTheDocument();
     });
     expect(readCompanyMock().numbering.prefix).toBe("DEMO");
+    // все виды номеров в образце; у заявки — свой формат с тем же обозначением из схемы
+    expect(within(list).getByText(/^RQ-\d{4}-001$/)).toBeInTheDocument();
   });
 
   it("умолчание SPEC-v3 §2.2 — формат «Стандартный», прежняя маска узнаётся как «Через дефис»", async () => {
@@ -429,11 +431,14 @@ describe("Нумерация", () => {
     expect(readCompanyMock().numbering.prefix).toBe("DEMO");
   });
 
-  it("пустой префикс: подсказка, что своя схема без него не действует", async () => {
+  it("пустой префикс: схема всё равно действует, обозначения всех видов номеров правятся", async () => {
     await openTab("numbering");
     await screen.findByLabelText("Префикс нумерации");
     type("Префикс нумерации", "");
-    expect(await screen.findByText(/Своя схема действует только с префиксом/)).toBeInTheDocument();
+    expect(screen.queryByText(/действует только с префиксом/)).toBeNull();
+    for (const kind of ["Заявка", "Проект", "Заказ поставщику", "Отгрузка", "Договор партнёра"]) {
+      expect(screen.getByLabelText(kind)).toBeInTheDocument();
+    }
   });
 });
 

@@ -65,11 +65,12 @@ def deal_number(deal) -> str:
     return deal.number or f"D-{deal.pk}"
 
 
-def deal_stage(number: str) -> str:
-    """`DealRef.stage` / `MessageContext.stage`: `request` — заявка до принятия КП, `project` — после (0.12, FR-37)."""
+def deal_stage(deal) -> str:
+    """`DealRef.stage` / `MessageContext.stage`: `request` — заявка до принятия КП, `project` — после (0.12, FR-37);
+    полем сделки, не по префиксу номера (задача «Н»)."""
     from sales.services.deal_numbers import stage_of
 
-    return stage_of(number)
+    return stage_of(deal)
 
 
 def request_number(deal) -> str:

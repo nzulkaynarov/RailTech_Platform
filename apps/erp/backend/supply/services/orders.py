@@ -286,7 +286,7 @@ def create_order(user, data: OrderInput) -> SupplierOrder:
         raise StockError("LINES_REQUIRED", 400)
     _check_price_rights(user, lines)
     rows = _resolve_lines(lines)
-    number, year, seq = stock.next_number("PO", "ЗП")
+    number, year, seq = stock.next_number("PO")
     order = SupplierOrder.objects.create(
         number=number,
         number_year=year,

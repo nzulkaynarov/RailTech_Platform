@@ -13,6 +13,7 @@ import type {
   ChargeTemplateUpdate,
   CompanyProfileUpdate,
   DocumentKind,
+  NumberingKind,
   DocumentTemplateCopyIn,
   DocumentTemplateIn,
   DocumentTemplateKind,
@@ -179,12 +180,29 @@ const KIND_WORD: Record<DocumentKind, string> = {
   act: "Акт выполненных работ",
   letter: "Письмо",
 };
-const KIND_CODE: Record<DocumentKind, string> = {
-  quote: "КП",
-  contract: "ДОГ",
-  invoice: "СЧ",
-  act: "АКТ",
-  letter: "ДОК",
+// Обозначения номеров по умолчанию — латиницей, все виды (задача «Н», как ERP `DEFAULT_TYPE_LABELS`).
+const KIND_CODE: Record<NumberingKind, string> = {
+  request: "RQ",
+  project: "PRJ",
+  quote: "QT",
+  contract: "CT",
+  invoice: "INV",
+  act: "ACT",
+  receipt: "RCP",
+  delivery_note: "DN",
+  purchase_order: "PO",
+  shipment: "SHP",
+  partner_contract: "PA",
+  letter: "DOC",
+};
+const NUMBER_KINDS = Object.keys(KIND_CODE) as NumberingKind[];
+// Свой счётчик и формат `{обозначение}-{ГГГГ}-{NNN}` (сделка, склад, договор партнёра) — как в ERP.
+const OWN_FORMAT: Partial<Record<NumberingKind, number>> = {
+  request: 3,
+  project: 3,
+  purchase_order: 3,
+  shipment: 3,
+  partner_contract: 4,
 };
 const KINDS = Object.keys(KIND_WORD) as DocumentKind[];
 
@@ -399,11 +417,18 @@ export const adminCompanyHandlers = [
     }
     const labels = { ...readCompanyMock().numbering.type_labels, ...body.type_labels };
     return HttpResponse.json({
-      items: KINDS.map((kind) => ({
-        kind,
-        label: labels[kind] ?? KIND_CODE[kind],
-        number: renderNumber(body, labels[kind] ?? KIND_CODE[kind]),
-      })),
+      items: NUMBER_KINDS.map((kind) => {
+        const label = labels[kind] ?? KIND_CODE[kind];
+        const width = OWN_FORMAT[kind];
+        const year = String(new Date().getFullYear());
+        return {
+          kind,
+          label,
+          number: width
+            ? `${label}-${year}-${"1".padStart(width, "0")}`
+            : renderNumber(body, label),
+        };
+      }),
     });
   }),
 

@@ -36,9 +36,10 @@ def _may_sign(user: Any) -> bool:
 
 
 def generate_partner_contract_number(app_pk: int) -> str:
-    """Генерирует номер партнёрского договора вида PART-YYYY-XXXX."""
-    year = timezone.now().year
-    return f"PART-{year}-{app_pk:04d}"
+    """Номер партнёрского договора `<метка>-YYYY-XXXX`: метка — вид PART схемы нумерации (по умолчанию PA)."""
+    from crm.services.numbering import OWN_FORMAT_WIDTH, own_format_number, type_label
+
+    return own_format_number(type_label("PART"), timezone.now().year, app_pk, OWN_FORMAT_WIDTH["PART"])
 
 
 def build_partner_contract_context(

@@ -4,7 +4,7 @@
  */
 
 /**
- * Что подставляется в `{type}` для каждого вида документа; ключи — `DocumentKind`
+ * Обозначение каждого вида номера (по умолчанию латиницей); ключи — `NumberingKind`
  */
 export interface NumberingLabels {
   [key: string]: string;

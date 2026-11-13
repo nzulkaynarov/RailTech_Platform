@@ -4,16 +4,18 @@ Covers the thin DRF surface over the N1 service:
   * GET returns the effective scheme + prefix + is_effective (prefixed vs prefix-less);
   * PATCH upserts a valid scheme and echoes it back;
   * PATCH with an invalid mask (no {seq}) → 400 {"detail": "INVALID_NUMBERING_PATTERN"};
-  * POST preview renders КП/CT/INV examples WITHOUT incrementing any counter;
+  * POST preview renders QT/CT/INV examples WITHOUT incrementing any counter;
   * gate: a non-seller (no seller company) is refused 403;
   * preview echoes the draft mask (single source of truth = the real token parser).
 """
 
 import pytest
+from django.db import transaction
 from rest_framework.test import APIClient
 
 from accounts.models import Company, CompanyMember, CompanySettings, CompanyType, CustomUser, WorkspaceRole
 from crm.models import DocumentNumberingScheme, DocumentSequence
+from crm.services.numbering import next_document_number
 
 pytestmark = pytest.mark.django_db
 
@@ -69,13 +71,20 @@ def test_get_effective_scheme_prefixed():
     assert body["is_effective"] is True
 
 
-def test_get_prefixless_is_not_effective():
+def test_get_prefixless_is_effective_and_edits_the_platform_scheme():
+    """Без префикса компания нумерует по платформенной схеме — её редактор и показывает и правит (задача «Н»):
+    сохранённое начинает действовать, а не лежит в строке компании без применения."""
     company = _seller_company("Plain", "6200000002")
-    resp = _client(_owner(company, "owner@plain.test")).get(URL)
-    assert resp.status_code == 200, resp.content
-    body = resp.json()
-    assert body["prefix"] == ""
-    assert body["is_effective"] is False
+    client = _client(_owner(company, "owner@plain.test"))
+    body = client.get(URL).json()
+    assert body["prefix"] == "" and body["is_effective"] is True
+    assert body["type_labels"]["REQ"] == "RQ" and body["type_labels"]["KP"] == "QT", "умолчания — латиницей"
+
+    assert client.patch(URL, {"type_labels": {"KP": "RFQ"}}, format="json").status_code == 200
+    assert DocumentNumberingScheme.objects.filter(company__isnull=True).get().type_labels["KP"] == "RFQ"
+    assert not DocumentNumberingScheme.objects.filter(company=company).exists()
+    with transaction.atomic():
+        assert next_document_number("KP", company=company).startswith("RFQ-")
 
 
 # ── PATCH ───────────────────────────────────────────────────────────────────────────
@@ -122,13 +131,14 @@ def test_preview_renders_all_editable_types_without_counter():
     assert resp.status_code == 200, resp.content
     results = resp.json()["results"]
     codes = {r["type_code"]: r["number"] for r in results}
-    assert set(codes) == {"KP", "CT", "INV", "ACT", "DOC"}
+    assert set(codes) == {"REQ", "PRJ", "KP", "CT", "INV", "ACT", "RCP", "DN", "PO", "SHP", "PART", "DOC"}
     from django.utils import timezone
 
     year = timezone.now().year
-    assert codes["KP"] == f"ACME-КП-{year}/001"
-    assert codes["CT"] == f"ACME-ДОГ-{year}/001"
-    assert codes["INV"] == f"ACME-СЧ-{year}/001"
+    assert codes["REQ"] == f"RQ-{year}-001" and codes["PART"] == f"PA-{year}-0001", "свой формат, метка из схемы"
+    assert codes["KP"] == f"ACME-QT-{year}/001"
+    assert codes["CT"] == f"ACME-CT-{year}/001"
+    assert codes["INV"] == f"ACME-INV-{year}/001"
     # Dry-run: no counter row was created / touched.
     assert not DocumentSequence.objects.filter(company=company).exists()
 
@@ -144,7 +154,7 @@ def test_preview_reflects_draft_prefix_and_type_labels():
             "reset_period": "yearly",
             "start_value": 0,
             "prefix": "BETA",
-            "type_labels": {"CT": "ДОГ", "INV": "СЧ"},
+            "type_labels": {"CT": "CT", "INV": "INV"},
         },
         format="json",
     )
@@ -153,9 +163,9 @@ def test_preview_reflects_draft_prefix_and_type_labels():
     from django.utils import timezone
 
     year = timezone.now().year
-    assert codes["CT"] == f"BETA-ДОГ-{year}-00001"  # draft prefix + draft label both applied
-    assert codes["INV"] == f"BETA-СЧ-{year}-00001"
-    assert codes["KP"] == f"BETA-КП-{year}-00001"  # unset label falls back to shipped default
+    assert codes["CT"] == f"BETA-CT-{year}-00001"  # draft prefix + draft label both applied
+    assert codes["INV"] == f"BETA-INV-{year}-00001"
+    assert codes["KP"] == f"BETA-QT-{year}-00001"  # unset label falls back to shipped default
 
 
 def test_preview_reflects_draft_start_value():
@@ -168,7 +178,7 @@ def test_preview_reflects_draft_start_value():
     assert resp.status_code == 200, resp.content
     codes = {r["type_code"]: r["number"] for r in resp.json()["results"]}
     # first number = start_value + 1
-    assert codes["CT"] == "ДОГ-1001"
+    assert codes["CT"] == "CT-1001"
 
 
 def test_preview_invalid_pattern_returns_code():
