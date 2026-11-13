@@ -1,12 +1,13 @@
 {
   "app": {
-    "name": "RailTech Cabinet",
+    "name": "{{operator}} Cabinet",
     "tagline": "Client cabinet",
     "skipToContent": "Skip to content",
     "loading": "Loading…",
     "mainNav": "Main sections",
     "sideNav": "Cabinet sections",
-    "breadcrumbs": "Page path"
+    "breadcrumbs": "Page path",
+    "operatorFallback": "Platform"
   },
   "help": {
     "trigger": "Help & tips",
@@ -206,7 +207,7 @@
       "newClient": "I am a new client",
       "newClientHint": "Haven't worked with us yet? Leave a request and a manager will get in touch.",
       "partnerOnboarding": "For Suppliers & Manufacturers",
-      "partnerOnboardingHint": "Supply products through RailTech Platform and manage your assortment in the cabinet.",
+      "partnerOnboardingHint": "Supply products through {{operator}} and manage your assortment in the cabinet.",
       "becomePartner": "Become a Partner",
       "telegram": "Sign in with Telegram",
       "telegramHint": "The bot will open; sign-in is by invitation.",
@@ -471,7 +472,7 @@
       "sent": "Request {{number}} sent",
       "viewOnlyTitle": "Requests can be created by a contact with approval rights",
       "viewOnlyText": "Ask a colleague with this right or your manager to send the request.",
-      "consequence": "Your request gets a number and goes to a RailTech manager. They will prepare a quote — it will appear under “Quotes”, and we will notify you in Telegram or by email."
+      "consequence": "Your request gets a number and goes to a {{operator}} manager. They will prepare a quote — it will appear under “Quotes”, and we will notify you in Telegram or by email."
     },
     "requestDetail": {
       "title": "Request {{number}}",
@@ -873,9 +874,9 @@
         "alreadyPartnerTitle": "Partner Agreement Active",
         "alreadyPartnerDesc": "Your company is an authorized partner. You have access to “My Products” to manage your catalog.",
         "toMyProducts": "Go to “My Products”",
-        "applicationPendingDesc": "The application for partner status has been submitted and is under review by RailTech.",
+        "applicationPendingDesc": "The application for partner status has been submitted and is under review by {{operator}}.",
         "contractSentDesc": "The partner agreement has been prepared and sent to your company for review and signing.",
-        "contractAgreedDesc": "The draft contract has been agreed by you and is awaiting digital signature by RailTech management.",
+        "contractAgreedDesc": "The draft contract has been agreed by you and is awaiting digital signature by {{operator}} management.",
         "status": {
           "submitted": "Under review",
           "contract_sent": "Contract sent",
@@ -888,7 +889,7 @@
         "downloadDraftPdf": "Download draft contract (PDF)",
         "agreeContractBtn": "Agree to draft contract",
         "agreeDialogTitle": "Draft contract agreement",
-        "agreeDialogDesc": "By confirming, you agree to the terms of the partnership contract and RailTech platform rules.",
+        "agreeDialogDesc": "By confirming, you agree to the terms of the partnership contract and {{operator}} platform rules.",
         "agreeNotesLabel": "Notes or comments for agreement (optional)",
         "agreeSubmit": "Confirm agreement",
         "agreeSuccess": "Draft contract successfully agreed! Application submitted for director approval.",
@@ -898,7 +899,7 @@
           "director": "Approval",
           "active": "Partnership"
         },
-        "notPartnerDesc": "Interested in supplying products through RailTech Platform? Apply for a partnership agreement.",
+        "notPartnerDesc": "Interested in supplying products through {{operator}}? Apply for a partnership agreement.",
         "onlyCanAct": "Only a representative authorized to confirm actions can submit an application.",
         "applyBtn": "Apply for Partnership",
         "dialogTitle": "Partner Status Application",
@@ -919,7 +920,7 @@
     },
     "becomePartner": {
       "title": "Partner Application",
-      "subtitle": "Join the RailTech platform as a supplier or manufacturer",
+      "subtitle": "Join the {{operator}} platform as a supplier or manufacturer",
       "backToLogin": "Back to login",
       "errors": {
         "companyNameRequired": "Please enter company name.",
@@ -930,7 +931,7 @@
       "fields": {
         "country": "Country of registration",
         "companyName": "Company name",
-        "companyNamePlaceholder": "RailTech Technologies LLC",
+        "companyNamePlaceholder": "{{operator}} Technologies LLC",
         "inn": "Tax ID / INN (if applicable)",
         "innPlaceholder": "123456789",
         "registrationNumber": "Registration / Tax number",
@@ -956,7 +957,7 @@
       "submit": "Submit Application",
       "submitting": "Submitting application…",
       "successTitle": "Application Received",
-      "successSubtitle": "Thank you for your interest in partnering with RailTech Platform!",
+      "successSubtitle": "Thank you for your interest in partnering with {{operator}}!",
       "nextStepsTitle": "What happens next?",
       "step1Title": "Data verification",
       "step1Desc": "Our procurement and compliance team verifies company details and product assortment.",
@@ -1083,7 +1084,7 @@
       "send": "Send",
       "infoLabel": "About this conversation",
       "responder": "{{name}}, your manager, replies here",
-      "responderTeam": "The RailTech team replies here",
+      "responderTeam": "The {{operator}} team replies here",
       "visibleToCompany": "Everyone from your company in the cabinet can see this conversation",
       "attachHint": "Files can’t be attached to chat yet — attach them to a request.",
       "attachLink": "Go to requests",
@@ -1664,7 +1665,7 @@
   "verify": {
     "pageTitle": "Document Verification",
     "verifiedBadge": "Authenticity Confirmed",
-    "verifiedSub": "Official document issued and signed in RailTech Platform",
+    "verifiedSub": "Official document issued and signed in {{operator}}",
     "revokedBadge": "Document Revoked",
     "revokedSub": "This document has been revoked and is no longer legally valid",
     "revokedReason": "Revocation reason",

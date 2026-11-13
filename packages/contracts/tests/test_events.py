@@ -428,6 +428,7 @@ def test_initial_subscriptions_v1() -> None:
     assert sorted(_gets(subs["erp"])) == [
         "uz.railtech.crm.cabinet.message_sent.v1",
         "uz.railtech.crm.client.updated.v1",
+        "uz.railtech.crm.company_profile.changed.v1",
         "uz.railtech.crm.contact.created.v1",
         "uz.railtech.crm.contact.deleted.v1",
         "uz.railtech.crm.contact.updated.v1",

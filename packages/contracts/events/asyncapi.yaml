@@ -384,6 +384,12 @@ channels:
     messages:
       uz.railtech.crm.ai_policy.changed.v1:
         $ref: '#/components/messages/uz.railtech.crm.ai_policy.changed.v1'
+  uz.railtech.crm.company_profile.changed.v1:
+    address: uz.railtech.crm.company_profile.changed.v1
+    title: Профиль компании изменён
+    messages:
+      uz.railtech.crm.company_profile.changed.v1:
+        $ref: '#/components/messages/uz.railtech.crm.company_profile.changed.v1'
   uz.railtech.crm.partner.client_resolved.v1:
     address: uz.railtech.crm.partner.client_resolved.v1
     title: Клиент партнёра в CRM, итог
@@ -947,6 +953,15 @@ operations:
       $ref: '#/channels/uz.railtech.crm.ai_policy.changed.v1'
     messages:
       - $ref: '#/channels/uz.railtech.crm.ai_policy.changed.v1/messages/uz.railtech.crm.ai_policy.changed.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.crm.company_profile.changed.v1:
+    action: send
+    summary: rt://crm публикует uz.railtech.crm.company_profile.changed.v1
+    channel:
+      $ref: '#/channels/uz.railtech.crm.company_profile.changed.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.crm.company_profile.changed.v1/messages/uz.railtech.crm.company_profile.changed.v1'
     bindings:
       $ref: '#/components/operationBindings/delivery'
   publish.uz.railtech.crm.partner.client_resolved.v1:
@@ -2486,6 +2501,31 @@ components:
                   const: rt://contracts/events/crm/ai_policy.changed/v1
                 data:
                   $ref: './crm/ai_policy.changed.v1.json'
+    uz.railtech.crm.company_profile.changed.v1:
+      name: uz.railtech.crm.company_profile.changed.v1
+      title: Профиль компании изменён
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://crm
+                type:
+                  const: uz.railtech.crm.company_profile.changed.v1
+                dataschema:
+                  const: rt://contracts/events/crm/company_profile.changed/v1
+                data:
+                  $ref: './crm/company_profile.changed.v1.json'
     uz.railtech.crm.partner.client_resolved.v1:
       name: uz.railtech.crm.partner.client_resolved.v1
       title: Клиент партнёра в CRM, итог
