@@ -16,17 +16,17 @@ describe('Запросы', () => {
     expect(within(list).getAllByText('Есть КП')).toHaveLength(2);
     expect(within(list).getByText('Ещё без проекта')).toBeInTheDocument();
 
-    const link = within(list).getByRole('link', { name: /Z-2026-0042/ });
+    const link = within(list).getByRole('link', { name: /^ЗВ-2026-042/ });
     link.focus();
     await user.keyboard('{Enter}');
-    expect(await heading('Запрос Z-2026-0042')).toBeInTheDocument();
+    expect(await heading('Запрос ЗВ-2026-042')).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/requests/501');
   });
 
   it('карточка: что дальше и КП по запросу', async () => {
     signedIn();
     renderApp('/requests/501');
-    await heading('Запрос Z-2026-0042');
+    await heading('Запрос ЗВ-2026-042');
     expect(screen.getByText('КП готово — откройте его ниже.')).toBeInTheDocument();
     expect(screen.getByText('Через менеджера')).toBeInTheDocument();
     const quotes = await screen.findByRole('link', { name: /KP-2026-0042 · версия 2/ });
@@ -68,7 +68,7 @@ describe('Запросы', () => {
     await user.click(screen.getByRole('button', { name: 'Удалить строку 3' }));
     await user.click(screen.getByRole('button', { name: 'Отправить запрос' }));
 
-    expect(await heading('Запрос Z-2026-0106')).toBeInTheDocument();
+    expect(await heading('Запрос ЗВ-2026-106')).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/requests/506');
     expect(body.current).toEqual({
       summary: 'Кабель для цеха',
@@ -77,7 +77,7 @@ describe('Запросы', () => {
         { text: 'Монтаж', quantity: null, unit: null },
       ],
     });
-    expect(await screen.findByText('Запрос Z-2026-0106 отправлен')).toBeInTheDocument();
+    expect(await screen.findByText('Запрос ЗВ-2026-106 отправлен')).toBeInTheDocument();
   });
 
   it('Ctrl+S / ⌘S не отправляет запрос и не перехватывается: отправка — только кнопкой рядом с «Что произойдёт»', async () => {
@@ -109,7 +109,7 @@ describe('Запросы', () => {
     expect(screen.queryByText(/Направление обращения/)).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Отправить запрос' }));
-    await heading(/^Запрос Z-/);
+    await heading(/^Запрос ЗВ-/);
     // Тело POST — ровно поля ClientRequestCreate, ничего лишнего.
     expect(body.current).toEqual({ summary: 'Кабель для цеха', lines: [] });
   });
@@ -147,7 +147,7 @@ describe('Запросы', () => {
     expect(await screen.findByText('spec.pdf')).toBeInTheDocument();
     expect(screen.getByText(/^\(2 (КБ|кБ|KB)\)$/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Отправить запрос' }));
-    await heading(/^Запрос Z-/);
+    await heading(/^Запрос ЗВ-/);
     expect(body.current).toEqual({
       summary: 'Нужны подшипники по спецификации',
       lines: [],

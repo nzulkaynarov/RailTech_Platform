@@ -250,9 +250,7 @@ def test_delivery_status_is_bell_only_and_client_decisions_are_not_echoed(contra
     shipped = contract_world["deliveries"]["in_transit"]
     notice_sources.delivery_status_changed(shipped, "in_transit")
     row = PortalNotice.objects.get(kind="delivery_status_changed", object_id=shipped.deal_id, contact=client_contact)
-    assert (
-        row.object_type == "delivery" and row.object_number == f"D-{shipped.deal_id}"
-    )  # id — сделки, как в start_param
+    assert row.object_type == "delivery" and row.object_number == shipped.deal.number  # id — сделки, как в start_param
     assert row.channel == NoticeChannel.CABINET and row.email_state == ""
     assert row.link == f"/deals/{shipped.deal_id}"
     accepted = contract_world["deliveries"]["accepted"]

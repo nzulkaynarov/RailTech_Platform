@@ -191,19 +191,19 @@ describe('меню из /me.modules', () => {
     // Мок: контакт «actor» с правом действовать, «viewer» — без права (и с узбекским языком): тексты берём из словаря
     signedIn('actor', 'demo', PARTNER_DEFAULT);
     const actor = renderApp('/requests');
-    await screen.findByText('Z-2026-0061');
+    await screen.findByText('ЗВ-2026-061');
     expect(screen.getByRole('link', { name: i18n.t('pages.requests.new') })).toBeInTheDocument();
     expect(screen.queryByText(i18n.t('widgets.actionRequired.title'))).not.toBeInTheDocument();
     expect(screen.queryByTestId('action-required-error')).not.toBeInTheDocument();
     // «Проект …» — просто текст: страница проекта собирает КП, договоры и счета
     const actorList = screen.getByRole('list', { name: 'Запросы' });
-    expect(within(actorList).queryByRole('link', { name: /D-57/ })).not.toBeInTheDocument();
-    expect(within(actorList).getByText(/D-57/)).toBeInTheDocument();
+    expect(within(actorList).queryByRole('link', { name: /Проект ПР-2026-057/ })).not.toBeInTheDocument();
+    expect(within(actorList).getByText(/Проект ПР-2026-057/)).toBeInTheDocument();
     actor.unmount();
 
     signedIn('viewer', 'demo', PARTNER_DEFAULT);
     renderApp('/requests');
-    await screen.findByText('Z-2026-0061');
+    await screen.findByText('ЗВ-2026-061');
     expect(document.querySelector('a[href="/requests/new"]')).not.toBeInTheDocument();
     expect(screen.getByText(i18n.t('common.viewOnly'))).toBeInTheDocument();
   });
@@ -211,16 +211,16 @@ describe('меню из /me.modules', () => {
   it('клиент видит «Проект …» ссылкой', async () => {
     signedIn();
     renderApp('/requests');
-    await screen.findByText('Z-2026-0061');
+    await screen.findByText('ЗВ-2026-061');
     const list = screen.getByRole('list', { name: 'Запросы' });
-    expect(within(list).getByRole('link', { name: /D-57/ })).toHaveAttribute('href', '/deals/57');
+    expect(within(list).getByRole('link', { name: /Проект ПР-2026-057/ })).toHaveAttribute('href', '/deals/57');
   });
 
   it('клиент без права действовать по-прежнему только смотрит', async () => {
     signedIn('viewer');
     renderApp('/requests');
 
-    await screen.findByText('Z-2026-0061');
+    await screen.findByText('ЗВ-2026-061');
     expect(screen.queryByRole('link', { name: i18n.t('pages.requests.new') })).not.toBeInTheDocument();
     expect(screen.getByText(i18n.t('common.viewOnly'))).toBeInTheDocument();
   });

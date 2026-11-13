@@ -107,3 +107,19 @@ export function dealProgress(docs: DealDocuments): DealProgress {
   const currentIndex = stages.findIndex((stage) => stage.state !== 'done');
   return { closed, outcome, stages: stages.map((stage, index) => ({ ...stage, current: index === currentIndex })) };
 }
+
+/** Стадия сделки из портала (`DealRef.stage`, `MessageContext.stage`): заявка до принятия КП или проект после. */
+export type DealStageKind = 'request' | 'project';
+
+/**
+ * Подпись сделки (0.12 плана 2026-11-12, FR-37: один объект — одно имя): номер тот же, что у сотрудников, а слово —
+ * по стадии из портала, не по префиксу номера (префиксы задаёт владелец в настройках нумерации).
+ */
+export function dealLabelKey(stage: DealStageKind | undefined): 'common.requestNumber' | 'common.dealNumber' {
+  return stage === 'request' ? 'common.requestNumber' : 'common.dealNumber';
+}
+
+/** «Написать менеджеру о заявке …» или «… о проекте …» — по той же стадии. */
+export function aboutDealKey(stage: DealStageKind | undefined): 'manager.aboutRequest' | 'manager.aboutDeal' {
+  return stage === 'request' ? 'manager.aboutRequest' : 'manager.aboutDeal';
+}

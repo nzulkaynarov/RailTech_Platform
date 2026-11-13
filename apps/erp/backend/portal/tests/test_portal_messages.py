@@ -193,7 +193,9 @@ def test_context_of_an_own_document_gets_its_number_from_erp(contract_world, por
 def test_context_of_an_own_deal_is_its_deal_ref(contract_world, portal_client):
     deal = contract_world["main"]
     response = send(portal_client, context={"kind": "deal", "id": deal.pk})
-    assert response.json()["context"]["number"] == f"D-{deal.pk}"
+    context = response.json()["context"]
+    assert context["number"] == deal.number
+    assert context["stage"] == "request"  # 0.12: подпись «Заявка» — из стадии, не из префикса номера
 
 
 def _foreign_documents(world) -> dict:
