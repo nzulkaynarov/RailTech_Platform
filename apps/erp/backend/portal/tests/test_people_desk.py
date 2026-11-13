@@ -45,8 +45,8 @@ def test_clients_and_partners_without_own_and_strangers(world):
         "id": anvar["id"],
         "name": "Анвар Клиентов",
         "position": "Главный инженер",
-        "email": None,
-        "phone": None,
+        "has_email": False,
+        "has_phone": False,
         "is_primary": False,
         "company": {"id": world["client_company"].pk, "name": "ООО Клиент Юг"},
         "kind": "client",
@@ -73,3 +73,21 @@ def test_anonymous_is_401():
     from rest_framework.test import APIClient
 
     assert APIClient().get(URL).status_code == 401
+
+
+def test_contacts_of_one_person_within_the_same_bounds(world):
+    client = world["clients"]["supply"]
+    people = client.get(URL).json()["results"]
+    dilshod = next(row for row in people if row["name"] == "Дильшод Поставщиков")
+    assert (dilshod["has_email"], dilshod["has_phone"]) == (True, False)
+    assert "email" not in dilshod  # массовой выгрузки контактов нет
+    one = client.get(f"{URL}{dilshod['id']}/")
+    assert one.status_code == 200
+    assert one.json() == {
+        "id": dilshod["id"],
+        "name": "Дильшод Поставщиков",
+        "phone": None,
+        "email": "d@north.example.uz",
+    }
+    stranger = Contact.objects.get(name="Чужой Контакт")
+    assert client.get(f"{URL}{stranger.pk}/").status_code == 404

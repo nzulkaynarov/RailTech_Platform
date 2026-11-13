@@ -237,6 +237,7 @@ export * from "./companyProfileUpdate";
 export * from "./conversationCard";
 export * from "./conversationContacts";
 export * from "./conversationThread";
+export * from "./counterpartyContacts";
 export * from "./counterpartyPerson";
 export * from "./counterpartyPersonKind";
 export * from "./counterpartyPersonPage";

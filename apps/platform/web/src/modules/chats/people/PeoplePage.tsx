@@ -1,11 +1,13 @@
-import { Descriptions, Drawer, Input, Segmented, Table } from "antd";
+import { Alert, Button, Descriptions, Drawer, Input, Segmented, Table } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { canSee } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
+import type { CounterpartyContacts } from "../../../shared/api/generated/model";
 import {
+  revealCounterpartyContacts,
   useListCounterpartyPeople,
   useListCrmLeads,
   useListEdsStaff,
@@ -26,8 +28,8 @@ interface Person {
   owner: string | null;
   /** Компания контрагента (люди клиентов и партнёров) */
   company: string | null;
-  phone: string | null;
-  email: string | null;
+  /** Контакт контрагента, у которого есть телефон или почта: открываются по нажатию с записью в журнал */
+  revealId: string | null;
 }
 
 const STAFF_RULE = {
@@ -65,8 +67,7 @@ export function PeoplePage() {
         position: row.position,
         owner: null,
         company: null,
-        phone: null,
-        email: null,
+        revealId: null,
       })),
       ...(contacts.data?.items ?? []).map((row) => ({
         key: `contact-${row.id}`,
@@ -75,8 +76,7 @@ export function PeoplePage() {
         position: row.position,
         owner: null,
         company: row.company.name,
-        phone: row.phone,
-        email: row.email,
+        revealId: row.has_phone || row.has_email ? row.id : null,
       })),
       ...(leads.data?.items ?? []).map((row) => ({
         key: `lead-${row.lead}`,
@@ -85,8 +85,7 @@ export function PeoplePage() {
         position: null,
         owner: row.assigned?.name ?? null,
         company: null,
-        phone: null,
-        email: null,
+        revealId: null,
       })),
     ],
     [staff.data, contacts.data, leads.data],
@@ -102,6 +101,47 @@ export function PeoplePage() {
   );
 
   const kindLabel = (value: Kind) => t(`modules:chats.people.kinds.${value}`);
+  // Телефон и почта людей контрагентов — по нажатию «Показать», показ пишет BFF в журнал (NAVIGATION «Люди»).
+  const [revealed, setRevealed] = useState<Record<string, CounterpartyContacts>>({});
+  const [revealing, setRevealing] = useState<string | null>(null);
+  const [revealError, setRevealError] = useState<string | null>(null);
+  const reveal = (id: string) => {
+    setRevealing(id);
+    setRevealError(null);
+    revealCounterpartyContacts(id)
+      .then((value) => {
+        setRevealed((prev) => ({ ...prev, [id]: value }));
+      })
+      .catch(() => {
+        setRevealError(t("modules:chats.people.revealFailed"));
+      })
+      .finally(() => {
+        setRevealing(null);
+      });
+  };
+  const contactsOf = (person: Person, field: "phone" | "email" | "any") => {
+    if (!person.revealId) return "—";
+    const shown = revealed[person.revealId];
+    if (!shown) {
+      return (
+        <Button
+          size="small"
+          loading={revealing === person.revealId}
+          aria-label={t("modules:chats.people.showFor", { name: person.name })}
+          onClick={() => {
+            if (person.revealId) reveal(person.revealId);
+          }}
+        >
+          {t("modules:chats.people.show")}
+        </Button>
+      );
+    }
+    const phone = shown.phone ? <a href={`tel:${shown.phone}`}>{shown.phone}</a> : null;
+    const email = shown.email ? <a href={`mailto:${shown.email}`}>{shown.email}</a> : null;
+    if (field === "phone") return phone ?? "—";
+    if (field === "email") return email ?? "—";
+    return phone ?? email ?? "—";
+  };
   const columns: ColumnsType<Person> = [
     {
       title: t("modules:chats.people.columns.name"),
@@ -141,7 +181,7 @@ export function PeoplePage() {
     {
       title: t("modules:chats.people.columns.contacts"),
       key: "contacts",
-      render: (_, person) => person.phone ?? person.email ?? "—",
+      render: (_, person) => contactsOf(person, "any"),
     },
   ];
 
@@ -185,6 +225,9 @@ export function PeoplePage() {
       >
         {selected ? (
           <div className="pf-people-card">
+            {revealError ? (
+              <Alert type="error" showIcon role="alert" message={revealError} />
+            ) : null}
             <Descriptions
               column={1}
               items={[
@@ -206,20 +249,12 @@ export function PeoplePage() {
                 {
                   key: "phone",
                   label: t("modules:chats.people.phone"),
-                  children: selected.phone ? (
-                    <a href={`tel:${selected.phone}`}>{selected.phone}</a>
-                  ) : (
-                    "—"
-                  ),
+                  children: contactsOf(selected, "phone"),
                 },
                 {
                   key: "email",
                   label: t("modules:chats.people.email"),
-                  children: selected.email ? (
-                    <a href={`mailto:${selected.email}`}>{selected.email}</a>
-                  ) : (
-                    "—"
-                  ),
+                  children: contactsOf(selected, "email"),
                 },
               ]}
             />

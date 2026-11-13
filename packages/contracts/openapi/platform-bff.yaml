@@ -12479,6 +12479,33 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationFailed'
+  /people/contacts/{id}/reveal:
+    post:
+      tags: [chats]
+      operationId: revealCounterpartyContacts
+      summary: 'Органайзер · Люди: показать телефон и почту человека'
+      description: >-
+        FR-11, NAVIGATION «Люди»: телефон и почта открываются по нажатию, показ пишется в журнал CRM (`contact.reveal` — кто,
+        когда, чьи). Сначала запись в журнал: не записалась — контакты не отдаются (503). ERP `parties/people/{id}/` — в тех же
+        границах, что список. Раздел `chats.internal` — чтение.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      responses:
+        '200':
+          description: Телефон и почта
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CounterpartyContacts'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /erp/catalog/suppliers:
     get:
       tags: [erp-catalog]
@@ -25149,16 +25176,27 @@ components:
     CounterpartyPerson:
       type: object
       additionalProperties: false
-      required: [id, name, position, email, phone, is_primary, company, kind]
+      required: [id, name, position, has_email, has_phone, is_primary, company, kind]
+      description: >-
+        Человек контрагента в списке «Люди»: имя, компания и должность видят все (NAVIGATION). Телефон и почта в список не
+        входят — `has_*` говорит, есть ли они; открываются по одному человеку (`revealCounterpartyContacts`) с записью в журнал.
       properties:
         id: {$ref: '#/components/schemas/CompanyItemRef'}
         name: {type: string}
         position: {type: [string, 'null']}
-        email: {type: [string, 'null']}
-        phone: {type: [string, 'null']}
+        has_email: {type: boolean}
+        has_phone: {type: boolean}
         is_primary: {type: boolean}
         company: {$ref: '#/components/schemas/CounterpartyRef'}
         kind: {type: string, enum: [client, partner]}
+    CounterpartyContacts:
+      type: object
+      additionalProperties: false
+      required: [id, phone, email]
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        phone: {type: [string, 'null']}
+        email: {type: [string, 'null']}
     CounterpartyRef:
       type: object
       additionalProperties: false

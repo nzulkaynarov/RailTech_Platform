@@ -152,6 +152,7 @@ import type {
   CompanyProfile,
   ConversationCard,
   ConversationThread,
+  CounterpartyContacts,
   CounterpartyPersonPage,
   CreatedId,
   CrewRate,
@@ -28824,8 +28825,8 @@ export const getListCounterpartyPeopleResponseMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
-    email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
-    phone: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    has_email: faker.datatype.boolean(),
+    has_phone: faker.datatype.boolean(),
     is_primary: faker.datatype.boolean(),
     company: {
       id: faker.helpers.fromRegExp("^[0-9]+$"),
@@ -28836,6 +28837,15 @@ export const getListCounterpartyPeopleResponseMock = (
   total: faker.number.int({ min: 0 }),
   page: faker.number.int({ min: 1 }),
   page_size: faker.number.int({ min: 1 }),
+  ...overrideResponse,
+});
+
+export const getRevealCounterpartyContactsResponseMock = (
+  overrideResponse: Partial<Extract<CounterpartyContacts, object>> = {},
+): CounterpartyContacts => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  phone: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   ...overrideResponse,
 });
 
@@ -39730,6 +39740,30 @@ export const getListCounterpartyPeopleMockHandler = (
   );
 };
 
+export const getRevealCounterpartyContactsMockHandler = (
+  overrideResponse?:
+    | CounterpartyContacts
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<CounterpartyContacts> | CounterpartyContacts),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/people/contacts/:id/reveal",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRevealCounterpartyContactsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getListCatalogSuppliersMockHandler = (
   overrideResponse?:
     | SupplierPage
@@ -41101,6 +41135,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getAcceptCatalogProposalMockHandler(),
   getRejectCatalogProposalMockHandler(),
   getListCounterpartyPeopleMockHandler(),
+  getRevealCounterpartyContactsMockHandler(),
   getListCatalogSuppliersMockHandler(),
   getCreateCatalogSupplierMockHandler(),
   getGetCatalogSupplierMockHandler(),

@@ -30304,6 +30304,60 @@
                 }
             }
         },
+        "/api/v1/parties/people/{id}/": {
+            "get": {
+                "operationId": "parties_people_contacts",
+                "description": "Телефон и почта одного человека из списка «Люди» — в тех же границах, что и список.",
+                "summary": "Phone and e-mail of a counterparty person",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Parties"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskPersonContacts"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/public/doc-links/{token}/": {
             "get": {
                 "operationId": "public_doc_links_retrieve",
@@ -41772,13 +41826,13 @@
                         "type": "string",
                         "nullable": true
                     },
-                    "email": {
-                        "type": "string",
-                        "nullable": true
+                    "has_email": {
+                        "type": "boolean",
+                        "description": "Есть почта — открывается по одному человеку (`retrieve`)"
                     },
-                    "phone": {
-                        "type": "string",
-                        "nullable": true
+                    "has_phone": {
+                        "type": "boolean",
+                        "description": "Есть телефон — открывается по одному человеку (`retrieve`)"
                     },
                     "is_primary": {
                         "type": "boolean"
@@ -41792,13 +41846,39 @@
                 },
                 "required": [
                     "company",
-                    "email",
+                    "has_email",
+                    "has_phone",
                     "id",
                     "is_primary",
                     "kind",
                     "name",
-                    "phone",
                     "position"
+                ]
+            },
+            "DeskPersonContacts": {
+                "type": "object",
+                "description": "Телефон и почта одного человека контрагента (FR-11): Платформа открывает по нажатию и пишет показ в журнал.",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "phone": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "email": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "email",
+                    "id",
+                    "name",
+                    "phone"
                 ]
             },
             "DeskPersonKindEnum": {

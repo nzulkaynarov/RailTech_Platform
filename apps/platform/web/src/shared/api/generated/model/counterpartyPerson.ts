@@ -6,15 +6,16 @@ import type { CompanyItemRef } from "./companyItemRef";
 import type { CounterpartyPersonKind } from "./counterpartyPersonKind";
 import type { CounterpartyRef } from "./counterpartyRef";
 
+/**
+ * Человек контрагента в списке «Люди»: имя, компания и должность видят все (NAVIGATION). Телефон и почта в список не входят — `has_*` говорит, есть ли они; открываются по одному человеку (`revealCounterpartyContacts`) с записью в журнал.
+ */
 export interface CounterpartyPerson {
   id: CompanyItemRef;
   name: string;
   /** @nullable */
   position: string | null;
-  /** @nullable */
-  email: string | null;
-  /** @nullable */
-  phone: string | null;
+  has_email: boolean;
+  has_phone: boolean;
   is_primary: boolean;
   company: CounterpartyRef;
   kind: CounterpartyPersonKind;

@@ -108,6 +108,7 @@ import type {
   CompanyProfileUpdate,
   ConversationCard,
   ConversationThread,
+  CounterpartyContacts,
   CounterpartyPersonPage,
   CreatedId,
   CsrfFailedResponse,
@@ -48921,6 +48922,102 @@ export function useListCounterpartyPeople<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getRevealCounterpartyContactsUrl = (id: CompanyItemRef) => {
+  return `/api/v1/people/contacts/${id}/reveal`;
+};
+
+/**
+ * FR-11, NAVIGATION «Люди»: телефон и почта открываются по нажатию, показ пишется в журнал CRM (`contact.reveal` — кто, когда, чьи). Сначала запись в журнал: не записалась — контакты не отдаются (503). ERP `parties/people/{id}/` — в тех же границах, что список. Раздел `chats.internal` — чтение.
+ * @summary Органайзер · Люди: показать телефон и почту человека
+ */
+export const revealCounterpartyContacts = async (
+  id: CompanyItemRef,
+  options?: Parameters<typeof http>[1],
+): Promise<CounterpartyContacts> => {
+  return http<CounterpartyContacts>(getRevealCounterpartyContactsUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getRevealCounterpartyContactsMutationKey = () =>
+  ["revealCounterpartyContacts"] as const;
+
+export const getRevealCounterpartyContactsMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof revealCounterpartyContacts>>,
+    TError,
+    RevealCounterpartyContactsMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof revealCounterpartyContacts>>,
+  TError,
+  RevealCounterpartyContactsMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRevealCounterpartyContactsMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof revealCounterpartyContacts>>,
+    RevealCounterpartyContactsMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return revealCounterpartyContacts(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RevealCounterpartyContactsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof revealCounterpartyContacts>>
+>;
+
+export type RevealCounterpartyContactsMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+export type RevealCounterpartyContactsMutationVariables = { id: CompanyItemRef };
+
+/**
+ * @summary Органайзер · Люди: показать телефон и почту человека
+ */
+export const useRevealCounterpartyContacts = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof revealCounterpartyContacts>>,
+      TError,
+      RevealCounterpartyContactsMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof revealCounterpartyContacts>>,
+  TError,
+  RevealCounterpartyContactsMutationVariables,
+  TContext
+> => {
+  return useMutation(getRevealCounterpartyContactsMutationOptions(options), queryClient);
+};
 
 export const getListCatalogSuppliersUrl = (params?: ListCatalogSuppliersParams) => {
   const normalizedParams = new URLSearchParams();
