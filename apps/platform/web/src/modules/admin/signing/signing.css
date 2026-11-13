@@ -80,15 +80,3 @@
   margin: 0 0 12px;
   padding-left: 20px;
 }
-/* До 992 px таблица не растёт вширь: вид, основание, лимит и срок уходят строкой под имя, остаются состояние и «Открыть». */
-.pf-sign-compact {
-  display: none;
-}
-@media (max-width: 991px) {
-  .pf-sign .pf-sign-col-wide {
-    display: none;
-  }
-  .pf-sign .pf-sign-compact {
-    display: block;
-  }
-}

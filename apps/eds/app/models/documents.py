@@ -56,6 +56,10 @@ class Document(Base):
     text: Mapped[str] = mapped_column(Text)
     author_crm_user_id: Mapped[int] = mapped_column(BigInteger)
     addressee_crm_user_id: Mapped[int | None] = mapped_column(BigInteger)  # None — директор
+    # Пункт 1.6 плана: согласующие, которых автор добавил перед шагами шаблона (по порядку), и получатели копии — они
+    # видят документ, но не решают. Списки `crm_user_id`.
+    extra_approvers: Mapped[list[int]] = mapped_column(JSONB, default=list, server_default="[]")
+    watchers: Mapped[list[int]] = mapped_column(JSONB, default=list, server_default="[]")
     amount: Mapped[Decimal | None] = mapped_column(Numeric(18, 2))
     currency: Mapped[str | None] = mapped_column(String(3))
     due_date: Mapped[date | None] = mapped_column(Date)

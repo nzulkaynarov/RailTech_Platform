@@ -2881,6 +2881,10 @@ export interface components {
       /** Format: date */
       due_date?: string | null;
       file_ids?: components["schemas"]["Uuid"][];
+      /** @description `crm_user_id` согласующих перед шагами шаблона, по порядку (пункт 1.6 плана); не передано — прежние. Не активный сотрудник — 422 `not_active_employee`, автор в списке — 422 `author_not_allowed`. Письму не нужно */
+      approvers?: number[];
+      /** @description `crm_user_id` получателей копии — видят документ, не решают; не передано — прежние */
+      watchers?: number[];
       /**
        * @description Только `letter_out` (P4): после регистрации отправить письмо на `letter.recipient_email` почтовым сервисом CRM — с
        *     итоговым PDF (номер и дата регистрации) вложением; нет адреса — 422 (`recipient_email`).
@@ -2999,6 +3003,10 @@ export interface components {
       author: components["schemas"]["PersonRef"];
       /** @description `null` — директор (любой с `memos.approve`) */
       addressee: components["schemas"]["PersonRef"] | null;
+      /** @description Согласующие, которых автор добавил перед шагами шаблона, по порядку (пункт 1.6 плана) */
+      approvers?: components["schemas"]["PersonRef"][];
+      /** @description Получатели копии — видят документ, не решают (пункт 1.6 плана) */
+      watchers?: components["schemas"]["PersonRef"][];
       amount: components["schemas"]["Money"] | null;
       /** Format: date */
       due_date: string | null;

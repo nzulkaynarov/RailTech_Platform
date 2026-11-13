@@ -472,6 +472,8 @@ StaffReader = Annotated[
             ("eds.inbox", "full"),
             ("admin", "full"),
             ("eds.signing.manage", "full"),
+            # Пункт 1.6: автор документа выбирает согласующих и получателей копии
+            ("eds.memo.create", "full"),
         )
     ),
 ]

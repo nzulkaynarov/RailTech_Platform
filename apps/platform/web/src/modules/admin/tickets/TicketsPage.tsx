@@ -1,5 +1,5 @@
 import { keepPreviousData } from "@tanstack/react-query";
-import { Button, Card, Pagination, Select, Table } from "antd";
+import { Button, Card, Pagination, Select } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
@@ -25,6 +25,7 @@ import { PageHeader } from "../../../shared/ui/PageHeader";
 import { TicketCard } from "./TicketCard";
 
 import "../../../features/help/help.css";
+import { DataTable } from "../../../shared/ui/DataTable/DataTable";
 
 const PATH = "/admin/tickets";
 const PAGE = 50;
@@ -136,25 +137,27 @@ export function TicketsPage({ objectId }: { objectId?: string | undefined }) {
     );
   } else {
     body = (
-      <Table<TicketRow>
-        rowKey="number"
-        dataSource={items}
-        pagination={false}
-        tableLayout="fixed"
-        aria-label={t("admin.listLabel")}
-        rowClassName={(row) => (row.number === objectId ? "pf-ticket-table-row-selected" : "")}
+      <DataTable<TicketRow>
+        tableId="admin.tickets"
+        caption={t("admin.listLabel")}
+        scrollLabel={t("admin.listLabel")}
+        rows={items}
+        rowKey={(row) => row.number}
+        rowAttrs={(row) => ({
+          className: row.number === objectId ? "pf-ticket-table-row-selected" : "",
+        })}
         columns={[
           {
-            title: t("admin.columns.number"),
-            key: "number",
-            width: "14%",
-            render: (_, row) => numberLink(row),
+            id: "number",
+            header: t("admin.columns.number"),
+            width: 154,
+            cell: (row) => numberLink(row),
           },
           {
-            title: t("admin.columns.subject"),
-            key: "subject",
-            width: "30%",
-            render: (_, row) => (
+            id: "subject",
+            header: t("admin.columns.subject"),
+            width: 330,
+            cell: (row) => (
               <div>
                 <div>{t(`ticket.subject.${row.subject}`)}</div>
                 <div className="pf-hint">{row.preview}</div>
@@ -162,10 +165,10 @@ export function TicketsPage({ objectId }: { objectId?: string | undefined }) {
             ),
           },
           {
-            title: t("admin.columns.author"),
-            key: "author",
-            width: "22%",
-            render: (_, row) => (
+            id: "author",
+            header: t("admin.columns.author"),
+            width: 242,
+            cell: (row) => (
               <div>
                 <div>{row.author.name}</div>
                 <div className="pf-hint">{row.author_role}</div>
@@ -173,16 +176,16 @@ export function TicketsPage({ objectId }: { objectId?: string | undefined }) {
             ),
           },
           {
-            title: t("admin.columns.status"),
-            key: "status",
-            width: "16%",
-            render: (_, row) => <TicketStatusTag status={row.status} />,
+            id: "status",
+            header: t("admin.columns.status"),
+            width: 176,
+            cell: (row) => <TicketStatusTag status={row.status} />,
           },
           {
-            title: t("admin.columns.updated"),
-            key: "updated",
-            width: "18%",
-            render: (_, row) => format.activity(row.updated_at),
+            id: "updated",
+            header: t("admin.columns.updated"),
+            width: 198,
+            cell: (row) => format.activity(row.updated_at),
           },
         ]}
       />

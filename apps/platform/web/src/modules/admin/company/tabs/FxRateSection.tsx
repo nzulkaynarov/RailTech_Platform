@@ -1,6 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Alert, App, Button, Form, Input, Select } from "antd";
-import type { TableColumnsType } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -19,6 +18,7 @@ import { StatusTag } from "../../../../shared/ui/StatusTag";
 import { ListTable, QueryGate, ReadOnlyFence } from "../common";
 import { companyErrorText, errorFields } from "../errors";
 import { useReadOnly } from "../useReadOnly";
+import type { DataColumn } from "../../../../shared/ui/DataTable/DataTable";
 
 interface Values {
   rate_date: string;
@@ -235,22 +235,25 @@ function FxForm({ currency }: { currency: string }) {
 function FxJournal({ rows }: { rows: readonly FxRateJournalEntry[] }) {
   const { t } = useTranslation("company");
   const { number, date } = useFormat();
-  const columns: TableColumnsType<FxRateJournalEntry> = [
+  const columns: DataColumn<FxRateJournalEntry>[] = [
     {
-      title: t("platform.fx.journal.date"),
-      key: "rate_date",
-      render: (_v, row) => date(row.rate_date),
+      id: "rate_date",
+      header: t("platform.fx.journal.date"),
+      width: null,
+      cell: (row) => date(row.rate_date),
     },
     {
-      title: t("platform.fx.journal.rate"),
-      key: "rate",
-      align: "right",
-      render: (_v, row) => number(row.rate_to_uzs, { fractionDigits: decimals(row.rate_to_uzs) }),
+      id: "rate",
+      header: t("platform.fx.journal.rate"),
+      width: null,
+      numeric: true,
+      cell: (row) => number(row.rate_to_uzs, { fractionDigits: decimals(row.rate_to_uzs) }),
     },
     {
-      title: t("platform.fx.journal.event"),
-      key: "kind",
-      render: (_v, row) =>
+      id: "kind",
+      header: t("platform.fx.journal.event"),
+      width: null,
+      cell: (row) =>
         row.kind === "manual" ? (
           <StatusTag kind="origin" status="manual">
             {t("platform.fx.journal.manual")}
@@ -260,9 +263,10 @@ function FxJournal({ rows }: { rows: readonly FxRateJournalEntry[] }) {
         ),
     },
     {
-      title: t("platform.fx.journal.before"),
-      key: "before",
-      render: (_v, row) =>
+      id: "before",
+      header: t("platform.fx.journal.before"),
+      width: null,
+      cell: (row) =>
         row.previous_rate_to_uzs === null
           ? t("platform.fx.journal.none")
           : t("platform.fx.journal.was", {
@@ -273,14 +277,16 @@ function FxJournal({ rows }: { rows: readonly FxRateJournalEntry[] }) {
             }),
     },
     {
-      title: t("platform.fx.journal.who"),
-      key: "who",
-      render: (_v, row) => row.entered_by ?? t("platform.fx.journal.system"),
+      id: "who",
+      header: t("platform.fx.journal.who"),
+      width: null,
+      cell: (row) => row.entered_by ?? t("platform.fx.journal.system"),
     },
     {
-      title: t("platform.fx.journal.when"),
-      key: "when",
-      render: (_v, row) => date(row.entered_at, "datetime"),
+      id: "when",
+      header: t("platform.fx.journal.when"),
+      width: null,
+      cell: (row) => date(row.entered_at, "datetime"),
     },
   ];
   return (
@@ -289,6 +295,7 @@ function FxJournal({ rows }: { rows: readonly FxRateJournalEntry[] }) {
         {t("platform.fx.journal.title")}
       </h4>
       <ListTable<FxRateJournalEntry>
+        tableId="admin.company.fxJournal"
         label={t("platform.fx.journal.title")}
         columns={columns}
         data={rows}
