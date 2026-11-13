@@ -1,4 +1,4 @@
-import { Checkbox, Input, Modal, Select } from "antd";
+import { Alert, Button, Checkbox, Input, Modal, Select } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
@@ -25,17 +25,29 @@ import { HOME_CURRENCY, currencyLabel } from "../../../shared/lib/money";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DateField } from "../../../shared/ui/DateField";
 import { FormField, QueryState } from "../../../shared/ui/FormParts";
+import { StepSections } from "../../../shared/ui/StepSections/StepSections";
 import { FormModal, PriceCell } from "./common";
-import { errorFields } from "./errors";
+import { catalogErrorText, errorFields } from "./errors";
 import { localName } from "../../eds/dictionaries";
 import { queryLabels } from "./labels";
 import { OFFER_SOURCES } from "./kinds";
 import { useDebounced } from "./useDebounced";
 
+/** Поля секции «Компания»: ошибка сервера в них отмечает секцию */
+const COMPANY_FIELDS: ReadonlySet<string> = new Set([
+  "name",
+  "country_id",
+  "tin",
+  "registration_number",
+  "currency",
+  "is_manufacturer",
+]);
+
 /**
  * Поставщик — простая карточка компании (CAT-1): название, страна, ИНН или рег. номер нерезидента, валюта цен, контакт.
  * Без анкет и статусов допуска (L0-2). Эталон — Odoo «Contact» с вкладкой «Purchase», SAP Business Partner (роль
- * «поставщик»).
+ * «поставщик»). Форма — секциями в боковом окне (platform-frontend.md §4.1a): «Компания» и «Контакт»; рисует её хозяин
+ * окна (`Sheet` или карточка партнёра вместо себя).
  */
 export function SupplierForm({
   supplier,
@@ -58,7 +70,9 @@ export function SupplierForm({
   const [email, setEmail] = useState(supplier?.email ?? "");
   const [phone, setPhone] = useState(supplier?.phone ?? "");
   const [maker, setMaker] = useState(supplier?.is_manufacturer ?? false);
+  const [active, setActive] = useState("company");
   const ids = {
+    title: useId(),
     name: useId(),
     country: useId(),
     tin: useId(),
@@ -78,6 +92,7 @@ export function SupplierForm({
   const update = useUpdateCatalogSupplier({ mutation: { onSuccess: done } });
   const mutation = supplier ? update : create;
   const fields = errorFields(mutation.error);
+  const error = mutation.error ? catalogErrorText(t, mutation.error) : null;
   const tinValid = tin.trim() === "" || /^\d{9}$/.test(tin.trim());
   const valid = name.trim() !== "" && (tin.trim() !== "" || reg.trim() !== "") && tinValid;
   const submit = () => {
@@ -95,126 +110,174 @@ export function SupplierForm({
     if (supplier) update.mutate({ id: supplier.id, data });
     else create.mutate({ data });
   };
+  const companyDone = name.trim() !== "" && (tin.trim() !== "" || reg.trim() !== "") && tinValid;
   return (
-    <FormModal
-      title={supplier ? t("supplierForm.editTitle") : t("supplierForm.addTitle")}
-      okLabel={supplier ? t("save") : t("supplierForm.add")}
-      loading={mutation.isPending}
-      error={mutation.error}
-      disabled={!valid}
-      onOk={submit}
-      onCancel={onClose}
-    >
-      <FormField id={ids.name} label={t("supplierForm.name")}>
-        <Input
-          id={ids.name}
-          value={name}
-          maxLength={255}
-          status={fields.includes("name") ? "error" : undefined}
-          onChange={(e) => {
-            setName(e.target.value);
-          }}
-        />
-      </FormField>
-      <div className="pf-cat-form-row">
-        <FormField id={ids.country} label={t("supplierForm.country")}>
-          <Select
-            id={ids.country}
-            allowClear
-            showSearch
-            optionFilterProp="label"
-            value={country}
-            onChange={(value: string | null | undefined) => {
-              setCountry(value ?? null);
-            }}
-            options={(lookups.data?.countries ?? []).map((c) => ({
-              value: c.id,
-              label: localName(c.names, i18n.language),
-            }))}
-          />
-        </FormField>
-        <FormField id={ids.currency} label={t("supplierForm.currency")}>
-          <Select
-            id={ids.currency}
-            allowClear
-            value={currency}
-            onChange={(value: string | null | undefined) => {
-              setCurrency(value ?? null);
-            }}
-            options={(lookups.data?.currencies ?? []).map((c) => ({
-              value: c.code,
-              label: c.code,
-            }))}
-          />
-        </FormField>
-      </div>
-      <div className="pf-cat-form-row">
-        <FormField id={ids.tin} label={t("supplierForm.tin")} hint={t("supplierForm.tinHint")}>
-          <Input
-            id={ids.tin}
-            inputMode="numeric"
-            maxLength={9}
-            value={tin}
-            status={fields.includes("tin") || !tinValid ? "error" : undefined}
-            onChange={(e) => {
-              setTin(e.target.value);
-            }}
-          />
-        </FormField>
-        <FormField id={ids.reg} label={t("supplierForm.reg")} hint={t("supplierForm.regHint")}>
-          <Input
-            id={ids.reg}
-            maxLength={64}
-            value={reg}
-            status={fields.includes("registration_number") ? "error" : undefined}
-            onChange={(e) => {
-              setReg(e.target.value);
-            }}
-          />
-        </FormField>
-      </div>
-      <FormField id={ids.contact} label={t("supplierForm.contact")}>
-        <Input
-          id={ids.contact}
-          maxLength={255}
-          value={contact}
-          onChange={(e) => {
-            setContact(e.target.value);
-          }}
-        />
-      </FormField>
-      <div className="pf-cat-form-row">
-        <FormField id={ids.email} label={t("supplierForm.email")}>
-          <Input
-            id={ids.email}
-            type="email"
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value);
-            }}
-          />
-        </FormField>
-        <FormField id={ids.phone} label={t("supplierForm.phone")}>
-          <Input
-            id={ids.phone}
-            type="tel"
-            value={phone}
-            onChange={(e) => {
-              setPhone(e.target.value);
-            }}
-          />
-        </FormField>
-      </div>
-      <Checkbox
-        id={ids.maker}
-        checked={maker}
-        onChange={(e) => {
-          setMaker(e.target.checked);
+    <section className="pf-cat-sheet-form" aria-labelledby={ids.title}>
+      <h2 className="pf-cat-sheet-title" id={ids.title}>
+        {supplier ? t("supplierForm.editTitle") : t("supplierForm.addTitle")}
+      </h2>
+      <form
+        className="pf-cat-form"
+        noValidate
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (valid && !mutation.isPending) submit();
         }}
       >
-        {t("supplierForm.maker")}
-      </Checkbox>
-    </FormModal>
+        <StepSections
+          headingLevel={3}
+          active={active}
+          onActiveChange={setActive}
+          sections={[
+            {
+              key: "company",
+              title: t("supplierForm.sections.company"),
+              summary: [name.trim(), tin.trim() || reg.trim()].filter(Boolean).join(" · "),
+              complete: companyDone,
+              invalid: fields.some((field) => COMPANY_FIELDS.has(field)) || !tinValid,
+              content: (
+                <>
+                  <FormField id={ids.name} label={t("supplierForm.name")}>
+                    <Input
+                      id={ids.name}
+                      value={name}
+                      maxLength={255}
+                      status={fields.includes("name") ? "error" : undefined}
+                      onChange={(e) => {
+                        setName(e.target.value);
+                      }}
+                    />
+                  </FormField>
+                  <div className="pf-cat-form-row">
+                    <FormField id={ids.country} label={t("supplierForm.country")}>
+                      <Select
+                        id={ids.country}
+                        allowClear
+                        showSearch
+                        optionFilterProp="label"
+                        value={country}
+                        onChange={(value: string | null | undefined) => {
+                          setCountry(value ?? null);
+                        }}
+                        options={(lookups.data?.countries ?? []).map((c) => ({
+                          value: c.id,
+                          label: localName(c.names, i18n.language),
+                        }))}
+                      />
+                    </FormField>
+                    <FormField id={ids.currency} label={t("supplierForm.currency")}>
+                      <Select
+                        id={ids.currency}
+                        allowClear
+                        value={currency}
+                        onChange={(value: string | null | undefined) => {
+                          setCurrency(value ?? null);
+                        }}
+                        options={(lookups.data?.currencies ?? []).map((c) => ({
+                          value: c.code,
+                          label: c.code,
+                        }))}
+                      />
+                    </FormField>
+                  </div>
+                  <div className="pf-cat-form-row">
+                    <FormField
+                      id={ids.tin}
+                      label={t("supplierForm.tin")}
+                      hint={t("supplierForm.tinHint")}
+                    >
+                      <Input
+                        id={ids.tin}
+                        inputMode="numeric"
+                        maxLength={9}
+                        value={tin}
+                        status={fields.includes("tin") || !tinValid ? "error" : undefined}
+                        onChange={(e) => {
+                          setTin(e.target.value);
+                        }}
+                      />
+                    </FormField>
+                    <FormField
+                      id={ids.reg}
+                      label={t("supplierForm.reg")}
+                      hint={t("supplierForm.regHint")}
+                    >
+                      <Input
+                        id={ids.reg}
+                        maxLength={64}
+                        value={reg}
+                        status={fields.includes("registration_number") ? "error" : undefined}
+                        onChange={(e) => {
+                          setReg(e.target.value);
+                        }}
+                      />
+                    </FormField>
+                  </div>
+                  <Checkbox
+                    id={ids.maker}
+                    checked={maker}
+                    onChange={(e) => {
+                      setMaker(e.target.checked);
+                    }}
+                  >
+                    {t("supplierForm.maker")}
+                  </Checkbox>
+                </>
+              ),
+            },
+            {
+              key: "contact",
+              title: t("supplierForm.sections.contact"),
+              summary: [contact.trim(), email.trim() || phone.trim()].filter(Boolean).join(" · "),
+              complete: contact.trim() !== "" || email.trim() !== "" || phone.trim() !== "",
+              content: (
+                <>
+                  <FormField id={ids.contact} label={t("supplierForm.contact")}>
+                    <Input
+                      id={ids.contact}
+                      maxLength={255}
+                      value={contact}
+                      onChange={(e) => {
+                        setContact(e.target.value);
+                      }}
+                    />
+                  </FormField>
+                  <div className="pf-cat-form-row">
+                    <FormField id={ids.email} label={t("supplierForm.email")}>
+                      <Input
+                        id={ids.email}
+                        type="email"
+                        value={email}
+                        onChange={(e) => {
+                          setEmail(e.target.value);
+                        }}
+                      />
+                    </FormField>
+                    <FormField id={ids.phone} label={t("supplierForm.phone")}>
+                      <Input
+                        id={ids.phone}
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => {
+                          setPhone(e.target.value);
+                        }}
+                      />
+                    </FormField>
+                  </div>
+                </>
+              ),
+            },
+          ]}
+        />
+        {error ? <Alert type="error" showIcon role="alert" message={error} /> : null}
+        <div className="pf-cat-sheet-actions">
+          <Button type="primary" htmlType="submit" loading={mutation.isPending} disabled={!valid}>
+            {supplier ? t("save") : t("supplierForm.add")}
+          </Button>
+          <Button onClick={onClose}>{t("cancel")}</Button>
+        </div>
+      </form>
+    </section>
   );
 }
 

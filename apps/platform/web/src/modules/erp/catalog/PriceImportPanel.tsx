@@ -5,6 +5,7 @@ import { useLocation, useSearchParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "../../../app/auth/useAuth";
+import { useViewport } from "../../../app/shell/useViewport";
 import { canEdit } from "../../../app/access";
 import { downloadFile } from "../../../shared/api/download";
 import type {
@@ -27,6 +28,7 @@ import { DateField } from "../../../shared/ui/DateField";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { FileField } from "../../../shared/ui/FileField";
 import { FormField } from "../../../shared/ui/FormParts";
+import { Sheet } from "../../../shared/ui/Sheet";
 import { catalogErrorText } from "./errors";
 import { SupplierForm } from "./supplierForms";
 import { useDebounced } from "./useDebounced";
@@ -71,7 +73,28 @@ export function PriceImportPanel() {
   const [supplier, setSupplier] = useState<{ id: string; name: string } | null>(
     (location.state as { supplier?: { id: string; name: string } } | null)?.supplier ?? null,
   );
+  const { mobile } = useViewport();
   const [creating, setCreating] = useState(false);
+  // Новый поставщик — формой секциями в боковом окне (§4.1a): окно открывается и закрывается вместе с формой.
+  const openCreate = (open: boolean) => {
+    setCreating(open);
+    // на телефоне форма — лист на весь экран (`Sheet`), боковое окно каркаса не открываем
+    if (mobile) return;
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (open) {
+          next.set("panel", "open");
+          next.set("tab", "card");
+        } else {
+          next.delete("panel");
+          next.delete("tab");
+        }
+        return next;
+      },
+      { replace: true },
+    );
+  };
   const [mode, setMode] = useState<PriceImportMode>("xlsx");
   const [files, setFiles] = useState<File[]>([]);
   const [from, setFrom] = useState("");
@@ -176,7 +199,7 @@ export function PriceImportPanel() {
           <div className="pf-cat-import-new">
             <Button
               onClick={() => {
-                setCreating(true);
+                openCreate(true);
               }}
             >
               {t("import.newSupplier")}
@@ -300,16 +323,23 @@ export function PriceImportPanel() {
         )}
       </section>
       {creating ? (
-        <SupplierForm
+        <Sheet
+          label={t("supplierForm.addTitle")}
           onClose={() => {
-            setCreating(false);
+            openCreate(false);
           }}
-          onSaved={(saved) => {
-            setCreating(false);
-            setSupplier({ id: saved.id, name: saved.name });
-            reset();
-          }}
-        />
+        >
+          <SupplierForm
+            onClose={() => {
+              openCreate(false);
+            }}
+            onSaved={(saved) => {
+              openCreate(false);
+              setSupplier({ id: saved.id, name: saved.name });
+              reset();
+            }}
+          />
+        </Sheet>
       ) : null}
     </div>
   );

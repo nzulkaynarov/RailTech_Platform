@@ -1,5 +1,4 @@
 import { Button, Card, Input, Segmented, Tag } from "antd";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router";
 
@@ -24,7 +23,7 @@ import { BankChangesPanel } from "../../eds/payments/BankChangesPanel";
 import { PartnerApplicationsPanel } from "../../erp/catalog/PartnerApplicationsPanel";
 import { PartnerCard } from "../../erp/catalog/PartnerCard";
 import { SupplierForm } from "../../erp/catalog/supplierForms";
-import { Sheet } from "../common/Sheet";
+import { Sheet } from "../../../shared/ui/Sheet";
 import { parseClientId, useParamChanger, withParams } from "../common/params";
 import { CreateRequest } from "../request/CreateRequest";
 import { ClientPanel } from "./ClientPanel";
@@ -191,7 +190,6 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
     { status: "pending" },
     { query: { enabled: seesBankChanges } },
   );
-  const [addingPartner, setAddingPartner] = useState(false);
   const shownKinds = KINDS.filter((value) => {
     if (value === "partners" || value === "applications") return seesPartners;
     if (value === "bank_changes") return seesBankChanges;
@@ -233,7 +231,9 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
     return all;
   };
   const selected = parseClientId(objectId) ?? parseClientId(params.get("client"));
-  const partner = params.get("partner");
+  // «Добавить партнёра» — форма секциями в боковом окне (§4.1a), по адресу `?partner=new`
+  const addingPartner = params.get("partner") === "new";
+  const partner = addingPartner ? null : params.get("partner");
   const selectedInn = list.data?.items.find((row) => row.id === selected)?.inn;
   const sameCompanyPartner = selectedInn
     ? suppliers.data?.items.find((row) => row.tin === selectedInn)
@@ -331,7 +331,13 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
           canEdit(me, "erp.stock") ? (
             <Button
               onClick={() => {
-                setAddingPartner(true);
+                change({
+                  client: null,
+                  partner: "new",
+                  create: null,
+                  panel: mobile ? null : "open",
+                  tab: mobile ? null : "card",
+                });
               }}
             >
               {t("clients:addPartner")}
@@ -422,19 +428,18 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
         </Sheet>
       ) : null}
       {addingPartner ? (
-        <SupplierForm
-          onClose={() => {
-            setAddingPartner(false);
-          }}
-          onSaved={(saved) => {
-            setAddingPartner(false);
-            change({
-              partner: saved.id,
-              panel: mobile ? null : "open",
-              tab: mobile ? null : "card",
-            });
-          }}
-        />
+        <Sheet label={t("catalog:supplierForm.addTitle")} onClose={close}>
+          <SupplierForm
+            onClose={close}
+            onSaved={(saved) => {
+              change({
+                partner: saved.id,
+                panel: mobile ? null : "open",
+                tab: mobile ? null : "card",
+              });
+            }}
+          />
+        </Sheet>
       ) : null}
       {newRequest ? (
         <Sheet label={t("request:title")} onClose={close}>
