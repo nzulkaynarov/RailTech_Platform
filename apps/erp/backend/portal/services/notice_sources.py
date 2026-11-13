@@ -13,6 +13,8 @@ from typing import Optional
 from django.utils import timezone
 from portal import projections
 
+from core.currency import BASE_CURRENCY
+
 from .notices import notify
 
 
@@ -66,7 +68,7 @@ def quote_sent(quote, channels: Optional[list[str]] = None, bot_reaches: Optiona
 def _currency(invoice) -> str:
     """Код валюты счёта — как в событии `invoice.*` (`events.publish_invoice_event`): справочник или строка, нет — UZS."""
     currency = getattr(invoice, "currency", None)
-    return (getattr(currency, "code", None) or (str(currency) if currency else "UZS")).upper()
+    return (getattr(currency, "code", None) or (str(currency) if currency else BASE_CURRENCY)).upper()
 
 
 def invoice_issued(invoice, bot_reaches: Optional[bool] = None) -> None:
