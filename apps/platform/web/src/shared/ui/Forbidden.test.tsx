@@ -13,7 +13,7 @@ describe("Forbidden", () => {
     ).toBeVisible();
     const button = screen.getByRole("button", { name: /Написать администратору/ });
     expect(button).toBeEnabled();
-    expect(document.title).toBe("Нет доступа — RailTech Platform");
+    expect(document.title).toBe("Нет доступа — Платформа"); // название не задано — нейтральное (задача «Н3»)
   });
 
   it("«Раздел доступен ролям: …»", () => {
