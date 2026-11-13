@@ -153,6 +153,11 @@ export function getPortalCountries(): Promise<PortalCountry[]> {
   return portalRequest<PortalCountry[]>('/countries');
 }
 
+/** Название оператора платформы до входа (задача «Н3a2»); `null` — не задано. */
+export function getOperator(): Promise<Schemas['PortalOperator']> {
+  return portalRequest<Schemas['PortalOperator']>('/operator');
+}
+
 /** Обмен токена из ссылки входа на сессию; токен — в теле, не в пути (FIX-20: пути попадают в журналы). */
 export function exchangeMagicToken(token: string): Promise<Me> {
   const body: JsonBody<paths['/auth/magic']['post']> = { token };

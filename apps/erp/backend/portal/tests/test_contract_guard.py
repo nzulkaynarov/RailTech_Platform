@@ -81,6 +81,7 @@ GET_CASES = {
     "/company/partner-application": lambda w: ["/company/partner-application"],
     "/company/partner-application/contract-pdf": lambda w: ["/company/partner-application/contract-pdf"],
     "/countries": lambda w: ["/countries"],
+    "/operator": lambda w: ["/operator"],  # Н3a2: название оператора до входа
     "/team": lambda w: ["/team"],
     "/me/telegram": lambda w: ["/me/telegram"],  # NOTIFY-1: статус привязки по проекции CRM
     "/auth/sessions": lambda w: ["/auth/sessions"],
@@ -131,7 +132,12 @@ def api(path: str) -> str:
 def anonymous_for(path: str) -> bool:
     if path == "/auth/sessions":
         return False
-    return path.startswith("/auth/") or path.startswith("/verify") or path.startswith("/countries")
+    return (
+        path.startswith("/auth/")
+        or path.startswith("/verify")
+        or path.startswith("/countries")
+        or path.startswith("/operator")
+    )
 
 
 def fetch(client, anon_client, contract_path: str, url: str):
@@ -144,7 +150,7 @@ def fetch(client, anon_client, contract_path: str, url: str):
 def test_contract_is_mounted_and_readable():
     path = find_contract_path()
     assert path.name == "erp-portal.yaml"
-    assert load_contract()["info"]["version"] == "0.14.0"
+    assert load_contract()["info"]["version"] == "0.15.0"
 
 
 #: GET раздела «Мои товары» партнёра (PART-2): сессия клиента сюда не допущена (403 `MODULE_REQUIRED`), поэтому их

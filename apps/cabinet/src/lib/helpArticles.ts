@@ -234,19 +234,19 @@ export const HELP_ARTICLES: HelpArticle[] = [
     },
     content: {
       ru: [
-        'Партнёры платформы могут поставлять собственную продукцию через платформу RailTech.',
+        'Партнёры платформы могут поставлять собственную продукцию через платформу.',
         'Загрузите файл Excel по стандартному шаблону через «Загрузить прайс-лист».',
         'После загрузки карточки проходят автоматическую и ручную модерацию перед публикацией в общем каталоге.',
         'Документы к своей карточке (сертификат, паспорт) сначала проверяет сотрудник: пока документ «На проверке», клиенты его не видят. Удалить можно только присланный вами документ.',
       ],
       uz: [
-        'Platforma hamkorlari o‘z mahsulotlarini RailTech orqali yetkazib berishlari mumkin.',
+        'Platforma hamkorlari o‘z mahsulotlarini platforma orqali yetkazib berishlari mumkin.',
         '«Narxlar ro‘yxatini yuklash» orqali standart Excel faylini yuklang.',
         'Yuklangach, tovar kartochkalari umumiy katalogda chop etilishidan oldin moderatsiyadan o‘tadi.',
         'Kartochkaga yuklangan hujjatlarni (sertifikat, pasport) avval xodim tekshiradi: «Tekshiruvda» holatida mijozlar ularni koʻrmaydi. Faqat oʻzingiz yuborgan hujjatni oʻchirish mumkin.',
       ],
       en: [
-        'Verified partners can distribute their products through the RailTech platform.',
+        'Verified partners can distribute their products through the platform.',
         'Upload your Excel catalog using the standard template.',
         'Cards undergo automatic and manual verification before public catalog listing.',
         'Documents you add to your card (certificates, passports) are reviewed by staff first: while a document is "Under review", clients cannot see it. You can delete only documents you sent yourself.',
@@ -258,9 +258,9 @@ export const HELP_ARTICLES: HelpArticle[] = [
     category: 'messages',
     routePatterns: ['/messages'],
     title: {
-      ru: 'Чат с персональным менеджером RailTech',
-      uz: 'RailTech shaxsiy menejeri bilan muloqot',
-      en: 'Chat with your RailTech manager',
+      ru: 'Чат с персональным менеджером',
+      uz: 'Shaxsiy menejer bilan muloqot',
+      en: 'Chat with your personal manager',
     },
     summary: {
       ru: 'Прямая связь со специалистом, отправка вложений и архив переписки.',

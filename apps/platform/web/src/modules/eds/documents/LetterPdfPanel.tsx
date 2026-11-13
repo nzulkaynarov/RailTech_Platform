@@ -27,12 +27,13 @@ function usePdfBytes(id: string | null, pdf: EdsDocumentPdf | undefined) {
   const version = `${pdf?.requested_at ?? ""}:${String(pdf?.final ?? false)}`;
   const seen = useRef(version);
   useEffect(() => {
-    // Новый PDF (правки, регистрация): прежние байты не показываются, файл загружается заново.
-    if (seen.current !== version) {
+    // Новый PDF (правки, регистрация) загружается заново, когда готов; пока он строится, на экране остаются прежние
+    // страницы с пометкой «Обновляется» (пункт «Ш»: страницы от сервера без мигания).
+    if (ready && seen.current !== version) {
       seen.current = version;
-      client.removeQueries({ queryKey });
+      void client.invalidateQueries({ queryKey });
     }
-  }, [client, queryKey, version]);
+  }, [client, queryKey, ready, version]);
   return useQuery({
     enabled: Boolean(id) && ready,
     queryKey,
@@ -62,7 +63,15 @@ export interface LetterPdfPanelProps {
   subject: string;
   /** Уровень заголовка блока: 2 — на странице формы, 4 — в карточке документа */
   headingLevel?: 2 | 4;
+  /**
+   * Страницы строятся сами (пункт «Ш», ADR-0020 п. 4): через секунду после паузы в наборе — сохранить черновик и построить
+   * PDF. `key` меняется с каждой правкой; `prepare` молча возвращает `null`, если форма ещё не заполнена.
+   */
+  auto?: { key: string; prepare: () => Promise<string | null> };
 }
+
+/** Пауза в наборе перед автоматическим построением страниц, мс */
+export const AUTO_BUILD_MS = 1000;
 
 /**
  * PDF письма на бланке (P4): «Показать PDF» → (сохранить черновик) → EDS ставит рендер в фоновый воркер → опрос до «готов»
@@ -76,6 +85,7 @@ export function LetterPdfPanel({
   canBuild,
   subject,
   headingLevel = 2,
+  auto,
 }: LetterPdfPanelProps) {
   const Heading = headingLevel === 2 ? "h2" : "h4";
   const { t } = useTranslation("documents");
@@ -96,11 +106,19 @@ export function LetterPdfPanel({
   const bytes = usePdfBytes(current, pdf);
   const name = t("preview.name", { subject: subject || "—" });
 
-  const build = async () => {
+  const busy = useRef(false);
+  const again = useRef(false);
+  const build = async (quiet = false) => {
+    if (busy.current) {
+      again.current = true;
+      return;
+    }
+    busy.current = true;
     setRequestError(null);
     setRequesting(true);
     try {
-      const target = prepare ? await prepare() : current;
+      const make = quiet ? autoRef.current?.prepare : prepare;
+      const target = make ? await make() : current;
       if (!target) return;
       setId(target);
       const result = await requestEdsDocumentPdf(target);
@@ -109,13 +127,41 @@ export function LetterPdfPanel({
     } catch (error) {
       setRequestError(t("preview.requestFailed", { reason: reasonText(t, error) }));
     } finally {
+      busy.current = false;
       setRequesting(false);
+      // Пока строился PDF, текст снова поменялся — строим ещё раз по последней версии.
+      if (again.current) {
+        again.current = false;
+        void build(true);
+      }
     }
   };
 
+  const autoRef = useRef(auto);
+  useEffect(() => {
+    autoRef.current = auto;
+  });
+  // Открытый черновик с готовым PDF не перестраивается, пока его не правили.
+  const builtKey = useRef(initial ? auto?.key : undefined);
+  const autoKey = auto?.key;
+  useEffect(() => {
+    if (autoKey === undefined || autoKey === builtKey.current) return;
+    const timer = window.setTimeout(() => {
+      builtKey.current = autoKey;
+      void build(true);
+    }, AUTO_BUILD_MS);
+    return () => {
+      window.clearTimeout(timer);
+    };
+    // build — свежая функция на каждой отрисовке; запуск — только по смене текста
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoKey]);
+
   const stateLine = (() => {
-    if (!pdf) return null;
-    if (pdf.status === "pending") return <p role="status">{t("preview.pending")}</p>;
+    if (!pdf) return requesting ? <p role="status">{t("preview.pending")}</p> : null;
+    if (pdf.status === "pending" || requesting || (bytes.isFetching && bytes.data)) {
+      return <p role="status">{t(bytes.data ? "preview.updating" : "preview.pending")}</p>;
+    }
     if (pdf.status === "failed") {
       return (
         <Alert
@@ -140,7 +186,7 @@ export function LetterPdfPanel({
       <div className="pf-letter-pdf-head">
         <Heading className="pf-letter-pdf-title">{t("preview.title")}</Heading>
         <div className="pf-fp-row">
-          {canBuild ? (
+          {canBuild && !auto ? (
             <Button
               loading={requesting}
               disabled={pdf?.status === "pending"}
@@ -171,11 +217,14 @@ export function LetterPdfPanel({
           ) : null}
         </div>
       </div>
-      <p className="pf-hint">{pdf ? t("preview.hint") : t("preview.empty")}</p>
+      <p className="pf-hint">
+        {pdf ? t("preview.hint") : t(auto ? "preview.emptyAuto" : "preview.empty")}
+      </p>
       {requestError ? <Alert type="error" showIcon role="alert" message={requestError} /> : null}
       {stateLine}
-      {pdf?.status === "ready" ? (
-        bytes.isError ? (
+      {pdf?.status === "ready" || (pdf?.status === "pending" && bytes.data) ? (
+        // Ошибка — только когда показать нечего: перезапрос, попавший на стройку нового PDF, оставляет прежние страницы.
+        bytes.isError && !bytes.data ? (
           <Alert
             type="error"
             showIcon

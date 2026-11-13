@@ -898,7 +898,7 @@ describe("Курс USD → UZS: ручной ввод", () => {
 
   it("показывает текущий курс, его дату и источник и журнал", async () => {
     await openTab("platform", "admin@demo.example");
-    const section = within(await screen.findByRole("region", { name: "Курс USD → UZS" }));
+    const section = within(await screen.findByRole("region", { name: "Курс валюты к суму" }));
     expect(await section.findByText(/1 USD = 12\s650,50 сум/)).toBeInTheDocument();
     expect(section.getByText("26.10.2026")).toBeInTheDocument();
     expect(section.getByText("Автозагрузка (ЦБ РУз)")).toBeInTheDocument();
@@ -908,6 +908,20 @@ describe("Курс USD → UZS: ручной ввод", () => {
     expect(journal.getByText("Демо Директоров")).toBeInTheDocument();
     expect(journal.getByText("Автозагрузка")).toBeInTheDocument();
     expect(screen.getByLabelText("Дата курса")).toHaveValue(today().split("-").reverse().join("."));
+  });
+
+  it("курс любой включённой валюты (пункт 1.7): выбор валюты, ввод, курс этой валюты", async () => {
+    await openTab("platform", "admin@demo.example");
+    const select = await screen.findByLabelText("Валюта");
+    fireEvent.mouseDown(select);
+    fireEvent.click(await screen.findByText("EUR — Евро"));
+    const rate = await screen.findByLabelText("Курс, сум за 1 EUR");
+    fireEvent.change(rate, { target: { value: "14000" } });
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить курс" }));
+    expect(await screen.findByText("Курс сохранён")).toBeInTheDocument();
+    expect(await screen.findByText(/1 EUR = 14\s000,00 сум/)).toBeInTheDocument();
+    expect(readCompanyMock().fxOthers?.EUR?.current?.rate_to_uzs).toBe("14000");
+    expect(readCompanyMock().fx.current?.rate_to_uzs).toBe("12650.5"); // курс USD не тронут
   });
 
   it("вводит курс запятой: курс, источник и журнал обновляются, поле очищается", async () => {
@@ -1012,6 +1026,7 @@ describe("Курс USD → UZS: ручной ввод", () => {
       http.get("*/admin/company/fx-rate", () =>
         HttpResponse.json({
           currency: "USD",
+          currencies: [{ code: "USD", name: "Доллар США" }],
           current: { rate_to_uzs: "12650.5", rate_date: "2026-10-27", source: "auto" },
           max_age_days: 7,
           journal: [],
