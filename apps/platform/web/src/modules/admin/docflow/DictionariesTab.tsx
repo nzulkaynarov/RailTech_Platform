@@ -8,11 +8,11 @@ import {
   Form,
   Input,
   InputNumber,
-  Modal,
   Segmented,
   Select,
   Skeleton,
 } from "antd";
+import type { FormInstance } from "antd";
 import type { TFunction } from "i18next";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -39,6 +39,8 @@ import {
 import { useFormat } from "../../../shared/lib/useFormat";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { localName } from "../../eds/dictionaries";
+import { Sheet } from "../../../shared/ui/Sheet";
+import { useSheetPanel } from "../../../shared/ui/useSheetPanel";
 import { ConfirmModal, ListTable, TabHeader } from "../company/common";
 import { DictionaryFile } from "./DictionaryFile";
 import { dictionaryErrorText } from "./errors";
@@ -126,7 +128,21 @@ function DictionaryTable({ dictionary, readOnly }: { dictionary: Dictionary; rea
   const queryClient = useQueryClient();
   const params = { include_hidden: true };
   const query = useListDictionaryItems(dictionary.kind, params);
-  const [editing, setEditing] = useState<DictionaryItem | "new" | null>(null);
+  const [editing, setEditingState] = useState<DictionaryItem | "new" | null>(null);
+  // Значение справочника — короткая форма о выбранной строке: в боковом окне (platform-frontend.md §4.1a)
+  const panel = useSheetPanel();
+  // Экземпляр формы — здесь: при смене ширины окно и лист на весь экран пересоздают форму, а набранное остаётся
+  const [itemForm] = Form.useForm<Values>();
+  const setEditing = (next: DictionaryItem | "new") => {
+    itemForm.resetFields();
+    setEditingState(next);
+    panel.open();
+  };
+  const closeItem = () => {
+    setEditingState(null);
+    panel.close();
+  };
+  const sheetTitle = editing === "new" ? t("settings.dict.addTitle") : t("settings.dict.editTitle");
   const [removing, setRemoving] = useState<DictionaryItem | null>(null);
   const [error, setError] = useState<unknown>(null);
   const kind = dictionary.kind;
@@ -408,19 +424,21 @@ function DictionaryTable({ dictionary, readOnly }: { dictionary: Dictionary; rea
         ]}
       />
       {editing !== null ? (
-        <ItemModal
-          dictionary={dictionary}
-          item={editing === "new" ? null : editing}
-          onClose={() => {
-            setEditing(null);
-          }}
-          onSaved={() => {
-            refresh();
-            setEditing(null);
-            setError(null);
-            void message.success(t("settings.dict.saved"));
-          }}
-        />
+        <Sheet label={sheetTitle} onClose={closeItem}>
+          <ItemForm
+            key={editing === "new" ? "new" : editing.code}
+            form={itemForm}
+            dictionary={dictionary}
+            item={editing === "new" ? null : editing}
+            onClose={closeItem}
+            onSaved={() => {
+              refresh();
+              closeItem();
+              setError(null);
+              void message.success(t("settings.dict.saved"));
+            }}
+          />
+        </Sheet>
       ) : null}
       <ConfirmModal
         open={removing !== null}
@@ -468,12 +486,14 @@ interface Values {
 }
 
 /** Добавить или изменить значение: названия на трёх языках и поля вида по описанию каталога. */
-function ItemModal({
+function ItemForm({
+  form,
   dictionary,
   item,
   onClose,
   onSaved,
 }: {
+  form: FormInstance<Values>;
   dictionary: Dictionary;
   item: DictionaryItem | null;
   onClose: () => void;
@@ -481,7 +501,6 @@ function ItemModal({
 }) {
   const { t, i18n } = useTranslation("letters");
   const formId = useId();
-  const [form] = Form.useForm<Values>();
   const create = useCreateDictionaryItem({ mutation: { onSuccess: onSaved } });
   const update = useUpdateDictionaryItem({ mutation: { onSuccess: onSaved } });
   const mutation = item ? update : create;
@@ -509,36 +528,10 @@ function ItemModal({
   };
 
   return (
-    <Modal
-      open
-      title={item ? t("settings.dict.editTitle") : t("settings.dict.addTitle")}
-      onCancel={onClose}
-      destroyOnHidden
-      maskClosable={false}
-      footer={[
-        <Button key="cancel" onClick={onClose}>
-          {t("settings.dict.cancel")}
-        </Button>,
-        <Button
-          key="submit"
-          type="primary"
-          htmlType="submit"
-          form={formId}
-          loading={mutation.isPending}
-        >
-          {t("settings.dict.save")}
-        </Button>,
-      ]}
-    >
-      {mutation.isError ? (
-        <Alert
-          type="error"
-          showIcon
-          role="alert"
-          message={dictionaryErrorText(t, mutation.error)}
-          style={{ marginBottom: 16 }}
-        />
-      ) : null}
+    <section aria-labelledby={`${formId}-title`}>
+      <h3 className="pf-fp-title" id={`${formId}-title`}>
+        {item ? t("settings.dict.editTitle") : t("settings.dict.addTitle")}
+      </h3>
       <Form<Values>
         id={formId}
         form={form}
@@ -634,7 +627,13 @@ function ItemModal({
             </Form.Item>
           ),
         )}
+        <div className="pf-fp-row">
+          <Button type="primary" htmlType="submit" loading={mutation.isPending}>
+            {t("settings.dict.save")}
+          </Button>
+          <Button onClick={onClose}>{t("settings.dict.cancel")}</Button>
+        </div>
       </Form>
-    </Modal>
+    </section>
   );
 }

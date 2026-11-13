@@ -284,7 +284,7 @@ for (const width of WIDTHS) {
     await settledScreenshot(page, "mail-types-settings");
 
     await page.getByRole("button", { name: "Добавить значение" }).click();
-    const dialog = page.getByRole("dialog", { name: "Новое значение" });
+    const dialog = page.getByRole("region", { name: "Новое значение" });
     await dialog.getByRole("textbox", { name: "Название по-русски" }).fill("Жалоба покупателя");
     await chooseOption(
       dialog.getByRole("combobox", { name: "Действие по умолчанию" }),

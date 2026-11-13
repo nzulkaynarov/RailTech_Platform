@@ -698,7 +698,7 @@ describe("Справочники «Расчёта» на общем ресурс
     await openTab("reference", "admin@demo.example");
     expect(await screen.findByText("Казахстан")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Добавить значение" }));
-    const dialog = await screen.findByRole("dialog", { name: "Новое значение" });
+    const dialog = await screen.findByRole("region", { name: "Новое значение" });
     fireEvent.change(within(dialog).getByLabelText("Код"), { target: { value: "tr" } });
     fireEvent.change(within(dialog).getByLabelText("Название по-русски"), {
       target: { value: "Турция" },
