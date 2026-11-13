@@ -65,7 +65,19 @@ def fresh_deal(pk):
 def test_deal_ref_has_id_number_title(contract_world):
     deal = contract_world["main"]
     data = DealRefSerializer(deal).data
-    assert data == {"id": deal.pk, "number": deal.number, "title": "Поставка труб"}
+    assert data == {"id": deal.pk, "number": deal.number, "stage": "request", "title": "Поставка труб"}
+    assert_matches_contract(data, "DealRef")
+
+
+def test_deal_ref_stage_follows_the_deal_number(contract_world):
+    """0.12: подпись «Заявка» / «Проект» — из `stage`, Cabinet не разбирает префикс номера."""
+    from sales.services import deal_numbers
+
+    deal = fresh_deal(contract_world["main"].pk)
+    assert DealRefSerializer(deal).data["stage"] == "request"
+    assert deal_numbers.promote_to_project(deal)
+    data = DealRefSerializer(deal).data
+    assert data["number"].startswith(f"{deal_numbers.PROJECT_PREFIX}-") and data["stage"] == "project"
     assert_matches_contract(data, "DealRef")
 
 
@@ -102,7 +114,12 @@ def test_request_after_work_started_refers_to_its_deal(contract_world, key, stat
     deal = fresh_deal(contract_world[key].pk)
     data = ClientRequestSerializer(deal).data
     assert data["status"] == status
-    assert data["deal"] == {"id": deal.pk, "number": deal.number, "title": deal.title or None}
+    assert data["deal"] == {
+        "id": deal.pk,
+        "number": deal.number,
+        "stage": "project" if deal.number.startswith("ПР-") else "request",
+        "title": deal.title or None,
+    }
     assert "deal_id" not in data
     assert data["source"] == source  # по журналу создания: сотрудник ERP → erp, нет записи (передача из CRM) → crm
     assert_matches_contract(data, "ClientRequest")

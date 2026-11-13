@@ -33,6 +33,7 @@ import { MAX_UPLOAD_BYTES } from '@/lib/upload';
 import { CanAct } from '@/session/CanAct';
 import { useHasModule, useMe } from '@/session/useMe';
 import { aboutDealKey } from '@/lib/dealStage';
+import { dealContext } from '@/lib/messages';
 
 /**
  * Запросы клиента (B2B `MyRequestsPage` / `RequestDetailPage`, покупательская часть): список, карточка
@@ -246,8 +247,8 @@ export function RequestDetailPage() {
               </Button>
             </CanAct>
             <ManagerButton
-              context={request.deal ? { kind: 'deal', id: request.deal.id, number: request.deal.number } : null}
-              label={request.deal ? t(aboutDealKey(request.deal.number), { number: request.deal.number }) : undefined}
+              context={dealContext(request.deal)}
+              label={request.deal ? t(aboutDealKey(request.deal.stage), { number: request.deal.number }) : undefined}
             />
           </div>
         }

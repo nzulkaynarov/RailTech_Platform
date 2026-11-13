@@ -51,10 +51,10 @@ export function DealLink({
           to={`/deals/${deal.id}`}
           className="relative z-10 rounded-sm text-primary underline underline-offset-4 outline-none hover:no-underline focus-visible:ring-2 focus-visible:ring-ring"
         >
-          {t(dealLabelKey(deal.number), { number: deal.number })}
+          {t(dealLabelKey(deal.stage), { number: deal.number })}
         </Link>
       ) : (
-        <span>{t(dealLabelKey(deal.number), { number: deal.number })}</span>
+        <span>{t(dealLabelKey(deal.stage), { number: deal.number })}</span>
       )}
       {showTitle && deal.title ? (
         stackTitle ? (

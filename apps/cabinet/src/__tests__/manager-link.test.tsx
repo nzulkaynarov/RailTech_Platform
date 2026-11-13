@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { botLink } from '@/app/links';
-import { CLIENT_ACCESS } from '@/mocks/fixtures';
+import { CLIENT_ACCESS, deals } from '@/mocks/fixtures';
 import { chatLink, contextFromSearch } from '@/lib/messages';
 import { renderApp, signedIn } from '@/test/render';
 import { expectNoAxeViolations, heading } from '@/test/screens';
@@ -16,7 +16,8 @@ const BOT = 'https://t.me/railtech_test_bot';
 const LOADED = { timeout: 5000 };
 /** Содержимое экрана: роль ищется внутри `<main>` (CONVENTIONS, «Правило тестов»). */
 const page = () => document.querySelector('main') as HTMLElement;
-const chat = (kind: string, id: number, number: string) => chatLink({ kind: kind as 'deal', id, number });
+const chat = (kind: string, id: number, number: string) =>
+  chatLink({ kind: kind as 'deal', id, number, ...(kind === 'deal' ? { stage: deals[id]?.stage } : {}) });
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -34,6 +35,14 @@ describe('ссылки', () => {
     expect(parse('about=contract&id=1&number=X')).toBeNull();
     expect(parse('about=quote&id=abc&number=X')).toBeNull();
     expect(parse('about=quote&id=301')).toBeNull();
+  });
+
+  it('метка сделки несёт стадию: «Заявка» или «Проект» — из портала, не из префикса номера (0.12)', () => {
+    const parse = (query: string) => contextFromSearch(new URLSearchParams(query));
+    expect(chat('deal', 42, 'ЗВ-2026-042')).toBe(`/messages?${new URLSearchParams({ about: 'deal', id: '42', number: 'ЗВ-2026-042', stage: 'request' })}`);
+    expect(parse('about=deal&id=42&number=ЗВ-2026-042&stage=request')).toEqual({ kind: 'deal', id: 42, number: 'ЗВ-2026-042', stage: 'request' });
+    expect(parse('about=deal&id=42&number=RQ-2026-042&stage=bogus')).toEqual({ kind: 'deal', id: 42, number: 'RQ-2026-042' });
+    expect(parse('about=quote&id=301&number=KP-1&stage=request')).toEqual({ kind: 'quote', id: 301, number: 'KP-1' });
   });
 
   it('бот — второй канал: имя с @ принимается, пустое — ссылок нет', () => {

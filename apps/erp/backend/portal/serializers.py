@@ -4,13 +4,13 @@ import re
 from decimal import Decimal
 from typing import Optional
 
+from drf_spectacular.utils import extend_schema_field
 from parties.models import Company, CompanyRelationship, Contact, RelationshipStatus
 from portal import projections
 from portal.models import PortalSecurityEvent, PortalSession
 from portal.services import act_scan
 from portal.services import documents as portal_documents
 from rest_framework import serializers
-from drf_spectacular.utils import extend_schema_field
 
 #: Лимиты контракта (`erp-portal.yaml`): `ClientRequestCreate.summary` и `Reason.reason`.
 SUMMARY_MAX_LENGTH = 5000

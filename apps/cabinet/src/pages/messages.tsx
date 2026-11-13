@@ -27,8 +27,8 @@ import { useAppMode } from '@/session/mode';
 import { useCanAct, useHasModule, useMe } from '@/session/useMe';
 
 /** Подпись контекста переписки: сделка до принятия КП — «Заявка ЗВ-…», после — «Проект ПР-…» (0.12, FR-37). */
-function contextKey(context: { kind: string; number: string }): string {
-  if (context.kind === 'deal' && context.number.startsWith('ЗВ-')) return 'pages.messages.context.request';
+function contextKey(context: MessageContext): string {
+  if (context.kind === 'deal' && context.stage === 'request') return 'pages.messages.context.request';
   return `pages.messages.context.${context.kind}`;
 }
 
@@ -275,7 +275,7 @@ function Composer({ onSend }: { onSend: (text: string, context: MessageContext |
     setParams(
       (current) => {
         const next = new URLSearchParams(current);
-        for (const key of ['about', 'id', 'number']) next.delete(key);
+        for (const key of ['about', 'id', 'number', 'stage']) next.delete(key);
         return next;
       },
       { replace: true },

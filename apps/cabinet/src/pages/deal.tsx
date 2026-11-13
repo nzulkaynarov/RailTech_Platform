@@ -19,6 +19,7 @@ import { aboutDealKey, dealLabelKey, dealProgress, type DealProgress } from '@/l
 import { invoiceView } from '@/lib/invoice';
 import { cn } from '@/lib/utils';
 import { CanAct } from '@/session/CanAct';
+import { dealContext } from '@/lib/messages';
 
 /**
  * Сделка — цель deep-link бота (`start_param=deal_<id>`): всё по сделке на одном экране, собрано из
@@ -44,7 +45,7 @@ export function DealPage() {
   const dealRef = [requests, quotes, contracts, invoices, acts, deliveries, documents]
     .flatMap((query) => of(query.data as Array<{ deal?: DealRef | null }> | undefined))
     .find((item) => item.deal)?.deal;
-  const title = dealRef ? t(dealLabelKey(dealRef.number), { number: dealRef.number }) : t('pages.deal.titleFallback');
+  const title = dealRef ? t(dealLabelKey(dealRef.stage), { number: dealRef.number }) : t('pages.deal.titleFallback');
   const subtitle = dealRef?.title ?? null;
   if (all.some((query) => query.isPending)) {
     return (
@@ -126,8 +127,8 @@ export function DealPage() {
               </CanAct>
             ) : null}
             <ManagerButton
-              context={dealRef ? { kind: 'deal', id: dealRef.id, number: dealRef.number } : null}
-              label={dealRef ? t(aboutDealKey(dealRef.number), { number: dealRef.number }) : undefined}
+              context={dealContext(dealRef)}
+              label={dealRef ? t(aboutDealKey(dealRef.stage), { number: dealRef.number }) : undefined}
             />
           </div>
         }

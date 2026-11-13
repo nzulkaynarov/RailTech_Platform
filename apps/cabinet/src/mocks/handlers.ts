@@ -221,7 +221,10 @@ function contextOf(db: Db, ref: Schemas['MessageContextRef']): Schemas['MessageC
     }
   };
   const number = find();
-  return number ? { kind: ref.kind, id: ref.id, number } : null;
+  if (!number) return null;
+  return ref.kind === 'deal'
+    ? { kind: ref.kind, id: ref.id, number, stage: fixtures.deals[ref.id]?.stage }
+    : { kind: ref.kind, id: ref.id, number };
 }
 
 function sessionFromToken(token: string, authMethod: MockSession['auth_method']): MockSession {

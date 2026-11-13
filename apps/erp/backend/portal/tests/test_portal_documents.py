@@ -151,7 +151,12 @@ def test_item_fields(contract_world, portal_client):
     contract = contract_world["contracts"]["signed"]
     assert item["kind"] == "contract" and item["number"] == contract.number
     assert item["title"] == f"Договор {contract.number}"
-    assert item["deal"] == {"id": contract.deal_id, "number": contract.deal.number, "title": contract.deal.title}
+    assert item["deal"] == {
+        "id": contract.deal_id,
+        "number": contract.deal.number,
+        "stage": item["deal"]["stage"],
+        "title": contract.deal.title,
+    }
     assert "deal_id" not in item
     assert item["file_name"] == "CT-GUARD-signed.pdf"
     assert item["size_bytes"] == len(b"%PDF-1.4 fake")
