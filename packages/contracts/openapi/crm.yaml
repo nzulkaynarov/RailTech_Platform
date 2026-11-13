@@ -1730,6 +1730,25 @@ components:
       - created_at
       title: ContactOut
       type: object
+    ContactRevealIn:
+      description: 'Показ телефона и почты человека контрагента в «Органайзер · Люди» (FR-11): кто чей.'
+      properties:
+        contact:
+          description: Id контакта ERP строкой
+          pattern: ^[0-9]{1,18}$
+          title: Contact
+          type: string
+        name:
+          description: Имя человека — для строки журнала
+          maxLength: 255
+          minLength: 1
+          title: Name
+          type: string
+      required:
+      - contact
+      - name
+      title: ContactRevealIn
+      type: object
     ContactSuggestion:
       description: Подтверждённый Telegram-аккаунт клиента с номером, которого ещё нет среди контактов.
       properties:
@@ -10192,7 +10211,7 @@ components:
       type: http
 info:
   title: RailTech CRM API
-  version: 0.22.0
+  version: 0.23.0
 openapi: 3.1.0
 paths:
   /api/v1/admin/ai-spend:
@@ -10560,6 +10579,32 @@ paths:
       security:
       - HTTPBearer: []
       summary: Audit Console Open
+      tags:
+      - admin
+  /api/v1/audit/contact-reveal:
+    post:
+      description: 'Запись «показал контакты человека» (FR-11): в «Людях» телефон и почта открываются по нажатию,
+
+        и каждый показ пишется в журнал — кто, когда, чьи. Любой сотрудник; массовой выгрузки нет.'
+      operationId: audit_contact_reveal
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactRevealIn'
+        required: true
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Audit Contact Reveal
       tags:
       - admin
   /api/v1/auth/change-password:

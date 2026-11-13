@@ -8,9 +8,9 @@ from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import ContainerDep, require
+from app.api.deps import ContainerDep, PrincipalDep, require
 from app.models.auth import AuditLog, User
-from app.schemas.admin import AuditItem, AuditPage, ConsoleOpenIn, Dashboard
+from app.schemas.admin import AuditItem, AuditPage, ConsoleOpenIn, ContactRevealIn, Dashboard
 from app.schemas.leads import ActionResult
 from app.security import audit
 from app.security.principal import Principal
@@ -110,6 +110,24 @@ async def audit_console_open(
     консоль сервиса по пути `/console/<ключ>/` и отмечает это здесь — кто, когда, какая."""
     async with container.session_factory() as session, session.begin():
         await audit.record(session, who.actor, "console.open", "console", body.console)
+    return Response(status_code=204)
+
+
+@router.post("/audit/contact-reveal", status_code=204)
+async def audit_contact_reveal(
+    body: ContactRevealIn, who: PrincipalDep, container: ContainerDep
+) -> Response:
+    """Запись «показал контакты человека» (FR-11): в «Людях» телефон и почта открываются по нажатию,
+    и каждый показ пишется в журнал — кто, когда, чьи. Любой сотрудник; массовой выгрузки нет."""
+    async with container.session_factory() as session, session.begin():
+        await audit.record(
+            session,
+            who.actor,
+            "contact.reveal",
+            "erp_contact",
+            body.contact,
+            after={"name": body.name},
+        )
     return Response(status_code=204)
 
 

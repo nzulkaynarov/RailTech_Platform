@@ -18,7 +18,7 @@ afterEach(() => {
 });
 
 describe("Органайзер · Люди", () => {
-  it("общий список, фильтр, поиск и карточка; контакты не раскрываются", async () => {
+  it("общий список: сотрудники, лиды, люди клиентов и партнёров; фильтр, поиск и карточка", async () => {
     server.use(
       http.get("*/eds/staff", () =>
         HttpResponse.json({ items: [{ id: "7", name: "Анна Сотрудник", position: "Юрист" }] }),
@@ -57,7 +57,42 @@ describe("Органайзер · Люди", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Борис Лид" }));
-    const card = await screen.findByRole("dialog", { name: "Борис Лид" });
-    expect(within(card).getAllByRole("button", { name: /Показать/ })[0]).toBeDisabled();
+    const leadCard = await screen.findByRole("dialog", { name: "Борис Лид" });
+    // у лида контактов в списке нет — прочерк, а не «скоро»
+    expect(within(leadCard).queryByRole("button", { name: /Показать/ })).toBeNull();
+  });
+
+  it("люди клиентов и партнёров (FR-11): компания и должность; телефон и почта — по нажатию", async () => {
+    server.use(
+      http.get("*/eds/staff", () => HttpResponse.json({ items: [] })),
+      http.get("*/crm/leads", () => HttpResponse.json({ items: [], total: 0 })),
+    );
+    signInAs("all@demo.example");
+    renderApp("/chats/contacts");
+
+    expect(await screen.findByRole("button", { name: "Демо Клиентов" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Демо Партнёров" })).toBeVisible();
+    expect(screen.getByText("АО «Демо-Путь»")).toBeVisible();
+
+    fireEvent.click(screen.getByText("Люди партнёров", { selector: ".ant-segmented-item-label" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: "Демо Клиентов" })).toBeNull();
+    });
+
+    // контакты в списке не раскрыты — только по нажатию «Показать» (показ пишется в журнал)
+    expect(screen.queryByText("partner@demo.example")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Демо Партнёров" }));
+    const card = await screen.findByRole("dialog", { name: "Демо Партнёров" });
+    expect(within(card).getByText("ООО «Поставщик Север»")).toBeVisible();
+    // «Показать» стоит у телефона и у почты — достаточно первой
+    const [show] = within(card).getAllByRole("button", {
+      name: "Показать телефон и почту: Демо Партнёров",
+    });
+    if (!show) throw new Error("нет кнопки «Показать»");
+    fireEvent.click(show);
+    expect(await within(card).findByRole("link", { name: "partner@demo.example" })).toHaveAttribute(
+      "href",
+      "mailto:partner@demo.example",
+    );
   });
 });

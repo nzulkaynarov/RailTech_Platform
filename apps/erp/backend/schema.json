@@ -2711,6 +2711,38 @@
                 }
             }
         },
+        "/api/portal/v1/quotes/{id}/code-delivery/{delivery}": {
+            "get": {
+                "operationId": "api_portal_v1_quotes_code_delivery_retrieve",
+                "description": "GET /quotes/{id}/code-delivery/{delivery} — итог письма с кодом акцепта (0.10, FR-12).\n\nТолько письмо с кодом этой сессии: шаблон кода акцепта и адрес контакта сессии; чужое — 404.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "delivery",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/portal/v1/quotes/{id}/comments": {
             "post": {
                 "operationId": "api_portal_v1_quotes_comments_create",
@@ -30235,6 +30267,129 @@
                 }
             }
         },
+        "/api/v1/parties/people/": {
+            "get": {
+                "operationId": "parties_people_list",
+                "description": "Контакты клиентов своей компании и партнёров (поставщики, изготовители, отношение «партнёр») для списка «Люди» Платформы. Компания и клиент, и поставщик — `client`. Своя компания не входит.",
+                "summary": "List counterparty people",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "kind",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "client",
+                                "partner"
+                            ]
+                        },
+                        "description": "client | partner"
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page_size",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Поиск по имени, компании, должности"
+                    }
+                ],
+                "tags": [
+                    "Parties"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedDeskPeoplePageList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/parties/people/{id}/": {
+            "get": {
+                "operationId": "parties_people_contacts",
+                "description": "Телефон и почта одного человека из списка «Люди» — в тех же границах, что и список.",
+                "summary": "Phone and e-mail of a counterparty person",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Parties"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskPersonContacts"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/public/doc-links/{token}/": {
             "get": {
                 "operationId": "public_doc_links_retrieve",
@@ -41414,7 +41569,7 @@
                         "description": "Итог последнего письма-приглашения кандидату; null — приглашения ещё не было.\n\n* `queued` - queued\n* `sent` - sent\n* `failed` - failed",
                         "oneOf": [
                             {
-                                "$ref": "#/components/schemas/OrderMailStateEnum"
+                                "$ref": "#/components/schemas/InviteDeliveryEnum"
                             },
                             {
                                 "$ref": "#/components/schemas/NullEnum"
@@ -41573,7 +41728,7 @@
                         "description": "Итог последнего письма-приглашения кандидату; null — приглашения ещё не было.\n\n* `queued` - queued\n* `sent` - sent\n* `failed` - failed",
                         "oneOf": [
                             {
-                                "$ref": "#/components/schemas/OrderMailStateEnum"
+                                "$ref": "#/components/schemas/InviteDeliveryEnum"
                             },
                             {
                                 "$ref": "#/components/schemas/NullEnum"
@@ -41660,6 +41815,111 @@
                         "description": "Сотрудник подтвердил: найденная компания — другая, завести новую."
                     }
                 }
+            },
+            "DeskPeoplePage": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DeskPerson"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "next",
+                    "previous",
+                    "results"
+                ]
+            },
+            "DeskPerson": {
+                "type": "object",
+                "description": "Человек контрагента для «Люди» Платформы (FR-11).",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "position": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "has_email": {
+                        "type": "boolean",
+                        "description": "Есть почта — открывается по одному человеку (`retrieve`)"
+                    },
+                    "has_phone": {
+                        "type": "boolean",
+                        "description": "Есть телефон — открывается по одному человеку (`retrieve`)"
+                    },
+                    "is_primary": {
+                        "type": "boolean"
+                    },
+                    "company": {
+                        "$ref": "#/components/schemas/DeskRef"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/DeskPersonKindEnum"
+                    }
+                },
+                "required": [
+                    "company",
+                    "has_email",
+                    "has_phone",
+                    "id",
+                    "is_primary",
+                    "kind",
+                    "name",
+                    "position"
+                ]
+            },
+            "DeskPersonContacts": {
+                "type": "object",
+                "description": "Телефон и почта одного человека контрагента (FR-11): Платформа открывает по нажатию и пишет показ в журнал.",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "phone": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "email": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "email",
+                    "id",
+                    "name",
+                    "phone"
+                ]
+            },
+            "DeskPersonKindEnum": {
+                "enum": [
+                    "client",
+                    "partner"
+                ],
+                "type": "string",
+                "description": "* `client` - client\n* `partner` - partner"
             },
             "DeskProposal": {
                 "type": "object",
@@ -44046,6 +44306,15 @@
                 "type": "string",
                 "description": "* `stock` - stock\n* `supply` - supply\n* `engineer` - engineer"
             },
+            "InviteDeliveryEnum": {
+                "enum": [
+                    "queued",
+                    "sent",
+                    "failed"
+                ],
+                "type": "string",
+                "description": "* `queued` - queued\n* `sent` - sent\n* `failed` - failed"
+            },
             "InviteRequestRequest": {
                 "type": "object",
                 "properties": {
@@ -45774,7 +46043,7 @@
                 "description": "Итог письма партнёру (0.10, FR-12): в очереди почтового сервиса, отправлено или не отправлено с кодом причины.",
                 "properties": {
                     "state": {
-                        "$ref": "#/components/schemas/OrderMailStateEnum"
+                        "$ref": "#/components/schemas/InviteDeliveryEnum"
                     },
                     "reason": {
                         "type": "string",
@@ -45786,15 +46055,6 @@
                     "reason",
                     "state"
                 ]
-            },
-            "OrderMailStateEnum": {
-                "enum": [
-                    "queued",
-                    "sent",
-                    "failed"
-                ],
-                "type": "string",
-                "description": "* `queued` - queued\n* `sent` - sent\n* `failed` - failed"
             },
             "OrderReceipt": {
                 "type": "object",
@@ -46667,6 +46927,37 @@
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/DeskPartnerApplicationListResponse"
+                        }
+                    }
+                }
+            },
+            "PaginatedDeskPeoplePageList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DeskPeoplePage"
                         }
                     }
                 }

@@ -263,3 +263,32 @@ class DeskBankChangeListResponse(serializers.Serializer):
 
 class DeskBankChangeRejectIn(serializers.Serializer):
     reason = serializers.CharField(max_length=1000, trim_whitespace=True)
+
+
+class DeskPerson(serializers.Serializer):
+    """Человек контрагента для «Люди» Платформы (FR-11)."""
+
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    position = serializers.CharField(allow_null=True)
+    has_email = serializers.BooleanField(help_text="Есть почта — открывается по одному человеку (`retrieve`)")
+    has_phone = serializers.BooleanField(help_text="Есть телефон — открывается по одному человеку (`retrieve`)")
+    is_primary = serializers.BooleanField()
+    company = DeskRef()
+    kind = serializers.ChoiceField(choices=["client", "partner"])
+
+
+class DeskPeoplePage(serializers.Serializer):
+    count = serializers.IntegerField()
+    next = serializers.CharField(allow_null=True)
+    previous = serializers.CharField(allow_null=True)
+    results = DeskPerson(many=True)
+
+
+class DeskPersonContacts(serializers.Serializer):
+    """Телефон и почта одного человека контрагента (FR-11): Платформа открывает по нажатию и пишет показ в журнал."""
+
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    phone = serializers.CharField(allow_null=True)
+    email = serializers.CharField(allow_null=True)

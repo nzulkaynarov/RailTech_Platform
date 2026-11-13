@@ -12439,6 +12439,73 @@ paths:
           $ref: '#/components/responses/CatalogConflict'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+  /people/contacts:
+    get:
+      tags: [chats]
+      operationId: listCounterpartyPeople
+      summary: 'Органайзер · Люди: контакты клиентов и партнёров'
+      description: >-
+        ERP `parties/people/` (FR-11): контакты клиентов своей компании (с контактами клиентов CRM) и партнёров (поставщики,
+        изготовители, отношение «партнёр»). Своя компания не входит; компания и клиент, и поставщик — `client`. Раздел
+        `chats.internal` — чтение.
+      parameters:
+        - name: kind
+          in: query
+          required: false
+          schema: {type: string, enum: [client, partner]}
+        - name: q
+          in: query
+          required: false
+          description: Поиск по имени, компании, должности
+          schema: {type: string, maxLength: 100}
+        - name: page
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, default: 1}
+        - name: page_size
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, maximum: 200, default: 100}
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CounterpartyPersonPage'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /people/contacts/{id}/reveal:
+    post:
+      tags: [chats]
+      operationId: revealCounterpartyContacts
+      summary: 'Органайзер · Люди: показать телефон и почту человека'
+      description: >-
+        FR-11, NAVIGATION «Люди»: телефон и почта открываются по нажатию, показ пишется в журнал CRM (`contact.reveal` — кто,
+        когда, чьи). Сначала запись в журнал: не записалась — контакты не отдаются (503). ERP `parties/people/{id}/` — в тех же
+        границах, что список. Раздел `chats.internal` — чтение.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      responses:
+        '200':
+          description: Телефон и почта
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CounterpartyContacts'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /erp/catalog/suppliers:
     get:
       tags: [erp-catalog]
@@ -25122,6 +25189,46 @@ components:
         expired_count: {type: integer, minimum: 0, description: Действующих предложений с истёкшим сроком цены}
         expiring_count: {type: integer, minimum: 0, description: Срок цены истекает в ближайшие 14 дней}
         nearest_valid_until: {type: [string, 'null'], format: date}
+    CounterpartyPerson:
+      type: object
+      additionalProperties: false
+      required: [id, name, position, has_email, has_phone, is_primary, company, kind]
+      description: >-
+        Человек контрагента в списке «Люди»: имя, компания и должность видят все (NAVIGATION). Телефон и почта в список не
+        входят — `has_*` говорит, есть ли они; открываются по одному человеку (`revealCounterpartyContacts`) с записью в журнал.
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        name: {type: string}
+        position: {type: [string, 'null']}
+        has_email: {type: boolean}
+        has_phone: {type: boolean}
+        is_primary: {type: boolean}
+        company: {$ref: '#/components/schemas/CounterpartyRef'}
+        kind: {type: string, enum: [client, partner]}
+    CounterpartyContacts:
+      type: object
+      additionalProperties: false
+      required: [id, phone, email]
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        phone: {type: [string, 'null']}
+        email: {type: [string, 'null']}
+    CounterpartyRef:
+      type: object
+      additionalProperties: false
+      required: [id, name]
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        name: {type: string}
+    CounterpartyPersonPage:
+      type: object
+      additionalProperties: false
+      required: [items, total, page, page_size]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/CounterpartyPerson'}}
+        total: {type: integer, minimum: 0}
+        page: {type: integer, minimum: 1}
+        page_size: {type: integer, minimum: 1}
     SupplierPage:
       type: object
       additionalProperties: false
