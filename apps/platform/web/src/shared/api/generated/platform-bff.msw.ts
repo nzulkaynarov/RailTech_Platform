@@ -13488,7 +13488,13 @@ export const getGetFxRateResponseFxRateMock = (overrideResponse: Partial<FxRate>
 export const getGetFxRateResponseMock = (
   overrideResponse: Partial<Extract<FxRateOverview, object>> = {},
 ): FxRateOverview => ({
-  currency: faker.helpers.arrayElement(["USD"] as const),
+  currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  currencies: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
   current: faker.helpers.arrayElement([{ ...getGetFxRateResponseFxRateMock() }, null]),
   max_age_days: faker.number.int(),
   journal: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
@@ -13530,7 +13536,13 @@ export const getCreateFxRateResponseFxRateMock = (
 export const getCreateFxRateResponseMock = (
   overrideResponse: Partial<Extract<FxRateOverview, object>> = {},
 ): FxRateOverview => ({
-  currency: faker.helpers.arrayElement(["USD"] as const),
+  currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  currencies: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
   current: faker.helpers.arrayElement([{ ...getCreateFxRateResponseFxRateMock() }, null]),
   max_age_days: faker.number.int(),
   journal: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(

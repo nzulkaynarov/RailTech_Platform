@@ -375,3 +375,15 @@ def test_manual_rate_that_appears_just_before_the_write_is_not_overwritten(monke
     row = ExchangeRate.objects.get()
     assert (row.rate_to_uzs, row.source) == (Decimal("12800"), "MANUAL")
     assert ActivityLog.objects.filter(event_code="admin.exchange_rate.auto_skipped").count() == 1
+
+
+def test_current_lists_tracked_currencies_for_the_manual_entry():
+    """Пункт 1.7 плана: ручной курс — для любой включённой валюты; список выбора отдаёт ERP (валюта учёта не входит)."""
+    currency("USD")
+    currency("EUR")
+    currency("UZS")
+    codes = [c["code"] for c in _editor().get(CURRENT).json()["currencies"]]
+    assert "USD" in codes and "EUR" in codes and "UZS" not in codes
+    assert _editor().post(MANUAL, _body("14000", currency="EUR"), format="json").status_code == 201
+    eur = _editor().get(CURRENT, {"currency": "EUR"}).json()
+    assert eur["currency"] == "EUR" and eur["current"]["rate_to_uzs"].startswith("14000")

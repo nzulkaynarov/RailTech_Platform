@@ -5,8 +5,13 @@
 import type { DecimalString } from "./decimalString";
 
 export interface FxRateIn {
+  /**
+   * Код валюты ISO 4217 (пункт 1.7); по умолчанию USD
+   * @pattern ^[A-Z]{3}$
+   */
+  currency?: string;
   /** Дата курса; по умолчанию в форме — сегодня */
   rate_date: string;
-  /** Сумов за 1 USD; больше 0, не более 6 знаков после запятой */
+  /** Сумов за 1 единицу валюты; больше 0, не более 6 знаков после запятой */
   rate_to_uzs: DecimalString;
 }
