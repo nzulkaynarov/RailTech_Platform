@@ -91,3 +91,45 @@ def test_contacts_of_one_person_within_the_same_bounds(world):
     }
     stranger = Contact.objects.get(name="Чужой Контакт")
     assert client.get(f"{URL}{stranger.pk}/").status_code == 404
+
+
+# --- «Ш»: адресат письма из контрагентов — `/api/v1/parties/organizations/` -------------------------------------------
+
+ORGS = "/api/v1/parties/organizations/"
+
+
+def test_organizations_in_the_same_bounds_with_letter_details(world):
+    client = world["clients"]["supply"]
+    world["client_company"].email = "office@yug.example.uz"
+    world["client_company"].contact_person = "Анвар Клиентов"
+    world["client_company"].save(update_fields=["email", "contact_person"])
+    response = client.get(ORGS)
+    assert response.status_code == 200, response.content
+    rows = {row["name"]: row for row in response.json()["results"]}
+    assert world["own"].name not in rows
+    assert "ООО Чужой" not in rows
+    assert rows["ООО Клиент Юг"] == {
+        "id": world["client_company"].pk,
+        "name": "ООО Клиент Юг",
+        "inn": "300000555",
+        "email": "office@yug.example.uz",
+        "contact_person": "Анвар Клиентов",
+        "kind": "client",
+    }
+    assert rows["ООО Изготовитель"]["kind"] == "partner"
+    assert rows["ООО Изготовитель"]["email"] is None
+
+
+def test_organizations_search_by_name_and_inn(world):
+    client = world["clients"]["supply"]
+    by_name = [row["name"] for row in client.get(ORGS, {"q": "изготов"}).json()["results"]]
+    assert by_name == ["ООО Изготовитель"]
+    by_inn = [row["name"] for row in client.get(ORGS, {"q": "0005"}).json()["results"]]
+    assert by_inn == ["ООО Клиент Юг"]
+    assert client.get(ORGS, {"q": "Чужой"}).json()["results"] == []
+
+
+def test_organizations_need_a_session():
+    from rest_framework.test import APIClient
+
+    assert APIClient().get(ORGS).status_code == 401

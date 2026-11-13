@@ -245,7 +245,9 @@
     "recipient": {
       "label": "Manzil (tashkilot)",
       "inn": "Manzil STIRi",
-      "innHint": "Majburiy emas."
+      "innHint": "Majburiy emas.",
+      "placeholder": "Nomi yoki STIR",
+      "innShort": "STIR {{inn}}"
     },
     "text": {
       "label": "Matn",
