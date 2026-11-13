@@ -995,10 +995,11 @@ def letter_stage(status: LetterStatus, deal: dict[str, Any] | None) -> tuple[Ste
 
 def _request_path(number: str, deal: dict[str, Any] | None) -> str:
     """Заявка открывается в «Заявках в расчёте» (окно «Задание», B-UIA-1), а после принятия КП
-    клиентом (договор и дальше) — проект в EDS под тем же сквозным номером (`ЗВ-2026-104` ->
-    `ПР-2026-104`, SPEC-v3 §2.2)."""
+    клиентом (договор и дальше) — проект в EDS под номером сделки из ERP. BFF префиксы не
+    переписывает (задача «Н»): адрес проекта ERP находит по году и NNN."""
     if deal is not None and deal_kind(deal_step(deal)) == "project":
-        project = f"ПР-{number.removeprefix('ЗВ-')}" if number.startswith("ЗВ-") else number
+        own = deal.get("number")
+        project = own if isinstance(own, str) and own else number
         return f"/eds/projects/{quote(project, safe='')}?panel=open&tab=card"
     return request_path(number)
 

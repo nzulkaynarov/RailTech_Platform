@@ -107,6 +107,9 @@ class Deal(models.Model):
     )
     number_year = models.PositiveIntegerField(null=True, blank=True, editable=False, verbose_name=_("Год номера"))
     number_seq = models.PositiveIntegerField(null=True, blank=True, editable=False, verbose_name=_("NNN номера"))
+    # Стадия номера — заявка или проект (КП принято). Полем, а не по префиксу: префиксы задаёт владелец в настройках
+    # нумерации (решение владельца 2026-11-13, задача «Н»).
+    is_project = models.BooleanField(default=False, editable=False, verbose_name=_("Проект (КП принято)"))
     # Процесс заявки (ERP-07): v3 — заявка Платформы (резолюция и одобрение КП в EDS); legacy — начатая до Платформы.
     process = models.CharField(
         max_length=8,

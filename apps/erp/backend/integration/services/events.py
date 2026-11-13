@@ -175,7 +175,7 @@ def _request_details(deal: Any) -> Dict[str, Any]:
     """Номер ЗВ, процесс и срочность заявки для `request.created` (W16-D1-2)."""
     details: Dict[str, Any] = {}
     number = getattr(deal, "number", "") or ""
-    if number.startswith("ЗВ-"):
+    if number and not getattr(deal, "is_project", False):  # стадия — полем, не по префиксу (задача «Н»)
         details["request_number"] = number
     if getattr(deal, "process", "") == "v3":
         details["process"] = "v3"

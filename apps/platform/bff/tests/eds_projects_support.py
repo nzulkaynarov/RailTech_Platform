@@ -95,6 +95,7 @@ def invoice_card(**over: Any) -> dict[str, Any]:
 def row(deal_id: int = DEAL, **over: Any) -> dict[str, Any]:
     base: dict[str, Any] = {
         "deal_id": deal_id,
+        "number": f"ПР-2026-{deal_id:03d}",
         "title": "Стрелочные приводы",
         "company_id": 7,
         "company_name": "ООО «Демо-Рейл»",
@@ -201,6 +202,12 @@ class ProjectsFake:
             rows = list(self.rows)
             if "deal_id" in params:
                 rows = [r for r in rows if r["deal_id"] == int(params["deal_id"])]
+            if "number" in params:  # как ERP: год и NNN, префикс не важен
+                known = {r["deal_id"]: r for r in [*self.cards.values(), *rows]}
+                wanted = _year_seq(params["number"])
+                rows = [
+                    r for r in known.values() if wanted and _year_seq(r.get("number", "")) == wanted
+                ]
             offset, limit = int(params.get("offset", 0)), int(params.get("limit", 25))
             return httpx.Response(
                 200, json={"count": len(rows), "results": rows[offset : offset + limit]}
@@ -234,3 +241,8 @@ class ProjectsFake:
 
 def erp_error(status: int, code: str) -> httpx.Response:
     return httpx.Response(status, json={"detail": code})
+
+
+def _year_seq(number: str) -> tuple[int, int] | None:
+    match = re.search(r"(\d{4})\D+(\d{1,9})$", number.strip())
+    return (int(match[1]), int(match[2])) if match else None

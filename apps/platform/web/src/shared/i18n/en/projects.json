@@ -96,7 +96,6 @@
     "doneRule": "The project becomes “Completed” when the act is signed and all invoices are paid.",
     "fields": {
       "client": "Client",
-      "request": "Request",
       "total": "Total incl. VAT",
       "manager": "Manager",
       "responsible": "Owner",

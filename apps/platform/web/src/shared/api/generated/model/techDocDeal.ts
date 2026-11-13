@@ -6,7 +6,7 @@ import type { CompanyItemRef } from "./companyItemRef";
 
 export interface TechDocDeal {
   id: CompanyItemRef;
-  /** Номер для показа (`ЗВ-2026-104`, `ПР-…`); составляется до ERP-09 */
+  /** Номер для показа — `Deal.number` из ERP */
   number: string;
   title: string;
   client: string;

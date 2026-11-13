@@ -17,7 +17,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 
 from app.api.eds_documents import FileStream
 from app.deps import Authed, require
-from app.eds_projects import ErpProjects, deal_id_of_number, project_error
+from app.eds_projects import ErpProjects, project_error
 from app.errors import PlatformError
 from app.schemas_eds_projects import (
     ActActionIn,
@@ -112,11 +112,7 @@ async def list_projects(
         params["step"] = step
     text = (q or "").strip()
     if text:
-        deal_id = deal_id_of_number(text)  # номер ПР или ЗВ: точный поиск сделки
-        if deal_id is not None:
-            params["deal_id"] = deal_id
-        else:
-            params["q"] = text
+        params["q"] = text  # номер сделки ERP ищет сам — по году и NNN, префикс не важен
     return await _erp(authed).page(params)
 
 
