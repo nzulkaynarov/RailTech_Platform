@@ -54,7 +54,8 @@ async function uploadScenario(page: Page, width: number): Promise<void> {
 
   // новый иностранный завод без ИНН
   await page.getByRole("button", { name: "Новый партнёр" }).click();
-  const form = page.getByRole("dialog", { name: "Новый партнёр" });
+  // форма секциями в боковом окне (§4.1a)
+  const form = page.getByRole("region", { name: "Новый партнёр" });
   await form.getByLabel("Название").fill("Werk Nordlicht GmbH");
   await chooseOption(form.getByLabel("Страна"), "Германия");
   await chooseOption(form.getByLabel("Валюта цен"), "EUR");

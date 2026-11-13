@@ -410,3 +410,14 @@
   gap: 12px;
   margin-top: 8px;
 }
+/* Форма партнёра в боковом окне (§4.1a): заголовок, секции, кнопки в конце */
+.pf-cat-sheet-title {
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.pf-cat-sheet-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}

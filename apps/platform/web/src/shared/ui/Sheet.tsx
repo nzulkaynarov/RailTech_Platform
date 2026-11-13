@@ -1,8 +1,8 @@
 import { Drawer } from "antd";
 import type { ReactNode } from "react";
 
-import { PanelPortal } from "../../../app/shell/PanelSlot";
-import { useViewport } from "../../../app/shell/useViewport";
+import { PanelPortal } from "../../app/shell/PanelSlot";
+import { useViewport } from "../../app/shell/useViewport";
 
 /**
  * Карточка лида, клиента и форма «Создать заявку» — в боковом окне каркаса (SPEC-v3 §7.2); на телефоне (< 768) —
