@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "ERP API",
-        "version": "1.5.0",
+        "version": "1.7.0",
         "description": "ERP Platform API. Supports deal lifecycle management, quoting, product catalog (PIM), Excel imports, and real-time notifications via WebSocket.",
         "contact": {
             "name": "ERP API Support",
@@ -41414,7 +41414,7 @@
                         "description": "Итог последнего письма-приглашения кандидату; null — приглашения ещё не было.\n\n* `queued` - queued\n* `sent` - sent\n* `failed` - failed",
                         "oneOf": [
                             {
-                                "$ref": "#/components/schemas/InviteDeliveryEnum"
+                                "$ref": "#/components/schemas/OrderMailStateEnum"
                             },
                             {
                                 "$ref": "#/components/schemas/NullEnum"
@@ -41573,7 +41573,7 @@
                         "description": "Итог последнего письма-приглашения кандидату; null — приглашения ещё не было.\n\n* `queued` - queued\n* `sent` - sent\n* `failed` - failed",
                         "oneOf": [
                             {
-                                "$ref": "#/components/schemas/InviteDeliveryEnum"
+                                "$ref": "#/components/schemas/OrderMailStateEnum"
                             },
                             {
                                 "$ref": "#/components/schemas/NullEnum"
@@ -44046,15 +44046,6 @@
                 "type": "string",
                 "description": "* `stock` - stock\n* `supply` - supply\n* `engineer` - engineer"
             },
-            "InviteDeliveryEnum": {
-                "enum": [
-                    "queued",
-                    "sent",
-                    "failed"
-                ],
-                "type": "string",
-                "description": "* `queued` - queued\n* `sent` - sent\n* `failed` - failed"
-            },
             "InviteRequestRequest": {
                 "type": "object",
                 "properties": {
@@ -45447,6 +45438,14 @@
                         "type": "string",
                         "nullable": true
                     },
+                    "mail": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/OrderMail"
+                            }
+                        ],
+                        "nullable": true
+                    },
                     "confirmed_at": {
                         "type": "string",
                         "format": "date-time",
@@ -45502,6 +45501,7 @@
                     "lines",
                     "lines_count",
                     "log",
+                    "mail",
                     "note",
                     "number",
                     "overdue",
@@ -45768,6 +45768,33 @@
                 ],
                 "type": "string",
                 "description": "* `created` - created\n* `edited` - edited\n* `sent` - sent\n* `confirmed` - confirmed\n* `receipt` - receipt\n* `received` - received\n* `cancelled` - cancelled\n* `overdue` - overdue"
+            },
+            "OrderMail": {
+                "type": "object",
+                "description": "Итог письма партнёру (0.10, FR-12): в очереди почтового сервиса, отправлено или не отправлено с кодом причины.",
+                "properties": {
+                    "state": {
+                        "$ref": "#/components/schemas/OrderMailStateEnum"
+                    },
+                    "reason": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Код причины неудачи: smtp_not_configured, rejected, auth_failed, unavailable…"
+                    }
+                },
+                "required": [
+                    "reason",
+                    "state"
+                ]
+            },
+            "OrderMailStateEnum": {
+                "enum": [
+                    "queued",
+                    "sent",
+                    "failed"
+                ],
+                "type": "string",
+                "description": "* `queued` - queued\n* `sent` - sent\n* `failed` - failed"
             },
             "OrderReceipt": {
                 "type": "object",

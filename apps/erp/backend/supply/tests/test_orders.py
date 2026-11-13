@@ -221,6 +221,35 @@ def test_send_mails_the_supplier_and_writes_the_journal(world):
     assert log.status == "QUEUED" and log.to_emails == ["sales@vendor.example"]
 
 
+def test_order_card_shows_the_real_mail_result_not_sent_in_advance(world):
+    """0.10 (FR-12): «отправлено» — только когда почтовый сервис CRM вернул итог; без почты — причина словами."""
+    from notifications import mail_bus
+
+    order = _create(world, [_line(world["rail"], 1)], expected_date=_tomorrow()).json()
+    sent = _act(world, order["id"], "send").json()
+    assert sent["mail"] == {"state": "queued", "reason": None}
+    log = EmailLog.objects.get(template="supplier_order")
+
+    def result(kind, **extra):
+        return {
+            "requester": "erp",
+            "request_key": f"erp:email_log:{log.pk}",
+            "purpose": "erp_mail",
+            "ref": {"kind": "supplier_order", "id": str(order["id"])},
+            **extra,
+        }
+
+    mail_bus.apply_mail_result(
+        mail_bus.MAIL_FAILED, result("failed", reason="smtp_not_configured", detail="", attempts=0)
+    )
+    detail = api(world["supply"]).get(f"{STOCK}orders/{order['id']}/").json()
+    assert detail["mail"] == {"state": "failed", "reason": "smtp_not_configured"}
+    # повторная отправка тем же письмом после настройки почты — «отправлено»
+    mail_bus.apply_mail_result(mail_bus.MAIL_SENT, result("sent"))
+    detail = api(world["supply"]).get(f"{STOCK}orders/{order['id']}/").json()
+    assert detail["mail"] == {"state": "sent", "reason": None}
+
+
 def test_send_needs_an_address_and_a_failed_mail_leaves_the_order_a_draft(world, monkeypatch):
     silent = _create(world, supplier="silent").json()
     refused = _act(world, silent["id"], "send")

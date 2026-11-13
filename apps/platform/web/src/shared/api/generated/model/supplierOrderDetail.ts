@@ -10,6 +10,7 @@ import type { SupplierOrderActions } from "./supplierOrderActions";
 import type { SupplierOrderDetailReceiptState } from "./supplierOrderDetailReceiptState";
 import type { SupplierOrderLine } from "./supplierOrderLine";
 import type { SupplierOrderLogEntry } from "./supplierOrderLogEntry";
+import type { SupplierOrderMail } from "./supplierOrderMail";
 import type { SupplierOrderReceipt } from "./supplierOrderReceipt";
 import type { SupplierOrderStatus } from "./supplierOrderStatus";
 
@@ -59,6 +60,8 @@ export interface SupplierOrderDetail {
    * @nullable
    */
   sent_to: string | null;
+  /** Итог письма партнёру; `null` — заказ ещё не отправлялся */
+  mail: SupplierOrderMail | null;
   /** @nullable */
   confirmed_at: string | null;
   /** @nullable */

@@ -355,6 +355,7 @@ import type {
   SupplierOrderDetail,
   SupplierOrderLineOffer,
   SupplierOrderList,
+  SupplierOrderMail,
   SupplierPage,
   SystemStatus,
   TechDoc,
@@ -24661,6 +24662,16 @@ export const getListSupplierOrdersResponseMock = (
   ...overrideResponse,
 });
 
+export const getCreateSupplierOrderResponseSupplierOrderMailMock = (
+  overrideResponse: Partial<SupplierOrderMail> = {},
+): SupplierOrderMail => ({
+  ...{
+    state: faker.helpers.arrayElement(["queued", "sent", "failed"] as const),
+    reason: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[a-z][a-z0-9_]{0,63}$"), null]),
+  },
+  ...overrideResponse,
+});
+
 export const getCreateSupplierOrderResponseStockRequestRefMock = (
   overrideResponse: Partial<StockRequestRef> = {},
 ): StockRequestRef => ({
@@ -24734,6 +24745,10 @@ export const getCreateSupplierOrderResponseMock = (
   note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  mail: faker.helpers.arrayElement([
+    { ...getCreateSupplierOrderResponseSupplierOrderMailMock() },
+    null,
+  ]),
   confirmed_at: faker.helpers.arrayElement([
     faker.date.past().toISOString().slice(0, 19) + "Z",
     null,
@@ -24849,6 +24864,16 @@ export const getCreateSupplierOrderResponseMock = (
   ...overrideResponse,
 });
 
+export const getCreateSupplierOrderFromRequestResponseSupplierOrderMailMock = (
+  overrideResponse: Partial<SupplierOrderMail> = {},
+): SupplierOrderMail => ({
+  ...{
+    state: faker.helpers.arrayElement(["queued", "sent", "failed"] as const),
+    reason: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[a-z][a-z0-9_]{0,63}$"), null]),
+  },
+  ...overrideResponse,
+});
+
 export const getCreateSupplierOrderFromRequestResponseStockRequestRefMock = (
   overrideResponse: Partial<StockRequestRef> = {},
 ): StockRequestRef => ({
@@ -24922,6 +24947,10 @@ export const getCreateSupplierOrderFromRequestResponseMock = (
   note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  mail: faker.helpers.arrayElement([
+    { ...getCreateSupplierOrderFromRequestResponseSupplierOrderMailMock() },
+    null,
+  ]),
   confirmed_at: faker.helpers.arrayElement([
     faker.date.past().toISOString().slice(0, 19) + "Z",
     null,
@@ -25037,6 +25066,16 @@ export const getCreateSupplierOrderFromRequestResponseMock = (
   ...overrideResponse,
 });
 
+export const getGetSupplierOrderResponseSupplierOrderMailMock = (
+  overrideResponse: Partial<SupplierOrderMail> = {},
+): SupplierOrderMail => ({
+  ...{
+    state: faker.helpers.arrayElement(["queued", "sent", "failed"] as const),
+    reason: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[a-z][a-z0-9_]{0,63}$"), null]),
+  },
+  ...overrideResponse,
+});
+
 export const getGetSupplierOrderResponseStockRequestRefMock = (
   overrideResponse: Partial<StockRequestRef> = {},
 ): StockRequestRef => ({
@@ -25110,6 +25149,10 @@ export const getGetSupplierOrderResponseMock = (
   note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  mail: faker.helpers.arrayElement([
+    { ...getGetSupplierOrderResponseSupplierOrderMailMock() },
+    null,
+  ]),
   confirmed_at: faker.helpers.arrayElement([
     faker.date.past().toISOString().slice(0, 19) + "Z",
     null,
@@ -25225,6 +25268,16 @@ export const getGetSupplierOrderResponseMock = (
   ...overrideResponse,
 });
 
+export const getUpdateSupplierOrderResponseSupplierOrderMailMock = (
+  overrideResponse: Partial<SupplierOrderMail> = {},
+): SupplierOrderMail => ({
+  ...{
+    state: faker.helpers.arrayElement(["queued", "sent", "failed"] as const),
+    reason: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[a-z][a-z0-9_]{0,63}$"), null]),
+  },
+  ...overrideResponse,
+});
+
 export const getUpdateSupplierOrderResponseStockRequestRefMock = (
   overrideResponse: Partial<StockRequestRef> = {},
 ): StockRequestRef => ({
@@ -25298,6 +25351,10 @@ export const getUpdateSupplierOrderResponseMock = (
   note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  mail: faker.helpers.arrayElement([
+    { ...getUpdateSupplierOrderResponseSupplierOrderMailMock() },
+    null,
+  ]),
   confirmed_at: faker.helpers.arrayElement([
     faker.date.past().toISOString().slice(0, 19) + "Z",
     null,
@@ -25413,6 +25470,16 @@ export const getUpdateSupplierOrderResponseMock = (
   ...overrideResponse,
 });
 
+export const getSendSupplierOrderResponseSupplierOrderMailMock = (
+  overrideResponse: Partial<SupplierOrderMail> = {},
+): SupplierOrderMail => ({
+  ...{
+    state: faker.helpers.arrayElement(["queued", "sent", "failed"] as const),
+    reason: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[a-z][a-z0-9_]{0,63}$"), null]),
+  },
+  ...overrideResponse,
+});
+
 export const getSendSupplierOrderResponseStockRequestRefMock = (
   overrideResponse: Partial<StockRequestRef> = {},
 ): StockRequestRef => ({
@@ -25486,6 +25553,10 @@ export const getSendSupplierOrderResponseMock = (
   note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  mail: faker.helpers.arrayElement([
+    { ...getSendSupplierOrderResponseSupplierOrderMailMock() },
+    null,
+  ]),
   confirmed_at: faker.helpers.arrayElement([
     faker.date.past().toISOString().slice(0, 19) + "Z",
     null,
@@ -25601,6 +25672,16 @@ export const getSendSupplierOrderResponseMock = (
   ...overrideResponse,
 });
 
+export const getConfirmSupplierOrderResponseSupplierOrderMailMock = (
+  overrideResponse: Partial<SupplierOrderMail> = {},
+): SupplierOrderMail => ({
+  ...{
+    state: faker.helpers.arrayElement(["queued", "sent", "failed"] as const),
+    reason: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[a-z][a-z0-9_]{0,63}$"), null]),
+  },
+  ...overrideResponse,
+});
+
 export const getConfirmSupplierOrderResponseStockRequestRefMock = (
   overrideResponse: Partial<StockRequestRef> = {},
 ): StockRequestRef => ({
@@ -25674,6 +25755,10 @@ export const getConfirmSupplierOrderResponseMock = (
   note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  mail: faker.helpers.arrayElement([
+    { ...getConfirmSupplierOrderResponseSupplierOrderMailMock() },
+    null,
+  ]),
   confirmed_at: faker.helpers.arrayElement([
     faker.date.past().toISOString().slice(0, 19) + "Z",
     null,
@@ -25789,6 +25874,16 @@ export const getConfirmSupplierOrderResponseMock = (
   ...overrideResponse,
 });
 
+export const getCancelSupplierOrderResponseSupplierOrderMailMock = (
+  overrideResponse: Partial<SupplierOrderMail> = {},
+): SupplierOrderMail => ({
+  ...{
+    state: faker.helpers.arrayElement(["queued", "sent", "failed"] as const),
+    reason: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[a-z][a-z0-9_]{0,63}$"), null]),
+  },
+  ...overrideResponse,
+});
+
 export const getCancelSupplierOrderResponseStockRequestRefMock = (
   overrideResponse: Partial<StockRequestRef> = {},
 ): StockRequestRef => ({
@@ -25862,6 +25957,10 @@ export const getCancelSupplierOrderResponseMock = (
   note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  mail: faker.helpers.arrayElement([
+    { ...getCancelSupplierOrderResponseSupplierOrderMailMock() },
+    null,
+  ]),
   confirmed_at: faker.helpers.arrayElement([
     faker.date.past().toISOString().slice(0, 19) + "Z",
     null,
@@ -25977,6 +26076,16 @@ export const getCancelSupplierOrderResponseMock = (
   ...overrideResponse,
 });
 
+export const getReceiveSupplierOrderResponseSupplierOrderMailMock = (
+  overrideResponse: Partial<SupplierOrderMail> = {},
+): SupplierOrderMail => ({
+  ...{
+    state: faker.helpers.arrayElement(["queued", "sent", "failed"] as const),
+    reason: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[a-z][a-z0-9_]{0,63}$"), null]),
+  },
+  ...overrideResponse,
+});
+
 export const getReceiveSupplierOrderResponseStockRequestRefMock = (
   overrideResponse: Partial<StockRequestRef> = {},
 ): StockRequestRef => ({
@@ -26050,6 +26159,10 @@ export const getReceiveSupplierOrderResponseMock = (
   note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  mail: faker.helpers.arrayElement([
+    { ...getReceiveSupplierOrderResponseSupplierOrderMailMock() },
+    null,
+  ]),
   confirmed_at: faker.helpers.arrayElement([
     faker.date.past().toISOString().slice(0, 19) + "Z",
     null,

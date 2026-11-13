@@ -115,10 +115,20 @@ class OrderLogSerializer(serializers.Serializer):
     detail = serializers.CharField(allow_null=True)
 
 
+class OrderMailSerializer(serializers.Serializer):
+    """Итог письма партнёру (0.10, FR-12): в очереди почтового сервиса, отправлено или не отправлено с кодом причины."""
+
+    state = serializers.ChoiceField(choices=["queued", "sent", "failed"])
+    reason = serializers.CharField(
+        allow_null=True, help_text="Код причины неудачи: smtp_not_configured, rejected, auth_failed, unavailable…"
+    )
+
+
 class OrderDetailSerializer(OrderRowSerializer):
     note = serializers.CharField(allow_blank=True)
     sent_at = serializers.DateTimeField(allow_null=True)
     sent_to = serializers.CharField(allow_null=True)
+    mail = OrderMailSerializer(allow_null=True)
     confirmed_at = serializers.DateTimeField(allow_null=True)
     received_at = serializers.DateTimeField(allow_null=True)
     cancelled_at = serializers.DateTimeField(allow_null=True)
