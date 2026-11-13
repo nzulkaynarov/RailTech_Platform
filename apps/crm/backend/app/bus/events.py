@@ -49,6 +49,7 @@ USER_DEACTIVATED = "uz.railtech.identity.user.deactivated.v1"
 MAIL_SENT = "uz.railtech.crm.mail.sent.v1"
 MAIL_FAILED = "uz.railtech.crm.mail.failed.v1"
 AI_POLICY_CHANGED = "uz.railtech.crm.ai_policy.changed.v1"
+COMPANY_PROFILE_CHANGED = "uz.railtech.crm.company_profile.changed.v1"
 PARTNER_CLIENT_RESOLVED = "uz.railtech.crm.partner.client_resolved.v1"
 CABINET_MESSAGE_SENT = "uz.railtech.crm.cabinet.message_sent.v1"
 
@@ -390,6 +391,24 @@ async def ai_policy_changed(
         "actor": snapshots.actor_of(actor),
     }
     await _publish(session, AI_POLICY_CHANGED, data, "ai_policy/pii")
+
+
+async def company_profile_changed(
+    session: AsyncSession, company: dict[str, Any], actor: Actor, changed_at: datetime | None = None
+) -> None:
+    """Раздел «Компания» сохранён (задача «Н3a2», FIX-42): название и контакты — снимок
+    для ERP (письма, документы, кабинет), в той же транзакции. `changed_at` — для повторной
+    публикации (время сохранения)."""
+    _require_transaction(session)
+    data = {
+        "name": str(company.get("name") or "").strip()[:255],
+        "phone": str(company.get("phone") or "").strip()[:100],
+        "site": str(company.get("site") or "").strip()[:200],
+        "address": str(company.get("address") or "").strip()[:300],
+        "changed_at": snapshots.utc(changed_at or await snapshots.db_now(session)),
+        "actor": snapshots.actor_of(actor),
+    }
+    await _publish(session, COMPANY_PROFILE_CHANGED, data, "company_profile")
 
 
 _ADDRESS = re.compile(r"[^\s,:;<>]+@[^\s,:;<>]+")
