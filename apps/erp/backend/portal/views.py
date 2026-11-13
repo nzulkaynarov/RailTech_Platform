@@ -503,6 +503,25 @@ class CountriesView(APIView):
         return Response(list_portal_countries(), status=status.HTTP_200_OK)
 
 
+class OperatorView(APIView):
+    """GET /operator — название оператора платформы для кабинета до входа (задача «Н3a2»): ведётся в CRM
+    («Настройки · Компания»), проекция в ERP — `SystemSetting.platform_name`. Ничего, кроме названия, не отдаёт."""
+
+    authentication_classes = []
+    permission_classes = []
+
+    def get_exception_handler(self):
+        return portal_exception_handler
+
+    def get(self, request):
+        from core.models.settings import SystemSetting
+
+        setting = SystemSetting.load()
+        # Пока CRM не прислала профиль, `platform_name` — значение окружения: не показываем его клиенту.
+        name = setting.platform_name.strip() if setting.company_profile_changed_at else ""
+        return Response({"name": name or None}, status=status.HTTP_200_OK)
+
+
 # ── 2. Me ───────────────────────────────────────────────────────────────────
 
 

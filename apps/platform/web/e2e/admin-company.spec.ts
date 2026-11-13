@@ -518,7 +518,7 @@ test.describe("Курс USD → UZS: ручной ввод (W13C-F6)", () => {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
       await loginAndWait(page, "admin@demo.example");
       await openCompany(page, "platform");
-      const section = page.getByRole("region", { name: "Курс USD → UZS" });
+      const section = page.getByRole("region", { name: "Курс валюты к суму" });
       await expect(section.getByText(/1 USD = 12\s650,50 сум/)).toBeVisible();
       await expect(section.getByText("Автозагрузка (ЦБ РУз)")).toBeVisible();
       await expect(section.getByRole("region", { name: "Журнал курса" })).toBeVisible();

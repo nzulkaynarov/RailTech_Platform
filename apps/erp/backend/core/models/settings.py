@@ -52,6 +52,9 @@ class SystemSetting(models.Model):
         default=os.environ.get("PLATFORM_NAME", "ERP"),
         verbose_name=_("Название платформы"),
     )
+    #: Задача «Н3a2»: время снимка профиля компании из CRM (`crm.company_profile.changed`), последнего применённого —
+    #: снимок старее не применяется (повтор при старте воркера CRM, сбой порядка доставки).
+    company_profile_changed_at = models.DateTimeField(null=True, blank=True, editable=False)
     support_email = models.EmailField(
         default=os.environ.get("SUPPORT_EMAIL", "support@example.com"),
         verbose_name=_("Email поддержки"),

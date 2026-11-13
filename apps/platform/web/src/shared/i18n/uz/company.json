@@ -455,7 +455,7 @@
   },
   "platform": {
     "title": "Platforma sozlamalari",
-    "hint": "Butun platforma uchun QQS stavkasi va USD → UZS kursi.",
+    "hint": "Butun platforma uchun QQS stavkasi va valyutalarning so‘mga kursi.",
     "vat": "QQS stavkasi, %",
     "vatHint": "0 dan 100 gacha.",
     "invalidVat": "Stavka — 0 dan 100 gacha son",
@@ -463,7 +463,7 @@
     "updated": "Sozlamalar yangilangan",
     "save": "QQS stavkasini saqlash",
     "fx": {
-      "title": "USD → UZS kursi",
+      "title": "Valyutaning so‘mga kursi",
       "current": "Joriy kurs",
       "date": "Kurs sanasi",
       "source": "Manba",
@@ -475,7 +475,7 @@
       "formLabel": "Kursni qo‘lda kiritish",
       "dateField": "Kurs sanasi",
       "dateHint": "Bugundan kech emas va bir yildan eski emas.",
-      "rateField": "Kurs, 1 USD uchun so‘m",
+      "rateField": "Kurs, 1 {{currency}} uchun so‘m",
       "rateHint": "Noldan katta son, verguldan keyin 6 tagacha raqam. Masalan, 12650,5.",
       "save": "Kursni saqlash",
       "saved": "Kurs saqlandi",
@@ -494,7 +494,8 @@
         "when": "Qachon",
         "emptyTitle": "Hozircha qo‘lda kiritish bo‘lmagan",
         "emptyText": "Bu yerda qo‘lda kiritilgan kurslar va avtomatik yuklash qo‘lda kiritilgan kursga tegmagan holatlar ko‘rinadi."
-      }
+      },
+      "currency": "Valyuta"
     },
     "note": "Yangi hisob-kitob va hujjatlar shu stavka bilan boradi."
   },

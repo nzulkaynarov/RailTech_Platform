@@ -19,7 +19,7 @@ from app.bus import events as bus_events
 from app.domain.platform_links import LinkBase
 from app.domain.public_urls import is_schema_default
 from app.models.leads import Setting
-from app.schemas.settings import SETTINGS_MODELS, AppSettings
+from app.schemas.settings import SETTINGS_MODELS, AppSettings, CompanySettings
 from app.security import audit
 from app.security.audit import Actor
 from app.security.pii import DEFAULT_POLICY
@@ -27,6 +27,7 @@ from app.security.pii import DEFAULT_POLICY
 logger = structlog.get_logger(__name__)
 
 AI_KEY = "ai"
+COMPANY_KEY = "company"
 
 
 class UnknownSettingError(KeyError):
@@ -104,6 +105,9 @@ class SettingsService:
                 await bus_events.ai_policy_changed(
                     session, payload["pii_policy"], actor or Actor.system()
                 )
+            if key == COMPANY_KEY:
+                # Н3a2: ERP держит проекцию названия и контактов (письма, документы, кабинет).
+                await bus_events.company_profile_changed(session, payload, actor or Actor.system())
         self.invalidate()
         return validated
 
@@ -169,6 +173,9 @@ class SettingsService:
             result = await session.execute(delete(Setting).where(Setting.key == key))
             if key == AI_KEY:
                 await bus_events.ai_policy_changed(session, DEFAULT_POLICY, Actor.system())
+            if key == COMPANY_KEY:
+                default = CompanySettings().model_dump(mode="json")
+                await bus_events.company_profile_changed(session, default, Actor.system())
         self.invalidate()
         return bool(getattr(result, "rowcount", 0))
 
