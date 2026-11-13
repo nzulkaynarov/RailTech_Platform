@@ -311,13 +311,14 @@ async def test_request_becomes_a_project_link_after_the_contract_step(
     web: Web, eds: EdsFake
 ) -> None:
     eds.letters[LETTER_ID] = resolved()
-    eds.deal = deal("CONTRACT_SIGNED")
+    eds.deal = {**deal("CONTRACT_SIGNED"), "number": "PRJ-2026-104"}
     await _director(web)
 
     card = (await web.client.get(CARD)).json()
 
     assert card["stage"] == "CONTRACT"
-    assert card["request"]["path"] == "/eds/projects/%D0%9F%D0%A0-2026-104?panel=open&tab=card"
+    # номер проекта — от ERP как есть; BFF префиксы не переписывает (задача «Н»)
+    assert card["request"]["path"] == "/eds/projects/PRJ-2026-104?panel=open&tab=card"
 
 
 async def test_letter_without_links_has_no_erp_call_and_no_blocks(web: Web, eds: EdsFake) -> None:

@@ -3,11 +3,17 @@ from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-NUMBERING_TYPE_CODES = ("KP", "CT", "INV", "ACT", "DOC")
+# Все виды номеров ERP в одной схеме (задача «Н», решение владельца 2026-11-13): заявка и проект, КП, договор, счёт, акт,
+# квитанция, накладная, заказ поставщику, отгрузка, договор партнёра, документ по шаблону.
+NUMBERING_TYPE_CODES = ("REQ", "PRJ", "KP", "CT", "INV", "ACT", "RCP", "DN", "PO", "SHP", "PART", "DOC")
 # Умолчания SPEC-v3 §2.2 (W-6, B-WDOCS2-1): КП-2026/115, ДОГ-2026/104, СЧ-2026/142, АКТ-2026/058; для документа по
 # шаблону SPEC молчит — тот же стиль, «ДОК». До 2026-11 умолчания были `КП-2026-00042`, `CT-…`, `INV-…`, `ACT-…`, `DOC-…`
 # (LEGACY_* ниже — их знает миграция documents/0004 и поиск по номеру).
-DEFAULT_TYPE_LABELS = {"KP": "КП", "CT": "ДОГ", "INV": "СЧ", "ACT": "АКТ", "DOC": "ДОК"}
+# Умолчания — латиницей (владелец 2026-11-13): номер читают и набирают иностранные партнёры; переводятся только подписи
+# вокруг номера. Выданные номера (`КП-2026/042`, `ЗВ-2026-001`, …) не меняются, поиск находит оба вида.
+DEFAULT_TYPE_LABELS = {"REQ": "RQ", "PRJ": "PRJ", "KP": "QT", "CT": "CT", "INV": "INV", "ACT": "ACT", "RCP": "RCP", "DN": "DN", "PO": "PO", "SHP": "SHP", "PART": "PA", "DOC": "DOC"}
+# Кириллические умолчания SPEC-v3 §2.2 до 2026-11-13 — их знают поиск по номеру и тесты истории.
+CYRILLIC_TYPE_LABELS = {"KP": "КП", "CT": "ДОГ", "INV": "СЧ", "ACT": "АКТ", "DOC": "ДОК", "RCP": "КВ", "DN": "НАК"}
 LEGACY_DEFAULT_TYPE_LABELS = {"KP": "КП", "CT": "CT", "INV": "INV", "ACT": "ACT", "DOC": "DOC"}
 LEGACY_DEFAULT_PATTERN = "{prefix}{type}-{YYYY}-{seq}"
 LEGACY_DEFAULT_PADDING = 5

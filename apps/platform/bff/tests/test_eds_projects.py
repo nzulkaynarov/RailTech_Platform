@@ -61,7 +61,11 @@ async def test_list_composes_numbers_and_passes_filters(
     web: Web, erp: ProjectsFake, check: ContractChecker
 ) -> None:
     await _as(web, "DIRECTOR")
-    erp.rows = [row(104), row(7, title="", created_at="2025-12-31T21:00:00+00:00", step="PAYMENT")]
+    erp.rows = [
+        row(104),
+        row(7, title="", number="PRJ-2025-031", step="PAYMENT"),
+        row(9, number=""),
+    ]
 
     response = await web.client.get(
         BASE,
@@ -70,10 +74,11 @@ async def test_list_composes_numbers_and_passes_filters(
 
     check(response, "/eds/projects", "get")
     body = response.json()
-    assert [i["number"] for i in body["items"]] == [NUMBER, "ПР-2025-007"]
-    assert body["items"][0]["request_number"] == "ЗВ-2026-104"
+    # номер — от ERP как есть (префиксы задаёт владелец); BFF его не составляет, без номера — D-<id>
+    assert [i["number"] for i in body["items"]] == [NUMBER, "PRJ-2025-031", "D-9"]
+    assert body["items"][0]["request_number"] == NUMBER, "заявка и проект — один объект, один номер"
     assert body["items"][1]["title"] == "ООО «Демо-Рейл»", "нет названия — название клиента"
-    assert (body["total"], body["offset"], body["limit"]) == (2, 0, 10)
+    assert (body["total"], body["offset"], body["limit"]) == (3, 0, 10)
     [call] = erp.calls_to("GET", "projects/")
     assert dict(call.url.params) == {
         "mine": "true",
@@ -85,16 +90,15 @@ async def test_list_composes_numbers_and_passes_filters(
     assert call.headers["authorization"].startswith("Bearer ")
 
 
-@pytest.mark.parametrize("query", ["ПР-2026-104", "pr-2026-104", "ЗВ-2026-104", "104"])
-async def test_search_by_number_asks_erp_for_that_deal(
+@pytest.mark.parametrize("query", ["ПР-2026-104", "pr-2026-104", "PRJ-2026-104", "104"])
+async def test_search_passes_the_text_and_erp_finds_numbers_itself(
     web: Web, erp: ProjectsFake, query: str
 ) -> None:
+    """BFF префиксы номера не разбирает (задача «Н»): номер сделки ищет ERP — по году и NNN."""
     await _as(web, "MANAGER")
     assert (await web.client.get(BASE, params={"q": query})).status_code == 200
     [call] = erp.calls_to("GET", "projects/")
-    # «104» цифрами — обычный текст (название, клиент), номером считаются только ПР-/ЗВ-
-    expected = {"q": "104"} if query == "104" else {"deal_id": "104"}
-    assert {k: v for k, v in call.url.params.items() if k in ("q", "deal_id")} == expected
+    assert {k: v for k, v in call.url.params.items() if k in ("q", "deal_id")} == {"q": query}
 
 
 async def test_search_by_text_is_passed_as_text(web: Web, erp: ProjectsFake) -> None:

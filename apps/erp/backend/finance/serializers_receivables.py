@@ -19,9 +19,10 @@ class ReceivableRowSerializer(serializers.Serializer):
     number = serializers.CharField()
     deal_id = serializers.IntegerField()
     deal_title = serializers.CharField(allow_blank=True)
-    deal_year = serializers.IntegerField(
-        help_text="Год создания сделки: из него и id BFF составляет номер ЗВ/ПР (ERP-09)."
+    deal_number = serializers.CharField(
+        help_text="Номер сделки (`Deal.number`), без номера — `D-<id>`; BFF его не составляет"
     )
+    deal_year = serializers.IntegerField(help_text="Год создания сделки (устарело: номер — `deal_number`)")
     client_id = serializers.IntegerField()
     client_name = serializers.CharField()
     currency = serializers.CharField(allow_null=True)
@@ -165,6 +166,7 @@ def row(invoice: Invoice, day: date | None = None) -> dict[str, Any]:
         "number": invoice.number,
         "deal_id": deal.pk,
         "deal_title": deal.title or "",
+        "deal_number": deal.number or f"D-{deal.pk}",
         "deal_year": deal.created_at.year,
         "client_id": deal.company_id,
         "client_name": deal.company.name if deal.company_id else "",

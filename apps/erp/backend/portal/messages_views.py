@@ -10,7 +10,12 @@ from django.http import Http404
 from portal.exceptions import PortalValidationError
 from portal.models import PortalMessage
 from portal.permissions import HasPortalModule, IsPortalAuthenticated
-from portal.serializers import PortalMessageCreateSerializer, PortalMessageReadMarkSerializer, portal_message_data
+from portal.serializers import (
+    PortalMessageCreateSerializer,
+    PortalMessageReadMarkSerializer,
+    deal_stages,
+    portal_message_data,
+)
 from portal.services import messages as chat
 from portal.views import BasePortalView
 from rest_framework import status
@@ -44,8 +49,9 @@ class MessageListView(BasePortalView):
         chat.touch_presence(request.portal_company, request.portal_contact)
         me = request.portal_contact.pk
         erased = chat.erased_ids(request.portal_company, up_to=after_id) if after_id is not None else []
+        stages = deal_stages(items)
         return Response(
-            {"items": [portal_message_data(m, me) for m in items], "has_more": has_more, "erased_ids": erased}
+            {"items": [portal_message_data(m, me, stages) for m in items], "has_more": has_more, "erased_ids": erased}
         )
 
     def post(self, request):

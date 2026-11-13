@@ -351,7 +351,7 @@ class DealRefSerializer(serializers.Serializer):
 
     @extend_schema_field(serializers.ChoiceField(choices=["request", "project"]))
     def get_stage(self, deal) -> str:
-        return projections.deal_stage(projections.deal_number(deal))
+        return projections.deal_stage(deal)
 
     def get_title(self, deal) -> Optional[str]:
         return projections.blank_to_none(deal.title)
@@ -835,14 +835,28 @@ class PortalMessageReadMarkSerializer(serializers.Serializer):
     last_id = serializers.IntegerField(min_value=1)
 
 
-def portal_message_data(message, contact_id: int) -> dict:
+def deal_stages(messages) -> dict:
+    """Стадии сделок меток ленты одним запросом: `{id сделки: request|project}` (задача «Н»: полем, не по префиксу)."""
+    from crm.models import Deal
+
+    ids = {m.context_id for m in messages if m.context_kind == "deal" and m.context_id}
+    if not ids:
+        return {}
+    return {
+        pk: ("project" if flag else "request")
+        for pk, flag in Deal.objects.filter(pk__in=ids).values_list("pk", "is_project")
+    }
+
+
+def portal_message_data(message, contact_id: int, stages: Optional[dict] = None) -> dict:
     """`PortalMessage` контракта: направление, автор, «моё», текст как есть, метка документа."""
     context = None
     if message.context_kind:
         context = {"kind": message.context_kind, "id": message.context_id, "number": message.context_number}
         if message.context_kind == "deal":
-            # Стадия на момент сообщения — по номеру, снятому вместе с меткой (заявка ЗВ остаётся заявкой в истории).
-            context["stage"] = projections.deal_stage(message.context_number)
+            known = stages if stages is not None else deal_stages([message])
+            if message.context_id in known:
+                context["stage"] = known[message.context_id]
     return {
         "id": message.pk,
         "direction": message.direction,

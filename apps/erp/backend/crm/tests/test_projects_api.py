@@ -103,6 +103,16 @@ def test_filters_step_mine_q_and_deal_id(pw):  # noqa: F811
     assert client.get(LIST, {"q": "Другой"}).json()["count"] == 1
     assert client.get(LIST, {"q": "ООО Клиент"}).json()["count"] == 2
     assert client.get(LIST, {"deal_id": other.id}).json()["count"] == 1
+    # Номер сделки — от ERP, BFF его не составляет; найти проект можно по номеру с любым префиксом (год и NNN)
+    other.refresh_from_db()
+    row = client.get(LIST, {"number": other.number}).json()["results"]
+    assert [r["deal_id"] for r in row] == [other.id] and row[0]["number"] == other.number
+    year, seq = other.number_year, other.number_seq
+    assert (
+        client.get(LIST, {"number": f"ЗВ-{year}-{seq}"}).json()["count"] == 1
+    ), "номер заявки находит проект: тот же год и NNN"
+    assert client.get(LIST, {"q": other.number}).json()["count"] == 1
+    assert client.get(LIST, {"number": "не номер"}).json()["count"] == 0
     assert client.get(LIST, {"step": "nonsense"}).json()["count"] == 2, "неизвестный шаг игнорируется"
     page = client.get(LIST, {"limit": 1, "offset": 1}).json()
     assert page["count"] == 2 and len(page["results"]) == 1

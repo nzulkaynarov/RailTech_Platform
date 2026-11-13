@@ -184,11 +184,10 @@ def _dt(value: Any) -> datetime | None:
     return None
 
 
-def project_number(deal_id: int, year: int) -> str:
-    """ПР-ГГГГ-NNN до ERP-09 (`Deal.number`): счёт бывает только у проекта, то есть после принятого
-    КП.
-    """
-    return f"ПР-{year:04d}-{deal_id:03d}"
+def project_number(deal_id: int, deal_number: str) -> str:
+    """Номер проекта счёта, который выдал ERP (`deal_number`); нет — `D-<id>`. BFF номер не
+    составляет: префиксы задаёт владелец в настройках нумерации (задача «Н»)."""
+    return deal_number or f"D-{deal_id}"
 
 
 class Receivable(BaseModel):
@@ -199,7 +198,7 @@ class Receivable(BaseModel):
     id: int
     number: str
     deal_id: int
-    deal_year: int
+    deal_number: str = ""
     client_name: str
     currency: str | None
     total_incl_vat: str
@@ -224,7 +223,7 @@ def row_of(raw: dict[str, Any]) -> PaymentRow:
     return PaymentRow(
         id=item.id,
         number=item.number,
-        project_number=project_number(item.deal_id, item.deal_year),
+        project_number=project_number(item.deal_id, item.deal_number),
         deal_id=item.deal_id,
         client_name=item.client_name,
         amount=_money(item.total_incl_vat, item.currency),

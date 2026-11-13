@@ -211,11 +211,23 @@ class Filters:
     problems: bool = False
     step: str = ""
     deal_id: Optional[int] = None
+    number: str = ""
+
+
+def _deal_number_q(text: str) -> Q:
+    """Номер сделки в запросе — по году и NNN (`deal_numbers.parse_query`): префикс не важен, после принятия КП номер
+    заявки становится номером проекта с тем же NNN. Не номер — пустое условие."""
+    from sales.services import deal_numbers
+
+    parsed = deal_numbers.parse_query(text)
+    return Q(number_year=parsed[0], number_seq=parsed[1]) if parsed else Q(pk__in=[])
 
 
 def _apply_sql_filters(qs: QuerySet, filters: Filters, user) -> QuerySet:
     if filters.deal_id is not None:
         qs = qs.filter(pk=filters.deal_id)
+    if filters.number:
+        qs = qs.filter(_deal_number_q(filters.number))
     if filters.mine:
         qs = qs.filter(Q(manager=user) | Q(assigned_to=user))
     text = filters.q.strip()
@@ -223,6 +235,8 @@ def _apply_sql_filters(qs: QuerySet, filters: Filters, user) -> QuerySet:
         qs = qs.filter(
             Q(title__icontains=text)
             | Q(company__name__icontains=text)
+            | Q(number__icontains=text)
+            | _deal_number_q(text)
             | number_search_q("contracts__number", text)
             | number_search_q("invoices__number", text)
             | number_search_q("acts__number", text)
@@ -299,6 +313,7 @@ def project_row(deal) -> dict:
     amount = stages.deal_amount(deal)
     return {
         "deal_id": deal.id,
+        "number": deal.number or f"D-{deal.id}",
         "title": deal.title or "",
         "company_id": deal.company_id,
         "company_name": deal.company.name if deal.company_id else "",

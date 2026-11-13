@@ -10,9 +10,9 @@ import type { ProjectRowProblemsItem } from "./projectRowProblemsItem";
 import type { ProjectRowStep } from "./projectRowStep";
 
 export interface ProjectRow {
-  /** Номер проекта ПР-ГГГГ-NNN (тот же NNN, что у заявки). Пока в ERP нет Deal.number (ERP-09), BFF составляет его из года создания и id сделки */
+  /** Номер сделки из ERP (`Deal.number`; префиксы задаёт владелец в настройках нумерации), без номера — `D-<id>`. BFF его не составляет */
   number: string;
-  /** Номер заявки ЗВ-ГГГГ-NNN, из которой вырос проект */
+  /** Тот же номер сделки: заявка и проект — один объект с одним номером */
   request_number: string;
   /** Название проекта (сделки ERP); нет названия — название клиента */
   title: string;

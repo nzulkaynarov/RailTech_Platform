@@ -71,11 +71,11 @@ def test_orders_get_gapless_numbers_per_year(world):
     first = _create(world)
     assert first.status_code == 201, first.json()
     year = timezone.localdate().year
-    assert first.json()["number"] == f"ЗП-{year}-001" and first.json()["status"] == "draft"
-    assert _create(world).json()["number"] == f"ЗП-{year}-002"
+    assert first.json()["number"] == f"PO-{year}-001" and first.json()["status"] == "draft"
+    assert _create(world).json()["number"] == f"PO-{year}-002"
     # откат создания номер возвращает: отказавший запрос не сжигает NNN
     assert _create(world, [_line(world["mounting"], 1)]).status_code == 400
-    assert _create(world).json()["number"] == f"ЗП-{year}-003"
+    assert _create(world).json()["number"] == f"PO-{year}-003"
     log = first.json()["log"]
     assert [(entry["kind"], entry["by_name"]) for entry in log] == [("created", "Supply")]
 

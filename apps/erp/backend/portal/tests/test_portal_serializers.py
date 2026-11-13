@@ -69,15 +69,15 @@ def test_deal_ref_has_id_number_title(contract_world):
     assert_matches_contract(data, "DealRef")
 
 
-def test_deal_ref_stage_follows_the_deal_number(contract_world):
-    """0.12: подпись «Заявка» / «Проект» — из `stage`, Cabinet не разбирает префикс номера."""
+def test_deal_ref_stage_follows_the_deal(contract_world):
+    """0.12: подпись «Заявка» / «Проект» — из `stage`, Cabinet не разбирает префикс номера; стадия — поле сделки."""
     from sales.services import deal_numbers
 
     deal = fresh_deal(contract_world["main"].pk)
     assert DealRefSerializer(deal).data["stage"] == "request"
     assert deal_numbers.promote_to_project(deal)
     data = DealRefSerializer(deal).data
-    assert data["number"].startswith(f"{deal_numbers.PROJECT_PREFIX}-") and data["stage"] == "project"
+    assert data["number"].startswith("PRJ-") and data["stage"] == "project" and deal.is_project
     assert_matches_contract(data, "DealRef")
 
 

@@ -457,7 +457,7 @@ def exercise_all(client, world):
     requests_path = "/clients/{crm_client_id}/requests"
     made = hit("POST", requests_path, "/clients/8101/requests", 201, body=client_request_body(8111))
     again = hit("POST", requests_path, "/clients/8101/requests", 200, body=client_request_body(8111))
-    assert made == again and made["number"].startswith("ЗВ-")
+    assert made == again and made["number"].startswith("RQ-")
     hit("POST", requests_path, "/clients/999999/requests", 404, body=client_request_body(8112))
     # тот же Idempotency-Key, другое тело — 409 IDEMPOTENCY_CONFLICT, второй заявки нет
     same_key = str(uuid.uuid4())

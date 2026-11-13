@@ -582,7 +582,7 @@ def test_deal_refs_are_light_and_newest_first(world):
     rows = response.json()["results"]
     assert [row["id"] for row in rows] == [other.pk, world["deal"].pk]
     assert set(rows[0]) == {"id", "number", "created_at", "stage_code"} and rows[0]["stage_code"] == "CALCULATING"
-    assert rows[0]["number"] == other.number and other.number.startswith("ЗВ-")
+    assert rows[0]["number"] == other.number and other.number.startswith("RQ-")
 
     # отбор по номеру: префикс и ширина не важны (ПР — тот же NNN), не номер — пусто
     year, seq = other.number_year, other.number_seq

@@ -19,15 +19,24 @@ from typing import Optional
 from django.db import transaction
 from django.utils import timezone
 
+# Префиксы до 2026-11-13 (SPEC-v3 §2.2): выданные номера не меняются, поиск их находит. Новые — из схемы нумерации
+# («Настройки · Нумерация», виды REQ и PRJ, по умолчанию RQ и PRJ; задача «Н»).
 REQUEST_PREFIX = "ЗВ"
 PROJECT_PREFIX = "ПР"
-_WIDTH = 3
-_LATIN = {"zv": REQUEST_PREFIX, "pr": PROJECT_PREFIX}
-_QUERY = re.compile(r"(?P<prefix>[^\W\d_]{2})?[\s\-–—/]*(?P<year>\d{4})[\s\-–—/]+(?P<seq>\d{1,9})")
+_LEGACY = {"зв", "пр", "zv", "pr"}
+_QUERY = re.compile(r"(?P<prefix>[^\W\d_]{1,8})?[\s\-–—/]*(?P<year>\d{4})[\s\-–—/]+(?P<seq>\d{1,9})")
+
+
+def _label(kind: str) -> str:
+    from crm.services.numbering import type_label
+
+    return type_label(kind)
 
 
 def format_number(prefix: str, year: int, seq: int) -> str:
-    return f"{prefix}-{year:04d}-{seq:0{_WIDTH}d}"
+    from crm.services.numbering import own_format_number
+
+    return own_format_number(prefix, year, seq)
 
 
 def _next_seq(year: int) -> int:
@@ -47,34 +56,39 @@ def assign(deal) -> None:
     year = timezone.localdate().year
     seq = _next_seq(year)
     deal.number_year, deal.number_seq = year, seq
-    deal.number = format_number(REQUEST_PREFIX, year, seq)
+    deal.number = format_number(_label("REQ"), year, seq)
 
 
 def promote_to_project(deal) -> bool:
-    """ЗВ → ПР с тем же NNN (КП принято клиентом). Возвращает, изменился ли номер; сохраняет только поле номера."""
-    if not deal.number_seq or not deal.number_year:
-        return False
-    number = format_number(PROJECT_PREFIX, deal.number_year, deal.number_seq)
-    if deal.number == number:
-        return False
-    deal.number = number
-    type(deal).objects.filter(pk=deal.pk).update(number=number)
-    return True
+    """Заявка → проект (КП принято клиентом): `is_project` и номер ПР с тем же NNN. Возвращает, изменился ли номер;
+    сохраняет только эти поля."""
+    fields: dict = {}
+    if not deal.is_project:
+        deal.is_project = fields["is_project"] = True
+    number = (
+        format_number(_label("PRJ"), deal.number_year, deal.number_seq) if deal.number_seq and deal.number_year else ""
+    )
+    renumbered = bool(number) and deal.number != number
+    if renumbered:
+        deal.number = fields["number"] = number
+    if fields:
+        type(deal).objects.filter(pk=deal.pk).update(**fields)
+    return renumbered
 
 
-def stage_of(number: str) -> str:
-    """Стадия сделки по её номеру — `request` (заявка, до принятия КП) или `project`: единственное место, где смысл
-    префикса известен (здесь же он выдаётся), — экраны и портал читают стадию отсюда, а не разбирают номер сами.
-    Номер без префикса заявки (старые сделки `D-<id>`) — проект, как раньше."""
-    return "request" if (number or "").startswith(f"{REQUEST_PREFIX}-") else "project"
+def stage_of(deal) -> str:
+    """Стадия сделки — `request` (заявка, до принятия КП) или `project`: полем `is_project`, а не по префиксу номера
+    (префиксы задаёт владелец в настройках нумерации, задача «Н»)."""
+    return "project" if deal.is_project else "request"
 
 
 def parse_query(text: str) -> Optional[tuple[int, int]]:
-    """`ЗВ-2026-104`, `ПР-2026-104`, `zv 2026 104`, `2026-104` → (2026, 104); не номер — None."""
+    """`RQ-2026-104`, `PRJ-2026-104`, `ЗВ-2026-104`, `zv 2026 104`, `2026-104` → (2026, 104); не номер сделки — None.
+    Префикс — нынешние метки заявки и проекта из схемы или прежние ЗВ/ПР; регистр не важен."""
     match = _QUERY.fullmatch((text or "").strip())
     if match is None:
         return None
     prefix = (match["prefix"] or "").casefold()
-    if prefix and _LATIN.get(prefix, prefix.upper()) not in (REQUEST_PREFIX, PROJECT_PREFIX):
+    if prefix and prefix not in _LEGACY | {_label("REQ").casefold(), _label("PRJ").casefold()}:
         return None
     return int(match["year"]), int(match["seq"])

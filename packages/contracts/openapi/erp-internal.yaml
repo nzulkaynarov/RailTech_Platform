@@ -3,7 +3,7 @@
 openapi: 3.0.3
 info:
   title: RailTech Platform ERP — Internal API (ERP SPA)
-  version: 1.7.0
+  version: 1.8.0
   description: 'Внутренний API ERP для ERP SPA (бэк-офис), пространство `/api/v1/` (CONTRACTS §1). Файл генерируется из схемы
     бэкенда — это не отдельное описание, а её срез; расхождение с кодом невозможно: CI перегенерирует схему и падает при diff.'
   contact:
@@ -12492,7 +12492,7 @@ paths:
         name: deal_id
         schema:
           type: integer
-        description: Одна сделка (точный поиск по номеру ПР)
+        description: Одна сделка по id
       - in: query
         name: limit
         schema:
@@ -12503,6 +12503,11 @@ paths:
         schema:
           type: boolean
         description: Только проекты, где сотрудник — менеджер или взявший в работу
+      - in: query
+        name: number
+        schema:
+          type: string
+        description: Одна сделка по номеру (год и NNN, префикс не важен)
       - in: query
         name: offset
         schema:
@@ -32930,7 +32935,10 @@ components:
       properties:
         deal_id:
           type: integer
-          description: Сделка ERP; номер ПР-ГГГГ-NNN составляет BFF (B-010)
+          description: Сделка ERP
+        number:
+          type: string
+          description: Номер сделки (`Deal.number`), без номера — `D-<id>`; BFF его не составляет
         title:
           type: string
         company_id:
@@ -33038,6 +33046,7 @@ components:
       - invoices
       - journal
       - manager
+      - number
       - problems
       - quote
       - responsible
@@ -33169,7 +33178,10 @@ components:
       properties:
         deal_id:
           type: integer
-          description: Сделка ERP; номер ПР-ГГГГ-NNN составляет BFF (B-010)
+          description: Сделка ERP
+        number:
+          type: string
+          description: Номер сделки (`Deal.number`), без номера — `D-<id>`; BFF его не составляет
         title:
           type: string
         company_id:
@@ -33227,6 +33239,7 @@ components:
       - documents
       - due_date
       - manager
+      - number
       - problems
       - responsible
       - step
@@ -34704,9 +34717,12 @@ components:
           type: integer
         deal_title:
           type: string
+        deal_number:
+          type: string
+          description: Номер сделки (`Deal.number`), без номера — `D-<id>`; BFF его не составляет
         deal_year:
           type: integer
-          description: 'Год создания сделки: из него и id BFF составляет номер ЗВ/ПР (ERP-09).'
+          description: 'Год создания сделки (устарело: номер — `deal_number`)'
         client_id:
           type: integer
         client_name:
@@ -34807,6 +34823,7 @@ components:
       - currency
       - days_overdue
       - deal_id
+      - deal_number
       - deal_title
       - deal_year
       - display_status
@@ -34986,9 +35003,12 @@ components:
           type: integer
         deal_title:
           type: string
+        deal_number:
+          type: string
+          description: Номер сделки (`Deal.number`), без номера — `D-<id>`; BFF его не составляет
         deal_year:
           type: integer
-          description: 'Год создания сделки: из него и id BFF составляет номер ЗВ/ПР (ERP-09).'
+          description: 'Год создания сделки (устарело: номер — `deal_number`)'
         client_id:
           type: integer
         client_name:
@@ -35040,6 +35060,7 @@ components:
       - currency
       - days_overdue
       - deal_id
+      - deal_number
       - deal_title
       - deal_year
       - display_status

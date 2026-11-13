@@ -17,6 +17,20 @@ from app.clients.erp_company import media_path
 from app.schemas_dictionaries import LocalizedName, localized
 
 DocumentKind = Literal["quote", "contract", "invoice", "act", "letter"]
+NumberingKind = Literal[
+    "request",
+    "project",
+    "quote",
+    "contract",
+    "invoice",
+    "act",
+    "receipt",
+    "delivery_note",
+    "purchase_order",
+    "shipment",
+    "partner_contract",
+    "letter",
+]
 ResetPeriod = Literal["never", "yearly", "monthly"]
 ReferenceKind = Literal["countries", "currencies", "units", "delivery-basis"]
 RequestStatus = Literal["pending", "approved", "rejected"]
@@ -46,21 +60,22 @@ TEMPLATE_KIND_FROM_ERP: dict[str, TemplateKind] = {
     "DELIVERY_NOTE": "delivery_note",
 }
 
-# Вид документа контракта <-> код ERP.
-KIND_TO_ERP: dict[str, str] = {
-    "quote": "KP",
-    "contract": "CT",
-    "invoice": "INV",
-    "act": "ACT",
-    "letter": "DOC",
-}
-KIND_FROM_ERP: dict[str, DocumentKind] = {
+# Вид номера контракта <-> код ERP (все виды номеров ERP, задача «Н»).
+KIND_FROM_ERP: dict[str, NumberingKind] = {
+    "REQ": "request",
+    "PRJ": "project",
     "KP": "quote",
     "CT": "contract",
     "INV": "invoice",
     "ACT": "act",
+    "RCP": "receipt",
+    "DN": "delivery_note",
+    "PO": "purchase_order",
+    "SHP": "shipment",
+    "PART": "partner_contract",
     "DOC": "letter",
 }
+KIND_TO_ERP: dict[str, str] = {kind: code for code, kind in KIND_FROM_ERP.items()}
 MARGIN_FIELDS = ("default_margin_percent", "min_margin_percent", "target_margin_percent")
 COST_MARGIN_GROUP = "cost_margin"
 
@@ -328,7 +343,7 @@ class NumberingPreviewIn(BaseModel):
 
 
 class NumberingPreviewItem(BaseModel):
-    kind: DocumentKind
+    kind: NumberingKind
     label: str
     number: str
 
