@@ -102,3 +102,10 @@ class ConsoleOpenIn(BaseModel):
     console: str = Field(
         pattern=r"^[a-z][a-z0-9-]{1,31}$", description="Ключ консоли: litellm, erp и т. п."
     )
+
+
+class ContactRevealIn(BaseModel):
+    """Показ телефона и почты человека контрагента в «Органайзер · Люди» (FR-11): кто чей."""
+
+    contact: str = Field(pattern=r"^[0-9]{1,18}$", description="Id контакта ERP строкой")
+    name: str = Field(min_length=1, max_length=255, description="Имя человека — для строки журнала")

@@ -108,6 +108,8 @@ import type {
   CompanyProfileUpdate,
   ConversationCard,
   ConversationThread,
+  CounterpartyContacts,
+  CounterpartyPersonPage,
   CreatedId,
   CsrfFailedResponse,
   DeputyUpdate,
@@ -258,6 +260,7 @@ import type {
   ListCatalogItemsParams,
   ListCatalogSuppliersParams,
   ListCategoryRequestsParams,
+  ListCounterpartyPeopleParams,
   ListCrmClientsParams,
   ListCrmLeadsParams,
   ListDictionaryItemsParams,
@@ -48770,6 +48773,250 @@ export const useRejectCatalogProposal = <
   TContext
 > => {
   return useMutation(getRejectCatalogProposalMutationOptions(options), queryClient);
+};
+
+export const getListCounterpartyPeopleUrl = (params?: ListCounterpartyPeopleParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/people/contacts?${stringifiedParams}`
+    : `/api/v1/people/contacts`;
+};
+
+/**
+ * ERP `parties/people/` (FR-11): контакты клиентов своей компании (с контактами клиентов CRM) и партнёров (поставщики, изготовители, отношение «партнёр»). Своя компания не входит; компания и клиент, и поставщик — `client`. Раздел `chats.internal` — чтение.
+ * @summary Органайзер · Люди: контакты клиентов и партнёров
+ */
+export const listCounterpartyPeople = async (
+  params?: ListCounterpartyPeopleParams,
+  options?: Parameters<typeof http>[1],
+): Promise<CounterpartyPersonPage> => {
+  return http<CounterpartyPersonPage>(getListCounterpartyPeopleUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListCounterpartyPeopleQueryKey = (params?: ListCounterpartyPeopleParams) => {
+  return [`/api/v1/people/contacts`, ...(params ? [params] : [])] as const;
+};
+
+export const getListCounterpartyPeopleQueryOptions = <
+  TData = Awaited<ReturnType<typeof listCounterpartyPeople>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+>(
+  params?: ListCounterpartyPeopleParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCounterpartyPeople>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListCounterpartyPeopleQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listCounterpartyPeople>>> = ({ signal }) =>
+    listCounterpartyPeople(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listCounterpartyPeople>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListCounterpartyPeopleQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listCounterpartyPeople>>
+>;
+export type ListCounterpartyPeopleQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse
+>;
+
+export function useListCounterpartyPeople<
+  TData = Awaited<ReturnType<typeof listCounterpartyPeople>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+>(
+  params: undefined | ListCounterpartyPeopleParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCounterpartyPeople>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCounterpartyPeople>>,
+          TError,
+          Awaited<ReturnType<typeof listCounterpartyPeople>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCounterpartyPeople<
+  TData = Awaited<ReturnType<typeof listCounterpartyPeople>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+>(
+  params?: ListCounterpartyPeopleParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCounterpartyPeople>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCounterpartyPeople>>,
+          TError,
+          Awaited<ReturnType<typeof listCounterpartyPeople>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCounterpartyPeople<
+  TData = Awaited<ReturnType<typeof listCounterpartyPeople>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+>(
+  params?: ListCounterpartyPeopleParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCounterpartyPeople>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Органайзер · Люди: контакты клиентов и партнёров
+ */
+
+export function useListCounterpartyPeople<
+  TData = Awaited<ReturnType<typeof listCounterpartyPeople>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+>(
+  params?: ListCounterpartyPeopleParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCounterpartyPeople>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListCounterpartyPeopleQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getRevealCounterpartyContactsUrl = (id: CompanyItemRef) => {
+  return `/api/v1/people/contacts/${id}/reveal`;
+};
+
+/**
+ * FR-11, NAVIGATION «Люди»: телефон и почта открываются по нажатию, показ пишется в журнал CRM (`contact.reveal` — кто, когда, чьи). Сначала запись в журнал: не записалась — контакты не отдаются (503). ERP `parties/people/{id}/` — в тех же границах, что список. Раздел `chats.internal` — чтение.
+ * @summary Органайзер · Люди: показать телефон и почту человека
+ */
+export const revealCounterpartyContacts = async (
+  id: CompanyItemRef,
+  options?: Parameters<typeof http>[1],
+): Promise<CounterpartyContacts> => {
+  return http<CounterpartyContacts>(getRevealCounterpartyContactsUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getRevealCounterpartyContactsMutationKey = () =>
+  ["revealCounterpartyContacts"] as const;
+
+export const getRevealCounterpartyContactsMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof revealCounterpartyContacts>>,
+    TError,
+    RevealCounterpartyContactsMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof revealCounterpartyContacts>>,
+  TError,
+  RevealCounterpartyContactsMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRevealCounterpartyContactsMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof revealCounterpartyContacts>>,
+    RevealCounterpartyContactsMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return revealCounterpartyContacts(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RevealCounterpartyContactsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof revealCounterpartyContacts>>
+>;
+
+export type RevealCounterpartyContactsMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+export type RevealCounterpartyContactsMutationVariables = { id: CompanyItemRef };
+
+/**
+ * @summary Органайзер · Люди: показать телефон и почту человека
+ */
+export const useRevealCounterpartyContacts = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof revealCounterpartyContacts>>,
+      TError,
+      RevealCounterpartyContactsMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof revealCounterpartyContacts>>,
+  TError,
+  RevealCounterpartyContactsMutationVariables,
+  TContext
+> => {
+  return useMutation(getRevealCounterpartyContactsMutationOptions(options), queryClient);
 };
 
 export const getListCatalogSuppliersUrl = (params?: ListCatalogSuppliersParams) => {

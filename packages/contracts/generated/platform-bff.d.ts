@@ -6762,6 +6762,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/people/contacts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Органайзер · Люди: контакты клиентов и партнёров
+     * @description ERP `parties/people/` (FR-11): контакты клиентов своей компании (с контактами клиентов CRM) и партнёров (поставщики, изготовители, отношение «партнёр»). Своя компания не входит; компания и клиент, и поставщик — `client`. Раздел `chats.internal` — чтение.
+     */
+    get: operations["listCounterpartyPeople"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/people/contacts/{id}/reveal": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Органайзер · Люди: показать телефон и почту человека
+     * @description FR-11, NAVIGATION «Люди»: телефон и почта открываются по нажатию, показ пишется в журнал CRM (`contact.reveal` — кто, когда, чьи). Сначала запись в журнал: не записалась — контакты не отдаются (503). ERP `parties/people/{id}/` — в тех же границах, что список. Раздел `chats.internal` — чтение.
+     */
+    post: operations["revealCounterpartyContacts"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/erp/catalog/suppliers": {
     parameters: {
       query?: never;
@@ -14937,6 +14977,33 @@ export interface components {
       expiring_count: number;
       /** Format: date */
       nearest_valid_until: string | null;
+    };
+    /** @description Человек контрагента в списке «Люди»: имя, компания и должность видят все (NAVIGATION). Телефон и почта в список не входят — `has_*` говорит, есть ли они; открываются по одному человеку (`revealCounterpartyContacts`) с записью в журнал. */
+    CounterpartyPerson: {
+      id: components["schemas"]["CompanyItemRef"];
+      name: string;
+      position: string | null;
+      has_email: boolean;
+      has_phone: boolean;
+      is_primary: boolean;
+      company: components["schemas"]["CounterpartyRef"];
+      /** @enum {string} */
+      kind: "client" | "partner";
+    };
+    CounterpartyContacts: {
+      id: components["schemas"]["CompanyItemRef"];
+      phone: string | null;
+      email: string | null;
+    };
+    CounterpartyRef: {
+      id: components["schemas"]["CompanyItemRef"];
+      name: string;
+    };
+    CounterpartyPersonPage: {
+      items: components["schemas"]["CounterpartyPerson"][];
+      total: number;
+      page: number;
+      page_size: number;
     };
     SupplierPage: {
       items: components["schemas"]["SupplierRow"][];
@@ -28113,6 +28180,64 @@ export interface operations {
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
       409: components["responses"]["CatalogConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listCounterpartyPeople: {
+    parameters: {
+      query?: {
+        kind?: "client" | "partner";
+        /** @description Поиск по имени, компании, должности */
+        q?: string;
+        page?: number;
+        page_size?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CounterpartyPersonPage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  revealCounterpartyContacts: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Телефон и почта */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CounterpartyContacts"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
       503: components["responses"]["BackendUnavailable"];
     };
   };
