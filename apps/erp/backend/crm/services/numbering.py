@@ -53,7 +53,20 @@ DEFAULT_START_VALUE = 0
 # the call sites: each caller passes the doc's default label, but the scheme's editable
 # type_labels override it.
 # Latin by default (owner 2026-11-13, task «Н»): every number kind of ERP is editable in Settings · Numbering.
-DEFAULT_TYPE_LABELS = {"REQ": "RQ", "PRJ": "PRJ", "KP": "QT", "CT": "CT", "INV": "INV", "ACT": "ACT", "RCP": "RCP", "DN": "DN", "PO": "PO", "SHP": "SHP", "PART": "PA", "DOC": "DOC"}
+DEFAULT_TYPE_LABELS = {
+    "REQ": "RQ",
+    "PRJ": "PRJ",
+    "KP": "QT",
+    "CT": "CT",
+    "INV": "INV",
+    "ACT": "ACT",
+    "RCP": "RCP",
+    "DN": "DN",
+    "PO": "PO",
+    "SHP": "SHP",
+    "PART": "PA",
+    "DOC": "DOC",
+}
 
 
 @dataclass(frozen=True)
