@@ -104,11 +104,16 @@ test.describe("Склад и закупки: снабженец", () => {
     await expect(overdueRow.getByText("Просрочен · 3 дн.")).toBeVisible();
     await settledScreenshot(page, "stock-orders");
     await expectNoViolations(page, "заказы партнёрам");
-    await page.getByRole("button", { name: "Создать заказ" }).click();
-    const create = page.getByRole("dialog", { name: "Новый заказ партнёру" });
+    // новый заказ — страница с секциями (platform-frontend.md §4.1a)
+    await page.getByRole("link", { name: "Создать заказ" }).click();
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Новый заказ партнёру" }),
+    ).toBeVisible();
+    const create = page.getByRole("main");
     await create.getByRole("combobox", { name: "Партнёр" }).click();
     // Вариант списка партнёров (у ячейки таблицы тоже есть `title` с полным именем — UX-1c)
     await page.locator(".ant-select-dropdown").getByTitle("ООО «Вымышленная Сталь»").click();
+    await create.getByRole("button", { name: /^Строки/, expanded: false }).click();
     const product = create.getByRole("combobox", { name: "Товар, строка 1" });
     await product.click();
     await product.pressSequentially("перевод");
@@ -202,7 +207,7 @@ test.describe("Склад и закупки: снабженец", () => {
     await loginAndWait(page, "manager@demo.example");
     await spaGoto(page, "/erp/stock?view=orders");
     await expect(page.getByRole("heading", { level: 1, name: "Закупки" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Создать заказ" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Создать заказ" })).toHaveCount(0);
     await expect(
       page.getByRole("link", { name: new RegExp(`Просрочен заказ ${OVERDUE}`) }),
     ).toHaveCount(0);

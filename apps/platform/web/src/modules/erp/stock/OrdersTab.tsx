@@ -1,4 +1,4 @@
-import { Button, Card, Checkbox, Input, Select } from "antd";
+import { Card, Checkbox, Input, Select } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
@@ -13,7 +13,7 @@ import { QueryState } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { ORDER_STATUSES, useStateLabels } from "./api";
-import { OrderCreateModal } from "./OrderCreateModal";
+import { NEW_ORDER_PATH } from "./OrderCreatePage";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 
 /** Ширины колонок: номер, поставщик (гибкая), заявки, ожидается, статус, приёмка, [сумма], действие (UX-1c, S9) */
@@ -199,7 +199,6 @@ export function OrdersTab() {
   const labels = useStateLabels();
   const [params, setParams] = useSearchParams();
   const [q, setQ] = useState("");
-  const [creating, setCreating] = useState(false);
   const status = ORDER_STATUSES.find((s) => s === params.get("status"));
   const overdue = params.get("overdue") === "1";
   const query = useListSupplierOrders({
@@ -249,15 +248,9 @@ export function OrdersTab() {
             {t("orders.overdueOnly")}
           </Checkbox>
           {query.data?.rights.manage ? (
-            <Button
-              type="primary"
-              className="pf-stock-toolbar-action"
-              onClick={() => {
-                setCreating(true);
-              }}
-            >
+            <LinkButton type="primary" className="pf-stock-toolbar-action" to={NEW_ORDER_PATH}>
               {t("orders.create")}
-            </Button>
+            </LinkButton>
           ) : query.isPending ? (
             // До ответа право неизвестно: место кнопки держится, чтобы панель не переносилась, когда она появится (UX-1c, S10)
             <span className="pf-stock-toolbar-action pf-stock-action-slot" aria-hidden="true">
@@ -273,13 +266,7 @@ export function OrdersTab() {
                 text={t("orders.empty.text")}
                 action={
                   data.rights.manage ? (
-                    <Button
-                      onClick={() => {
-                        setCreating(true);
-                      }}
-                    >
-                      {t("orders.create")}
-                    </Button>
+                    <LinkButton to={NEW_ORDER_PATH}>{t("orders.create")}</LinkButton>
                   ) : undefined
                 }
               />
@@ -289,14 +276,6 @@ export function OrdersTab() {
           }
         </QueryState>
       </Card>
-      {creating ? (
-        <OrderCreateModal
-          prices={query.data?.rights.prices ?? false}
-          onClose={() => {
-            setCreating(false);
-          }}
-        />
-      ) : null}
     </>
   );
 }

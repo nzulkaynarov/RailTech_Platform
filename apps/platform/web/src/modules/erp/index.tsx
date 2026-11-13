@@ -7,6 +7,7 @@ import { CalcScreen } from "./calc/CalcScreen";
 import { RequestsScreen } from "./calc/RequestsScreen";
 import { CatalogScreen } from "./catalog/CatalogScreen";
 import { DocsScreen } from "./docs/DocsScreen";
+import { OrderCreatePage } from "./stock/OrderCreatePage";
 import { OrderScreen } from "./stock/OrderScreen";
 import { StockScreen } from "./stock/StockScreen";
 
@@ -47,7 +48,13 @@ export function Component() {
   if (match?.module.code === "erp" && match.section.key === "stock") {
     return (
       <RequireAccess rule={match.section.access}>
-        {match.objectId ? <OrderScreen number={match.objectId} /> : <StockScreen />}
+        {match.objectId === "new" ? (
+          <OrderCreatePage />
+        ) : match.objectId ? (
+          <OrderScreen number={match.objectId} />
+        ) : (
+          <StockScreen />
+        )}
       </RequireAccess>
     );
   }

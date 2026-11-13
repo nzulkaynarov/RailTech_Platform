@@ -188,7 +188,12 @@
     "done": "Draft {{number}} created",
     "productHint": "Type at least two letters of the name or article",
     "productSearching": "Searching…",
-    "productNone": "Nothing found"
+    "productNone": "Nothing found",
+    "sections": {
+      "supplier": "Partner and method",
+      "lines": "Lines"
+    },
+    "linesSummary": "Lines: {{count}}"
   },
   "order": {
     "title": "Partner order {{number}}",
