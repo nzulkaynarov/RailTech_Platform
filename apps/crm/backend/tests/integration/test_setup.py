@@ -37,7 +37,10 @@ def _code(client: TestClient) -> str:
 async def test_first_run_creates_admin_once(
     client: TestClient, sessions: async_sessionmaker[AsyncSession]
 ) -> None:
-    assert client.get("/api/v1/setup/state").json() == {"needs_setup": True}
+    assert client.get("/api/v1/setup/state").json() == {
+        "needs_setup": True,
+        "company_name": "RailTech",
+    }
     wrong = client.post("/api/v1/setup/admin", json={**BODY, "code": "WRONGCODE1234567"})
     assert wrong.status_code == 422
     assert wrong.json()["details"]["reason"] == "setup_code_invalid"
@@ -48,7 +51,10 @@ async def test_first_run_creates_admin_once(
     headers = {"Authorization": f"Bearer {ok.json()['access_token']}"}
     assert client.get("/api/v1/setup/checklist", headers=headers).status_code == 200
 
-    assert client.get("/api/v1/setup/state").json() == {"needs_setup": False}
+    assert client.get("/api/v1/setup/state").json() == {
+        "needs_setup": False,
+        "company_name": "RailTech",
+    }
     again = client.post("/api/v1/setup/admin", json={**BODY, "code": "ANYTHING12345678"})
     assert again.status_code == 409
     assert again.json()["details"]["reason"] == "setup_done"

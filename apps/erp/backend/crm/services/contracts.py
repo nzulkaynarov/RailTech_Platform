@@ -4,6 +4,7 @@ from django.db import transaction
 
 from accounts.models import CustomUser
 from core.audit import log_admin_action
+from core.currency import BASE_CURRENCY
 from crm.services.pdf_storage import save_rendered_pdf
 
 from ..constants import ContractStatusCode, QuoteStatusCode
@@ -212,7 +213,7 @@ def _render_contract_pdf(contract) -> None:
 
     # D1: shared 3-line VAT bridge. A contract stores only the gross `total_amount`, so the net/VAT
     # split is derived from the КП vat_rate (document_totals) — same block as КП/инвойс/акт.
-    ccy = contract.currency.code if contract.currency else "UZS"
+    ccy = contract.currency.code if contract.currency else BASE_CURRENCY
     totals = document_totals(
         ccy=ccy,
         vat_rate=contract.quote.vat_rate if contract.quote_id else None,

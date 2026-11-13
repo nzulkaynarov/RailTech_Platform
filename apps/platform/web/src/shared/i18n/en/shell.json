@@ -1,12 +1,12 @@
 {
-  "docTitle": "{{page}} — RailTech Platform",
+  "docTitle": "{{page}} — {{name}}",
   "soon": "Coming in the next update",
   "soonPilot": "Coming by the pilot",
   "skip": "Skip to content",
   "loading": "Loading…",
   "rail": {
     "label": "Modules",
-    "logo": "RT — RailTech Platform"
+    "logo": "{{initials}} — {{name}}"
   },
   "menu": {
     "nav": "Module sections",
@@ -105,7 +105,7 @@
   },
   "login": {
     "title": "Sign in to the Platform",
-    "lead": "The unified RailTech staff interface. Sign in with the email and password your administrator gave you.",
+    "lead": "The unified staff interface. Sign in with the email and password your administrator gave you.",
     "email": "Email",
     "password": "Password",
     "submit": "Sign in",

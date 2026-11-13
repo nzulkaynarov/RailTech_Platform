@@ -16,7 +16,7 @@ test.describe("вход", () => {
   test("вход → /dashboard/queue, сессия переживает перезагрузку", async ({ page }) => {
     await loginAndWait(page, "director@demo.example");
     await expect(page.getByRole("heading", { level: 1, name: "Задачи" })).toBeVisible();
-    await expect(page).toHaveTitle("Задачи — RailTech Platform");
+    await expect(page).toHaveTitle("Задачи — RailTech (демо)");
 
     await page.reload();
     await expect(page).toHaveURL(/\/dashboard\/queue$/);
