@@ -21,7 +21,8 @@ export const crm: ModuleConfig = {
       key: "clients",
       path: "/crm/clients",
       detail: "/crm/clients/:id",
-      access: { resource: "crm.clients" },
+      // 0.3 (FR-13): снабженец без `crm.clients` видит здесь партнёров каталога (`erp.stock`), клиентов — нет.
+      access: { anyOf: ["crm.clients", "erp.stock"] },
       actionTo: "/crm/leads",
     },
     { key: "requests", path: "/crm/requests", access: { resource: "crm.clients" } },

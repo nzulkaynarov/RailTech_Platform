@@ -65,7 +65,9 @@ const docs = (box: string): NavTarget => ({
   to: `/eds/documents?box=${box}`,
 });
 
-const REQUESTS: readonly NavTarget[] = [{ section: "erp.requests" }, { section: "crm.requests" }];
+// 0.3 плана 2026-11-12 (FR-7): «Заявки» — только расчёт ERP. Запасной адрес CRM (`crm.requests`) выручал менеджера без
+// `erp.calc`; теперь расчёт у менеджера есть, а делопроизводителю пункт вёл в «Нет доступа» — NAVIGATION ему «Операции» не даёт.
+const REQUESTS: readonly NavTarget[] = [{ section: "erp.requests" }];
 const PURCHASES: readonly NavTarget[] = [{ section: "erp.stock", to: "/erp/stock?view=orders" }];
 const INVOICES: readonly NavTarget[] = [{ section: "eds.payments" }];
 const PAY_REQUESTS: readonly NavTarget[] = [

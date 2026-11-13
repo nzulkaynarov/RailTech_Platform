@@ -32,7 +32,8 @@ export const eds: ModuleConfig = {
       key: "mail",
       path: "/eds/mail",
       detail: "/eds/mail/:id",
-      access: { resource: "crm.leads.triage", level: "full" },
+      // 0.3 (FR-10): и менеджер (`crm.leads`, свои письма), и директор (`crm.mail`, вся очередь без действий) — `MailScreen`.
+      access: { anyOf: ["crm.leads.triage", "crm.leads", "crm.mail"] },
       defaults: { panelOpen: false },
     },
     {

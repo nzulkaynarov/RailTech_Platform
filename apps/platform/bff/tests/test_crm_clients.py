@@ -40,7 +40,7 @@ async def test_reader_cannot_resend_the_invitation(web: Web, crm: CrmLeadsFake) 
 async def test_list_puts_recently_active_first(
     web: Web, crm: CrmLeadsFake, check: ContractChecker
 ) -> None:
-    await web.login(["SUPPLY"])
+    await web.login(["ENGINEER"])  # 0.3 (FR-13): у снабженца клиентов CRM больше нет
     response = check(await web.client.get(f"{BASE}?q=%20Демо%20"), "/crm/clients", "get")
 
     items = response.json()["items"]
@@ -194,7 +194,7 @@ async def test_card_shows_partners_waiting_for_the_managers_decision(
 ) -> None:
     """PART-CRM: партнёр ERP, похожий на клиента, ждёт подтверждения: карточка отдаёт его заявку."""
     crm.answer("GET", "clients/12", body=client_detail(12, partner_requests=[PARTNER_REQUEST]))
-    await web.login(["SUPPLY"])
+    await web.login(["ENGINEER"])  # 0.3 (FR-13): у снабженца клиентов CRM больше нет
 
     response = check(await web.client.get(f"{BASE}/12"), "/crm/clients/{id}", "get")
 
@@ -204,7 +204,7 @@ async def test_card_shows_partners_waiting_for_the_managers_decision(
 async def test_card_without_waiting_partners_has_an_empty_list(
     web: Web, crm: CrmLeadsFake, check: ContractChecker
 ) -> None:
-    await web.login(["SUPPLY"])
+    await web.login(["ENGINEER"])  # 0.3 (FR-13): у снабженца клиентов CRM больше нет
     response = check(await web.client.get(f"{BASE}/12"), "/crm/clients/{id}", "get")
     assert response.json()["partner_requests"] == []
 

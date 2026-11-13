@@ -148,7 +148,12 @@ SUPPLY_PERMISSIONS = (
 @pytest.mark.parametrize(
     ("platform_role", "role", "permissions"),
     [
-        ("MANAGER", "backoffice", ("deal.manage", "quote.send", "finance.view")),
+        # 0.3 (FR-7): менеджер ведёт расчёт и КП — `erp.calc: full`
+        (
+            "MANAGER",
+            "backoffice",
+            ("deal.manage", "quote.build", "quote.edit_pricing", "quote.send", "finance.view"),
+        ),
         ("SUPPLY", "backoffice", SUPPLY_PERMISSIONS),
         (
             "ACCOUNTANT",
