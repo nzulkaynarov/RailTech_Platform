@@ -6762,6 +6762,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/eds/addressees": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Письмо: адресат из контрагентов
+     * @description ERP `parties/organizations/` (пункт «Ш» плана 2026-11-12): клиенты своей компании и партнёры по названию или ИНН, первые 10. Название, ИНН, общая почта и контактное лицо организации — реквизиты для письма; своя компания не входит. Ручной ввод адресата остаётся. Право `eds.memo.create` (полный доступ) — как у создания документа.
+     */
+    get: operations["searchEdsAddressees"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/people/contacts": {
     parameters: {
       query?: never;
@@ -15009,6 +15029,19 @@ export interface components {
       expiring_count: number;
       /** Format: date */
       nearest_valid_until: string | null;
+    };
+    /** @description Организация-контрагент для поля «Организация» письма; `attention` — контактное лицо для строки «Кому». */
+    EdsAddressee: {
+      id: components["schemas"]["CompanyItemRef"];
+      name: string;
+      inn: string | null;
+      email: string | null;
+      attention: string | null;
+      /** @enum {string} */
+      kind: "client" | "partner";
+    };
+    EdsAddresseeList: {
+      items: components["schemas"]["EdsAddressee"][];
     };
     /** @description Человек контрагента в списке «Люди»: имя, компания и должность видят все (NAVIGATION). Телефон и почта в список не входят — `has_*` говорит, есть ли они; открываются по одному человеку (`revealCounterpartyContacts`) с записью в журнал. */
     CounterpartyPerson: {
@@ -28213,6 +28246,32 @@ export interface operations {
       404: components["responses"]["NotFound"];
       409: components["responses"]["CatalogConflict"];
       503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  searchEdsAddressees: {
+    parameters: {
+      query: {
+        /** @description Часть названия или ИНН */
+        q: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsAddresseeList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
     };
   };
   listCounterpartyPeople: {

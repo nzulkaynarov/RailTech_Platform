@@ -144,7 +144,7 @@ SPECTACULAR_SETTINGS = {
         "Supports deal lifecycle management, quoting, product catalog (PIM), "
         "Excel imports, and real-time notifications via WebSocket."
     ),
-    "VERSION": "1.8.0",
+    "VERSION": "1.11.0",
     "CONTACT": {"name": "ERP API Support", "email": "support@example.com"},
     "LICENSE": {"name": "Proprietary"},
     "SERVE_INCLUDE_SCHEMA": False,
@@ -185,6 +185,8 @@ SPECTACULAR_SETTINGS = {
         # D2-3: «Номенклатура и поставщики» — одноимённые поля `kind` и `unit` у разных схем.
         "DeskItemKindEnum": ["stock", "on_order", "service_fixed", "service_milestones", "service_time"],
         "BrigadeKindEnum": ["brigade", "person", "subcontractor"],
+        # «Люди» и адресат письма («Ш»): клиент или партнёр — одно перечисление на оба ответа.
+        "DeskPersonKindEnum": ["client", "partner"],
         "TechDocKindEnum": ["tz", "drawing", "certificate", "pnr", "other"],
         "CrewRateUnitEnum": ["day", "hour"],
         # CAT-1: источник цены поставщика и поле предложения изменений карточки.

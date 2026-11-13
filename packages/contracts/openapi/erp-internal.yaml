@@ -3,7 +3,7 @@
 openapi: 3.0.3
 info:
   title: RailTech Platform ERP — Internal API (ERP SPA)
-  version: 1.8.0
+  version: 1.11.0
   description: 'Внутренний API ERP для ERP SPA (бэк-офис), пространство `/api/v1/` (CONTRACTS §1). Файл генерируется из схемы
     бэкенда — это не отдельное описание, а её срез; расхождение с кодом невозможно: CI перегенерирует схему и падает при diff.'
   contact:
@@ -17269,6 +17269,41 @@ paths:
           $ref: '#/components/responses/UnauthorizedResponse'
         '403':
           $ref: '#/components/responses/ForbiddenResponse'
+  /api/v1/parties/organizations/:
+    get:
+      operationId: parties_organizations_list
+      description: 'Клиенты своей компании и партнёры для поля «Организация» письма: поиск по названию и ИНН, в ответе ИНН,
+        общая почта и контактное лицо.'
+      summary: Search counterparty organizations
+      parameters:
+      - in: query
+        name: page
+        schema:
+          type: integer
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Поиск по названию и ИНН
+      tags:
+      - Parties
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDeskOrganizationPageList'
+          description: ''
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
   /api/v1/parties/people/:
     get:
       operationId: parties_people_list
@@ -25340,6 +25375,54 @@ components:
       required:
       - id
       - name
+    DeskOrganization:
+      type: object
+      description: Организация-контрагент для поля «Организация» письма (пункт «Ш»).
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        inn:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+          description: Общая почта организации (`Company.email`)
+        contact_person:
+          type: string
+          nullable: true
+          description: Контактное лицо — для строки «Кому»
+        kind:
+          $ref: '#/components/schemas/DeskPersonKindEnum'
+      required:
+      - contact_person
+      - email
+      - id
+      - inn
+      - kind
+      - name
+    DeskOrganizationPage:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          nullable: true
+        previous:
+          type: string
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeskOrganization'
+      required:
+      - count
+      - next
+      - previous
+      - results
     DeskOrigin:
       type: object
       properties:
@@ -29659,6 +29742,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DeskOfferHistoryRow'
+    PaginatedDeskOrganizationPageList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeskOrganizationPage'
     PaginatedDeskPartnerApplicationListResponseList:
       type: object
       required:
