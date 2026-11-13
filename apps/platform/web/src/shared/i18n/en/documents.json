@@ -122,7 +122,8 @@
       "deal": "Project",
       "created": "Created",
       "updated": "Changed",
-      "version": "Revision"
+      "version": "Revision",
+      "watchers": "Copy to"
     },
     "toDirector": "Director",
     "text": "Text",
@@ -286,7 +287,12 @@
       "plain": "You → Director",
       "withAmount": "You → Director → Accountant (amount given)",
       "letter": "No approval: the letter is registered at once",
-      "letterHandover": "You → records clerk: they register the outgoing number and send it"
+      "letterHandover": "You → records clerk: they register the outgoing number and send it",
+      "approvers": "Approvers",
+      "approversHint": "Approve before the route steps, in the order chosen.",
+      "watchers": "Copy to",
+      "watchersHint": "See the document but do not decide.",
+      "choosePeople": "Choose employees"
     },
     "consequence": {
       "memo": [

@@ -282,8 +282,9 @@ async def test_resolution_and_draft_need_their_sections_before_eds(web: Web, eds
     assert (await web.login(["MANAGER"])).status_code == 200
     draft = await web.send("PUT", f"{CARD}/resolution-draft", json={"kind": None})
     assert draft.status_code == 403
-    assert (await web.client.get(f"{BASE}/staff")).status_code == 403
     assert [c for c in eds.calls if "exchange" not in c.url.path] == []
+    # Пункт 1.6: менеджер — автор документов (`eds.memo.create`) — видит список сотрудников
+    assert (await web.client.get(f"{BASE}/staff")).status_code != 403
 
 
 async def test_track_mismatch_from_eds_is_a_conflict(web: Web, eds: EdsFake) -> None:

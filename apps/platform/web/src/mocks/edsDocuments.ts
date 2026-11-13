@@ -1,6 +1,7 @@
 import { HttpResponse, http } from "msw";
 
 import type {
+  EdsPerson,
   EdsDealOptions,
   EdsDocument,
   EdsDocumentIn,
@@ -26,6 +27,7 @@ import {
   readEds,
   writeEds,
 } from "./fixtures/edsDocuments";
+import { DEMO_USERS } from "./fixtures/users";
 import {
   closeReplyInstructions,
   noticeMailFailed,
@@ -153,6 +155,12 @@ function page(rows: EdsDocumentRow[], cursor: string | null, limit: number): Eds
   return { items, next_cursor: end < rows.length ? String(end) : null };
 }
 
+/** Сотрудник по `crm_user_id` для маршрута и копий (пункт 1.6). */
+function staffPerson(id: string): EdsPerson {
+  const found = DEMO_USERS.find((u) => u.id === id);
+  return found ? personOf(found.id) : { crm_user_id: Number(id) || 0, full_name: `№${id}` };
+}
+
 function stepsOf(doc: MockDocument): EdsRouteStep[] {
   const withAccountant = doc.kind === "memo" && doc.amount !== null;
   const director = (status: EdsRouteStep["status"]): EdsRouteStep => {
@@ -173,9 +181,20 @@ function stepsOf(doc: MockDocument): EdsRouteStep[] {
     comment: null,
   });
   const tail = (status: EdsRouteStep["status"]) => (withAccountant ? [accountant(status)] : []);
+  // Пункт 1.6: согласующие автора — перед директором; в моке все уже согласовали, кроме случая «на согласовании»
+  const extra = (status: EdsRouteStep["status"]): EdsRouteStep[] =>
+    (doc.approvers ?? []).map((id, index) => ({
+      label: "Согласующий",
+      status: status === "current" && index > 0 ? "pending" : status,
+      decided_by: status === "approved" ? staffPerson(id) : null,
+      decided_at: status === "approved" ? EDS_MOCK_NOW : null,
+      comment: null,
+    }));
   switch (doc.status) {
     case "on_approval":
-      return [director("current"), ...tail("pending")];
+      return (doc.approvers ?? []).length > 0
+        ? [...extra("current"), director("pending"), ...tail("pending")]
+        : [director("current"), ...tail("pending")];
     case "to_accountant":
       return [director("approved"), accountant("current")];
     case "approved":
@@ -206,6 +225,8 @@ function detail(doc: MockDocument, state: EdsMock, me: string): EdsDocument {
     text: doc.text,
     author: personOf(doc.ownerId),
     addressee: null,
+    approvers: (doc.approvers ?? []).map(staffPerson),
+    watchers: (doc.watchers ?? []).map(staffPerson),
     amount: doc.amount,
     due_date: doc.due_date,
     files: doc.file_ids.flatMap((id) => {
@@ -624,6 +645,9 @@ export const edsDocumentsHandlers = [
         writeEds(state);
         return backendDown(doc, true);
       }
+      // пункт 1.6: маршрут от автора — при отправке
+      if (body.approvers) doc.approvers = body.approvers;
+      if (body.watchers) doc.watchers = body.watchers;
       submitDocument(doc, state, body.send === true);
     }
     writeEds(state);
@@ -688,6 +712,9 @@ export const edsDocumentsHandlers = [
           created: false,
         });
       }
+      // пункт 1.6: маршрут от автора — при отправке
+      if (body.approvers) doc.approvers = body.approvers;
+      if (body.watchers) doc.watchers = body.watchers;
       submitDocument(doc, state, body.send === true);
     }
     writeEds(state);

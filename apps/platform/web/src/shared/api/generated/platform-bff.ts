@@ -37367,7 +37367,7 @@ export const getListEdsStaffUrl = () => {
 };
 
 /**
- * EDS `GET /employees` (права `letters.register` или `letters.resolve`): активные сотрудники по имени. Раздел `eds.inbox.register` или `eds.inbox` — полный, или `admin` — полный (общие шаблоны резолюций, EDS-REG), или `eds.signing.manage` — полный (выбрать сотрудника для полномочия подписи, SIGN-2). Исполнитель резолюции делопроизводства — любой активный сотрудник, без проверки зоны (SPEC-v3 §3.2a п. 2).
+ * EDS `GET /employees` (права `letters.register` или `letters.resolve`): активные сотрудники по имени. Раздел `eds.inbox.register` или `eds.inbox` — полный, или `admin` — полный (общие шаблоны резолюций, EDS-REG), или `eds.signing.manage` — полный (выбрать сотрудника для полномочия подписи, SIGN-2), или `eds.memo.create` — полный (согласующие и получатели копии документа, пункт 1.6). Исполнитель резолюции делопроизводства — любой активный сотрудник, без проверки зоны (SPEC-v3 §3.2a п. 2).
  * @summary EDS · Активные сотрудники: адресат, исполнитель, «ознакомить» (P8b)
  */
 export const listEdsStaff = async (options?: Parameters<typeof http>[1]): Promise<EdsStaffList> => {

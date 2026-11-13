@@ -122,7 +122,8 @@
       "deal": "Loyiha",
       "created": "Yaratilgan",
       "updated": "O‘zgartirilgan",
-      "version": "Tahrir"
+      "version": "Tahrir",
+      "watchers": "Nusxa"
     },
     "toDirector": "Direktor",
     "text": "Matn",
@@ -286,7 +287,12 @@
       "plain": "Siz → Direktor",
       "withAmount": "Siz → Direktor → Buxgalter (summa bor)",
       "letter": "Kelishuvsiz: xat darhol ro‘yxatdan o‘tadi",
-      "letterHandover": "Siz → ish yurituvchi: u ИСХ ni ro‘yxatga oladi va manzilga yuboradi"
+      "letterHandover": "Siz → ish yurituvchi: u ИСХ ni ro‘yxatga oladi va manzilga yuboradi",
+      "approvers": "Kelishuvchilar",
+      "approversHint": "Marshrut bosqichlaridan oldin, tanlangan tartibda kelishadi.",
+      "watchers": "Nusxa oluvchilar",
+      "watchersHint": "Hujjatni ko‘radi, lekin qaror qilmaydi.",
+      "choosePeople": "Xodimlarni tanlang"
     },
     "consequence": {
       "memo": [

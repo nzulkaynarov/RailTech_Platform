@@ -2103,6 +2103,20 @@ export const getCreateEdsDocumentResponseMock = (
     full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   },
   addressee: faker.helpers.arrayElement([{ ...getCreateEdsDocumentResponseEdsPersonMock() }, null]),
+  approvers: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      crm_user_id: faker.number.int(),
+      full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    })),
+    undefined,
+  ]),
+  watchers: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      crm_user_id: faker.number.int(),
+      full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    })),
+    undefined,
+  ]),
   amount: faker.helpers.arrayElement([{ ...getCreateEdsDocumentResponseEdsMoneyMock() }, null]),
   due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
   files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -2366,6 +2380,20 @@ export const getGetEdsDocumentResponseMock = (
     full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   },
   addressee: faker.helpers.arrayElement([{ ...getGetEdsDocumentResponseEdsPersonMock() }, null]),
+  approvers: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      crm_user_id: faker.number.int(),
+      full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    })),
+    undefined,
+  ]),
+  watchers: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      crm_user_id: faker.number.int(),
+      full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    })),
+    undefined,
+  ]),
   amount: faker.helpers.arrayElement([{ ...getGetEdsDocumentResponseEdsMoneyMock() }, null]),
   due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
   files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -2623,6 +2651,20 @@ export const getUpdateEdsDocumentResponseMock = (
     full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   },
   addressee: faker.helpers.arrayElement([{ ...getUpdateEdsDocumentResponseEdsPersonMock() }, null]),
+  approvers: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      crm_user_id: faker.number.int(),
+      full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    })),
+    undefined,
+  ]),
+  watchers: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      crm_user_id: faker.number.int(),
+      full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    })),
+    undefined,
+  ]),
   amount: faker.helpers.arrayElement([{ ...getUpdateEdsDocumentResponseEdsMoneyMock() }, null]),
   due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
   files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -6466,6 +6508,20 @@ export const getRequestEdsDocumentRegistrationResponseMock = (
     { ...getRequestEdsDocumentRegistrationResponseEdsPersonMock() },
     null,
   ]),
+  approvers: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      crm_user_id: faker.number.int(),
+      full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    })),
+    undefined,
+  ]),
+  watchers: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      crm_user_id: faker.number.int(),
+      full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    })),
+    undefined,
+  ]),
   amount: faker.helpers.arrayElement([
     { ...getRequestEdsDocumentRegistrationResponseEdsMoneyMock() },
     null,
@@ -6744,6 +6800,20 @@ export const getSendEdsDocumentResponseMock = (
     full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   },
   addressee: faker.helpers.arrayElement([{ ...getSendEdsDocumentResponseEdsPersonMock() }, null]),
+  approvers: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      crm_user_id: faker.number.int(),
+      full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    })),
+    undefined,
+  ]),
+  watchers: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      crm_user_id: faker.number.int(),
+      full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    })),
+    undefined,
+  ]),
   amount: faker.helpers.arrayElement([{ ...getSendEdsDocumentResponseEdsMoneyMock() }, null]),
   due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
   files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -7007,6 +7077,20 @@ export const getSignEdsDocumentResponseMock = (
     full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   },
   addressee: faker.helpers.arrayElement([{ ...getSignEdsDocumentResponseEdsPersonMock() }, null]),
+  approvers: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      crm_user_id: faker.number.int(),
+      full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    })),
+    undefined,
+  ]),
+  watchers: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      crm_user_id: faker.number.int(),
+      full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    })),
+    undefined,
+  ]),
   amount: faker.helpers.arrayElement([{ ...getSignEdsDocumentResponseEdsMoneyMock() }, null]),
   due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
   files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({

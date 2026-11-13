@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Button, Card, Table } from "antd";
+import { Button, Card } from "antd";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -25,7 +25,8 @@ import {
   shortType,
   subscriberName,
 } from "./format";
-import { BusSourcesNote, FilterSelect, ScrollRegion } from "./parts";
+import { BusSourcesNote, FilterSelect } from "./parts";
+import { DataTable } from "../../../shared/ui/DataTable/DataTable";
 
 const PAGE = 50;
 
@@ -153,29 +154,34 @@ export function InboxView({ selectedKey, onOpen }: InboxViewProps) {
     );
   } else {
     body = (
-      <ScrollRegion label={caption}>
-        <Table<BusInboxEntry>
-          rowKey={(e) => inboxKey(e)}
-          dataSource={items}
-          pagination={false}
-          size="middle"
-          aria-label={caption}
-          rowClassName={(e) => (inboxKey(e) === selectedKey ? "pf-bus-row-selected" : "")}
+      <>
+        <DataTable<BusInboxEntry>
+          tableId="admin.bus.inbox"
+          caption={caption}
+          scrollLabel={caption}
+          rows={items}
+          rowKey={inboxKey}
+          rowAttrs={(row) => ({
+            className: inboxKey(row) === selectedKey ? "pf-bus-row-selected" : "",
+          })}
           columns={[
             {
-              title: t("inboxView.columns.time"),
-              key: "time",
-              render: (_, e) => <span className="pf-num">{date(e.received_at, "datetime")}</span>,
+              id: "time",
+              header: t("inboxView.columns.time"),
+              width: null,
+              cell: (e) => <span className="pf-num">{date(e.received_at, "datetime")}</span>,
             },
             {
-              title: t("inboxView.columns.domain"),
-              key: "domain",
-              render: (_, e) => domainName(t, e.domain),
+              id: "domain",
+              header: t("inboxView.columns.domain"),
+              width: null,
+              cell: (e) => domainName(t, e.domain),
             },
             {
-              title: t("inboxView.columns.event"),
-              key: "event",
-              render: (_, e) => (
+              id: "event",
+              header: t("inboxView.columns.event"),
+              width: null,
+              cell: (e) => (
                 <div className="pf-bus-cell-stack">
                   <button
                     type="button"
@@ -196,14 +202,16 @@ export function InboxView({ selectedKey, onOpen }: InboxViewProps) {
               ),
             },
             {
-              title: t("inboxView.columns.publisher"),
-              key: "publisher",
-              render: (_, e) => subscriberName(t, e.publisher),
+              id: "publisher",
+              header: t("inboxView.columns.publisher"),
+              width: null,
+              cell: (e) => subscriberName(t, e.publisher),
             },
             {
-              title: t("inboxView.columns.status"),
-              key: "status",
-              render: (_, e) => {
+              id: "status",
+              header: t("inboxView.columns.status"),
+              width: null,
+              cell: (e) => {
                 const word = inboxWord(e);
                 return (
                   <StatusTag kind="busInbox" status={word}>
@@ -213,20 +221,22 @@ export function InboxView({ selectedKey, onOpen }: InboxViewProps) {
               },
             },
             {
-              title: t("inboxView.columns.attempts"),
-              key: "attempts",
-              align: "right",
-              render: (_, e) => <span className="pf-num">{number(e.attempts)}</span>,
+              id: "attempts",
+              header: t("inboxView.columns.attempts"),
+              width: null,
+              numeric: true,
+              cell: (e) => <span className="pf-num">{number(e.attempts)}</span>,
             },
             {
-              title: t("inboxView.columns.error"),
-              key: "error",
-              render: (_, e) => <span className="pf-bus-error">{e.error ?? "—"}</span>,
+              id: "error",
+              header: t("inboxView.columns.error"),
+              width: null,
+              cell: (e) => <span className="pf-bus-error">{e.error ?? "—"}</span>,
             },
           ]}
         />
         {more}
-      </ScrollRegion>
+      </>
     );
   }
 

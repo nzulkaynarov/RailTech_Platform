@@ -408,7 +408,7 @@ test.describe("Первый запуск: банковские реквизит�
       await expectNoViolations(page, `мастер: реквизиты ${String(width)}`);
 
       await card.getByRole("link", { name: "Открыть «Реквизиты и бланк»" }).click();
-      await expect(page).toHaveURL(/\/admin\/company$/);
+      await expect(page).toHaveURL(/\/admin\/company\?section=bank$/);
       // Счета — список (решение владельца 2026-11-11): основной счёт в сумах добавляется в разделе «Банковские счета».
       await expect(page.getByText(/Нет основного счёта в сумах/)).toBeVisible();
       await screenShot(page, "company-bank-missing");

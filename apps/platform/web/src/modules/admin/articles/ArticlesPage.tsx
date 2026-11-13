@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Alert, App, Button, Card, Select, Skeleton, Table } from "antd";
+import { Alert, App, Button, Card, Select, Skeleton } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
@@ -27,6 +27,7 @@ import { articleErrorText } from "./errors";
 
 import "../../../features/help/help.css";
 import "./articles.css";
+import { DataTable } from "../../../shared/ui/DataTable/DataTable";
 
 const EDIT_PARAM = "edit";
 const STATUSES: readonly CompanyArticleStatus[] = ["draft", "published"];
@@ -276,18 +277,18 @@ export function ArticlesPage() {
     );
   } else {
     body = (
-      <Table<CompanyArticle>
-        rowKey="id"
-        dataSource={items}
-        pagination={false}
-        tableLayout="fixed"
-        aria-label={t("admin.listLabel")}
+      <DataTable<CompanyArticle>
+        tableId="admin.articles"
+        caption={t("admin.listLabel")}
+        scrollLabel={t("admin.listLabel")}
+        rows={items}
+        rowKey={(row) => String(row.id)}
         columns={[
           {
-            title: t("admin.columns.title"),
-            key: "title",
-            width: "32%",
-            render: (_, article) => (
+            id: "title",
+            header: t("admin.columns.title"),
+            width: 352,
+            cell: (article) => (
               <button
                 type="button"
                 className="pf-ca-title pf-focusable"
@@ -300,28 +301,28 @@ export function ArticlesPage() {
             ),
           },
           {
-            title: t("admin.columns.language"),
-            key: "language",
-            width: "12%",
-            render: (_, article) => t(`admin.language.${article.language}`),
+            id: "language",
+            header: t("admin.columns.language"),
+            width: 132,
+            cell: (article) => t(`admin.language.${article.language}`),
           },
           {
-            title: t("admin.columns.status"),
-            key: "status",
-            width: "16%",
-            render: (_, article) => statusTag(article),
+            id: "status",
+            header: t("admin.columns.status"),
+            width: 176,
+            cell: (article) => statusTag(article),
           },
           {
-            title: t("admin.columns.updated"),
-            key: "updated",
-            width: "20%",
-            render: (_, article) => changed(article),
+            id: "updated",
+            header: t("admin.columns.updated"),
+            width: 220,
+            cell: (article) => changed(article),
           },
           {
-            title: t("admin.columns.actions"),
-            key: "actions",
-            width: "20%",
-            render: (_, article) => actionButtons(article),
+            id: "actions",
+            header: t("admin.columns.actions"),
+            width: 220,
+            cell: (article) => actionButtons(article),
           },
         ]}
       />

@@ -14,6 +14,7 @@ import {
   useGetEdsDocument,
   useGetEdsLetterhead,
   useGetLetter,
+  useListEdsStaff,
   useUpdateEdsDocument,
 } from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
@@ -148,6 +149,11 @@ function DocumentForm({
   const canLink = canSee(me, { anyOf: ["crm.clients", "eds.projects"] });
   const canCompany = canEdit(me, "company.settings");
   const [values, setValues] = useState<FormValues>(initial);
+  // Пункт 1.6 плана: согласующие и получатели копии — из сотрудников EDS (без автора: он отправляет сам).
+  const staff = useListEdsStaff({ query: { staleTime: 5 * 60_000 } });
+  const people = (staff.data?.items ?? [])
+    .filter((p) => p.id !== me.id)
+    .map((p) => ({ value: p.id, label: p.position ? `${p.name} · ${p.position}` : p.name }));
   const [errors, setErrors] = useState<FormErrors>({});
   // Секции по шагам (platform-frontend.md §4.1a): новый документ — с первой, черновик — с проверки.
   const [active, setActive] = useState<SectionKey>(draft ? "check" : "about");
@@ -731,6 +737,48 @@ function DocumentForm({
             <span className="pf-fp-label">{t("documents:form.route.label")}</span>
             <span>{routeText}</span>
           </div>
+          {letter ? null : (
+            <>
+              <Field
+                id="doc-approvers"
+                label={t("documents:form.route.approvers")}
+                hint={t("documents:form.route.approversHint")}
+              >
+                <Select
+                  id="doc-approvers"
+                  mode="multiple"
+                  value={values.approvers}
+                  placeholder={t("documents:form.route.choosePeople")}
+                  optionFilterProp="label"
+                  options={people}
+                  maxCount={10}
+                  aria-describedby="doc-approvers-hint"
+                  onChange={(next: string[]) => {
+                    set("approvers", next);
+                  }}
+                />
+              </Field>
+              <Field
+                id="doc-watchers"
+                label={t("documents:form.route.watchers")}
+                hint={t("documents:form.route.watchersHint")}
+              >
+                <Select
+                  id="doc-watchers"
+                  mode="multiple"
+                  value={values.watchers}
+                  placeholder={t("documents:form.route.choosePeople")}
+                  optionFilterProp="label"
+                  options={people}
+                  maxCount={20}
+                  aria-describedby="doc-watchers-hint"
+                  onChange={(next: string[]) => {
+                    set("watchers", next);
+                  }}
+                />
+              </Field>
+            </>
+          )}
           {letter ? (
             <div className="pf-newdoc-row">
               <Field

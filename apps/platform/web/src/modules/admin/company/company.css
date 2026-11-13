@@ -183,9 +183,6 @@
     gap: 0;
   }
 }
-.pf-co-table-wrap {
-  overflow-x: auto;
-}
 .pf-co-tree {
   margin: 0;
   padding: 0 0 0 20px;

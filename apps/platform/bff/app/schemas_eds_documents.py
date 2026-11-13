@@ -209,6 +209,9 @@ class EdsDocument(BaseModel):
     text: str
     author: EdsPerson
     addressee: EdsPerson | None
+    # Пункт 1.6: согласующие от автора (шаги — в `route`) и получатели копии.
+    approvers: list[EdsPerson] = Field(default_factory=list)
+    watchers: list[EdsPerson] = Field(default_factory=list)
     amount: EdsMoney | None
     due_date: date | None
     files: list[EdsFile]
@@ -267,6 +270,13 @@ class _Form(BaseModel):
     erp_deal_id: int | None = None
     recipient: EdsRecipient | None = None
     letter: EdsLetterIn | None = None
+    # Пункт 1.6 плана: согласующие перед шаблоном и получатели копии (`crm_user_id`) — при отправке.
+    approvers: list[Annotated[str, Field(pattern=r"^[0-9]+$")]] | None = Field(
+        default=None, max_length=10
+    )
+    watchers: list[Annotated[str, Field(pattern=r"^[0-9]+$")]] | None = Field(
+        default=None, max_length=20
+    )
     send: bool = False
     submit: bool = False
 

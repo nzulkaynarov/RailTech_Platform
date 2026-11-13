@@ -137,10 +137,13 @@ test.describe("Компания: реквизиты, бланк, нумерац�
     // Без правок бар сохранения невидим (UX-1b, S6)
     await expect(page.getByRole("button", { name: "Сохранить реквизиты" })).toBeHidden();
 
+    // реквизиты — секциями (§4.1a): телефон — в «Контактах», ИНН и логотип — в «Компании»
+    await page.getByRole("button", { name: /^Контакты/, expanded: false }).click();
     await page.getByLabel("Телефон", { exact: true }).fill("+998 11 111 11 11");
     await page.getByRole("button", { name: "Сохранить реквизиты" }).click();
     await expect(toast(page, "Сохранено")).toBeVisible();
 
+    await page.getByRole("button", { name: /^Компания/, expanded: false }).click();
     await page.getByLabel(/^ИНН/).fill("12");
     await page.getByRole("button", { name: "Сохранить реквизиты" }).click();
     await expect(page.getByText("ИНН — 9 цифр")).toBeVisible();
@@ -160,7 +163,9 @@ test.describe("Компания: реквизиты, бланк, нумерац�
 
     await page.reload();
     await expect(page.getByRole("heading", { level: 1, name: "Реквизиты и бланк" })).toBeVisible();
+    await page.getByRole("button", { name: /^Контакты/, expanded: false }).click();
     await expect(page.getByLabel("Телефон", { exact: true })).toHaveValue("+998 11 111 11 11");
+    await page.getByRole("button", { name: /^Компания/, expanded: false }).click();
     await page.getByRole("button", { name: "Удалить логотип" }).click();
     const confirm = page.getByRole("dialog", { name: "Удалить логотип компании?" });
     await confirm.getByRole("button", { name: "Удалить логотип" }).click();

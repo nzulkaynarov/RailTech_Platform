@@ -234,11 +234,24 @@ async def _letter_id(authed: Authed, kind: str, number: str) -> str:
     return found
 
 
-async def _submit(proxy: EdsProxy, document_id: str, *, send: bool = False) -> Any:
-    # P4: письмо на бланке после регистрации уходит адресату почтой (`send`); без флага — тело
-    # запроса не нужно.
-    payload = {"send": True} if send else None
-    return await proxy.request("POST", f"{API}/documents/{document_id}/submit", json=payload)
+async def _submit(
+    proxy: EdsProxy,
+    document_id: str,
+    *,
+    send: bool = False,
+    approvers: list[str] | None = None,
+    watchers: list[str] | None = None,
+) -> Any:
+    # P4: письмо на бланке после регистрации уходит адресату почтой (`send`); пункт 1.6 —
+    # согласующие и получатели копии. Ничего из этого — тело запроса не нужно.
+    payload: dict[str, Any] = {"send": True} if send else {}
+    if approvers is not None:
+        payload["approvers"] = [int(uid) for uid in approvers]
+    if watchers is not None:
+        payload["watchers"] = [int(uid) for uid in watchers]
+    return await proxy.request(
+        "POST", f"{API}/documents/{document_id}/submit", json=payload or None
+    )
 
 
 @router.post(
@@ -268,7 +281,9 @@ async def create_document(
     if body.submit:
         document_id = str(created.get("id", ""))
         try:
-            result = await _submit(proxy, document_id, send=body.send)
+            result = await _submit(
+                proxy, document_id, send=body.send, approvers=body.approvers, watchers=body.watchers
+            )
         except PlatformError as exc:
             raise _with_document(exc, document_id, created=True) from exc
     return await _present(proxy, result, authed)
@@ -281,7 +296,9 @@ async def update_document(id: DocumentId, body: EdsDocumentUpdateIn, authed: Wri
     result = saved
     if body.submit:
         try:
-            result = await _submit(proxy, str(id), send=body.send)
+            result = await _submit(
+                proxy, str(id), send=body.send, approvers=body.approvers, watchers=body.watchers
+            )
         except PlatformError as exc:
             raise _with_document(exc, str(id), created=False) from exc
         # Документ ушёл на согласование — он больше не «Доработать» в очереди автора (D1-6b)

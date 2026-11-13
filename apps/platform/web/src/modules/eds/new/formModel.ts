@@ -70,6 +70,9 @@ export interface FormValues {
   recipientEmail: string;
   signatoryName: string;
   signatoryPosition: string;
+  /** Пункт 1.6 плана: согласующие перед шагами шаблона (по порядку) и получатели копии — `crm_user_id` */
+  approvers: string[];
+  watchers: string[];
 }
 
 export const EMPTY_FORM: FormValues = {
@@ -88,6 +91,8 @@ export const EMPTY_FORM: FormValues = {
   recipientEmail: "",
   signatoryName: "",
   signatoryPosition: "",
+  approvers: [],
+  watchers: [],
 };
 
 /** Сегодня в часовом поясе компании (`YYYY-MM-DD`): «нужно до» не раньше этой даты. */
@@ -204,6 +209,8 @@ interface Payload {
   };
   submit: boolean;
   send?: boolean;
+  approvers?: string[];
+  watchers?: string[];
 }
 
 const orNull = (value: string): string | null => (value.trim() === "" ? null : value.trim());
@@ -250,6 +257,8 @@ export function toPayload(
           ...(submit && send ? { send: true } : {}),
         }
       : {}),
+    // Пункт 1.6: маршрут от автора уходит при отправке внутреннего документа (письму не нужен)
+    ...(!letter && submit ? { approvers: values.approvers, watchers: values.watchers } : {}),
     submit,
   };
 }
@@ -306,6 +315,8 @@ export function fromDocument(doc: EdsDocument): FormValues {
       : doc.kind === "letter_out" && doc.text
         ? { type: "doc", content: [paragraphOf(doc.text)] }
         : emptyDoc(),
+    approvers: (doc.approvers ?? []).map((p) => String(p.crm_user_id)),
+    watchers: (doc.watchers ?? []).map((p) => String(p.crm_user_id)),
     recipientAttention: doc.letter?.recipient_attention ?? "",
     recipientEmail: doc.letter?.recipient_email ?? "",
     signatoryName: doc.letter?.signatory_name ?? "",

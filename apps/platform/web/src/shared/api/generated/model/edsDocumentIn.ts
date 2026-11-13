@@ -44,6 +44,18 @@ export interface EdsDocumentIn {
   in_reply_to_number?: string | null;
   /** Только `letter_out` — письмо на бланке (P4): тело блоками, «кому», почта, подписант */
   letter?: EdsLetterIn | null;
+  /**
+   * Пункт 1.6: `crm_user_id` (как `id` в `/eds/staff`) согласующих перед шагами шаблона, по порядку; уходят при отправке (`submit`); не передано — прежние
+   * @maxItems 10
+   * @items.pattern ^[0-9]+$
+   */
+  approvers?: string[];
+  /**
+   * Пункт 1.6: `crm_user_id` (как `id` в `/eds/staff`) получателей копии — видят документ, не решают
+   * @maxItems 20
+   * @items.pattern ^[0-9]+$
+   */
+  watchers?: string[];
   /** Только письмо (P4): после регистрации отправить адресату почтой с PDF на бланке */
   send?: boolean;
   /** `true` — сразу отправить (на согласование; письмо — зарегистрировать); `false` — сохранить черновик */
