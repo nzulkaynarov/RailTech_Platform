@@ -39,7 +39,7 @@ def roles(*codes: str | dict[str, Any]) -> list[SessionRole]:
 
 def test_catalog_has_twenty_sections_in_oracle_order() -> None:
     # P8: + `eds.inbox.register`; D17G-1: + `crm.leads.triage`;
-    # SIGN-2: + `eds.signing.manage`; восемь ролей каталога
+    # SIGN-2: + `eds.signing.manage`; 0.3: + `crm.mail`; восемь ролей каталога
     assert list(RESOURCE_MODULE) == list(MATRIX)
     assert len(CELLS) == len(MATRIX) * 8
     assert {k: RESOURCE_MODULE[k] for k in MATRIX} == MODULE_OF
@@ -267,7 +267,7 @@ def test_menu_examples() -> None:
     assert rbac.menu_for(rbac.merge(roles("SUPPLY")))["chats"] == ["all", "internal", "contacts"]
     mixed = rbac.menu_for(rbac.merge(roles(MIXED)))
     assert mixed["crm"] == ["messages", "leads", "channels", "kb"]
-    assert mixed["eds"] == ["documents", "payments"]
+    assert mixed["eds"] == ["documents", "mail", "payments"]  # 0.3 (FR-10): почта держателю лидов
     assert mixed["dashboard"] == []
 
 
