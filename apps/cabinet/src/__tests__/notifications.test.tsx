@@ -42,8 +42,8 @@ describe('колокольчик кабинета', () => {
     expect(rows[0]).toHaveTextContent('Новое КП KP-2026-0042 ждёт вашего решения');
     expect(rows[0]).toHaveTextContent('Не прочитано');
     expect(rows[1]).toHaveTextContent(/Выставлен счёт S-2026-0124 на 9\s800\s000\sсум/);
-    expect(rows[2]).toHaveTextContent('Изменился срок поставки по проекту D-35: теперь 24 окт. 2026 г.');
-    expect(rows[4]).toHaveTextContent('Поставка по проекту D-35: Отгружено');
+    expect(rows[2]).toHaveTextContent('Изменился срок поставки по проекту ПР-2026-035: теперь 24 окт. 2026 г.');
+    expect(rows[4]).toHaveTextContent('Поставка по проекту ПР-2026-035: Отгружено');
     expect(rows[4]).not.toHaveTextContent('Не прочитано');
     expect(router.state.location.pathname).toBe('/requests');
     expect((await axe(panel)).violations).toEqual([]);

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Portal API (Cabinet → ERP)
-  version: 0.13.0
+  version: 0.14.0
   summary: Пространство `/api/portal/v1/` — вызывает Cabinet SPA от имени клиента.
   description: |
     Контракт по `docs/architecture/CONTRACTS.md` §4 и ADR-0004 (Cabinet без бэкенда). Версия 0 (M0-INF-02):
@@ -4643,16 +4643,29 @@ components:
     DealRef:
       type: object
       description: Сделка глазами клиента (Q-16) — номер и название вместо внутреннего id
-      required: [id, number]
+      required: [id, number, stage]
       properties:
         id:
           type: integer
           format: int64
         number:
           type: string
+          description: >-
+            Тот же номер, что у сотрудников (0.12, FR-37: один объект — одно имя): `ЗВ-ГГГГ-NNN` — заявка до принятия КП,
+            `ПР-ГГГГ-NNN` — проект после. У сделки без номера — `D-<id>`.
+          examples: [ЗВ-2026-001, ПР-2026-001]
+        stage:
+          $ref: '#/components/schemas/DealStage'
         title:
           type: [string, 'null']
       additionalProperties: false
+
+    DealStage:
+      type: string
+      enum: [request, project]
+      description: >-
+        Стадия сделки для подписи (0.12): `request` — заявка до принятия КП, `project` — проект после. Подпись берётся
+        отсюда, а не из префикса номера: префиксы задаёт владелец в настройках нумерации.
 
     AcceptanceCodeSent:
       type: object
@@ -5056,6 +5069,7 @@ components:
           format: int64
         number:
           type: string
+          description: Номер заявки — тот же, что у сотрудников (`ЗВ-ГГГГ-NNN`, после принятия КП — `ПР-ГГГГ-NNN`); 0.12, FR-37
         status:
           $ref: '#/components/schemas/RequestStatus'
         outcome:
@@ -5966,6 +5980,9 @@ components:
           format: int64
         number:
           type: string
+        stage:
+          $ref: '#/components/schemas/DealStage'
+          description: Только у метки проекта (`kind=deal`) — стадия на момент сообщения
       additionalProperties: false
 
     PortalMessageCreate:

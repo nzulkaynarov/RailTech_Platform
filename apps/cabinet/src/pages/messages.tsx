@@ -26,6 +26,12 @@ import { cn } from '@/lib/utils';
 import { useAppMode } from '@/session/mode';
 import { useCanAct, useHasModule, useMe } from '@/session/useMe';
 
+/** Подпись контекста переписки: сделка до принятия КП — «Заявка ЗВ-…», после — «Проект ПР-…» (0.12, FR-37). */
+function contextKey(context: MessageContext): string {
+  if (context.kind === 'deal' && context.stage === 'request') return 'pages.messages.context.request';
+  return `pages.messages.context.${context.kind}`;
+}
+
 /**
  * «Сообщения» (CHAT-1, ADR-0023): одна лента на компанию — её видят все контакты компании, менеджер отвечает из очереди
  * «Сообщения» Платформы. Обновление — опрос, пока экран открыт (`useMessagesFeed`). «Написать менеджеру» со страницы
@@ -211,7 +217,7 @@ function Bubble({
 function ContextLabel({ context }: { context: MessageContext }) {
   const { t } = useTranslation();
   const open = useHasModule(contextModule(context.kind));
-  const label = t(`pages.messages.context.${context.kind}`, { number: context.number });
+  const label = t(contextKey(context), { number: context.number });
   const base = 'inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-0.5 text-xs';
   if (!open) {
     return (
@@ -269,7 +275,7 @@ function Composer({ onSend }: { onSend: (text: string, context: MessageContext |
     setParams(
       (current) => {
         const next = new URLSearchParams(current);
-        for (const key of ['about', 'id', 'number']) next.delete(key);
+        for (const key of ['about', 'id', 'number', 'stage']) next.delete(key);
         return next;
       },
       { replace: true },
@@ -307,7 +313,7 @@ function Composer({ onSend }: { onSend: (text: string, context: MessageContext |
             <Tag className="size-4 shrink-0" aria-hidden="true" />
             <span className="truncate">
               {t('pages.messages.about', {
-                what: t(`pages.messages.context.${context.kind}`, { number: context.number }),
+                what: t(contextKey(context), { number: context.number }),
               })}
             </span>
           </span>

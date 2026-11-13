@@ -14,16 +14,20 @@ export const MAX_CATCH_UP_PAGES = 5;
 
 const KINDS: readonly MessageContextKind[] = ['deal', 'quote', 'invoice', 'act'];
 
-/** Адрес чата; с меткой — `?about=<вид>&id=<id>&number=<номер>` («Написать менеджеру» со страницы документа). */
+/**
+ * Адрес чата; с меткой — `?about=<вид>&id=<id>&number=<номер>` («Написать менеджеру» со страницы документа), у сделки
+ * ещё `&stage=<request|project>` — подпись плашки «Заявка» / «Проект» (0.12).
+ */
 export function chatLink(context?: MessageContext | null): string {
   if (!context) return '/messages';
   const search = new URLSearchParams({ about: context.kind, id: String(context.id), number: context.number });
+  if (context.stage) search.set('stage', context.stage);
   return `/messages?${search.toString()}`;
 }
 
 /** Метка сделки документа (строка договора): нет сделки — общее сообщение без метки. */
 export function dealContext(deal: DealRef | null | undefined): MessageContext | null {
-  return deal ? { kind: 'deal', id: deal.id, number: deal.number } : null;
+  return deal ? { kind: 'deal', id: deal.id, number: deal.number, stage: deal.stage } : null;
 }
 
 /** Метка документа из адреса чата; неполная или чужого вида — без метки. */
@@ -33,7 +37,10 @@ export function contextFromSearch(search: URLSearchParams): MessageContext | nul
   const number = search.get('number')?.trim() ?? '';
   if (!kind || !(KINDS as readonly string[]).includes(kind)) return null;
   if (!Number.isInteger(id) || id <= 0 || !number) return null;
-  return { kind: kind as MessageContextKind, id, number: number.slice(0, 64) };
+  const context: MessageContext = { kind: kind as MessageContextKind, id, number: number.slice(0, 64) };
+  const stage = search.get('stage');
+  if (kind === 'deal' && (stage === 'request' || stage === 'project')) context.stage = stage;
+  return context;
 }
 
 /** Модуль кабинета, который открывает документ метки: проект и КП — «КП», счёт — «Счета», акт — «Акты». */
