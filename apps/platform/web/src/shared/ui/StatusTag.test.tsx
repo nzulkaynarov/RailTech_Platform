@@ -24,8 +24,10 @@ describe("StatusTag", () => {
     });
   });
 
-  it("у каждого статуса каждого документа есть непустое слово на трёх языках", () => {
-    for (const language of ["ru", "uz", "en"]) {
+  // По тесту на язык: одним тестом сотни отрисовок под полной нагрузкой не укладывались в 20 с (плавающий тайм-аут).
+  it.each(["ru", "uz", "en"])(
+    "у каждого статуса каждого документа есть непустое слово: %s",
+    (language) => {
       for (const kind of STATUS_KINDS) {
         for (const status of Object.keys(STATUS_TONE[kind])) {
           const { container, unmount } = renderUi(<StatusTag kind={kind} status={status} />, {
@@ -37,8 +39,8 @@ describe("StatusTag", () => {
           unmount();
         }
       }
-    }
-  });
+    },
+  );
 
   it("слово по языку интерфейса", () => {
     renderUi(<StatusTag kind="quote" status="accepted" />, { language: "en" });
