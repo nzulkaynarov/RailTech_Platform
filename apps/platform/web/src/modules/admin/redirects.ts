@@ -96,7 +96,8 @@ export function legacySettingsPath(pathname: string, search = ""): string | null
   if (path.startsWith("/admin/company/")) return "/admin/company";
   if (path === "/admin/company") {
     const tab = params.get("tab");
-    if (tab === null) return null;
+    // `tab=card` — вкладка бокового окна (форма счёта в `Sheet`), а не старая вкладка страницы: не перенаправляем
+    if (tab === null || tab === "card") return null;
     return COMPANY_TAB[tab] ?? "/admin/company";
   }
   if (path === "/admin/tickets") return TICKETS_HOME;

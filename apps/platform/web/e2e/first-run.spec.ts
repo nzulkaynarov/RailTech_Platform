@@ -414,7 +414,7 @@ test.describe("Первый запуск: банковские реквизит�
       await screenShot(page, "company-bank-missing");
       await expectNoViolations(page, `компания: реквизитов нет ${String(width)}`);
       await page.getByRole("button", { name: "Добавить счёт" }).first().click();
-      const dialog = page.getByRole("dialog", { name: "Новый банковский счёт" });
+      const dialog = page.getByRole("region", { name: "Новый банковский счёт" });
       await dialog.getByLabel("Расчётный счёт").fill("20208000900000000001");
       await dialog.getByLabel("МФО").fill("00001");
       await screenShot(page, "company-bank-add");

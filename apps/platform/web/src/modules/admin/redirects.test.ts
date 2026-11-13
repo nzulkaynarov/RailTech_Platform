@@ -79,5 +79,7 @@ describe("старые адреса Настроек → новые (SET-IA)", (
     }
     expect(legacySettingsPath("/admin/integrations", "card=erp&panel=open")).toBeNull();
     expect(legacySettingsPath("/admin/company", "part=brand")).toBeNull();
+    // вкладка бокового окна (форма банковского счёта) — не старая вкладка страницы
+    expect(legacySettingsPath("/admin/company", "panel=open&tab=card")).toBeNull();
   });
 });

@@ -102,7 +102,7 @@ describe("Admin · Компания: реквизиты для счетов (D26
     fireEvent.click(
       (await screen.findAllByRole("button", { name: "Добавить счёт" }))[0] as HTMLElement,
     );
-    const dialog = await screen.findByRole("dialog", { name: "Новый банковский счёт" });
+    const dialog = await screen.findByRole("region", { name: "Новый банковский счёт" });
     fireEvent.change(within(dialog).getByLabelText("Расчётный счёт"), {
       target: { value: "20208000900000000001" },
     });
