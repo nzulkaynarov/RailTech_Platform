@@ -142,6 +142,11 @@ function seed(): CompanyMock {
         shipment: "SHP",
         partner_contract: "PA",
         letter: "DOC",
+        letter_in: "IN",
+        outgoing: "OUT",
+        memo: "MEMO",
+        application: "APP",
+        report: "REP",
       },
     },
     quote: {

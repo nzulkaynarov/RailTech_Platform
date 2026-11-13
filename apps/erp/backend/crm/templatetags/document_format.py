@@ -13,6 +13,7 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from django import template
 
+from core.currency import BASE_CURRENCY
 from crm.services.money_words import money_in_words, money_in_words_en
 
 register = template.Library()
@@ -51,7 +52,7 @@ def money(value, currency=None):
 
 
 @register.filter
-def money_words(value, currency_code="UZS"):
+def money_words(value, currency_code=BASE_CURRENCY):
     """«Сумма прописью» на языке документа: `{{ total|money_words:"UZS" }}`.
 
     M1: документ печатается на языке ПОЛУЧАТЕЛЯ, и пропись обязана следовать за ним — иначе
@@ -62,8 +63,8 @@ def money_words(value, currency_code="UZS"):
     from django.utils import translation
 
     if (translation.get_language() or "").startswith("en"):
-        return money_in_words_en(value, currency_code or "UZS")
-    return money_in_words(value, currency_code or "UZS")
+        return money_in_words_en(value, currency_code or BASE_CURRENCY)
+    return money_in_words(value, currency_code or BASE_CURRENCY)
 
 
 @register.filter

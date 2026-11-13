@@ -15,11 +15,13 @@ from typing import Annotated, Any
 import httpx
 from fastapi import APIRouter, Depends, Path, Query, Request, Response, status
 
+from app.clients.eds import eds_error
 from app.clients.erp_company import ErpCompany, rows_of
 from app.deps import Authed, require
-from app.errors import PlatformError
+from app.errors import PlatformError, backend_unavailable
 from app.schemas_company import (
     COST_MARGIN_GROUP,
+    EDS_KINDS,
     KIND_TO_ERP,
     MARGIN_FIELDS,
     REFERENCE_PATH,
@@ -75,6 +77,8 @@ from app.schemas_company import (
     ReferenceItemUpdate,
     ReferenceKind,
     RequestStatus,
+    eds_labels,
+    eds_preview,
     foreign_reference_fields,
     labels_to_erp,
     text,
@@ -278,11 +282,32 @@ async def preview_brand_document(body: BrandPreviewIn, authed: Reader) -> Docume
 # --- нумерация ---------------------------------------------------------------------------------
 
 
+_EDS_LABELS = "/api/v1/numbering-labels"
+
+
+async def _eds_labels(authed: Authed, method: str = "GET", **kw: Any) -> list[Any]:
+    """Обозначения номеров документооборота (EDS, задача «Н2»): EDS отвечает ошибкой — она уходит
+    сотруднику (`source = eds`)."""
+    response = await authed.call("eds", method, _EDS_LABELS, **kw)
+    if response.status_code != 200:
+        raise eds_error(response)
+    try:
+        return eds_labels(response.json())
+    except ValueError as exc:
+        raise backend_unavailable("eds", "bad_response") from exc
+
+
+def _with_eds(scheme: NumberingScheme, rows: list[Any]) -> NumberingScheme:
+    scheme.type_labels.update({kind: label for kind, label, _ in rows})
+    return scheme
+
+
 @router.get(
     "/admin/company/numbering", response_model=NumberingScheme, operation_id="getNumberingScheme"
 )
 async def get_numbering(authed: Reader) -> NumberingScheme:
-    return to_numbering(await _erp(authed).data("GET", "crm/numbering-scheme/"))
+    scheme = to_numbering(await _erp(authed).data("GET", "crm/numbering-scheme/"))
+    return _with_eds(scheme, await _eds_labels(authed))
 
 
 @router.patch(
@@ -299,12 +324,23 @@ async def update_numbering(body: NumberingUpdate, authed: Writer) -> NumberingSc
             await erp.company_path("settings/"),
             json={"doc_number_prefix": prefix.strip()},
         )
+    eds_rows = None
     if "type_labels" in sent:
-        sent["type_labels"] = labels_to_erp(sent["type_labels"])
+        labels = sent.pop("type_labels")
+        eds_part = {k: v for k, v in labels.items() if k in EDS_KINDS}
+        if (
+            eds_part
+        ):  # сначала EDS: отказ EDS (обозначение занято) не оставляет ERP наполовину сохранённым
+            eds_rows = await _eds_labels(authed, "PUT", json={"labels": eds_part})
+        erp_part = labels_to_erp(labels)
+        if erp_part:
+            sent["type_labels"] = erp_part
     scheme = await erp.data("PATCH", "crm/numbering-scheme/", json=sent) if sent else None
     if scheme is None:
         scheme = await erp.data("GET", "crm/numbering-scheme/")
-    return to_numbering(scheme)
+    return _with_eds(
+        to_numbering(scheme), eds_rows if eds_rows is not None else await _eds_labels(authed)
+    )
 
 
 @router.post(
@@ -317,7 +353,9 @@ async def preview_numbering(body: NumberingPreviewIn, authed: Reader) -> Numberi
     if "type_labels" in payload:
         payload["type_labels"] = labels_to_erp(payload["type_labels"])
     data = await _erp(authed).data("POST", "crm/numbering-scheme/preview/", json=payload)
-    return to_numbering_preview(data)
+    preview = to_numbering_preview(data)
+    preview.items.extend(eds_preview(await _eds_labels(authed), body.type_labels))
+    return preview
 
 
 # --- условия КП --------------------------------------------------------------------------------

@@ -8929,6 +8929,8 @@ export interface components {
     SetupState: {
       /** @description В CRM ещё нет активного администратора — нужен экран «Первый запуск» */
       needs_admin: boolean;
+      /** @description Название компании из «Настройки · Компания» (задача «Н3»): Платформа показывает его в заголовке вкладки, у логотипа и на экране входа, а не зашитое в код. `null` — не задано, Платформа пишет нейтральное «Платформа» */
+      company_name?: string | null;
     };
     SetupAdminIn: {
       /** @description Одноразовый код первого запуска из журнала `crm-api` (`setup_code_issued`) */
@@ -10841,7 +10843,7 @@ export interface components {
      */
     DocumentKind: "quote" | "contract" | "invoice" | "act" | "letter";
     /**
-     * @description Вид номера в «Настройки · Нумерация» (задача «Н»): заявка, проект, КП, договор, счёт, акт, квитанция, накладная, заказ поставщику, отгрузка, договор партнёра, документ по шаблону (ERP `REQ`, `PRJ`, `KP`, `CT`, `INV`, `ACT`, `RCP`, `DN`, `PO`, `SHP`, `PART`, `DOC`)
+     * @description Вид номера в «Настройки · Нумерация» (задача «Н»): заявка, проект, КП, договор, счёт, акт, квитанция, накладная, заказ поставщику, отгрузка, договор партнёра, документ по шаблону (ERP `REQ`, `PRJ`, `KP`, `CT`, `INV`, `ACT`, `RCP`, `DN`, `PO`, `SHP`, `PART`, `DOC`); документооборота (задача «Н2», EDS): входящее, исходящее, служебная записка, заявление, отчёт
      * @enum {string}
      */
     NumberingKind:
@@ -10856,7 +10858,12 @@ export interface components {
       | "purchase_order"
       | "shipment"
       | "partner_contract"
-      | "letter";
+      | "letter"
+      | "letter_in"
+      | "outgoing"
+      | "memo"
+      | "application"
+      | "report";
     BrandPreviewIn: {
       kind: components["schemas"]["DocumentKind"];
       /** @description Несохранённые правки бланка — предпросмотр накладывает их в памяти, ничего не сохраняя */

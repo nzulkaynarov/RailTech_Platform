@@ -120,10 +120,10 @@ async def test_green_checklist_allows_approval_with_outgoing_number_and_channels
     assert approved.status_code == 200, approved.text
     body = approved.json()
     validate("Approval", body)
-    assert (body["status"], body["outgoing_number"], body["allowed_decisions"]) == ("approved", "ИСХ-001/26", [])
+    assert (body["status"], body["outgoing_number"], body["allowed_decisions"]) == ("approved", "OUT-001/26", [])
     [decided] = await outbox(container, "approval.decided")
     data = decided["data"]
-    assert (data["decision"], data["route_status"], data["outgoing_number"]) == ("approve", "approved", "ИСХ-001/26")
+    assert (data["decision"], data["route_status"], data["outgoing_number"]) == ("approve", "approved", "OUT-001/26")
     assert data["channels"] == ["telegram", "cabinet"] and data["comment"] is None
     assert data["approval"]["object"]["erp_quote_id"] == 1203 and data["approval"]["object"]["quote_version"] == 2
     assert data["decided_by"] == {"crm_user_id": 3, "full_name": "Рустам Директоров"}
@@ -199,14 +199,14 @@ async def test_late_quote_is_approved_with_the_late_mark_in_route_journal_and_ev
     assert approved.status_code == 200, approved.text
     body = approved.json()
     validate("Approval", body)
-    assert (body["status"], body["outgoing_number"], body["approved_late"]) == ("approved", "ИСХ-001/26", True)
+    assert (body["status"], body["outgoing_number"], body["approved_late"]) == ("approved", "OUT-001/26", True)
     assert await journal_of(container, route["id"]) == [
         ("approval.requested", None),
         ("approval.decided", None),
         ("approval.approved_late", "Одобрено с опозданием: готово 28.10.2026, срок 27.10.2026"),
     ]
     [decided] = await outbox(container, "approval.decided")
-    assert decided["data"]["approved_late"] is True and decided["data"]["outgoing_number"] == "ИСХ-001/26"
+    assert decided["data"]["approved_late"] is True and decided["data"]["outgoing_number"] == "OUT-001/26"
 
 
 async def test_quote_in_time_has_no_late_mark(
@@ -320,4 +320,4 @@ async def test_outgoing_numbers_of_approved_quotes_are_sequential(
             f"/api/v1/approvals/{item['id']}/decision", json={"decision": "approve"}, headers=staff["director"].headers
         )
         numbers.append(done.json()["outgoing_number"])
-    assert numbers == ["ИСХ-001/26", "ИСХ-002/26"]
+    assert numbers == ["OUT-001/26", "OUT-002/26"]

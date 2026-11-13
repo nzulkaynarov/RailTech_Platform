@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/eds/letter.rejected.v2.json",
+  "title": "Письмо отклонено",
+  "description": "Тип uz.railtech.eds.letter.rejected.v2, источник rt://eds. v2 (задача «Н», 2026-11-13): номер с обозначением из настроек нумерации, иначе как v1. Поле data конверта (envelope.v1.json). Директор отклонил письмо с причиной (обязательна). Что делает ERP: сделка links.erp_deal_id → LOST с причиной reason.",
+  "type": "object",
+  "required": [
+    "letter",
+    "links",
+    "reason",
+    "actor"
+  ],
+  "properties": {
+    "letter": {
+      "$ref": "_defs.v2.json#/$defs/LetterRef"
+    },
+    "links": {
+      "$ref": "_defs.v2.json#/$defs/ErpLinks"
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "actor": {
+      "$ref": "_defs.v2.json#/$defs/Actor"
+    }
+  },
+  "additionalProperties": false
+}

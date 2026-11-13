@@ -28,6 +28,8 @@ from app.services import staff_notifications
 logger = structlog.get_logger(__name__)
 
 NOTICE_TYPE: Final = "uz.railtech.eds.notice.requested.v1"
+# v2 (задача «Н», 2026-11-13): номер документа с обозначением из настроек нумерации; данные те же.
+NOTICE_TYPE_V2: Final = "uz.railtech.eds.notice.requested.v2"
 # SIGN-2 (ADR-0024 п. 1): полномочие подписи скоро истекает — тот же путь доставки, своя схема.
 SIGNING_EXPIRING_TYPE: Final = "uz.railtech.eds.signing_authority.expiring.v1"
 SIGNING_EXPIRING_KIND: Final = "signing_authority_expiring"

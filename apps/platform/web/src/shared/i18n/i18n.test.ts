@@ -11,7 +11,7 @@ function keys(obj: object, prefix = ""): string[] {
 describe("i18n", () => {
   it("defaults to Russian", () => {
     expect(i18n.language).toBe("ru");
-    expect(i18n.t("app.title")).toBe("Платформа RailTech");
+    expect(i18n.t("app.title")).toBe("Платформа");
     expect(i18n.t("login.title", { ns: "shell" })).toBe("Вход в Платформу");
   });
 

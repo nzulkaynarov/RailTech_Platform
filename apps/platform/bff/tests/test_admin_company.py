@@ -15,7 +15,7 @@ import respx
 
 from tests.backends import Backends
 from tests.conftest import ContractChecker, Web
-from tests.consts import ERP_URL
+from tests.consts import EDS_URL, ERP_URL
 from tests.roles import custom
 
 API = f"{ERP_URL}/api/v1"
@@ -34,6 +34,41 @@ def erp_company(be: Backends, own: int | None = CID) -> respx.Route:
 def erp(be: Backends) -> respx.MockRouter:
     erp_company(be)
     return be.router
+
+
+EDS_LABELS_URL = f"{EDS_URL}/api/v1/numbering-labels"
+
+
+def eds_labels_json(**labels: str) -> dict[str, Any]:
+    """Ответ EDS `NumberLabels` (задача «Н2»): обозначения номеров документооборота и образцы."""
+    current = {
+        "letter_in": "IN",
+        "outgoing": "OUT",
+        "memo": "MEMO",
+        "application": "APP",
+        "report": "REP",
+    }
+    current.update(labels)
+    yearly = {"letter_in", "outgoing"}
+    return {
+        "items": [
+            {"kind": k, "label": v, "example": f"{v}-001/26" if k in yearly else f"{v}-2026/001"}
+            for k, v in current.items()
+        ]
+    }
+
+
+@pytest.fixture(autouse=True)
+def eds(be: Backends) -> respx.Route:
+    """EDS отвечает обозначениями номеров документооборота; вход в EDS — обмен токена."""
+    be.router.post(f"{EDS_URL}/api/v1/auth/sso/exchange").mock(
+        return_value=httpx.Response(
+            200, json={"access_token": "eds-1", "token_type": "bearer", "expires_in": 900}
+        )
+    )
+    return be.router.get(EDS_LABELS_URL).mock(
+        return_value=httpx.Response(200, json=eds_labels_json())
+    )
 
 
 def sent(route: respx.Route) -> Any:
@@ -708,6 +743,12 @@ async def test_numbering_get_maps_document_kinds(
         "invoice": "СЧ",
         "act": "АКТ",
         "letter": "ПИС",
+        # номера документооборота — из EDS (задача «Н2»)
+        "letter_in": "IN",
+        "outgoing": "OUT",
+        "memo": "MEMO",
+        "application": "APP",
+        "report": "REP",
     }
 
 
@@ -824,7 +865,7 @@ async def test_numbering_preview_maps_kinds_both_ways(
 
     assert response.status_code == 200
     check(response, "/admin/company/numbering/preview", "post")
-    assert response.json()["items"] == [
+    assert response.json()["items"][:2] == [
         {"kind": "quote", "label": "КП", "number": "DEMO-КП-2026-00001"},
         {"kind": "contract", "label": "ДОГ", "number": "DEMO-ДОГ-2026-00001"},
     ]
@@ -2154,3 +2195,84 @@ async def test_bank_account_field_errors_and_read_only_role(
 
     await web.login(["MANAGER"])
     assert (await web.client.get("/api/v1/admin/company/bank-accounts")).status_code == 403
+
+
+async def test_numbering_patch_splits_labels_between_erp_and_eds(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    """Задача «Н2»: обозначения документооборота уходят в EDS, остальные — в ERP; EDS — первым."""
+    await web.login(["DIRECTOR"])
+    eds_put = erp.put(EDS_LABELS_URL).mock(
+        return_value=httpx.Response(200, json=eds_labels_json(letter_in="INC"))
+    )
+    erp_patch = erp.patch(f"{API}/crm/numbering-scheme/").mock(
+        return_value=httpx.Response(200, json=scheme_json())
+    )
+
+    response = await web.send(
+        "PATCH",
+        "/api/v1/admin/company/numbering",
+        json={"type_labels": {"letter_in": "INC", "quote": "QT"}},
+    )
+
+    assert response.status_code == 200, response.text
+    check(response, "/admin/company/numbering", "patch")
+    assert sent(eds_put) == {"labels": {"letter_in": "INC"}}
+    assert sent(erp_patch) == {"type_labels": {"KP": "QT"}}
+    assert response.json()["type_labels"]["letter_in"] == "INC"
+
+
+async def test_numbering_eds_refusal_keeps_erp_untouched(web: Web, erp: respx.MockRouter) -> None:
+    await web.login(["DIRECTOR"])
+    erp.put(EDS_LABELS_URL).mock(
+        return_value=httpx.Response(
+            422,
+            json={
+                "code": "VALIDATION_FAILED",
+                "message": "Такое обозначение уже у другого вида номера.",
+                "details": {
+                    "fields": [{"field": "labels.memo", "message": "x", "type": "value_error"}]
+                },
+            },
+        )
+    )
+    erp_patch = erp.patch(f"{API}/crm/numbering-scheme/").mock(return_value=httpx.Response(200))
+
+    response = await web.send(
+        "PATCH",
+        "/api/v1/admin/company/numbering",
+        json={"type_labels": {"memo": "IN", "quote": "QT"}},
+    )
+
+    assert response.status_code == 422
+    assert not erp_patch.called
+
+
+async def test_numbering_preview_adds_eds_kinds_with_the_draft_label(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    await web.login(["DIRECTOR"])
+    erp.post(f"{API}/crm/numbering-scheme/preview/").mock(
+        return_value=httpx.Response(
+            200, json={"results": [{"type_code": "KP", "label": "QT", "number": "QT-2026/001"}]}
+        )
+    )
+
+    response = await web.send(
+        "POST",
+        "/api/v1/admin/company/numbering/preview",
+        json={
+            "pattern": "{prefix}{type}-{YYYY}/{seq}",
+            "padding": 3,
+            "reset_period": "yearly",
+            "start_value": 0,
+            "type_labels": {"memo": "SZ"},
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    check(response, "/admin/company/numbering/preview", "post")
+    numbers = {i["kind"]: i["number"] for i in response.json()["items"]}
+    assert numbers["quote"] == "QT-2026/001"
+    assert numbers["memo"] == "SZ-2026/001", "несохранённое обозначение — в образце"
+    assert numbers["letter_in"] == "IN-001/26"

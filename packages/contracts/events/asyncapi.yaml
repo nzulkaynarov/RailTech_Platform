@@ -120,54 +120,108 @@ channels:
     messages:
       uz.railtech.eds.approval.decided.v1:
         $ref: '#/components/messages/uz.railtech.eds.approval.decided.v1'
+  uz.railtech.eds.approval.decided.v2:
+    address: uz.railtech.eds.approval.decided.v2
+    title: Решение по маршруту согласования
+    messages:
+      uz.railtech.eds.approval.decided.v2:
+        $ref: '#/components/messages/uz.railtech.eds.approval.decided.v2'
   uz.railtech.eds.approval.requested.v1:
     address: uz.railtech.eds.approval.requested.v1
     title: Маршрут согласования открыт
     messages:
       uz.railtech.eds.approval.requested.v1:
         $ref: '#/components/messages/uz.railtech.eds.approval.requested.v1'
+  uz.railtech.eds.approval.requested.v2:
+    address: uz.railtech.eds.approval.requested.v2
+    title: Маршрут согласования открыт
+    messages:
+      uz.railtech.eds.approval.requested.v2:
+        $ref: '#/components/messages/uz.railtech.eds.approval.requested.v2'
   uz.railtech.eds.document.archived.v1:
     address: uz.railtech.eds.document.archived.v1
     title: Документ в архиве
     messages:
       uz.railtech.eds.document.archived.v1:
         $ref: '#/components/messages/uz.railtech.eds.document.archived.v1'
+  uz.railtech.eds.document.archived.v2:
+    address: uz.railtech.eds.document.archived.v2
+    title: Документ в архиве
+    messages:
+      uz.railtech.eds.document.archived.v2:
+        $ref: '#/components/messages/uz.railtech.eds.document.archived.v2'
   uz.railtech.eds.document.registered.v1:
     address: uz.railtech.eds.document.registered.v1
     title: Документ зарегистрирован
     messages:
       uz.railtech.eds.document.registered.v1:
         $ref: '#/components/messages/uz.railtech.eds.document.registered.v1'
+  uz.railtech.eds.document.registered.v2:
+    address: uz.railtech.eds.document.registered.v2
+    title: Документ зарегистрирован
+    messages:
+      uz.railtech.eds.document.registered.v2:
+        $ref: '#/components/messages/uz.railtech.eds.document.registered.v2'
   uz.railtech.eds.document.signed.v1:
     address: uz.railtech.eds.document.signed.v1
     title: Документ подписан
     messages:
       uz.railtech.eds.document.signed.v1:
         $ref: '#/components/messages/uz.railtech.eds.document.signed.v1'
+  uz.railtech.eds.document.signed.v2:
+    address: uz.railtech.eds.document.signed.v2
+    title: Документ подписан
+    messages:
+      uz.railtech.eds.document.signed.v2:
+        $ref: '#/components/messages/uz.railtech.eds.document.signed.v2'
   uz.railtech.eds.letter.registered.v1:
     address: uz.railtech.eds.letter.registered.v1
     title: Входящее письмо зарегистрировано
     messages:
       uz.railtech.eds.letter.registered.v1:
         $ref: '#/components/messages/uz.railtech.eds.letter.registered.v1'
+  uz.railtech.eds.letter.registered.v2:
+    address: uz.railtech.eds.letter.registered.v2
+    title: Входящее письмо зарегистрировано
+    messages:
+      uz.railtech.eds.letter.registered.v2:
+        $ref: '#/components/messages/uz.railtech.eds.letter.registered.v2'
   uz.railtech.eds.letter.rejected.v1:
     address: uz.railtech.eds.letter.rejected.v1
     title: Письмо отклонено
     messages:
       uz.railtech.eds.letter.rejected.v1:
         $ref: '#/components/messages/uz.railtech.eds.letter.rejected.v1'
+  uz.railtech.eds.letter.rejected.v2:
+    address: uz.railtech.eds.letter.rejected.v2
+    title: Письмо отклонено
+    messages:
+      uz.railtech.eds.letter.rejected.v2:
+        $ref: '#/components/messages/uz.railtech.eds.letter.rejected.v2'
   uz.railtech.eds.letter.resolved.v1:
     address: uz.railtech.eds.letter.resolved.v1
     title: Резолюция наложена
     messages:
       uz.railtech.eds.letter.resolved.v1:
         $ref: '#/components/messages/uz.railtech.eds.letter.resolved.v1'
+  uz.railtech.eds.letter.resolved.v2:
+    address: uz.railtech.eds.letter.resolved.v2
+    title: Резолюция наложена
+    messages:
+      uz.railtech.eds.letter.resolved.v2:
+        $ref: '#/components/messages/uz.railtech.eds.letter.resolved.v2'
   uz.railtech.eds.letter.returned.v1:
     address: uz.railtech.eds.letter.returned.v1
     title: Письмо возвращено менеджеру
     messages:
       uz.railtech.eds.letter.returned.v1:
         $ref: '#/components/messages/uz.railtech.eds.letter.returned.v1'
+  uz.railtech.eds.letter.returned.v2:
+    address: uz.railtech.eds.letter.returned.v2
+    title: Письмо возвращено менеджеру
+    messages:
+      uz.railtech.eds.letter.returned.v2:
+        $ref: '#/components/messages/uz.railtech.eds.letter.returned.v2'
   uz.railtech.erp.act.accepted.v1:
     address: uz.railtech.erp.act.accepted.v1
     title: Акт принят клиентом
@@ -432,6 +486,12 @@ channels:
     messages:
       uz.railtech.eds.notice.requested.v1:
         $ref: '#/components/messages/uz.railtech.eds.notice.requested.v1'
+  uz.railtech.eds.notice.requested.v2:
+    address: uz.railtech.eds.notice.requested.v2
+    title: Запрошено уведомление сотрудникам (EDS)
+    messages:
+      uz.railtech.eds.notice.requested.v2:
+        $ref: '#/components/messages/uz.railtech.eds.notice.requested.v2'
   uz.railtech.eds.signing_authority.expiring.v1:
     address: uz.railtech.eds.signing_authority.expiring.v1
     title: Полномочие подписи скоро истекает (EDS)
@@ -559,6 +619,15 @@ operations:
       - $ref: '#/channels/uz.railtech.eds.approval.decided.v1/messages/uz.railtech.eds.approval.decided.v1'
     bindings:
       $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.eds.approval.decided.v2:
+    action: send
+    summary: rt://eds публикует uz.railtech.eds.approval.decided.v2
+    channel:
+      $ref: '#/channels/uz.railtech.eds.approval.decided.v2'
+    messages:
+      - $ref: '#/channels/uz.railtech.eds.approval.decided.v2/messages/uz.railtech.eds.approval.decided.v2'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
   publish.uz.railtech.eds.approval.requested.v1:
     action: send
     summary: rt://eds публикует uz.railtech.eds.approval.requested.v1
@@ -566,6 +635,15 @@ operations:
       $ref: '#/channels/uz.railtech.eds.approval.requested.v1'
     messages:
       - $ref: '#/channels/uz.railtech.eds.approval.requested.v1/messages/uz.railtech.eds.approval.requested.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.eds.approval.requested.v2:
+    action: send
+    summary: rt://eds публикует uz.railtech.eds.approval.requested.v2
+    channel:
+      $ref: '#/channels/uz.railtech.eds.approval.requested.v2'
+    messages:
+      - $ref: '#/channels/uz.railtech.eds.approval.requested.v2/messages/uz.railtech.eds.approval.requested.v2'
     bindings:
       $ref: '#/components/operationBindings/delivery'
   publish.uz.railtech.eds.document.archived.v1:
@@ -577,6 +655,15 @@ operations:
       - $ref: '#/channels/uz.railtech.eds.document.archived.v1/messages/uz.railtech.eds.document.archived.v1'
     bindings:
       $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.eds.document.archived.v2:
+    action: send
+    summary: rt://eds публикует uz.railtech.eds.document.archived.v2
+    channel:
+      $ref: '#/channels/uz.railtech.eds.document.archived.v2'
+    messages:
+      - $ref: '#/channels/uz.railtech.eds.document.archived.v2/messages/uz.railtech.eds.document.archived.v2'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
   publish.uz.railtech.eds.document.registered.v1:
     action: send
     summary: rt://eds публикует uz.railtech.eds.document.registered.v1
@@ -584,6 +671,15 @@ operations:
       $ref: '#/channels/uz.railtech.eds.document.registered.v1'
     messages:
       - $ref: '#/channels/uz.railtech.eds.document.registered.v1/messages/uz.railtech.eds.document.registered.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.eds.document.registered.v2:
+    action: send
+    summary: rt://eds публикует uz.railtech.eds.document.registered.v2
+    channel:
+      $ref: '#/channels/uz.railtech.eds.document.registered.v2'
+    messages:
+      - $ref: '#/channels/uz.railtech.eds.document.registered.v2/messages/uz.railtech.eds.document.registered.v2'
     bindings:
       $ref: '#/components/operationBindings/delivery'
   publish.uz.railtech.eds.document.signed.v1:
@@ -595,6 +691,15 @@ operations:
       - $ref: '#/channels/uz.railtech.eds.document.signed.v1/messages/uz.railtech.eds.document.signed.v1'
     bindings:
       $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.eds.document.signed.v2:
+    action: send
+    summary: rt://eds публикует uz.railtech.eds.document.signed.v2
+    channel:
+      $ref: '#/channels/uz.railtech.eds.document.signed.v2'
+    messages:
+      - $ref: '#/channels/uz.railtech.eds.document.signed.v2/messages/uz.railtech.eds.document.signed.v2'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
   publish.uz.railtech.eds.letter.registered.v1:
     action: send
     summary: rt://eds публикует uz.railtech.eds.letter.registered.v1
@@ -602,6 +707,15 @@ operations:
       $ref: '#/channels/uz.railtech.eds.letter.registered.v1'
     messages:
       - $ref: '#/channels/uz.railtech.eds.letter.registered.v1/messages/uz.railtech.eds.letter.registered.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.eds.letter.registered.v2:
+    action: send
+    summary: rt://eds публикует uz.railtech.eds.letter.registered.v2
+    channel:
+      $ref: '#/channels/uz.railtech.eds.letter.registered.v2'
+    messages:
+      - $ref: '#/channels/uz.railtech.eds.letter.registered.v2/messages/uz.railtech.eds.letter.registered.v2'
     bindings:
       $ref: '#/components/operationBindings/delivery'
   publish.uz.railtech.eds.letter.rejected.v1:
@@ -613,6 +727,15 @@ operations:
       - $ref: '#/channels/uz.railtech.eds.letter.rejected.v1/messages/uz.railtech.eds.letter.rejected.v1'
     bindings:
       $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.eds.letter.rejected.v2:
+    action: send
+    summary: rt://eds публикует uz.railtech.eds.letter.rejected.v2
+    channel:
+      $ref: '#/channels/uz.railtech.eds.letter.rejected.v2'
+    messages:
+      - $ref: '#/channels/uz.railtech.eds.letter.rejected.v2/messages/uz.railtech.eds.letter.rejected.v2'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
   publish.uz.railtech.eds.letter.resolved.v1:
     action: send
     summary: rt://eds публикует uz.railtech.eds.letter.resolved.v1
@@ -622,6 +745,15 @@ operations:
       - $ref: '#/channels/uz.railtech.eds.letter.resolved.v1/messages/uz.railtech.eds.letter.resolved.v1'
     bindings:
       $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.eds.letter.resolved.v2:
+    action: send
+    summary: rt://eds публикует uz.railtech.eds.letter.resolved.v2
+    channel:
+      $ref: '#/channels/uz.railtech.eds.letter.resolved.v2'
+    messages:
+      - $ref: '#/channels/uz.railtech.eds.letter.resolved.v2/messages/uz.railtech.eds.letter.resolved.v2'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
   publish.uz.railtech.eds.letter.returned.v1:
     action: send
     summary: rt://eds публикует uz.railtech.eds.letter.returned.v1
@@ -629,6 +761,15 @@ operations:
       $ref: '#/channels/uz.railtech.eds.letter.returned.v1'
     messages:
       - $ref: '#/channels/uz.railtech.eds.letter.returned.v1/messages/uz.railtech.eds.letter.returned.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.eds.letter.returned.v2:
+    action: send
+    summary: rt://eds публикует uz.railtech.eds.letter.returned.v2
+    channel:
+      $ref: '#/channels/uz.railtech.eds.letter.returned.v2'
+    messages:
+      - $ref: '#/channels/uz.railtech.eds.letter.returned.v2/messages/uz.railtech.eds.letter.returned.v2'
     bindings:
       $ref: '#/components/operationBindings/delivery'
   publish.uz.railtech.erp.act.accepted.v1:
@@ -1027,6 +1168,15 @@ operations:
       - $ref: '#/channels/uz.railtech.eds.notice.requested.v1/messages/uz.railtech.eds.notice.requested.v1'
     bindings:
       $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.eds.notice.requested.v2:
+    action: send
+    summary: rt://eds публикует uz.railtech.eds.notice.requested.v2
+    channel:
+      $ref: '#/channels/uz.railtech.eds.notice.requested.v2'
+    messages:
+      - $ref: '#/channels/uz.railtech.eds.notice.requested.v2/messages/uz.railtech.eds.notice.requested.v2'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
   publish.uz.railtech.eds.signing_authority.expiring.v1:
     action: send
     summary: rt://eds публикует uz.railtech.eds.signing_authority.expiring.v1
@@ -1401,6 +1551,31 @@ components:
                   const: rt://contracts/events/eds/approval.decided/v1
                 data:
                   $ref: './eds/approval.decided.v1.json'
+    uz.railtech.eds.approval.decided.v2:
+      name: uz.railtech.eds.approval.decided.v2
+      title: Решение по маршруту согласования
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://eds
+                type:
+                  const: uz.railtech.eds.approval.decided.v2
+                dataschema:
+                  const: rt://contracts/events/eds/approval.decided/v2
+                data:
+                  $ref: './eds/approval.decided.v2.json'
     uz.railtech.eds.approval.requested.v1:
       name: uz.railtech.eds.approval.requested.v1
       title: Маршрут согласования открыт
@@ -1426,6 +1601,31 @@ components:
                   const: rt://contracts/events/eds/approval.requested/v1
                 data:
                   $ref: './eds/approval.requested.v1.json'
+    uz.railtech.eds.approval.requested.v2:
+      name: uz.railtech.eds.approval.requested.v2
+      title: Маршрут согласования открыт
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://eds
+                type:
+                  const: uz.railtech.eds.approval.requested.v2
+                dataschema:
+                  const: rt://contracts/events/eds/approval.requested/v2
+                data:
+                  $ref: './eds/approval.requested.v2.json'
     uz.railtech.eds.document.archived.v1:
       name: uz.railtech.eds.document.archived.v1
       title: Документ в архиве
@@ -1451,6 +1651,31 @@ components:
                   const: rt://contracts/events/eds/document.archived/v1
                 data:
                   $ref: './eds/document.archived.v1.json'
+    uz.railtech.eds.document.archived.v2:
+      name: uz.railtech.eds.document.archived.v2
+      title: Документ в архиве
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://eds
+                type:
+                  const: uz.railtech.eds.document.archived.v2
+                dataschema:
+                  const: rt://contracts/events/eds/document.archived/v2
+                data:
+                  $ref: './eds/document.archived.v2.json'
     uz.railtech.eds.document.registered.v1:
       name: uz.railtech.eds.document.registered.v1
       title: Документ зарегистрирован
@@ -1476,6 +1701,31 @@ components:
                   const: rt://contracts/events/eds/document.registered/v1
                 data:
                   $ref: './eds/document.registered.v1.json'
+    uz.railtech.eds.document.registered.v2:
+      name: uz.railtech.eds.document.registered.v2
+      title: Документ зарегистрирован
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://eds
+                type:
+                  const: uz.railtech.eds.document.registered.v2
+                dataschema:
+                  const: rt://contracts/events/eds/document.registered/v2
+                data:
+                  $ref: './eds/document.registered.v2.json'
     uz.railtech.eds.document.signed.v1:
       name: uz.railtech.eds.document.signed.v1
       title: Документ подписан
@@ -1501,6 +1751,31 @@ components:
                   const: rt://contracts/events/eds/document.signed/v1
                 data:
                   $ref: './eds/document.signed.v1.json'
+    uz.railtech.eds.document.signed.v2:
+      name: uz.railtech.eds.document.signed.v2
+      title: Документ подписан
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://eds
+                type:
+                  const: uz.railtech.eds.document.signed.v2
+                dataschema:
+                  const: rt://contracts/events/eds/document.signed/v2
+                data:
+                  $ref: './eds/document.signed.v2.json'
     uz.railtech.eds.letter.registered.v1:
       name: uz.railtech.eds.letter.registered.v1
       title: Входящее письмо зарегистрировано
@@ -1526,6 +1801,31 @@ components:
                   const: rt://contracts/events/eds/letter.registered/v1
                 data:
                   $ref: './eds/letter.registered.v1.json'
+    uz.railtech.eds.letter.registered.v2:
+      name: uz.railtech.eds.letter.registered.v2
+      title: Входящее письмо зарегистрировано
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://eds
+                type:
+                  const: uz.railtech.eds.letter.registered.v2
+                dataschema:
+                  const: rt://contracts/events/eds/letter.registered/v2
+                data:
+                  $ref: './eds/letter.registered.v2.json'
     uz.railtech.eds.letter.rejected.v1:
       name: uz.railtech.eds.letter.rejected.v1
       title: Письмо отклонено
@@ -1551,6 +1851,31 @@ components:
                   const: rt://contracts/events/eds/letter.rejected/v1
                 data:
                   $ref: './eds/letter.rejected.v1.json'
+    uz.railtech.eds.letter.rejected.v2:
+      name: uz.railtech.eds.letter.rejected.v2
+      title: Письмо отклонено
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://eds
+                type:
+                  const: uz.railtech.eds.letter.rejected.v2
+                dataschema:
+                  const: rt://contracts/events/eds/letter.rejected/v2
+                data:
+                  $ref: './eds/letter.rejected.v2.json'
     uz.railtech.eds.letter.resolved.v1:
       name: uz.railtech.eds.letter.resolved.v1
       title: Резолюция наложена
@@ -1576,6 +1901,31 @@ components:
                   const: rt://contracts/events/eds/letter.resolved/v1
                 data:
                   $ref: './eds/letter.resolved.v1.json'
+    uz.railtech.eds.letter.resolved.v2:
+      name: uz.railtech.eds.letter.resolved.v2
+      title: Резолюция наложена
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://eds
+                type:
+                  const: uz.railtech.eds.letter.resolved.v2
+                dataschema:
+                  const: rt://contracts/events/eds/letter.resolved/v2
+                data:
+                  $ref: './eds/letter.resolved.v2.json'
     uz.railtech.eds.letter.returned.v1:
       name: uz.railtech.eds.letter.returned.v1
       title: Письмо возвращено менеджеру
@@ -1601,6 +1951,31 @@ components:
                   const: rt://contracts/events/eds/letter.returned/v1
                 data:
                   $ref: './eds/letter.returned.v1.json'
+    uz.railtech.eds.letter.returned.v2:
+      name: uz.railtech.eds.letter.returned.v2
+      title: Письмо возвращено менеджеру
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://eds
+                type:
+                  const: uz.railtech.eds.letter.returned.v2
+                dataschema:
+                  const: rt://contracts/events/eds/letter.returned/v2
+                data:
+                  $ref: './eds/letter.returned.v2.json'
     uz.railtech.erp.act.accepted.v1:
       name: uz.railtech.erp.act.accepted.v1
       title: Акт принят клиентом
@@ -2701,6 +3076,31 @@ components:
                   const: rt://contracts/events/eds/notice.requested/v1
                 data:
                   $ref: './eds/notice.requested.v1.json'
+    uz.railtech.eds.notice.requested.v2:
+      name: uz.railtech.eds.notice.requested.v2
+      title: Запрошено уведомление сотрудникам (EDS)
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://eds
+                type:
+                  const: uz.railtech.eds.notice.requested.v2
+                dataschema:
+                  const: rt://contracts/events/eds/notice.requested/v2
+                data:
+                  $ref: './eds/notice.requested.v2.json'
     uz.railtech.eds.signing_authority.expiring.v1:
       name: uz.railtech.eds.signing_authority.expiring.v1
       title: Полномочие подписи скоро истекает (EDS)

@@ -47,7 +47,7 @@ async def test_registrar_registers_a_tax_notice_urgent_without_summary(
     assert response.status_code == 201, response.text
     letter = response.json()
     validate("Letter", letter)
-    assert letter["number"] == "ВХ-001/26"
+    assert letter["number"] == "IN-001/26"
     assert letter["status"] == "awaiting_resolution"
     assert letter["urgent"] is True  # вид «Требование ГНК» ставит «срочно» сам
     assert letter["summary"] == TAX_NOTICE["subject"]  # краткое содержание не задано — тема
@@ -85,7 +85,7 @@ async def test_related_number_links_a_previous_letter_or_our_outgoing(
         client, staff["registrar"], related_number=first["number"], sender_ref={"number": "04-12/3500"}
     )
     assert second.status_code == 201, second.text
-    assert second.json()["related"] == {"kind": "letter_in", "id": first["id"], "number": "ВХ-001/26"}
+    assert second.json()["related"] == {"kind": "letter_in", "id": first["id"], "number": "IN-001/26"}
 
     outgoing = await client.post(
         "/api/v1/documents",
@@ -99,7 +99,7 @@ async def test_related_number_links_a_previous_letter_or_our_outgoing(
     assert third.json()["related"]["kind"] == "letter_out"
     assert third.json()["related"]["number"] == number
 
-    missing = await register(client, staff["registrar"], related_number="ВХ-999/26")
+    missing = await register(client, staff["registrar"], related_number="IN-999/26")
     assert_error(missing, 422, "VALIDATION_FAILED")
     assert missing.json()["details"]["fields"][0]["field"] == "related_number"
     assert missing.json()["details"]["fields"][0]["message"] == "not_found"

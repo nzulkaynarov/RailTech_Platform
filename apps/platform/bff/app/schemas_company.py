@@ -30,7 +30,14 @@ NumberingKind = Literal[
     "shipment",
     "partner_contract",
     "letter",
+    "letter_in",
+    "outgoing",
+    "memo",
+    "application",
+    "report",
 ]
+# Виды номеров документооборота (EDS `/api/v1/numbering-labels`, задача «Н2»).
+EDS_KINDS: tuple[NumberingKind, ...] = ("letter_in", "outgoing", "memo", "application", "report")
 ResetPeriod = Literal["never", "yearly", "monthly"]
 ReferenceKind = Literal["countries", "currencies", "units", "delivery-basis"]
 RequestStatus = Literal["pending", "approved", "rejected"]
@@ -373,6 +380,29 @@ def to_numbering(raw: Mapping[str, Any]) -> NumberingScheme:
         prefix=text(raw.get("prefix")),
         is_effective=flag(raw.get("is_effective")),
     )
+
+
+def eds_labels(raw: Mapping[str, Any]) -> list[tuple[NumberingKind, str, str]]:
+    """Ответ EDS `NumberLabels` -> (вид, обозначение, образец); чужой вид пропускается."""
+    out: list[tuple[NumberingKind, str, str]] = []
+    for row in raw.get("items") or []:
+        kind = row.get("kind") if isinstance(row, dict) else None
+        if kind in EDS_KINDS:
+            out.append((kind, text(row.get("label")), text(row.get("example"))))
+    return out
+
+
+def eds_preview(
+    rows: list[tuple[NumberingKind, str, str]], draft: Mapping[str, str] | None
+) -> list[NumberingPreviewItem]:
+    """Образец номеров EDS с несохранённым обозначением: образец EDS — `<обозначение>-…`, а в
+    обозначении нет «-» (правило EDS), поэтому подставляется только часть до первого «-»."""
+    items: list[NumberingPreviewItem] = []
+    for kind, label, example in rows:
+        wanted = ((draft or {}).get(kind) or "").strip() or label
+        tail = example.split("-", 1)[1] if "-" in example else example
+        items.append(NumberingPreviewItem(kind=kind, label=wanted, number=f"{wanted}-{tail}"))
+    return items
 
 
 def to_numbering_preview(raw: Mapping[str, Any]) -> NumberingPreview:

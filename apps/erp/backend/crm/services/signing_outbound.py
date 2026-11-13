@@ -17,6 +17,7 @@ from integration.models import CommercialSigningRequest, CrmUserMapping
 from integration.services.event_builders import build_actor
 
 from accounts.models import CustomUser
+from core.currency import BASE_CURRENCY
 
 logger = logging.getLogger(__name__)
 
@@ -42,10 +43,10 @@ def _amount(doc: Any) -> Decimal:
 def _currency(kind: str, doc: Any) -> str:
     if kind == "act":
         invoice = getattr(doc, "invoice", None) or doc.deal.invoices.exclude(currency=None).order_by("-id").first()
-        return invoice.currency.code if invoice is not None and invoice.currency_id else "UZS"
+        return invoice.currency.code if invoice is not None and invoice.currency_id else BASE_CURRENCY
     if kind == "quote":
-        return doc.quote_currency.code if doc.quote_currency_id else "UZS"
-    return doc.currency.code if doc.currency_id else "UZS"
+        return doc.quote_currency.code if doc.quote_currency_id else BASE_CURRENCY
+    return doc.currency.code if doc.currency_id else BASE_CURRENCY
 
 
 def fingerprint(kind: str, doc: Any) -> str:

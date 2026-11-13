@@ -437,9 +437,13 @@ def test_initial_subscriptions_v1() -> None:
         "uz.railtech.crm.mail.sent.v1",
         "uz.railtech.crm.partner.client_resolved.v1",
         "uz.railtech.eds.approval.decided.v1",
+        "uz.railtech.eds.approval.decided.v2",
         "uz.railtech.eds.document.signed.v1",
+        "uz.railtech.eds.document.signed.v2",
         "uz.railtech.eds.letter.rejected.v1",
+        "uz.railtech.eds.letter.rejected.v2",
         "uz.railtech.eds.letter.resolved.v1",
+        "uz.railtech.eds.letter.resolved.v2",
         "uz.railtech.eds.signing.decided.v1",
     ]
 
@@ -460,8 +464,10 @@ def test_crm_gets_every_erp_event_except_those_for_eds() -> None:
     assert _gets(crm) - erp_got == {
         "uz.railtech.eds.mail.requested.v1",
         "uz.railtech.eds.notice.requested.v1",
+        "uz.railtech.eds.notice.requested.v2",
         "uz.railtech.eds.signing_authority.expiring.v1",  # SIGN-2: полномочие подписи скоро истекает
         "uz.railtech.eds.letter.registered.v1",
+        "uz.railtech.eds.letter.registered.v2",  # задача «Н»: номер с обозначением из настроек
     }
 
 
