@@ -48,7 +48,7 @@ describe('«Новый запрос»: черновик переживает у�
     await user.type(screen.getByLabelText('Что нужно'), 'Нужно что-то');
     expect(loadRequestDraft(KEY)).not.toBeNull();
     await user.click(screen.getByRole('button', { name: 'Отправить запрос' }));
-    await heading(/^Запрос Z-/);
+    await heading(/^Запрос ЗВ-/);
     expect(loadRequestDraft(KEY)).toBeNull();
     expect(window.sessionStorage.getItem(KEY)).toBeNull();
 
@@ -103,7 +103,7 @@ describe('«Новый запрос»: черновик переживает у�
     await heading('Новый запрос');
     await user.type(screen.getByLabelText('Что нужно'), 'Без хранилища');
     await user.click(screen.getByRole('button', { name: 'Отправить запрос' }));
-    expect(await heading(/^Запрос Z-/)).toBeInTheDocument();
+    expect(await heading(/^Запрос ЗВ-/)).toBeInTheDocument();
     vi.restoreAllMocks();
   });
 });

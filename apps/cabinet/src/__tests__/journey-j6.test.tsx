@@ -26,7 +26,7 @@ describe('Wave J6 & B-CABFIX-2: Поиск, фильтры, повтор зап�
       await waitFor(() => {
         const items = within(list).getAllByRole('listitem');
         expect(items).toHaveLength(1);
-        expect(items[0]).toHaveTextContent('Z-2026-0035');
+        expect(items[0]).toHaveTextContent('ПР-2026-035');
       });
 
       // Сбрасываем фильтр кнопкой «Все»
@@ -51,7 +51,7 @@ describe('Wave J6 & B-CABFIX-2: Поиск, фильтры, повтор зап�
       await waitFor(() => {
         const items = within(list).getAllByRole('listitem');
         expect(items).toHaveLength(1);
-        expect(items[0]).toHaveTextContent('Z-2026-0061');
+        expect(items[0]).toHaveTextContent('ЗВ-2026-061');
         expect(items[0]).toHaveTextContent('Перчатки нитриловые');
       });
     });
@@ -102,28 +102,28 @@ describe('Wave J6 & B-CABFIX-2: Поиск, фильтры, повтор зап�
       signedIn();
       const user = userEvent.setup();
       const { router } = renderApp('/requests/501');
-      await heading('Запрос Z-2026-0042');
+      await heading('Запрос ЗВ-2026-042');
 
       const reorderBtn = screen.getByRole('link', { name: 'Повторить запрос' });
       await user.click(reorderBtn);
 
       expect(await heading('Новый запрос')).toBeInTheDocument();
       expect(router.state.location.pathname).toBe('/requests/new');
-      expect(screen.getByLabelText('Что нужно')).toHaveValue('Повтор запроса Z-2026-0042: Подшипники 6205-2RS — 200 шт., ремни приводные SPZ 1250 — 40 шт.');
+      expect(screen.getByLabelText('Что нужно')).toHaveValue('Повтор запроса ЗВ-2026-042: Подшипники 6205-2RS — 200 шт., ремни приводные SPZ 1250 — 40 шт.');
     }, 60_000);
 
     it('кнопка «Повторить проект» на странице сделки предзаполняет позиции из поставки', async () => {
       signedIn();
       const user = userEvent.setup();
       const { router } = renderApp('/deals/35');
-      await heading('Проект D-35');
+      await heading('Проект ПР-2026-035');
 
       const reorderDealBtn = screen.getByRole('link', { name: 'Повторить проект' });
       await user.click(reorderDealBtn);
 
       expect(await heading('Новый запрос')).toBeInTheDocument();
       expect(router.state.location.pathname).toBe('/requests/new');
-      expect(screen.getByLabelText('Что нужно')).toHaveValue('Повтор запроса D-35: Редукторы и муфты');
+      expect(screen.getByLabelText('Что нужно')).toHaveValue('Повтор запроса ПР-2026-035: Редукторы и муфты');
     }, 60_000);
   });
 
@@ -135,12 +135,12 @@ describe('Wave J6 & B-CABFIX-2: Поиск, фильтры, повтор зап�
 
       const list = await screen.findByRole('list', { name: 'Запросы' });
       // Запрос 504 закрыт с outcome: 'won'
-      const item504 = within(list).getByText('Z-2026-0035').closest('li')!;
+      const item504 = within(list).getByText('ПР-2026-035').closest('li')!;
       expect(within(item504).getByText('Исполнен')).toBeInTheDocument();
 
       // Открываем детальную страницу
       await router.navigate('/requests/504');
-      await heading('Запрос Z-2026-0035');
+      await heading('Запрос ПР-2026-035');
       expect(screen.getByText('Исполнен')).toBeInTheDocument();
     });
 
@@ -149,7 +149,7 @@ describe('Wave J6 & B-CABFIX-2: Поиск, фильтры, повтор зап�
       const cancelledReq = {
         ...fixtures.requests[4],
         id: 599,
-        number: 'Z-2026-0099',
+        number: 'ЗВ-2026-099',
         status: 'closed' as const,
         outcome: 'cancelled' as const,
       };
@@ -158,7 +158,7 @@ describe('Wave J6 & B-CABFIX-2: Поиск, фильтры, повтор зап�
       );
 
       renderApp('/requests/599');
-      await heading('Запрос Z-2026-0099');
+      await heading('Запрос ЗВ-2026-099');
       expect(screen.getByText('Отменён')).toBeInTheDocument();
     });
   });

@@ -25,12 +25,12 @@ export const DOC_ALWAYS_PREPARING = 909;
 
 /** Сделки глазами клиента: номер и название вместо внутреннего id (Q-16). */
 export const deals: Record<number, Schemas['DealRef']> = {
-  29: { id: 29, number: 'D-29', title: 'Насос, задвижки и манометры' },
-  33: { id: 33, number: 'D-33', title: 'Кабель ВВГнг для цеха' },
-  35: { id: 35, number: 'D-35', title: 'Редукторы и муфты' },
-  42: { id: 42, number: 'D-42', title: 'Подшипники и ремни' },
-  48: { id: 48, number: 'D-48', title: 'Электродвигатели и преобразователь' },
-  57: { id: 57, number: 'D-57', title: 'Насосная станция в Чирчике' },
+  29: { id: 29, number: 'ПР-2026-029', stage: 'project', title: 'Насос, задвижки и манометры' },
+  33: { id: 33, number: 'ПР-2026-033', stage: 'project', title: 'Кабель ВВГнг для цеха' },
+  35: { id: 35, number: 'ПР-2026-035', stage: 'project', title: 'Редукторы и муфты' },
+  42: { id: 42, number: 'ЗВ-2026-042', stage: 'request', title: 'Подшипники и ремни' },
+  48: { id: 48, number: 'ПР-2026-048', stage: 'project', title: 'Электродвигатели и преобразователь' },
+  57: { id: 57, number: 'ПР-2026-057', stage: 'project', title: 'Насосная станция в Чирчике' },
 };
 
 /** Сделка записи по контракту 0.3.0: только `deal {id, number, title}`, отдельного внутреннего id сделки в записи нет. */
@@ -155,7 +155,7 @@ export const sessions: Schemas['PortalSessionItem'][] = [
 export const requests: Schemas['ClientRequest'][] = [
   {
     id: 503,
-    number: 'Z-2026-0061',
+    number: 'ЗВ-2026-061',
     status: 'new',
     summary: 'Перчатки нитриловые, размер L — 50 упаковок',
     source: 'cabinet',
@@ -164,7 +164,7 @@ export const requests: Schemas['ClientRequest'][] = [
   },
   {
     id: 502,
-    number: 'Z-2026-0057',
+    number: 'ПР-2026-057',
     status: 'in_progress',
     summary: 'Монтаж и пусконаладка насосной станции на складе в Чирчике',
     source: 'cabinet',
@@ -173,7 +173,7 @@ export const requests: Schemas['ClientRequest'][] = [
   },
   {
     id: 501,
-    number: 'Z-2026-0042',
+    number: 'ЗВ-2026-042',
     status: 'quoted',
     summary: 'Подшипники 6205-2RS — 200 шт., ремни приводные SPZ 1250 — 40 шт.',
     source: 'crm',
@@ -182,7 +182,7 @@ export const requests: Schemas['ClientRequest'][] = [
   },
   {
     id: 505,
-    number: 'Z-2026-0048',
+    number: 'ПР-2026-048',
     status: 'quoted',
     summary: 'Электродвигатель АИР 100L4 — 2 шт., частотный преобразователь 4 кВт',
     source: 'erp',
@@ -191,7 +191,7 @@ export const requests: Schemas['ClientRequest'][] = [
   },
   {
     id: 504,
-    number: 'Z-2026-0035',
+    number: 'ПР-2026-035',
     status: 'closed',
     outcome: 'won',
     summary: 'Редукторы червячные NMRV 063 — 6 шт., муфты упругие — 12 шт.',
@@ -929,7 +929,7 @@ export const notifications: Schemas['PortalNotification'][] = [
     'documents',
     { type: 'quote', id: 301, number: 'KP-2026-0042' },
     'awaiting_decision',
-    { number: 'KP-2026-0042', deal: 'D-42' },
+    { number: 'KP-2026-0042', deal: 'ЗВ-2026-042' },
     '/quotes/301',
     '2026-10-14T10:20:00+05:00',
   ),
@@ -947,9 +947,9 @@ export const notifications: Schemas['PortalNotification'][] = [
     9003,
     'delivery_eta_changed',
     'deliveries',
-    { type: 'delivery', id: 35, number: 'D-35' },
+    { type: 'delivery', id: 35, number: 'ПР-2026-035' },
     'eta_changed',
-    { deal: 'D-35', eta: '2026-10-24', previous_eta: '2026-10-20' },
+    { deal: 'ПР-2026-035', eta: '2026-10-24', previous_eta: '2026-10-20' },
     '/deals/35',
     '2026-10-12T09:40:00+05:00',
   ),
@@ -968,9 +968,9 @@ export const notifications: Schemas['PortalNotification'][] = [
     9001,
     'delivery_status_changed',
     'deliveries',
-    { type: 'delivery', id: 35, number: 'D-35' },
+    { type: 'delivery', id: 35, number: 'ПР-2026-035' },
     'status_changed',
-    { deal: 'D-35', status: 'shipped' },
+    { deal: 'ПР-2026-035', status: 'shipped' },
     '/deals/35',
     '2026-10-09T08:15:00+05:00',
     '2026-10-09T09:00:00+05:00',

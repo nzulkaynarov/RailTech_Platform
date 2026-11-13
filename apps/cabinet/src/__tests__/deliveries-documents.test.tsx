@@ -13,9 +13,9 @@ describe('Поставки по строкам', () => {
     signedIn();
     renderApp('/deliveries');
     await heading('Поставки');
-    const deal29 = await screen.findByRole('list', { name: 'Проект D-29' });
+    const deal29 = await screen.findByRole('list', { name: 'Проект ПР-2026-029' });
     expect(within(deal29).getAllByRole('listitem')).toHaveLength(3);
-    expect(screen.getByRole('link', { name: 'Проект D-29' })).toHaveAttribute('href', '/deals/29');
+    expect(screen.getByRole('link', { name: 'Проект ПР-2026-029' })).toHaveAttribute('href', '/deals/29');
     expect(screen.getByText(/Насос, задвижки и манометры/)).toBeInTheDocument();
     expect(within(deal29).getByText('Комплектуем')).toBeInTheDocument();
     expect(within(deal29).getByText('Ожидается 24 окт. 2026 г.')).toBeInTheDocument();
@@ -23,8 +23,8 @@ describe('Поставки по строкам', () => {
     expect(within(deal29).getByText('UZP-77815230')).toBeInTheDocument();
     expect(within(deal29).getByText('Отгружено 12 окт. 2026 г., 11:00')).toBeInTheDocument();
     expect(screen.getByText('Доставлено 3 из 4')).toBeInTheDocument();
-    expect(within(screen.getByRole('list', { name: 'Проект D-48' })).getByText('Дата уточняется')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Проект D-35' })).toHaveAttribute('href', '/deals/35');
+    expect(within(screen.getByRole('list', { name: 'Проект ПР-2026-048' })).getByText('Дата уточняется')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Проект ПР-2026-035' })).toHaveAttribute('href', '/deals/35');
     await expectNoAxeViolations();
   });
 
@@ -32,7 +32,7 @@ describe('Поставки по строкам', () => {
   it('название сделки — отдельный элемент, разделитель «·» декоративный и скрыт на узком экране', async () => {
     signedIn();
     renderApp('/deliveries');
-    const deal29 = await screen.findByRole('list', { name: 'Проект D-29' });
+    const deal29 = await screen.findByRole('list', { name: 'Проект ПР-2026-029' });
     const card = deal29.closest('[data-slot=card]') as HTMLElement;
     const title = within(card).getByText('Насос, задвижки и манометры');
     expect(title).toHaveClass('basis-full');

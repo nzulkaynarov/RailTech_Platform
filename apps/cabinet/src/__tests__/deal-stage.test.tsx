@@ -50,7 +50,7 @@ describe('Этапы проекта по статусам документов (
     expect(stateOf(input, 'contract')).toBe('active');
   });
 
-  it('договор ждёт согласования клиента — не выполнен (случай D-48 из аудита)', () => {
+  it('договор ждёт согласования клиента — не выполнен (случай ПР-2026-048 из аудита)', () => {
     for (const status of ['sent', 'signed_by_company', 'signed_by_client'] as const) {
       expect(stateOf(docs({ quotes: [{ status: 'accepted' }], contracts: [{ status }] }), 'contract')).toBe('active');
     }
@@ -111,7 +111,7 @@ describe('Этапы проекта по статусам документов (
 
   it('текущий этап — ровно один, первый невыполненный; остальные начатые — просто «в работе» (CAB-FIX-3)', () => {
     const current = (input: DealDocuments) => dealProgress(input).stages.filter((stage) => stage.current).map((stage) => stage.id);
-    // D-48: договор ждёт согласования, счёт на предоплату и поставка уже идут — текущий только договор
+    // ПР-2026-048: договор ждёт согласования, счёт на предоплату и поставка уже идут — текущий только договор
     const d48 = docs({
       requests: [{ status: 'quoted' }],
       quotes: [{ status: 'accepted' }],
@@ -138,10 +138,10 @@ describe('Этапы проекта по статусам документов (
 });
 
 describe('Этапы на странице проекта', () => {
-  it('D-48: договор ждёт согласования — «Договор» текущий этап, оплата и поставка — «начато»', async () => {
+  it('ПР-2026-048: договор ждёт согласования — «Договор» текущий этап, оплата и поставка — «начато»', async () => {
     signedIn();
     renderApp('/deals/48');
-    await heading('Проект D-48');
+    await heading('Проект ПР-2026-048');
     const stages = await screen.findByRole('region', { name: 'Этапы проекта' });
     const items = within(stages).getAllByRole('listitem');
     expect(items.map((item) => item.textContent)).toEqual([
@@ -156,10 +156,10 @@ describe('Этапы на странице проекта', () => {
     expect(screen.queryByText('Что произойдёт')).not.toBeInTheDocument();
   });
 
-  it('D-35: закрытый запрос с исходом won — «Проект успешно завершён», без этапов «в работе» и без «исполнения»', async () => {
+  it('ПР-2026-035: закрытый запрос с исходом won — «Проект успешно завершён», без этапов «в работе» и без «исполнения»', async () => {
     signedIn();
     renderApp('/deals/35');
-    await heading('Проект D-35');
+    await heading('Проект ПР-2026-035');
     const stages = await screen.findByRole('region', { name: 'Этапы проекта' });
     expect(within(stages).getByText('Проект успешно завершён')).toBeInTheDocument();
     expect(within(stages).queryByText(/текущий этап|начато/)).not.toBeInTheDocument();
@@ -171,7 +171,7 @@ describe('Этапы на странице проекта', () => {
     const lapsed = { ...fixtures.quotes[0], id: 399, ...fixtures.dealOf(48), number: 'KP-LAPSED', status: 'sent' as const, valid_until: '2026-10-01' };
     portalServer.use(http.get('*/api/portal/v1/quotes', () => HttpResponse.json([lapsed])));
     renderApp('/deals/48');
-    await heading('Проект D-48');
+    await heading('Проект ПР-2026-048');
     const quotes = await screen.findByRole('region', { name: 'КП' });
     expect(within(quotes).getByText('Срок истёк')).toBeInTheDocument();
     expect(within(quotes).queryByText(/Ждёт/)).not.toBeInTheDocument();

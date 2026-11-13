@@ -88,7 +88,8 @@
     },
     "date": {
       "placeholder": "KK.OO.YYYY"
-    }
+    },
+    "requestNumber": "Ariza {{number}}"
   },
   "access": {
     "noSections": {
@@ -321,6 +322,7 @@
   "manager": {
     "write": "Menejerga yozish",
     "aboutDeal": "Menejerga yozish: loyiha {{number}}",
+    "aboutRequest": "Menejerga yozish: ariza {{number}}",
     "aboutQuote": "Menejerga yozish: {{number}} taklifi",
     "aboutContract": "Menejerga yozish: {{number}} shartnomasi",
     "aboutInvoice": "Menejerga yozish: {{number}} hisob-fakturasi",
@@ -1067,7 +1069,8 @@
         "deal": "Loyiha {{number}}",
         "quote": "TK {{number}}",
         "invoice": "Hisob {{number}}",
-        "act": "Dalolatnoma {{number}}"
+        "act": "Dalolatnoma {{number}}",
+        "request": "Ariza {{number}}"
       },
       "aboutLabel": "Savol qaysi hujjat haqida",
       "about": "Hujjat: {{what}}",

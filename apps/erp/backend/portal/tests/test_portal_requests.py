@@ -313,7 +313,7 @@ def test_request_source_is_cabinet_in_the_response_and_in_the_journal(portal_cli
 def test_request_is_not_a_deal_yet(portal_client):
     created = post(portal_client).json()
     assert created["status"] == "new" and created["deal"] is None and "deal_id" not in created
-    assert created["number"] == f"Z-{created['id']}"
+    assert created["number"].startswith("ЗВ-")  # 0.12 (FR-37): номер заявки — как у сотрудников
 
 
 def test_deal_created_by_portal_belongs_to_the_session_company_and_contact(
