@@ -435,7 +435,7 @@ def generate_document(company, user: CustomUser, *, template, deal=None, contact
         deal=deal,
         contact=contact,
         template=template,
-        number=next_document_number("DOC", "ДОК", company=company),
+        number=next_document_number("DOC", company=company),
         status=_status(GeneratedDocumentStatusCode.DRAFT),
         title=(title or template.name)[:255],
         values=values,

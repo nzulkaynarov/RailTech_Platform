@@ -680,6 +680,7 @@ export * from "./notificationPage";
 export * from "./notificationSettings";
 export * from "./notificationSettingsUpdate";
 export * from "./notificationTab";
+export * from "./numberingKind";
 export * from "./numberingLabels";
 export * from "./numberingPreview";
 export * from "./numberingPreviewIn";

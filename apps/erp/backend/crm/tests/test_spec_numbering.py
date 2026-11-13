@@ -24,14 +24,7 @@ from crm.models import (
     QuoteStatus,
 )
 from crm.services import billing, contracts
-from crm.services.numbering import (
-    DELIVERY_NOTE_LABEL,
-    RECEIPT_LABEL,
-    next_document_number,
-    number_search_q,
-    preview_scheme_numbers,
-    set_company_scheme,
-)
+from crm.services.numbering import next_document_number, number_search_q, preview_scheme_numbers, set_company_scheme
 from crm.services.pdf_storage import safe_file_name
 
 pytestmark = pytest.mark.django_db
@@ -58,32 +51,31 @@ def test_every_kind_gets_the_spec_number():
     year = timezone.now().year
     with transaction.atomic():
         minted = {
-            "KP": next_document_number("KP", "КП"),
+            "KP": next_document_number("KP"),
             "CT": contracts._next_contract_number(),
             "INV": billing._next_invoice_number(),
             "ACT": billing._next_act_number(),
             "RCP": billing._next_receipt_number(),
-            "DN": next_document_number("DN", DELIVERY_NOTE_LABEL),
-            "DOC": next_document_number("DOC", "ДОК"),
+            "DN": next_document_number("DN"),
+            "DOC": next_document_number("DOC"),
         }
     assert minted == {
-        "KP": f"КП-{year}/001",
-        "CT": f"ДОГ-{year}/001",
-        "INV": f"СЧ-{year}/001",
-        "ACT": f"АКТ-{year}/001",
-        "RCP": f"{RECEIPT_LABEL}-{year}/001",
-        "DN": f"НАК-{year}/001",
-        "DOC": f"ДОК-{year}/001",
+        "KP": f"QT-{year}/001",
+        "CT": f"CT-{year}/001",
+        "INV": f"INV-{year}/001",
+        "ACT": f"ACT-{year}/001",
+        "RCP": f"RCP-{year}/001",
+        "DN": f"DN-{year}/001",
+        "DOC": f"DOC-{year}/001",
     }
-    assert RECEIPT_LABEL == "КВ"
 
 
 def test_company_prefix_keeps_its_place_and_own_counter():
     year = timezone.now().year
     acme = _company("ACME", "6200000001", prefix="ACME")
-    assert _mint("CT", "ДОГ", acme) == f"ACME-ДОГ-{year}/001"
-    assert _mint("CT", "ДОГ") == f"ДОГ-{year}/001"  # платформенный счётчик отдельный
-    assert _mint("CT", "ДОГ", acme) == f"ACME-ДОГ-{year}/002"
+    assert _mint("CT", "CT", acme) == f"ACME-CT-{year}/001"
+    assert _mint("CT", "CT") == f"CT-{year}/001"  # платформенный счётчик отдельный
+    assert _mint("CT", "CT", acme) == f"ACME-CT-{year}/002"
 
 
 def test_preview_shows_the_spec_sample():
@@ -92,18 +84,25 @@ def test_preview_shows_the_spec_sample():
         None, pattern="{prefix}{type}-{YYYY}/{seq}", padding=3, reset_period="yearly", start_value=0, prefix=""
     )
     assert {row["type_code"]: row["number"] for row in rows} == {
-        "KP": f"КП-{year}/001",
-        "CT": f"ДОГ-{year}/001",
-        "INV": f"СЧ-{year}/001",
-        "ACT": f"АКТ-{year}/001",
-        "DOC": f"ДОК-{year}/001",
+        "KP": f"QT-{year}/001",
+        "CT": f"CT-{year}/001",
+        "INV": f"INV-{year}/001",
+        "ACT": f"ACT-{year}/001",
+        "DOC": f"DOC-{year}/001",
+        "REQ": f"RQ-{year}-001",
+        "PRJ": f"PRJ-{year}-001",
+        "RCP": f"RCP-{year}/001",
+        "DN": f"DN-{year}/001",
+        "PO": f"PO-{year}-001",
+        "SHP": f"SHP-{year}-001",
+        "PART": f"PA-{year}-0001",
     }
 
 
 def test_more_than_999_documents_widen_the_number():
     year = timezone.now().year
     DocumentSequence.objects.create(company=None, doc_type="INV", year=year, period=str(year), last_value=999)
-    assert _mint("INV", "СЧ") == f"СЧ-{year}/1000"
+    assert _mint("INV", "INV") == f"INV-{year}/1000"
 
 
 # ── Счётчик продолжается, уникальность ──────────────────────────────────────────────
@@ -130,9 +129,9 @@ def test_counter_continues_and_never_repeats_an_issued_number():
     _contract(deal, status, f"CT-{year}-00042", 1)  # выдан до перехода
     DocumentSequence.objects.create(company=None, doc_type="CT", year=year, period=str(year), last_value=42)
 
-    number = _mint("CT", "ДОГ")
+    number = _mint("CT", "CT")
 
-    assert number == f"ДОГ-{year}/043"  # не с 001: счётчик года продолжается
+    assert number == f"CT-{year}/043"  # не с 001: счётчик года продолжается
     assert not Contract.objects.filter(number=number).exists()
     _contract(deal, status, number, 2)  # глобальная уникальность `number` выдерживает новый номер
     assert DocumentSequence.objects.get(company=None, doc_type="CT", period=str(year)).last_value == 43
@@ -142,7 +141,7 @@ def test_issued_numbers_are_not_rewritten():
     year = timezone.now().year
     deal, status = _contract_world()
     old = _contract(deal, status, f"CT-{year}-00007", 1)
-    _mint("CT", "ДОГ")
+    _mint("CT", "CT")
     old.refresh_from_db()
     assert old.number == f"CT-{year}-00007"
 
@@ -154,7 +153,7 @@ def test_company_with_own_mask_is_untouched():
     year = timezone.now().year
     acme = _company("ACME", "6200000002", prefix="ACME")
     set_company_scheme(acme, pattern="{prefix}{type}-{YYYY}-{seq}", padding=5, type_labels={"CT": "CT"})
-    assert _mint("CT", "ДОГ", acme) == f"ACME-CT-{year}-00001"
+    assert _mint("CT", "CT", acme) == f"ACME-CT-{year}-00001"
 
 
 # ── Поиск: прежний и новый вид ──────────────────────────────────────────────────────

@@ -240,7 +240,7 @@ def test_parallel_order_numbers_are_unique_and_gapless(lab):
     results = _parallel([create] * 6)
     assert all(code == 201 for code, _number in results), results
     year = timezone.localdate().year
-    assert sorted(number for _code, number in results) == [f"ЗП-{year}-{n:03d}" for n in range(1, 7)]
+    assert sorted(number for _code, number in results) == [f"PO-{year}-{n:03d}" for n in range(1, 7)]
 
 
 def test_shipping_and_reserving_the_same_line_do_not_deadlock(lab, monkeypatch):

@@ -40,5 +40,5 @@ def test_backfill_corrects_behind_counter_and_prevents_collision():
     with transaction.atomic():
         nxt = next_document_number("CT", "CT")
     # SPEC-v3 §2.2 form (B-WDOCS2-1); the counter continues past the existing CT-2026-00007.
-    assert nxt == f"ДОГ-{timezone.now().year}/008"
+    assert nxt == f"CT-{timezone.now().year}/008"
     assert not Contract.objects.filter(number=nxt).exists()

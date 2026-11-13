@@ -172,11 +172,9 @@ def _held_for_verification(company_id: int) -> bool:
 
 
 def _request_details(deal: Any) -> Dict[str, Any]:
-    """Номер ЗВ, процесс и срочность заявки для `request.created` (W16-D1-2)."""
+    """Процесс и срочность заявки для `request.created` (W16-D1-2). `request_number` не заполняется с 2026-11-13
+    (задача «Н»): номер — в `deal.number`, а шаблон поля в схеме v1 знает только прежний префикс ЗВ."""
     details: Dict[str, Any] = {}
-    number = getattr(deal, "number", "") or ""
-    if number and not getattr(deal, "is_project", False):  # стадия — полем, не по префиксу (задача «Н»)
-        details["request_number"] = number
     if getattr(deal, "process", "") == "v3":
         details["process"] = "v3"
         details["urgency"] = getattr(deal, "urgency", "") or "normal"

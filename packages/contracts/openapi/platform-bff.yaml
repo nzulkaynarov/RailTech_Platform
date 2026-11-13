@@ -19204,6 +19204,25 @@ components:
         - act
         - letter
       description: 'Вид документа: КП, договор, счёт, акт, письмо (ERP `KP`, `CT`, `INV`, `ACT`, `DOC`)'
+    NumberingKind:
+      type: string
+      enum:
+        - request
+        - project
+        - quote
+        - contract
+        - invoice
+        - act
+        - receipt
+        - delivery_note
+        - purchase_order
+        - shipment
+        - partner_contract
+        - letter
+      description: >-
+        Вид номера в «Настройки · Нумерация» (задача «Н»): заявка, проект, КП, договор, счёт, акт, квитанция, накладная,
+        заказ поставщику, отгрузка, договор партнёра, документ по шаблону (ERP `REQ`, `PRJ`, `KP`, `CT`, `INV`, `ACT`,
+        `RCP`, `DN`, `PO`, `SHP`, `PART`, `DOC`)
     BrandPreviewIn:
       type: object
       additionalProperties: false
@@ -19242,7 +19261,7 @@ components:
       additionalProperties:
         type: string
         maxLength: 16
-      description: Что подставляется в `{type}` для каждого вида документа; ключи — `DocumentKind`
+      description: Обозначение каждого вида номера (по умолчанию латиницей); ключи — `NumberingKind`
     NumberingScheme:
       type: object
       additionalProperties: false
@@ -19279,7 +19298,7 @@ components:
           description: Префикс нумерации компании
         is_effective:
           type: boolean
-          description: Своя схема применяется только с непустым префиксом
+          description: Схема, которую показывает редактор, всегда действует (задача «Н»); поле оставлено для совместимости
     NumberingUpdate:
       type: object
       additionalProperties: false
@@ -19347,7 +19366,7 @@ components:
         - number
       properties:
         kind:
-          $ref: '#/components/schemas/DocumentKind'
+          $ref: '#/components/schemas/NumberingKind'
         label:
           type: string
         number:

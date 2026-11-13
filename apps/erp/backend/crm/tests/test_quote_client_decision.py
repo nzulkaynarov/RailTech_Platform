@@ -66,7 +66,7 @@ def outcome(quote) -> dict:
     return {
         "quote": quote.status.code,
         "stage": deal.stage.code,
-        "project": (deal.number or "").startswith("ПР"),
+        "project": deal.is_project,  # стадия — полем, не по префиксу (задача «Н»)
         "contracts": [c.status.code for c in contracts],
         "notified": Notification.objects.filter(deal=deal, user=deal.manager).count(),
     }

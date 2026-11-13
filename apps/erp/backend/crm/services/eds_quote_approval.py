@@ -172,7 +172,7 @@ def request_director_approval(quote: Quote, actor, *, line_visas: bool = False) 
     if not locked.deal.company_id:
         raise ValueError("QUOTE_CLIENT_REQUIRED")
     if not locked.number:
-        locked.number = next_document_number("KP", "КП", locked.seller_company)
+        locked.number = next_document_number("KP", company=locked.seller_company)
     previous_version = locked.version
     if locked.eds_revision >= 1:
         # D26G-2 (SPEC-v3 §3.3): повторная отправка после возврата или отзыва — новая версия КП. Номер — следующий в

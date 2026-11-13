@@ -33,7 +33,6 @@ import {
   ClientSees,
   CompanyArticleLanguage,
   CompanyArticleStatus,
-  DocumentKind,
   DocumentTemplateKind,
   DueLabel,
   EdsDocumentKind,
@@ -57,6 +56,7 @@ import {
   LetterZone,
   ModuleCode,
   NotificationTab,
+  NumberingKind,
   NumberingResetPeriod,
   ObjectKind,
   OnBehalfChannel,
@@ -12797,7 +12797,7 @@ export const getPreviewNumberingResponseMock = (
   overrideResponse: Partial<Extract<NumberingPreview, object>> = {},
 ): NumberingPreview => ({
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
-    kind: faker.helpers.arrayElement(Object.values(DocumentKind)),
+    kind: faker.helpers.arrayElement(Object.values(NumberingKind)),
     label: faker.string.alpha({ length: { min: 10, max: 20 } }),
     number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   })),
