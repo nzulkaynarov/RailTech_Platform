@@ -7,6 +7,7 @@ import { chooseOption, selectedLabel } from "../../../test/fields";
 import { setupLetterTests } from "../../../test/lettersKit";
 import { renderAt, signIn } from "../../../test/edsKit";
 import { server } from "../../../test/server";
+import { openStep, reveal } from "../../../test/steps";
 import { readDictionaries, writeDictionaries } from "../../../mocks/dictionaries";
 import { resetEds } from "../../../mocks/fixtures/edsDocuments";
 import { emptyRegister, toRegisterBody, validateRegister } from "./registerModel";
@@ -23,11 +24,17 @@ async function openForm(email = "registrar@demo.example") {
 }
 
 function type(label: string | RegExp, value: string) {
-  fireEvent.change(screen.getByLabelText(label), { target: { value } });
+  fireEvent.change(reveal(screen.getByLabelText(label)), { target: { value } });
+}
+
+/** «Зарегистрировать» — в последней секции «Проверка и регистрация». */
+function registerButton(name: string | RegExp): HTMLElement {
+  openStep("Проверка и регистрация");
+  return screen.getByRole("button", { name });
 }
 
 async function attach() {
-  fireEvent.change(screen.getByLabelText("Файл документа"), {
+  fireEvent.change(reveal(screen.getByLabelText("Файл документа")), {
     target: { files: [new File(["%PDF-1.4"], "trebovanie.pdf", { type: "application/pdf" })] },
   });
   const list = await screen.findByRole("list", { name: "Прикреплённые файлы" });
@@ -54,13 +61,17 @@ describe("EDS · Зарегистрировать входящее (P8)", () => 
     );
     await openForm();
 
-    fireEvent.click(screen.getByRole("button", { name: "Зарегистрировать" }));
+    fireEvent.click(registerButton("Зарегистрировать"));
 
     expect(await screen.findByText("Выберите вид документа.")).toBeVisible();
     expect(screen.getByText("Выберите, как получено письмо.")).toBeVisible();
     expect(screen.getByText("Укажите корреспондента.")).toBeVisible();
-    expect(screen.getByText("Укажите тему.")).toBeVisible();
-    expect(screen.getByText("Приложите файл письма и дождитесь загрузки.")).toBeVisible();
+    // открыта первая секция с ошибкой («Отправитель»); в остальных — текст у поля и отметка у заголовка
+    expect(screen.getByText("Укажите тему.")).toBeInTheDocument();
+    expect(screen.getByText("Приложите файл письма и дождитесь загрузки.")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /^Тема и содержание.*нужно исправить/i }),
+    ).toBeVisible();
     expect(sent).toBe(false);
   });
 
@@ -74,20 +85,23 @@ describe("EDS · Зарегистрировать входящее (P8)", () => 
     );
     await openForm();
 
-    await chooseOption(screen.getByLabelText("Вид документа"), "Требование или уведомление ГНК");
-    expect(screen.getByRole("checkbox", { name: "Срочно" })).toBeChecked();
-    expect(selectedLabel(screen.getByLabelText("Способ получения"))).toBe(
+    await chooseOption(
+      reveal(screen.getByLabelText("Вид документа")),
+      "Требование или уведомление ГНК",
+    );
+    expect(reveal(screen.getByLabelText("Срочно"))).toBeChecked();
+    expect(selectedLabel(reveal(screen.getByLabelText("Способ получения")))).toBe(
       "Кабинет налогоплательщика my.soliq",
     );
     type("Корреспондент", "ГНИ Мирабадского района");
     type("Исходящий номер отправителя", "04-12/9999");
     type("Тема", "Требование о пояснениях");
     // P8b: адресат — выбор сотрудника; пусто — директор по умолчанию (назначает EDS)
-    expect(screen.getByText("Директор (по умолчанию)")).toBeVisible();
+    expect(reveal(screen.getByText("Директор (по умолчанию)"))).toBeVisible();
     await attach();
     expect(await screen.findByText(/Заполнено из файла:/)).toBeVisible();
 
-    fireEvent.click(screen.getByRole("button", { name: "Зарегистрировать" }));
+    fireEvent.click(registerButton("Зарегистрировать"));
 
     expect(await screen.findByText("Зарегистрировано: ВХ-109/26")).toBeVisible();
     await waitFor(() => {
@@ -120,7 +134,7 @@ describe("EDS · Зарегистрировать входящее (P8)", () => 
       "/eds/inbox/%D0%92%D0%A5-108%2F26",
     );
     expect(screen.getByText(/тот же исх\. №/)).toBeVisible();
-    expect(screen.getByRole("button", { name: "Зарегистрировать" })).toBeEnabled();
+    expect(registerButton("Зарегистрировать")).toBeEnabled();
   });
 
   it("то же письмо (409): блок с ВХ, «Это другое письмо» требует причину и уходит с force", async () => {
@@ -154,13 +168,16 @@ describe("EDS · Зарегистрировать входящее (P8)", () => 
       }),
     );
     await openForm();
-    await chooseOption(screen.getByLabelText("Вид документа"), "Требование или уведомление ГНК");
+    await chooseOption(
+      reveal(screen.getByLabelText("Вид документа")),
+      "Требование или уведомление ГНК",
+    );
     type("Корреспондент", "ГНИ Другого района");
     type("Исходящий номер отправителя", "77-01/1");
     type("Тема", "Требование о пояснениях");
     await attach();
 
-    fireEvent.click(screen.getByRole("button", { name: /Зарегистрировать$/ }));
+    fireEvent.click(registerButton(/Зарегистрировать$/));
 
     expect(await screen.findByText("Похоже, это письмо уже зарегистрировано")).toBeVisible();
     expect(screen.getByText(/Это письмо уже зарегистрировано: ВХ-108\/26/)).toBeVisible();
@@ -171,12 +188,12 @@ describe("EDS · Зарегистрировать входящее (P8)", () => 
     type("Исходящий номер отправителя", "77-01/1");
     expect(screen.getByText("Похоже, это письмо уже зарегистрировано")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Это другое письмо — зарегистрировать" }));
-    fireEvent.click(screen.getByRole("button", { name: /Зарегистрировать$/ }));
+    fireEvent.click(registerButton(/Зарегистрировать$/));
     expect(await screen.findByText("Укажите причину — она попадёт в журнал")).toBeVisible();
     expect(bodies).toHaveLength(1);
 
     type("Почему это другое письмо", "Повторное письмо с исправлениями");
-    fireEvent.click(screen.getByRole("button", { name: /Зарегистрировать$/ }));
+    fireEvent.click(registerButton(/Зарегистрировать$/));
 
     expect(await screen.findByText(/Зарегистрировано: ВХ-/)).toBeVisible();
     expect(bodies[1]).toMatchObject({
@@ -187,14 +204,14 @@ describe("EDS · Зарегистрировать входящее (P8)", () => 
 
   it("связанный документ с несуществующим номером — ошибка у поля, введённое остаётся", async () => {
     await openForm();
-    await chooseOption(screen.getByLabelText("Вид документа"), "Письмо банка");
-    await chooseOption(screen.getByLabelText("Способ получения"), "Почта");
+    await chooseOption(reveal(screen.getByLabelText("Вид документа")), "Письмо банка");
+    await chooseOption(reveal(screen.getByLabelText("Способ получения")), "Почта");
     type("Корреспондент", "АКБ «Демо-Банк»");
     type("Тема", "Изменение тарифов");
     type("Связанный документ", "ВХ-999/26");
     await attach();
 
-    fireEvent.click(screen.getByRole("button", { name: "Зарегистрировать" }));
+    fireEvent.click(registerButton("Зарегистрировать"));
 
     expect(await screen.findAllByText(/Документа с таким номером нет/)).not.toHaveLength(0);
     expect(screen.getByLabelText("Тема")).toHaveValue("Изменение тарифов");

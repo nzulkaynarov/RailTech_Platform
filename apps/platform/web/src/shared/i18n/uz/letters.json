@@ -440,6 +440,13 @@
         "DEFAULT": "Fayldan to‘ldirib bo‘lmadi. Qo‘lda to‘ldiring."
       },
       "reading": "Fayl o‘qilmoqda va maydonlar to‘ldirilmoqda — yozishda davom etishingiz mumkin."
+    },
+    "sections": {
+      "file": "Xat fayli",
+      "sender": "Yuboruvchi",
+      "content": "Mavzu va mazmun",
+      "route": "Muddat, qabul qiluvchi va rezolyutsiya",
+      "review": "Tekshirish va ro‘yxatga olish"
     }
   },
   "office": {
