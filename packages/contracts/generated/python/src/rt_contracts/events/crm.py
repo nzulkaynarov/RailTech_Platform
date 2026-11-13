@@ -170,6 +170,37 @@ class ClientUpdatedV1(BaseModel):
     actor: Actor
 
 
+class CompanyProfileChangedV1(BaseModel):
+    """
+    Тип uz.railtech.crm.company_profile.changed.v1, источник rt://crm. Поле data конверта (envelope.v1.json). Админ сохранил раздел «Компания» настроек CRM (общая настройка ансамбля, FIX-42; задача «Н3a2», 2026-11-13): название компании, которое видят сотрудники и клиенты (заголовок Платформы, кабинет, письма и документы ERP), и контакты для клиентов. Снимок целиком: подписчик заменяет проекцию, снимок с `changed_at` старше применённого не применяется. Событие публикуется и повторно при каждом старте воркера CRM (`changed_at` — время сохранения настройки, нет сохранённой — 1970-01-01). Данных людей нет.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    name: Annotated[str, Field(max_length=255)]
+    """
+    Название компании; пустая строка — не задано
+    """
+    phone: Annotated[str, Field(max_length=100)]
+    """
+    Телефон для клиентов; пустая строка — нет
+    """
+    site: Annotated[str, Field(max_length=200)]
+    """
+    Сайт; пустая строка — нет
+    """
+    address: Annotated[str, Field(max_length=300)]
+    """
+    Адрес; пустая строка — нет
+    """
+    changed_at: AwareDatetime
+    """
+    Момент сохранения настройки в CRM (время базы)
+    """
+    actor: Actor
+
+
 class Contact(BaseModel):
     """
     Снимок контактного лица клиента CRM: подписчик заменяет проекцию целиком; порядок — по updated_at.

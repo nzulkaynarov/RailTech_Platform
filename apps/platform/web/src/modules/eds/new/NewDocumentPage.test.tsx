@@ -223,20 +223,28 @@ describe("EDS · Создать документ: форма", () => {
     expect(screen.getByLabelText("Адресат (организация)")).toHaveValue("");
   });
 
-  it("«Показать PDF»: черновик сохраняется, PDF готовится в фоне и показывается со страницами", async () => {
+  it("страницы строятся сами после паузы: черновик сохраняется один раз, PDF готовится в фоне и показывается", async () => {
     await openForm("director@demo.example", "?type=letter");
+    // форма не заполнена — ни черновика, ни ошибок у полей
+    expect(
+      screen.getByText(/Заполните тему, адресата и текст — письмо сохранится черновиком/),
+    ).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Показать PDF" })).toBeNull();
     type("Тема", "Ответ на требование");
     type("Адресат (организация)", "ГНИ Мирабадского района");
     type("Текст", "Направляем пояснения.");
 
-    fireEvent.click(screen.getByRole("button", { name: "Показать PDF" }));
-
-    expect(await screen.findByText("Готовится PDF…")).toBeVisible();
+    expect(await screen.findByText("Готовится PDF…", {}, { timeout: 3000 })).toBeVisible();
     expect(await screen.findByText("PDF готов · 1 стр.", {}, { timeout: 5000 })).toBeVisible();
     expect(await screen.findByTestId("pdf-pages")).toHaveTextContent(
       "Письмо «Ответ на требование»",
     );
     expect(screen.getByRole("button", { name: "Скачать PDF" })).toBeVisible();
+    // правка текста: прежние страницы остаются на экране с пометкой «Обновляется…», затем — новый PDF
+    type("Текст", "Направляем пояснения и копии документов.");
+    expect(await screen.findByText("Обновляется…", {}, { timeout: 3000 })).toBeVisible();
+    expect(screen.getByTestId("pdf-pages")).toBeInTheDocument();
+    expect(await screen.findByText("PDF готов · 1 стр.", {}, { timeout: 5000 })).toBeVisible();
     // черновик создан один раз; тип больше не меняется
     expect(readEds().documents.filter((d) => d.subject === "Ответ на требование")).toHaveLength(1);
     // у письма выбора типа нет вовсе: экран «Исходящее письмо» (план 2026-11-12 п. 0.2)

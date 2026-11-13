@@ -190,7 +190,7 @@ test.describe("P4: письмо на бланке", () => {
     ).toBeVisible();
     await both(page, "editor");
 
-    await page.getByRole("button", { name: "Показать PDF" }).click();
+    // страницы строятся сами после паузы в наборе (пункт «Ш»)
     await pdfReady(page);
     await both(page, "pdf-preview", pdfReady);
 

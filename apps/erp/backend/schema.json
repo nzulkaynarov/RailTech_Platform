@@ -1759,6 +1759,34 @@
                 }
             }
         },
+        "/api/portal/v1/operator": {
+            "get": {
+                "operationId": "api_portal_v1_operator_retrieve",
+                "description": "GET /operator — название оператора платформы для кабинета до входа (задача «Н3a2»): ведётся в CRM\n(«Настройки · Компания»), проекция в ERP — `SystemSetting.platform_name`. Ничего, кроме названия, не отдаёт.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/operator/": {
+            "get": {
+                "operationId": "api_portal_v1_operator_retrieve_2",
+                "description": "GET /operator — название оператора платформы для кабинета до входа (задача «Н3a2»): ведётся в CRM\n(«Настройки · Компания»), проекция в ERP — `SystemSetting.platform_name`. Ничего, кроме названия, не отдаёт.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/portal/v1/partner/finance": {
             "get": {
                 "operationId": "api_portal_v1_partner_finance_retrieve",
@@ -39708,6 +39736,13 @@
                     "currency": {
                         "type": "string"
                     },
+                    "currencies": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/_TrackedCurrency"
+                        },
+                        "description": "Валюты, у которых ведётся курс (включены, кроме валюты учёта) — выбор при ручном вводе."
+                    },
                     "current": {
                         "allOf": [
                             {
@@ -39722,6 +39757,7 @@
                     }
                 },
                 "required": [
+                    "currencies",
                     "currency",
                     "current",
                     "max_age_days"
@@ -56574,6 +56610,21 @@
                 "required": [
                     "message",
                     "reason"
+                ]
+            },
+            "_TrackedCurrency": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "code",
+                    "name"
                 ]
             },
             "_Warranty": {

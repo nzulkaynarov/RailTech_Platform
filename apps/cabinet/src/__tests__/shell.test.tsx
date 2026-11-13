@@ -13,7 +13,7 @@ describe('оболочка кабинета', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Запросы' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/requests');
-    await waitFor(() => expect(document.title).toBe('Запросы · RailTech Cabinet'));
+    await waitFor(() => expect(document.title).toBe('Запросы · Кабинет RailTech'));
 
     const bottom = screen.getByRole('navigation', { name: 'Основные разделы' });
     for (const name of ['Запросы', 'КП', 'Каталог', 'Документы', 'Ещё']) {

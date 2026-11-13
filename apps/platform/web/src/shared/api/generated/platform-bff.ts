@@ -179,6 +179,7 @@ import type {
   FxRateOverview,
   GetAiSpendReportParams,
   GetCrmThreadParams,
+  GetFxRateParams,
   GetPriceImportParams,
   GetQueueCardsParams,
   GetQueueParams,
@@ -29078,38 +29079,56 @@ export const useUpdatePlatformSettings = <
   return useMutation(getUpdatePlatformSettingsMutationOptions(options), queryClient);
 };
 
-export const getGetFxRateUrl = () => {
-  return `/api/v1/admin/company/fx-rate`;
+export const getGetFxRateUrl = (params?: GetFxRateParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/admin/company/fx-rate?${stringifiedParams}`
+    : `/api/v1/admin/company/fx-rate`;
 };
 
 /**
- * Раздел `company.settings` — чтение. Журнал — последние 20 записей, новые первыми.
- * @summary Курс USD→UZS: текущий и журнал ручных вводов
+ * Раздел `company.settings` — чтение. Валюта — любая включённая в справочнике (пункт 1.7 плана), по умолчанию USD; список выбора — `currencies`. Журнал — последние 20 записей этой валюты, новые первыми.
+ * @summary Курс валюты к суму: текущий, список валют и журнал ручных вводов
  */
-export const getFxRate = async (options?: Parameters<typeof http>[1]): Promise<FxRateOverview> => {
-  return http<FxRateOverview>(getGetFxRateUrl(), {
+export const getFxRate = async (
+  params?: GetFxRateParams,
+  options?: Parameters<typeof http>[1],
+): Promise<FxRateOverview> => {
+  return http<FxRateOverview>(getGetFxRateUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export const getGetFxRateQueryKey = () => {
-  return [`/api/v1/admin/company/fx-rate`] as const;
+export const getGetFxRateQueryKey = (params?: GetFxRateParams) => {
+  return [`/api/v1/admin/company/fx-rate`, ...(params ? [params] : [])] as const;
 };
 
 export const getGetFxRateQueryOptions = <
   TData = Awaited<ReturnType<typeof getFxRate>>,
   TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
->(options?: {
-  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getFxRate>>, TError, TData>>;
-  request?: SecondParameter<typeof http>;
-}) => {
+>(
+  params?: GetFxRateParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getFxRate>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getGetFxRateQueryKey();
+  const queryKey = queryOptions?.queryKey ?? getGetFxRateQueryKey(params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getFxRate>>> = ({ signal }) =>
-    getFxRate({ signal, ...requestOptions });
+    getFxRate(params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getFxRate>>,
@@ -29125,6 +29144,7 @@ export function useGetFxRate<
   TData = Awaited<ReturnType<typeof getFxRate>>,
   TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
 >(
+  params: undefined | GetFxRateParams,
   options: {
     query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getFxRate>>, TError, TData>> &
       Pick<
@@ -29143,6 +29163,7 @@ export function useGetFxRate<
   TData = Awaited<ReturnType<typeof getFxRate>>,
   TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
 >(
+  params?: GetFxRateParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getFxRate>>, TError, TData>> &
       Pick<
@@ -29161,6 +29182,7 @@ export function useGetFxRate<
   TData = Awaited<ReturnType<typeof getFxRate>>,
   TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
 >(
+  params?: GetFxRateParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getFxRate>>, TError, TData>>;
     request?: SecondParameter<typeof http>;
@@ -29168,20 +29190,21 @@ export function useGetFxRate<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Курс USD→UZS: текущий и журнал ручных вводов
+ * @summary Курс валюты к суму: текущий, список валют и журнал ручных вводов
  */
 
 export function useGetFxRate<
   TData = Awaited<ReturnType<typeof getFxRate>>,
   TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
 >(
+  params?: GetFxRateParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getFxRate>>, TError, TData>>;
     request?: SecondParameter<typeof http>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-  const queryOptions = getGetFxRateQueryOptions(options);
+  const queryOptions = getGetFxRateQueryOptions(params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
@@ -29198,7 +29221,7 @@ export const getCreateFxRateUrl = () => {
  * Раздел `company.settings` — полный; в ERP — право `settings.edit` или администратор, иначе 403 `FORBIDDEN` (`source = erp`).
  * Строка на дату заменяется (курс ЦБ или прежний ручной), прежнее значение остаётся в журнале. Повтор того же значения ничего
  * не пишет. Дата — не позже сегодня и не старше 366 дней; курс — больше 0, не более 6 знаков после запятой, меньше миллиарда.
- * @summary Ввести курс USD→UZS на дату вручную
+ * @summary Ввести курс валюты к суму на дату вручную
  */
 export const createFxRate = async (
   fxRateIn: FxRateIn,
@@ -29277,7 +29300,7 @@ export type CreateFxRateMutationError = ErrorType<
 export type CreateFxRateMutationVariables = { data: FxRateIn };
 
 /**
- * @summary Ввести курс USD→UZS на дату вручную
+ * @summary Ввести курс валюты к суму на дату вручную
  */
 export const useCreateFxRate = <
   TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
