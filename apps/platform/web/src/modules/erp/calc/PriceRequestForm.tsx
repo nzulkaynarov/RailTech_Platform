@@ -1,4 +1,4 @@
-import { App, Button, Checkbox, Input, Modal, Select } from "antd";
+import { App, Button, Checkbox, Input, Select } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -14,9 +14,11 @@ import { calcRef } from "./api";
 /**
  * «Запросить цену у поставщика» (SPEC-v3 §7.4): письмо поставщику по выбранным строкам-товарам расчёта (почта ERP) и запись
  * в журнале — кто, когда, кому, по каким строкам. Цену из ответа поставщик вносит вручную в строку расчёта («Закупка»).
+ * Короткая форма о выбранном расчёте — в боковом окне (platform-frontend.md §4.1a), кнопки в конце.
  */
-export function PriceRequestModal({ sheet, onClose }: { sheet: CalcSheet; onClose: () => void }) {
+export function PriceRequestForm({ sheet, onClose }: { sheet: CalcSheet; onClose: () => void }) {
   const { t } = useTranslation("stock");
+  const titleId = useId();
   const { message } = App.useApp();
   const refresh = useRefreshStock();
   const errorText = useErrorText();
@@ -49,41 +51,10 @@ export function PriceRequestModal({ sheet, onClose }: { sheet: CalcSheet; onClos
     },
   });
   return (
-    <Modal
-      open
-      width={640}
-      title={t("priceRequest.title", { number: sheet.number })}
-      onCancel={onClose}
-      destroyOnHidden
-      footer={[
-        <Button key="cancel" onClick={onClose}>
-          {t("common.cancel")}
-        </Button>,
-        <Button
-          key="submit"
-          type="primary"
-          loading={create.isPending}
-          disabled={!supplier || lines.length === 0 || (needsEmail && clean(email) === undefined)}
-          onClick={() => {
-            if (!supplier) return;
-            const to = clean(email);
-            const text = clean(note);
-            setError(null);
-            create.mutate({
-              number: calcRef(sheet.number),
-              data: {
-                supplier_id: supplier,
-                line_ids: lines,
-                ...(text ? { note: text } : {}),
-                ...(needsEmail && to ? { to_email: to } : {}),
-              },
-            });
-          }}
-        >
-          {t("priceRequest.submit")}
-        </Button>,
-      ]}
-    >
+    <section className="pf-calc-panel-form" aria-labelledby={titleId}>
+      <h3 className="pf-fp-title" id={titleId}>
+        {t("priceRequest.title", { number: sheet.number })}
+      </h3>
       <div className="pf-calc-stack">
         <FormField id="pf-pr-supplier" label={t("priceRequest.supplier")}>
           <Select<string>
@@ -148,7 +119,32 @@ export function PriceRequestModal({ sheet, onClose }: { sheet: CalcSheet; onClos
           />
         </FormField>
         <ErrorNote message={error} />
+        <div className="pf-calc-panel-actions">
+          <Button
+            type="primary"
+            loading={create.isPending}
+            disabled={!supplier || lines.length === 0 || (needsEmail && clean(email) === undefined)}
+            onClick={() => {
+              if (!supplier) return;
+              const to = clean(email);
+              const text = clean(note);
+              setError(null);
+              create.mutate({
+                number: calcRef(sheet.number),
+                data: {
+                  supplier_id: supplier,
+                  line_ids: lines,
+                  ...(text ? { note: text } : {}),
+                  ...(needsEmail && to ? { to_email: to } : {}),
+                },
+              });
+            }}
+          >
+            {t("priceRequest.submit")}
+          </Button>
+          <Button onClick={onClose}>{t("common.cancel")}</Button>
+        </div>
       </div>
-    </Modal>
+    </section>
   );
 }

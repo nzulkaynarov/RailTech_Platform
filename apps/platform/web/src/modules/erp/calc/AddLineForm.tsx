@@ -1,4 +1,5 @@
-import { App, Button, Form, Input, InputNumber, Modal, Radio } from "antd";
+import { App, Button, Form, Input, InputNumber, Radio } from "antd";
+import { useId } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { CalcSheet } from "../../../shared/api/generated/model";
@@ -12,9 +13,13 @@ interface Values {
   kind: "goods" | "service";
 }
 
-/** Новая строка вручную: товар (визирует снабженец) или услуга (гл. инженер) — тип доступен, если у роли есть его зона. */
-export function AddLineModal({ sheet, onClose }: { sheet: CalcSheet; onClose: () => void }) {
+/**
+ * Новая строка вручную: товар (визирует снабженец) или услуга (гл. инженер) — тип доступен, если у роли есть его зона.
+ * Короткая форма о выбранном расчёте — в боковом окне (platform-frontend.md §4.1a), кнопки в конце.
+ */
+export function AddLineForm({ sheet, onClose }: { sheet: CalcSheet; onClose: () => void }) {
   const { t } = useTranslation("calc");
+  const titleId = useId();
   const { message } = App.useApp();
   const apply = useApplySheet();
   const errorText = useErrorText();
@@ -32,27 +37,10 @@ export function AddLineModal({ sheet, onClose }: { sheet: CalcSheet; onClose: ()
   });
   const initialKind = sheet.rights.goods ? "goods" : "service";
   return (
-    <Modal
-      open
-      title={t("add.title")}
-      onCancel={onClose}
-      destroyOnHidden
-      footer={[
-        <Button key="cancel" onClick={onClose}>
-          {t("add.cancel")}
-        </Button>,
-        <Button
-          key="submit"
-          type="primary"
-          loading={add.isPending}
-          onClick={() => {
-            form.submit();
-          }}
-        >
-          {t("add.submit")}
-        </Button>,
-      ]}
-    >
+    <section className="pf-calc-panel-form" aria-labelledby={titleId}>
+      <h3 className="pf-fp-title" id={titleId}>
+        {t("add.title")}
+      </h3>
       <Form<Values>
         form={form}
         layout="vertical"
@@ -98,7 +86,13 @@ export function AddLineModal({ sheet, onClose }: { sheet: CalcSheet; onClose: ()
             </Radio>
           </Radio.Group>
         </Form.Item>
+        <div className="pf-calc-panel-actions">
+          <Button type="primary" htmlType="submit" loading={add.isPending}>
+            {t("add.submit")}
+          </Button>
+          <Button onClick={onClose}>{t("add.cancel")}</Button>
+        </div>
       </Form>
-    </Modal>
+    </section>
   );
 }
