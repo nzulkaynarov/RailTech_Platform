@@ -24,12 +24,7 @@ from crm.models import (
     QuoteStatus,
 )
 from crm.services import billing, contracts
-from crm.services.numbering import (
-    next_document_number,
-    number_search_q,
-    preview_scheme_numbers,
-    set_company_scheme,
-)
+from crm.services.numbering import next_document_number, number_search_q, preview_scheme_numbers, set_company_scheme
 from crm.services.pdf_storage import safe_file_name
 
 pytestmark = pytest.mark.django_db

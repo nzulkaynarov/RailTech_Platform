@@ -41,7 +41,12 @@
     "purchase_order": "Yetkazib beruvchiga buyurtma",
     "shipment": "Jo‘natma",
     "partner_contract": "Hamkor shartnomasi",
-    "letter": "Xat"
+    "letter": "Xat",
+    "letter_in": "Kiruvchi xat",
+    "outgoing": "Chiquvchi raqam",
+    "memo": "Xizmat xati",
+    "application": "Ariza (ichki)",
+    "report": "Hisobot"
   },
   "notSet": {
     "title": "Kompaniyangiz hali yaratilmagan",

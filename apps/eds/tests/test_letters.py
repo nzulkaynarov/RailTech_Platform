@@ -48,7 +48,7 @@ async def test_register_gives_number_status_event_and_journal(
     client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
 ) -> None:
     letter = await register(client, staff["registrar"])
-    assert letter["number"] == "ВХ-001/26"
+    assert letter["number"] == "IN-001/26"
     assert letter["status"] == "awaiting_resolution"
     assert letter["registered_by"] == {"crm_user_id": 4, "full_name": "Регина Регистраторова"}
     assert letter["addressee"]["crm_user_id"] == 3  # директор по умолчанию
@@ -56,7 +56,7 @@ async def test_register_gives_number_status_event_and_journal(
     assert [e["action"] for e in letter["journal"]] == ["letter.registered"]
 
     [event] = await outbox(container, "letter.registered")
-    assert event["subject"] == "ВХ-001/26"
+    assert event["subject"] == "IN-001/26"
     body = event["data"]
     assert body["letter"]["eds_letter_id"] == letter["id"]
     assert body["letter"]["sender"] == {"name": "ООО «Пример Логистик»", "inn": "123456789"}
@@ -64,7 +64,7 @@ async def test_register_gives_number_status_event_and_journal(
     assert body["actor"] == {"type": "staff", "crm_user_id": 4}
 
     second = await register(client, staff["registrar"], links={})
-    assert second["number"] == "ВХ-002/26"
+    assert second["number"] == "IN-002/26"
 
 
 async def test_register_requires_sender_or_client(client: httpx.AsyncClient, staff: dict[str, Person]) -> None:
@@ -382,7 +382,7 @@ async def test_list_filters_search_and_cursor_pagination(client: httpx.AsyncClie
     assert len(both["items"]) == 1
     by_deal = (await client.get("/api/v1/letters", params={"q": "ЗВ-2026-003"}, headers=headers)).json()
     assert [i["subject"] for i in by_deal["items"]] == ["Письмо 3"]
-    by_number = (await client.get("/api/v1/letters", params={"q": "ВХ-004"}, headers=headers)).json()
+    by_number = (await client.get("/api/v1/letters", params={"q": "IN-004"}, headers=headers)).json()
     assert [i["subject"] for i in by_number["items"]] == ["Письмо 4"]
     assert (await client.get("/api/v1/letters", params={"q": "100%"}, headers=headers)).json()["items"] == []
 

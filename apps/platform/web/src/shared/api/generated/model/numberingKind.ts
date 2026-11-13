@@ -4,7 +4,7 @@
  */
 
 /**
- * Вид номера в «Настройки · Нумерация» (задача «Н»): заявка, проект, КП, договор, счёт, акт, квитанция, накладная, заказ поставщику, отгрузка, договор партнёра, документ по шаблону (ERP `REQ`, `PRJ`, `KP`, `CT`, `INV`, `ACT`, `RCP`, `DN`, `PO`, `SHP`, `PART`, `DOC`)
+ * Вид номера в «Настройки · Нумерация» (задача «Н»): заявка, проект, КП, договор, счёт, акт, квитанция, накладная, заказ поставщику, отгрузка, договор партнёра, документ по шаблону (ERP `REQ`, `PRJ`, `KP`, `CT`, `INV`, `ACT`, `RCP`, `DN`, `PO`, `SHP`, `PART`, `DOC`); документооборота (задача «Н2», EDS): входящее, исходящее, служебная записка, заявление, отчёт
  */
 export type NumberingKind = (typeof NumberingKind)[keyof typeof NumberingKind];
 
@@ -21,4 +21,9 @@ export const NumberingKind = {
   shipment: "shipment",
   partner_contract: "partner_contract",
   letter: "letter",
+  letter_in: "letter_in",
+  outgoing: "outgoing",
+  memo: "memo",
+  application: "application",
+  report: "report",
 } as const;

@@ -42,10 +42,10 @@ async def test_repeat_with_another_key_returns_the_same_letter_without_a_new_num
     assert again.status_code == 200, again.text
     validate("Letter", again.json())
     assert again.json()["id"] == first.json()["id"]
-    assert again.json()["number"] == first.json()["number"] == "ВХ-001/26"
+    assert again.json()["number"] == first.json()["number"] == "IN-001/26"
     assert again.json()["subject"] == first.json()["subject"], "повтор не меняет карточку"
     assert other.status_code == 201, other.text
-    assert other.json()["number"] == "ВХ-002/26", "повтор номер не тратит"
+    assert other.json()["number"] == "IN-002/26", "повтор номер не тратит"
     sources = [e["data"].get("source") for e in await outbox(container, "letter.registered")]
     assert sources == [{"crm_inbound_mail_id": 17}, {"crm_inbound_mail_id": 18}], "событие — один раз на письмо"
 

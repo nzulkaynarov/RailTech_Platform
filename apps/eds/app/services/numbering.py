@@ -58,7 +58,8 @@ def format_number(kind: NumberKind, year: int, value: int, label: str | None = N
 
 async def labels(session: AsyncSession) -> dict[NumberKind, str]:
     """Действующие обозначения всех видов: заданные владельцем поверх умолчаний."""
-    stored = dict((await session.execute(select(NumberLabel.kind, NumberLabel.label))).tuples().all())
+    rows = (await session.execute(select(NumberLabel.kind, NumberLabel.label))).all()
+    stored: dict[str, str] = {kind: label for kind, label in rows}  # noqa: C416 — строки Row, не пары
     return {kind: stored.get(kind.value) or default for kind, default in DEFAULT_LABELS.items()}
 
 
@@ -74,14 +75,18 @@ async def set_labels(session: AsyncSession, values: dict[str, str]) -> dict[Numb
             raise invalid_fields("Неизвестный вид номера.", **{f"labels.{key}": "unknown_kind"}) from None
         label = raw.strip()
         if not _LABEL.fullmatch(label):
-            raise invalid_fields("Обозначение: до 16 знаков, без пробелов, «/» и «-».", **{f"labels.{key}": "invalid_label"})
+            raise invalid_fields(
+                "Обозначение: до 16 знаков, без пробелов, «/» и «-».", **{f"labels.{key}": "invalid_label"}
+            )
         wanted[kind] = label
     for kind, label in wanted.items():
         taken = {v.casefold() for k, v in wanted.items() if k != kind} | {
             v.casefold() for k, v in LEGACY_LABELS.items() if k != kind
         }
         if label.casefold() in taken:
-            raise invalid_fields("Такое обозначение уже у другого вида номера.", **{f"labels.{kind.value}": "label_taken"})
+            raise invalid_fields(
+                "Такое обозначение уже у другого вида номера.", **{f"labels.{kind.value}": "label_taken"}
+            )
     for kind, label in wanted.items():
         if label != current[kind]:
             await session.execute(

@@ -122,9 +122,9 @@ async def test_new_quote_version_supersedes_open_route_of_old_one(
     assert [(a, c, b) for a, c, b in rows] == [("approval.superseded", "заменён версией 2", None)]
 
     approved = await decide(client, staff["director"], queue[0]["id"], "approve")
-    assert approved.status_code == 200 and approved.json()["outgoing_number"] == "ИСХ-001/26"
+    assert approved.status_code == 200 and approved.json()["outgoing_number"] == "OUT-001/26"
     numbers = [e["data"]["outgoing_number"] for e in await outbox(container, "approval.decided")]
-    assert numbers == ["ИСХ-001/26"]  # по КП ушёл ровно один исходящий номер
+    assert numbers == ["OUT-001/26"]  # по КП ушёл ровно один исходящий номер
 
 
 # --- 3. файлы: версии только пока объект редактируется -------------------------------------------------------------
@@ -213,8 +213,8 @@ async def test_manual_registration_losing_the_race_for_a_request_gets_409(
     assert_error(response, 409, "CONFLICT", reason="letter_exists_for_request")
     monkeypatch.undo()
     assert len(await outbox(container, "letter.registered")) == before
-    # номер не сгорел: следующая регистрация получает ВХ-002
-    assert (await register(client, staff["registrar"], links={}))["number"] == "ВХ-002/26"
+    # номер не сгорел: следующая регистрация получает IN-002
+    assert (await register(client, staff["registrar"], links={}))["number"] == "IN-002/26"
 
 
 # --- 7. approval.requested на каждом шаге ----------------------------------------------------------------------------
@@ -237,8 +237,8 @@ async def test_next_step_publishes_approval_requested_with_its_index(
     assert requested[1]["data"]["approval"]["eds_approval_id"] == approval_id
     assert requested[1]["data"]["actor"] == {"type": "staff", "crm_user_id": 3}
     decided_before = [e["type"] for e in await outbox(container)]
-    assert decided_before.index("uz.railtech.eds.approval.decided.v1") < decided_before.index(
-        "uz.railtech.eds.approval.requested.v1", decided_before.index("uz.railtech.eds.approval.decided.v1")
+    assert decided_before.index("uz.railtech.eds.approval.decided.v2") < decided_before.index(
+        "uz.railtech.eds.approval.requested.v2", decided_before.index("uz.railtech.eds.approval.decided.v2")
     )
     # конец маршрута или возврат нового шага не открывают
     await client.post(
