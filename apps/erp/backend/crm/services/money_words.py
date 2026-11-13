@@ -11,6 +11,8 @@ The integer part is spelled out, the fractional subunit stays as two digits + it
 
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
+from core.currency import BASE_CURRENCY
+
 # Ones 1..9 — masculine and feminine (feminine only differs for 1 and 2: одна/две).
 _ONES_M = ["", "один", "два", "три", "четыре", "пять", "шесть", "семь", "восемь", "девять"]
 _ONES_F = ["", "одна", "две", "три", "четыре", "пять", "шесть", "семь", "восемь", "девять"]
@@ -62,7 +64,7 @@ _CURRENCIES = {
     "EUR": (("евро", "евро", "евро", "m"), ("цент", "цента", "центов")),
     "KZT": (("тенге", "тенге", "тенге", "m"), ("тиын", "тиын", "тиын")),
 }
-_DEFAULT_CURRENCY = _CURRENCIES["UZS"]
+_DEFAULT_CURRENCY = _CURRENCIES[BASE_CURRENCY]
 
 
 def _plural(amount, one, few, many):
@@ -117,7 +119,7 @@ def _integer_to_words(number):
     return words, base_group
 
 
-def money_in_words(value, currency_code="UZS"):
+def money_in_words(value, currency_code=BASE_CURRENCY):
     """«Сумма прописью»: `«Двадцать миллионов … сум 00 тийин»`. Capitalized, subunit as 2 digits.
 
     Accepts Decimal / int / float / numeric str. None or unparseable → «—». Negative amounts
@@ -239,7 +241,7 @@ def _en_integer_to_words(number: int) -> list:
     return words
 
 
-def money_in_words_en(value, currency_code="UZS") -> str:
+def money_in_words_en(value, currency_code=BASE_CURRENCY) -> str:
     """Amount in words, English: «Twelve million five hundred thousand soums 00 tiyin».
 
     Сознательно повторяет контракт русской версии: та же обработка None/мусора («—»),

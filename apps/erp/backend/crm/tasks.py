@@ -7,6 +7,8 @@ from celery import shared_task
 from django.db import transaction
 from django.utils import timezone, translation
 
+from core.currency import BASE_CURRENCY
+
 from .constants import ActStatusCode, ContractStatusCode, FulfillmentStatusCode, InvoiceStatusCode
 
 logger = logging.getLogger(__name__)
@@ -375,7 +377,7 @@ def send_quote_email(self, quote_id: int) -> dict:
     from crm.templatetags.document_format import money
     from notifications.emails import email_brand
 
-    presentation_ccy = getattr(quote.quote_currency, "code", None) or "UZS"
+    presentation_ccy = getattr(quote.quote_currency, "code", None) or BASE_CURRENCY
     quote_number = quote.number or f"{quote.deal_id}-в{quote.version}"
     send_templated_email(
         "quote_sent",

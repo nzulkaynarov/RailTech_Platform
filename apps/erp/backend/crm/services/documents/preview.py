@@ -11,6 +11,8 @@ exception.
 
 from decimal import Decimal
 
+from core.currency import BASE_CURRENCY
+
 from .blank import build_quote_terms, resolve_cover_letter
 from .brand import _brand_context_from_row
 from .totals import document_totals
@@ -138,7 +140,7 @@ def _sample_quote(brand: dict) -> dict:
     from datetime import date
 
     return {
-        "quote_currency": {"code": "UZS"},
+        "quote_currency": {"code": BASE_CURRENCY},
         "number": f"{_sample_quote_number(brand.get('seller'))} (образец)",
         "deal_id": 0,
         "version": 1,
@@ -232,7 +234,7 @@ def _render_sample_quote_html(brand: dict, cover_profile=None) -> str:
         ),
         # Shared 3-line VAT block (D1) — the preview mirrors the real render.
         "totals": document_totals(
-            ccy="UZS",
+            ccy=BASE_CURRENCY,
             vat_rate=sample_quote["vat_rate"],
             subtotal=sample_quote["total_excl_vat"],
             vat_amount=sample_quote["vat_amount"],
@@ -254,7 +256,7 @@ def _render_sample_contract_html(brand: dict) -> str:
     from django.template.loader import render_to_string
 
     sample_quote = {
-        "quote_currency": {"code": "UZS"},
+        "quote_currency": {"code": BASE_CURRENCY},
         "vat_rate": Decimal("12"),
         "effective_delivery_lead_time_days": 21,
         "delivery_basis": {"code": "DAP", "name": "Ташкент"},
@@ -295,7 +297,7 @@ def _render_sample_contract_html(brand: dict) -> str:
         "company": _SAMPLE_BUYER,
         "quote": sample_quote,
         "items": sample_items,
-        "totals": document_totals(ccy="UZS", vat_rate=Decimal("12"), total=Decimal("20608000.00")),
+        "totals": document_totals(ccy=BASE_CURRENCY, vat_rate=Decimal("12"), total=Decimal("20608000.00")),
         **brand,
     }
     return render_to_string("crm/contract_pdf.html", context)
@@ -324,7 +326,7 @@ def _render_sample_invoice_html(brand: dict) -> str:
         "items": _sample_invoice_lines(),
         "company": _SAMPLE_BUYER,
         "totals": document_totals(
-            ccy="UZS",
+            ccy=BASE_CURRENCY,
             subtotal=Decimal("18400000.00"),
             vat_amount=Decimal("2208000.00"),
             total=Decimal("20608000.00"),
@@ -361,7 +363,7 @@ def _render_sample_act_html(brand: dict) -> str:
         "company": _SAMPLE_BUYER,
         # Act mirrors its invoice — the same net/VAT/gross split.
         "totals": document_totals(
-            ccy="UZS",
+            ccy=BASE_CURRENCY,
             subtotal=Decimal("18400000.00"),
             vat_amount=Decimal("2208000.00"),
             total=Decimal("20608000.00"),

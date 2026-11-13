@@ -19,6 +19,8 @@ from django.db import transaction
 from django.db.models import Q, QuerySet
 from django.utils import timezone
 
+from core.currency import BASE_CURRENCY
+
 from ..constants import ActStatusCode, ContractStatusCode, DealStageCode, InvoiceStatusCode, QuoteStatusCode
 from ..models import ActivityLog, Deal
 from . import act_flow, contract_flow
@@ -262,7 +264,7 @@ def list_projects(user, filters: Filters, *, limit: int, offset: int) -> tuple:
 def _money(amount, currency: Optional[str]) -> Optional[dict]:
     if amount is None:
         return None
-    return {"amount": f"{Decimal(str(amount)):.2f}", "currency": (currency or "UZS").upper()}
+    return {"amount": f"{Decimal(str(amount)):.2f}", "currency": (currency or BASE_CURRENCY).upper()}
 
 
 def _quote_ref(quote) -> Optional[dict]:
@@ -492,7 +494,7 @@ def project_card(deal, user) -> dict:
         "contract": _contract_card(contract, user, journal),
         "can_create_contract": bool(quote and contract is None and may_manage),
         "invoices": [_invoice_card(i) for i in sorted(_live_invoices(deal), key=lambda i: i.id)],
-        "act": _act_card(act, user, journal, row["total"]["currency"] if row["total"] else "UZS"),
+        "act": _act_card(act, user, journal, row["total"]["currency"] if row["total"] else BASE_CURRENCY),
         "act_blocker": _act_blocker(deal, user, acts),
         "fulfillment": _fulfillment_card(deal, user),
         "delivery_lines": _delivery_lines(deal),

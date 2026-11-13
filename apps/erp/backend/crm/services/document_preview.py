@@ -15,6 +15,8 @@ from types import SimpleNamespace
 from django.template.loader import render_to_string
 from django.utils import timezone
 
+from core.currency import BASE_CURRENCY
+
 #: Виды с собственным каркасом и образцами блоков: код вида -> шаблон каркаса.
 FRAMES = {
     "CONTRACT": "crm/contract_pdf_templated.html",
@@ -22,7 +24,7 @@ FRAMES = {
     "ACT": "crm/act_pdf_templated.html",
 }
 
-_CCY = "UZS"
+_CCY = BASE_CURRENCY
 _VAT_RATE = Decimal("12")
 
 

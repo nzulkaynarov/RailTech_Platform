@@ -28,6 +28,8 @@ from portal import projections
 from portal.services import notice_sources
 from rt_bus import Event
 
+from core.currency import BASE_CURRENCY
+
 from ..bus import get_bus
 from ..models import CrmClientMapping, CrmContactMapping
 from .event_builders import (  # noqa: F401 — публичная поверхность модуля: на неё ссылаются сервисы и тесты
@@ -416,7 +418,7 @@ def publish_invoice_event(
     deal = invoice.deal
     company_id = deal.company_id
 
-    currency = "UZS"
+    currency = BASE_CURRENCY
     if getattr(invoice, "currency", None):
         c = invoice.currency
         currency = c.code if hasattr(c, "code") else str(c)
