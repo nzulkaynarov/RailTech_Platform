@@ -32,6 +32,15 @@ from core.currency import BASE_CURRENCY  # noqa: E402,F401 — валюта уч
 CBU_URL = "https://cbu.uz/ru/arkhiv-kursov-valyut/json/"
 
 
+def tracked_currencies() -> list[dict]:
+    """Валюты, у которых ведётся курс (включены в справочнике, кроме валюты учёта): выбор валюты при ручном вводе курса
+    (пункт 1.7 плана). Порядок — как в справочнике."""
+    from core.models import Currency
+
+    rows = Currency.objects.filter(is_active=True).exclude(code=BASE_CURRENCY).order_by("sort_order", "code")
+    return [{"code": row.code, "name": row.name} for row in rows]
+
+
 def is_tracked(currency_code) -> bool:
     """У валюты ведётся курс: она есть в справочнике и включена (UZS — база = 1, не хранится)."""
     from core.models import Currency

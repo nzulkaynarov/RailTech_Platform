@@ -1,0 +1,23 @@
+{
+  "specversion": "1.0",
+  "id": "8a3e6f12-4c7b-4d90-9e21-5f0b3c7d2e14",
+  "source": "rt://crm",
+  "type": "uz.railtech.crm.company_profile.changed.v1",
+  "time": "2026-11-13T09:00:00Z",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/crm/company_profile.changed/v1",
+  "tenant": "railtech",
+  "correlationid": "c4d1e2f3-a5b6-4c7d-8e9f-0a1b2c3d4e5f",
+  "subject": "company_profile",
+  "data": {
+    "name": "RailTech",
+    "phone": "+998 71 000 00 00",
+    "site": "https://railtech.example",
+    "address": "г. Ташкент, ул. Примерная, 1",
+    "changed_at": "2026-11-13T09:00:00Z",
+    "actor": {
+      "type": "staff",
+      "crm_user_id": 1
+    }
+  }
+}

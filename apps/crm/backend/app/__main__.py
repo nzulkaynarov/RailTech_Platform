@@ -56,6 +56,7 @@ async def _run_worker() -> None:
 
     from app.container import get_container
     from app.services.ai_policy_publish import sync_ai_policy_on_start
+    from app.services.company_profile_publish import sync_company_profile_on_start
     from app.services.identity_catalog import sync_eds_rights_on_start, sync_erp_rights_on_start
     from app.tasks.erp_users import enqueue_erp_sync
     from app.tasks.queue import queue
@@ -68,6 +69,8 @@ async def _run_worker() -> None:
                 await sync_eds_rights_on_start(get_container().session_factory)
                 # Политика защиты данных для ИИ (PD-BIZ): текущее значение — EDS, если не получил.
                 await sync_ai_policy_on_start(get_container().session_factory)
+                # Профиль компании (Н3a2): название и контакты — ERP, если не получил.
+                await sync_company_profile_on_start(get_container().session_factory)
                 # Права ERP при смене каталога (D2-1, B-073): провижининг всем с доступом к ERP.
                 await sync_erp_rights_on_start(get_container().session_factory, enqueue_erp_sync)
                 # опрос очереди раз в секунду: потерянное уведомление не задержит пробуждение шины

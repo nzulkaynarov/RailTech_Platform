@@ -38,6 +38,12 @@ i18n
     },
   });
 
+// До ответа `GET /operator` — нейтральное слово языка, а не «{{operator}}» в тексте (задача «Н3a2»).
+i18n.options.interpolation = {
+  ...i18n.options.interpolation,
+  defaultVariables: { operator: i18n.t('app.operatorFallback') },
+};
+
 // `<html lang>` следует за языком интерфейса — для экранных дикторов и переносов.
 const syncHtmlLang = (lng: string) => {
   if (typeof document !== 'undefined') document.documentElement.lang = lng.split('-')[0];

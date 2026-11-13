@@ -36,6 +36,7 @@ async function attach(name = "trebovanie.pdf", type = "application/pdf") {
   expect(await within(list).findByText("загружен")).toBeVisible();
 }
 
+// ВХ: форма начинается с загрузки, загрузка сама запускает распознавание (кнопка — для повтора).
 describe("«Заполнить из файла» (EDS-REG)", () => {
   it("EDS-DUP: письмо из файла уже зарегистрировано — блок «Похоже, это письмо уже зарегистрировано»", async () => {
     // Помощник прочитал реквизиты ВХ-108/26 (ГНИ Демо-района, 04-12/3456 от 28.10.2026).
@@ -56,7 +57,6 @@ describe("«Заполнить из файла» (EDS-REG)", () => {
     await openForm();
     await attach();
     expect(screen.queryByText("Похоже, это письмо уже зарегистрировано")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Заполнить из файла" }));
 
     expect(
       await screen.findByText("Похоже, это письмо уже зарегистрировано", {}, { timeout: 3000 }),
@@ -96,7 +96,6 @@ describe("«Заполнить из файла» (EDS-REG)", () => {
     await openForm();
     expect(await screen.findByText("Сначала приложите файл письма.")).toBeVisible();
     await attach();
-    fireEvent.click(screen.getByRole("button", { name: "Заполнить из файла" }));
 
     expect(await screen.findByText(/Заполнено из файла: 8 полей/)).toBeVisible();
     expect(screen.getByLabelText("Корреспондент")).toHaveValue("ГНИ Демо-района");
@@ -135,7 +134,6 @@ describe("«Заполнить из файла» (EDS-REG)", () => {
     writeDocflowSettings({ recognize_scans: false, pii_policy: "business", ai_available: true });
     await openForm();
     await attach("скан.png", "image/png");
-    fireEvent.click(await screen.findByRole("button", { name: "Заполнить из файла" }));
     expect(await screen.findByText(/помощник их сейчас не читает/)).toBeVisible();
     expect(screen.getByLabelText("Корреспондент")).toHaveValue("");
   });
@@ -146,7 +144,6 @@ describe("«Заполнить из файла» (EDS-REG)", () => {
     expect(screen.getByText(/Паспорта и личные документы не загружайте/)).toBeVisible();
     await attach("скан.png", "image/png");
     expect(await screen.findByText(/помощник предложит поля, проверьте их/)).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Заполнить из файла" }));
     expect(await screen.findByText(/Заполнено из файла: 8 полей/)).toBeVisible();
     cleanup();
 
@@ -157,7 +154,6 @@ describe("«Заполнить из файла» (EDS-REG)", () => {
     await openForm();
     await attach("скан.png", "image/png");
     expect(await screen.findByText(/Сканы и фото — вручную/)).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Заполнить из файла" }));
     expect(await screen.findByText(/помощник их сейчас не читает/)).toBeVisible();
   });
 
@@ -166,7 +162,6 @@ describe("«Заполнить из файла» (EDS-REG)", () => {
     await openForm();
     fireEvent.change(screen.getByLabelText("Тема"), { target: { value: "Своя тема" } });
     await attach();
-    fireEvent.click(screen.getByRole("button", { name: "Заполнить из файла" }));
     expect(await screen.findByText(/Заполнено из файла: 7 полей/)).toBeVisible();
     expect(screen.getByLabelText("Тема")).toHaveValue("Своя тема"); // набранное человеком не перетирается
     fireEvent.click(screen.getByRole("button", { name: "Убрать предложенное" }));

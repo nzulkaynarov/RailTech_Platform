@@ -11,7 +11,7 @@ describe('публичная проверка документа (/v/:code)', ()
 
     expect(await screen.findByTestId('status-valid')).toBeInTheDocument();
     expect(screen.getByText('Подлинность подтверждена')).toBeInTheDocument();
-    expect(screen.getByText('Официальный документ выпущен и подписан в RailTech Platform')).toBeInTheDocument();
+    expect(screen.getByText('Официальный документ выпущен и подписан в RailTech')).toBeInTheDocument();
 
     expect(screen.getByText('ИСХ-042/26')).toBeInTheDocument();
     expect(screen.getByText('OOO «RailTech»')).toBeInTheDocument();

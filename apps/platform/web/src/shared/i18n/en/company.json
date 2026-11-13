@@ -451,7 +451,7 @@
   },
   "platform": {
     "title": "Platform settings",
-    "hint": "The VAT rate and the USD → UZS rate for the whole platform.",
+    "hint": "The VAT rate and exchange rates to UZS for the whole platform.",
     "vat": "VAT rate, %",
     "vatHint": "From 0 to 100.",
     "invalidVat": "The rate is a number from 0 to 100",
@@ -459,7 +459,7 @@
     "updated": "Settings updated",
     "save": "Save VAT rate",
     "fx": {
-      "title": "USD → UZS exchange rate",
+      "title": "Exchange rate to UZS",
       "current": "Current rate",
       "date": "Rate date",
       "source": "Source",
@@ -471,7 +471,7 @@
       "formLabel": "Manual rate entry",
       "dateField": "Rate date",
       "dateHint": "Not later than today and not older than a year.",
-      "rateField": "Rate, UZS per 1 USD",
+      "rateField": "Rate, UZS per 1 {{currency}}",
       "rateHint": "A number above zero with up to 6 decimal places. For example, 12650.5.",
       "save": "Save rate",
       "saved": "Rate saved",
@@ -490,7 +490,8 @@
         "when": "When",
         "emptyTitle": "No manual entries yet",
         "emptyText": "Rates entered manually appear here, along with cases where the automatic load left a manual rate untouched."
-      }
+      },
+      "currency": "Currency"
     },
     "note": "New calculations and documents use this rate."
   },

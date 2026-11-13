@@ -438,7 +438,8 @@
         "nothing_recognized": "The assistant found nothing in the file. Fill in manually.",
         "unsupported_file": "You can fill from a PDF or a photo of the letter.",
         "DEFAULT": "Could not fill from the file. Fill in manually."
-      }
+      },
+      "reading": "Reading the file and filling the fields — you can keep typing."
     }
   },
   "office": {
