@@ -61,6 +61,8 @@ subscribers:
       - uz.railtech.crm.contact.*.v1
       # PART-CRM: итог «клиент партнёра в CRM» (сопоставление или конфликт).
       - uz.railtech.crm.partner.*.v1
+      # Н3a2 (2026-11-13): профиль компании (название, контакты) — владелец CRM, проекция ERP для писем, документов и кабинета.
+      - uz.railtech.crm.company_profile.changed.v1
       # Волна 12 (EDS-01, EDS-03): резолюция → задание расчёта; отказ → сделка LOST; решение по КП.
       - uz.railtech.eds.letter.resolved.v1
       - uz.railtech.eds.letter.resolved.v2  # задача «Н»: номер с обозначением из настроек

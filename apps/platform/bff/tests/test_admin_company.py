@@ -1857,6 +1857,7 @@ async def test_platform_settings_erp_forbids_non_superuser(
 
 FX_CURRENT = {
     "currency": "USD",
+    "currencies": [{"code": "USD", "name": "Доллар США"}, {"code": "EUR", "name": "Евро"}],
     "current": {
         "currency": "USD",
         "rate_to_uzs": "12650.5",
@@ -1934,6 +1935,32 @@ async def test_fx_rate_get_shows_current_rate_source_and_journal(
     )
     assert routes["journal"].calls.last.request.url.params["limit"] == "20"
     assert routes["current"].calls.last.request.url.params["currency"] == "USD"
+    assert [c["code"] for c in body["currencies"]] == ["USD", "EUR"]
+
+
+async def test_fx_rate_any_enabled_currency(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    """Пункт 1.7 плана: курс вручную по любой включённой валюте — валюта уходит в ERP и в ответе."""
+    await web.login(["ADMIN"])
+    routes = fx_erp(erp, {**FX_CURRENT, "currency": "EUR"})
+    manual = erp.post(f"{API}/exchange-rates/manual/").mock(
+        return_value=httpx.Response(201, json={"id": 1})
+    )
+
+    got = await web.client.get("/api/v1/admin/company/fx-rate", params={"currency": "EUR"})
+    assert got.status_code == 200
+    check(got, "/admin/company/fx-rate", "get")
+    assert got.json()["currency"] == "EUR"
+    assert routes["current"].calls.last.request.url.params["currency"] == "EUR"
+    assert routes["journal"].calls.last.request.url.params["currency"] == "EUR"
+
+    body = {"currency": "EUR", "rate_date": "2026-10-27", "rate_to_uzs": "14000"}
+    saved = await web.send("POST", "/api/v1/admin/company/fx-rate", json=body)
+    assert saved.status_code == 201, saved.text
+    assert json.loads(manual.calls.last.request.content)["currency"] == "EUR"
+    bad = await web.client.get("/api/v1/admin/company/fx-rate", params={"currency": "eur1"})
+    assert bad.status_code == 422
 
 
 async def test_fx_rate_without_erp_settings_edit_shows_the_rate_but_no_journal(
@@ -2097,7 +2124,7 @@ async def test_fx_rate_erp_forbids_member_without_settings_edit(
         {"rate_date": "2026-10-27", "rate_to_uzs": "abc"},
         {"rate_date": "2026-10-27"},
         {"rate_to_uzs": "12700"},
-        {"rate_date": "2026-10-27", "rate_to_uzs": "12700", "currency": "EUR"},
+        {"rate_date": "2026-10-27", "rate_to_uzs": "12700", "currency": "eur"},
     ],
 )
 async def test_fx_rate_bad_body_is_422_and_erp_is_not_called(

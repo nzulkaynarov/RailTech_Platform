@@ -85,6 +85,7 @@ describe("EDS · Зарегистрировать входящее (P8)", () => 
     // P8b: адресат — выбор сотрудника; пусто — директор по умолчанию (назначает EDS)
     expect(screen.getByText("Директор (по умолчанию)")).toBeVisible();
     await attach();
+    expect(await screen.findByText(/Заполнено из файла:/)).toBeVisible();
 
     fireEvent.click(screen.getByRole("button", { name: "Зарегистрировать" }));
 
@@ -99,7 +100,9 @@ describe("EDS · Зарегистрировать входящее (P8)", () => 
       sender_ref_number: "04-12/9999",
       subject: "Требование о пояснениях",
       urgent: true,
-      summary: null,
+      // ВХ: загрузка сама распознала файл — набранное человеком осталось, пустые поля заполнены из файла
+      sender_inn: "301234567",
+      summary: expect.stringContaining("Просят пояснить расхождение") as unknown,
     });
     expect(body?.file_ids).toHaveLength(1);
     expect(await screen.findByRole("heading", { level: 1, name: "Входящие" })).toBeVisible();

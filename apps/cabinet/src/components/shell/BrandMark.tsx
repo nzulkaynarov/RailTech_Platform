@@ -1,10 +1,16 @@
+import { useTranslation } from 'react-i18next';
+
+import { initialsOf } from '@/lib/initials';
 import { cn } from '@/lib/utils';
 
 /**
- * Марка RailTech в оболочке кабинета (CAB-FIX-2, K14): плитка «RT» основного цвета. Имя для чтения экраном —
- * у подписи рядом («RailTech Cabinet»); без подписи (свёрнутый сайдбар, шапка телефона) — `label`.
+ * Марка оператора в оболочке кабинета (CAB-FIX-2, K14): плитка основного цвета с буквами названия оператора — из
+ * настроек компании (`{{operator}}`, задача «Н3a2»), не из кода. Имя для чтения экраном — у подписи рядом; без подписи
+ * (свёрнутый сайдбар, шапка телефона) — `label`.
  */
 export function BrandMark({ label, className }: { label?: string; className?: string }) {
+  const { i18n } = useTranslation();
+  const operator = String(i18n.options.interpolation?.defaultVariables?.operator ?? '');
   return (
     <span
       className={cn(
@@ -13,7 +19,7 @@ export function BrandMark({ label, className }: { label?: string; className?: st
       )}
       {...(label ? { role: 'img', 'aria-label': label, title: label } : { 'aria-hidden': true })}
     >
-      RT
+      {initialsOf(operator)}
     </span>
   );
 }

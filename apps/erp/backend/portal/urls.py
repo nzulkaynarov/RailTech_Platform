@@ -34,6 +34,7 @@ from portal.views import (
     MagicLinkRequestView,
     MagicLinkTokenExchangeView,
     MeView,
+    OperatorView,
     PortalSessionsRevokeOthersView,
     PortalSessionsView,
     PublicPartnerApplicationView,
@@ -109,6 +110,8 @@ urlpatterns = [
         name="portal-auth-partner-application-slash",
     ),
     # Countries (Справочник стран и метаданных для онбординга, COUNTRY-MASK-1)
+    path("operator", OperatorView.as_view(), name="portal-operator"),
+    path("operator/", OperatorView.as_view(), name="portal-operator-slash"),
     path("countries", CountriesView.as_view(), name="portal-countries"),
     path("countries/", CountriesView.as_view(), name="portal-countries-slash"),
     # Me
