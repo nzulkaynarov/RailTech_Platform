@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "ERP API",
-        "version": "1.8.0",
+        "version": "1.10.0",
         "description": "ERP Platform API. Supports deal lifecycle management, quoting, product catalog (PIM), Excel imports, and real-time notifications via WebSocket.",
         "contact": {
             "name": "ERP API Support",
@@ -39679,6 +39679,13 @@
                     "currency": {
                         "type": "string"
                     },
+                    "currencies": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/_TrackedCurrency"
+                        },
+                        "description": "Валюты, у которых ведётся курс (включены, кроме валюты учёта) — выбор при ручном вводе."
+                    },
                     "current": {
                         "allOf": [
                             {
@@ -39693,6 +39700,7 @@
                     }
                 },
                 "required": [
+                    "currencies",
                     "currency",
                     "current",
                     "max_age_days"
@@ -56449,6 +56457,21 @@
                 "required": [
                     "message",
                     "reason"
+                ]
+            },
+            "_TrackedCurrency": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "code",
+                    "name"
                 ]
             },
             "_Warranty": {
