@@ -52,6 +52,7 @@ class SetupCrm:
             201, json={"id": 5, "name": "ООО Демо"}
         )
         router = be.router
+        self.company_name = "Demo Rail"
         self.state = router.get(f"{CRM_URL}/api/v1/setup/state").mock(side_effect=self._state)
         self.admin = router.post(f"{CRM_URL}/api/v1/setup/admin").mock(side_effect=self._admin)
         self.checklist = router.get(f"{CRM_URL}/api/v1/setup/checklist").mock(
@@ -71,7 +72,9 @@ class SetupCrm:
         return None
 
     def _state(self, request: httpx.Request) -> httpx.Response:
-        return self._guard("state") or httpx.Response(200, json={"needs_setup": self.needs_setup})
+        return self._guard("state") or httpx.Response(
+            200, json={"needs_setup": self.needs_setup, "company_name": self.company_name}
+        )
 
     def _admin(self, request: httpx.Request) -> httpx.Response:
         if (early := self._guard("admin")) is not None:
@@ -160,7 +163,7 @@ async def test_state_is_public_and_not_cached(
 
     assert response.status_code == 200
     check(response, "/setup/state", "get")
-    assert response.json() == {"needs_admin": True}
+    assert response.json() == {"needs_admin": True, "company_name": "Demo Rail"}
     assert response.headers["cache-control"] == "no-store"
     # токена нет: сотрудника ещё не существует
     assert "authorization" not in crm.state.calls.last.request.headers
@@ -171,7 +174,7 @@ async def test_state_when_the_admin_exists(web: Web, crm: SetupCrm) -> None:
 
     response = await web.client.get("/api/v1/setup/state")
 
-    assert response.json() == {"needs_admin": False}
+    assert response.json() == {"needs_admin": False, "company_name": "Demo Rail"}
 
 
 async def test_state_when_crm_is_down(web: Web, crm: SetupCrm, check: ContractChecker) -> None:
@@ -915,3 +918,10 @@ async def test_cabinet_address_needs_the_full_admin_section(
     denied = await web.send("PUT", "/api/v1/setup/cabinet", json={"url": "https://x.example"})
     assert denied.status_code == 403
     assert cabinet["bodies"] == []
+
+
+async def test_state_without_a_company_name_is_null(web: Web, crm: SetupCrm) -> None:
+    """Название не задано в «Настройки · Компания» — `null`: Платформа пишет «Платформа»."""
+    crm.company_name = "  "
+    response = await web.client.get("/api/v1/setup/state")
+    assert response.json()["company_name"] is None

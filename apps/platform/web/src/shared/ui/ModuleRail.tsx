@@ -33,6 +33,8 @@ export interface ModuleRailProps {
   /** Подпись для навигации и логотипа */
   label: string;
   logoLabel: string;
+  /** Буквы в квадрате логотипа — из названия в настройках компании (`useProductName`). */
+  logoText: string;
   logoTo: string;
   /** Единая кнопка «Создать» под логотипом */
   create?: ReactNode;
@@ -174,6 +176,7 @@ export function ModuleRail({
   modules,
   label,
   logoLabel,
+  logoText,
   logoTo,
   create,
   profile,
@@ -228,7 +231,7 @@ export function ModuleRail({
             textDecoration: "none",
           }}
         >
-          RT
+          {logoText}
         </Link>
         {create ? <div style={{ marginBottom: 12 }}>{create}</div> : null}
         {modules.map((m) => (

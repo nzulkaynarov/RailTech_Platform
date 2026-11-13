@@ -1,12 +1,12 @@
 {
-  "docTitle": "{{page}} — RailTech Platform",
+  "docTitle": "{{page}} — {{name}}",
   "soon": "Yaqin yangilanishda paydo bo‘ladi",
   "soonPilot": "Pilotgacha paydo bo‘ladi",
   "skip": "Tarkibga o‘tish",
   "loading": "Yuklanmoqda…",
   "rail": {
     "label": "Modullar",
-    "logo": "RT — RailTech Platform"
+    "logo": "{{initials}} — {{name}}"
   },
   "menu": {
     "nav": "Modul bo‘limlari",
@@ -105,7 +105,7 @@
   },
   "login": {
     "title": "Platformaga kirish",
-    "lead": "RailTech xodimlarining yagona interfeysi. Administrator bergan pochta va parol bilan kiring.",
+    "lead": "Xodimlarning yagona interfeysi. Administrator bergan pochta va parol bilan kiring.",
     "email": "Elektron pochta",
     "password": "Parol",
     "submit": "Kirish",
