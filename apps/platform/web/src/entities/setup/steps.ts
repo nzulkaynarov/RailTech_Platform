@@ -59,8 +59,11 @@ export function needsSetup(checklist: SetupChecklist): boolean {
   );
 }
 
-/** Где администратор вводит р/с и МФО своей компании (D26G-6): «Настройки · Реквизиты и бланк» (SET-IA). */
-export const BANK_DETAILS_PATH = "/admin/company";
+/**
+ * Где администратор вводит р/с и МФО своей компании (D26G-6): «Настройки · Реквизиты и бланк» (SET-IA), сразу секция
+ * «Банковские счета» (реквизиты — секциями, platform-frontend.md §4.1a).
+ */
+export const BANK_DETAILS_PATH = "/admin/company?section=bank";
 
 /**
  * Своя компания есть, а банковских реквизитов для счетов нет (D26G-6, признак ERP — та же проверка, что «Выставить

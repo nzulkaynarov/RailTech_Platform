@@ -86,10 +86,8 @@ export function BankAccounts() {
     </Button>
   );
   return (
-    <section className="pf-co-section" aria-labelledby="pf-co-bank-title">
-      <h3 className="pf-co-title" id="pf-co-bank-title">
-        {t("bank.title")}
-      </h3>
+    // Заголовок — у секции «Банковские счета» реквизитов (StepSections)
+    <div className="pf-co-section">
       <QueryGate query={query}>
         {({ items }) => {
           const ready = items.some(
@@ -195,7 +193,7 @@ export function BankAccounts() {
           setRemoving(null);
         }}
       />
-    </section>
+    </div>
   );
 }
 
