@@ -252,7 +252,9 @@ describe("EDS · Создать документ: форма", () => {
     fireEvent.mouseDown(screen.getByLabelText("Согласующие"));
     fireEvent.click(await screen.findByText(/Демо Снабженцев/));
     fireEvent.mouseDown(screen.getByLabelText("Получатели копии"));
-    fireEvent.click((await screen.findAllByText(/Демо Инженеров/)).at(-1)!);
+    const watcher = (await screen.findAllByText(/Демо Инженеров/)).at(-1);
+    if (!watcher) throw new Error("no watcher option");
+    fireEvent.click(watcher);
 
     await press("Отправить на согласование");
 

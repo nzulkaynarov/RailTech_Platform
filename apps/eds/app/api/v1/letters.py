@@ -326,9 +326,7 @@ async def list_my_letter_tasks(employee: Anyone, session: Session) -> LetterTask
 # согласующие и получатели копии (пункт 1.6 плана).
 StaffReader = Annotated[
     Employee,
-    Depends(
-        require_permission(P.LETTERS_REGISTER, P.LETTERS_RESOLVE, P.BUS_MANAGE, P.SIGNING_MANAGE, P.MEMOS_CREATE)
-    ),
+    Depends(require_permission(P.LETTERS_REGISTER, P.LETTERS_RESOLVE, P.BUS_MANAGE, P.SIGNING_MANAGE, P.MEMOS_CREATE)),
 ]
 
 
