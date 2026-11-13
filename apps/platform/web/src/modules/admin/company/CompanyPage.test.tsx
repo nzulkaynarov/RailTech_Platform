@@ -93,6 +93,10 @@ describe("Admin · Компания: реквизиты для счетов (D26
       state.bankAccounts = [];
     });
     await openTab("details", "admin@demo.example");
+    // реквизиты — секциями (§4.1a): счета — третья секция
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Банковские счета/, expanded: false }),
+    );
 
     expect(await screen.findByText(/Нет основного счёта в сумах/)).toBeVisible();
     fireEvent.click(
