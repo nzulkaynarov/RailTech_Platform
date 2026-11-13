@@ -9934,7 +9934,8 @@ paths:
       description: >-
         EDS `GET /employees` (права `letters.register` или `letters.resolve`): активные сотрудники по имени. Раздел
         `eds.inbox.register` или `eds.inbox` — полный, или `admin` — полный (общие шаблоны резолюций, EDS-REG), или
-        `eds.signing.manage` — полный (выбрать сотрудника для полномочия подписи, SIGN-2). Исполнитель
+        `eds.signing.manage` — полный (выбрать сотрудника для полномочия подписи, SIGN-2), или `eds.memo.create` —
+        полный (согласующие и получатели копии документа, пункт 1.6). Исполнитель
         резолюции делопроизводства — любой активный сотрудник, без проверки зоны (SPEC-v3 §3.2a п. 2).
       responses:
         '200':
@@ -17906,6 +17907,14 @@ components:
         text: {type: string}
         author: {$ref: '#/components/schemas/EdsPerson'}
         addressee: {oneOf: [{$ref: '#/components/schemas/EdsPerson'}, {type: 'null'}], description: '`null` — директор (любой, кто согласует служебные записки)'}
+        approvers:
+          type: array
+          items: {$ref: '#/components/schemas/EdsPerson'}
+          description: 'Согласующие, которых добавил автор (пункт 1.6), по порядку; их шаги — в `route`'
+        watchers:
+          type: array
+          items: {$ref: '#/components/schemas/EdsPerson'}
+          description: 'Получатели копии (пункт 1.6); не решают'
         amount: {oneOf: [{$ref: '#/components/schemas/EdsMoney'}, {type: 'null'}]}
         due_date: {type: [string, 'null'], format: date}
         files:
@@ -18109,6 +18118,16 @@ components:
             Только `letter_out` (P8b): «В ответ на ВХ» — номер входящего письма. Регистрация такого ИСХ закрывает поручения
             «Подготовить ответ» этого письма (решает EDS). Номера нет — 422, `details.fields = [in_reply_to_number]`.
         letter: {oneOf: [{$ref: '#/components/schemas/EdsLetterIn'}, {type: 'null'}], description: 'Только `letter_out` — письмо на бланке (P4): тело блоками, «кому», почта, подписант'}
+        approvers:
+          type: array
+          maxItems: 10
+          items: {type: string, pattern: '^[0-9]+$'}
+          description: 'Пункт 1.6: `crm_user_id` (как `id` в `/eds/staff`) согласующих перед шагами шаблона, по порядку; уходят при отправке (`submit`); не передано — прежние'
+        watchers:
+          type: array
+          maxItems: 20
+          items: {type: string, pattern: '^[0-9]+$'}
+          description: 'Пункт 1.6: `crm_user_id` (как `id` в `/eds/staff`) получателей копии — видят документ, не решают'
         send: {type: boolean, default: false, description: 'Только письмо (P4): после регистрации отправить адресату почтой с PDF на бланке'}
         submit:
           type: boolean
@@ -18132,6 +18151,16 @@ components:
         erp_deal_id: {type: [integer, 'null']}
         recipient: {oneOf: [{$ref: '#/components/schemas/EdsRecipient'}, {type: 'null'}], description: 'Только `letter_out`'}
         letter: {oneOf: [{$ref: '#/components/schemas/EdsLetterIn'}, {type: 'null'}], description: 'Только `letter_out` — письмо на бланке целиком (P4)'}
+        approvers:
+          type: array
+          maxItems: 10
+          items: {type: string, pattern: '^[0-9]+$'}
+          description: 'Пункт 1.6: `crm_user_id` (как `id` в `/eds/staff`) согласующих перед шагами шаблона, по порядку; уходят при отправке (`submit`); не передано — прежние'
+        watchers:
+          type: array
+          maxItems: 20
+          items: {type: string, pattern: '^[0-9]+$'}
+          description: 'Пункт 1.6: `crm_user_id` (как `id` в `/eds/staff`) получателей копии — видят документ, не решают'
         send: {type: boolean, default: false, description: 'Только письмо (P4): после регистрации отправить адресату почтой'}
         submit: {type: boolean, default: false}
     ApprovalRouteStatus:

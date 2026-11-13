@@ -125,7 +125,11 @@
     "save": "Save details",
     "invalidField": "Check the value",
     "bankReady": "Bank details for invoices are set: “Issue invoice” will work.",
-    "bankMissing": "No default account in sums: an invoice cannot be issued. Add an account below."
+    "bankMissing": "No default account in sums: an invoice cannot be issued. Add an account below.",
+    "sections": {
+      "company": "Company",
+      "contacts": "Contacts"
+    }
   },
   "brand": {
     "title": "Document letterhead and brand",

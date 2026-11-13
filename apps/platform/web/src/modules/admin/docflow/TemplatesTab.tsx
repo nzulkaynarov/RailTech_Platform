@@ -102,6 +102,7 @@ export function TemplatesTab({ readOnly }: { readOnly: boolean }) {
         <Alert type="error" showIcon role="alert" message={t("office.templates.unavailable")} />
       ) : null}
       <ListTable<ResolutionTemplate>
+        tableId="admin.docflow.templates"
         label={t("settings.templates.title")}
         data={items}
         loading={query.isPending}
@@ -114,38 +115,44 @@ export function TemplatesTab({ readOnly }: { readOnly: boolean }) {
         }}
         columns={[
           {
-            title: t("settings.templates.name"),
-            key: "name",
-            render: (_: unknown, row) => <b>{row.name}</b>,
+            id: "name",
+            header: t("settings.templates.name"),
+            width: null,
+            cell: (row) => <b>{row.name}</b>,
           },
           {
-            title: t("settings.templates.kind"),
-            key: "kind",
-            render: (_: unknown, row) => kindName(row.kind),
+            id: "kind",
+            header: t("settings.templates.kind"),
+            width: null,
+            cell: (row) => kindName(row.kind),
           },
           {
-            title: t("settings.templates.responsible"),
-            key: "responsible",
-            render: (_: unknown, row) => responsibleText(row),
+            id: "responsible",
+            header: t("settings.templates.responsible"),
+            width: null,
+            cell: (row) => responsibleText(row),
           },
           {
-            title: t("settings.templates.due"),
-            key: "due",
-            render: (_: unknown, row) =>
+            id: "due",
+            header: t("settings.templates.due"),
+            width: null,
+            cell: (row) =>
               row.due_days ? t("settings.templates.days", { count: row.due_days }) : "—",
           },
           {
-            title: t("settings.templates.scope"),
-            key: "scope",
-            render: (_: unknown, row) =>
+            id: "scope",
+            header: t("settings.templates.scope"),
+            width: null,
+            cell: (row) =>
               row.scope === "company"
                 ? t("settings.templates.company")
                 : t("settings.templates.personal", { name: row.owner?.name ?? "" }),
           },
           {
-            title: t("settings.dict.actions"),
-            key: "actions",
-            render: (_: unknown, row) => (
+            id: "actions",
+            header: t("settings.dict.actions"),
+            width: 160,
+            cell: (row) => (
               <span className="pf-co-actions">
                 <Button
                   type="link"

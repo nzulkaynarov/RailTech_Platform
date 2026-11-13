@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Alert, Button, Segmented, type TableColumnsType } from "antd";
+import { Alert, Button, Segmented } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -22,6 +22,7 @@ import type { FormValues } from "./model";
 import { useBasisText } from "./useBasisText";
 
 import "./signing.css";
+import type { DataColumn } from "../../../shared/ui/DataTable/DataTable";
 
 type Filter = "active" | "all";
 const KINDS_SHOWN = 2;
@@ -79,56 +80,48 @@ export function SigningPage() {
     const more = row.kinds.length - KINDS_SHOWN;
     return more > 0 ? `${shown} ${t("kinds.more", { count: more })}` : shown;
   };
-  const limitText = (row: SigningAuthority): string =>
-    row.limit
-      ? t("limit.upTo", {
-          amount: format.money(row.limit.amount, { currency: row.limit.currency }),
-        })
-      : t("limit.none");
-  const wide = {
-    className: "pf-sign-col-wide",
-    onHeaderCell: () => ({ className: "pf-sign-col-wide" }),
-  };
-
-  const columns: TableColumnsType<SigningAuthority> = [
+  const columns: DataColumn<SigningAuthority>[] = [
     {
-      title: t("col.holder"),
-      key: "holder",
-      render: (_: unknown, row) => (
+      id: "holder",
+      header: t("col.holder"),
+      width: null,
+      cell: (row) => (
         <div>
           <b>{row.holder.name}</b>
           <div className="pf-hint">
             {row.holder_active ? (row.holder_position ?? "") : t("inactiveHolder")}
           </div>
-          <div className="pf-hint pf-sign-compact">
-            {kindsText(row)} · {basisText(row)} · {limitText(row)} · {termText(row)}
-          </div>
         </div>
       ),
     },
     {
-      title: t("col.kinds"),
-      key: "kinds",
-      ...wide,
-      render: (_: unknown, row) => kindsText(row),
+      id: "kinds",
+      header: t("col.kinds"),
+      width: null,
+      cell: (row) => kindsText(row),
     },
     {
-      title: t("col.limit"),
-      key: "limit",
-      ...wide,
-      render: (_: unknown, row) =>
+      id: "limit",
+      header: t("col.limit"),
+      width: null,
+      cell: (row) =>
         row.limit ? (
           <MoneyText value={row.limit.amount} currency={row.limit.currency} />
         ) : (
           t("limit.none")
         ),
     },
-    { title: t("col.basis"), key: "basis", ...wide, render: (_: unknown, row) => basisText(row) },
     {
-      title: t("col.term"),
-      key: "term",
-      ...wide,
-      render: (_: unknown, row) => (
+      id: "basis",
+      header: t("col.basis"),
+      width: null,
+      cell: (row) => basisText(row),
+    },
+    {
+      id: "term",
+      header: t("col.term"),
+      width: null,
+      cell: (row) => (
         <div>
           <div>{termText(row)}</div>
           {row.status === "expiring" && row.expires_in_days !== null ? (
@@ -142,14 +135,16 @@ export function SigningPage() {
       ),
     },
     {
-      title: t("col.status"),
-      key: "status",
-      render: (_: unknown, row) => <AuthorityStatus status={row.status} />,
+      id: "status",
+      header: t("col.status"),
+      width: null,
+      cell: (row) => <AuthorityStatus status={row.status} />,
     },
     {
-      title: t("col.actions"),
-      key: "actions",
-      render: (_: unknown, row) => (
+      id: "actions",
+      header: t("col.actions"),
+      width: 160,
+      cell: (row) => (
         <Button
           type="link"
           size="small"
@@ -219,11 +214,11 @@ export function SigningPage() {
           <Alert type="error" showIcon role="alert" message={t("unavailable")} />
         ) : null}
         <ListTable<SigningAuthority>
+          tableId="admin.signing"
           label={t("list.label")}
           data={list.data?.items ?? []}
           loading={list.isPending}
           rowKey={(row) => row.id}
-          wrap
           columns={columns}
           empty={{
             title: t("empty.title"),

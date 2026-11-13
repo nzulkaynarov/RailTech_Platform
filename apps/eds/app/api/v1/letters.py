@@ -322,10 +322,11 @@ async def list_my_letter_tasks(employee: Anyone, session: Session) -> LetterTask
     return tasks
 
 
-# Администратору (`bus.manage`) — для людей общих шаблонов резолюций (EDS-REG).
+# Администратору (`bus.manage`) — для людей общих шаблонов резолюций (EDS-REG); автору документа (`memos.create`) —
+# согласующие и получатели копии (пункт 1.6 плана).
 StaffReader = Annotated[
     Employee,
-    Depends(require_permission(P.LETTERS_REGISTER, P.LETTERS_RESOLVE, P.BUS_MANAGE, P.SIGNING_MANAGE)),
+    Depends(require_permission(P.LETTERS_REGISTER, P.LETTERS_RESOLVE, P.BUS_MANAGE, P.SIGNING_MANAGE, P.MEMOS_CREATE)),
 ]
 
 

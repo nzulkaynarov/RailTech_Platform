@@ -125,7 +125,11 @@
     "save": "Rekvizitlarni saqlash",
     "invalidField": "Qiymatni tekshiring",
     "bankReady": "Hisoblar uchun rekvizitlar kiritilgan: «Hisob chiqarish» ishlaydi.",
-    "bankMissing": "So‘mdagi asosiy hisob yo‘q: mijozga hisob-faktura chiqarib bo‘lmaydi. Quyida hisob qo‘shing."
+    "bankMissing": "So‘mdagi asosiy hisob yo‘q: mijozga hisob-faktura chiqarib bo‘lmaydi. Quyida hisob qo‘shing.",
+    "sections": {
+      "company": "Kompaniya",
+      "contacts": "Kontaktlar"
+    }
   },
   "brand": {
     "title": "Hujjatlar blanki va brendi",
