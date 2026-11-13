@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.63.0
+  version: 0.66.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -19392,6 +19392,9 @@ components:
         - catalog_price_visibility
         - catalog_publish_threshold
         - fx_rate_max_age_days
+        - offer_confirm_days
+        - offer_expiring_days
+        - act_reminder_hours
       properties:
         default_cost_currency:
           type:
@@ -19461,6 +19464,21 @@ components:
           minimum: 1
           maximum: 90
           description: Предельный возраст курса, дней
+        offer_confirm_days:
+          type: integer
+          minimum: 1
+          maximum: 365
+          description: Через сколько дней без подтверждения цена партнёра «устарела» (задача «Н3c»)
+        offer_expiring_days:
+          type: integer
+          minimum: 1
+          maximum: 90
+          description: За сколько дней до окончания срока цена партнёра «истекает»
+        act_reminder_hours:
+          type: integer
+          minimum: 1
+          maximum: 720
+          description: Пауза между напоминаниями клиенту об акте, часов
     QuoteDefaultsUpdate:
       type: object
       additionalProperties: false
@@ -19535,6 +19553,21 @@ components:
           minimum: 1
           maximum: 90
           description: Предельный возраст курса, дней
+        offer_confirm_days:
+          type: integer
+          minimum: 1
+          maximum: 365
+          description: Через сколько дней без подтверждения цена партнёра «устарела» (задача «Н3c»)
+        offer_expiring_days:
+          type: integer
+          minimum: 1
+          maximum: 90
+          description: За сколько дней до окончания срока цена партнёра «истекает»
+        act_reminder_hours:
+          type: integer
+          minimum: 1
+          maximum: 720
+          description: Пауза между напоминаниями клиенту об акте, часов
     ChargeType:
       type: object
       additionalProperties: false

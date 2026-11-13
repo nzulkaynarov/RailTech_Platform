@@ -863,10 +863,20 @@ def apply_act_return(act, actor, reason: str, *, portal_contact=None):
 # исполнителя после выпуска не осталось ничего: акт висел, и сделать с ним было нечего.
 # Эталоны закрывающих документов дают выпустившей стороне ровно два действия, и оба здесь.
 
+
 #: Ручное напоминание — не чаще раза в сутки на документ. Ограничение взято у PandaDoc
 #: (manual reminder «once every 24 hours»): без него кнопка превращается в инструмент спама,
 #: а доставляемость считается по домену целиком — мусорные письма бьют по критичным.
-ACT_REMINDER_COOLDOWN_HOURS = 24
+def act_reminder_hours() -> int:
+    """Пауза между напоминаниями клиенту об акте — настройка своей компании (задача «Н3c»), иначе начальное значение."""
+    from parties.models import CompanySettings
+
+    from core.tenant import own_company_id
+
+    from ..constants import DEFAULT_ACT_REMINDER_HOURS
+
+    row = CompanySettings.objects.filter(company_id=own_company_id()).only("act_reminder_hours").first()
+    return row.act_reminder_hours if row else DEFAULT_ACT_REMINDER_HOURS
 
 
 @transaction.atomic
@@ -958,7 +968,7 @@ def remind_act_acceptance(act_id: int, actor: CustomUser) -> Tuple[Optional[obje
         return None, "ACT_REMINDER_NOT_ALLOWED"
     if act_viewer_side(actor, act) != "issuer":
         return None, "ACT_ISSUER_SIDE_REQUIRED"
-    if act.reminder_sent_at and timezone.now() - act.reminder_sent_at < timedelta(hours=ACT_REMINDER_COOLDOWN_HOURS):
+    if act.reminder_sent_at and timezone.now() - act.reminder_sent_at < timedelta(hours=act_reminder_hours()):
         return None, "ACT_REMINDER_TOO_SOON"
 
     act.reminder_sent_at = timezone.now()

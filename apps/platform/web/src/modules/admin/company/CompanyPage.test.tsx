@@ -452,6 +452,18 @@ describe("Условия КП: маржа — группа cost_margin", () => {
     expect(readCompanyMock().quote.min_margin_percent).toBe("6");
   });
 
+  it("сроки цен партнёров и напоминаний об акте — настройки, а не константы (задача «Н3c»)", async () => {
+    await openTab("quote");
+    const expiring = await screen.findByLabelText(
+      "Предупреждать об окончании цены партнёра, за дней",
+    );
+    expect(expiring).toHaveDisplayValue("14");
+    fireEvent.change(expiring, { target: { value: "7" } });
+    fireEvent.click(await button("Сохранить условия"));
+    expect(await screen.findByText("Сохранено")).toBeInTheDocument();
+    expect(readCompanyMock().quote.offer_expiring_days).toBe(7);
+  });
+
   it("администратор не видит маржу: полей нет, сказано почему, остальное правится", async () => {
     await openTab("quote", "admin@demo.example");
     await screen.findByLabelText("Срок действия КП, дней");

@@ -165,6 +165,22 @@ def update_company_settings(
         settings_row.fx_rate_max_age_days = max_age
         changed.append("fx_rate_max_age_days")
 
+    # Сроки (задача «Н3c», 2026-11-13): подтверждение и окончание цен партнёров, пауза напоминаний об акте.
+    for field, low, high in (
+        ("offer_confirm_days", 1, 365),
+        ("offer_expiring_days", 1, 90),
+        ("act_reminder_hours", 1, 720),
+    ):
+        if field in data:
+            try:
+                number = int(data.get(field))
+            except (TypeError, ValueError):
+                return None, "BAD_NUMBER"
+            if not low <= number <= high:
+                return None, "BAD_NUMBER"
+            setattr(settings_row, field, number)
+            changed.append(field)
+
     if changed:
         settings_row.save(update_fields=[*changed, "updated_at"])
     return settings_row, None

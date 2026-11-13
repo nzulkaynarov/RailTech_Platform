@@ -159,6 +159,9 @@ function seed(): CompanyMock {
       catalog_price_visibility: "on_request",
       catalog_publish_threshold: 70,
       fx_rate_max_age_days: 7,
+      offer_confirm_days: 30,
+      offer_expiring_days: 14,
+      act_reminder_hours: 24,
     },
     chargeTypes: [
       { id: "1", code: "FREIGHT", name: "Фрахт" },
