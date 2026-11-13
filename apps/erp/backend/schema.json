@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "ERP API",
-        "version": "1.6.0",
+        "version": "1.7.0",
         "description": "ERP Platform API. Supports deal lifecycle management, quoting, product catalog (PIM), Excel imports, and real-time notifications via WebSocket.",
         "contact": {
             "name": "ERP API Support",
@@ -2692,6 +2692,38 @@
                 "operationId": "api_portal_v1_quotes_accept_create_2",
                 "description": "POST /quotes/{id}/accept — Акцепт КП по коду из `request-code`.",
                 "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/quotes/{id}/code-delivery/{delivery}": {
+            "get": {
+                "operationId": "api_portal_v1_quotes_code_delivery_retrieve",
+                "description": "GET /quotes/{id}/code-delivery/{delivery} — итог письма с кодом акцепта (0.10, FR-12).\n\nТолько письмо с кодом этой сессии: шаблон кода акцепта и адрес контакта сессии; чужое — 404.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "delivery",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    },
                     {
                         "in": "path",
                         "name": "id",
@@ -45675,6 +45707,14 @@
                         "type": "string",
                         "nullable": true
                     },
+                    "mail": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/OrderMail"
+                            }
+                        ],
+                        "nullable": true
+                    },
                     "confirmed_at": {
                         "type": "string",
                         "format": "date-time",
@@ -45730,6 +45770,7 @@
                     "lines",
                     "lines_count",
                     "log",
+                    "mail",
                     "note",
                     "number",
                     "overdue",
@@ -45996,6 +46037,24 @@
                 ],
                 "type": "string",
                 "description": "* `created` - created\n* `edited` - edited\n* `sent` - sent\n* `confirmed` - confirmed\n* `receipt` - receipt\n* `received` - received\n* `cancelled` - cancelled\n* `overdue` - overdue"
+            },
+            "OrderMail": {
+                "type": "object",
+                "description": "Итог письма партнёру (0.10, FR-12): в очереди почтового сервиса, отправлено или не отправлено с кодом причины.",
+                "properties": {
+                    "state": {
+                        "$ref": "#/components/schemas/InviteDeliveryEnum"
+                    },
+                    "reason": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Код причины неудачи: smtp_not_configured, rejected, auth_failed, unavailable…"
+                    }
+                },
+                "required": [
+                    "reason",
+                    "state"
+                ]
             },
             "OrderReceipt": {
                 "type": "object",

@@ -10,6 +10,7 @@ SPA, вырезание цен поставщиков по полям с огр�
 """
 
 import datetime as dt
+import re
 from collections.abc import Collection, Mapping
 from typing import Annotated, Any, Literal
 
@@ -230,10 +231,19 @@ class SupplierOrderLogEntry(BaseModel):
     detail: str | None
 
 
+class SupplierOrderMail(BaseModel):
+    """Итог письма партнёру (0.10, FR-12): в очереди, отправлено или не отправлено с причиной."""
+
+    model_config = ConfigDict(extra="forbid")
+    state: Literal["queued", "sent", "failed"]
+    reason: str | None
+
+
 class SupplierOrderDetail(SupplierOrderRow):
     note: str
     sent_at: dt.datetime | None
     sent_to: str | None
+    mail: SupplierOrderMail | None
     confirmed_at: dt.datetime | None
     received_at: dt.datetime | None
     cancelled_at: dt.datetime | None
@@ -729,12 +739,26 @@ def to_order_list(raw: Mapping[str, Any], prices: bool) -> SupplierOrderList:
     )
 
 
+_REASON = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
+
+
+def _order_mail(raw: Any) -> SupplierOrderMail | None:
+    if not isinstance(raw, Mapping) or raw.get("state") not in ("queued", "sent", "failed"):
+        return None
+    reason = raw.get("reason")
+    return SupplierOrderMail(
+        state=raw["state"],
+        reason=reason if isinstance(reason, str) and _REASON.match(reason) else None,
+    )
+
+
 def to_order(raw: Mapping[str, Any], prices: bool) -> SupplierOrderDetail:
     return SupplierOrderDetail(
         **_row_data(raw, prices),
         note=raw.get("note") or "",
         sent_at=raw.get("sent_at"),
         sent_to=raw.get("sent_to"),
+        mail=_order_mail(raw.get("mail")),
         confirmed_at=raw.get("confirmed_at"),
         received_at=raw.get("received_at"),
         cancelled_at=raw.get("cancelled_at"),

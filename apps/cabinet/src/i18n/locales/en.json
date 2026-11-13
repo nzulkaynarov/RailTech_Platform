@@ -216,15 +216,15 @@
       "haveCode": "Already have a code from the email? Log in with the code"
     },
     "sent": {
-      "title": "If this address is registered, we sent an email",
+      "title": "If this address is registered, we will send an email",
       "text": "If {{email}} is registered, the email has a login code and a link. They are valid for 60 minutes.",
       "back": "Use another address",
       "mockLink": "Open the link from the email (mock)",
       "newClientLink": "New client? Leave a request",
-      "hint": "The email may take a few minutes. Check your spam folder.",
+      "hint": "The email can take a few minutes. Check your Spam folder. Nothing after 10 minutes — contact your manager: the company mail may be temporarily down.",
       "resend": "Send again",
       "resendIn": "Send again in {{seconds}} s",
-      "resent": "If this address is registered, we sent a new email. The code from the previous one no longer works."
+      "resent": "If this address is registered, we will send a new email. The code from the previous one no longer works."
     },
     "magic": {
       "exchanging": "Signing in with the link…",
@@ -578,7 +578,18 @@
       "commentSend": "Send comment",
       "commentSent": "Comment sent to your manager",
       "commentConsequence": "Your manager receives the comment. The quote does not change — you can still accept or decline it afterwards.",
-      "commentRequired": "Write the comment text."
+      "commentRequired": "Write the comment text.",
+      "codeDelivery": {
+        "sending": "Sending the code to {{to}} — the e-mail goes through the company mail.",
+        "queuedLong": "The e-mail with the code is still queued. Check your mail in a couple of minutes or request the code again.",
+        "notSent": "The code was not sent: {{reason}}. Contact your manager — they can accept the quote for you or help with the mail.",
+        "reasons": {
+          "smtp_not_configured": "the company mail is not set up",
+          "rejected": "the mail server rejected the e-mail",
+          "unavailable": "the mail server is unavailable",
+          "other": "the e-mail did not go out"
+        }
+      }
     },
     "contracts": {
       "title": "Contracts",

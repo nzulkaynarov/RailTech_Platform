@@ -218,6 +218,7 @@ export type QuoteComment = Schemas['QuoteComment'];
 export type Act = Schemas['Act'];
 export type DealRef = Schemas['DealRef'];
 export type AcceptanceCodeSent = Schemas['AcceptanceCodeSent'];
+export type CodeDelivery = Schemas['CodeDelivery'];
 export type DeliveryLine = Schemas['DeliveryLine'];
 export type PortalDocument = Schemas['Document'];
 export type DocumentKind = Schemas['DocumentKind'];
@@ -257,6 +258,9 @@ export const getQuote = (id: number) => portalRequest<Quote>(`/quotes/${id}`);
 export function requestQuoteCode(id: number): Promise<AcceptanceCodeSent> {
   return portalRequest<AcceptanceCodeSent>(`/quotes/${id}/request-code`, { method: 'POST' });
 }
+/** Итог письма с кодом (0.10, FR-12): «код отправлен» — только после ответа почтового сервиса. */
+export const getQuoteCodeDelivery = (id: number, delivery: string) =>
+  portalRequest<CodeDelivery>(`/quotes/${id}/code-delivery/${delivery}`);
 export function acceptQuote(id: number, code: string): Promise<Quote> {
   const body: JsonBody<paths['/quotes/{id}/accept']['post']> = { code };
   return portalRequest<Quote>(`/quotes/${id}/accept`, { method: 'POST', body });

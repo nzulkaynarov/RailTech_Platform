@@ -88,14 +88,34 @@ def request_acceptance_code(quote, contact, request_ip: str = "") -> dict:
         with transaction.atomic():  # код и событие шины — одна транзакция
             issue_acceptance_code(quote, request_ip, contact=contact, send=send)
         if emitted and emitted[0]:
-            return {"channel": "telegram", "sent_to": mask_telegram(contact), "expires_in": expires_in}
+            return {
+                "channel": "telegram",
+                "sent_to": mask_telegram(contact),
+                "expires_in": expires_in,
+                "delivery": None,  # бот CRM; журнала доставки у Telegram нет
+            }
         # Событие не выпущено (контакт или клиент не сопоставлены с CRM): откат на e-mail, если он есть.
         if not email:
             _drop_unsent_code(quote, contact)
             raise ContactChannelRequired
 
-    issue_acceptance_code(quote, request_ip, contact=contact)
-    return {"channel": "email", "sent_to": mask_email(email), "expires_in": expires_in}
+    # 0.10 (FR-12): письмо с кодом уходит через почтовый сервис CRM; кабинет узнаёт итог по строке журнала писем,
+    # а не пишет «отправлен» заранее (`GET /quotes/{id}/code-delivery/{delivery}`).
+    from crm.services.public_page import _send_code_email
+
+    logs: list = []
+
+    def send_mail(code: str) -> None:
+        logs.append(_send_code_email(quote, email, code, language=contact.language))
+
+    issue_acceptance_code(quote, request_ip, contact=contact, send=send_mail)
+    log = logs[0] if logs else None
+    return {
+        "channel": "email",
+        "sent_to": mask_email(email),
+        "expires_in": expires_in,
+        "delivery": str(log.pk) if log is not None else None,
+    }
 
 
 def _drop_unsent_code(quote, contact) -> None:

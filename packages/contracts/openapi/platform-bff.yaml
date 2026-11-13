@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.60.0
+  version: 0.61.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -23970,10 +23970,21 @@ components:
         by: {type: [string, 'null']}
         detail: {type: [string, 'null']}
 
+    SupplierOrderMail:
+      type: object
+      additionalProperties: false
+      required: [state, reason]
+      description: >-
+        Итог письма партнёру (0.10 плана 2026-11-12, FR-12): письмо уходит через почтовый сервис CRM, итог приходит событием —
+        `queued` (в очереди почты), `sent` (отправлено), `failed` с кодом причины (`smtp_not_configured`, `rejected`,
+        `auth_failed`, `unavailable`…; список открытый). Экран не пишет «отправлено» раньше `sent`.
+      properties:
+        state: {type: string, enum: [queued, sent, failed]}
+        reason: {type: [string, 'null'], pattern: '^[a-z][a-z0-9_]{0,63}$'}
     SupplierOrderDetail:
       type: object
       additionalProperties: false
-      required: [number, status, supplier, expected_date, overdue, days_overdue, currency, lines_count, quantity, received_quantity, receipt_state, total, requests, created_at, created_by, actions, path, note, sent_at, sent_to, confirmed_at, received_at, cancelled_at, cancel_reason, lines, receipts, log, rights]
+      required: [number, status, supplier, expected_date, overdue, days_overdue, currency, lines_count, quantity, received_quantity, receipt_state, total, requests, created_at, created_by, actions, path, note, sent_at, sent_to, mail, confirmed_at, received_at, cancelled_at, cancel_reason, lines, receipts, log, rights]
       description: Карточка заказа поставщику
       properties:
         number: {type: string, examples: [ЗП-2026-031], description: 'Номер заказа поставщику ЗП-ГГГГ-NNN'}
@@ -24003,6 +24014,11 @@ components:
         note: {type: string}
         sent_at: {type: [string, 'null'], format: date-time}
         sent_to: {type: [string, 'null'], description: 'Адрес, на который ушло письмо'}
+        mail:
+          description: Итог письма партнёру; `null` — заказ ещё не отправлялся
+          oneOf:
+            - {$ref: '#/components/schemas/SupplierOrderMail'}
+            - {type: 'null'}
         confirmed_at: {type: [string, 'null'], format: date-time}
         received_at: {type: [string, 'null'], format: date-time}
         cancelled_at: {type: [string, 'null'], format: date-time}

@@ -144,7 +144,7 @@ SPECTACULAR_SETTINGS = {
         "Supports deal lifecycle management, quoting, product catalog (PIM), "
         "Excel imports, and real-time notifications via WebSocket."
     ),
-    "VERSION": "1.6.0",
+    "VERSION": "1.7.0",
     "CONTACT": {"name": "ERP API Support", "email": "support@example.com"},
     "LICENSE": {"name": "Proprietary"},
     "SERVE_INCLUDE_SCHEMA": False,
@@ -162,6 +162,9 @@ SPECTACULAR_SETTINGS = {
         # PART-3: цены партнёра в каталоге — «как у компании» (пусто) / показывать / по запросу.
         "PartnerPriceVisibilityEnum": ["", "cabinet", "on_request"],
         "CatalogPriceSourceEnum": ["item", "partner", "company"],
+        # Итог письма почтового сервиса — в очереди, отправлено, не отправлено: приглашение партнёра (`invite_delivery`) и
+        # письмо партнёру по заказу (0.10, FR-12) — одно перечисление под прежним именем (переименование ломало бы схему).
+        "InviteDeliveryEnum": ["queued", "sent", "failed"],
         "ReviewKindEnum": ["card", "changes"],
         # Те же наборы значений в служебных сериализаторах (приглашение контакта, офлайн-клиент, сопряжение с CRM) —
         # одно имя, иначе drf-spectacular придумывает хешированные (D2-0, выгрузка без предупреждений).

@@ -480,6 +480,7 @@ function presentOrder(state: MockStock, order: MockOrder, user: Me): SupplierOrd
     note: order.note,
     sent_at: order.sentAt,
     sent_to: order.sentTo,
+    mail: order.sentAt ? (order.mail ?? { state: "sent", reason: null }) : null,
     confirmed_at: order.confirmedAt,
     received_at: order.receivedAt,
     cancelled_at: order.cancelledAt,
@@ -1011,6 +1012,8 @@ export const erpStockHandlers = [
     order.status = "sent";
     order.sentAt = new Date().toISOString();
     order.sentTo = email;
+    // письмо уходит через почтовый сервис — сразу после отправки итога ещё нет (0.10, FR-12)
+    order.mail = { state: "queued", reason: null };
     log(order, held.user, "sent", email);
     write(state);
     return HttpResponse.json<SupplierOrderDetail>(presentOrder(state, order, held.user));

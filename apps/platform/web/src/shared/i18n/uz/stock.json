@@ -284,7 +284,7 @@
       "submit": "Saqlash"
     },
     "notice": {
-      "sent": "Buyurtma hamkorga yuborildi",
+      "sent": "Buyurtma rasmiylashtirildi. Hamkorga xat pochta navbatida, natija — buyurtma kartasida.",
       "confirmed": "Buyurtma tasdiqlandi",
       "received": "Tovar qabul qilindi",
       "cancelled": "Buyurtma bekor qilindi",
@@ -295,6 +295,13 @@
       "incoterms": "bazis {{code}}",
       "validUntil": "{{date}} gacha amal qiladi",
       "expired": "{{date}} da tugagan"
+    },
+    "mail": {
+      "label": "Hamkorga xat",
+      "queued": "pochta navbatida — natija shu yerda chiqadi",
+      "sent": "yuborildi",
+      "failed": "yuborilmadi: {{reason}}",
+      "failedUnknown": "yuborilmadi"
     }
   },
   "receipts": {
