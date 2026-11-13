@@ -539,3 +539,47 @@ async def test_update_and_submit_reject_explicit_null_for_subject_and_text(
         assert_error(await submit(client, staff["manager"], doc["id"], {field: None}), 422, "VALIDATION_FAILED")
     still = (await client.get(f"/api/v1/documents/{doc['id']}", headers=staff["manager"].headers)).json()
     assert (still["subject"], still["status"]) == (MEMO["subject"], "draft")
+
+
+# --- пункт 1.6 плана: согласующие от автора и получатели копии ---------------------------------------------------
+
+
+@pytest.mark.pg
+async def test_author_adds_approvers_before_the_template_and_watchers_see_the_document(
+    client: httpx.AsyncClient, staff: dict[str, Person]
+) -> None:
+    doc = await create(client, staff["manager"])
+    watcher = staff["admin"]  # без `registry.read`: видит документ только как получатель копии
+    hidden = await client.get(f"/api/v1/documents/{doc['id']}", headers=watcher.headers)
+    assert hidden.status_code == 404
+
+    sent = await submit(client, staff["manager"], doc["id"], {"approvers": [staff["supplier"].id], "watchers": [9]})
+    assert sent.status_code == 200, sent.text
+    body = sent.json()
+    validate("Document", body)
+    assert [p["crm_user_id"] for p in body["approvers"]] == [staff["supplier"].id]
+    assert [p["crm_user_id"] for p in body["watchers"]] == [9]
+
+    route = await route_of(client, staff["manager"], body["approval_id"])
+    assert [s["label"] for s in route["steps"]] == ["Согласующий", "Директор"]
+    assert route["steps"][0]["assignee"]["crm_user_id"] == staff["supplier"].id
+
+    seen = await client.get(f"/api/v1/documents/{doc['id']}", headers=watcher.headers)
+    assert seen.status_code == 200
+
+
+@pytest.mark.pg
+@pytest.mark.parametrize(
+    ("body", "reason"),
+    [
+        ({"approvers": [5]}, "author_not_allowed"),  # автор — менеджер, crm_user_id 5
+        ({"watchers": [999]}, "not_active_employee"),
+    ],
+)
+async def test_route_people_are_active_employees_and_not_the_author(
+    client: httpx.AsyncClient, staff: dict[str, Person], body: dict[str, Any], reason: str
+) -> None:
+    doc = await create(client, staff["manager"])
+    refused = await submit(client, staff["manager"], doc["id"], body)
+    assert refused.status_code == 422
+    assert reason in {f["message"] for f in refused.json()["details"]["fields"]}

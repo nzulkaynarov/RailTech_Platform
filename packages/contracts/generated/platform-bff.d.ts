@@ -5242,7 +5242,7 @@ export interface paths {
     };
     /**
      * EDS · Активные сотрудники: адресат, исполнитель, «ознакомить» (P8b)
-     * @description EDS `GET /employees` (права `letters.register` или `letters.resolve`): активные сотрудники по имени. Раздел `eds.inbox.register` или `eds.inbox` — полный, или `admin` — полный (общие шаблоны резолюций, EDS-REG), или `eds.signing.manage` — полный (выбрать сотрудника для полномочия подписи, SIGN-2). Исполнитель резолюции делопроизводства — любой активный сотрудник, без проверки зоны (SPEC-v3 §3.2a п. 2).
+     * @description EDS `GET /employees` (права `letters.register` или `letters.resolve`): активные сотрудники по имени. Раздел `eds.inbox.register` или `eds.inbox` — полный, или `admin` — полный (общие шаблоны резолюций, EDS-REG), или `eds.signing.manage` — полный (выбрать сотрудника для полномочия подписи, SIGN-2), или `eds.memo.create` — полный (согласующие и получатели копии документа, пункт 1.6). Исполнитель резолюции делопроизводства — любой активный сотрудник, без проверки зоны (SPEC-v3 §3.2a п. 2).
      */
     get: operations["listEdsStaff"];
     put?: never;
@@ -9764,6 +9764,10 @@ export interface components {
       author: components["schemas"]["EdsPerson"];
       /** @description `null` — директор (любой, кто согласует служебные записки) */
       addressee: components["schemas"]["EdsPerson"] | null;
+      /** @description Согласующие, которых добавил автор (пункт 1.6), по порядку; их шаги — в `route` */
+      approvers?: components["schemas"]["EdsPerson"][];
+      /** @description Получатели копии (пункт 1.6); не решают */
+      watchers?: components["schemas"]["EdsPerson"][];
       amount: components["schemas"]["EdsMoney"] | null;
       /** Format: date */
       due_date: string | null;
@@ -9940,6 +9944,10 @@ export interface components {
       in_reply_to_number?: string | null;
       /** @description Только `letter_out` — письмо на бланке (P4): тело блоками, «кому», почта, подписант */
       letter?: components["schemas"]["EdsLetterIn"] | null;
+      /** @description Пункт 1.6: `crm_user_id` (как `id` в `/eds/staff`) согласующих перед шагами шаблона, по порядку; уходят при отправке (`submit`); не передано — прежние */
+      approvers?: string[];
+      /** @description Пункт 1.6: `crm_user_id` (как `id` в `/eds/staff`) получателей копии — видят документ, не решают */
+      watchers?: string[];
       /**
        * @description Только письмо (P4): после регистрации отправить адресату почтой с PDF на бланке
        * @default false
@@ -9964,6 +9972,10 @@ export interface components {
       recipient?: components["schemas"]["EdsRecipient"] | null;
       /** @description Только `letter_out` — письмо на бланке целиком (P4) */
       letter?: components["schemas"]["EdsLetterIn"] | null;
+      /** @description Пункт 1.6: `crm_user_id` (как `id` в `/eds/staff`) согласующих перед шагами шаблона, по порядку; уходят при отправке (`submit`); не передано — прежние */
+      approvers?: string[];
+      /** @description Пункт 1.6: `crm_user_id` (как `id` в `/eds/staff`) получателей копии — видят документ, не решают */
+      watchers?: string[];
       /**
        * @description Только письмо (P4): после регистрации отправить адресату почтой
        * @default false
