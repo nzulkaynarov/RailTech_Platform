@@ -12,6 +12,7 @@ from sqlalchemy import text
 
 from app.container import Container
 from app.security.access_token import issue_access_token
+from app.services.events import VERSION
 from tests.conftest import ACCESS_SECRET
 from tests.helpers import bearer, seed_employee
 
@@ -104,7 +105,8 @@ async def outbox(container: Container, event_type: str | None = None) -> list[di
     found = [{"type": t, "subject": s, "data": env["data"]} for t, s, env in rows]
     if event_type is None:
         return found
-    full = f"uz.railtech.eds.{event_type}.v1"
+    # Версия типа — как публикует EDS (`events.VERSION`, задача «Н»: события с номером — v2).
+    full = f"uz.railtech.eds.{event_type}.v{VERSION.get(event_type, 1)}"
     return [e for e in found if e["type"] == full]
 
 

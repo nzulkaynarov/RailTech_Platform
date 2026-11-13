@@ -33,7 +33,26 @@ class Actor(BaseModel):
     """
 
 
+class ActorV2(BaseModel):
+    """
+    Кто сделал: сотрудник (crm_user_id) или система EDS (задача, обработчик шины)
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    type: Type
+    crm_user_id: int | None = None
+    """
+    Сотрудник при type=staff
+    """
+
+
 class Amount(RootModel[str]):
+    root: Annotated[str, Field(pattern="^-?\\d+\\.\\d{2}$")]
+
+
+class AmountV2(RootModel[str]):
     root: Annotated[str, Field(pattern="^-?\\d+\\.\\d{2}$")]
 
 
@@ -44,6 +63,45 @@ class Approval(BaseModel):
     eds_approval_id: Uuid
     template: ApprovalTemplate
     object: ApprovalObject
+    title: Annotated[str | None, Field(max_length=300, min_length=1)] = None
+    """
+    Тема для уведомления
+    """
+
+
+class Approval1(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    eds_approval_id: UuidV2
+    template: ApprovalTemplateV2
+    object: ApprovalObjectV2
+    title: Annotated[str | None, Field(max_length=300, min_length=1)] = None
+    """
+    Тема для уведомления
+    """
+
+
+class Approval2(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    eds_approval_id: Uuid
+    template: ApprovalTemplate
+    object: ApprovalObject
+    title: Annotated[str | None, Field(max_length=300, min_length=1)] = None
+    """
+    Тема для уведомления
+    """
+
+
+class Approval3(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    eds_approval_id: UuidV2
+    template: ApprovalTemplateV2
+    object: ApprovalObjectV2
     title: Annotated[str | None, Field(max_length=300, min_length=1)] = None
     """
     Тема для уведомления
@@ -80,6 +138,36 @@ class ApprovalDecidedV1(BaseModel):
     actor: Actor
 
 
+class ApprovalDecidedV2(BaseModel):
+    """
+    Тип uz.railtech.eds.approval.decided.v2, источник rt://eds. v2 (задача «Н», 2026-11-13): номер с обозначением из настроек нумерации, иначе как v1. Поле data конверта (envelope.v1.json). Решение на шаге маршрута: approve, return (на доработку), reject; comment обязателен для return и reject. route_status — состояние маршрута после решения (open — есть следующий шаг). Что делает ERP (EDS-03) для approval.object.kind = quote и закрытого маршрута: approved — ИСХ-номер outgoing_number на КП, отправка по channels разблокирована; returned — КП «На доработке» с комментарием; rejected — КП отклонено директором. Одобрение КП, готового позже срока резолюции, допустимо (строка «срок» чек-листа — предупреждение) и помечается approved_late = true.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    approval: Approval1
+    step: StepV2
+    decision: DecisionV2
+    comment: Annotated[str | None, Field(max_length=4000)]
+    decided_by: PersonRefV2
+    decided_at: AwareDatetime
+    route_status: RouteStatusV2
+    outgoing_number: OutgoingNumberV2 | None
+    """
+    ИСХ-номер, присвоенный при одобрении КП (маршрут quote закрыт с approved); иначе null
+    """
+    channels: list[SendChannelV2] | None = None
+    """
+    Для одобренного КП: каналы отправки клиенту, выбранные директором
+    """
+    approved_late: bool | None = None
+    """
+    Для одобренного КП: true — директор одобрил КП, готовое позже срока резолюции, осознанно приняв опоздание (строка чек-листа due — предупреждение, не блок; решение архитектора 2026-10-26, C1-G-1). Нет поля или false — срок выдержан или не задан. Необязательное
+    """
+    actor: ActorV2
+
+
 class ApprovalObject(BaseModel):
     """
     Что согласуется. Документ EDS (memo, application, report) — eds_document_id и number; КП ERP (quote) — erp_quote_id, quote_number, quote_version, erp_deal_id (коммерческое содержание остаётся в ERP)
@@ -101,6 +189,27 @@ class ApprovalObject(BaseModel):
     deal_number: Annotated[str | None, Field(max_length=64)] = None
 
 
+class ApprovalObjectV2(BaseModel):
+    """
+    Что согласуется. Документ EDS (memo, application, report) — eds_document_id и number; КП ERP (quote) — erp_quote_id, quote_number, quote_version, erp_deal_id (коммерческое содержание остаётся в ERP)
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    kind: ApprovalTemplateV2
+    eds_document_id: UuidV2 | None = None
+    number: RegistryNumberV2 | None = None
+    erp_quote_id: int | None = None
+    quote_number: Annotated[str | None, Field(max_length=64, min_length=1)] = None
+    """
+    КП-ГГГГ/NNN
+    """
+    quote_version: Annotated[int | None, Field(ge=1)] = None
+    erp_deal_id: int | None = None
+    deal_number: Annotated[str | None, Field(max_length=64)] = None
+
+
 class ApprovalRequestedV1(BaseModel):
     """
     Тип uz.railtech.eds.approval.requested.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Шаг маршрута стал текущим: открыт маршрут (или новый круг после возврата) — первый шаг; решение `approve` передало маршрут дальше — следующий шаг (например, бухгалтер после директора). step.index — номер этого шага, step.assignee — кто решает. Для КП — после uz.railtech.erp.quote.ready_for_approval.v1. Подписчики v1: platform-bff (колокольчик, «Моя очередь»).
@@ -109,12 +218,36 @@ class ApprovalRequestedV1(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
     )
-    approval: Approval
+    approval: Approval2
     step: Step
     actor: Actor
 
 
+class ApprovalRequestedV2(BaseModel):
+    """
+    Тип uz.railtech.eds.approval.requested.v2, источник rt://eds. v2 (задача «Н», 2026-11-13): номер с обозначением из настроек нумерации, иначе как v1. Поле data конверта (envelope.v1.json). Шаг маршрута стал текущим: открыт маршрут (или новый круг после возврата) — первый шаг; решение `approve` передало маршрут дальше — следующий шаг (например, бухгалтер после директора). step.index — номер этого шага, step.assignee — кто решает. Для КП — после uz.railtech.erp.quote.ready_for_approval.v1. Подписчики v1: platform-bff (колокольчик, «Моя очередь»).
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    approval: Approval3
+    step: StepV2
+    actor: ActorV2
+
+
 class ApprovalTemplate(StrEnum):
+    """
+    Шаблон маршрута (runbook §2.5): memo — директор, затем бухгалтер, если указана сумма; quote — директор с чек-листом; application, report — директор
+    """
+
+    memo = "memo"
+    application = "application"
+    report = "report"
+    quote = "quote"
+
+
+class ApprovalTemplateV2(StrEnum):
     """
     Шаблон маршрута (runbook §2.5): memo — директор, затем бухгалтер, если указана сумма; quote — директор с чек-листом; application, report — директор
     """
@@ -131,6 +264,14 @@ class Assignee(BaseModel):
     )
     crm_user_id: int
     zone: Zone
+
+
+class AssigneeV2(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    crm_user_id: int
+    zone: ZoneV2
 
 
 class Attachment(BaseModel):
@@ -157,7 +298,7 @@ class Authority(BaseModel):
     )
     eds_authority_id: Uuid
     holder: Holder
-    basis: Basis2
+    basis: Basis3
     basis_number: Annotated[str | None, Field(max_length=64)] = None
     valid_to: date
     days_left: Annotated[int, Field(ge=0)]
@@ -169,14 +310,14 @@ class Basis(StrEnum):
     power_of_attorney = "power_of_attorney"
 
 
-class Basis1(Enum):
+class Basis2(Enum):
     charter = "charter"
     order = "order"
     power_of_attorney = "power_of_attorney"
     NoneType_None = None
 
 
-class Basis2(StrEnum):
+class Basis3(StrEnum):
     charter = "charter"
     order = "order"
     power_of_attorney = "power_of_attorney"
@@ -198,6 +339,10 @@ class Currency(RootModel[str]):
     root: Annotated[str, Field(pattern="^[A-Z]{3}$")]
 
 
+class CurrencyV2(RootModel[str]):
+    root: Annotated[str, Field(pattern="^[A-Z]{3}$")]
+
+
 class Decision(StrEnum):
     approve = "approve"
     return_ = "return"
@@ -207,6 +352,12 @@ class Decision(StrEnum):
 class Decision1(StrEnum):
     signed = "signed"
     rejected = "rejected"
+
+
+class DecisionV2(StrEnum):
+    approve = "approve"
+    return_ = "return"
+    reject = "reject"
 
 
 class DispatchMethod(StrEnum):
@@ -241,6 +392,26 @@ class Document1(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
     )
+    eds_document_id: UuidV2
+    kind: DocumentKindV2
+    number: RegistryNumberV2
+    subject: Annotated[str, Field(max_length=300, min_length=1)]
+    author: PersonRefV2
+    addressee: PersonRefV2 | None = None
+    registered_at: AwareDatetime
+    amount: MoneyV2 | None = None
+    due_date: date | None = None
+    erp_deal_id: int | None = None
+    """
+    Связь с проектом (заявкой) ERP
+    """
+    deal_number: Annotated[str | None, Field(max_length=64)] = None
+
+
+class Document2(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
     eds_document_id: Uuid
     kind: DocumentKind
     number: RegistryNumber
@@ -251,6 +422,30 @@ class Document1(BaseModel):
     basis: Basis
     basis_text: str | None = None
     acting_for: PersonRef | None = None
+    signed_at: AwareDatetime
+    verification_code: Annotated[str, Field(pattern="^[A-Za-z0-9_-]{8,32}$")]
+    verification_url: AnyUrl
+    pdf_hash: Annotated[str | None, Field(pattern="^[0-9a-f]{64}$")] = None
+    dispatch_method: DispatchMethod | None = None
+    in_reply_to: UUID | None = None
+    erp_deal_id: int | None = None
+    deal_number: Annotated[str | None, Field(max_length=64)] = None
+
+
+class Document3(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    eds_document_id: UuidV2
+    kind: DocumentKindV2
+    number: RegistryNumberV2
+    subject: Annotated[str, Field(max_length=300, min_length=1)]
+    author: PersonRefV2
+    signer: PersonRefV2
+    authority_id: UUID | None = None
+    basis: Basis
+    basis_text: str | None = None
+    acting_for: PersonRefV2 | None = None
     signed_at: AwareDatetime
     verification_code: Annotated[str, Field(pattern="^[A-Za-z0-9_-]{8,32}$")]
     verification_url: AnyUrl
@@ -275,7 +470,33 @@ class DocumentArchivedV1(BaseModel):
     actor: Actor
 
 
+class DocumentArchivedV2(BaseModel):
+    """
+    Тип uz.railtech.eds.document.archived.v2, источник rt://eds. v2 (задача «Н», 2026-11-13): номер с обозначением из настроек нумерации, иначе как v1. Поле data конверта (envelope.v1.json). Документ перенесён в архив; номер не освобождается (runbook §2.1). Публикуется автоматически, без отдельной операции: маршрут документа завершён окончательно — одобрен на последнем шаге (служебная записка без суммы, заявление, отчёт — approved; с суммой — paid) или отклонён (rejected); исходящее письмо — при отправке (sent). Документ сохраняет итоговый статус. Входящие письма (kind = letter_in) в C1 в архив не переносятся.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    document: DocumentRefV2
+    archived_at: AwareDatetime
+    reason: Annotated[str | None, Field(max_length=1000)] = None
+    actor: ActorV2
+
+
 class DocumentKind(StrEnum):
+    """
+    Тип документа реестра EDS: входящее, исходящее письмо, служебная записка, заявление, отчёт
+    """
+
+    letter_in = "letter_in"
+    letter_out = "letter_out"
+    memo = "memo"
+    application = "application"
+    report = "report"
+
+
+class DocumentKindV2(StrEnum):
     """
     Тип документа реестра EDS: входящее, исходящее письмо, служебная записка, заявление, отчёт
     """
@@ -296,6 +517,15 @@ class DocumentRef(BaseModel):
     number: RegistryNumber
 
 
+class DocumentRefV2(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    eds_document_id: UuidV2
+    kind: DocumentKindV2
+    number: RegistryNumberV2
+
+
 class DocumentRegisteredV1(BaseModel):
     """
     Тип uz.railtech.eds.document.registered.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Документ получил номер реестра: служебная записка (СЗ), заявление (ЗЯ), отчёт (ОТ) — при создании; исходящее письмо (ИСХ) — при отправке. Входящие письма — letter.registered.
@@ -308,6 +538,18 @@ class DocumentRegisteredV1(BaseModel):
     actor: Actor
 
 
+class DocumentRegisteredV2(BaseModel):
+    """
+    Тип uz.railtech.eds.document.registered.v2, источник rt://eds. v2 (задача «Н», 2026-11-13): номер с обозначением из настроек нумерации, иначе как v1. Поле data конверта (envelope.v1.json). Документ получил номер реестра: служебная записка (СЗ), заявление (ЗЯ), отчёт (ОТ) — при создании; исходящее письмо (ИСХ) — при отправке. Входящие письма — letter.registered.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    document: Document1
+    actor: ActorV2
+
+
 class DocumentSignedV1(BaseModel):
     """
     Тип uz.railtech.eds.document.signed.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Официальный документ подписан уполномоченным лицом из реестра полномочий (SIGN-3, ADR-0024): присвоен номер ИСХ, сгенерирован код проверки, снята плашка «ПРОЕКТ». Подписчики: erp (проекция для публичной проверки в кабинете по /v/<код>), crm.
@@ -316,8 +558,20 @@ class DocumentSignedV1(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
     )
-    document: Document1
+    document: Document2
     actor: Actor
+
+
+class DocumentSignedV2(BaseModel):
+    """
+    Тип uz.railtech.eds.document.signed.v2, источник rt://eds. v2 (задача «Н», 2026-11-13): номер с обозначением из настроек нумерации, иначе как v1. Поле data конверта (envelope.v1.json). Официальный документ подписан уполномоченным лицом из реестра полномочий (SIGN-3, ADR-0024): присвоен номер ИСХ, сгенерирован код проверки, снята плашка «ПРОЕКТ». Подписчики: erp (проекция для публичной проверки в кабинете по /v/<код>), crm.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    document: Document3
+    actor: ActorV2
 
 
 class EdsPermission(RootModel[str]):
@@ -327,7 +581,38 @@ class EdsPermission(RootModel[str]):
     """
 
 
+class EdsPermissionV2(RootModel[str]):
+    root: Annotated[str, Field(pattern="^[a-z_]+\\.[a-z_]+$")]
+    """
+    Код права EDS (runbook волны 12 §2.2). Шаблон, а не перечень: новый код не ломает события v1; перечень кодов — EdsPermission в openapi/eds.yaml и edsPermission в platform-rbac.schema.json
+    """
+
+
 class ErpLinks(BaseModel):
+    """
+    Ссылки на коммерческие объекты ERP и клиента CRM. Ключи erp_request_id, erp_deal_id, deal_number есть всегда; null — письмо ещё не связано с заявкой (зарегистрировано вручную до erp.request.created)
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_request_id: int | None
+    """
+    Заявка ERP (request.created)
+    """
+    erp_deal_id: int | None
+    """
+    Сделка ERP (Deal), к которой относится письмо
+    """
+    deal_number: Annotated[str | None, Field(max_length=64)]
+    """
+    Бизнес-номер заявки или проекта ERP (ЗВ-ГГГГ-NNN, ПР-ГГГГ-NNN)
+    """
+    crm_client_id: int | None = None
+    erp_company_id: int | None = None
+
+
+class ErpLinksV2(BaseModel):
     """
     Ссылки на коммерческие объекты ERP и клиента CRM. Ключи erp_request_id, erp_deal_id, deal_number есть всегда; null — письмо ещё не связано с заявкой (зарегистрировано вручную до erp.request.created)
     """
@@ -373,7 +658,7 @@ class Kind(StrEnum):
     letter_executed = "letter_executed"
 
 
-class Kind1(StrEnum):
+class Kind2(StrEnum):
     quote = "quote"
     contract = "contract"
     invoice = "invoice"
@@ -403,10 +688,40 @@ class Letter(BaseModel):
     urgent: bool | None = None
 
 
+class Letter1(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    eds_letter_id: UuidV2
+    number: LetterNumberV2
+    subject: Annotated[str, Field(max_length=300, min_length=1)]
+    received_at: date
+    """
+    Дата получения письма
+    """
+    registered_at: AwareDatetime
+    sender: Sender
+    """
+    Отправитель — организация клиента. Письмо, зарегистрированное автоматически по uz.railtech.erp.request.created.v1, берёт имя, ИНН и контакт из payload заявки (company_name, company_inn, contact_name); старое событие без них — имя null, клиент — по links.crm_client_id
+    """
+    addressee: PersonRefV2 | None = None
+    """
+    На чьё имя (по умолчанию — директор)
+    """
+    urgent: bool | None = None
+
+
 class LetterNumber(RootModel[str]):
     root: Annotated[str, Field(pattern="^ВХ-\\d{3,}/\\d{2}$")]
     """
     Номер входящего ВХ-NNN/ГГ; счётчик — на год по Asia/Tashkent, без пропусков
+    """
+
+
+class LetterNumberV2(RootModel[str]):
+    root: Annotated[str, Field(pattern="^[^\\\\s/\\\\-]{1,16}-\\d{3,}/\\d{2}$")]
+    """
+    Номер входящего <обозначение>-NNN/ГГ (v2, задача «Н»: обозначение задаёт владелец, по умолчанию IN, выданные раньше — ВХ); счётчик — на год по Asia/Tashkent, без пропусков
     """
 
 
@@ -416,6 +731,15 @@ class LetterRef(BaseModel):
     )
     eds_letter_id: Uuid
     number: LetterNumber
+    subject: Annotated[str, Field(max_length=300, min_length=1)]
+
+
+class LetterRefV2(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    eds_letter_id: UuidV2
+    number: LetterNumberV2
     subject: Annotated[str, Field(max_length=300, min_length=1)]
 
 
@@ -436,6 +760,23 @@ class LetterRegisteredV1(BaseModel):
     """
 
 
+class LetterRegisteredV2(BaseModel):
+    """
+    Тип uz.railtech.eds.letter.registered.v2, источник rt://eds. v2 (задача «Н», 2026-11-13): номер с обозначением из настроек нумерации, иначе как v1. Поле data конверта (envelope.v1.json). Письмо получило номер ВХ-NNN/ГГ в реестре EDS и ждёт резолюции директора: вручную (POST /api/v1/letters) или автоматически по uz.railtech.erp.request.created.v1 (связь с заявкой — links). Подписчики v1: platform-bff; crm — только письма из очереди «Входящая почта» (`source`, W18A-P2).
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    letter: Letter1
+    links: ErpLinksV2
+    actor: ActorV2
+    source: Source | None = None
+    """
+    Откуда письмо (W18A-P2, необязательное, с 2026-11-02): письмо общего ящика CRM, зарегистрированное из очереди «Входящая почта», — CRM снимает его с очереди и пишет номер ВХ. Нет поля — регистрация не из очереди.
+    """
+
+
 class LetterRejectedV1(BaseModel):
     """
     Тип uz.railtech.eds.letter.rejected.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Директор отклонил письмо с причиной (обязательна). Что делает ERP: сделка links.erp_deal_id → LOST с причиной reason.
@@ -448,6 +789,20 @@ class LetterRejectedV1(BaseModel):
     links: ErpLinks
     reason: Annotated[str, Field(max_length=4000, min_length=1)]
     actor: Actor
+
+
+class LetterRejectedV2(BaseModel):
+    """
+    Тип uz.railtech.eds.letter.rejected.v2, источник rt://eds. v2 (задача «Н», 2026-11-13): номер с обозначением из настроек нумерации, иначе как v1. Поле data конверта (envelope.v1.json). Директор отклонил письмо с причиной (обязательна). Что делает ERP: сделка links.erp_deal_id → LOST с причиной reason.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    letter: LetterRefV2
+    links: ErpLinksV2
+    reason: Annotated[str, Field(max_length=4000, min_length=1)]
+    actor: ActorV2
 
 
 class LetterResolvedV1(BaseModel):
@@ -464,6 +819,20 @@ class LetterResolvedV1(BaseModel):
     actor: Actor
 
 
+class LetterResolvedV2(BaseModel):
+    """
+    Тип uz.railtech.eds.letter.resolved.v2, источник rt://eds. v2 (задача «Н», 2026-11-13): номер с обозначением из настроек нумерации, иначе как v1. Поле data конверта (envelope.v1.json). Директор утвердил резолюцию: исполнители (crm_user_id, зона), срок, минимальная маржа, ссылки на заявку и сделку ERP. Что делает ERP (EDS-01): задание расчёта по сделке links.erp_deal_id исполнителям, стадия CALCULATION; links.erp_deal_id = null — пропуск с записью в журнал.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    letter: LetterRefV2
+    links: ErpLinksV2
+    resolution: Resolution1
+    actor: ActorV2
+
+
 class LetterReturnedV1(BaseModel):
     """
     Тип uz.railtech.eds.letter.returned.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Директор вернул письмо менеджеру с комментарием (обязателен). Подписчики v1: platform-bff (подсказка).
@@ -476,6 +845,20 @@ class LetterReturnedV1(BaseModel):
     links: ErpLinks
     comment: Annotated[str, Field(max_length=4000, min_length=1)]
     actor: Actor
+
+
+class LetterReturnedV2(BaseModel):
+    """
+    Тип uz.railtech.eds.letter.returned.v2, источник rt://eds. v2 (задача «Н», 2026-11-13): номер с обозначением из настроек нумерации, иначе как v1. Поле data конверта (envelope.v1.json). Директор вернул письмо менеджеру с комментарием (обязателен). Подписчики v1: platform-bff (подсказка).
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    letter: LetterRefV2
+    links: ErpLinksV2
+    comment: Annotated[str, Field(max_length=4000, min_length=1)]
+    actor: ActorV2
 
 
 class MailRequestedV1(BaseModel):
@@ -535,12 +918,27 @@ class MarginPct(RootModel[str]):
     """
 
 
+class MarginPctV2(RootModel[str]):
+    root: Annotated[str, Field(pattern="^(100(\\.0{1,2})?|\\d{1,2}(\\.\\d{1,2})?)$")]
+    """
+    Процент маржи 0–100, до двух знаков после точки, строкой (как деньги): «12.5»
+    """
+
+
 class Money(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
     )
     amount: Amount
     currency: Currency
+
+
+class MoneyV2(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    amount: AmountV2
+    currency: CurrencyV2
 
 
 class NoticeDocumentRef(BaseModel):
@@ -553,6 +951,22 @@ class NoticeDocumentRef(BaseModel):
     )
     eds_document_id: Uuid
     number: RegistryNumber | None
+    """
+    `ИСХ-NNN/ГГ` после регистрации; у черновика null
+    """
+    subject: Annotated[str, Field(max_length=300, min_length=1)]
+
+
+class NoticeDocumentRefV2(BaseModel):
+    """
+    Исходящее письмо EDS в уведомлении (EDS-REPLY-1): черновик без номера или ИСХ; ведёт к карточке документа
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    eds_document_id: UuidV2
+    number: RegistryNumberV2 | None
     """
     `ИСХ-NNN/ГГ` после регистрации; у черновика null
     """
@@ -599,11 +1013,51 @@ class NoticeRequestedV1(BaseModel):
     actor: Actor
 
 
+class NoticeRequestedV2(BaseModel):
+    """
+    Тип uz.railtech.eds.notice.requested.v2, источник rt://eds. v2 (задача «Н», 2026-11-13): номер с обозначением из настроек нумерации, иначе как v1. Поле data конверта (envelope.v1.json). Уведомления сотрудникам по поручениям входящих писем (P8b, SPEC-v3 §3.2a п. 2–5): поручение выдано, напоминание о сроке, «Просрочено», запрос переноса и решение по нему, «Ознакомиться», письмо исполнено. EDS сама сотрудникам не пишет: текст (RU) готовит EDS, доставляет CRM — строка колокольчика (`staff_notifications`, лента `crm:<id>` Платформы) и сообщение в Telegram тем, у кого он привязан (как сообщения сотрудникам по событиям ERP). EDS публикует уведомление с данным notice_key один раз (напоминания — по одному на срок); повтор доставки того же события — один эффект (inbox CRM). Подписчики v1: crm (доставка), platform-bff (подсказка). EDS-REPLY-1: те же виды покрывают путь «ответ на входящее» — `instruction_assigned` (делопроизводителю: ответ передан на регистрацию; автору и делопроизводителю: ответ не ушёл адресату, ссылка на `document`), `letter_executed` (исполнителю: поручение закрыто зарегистрированным ответом).
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    notice_key: Annotated[str, Field(pattern="^[A-Za-z0-9._:/-]{1,128}$")]
+    """
+    Ключ отправителя: EDS публикует уведомление с этим ключом один раз; для журнала и разбора
+    """
+    kind: Kind
+    """
+    Что случилось: выдано поручение; напоминание о сроке; срок прошёл; исполнитель просит перенос; автор решил перенос; надо ознакомиться; все поручения письма исполнены
+    """
+    recipients: Annotated[list[int], Field(max_length=50, min_length=1)]
+    """
+    crm_user_id получателей
+    """
+    title: Annotated[str, Field(max_length=200, min_length=1)]
+    """
+    Заголовок уведомления (RU), без персональных данных сверх номера и темы письма
+    """
+    subtitle: Annotated[str | None, Field(max_length=200)] = None
+    """
+    Вторая строка: тема письма, срок, причина
+    """
+    letter: LetterRefV2
+    document: NoticeDocumentRefV2 | None = None
+    """
+    Исходящее письмо, к которому ведёт уведомление (ответ на `letter`, EDS-REPLY-1): передан на регистрацию, не отправлен. Нет — уведомление про само входящее
+    """
+    due: date | None = None
+    """
+    Срок поручения, если уведомление о нём
+    """
+    actor: ActorV2
+
+
 class Object(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
     )
-    kind: Kind1
+    kind: Kind2
     object_id: int
     """
     Идентификатор сущности в ERP
@@ -619,7 +1073,26 @@ class OutgoingNumber(RootModel[str]):
     """
 
 
+class OutgoingNumberV2(RootModel[str]):
+    root: Annotated[str, Field(pattern="^[^\\\\s/\\\\-]{1,16}-\\d{3,}/\\d{2}$")]
+    """
+    Исходящий номер <обозначение>-NNN/ГГ (v2: по умолчанию OUT, выданные раньше — ИСХ): при одобрении КП и при отправке письма
+    """
+
+
 class PersonRef(BaseModel):
+    """
+    Сотрудник: crm_user_id (идентичность — CRM) и имя из проекции EDS на момент события
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    crm_user_id: int
+    full_name: Annotated[str, Field(max_length=255, min_length=1)]
+
+
+class PersonRefV2(BaseModel):
     """
     Сотрудник: crm_user_id (идентичность — CRM) и имя из проекции EDS на момент события
     """
@@ -655,6 +1128,15 @@ class RegistryNumber(RootModel[str]):
     """
 
 
+class RegistryNumberV2(RootModel[str]):
+    root: Annotated[
+        str, Field(pattern="^[^\\\\s/\\\\-]{1,16}-(\\d{3,}/\\d{2}|\\d{4}/\\d{3,})$")
+    ]
+    """
+    Номер документа реестра EDS (v2): <обозначение>-NNN/ГГ (входящее, исходящее) или <обозначение>-ГГГГ/NNN (служебная записка, заявление, отчёт); обозначения задаёт владелец
+    """
+
+
 class Resolution(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
@@ -676,6 +1158,27 @@ class Resolution(BaseModel):
     decided_at: AwareDatetime
 
 
+class Resolution1(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    text: Annotated[str, Field(max_length=4000, min_length=1)]
+    assignees: Annotated[list[AssigneeV2], Field(min_length=1)]
+    """
+    Исполнители расчёта с зоной ответственности
+    """
+    due: date
+    """
+    Срок расчёта
+    """
+    min_margin_pct: MarginPctV2 | None
+    """
+    «Маржа не ниже, %»; null — ограничения нет. Порог для чек-листа одобрения КП
+    """
+    decided_by: PersonRefV2
+    decided_at: AwareDatetime
+
+
 class RouteStatus(StrEnum):
     """
     Состояние маршрута после решения: open — есть следующий шаг; иначе маршрут закрыт
@@ -687,7 +1190,28 @@ class RouteStatus(StrEnum):
     rejected = "rejected"
 
 
+class RouteStatusV2(StrEnum):
+    """
+    Состояние маршрута после решения: open — есть следующий шаг; иначе маршрут закрыт
+    """
+
+    open = "open"
+    approved = "approved"
+    returned = "returned"
+    rejected = "rejected"
+
+
 class SendChannel(StrEnum):
+    """
+    Канал отправки КП клиенту, выбранный директором при одобрении (SPEC-v3 §7.3)
+    """
+
+    telegram = "telegram"
+    cabinet = "cabinet"
+    email = "email"
+
+
+class SendChannelV2(StrEnum):
     """
     Канал отправки КП клиенту, выбранный директором при одобрении (SPEC-v3 §7.3)
     """
@@ -762,7 +1286,7 @@ class SigningDecidedV1(BaseModel):
     decision: Decision1
     signer: Signer | None = None
     authority_id: UUID | None = None
-    basis: Basis1 | None = None
+    basis: Basis2 | None = None
     basis_text: str | None = None
     """
     Формулировка основания подписи для печати на документе
@@ -817,6 +1341,29 @@ class StepAssignee(BaseModel):
     permission: EdsPermission | None
 
 
+class StepAssigneeV2(BaseModel):
+    """
+    Кто решает на шаге: конкретный сотрудник (crm_user_id) или любой с правом EDS (permission); ровно одно из двух не null
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    crm_user_id: int | None
+    permission: EdsPermissionV2 | None
+
+
+class StepV2(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    index: Annotated[int, Field(ge=1)]
+    """
+    Номер шага маршрута с 1
+    """
+    assignee: StepAssigneeV2
+
+
 class ToItem(RootModel[EmailStr]):
     root: Annotated[EmailStr, Field(max_length=255)]
 
@@ -830,7 +1377,21 @@ class Uuid(RootModel[UUID]):
     root: UUID
 
 
+class UuidV2(RootModel[UUID]):
+    root: UUID
+
+
 class Zone(StrEnum):
+    """
+    Зона ответственности исполнителя резолюции (SPEC-v3 §7.3): goods — товары, склад, цены поставщиков (раздел erp.calc.goods, снабженец); services — услуги, ТЗ, бригада (erp.calc.services, гл. инженер); payment_terms — условия оплаты (бухгалтер)
+    """
+
+    goods = "goods"
+    services = "services"
+    payment_terms = "payment_terms"
+
+
+class ZoneV2(StrEnum):
     """
     Зона ответственности исполнителя резолюции (SPEC-v3 §7.3): goods — товары, склад, цены поставщиков (раздел erp.calc.goods, снабженец); services — услуги, ТЗ, бригада (erp.calc.services, гл. инженер); payment_terms — условия оплаты (бухгалтер)
     """

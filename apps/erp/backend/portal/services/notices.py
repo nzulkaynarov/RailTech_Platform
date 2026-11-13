@@ -32,6 +32,8 @@ from django.db import transaction
 from django.utils import timezone
 from parties.models import Contact, active_contact_q
 
+from core.currency import BASE_CURRENCY
+
 from ..models import NoticeChannel, NoticeEmailState, PortalNotice
 from .access import company_has_cabinet_access
 
@@ -509,7 +511,7 @@ def _email_money(amount: Optional[str], currency: Optional[str]) -> str:
         return ""
     from crm.templatetags.document_format import money
 
-    return money(Decimal(amount), currency or "UZS")
+    return money(Decimal(amount), currency or BASE_CURRENCY)
 
 
 def _email_date(value: Optional[str]) -> str:

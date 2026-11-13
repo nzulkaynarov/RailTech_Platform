@@ -3,6 +3,7 @@ from typing import Optional, Tuple
 from django.db import IntegrityError, transaction
 
 from accounts.models import CustomUser
+from core.currency import BASE_CURRENCY
 from crm.services.pdf_storage import save_rendered_pdf
 
 from ..constants import DEFAULT_INVOICE_DUE_DAYS, ActStatusCode, ContractStatusCode, InvoiceStatusCode
@@ -212,7 +213,7 @@ def _render_invoice_pdf(invoice) -> None:
             profile.bank_details = invoice.frozen_bank_details
 
     # D1: shared 3-line VAT bridge (+ paid/balance rows). Same block as КП/договор/акт.
-    ccy = invoice.currency.code if invoice.currency_id else "UZS"
+    ccy = invoice.currency.code if invoice.currency_id else BASE_CURRENCY
     totals = document_totals(
         ccy=ccy,
         subtotal=invoice.subtotal_excl_vat,
@@ -600,7 +601,7 @@ def _render_act_pdf(act) -> None:
     # D1: the act MIRRORS its invoice (audit: «акт зеркалит инвойс») — same net/VAT/gross figures,
     # same shared 3-line block. Falls back to the act's own gross total if it has no invoice.
     src_invoice = act.invoice
-    ccy = src_invoice.currency.code if (src_invoice and src_invoice.currency_id) else "UZS"
+    ccy = src_invoice.currency.code if (src_invoice and src_invoice.currency_id) else BASE_CURRENCY
     if src_invoice:
         totals = document_totals(
             ccy=ccy,
@@ -1051,7 +1052,7 @@ def _render_receipt_pdf(payment) -> None:
     invoice = payment.invoice
     supplier = _invoice_seller_company(invoice)
     brand = document_brand_context(supplier)
-    ccy = invoice.currency.code if invoice.currency_id else "UZS"
+    ccy = invoice.currency.code if invoice.currency_id else BASE_CURRENCY
     totals = document_totals(ccy=ccy, total=payment.amount)
     template = company_template_for(supplier, "RECEIPT")
     html_string = render_to_string(

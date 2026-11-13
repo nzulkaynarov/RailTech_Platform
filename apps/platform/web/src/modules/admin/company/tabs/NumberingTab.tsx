@@ -33,6 +33,12 @@ const KINDS: NumberingKind[] = [
   "shipment",
   "partner_contract",
   "letter",
+  // документооборот (EDS, задача «Н2»)
+  "letter_in",
+  "outgoing",
+  "memo",
+  "application",
+  "report",
 ];
 const RESET: NumberingResetPeriod[] = ["never", "yearly", "monthly"];
 // «Стандартный» — умолчание SPEC-v3 §2.2 (`КП-2026/042`); «Через дефис» — прежнее умолчание, его маски у компаний остаются.

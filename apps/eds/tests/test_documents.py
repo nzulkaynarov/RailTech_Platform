@@ -47,19 +47,19 @@ async def test_create_assigns_numbers_per_kind_and_publishes_registered(
     client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
 ) -> None:
     memo = await create(client, staff["manager"])
-    assert (memo["number"], memo["status"], memo["version"]) == ("СЗ-2026/001", "draft", 1)
+    assert (memo["number"], memo["status"], memo["version"]) == ("MEMO-2026/001", "draft", 1)
     assert memo["author"]["crm_user_id"] == 5
     assert memo["journal"][0]["action"] == "document.created"
-    assert (await create(client, staff["manager"]))["number"] == "СЗ-2026/002"
-    assert (await create(client, staff["manager"], kind="application"))["number"] == "ЗЯ-2026/001"
-    assert (await create(client, staff["manager"], kind="report"))["number"] == "ОТ-2026/001"
+    assert (await create(client, staff["manager"]))["number"] == "MEMO-2026/002"
+    assert (await create(client, staff["manager"], kind="application"))["number"] == "APP-2026/001"
+    assert (await create(client, staff["manager"], kind="report"))["number"] == "REP-2026/001"
 
     events = await outbox(container, "document.registered")
     assert [e["data"]["document"]["number"] for e in events] == [
-        "СЗ-2026/001",
-        "СЗ-2026/002",
-        "ЗЯ-2026/001",
-        "ОТ-2026/001",
+        "MEMO-2026/001",
+        "MEMO-2026/002",
+        "APP-2026/001",
+        "REP-2026/001",
     ]
     first = events[0]["data"]
     assert first["document"]["author"] == {"crm_user_id": 5, "full_name": "Алия Каримова"}
@@ -157,7 +157,7 @@ async def test_memo_without_amount_goes_to_director_only_and_is_archived_on_appr
     assert requested["data"]["approval"]["object"] == {
         "kind": "memo",
         "eds_document_id": doc["id"],
-        "number": "СЗ-2026/001",
+        "number": "MEMO-2026/001",
     }
     assert requested["data"]["step"] == {"index": 1, "assignee": {"crm_user_id": None, "permission": "memos.approve"}}
 
@@ -182,7 +182,7 @@ async def test_memo_without_amount_goes_to_director_only_and_is_archived_on_appr
         None,
     )
     [archived] = await outbox(container, "document.archived")
-    assert archived["data"]["document"]["number"] == "СЗ-2026/001"
+    assert archived["data"]["document"]["number"] == "MEMO-2026/001"
     assert archived["data"]["reason"] == "approved"
 
 
@@ -341,11 +341,11 @@ async def test_outgoing_letter_is_numbered_on_send_and_archived(
     assert sent.status_code == 200, sent.text
     body = sent.json()
     validate("Document", body)
-    assert (body["number"], body["status"], body["approval_id"]) == ("ИСХ-001/26", "sent", None)
+    assert (body["number"], body["status"], body["approval_id"]) == ("OUT-001/26", "sent", None)
     assert body["archived_at"] is not None
     [registered] = await outbox(container, "document.registered")
     assert (
-        registered["data"]["document"]["number"] == "ИСХ-001/26"
+        registered["data"]["document"]["number"] == "OUT-001/26"
         and registered["data"]["document"]["kind"] == "letter_out"
     )
     [archived] = await outbox(container, "document.archived")
@@ -353,7 +353,7 @@ async def test_outgoing_letter_is_numbered_on_send_and_archived(
     assert await outbox(container, "approval.requested") == []
     assert_error(await submit(client, staff["registrar"], draft["id"]), 409, "CONFLICT", reason="invalid_state")
     second = await create(client, staff["registrar"], kind="letter_out", recipient={"name": "Другой"})
-    assert (await submit(client, staff["registrar"], second["id"])).json()["number"] == "ИСХ-002/26"
+    assert (await submit(client, staff["registrar"], second["id"])).json()["number"] == "OUT-002/26"
 
 
 async def test_document_visibility_author_participant_registry(
@@ -445,7 +445,7 @@ async def test_author_edits_draft_without_sending(
         MEMO["text"],  # не переданное поле не меняется
         "draft",
         1,
-        "СЗ-2026/001",
+        "MEMO-2026/001",
     )
     assert (body["amount"], body["due_date"], body["erp_deal_id"]) == (
         {"amount": "250000.00", "currency": "UZS"},

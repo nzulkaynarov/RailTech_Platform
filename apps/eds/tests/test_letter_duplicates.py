@@ -1,5 +1,5 @@
 """Одно письмо — один входящий номер (EDS-DUP, pg): точный дубль — 409, `force` с причиной в журнал, похожие —
-предупреждение, нормализация корреспондента, гонка двух регистраций, «Это дубль ВХ-…» и права."""
+предупреждение, нормализация корреспондента, гонка двух регистраций, «Это дубль IN-…» и права."""
 
 import asyncio
 from datetime import date
@@ -85,11 +85,11 @@ async def test_exact_duplicate_is_409_with_the_existing_letter(
     duplicate = again.json()["details"]["duplicate"]
     validate("LetterDuplicate", duplicate)
     assert (duplicate["number"], duplicate["status"], duplicate["match"]) == (
-        "ВХ-001/26",
+        "IN-001/26",
         "awaiting_resolution",
         "exact",
     )
-    assert "ВХ-001/26" in again.json()["message"]
+    assert "IN-001/26" in again.json()["message"]
     # Без ИНН — по названию; ИНН у обоих разный — другой корреспондент.
     by_name = await register(client, registrar, SUPPLIER, sender={"name": "Пример Сталь LLC"})
     assert_error(by_name, 409, "CONFLICT", reason="duplicate_letter")
@@ -117,9 +117,9 @@ async def test_force_needs_a_reason_and_writes_it_to_the_journal(
     forced = await register(client, registrar, SUPPLIER, force=True, force_reason="Повторное письмо с исправлением")
     assert forced.status_code == 201, forced.text
     letter = forced.json()
-    assert letter["number"] == "ВХ-002/26"  # номер без пропуска: отказы выше номера не тратят
+    assert letter["number"] == "IN-002/26"  # номер без пропуска: отказы выше номера не тратят
     entry = next(e for e in letter["journal"] if e["action"] == "letter.duplicate_forced")
-    assert entry["comment"] == "Совпадает с ВХ-001/26: Повторное письмо с исправлением"
+    assert entry["comment"] == "Совпадает с IN-001/26: Повторное письмо с исправлением"
     assert entry["by"]["crm_user_id"] == registrar.id
     # Третья копия снова упирается в оригинал.
     assert_error(await register(client, registrar, SUPPLIER), 409, "CONFLICT", reason="duplicate_letter")
@@ -133,15 +133,15 @@ async def test_similar_letters_warn_but_do_not_block(client: httpx.AsyncClient, 
     sender = {"name": "Пример Сталь MChJ"}
 
     # Точное — первым; похожее по теме за ±3 дня, по номеру с другой датой, по тому же файлу.
-    assert await check(client, registrar, sender=sender, sender_ref=SUPPLIER["sender_ref"]) == [("ВХ-001/26", "exact")]
+    assert await check(client, registrar, sender=sender, sender_ref=SUPPLIER["sender_ref"]) == [("IN-001/26", "exact")]
     subject = {"sender": sender, "subject": " акт  сверки за октябрь.", "received_at": "2026-10-27"}
-    assert await check(client, registrar, **subject) == [("ВХ-001/26", "same_subject")]
+    assert await check(client, registrar, **subject) == [("IN-001/26", "same_subject")]
     assert await check(client, registrar, **{**subject, "received_at": "2026-10-28"}) == []  # 4 дня — не похоже
     assert await check(client, registrar, **{**subject, "sender": {"name": "Другой поставщик"}}) == []
     ref = {"number": "12/45", "date": "2026-10-01"}
-    assert await check(client, registrar, sender=sender, sender_ref=ref) == [("ВХ-001/26", "same_ref")]
+    assert await check(client, registrar, sender=sender, sender_ref=ref) == [("IN-001/26", "same_ref")]
     again = (await upload(client, registrar)).json()  # тот же файл ещё раз — тот же SHA-256
-    assert await check(client, registrar, file_ids=[again["id"]]) == [("ВХ-001/26", "same_file")]
+    assert await check(client, registrar, file_ids=[again["id"]]) == [("IN-001/26", "same_file")]
     other = (await upload(client, registrar, PDF + b"other")).json()
     assert await check(client, registrar, file_ids=[other["id"]]) == []
     # Похожее регистрировать не мешает.
@@ -159,9 +159,9 @@ async def test_two_parallel_registrations_of_one_letter_give_one_number(
     assert codes == [201, 409, 409, 409, 409], [r.text for r in responses]
     for loser in (r for r in responses if r.status_code == 409):
         assert loser.json()["details"]["reason"] == "duplicate_letter"
-        assert loser.json()["details"]["duplicate"]["number"] == "ВХ-001/26"
+        assert loser.json()["details"]["duplicate"]["number"] == "IN-001/26"
     listed = (await client.get("/api/v1/letters", headers=staff["registrar"].headers)).json()
-    assert [item["number"] for item in listed["items"]] == ["ВХ-001/26"]
+    assert [item["number"] for item in listed["items"]] == ["IN-001/26"]
 
 
 async def test_mark_duplicate_closes_letter_and_cancels_its_work(
@@ -224,14 +224,14 @@ async def test_mark_duplicate_closes_letter_and_cancels_its_work(
     # Ещё раз — уже дубль; номер ВХ не освобождается.
     assert_error(await mark(client, registrar, copy["id"], original_number=original["number"]), 409, "CONFLICT")
     nxt = await register(client, registrar, TAX_NOTICE, sender_ref={"number": "04-12/7777", "date": "2026-10-28"})
-    assert nxt.json()["number"] == "ВХ-003/26"
+    assert nxt.json()["number"] == "IN-003/26"
 
 
 async def test_mark_duplicate_validation_and_rights(client: httpx.AsyncClient, staff: dict[str, Person]) -> None:
     registrar = staff["registrar"]
     original = (await register(client, registrar, SUPPLIER)).json()
     copy = (await register(client, registrar, SUPPLIER, force=True, force_reason="Тест")).json()
-    for number, reason in (("ВХ-999/26", "not_found"), (copy["number"], "same_letter")):
+    for number, reason in (("IN-999/26", "not_found"), (copy["number"], "same_letter")):
         wrong = await mark(client, registrar, copy["id"], original_number=number)
         assert_error(wrong, 422, "VALIDATION_FAILED")
         assert wrong.json()["details"]["fields"][0]["message"] == reason
@@ -246,7 +246,7 @@ async def test_mark_duplicate_validation_and_rights(client: httpx.AsyncClient, s
     to_dup = await mark(client, registrar, third["id"], original_number=copy["number"])
     assert to_dup.json()["details"]["fields"][0]["message"] == "original_is_duplicate"
     assert_error(
-        await mark(client, registrar, "00000000-0000-0000-0000-000000000000", original_number="ВХ-001/26"),
+        await mark(client, registrar, "00000000-0000-0000-0000-000000000000", original_number="IN-001/26"),
         404,
         "NOT_FOUND",
     )
@@ -266,8 +266,9 @@ def test_no_number_is_an_empty_number_and_original_number_is_forgiving() -> None
         assert ref_key(empty) == "", empty
         assert exact_key("301234567", None, None, empty, date(2026, 10, 20)) is None, empty
     assert ref_key("Н-1") == "н-1"
-    assert letter_number(" bx-001/26 ") == letter_number("вх-001/26") == "ВХ-001/26"
-    assert letter_number("BХ-001/26") == "ВХ-001/26"  # латинская B, кириллическая Х
+    assert letter_number(" in-001/26 ") == "IN-001/26"  # нынешнее обозначение — как набрано, регистр не важен
+    assert letter_number(" bx-001/26 ") == letter_number("вх-001/26") == "ВХ-001/26"  # выданные раньше — прежний вид
+    assert letter_number("BХ-001/26") == "ВХ-001/26"  # латинская B, кириллическая Х — прежний вид
 
 
 async def test_letters_without_a_number_are_not_duplicates(client: httpx.AsyncClient, staff: dict[str, Person]) -> None:
@@ -286,7 +287,7 @@ async def test_mark_duplicate_keeps_the_key_only_if_it_is_the_originals_own(
     registrar = staff["registrar"]
     original = (await register(client, registrar, SUPPLIER, sender_ref=None)).json()
     copy = (await register(client, registrar, SUPPLIER)).json()
-    assert (await mark(client, registrar, copy["id"], original_number="bx-001/26")).status_code == 200
+    assert (await mark(client, registrar, copy["id"], original_number=" in-001/26 ")).status_code == 200
     again = await register(client, registrar, SUPPLIER)
     assert again.status_code == 201, again.text
 

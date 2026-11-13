@@ -10,6 +10,7 @@ from decimal import Decimal
 from typing import Optional
 
 from accounts.models import Company
+from core.currency import BASE_CURRENCY
 from crm.constants import QuoteStatusCode
 from crm.models import Quote
 
@@ -33,7 +34,7 @@ def apply_company_quote_defaults(quote: Quote, company: Optional[Company]) -> Qu
     if quote.quote_currency_id is None:
         from master_data.models import Currency
 
-        uzs = Currency.objects.filter(code="UZS").first()
+        uzs = Currency.objects.filter(code=BASE_CURRENCY).first()
         if uzs is not None:
             quote.quote_currency_id = uzs.id
             quote.save(update_fields=["quote_currency", "updated_at"])
@@ -59,7 +60,8 @@ def apply_company_quote_defaults(quote: Quote, company: Optional[Company]) -> Qu
         changed.append("cost_currency_default")
     # vat_rate / margin_percent have non-null model defaults; only override when the
     # quote still carries the bare model default AND the company configured a value.
-    if settings_row.default_vat_rate is not None and quote.vat_rate == Decimal("12.00"):
+    # «Не задано» = значение поля по умолчанию из модели, а не литерал ставки в коде (аудит, задача «Н3b»).
+    if settings_row.default_vat_rate is not None and quote.vat_rate == type(quote)._meta.get_field("vat_rate").default:
         quote.vat_rate = settings_row.default_vat_rate
         changed.append("vat_rate")
     if settings_row.default_margin_percent is not None and quote.margin_percent == Decimal("0"):

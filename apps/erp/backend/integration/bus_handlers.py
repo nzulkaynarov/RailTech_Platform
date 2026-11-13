@@ -72,21 +72,25 @@ def on_lead_erased(event: Event) -> None:
 
 
 @subscribe("uz.railtech.eds.letter.resolved.v1")
+@subscribe("uz.railtech.eds.letter.resolved.v2")  # задача «Н»
 def on_letter_resolved(event: Event) -> None:
     eds_inbound.apply_letter_resolved(event.data, event_id=_event_uuid(event))
 
 
 @subscribe("uz.railtech.eds.letter.rejected.v1")
+@subscribe("uz.railtech.eds.letter.rejected.v2")  # задача «Н»
 def on_letter_rejected(event: Event) -> None:
     eds_inbound.apply_letter_rejected(event.data)
 
 
 @subscribe("uz.railtech.eds.approval.decided.v1")
+@subscribe("uz.railtech.eds.approval.decided.v2")  # задача «Н»: исходящий номер с обозначением из настроек
 def on_approval_decided(event: Event) -> None:
     eds_inbound.apply_approval_decided(event.data)
 
 
 @subscribe("uz.railtech.eds.document.signed.v1")
+@subscribe("uz.railtech.eds.document.signed.v2")  # задача «Н»
 def on_document_signed(event: Event) -> None:
     eds_inbound.apply_document_signed(event.data, event_id=_event_uuid(event))
 

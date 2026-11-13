@@ -39,8 +39,8 @@ from app.bus.erp_event import CODE_TYPE, INVITE_TYPE, SECURITY_NOTICE_TYPE, TEST
 from app.bus.runtime import current_container
 from app.services.cabinet_chat import POSTED_TYPE
 from app.services.contact_telegram import UNLINK_REQUESTED
-from app.services.eds_notices import NOTICE_TYPE, SIGNING_EXPIRING_TYPE
-from app.services.inbound_mail import LETTER_REGISTERED
+from app.services.eds_notices import NOTICE_TYPE, NOTICE_TYPE_V2, SIGNING_EXPIRING_TYPE
+from app.services.inbound_mail import LETTER_REGISTERED, LETTER_REGISTERED_V2
 from app.services.mail_requests import MAIL_REQUEST_TYPES
 from app.services.partner_clients import REJECTED_TYPE as PARTNER_CLIENT_REJECTED
 from app.services.partner_clients import REQUESTED_TYPE as PARTNER_CLIENT_REQUESTED
@@ -93,6 +93,7 @@ async def on_partner_client_rejected(event: Event, session: AsyncSession) -> Non
 
 
 @subscribe(NOTICE_TYPE)
+@subscribe(NOTICE_TYPE_V2)
 async def on_eds_notice(event: Event, session: AsyncSession) -> None:
     await current_container().eds_notices.accept(session, event)
 
@@ -103,6 +104,7 @@ async def on_signing_authority_expiring(event: Event, session: AsyncSession) -> 
 
 
 @subscribe(LETTER_REGISTERED)
+@subscribe(LETTER_REGISTERED_V2)
 async def on_letter_registered(event: Event, session: AsyncSession) -> None:
     await current_container().inbound_mail.accept_registered(session, event)
 

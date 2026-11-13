@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/eds/approval.requested.v2.json",
+  "title": "Маршрут согласования открыт",
+  "description": "Тип uz.railtech.eds.approval.requested.v2, источник rt://eds. v2 (задача «Н», 2026-11-13): номер с обозначением из настроек нумерации, иначе как v1. Поле data конверта (envelope.v1.json). Шаг маршрута стал текущим: открыт маршрут (или новый круг после возврата) — первый шаг; решение `approve` передало маршрут дальше — следующий шаг (например, бухгалтер после директора). step.index — номер этого шага, step.assignee — кто решает. Для КП — после uz.railtech.erp.quote.ready_for_approval.v1. Подписчики v1: platform-bff (колокольчик, «Моя очередь»).",
+  "type": "object",
+  "required": [
+    "approval",
+    "step",
+    "actor"
+  ],
+  "properties": {
+    "approval": {
+      "type": "object",
+      "required": [
+        "eds_approval_id",
+        "template",
+        "object"
+      ],
+      "properties": {
+        "eds_approval_id": {
+          "$ref": "_defs.v2.json#/$defs/Uuid"
+        },
+        "template": {
+          "$ref": "_defs.v2.json#/$defs/ApprovalTemplate"
+        },
+        "object": {
+          "$ref": "_defs.v2.json#/$defs/ApprovalObject"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "description": "Тема для уведомления"
+        }
+      },
+      "additionalProperties": false
+    },
+    "step": {
+      "$ref": "_defs.v2.json#/$defs/Step"
+    },
+    "actor": {
+      "$ref": "_defs.v2.json#/$defs/Actor"
+    }
+  },
+  "additionalProperties": false
+}
