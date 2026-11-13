@@ -75,7 +75,8 @@ test.describe("Склад и закупки: снабженец", () => {
     await expect(line(page, RAIL).getByText("Резерв · 1")).toBeVisible();
 
     await page.getByRole("button", { name: "Запросить цену у партнёра" }).click();
-    const request = page.getByRole("dialog", { name: `Запросить цену у партнёра · ${NUMBER}` });
+    // форма в боковом окне (§4.1a)
+    const request = page.getByRole("region", { name: `Запросить цену у партнёра · ${NUMBER}` });
     await request.getByRole("combobox", { name: "Партнёр" }).click();
     await page.getByTitle(/ООО «Вымышленная Сталь» · sales@steel\.example/).click();
     await settledScreenshot(page, "calc-price-request");

@@ -12,10 +12,13 @@ export function Sheet({
   label,
   onClose,
   children,
+  tab = "card",
 }: {
   label: string;
   onClose: () => void;
   children: ReactNode;
+  /** Вкладка бокового окна раздела (у расчёта — `task`, у остальных — `card`) */
+  tab?: string;
 }) {
   const { mobile } = useViewport();
   if (mobile) {
@@ -35,5 +38,5 @@ export function Sheet({
       </Drawer>
     );
   }
-  return <PanelPortal tab="card">{children}</PanelPortal>;
+  return <PanelPortal tab={tab}>{children}</PanelPortal>;
 }
