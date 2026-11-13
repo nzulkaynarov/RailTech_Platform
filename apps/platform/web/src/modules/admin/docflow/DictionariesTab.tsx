@@ -248,7 +248,7 @@ function DictionaryTable({ dictionary, readOnly }: { dictionary: Dictionary; rea
         />
       ) : null}
       <ListTable<DictionaryItem>
-        wrap
+        tableId="admin.docflow.dictionary"
         pageSize={PAGE_SIZE}
         label={localName(dictionary.name, i18n.language)}
         data={shown}
@@ -264,32 +264,35 @@ function DictionaryTable({ dictionary, readOnly }: { dictionary: Dictionary; rea
           ...(dictionary.codes === "given"
             ? [
                 {
-                  title: t("settings.dict.code"),
-                  key: "code",
-                  render: (_: unknown, row: DictionaryItem) => row.code,
+                  id: "code",
+                  header: t("settings.dict.code"),
+                  width: null,
+                  cell: (row: DictionaryItem) => row.code,
                 },
               ]
             : []),
           {
-            title: t("settings.dict.name"),
-            key: "name",
-            render: (_: unknown, row) => <b>{name(row)}</b>,
+            id: "name",
+            header: t("settings.dict.name"),
+            width: null,
+            cell: (row) => <b>{name(row)}</b>,
           },
           // «Значок» виден в самой метке типа; в таблице он только отнимал бы ширину.
           ...dictionary.attrs
             .filter((attr) => attr.key !== "icon")
             .map((attr) => ({
-              title: localName(attr.name, i18n.language),
-              key: attr.key,
-              render: (_: unknown, row: DictionaryItem) =>
-                attrText(t, attr, row.attrs[attr.key], i18n.language),
+              id: attr.key,
+              header: localName(attr.name, i18n.language),
+              width: null,
+              cell: (row: DictionaryItem) => attrText(t, attr, row.attrs[attr.key], i18n.language),
             })),
           ...(source
             ? [
                 {
-                  title: t("settings.dict.source.column"),
-                  key: "source",
-                  render: (_: unknown, row: DictionaryItem) =>
+                  id: "source",
+                  header: t("settings.dict.source.column"),
+                  width: null,
+                  cell: (row: DictionaryItem) =>
                     row.source?.missing ? (
                       <StatusTag kind="origin" status="missing">
                         {t("settings.dict.source.missing")}
@@ -308,18 +311,20 @@ function DictionaryTable({ dictionary, readOnly }: { dictionary: Dictionary; rea
               ]
             : []),
           {
-            title: t("settings.dict.status"),
-            key: "active",
-            render: (_: unknown, row) => (
+            id: "active",
+            header: t("settings.dict.status"),
+            width: null,
+            cell: (row) => (
               <StatusTag kind="activity" status={row.active ? "active" : "inactive"}>
                 {row.active ? t("settings.dict.active") : t("settings.dict.hidden")}
               </StatusTag>
             ),
           },
           {
-            title: t("settings.dict.order"),
-            key: "order",
-            render: (_: unknown, row) => {
+            id: "order",
+            header: t("settings.dict.order"),
+            width: null,
+            cell: (row) => {
               // Номер в полном списке, а не на странице или в отборе поиска
               const index = items.indexOf(row);
               return (
@@ -347,9 +352,10 @@ function DictionaryTable({ dictionary, readOnly }: { dictionary: Dictionary; rea
             },
           },
           {
-            title: t("settings.dict.actions"),
-            key: "actions",
-            render: (_: unknown, row) => (
+            id: "actions",
+            header: t("settings.dict.actions"),
+            width: 160,
+            cell: (row) => (
               <span className="pf-co-actions">
                 <Button
                   type="link"

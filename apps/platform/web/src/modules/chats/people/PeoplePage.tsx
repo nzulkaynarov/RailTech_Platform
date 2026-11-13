@@ -1,5 +1,4 @@
-import { Alert, Button, Descriptions, Drawer, Input, Segmented, Table } from "antd";
-import type { ColumnsType } from "antd/es/table";
+import { Alert, Button, Descriptions, Drawer, Input, Segmented, Skeleton } from "antd";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -13,6 +12,7 @@ import {
   useListEdsStaff,
 } from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
+import { type DataColumn, DataTable } from "../../../shared/ui/DataTable/DataTable";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { SoonButton } from "../../../shared/ui/SoonButton";
 import "./people.css";
@@ -142,11 +142,13 @@ export function PeoplePage() {
     if (field === "email") return email ?? "—";
     return phone ?? email ?? "—";
   };
-  const columns: ColumnsType<Person> = [
+  const loading = staff.isLoading || contacts.isLoading || leads.isLoading;
+  const columns: DataColumn<Person>[] = [
     {
-      title: t("modules:chats.people.columns.name"),
-      dataIndex: "name",
-      render: (_, person) => (
+      id: "name",
+      header: t("modules:chats.people.columns.name"),
+      width: null,
+      cell: (person) => (
         <button
           type="button"
           className="pf-people-name"
@@ -159,29 +161,34 @@ export function PeoplePage() {
       ),
     },
     {
-      title: t("modules:chats.people.columns.position"),
-      dataIndex: "position",
-      render: (value: string | null) => value ?? "—",
+      id: "position",
+      header: t("modules:chats.people.columns.position"),
+      width: null,
+      cell: (row) => row.position ?? "—",
     },
     {
-      title: t("modules:chats.people.columns.company"),
-      dataIndex: "company",
-      render: (value: string | null) => value ?? "—",
+      id: "company",
+      header: t("modules:chats.people.columns.company"),
+      width: null,
+      cell: (row) => row.company ?? "—",
     },
     {
-      title: t("modules:chats.people.columns.kind"),
-      dataIndex: "kind",
-      render: (value: Kind) => kindLabel(value),
+      id: "kind",
+      header: t("modules:chats.people.columns.kind"),
+      width: null,
+      cell: (row) => kindLabel(row.kind),
     },
     {
-      title: t("modules:chats.people.columns.owner"),
-      dataIndex: "owner",
-      render: (value: string | null) => value ?? "—",
+      id: "owner",
+      header: t("modules:chats.people.columns.owner"),
+      width: null,
+      cell: (row) => row.owner ?? "—",
     },
     {
-      title: t("modules:chats.people.columns.contacts"),
-      key: "contacts",
-      render: (_, person) => contactsOf(person, "any"),
+      id: "contacts",
+      header: t("modules:chats.people.columns.contacts"),
+      width: null,
+      cell: (person) => contactsOf(person, "any"),
     },
   ];
 
@@ -206,15 +213,21 @@ export function PeoplePage() {
           style={{ maxWidth: 280 }}
         />
       </div>
-      <Table<Person>
-        rowKey="key"
-        columns={columns}
-        dataSource={rows}
-        loading={staff.isFetching || contacts.isFetching || leads.isFetching}
-        pagination={{ pageSize: 20, hideOnSinglePage: true }}
-        scroll={{ x: "max-content" }}
-        locale={{ emptyText: t("modules:chats.people.noData") }}
-      />
+      {loading ? (
+        <Skeleton active paragraph={{ rows: 4 }} />
+      ) : rows.length === 0 ? (
+        <p className="pf-hint">{t("modules:chats.people.noData")}</p>
+      ) : (
+        <DataTable<Person>
+          tableId="chats.people"
+          caption={title}
+          scrollLabel={title}
+          columns={columns}
+          rows={rows}
+          rowKey={(row) => row.key}
+          pageSize={20}
+        />
+      )}
       <Drawer
         open={selected !== null}
         title={selected?.name}

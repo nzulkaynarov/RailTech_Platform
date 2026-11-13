@@ -68,6 +68,7 @@ export function EmailTemplates() {
         <>
           {items.length > 0 ? <div>{add}</div> : null}
           <ListTable<EmailTemplate>
+            tableId="admin.company.emailTemplates"
             label={t("templates.parts.emails")}
             data={items}
             rowKey={(row) => row.id}
@@ -78,25 +79,38 @@ export function EmailTemplates() {
             }}
             columns={[
               {
-                title: t("templates.emails.key"),
-                dataIndex: "key",
-                render: (v: string) => <b className="pf-co-mono">{v}</b>,
+                id: "key",
+                header: t("templates.emails.key"),
+                width: null,
+                cell: (row) => <b className="pf-co-mono">{row.key}</b>,
               },
-              { title: t("templates.emails.language"), dataIndex: "language" },
-              { title: t("templates.emails.subject"), dataIndex: "subject", responsive: ["md"] },
               {
-                title: t("status"),
-                dataIndex: "is_active",
-                render: (value: boolean) => (
-                  <StatusTag kind="activity" status={value ? "active" : "inactive"}>
-                    {t(value ? "templates.emails.replaces" : "templates.emails.fileUsed")}
+                id: "language",
+                header: t("templates.emails.language"),
+                width: null,
+                cell: (row) => row.language,
+              },
+              {
+                id: "subject",
+                header: t("templates.emails.subject"),
+                width: null,
+                cell: (row) => row.subject,
+              },
+              {
+                id: "is_active",
+                header: t("status"),
+                width: null,
+                cell: (row) => (
+                  <StatusTag kind="activity" status={row.is_active ? "active" : "inactive"}>
+                    {t(row.is_active ? "templates.emails.replaces" : "templates.emails.fileUsed")}
                   </StatusTag>
                 ),
               },
               {
-                title: t("actions"),
-                key: "actions",
-                render: (_: unknown, row) =>
+                id: "actions",
+                header: t("actions"),
+                width: 160,
+                cell: (row) =>
                   readOnly ? (
                     <Button
                       type="link"

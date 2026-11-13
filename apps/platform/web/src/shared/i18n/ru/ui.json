@@ -133,7 +133,8 @@
     "moveDown": "Ниже: {{name}}",
     "resize": "Ширина столбца «{{name}}»: тяните, двойной щелчок — по содержимому",
     "narrower": "Уже: {{name}}",
-    "wider": "Шире: {{name}}"
+    "wider": "Шире: {{name}}",
+    "pages": "Страницы: {{name}}"
   },
   "formSteps": {
     "next": "Далее: {{title}}",

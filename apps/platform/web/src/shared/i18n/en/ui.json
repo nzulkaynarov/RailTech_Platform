@@ -133,7 +133,8 @@
     "moveDown": "Move down: {{name}}",
     "resize": "Width of “{{name}}”: drag, double-click to fit content",
     "narrower": "Narrower: {{name}}",
-    "wider": "Wider: {{name}}"
+    "wider": "Wider: {{name}}",
+    "pages": "Pages: {{name}}"
   },
   "formSteps": {
     "next": "Next: {{title}}",
