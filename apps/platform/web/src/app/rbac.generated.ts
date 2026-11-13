@@ -61,6 +61,16 @@ export const RESOURCES = {
       en: "Contacts · Leads and mail · triage and hand over to a manager",
     },
   },
+  "crm.mail": {
+    module: "crm",
+    levels: ["read"],
+    backends: ["crm"],
+    label: {
+      ru: "Контакты · Почта · вся очередь, чтение",
+      uz: "Kontaktlar · Pochta · butun navbat, o‘qish",
+      en: "Contacts · Mail · whole queue, read",
+    },
+  },
   "crm.clients": {
     module: "crm",
     levels: ["read", "full"],
@@ -246,7 +256,7 @@ export const MENU = {
   crm: {
     messages: ["crm.leads", "crm.leads.triage"],
     leads: ["crm.leads", "crm.leads.triage"],
-    clients: ["crm.clients"],
+    clients: ["crm.clients", "erp.stock"],
     requests: ["crm.clients"],
     channels: ["crm.leads"],
     kb: ["crm.leads"],
@@ -262,7 +272,7 @@ export const MENU = {
       "eds.memo.approve",
     ],
     inbox: ["eds.inbox", "eds.inbox.register"],
-    mail: ["crm.leads.triage"],
+    mail: ["crm.leads.triage", "crm.leads", "crm.mail"],
     outbox: ["eds.drafts"],
     projects: ["eds.projects"],
     drafts: ["eds.drafts"],
@@ -475,6 +485,7 @@ export const SYSTEM_ROLES = {
       "dashboard.queue": "full",
       "dashboard.summary": "full",
       "crm.leads": "read",
+      "crm.mail": "read",
       "crm.clients": "full",
       "eds.inbox": "full",
       "eds.inbox.register": "full",
@@ -513,6 +524,7 @@ export const TEMPLATES = {
       "eds.projects": "read",
       "eds.payments": "read",
       "eds.memo.create": "full",
+      "erp.calc": "full",
       "erp.stock": "read",
       "chats.internal": "full",
       "chats.external": "full",
@@ -527,7 +539,6 @@ export const TEMPLATES = {
     },
     access: {
       "dashboard.queue": "full",
-      "crm.clients": "read",
       "eds.projects": "read",
       "eds.memo.create": "full",
       "erp.calc": "full",

@@ -160,11 +160,14 @@ describe("Документы · Входящая почта: список (W18A-
     expect(await screen.findByRole("heading", { name: "Почта не подключена" })).toBeVisible();
   });
 
-  it("менеджеру без первой линии раздел не открыт; свои письма — по «Моя почта»", async () => {
+  it("менеджер открывает «Почту» (0.3, FR-10): свои письма, без очереди разбора и массовых действий", async () => {
     signIn("universal@demo.example");
     renderAt("/eds/mail");
-    expect(await screen.findByText(/не открыт|нет доступа|Нет доступа/i)).toBeVisible();
+    const list = await listOf("Мои письма в работе");
+    expect(within(list).getAllByRole("listitem")).toHaveLength(1);
     expect(screen.queryByRole("list", { name: "Письма, ждущие разбора" })).toBeNull();
+    expect(screen.queryByRole("tab", { name: /Подозрительные/ })).toBeNull();
+    expect(within(list).queryByRole("checkbox")).toBeNull();
   });
 });
 

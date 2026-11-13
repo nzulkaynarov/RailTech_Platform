@@ -29,6 +29,7 @@ RESOURCE_KEYS: Final[tuple[str, ...]] = (
     "dashboard.summary",
     "crm.leads",
     "crm.leads.triage",
+    "crm.mail",
     "crm.clients",
     "eds.inbox",
     "eds.inbox.register",
@@ -63,6 +64,7 @@ RESOURCE_LEVELS: Final[dict[str, tuple[str, ...]]] = {
         "full",
     ),
     "crm.leads.triage": ("full",),
+    "crm.mail": ("read",),
     "crm.clients": (
         "read",
         "full",
@@ -162,6 +164,9 @@ CRM_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
             "mail_inbox:work",
         ),
     },
+    "crm.mail": {
+        "read": ("mail_inbox:read",),
+    },
     "crm.clients": {
         "read": (
             "clients:read",
@@ -256,6 +261,7 @@ ERP_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
     },
     "crm.leads": {},
     "crm.leads.triage": {},
+    "crm.mail": {},
     "crm.clients": {
         "full": (
             "deal.manage",
@@ -336,6 +342,7 @@ EDS_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
     "dashboard.summary": {},
     "crm.leads": {},
     "crm.leads.triage": {},
+    "crm.mail": {},
     "crm.clients": {
         "full": ("files.upload",),
     },
@@ -459,6 +466,7 @@ ROLE_ACCESS: Final[dict[str, dict[str, str]]] = {
     "DIRECTOR": {
         "dashboard.queue": "full",
         "dashboard.summary": "full",
+        "crm.mail": "read",
         "crm.leads": "read",
         "crm.clients": "full",
         "eds.inbox": "full",
@@ -481,6 +489,7 @@ ROLE_ACCESS: Final[dict[str, dict[str, str]]] = {
         "dashboard.queue": "full",
         "crm.leads": "full",
         "crm.clients": "full",
+        "erp.calc": "full",
         "eds.inbox": "read",
         "eds.drafts": "read",
         "eds.projects": "read",
@@ -492,7 +501,6 @@ ROLE_ACCESS: Final[dict[str, dict[str, str]]] = {
     },
     "SUPPLY": {
         "dashboard.queue": "full",
-        "crm.clients": "read",
         "eds.projects": "read",
         "eds.memo.create": "full",
         "erp.calc": "full",

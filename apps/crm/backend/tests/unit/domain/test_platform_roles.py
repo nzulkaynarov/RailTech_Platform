@@ -258,6 +258,8 @@ EXPECTED: dict[tuple[str, str], tuple[set[str], set[str]]] = {
         "chats.external",
         "full",
     ): ({"chats:read", "chats:reply", "chats:note", "chats:assist"}, set()),
+    # 0.3 (FR-10): вся очередь «Почты» без действий — директор
+    ("crm.mail", "read"): ({"mail_inbox:read"}, set()),
     ("company.settings", "read"): NOTHING,
     ("company.settings", "full"): (set(), {"settings.edit", "settings.charge_templates"}),
     ("admin", "read"): (ADMIN_READ, set()),
@@ -312,7 +314,8 @@ DIRECTOR_ERP = set(ERP_PERMISSIONS) - {
     "finance.rates",
 }
 ROLE_ERP: dict[str, set[str]] = {
-    "MANAGER": {"deal.manage", "quote.send", "finance.view"},
+    # 0.3 (FR-7): менеджер ведёт расчёт и КП — `erp.calc: full` (без себестоимости и виз)
+    "MANAGER": {"deal.manage", "quote.build", "quote.edit_pricing", "quote.send", "finance.view"},
     "DIRECTOR": DIRECTOR_ERP,
     "SUPPLY": {
         "deal.manage",
@@ -416,7 +419,8 @@ def test_the_two_system_roles_are_fixed_by_the_catalog() -> None:
     director = dict(make_role("DIRECTOR").access)
     # R-1b (уточнение ADR-0012 п. 2): воронка и внешняя переписка — только чтение, лиды не берёт.
     # D2-4: «Счета и оплаты» тоже чтение — оплату подтверждает бухгалтер.
-    read_only = {"admin", "crm.leads", "chats.external", "eds.payments"}
+    # 0.3 (FR-10): вся очередь «Почты» — чтение, без действий первой линии.
+    read_only = {"admin", "crm.leads", "chats.external", "eds.payments", "crm.mail"}
     # D17G-1: разбор и передачу лидов (первая линия) директор не ведёт — раздела у него нет.
     # SIGN-2: реестр полномочий подписи ведёт администратор — у директора раздела нет.
     hidden = {"crm.leads.triage", "eds.signing.manage"}
@@ -487,8 +491,17 @@ def _v1_columns() -> dict[str, dict[str, str]]:
 @pytest.mark.parametrize("legacy", ["MANAGER", "SUPPLY", "ENGINEER", "ACCOUNTANT"])
 def test_templates_keep_the_v1_matrix_column_plus_the_new_calc_sections(legacy: str) -> None:
     """Шаблоны = колонки матрицы SPEC-v3 §4.2 (версия 1) + виза расчёта у снабженца и инженера."""
-    added = {"SUPPLY": {"erp.calc.goods": "full"}, "ENGINEER": {"erp.calc.services": "full"}}
-    expected = {**_v1_columns()[legacy], **added.get(legacy, {})}
+    added = {
+        "SUPPLY": {"erp.calc.goods": "full"},
+        "ENGINEER": {"erp.calc.services": "full"},
+        "MANAGER": {"erp.calc": "full"},  # 0.3 (FR-7): менеджер ведёт расчёт и КП
+    }
+    removed = {"SUPPLY": {"crm.clients"}}  # 0.3 (FR-13): снабженец видит только партнёров
+    expected = {
+        k: v
+        for k, v in {**_v1_columns()[legacy], **added.get(legacy, {})}.items()
+        if k not in removed.get(legacy, set())
+    }
     assert dict(make_grant(legacy).access) == expected
 
 
@@ -507,6 +520,7 @@ def test_director_keeps_everything_v1_gave_and_gains_full_where_it_had_read() ->
         "erp.calc.services",
         "company.settings",
         "eds.inbox.register",
+        "crm.mail",  # 0.3 (FR-10)
     }
 
 
