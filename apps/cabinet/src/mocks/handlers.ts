@@ -539,7 +539,7 @@ export const handlers = [
         const nextId = Math.max(500, ...db.requests.map((r) => r.id)) + 1;
         const created: Schemas['ClientRequest'] = {
           id: nextId,
-          number: `Z-2026-${String(nextId - 400).padStart(4, '0')}`,
+          number: `ЗВ-2026-${String(nextId - 400).padStart(3, '0')}`,
           status: 'new',
           outcome: null,
           summary: `Повтор запроса ${item.number}: ${item.summary}`,
@@ -564,7 +564,7 @@ export const handlers = [
         const nextId = Math.max(500, ...db.requests.map((item) => item.id)) + 1;
         const created: Schemas['ClientRequest'] = {
           id: nextId,
-          number: `Z-2026-${String(nextId - 400).padStart(4, '0')}`,
+          number: `ЗВ-2026-${String(nextId - 400).padStart(3, '0')}`,
           status: 'new',
           outcome: null,
           summary: body.summary,

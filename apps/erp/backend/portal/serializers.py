@@ -10,6 +10,7 @@ from portal.models import PortalSecurityEvent, PortalSession
 from portal.services import act_scan
 from portal.services import documents as portal_documents
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 
 #: Лимиты контракта (`erp-portal.yaml`): `ClientRequestCreate.summary` и `Reason.reason`.
 SUMMARY_MAX_LENGTH = 5000
@@ -342,10 +343,15 @@ class DealRefSerializer(serializers.Serializer):
 
     id = serializers.IntegerField(read_only=True)
     number = serializers.SerializerMethodField()
+    stage = serializers.SerializerMethodField()
     title = serializers.SerializerMethodField()
 
     def get_number(self, deal) -> str:
         return projections.deal_number(deal)
+
+    @extend_schema_field(serializers.ChoiceField(choices=["request", "project"]))
+    def get_stage(self, deal) -> str:
+        return projections.deal_stage(projections.deal_number(deal))
 
     def get_title(self, deal) -> Optional[str]:
         return projections.blank_to_none(deal.title)
@@ -826,6 +832,9 @@ def portal_message_data(message, contact_id: int) -> dict:
     context = None
     if message.context_kind:
         context = {"kind": message.context_kind, "id": message.context_id, "number": message.context_number}
+        if message.context_kind == "deal":
+            # Стадия на момент сообщения — по номеру, снятому вместе с меткой (заявка ЗВ остаётся заявкой в истории).
+            context["stage"] = projections.deal_stage(message.context_number)
     return {
         "id": message.pk,
         "direction": message.direction,

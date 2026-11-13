@@ -15,7 +15,7 @@ import { ManagerButton } from '@/components/TelegramLinkButton';
 import { Button } from '@/components/ui/button';
 import { useNow } from '@/hooks/useNow';
 import { formatDate, formatMoney, formatQuantity } from '@/lib/format';
-import { dealProgress, type DealProgress } from '@/lib/dealStage';
+import { aboutDealKey, dealLabelKey, dealProgress, type DealProgress } from '@/lib/dealStage';
 import { invoiceView } from '@/lib/invoice';
 import { cn } from '@/lib/utils';
 import { CanAct } from '@/session/CanAct';
@@ -44,7 +44,7 @@ export function DealPage() {
   const dealRef = [requests, quotes, contracts, invoices, acts, deliveries, documents]
     .flatMap((query) => of(query.data as Array<{ deal?: DealRef | null }> | undefined))
     .find((item) => item.deal)?.deal;
-  const title = dealRef ? t('common.dealNumber', { number: dealRef.number }) : t('pages.deal.titleFallback');
+  const title = dealRef ? t(dealLabelKey(dealRef.number), { number: dealRef.number }) : t('pages.deal.titleFallback');
   const subtitle = dealRef?.title ?? null;
   if (all.some((query) => query.isPending)) {
     return (
@@ -127,7 +127,7 @@ export function DealPage() {
             ) : null}
             <ManagerButton
               context={dealRef ? { kind: 'deal', id: dealRef.id, number: dealRef.number } : null}
-              label={dealRef ? t('manager.aboutDeal', { number: dealRef.number }) : undefined}
+              label={dealRef ? t(aboutDealKey(dealRef.number), { number: dealRef.number }) : undefined}
             />
           </div>
         }

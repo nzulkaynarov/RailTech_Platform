@@ -88,7 +88,8 @@
     },
     "date": {
       "placeholder": "DD.MM.YYYY"
-    }
+    },
+    "requestNumber": "Request {{number}}"
   },
   "access": {
     "noSections": {
@@ -321,6 +322,7 @@
   "manager": {
     "write": "Message the manager",
     "aboutDeal": "Message the manager about project {{number}}",
+    "aboutRequest": "Message the manager about request {{number}}",
     "aboutQuote": "Message the manager about quote {{number}}",
     "aboutContract": "Message the manager about contract {{number}}",
     "aboutInvoice": "Message the manager about invoice {{number}}",
@@ -1056,7 +1058,8 @@
         "deal": "Project {{number}}",
         "quote": "Quote {{number}}",
         "invoice": "Invoice {{number}}",
-        "act": "Act {{number}}"
+        "act": "Act {{number}}",
+        "request": "Request {{number}}"
       },
       "aboutLabel": "Document the question is about",
       "about": "About: {{what}}",

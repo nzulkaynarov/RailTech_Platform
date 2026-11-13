@@ -48,9 +48,9 @@ describe('«Написать менеджеру» на экранах', () => {
   it('сделка: кнопка в шапке ведёт в чат кабинета с меткой проекта, не в Telegram', async () => {
     signedIn();
     renderApp('/deals/35');
-    await heading('Проект D-35');
-    const link = await within(page()).findByRole('link', { name: 'Написать менеджеру о проекте D-35' }, LOADED);
-    expect(link).toHaveAttribute('href', chat('deal', 35, 'D-35'));
+    await heading('Проект ПР-2026-035');
+    const link = await within(page()).findByRole('link', { name: 'Написать менеджеру о проекте ПР-2026-035' }, LOADED);
+    expect(link).toHaveAttribute('href', chat('deal', 35, 'ПР-2026-035'));
     expect(link).not.toHaveAttribute('target');
     expect(link).toHaveTextContent('Написать менеджеру');
     await expectNoAxeViolations();
@@ -65,7 +65,7 @@ describe('«Написать менеджеру» на экранах', () => {
   });
 
   it.each([
-    ['/contracts', 'Договоры', 'Написать менеджеру о договоре D-2026-0048', chat('deal', 48, 'D-48')],
+    ['/contracts', 'Договоры', 'Написать менеджеру о договоре D-2026-0048', chat('deal', 48, 'ПР-2026-048')],
     ['/invoices', 'Счета', 'Написать менеджеру о счёте S-2026-0124', chat('invoice', 603, 'S-2026-0124')],
     ['/acts', 'Акты', 'Написать менеджеру об акте A-2026-0090', chat('act', 701, 'A-2026-0090')],
   ])('%s: в строке — метка документа (договор — его проекта)', async (path, title, name, href) => {
@@ -80,11 +80,11 @@ describe('«Написать менеджеру» на экранах', () => {
     signedIn();
     renderApp('/deliveries');
     await heading('Поставки');
-    const links = await within(page()).findAllByRole('link', { name: /^Написать менеджеру о проекте D-\d+$/ });
+    const links = await within(page()).findAllByRole('link', { name: /^Написать менеджеру о (проекте|заявке) (ПР|ЗВ)-\d{4}-\d+$/ });
     expect(links.length).toBeGreaterThan(1);
     for (const link of links) {
-      const number = link.getAttribute('aria-label')!.match(/(D-\d+)$/)![1];
-      expect(link).toHaveAttribute('href', chat('deal', Number(number.slice(2)), number));
+      const number = link.getAttribute('aria-label')!.match(/((ПР|ЗВ)-\d{4}-\d+)$/)![1];
+      expect(link).toHaveAttribute('href', chat('deal', Number(number.slice(-3)), number));
     }
     await expectNoAxeViolations();
   });
@@ -105,7 +105,7 @@ describe('«Написать менеджеру» на экранах', () => {
   it('модуля «Сообщения» нет у сессии — кнопки нет', async () => {
     signedIn('actor', 'demo', { roles: ['client'], modules: CLIENT_ACCESS.modules.filter((m) => m !== 'messages') });
     renderApp('/deals/35');
-    await heading('Проект D-35');
+    await heading('Проект ПР-2026-035');
     await within(page()).findByRole('region', { name: 'Счета' }, LOADED);
     expect(within(page()).queryByRole('link', { name: /Написать менеджеру/ })).not.toBeInTheDocument();
   });

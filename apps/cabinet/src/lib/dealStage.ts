@@ -107,3 +107,16 @@ export function dealProgress(docs: DealDocuments): DealProgress {
   const currentIndex = stages.findIndex((stage) => stage.state !== 'done');
   return { closed, outcome, stages: stages.map((stage, index) => ({ ...stage, current: index === currentIndex })) };
 }
+
+/**
+ * Подпись сделки по её номеру (0.12 плана 2026-11-12, FR-37: один объект — одно имя): портал отдаёт тот же номер, что
+ * у сотрудников — `ЗВ-ГГГГ-NNN` до принятия КП («Заявка»), `ПР-ГГГГ-NNN` после («Проект»).
+ */
+export function dealLabelKey(number: string): 'common.requestNumber' | 'common.dealNumber' {
+  return number.startsWith('ЗВ-') ? 'common.requestNumber' : 'common.dealNumber';
+}
+
+/** «Написать менеджеру о заявке …» или «… о проекте …» — по тому же номеру, что и `dealLabelKey`. */
+export function aboutDealKey(number: string): 'manager.aboutRequest' | 'manager.aboutDeal' {
+  return number.startsWith('ЗВ-') ? 'manager.aboutRequest' : 'manager.aboutDeal';
+}

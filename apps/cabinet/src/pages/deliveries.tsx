@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { groupDeliveries } from '@/lib/deliveries';
+import { aboutDealKey, dealLabelKey } from '@/lib/dealStage';
 import { DOCUMENT_KINDS, isDocumentKind } from '@/lib/documents';
 import { saveBlob } from '@/lib/download';
 import { formatDate, formatDateTime, formatFileSize, formatQuantity } from '@/lib/format';
@@ -80,11 +81,11 @@ export function DeliveriesPage() {
                 </CardTitle>
                 <ManagerButton
                   context={{ kind: 'deal', id: group.deal.id, number: group.deal.number }}
-                  label={t('manager.aboutDeal', { number: group.deal.number })}
+                  label={t(aboutDealKey(group.deal.number), { number: group.deal.number })}
                 />
               </CardHeader>
               <CardContent className="px-4">
-                <ul className="flex flex-col divide-y" aria-label={t('common.dealNumber', { number: group.deal.number })}>
+                <ul className="flex flex-col divide-y" aria-label={t(dealLabelKey(group.deal.number), { number: group.deal.number })}>
                   {group.lines.map((line) => (
                     <li key={line.id} className="flex min-w-0 flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-start sm:justify-between">
                       <div className="flex min-w-0 flex-col gap-0.5">

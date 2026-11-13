@@ -5,6 +5,7 @@ import type { LucideIcon } from 'lucide-react';
 
 import type { DealRef } from '@/api/portal';
 import { cn } from '@/lib/utils';
+import { dealLabelKey } from '@/lib/dealStage';
 import { useHasModule } from '@/session/useMe';
 
 /** Пары «подпись — значение» карточки объекта; на телефоне — столбиком, от `sm` — в две колонки. */
@@ -50,10 +51,10 @@ export function DealLink({
           to={`/deals/${deal.id}`}
           className="relative z-10 rounded-sm text-primary underline underline-offset-4 outline-none hover:no-underline focus-visible:ring-2 focus-visible:ring-ring"
         >
-          {t('common.dealNumber', { number: deal.number })}
+          {t(dealLabelKey(deal.number), { number: deal.number })}
         </Link>
       ) : (
-        <span>{t('common.dealNumber', { number: deal.number })}</span>
+        <span>{t(dealLabelKey(deal.number), { number: deal.number })}</span>
       )}
       {showTitle && deal.title ? (
         stackTitle ? (

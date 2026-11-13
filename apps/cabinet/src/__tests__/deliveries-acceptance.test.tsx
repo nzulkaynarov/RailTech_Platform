@@ -9,7 +9,7 @@ const LINE = 'Редуктор червячный NMRV 063';
 async function openDeliveries() {
   renderApp('/deliveries');
   await heading('Поставки');
-  await screen.findByRole('list', { name: 'Проект D-35' });
+  await screen.findByRole('list', { name: 'Проект ПР-2026-035' });
 }
 
 describe('Приёмка поставки по строкам', () => {
@@ -21,7 +21,7 @@ describe('Приёмка поставки по строкам', () => {
     expect(screen.getAllByRole('button', { name: /^Есть замечания по позиции / })).toHaveLength(1);
     expect(screen.getByRole('button', { name: `Принять позицию ${LINE}` })).toBeInTheDocument();
 
-    const deal35 = screen.getByRole('list', { name: 'Проект D-35' });
+    const deal35 = screen.getByRole('list', { name: 'Проект ПР-2026-035' });
     expect(within(deal35).getByText('Принято', { selector: 'span[data-slot="badge"], span' })).toBeInTheDocument();
     expect(within(deal35).getByText('Принято 27 сент. 2026 г., 10:15')).toBeInTheDocument();
     expect(within(deal35).getByText('Есть замечания', { selector: '[data-slot="badge"]' })).toBeInTheDocument();
@@ -42,7 +42,7 @@ describe('Приёмка поставки по строкам', () => {
 
     expect(await screen.findByText(`Позиция «${LINE}» принята`)).toBeInTheDocument();
     expect(log).toContain('POST /deliveries/105/accept');
-    const deal35 = screen.getByRole('list', { name: 'Проект D-35' });
+    const deal35 = screen.getByRole('list', { name: 'Проект ПР-2026-035' });
     expect(await within(deal35).findByText('Принято 14 окт. 2026 г., 12:00')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: `Принять позицию ${LINE}` })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: `Есть замечания по позиции ${LINE}` })).not.toBeInTheDocument();
@@ -73,7 +73,7 @@ describe('Приёмка поставки по строкам', () => {
 
     expect(await screen.findByText('Замечание передано менеджеру')).toBeInTheDocument();
     expect(body.current).toEqual({ reason: 'Повреждена упаковка' });
-    const deal35 = screen.getByRole('list', { name: 'Проект D-35' });
+    const deal35 = screen.getByRole('list', { name: 'Проект ПР-2026-035' });
     expect(await within(deal35).findByText('Замечание: Повреждена упаковка')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: `Принять позицию ${LINE}` })).not.toBeInTheDocument();
   });

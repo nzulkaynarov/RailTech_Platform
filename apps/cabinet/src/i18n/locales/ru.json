@@ -88,7 +88,8 @@
     },
     "date": {
       "placeholder": "ДД.ММ.ГГГГ"
-    }
+    },
+    "requestNumber": "Заявка {{number}}"
   },
   "access": {
     "noSections": {
@@ -321,6 +322,7 @@
   "manager": {
     "write": "Написать менеджеру",
     "aboutDeal": "Написать менеджеру о проекте {{number}}",
+    "aboutRequest": "Написать менеджеру о заявке {{number}}",
     "aboutQuote": "Написать менеджеру о КП {{number}}",
     "aboutContract": "Написать менеджеру о договоре {{number}}",
     "aboutInvoice": "Написать менеджеру о счёте {{number}}",
@@ -1071,7 +1073,8 @@
         "deal": "Проект {{number}}",
         "quote": "КП {{number}}",
         "invoice": "Счёт {{number}}",
-        "act": "Акт {{number}}"
+        "act": "Акт {{number}}",
+        "request": "Заявка {{number}}"
       },
       "aboutLabel": "Документ, о котором вопрос",
       "about": "О документе: {{what}}",

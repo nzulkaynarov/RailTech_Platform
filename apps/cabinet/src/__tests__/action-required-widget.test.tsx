@@ -40,7 +40,7 @@ describe('виджет «Требует вашего решения»', () => {
         HttpResponse.json([
           {
             id: 700,
-            deal: { id: 29, number: 'D-29', title: null },
+            deal: { id: 29, number: 'ПР-2026-029', title: null },
             number: 'S-OVERDUE-1',
             status: 'overdue',
             total: { amount: '100.00', currency: 'UZS' },
@@ -98,7 +98,7 @@ describe('виджет «Требует вашего решения»', () => {
     release();
     expect(await screen.findByRole('region', { name: 'Требует вашего решения' })).toBeInTheDocument();
     expect(screen.queryByTestId('action-required-loading')).not.toBeInTheDocument();
-    expect(await screen.findByText('Z-2026-0042')).toBeInTheDocument();
+    expect(await screen.findByText('ЗВ-2026-042')).toBeInTheDocument();
   });
 
   it('наблюдатель: «Ждут решения компании», без призыва к действию', async () => {

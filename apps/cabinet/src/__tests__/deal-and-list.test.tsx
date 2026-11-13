@@ -26,7 +26,7 @@ describe('Сделка (deep-link бота)', () => {
   it('всё по сделке на одном экране', async () => {
     signedIn();
     renderApp('/deals/35');
-    await heading('Проект D-35');
+    await heading('Проект ПР-2026-035');
     // Название сделки (deal.title) — под заголовком; внутренний id в тексте экрана не показывается.
     expect(await screen.findByText('Редукторы и муфты')).toBeInTheDocument();
     expect(screen.queryByText(/Проект 35/)).not.toBeInTheDocument();
@@ -42,7 +42,7 @@ describe('Сделка (deep-link бота)', () => {
   it('сделка собирается по deal.id: в сделке 29 нет объектов сделки 35', async () => {
     signedIn();
     renderApp('/deals/29');
-    await heading('Проект D-29');
+    await heading('Проект ПР-2026-029');
     expect(await screen.findByRole('region', { name: 'Счета' })).toBeInTheDocument();
     expect(within(screen.getByRole('region', { name: 'Счета' })).getByText('S-2026-0124')).toBeInTheDocument();
     expect(within(screen.getByRole('region', { name: 'Счета' })).queryByText('S-2026-0118')).not.toBeInTheDocument();
@@ -83,7 +83,7 @@ describe('Адаптивный список на десктопе', () => {
     expect(await heading('КП KP-2026-0042')).toBeInTheDocument();
     await router.navigate('/quotes');
     const again = await screen.findByRole('table', { name: 'Коммерческие предложения' });
-    await user.click(within(again).getAllByRole('link', { name: 'Проект D-42' })[0]);
+    await user.click(within(again).getAllByRole('link', { name: 'Заявка ЗВ-2026-042' })[0]);
     expect(router.state.location.pathname).toBe('/deals/42');
 
     await router.navigate('/quotes');

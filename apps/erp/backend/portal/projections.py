@@ -59,12 +59,21 @@ def currency_code(currency) -> str:
 
 
 def deal_number(deal) -> str:
-    """Номер сделки для клиента: у сделки нет собственного номера (QUESTIONS Q-FIX21-3) — `D-<id>`."""
-    return f"D-{deal.pk}"
+    """Номер сделки для клиента — тот же, что у сотрудников (0.12 плана 2026-11-12, FR-37: один объект — одно имя):
+    `Deal.number` — `ЗВ-ГГГГ-NNN` до принятия КП, `ПР-ГГГГ-NNN` после (ERP-09). Без номера (старые сделки) — `D-<id>`."""
+    return deal.number or f"D-{deal.pk}"
+
+
+def deal_stage(number: str) -> str:
+    """`DealRef.stage` / `MessageContext.stage`: `request` — заявка до принятия КП, `project` — после (0.12, FR-37)."""
+    from sales.services.deal_numbers import stage_of
+
+    return stage_of(number)
 
 
 def request_number(deal) -> str:
-    return f"Z-{deal.pk}"
+    """Запрос клиента и сделка — один объект (ERP-09): номер тот же, что у сделки; без номера — `Z-<id>`."""
+    return deal.number or f"Z-{deal.pk}"
 
 
 def blank_to_none(value):
