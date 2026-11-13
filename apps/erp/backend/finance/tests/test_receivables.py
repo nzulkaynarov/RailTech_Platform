@@ -132,6 +132,8 @@ def test_row_statuses_in_words_and_overdue_is_computed_from_the_due_date(world):
     assert D(rows["SCH-PART"]["balance_due"]) == D("72.00")
     assert rows[world["invoice"].number]["display_status"] == "issued"
     assert late.pk and partial.pk
+    # Номер сделки счёта — от ERP (`Deal.number`), BFF его не составляет (задача «Н»)
+    assert rows["SCH-LATE"]["deal_number"] == late.deal.number and late.deal.number
 
 
 def test_a_pending_proof_changes_the_status_and_the_tab_until_it_is_confirmed(world):

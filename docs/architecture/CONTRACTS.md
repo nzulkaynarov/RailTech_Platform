@@ -80,7 +80,8 @@ v1.<ts>.<jti>.<hex>` — доказательство владения общи�
 `POST /clients/{crm_client_id}/requests`. Номер заявки `Deal.number` (`ЗВ-ГГГГ-NNN`, после принятия КП — `ПР-ГГГГ-NNN` с тем же
 NNN; ERP-09) выдаёт ERP из счётчика года под блокировкой, без пропусков; он же — `number` в `DealListItem`, `DealRef` событий
 и инструментах `erp-mcp`. Список сделок ERP (`GET /api/v1/crm/deals/?search=`) ищет по номеру под любым префиксом, названию и
-компании. Портал (Cabinet) пока показывает `D-<id>` (контракт `erp-portal.yaml`, отдельная задача).
+компании. Портал (Cabinet) показывает тот же номер и стадию `DealRef.stage` (`request` | `project`, `erp-portal.yaml` 0.14.0):
+подпись «Заявка» / «Проект» берётся из стадии, а не из префикса номера.
 
 Передача (`/clients/handoff`): компания ищется по `crm_client_id`, затем по ИНН; сопоставление создаётся **до** сделки, поэтому
 `request.created(source=crm)` и `invite.sent` доходят до CRM; ИНН чужого `crm_client_id` — 409 `INN_CONFLICT`; компания партнёра кабинета, найденная по ИНН, — 409 `PARTNER_VERIFICATION_REQUIRED` (сопоставление не создаётся, PART-CRM); согласие хранится

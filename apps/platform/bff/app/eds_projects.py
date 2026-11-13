@@ -9,15 +9,12 @@ BFF не решает: проект, его шаг, статус для клие
 ошибок ERP в формат `Error` и потоковая выдача файлов.
 """
 
-import re
 from collections.abc import Awaitable, Callable
-from datetime import UTC, datetime
 from typing import Any
 
 import httpx
 
 from app.errors import PlatformError, backend_code, backend_unavailable
-from app.feeds.text import parse_dt
 from app.schemas_eds_projects import (
     ActActionIn,
     ContractActionIn,
@@ -35,7 +32,6 @@ Call = Callable[..., Awaitable[httpx.Response]]
 
 API = "/api/v1/crm"
 # Номер проекта или заявки: `ПР-2026-104`, `ЗВ-2026-104`; латиницей (раскладка) — `PR-`, `ZV-`.
-_NUMBER = re.compile(r"^(?:ПР|ЗВ|PR|ZV)-(\d{4})-(\d{1,9})$", re.IGNORECASE)
 MAX_ID = 2**31 - 1
 
 # Код отказа ERP -> текст для сотрудника. Остальное переводит `project_error` по статусу.
@@ -88,21 +84,10 @@ _FIELD_OF: dict[str, str] = {
 }
 
 
-def _year(created_at: Any) -> int:
-    """Год создания сделки по UTC — так же, как у `feeds.numbers.deal_number`."""
-    moment = (
-        created_at.astimezone(UTC) if isinstance(created_at, datetime) else parse_dt(created_at)
-    )
-    return moment.year if moment else 0
-
-
-def project_number(deal_id: int, created_at: Any) -> str:
-    """Номер проекта `ПР-2026-104`. **Временно, до ERP-09** (`Deal.number`): год и id сделки."""
-    return f"ПР-{_year(created_at):04d}-{deal_id:03d}"
-
-
-def request_number(deal_id: int, created_at: Any) -> str:
-    return f"ЗВ-{_year(created_at):04d}-{deal_id:03d}"
+def project_number(raw: RawRow) -> str:
+    """Номер сделки, который выдал ERP (`Deal.number`); нет — `D-<id>` (подпись, не ключ).
+    BFF номер не составляет: префиксы задаёт владелец в настройках нумерации (задача «Н»)."""
+    return raw.number or f"D-{raw.deal_id}"
 
 
 def not_found() -> PlatformError:
@@ -115,21 +100,11 @@ def not_found() -> PlatformError:
     )
 
 
-def parse_ref(ref: str) -> tuple[int, int | None]:
-    """Адрес проекта -> (id сделки, год из номера или None); год сверяется с карточкой ERP."""
+def deal_id_of_ref(ref: str) -> int | None:
+    """Адрес проекта — id сделки (цифры); номер (`None`) ищется в ERP: префиксы номера
+    задаёт владелец, BFF их не разбирает (задача «Н»)."""
     text = ref.strip()
-    if text.isdigit() and int(text) <= MAX_ID:
-        return int(text), None
-    match = _NUMBER.match(text)
-    if match is None or int(match.group(2)) > MAX_ID:
-        raise not_found()
-    return int(match.group(2)), int(match.group(1))
-
-
-def deal_id_of_number(text: str) -> int | None:
-    """Id сделки из номера `ПР-2026-104` / `ЗВ-2026-104` (для поиска); голые цифры — не номер."""
-    match = _NUMBER.match(text.strip())
-    return int(match.group(2)) if match and int(match.group(2)) <= MAX_ID else None
+    return int(text) if text.isdigit() and int(text) <= MAX_ID else None
 
 
 def project_error(response: httpx.Response) -> PlatformError:
@@ -199,19 +174,33 @@ class ErpProjects:
         )
 
     async def raw_card(self, ref: str) -> RawCard:
-        deal_id, year = parse_ref(ref)
+        deal_id = deal_id_of_ref(ref)
+        if deal_id is None:
+            deal_id = await self._deal_id_by_number(ref)
         response = await self._call("erp", "GET", f"{API}/projects/{deal_id}/")
         if response.status_code == 404:
             raise not_found()
         if response.status_code != 200:
             raise project_error(response)
         try:
-            card = parse(RawCard, response.json(), "project")
+            return parse(RawCard, response.json(), "project")
         except ValueError as exc:
             raise backend_unavailable("erp", "bad_response") from exc
-        if year is not None and _year(card.created_at) != year:
-            raise not_found()  # номер называет год, которого у этой сделки нет
-        return card
+
+    async def _deal_id_by_number(self, number: str) -> int:
+        """Номер в адресе -> id сделки через ERP (`?number=`: год и NNN, префикс не важен).
+        Не проект — 404."""
+        text = number.strip()
+        if not text or len(text) > 64:
+            raise not_found()
+        raw = parse(
+            RawPage,
+            await self._json("GET", f"{API}/projects/", params={"number": text, "limit": 1}),
+            "projects",
+        )
+        if not raw.results:
+            raise not_found()
+        return raw.results[0].deal_id
 
     async def card(self, ref: str) -> ProjectCard:
         return present(await self.raw_card(ref))
@@ -393,9 +382,9 @@ class ErpProjects:
 
 def row(raw: RawRow) -> ProjectRow:
     return ProjectRow(
-        number=project_number(raw.deal_id, raw.created_at),
-        request_number=request_number(raw.deal_id, raw.created_at),
-        title=raw.title or raw.company_name or project_number(raw.deal_id, raw.created_at),
+        number=project_number(raw),
+        request_number=project_number(raw),  # заявка и проект — один объект, один номер
+        title=raw.title or raw.company_name or project_number(raw),
         client_name=raw.company_name,
         step=raw.step,
         client_status=raw.client_status,

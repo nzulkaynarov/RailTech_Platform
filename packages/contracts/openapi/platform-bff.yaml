@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.61.0
+  version: 0.62.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -3242,8 +3242,8 @@ paths:
         черновики), `proofs` («Платёжки на подтверждение» — есть платёжка клиента без подтверждения), `overdue` («Просрочены» —
         срок оплаты прошёл, остаток есть), `awaiting` («Ждут оплаты»), `all` («Все счета», в том числе оплаченные). «Просрочен» не
         хранится статусом, а вычисляется по сроку. `counts` — число счетов на каждой вкладке, `memos_to_pay` — число служебок к
-        оплате из EDS (до 100; `null` — EDS не ответил, `sources.eds = unavailable`). Номер проекта `ПР-ГГГГ-NNN` BFF составляет из
-        года и id сделки (до ERP-09). Раздел `eds.payments` — чтение (менеджер, директор, бухгалтер); читать счета вправе сотрудник
+        оплате из EDS (до 100; `null` — EDS не ответил, `sources.eds = unavailable`). Номер проекта — номер сделки из ERP
+        (`deal_number`), BFF его не составляет. Раздел `eds.payments` — чтение (менеджер, директор, бухгалтер); читать счета вправе сотрудник
         с правом ERP на финансы — иначе ERP отвечает 403 (`source = erp`). В данных нет себестоимости, маржи и цен поставщиков.
         ERP не ответил — 503.
       parameters:
@@ -13852,7 +13852,7 @@ paths:
       operationId: listTechDocDealOptions
       summary: 'Расчёт · Техдокументация: заявки и проекты для привязки'
       description: >-
-        ERP `crm/deals/` (как «Связь с проектом» в EDS); номер ЗВ/ПР составляется до ERP-09. Раздел `erp.stock` — чтение.
+        ERP `crm/deals/` (как «Связь с проектом» в EDS); номер — `Deal.number` из ERP. Раздел `erp.stock` — чтение.
       parameters:
         - name: q
           in: query
@@ -17329,10 +17329,10 @@ components:
       type: object
       properties:
         number:
-          description: 'Номер проекта ПР-ГГГГ-NNN (тот же NNN, что у заявки). Пока в ERP нет Deal.number (ERP-09), BFF составляет его из года создания и id сделки'
+          description: 'Номер сделки из ERP (`Deal.number`; префиксы задаёт владелец в настройках нумерации), без номера — `D-<id>`. BFF его не составляет'
           type: string
         request_number:
-          description: 'Номер заявки ЗВ-ГГГГ-NNN, из которой вырос проект'
+          description: 'Тот же номер сделки: заявка и проект — один объект с одним номером'
           type: string
         title:
           description: 'Название проекта (сделки ERP); нет названия — название клиента'
@@ -25896,7 +25896,7 @@ components:
       required: [id, number, title, client]
       properties:
         id: {$ref: '#/components/schemas/CompanyItemRef'}
-        number: {type: string, description: 'Номер для показа (`ЗВ-2026-104`, `ПР-…`); составляется до ERP-09'}
+        number: {type: string, description: 'Номер для показа — `Deal.number` из ERP'}
         title: {type: string}
         client: {type: string}
     TechDoc:

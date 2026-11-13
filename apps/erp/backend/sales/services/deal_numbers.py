@@ -51,15 +51,27 @@ def assign(deal) -> None:
 
 
 def promote_to_project(deal) -> bool:
-    """ЗВ → ПР с тем же NNN (КП принято клиентом). Возвращает, изменился ли номер; сохраняет только поле номера."""
-    if not deal.number_seq or not deal.number_year:
-        return False
-    number = format_number(PROJECT_PREFIX, deal.number_year, deal.number_seq)
-    if deal.number == number:
-        return False
-    deal.number = number
-    type(deal).objects.filter(pk=deal.pk).update(number=number)
-    return True
+    """Заявка → проект (КП принято клиентом): `is_project` и номер ПР с тем же NNN. Возвращает, изменился ли номер;
+    сохраняет только эти поля."""
+    fields: dict = {}
+    if not deal.is_project:
+        deal.is_project = fields["is_project"] = True
+    number = (
+        format_number(PROJECT_PREFIX, deal.number_year, deal.number_seq) if deal.number_seq and deal.number_year else ""
+    )
+    renumbered = bool(number) and deal.number != number
+    if renumbered:
+        deal.number = fields["number"] = number
+    if fields:
+        type(deal).objects.filter(pk=deal.pk).update(**fields)
+    return renumbered
+
+
+def stage_of(number: str) -> str:
+    """Стадия сделки по её номеру — `request` (заявка, до принятия КП) или `project`: единственное место, где смысл
+    префикса известен (здесь же он выдаётся), — экраны и портал читают стадию отсюда, а не разбирают номер сами.
+    Номер без префикса заявки (старые сделки `D-<id>`) — проект, как раньше."""
+    return "request" if (number or "").startswith(f"{REQUEST_PREFIX}-") else "project"
 
 
 def parse_query(text: str) -> Optional[tuple[int, int]]:

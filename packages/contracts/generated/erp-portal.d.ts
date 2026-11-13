@@ -2239,9 +2239,20 @@ export interface components {
     DealRef: {
       /** Format: int64 */
       id: number;
+      /**
+       * @description Тот же номер, что у сотрудников (0.12, FR-37: один объект — одно имя): `ЗВ-ГГГГ-NNN` — заявка до принятия КП, `ПР-ГГГГ-NNN` — проект после. У сделки без номера — `D-<id>`.
+       * @example ЗВ-2026-001
+       * @example ПР-2026-001
+       */
       number: string;
+      stage: components["schemas"]["DealStage"];
       title?: string | null;
     };
+    /**
+     * @description Стадия сделки для подписи (0.12): `request` — заявка до принятия КП, `project` — проект после. Подпись берётся отсюда, а не из префикса номера: префиксы задаёт владелец в настройках нумерации.
+     * @enum {string}
+     */
+    DealStage: "request" | "project";
     AcceptanceCodeSent: {
       /** @enum {string} */
       channel: "telegram" | "email";
@@ -2489,6 +2500,7 @@ export interface components {
     ClientRequest: {
       /** Format: int64 */
       id: number;
+      /** @description Номер заявки — тот же, что у сотрудников (`ЗВ-ГГГГ-NNN`, после принятия КП — `ПР-ГГГГ-NNN`); 0.12, FR-37 */
       number: string;
       status: components["schemas"]["RequestStatus"];
       /**
@@ -3027,6 +3039,8 @@ export interface components {
       /** Format: int64 */
       id: number;
       number: string;
+      /** @description Только у метки проекта (`kind=deal`) — стадия на момент сообщения */
+      stage?: components["schemas"]["DealStage"];
     };
     PortalMessageCreate: {
       /** @description Текст как есть; Cabinet показывает его текстом, не HTML */

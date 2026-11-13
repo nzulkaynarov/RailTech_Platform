@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "ERP API",
-        "version": "1.7.0",
+        "version": "1.8.0",
         "description": "ERP Platform API. Supports deal lifecycle management, quoting, product catalog (PIM), Excel imports, and real-time notifications via WebSocket.",
         "contact": {
             "name": "ERP API Support",
@@ -22717,7 +22717,7 @@
                         "schema": {
                             "type": "integer"
                         },
-                        "description": "Одна сделка (точный поиск по номеру ПР)"
+                        "description": "Одна сделка по id"
                     },
                     {
                         "in": "query",
@@ -22734,6 +22734,14 @@
                             "type": "boolean"
                         },
                         "description": "Только проекты, где сотрудник — менеджер или взявший в работу"
+                    },
+                    {
+                        "in": "query",
+                        "name": "number",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Одна сделка по номеру (год и NNN, префикс не важен)"
                     },
                     {
                         "in": "query",
@@ -51136,7 +51144,11 @@
                 "properties": {
                     "deal_id": {
                         "type": "integer",
-                        "description": "Сделка ERP; номер ПР-ГГГГ-NNN составляет BFF (B-010)"
+                        "description": "Сделка ERP"
+                    },
+                    "number": {
+                        "type": "string",
+                        "description": "Номер сделки (`Deal.number`), без номера — `D-<id>`; BFF его не составляет"
                     },
                     "title": {
                         "type": "string"
@@ -51287,6 +51299,7 @@
                     "invoices",
                     "journal",
                     "manager",
+                    "number",
                     "problems",
                     "quote",
                     "responsible",
@@ -51461,7 +51474,11 @@
                 "properties": {
                     "deal_id": {
                         "type": "integer",
-                        "description": "Сделка ERP; номер ПР-ГГГГ-NNN составляет BFF (B-010)"
+                        "description": "Сделка ERP"
+                    },
+                    "number": {
+                        "type": "string",
+                        "description": "Номер сделки (`Deal.number`), без номера — `D-<id>`; BFF его не составляет"
                     },
                     "title": {
                         "type": "string"
@@ -51538,6 +51555,7 @@
                     "documents",
                     "due_date",
                     "manager",
+                    "number",
                     "problems",
                     "responsible",
                     "step",
@@ -53381,9 +53399,13 @@
                     "deal_title": {
                         "type": "string"
                     },
+                    "deal_number": {
+                        "type": "string",
+                        "description": "Номер сделки (`Deal.number`), без номера — `D-<id>`; BFF его не составляет"
+                    },
                     "deal_year": {
                         "type": "integer",
-                        "description": "Год создания сделки: из него и id BFF составляет номер ЗВ/ПР (ERP-09)."
+                        "description": "Год создания сделки (устарело: номер — `deal_number`)"
                     },
                     "client_id": {
                         "type": "integer"
@@ -53517,6 +53539,7 @@
                     "currency",
                     "days_overdue",
                     "deal_id",
+                    "deal_number",
                     "deal_title",
                     "deal_year",
                     "display_status",
@@ -53750,9 +53773,13 @@
                     "deal_title": {
                         "type": "string"
                     },
+                    "deal_number": {
+                        "type": "string",
+                        "description": "Номер сделки (`Deal.number`), без номера — `D-<id>`; BFF его не составляет"
+                    },
                     "deal_year": {
                         "type": "integer",
-                        "description": "Год создания сделки: из него и id BFF составляет номер ЗВ/ПР (ERP-09)."
+                        "description": "Год создания сделки (устарело: номер — `deal_number`)"
                     },
                     "client_id": {
                         "type": "integer"
@@ -53819,6 +53846,7 @@
                     "currency",
                     "days_overdue",
                     "deal_id",
+                    "deal_number",
                     "deal_title",
                     "deal_year",
                     "display_status",

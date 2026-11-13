@@ -73,7 +73,10 @@ class ProjectDocumentsSerializer(serializers.Serializer):
 
 
 class ProjectRowSerializer(serializers.Serializer):
-    deal_id = serializers.IntegerField(help_text="Сделка ERP; номер ПР-ГГГГ-NNN составляет BFF (B-010)")
+    deal_id = serializers.IntegerField(help_text="Сделка ERP")
+    number = serializers.CharField(
+        help_text="Номер сделки (`Deal.number`), без номера — `D-<id>`; BFF его не составляет"
+    )
     title = serializers.CharField(allow_blank=True)
     company_id = serializers.IntegerField(allow_null=True)
     company_name = serializers.CharField(allow_blank=True)

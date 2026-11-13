@@ -4,6 +4,7 @@ import re
 from decimal import Decimal
 from typing import Optional
 
+from drf_spectacular.utils import extend_schema_field
 from parties.models import Company, CompanyRelationship, Contact, RelationshipStatus
 from portal import projections
 from portal.models import PortalSecurityEvent, PortalSession
@@ -342,10 +343,15 @@ class DealRefSerializer(serializers.Serializer):
 
     id = serializers.IntegerField(read_only=True)
     number = serializers.SerializerMethodField()
+    stage = serializers.SerializerMethodField()
     title = serializers.SerializerMethodField()
 
     def get_number(self, deal) -> str:
         return projections.deal_number(deal)
+
+    @extend_schema_field(serializers.ChoiceField(choices=["request", "project"]))
+    def get_stage(self, deal) -> str:
+        return projections.deal_stage(projections.deal_number(deal))
 
     def get_title(self, deal) -> Optional[str]:
         return projections.blank_to_none(deal.title)
@@ -834,6 +840,9 @@ def portal_message_data(message, contact_id: int) -> dict:
     context = None
     if message.context_kind:
         context = {"kind": message.context_kind, "id": message.context_id, "number": message.context_number}
+        if message.context_kind == "deal":
+            # Стадия на момент сообщения — по номеру, снятому вместе с меткой (заявка ЗВ остаётся заявкой в истории).
+            context["stage"] = projections.deal_stage(message.context_number)
     return {
         "id": message.pk,
         "direction": message.direction,
