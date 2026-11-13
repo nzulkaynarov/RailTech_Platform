@@ -1,8 +1,8 @@
 import { Drawer } from "antd";
 import type { ReactNode } from "react";
 
-import { PanelPortal } from "../../../app/shell/PanelSlot";
-import { useViewport } from "../../../app/shell/useViewport";
+import { PanelPortal } from "../../app/shell/PanelSlot";
+import { useViewport } from "../../app/shell/useViewport";
 
 /**
  * Карточка лида, клиента и форма «Создать заявку» — в боковом окне каркаса (SPEC-v3 §7.2); на телефоне (< 768) —
@@ -12,10 +12,13 @@ export function Sheet({
   label,
   onClose,
   children,
+  tab = "card",
 }: {
   label: string;
   onClose: () => void;
   children: ReactNode;
+  /** Вкладка бокового окна раздела (у расчёта — `task`, у остальных — `card`) */
+  tab?: string;
 }) {
   const { mobile } = useViewport();
   if (mobile) {
@@ -35,5 +38,5 @@ export function Sheet({
       </Drawer>
     );
   }
-  return <PanelPortal tab="card">{children}</PanelPortal>;
+  return <PanelPortal tab={tab}>{children}</PanelPortal>;
 }

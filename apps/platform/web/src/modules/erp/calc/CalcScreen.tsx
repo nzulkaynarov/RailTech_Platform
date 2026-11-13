@@ -17,13 +17,14 @@ import { EmptyState } from "../../../shared/ui/EmptyState";
 import { QueryState } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { PageHeader } from "../../../shared/ui/PageHeader";
+import { Sheet } from "../../../shared/ui/Sheet";
 import { RequestSteps } from "../../../shared/ui/RequestSteps";
 import { StatusTag } from "../../../shared/ui/StatusTag";
-import { AddLineModal } from "./AddLineModal";
+import { AddLineForm } from "./AddLineForm";
 import { calcRef, readyHintKey, useApplySheet, useErrorText, useStateLabels } from "./api";
 import { LinesTable } from "./LinesTable";
 import { ParseModal } from "./ParseModal";
-import { PriceRequestModal } from "./PriceRequestModal";
+import { PriceRequestForm } from "./PriceRequestForm";
 import { PriceRequests } from "./PriceRequests";
 import { ClientRejection } from "./Rejection";
 import { TaskSlot } from "./TaskPanel";
@@ -202,6 +203,23 @@ function Content({ sheet }: { sheet: CalcSheet }) {
   const { mobile } = useViewport();
   const [, setParams] = useSearchParams();
   const [dialog, setDialog] = useState<"add" | "parse" | "price" | null>(null);
+  // Строка вручную и запрос цены — короткие формы о расчёте: в боковом окне на вкладке «Задача» (§4.1a)
+  const openForm = (kind: "add" | "price") => {
+    setDialog(kind);
+    if (mobile) return;
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("panel", "open");
+        next.set("tab", "task");
+        return next;
+      },
+      { replace: true },
+    );
+  };
+  const closeForm = () => {
+    setDialog(null);
+  };
   const state = stateOf(sheet);
   const editable = state === "in_progress" || state === "returned";
   const canLines = sheet.rights.goods || sheet.rights.services;
@@ -229,7 +247,7 @@ function Content({ sheet }: { sheet: CalcSheet }) {
             {sheet.quote !== null && sheet.rights.stock === true ? (
               <Button
                 onClick={() => {
-                  setDialog("price");
+                  openForm("price");
                 }}
               >
                 {t("sheet.requestPrice")}
@@ -270,7 +288,7 @@ function Content({ sheet }: { sheet: CalcSheet }) {
               <div className="pf-calc-row">
                 <Button
                   onClick={() => {
-                    setDialog("add");
+                    openForm("add");
                   }}
                 >
                   {t("add.button")}
@@ -295,20 +313,18 @@ function Content({ sheet }: { sheet: CalcSheet }) {
       )}
       {sheet.quote !== null ? <PriceRequests sheet={sheet} /> : null}
       {dialog === "price" ? (
-        <PriceRequestModal
-          sheet={sheet}
-          onClose={() => {
-            setDialog(null);
-          }}
-        />
+        <Sheet
+          tab="task"
+          label={t("stock:priceRequest.title", { number: sheet.number })}
+          onClose={closeForm}
+        >
+          <PriceRequestForm sheet={sheet} onClose={closeForm} />
+        </Sheet>
       ) : null}
       {dialog === "add" ? (
-        <AddLineModal
-          sheet={sheet}
-          onClose={() => {
-            setDialog(null);
-          }}
-        />
+        <Sheet tab="task" label={t("add.title")} onClose={closeForm}>
+          <AddLineForm sheet={sheet} onClose={closeForm} />
+        </Sheet>
       ) : null}
       {dialog === "parse" ? (
         <ParseModal
@@ -318,7 +334,7 @@ function Content({ sheet }: { sheet: CalcSheet }) {
           }}
         />
       ) : null}
-      <TaskSlot number={sheet.number} />
+      {dialog === "add" || dialog === "price" ? null : <TaskSlot number={sheet.number} />}
     </div>
   );
 }
