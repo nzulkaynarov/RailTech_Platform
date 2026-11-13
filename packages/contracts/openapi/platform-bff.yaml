@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.63.0
+  version: 0.64.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -19214,10 +19214,16 @@ components:
         - shipment
         - partner_contract
         - letter
+        - letter_in
+        - outgoing
+        - memo
+        - application
+        - report
       description: >-
         Вид номера в «Настройки · Нумерация» (задача «Н»): заявка, проект, КП, договор, счёт, акт, квитанция, накладная,
         заказ поставщику, отгрузка, договор партнёра, документ по шаблону (ERP `REQ`, `PRJ`, `KP`, `CT`, `INV`, `ACT`,
-        `RCP`, `DN`, `PO`, `SHP`, `PART`, `DOC`)
+        `RCP`, `DN`, `PO`, `SHP`, `PART`, `DOC`); документооборота (задача «Н2», EDS): входящее, исходящее, служебная
+        записка, заявление, отчёт
     BrandPreviewIn:
       type: object
       additionalProperties: false

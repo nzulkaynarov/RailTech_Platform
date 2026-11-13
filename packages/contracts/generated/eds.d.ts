@@ -1312,6 +1312,35 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/numbering-labels": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Обозначения номеров документооборота (задача «Н»)
+     * @description Обозначения видов номера EDS — входящее, исходящее, служебная записка, заявление, отчёт — и образец первого
+     *     номера года. Задаёт владелец в «Настройки · Нумерация»; по умолчанию латиницей (`IN-001/26`, `OUT-001/26`,
+     *     `MEMO-2026/001`, `APP-2026/001`, `REP-2026/001`). Выданные номера (`ВХ-104/26`, `СЗ-2026/031`) не меняются.
+     */
+    get: operations["getNumberLabels"];
+    /**
+     * Задать обозначения номеров документооборота
+     * @description Только переданные виды. Обозначение — до 16 знаков без пробелов, «/» и «-» (иначе 422, поле `labels.<вид>` с
+     *     `invalid_label`); неизвестный вид — 422 `unknown_kind`; совпадает с обозначением другого вида — нынешним или
+     *     прежним (`ВХ`, `ИСХ`, `СЗ`, `ЗЯ`, `ОТ`), которым уже выданы номера, — 422 `label_taken`. Новые номера идут с
+     *     новым обозначением, счётчик года продолжается.
+     */
+    put: operations["setNumberLabels"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/registry": {
     parameters: {
       query?: never;
@@ -1526,6 +1555,26 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /**
+     * @description Вид номера EDS — входящее, исходящее (письмо и КП), служебная записка, заявление, отчёт
+     * @enum {string}
+     */
+    NumberKind: "letter_in" | "outgoing" | "memo" | "application" | "report";
+    NumberLabelItem: {
+      kind: components["schemas"]["NumberKind"];
+      label: string;
+      /** @description Первый номер года с этим обозначением */
+      example: string;
+    };
+    NumberLabels: {
+      items: components["schemas"]["NumberLabelItem"][];
+    };
+    NumberLabelsIn: {
+      /** @description Вид номера -> обозначение; только меняемые виды */
+      labels: {
+        [key: string]: string;
+      };
+    };
     Error: {
       /**
        * @description Стабильный код (`UNAUTHORIZED`, `INVALID_SSO_TOKEN`, `USER_NOT_PROVISIONED`, `USER_INACTIVE`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `CONFLICT`, `PAYLOAD_TOO_LARGE`, `UNSUPPORTED_MEDIA_TYPE`, `BAD_REQUEST`, `INTERNAL_ERROR`)
@@ -1729,12 +1778,21 @@ export interface components {
     };
     /** @description Процент 0–100 строкой, до двух знаков (`15`, `12.5`) */
     MarginPct: string;
-    /** @example ВХ-104/26 */
+    /**
+     * @description Номер входящего `<обозначение>-NNN/ГГ`: обозначение задаёт владелец (задача «Н»; по умолчанию `IN`, выданные раньше — `ВХ`)
+     * @example IN-104/26
+     * @example ВХ-104/26
+     */
     LetterNumber: string;
-    /** @example ИСХ-082/26 */
+    /**
+     * @description Исходящий номер `<обозначение>-NNN/ГГ` (по умолчанию `OUT`, выданные раньше — `ИСХ`)
+     * @example OUT-082/26
+     * @example ИСХ-082/26
+     */
     OutgoingNumber: string;
     /**
-     * @description `СЗ-ГГГГ/NNN`, `ЗЯ-ГГГГ/NNN`, `ОТ-ГГГГ/NNN`, `ИСХ-NNN/ГГ` (исходящее письмо)
+     * @description Служебная записка, заявление, отчёт — `<обозначение>-ГГГГ/NNN`, исходящее письмо — `<обозначение>-NNN/ГГ`; обозначения задаёт владелец (задача «Н»; по умолчанию `MEMO`, `APP`, `REP`, `OUT`; выданные раньше — `СЗ`, `ЗЯ`, `ОТ`, `ИСХ`)
+     * @example MEMO-2026/031
      * @example СЗ-2026/031
      */
     DocumentNumber: string;
@@ -5123,6 +5181,54 @@ export interface operations {
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
       409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  getNumberLabels: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Все виды с обозначением и образцом */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NumberLabels"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+    };
+  };
+  setNumberLabels: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["NumberLabelsIn"];
+      };
+    };
+    responses: {
+      /** @description Все виды после сохранения */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NumberLabels"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
       422: components["responses"]["ValidationFailed"];
     };
   };

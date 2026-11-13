@@ -42,12 +42,14 @@ subscribers:
       # P8b (SPEC-v3 §3.2a): уведомления сотрудникам по поручениям входящих — колокольчик (staff_notifications) и Telegram;
       # текст готовит EDS, доставляет CRM. Секрет пары eds → crm — тот же RT_BUS_SECRET_EDS_CRM.
       - uz.railtech.eds.notice.requested.v1
+      - uz.railtech.eds.notice.requested.v2  # задача «Н»: номер с обозначением из настроек
       # SIGN-2 (ADR-0024 п. 1): напоминание держателям права `signing.manage` — полномочие подписи заканчивается через 14 дней;
       # доставка — тем же путём, что `notice.requested` (колокольчик и Telegram).
       - uz.railtech.eds.signing_authority.expiring.v1
       # W18A-P2 (B-INB-5): ВХ, зарегистрированный из очереди «Входящая почта» (`source.crm_inbound_mail_id`), —
       # CRM снимает письмо с очереди и показывает номер ВХ. Прочие регистрации CRM пропускает.
       - uz.railtech.eds.letter.registered.v1
+      - uz.railtech.eds.letter.registered.v2  # задача «Н»: номер с обозначением из настроек
       # CHAT-1 (ADR-0023): сообщение контакта в чат кабинета — в беседу канала cabinet клиента и очередь «Сообщения».
       - uz.railtech.erp.cabinet.message_posted.v1
 
@@ -61,10 +63,14 @@ subscribers:
       - uz.railtech.crm.partner.*.v1
       # Волна 12 (EDS-01, EDS-03): резолюция → задание расчёта; отказ → сделка LOST; решение по КП.
       - uz.railtech.eds.letter.resolved.v1
+      - uz.railtech.eds.letter.resolved.v2  # задача «Н»: номер с обозначением из настроек
       - uz.railtech.eds.letter.rejected.v1
+      - uz.railtech.eds.letter.rejected.v2  # задача «Н»: номер с обозначением из настроек
       - uz.railtech.eds.approval.decided.v1
+      - uz.railtech.eds.approval.decided.v2  # задача «Н»: номер с обозначением из настроек
       # SIGN-3 (ADR-0024 п. 6): документ подписан — проекция в ERP для проверки в кабинете (/v/<код>).
       - uz.railtech.eds.document.signed.v1
+      - uz.railtech.eds.document.signed.v2  # задача «Н»: номер с обозначением из настроек
       # SIGN-4 (ADR-0024 п. 7): решение по запросу подписи коммерческого документа (КП, договор, счёт, акт).
       - uz.railtech.eds.signing.decided.v1
       # W18A-P1: итог доставки письма, запрошенного ERP с notify = true (журнал писем ERP, Quote.send_report КП).
@@ -87,6 +93,7 @@ subscribers:
       - uz.railtech.crm.lead.*.v1
       - uz.railtech.identity.user.*.v1
       - uz.railtech.eds.*.v1
+      - uz.railtech.eds.*.v2
 
   # EDS (волна 12, ADR-0015): проекция сотрудников с правами permissions.eds, связь письма с заявкой ERP, маршрут
   # одобрения КП (EDS-03). Приёмник — только внутри сети compose (у EDS нет внешнего маршрута в Caddy).

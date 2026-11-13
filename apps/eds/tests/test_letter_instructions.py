@@ -332,7 +332,7 @@ async def test_complete_with_outgoing_number_and_report_files(
         )
     ).json()
     responsible, co = body["instructions"]
-    missing = await act(client, executor, responsible["id"], "complete", {"outgoing_number": "ИСХ-999/26"})
+    missing = await act(client, executor, responsible["id"], "complete", {"outgoing_number": "OUT-999/26"})
     assert_error(missing, 422, "VALIDATION_FAILED")
     outgoing = await client.post(
         "/api/v1/documents",

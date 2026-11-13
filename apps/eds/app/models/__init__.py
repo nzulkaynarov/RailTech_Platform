@@ -12,7 +12,7 @@ from app.models.instructions import Acquaintance, Instruction, InstructionExtens
 from app.models.journal import JournalEntry
 from app.models.letterhead import DocumentMailing, DocumentRender, Letterhead, LetterheadLogo
 from app.models.letters import Letter
-from app.models.numbering import NumberCounter
+from app.models.numbering import NumberCounter, NumberLabel
 from app.models.project_documents import ProjectDocument
 from app.models.resolution_templates import ResolutionTemplate
 from app.models.signing import SigningAuthority, SigningAuthorityEvent
@@ -40,6 +40,7 @@ __all__ = [
     "Letterhead",
     "LetterheadLogo",
     "NumberCounter",
+    "NumberLabel",
     "ProjectDocument",
     "ResolutionTemplate",
     "SigningAuthority",

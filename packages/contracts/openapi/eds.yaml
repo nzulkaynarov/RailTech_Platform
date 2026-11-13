@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — EDS API (электронный документооборот)
-  version: 0.15.0
+  version: 0.16.0
   summary: Пространство `/api/v1/` сервиса EDS — вызывает BFF Платформы от имени сотрудника.
   description: |
     Контракт сервиса EDS (`apps/eds`, ADR-0015; `docs/history/runbooks/wave12-eds-c1.md` §2). EDS — владелец реестра документов и
@@ -2354,6 +2354,54 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationFailed'
 
+  /api/v1/numbering-labels:
+    get:
+      tags: [registry]
+      operationId: getNumberLabels
+      summary: Обозначения номеров документооборота (задача «Н»)
+      description: |
+        Обозначения видов номера EDS — входящее, исходящее, служебная записка, заявление, отчёт — и образец первого
+        номера года. Задаёт владелец в «Настройки · Нумерация»; по умолчанию латиницей (`IN-001/26`, `OUT-001/26`,
+        `MEMO-2026/001`, `APP-2026/001`, `REP-2026/001`). Выданные номера (`ВХ-104/26`, `СЗ-2026/031`) не меняются.
+      x-rt-permissions: []
+      responses:
+        '200':
+          description: Все виды с обозначением и образцом
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NumberLabels'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags: [registry]
+      operationId: setNumberLabels
+      summary: Задать обозначения номеров документооборота
+      description: |
+        Только переданные виды. Обозначение — до 16 знаков без пробелов, «/» и «-» (иначе 422, поле `labels.<вид>` с
+        `invalid_label`); неизвестный вид — 422 `unknown_kind`; совпадает с обозначением другого вида — нынешним или
+        прежним (`ВХ`, `ИСХ`, `СЗ`, `ЗЯ`, `ОТ`), которым уже выданы номера, — 422 `label_taken`. Новые номера идут с
+        новым обозначением, счётчик года продолжается.
+      x-rt-permissions: [bus.manage]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NumberLabelsIn'
+      responses:
+        '200':
+          description: Все виды после сохранения
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NumberLabels'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
   /api/v1/registry:
     get:
       tags: [registry]
@@ -2967,6 +3015,43 @@ components:
             $ref: '#/components/schemas/Error'
 
   schemas:
+    NumberKind:
+      type: string
+      enum: [letter_in, outgoing, memo, application, report]
+      description: Вид номера EDS — входящее, исходящее (письмо и КП), служебная записка, заявление, отчёт
+    NumberLabelItem:
+      type: object
+      additionalProperties: false
+      required: [kind, label, example]
+      properties:
+        kind:
+          $ref: '#/components/schemas/NumberKind'
+        label:
+          type: string
+          maxLength: 16
+        example:
+          type: string
+          description: Первый номер года с этим обозначением
+    NumberLabels:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/NumberLabelItem'
+    NumberLabelsIn:
+      type: object
+      additionalProperties: false
+      required: [labels]
+      properties:
+        labels:
+          type: object
+          additionalProperties:
+            type: string
+            maxLength: 16
+          description: Вид номера -> обозначение; только меняемые виды
     Error:
       type: object
       additionalProperties: false
@@ -3324,17 +3409,19 @@ components:
       description: Процент 0–100 строкой, до двух знаков (`15`, `12.5`)
     LetterNumber:
       type: string
-      pattern: '^ВХ-\d{3,}/\d{2}$'
-      examples: [ВХ-104/26]
+      pattern: '^[^\s/\-]{1,16}-\d{3,}/\d{2}$'
+      description: 'Номер входящего `<обозначение>-NNN/ГГ`: обозначение задаёт владелец (задача «Н»; по умолчанию `IN`, выданные раньше — `ВХ`)'
+      examples: [IN-104/26, ВХ-104/26]
     OutgoingNumber:
       type: string
-      pattern: '^ИСХ-\d{3,}/\d{2}$'
-      examples: [ИСХ-082/26]
+      pattern: '^[^\s/\-]{1,16}-\d{3,}/\d{2}$'
+      description: 'Исходящий номер `<обозначение>-NNN/ГГ` (по умолчанию `OUT`, выданные раньше — `ИСХ`)'
+      examples: [OUT-082/26, ИСХ-082/26]
     DocumentNumber:
       type: string
-      pattern: '^(ИСХ-\d{3,}/\d{2}|(СЗ|ЗЯ|ОТ)-\d{4}/\d{3,})$'
-      description: '`СЗ-ГГГГ/NNN`, `ЗЯ-ГГГГ/NNN`, `ОТ-ГГГГ/NNN`, `ИСХ-NNN/ГГ` (исходящее письмо)'
-      examples: [СЗ-2026/031]
+      pattern: '^[^\s/\-]{1,16}-(\d{3,}/\d{2}|\d{4}/\d{3,})$'
+      description: 'Служебная записка, заявление, отчёт — `<обозначение>-ГГГГ/NNN`, исходящее письмо — `<обозначение>-NNN/ГГ`; обозначения задаёт владелец (задача «Н»; по умолчанию `MEMO`, `APP`, `REP`, `OUT`; выданные раньше — `СЗ`, `ЗЯ`, `ОТ`, `ИСХ`)'
+      examples: [MEMO-2026/031, СЗ-2026/031]
 
     PersonRef:
       type: object

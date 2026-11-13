@@ -24,7 +24,7 @@ async def test_fifty_parallel_letter_registrations_get_numbers_1_to_50(
     responses = await asyncio.gather(*(one(n) for n in range(50)))
     assert {r.status_code for r in responses} == {201}
     numbers = sorted(r.json()["number"] for r in responses)
-    assert numbers == [f"ВХ-{n:03d}/26" for n in range(1, 51)]
+    assert numbers == [f"IN-{n:03d}/26" for n in range(1, 51)]
     events = await outbox(container, "letter.registered")
     assert sorted(e["data"]["letter"]["number"] for e in events) == numbers
 
@@ -41,8 +41,8 @@ async def test_fifty_parallel_documents_number_each_kind_independently(
     assert {r.status_code for r in responses} == {201}
     memos = sorted(r.json()["number"] for r in responses if r.json()["kind"] == "memo")
     reports = sorted(r.json()["number"] for r in responses if r.json()["kind"] == "report")
-    assert memos == [f"СЗ-2026/{n:03d}" for n in range(1, 31)]
-    assert reports == [f"ОТ-2026/{n:03d}" for n in range(1, 21)]
+    assert memos == [f"MEMO-2026/{n:03d}" for n in range(1, 31)]
+    assert reports == [f"REP-2026/{n:03d}" for n in range(1, 21)]
 
 
 async def test_parallel_outgoing_numbers_are_shared_by_letters_and_quotes(
@@ -53,7 +53,7 @@ async def test_parallel_outgoing_numbers_are_shared_by_letters_and_quotes(
         for n in range(10)
     ]
     responses = await asyncio.gather(*(submit(client, staff["registrar"], d["id"]) for d in drafts))
-    assert sorted(r.json()["number"] for r in responses) == [f"ИСХ-{n:03d}/26" for n in range(1, 11)]
+    assert sorted(r.json()["number"] for r in responses) == [f"OUT-{n:03d}/26" for n in range(1, 11)]
 
 
 async def test_two_parallel_decisions_one_wins_the_other_gets_route_closed(
@@ -130,4 +130,4 @@ async def test_numbers_have_no_gaps_when_some_parallel_requests_fail_after_numbe
     responses = await asyncio.gather(*(one(n) for n in range(25)))
     assert sum(1 for r in responses if r.status_code == 422) == 5
     ok = sorted(r.json()["number"] for r in responses if r.status_code == 201)
-    assert ok == [f"ВХ-{n:03d}/26" for n in range(1, 21)]
+    assert ok == [f"IN-{n:03d}/26" for n in range(1, 21)]
