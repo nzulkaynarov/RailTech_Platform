@@ -301,3 +301,22 @@
   outline: 2px solid #1668dc;
   outline-offset: -2px;
 }
+
+/* «Все шаблоны» (план 2.7): языки шаблона — RU UZ EN, отсутствующий бледный */
+.pf-tpl-lang {
+  display: inline-block;
+  min-width: 28px;
+  margin-right: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+/* Отсутствующий язык: тонкий и зачёркнутый — цвет тот же, контраст не падает */
+.pf-tpl-lang-off {
+  font-weight: 400;
+  text-decoration: line-through;
+}
+.pf-tpl-filter {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}

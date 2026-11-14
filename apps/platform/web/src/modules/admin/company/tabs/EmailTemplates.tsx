@@ -17,6 +17,7 @@ import { ConfirmModal, FormModal, ListTable, PreviewFrame, QueryGate } from "../
 import { useReadOnly } from "../useReadOnly";
 import { changedFields, isEmptyObject } from "../diff";
 import { errorFields } from "../errors";
+import { useRequestedTemplate } from "../../settings/useRequestedTemplate";
 
 interface Values {
   key: string;
@@ -38,6 +39,7 @@ export function EmailTemplates() {
   const query = useListEmailTemplates();
   const [editing, setEditing] = useState<EmailTemplate | "new" | null>(null);
   const [removing, setRemoving] = useState<EmailTemplate | null>(null);
+  useRequestedTemplate(query.data?.items, setEditing);
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: getListEmailTemplatesQueryKey() });
   const remove = useDeleteEmailTemplate({

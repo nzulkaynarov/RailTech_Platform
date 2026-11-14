@@ -489,6 +489,7 @@ import type {
   TelegramConnector,
   TelegramLink,
   TelegramTokenIn,
+  TemplateCatalog,
   Ticket,
   TicketCreate,
   TicketList,
@@ -6551,6 +6552,130 @@ export function useStreamEvents<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getStreamEventsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListTemplateCatalogUrl = () => {
+  return `/api/v1/templates`;
+};
+
+/**
+ * BFF собирает шаблоны из API доменов от имени сотрудника: документы и письма ERP (раздел `company.settings`), резолюции EDS (`eds.inbox` или `eds.inbox.register` полный, либо `admin`), быстрые ответы бота CRM (`admin` или `crm.leads` полный) и встроенный шаблон КП. Источник без раздела не опрашивается; упавший — в `sources`, остальное показывается. `path` ведёт в редактор шаблона. Письма ERP — одна строка на ключ, `languages` — у каких вариантов есть запись.
+ * @summary Шаблоны всех доменов одним списком (план 2.7, TPL-1)
+ */
+export const listTemplateCatalog = async (
+  options?: Parameters<typeof http>[1],
+): Promise<TemplateCatalog> => {
+  return http<TemplateCatalog>(getListTemplateCatalogUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListTemplateCatalogQueryKey = () => {
+  return [`/api/v1/templates`] as const;
+};
+
+export const getListTemplateCatalogQueryOptions = <
+  TData = Awaited<ReturnType<typeof listTemplateCatalog>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTemplateCatalog>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListTemplateCatalogQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listTemplateCatalog>>> = ({ signal }) =>
+    listTemplateCatalog({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listTemplateCatalog>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListTemplateCatalogQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listTemplateCatalog>>
+>;
+export type ListTemplateCatalogQueryError = ErrorType<SessionExpiredResponse | ForbiddenResponse>;
+
+export function useListTemplateCatalog<
+  TData = Awaited<ReturnType<typeof listTemplateCatalog>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listTemplateCatalog>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listTemplateCatalog>>,
+          TError,
+          Awaited<ReturnType<typeof listTemplateCatalog>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListTemplateCatalog<
+  TData = Awaited<ReturnType<typeof listTemplateCatalog>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listTemplateCatalog>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listTemplateCatalog>>,
+          TError,
+          Awaited<ReturnType<typeof listTemplateCatalog>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListTemplateCatalog<
+  TData = Awaited<ReturnType<typeof listTemplateCatalog>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listTemplateCatalog>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Шаблоны всех доменов одним списком (план 2.7, TPL-1)
+ */
+
+export function useListTemplateCatalog<
+  TData = Awaited<ReturnType<typeof listTemplateCatalog>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listTemplateCatalog>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListTemplateCatalogQueryOptions(options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
