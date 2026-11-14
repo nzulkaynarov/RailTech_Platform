@@ -525,7 +525,7 @@
     }
   },
   "letterTemplates": {
-    "tab": "Letterhead letters",
+    "tab": "On letterhead",
     "caption": "Letter and memo templates",
     "create": "New template",
     "createTitle": "New template",
