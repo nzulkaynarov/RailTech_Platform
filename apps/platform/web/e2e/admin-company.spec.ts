@@ -372,7 +372,7 @@ test.describe("Компания: статьи расхода, шаблоны, с
     await loginAndWait(page, "director@demo.example");
     await openCompany(page, "reference");
     await page.getByRole("button", { name: "Добавить значение" }).click();
-    const dialog = page.getByRole("dialog", { name: "Новое значение" });
+    const dialog = page.getByRole("region", { name: "Новое значение" });
     await dialog.getByLabel("Код", { exact: true }).fill("TR");
     await dialog.getByLabel("Название по-русски").fill("Турция");
     await dialog.getByRole("button", { name: "Сохранить" }).click();

@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Alert, App, Button, Checkbox, Form, Input, Select } from "antd";
+import type { FormInstance } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -17,7 +18,8 @@ import {
 } from "../../../../shared/api/generated/platform-bff";
 import { HOME_CURRENCY } from "../../../../shared/lib/money";
 import { StatusTag } from "../../../../shared/ui/StatusTag";
-import { ConfirmModal, FormModal, ListTable, QueryGate } from "../common";
+import { useSheetPanel } from "../../../../shared/ui/useSheetPanel";
+import { ConfirmModal, FormSheet, ListTable, QueryGate } from "../common";
 import { changedFields, codeLabel } from "../diff";
 import { errorFields } from "../errors";
 
@@ -63,7 +65,20 @@ export function BankAccounts() {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
   const query = useListCompanyBankAccounts();
-  const [editing, setEditing] = useState<CompanyBankAccount | "new" | null>(null);
+  const [editing, setEditingState] = useState<CompanyBankAccount | "new" | null>(null);
+  // Счёт — короткая форма о выбранной строке: в боковом окне (§4.1a). Экземпляр формы — здесь: при смене ширины окно и
+  // лист на весь экран пересоздают форму, а набранное остаётся.
+  const panel = useSheetPanel();
+  const [accountForm] = Form.useForm<Values>();
+  const setEditing = (next: CompanyBankAccount | "new") => {
+    accountForm.resetFields();
+    setEditingState(next);
+    panel.open();
+  };
+  const closeEditing = () => {
+    setEditingState(null);
+    panel.close();
+  };
   const [removing, setRemoving] = useState<CompanyBankAccount | null>(null);
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: getListCompanyBankAccountsQueryKey() });
@@ -181,14 +196,14 @@ export function BankAccounts() {
         }}
       </QueryGate>
       {editing !== null ? (
-        <BankAccountModal
+        <BankAccountForm
+          key={editing === "new" ? "new" : editing.id}
+          form={accountForm}
           row={editing === "new" ? null : editing}
-          onClose={() => {
-            setEditing(null);
-          }}
+          onClose={closeEditing}
           onSaved={() => {
             void refresh();
-            setEditing(null);
+            closeEditing();
             void message.success(t("saved"));
           }}
         />
@@ -211,18 +226,19 @@ export function BankAccounts() {
   );
 }
 
-function BankAccountModal({
+function BankAccountForm({
+  form,
   row,
   onClose,
   onSaved,
 }: {
+  form: FormInstance<Values>;
   row: CompanyBankAccount | null;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const { t } = useTranslation("company");
   const formId = useId();
-  const [form] = Form.useForm<Values>();
   const initial = row ? valuesOf(row) : EMPTY;
   const currencies = useListReferenceItems("currencies");
   const create = useCreateCompanyBankAccount({ mutation: { onSuccess: onSaved } });
@@ -246,8 +262,7 @@ function BankAccountModal({
   };
 
   return (
-    <FormModal
-      open
+    <FormSheet
       title={row ? t("bank.editTitle") : t("bank.addTitle")}
       formId={formId}
       submitLabel={t("save")}
@@ -311,6 +326,6 @@ function BankAccountModal({
           <Checkbox>{t("bank.activeLabel")}</Checkbox>
         </Form.Item>
       </Form>
-    </FormModal>
+    </FormSheet>
   );
 }

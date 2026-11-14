@@ -102,7 +102,7 @@ describe("Admin · Компания: реквизиты для счетов (D26
     fireEvent.click(
       (await screen.findAllByRole("button", { name: "Добавить счёт" }))[0] as HTMLElement,
     );
-    const dialog = await screen.findByRole("dialog", { name: "Новый банковский счёт" });
+    const dialog = await screen.findByRole("region", { name: "Новый банковский счёт" });
     fireEvent.change(within(dialog).getByLabelText("Расчётный счёт"), {
       target: { value: "20208000900000000001" },
     });
@@ -710,7 +710,7 @@ describe("Справочники «Расчёта» на общем ресурс
     await openTab("reference", "admin@demo.example");
     expect(await screen.findByText("Казахстан")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Добавить значение" }));
-    const dialog = await screen.findByRole("dialog", { name: "Новое значение" });
+    const dialog = await screen.findByRole("region", { name: "Новое значение" });
     fireEvent.change(within(dialog).getByLabelText("Код"), { target: { value: "tr" } });
     fireEvent.change(within(dialog).getByLabelText("Название по-русски"), {
       target: { value: "Турция" },

@@ -78,9 +78,9 @@ test.describe("EDS-REG · справочники документооборот�
       page.getByText("Кабинет налогоплательщика my.soliq", { exact: true }),
     ).toBeVisible();
     await page.getByRole("button", { name: "Добавить значение" }).click();
-    const dialog = page.getByRole("dialog", { name: "Новое значение" });
-    await (await reveal(dialog.getByLabel("Название по-русски"))).fill("Фельдъегерская связь");
-    await (await reveal(dialog.getByLabel("Название по-английски"))).fill("Courier service");
+    const dialog = page.getByRole("region", { name: "Новое значение" });
+    await dialog.getByLabel("Название по-русски").fill("Фельдъегерская связь");
+    await dialog.getByLabel("Название по-английски").fill("Courier service");
     await shoot(page, "dictionaries-add");
     await dialog.getByRole("button", { name: "Сохранить" }).click();
     await expect(dialog).toBeHidden();

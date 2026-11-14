@@ -62,7 +62,7 @@ describe("Настройки · Процессы · Справочники · Т
     signInAs("admin@demo.example");
     renderApp(PAGE);
     fireEvent.click(await screen.findByRole("button", { name: "Добавить значение" }));
-    const dialog = await screen.findByRole("dialog", { name: "Новое значение" });
+    const dialog = await screen.findByRole("region", { name: "Новое значение" });
     fireEvent.change(within(dialog).getByRole("textbox", { name: "Название по-русски" }), {
       target: { value: "Жалоба покупателя" },
     });

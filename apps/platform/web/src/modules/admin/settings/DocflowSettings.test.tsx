@@ -65,7 +65,7 @@ describe("Настройки · Процессы · Справочники пи�
     renderApp("/admin/docflow");
     await heading();
     fireEvent.click(await screen.findByRole("button", { name: "Добавить значение" }));
-    const dialog = await screen.findByRole("dialog", { name: "Новое значение" });
+    const dialog = await screen.findByRole("region", { name: "Новое значение" });
     fireEvent.change(within(dialog).getByRole("textbox", { name: "Название по-русски" }), {
       target: { value: "Претензия покупателя" },
     });

@@ -11,6 +11,7 @@ import { type DataColumn, DataTable } from "../../../shared/ui/DataTable/DataTab
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { FilePicker } from "../../../shared/ui/FileField";
 import { ErrorNote } from "../../../shared/ui/FormParts";
+import { Sheet } from "../../../shared/ui/Sheet";
 import { companyErrorText, isCompanyNotSet, missingBlocks } from "./errors";
 import { SoloSection } from "./solo";
 
@@ -274,6 +275,58 @@ function MissingBlocks({ error }: { error: unknown }) {
       </ul>
       <p style={{ margin: 0 }}>{t("errors.missingBlocks.hint")}</p>
     </div>
+  );
+}
+
+/**
+ * Короткая форма о выбранной строке настроек — в боковом окне (platform-frontend.md §4.1a), на телефоне — лист на весь
+ * экран; тот же порядок, что у `FormModal`: ошибка сверху, кнопки — в конце формы. Форма (`formId`) — у вызывающего.
+ */
+export function FormSheet({
+  title,
+  formId,
+  submitLabel,
+  saving,
+  error,
+  onCancel,
+  children,
+}: {
+  title: string;
+  formId: string;
+  submitLabel: string;
+  saving: boolean;
+  error?: unknown;
+  onCancel: () => void;
+  children: ReactNode;
+}) {
+  const { t } = useTranslation("company");
+  return (
+    <Sheet label={title} onClose={onCancel}>
+      <section aria-labelledby={`${formId}-title`}>
+        <h3 className="pf-fp-title" id={`${formId}-title`}>
+          {title}
+        </h3>
+        {error ? (
+          <Alert
+            type="error"
+            showIcon
+            role="alert"
+            message={companyErrorText(t, error)}
+            description={
+              missingBlocks(error).length > 0 ? <MissingBlocks error={error} /> : undefined
+            }
+            style={{ marginBottom: 16 }}
+          />
+        ) : null}
+        {children}
+        <div className="pf-fp-row">
+          <Button type="primary" htmlType="submit" form={formId} loading={saving}>
+            {submitLabel}
+          </Button>
+          <Button onClick={onCancel}>{t("cancel")}</Button>
+        </div>
+      </section>
+    </Sheet>
   );
 }
 
