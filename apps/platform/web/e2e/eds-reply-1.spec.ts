@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { type Locator, type Page, expect, test } from "@playwright/test";
 
-import { loginAndWait, openAvatarMenu, spaGoto, waitForMotionEnd } from "./support/app";
+import { loginAndWait, openAvatarMenu, reveal, spaGoto, waitForMotionEnd } from "./support/app";
 import { chooseOption, fillDate, openStep, pickFiles } from "./support/fields";
 
 // EDS-REPLY-1 «Ответ на входящее» на MSW: требование ГНК → поручение «Подготовить ответ» исполнителю без права регистрировать →
@@ -59,8 +59,8 @@ async function switchTo(page: Page, email: string): Promise<void> {
   await openAvatarMenu(page);
   await page.getByRole("menuitem", { name: "Выйти" }).click();
   await expect(page).toHaveURL(/\/login/);
-  await page.getByLabel("Электронная почта").fill(email);
-  await page.getByLabel("Пароль").fill("demo-pass-1");
+  await (await reveal(page.getByLabel("Электронная почта"))).fill(email);
+  await (await reveal(page.getByLabel("Пароль"))).fill("demo-pass-1");
   await page.getByRole("button", { name: "Войти" }).click();
   await expect(page).toHaveURL(/\/dashboard\/queue$/);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
@@ -82,20 +82,32 @@ async function incomingWithReplyInstruction(page: Page): Promise<void> {
   await at(page, WIDE);
   await loginAndWait(page, "registrar@demo.example");
   await spaGoto(page, "/eds/register");
-  await chooseOption(page.getByLabel("Вид документа"), "Требование или уведомление ГНК");
-  await page.getByLabel("Корреспондент", { exact: true }).fill("ГНИ Мирабадского района");
-  await page.getByLabel("ИНН корреспондента").fill("305123456");
-  await page.getByLabel("Исходящий номер отправителя").fill("14-02/3381");
-  await page.getByLabel("Тема").fill("Требование о представлении пояснений по НДС");
-  await pickFiles(page.getByLabel("Файл документа"), {
+  await chooseOption(
+    await reveal(page.getByLabel("Вид документа")),
+    "Требование или уведомление ГНК",
+  );
+  await (
+    await reveal(page.getByLabel("Корреспондент", { exact: true }))
+  ).fill("ГНИ Мирабадского района");
+  await (await reveal(page.getByLabel("ИНН корреспондента"))).fill("305123456");
+  await (await reveal(page.getByLabel("Исходящий номер отправителя"))).fill("14-02/3381");
+  await (
+    await reveal(page.getByLabel("Тема", { exact: true }))
+  ).fill("Требование о представлении пояснений по НДС");
+  await pickFiles(await reveal(page.getByLabel("Файл документа")), {
     name: "trebovanie.pdf",
     mimeType: "application/pdf",
     buffer: Buffer.from("%PDF-1.4 demo"),
   });
   await expect(page.getByText("загружен")).toBeVisible();
-  await chooseOption(page.getByLabel("Тип резолюции"), "Подготовить ответ");
-  await chooseOption(page.getByLabel("Ответственный"), "Демо Широков · Менеджер-универсал");
+  await openStep(page, "Срок, адресат и резолюция");
+  await chooseOption(await reveal(page.getByLabel("Тип резолюции")), "Подготовить ответ");
+  await chooseOption(
+    await reveal(page.getByLabel("Ответственный")),
+    "Демо Широков · Менеджер-универсал",
+  );
   await fillDate(page.getByLabel("Срок исполнения"), companyDay(3));
+  await openStep(page, "Проверка и регистрация");
   await page.getByRole("button", { name: "Зарегистрировать", exact: true }).click();
   await expect(page.getByText(new RegExp(`Зарегистрировано: ${NUMBER}`))).toBeVisible();
 
@@ -117,7 +129,7 @@ async function executorHandsOver(page: Page, email: string, screens: boolean): P
   // Поля заполнены из входящего (корреспондент, ИНН, тема); почты в письме нет — пусто, вводит исполнитель.
   await expect(page.getByLabel("Адресат (организация)")).toHaveValue("ГНИ Мирабадского района");
   await expect(page.getByLabel("ИНН адресата")).toHaveValue("305123456");
-  await expect(page.getByLabel("Тема")).toHaveValue(
+  await expect(page.getByLabel("Тема", { exact: true })).toHaveValue(
     /^На ВХ-109\/26 от \d{2}\.\d{2}\.\d{4}: Требование о представлении пояснений по НДС$/,
   );
   await expect(page.getByLabel("В ответ на входящее")).toHaveValue(NUMBER);
@@ -127,13 +139,13 @@ async function executorHandsOver(page: Page, email: string, screens: boolean): P
   ).toBeVisible();
   if (screens) await both(page, "reply-form-prefilled");
 
-  await page.getByLabel("Почта адресата").fill(email);
+  await (await reveal(page.getByLabel("Почта адресата"))).fill(email);
   await openStep(page, "Текст и вложения");
-  await page
-    .getByLabel("Текст", { exact: true })
-    .fill(
-      "На требование № 14-02/3381 сообщаем: расхождения вызваны поступлением счетов-фактур после отчётной даты.",
-    );
+  await (
+    await reveal(page.getByLabel("Текст", { exact: true }))
+  ).fill(
+    "На требование № 14-02/3381 сообщаем: расхождения вызваны поступлением счетов-фактур после отчётной даты.",
+  );
   await openStep(page, "Проверка и отправка");
   await page.getByRole("button", { name: "Передать на регистрацию" }).click();
   await expect(page.getByText("Передано на регистрацию делопроизводителю.")).toBeVisible();
@@ -260,9 +272,14 @@ async function mailLetterInExecution(page: Page): Promise<string> {
   await spaGoto(page, "/eds/mail/17");
   await page.getByRole("link", { name: "Зарегистрировать как ВХ" }).click();
   await expect(page.getByText("акт-сверки-октябрь.pdf")).toBeVisible();
-  await chooseOption(page.getByLabel("Тип резолюции"), "К исполнению");
-  await chooseOption(page.getByLabel("Ответственный"), "Демо Широков · Менеджер-универсал");
+  await openStep(page, "Срок, адресат и резолюция");
+  await chooseOption(await reveal(page.getByLabel("Тип резолюции")), "К исполнению");
+  await chooseOption(
+    await reveal(page.getByLabel("Ответственный")),
+    "Демо Широков · Менеджер-универсал",
+  );
   await fillDate(page.getByLabel("Срок исполнения"), companyDay(3));
+  await openStep(page, "Проверка и регистрация");
   await page.getByRole("button", { name: "Зарегистрировать", exact: true }).click();
   const done = page.getByText(/Зарегистрировано: ВХ-\d+\/\d+/);
   await expect(done).toBeVisible();
@@ -300,8 +317,10 @@ test.describe("Исполнение письма из почты (решение
     await page.getByRole("button", { name: "Ещё" }).click();
     await page.getByRole("menuitem", { name: "Закрыть без ответа" }).click();
     const dialog = page.getByRole("dialog", { name: `${number}: закрыть без ответа` });
-    await chooseOption(dialog.getByLabel("Причина"), "Недобросовестный контрагент");
-    await dialog.getByLabel("Пояснение (обязательно)").fill("Срывал поставки в 2025 году");
+    await chooseOption(await reveal(dialog.getByLabel("Причина")), "Недобросовестный контрагент");
+    await (
+      await reveal(dialog.getByLabel("Пояснение (обязательно)"))
+    ).fill("Срывал поставки в 2025 году");
     await both(page, "task-close-dialog");
     await dialog.getByRole("button", { name: "Закрыть", exact: true }).click();
     await expect(

@@ -12923,6 +12923,9 @@ export const getGetQuoteDefaultsResponseMock = (
   catalog_price_visibility: faker.helpers.arrayElement(["cabinet", "on_request"] as const),
   catalog_publish_threshold: faker.number.int({ min: 1, max: 100 }),
   fx_rate_max_age_days: faker.number.int({ min: 1, max: 90 }),
+  offer_confirm_days: faker.number.int({ min: 1, max: 365 }),
+  offer_expiring_days: faker.number.int({ min: 1, max: 90 }),
+  act_reminder_hours: faker.number.int({ min: 1, max: 720 }),
   ...overrideResponse,
 });
 
@@ -12961,6 +12964,9 @@ export const getUpdateQuoteDefaultsResponseMock = (
   catalog_price_visibility: faker.helpers.arrayElement(["cabinet", "on_request"] as const),
   catalog_publish_threshold: faker.number.int({ min: 1, max: 100 }),
   fx_rate_max_age_days: faker.number.int({ min: 1, max: 90 }),
+  offer_confirm_days: faker.number.int({ min: 1, max: 365 }),
+  offer_expiring_days: faker.number.int({ min: 1, max: 90 }),
+  act_reminder_hours: faker.number.int({ min: 1, max: 720 }),
   ...overrideResponse,
 });
 

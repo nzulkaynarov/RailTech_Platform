@@ -168,6 +168,18 @@ class TestList:
         CompanySettings.objects.update_or_create(company=w["own"], defaults={"offer_confirm_days": 5})
         assert item()["offer"]["freshness"] == "stale"
 
+    def test_expiring_days_setting_of_the_company(self, partner_world):
+        """Задача «Н3c»: «истекает» — за сколько дней до конца срока, настройка компании, а не константа в коде."""
+        from parties.models import CompanySettings
+
+        w = partner_world
+        item = lambda: next(  # noqa: E731
+            i for i in w["client_a"].get(f"{PREFIX}/products").json()["items"] if i["id"] == w["cards"]["published"].pk
+        )
+        assert item()["offer"]["freshness"] == "expiring"  # срок через 3 дня, умолчание — 14
+        CompanySettings.objects.update_or_create(company=w["own"], defaults={"offer_expiring_days": 2})
+        assert item()["offer"]["freshness"] == "fresh"
+
 
 class TestAttention:
     """Плашка «подтвердите актуальность»: счётчики по ВСЕМ ценам компании тем же правилом, что флаги строк."""
