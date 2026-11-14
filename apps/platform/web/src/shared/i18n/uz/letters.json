@@ -607,7 +607,12 @@
       "waiting": "kutilmoqda",
       "done": "tanishdi {{date}}"
     },
-    "none": "Topshiriqlar yo‘q."
+    "none": "Topshiriqlar yo‘q.",
+    "handedTo": {
+      "label": "Ishga topshirildi",
+      "client_request": "Mijoz arizasi",
+      "memo": "Xizmat xati"
+    }
   },
   "tasks": {
     "title": "{{number}} xati bo‘yicha topshiriq",
@@ -1242,6 +1247,15 @@
     "more": "Yana",
     "cancel": "Bekor qilish",
     "failed": "Bajarilmadi. Qayta urinib ko‘ring.",
+    "hand": {
+      "action": "Ishga topshirish",
+      "title": "{{number}}: ishga topshirish",
+      "what": "Nima yaratish",
+      "request": "Mijoz arizasi",
+      "memo": "Xizmat xati",
+      "next": "Davom etish",
+      "done": "{{number}} xati ishga topshirildi"
+    },
     "co": {
       "action": "Hamijrochini jalb qilish",
       "title": "{{number}}: hamijrochi",

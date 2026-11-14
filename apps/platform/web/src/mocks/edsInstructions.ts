@@ -654,6 +654,7 @@ export const edsInstructionsHandlers = [
             report: null,
             files: [],
             outgoing: null,
+            handed_to: null,
             executed_at: null,
             extensions: [],
           }))
@@ -756,6 +757,7 @@ export const edsInstructionsHandlers = [
           report: null,
           files: [],
           outgoing: null,
+          handed_to: null,
           executed_at: null,
           extensions: [],
         },
@@ -887,7 +889,25 @@ export const edsInstructionsHandlers = [
     }
     const body = (await request.json()) as InstructionCompleteIn;
     const files = body.file_ids ?? [];
-    if (!body.report?.trim() && files.length === 0 && !body.outgoing_number) {
+    // План 1.9: «Передать в работу» — исход ответственного; записка — своя из реестра, заявка — сделка CRM
+    let handed: LetterInstruction["handed_to"] = null;
+    if (body.handed_to) {
+      if (instruction.role !== "responsible") {
+        return failure(403, "FORBIDDEN", "Передать письмо в работу может только ответственный.", {
+          reason: "not_responsible",
+        });
+      }
+      const ref = body.handed_to.id;
+      if (body.handed_to.kind === "memo") {
+        const memo = readEds().documents.find((d) => d.id === ref && d.kind !== "letter_out");
+        if (!memo?.number) return invalid("handed_to", "not_found", "Объект не найден.");
+        handed = { kind: "memo", number: memo.number, path: outgoingPath(memo.id) };
+      } else {
+        if (!/^[1-9]\d*$/.test(ref)) return invalid("handed_to", "not_found", "Объект не найден.");
+        handed = { kind: "client_request", number: ref, path: null };
+      }
+    }
+    if (!body.report?.trim() && files.length === 0 && !body.outgoing_number && !handed) {
       return invalid("report", "report_required", "Нужен отчёт или ИСХ.");
     }
     if (body.outgoing_number && !/^ИСХ-\d{3,}\/\d{2}$/.test(body.outgoing_number.trim())) {
@@ -928,6 +948,7 @@ export const edsInstructionsHandlers = [
             path: `/eds/documents?scope=all&q=${encodeURIComponent(body.outgoing_number.trim())}`,
           }
         : null,
+      handed_to: handed,
       executed_at: now,
     });
     next = {

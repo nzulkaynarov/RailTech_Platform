@@ -25,10 +25,11 @@ import httpx
 import structlog
 from fastapi import APIRouter, Depends, Header, Path, Query
 from fastapi.responses import StreamingResponse
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 from starlette.types import Send
 
 from app.api.inbound_mail import mail_card, mail_registration
+from app.clients.crm_proxy import CrmProxy, crm_error
 from app.clients.eds import EdsLetters, eds_error
 from app.deps import Authed, require, require_any, require_any_section
 from app.errors import PlatformError, backend_unavailable
@@ -43,6 +44,7 @@ from app.schemas_eds_letters import (
     CoExecutorIn,
     EdsStaffList,
     EdsStaffMember,
+    HandoverIn,
     InstructionCompleteIn,
     InstructionExtensionDecisionIn,
     InstructionExtensionIn,
@@ -398,7 +400,45 @@ async def acknowledge_letter(id: LetterId, authed: Participant) -> LetterCard:
 async def complete_instruction(
     id: InstructionId, body: InstructionCompleteIn, authed: Participant
 ) -> LetterCard:
-    return await _card(authed, await _letters(authed).complete(str(id), body.for_eds()))
+    payload = body.for_eds()
+    if body.handed_to is not None:
+        payload["handed_to"] = await _handed_to(authed, body.handed_to)
+    return await _card(authed, await _letters(authed).complete(str(id), payload))
+
+
+def _handover_missing() -> PlatformError:
+    return PlatformError(
+        "VALIDATION_FAILED",
+        "Объект, в который передано письмо, не найден.",
+        status_code=422,
+        details={"fields": {"handed_to": "not_found"}},
+    )
+
+
+async def _handed_to(authed: Authed, handover: HandoverIn) -> dict[str, str]:
+    """«Передать в работу» (план 1.9). Заявку клиента BFF проверяет в CRM от имени сотрудника:
+    сделка есть и видна ему; номер для людей — номер заявки ERP, пока его нет — номер сделки.
+    Служебную записку проверяет EDS: своя, внутренняя, с номером."""
+    if handover.kind == "memo":
+        return {"kind": "memo", "ref": handover.id, "number": "-"}
+    if not handover.id.isdigit() or int(handover.id) < 1:
+        raise _handover_missing()
+    upstream = await CrmProxy(authed.call).raw("GET", f"/api/v1/deals/{int(handover.id)}")
+    if upstream.status_code in (403, 404, 422):
+        raise _handover_missing()
+    if upstream.status_code != 200:
+        raise crm_error(upstream)
+    try:
+        deal = _CrmDeal.model_validate(upstream.json())
+    except ValueError as exc:
+        raise backend_unavailable("crm", "bad_response") from exc
+    number = (deal.erp_number or "").strip()[:32] or str(deal.id)
+    return {"kind": "client_request", "ref": str(deal.id), "number": number}
+
+
+class _CrmDeal(BaseModel):
+    id: int
+    erp_number: str | None = None
 
 
 @router.post(

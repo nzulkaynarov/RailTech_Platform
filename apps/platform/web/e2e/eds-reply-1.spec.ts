@@ -334,4 +334,33 @@ test.describe("Исполнение письма из почты (решение
     await page.getByRole("button", { name: "Вернуть в работу" }).click();
     await expect(page.getByText(`${number} снова в работе`)).toBeVisible();
   });
+
+  test("«Передать в работу» служебной запиской: поручение закрыто, связь в карточке письма (план 1.9)", async ({
+    page,
+  }) => {
+    const number = await mailLetterInExecution(page);
+
+    await switchTo(page, "universal@demo.example");
+    await spaGoto(page, `/eds/tasks/${encodeURIComponent(number)}`);
+    await page.getByRole("button", { name: "Ещё" }).click();
+    await page.getByRole("menuitem", { name: "Передать в работу" }).click();
+    const dialog = page.getByRole("dialog", { name: `${number}: передать в работу` });
+    await dialog.getByLabel("Служебная записка").check();
+    await both(page, "task-hand-over-dialog");
+    await dialog.getByRole("button", { name: "Продолжить" }).click();
+
+    await expect(page).toHaveURL(/\/eds\/new\?type=memo&handover=/);
+    await page.getByLabel("Тема").fill("Сверка взаимных расчётов с банком");
+    await openStep(page, "Текст и вложения");
+    await page
+      .getByRole("textbox", { name: "Текст" })
+      .fill("Прошу поручить бухгалтерии сверку по акту банка.");
+    await openStep(page, "Проверка и отправка");
+    await page.getByRole("button", { name: "Отправить на согласование" }).click();
+    await expect(page.getByText(new RegExp(`письмо ${number} передано в работу`))).toBeVisible();
+
+    await spaGoto(page, `/eds/tasks/${encodeURIComponent(number)}`);
+    await expect(page.getByText("Передано в работу", { exact: true })).toBeVisible();
+    await both(page, "task-handed-over");
+  });
 });

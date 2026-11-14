@@ -328,6 +328,21 @@ class ExtensionStatus(StrEnum):
     REJECTED = "rejected"
 
 
+class HandoverKind(StrEnum):
+    """Во что передано письмо (план 1.9): заявка клиента в CRM или служебная записка здесь же."""
+
+    CLIENT_REQUEST = "client_request"
+    MEMO = "memo"
+
+
+class HandedTo(Strict):
+    """Объект, в который ответственный передал письмо: вид, идентификатор в своей системе и номер для людей."""
+
+    kind: HandoverKind
+    ref: Annotated[str, Field(min_length=1, max_length=64)]
+    number: Annotated[str, Field(min_length=1, max_length=32)]
+
+
 class OutgoingRef(BaseModel):
     id: uuid.UUID
     number: str
@@ -392,6 +407,7 @@ class InstructionOut(BaseModel):
     report: str | None
     files: list[FileRef]
     outgoing: OutgoingRef | None
+    handed_to: HandedTo | None
     executed_at: dt.datetime | None
     extensions: list[InstructionExtensionOut]
 
@@ -426,6 +442,7 @@ class InstructionCompleteIn(Strict):
     report: Annotated[str | None, Field(max_length=10000)] = None
     file_ids: Annotated[list[uuid.UUID], Field(max_length=20)] = Field(default_factory=list)
     outgoing_number: Annotated[str | None, Field(min_length=1, max_length=32)] = None
+    handed_to: HandedTo | None = None
 
 
 class ExtensionRequestIn(Strict):

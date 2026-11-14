@@ -5092,7 +5092,7 @@ export interface paths {
     put?: never;
     /**
      * EDS · Поручение исполнено (P8b)
-     * @description EDS `POST /instructions/{id}/complete`. Любой сотрудник; отмечает только исполнитель поручения (решает EDS: чужое — 403, `details.reason = not_executor`; не в работе — 409 `invalid_state`). Нужен отчёт (текст или файлы — загрузка `POST /eds/document-files`) или номер отправленного ИСХ (`outgoing_number`); иначе 422, `details.fields = [report]`; ИСХ не найден — `details.fields = [outgoing_number]`. ИСХ «в ответ на» это письмо принимается; ИСХ без связи — тоже, и EDS записывает связь (EDS-REPLY-1); ИСХ в ответ на другое входящее — 409, `details.reason = outgoing_linked_elsewhere`. Все поручения письма исполнены — письмо «Исполнено», контроль снят, директор и делопроизводитель получают уведомление. Ответ — карточка.
+     * @description EDS `POST /instructions/{id}/complete`. Любой сотрудник; отмечает только исполнитель поручения (решает EDS: чужое — 403, `details.reason = not_executor`; не в работе — 409 `invalid_state`). Нужен отчёт (текст или файлы — загрузка `POST /eds/document-files`) или номер отправленного ИСХ (`outgoing_number`); иначе 422, `details.fields = [report]`; ИСХ не найден — `details.fields = [outgoing_number]`. ИСХ «в ответ на» это письмо принимается; ИСХ без связи — тоже, и EDS записывает связь (EDS-REPLY-1); ИСХ в ответ на другое входящее — 409, `details.reason = outgoing_linked_elsewhere`. Все поручения письма исполнены — письмо «Исполнено», контроль снят, директор и делопроизводитель получают уведомление. «Передать в работу» (план 1.9, `handed_to`) — только ответственный (иначе 403 `not_responsible`): заявку клиента BFF проверяет в CRM `GET /deals/{id}` от имени сотрудника, служебную записку — EDS (своя, с номером); не найдено — 422, `details.fields.handed_to = not_found`. Ответ — карточка.
      */
     post: operations["completeInstruction"];
     delete?: never;
@@ -12144,6 +12144,14 @@ export interface components {
         /** @description Путь документа в SPA */
         path: string;
       } | null;
+      /** @description «Передать в работу» (план 1.9) — объект, в который передано письмо */
+      handed_to: {
+        kind: components["schemas"]["HandoverKind"];
+        /** @example З-0045/26 */
+        number: string;
+        /** @description Путь в SPA — у служебной записки */
+        path: string | null;
+      } | null;
       /** Format: date-time */
       executed_at: string | null;
       extensions: components["schemas"]["LetterInstructionExtension"][];
@@ -12200,12 +12208,23 @@ export interface components {
     InstructionReturnIn: {
       reason: string;
     };
-    /** @description Отчёт (текст, файлы) или номер отправленного ИСХ — хотя бы что-то одно */
+    /** @description Отчёт (текст, файлы), номер отправленного ИСХ или «Передать в работу» — хотя бы что-то одно */
     InstructionCompleteIn: {
       report?: string | null;
       file_ids?: string[];
       /** @example ИСХ-014/26 */
       outgoing_number?: string | null;
+      handed_to?: components["schemas"]["HandoverIn"] | null;
+    };
+    /**
+     * @description Во что передано письмо — заявка клиента (сделка CRM) или служебная записка (EDS)
+     * @enum {string}
+     */
+    HandoverKind: "client_request" | "memo";
+    HandoverIn: {
+      kind: components["schemas"]["HandoverKind"];
+      /** @description Сделка CRM (заявка клиента) или id документа EDS */
+      id: string;
     };
     InstructionExtensionIn: {
       /** Format: date */

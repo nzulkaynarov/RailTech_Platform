@@ -23,6 +23,7 @@ from sqlalchemy import (
     Uuid,
 )
 from sqlalchemy import text as sql_text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -59,6 +60,8 @@ class Instruction(Base):
     outgoing_document_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("documents.id", ondelete="SET NULL")
     )
+    # «Передать в работу» (план 1.9): что выросло из письма — {kind, ref, number}; заявка клиента живёт в CRM
+    handed_to: Mapped[dict[str, str] | None] = mapped_column(JSONB)
     executed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     reminders_sent: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=sql_text("'{}'::text[]"))
     created_by: Mapped[int] = mapped_column(BigInteger)  # автор резолюции

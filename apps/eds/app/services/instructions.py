@@ -41,8 +41,11 @@ from app.schemas.letters import (
     ExtensionDecisionIn,
     ExtensionRequestIn,
     ExtensionTask,
+    HandedTo,
+    HandoverKind,
     InstructionCompleteIn,
     InstructionReturnIn,
+    InstructionRole,
     InstructionTask,
     LetterCloseIn,
     LetterStatus,
@@ -479,20 +482,48 @@ async def _link_outgoing(session: AsyncSession, outgoing: Document, letter: Lett
     )
 
 
+HANDOVER_LABELS = {HandoverKind.CLIENT_REQUEST: "заявка клиента", HandoverKind.MEMO: "служебная записка"}
+INTERNAL_KINDS = ("memo", "application", "report")
+
+
+async def _checked_handover(session: AsyncSession, handed_to: HandedTo, actor_id: int) -> HandedTo:
+    """Объект «Передать в работу» (план 1.9). Служебную записку EDS проверяет сам: своя, внутренняя, номер из базы.
+    Заявку клиента проверяет BFF по CRM до вызова — у EDS нет данных CRM."""
+    if handed_to.kind != HandoverKind.MEMO:
+        return handed_to
+    try:
+        document_id = uuid.UUID(handed_to.ref)
+    except ValueError:
+        raise invalid_fields("Служебная записка не найдена.", handed_to="not_found") from None
+    document = await session.get(Document, document_id)
+    if (
+        document is None
+        or document.kind not in INTERNAL_KINDS
+        or document.author_crm_user_id != actor_id
+        or document.number is None
+    ):
+        raise invalid_fields("Служебная записка не найдена.", handed_to="not_found")
+    return HandedTo(kind=handed_to.kind, ref=str(document.id), number=document.number)
+
+
 async def complete(
     session: AsyncSession, bus: AsyncBus, *, actor_id: int, instruction_id: uuid.UUID, data: InstructionCompleteIn
 ) -> Letter:
-    """«Исполнено» исполнителем: отчёт (текст, файлы) или отправленный ИСХ."""
+    """«Исполнено» исполнителем: отчёт (текст, файлы), отправленный ИСХ или «Передать в работу» — объект из письма."""
     instruction, letter = await _instruction_for_update(session, instruction_id)
     if instruction.crm_user_id != actor_id:
         raise forbidden_reason("not_executor", "Отметить исполнение может только исполнитель поручения.")
     if instruction.status != IN_WORK:
         raise conflict("invalid_state", "Поручение уже исполнено.", status=instruction.status, expected=IN_WORK)
+    if data.handed_to is not None and instruction.role != InstructionRole.RESPONSIBLE:
+        # Исход письма выбирает ответственный; соисполнитель только отчитывается (исследование 2026-11-11, §4.3)
+        raise forbidden_reason("not_responsible", "Передать письмо в работу может только ответственный.")
     report = (data.report or "").strip() or None
     outgoing = await _outgoing_by_number(session, data.outgoing_number) if data.outgoing_number else None
     if outgoing is not None:
         await _link_outgoing(session, outgoing, letter, actor_id)
-    if report is None and not data.file_ids and outgoing is None:
+    handed_to = await _checked_handover(session, data.handed_to, actor_id) if data.handed_to else None
+    if report is None and not data.file_ids and outgoing is None and handed_to is None:
         raise invalid_fields("Напишите отчёт, приложите файл или укажите ИСХ.", report="report_required")
     await files.attach(session, data.file_ids, actor_id=actor_id, instruction_id=instruction.id)
     now = clock.now()
@@ -503,7 +534,11 @@ async def complete(
         now,
     )
     instruction.outgoing_document_id = outgoing.id if outgoing else None
+    instruction.handed_to = handed_to.model_dump(mode="json") if handed_to else None
     comment = report if outgoing is None else f"Ответ {outgoing.number}" + (f". {report}" if report else "")
+    if handed_to is not None:
+        moved = f"Передано в работу: {HANDOVER_LABELS[handed_to.kind]} {handed_to.number}"
+        comment = moved + (f". {comment}" if comment else "")
     await journal.record(session, "instruction.executed", by=actor_id, letter_id=letter.id, comment=comment)
     if instruction.role == "co_executor" and instruction.created_by != letter.resolution_decided_by:
         # План 1.9: соисполнитель, которого привлёк ответственный, отчитывается ему, а не автору резолюции

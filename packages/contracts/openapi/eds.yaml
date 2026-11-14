@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — EDS API (электронный документооборот)
-  version: 0.19.0
+  version: 0.21.0
   summary: Пространство `/api/v1/` сервиса EDS — вызывает BFF Платформы от имени сотрудника.
   description: |
     Контракт сервиса EDS (`apps/eds`, ADR-0015; `docs/history/runbooks/wave12-eds-c1.md` §2). EDS — владелец реестра документов и
@@ -4839,6 +4839,27 @@ components:
         created_at:
           type: string
           format: date-time
+    HandoverKind:
+      type: string
+      enum: [client_request, memo]
+      description: Во что передано письмо — заявка клиента (CRM) или служебная записка (EDS)
+    HandedTo:
+      type: object
+      additionalProperties: false
+      required: [kind, ref, number]
+      properties:
+        kind:
+          $ref: '#/components/schemas/HandoverKind'
+        ref:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: Идентификатор объекта в своей системе (id заявки CRM, id документа EDS)
+        number:
+          type: string
+          minLength: 1
+          maxLength: 32
+          description: Номер объекта для людей; у служебной записки EDS берёт его из базы
     OutgoingRef:
       type: object
       additionalProperties: false
@@ -4897,6 +4918,7 @@ components:
         - report
         - files
         - outgoing
+        - handed_to
         - executed_at
         - extensions
       properties:
@@ -4931,6 +4953,11 @@ components:
             - $ref: '#/components/schemas/OutgoingRef'
             - type: 'null'
           description: Ответ — наш ИСХ
+        handed_to:
+          oneOf:
+            - $ref: '#/components/schemas/HandedTo'
+            - type: 'null'
+          description: «Передать в работу» (план 1.9) — объект, в который передано письмо
         executed_at:
           type: [string, 'null']
           format: date-time
@@ -4999,6 +5026,13 @@ components:
           minLength: 1
           maxLength: 32
           description: Номер нашего отправленного ИСХ — ответ на письмо
+        handed_to:
+          oneOf:
+            - $ref: '#/components/schemas/HandedTo'
+            - type: 'null'
+          description: >-
+            «Передать в работу» (план 1.9): только ответственный (иначе 403 `not_responsible`); служебная записка —
+            своя, внутренняя, с номером (иначе 422 `handed_to: not_found`); заявку клиента проверяет BFF по CRM
     ExtensionRequestIn:
       type: object
       additionalProperties: false
