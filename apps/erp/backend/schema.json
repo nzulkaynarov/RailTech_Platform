@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "ERP API",
-        "version": "1.15.0",
+        "version": "1.16.0",
         "description": "ERP Platform API. Supports deal lifecycle management, quoting, product catalog (PIM), Excel imports, and real-time notifications via WebSocket.",
         "contact": {
             "name": "ERP API Support",
@@ -8740,6 +8740,106 @@
                 }
             }
         },
+        "/api/v1/calc/{deal_id}/copy/": {
+            "post": {
+                "operationId": "calc_copy",
+                "description": "POST /api/v1/calc/<deal_id>/copy/ — «Как в прошлой заявке»: состав прошлого расчёта, цены сегодняшние (план 1.5).",
+                "summary": "Скопировать состав прошлого расчёта клиента",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "deal_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Calc"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CalcCopyInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CalcCopyInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CalcCopyInRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcCopyResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcError"
+                                }
+                            }
+                        },
+                        "description": "Тело не прошло проверку или отказ правила строки"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcError"
+                                }
+                            }
+                        },
+                        "description": "Нет права (зона строки, роль) или не сотрудник"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcError"
+                                }
+                            }
+                        },
+                        "description": "Заявки, задания расчёта или строки нет"
+                    },
+                    "409": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcError"
+                                }
+                            }
+                        },
+                        "description": "Состояние не позволяет (КП не черновик, нет виз, ИИ выключен)"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/calc/{deal_id}/lines/": {
             "post": {
                 "operationId": "calc_lines_add",
@@ -9373,6 +9473,86 @@
                             }
                         },
                         "description": "Очередь ИИ недоступна"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcError"
+                                }
+                            }
+                        },
+                        "description": "Тело не прошло проверку или отказ правила строки"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcError"
+                                }
+                            }
+                        },
+                        "description": "Нет права (зона строки, роль) или не сотрудник"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcError"
+                                }
+                            }
+                        },
+                        "description": "Заявки, задания расчёта или строки нет"
+                    },
+                    "409": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcError"
+                                }
+                            }
+                        },
+                        "description": "Состояние не позволяет (КП не черновик, нет виз, ИИ выключен)"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/calc/{deal_id}/previous/": {
+            "get": {
+                "operationId": "calc_previous_list",
+                "description": "GET /api/v1/calc/<deal_id>/previous/ — прошлые расчёты того же клиента (план 1.5).",
+                "summary": "Прошлые расчёты клиента для «Как в прошлой заявке»",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "deal_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Calc"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcPreviousList"
+                                }
+                            }
+                        },
+                        "description": ""
                     },
                     "400": {
                         "content": {
@@ -35990,6 +36170,82 @@
                     "supplier_name"
                 ]
             },
+            "CalcCopyInRequest": {
+                "type": "object",
+                "properties": {
+                    "from_deal_id": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "Прошлая заявка того же клиента"
+                    }
+                },
+                "required": [
+                    "from_deal_id"
+                ]
+            },
+            "CalcCopyResult": {
+                "type": "object",
+                "properties": {
+                    "deal": {
+                        "$ref": "#/components/schemas/CalcDeal"
+                    },
+                    "task": {
+                        "$ref": "#/components/schemas/CalcTaskBrief"
+                    },
+                    "request": {
+                        "$ref": "#/components/schemas/CalcRequest"
+                    },
+                    "quote": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/CalcQuote"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "lines": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CalcLine"
+                        }
+                    },
+                    "totals": {
+                        "$ref": "#/components/schemas/CalcTotals"
+                    },
+                    "visas": {
+                        "$ref": "#/components/schemas/CalcVisaGroups"
+                    },
+                    "ready": {
+                        "$ref": "#/components/schemas/CalcReady"
+                    },
+                    "rights": {
+                        "$ref": "#/components/schemas/CalcRights"
+                    },
+                    "created": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        }
+                    },
+                    "skipped": {
+                        "type": "integer",
+                        "description": "Строки чужой зоны (товары или услуги): их добавит коллега"
+                    }
+                },
+                "required": [
+                    "created",
+                    "deal",
+                    "lines",
+                    "quote",
+                    "ready",
+                    "request",
+                    "rights",
+                    "skipped",
+                    "task",
+                    "totals",
+                    "visas"
+                ]
+            },
             "CalcDeal": {
                 "type": "object",
                 "properties": {
@@ -36399,6 +36655,59 @@
                         "description": "docx, xlsx, xls, pdf, png, jpg, csv, txt — до 10 МБ"
                     }
                 }
+            },
+            "CalcPrevious": {
+                "type": "object",
+                "description": "План 1.5: прошлый расчёт того же клиента — основа «Как в прошлой заявке».",
+                "properties": {
+                    "deal_id": {
+                        "type": "integer"
+                    },
+                    "number": {
+                        "type": "string",
+                        "description": "Номер прошлой заявки (ЗВ-…)"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "lines": {
+                        "type": "integer",
+                        "description": "Сколько строк скопируется"
+                    },
+                    "names": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Первые три позиции"
+                    }
+                },
+                "required": [
+                    "created_at",
+                    "deal_id",
+                    "lines",
+                    "names",
+                    "number",
+                    "title"
+                ]
+            },
+            "CalcPreviousList": {
+                "type": "object",
+                "properties": {
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CalcPrevious"
+                        }
+                    }
+                },
+                "required": [
+                    "results"
+                ]
             },
             "CalcQuote": {
                 "type": "object",

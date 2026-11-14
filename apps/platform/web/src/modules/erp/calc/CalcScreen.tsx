@@ -24,6 +24,7 @@ import { AddLineForm } from "./AddLineForm";
 import { calcRef, readyHintKey, useApplySheet, useErrorText, useStateLabels } from "./api";
 import { LinesTable } from "./LinesTable";
 import { ParseModal } from "./ParseModal";
+import { PreviousModal } from "./PreviousModal";
 import { PriceRequestForm } from "./PriceRequestForm";
 import { PriceRequests } from "./PriceRequests";
 import { ClientRejection } from "./Rejection";
@@ -204,8 +205,8 @@ function Content({ sheet }: { sheet: CalcSheet }) {
   const { mobile } = useViewport();
   const [params, setParams] = useSearchParams();
   // План 1.1: «Создать → Расчёт» открывает расчёт сразу с разбором файла заявки (`?parse=1`)
-  const [dialog, setDialog] = useState<"add" | "parse" | "price" | "terms" | null>(() =>
-    params.get("parse") === "1" && sheet.rights.build ? "parse" : null,
+  const [dialog, setDialog] = useState<"add" | "parse" | "previous" | "price" | "terms" | null>(
+    () => (params.get("parse") === "1" && sheet.rights.build ? "parse" : null),
   );
   // Строка вручную и запрос цены — короткие формы о расчёте: в боковом окне на вкладке «Задача» (§4.1a)
   const openForm = (kind: "add" | "price" | "terms") => {
@@ -306,6 +307,15 @@ function Content({ sheet }: { sheet: CalcSheet }) {
                     {t("parse.button")}
                   </Button>
                 ) : null}
+                {sheet.rights.build ? (
+                  <Button
+                    onClick={() => {
+                      setDialog("previous");
+                    }}
+                  >
+                    {t("previous.button")}
+                  </Button>
+                ) : null}
               </div>
             ) : null
           }
@@ -359,6 +369,14 @@ function Content({ sheet }: { sheet: CalcSheet }) {
                 { replace: true },
               );
             }
+          }}
+        />
+      ) : null}
+      {dialog === "previous" ? (
+        <PreviousModal
+          sheet={sheet}
+          onClose={() => {
+            setDialog(null);
           }}
         />
       ) : null}

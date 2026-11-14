@@ -317,3 +317,26 @@ class CalcErrorSerializer(serializers.Serializer):
     missing = serializers.IntegerField(required=False)
     zone = serializers.CharField(required=False)
     stage = serializers.CharField(required=False)
+
+
+class CalcPreviousSerializer(serializers.Serializer):
+    """План 1.5: прошлый расчёт того же клиента — основа «Как в прошлой заявке»."""
+
+    deal_id = serializers.IntegerField()
+    number = serializers.CharField(help_text="Номер прошлой заявки (ЗВ-…)")
+    title = serializers.CharField(allow_blank=True)
+    created_at = serializers.DateTimeField()
+    lines = serializers.IntegerField(help_text="Сколько строк скопируется")
+    names = serializers.ListField(child=serializers.CharField(allow_blank=True), help_text="Первые три позиции")
+
+
+class CalcPreviousListSerializer(serializers.Serializer):
+    results = CalcPreviousSerializer(many=True)
+
+
+class CalcCopyInSerializer(serializers.Serializer):
+    from_deal_id = serializers.IntegerField(min_value=1, help_text="Прошлая заявка того же клиента")
+
+
+class CalcCopyResultSerializer(CalcLinesCreatedSerializer):
+    skipped = serializers.IntegerField(help_text="Строки чужой зоны (товары или услуги): их добавит коллега")
