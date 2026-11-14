@@ -708,3 +708,77 @@ def test_quote_level_visa_chain_does_not_mix_in_line_visas(world):
     assert plain["required_zones"] == calc_tasks.required_visa_zones(calc_tasks.latest_task(world["deal"].pk))
     assert ("services", 12) not in [(v["zone"], v["by"]["crm_user_id"]) for v in plain["visas"]]
     assert sorted((v["zone"], v["by"]["crm_user_id"]) for v in with_lines["visas"]) == [("goods", 11), ("services", 12)]
+
+
+# ── План 1.5: «Как в прошлой заявке» ─────────────────────────────────────────────────────────────────────────────────
+
+
+def _next_request(world):
+    """Новая заявка того же клиента с заданием расчёта — прошлая заявка `world["deal"]` уже посчитана."""
+    deal = Deal.objects.create(
+        title="Стрелочные переводы, вторая очередь",
+        company=world["deal"].company,
+        manager=world["supply"],
+        stage=DealStage.objects.get(code="RFQ_OPEN"),
+        notes="Как в прошлый раз",
+    )
+    calc_tasks.apply_resolution(
+        deal,
+        eds_letter_id=uuid.UUID("0b1f5c0e-9a51-4c43-8a0e-3c1f0a2d5e02"),
+        letter_number="ВХ-120/26",
+        letter_subject="Запрос КП",
+        text="Как в прошлой заявке",
+        due=date(2026, 11, 30),
+        min_margin_pct=Decimal("15"),
+        decided_by_crm_user_id=3,
+        decided_by_name="Демо Директоров",
+        decided_at=datetime(2026, 11, 14, 6, 30, tzinfo=timezone.utc),
+        assignees=[calc_tasks.Assignment(11, "goods"), calc_tasks.Assignment(12, "services")],
+    )
+    return deal
+
+
+def test_previous_calcs_of_the_client_and_copy_with_todays_prices(world):
+    _started(world)
+    new = _next_request(world)
+    previous = _api(world["supply"]).get(f"/api/v1/calc/{new.pk}/previous/")
+    assert previous.status_code == 200, previous.json()
+    [row] = previous.json()["results"]
+    assert (row["deal_id"], row["lines"]) == (world["deal"].pk, 2)
+    assert row["names"][0] == "Перевод стрелочный Р65 1/11"
+
+    # Цена партнёра выросла с прошлого расчёта: в копию идёт сегодняшняя
+    SupplierOffer.objects.filter(product=world["rail"], base_price=Decimal("90000000.00")).update(
+        base_price=Decimal("95000000.00")
+    )
+    copied = _api(world["supply"]).post(
+        f"/api/v1/calc/{new.pk}/copy/", {"from_deal_id": world["deal"].pk}, format="json"
+    )
+    assert copied.status_code == 201, copied.json()
+    assert copied.json()["skipped"] == 1, "услугу добавит гл. инженер"
+    from crm.services.calculation import calc_quote
+
+    quote = calc_quote(new)
+    [item] = list(quote.items.filter(display_type=QuoteItem.DisplayType.ITEM))
+    assert (item.product_id, item.quantity) == (world["rail"].pk, 2)
+    assert item.frozen_base_price == Decimal("95000000.00")
+
+    services = _api(world["engineer"]).post(
+        f"/api/v1/calc/{new.pk}/copy/", {"from_deal_id": world["deal"].pk}, format="json"
+    )
+    assert services.status_code == 201, services.json()
+    assert quote.items.filter(display_type=QuoteItem.DisplayType.ITEM).count() == 2
+
+
+def test_copy_from_another_client_is_404(world):
+    _started(world)
+    stranger = Company.objects.create(name="ООО Чужой Клиент", inn="6600000299")
+    other = Deal.objects.create(title="Чужая заявка", company=stranger, manager=world["supply"])
+    response = _api(world["supply"]).post(
+        f"/api/v1/calc/{world['deal'].pk}/copy/", {"from_deal_id": other.pk}, format="json"
+    )
+    assert response.status_code == 404 and response.json() == {"detail": "DEAL_NOT_FOUND"}
+    same = _api(world["supply"]).post(
+        f"/api/v1/calc/{world['deal'].pk}/copy/", {"from_deal_id": world["deal"].pk}, format="json"
+    )
+    assert same.status_code == 404
