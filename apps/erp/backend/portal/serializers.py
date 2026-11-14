@@ -458,6 +458,19 @@ class QuoteSerializer(QuoteListItemSerializer):
     comments = serializers.SerializerMethodField()
     subtotal = serializers.SerializerMethodField()
     vat = serializers.SerializerMethodField()
+    payment_terms = serializers.SerializerMethodField()
+    delivery_days = serializers.SerializerMethodField()
+    delivery_note = serializers.SerializerMethodField()
+
+    def get_payment_terms(self, quote) -> Optional[str]:
+        return quote.payment_terms or None
+
+    def get_delivery_days(self, quote) -> Optional[int]:
+        # Same rule as the PDF: the quote-level term, else the longest required line; 0 means «not set».
+        return quote.effective_delivery_lead_time_days or None
+
+    def get_delivery_note(self, quote) -> Optional[str]:
+        return quote.delivery_note or None
 
     def get_subtotal(self, quote) -> dict:
         return projections.quote_subtotal(quote)

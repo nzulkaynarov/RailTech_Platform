@@ -1,0 +1,18 @@
+[
+  {
+    "screen": "cabinet-quote-terms",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 43,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "cabinet-quote-terms",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 40,
+    "overflowPx": 0,
+    "violations": []
+  }
+]
