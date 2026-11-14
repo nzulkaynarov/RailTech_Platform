@@ -41,7 +41,7 @@ def test_catalog_has_twenty_sections_in_oracle_order() -> None:
     # P8: + `eds.inbox.register`; D17G-1: + `crm.leads.triage`;
     # SIGN-2: + `eds.signing.manage`; 0.3: + `crm.mail`; восемь ролей каталога
     assert list(RESOURCE_MODULE) == list(MATRIX)
-    assert len(CELLS) == len(MATRIX) * 8
+    assert len(CELLS) == len(MATRIX) * len(ROLES)
     assert {k: RESOURCE_MODULE[k] for k in MATRIX} == MODULE_OF
 
 
@@ -213,8 +213,14 @@ def test_menu_item_visible_if_any_section_is_visible(code: str) -> None:
 
 def test_menu_sections_exist_and_cover_every_section() -> None:
     covered = {s for items in MENU.values() for sections in items.values() for s in sections}
-    # Визы расчёта — возможности внутри экрана «Расчёт», своего пункта меню у них нет.
-    assert set(MATRIX) - covered == {"erp.calc.goods", "erp.calc.services"}
+    # Визы расчёта — возможности внутри экрана «Расчёт», визы договора, счёта и акта (ADR-0025) —
+    # блок «Визы и подписи» в «Задачах»: своего пункта меню у них нет.
+    assert set(MATRIX) - covered == {
+        "erp.calc.goods",
+        "erp.calc.services",
+        "eds.visa.finance",
+        "eds.visa.legal",
+    }
     for module, items in MENU.items():
         for sections in items.values():
             assert all(RESOURCE_MODULE[s] in MODULES for s in sections)

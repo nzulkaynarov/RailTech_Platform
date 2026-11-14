@@ -22,4 +22,6 @@ EDS_PERMISSIONS: Final[tuple[str, ...]] = (
     "bus.manage",
     "files.upload",
     "signing.manage",
+    "approvals.visa_finance",
+    "approvals.visa_legal",
 )

@@ -19,10 +19,26 @@ router = APIRouter(prefix="/api/v1", tags=["approvals"])
 Reader = Annotated[
     Employee,
     Depends(
-        require_permission(P.MEMOS_CREATE, P.MEMOS_APPROVE, P.APPROVALS_DECIDE, P.PAYMENTS_CONFIRM, P.REGISTRY_READ)
+        require_permission(
+            P.MEMOS_CREATE,
+            P.MEMOS_APPROVE,
+            P.APPROVALS_DECIDE,
+            P.PAYMENTS_CONFIRM,
+            P.REGISTRY_READ,
+            P.APPROVALS_VISA_FINANCE,
+            P.APPROVALS_VISA_LEGAL,
+        )
     ),
 ]
-Decider = Annotated[Employee, Depends(require_permission(P.MEMOS_APPROVE, P.APPROVALS_DECIDE, P.PAYMENTS_CONFIRM))]
+# ADR-0025: визирующие договора, счёта и акта решают свой шаг маршрута подписи.
+Decider = Annotated[
+    Employee,
+    Depends(
+        require_permission(
+            P.MEMOS_APPROVE, P.APPROVALS_DECIDE, P.PAYMENTS_CONFIRM, P.APPROVALS_VISA_FINANCE, P.APPROVALS_VISA_LEGAL
+        )
+    ),
+]
 Session = Annotated[AsyncSession, Depends(get_session)]
 Bus = Annotated[AsyncBus, Depends(get_bus)]
 

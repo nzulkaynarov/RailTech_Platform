@@ -940,6 +940,98 @@ def add_lines(deal_id: int, user, rows: list[LineInput]) -> dict:
     return {"created": created, **_sheet(deal, task, user)}
 
 
+#: План 1.5: сколько прошлых расчётов клиента показать в «Как в прошлой заявке».
+MAX_PREVIOUS = 20
+
+
+def _previous_items(quote: Quote) -> list[QuoteItem]:
+    return list(
+        quote.items.filter(display_type=QuoteItem.DisplayType.ITEM, is_optional=False)
+        .select_related("product", "calc")
+        .order_by("position", "id")
+    )
+
+
+def previous_calcs(deal_id: int, user) -> list[dict]:
+    """План 1.5: прошлые расчёты того же клиента (новые сверху) — что можно взять за основу этой заявки."""
+    _require_staff(user)
+    _require(user, Permission.QUOTE_BUILD.value)
+    deal = _deal_or_404(deal_id)
+    _task_or_404(deal)
+    if not deal.company_id:
+        return []
+    rows = []
+    others = (
+        Deal.objects.filter(company_id=deal.company_id)
+        .exclude(pk=deal.pk)
+        .order_by("-created_at", "-id")
+        .only("id", "number", "title", "created_at")
+    )
+    for other in others[: MAX_PREVIOUS * 3]:
+        quote = calc_quote(other)
+        if quote is None:
+            continue
+        items = _previous_items(quote)
+        if not items:
+            continue
+        rows.append(
+            {
+                "deal_id": other.pk,
+                "number": other.number or "",
+                "title": other.title or "",
+                "created_at": other.created_at,
+                "lines": len(items),
+                "names": [item.imported_raw_name or (item.product.name if item.product else "") for item in items[:3]],
+            }
+        )
+        if len(rows) >= MAX_PREVIOUS:
+            break
+    return rows
+
+
+def copy_lines(deal_id: int, user, from_deal_id: int) -> dict:
+    """План 1.5: «Как в прошлой заявке» — состав прошлого расчёта того же клиента новыми строками черновика.
+
+    Копируются позиция, карточка каталога, количество, единица, артикул, примечание и тип строки; цены — сегодняшние:
+    строки идут тем же путём, что ручные (`add_lines` подставляет действующие цены партнёров). Чужой клиент — 404.
+    """
+    deal = _deal_or_404(deal_id)
+    source_deal = Deal.objects.filter(pk=from_deal_id).first()
+    if source_deal is None or source_deal.pk == deal.pk or source_deal.company_id != deal.company_id:
+        raise CalcError("DEAL_NOT_FOUND", 404)
+    source = calc_quote(source_deal)
+    items = _previous_items(source) if source is not None else []
+    if not items:
+        raise CalcError("NOTHING_TO_COPY", 409)
+    # Строки своей зоны (товары — снабженец, услуги — гл. инженер): чужую зону добавит коллега тем же действием.
+    mine = [item for item in items if has_perm(user, ZONE_PERMISSION[zone_of(item)])][:MAX_LINES_PER_CALL]
+    if not mine:
+        raise CalcError("ZONE_NOT_PERMITTED", 403, zone=zone_of(items[0]))
+    rows = [
+        LineInput(
+            name=item.imported_raw_name or (item.product.name if item.product else ""),
+            quantity=int(item.quantity or 1),
+            unit=item.unit or "",
+            kind=(calc_of(item).kind if calc_of(item) is not None else CalcLineKind.GOODS),
+            product_id=item.product_id,
+            article=item.mpn or "",
+            note=item.note or "",
+        )
+        for item in mine
+    ]
+    result = add_lines(deal_id, user, rows)
+    result["skipped"] = len(items) - len(mine)
+    _log(
+        deal,
+        user,
+        "Состав скопирован из прошлой заявки",
+        f"{len(rows)} строк(и) из {source_deal.number}",
+        "calc.lines_copied",
+        {"count": len(rows), "from": source_deal.number},
+    )
+    return result
+
+
 def _locked_item(quote: Quote, item_id: int) -> QuoteItem:
     item = (
         QuoteItem.objects.select_for_update(of=("self",))
