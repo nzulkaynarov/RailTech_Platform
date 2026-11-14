@@ -59,10 +59,10 @@ from supply.views import (
     OrderSendView,
     OrderView,
     OverdueListView,
-    SupplyTaskListView,
     PriceRequestAnswerView,
     PriceRequestListView,
     ReceiptListView,
+    SupplyTaskListView,
 )
 
 from accounts.views import (

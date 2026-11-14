@@ -230,9 +230,7 @@ class SupplyTaskSerializer(serializers.Serializer):
     supplier_name = serializers.CharField(help_text="Партнёр или компания-заявитель")
     since = serializers.DateTimeField(allow_null=True, help_text="С какого момента дело ждёт снабженца")
     date = serializers.DateField(required=False, help_text="partner_date_change: на какую дату просит партнёр")
-    note = serializers.CharField(
-        required=False, allow_null=True, help_text="Причина переноса или накладная отгрузки"
-    )
+    note = serializers.CharField(required=False, allow_null=True, help_text="Причина переноса или накладная отгрузки")
     status = serializers.CharField(required=False, help_text="partner_application: submitted или candidate_agreed")
 
 

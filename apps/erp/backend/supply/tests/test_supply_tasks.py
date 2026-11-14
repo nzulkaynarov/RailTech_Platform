@@ -13,7 +13,6 @@ from django.utils import timezone
 from inventory.tests.support import api
 from parties.models import PartnerApplication, PartnerApplicationSource, PartnerApplicationStatus, PartnerKind
 from supply.models import SupplierOrder, SupplierOrderShipmentNotice
-
 from supply.tests.test_orders import _act, _create, _line, _tomorrow, locmem_mail  # noqa: F401
 
 pytestmark = pytest.mark.django_db
