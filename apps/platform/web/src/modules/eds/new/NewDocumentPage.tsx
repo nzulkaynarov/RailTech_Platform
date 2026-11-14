@@ -37,6 +37,7 @@ import {
 } from "../documents/errors";
 import { LetterPdfPanel } from "../documents/LetterPdfPanel";
 import { parseDocumentId, useRefreshDocuments } from "../documents/params";
+import { useRefreshLetters } from "../inbox/api";
 import { AttachmentsField } from "./AttachmentsField";
 import { DealField } from "./DealField";
 import { RecipientField } from "./RecipientField";
@@ -147,6 +148,7 @@ function DocumentForm({
   const navigate = useNavigate();
   const { mobile } = useViewport();
   const refresh = useRefreshDocuments();
+  const refreshLetters = useRefreshLetters();
   // P8: исходящее письмо регистрирует тот, кто регистрирует входящие (`eds.inbox.register`); черновик письма (P4) готовит
   // любой и передаёт делопроизводителю.
   const canRegister = canEdit(me, "eds.inbox.register");
@@ -265,6 +267,7 @@ function DocumentForm({
             handed_to: { kind: "memo", id: doc.id },
           });
           handed = true;
+          void refreshLetters(); // карточка письма и «Мои задачи» — уже с закрытым поручением
         } catch (error) {
           void message.error(
             t("documents:form.handover.failed", {
