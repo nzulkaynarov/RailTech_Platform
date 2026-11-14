@@ -4,7 +4,9 @@ import datetime as dt
 import uuid
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+
+from app.schemas_eds_documents import EdsDocumentBody
 
 
 class _In(BaseModel):
@@ -47,3 +49,22 @@ class DocflowSettings(BaseModel):
 
 class DocflowSettingsPatch(_In):
     recognize_scans: bool
+
+
+class LetterAssistIn(BaseModel):
+    """План 1.4: «Подготовить текст» (`draft`) или «Перевести» (`translate`); правила — в EDS."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    action: Literal["draft", "translate"]
+    lang: Literal["ru", "uz", "en"]
+    brief: str | None = Field(default=None, max_length=4000)
+    recipient: str | None = Field(default=None, max_length=300)
+    subject: str | None = Field(default=None, max_length=300)
+    body: EdsDocumentBody | None = None
+
+
+class LetterAssistSuggestion(BaseModel):
+    suggestion_id: uuid.UUID
+    body: EdsDocumentBody
+    back_translation: str | None

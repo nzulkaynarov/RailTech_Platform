@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — EDS API (электронный документооборот)
-  version: 0.17.0
+  version: 0.20.0
   summary: Пространство `/api/v1/` сервиса EDS — вызывает BFF Платформы от имени сотрудника.
   description: |
     Контракт сервиса EDS (`apps/eds`, ADR-0015; `docs/history/runbooks/wave12-eds-c1.md` §2). EDS — владелец реестра документов и
@@ -1652,6 +1652,41 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/letter-assist:
+    post:
+      tags: [letters]
+      operationId: assistLetterText
+      summary: Помощник письма — подготовить текст или перевести
+      description: |
+        План 1.4. `draft` — текст письма по поручению (`brief`, необязательно `recipient`, `subject`, текущее тело `body`) на
+        языке `lang`; `translate` — перевод тела `body` на язык `lang` и обратный перевод на русский (`back_translation`), чтобы
+        сотрудник проверил смысл. Модель пишет Markdown, тело собирает мост `rt_docs.markdown_to_body` (план 1.3); в документ
+        ничего не сохраняется — тело вставляет человек. Шлюз — алиас `draft-model` ключом EDS, вызов — строка `ai_suggestions`.
+        Пустое поручение — 422 `details.fields.brief = required`; перевод без текста — `body = required`; помощник не настроен
+        или не ответил — 409 `ai_unavailable`; дневной лимит — 409 `ai_budget_exceeded`.
+      x-rt-permissions: [memos.create]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LetterAssistIn'
+      responses:
+        '200':
+          description: Предложение тела письма
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LetterAssistSuggestion'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '409':
           $ref: '#/components/responses/Conflict'
         '422':
@@ -4246,6 +4281,31 @@ components:
             - $ref: '#/components/schemas/LetterKindCode'
             - type: 'null'
         document_due: { type: [string, 'null'], format: date }
+    LetterAssistIn:
+      type: object
+      additionalProperties: false
+      required: [action, lang]
+      properties:
+        action: {type: string, enum: [draft, translate]}
+        lang: {type: string, enum: [ru, uz, en], description: Язык текста (draft) или перевода (translate)}
+        brief: {type: [string, 'null'], maxLength: 4000, description: О чём письмо (draft)}
+        recipient: {type: [string, 'null'], maxLength: 300}
+        subject: {type: [string, 'null'], maxLength: 300}
+        body:
+          oneOf: [{$ref: '#/components/schemas/DocumentBody'}, {type: 'null'}]
+          description: Текущее тело письма (обязательно для translate)
+
+    LetterAssistSuggestion:
+      type: object
+      additionalProperties: false
+      required: [suggestion_id, body, back_translation, alias, prompt_version]
+      properties:
+        suggestion_id: {type: string, format: uuid}
+        body: {$ref: '#/components/schemas/DocumentBody'}
+        back_translation: {type: [string, 'null'], description: Обратный перевод на русский в Markdown (translate)}
+        alias: {type: string}
+        prompt_version: {type: string}
+
     LetterIntakeSuggestion:
       type: object
       additionalProperties: false
