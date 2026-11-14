@@ -744,6 +744,17 @@ export const erpCalcHandlers = [
     return HttpResponse.json<CalcSheet>(present(calc, held.user));
   }),
 
+  // План 1.1: файл заявки — тот же разбор, предложение строк из PARSE_PROPOSAL
+  http.post("*/api/v1/erp/calc/:number/parse-file", ({ params }) => {
+    const held = guard("erp.calc", "full");
+    if ("error" in held) return held.error;
+    if (!find(read(), String(params["number"]))) return notFound();
+    nextId += 1;
+    const job = `job-${String(nextId)}`;
+    jobs.set(job, 0);
+    return HttpResponse.json({ job_id: job }, { status: 202 });
+  }),
+
   http.post("*/api/v1/erp/calc/:number/parse", ({ params }) => {
     const held = guard("erp.calc", "full");
     if ("error" in held) return held.error;

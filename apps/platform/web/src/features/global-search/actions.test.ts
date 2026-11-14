@@ -45,6 +45,8 @@ describe("действия поиска: совпадение по началу 
 describe("виды «Создать» — из реестра окна", () => {
   it("готовый вид находится, неготовый — нет", () => {
     expect(keys("зарегистрировать", REGISTRAR)).toEqual(["incoming"]);
-    expect(keys("расчёт", me({ "erp.calc": "full" }))).toEqual([]);
+    // План 1.1: «Расчёт» готов — ведёт к выбору заявки; «Сообщение» ждёт чатов
+    expect(keys("расчёт", me({ "erp.calc": "full" }))).toEqual(["calc"]);
+    expect(keys("сообщение", me({ "chats.internal": "full" }))).toEqual([]);
   });
 });
