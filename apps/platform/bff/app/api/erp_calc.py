@@ -11,7 +11,7 @@ BFF не решает (CONVENTIONS.md §2 п. 2): зону строки, виз�
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Body, Depends, Path, Query, status
+from fastapi import APIRouter, Body, Depends, Path, Query, Request, status
 
 from app.clients.erp_company import ErpCompany, erp_error
 from app.deps import Authed, require, require_any
@@ -50,8 +50,14 @@ Number = Annotated[str, Path(min_length=1, max_length=40)]
 LineId = Annotated[str, Path(pattern=r"^[0-9]+$", max_length=12)]
 
 ZONE_SECTION = {"goods": "erp.calc.goods", "service": "erp.calc.services"}
+#: План 1.1: файл заявки для разбора — предел ERP (`AI_IMPORT_MAX_BYTES`, 10 МБ) и поля формы.
+MAX_PARSE_FILE_BYTES = 10 * 1024 * 1024
+MAX_PARSE_BODY_BYTES = MAX_PARSE_FILE_BYTES + 64 * 1024
 # Отказ правила строки ERP (400) -> поле контракта (`details.fields`).
+
 _FIELD_OF = {
+    "FILE_TYPE_UNSUPPORTED": "file",
+    "FILE_TOO_LARGE": "file",
     "CLIENT_PRICE_BELOW_COST": "client_price",
     "MARKUP_OUT_OF_RANGE": "client_price",
     "REASON_REQUIRED": "reason",
@@ -116,9 +122,24 @@ class ErpCalc(ErpCompany):
         )
 
     async def call_calc(
-        self, method: str, path: str, *, json: Any = None, params: dict[str, Any] | None = None
+        self,
+        method: str,
+        path: str,
+        *,
+        json: Any = None,
+        params: dict[str, Any] | None = None,
+        content: bytes | None = None,
+        content_type: str | None = None,
     ) -> Any:
-        response = await self._call("erp", method, f"/api/v1/calc/{path}", json=json, params=params)
+        response = await self._call(
+            "erp",
+            method,
+            f"/api/v1/calc/{path}",
+            json=json,
+            params=params,
+            content=content,
+            content_type=content_type,
+        )
         if response.status_code >= 400:
             raise calc_error(response)
         return response.json()
@@ -501,4 +522,48 @@ async def parse_text(
     deal_id = await erp.deal_id(number)
     text = body.text if body is not None and body.text else ""
     data = await erp.call_calc("POST", f"{deal_id}/parse/", json={"text": text})
+    return CalcParseJob(job_id=str(data["task_id"]))
+
+
+def _file_too_large() -> PlatformError:
+    return PlatformError(
+        "VALIDATION_FAILED",
+        "Файл больше 10 МБ.",
+        status_code=422,
+        details={"fields": ["file"], "reason": "file_too_large", "max_bytes": MAX_PARSE_FILE_BYTES},
+    )
+
+
+@router.post(
+    "/calc/{number}/parse-file",
+    response_model=CalcParseJob,
+    status_code=status.HTTP_202_ACCEPTED,
+    operation_id="parseCalcFile",
+)
+async def parse_file(request: Request, authed: Builder, number: Number) -> CalcParseJob:
+    """План 1.1: файл заявки (Word, Excel, PDF, изображение, текст) — в ИИ-разбор ERP как есть.
+
+    BFF multipart не разбирает: читает тело потоком до предела и передаёт ERP с тем же
+    `Content-Type` (как загрузка документа базы знаний); тип и подпись файла проверяет ERP."""
+    content_type = request.headers.get("content-type", "")
+    if not content_type.lower().startswith("multipart/form-data"):
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "Файл нужно передать формой multipart.",
+            status_code=422,
+            details={"fields": ["file"], "reason": "multipart_required"},
+        )
+    declared = request.headers.get("content-length")
+    if declared and declared.isdigit() and int(declared) > MAX_PARSE_BODY_BYTES:
+        raise _file_too_large()
+    body = bytearray()
+    async for chunk in request.stream():
+        body.extend(chunk)
+        if len(body) > MAX_PARSE_BODY_BYTES:
+            raise _file_too_large()
+    erp = _erp(authed)
+    deal_id = await erp.deal_id(number)
+    data = await erp.call_calc(
+        "POST", f"{deal_id}/parse/", content=bytes(body), content_type=content_type
+    )
     return CalcParseJob(job_id=str(data["task_id"]))

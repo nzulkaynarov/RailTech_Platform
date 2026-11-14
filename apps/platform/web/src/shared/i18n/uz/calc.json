@@ -28,7 +28,8 @@
       "label": "Kimning arizalari",
       "all": "Barchasi",
       "mine": "Meniki"
-    }
+    },
+    "pickForCalc": "Arizani tanlang — fayl tahlili bilan hisob-kitob ochiladi"
   },
   "state": {
     "not_started": "Boshlanmagan",
@@ -156,14 +157,17 @@
     "cancel": "Bekor qilish"
   },
   "parse": {
-    "button": "Ariza matnini ajratish",
-    "title": "Ariza matnini sun’iy intellekt bilan ajratish",
-    "intro": "SI ariza matni bo‘yicha qatorlarni taklif qiladi. Qatorlarni belgilab «Tanlanganlarni qo‘shish» ni bosmaguningizcha hech narsa yozilmaydi.",
+    "button": "Arizani tahlil qilish",
+    "title": "Arizani tahlil qilish",
+    "intro": "Ariza faylini yuklang yoki matn va Excel qatorlarini qo‘ying. Qatorlarni belgilab, «Tanlanganlarni qo‘shish»ni bosmaguningizcha hech narsa yozilmaydi.",
+    "file": "Ariza faylini yuklash",
+    "fileHint": "Word, Excel, PDF yoki rasm, 10 MB gacha",
     "text": "Ajratish uchun matn",
-    "textHint": "Tuzatish yoki o‘z matningizni qo‘yish mumkin.",
+    "textHint": "Matnni tuzating yoki Excel jadvalini qo‘ying — u darhol tahlil qilinadi.",
     "start": "Ajratish",
     "pending": "Matnni ajratyapmiz… Odatda bir daqiqagacha davom etadi.",
     "proposal": "SI taklifi: qo‘shiladigan qatorlarni belgilang",
+    "pasted": "Jadval qatorlari: qo‘shiladiganlarini belgilang",
     "nothing": "SI bu matnda qatorlar topmadi. Qatorlarni qo‘lda qo‘shing.",
     "addSelected": "Tanlanganlarni qo‘shish ({{count}})",
     "cancel": "Yopish",
@@ -173,6 +177,9 @@
       "request_text_empty": "arizada matn yo‘q",
       "ai_extract_failed": "model javob bermadi",
       "ai_budget_exceeded": "SI kunlik byudjeti tugadi",
+      "word_unavailable": "bu serverda Word tahlil qilinmaydi — matnni qo‘ying",
+      "file_type_unsupported": "Word, Excel, PDF, rasm yoki matn mos keladi",
+      "file_too_large": "fayl 10 MB dan katta",
       "other": "xizmat xatosi"
     },
     "truncated": "{{count}} tadan birinchi 50 ta qator ko‘rsatilgan."

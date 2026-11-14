@@ -198,8 +198,8 @@ test.describe("Расчёт по заявке: снабженец и гл. ин�
     await expect(
       page.getByText("Строк пока нет. Добавьте строку или разберите текст заявки."),
     ).toBeVisible();
-    await page.getByRole("button", { name: "Разобрать текст заявки" }).click();
-    const dialog = page.getByRole("dialog", { name: "ИИ-разбор текста заявки" });
+    await page.getByRole("button", { name: "Разобрать заявку" }).click();
+    const dialog = page.getByRole("dialog", { name: "Разбор заявки" });
     await dialog.getByRole("button", { name: "Разобрать" }).click();
     await expect(dialog.getByText("Обследование стрелочного перевода · 6 шт.")).toBeVisible();
     await expect(page.getByRole("row")).toHaveCount(0);
@@ -211,6 +211,40 @@ test.describe("Расчёт по заявке: снабженец и гл. ин�
     await dialog.getByRole("button", { name: "Добавить выбранные (1)" }).click();
     await expect(dialog).toBeHidden();
     await expect(line(page, "Обследование стрелочного перевода").getByText("Услуга")).toBeVisible();
+  });
+});
+
+test.describe("План 1.1: расчёт из окна «Создать» — файл и вставка из Excel", () => {
+  test("«Создать → Расчёт»: заявка из «Моих расчётов», файл заявки, таблица из Excel без ИИ", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "supply@demo.example");
+    await spaGoto(page, "/erp/requests?mine=1&new=calc");
+    await expect(
+      page.getByText("Выберите заявку — откроется расчёт с разбором файла"),
+    ).toBeVisible();
+    await page
+      .getByRole("link", { name: /ЗВ-2026-097/ })
+      .first()
+      .click();
+    const dialog = page.getByRole("dialog", { name: "Разбор заявки" });
+    await expect(dialog.getByRole("button", { name: "Загрузить файл заявки" })).toBeVisible();
+    await dialog.locator('input[type="file"]').setInputFiles({
+      name: "заявка.xlsx",
+      mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      buffer: Buffer.from("PK\u0003\u0004"),
+    });
+    await expect(dialog.getByText("Обследование стрелочного перевода · 6 шт.")).toBeVisible();
+    await settledScreenshot(page, "calc-parse-file");
+    await expectNoViolations(page, "разбор файла заявки");
+
+    await dialog
+      .getByLabel("Текст для разбора")
+      .fill("Наименование\tКол-во\tЕд.\nБолт путевой М22\t400\tшт.\nКлемма КБ-65\t12\tкомпл.");
+    await dialog.getByRole("button", { name: "Разобрать", exact: true }).click();
+    await expect(dialog.getByText("Строки из таблицы: отметьте, что добавить")).toBeVisible();
+    await expect(dialog.getByText("Клемма КБ-65 · 12 компл.")).toBeVisible();
+    await settledScreenshot(page, "calc-parse-excel");
   });
 });
 

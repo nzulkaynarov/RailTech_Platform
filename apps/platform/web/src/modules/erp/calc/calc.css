@@ -356,6 +356,15 @@
   margin-top: 8px;
 }
 
+/* План 1.1: файл заявки — первым в окне разбора */
+.pf-calc-parse-file {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-bottom: 16px;
+}
+
 /* План 1.5: прошлые расчёты клиента — по строке на расчёт */
 .pf-calc-previous {
   display: flex;

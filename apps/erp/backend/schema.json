@@ -9405,7 +9405,7 @@
             "post": {
                 "operationId": "calc_parse",
                 "description": "POST /api/v1/calc/<deal_id>/parse/ — ИИ-разбор текста заявки в строки: задание в очереди ИИ, ответ — предложение\n(`GET /api/v1/sourcing/ai-status/<task_id>/`, результат `{proposal: [...]}`); строки не пишутся.",
-                "summary": "ИИ-разбор текста заявки в строки (предложение)",
+                "summary": "ИИ-разбор текста или файла заявки в строки (предложение)",
                 "parameters": [
                     {
                         "in": "path",
@@ -36648,6 +36648,11 @@
                         "type": "string",
                         "default": "",
                         "maxLength": 20000
+                    },
+                    "file": {
+                        "type": "string",
+                        "format": "binary",
+                        "description": "docx, xlsx, xls, pdf, png, jpg, csv, txt — до 10 МБ"
                     }
                 }
             },

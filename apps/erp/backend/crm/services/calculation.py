@@ -1592,30 +1592,58 @@ def catalog_search(user, q: str, *, limit: int = 20) -> list[dict]:
     return rows
 
 
-def parse_payload(deal_id: int, user, text: Optional[str]) -> dict:
-    """Проверки перед ИИ-разбором (дешёвые, до очереди): заявка с заданием, право строить КП, есть текст."""
+#: План 1.1: какие файлы заявки разбирает модель (Word — через docling-serve, остальное — `ai.services.payloads`).
+PARSE_FILE_TYPES = frozenset({"docx", "xlsx", "xls", "pdf", "png", "jpg", "jpeg", "webp", "csv", "txt", "tsv"})
+
+
+def parse_payload(deal_id: int, user, text: Optional[str], *, has_file: bool = False) -> dict:
+    """Проверки перед ИИ-разбором (дешёвые, до очереди): заявка с заданием, право строить КП, есть текст или файл."""
     from .draft_quote import deal_request_text
 
     _require_staff(user)
     _require(user, Permission.QUOTE_BUILD.value)
     deal = _deal_or_404(deal_id)
     _task_or_404(deal)
+    if has_file:
+        return {"deal_id": deal.id, "user_id": user.pk, "text": ""}
     source = (text or "").strip() or deal_request_text(deal)
     if not source:
         raise CalcError("REQUEST_TEXT_EMPTY", 409)
     return {"deal_id": deal.id, "user_id": user.pk, "text": source[:20000]}
 
 
-def parse_proposal(text: str) -> dict:
-    """ИИ-разбор текста заявки в строки — ПРЕДЛОЖЕНИЕ: ничего не записывается, строки добавляет человек
-    (`add_lines`). Модель — через шлюз ИИ по алиасу (`ai.services.intake`)."""
+def parse_file_check(filename: str, content: bytes) -> str:
+    """Тип и размер файла заявки до очереди (план 1.1): расширение из списка, подпись файла совпадает с ним."""
+    from django.conf import settings
+
+    from core.validators import content_matches_extension
+
+    extension = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    if extension not in PARSE_FILE_TYPES or not content_matches_extension(content[:16], extension):
+        raise CalcError("FILE_TYPE_UNSUPPORTED", 400)
+    if len(content) > getattr(settings, "AI_IMPORT_MAX_BYTES", 10 * 1024 * 1024):
+        raise CalcError("FILE_TOO_LARGE", 400)
+    return extension
+
+
+def parse_proposal(text: str, *, content: Optional[bytes] = None, filename: str = "request.txt") -> dict:
+    """ИИ-разбор текста или файла заявки (план 1.1) в строки — ПРЕДЛОЖЕНИЕ: ничего не записывается, строки добавляет
+    человек (`add_lines`). Модель — через шлюз ИИ по алиасу (`ai.services.intake`)."""
     from ai.services.intake import extract_request_items
 
     try:
-        rows = extract_request_items(text.encode("utf-8"), "request.txt")
+        if content is not None:
+            rows = extract_request_items(content, filename)
+        else:
+            rows = extract_request_items(text.encode("utf-8"), "request.txt")
     except (RuntimeError, ValueError) as exc:
         logger.warning("AI calc parse failed: %s", exc)
-        return {"error": "AI_DISABLED" if str(exc).startswith("AI_IMPORT_DISABLED") else "AI_EXTRACT_FAILED"}
+        reason = str(exc)
+        if reason.startswith("AI_IMPORT_DISABLED"):
+            return {"error": "AI_DISABLED"}
+        if reason.startswith("AI_IMPORT_WORD_UNAVAILABLE"):
+            return {"error": "WORD_UNAVAILABLE"}
+        return {"error": "AI_EXTRACT_FAILED"}
     proposal = []
     for row in rows[:MAX_LINES_PER_CALL]:
         name = str(row.get("name") or "").strip()

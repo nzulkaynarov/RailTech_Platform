@@ -28,7 +28,8 @@
       "label": "Whose requests",
       "all": "All",
       "mine": "Mine"
-    }
+    },
+    "pickForCalc": "Pick a request — its calculation opens with the file parser"
   },
   "state": {
     "not_started": "Not started",
@@ -156,14 +157,17 @@
     "cancel": "Cancel"
   },
   "parse": {
-    "button": "Parse request text",
-    "title": "AI parsing of the request text",
-    "intro": "AI will suggest lines from the request text. Nothing is saved until you tick the lines and press “Add selected”.",
+    "button": "Parse the request",
+    "title": "Parse the request",
+    "intro": "Upload the request file or paste text and rows from Excel. Nothing is saved until you tick rows and press “Add selected”.",
+    "file": "Upload the request file",
+    "fileHint": "Word, Excel, PDF or a photo up to 10 MB",
     "text": "Text to parse",
-    "textHint": "You can edit it or paste your own text.",
+    "textHint": "Edit the text or paste a table from Excel — it is parsed at once.",
     "start": "Parse",
     "pending": "Parsing the text… This usually takes up to a minute.",
     "proposal": "AI suggestion: tick the lines to add",
+    "pasted": "Rows from the table: tick what to add",
     "nothing": "AI found no lines in this text. Add lines manually.",
     "addSelected": "Add selected ({{count}})",
     "cancel": "Close",
@@ -173,6 +177,9 @@
       "request_text_empty": "the request has no text",
       "ai_extract_failed": "the model did not respond",
       "ai_budget_exceeded": "the daily AI budget is used up",
+      "word_unavailable": "Word is not parsed on this server — paste the text",
+      "file_type_unsupported": "Word, Excel, PDF, a photo or text fits",
+      "file_too_large": "the file is over 10 MB",
       "other": "service error"
     },
     "truncated": "Showing the first 50 lines of {{count}}."

@@ -808,6 +808,65 @@ async def test_terms_need_the_full_calc_section(web: Web, erp: respx.MockRouter)
     assert not route.called
 
 
+# --- план 1.1: разбор файла заявки ------------------------------------------------------------
+
+
+async def test_parse_file_goes_to_erp_as_multipart_and_returns_a_job(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    await web.login(["SUPPLY"])
+    route = erp.post(f"{CALC}/104/parse/").mock(
+        return_value=httpx.Response(202, json={"task_id": "job-7"})
+    )
+
+    response = await web.client.post(
+        f"/api/v1/erp/calc/{ENCODED}/parse-file",
+        files={"file": ("заявка.xlsx", b"PK\x03\x04 xlsx", "application/vnd.ms-excel")},
+        headers={"X-CSRF-Token": web.csrf},
+    )
+
+    assert response.status_code == 202, response.json()
+    check(response, "/erp/calc/{number}/parse-file", "post")
+    assert response.json() == {"job_id": "job-7"}
+    sent = route.calls.last.request
+    assert sent.headers["content-type"].startswith("multipart/form-data; boundary=")
+    assert b"PK\x03\x04 xlsx" in sent.content
+
+
+async def test_parse_file_of_a_wrong_type_is_422_with_the_file_field(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    await web.login(["SUPPLY"])
+    erp.post(f"{CALC}/104/parse/").mock(
+        return_value=httpx.Response(400, json={"detail": "FILE_TYPE_UNSUPPORTED"})
+    )
+    response = await web.client.post(
+        f"/api/v1/erp/calc/{ENCODED}/parse-file",
+        files={"file": ("virus.exe", b"MZ", "application/octet-stream")},
+        headers={"X-CSRF-Token": web.csrf},
+    )
+    assert response.status_code == 422
+    check(response, "/erp/calc/{number}/parse-file", "post")
+    assert response.json()["details"]["fields"] == ["file"]
+    assert response.json()["details"]["reason"] == "file_type_unsupported"
+
+
+async def test_parse_file_needs_multipart_and_the_calc_section(
+    web: Web, erp: respx.MockRouter
+) -> None:
+    await web.login(["SUPPLY"])
+    plain = await call(web, "POST", f"/erp/calc/{ENCODED}/parse-file", {"text": "x"})
+    assert plain.status_code == 422
+    assert plain.json()["details"]["reason"] == "multipart_required"
+    await web.login(["ACCOUNTANT"])
+    refused = await web.client.post(
+        f"/api/v1/erp/calc/{ENCODED}/parse-file",
+        files={"file": ("заявка.txt", b"x", "text/plain")},
+        headers={"X-CSRF-Token": web.csrf},
+    )
+    assert refused.status_code == 403
+
+
 # --- план 1.5: «Как в прошлой заявке» --------------------------------------------------------
 
 
