@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Alert, App, AutoComplete, Button, Checkbox, Form, Input, Select } from "antd";
-import type { FormInstance } from "antd";
+import type { FormInstance, SelectProps } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -227,6 +227,16 @@ export function BankAccounts() {
   );
 }
 
+/**
+ * Выбор с поиском в обязательном поле формы: Form.Item ставит `aria-required` на корень antd Select (`div` без роли —
+ * axe aria-allowed-attr); обязательность и так видна в метке и проверяется правилом формы.
+ */
+function SearchSelect(props: SelectProps & { "aria-required"?: unknown }) {
+  const rest: SelectProps & { "aria-required"?: unknown } = { ...props };
+  delete rest["aria-required"];
+  return <Select {...rest} />;
+}
+
 function BankAccountForm({
   form,
   row,
@@ -298,7 +308,7 @@ function BankAccountForm({
           label={t("bank.currency")}
           rules={[{ required: true, message: t("required") }]}
         >
-          <Select
+          <SearchSelect
             showSearch
             optionFilterProp="label"
             loading={currencies.isPending}
