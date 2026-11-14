@@ -494,6 +494,31 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/letters/{letter_id}/co-executors": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Привлечь соисполнителя
+     * @description План 1.9: ответственный исполнитель сам привлекает соисполнителя — кто, что сделать, срок. Уровень один:
+     *     соисполнитель дальше не передаёт. Срок в прошлом — 422 `details.fields.due = due_in_past`; позже срока
+     *     ответственного — `after_responsible_due`; сам себя — `crm_user_id = self`; сотрудник уже работает с письмом —
+     *     `already_assigned`; не найден или отключён — `not_active_employee`. Не ответственный — 403 `not_responsible`; письмо не
+     *     `in_execution` — 409 `invalid_state`. Соисполнителю — `notice.requested` (вид `instruction_assigned`); его «Исполнено»
+     *     уходит ответственному (`letter_executed`, заголовок «Соисполнитель отчитался: …»). Журнал `instruction.co_executor_added`.
+     */
+    post: operations["addCoExecutor"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/letters/{letter_id}/close": {
     parameters: {
       query?: never;
@@ -2630,6 +2655,16 @@ export interface components {
        */
       acknowledged_at: string | null;
     };
+    CoExecutorIn: {
+      crm_user_id: number;
+      /** @description Что сделать */
+      text: string;
+      /**
+       * Format: date
+       * @description Не раньше сегодня и не позже срока ответственного
+       */
+      due: string;
+    };
     LetterCloseIn: {
       /** @description Код действующего значения справочника `close-reasons` */
       reason: string;
@@ -4038,6 +4073,37 @@ export interface operations {
       };
       401: components["responses"]["Unauthorized"];
       404: components["responses"]["NotFound"];
+    };
+  };
+  addCoExecutor: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        letter_id: components["parameters"]["LetterId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CoExecutorIn"];
+      };
+    };
+    responses: {
+      /** @description Соисполнитель привлечён — карточка письма */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Letter"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationFailed"];
     };
   };
   closeLetterWithoutReply: {

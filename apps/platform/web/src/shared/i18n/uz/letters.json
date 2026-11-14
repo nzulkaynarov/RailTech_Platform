@@ -1242,6 +1242,15 @@
     "more": "Yana",
     "cancel": "Bekor qilish",
     "failed": "Bajarilmadi. Qayta urinib ko‘ring.",
+    "co": {
+      "action": "Hamijrochini jalb qilish",
+      "title": "{{number}}: hamijrochi",
+      "person": "Xodim",
+      "text": "Nima qilish kerak",
+      "due": "Muddat — sizdan kech emas",
+      "submit": "Jalb qilish",
+      "done": "Hamijrochi jalb qilindi: {{number}}"
+    },
     "close": {
       "action": "Javobsiz yopish",
       "title": "{{number}}: javobsiz yopish",

@@ -6,11 +6,15 @@ import { useAuth } from "../../../app/auth/useAuth";
 import { ApiError } from "../../../shared/api/errors";
 import type { LetterCard, LetterInstruction } from "../../../shared/api/generated/model";
 import {
+  addCoExecutor,
   closeLetterWithoutReply,
   reopenLetter,
   returnInstructionToAuthor,
   useListDictionaryItems,
+  useListEdsStaff,
 } from "../../../shared/api/generated/platform-bff";
+import { DateField } from "../../../shared/ui/DateField";
+import { companyDate } from "../inbox/api";
 import { localName } from "../dictionaries";
 import { useRefreshLetters } from "../inbox/api";
 
@@ -182,6 +186,101 @@ function ReturnDialog({
   );
 }
 
+/** План 1.9: «Привлечь соисполнителя» — кто, что сделать, срок не позже своего; отчёт придёт ответственному. */
+function CoExecutorDialog({
+  letter,
+  instruction,
+  onClose,
+}: {
+  letter: LetterCard;
+  instruction: LetterInstruction;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation("letters");
+  const { message } = App.useApp();
+  const refresh = useRefreshLetters();
+  const staff = useListEdsStaff({ query: { staleTime: 5 * 60_000 } });
+  const busy = new Set((letter.instructions ?? []).map((i) => i.person.id));
+  const [person, setPerson] = useState<string | undefined>();
+  const [text, setText] = useState("");
+  const [due, setDue] = useState<string | null>(instruction.due);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const run = async () => {
+    if (!person || !due || !text.trim()) return;
+    setPending(true);
+    setError(null);
+    try {
+      await addCoExecutor(letter.id, { person_id: person, text: text.trim(), due });
+      void message.success(t("outcome.co.done", { number: letter.number }));
+      onClose();
+      await refresh();
+    } catch (failure) {
+      setError(errorText(failure, t("outcome.failed")));
+    } finally {
+      setPending(false);
+    }
+  };
+  return (
+    <Modal
+      open
+      width={480}
+      title={t("outcome.co.title", { number: letter.number })}
+      onCancel={onClose}
+      footer={null}
+      destroyOnHidden
+    >
+      <div className="pf-mail-actions">
+        <label htmlFor="co-person">{t("outcome.co.person")}</label>
+        <Select
+          id="co-person"
+          showSearch
+          optionFilterProp="label"
+          value={person}
+          loading={staff.isPending}
+          options={(staff.data?.items ?? [])
+            .filter((p) => !busy.has(p.id))
+            .map((p) => ({
+              value: p.id,
+              label: p.position ? `${p.name} · ${p.position}` : p.name,
+            }))}
+          onChange={setPerson}
+        />
+        <label htmlFor="co-text">{t("outcome.co.text")}</label>
+        <Input.TextArea
+          id="co-text"
+          rows={3}
+          maxLength={2000}
+          value={text}
+          onChange={(event) => {
+            setText(event.target.value);
+          }}
+        />
+        <label htmlFor="co-due">{t("outcome.co.due")}</label>
+        <DateField
+          id="co-due"
+          value={due}
+          min={companyDate()}
+          max={instruction.due}
+          onChange={setDue}
+        />
+        {error ? <Alert type="error" showIcon role="alert" message={error} /> : null}
+        <div className="pf-res-actions">
+          <Button onClick={onClose}>{t("outcome.cancel")}</Button>
+          <Button
+            type="primary"
+            loading={pending}
+            disabled={!person || !due || !text.trim()}
+            onClick={() => void run()}
+          >
+            {t("outcome.co.submit")}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 /**
  * «Ещё» у поручения ответственного (решение владельца 2026-11-11): «Закрыть без ответа» и «Вернуть автору».
  * Соисполнителю исход письма не положен — меню нет.
@@ -194,7 +293,7 @@ export function OutcomeMenu({
   instruction: LetterInstruction;
 }) {
   const { t } = useTranslation("letters");
-  const [open, setOpen] = useState<"close" | "return" | null>(null);
+  const [open, setOpen] = useState<"close" | "return" | "co" | null>(null);
   if (instruction.role !== "responsible" || instruction.status !== "in_work") return null;
   const someoneDone = (letter.instructions ?? []).some((i) => i.status === "executed");
   return (
@@ -203,11 +302,12 @@ export function OutcomeMenu({
         trigger={["click"]}
         menu={{
           items: [
+            { key: "co", label: t("outcome.co.action") },
             { key: "close", label: t("outcome.close.action") },
             { key: "return", label: t("outcome.return.action"), disabled: someoneDone },
           ],
           onClick: ({ key }) => {
-            setOpen(key === "close" ? "close" : "return");
+            setOpen(key === "co" ? "co" : key === "close" ? "close" : "return");
           },
         }}
       >
@@ -216,6 +316,15 @@ export function OutcomeMenu({
       {open === "close" ? (
         <CloseDialog
           letter={letter}
+          onClose={() => {
+            setOpen(null);
+          }}
+        />
+      ) : null}
+      {open === "co" ? (
+        <CoExecutorDialog
+          letter={letter}
+          instruction={instruction}
           onClose={() => {
             setOpen(null);
           }}

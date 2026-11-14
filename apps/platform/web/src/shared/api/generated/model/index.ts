@@ -230,6 +230,7 @@ export * from "./clientRow";
 export * from "./clientRowHandoffStatus";
 export * from "./clientSees";
 export * from "./clientShort";
+export * from "./coExecutorIn";
 export * from "./colleague";
 export * from "./companyArticle";
 export * from "./companyArticleCreate";

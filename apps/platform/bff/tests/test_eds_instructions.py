@@ -629,3 +629,33 @@ async def test_reopen_needs_the_resolution_section(
     reopened = await web.send("POST", f"{CARD}/reopen")
     assert reopened.status_code == 200, reopened.text
     check(reopened, "/eds/letters/{id}/reopen", "post")
+
+
+# --- план 1.9: соисполнитель от ответственного -------------------------------------------------
+
+
+async def test_responsible_adds_a_co_executor_eds_decides(
+    web: Web, eds: EdsFake, check: ContractChecker
+) -> None:
+    eds.answer(
+        "POST", f"letters/{LETTER_ID}/co-executors", httpx.Response(200, json=office_letter())
+    )
+    assert (await web.login(["SUPPLY"])).status_code == 200
+
+    added = await web.send(
+        "POST",
+        f"{CARD}/co-executors",
+        json={"person_id": "6", "text": " Сверить тарифы ", "due": "2026-11-20"},
+    )
+    assert added.status_code == 200, added.text
+    check(added, "/eds/letters/{id}/co-executors", "post")
+    assert json.loads(eds.made("POST", f"letters/{LETTER_ID}/co-executors")[0].content) == {
+        "crm_user_id": 6,
+        "text": "Сверить тарифы",
+        "due": "2026-11-20",
+    }
+
+    bad = await web.send(
+        "POST", f"{CARD}/co-executors", json={"person_id": "x", "text": "a", "due": "2026-11-20"}
+    )
+    assert bad.status_code == 422
