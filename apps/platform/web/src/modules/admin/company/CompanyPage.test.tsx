@@ -355,9 +355,9 @@ describe("Бланк и бренд", () => {
     fireEvent.click(await button("Сохранить бланк"));
     expect(await screen.findByText("Сохранено")).toBeInTheDocument();
     const saved = readCompanyMock().brand.translations;
-    expect(saved.uz.legal_name).toBe("«Demo Temir Yo‘l» MChJ");
-    expect(saved.uz.signatory_position).toBe("Direktor");
-    expect(saved.en.footer_text).toBe("Tashkent, Uzbekistan");
+    expect(saved.uz?.legal_name).toBe("«Demo Temir Yo‘l» MChJ");
+    expect(saved.uz?.signatory_position).toBe("Direktor");
+    expect(saved.en?.footer_text).toBe("Tashkent, Uzbekistan");
   });
 
   it("вид документа переключает образец; сохранение уходит с изменённым полем", async () => {
