@@ -39,6 +39,19 @@ def _fake_html(during_render):
     return FakeHTML
 
 
+def _fake_rt_render(during_render):
+    """То же для документов на rt_docs (план 2.6): конкурирующая операция посреди рендера генератора."""
+
+    class Result:
+        pdf = b"%PDF-1.7 race test"
+
+    def render(*args, **kwargs):
+        during_render()
+        return Result()
+
+    return render
+
+
 @pytest.mark.django_db
 def test_quote_render_does_not_roll_back_client_acceptance(lookups, buyer_company, seller_company, deal):  # noqa: F811
     from crm.services.quotes import QuoteLifecycleService
@@ -75,7 +88,10 @@ def test_invoice_render_does_not_roll_back_payment(lookups, buyer_company, selle
             status=InvoiceStatus.objects.get(code="PAID"), amount_paid=invoice.total_incl_vat
         )
 
-    with patch("weasyprint.HTML", _fake_html(payment_arrives_mid_render)):
+    with (
+        patch("weasyprint.HTML", _fake_html(payment_arrives_mid_render)),
+        patch("rt_docs.pdf.render_pdf", _fake_rt_render(payment_arrives_mid_render)),
+    ):
         _render_pdf_for("invoice", invoice.id)
 
     invoice.refresh_from_db()
@@ -103,7 +119,7 @@ def test_act_render_does_not_roll_back_signature(lookups, buyer_company, seller_
     def client_signs_mid_render():
         Act.objects.filter(pk=act.pk).update(status=ActStatus.objects.get(code="SIGNED"))
 
-    with patch("weasyprint.HTML", _fake_html(client_signs_mid_render)):
+    with patch("rt_docs.pdf.render_pdf", _fake_rt_render(client_signs_mid_render)):
         _render_pdf_for("act", act.id)
 
     act.refresh_from_db()
