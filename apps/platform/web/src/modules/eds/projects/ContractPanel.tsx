@@ -372,7 +372,12 @@ function ContractBody({
         </ActionToggle>
       ) : null}
 
-      <SigningButton objectId={objectId} kind="contract" documentId={contract.id} />
+      {/* План 0.7 (FR-30): подписанный, отклонённый или отменённый договор на подпись не отправляют */}
+      {contract.status !== "signed" &&
+      contract.status !== "rejected" &&
+      contract.status !== "cancelled" ? (
+        <SigningButton objectId={objectId} kind="contract" documentId={contract.id} />
+      ) : null}
 
       <section aria-label={t("contract.history")}>
         <h3 className="pf-dec-subhead">{t("contract.history")}</h3>
