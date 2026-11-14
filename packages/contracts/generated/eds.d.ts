@@ -1658,7 +1658,8 @@ export interface components {
      *     маршрута служебной записки с суммой (решение архитектора). `bus.manage` (0.3.0, W13-A2) — «Журнал интеграций» шины:
      *     раздел `admin` каталога, уровень `full`. `files.upload` (D1-2b) — загрузить свой файл и читать свои файлы
      *     (письмо директору к «Создать заявку»): раздел `crm.clients`, уровень `full`. `signing.manage` (0.11.0, SIGN-2) — вести
-     *     реестр полномочий подписи: раздел `eds.signing.manage`, уровень `full`. В событиях шины (`identity`, `eds`) код — строка по шаблону
+     *     реестр полномочий подписи: раздел `eds.signing.manage`, уровень `full`. `approvals.visa_finance` и `approvals.visa_legal` (0.18.0, ADR-0025) — визы бухгалтера и юриста
+     *     маршрута подписи договора, счёта и акта: разделы `eds.visa.finance` и `eds.visa.legal`. В событиях шины (`identity`, `eds`) код — строка по шаблону
      *     `^[a-z_]+\.[a-z_]+$`, не перечень: новый код не ломает события v1.
      * @enum {string}
      */
@@ -1674,7 +1675,9 @@ export interface components {
       | "payments.confirm"
       | "bus.manage"
       | "files.upload"
-      | "signing.manage";
+      | "signing.manage"
+      | "approvals.visa_finance"
+      | "approvals.visa_legal";
     /** Format: uuid */
     Uuid: string;
     /** @description Имя подписчика шины (`crm`, `erp`, `platform-bff`) */

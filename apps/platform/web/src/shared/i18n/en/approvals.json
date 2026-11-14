@@ -190,10 +190,13 @@
     "hint": ""
   },
   "signing": {
-    "title": "Waiting for your signature",
+    "title": "Visas and signatures",
     "sign": "Sign",
+    "approve": "Approve",
     "reject": "Refuse",
+    "return": "Return with a remark",
     "rejectTitle": "Reason for refusal",
+    "returnTitle": "Remark",
     "reason": "Reason, visible to the author",
     "done": "Decision saved",
     "failed": "Could not save the decision"

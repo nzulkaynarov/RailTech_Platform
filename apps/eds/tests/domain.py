@@ -61,8 +61,19 @@ ROSTER: dict[str, Person] = {
     "accountant": Person(
         6,
         "Бахтиёр Бухгалтеров",
-        ["letters.read", "registry.read", "registry.export", "payments.confirm", "memos.create"],
-        {"eds.payments": "full", "eds.projects": "full", "erp.calc": "read"},
+        [
+            "letters.read",
+            "registry.read",
+            "registry.export",
+            "payments.confirm",
+            "memos.create",
+            "approvals.visa_finance",
+        ],
+        {"eds.payments": "full", "eds.projects": "full", "erp.calc": "read", "eds.visa.finance": "full"},
+    ),
+    # «Юрист» (ADR-0025): виза договора перед подписью.
+    "lawyer": Person(
+        13, "Лола Юристова", ["registry.read", "memos.create", "approvals.visa_legal"], {"eds.visa.legal": "full"}
     ),
     "supplier": Person(
         11, "Сардор Снабженцев", ["registry.read", "memos.create"], {"erp.calc": "full", "erp.calc.goods": "full"}
