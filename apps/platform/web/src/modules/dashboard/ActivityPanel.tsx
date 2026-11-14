@@ -34,7 +34,8 @@ function Row({ item }: { item: ActivityItem }) {
           <b style={{ fontWeight: 500 }}>{item.actor.name}</b>{" "}
           <span style={{ color: "#595959" }}>{text}</span>
         </span>
-        <span className="pf-hint" style={{ display: "block" }}>
+        {/* Номер объекта бывает длинным словом без пробелов (id из домена): переносится, а не раздвигает экран на 390 */}
+        <span className="pf-hint" style={{ display: "block", overflowWrap: "anywhere" }}>
           {hint}
         </span>
       </span>
