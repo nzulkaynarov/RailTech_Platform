@@ -70,10 +70,10 @@ describe("Письма на бланке (TPL-4)", () => {
     ).toBeInTheDocument();
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Вернуть по умолчанию" }));
-    const confirm = await screen.findByRole("dialog", {
-      name: "Вернуть «Деловое письмо» по умолчанию?",
-    });
-    fireEvent.click(within(confirm).getByRole("button", { name: "Вернуть по умолчанию" }));
+    // Подтверждение — окно поверх редактора: «Что произойдёт» и вторая кнопка «Вернуть по умолчанию»
+    expect(await screen.findByText(/Ваши правки пропадут/)).toBeInTheDocument();
+    const buttons = screen.getAllByRole("button", { name: "Вернуть по умолчанию" });
+    fireEvent.click(buttons[buttons.length - 1] as HTMLElement);
     expect(await screen.findByText("Шаблон возвращён")).toBeInTheDocument();
 
     fireEvent.change(within(dialog).getByLabelText("Текст (UZ)"), {
