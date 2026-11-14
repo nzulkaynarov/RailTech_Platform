@@ -58,7 +58,10 @@ export function TemplateCatalog() {
         row.languages.length === 0 ? (
           "—"
         ) : (
-          <span aria-label={row.languages.map((l) => l.toUpperCase()).join(", ")}>
+          <span>
+            <span className="pf-sr-only">
+              {row.languages.map((l) => l.toUpperCase()).join(", ")}
+            </span>
             {LANGS.map((lang) => (
               <span
                 key={lang}

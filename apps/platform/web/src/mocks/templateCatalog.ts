@@ -76,7 +76,7 @@ export const templateCatalogHandlers = [
         rows.push({
           id: `erp.email:${key}`,
           kind: "email",
-          name: first.subject || key,
+          name: first.subject.replace(/\{\{\s*[\w.]+\s*\}\}/g, "…") || key,
           domain: "erp",
           languages: langs(group.map((e) => e.language)),
           origin: "custom",

@@ -9,6 +9,7 @@
 """
 
 import asyncio
+import re
 from collections.abc import Awaitable, Callable
 from typing import Annotated, Any, Literal
 
@@ -61,6 +62,14 @@ class TemplateCatalog(BaseModel):
     sources: Sources
 
 
+_VARIABLE = re.compile(r"\{\{\s*[\w.]+\s*\}\}")
+
+
+def _title(subject: str) -> str:
+    """Тема письма как название: переменные шаблона `{{number}}` — многоточием."""
+    return " ".join(_VARIABLE.sub("…", subject).split())
+
+
 def _langs(values: Any) -> list[Lang]:
     present = {str(v) for v in values}
     return [lang for lang in LANGS if lang in present]
@@ -100,7 +109,7 @@ def _emails(payload: Any) -> list[TemplateRow]:
             TemplateRow(
                 id=f"erp.email:{key}",
                 kind="email",
-                name=str(first.get("subject") or key),
+                name=_title(str(first.get("subject") or "")) or key,
                 domain="erp",
                 languages=_langs(r.get("language") for r in group),
                 origin="custom",
