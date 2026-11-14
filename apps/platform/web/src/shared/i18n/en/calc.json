@@ -184,10 +184,14 @@
     "loading": "Loading past calculations…",
     "empty": "The client has no past calculations yet",
     "lines_one": "{{count}} row",
+    "lines_few": "{{count}} rows",
+    "lines_many": "{{count}} rows",
     "lines_other": "{{count}} rows",
     "copy": "Copy the rows",
     "done": "Rows added",
     "doneSkipped_one": "Rows added; a colleague adds {{count}} row of the other zone",
+    "doneSkipped_few": "Rows added; a colleague adds {{count}} rows of the other zone",
+    "doneSkipped_many": "Rows added; a colleague adds {{count}} rows of the other zone",
     "doneSkipped_other": "Rows added; a colleague adds {{count}} rows of the other zone"
   },
   "match": {
