@@ -285,6 +285,24 @@ class DeskPeoplePage(serializers.Serializer):
     results = DeskPerson(many=True)
 
 
+class DeskOrganization(serializers.Serializer):
+    """Организация-контрагент для поля «Организация» письма (пункт «Ш»)."""
+
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    inn = serializers.CharField(allow_null=True)
+    email = serializers.CharField(allow_null=True, help_text="Общая почта организации (`Company.email`)")
+    contact_person = serializers.CharField(allow_null=True, help_text="Контактное лицо — для строки «Кому»")
+    kind = serializers.ChoiceField(choices=["client", "partner"])
+
+
+class DeskOrganizationPage(serializers.Serializer):
+    count = serializers.IntegerField()
+    next = serializers.CharField(allow_null=True)
+    previous = serializers.CharField(allow_null=True)
+    results = DeskOrganization(many=True)
+
+
 class DeskPersonContacts(serializers.Serializer):
     """Телефон и почта одного человека контрагента (FR-11): Платформа открывает по нажатию и пишет показ в журнал."""
 

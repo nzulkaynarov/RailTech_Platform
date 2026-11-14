@@ -287,5 +287,18 @@
       "submit": "Close as lost",
       "done": "Request closed as lost, reservation released"
     }
+  },
+  "terms": {
+    "title": "Quote terms",
+    "edit": "Edit",
+    "payment": "Payment terms",
+    "validUntil": "Valid until",
+    "delivery": "Delivery time",
+    "deliveryDays": "Delivery time, days",
+    "note": "Delivery note",
+    "byLines": "By lines: {{count}} d",
+    "days": "{{count}} d",
+    "save": "Save",
+    "validUntilPast": "The date cannot be in the past."
   }
 }

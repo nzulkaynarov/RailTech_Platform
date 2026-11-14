@@ -25,6 +25,7 @@ from ..serializers.calc import (
     CalcParseInSerializer,
     CalcSheetSerializer,
     CalcTaskListSerializer,
+    CalcTermsPatchSerializer,
 )
 from ..services import calculation as calc
 from ..services.calculation import CalcError, LineInput
@@ -214,6 +215,29 @@ class CalcLineVisaView(RoleGatedViewMixin, APIView):
     def post(self, request, deal_id: int, item_id: int):
         try:
             return Response(calc.sign_line(deal_id, item_id, request.user))
+        except CalcError as exc:
+            return _fail(exc)
+
+
+class CalcTermsView(RoleGatedViewMixin, APIView):
+    """PATCH /api/v1/calc/<deal_id>/terms/ — условия КП: оплата, срок действия, срок поставки (FR-16)."""
+
+    permission_classes = [IsAuthenticated]
+    required_permissions = {"PATCH": "quote.build"}
+
+    @extend_schema(
+        operation_id="calc_terms_update",
+        summary="Изменить условия КП (черновик)",
+        tags=TAGS,
+        request=CalcTermsPatchSerializer,
+        responses={200: CalcSheetSerializer, **ERRORS},
+    )
+    def patch(self, request, deal_id: int):
+        serializer = CalcTermsPatchSerializer(data=request.data, partial=True)
+        if not serializer.is_valid():
+            return _invalid(serializer)
+        try:
+            return Response(calc.update_terms(deal_id, request.user, dict(serializer.validated_data)))
         except CalcError as exc:
             return _fail(exc)
 

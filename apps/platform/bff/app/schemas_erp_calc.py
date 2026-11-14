@@ -79,6 +79,16 @@ class CalcRequestText(BaseModel):
     lines: int
 
 
+class CalcTerms(BaseModel):
+    """Условия КП (FR-16): то, что клиент увидит в КП, PDF и кабинете."""
+
+    payment_terms: str | None
+    valid_until: dt.date | None
+    delivery_days: int | None
+    delivery_days_lines: int
+    delivery_note: str | None
+
+
 class CalcQuote(BaseModel):
     number: str | None
     version: int
@@ -90,6 +100,7 @@ class CalcQuote(BaseModel):
     reject_reason: str | None = None
     can_revise: bool = False
     vat_rate: str
+    terms: CalcTerms | None = None
 
 
 class CalcStock(BaseModel):
@@ -262,6 +273,15 @@ class CalcLinePatch(BaseModel):
     kind: Literal["goods", "service"] | None = None
 
 
+class CalcTermsPatch(BaseModel):
+    model_config = _STRICT
+
+    payment_terms: str | None = Field(default=None, max_length=255)
+    valid_until: dt.date | None = None
+    delivery_days: int | None = Field(default=None, ge=0, le=3650)
+    delivery_note: str | None = Field(default=None, max_length=255)
+
+
 class CalcLostIn(BaseModel):
     model_config = _STRICT
 
@@ -363,6 +383,11 @@ def zones_of(access: Mapping[str, str]) -> set[str]:
     return {zone for zone, section in ZONE_SECTIONS.items() if access.get(section) == "full"}
 
 
+def _terms(raw: Any) -> dict[str, CalcTerms]:
+    """Условия КП, если ERP их прислал (старый ERP — без ключа `terms`)."""
+    return {"terms": CalcTerms(**raw)} if isinstance(raw, dict) else {}
+
+
 def to_sheet(raw: dict[str, Any], fields: Collection[str], access: Mapping[str, str]) -> CalcSheet:
     """Расчёт ERP -> ответ Платформы; поля с ограничением — только тем, кто их видит. Итоги
     себестоимости и наценки — только `cost_margin`; «только итоги» (`totals_only`, бухгалтер) — цены
@@ -409,6 +434,7 @@ def to_sheet(raw: dict[str, Any], fields: Collection[str], access: Mapping[str, 
             reject_reason=quote.get("reject_reason"),
             can_revise=quote.get("can_revise") is True,
             vat_rate=quote["vat_rate"],
+            **_terms(quote.get("terms")),
         ),
         lines=[_line(item, cost=cost, zones=zones, offers=offers) for item in raw["lines"]],
         totals=totals_model,

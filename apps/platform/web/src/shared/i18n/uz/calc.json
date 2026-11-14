@@ -287,5 +287,18 @@
       "submit": "Arizani rad bilan yopish",
       "done": "Ariza rad bilan yopildi, zaxira bekor qilindi"
     }
+  },
+  "terms": {
+    "title": "TT shartlari",
+    "edit": "O‘zgartirish",
+    "payment": "To‘lov shartlari",
+    "validUntil": "Amal qilish muddati",
+    "delivery": "Yetkazib berish muddati",
+    "deliveryDays": "Yetkazib berish muddati, kun",
+    "note": "Muddat bo‘yicha izoh",
+    "byLines": "Qatorlar bo‘yicha: {{count}} kun",
+    "days": "{{count}} kun",
+    "save": "Saqlash",
+    "validUntilPast": "Sana o‘tgan kun bo‘lishi mumkin emas."
   }
 }

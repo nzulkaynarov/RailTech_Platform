@@ -38,6 +38,7 @@ import { LetterPdfPanel } from "../documents/LetterPdfPanel";
 import { parseDocumentId, useRefreshDocuments } from "../documents/params";
 import { AttachmentsField } from "./AttachmentsField";
 import { DealField } from "./DealField";
+import { RecipientField } from "./RecipientField";
 import {
   type Attachment,
   EMPTY_FORM,
@@ -519,16 +520,19 @@ function DocumentForm({
                 label={t("documents:form.recipient.label")}
                 error={errors.recipient ? fieldText(t, "recipient") : undefined}
               >
-                <Input
+                <RecipientField
                   id={ids.recipient}
                   value={values.recipientName}
-                  maxLength={255}
-                  autoComplete="off"
-                  status={errors.recipient ? "error" : undefined}
-                  aria-invalid={errors.recipient || undefined}
-                  aria-describedby={describedBy(ids.recipient, false, Boolean(errors.recipient))}
-                  onChange={(event) => {
-                    set("recipientName", event.target.value);
+                  invalid={Boolean(errors.recipient)}
+                  describedBy={describedBy(ids.recipient, false, Boolean(errors.recipient))}
+                  onChange={(name) => {
+                    set("recipientName", name);
+                  }}
+                  onPick={(addressee) => {
+                    set("recipientName", addressee.name);
+                    if (addressee.inn) set("recipientInn", addressee.inn);
+                    if (addressee.email) set("recipientEmail", addressee.email);
+                    if (addressee.attention) set("recipientAttention", addressee.attention);
                   }}
                 />
               </Field>

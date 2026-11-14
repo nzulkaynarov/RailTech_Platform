@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.70.0
+  version: 0.71.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -10919,6 +10919,37 @@ paths:
         '409': {$ref: '#/components/responses/CalcConflict'}
         '503': {$ref: '#/components/responses/BackendUnavailable'}
 
+  /erp/calc/{number}/terms:
+    patch:
+      tags: [calc]
+      operationId: updateCalcTerms
+      summary: 'Расчёт · Условия КП'
+      description: >-
+        ERP `PATCH /calc/{deal_id}/terms/` (план 0.5, FR-16): условия оплаты, срок действия и срок поставки КП в черновике —
+        их видит клиент в КП, PDF и кабинете. Новый КП получает условия оплаты и срок действия из настроек компании. Визы
+        строк не снимаются. Пустой текст или `null` очищает значение; `delivery_days = null` — срок поставки по строкам.
+        Срок действия в прошлом — 422 `details.fields = [valid_until]`; КП у директора — 409. Раздел `erp.calc` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CalcNumberPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CalcTermsPatch'}
+      responses:
+        '200':
+          description: Расчёт по заявке
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CalcSheet'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/CalcConflict'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
   /erp/calc/{number}/ready:
     post:
       tags: [calc]
@@ -12451,6 +12482,34 @@ paths:
           $ref: '#/components/responses/CatalogConflict'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+  /eds/addressees:
+    get:
+      tags: [eds-documents]
+      operationId: searchEdsAddressees
+      summary: 'Письмо: адресат из контрагентов'
+      description: >-
+        ERP `parties/organizations/` (пункт «Ш» плана 2026-11-12): клиенты своей компании и партнёры по названию или ИНН,
+        первые 10. Название, ИНН, общая почта и контактное лицо организации — реквизиты для письма; своя компания не входит.
+        Ручной ввод адресата остаётся. Право `eds.memo.create` (полный доступ) — как у создания документа.
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Часть названия или ИНН
+          schema: {type: string, minLength: 2, maxLength: 100}
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdsAddresseeList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
   /people/contacts:
     get:
       tags: [chats]
@@ -18247,9 +18306,7 @@ components:
         min_margin_pct: {type: [string, 'null'], description: 'Порог маржи из резолюции, %'}
         payment_terms:
           type: [string, 'null']
-          description: >-
-            Условия оплаты. ERP хранит их на уровне компании, а не КП, и в снимке КП их нет — пока всегда `null`
-            (хвост в `docs/BACKLOG.md`)
+          description: Условия оплаты КП из ERP (план 0.5); не заданы — `null`
         valid_until: {type: [string, 'null'], format: date, description: Срок действия КП}
         supplier_price_until:
           type: [string, 'null']
@@ -23414,6 +23471,32 @@ components:
             Клиент отклонил КП, заявка в расчёте и у сотрудника право `quote.build`: доступны «Новая версия КП»
             (`newCalcQuoteVersion`) и «Отказ по заявке» (`loseCalcRequest`)
         vat_rate: {$ref: '#/components/schemas/DecimalString'}
+        terms: {$ref: '#/components/schemas/CalcTerms'}
+
+    CalcTerms:
+      type: object
+      additionalProperties: false
+      required: [payment_terms, valid_until, delivery_days, delivery_days_lines, delivery_note]
+      description: Условия КП (FR-16) — то, что клиент увидит в КП, PDF и кабинете
+      properties:
+        payment_terms: {type: [string, 'null'], description: 'Условия оплаты; новый КП — из настроек компании'}
+        valid_until: {type: [string, 'null'], format: date, description: КП действует до}
+        delivery_days:
+          type: [integer, 'null']
+          minimum: 0
+          description: 'Срок поставки КП, дней; null — максимум по строкам (`delivery_days_lines`)'
+        delivery_days_lines: {type: integer, minimum: 0, description: 'Максимальный срок строк-товаров, дней'}
+        delivery_note: {type: [string, 'null'], description: 'Уточнение по срокам («в наличии», «под заказ»)'}
+
+    CalcTermsPatch:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        payment_terms: {type: [string, 'null'], maxLength: 255}
+        valid_until: {type: [string, 'null'], format: date}
+        delivery_days: {type: [integer, 'null'], minimum: 0, maximum: 3650}
+        delivery_note: {type: [string, 'null'], maxLength: 255}
 
     CalcLineKind:
       type: string
@@ -25312,6 +25395,26 @@ components:
         expired_count: {type: integer, minimum: 0, description: Действующих предложений с истёкшим сроком цены}
         expiring_count: {type: integer, minimum: 0, description: Срок цены истекает в ближайшие 14 дней}
         nearest_valid_until: {type: [string, 'null'], format: date}
+    EdsAddressee:
+      type: object
+      additionalProperties: false
+      required: [id, name, inn, email, attention, kind]
+      description: Организация-контрагент для поля «Организация» письма; `attention` — контактное лицо для строки «Кому».
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        name: {type: string}
+        inn: {type: [string, 'null']}
+        email: {type: [string, 'null']}
+        attention: {type: [string, 'null']}
+        kind: {type: string, enum: [client, partner]}
+    EdsAddresseeList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/EdsAddressee'}
     CounterpartyPerson:
       type: object
       additionalProperties: false

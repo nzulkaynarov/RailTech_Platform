@@ -202,6 +202,13 @@ class Quote(models.Model):
         verbose_name=_("Действует до"),
         help_text=_("Дата окончания действия коммерческого предложения"),
     )
+    payment_terms = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        verbose_name=_("Условия оплаты"),
+        help_text=_("Условия оплаты этого КП; новый КП получает их из настроек компании"),
+    )
     notes = models.TextField(
         blank=True,
         verbose_name=_("Примечания"),

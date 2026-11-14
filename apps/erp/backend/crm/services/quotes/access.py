@@ -23,7 +23,7 @@ def apply_company_quote_defaults(quote: Quote, company: Optional[Company]) -> Qu
     Only fills fields the company has actually configured (non-None), and ONLY on a
     brand-new quote — never overwrites a value already set on the quote. Applied to:
     delivery_basis, quote cost_currency_default, vat_rate, margin_percent and
-    valid_until (= today + default_offer_validity_days). No-op when the company has no
+    valid_until (= today + default_offer_validity_days) and payment_terms. No-op when the company has no
     settings configured. Reads settings via a plain filter (no write on read).
     """
     # Every client КП is denominated in the national currency (UZS): the cost engine
@@ -70,6 +70,9 @@ def apply_company_quote_defaults(quote: Quote, company: Optional[Company]) -> Qu
     if settings_row.default_offer_validity_days is not None and quote.valid_until is None:
         quote.valid_until = timezone.localdate() + timedelta(days=settings_row.default_offer_validity_days)
         changed.append("valid_until")
+    if settings_row.default_payment_terms and not quote.payment_terms:
+        quote.payment_terms = settings_row.default_payment_terms
+        changed.append("payment_terms")
 
     if changed:
         quote.save(update_fields=[*changed, "updated_at"])
@@ -77,14 +80,14 @@ def apply_company_quote_defaults(quote: Quote, company: Optional[Company]) -> Qu
 
 
 def reapply_company_defaults(quote: Quote, company: Optional[Company]) -> list:
-    """Re-pull the CURRENT company defaults into an EXISTING КП, OVERWRITING the five
+    """Re-pull the CURRENT company defaults into an EXISTING КП, OVERWRITING the six
     default-backed fields (Odoo «Update Prices» / Salesforce CPQ «Recalculate» pattern).
 
     Unlike ``apply_company_quote_defaults`` — a create-time *fill-empties* helper whose
     guards make it a no-op on an already-configured КП — this is an explicit, user-triggered
     OVERWRITE so a seller who changed their CompanySettings after the КП was built can refresh
     it on demand. It touches ONLY: delivery_basis, cost_currency_default, vat_rate,
-    margin_percent and valid_until (= today + default_offer_validity_days). It never touches
+    margin_percent, valid_until (= today + default_offer_validity_days) and payment_terms. It never touches
     the locked presentation currency (quote_currency = UZS) or the manual FX overrides, and it
     only writes a field when the company has that default configured AND the КП's current value
     differs (so a no-diff reapply is a genuine no-op and reports nothing changed).
@@ -126,6 +129,9 @@ def reapply_company_defaults(quote: Quote, company: Optional[Company]) -> list:
         if quote.valid_until != new_valid_until:
             quote.valid_until = new_valid_until
             changed.append("valid_until")
+    if settings_row.default_payment_terms and quote.payment_terms != settings_row.default_payment_terms:
+        quote.payment_terms = settings_row.default_payment_terms
+        changed.append("payment_terms")
 
     if changed:
         quote.save(update_fields=[*changed, "updated_at"])

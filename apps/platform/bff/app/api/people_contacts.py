@@ -124,3 +124,55 @@ async def reveal_contacts(id: ContactId, authed: Reader) -> CounterpartyContacts
     return CounterpartyContacts(
         id=str(row.get("id", id)), phone=_text(row.get("phone")), email=_text(row.get("email"))
     )
+
+
+# --- «Ш»: адресат письма из контрагентов ---------------------------------------------------------
+
+Writer = Annotated[Authed, Depends(require("eds.memo.create", "full"))]
+
+
+class EdsAddressee(BaseModel):
+    """Организация-контрагент для поля «Организация» письма: реквизиты, не личные контакты."""
+
+    model_config = ConfigDict(extra="forbid")
+    id: str
+    name: str
+    inn: str | None
+    email: str | None
+    attention: str | None
+    kind: Kind
+
+
+class EdsAddresseeList(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    items: list[EdsAddressee]
+
+
+def to_addressee(row: dict[str, Any]) -> EdsAddressee:
+    return EdsAddressee(
+        id=str(row["id"]),
+        name=str(row.get("name") or ""),
+        inn=_text(row.get("inn")),
+        email=_text(row.get("email")),
+        attention=_text(row.get("contact_person")),
+        kind="client" if row.get("kind") == "client" else "partner",
+    )
+
+
+@router.get(
+    "/eds/addressees",
+    response_model=EdsAddresseeList,
+    operation_id="searchEdsAddressees",
+    tags=["eds-documents"],
+)
+async def search_addressees(
+    authed: Writer,
+    q: Annotated[str, Query(min_length=2, max_length=100)],
+) -> EdsAddresseeList:
+    """Клиенты и партнёры из ERP по названию или ИНН — первые 10; ручной ввод адресата остаётся."""
+    data = await ErpCompany(authed.call).data(
+        "GET", "parties/organizations/", params={"q": q, "page_size": 10}
+    )
+    return EdsAddresseeList(
+        items=[to_addressee(row) for row in rows_of(data) if "id" in row and row.get("name")]
+    )

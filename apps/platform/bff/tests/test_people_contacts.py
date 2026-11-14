@@ -124,3 +124,63 @@ async def test_no_journal_no_contacts(web: Web, be: Any) -> None:
     )
     assert response.status_code == 503
     assert "+9989" not in response.text
+
+
+# --- «Ш»: адресат письма из контрагентов ---------------------------------------------------------
+
+ORGS = {
+    "count": 2,
+    "next": None,
+    "previous": None,
+    "results": [
+        {
+            "id": 7,
+            "name": "ООО Клиент Юг",
+            "inn": "300000555",
+            "email": "office@yug.example.uz",
+            "contact_person": "Анвар Клиентов",
+            "kind": "client",
+        },
+        {
+            "id": 9,
+            "name": "ООО Изготовитель",
+            "inn": None,
+            "email": "",
+            "contact_person": None,
+            "kind": "partner",
+        },
+    ],
+}
+
+
+async def test_addressees_from_counterparties(web: Web, be: Any, check: ContractChecker) -> None:
+    await web.login(["MANAGER"])
+    router: respx.MockRouter = be.router
+    route = router.get(f"{API}/parties/organizations/").mock(
+        return_value=httpx.Response(200, json=ORGS)
+    )
+    response = await web.client.get("/api/v1/eds/addressees", params={"q": "ооо"})
+    assert response.status_code == 200, response.text
+    check(response, "/eds/addressees", "get")
+    first, second = response.json()["items"]
+    assert first == {
+        "id": "7",
+        "name": "ООО Клиент Юг",
+        "inn": "300000555",
+        "email": "office@yug.example.uz",
+        "attention": "Анвар Клиентов",
+        "kind": "client",
+    }
+    assert (second["inn"], second["email"], second["attention"]) == (None, None, None)
+    assert dict(route.calls.last.request.url.params) == {"q": "ооо", "page_size": "10"}
+
+
+async def test_addressees_need_two_letters(web: Web, be: Any) -> None:
+    await web.login(["MANAGER"])
+    response = await web.client.get("/api/v1/eds/addressees", params={"q": "о"})
+    assert response.status_code == 422
+
+
+async def test_addressees_need_a_session(web: Web) -> None:
+    response = await web.client.get("/api/v1/eds/addressees", params={"q": "ооо"})
+    assert response.status_code == 401

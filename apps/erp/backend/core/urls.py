@@ -36,7 +36,7 @@ from inventory.views import (
 from portal.desk.views import SupplierAccessViewSet
 from portal.desk.views_bank_changes import BankChangeDeskViewSet
 from portal.desk.views_partner_applications import PartnerApplicationDeskViewSet
-from portal.desk.views_people import PeopleDeskViewSet
+from portal.desk.views_people import OrganizationsDeskViewSet, PeopleDeskViewSet
 from portal.exceptions import portal_not_found
 from portal.public_views import (
     PublicDocumentView,
@@ -159,6 +159,7 @@ from crm.views.calc import (
     CalcSheetView,
     CalcStartView,
     CalcTaskListView,
+    CalcTermsView,
 )
 from master_data.dictionary_views import (
     DictionaryCatalogView,
@@ -195,6 +196,7 @@ router.register(r"catalog/items", ItemDeskViewSet, basename="desk-item")
 router.register(r"catalog/suppliers", SupplierDeskViewSet, basename="desk-supplier")
 router.register(r"catalog/supplier-access", SupplierAccessViewSet, basename="desk-supplier-access")
 router.register(r"parties/people", PeopleDeskViewSet, basename="desk-people")
+router.register(r"parties/organizations", OrganizationsDeskViewSet, basename="desk-organizations")
 router.register(r"catalog/partner-applications", PartnerApplicationDeskViewSet, basename="desk-partner-application")
 router.register(r"finance/bank-changes", BankChangeDeskViewSet, basename="desk-bank-change")
 router.register(r"catalog/field-proposals", ProposalDeskViewSet, basename="desk-field-proposal")
@@ -351,6 +353,7 @@ urlpatterns = (
         path("api/v1/calc/<int:deal_id>/lines/<int:item_id>/", CalcLineView.as_view(), name="calc-line"),
         path("api/v1/calc/<int:deal_id>/lines/<int:item_id>/visa/", CalcLineVisaView.as_view(), name="calc-line-visa"),
         path("api/v1/calc/<int:deal_id>/ready/", CalcReadyView.as_view(), name="calc-ready"),
+        path("api/v1/calc/<int:deal_id>/terms/", CalcTermsView.as_view(), name="calc-terms"),
         path("api/v1/calc/<int:deal_id>/new-version/", CalcNewVersionView.as_view(), name="calc-new-version"),
         path("api/v1/calc/<int:deal_id>/lost/", CalcLostView.as_view(), name="calc-lost"),
         path("api/v1/calc/<int:deal_id>/parse/", CalcParseView.as_view(), name="calc-parse"),
