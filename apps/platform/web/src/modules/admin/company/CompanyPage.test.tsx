@@ -240,6 +240,8 @@ describe("Admin · Компания: доступ и каркас", () => {
         name: "Шаблоны",
       }),
     );
+    // Раздел открывается на «Все шаблоны» (план 2.7): шаблоны документов — своя вкладка
+    fireEvent.click(await screen.findByRole("tab", { name: "Документы" }));
     fireEvent.click(await screen.findByRole("button", { name: "Открыть: Договор поставки (наш)" }));
     const viewer = await screen.findByRole("dialog", { name: "Шаблон документа" });
     expect(within(viewer).getByLabelText(/^Текст шаблона/)).toBeDisabled();
