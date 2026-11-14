@@ -1,7 +1,7 @@
 """Каталог версии 2 дословно — независимый от YAML эталон для тестов (не генерируется).
 
-Колонки — роли каталога: две системные (ADMIN, DIRECTOR) и шесть шаблонов (MANAGER, SUPPLY,
-ENGINEER, ACCOUNTANT; с P8 — роли пилота REGISTRAR и MANAGER_ALL); F — full, R — read,
+Колонки — роли каталога: две системные (ADMIN, DIRECTOR) и шаблоны (MANAGER, SUPPLY, ENGINEER,
+ACCOUNTANT; с P8 — роли пилота REGISTRAR и MANAGER_ALL; с ADR-0025 — LAWYER); F — full, R — read,
 H — скрыто. Менять вместе с `platform-rbac.yaml`: тесты падают, пока файл и эталон расходятся.
 Роли в Платформе — данные; эти восемь — только предустановки (ADR-0012).
 """
@@ -17,40 +17,44 @@ ROLES: Final = (
     "ACCOUNTANT",
     "REGISTRAR",
     "MANAGER_ALL",
+    "LAWYER",
 )
 SYSTEM: Final = ("ADMIN", "DIRECTOR")
 LEVELS: Final = {"F": "full", "R": "read", "H": "hidden"}
 RANK: Final = {"hidden": 0, "read": 1, "full": 2}
 
 MATRIX: Final[dict[str, str]] = {
-    "dashboard.queue": "FFFFFFFF",
-    "dashboard.summary": "HFHHHRHH",
+    "dashboard.queue": "FFFFFFFFF",
+    "dashboard.summary": "HFHHHRHHH",
     # D17G-1: делопроизводитель — лиды только чтение + разбор и передача (`crm.leads.triage`).
-    "crm.leads": "HRFHHHRF",
-    "crm.leads.triage": "HHHHHHFH",
+    "crm.leads": "HRFHHHRFH",
+    "crm.leads.triage": "HHHHHHFHH",
     # 0.3 (FR-10): вся очередь «Почты» без действий — директор.
-    "crm.mail": "HRHHHHHH",
+    "crm.mail": "HRHHHHHHH",
     # 0.3 (FR-13): снабженец видит в «Контрагентах» только партнёров — `crm.clients` у него нет.
-    "crm.clients": "HFFHRRRF",
-    "eds.inbox": "HFRHHRRR",
+    "crm.clients": "HFFHRRRFR",
+    "eds.inbox": "HFRHHRRRR",
     # P8: регистрация входящих отдельно от резолюции — директор (системная) и делопроизводитель.
-    "eds.inbox.register": "HFHHHHFH",
-    "eds.drafts": "HFRHHHHR",
-    "eds.projects": "HFRRRFRF",
-    "eds.payments": "HRRHHFHF",
-    "eds.memo.create": "FFFFFFFF",
-    "eds.memo.approve": "HFHHHHHH",
+    "eds.inbox.register": "HFHHHHFHH",
+    "eds.drafts": "HFRHHHHRH",
+    "eds.projects": "HFRRRFRFR",
+    "eds.payments": "HRRHHFHFH",
+    "eds.memo.create": "FFFFFFFFF",
+    "eds.memo.approve": "HFHHHHHHH",
     # SIGN-2: реестр полномочий подписи ведёт администратор (ADR-0024 п. 1).
-    "eds.signing.manage": "FHHHHHHH",
+    "eds.signing.manage": "FHHHHHHHH",
+    # ADR-0025: визы перед подписью — бухгалтер и менеджер-универсал (финансы), юрист (договор).
+    "eds.visa.finance": "HHHHHFHFH",
+    "eds.visa.legal": "HHHHHHHHF",
     # 0.3 (FR-7): менеджер ведёт расчёт и КП.
-    "erp.calc": "HFFFFRHF",
-    "erp.calc.goods": "HFHFHHHF",
-    "erp.calc.services": "HFHHFHHF",
-    "erp.stock": "HFRFFRHF",
-    "chats.internal": "FFFFFFFF",
-    "chats.external": "HRFHHFRF",
-    "admin": "FRHHHHHH",
-    "company.settings": "FFHHHHHH",
+    "erp.calc": "HFFFFRHFH",
+    "erp.calc.goods": "HFHFHHHFH",
+    "erp.calc.services": "HFHHFHHFH",
+    "erp.stock": "HFRFFRHFH",
+    "chats.internal": "FFFFFFFFF",
+    "chats.external": "HRFHHFRFH",
+    "admin": "FRHHHHHHH",
+    "company.settings": "FFHHHHHHH",
 }
 
 MODULE_OF: Final[dict[str, str]] = {
@@ -67,6 +71,7 @@ FIELDS: Final[dict[str, tuple[str, ...]]] = {
     "ACCOUNTANT": ("totals_only",),
     "REGISTRAR": (),
     "MANAGER_ALL": ("cost_margin", "supplier_prices"),
+    "LAWYER": ("totals_only",),
 }
 
 

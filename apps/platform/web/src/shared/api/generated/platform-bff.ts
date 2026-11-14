@@ -57,6 +57,8 @@ import type {
   BusRetryResult,
   CalcCatalogPage,
   CalcConflictResponse,
+  CalcCopyIn,
+  CalcCopyResult,
   CalcLinePatch,
   CalcLinesIn,
   CalcLostIn,
@@ -64,6 +66,7 @@ import type {
   CalcParseIn,
   CalcParseJob,
   CalcParseResult,
+  CalcPreviousPage,
   CalcRequestList,
   CalcSheet,
   CalcTermsPatch,
@@ -42399,6 +42402,273 @@ export const useParseCalcFile = <
   TContext
 > => {
   return useMutation(getParseCalcFileMutationOptions(options), queryClient);
+};
+
+export const getListCalcPreviousUrl = (number: string) => {
+  return `/api/v1/erp/calc/${number}/previous`;
+};
+
+/**
+ * План 1.5. ERP `GET /calc/{deal_id}/previous/`: прошлые заявки того же клиента с непустым расчётом, новые сверху, до 20; у каждой — число строк и первые три позиции. Раздел `erp.calc` — полный.
+ * @summary Расчёт · Прошлые расчёты клиента для «Как в прошлой заявке»
+ */
+export const listCalcPrevious = async (
+  number: string,
+  options?: Parameters<typeof http>[1],
+): Promise<CalcPreviousPage> => {
+  return http<CalcPreviousPage>(getListCalcPreviousUrl(number), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListCalcPreviousQueryKey = (number: string) => {
+  return [`/api/v1/erp/calc/${number}/previous`] as const;
+};
+
+export const getListCalcPreviousQueryOptions = <
+  TData = Awaited<ReturnType<typeof listCalcPrevious>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCalcPrevious>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListCalcPreviousQueryKey(number);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listCalcPrevious>>> = ({ signal }) =>
+    listCalcPrevious(number, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: number !== null && number !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof listCalcPrevious>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type ListCalcPreviousQueryResult = NonNullable<Awaited<ReturnType<typeof listCalcPrevious>>>;
+export type ListCalcPreviousQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useListCalcPrevious<
+  TData = Awaited<ReturnType<typeof listCalcPrevious>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCalcPrevious>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCalcPrevious>>,
+          TError,
+          Awaited<ReturnType<typeof listCalcPrevious>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCalcPrevious<
+  TData = Awaited<ReturnType<typeof listCalcPrevious>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCalcPrevious>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCalcPrevious>>,
+          TError,
+          Awaited<ReturnType<typeof listCalcPrevious>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCalcPrevious<
+  TData = Awaited<ReturnType<typeof listCalcPrevious>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCalcPrevious>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Расчёт · Прошлые расчёты клиента для «Как в прошлой заявке»
+ */
+
+export function useListCalcPrevious<
+  TData = Awaited<ReturnType<typeof listCalcPrevious>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCalcPrevious>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListCalcPreviousQueryOptions(number, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCopyCalcLinesUrl = (number: string) => {
+  return `/api/v1/erp/calc/${number}/copy`;
+};
+
+/**
+ * План 1.5. ERP `POST /calc/{deal_id}/copy/`: строки прошлого расчёта того же клиента — новыми строками черновика тем же путём, что ручные (цены партнёров — действующие сегодня). Копируются строки своей зоны (товары или услуги); `skipped` — сколько строк чужой зоны добавит коллега. Прошлая заявка ищется только среди прошлых расчётов клиента: другой номер — 404 `previous_not_found`. Раздел `erp.calc.goods` или `erp.calc.services` — полный.
+ * @summary Расчёт · «Как в прошлой заявке»: состав прошлого расчёта, цены сегодняшние
+ */
+export const copyCalcLines = async (
+  number: string,
+  calcCopyIn: CalcCopyIn,
+  options?: Parameters<typeof http>[1],
+): Promise<CalcCopyResult> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CalcCopyResult>(getCopyCalcLinesUrl(number), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(calcCopyIn),
+  });
+};
+
+export const getCopyCalcLinesMutationKey = () => ["copyCalcLines"] as const;
+
+export const getCopyCalcLinesMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CalcConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof copyCalcLines>>,
+    TError,
+    CopyCalcLinesMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof copyCalcLines>>,
+  TError,
+  CopyCalcLinesMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCopyCalcLinesMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof copyCalcLines>>,
+    CopyCalcLinesMutationVariables
+  > = (props) => {
+    const { number, data } = props ?? {};
+
+    return copyCalcLines(number, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CopyCalcLinesMutationResult = NonNullable<Awaited<ReturnType<typeof copyCalcLines>>>;
+export type CopyCalcLinesMutationBody = CalcCopyIn;
+export type CopyCalcLinesMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | CalcConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type CopyCalcLinesMutationVariables = { number: string; data: CalcCopyIn };
+
+/**
+ * @summary Расчёт · «Как в прошлой заявке»: состав прошлого расчёта, цены сегодняшние
+ */
+export const useCopyCalcLines = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CalcConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof copyCalcLines>>,
+      TError,
+      CopyCalcLinesMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof copyCalcLines>>,
+  TError,
+  CopyCalcLinesMutationVariables,
+  TContext
+> => {
+  return useMutation(getCopyCalcLinesMutationOptions(options), queryClient);
 };
 
 export const getListStockBalancesUrl = (params?: ListStockBalancesParams) => {

@@ -50,6 +50,7 @@ def sso_settings() -> Settings:
 
 
 ACCOUNTANT = [
+    "approvals.visa_finance",
     "letters.read",
     "memos.create",
     "payments.confirm",
@@ -96,7 +97,12 @@ async def test_director_gets_an_eds_token_with_the_document_codes(
     # журнал шины (`bus.manage`) — раздел `admin: full`, у директора `admin: read` (W13-A2)
     # «Счета и оплаты» у директора — read (D2-4): без подтверждения оплаты
     assert claims["permissions"] == sorted(
-        set(EDS_PERMISSIONS) - {"bus.manage", "signing.manage", "payments.confirm"}
+        set(EDS_PERMISSIONS)
+        - {"bus.manage", "signing.manage", "payments.confirm"}
+        - {
+            "approvals.visa_finance",
+            "approvals.visa_legal",
+        }  # ADR-0025: директор подписывает, не визирует
     )
 
 

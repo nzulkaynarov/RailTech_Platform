@@ -35,6 +35,7 @@ SECTIONS: dict[str, dict[str, str]] = {
         "eds.drafts": "read",
         "eds.projects": "full",
         "eds.payments": "full",
+        "eds.visa.finance": "full",  # ADR-0025: виза бухгалтера на пилоте
         "eds.memo.create": "full",
         "erp.calc": "full",
         "erp.calc.goods": "full",

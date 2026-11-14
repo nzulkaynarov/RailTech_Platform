@@ -5926,6 +5926,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/erp/calc/{number}/previous": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Прошлые расчёты клиента для «Как в прошлой заявке»
+     * @description План 1.5. ERP `GET /calc/{deal_id}/previous/`: прошлые заявки того же клиента с непустым расчётом, новые сверху, до 20; у каждой — число строк и первые три позиции. Раздел `erp.calc` — полный.
+     */
+    get: operations["listCalcPrevious"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/calc/{number}/copy": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · «Как в прошлой заявке»: состав прошлого расчёта, цены сегодняшние
+     * @description План 1.5. ERP `POST /calc/{deal_id}/copy/`: строки прошлого расчёта того же клиента — новыми строками черновика тем же путём, что ручные (цены партнёров — действующие сегодня). Копируются строки своей зоны (товары или услуги); `skipped` — сколько строк чужой зоны добавит коллега. Прошлая заявка ищется только среди прошлых расчётов клиента: другой номер — 404 `previous_not_found`. Раздел `erp.calc.goods` или `erp.calc.services` — полный.
+     */
+    post: operations["copyCalcLines"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/erp/stock/balances": {
     parameters: {
       query?: never;
@@ -10919,6 +10959,13 @@ export interface components {
       id: string;
       /** @enum {string} */
       kind: "quote" | "contract" | "invoice" | "act";
+      /**
+       * @description ADR-0025: шаг сотрудника — виза (бухгалтер, юрист) или подпись
+       * @enum {string}
+       */
+      action: "visa" | "sign";
+      /** @description Подпись шага словами, например «Виза бухгалтера» или «Подписать» */
+      step: string;
       number: string;
       title: string;
       amount: string | null;
@@ -10930,8 +10977,11 @@ export interface components {
       items: components["schemas"]["SigningApprovalRow"][];
     };
     SigningDecisionIn: {
-      /** @enum {string} */
-      decision: "approve" | "reject";
+      /**
+       * @description Виза — approve («Согласовать») или return («Вернуть с замечанием»); подпись — approve или reject. У reject и return нужен comment
+       * @enum {string}
+       */
+      decision: "approve" | "reject" | "return";
       comment?: string;
     };
     /**
@@ -13810,6 +13860,29 @@ export interface components {
        * @description Файл заявки — docx, xlsx, xls, pdf, png, jpg, webp, csv, txt, tsv; до 10 МБ
        */
       file: string;
+    };
+    CalcPrevious: {
+      /** @description Номер прошлой заявки (ЗВ-…) */
+      number: string;
+      title: string;
+      /** Format: date-time */
+      created_at: string;
+      /** @description Сколько строк скопируется */
+      lines: number;
+      /** @description Первые три позиции */
+      names: string[];
+    };
+    CalcPreviousPage: {
+      items: components["schemas"]["CalcPrevious"][];
+    };
+    CalcCopyIn: {
+      /** @description Номер прошлой заявки (ЗВ-…) */
+      source: string;
+    };
+    CalcCopyResult: {
+      sheet: components["schemas"]["CalcSheet"];
+      /** @description Строки чужой зоны — их добавит коллега */
+      skipped: number;
     };
     CalcParseJob: {
       job_id: string;
@@ -26869,6 +26942,69 @@ export interface operations {
       409: components["responses"]["CalcConflict"];
       422: components["responses"]["ValidationFailed"];
       429: components["responses"]["TooManyRequests"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listCalcPrevious: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Номер заявки `ЗВ-ГГГГ-NNN` (как в списке «Заявки в расчёте») */
+        number: components["parameters"]["CalcNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Прошлые расчёты */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalcPreviousPage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  copyCalcLines: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер заявки `ЗВ-ГГГГ-NNN` (как в списке «Заявки в расчёте») */
+        number: components["parameters"]["CalcNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CalcCopyIn"];
+      };
+    };
+    responses: {
+      /** @description Строки добавлены */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalcCopyResult"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["CalcConflict"];
+      422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
     };
   };
