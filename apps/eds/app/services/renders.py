@@ -112,7 +112,7 @@ async def build_payload(session: AsyncSession, document: Document) -> tuple[dict
     final = is_final(document)
     directory = await load_directory(session, [document.author_crm_user_id])
     name = (document.signatory_name or head.signatory_name).strip()
-    position = (document.signatory_position or head.signatory_position).strip()
+    position = (document.signatory_position or letterhead.text(head, "signatory_position", lang)).strip()
     addressee = [line for line in (document.recipient_attention, document.recipient_name) if line and line.strip()]
     basis_text = document.signatory_basis_text if final else None
     verification_code = document.verification_code if final else None
@@ -134,9 +134,9 @@ async def build_payload(session: AsyncSession, document: Document) -> tuple[dict
             "verification_url": verification_url,
         },
         "letterhead": {
-            "company_name": head.company_name,
+            "company_name": letterhead.text(head, "company_name", lang),
             "requisites": letterhead.requisites(head, lang),
-            "footer": letterhead.footer(head),
+            "footer": letterhead.footer(head, lang),
             "accent": head.accent_color or DEFAULT_ACCENT,
             "font": head.font_family,
         },
@@ -145,6 +145,66 @@ async def build_payload(session: AsyncSession, document: Document) -> tuple[dict
     if not final:
         payload["draft"] = True  # ключ только у проекта: у итогового ввод и хеш прежние (SIGN-1)
     return payload, head.logo_sha256
+
+
+async def request_preview(session: AsyncSession, body: dict[str, Any]) -> DocumentRender:
+    """Предпросмотр шаблона (TPL-4): тело на бланке без документа — проект с подписантом бланка, та же очередь и
+    тот же кэш по хешу ввода, что у писем; нет бланка — 409 `letterhead_missing`."""
+    head = await letterhead.current(session)
+    if head is None:
+        raise conflict("letterhead_missing", LETTERHEAD_MISSING)
+    lang = str(body.get("lang") or "ru")
+    payload: dict[str, Any] = {
+        "renderer": RENDERER_VERSION,
+        "layout": LAYOUT,
+        "body": _with_signature(
+            body, head.signatory_name.strip(), letterhead.text(head, "signatory_position", lang).strip()
+        ),
+        "meta": {
+            "number": None,
+            "date": None,
+            "addressee": [],
+            "reply_to": None,
+            "executor": None,
+            "basis_text": None,
+            "verification_code": None,
+            "verification_url": None,
+        },
+        "letterhead": {
+            "company_name": letterhead.text(head, "company_name", lang),
+            "requisites": letterhead.requisites(head, lang),
+            "footer": letterhead.footer(head, lang),
+            "accent": head.accent_color or DEFAULT_ACCENT,
+            "font": head.font_family,
+        },
+        "logo_sha256": head.logo_sha256,
+        "draft": True,
+        "preview": True,  # выдаётся по хешу только такой рендер — черновик чужого письма так не получить
+    }
+    render_hash = digest(payload)
+    now = clock.now()
+    await session.execute(
+        insert(DocumentRender)
+        .values(
+            hash=render_hash,
+            status="pending",
+            final=False,
+            payload=payload,
+            logo_sha256=head.logo_sha256,
+            attempts=0,
+            created_at=now,
+        )
+        .on_conflict_do_nothing(index_elements=["hash"])
+    )
+    row = (
+        await session.execute(select(DocumentRender).where(DocumentRender.hash == render_hash).with_for_update())
+    ).scalar_one()
+    if row.status == "failed":
+        row.status, row.error, row.created_at, row.finished_at = "pending", None, now, None
+    if row.status == "pending":
+        _pending(session).append(render_hash)
+    await session.flush()
+    return row
 
 
 def _pending(session: AsyncSession) -> list[str]:

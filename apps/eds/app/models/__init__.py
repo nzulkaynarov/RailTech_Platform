@@ -10,6 +10,7 @@ from app.models.files import FileVersion, StoredFile
 from app.models.idempotency import IdempotencyKey
 from app.models.instructions import Acquaintance, Instruction, InstructionExtension
 from app.models.journal import JournalEntry
+from app.models.letter_templates import LetterTemplate
 from app.models.letterhead import DocumentMailing, DocumentRender, Letterhead, LetterheadLogo
 from app.models.letters import Letter
 from app.models.numbering import NumberCounter, NumberLabel
@@ -37,6 +38,7 @@ __all__ = [
     "InstructionExtension",
     "JournalEntry",
     "Letter",
+    "LetterTemplate",
     "Letterhead",
     "LetterheadLogo",
     "NumberCounter",

@@ -38,6 +38,7 @@ from app.api import (
     eds_projects,
     eds_resolution_templates,
     eds_signing,
+    eds_templates,
     erp_calc,
     erp_catalog,
     erp_docs,
@@ -165,6 +166,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(dashboard.router, prefix=API_PREFIX)
     app.include_router(notifications.router, prefix=API_PREFIX)
     app.include_router(search.router, prefix=API_PREFIX)
+    app.include_router(eds_templates.router, prefix=API_PREFIX)
     app.include_router(events.router, prefix=API_PREFIX)
     # Приёмник шины rt_bus: POST /bus/v1/events (подпись пары издатель → platform-bff).
     app.include_router(bus_router(create_receiver(hub)))

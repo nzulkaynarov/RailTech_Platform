@@ -23,17 +23,26 @@ vi.mock("../../../shared/ui/BodyEditor/BodyEditor", async () => {
     BodyEditor: ({
       id,
       label,
+      value,
+      revision = 0,
       onChange,
       invalid,
       describedBy,
     }: {
       id: string;
       label: string;
+      value: { content?: { content?: { text?: string }[] }[] };
+      revision?: number;
       onChange: (doc: unknown) => void;
       invalid?: boolean;
       describedBy?: string;
     }) => (
+      // Замена тела снаружи (помощник письма, план 1.4) — как у редактора: поле берёт `value` при смене revision
       <textarea
+        key={revision}
+        defaultValue={(value.content ?? [])
+          .map((block) => (block.content ?? []).map((node) => node.text ?? "").join(""))
+          .join("\n\n")}
         id={id}
         aria-label={label}
         aria-invalid={invalid || undefined}
@@ -141,6 +150,37 @@ describe("EDS · Создать документ: форма", () => {
     expect(screen.getByRole("button", { name: "Зарегистрировать и отправить" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Отправить на согласование" })).toBeNull();
     expect(screen.getByRole("region", { name: "PDF на бланке" })).toBeVisible();
+  });
+
+  it("помощник письма (план 1.4): «Подготовить текст» вставляет черновик, «Перевести на английский» — с обратным переводом", async () => {
+    await openForm("director@demo.example", "?type=letter");
+    step(/Текст и вложения/);
+    fireEvent.click(screen.getByRole("button", { name: "Подготовить текст" }));
+    const draft = await screen.findByRole("dialog", { name: "Подготовить текст письма" });
+    fireEvent.change(within(draft).getByLabelText("О чём письмо"), {
+      target: { value: "Подтвердить срок поставки" },
+    });
+    fireEvent.click(within(draft).getByRole("button", { name: "Подготовить" }));
+    await screen.findByText("Текст вставлен — проверьте его");
+    await waitFor(() => {
+      expect(screen.getByRole("textbox", { name: "Текст" })).toHaveTextContent(
+        "Просим подтвердить срок поставки.",
+      );
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Перевести на английский" }));
+    const translate = await screen.findByRole("dialog", { name: "Перевод на английский" });
+    const back = await within(translate).findByRole("region", {
+      name: "Обратный перевод — проверьте смысл",
+    });
+    expect(within(back).getByText(/Просим подтвердить срок поставки/)).toBeInTheDocument();
+    fireEvent.click(within(translate).getByRole("button", { name: "Вставить перевод" }));
+    await waitFor(() => {
+      expect(screen.getByRole("textbox", { name: "Текст" })).toHaveTextContent(
+        "Please confirm the delivery date.",
+      );
+    });
+    expect(screen.queryByRole("button", { name: "Перевести на английский" })).toBeNull();
   });
 
   it("у роли без права регистрировать письмо готовит черновик и передаёт его на регистрацию (B-P8B-4)", async () => {
