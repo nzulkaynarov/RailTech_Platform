@@ -108,3 +108,21 @@
     grid-column: 1 / -1;
   }
 }
+
+/* План 1.4: помощник письма под редактором; перевод и обратный перевод рядом */
+.pf-new-assist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.pf-new-assist-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.pf-new-assist-text {
+  white-space: pre-wrap;
+}
