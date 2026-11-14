@@ -119,7 +119,7 @@ def test_act_render_does_not_roll_back_signature(lookups, buyer_company, seller_
     def client_signs_mid_render():
         Act.objects.filter(pk=act.pk).update(status=ActStatus.objects.get(code="SIGNED"))
 
-    with patch("weasyprint.HTML", _fake_html(client_signs_mid_render)):
+    with patch("rt_docs.pdf.render_pdf", _fake_rt_render(client_signs_mid_render)):
         _render_pdf_for("act", act.id)
 
     act.refresh_from_db()

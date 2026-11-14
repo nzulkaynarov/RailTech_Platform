@@ -633,6 +633,22 @@ def _render_act_pdf(act) -> None:
 
     frozen_body = act.frozen_template_body
     act_template = None if frozen_body else company_template_for(supplier, "ACT")
+    from .documents import rt_documents
+
+    if rt_documents.enabled("act"):
+        # План 2.6: акт на общем генераторе rt_docs — по шаблону компании, замороженной редакции или образцу.
+        from core.seeds.documents import ACT_BODY
+
+        pdf = rt_documents.act_pdf(
+            act,
+            totals,
+            act_brand,
+            draft=is_draft,
+            body_html=frozen_body or (act_template.body_html if act_template is not None else ACT_BODY),
+        )
+        save_rendered_pdf(act, f"Act_{act.number}.pdf", ContentFile(pdf))
+        remember_pdf_state("act", act.pk, is_draft)
+        return
     if frozen_body or act_template is not None:
         html_string = render_to_string(
             "crm/act_pdf_templated.html",
