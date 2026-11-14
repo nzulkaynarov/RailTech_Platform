@@ -5,6 +5,8 @@ import type {
   AiDecisionIn,
   DocflowSettings,
   DocflowSettingsPatch,
+  LetterAssistIn,
+  LetterAssistSuggestion,
   LetterIntakeIn,
   LetterIntakeSuggestion,
 } from "../shared/api/generated/model";
@@ -82,7 +84,49 @@ export const DEMO_SUGGESTION: Omit<LetterIntakeSuggestion, "suggestion_id" | "so
   prompt_version: "demo00000001",
 };
 
+/** План 1.4: помощник письма — черновик по поручению и перевод с обратным переводом (без модели). */
+function paragraphs(lang: "ru" | "uz" | "en", lines: string[]): LetterAssistSuggestion["body"] {
+  return {
+    version: 1,
+    lang,
+    doc: {
+      type: "doc",
+      content: lines.map((text) => ({ type: "paragraph", content: [{ type: "text", text }] })),
+    },
+  };
+}
+
 export const letterIntakeHandlers = [
+  http.post("*/eds/letter-assist", async ({ request }) => {
+    const held = resources();
+    if (!held) return fail(401, "SESSION_EXPIRED", "Сессия истекла");
+    if (!allows(held, "eds.memo.create", "full")) {
+      return fail(403, "FORBIDDEN", "Раздел или действие не положены вашей роли.");
+    }
+    const body = (await request.json()) as LetterAssistIn;
+    const suggestion_id = "7b1c0d2e-3f4a-4b5c-8d6e-0f1a2b3c4d5e";
+    if (body.action === "draft") {
+      return HttpResponse.json<LetterAssistSuggestion>({
+        suggestion_id,
+        body: paragraphs(body.lang, [
+          "Уважаемые коллеги!",
+          `Просим ${(body.brief ?? "").trim().replace(/^[А-ЯЁ]/, (c) => c.toLowerCase())}.`,
+          "С уважением,",
+        ]),
+        back_translation: null,
+      });
+    }
+    return HttpResponse.json<LetterAssistSuggestion>({
+      suggestion_id,
+      body: paragraphs("en", [
+        "Dear colleagues!",
+        "Please confirm the delivery date.",
+        "Best regards,",
+      ]),
+      back_translation: "Уважаемые коллеги!\n\nПросим подтвердить срок поставки.\n\nС уважением,",
+    });
+  }),
+
   http.post("*/eds/letter-intake", async ({ request }) => {
     const held = resources();
     if (!held) return fail(401, "SESSION_EXPIRED", "Сессия истекла");
