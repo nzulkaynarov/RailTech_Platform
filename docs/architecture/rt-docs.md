@@ -46,7 +46,7 @@ fit: рендер → почти пустая последняя страниц�
 
 | Модуль | Что |
 |---|---|
-| `rt_docs` | `normalize_body`, `validate_body`, `validate_blocks`, `load_catalog`, `Catalog`, модели (`Letterhead`, `Logo`, `DocumentMeta`, `Money`, `Tuning`, `Layout`, `Density`, `PageStats`, `RenderResult`), форматтеры, `to_docx`, `html_to_body` — без системных библиотек |
+| `rt_docs` | `normalize_body`, `validate_body`, `validate_blocks`, `load_catalog`, `Catalog`, модели (`Letterhead`, `Logo`, `DocumentMeta`, `Money`, `Tuning`, `Layout`, `Density`, `PageStats`, `RenderResult`), форматтеры, `to_docx`, `html_to_body`, `markdown_to_body`, `body_to_markdown` — без системных библиотек |
 | `rt_docs.prepare` | `prepare(...)` → `Prepared` (нормализация, лимиты, схема тела и данных блоков, подстановка), `document_html` — HTML без pango |
 | `rt_docs.pdf` | `render_pdf(body, *, letterhead, layout, meta, values, blocks, tuning, highlight_missing, timeout_s=60)` → `RenderResult(pdf, stats, tuning, warnings, blocked_urls, passes)`; `render_prepared` — нужны pango и harfbuzz; превышение тайм-аута — `RenderTimeoutError`; другая мажорная версия WeasyPrint — ошибка при импорте |
 | `rt_docs.fit` | `fit(prepared, timeout_s=60)` → `FitResult(result, before, actions, passes)`; `apply_tuning(body, tuning)` — сохранить подгонку в теле |
@@ -127,6 +127,7 @@ WeasyPrint: заполненность последней = низ нижнег�
   переменная (`today` → `system.today`), `{{doc.*}}` → блок (абзац из одного токена — блок; токен посреди текста делит абзац),
   `h4` → заголовок 3, ссылки по белому списку. В отчёт: `style/class/id`, `hr`, картинки, `script/style`, вложенные таблицы,
   блоки внутри заголовка/списка/ячейки, неизвестные и некорректные коды. Используется миграцией D-DOC3.
+- **`markdown_to_body` и `body_to_markdown`** (план 1.3) — мост для черновика помощника: Markdown (CommonMark и таблицы GFM) разбирает `markdown-it-py` с выключенным сырым HTML, дальше — те же правила и отчёт `losses`, что у `html_to_body`; обратно — абзацы, заголовки, списки, таблицы, жирный, курсив, ссылки, `{{код}}` переменных и блоков. Подчёркивание, ширины колонок, выравнивание и разрыв страницы в Markdown не выражаются. Круг «Markdown → тело → Markdown → тело» тело не меняет (тест `tests/test_markdown.py`).
 
 ## 6. Разработка и проверка
 

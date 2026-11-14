@@ -53,4 +53,28 @@ describe("«Визы и подписи» (ADR-0025, план 0.8)", () => {
     expect(within(list).getByRole("button", { name: "Подписать" })).toBeVisible();
     expect(within(list).getByRole("button", { name: "Отказать" })).toBeVisible();
   });
+
+  it("сумма — с разрядами и словом валюты, а не «604800000.00 UZS» (план 0.7, FR-30)", async () => {
+    server.use(
+      http.get("*/api/v1/eds/signing-approvals", () =>
+        HttpResponse.json({
+          items: [
+            {
+              ...ROW,
+              kind: "act",
+              title: "Акт АКТ-2026/001",
+              amount: "604800000.00",
+              currency: "UZS",
+              action: "sign",
+              step: "Подписать",
+            },
+          ],
+        }),
+      ),
+    );
+    renderUi(<SigningList />);
+    const list = await screen.findByRole("list", { name: "Визы и подписи" });
+    expect(within(list).queryByText(/604800000\.00/)).toBeNull();
+    expect(within(list).getByText(/604\s800\s000\sсум/)).toBeVisible();
+  });
 });

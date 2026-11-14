@@ -8709,7 +8709,8 @@ export interface components {
       | "chat"
       | "ticket"
       | "integration"
-      | "supplier_order";
+      | "supplier_order"
+      | "partner_application";
     ObjectRef: {
       kind: components["schemas"]["ObjectKind"];
       /**
@@ -9159,6 +9160,10 @@ export interface components {
       | "problem_project"
       | "calc_task"
       | "supplier_overdue"
+      | "send_supplier_order"
+      | "partner_date_change"
+      | "receive_goods"
+      | "partner_application"
       | "confirm_payment"
       | "issue_invoice"
       | "issue_contract"
@@ -14692,8 +14697,11 @@ export interface components {
       summary: string;
       /** @enum {string} */
       urgency: "normal" | "urgent";
-      /** Format: uuid */
-      letter_file_id?: string | null;
+      /**
+       * Format: uuid
+       * @description Основание заявки — письмо или файл запроса, загруженный в EDS (`POST /files`); без него заявка не создаётся (план 0.4)
+       */
+      letter_file_id: string;
       consent?: {
         /** @enum {string} */
         method: "phone" | "email" | "paper";

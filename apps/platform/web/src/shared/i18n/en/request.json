@@ -28,14 +28,14 @@
     "hint": "What the client needs: items, volume, timing"
   },
   "letter": {
-    "label": "Letter addressed to the director",
-    "hint": "PDF, image or Office document up to 25 MB. Optional",
-    "uploading": "Uploading the letter…",
-    "uploaded": "Letter uploaded: {{name}}",
-    "remove": "Remove letter",
+    "label": "Letter or request file",
+    "hint": "PDF, image or Office document up to 25 MB",
+    "uploading": "Uploading the file…",
+    "uploaded": "Uploaded: {{name}}",
+    "remove": "Remove the file",
     "tooLarge": "The file is larger than 25 MB",
     "unsupported": "PDF, image or Office document only",
-    "failed": "Could not upload the letter: {{reason}}"
+    "failed": "Could not upload the file: {{reason}}"
   },
   "urgency": {
     "legend": "Urgency",
@@ -89,7 +89,8 @@
     "erp_not_configured": "The back office is not connected — contact the administrator",
     "not_lead_owner": "Another employee handles this lead",
     "telegram_linked_elsewhere": "The lead's Telegram is already linked to another client",
-    "letter_failed": "The letter was not uploaded — remove it or pick another file, otherwise the request goes without it",
+    "letter_required": "Attach the client's letter or request file",
+    "letter_failed": "The file did not upload — pick it again or another one",
     "request_not_failed": "The request is already being sent or was sent to the back office — refresh the card",
     "request_not_retryable": "Retrying will not help: the request data changed after sending — create the request again",
     "enqueue_failed": "Could not queue the sending — try again a bit later",

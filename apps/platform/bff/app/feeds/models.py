@@ -27,6 +27,7 @@ ObjectKind = Literal[
     "ticket",
     "integration",
     "supplier_order",
+    "partner_application",
 ]
 StepCode = Literal[
     "REQUEST", "RESOLUTION", "CALCULATION", "QUOTE", "CONTRACT", "PAYMENT", "DONE", "LOST"
@@ -45,6 +46,11 @@ QueueItemKind = Literal[
     "problem_project",
     "calc_task",
     "supplier_overdue",
+    # План 0.7 (FR-6): дела снабженца из ERP `/stock/tasks/`
+    "send_supplier_order",
+    "partner_date_change",
+    "receive_goods",
+    "partner_application",
     "confirm_payment",
     "issue_invoice",
     "issue_contract",

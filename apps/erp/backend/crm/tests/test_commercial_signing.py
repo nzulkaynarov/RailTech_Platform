@@ -128,6 +128,25 @@ def test_signed_document_cannot_be_sent_again(lookups, deal, seller_company):  #
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize(("code", "expected"), [("SIGNED", "ALREADY_SIGNED"), ("CANCELLED", "DOCUMENT_CLOSED")])
+def test_signed_or_cancelled_contract_is_not_sent_for_signing(
+    lookups, deal, seller_company, code, expected  # noqa: F811
+):
+    """Plan 0.7 (FR-30): «На подпись» on a contract signed by the parties or cancelled is refused."""
+    from sales.models import ContractStatus
+
+    from crm.services.signing_outbound import SigningRequestError, request_commercial_signing
+
+    seller = _seller(seller_company, f"closed-{code.lower()}@seller.test")
+    contract = _contract(deal, _sent_quote(deal, prepared_by=seller))
+    contract.status = ContractStatus.objects.get_or_create(code=code, defaults={"name": code})[0]
+    contract.save(update_fields=["status"])
+    with pytest.raises(SigningRequestError) as err:
+        request_commercial_signing(kind="contract", doc=contract, user=seller)
+    assert err.value.code == expected
+
+
+@pytest.mark.django_db
 def test_signature_is_applied_and_projection_written(lookups, deal, seller_company):  # noqa: F811
     from integration.services.eds_inbound import apply_signing_decided
 

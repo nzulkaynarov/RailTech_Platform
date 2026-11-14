@@ -7,11 +7,13 @@ import {
   useDecideSigningApproval,
   useListSigningApprovals,
 } from "../../../shared/api/generated/platform-bff";
+import { useFormat } from "../../../shared/lib/useFormat";
 import { useConfirmAction } from "../../../shared/ui/useConfirmAction";
 
 /** Документы ERP, ждущие подписи текущего сотрудника (SIGN-4): «Подписать» или «Отказать» с причиной. */
 export function SigningList() {
   const { t } = useTranslation("approvals");
+  const { money } = useFormat();
   const confirmAction = useConfirmAction();
   const { message } = App.useApp();
   const list = useListSigningApprovals();
@@ -41,7 +43,7 @@ export function SigningList() {
             <div className="pf-dec-card-head">
               <strong>{row.title}</strong>
               <span className="pf-hint">
-                {[row.step, row.amount ? `${row.amount} ${row.currency ?? ""}` : null]
+                {[row.step, row.amount ? money(row.amount, { currency: row.currency }) : null]
                   .filter(Boolean)
                   .join(" · ")}
               </span>

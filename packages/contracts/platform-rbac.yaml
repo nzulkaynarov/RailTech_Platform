@@ -509,6 +509,11 @@ queue:
   problem_project: { resource: eds.projects, level: full }
   calc_task: { resource: erp.calc, level: full }
   supplier_overdue: { resource: erp.stock, level: full }
+  # План 0.7 (FR-6): дела снабженца из ERP `/stock/tasks/` — черновик заказа, перенос даты партнёром, отгрузка, заявка на партнёрство
+  send_supplier_order: { resource: erp.stock, level: full }
+  partner_date_change: { resource: erp.stock, level: full }
+  receive_goods: { resource: erp.stock, level: full }
+  partner_application: { resource: erp.stock, level: full }
   confirm_payment: { resource: eds.payments, level: full }
   issue_invoice: { resource: eds.payments, level: full }
   issue_contract: { resource: eds.projects, level: full }

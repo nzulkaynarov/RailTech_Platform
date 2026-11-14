@@ -31,8 +31,9 @@ from supply.serializers import (
     PriceRequestSerializer,
     ReceiptInSerializer,
     ReceiptsSerializer,
+    SupplyTaskListSerializer,
 )
-from supply.services import orders, price_requests
+from supply.services import orders, price_requests, tasks
 
 from core.permissions import RoleGatedViewMixin
 
@@ -374,6 +375,24 @@ class OverdueListView(APIView):
     def get(self, request):
         try:
             return Response({"results": orders.overdue_orders(request.user)})
+        except StockError as exc:
+            return fail(exc)
+
+
+class SupplyTaskListView(APIView):
+    """GET /api/v1/stock/tasks/ — дела снабженца: черновики, переносы дат, отгрузки, заявки на партнёрство (план 0.7)."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        operation_id="stock_tasks_list",
+        summary="Дела снабженца",
+        tags=TAGS,
+        responses={200: SupplyTaskListSerializer, 403: ERRORS[403]},
+    )
+    def get(self, request):
+        try:
+            return Response({"results": tasks.supply_tasks(request.user)})
         except StockError as exc:
             return fail(exc)
 

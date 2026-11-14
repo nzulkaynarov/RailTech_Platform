@@ -29,7 +29,7 @@ export interface RequestFormIn {
    */
   summary: string;
   urgency: RequestFormInUrgency;
-  /** @nullable */
-  letter_file_id?: string | null;
+  /** Основание заявки — письмо или файл запроса, загруженный в EDS (`POST /files`); без него заявка не создаётся (план 0.4) */
+  letter_file_id: string;
   consent?: RequestFormInConsent;
 }

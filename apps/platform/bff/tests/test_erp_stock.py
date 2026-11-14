@@ -9,6 +9,7 @@ ERP — на respx; ответы BFF сверяются со схемами plat
 
 import json
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 import pytest
@@ -1119,3 +1120,83 @@ async def test_the_overdue_notification_opens_the_order(
         "title": "ООО Вымышленный Поставщик",
         "path": f"/erp/stock/{ORDER_ENCODED}",
     }
+
+
+# ── План 0.7 (FR-6): дела снабженца из ERP `/stock/tasks/` ────────────────────────────────────
+
+
+def supply_task_rows() -> list[dict[str, Any]]:
+    return [
+        {
+            "kind": "send_order",
+            "id": 40,
+            "number": "ЗП-2026-040",
+            "supplier_name": "ООО Вымышленный Поставщик",
+            "since": "2027-01-09T10:00:00+05:00",
+        },
+        {
+            "kind": "partner_date_change",
+            "id": 41,
+            "number": "ЗП-2026-041",
+            "supplier_name": "ООО Вымышленный Поставщик",
+            "since": "2027-01-09T11:00:00+05:00",
+            "date": "2027-01-25",
+            "note": "нет вагонов",
+        },
+        {
+            "kind": "receive_goods",
+            "id": 42,
+            "number": "ЗП-2026-042",
+            "supplier_name": "ООО Вымышленный Поставщик",
+            "since": "2027-01-09T12:00:00+05:00",
+            "note": "ТТН-5",
+        },
+        {
+            "kind": "partner_application",
+            "id": 7,
+            "number": None,
+            "supplier_name": "ООО Завод Металл",
+            "since": "2027-01-08T09:00:00+05:00",
+            "status": "candidate_agreed",
+        },
+    ]
+
+
+async def test_supply_tasks_are_queue_rows(
+    web: Web, fb: FeedBackends, check: ContractChecker
+) -> None:
+    fb.state["supply_tasks"] = {"results": supply_task_rows()}
+    await web.login(["SUPPLY"])
+
+    response = await web.client.get("/api/v1/queue")
+
+    assert response.status_code == 200, response.json()
+    check(response, "/queue", "get")
+    rows = {i["kind"]: i for i in response.json()["items"]}
+    assert rows["send_supplier_order"]["title"] == "Отправить заказ ЗП-2026-040 партнёру"
+    assert rows["send_supplier_order"]["object"]["path"] == "/erp/stock/" + quote(
+        "ЗП-2026-040", safe=""
+    )
+    assert rows["partner_date_change"]["title"] == "Партнёр просит перенести ЗП-2026-041 на 25.01"
+    assert "нет вагонов" in rows["partner_date_change"]["subtitle"]
+    assert rows["receive_goods"]["title"] == "Принять товар по ЗП-2026-042"
+    assert "накладная ТТН-5" in rows["receive_goods"]["subtitle"]
+    assert rows["partner_application"]["title"] == "Заявка на партнёрство: ООО Завод Металл"
+    assert rows["partner_application"]["object"] == {
+        "kind": "partner_application",
+        "number": "ООО Завод Металл",
+        "path": "/crm/clients?kind=applications",
+    }
+
+
+@pytest.mark.parametrize("role", ["MANAGER", "ACCOUNTANT"])
+async def test_supply_tasks_are_not_asked_for_roles_without_the_stock_section(
+    web: Web, fb: FeedBackends, role: str
+) -> None:
+    fb.state["supply_tasks"] = {"results": supply_task_rows()}
+    await web.login([role])
+    response = await web.client.get("/api/v1/queue")
+    assert not {"send_supplier_order", "receive_goods"} & {
+        i["kind"] for i in response.json()["items"]
+    }
+    assert fb.calls(fb.erp["supply_tasks"]) == 0

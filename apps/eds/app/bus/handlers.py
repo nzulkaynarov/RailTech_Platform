@@ -76,6 +76,9 @@ async def on_user_deactivated(event: Event, session: AsyncSession) -> None:
 async def on_project_document(event: Event, session: AsyncSession) -> None:
     data = ProjectDocumentEvent.model_validate(event.data)
     row = await project_documents.apply(session, event.type, data, moment=parse_time(event.time))
+    if row is not None:
+        # План 0.7 (FR-30): подписанный, принятый или отменённый документ уходит из «Ждут вашей подписи»
+        await commercial_signing.withdraw_finished(session, row.kind, row.erp_id, row.status)
     log.info(
         "project_document",
         event_type=event.type,
