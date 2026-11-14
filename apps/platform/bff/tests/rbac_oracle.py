@@ -1,7 +1,7 @@
 """Каталог версии 2 дословно — независимый от YAML эталон для тестов (не генерируется).
 
-Колонки — роли каталога: две системные (ADMIN, DIRECTOR) и шесть шаблонов (MANAGER, SUPPLY,
-ENGINEER, ACCOUNTANT; с P8 — роли пилота REGISTRAR и MANAGER_ALL; с ADR-0025 — LAWYER); F — full, R — read,
+Колонки — роли каталога: две системные (ADMIN, DIRECTOR) и шаблоны (MANAGER, SUPPLY, ENGINEER,
+ACCOUNTANT; с P8 — роли пилота REGISTRAR и MANAGER_ALL; с ADR-0025 — LAWYER); F — full, R — read,
 H — скрыто. Менять вместе с `platform-rbac.yaml`: тесты падают, пока файл и эталон расходятся.
 Роли в Платформе — данные; эти восемь — только предустановки (ADR-0012).
 """
@@ -43,7 +43,7 @@ MATRIX: Final[dict[str, str]] = {
     "eds.memo.approve": "HFHHHHHHH",
     # SIGN-2: реестр полномочий подписи ведёт администратор (ADR-0024 п. 1).
     "eds.signing.manage": "FHHHHHHHH",
-    # ADR-0025 (план 0.8): визы перед подписью — бухгалтер и менеджер-универсал (финансы), юрист (договор).
+    # ADR-0025: визы перед подписью — бухгалтер и менеджер-универсал (финансы), юрист (договор).
     "eds.visa.finance": "HHHHHFHFH",
     "eds.visa.legal": "HHHHHHHHF",
     # 0.3 (FR-7): менеджер ведёт расчёт и КП.

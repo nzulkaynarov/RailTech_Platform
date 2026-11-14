@@ -213,8 +213,8 @@ def test_menu_item_visible_if_any_section_is_visible(code: str) -> None:
 
 def test_menu_sections_exist_and_cover_every_section() -> None:
     covered = {s for items in MENU.values() for sections in items.values() for s in sections}
-    # Визы расчёта — возможности внутри экрана «Расчёт», визы договора, счёта и акта (ADR-0025) — блок
-    # «Визы и подписи» в «Задачах»: своего пункта меню у них нет.
+    # Визы расчёта — возможности внутри экрана «Расчёт», визы договора, счёта и акта (ADR-0025) —
+    # блок «Визы и подписи» в «Задачах»: своего пункта меню у них нет.
     assert set(MATRIX) - covered == {
         "erp.calc.goods",
         "erp.calc.services",
