@@ -229,6 +229,16 @@ def supplier_order_ref(number: str, supplier: str | None) -> ObjectRef:
     )
 
 
+def partner_application_ref(company: str) -> ObjectRef:
+    """Заявка на партнёрство (план 0.7): «Контакты → Контрагенты», фильтр «Заявки на
+    подключение»."""
+    return ObjectRef(
+        kind="partner_application",
+        number=company,
+        path="/crm/clients?kind=applications",
+    )
+
+
 def calc_ref(number: str, title: str | None) -> ObjectRef:
     """Задание на расчёт (D2-8): экран расчёта заявки `/erp/calc/ЗВ-…` — строки, визы, «Расчёт
     готов»."""

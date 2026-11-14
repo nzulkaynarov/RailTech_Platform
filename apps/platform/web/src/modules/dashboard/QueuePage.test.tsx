@@ -2,6 +2,7 @@ import { act, fireEvent, screen, waitFor, within } from "@testing-library/react"
 import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { seedDraftOrder } from "../../mocks/erpStock";
 import { MOCK_EDS_DOWN_KEY, MOCK_ERP_DOWN_KEY } from "../../mocks/feedHandlers";
 import { endSession } from "../../mocks/mockSession";
 import { usePanelsStore } from "../../app/shell/panelsStore";
@@ -171,6 +172,20 @@ describe("Dashboard · Моя очередь", () => {
     expect(within(row).getByRole("link", { name: /Открыть/ })).toHaveAttribute(
       "href",
       expect.stringMatching(/^\/erp\/stock\/%D0%97%D0%9F-\d{4}-029$/),
+    );
+  });
+
+  it("снабженец: черновик заказа партнёру — строка «Отправить заказ … партнёру» (план 0.7, FR-6)", async () => {
+    const number = seedDraftOrder();
+    signInAs("supply@demo.example");
+    renderApp("/dashboard/queue");
+    const page = await main();
+
+    const row = (await within(page).findByText(`Отправить заказ ${number} партнёру`)).closest("li");
+    if (!row) throw new Error("нет строки очереди");
+    expect(within(row).getByRole("link", { name: /Открыть/ })).toHaveAttribute(
+      "href",
+      `/erp/stock/${encodeURIComponent(number)}`,
     );
   });
 

@@ -16,7 +16,7 @@ import { computeAccess, type MockRole } from "./fixtures/roles";
 import { readSession, sessionRoles } from "./mockSession";
 import { inboundMailCards, inboundMailCounters, inboundMailQueueItems } from "./inboundMail";
 import { crmNotificationsOf, markCrmNoteRead, ticketQueueItems } from "./ticketsHandlers";
-import { stockQueueItems } from "./erpStock";
+import { stockQueueItems, supplyTaskQueueItems } from "./erpStock";
 import { erpWorkCards, erpWorkCounters, erpWorkQueueItems } from "./erpWork";
 import { edsDecisionQueueItems, quoteCounter, quotesToApprove } from "./edsQueue";
 import { coveredQueueItems } from "./profileStore";
@@ -141,6 +141,7 @@ function ownQueue(view: readonly MockRole[]): QueueItem[] {
     ...ticketQueueItems(view), // обращения живут в CRM, как и лиды
     ...inboundMailQueueItems(view), // W18A-P2: письма общего ящика ждут разбора (CRM)
     ...stockQueueItems(view), // просроченные заказы партнёрам (ERP, D2-2)
+    ...supplyTaskQueueItems(view), // план 0.7: черновики заказов партнёрам (ERP `/stock/tasks/`)
     ...registeredQueueItems(view), // P8: входящие, зарегистрированные делопроизводителем
     ...letterTaskQueueItems(view), // P8b: поручения, переносы, ознакомления
     ...erpWorkQueueItems(view), // D2-8: расчёт, счета и платёжки, договор и акт (ERP)
