@@ -94,7 +94,7 @@ from accounts.views.setup import SetupCompanyView, SetupStatusView
 from accounts.wizard import WIZARD_FORMS, CompanyWizardView
 from catalog.desk.views_items import ItemDeskViewSet, ProposalDeskViewSet, SupplierDeskViewSet
 from catalog.desk.views_people import BrigadeDeskViewSet
-from catalog.desk.views_refs import ExchangeRateListViewSet, HsCodeDeskViewSet
+from catalog.desk.views_refs import ExchangeRateListViewSet, HsCodeDeskViewSet, MxikSearchView
 from catalog.desk.views_tech_docs import DocumentKindDeskViewSet, TechDocDeskViewSet
 from catalog.views import (
     CategoryRequestViewSet,
@@ -377,6 +377,7 @@ urlpatterns = (
         path("api/v1/stock/orders/<int:order_id>/cancel/", OrderCancelView.as_view(), name="stock-order-cancel"),
         path("api/v1/stock/orders/<int:order_id>/receipts/", OrderReceiptView.as_view(), name="stock-order-receive"),
         path("api/v1/stock/receipts/", ReceiptListView.as_view(), name="stock-receipts"),
+        path("api/v1/master-data/mxik/", MxikSearchView.as_view(), name="master-data-mxik"),
         path("api/v1/stock/overdue/", OverdueListView.as_view(), name="stock-overdue"),
         path("api/v1/stock/tasks/", SupplyTaskListView.as_view(), name="stock-tasks"),
         path("api/v1/stock/price-requests/", PriceRequestListView.as_view(), name="stock-price-requests"),

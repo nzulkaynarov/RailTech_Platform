@@ -80,6 +80,7 @@ import type {
   CatalogItemReturn,
   CatalogItemUpdate,
   CatalogLookups,
+  CatalogMxikPage,
   CatalogOffer,
   CategoryProposalIn,
   CategoryRequest,
@@ -407,6 +408,7 @@ import type {
   SaveBotSettingBody,
   SearchCalcCatalogParams,
   SearchEdsAddresseesParams,
+  SearchMxikParams,
   SearchParams,
   SearchResult,
   SearchStockTraceParams,
@@ -53363,6 +53365,142 @@ export function useListCatalogExchangeRates<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getListCatalogExchangeRatesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getSearchMxikUrl = (params?: SearchMxikParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/erp/catalog/mxik?${stringifiedParams}`
+    : `/api/v1/erp/catalog/mxik`;
+};
+
+/**
+ * План 1.8. ERP `master-data/mxik/?q=` → классификатор Налогового комитета (tasnif.soliq.uz): до 10 позиций с кодом, названием, группой, единицей и упаковкой; меньше двух знаков — пусто. Классификатор не ответил — 503 `details.reason = mxik_unavailable`, код вводится вручную. Раздел `erp.stock` — чтение.
+ * @summary Товары · Подбор МХИК (ИКПУ) из классификатора
+ */
+export const searchMxik = async (
+  params?: SearchMxikParams,
+  options?: Parameters<typeof http>[1],
+): Promise<CatalogMxikPage> => {
+  return http<CatalogMxikPage>(getSearchMxikUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getSearchMxikQueryKey = (params?: SearchMxikParams) => {
+  return [`/api/v1/erp/catalog/mxik`, ...(params ? [params] : [])] as const;
+};
+
+export const getSearchMxikQueryOptions = <
+  TData = Awaited<ReturnType<typeof searchMxik>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: SearchMxikParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchMxik>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getSearchMxikQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof searchMxik>>> = ({ signal }) =>
+    searchMxik(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof searchMxik>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type SearchMxikQueryResult = NonNullable<Awaited<ReturnType<typeof searchMxik>>>;
+export type SearchMxikQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useSearchMxik<
+  TData = Awaited<ReturnType<typeof searchMxik>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params: undefined | SearchMxikParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchMxik>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchMxik>>,
+          TError,
+          Awaited<ReturnType<typeof searchMxik>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchMxik<
+  TData = Awaited<ReturnType<typeof searchMxik>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: SearchMxikParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchMxik>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchMxik>>,
+          TError,
+          Awaited<ReturnType<typeof searchMxik>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchMxik<
+  TData = Awaited<ReturnType<typeof searchMxik>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: SearchMxikParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchMxik>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Товары · Подбор МХИК (ИКПУ) из классификатора
+ */
+
+export function useSearchMxik<
+  TData = Awaited<ReturnType<typeof searchMxik>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: SearchMxikParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchMxik>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getSearchMxikQueryOptions(params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

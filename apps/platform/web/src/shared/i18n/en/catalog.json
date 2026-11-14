@@ -186,6 +186,7 @@
       "brand": "Manufacturer",
       "gost": "Standard / drawing",
       "hs": "HS code",
+      "mxik": "MXIK",
       "mpn": "Manufacturer part no.",
       "source": "Created from price list of",
       "origin": "Country of origin",
@@ -221,6 +222,9 @@
       "mpn": "Manufacturer part no.",
       "hs": "HS code",
       "hsHint": "2, 4, 6, 8 or 10 digits",
+      "mxik": "MXIK (IKPU)",
+      "mxikHint": "A word or code finds it in the classifier; or type the 17 digits",
+      "mxikDown": "The classifier does not answer — type the code by hand",
       "country": "Country of origin",
       "countryHintBrand": "Empty — manufacturer's country: {{country}}",
       "countryHintNone": "Empty — manufacturer's country",
@@ -960,7 +964,10 @@
       "It appears on the item card and in “Technical documents”.",
       "The “Visible to client” mark is saved; the client portal will show it later."
     ],
-    "editSteps": ["The changes are saved in the document.", "The file itself does not change."],
+    "editSteps": [
+      "The changes are saved in the document.",
+      "The file itself does not change."
+    ],
     "saved": "Document saved."
   },
   "queue": {

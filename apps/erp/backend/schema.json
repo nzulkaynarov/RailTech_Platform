@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "ERP API",
-        "version": "1.14.0",
+        "version": "1.17.0",
         "description": "ERP Platform API. Supports deal lifecycle management, quoting, product catalog (PIM), Excel imports, and real-time notifications via WebSocket.",
         "contact": {
             "name": "ERP API Support",
@@ -29833,6 +29833,59 @@
                 }
             }
         },
+        "/api/v1/master-data/mxik/": {
+            "get": {
+                "operationId": "master_data_mxik_search",
+                "description": "GET /api/v1/master-data/mxik/?q= — подбор МХИК (ИКПУ) из классификатора Налогового комитета (план 1.8).\n\nКлассификатор внешний и без документации: не ответил — 503 `MXIK_UNAVAILABLE`, код вводится вручную.",
+                "summary": "Search the MXIK (IKPU) classifier",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Слово или код, от 2 знаков"
+                    }
+                ],
+                "tags": [
+                    "Master Data"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskMxikSearch"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "503": {
+                        "description": "MXIK_UNAVAILABLE — классификатор не ответил, код вводится вручную.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/master-data/units/": {
             "get": {
                 "operationId": "master_data_units_list",
@@ -41131,6 +41184,15 @@
                     "hs_code": {
                         "type": "string"
                     },
+                    "mxik": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DeskMxik"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "МХИК (ИКПУ); нет кода — null"
+                    },
                     "manufacturer_part_number": {
                         "type": "string"
                     },
@@ -41214,6 +41276,7 @@
                     "is_service",
                     "kind",
                     "manufacturer_part_number",
+                    "mxik",
                     "name",
                     "nearest_valid_until",
                     "offers",
@@ -41273,6 +41336,23 @@
                         "type": "string",
                         "description": "2–10 цифр.",
                         "maxLength": 20
+                    },
+                    "mxik_code": {
+                        "type": "string",
+                        "description": "МХИК: 17 цифр; пусто — снять.",
+                        "maxLength": 17
+                    },
+                    "mxik_name": {
+                        "type": "string",
+                        "maxLength": 500
+                    },
+                    "mxik_unit": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "mxik_package": {
+                        "type": "string",
+                        "maxLength": 200
                     },
                     "country_of_origin_id": {
                         "type": "integer",
@@ -41416,6 +41496,75 @@
                 "required": [
                     "amount",
                     "currency"
+                ]
+            },
+            "DeskMxik": {
+                "type": "object",
+                "description": "План 1.8: МХИК (ИКПУ) товара — код и что о нём сказал классификатор.",
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "description": "17 цифр"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "unit": {
+                        "type": "string"
+                    },
+                    "package": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "code",
+                    "name",
+                    "package",
+                    "unit"
+                ]
+            },
+            "DeskMxikHit": {
+                "type": "object",
+                "description": "План 1.8: МХИК (ИКПУ) товара — код и что о нём сказал классификатор.",
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "description": "17 цифр"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "unit": {
+                        "type": "string"
+                    },
+                    "package": {
+                        "type": "string"
+                    },
+                    "group": {
+                        "type": "string",
+                        "description": "Группа или класс классификатора"
+                    }
+                },
+                "required": [
+                    "code",
+                    "group",
+                    "name",
+                    "package",
+                    "unit"
+                ]
+            },
+            "DeskMxikSearch": {
+                "type": "object",
+                "properties": {
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DeskMxikHit"
+                        }
+                    }
+                },
+                "required": [
+                    "results"
                 ]
             },
             "DeskOffer": {
@@ -48973,6 +49122,23 @@
                         "type": "string",
                         "description": "2–10 цифр.",
                         "maxLength": 20
+                    },
+                    "mxik_code": {
+                        "type": "string",
+                        "description": "МХИК: 17 цифр; пусто — снять.",
+                        "maxLength": 17
+                    },
+                    "mxik_name": {
+                        "type": "string",
+                        "maxLength": 500
+                    },
+                    "mxik_unit": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "mxik_package": {
+                        "type": "string",
+                        "maxLength": 200
                     },
                     "country_of_origin_id": {
                         "type": "integer",
