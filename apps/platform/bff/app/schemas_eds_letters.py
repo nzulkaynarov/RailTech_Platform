@@ -457,6 +457,23 @@ class OfficeResolutionIn(BaseModel):
         }
 
 
+class CoExecutorIn(BaseModel):
+    """План 1.9: ответственный привлекает соисполнителя — кто, что сделать, срок."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    person_id: str = Field(pattern=_USER_ID)
+    text: str = Field(min_length=1, max_length=2000)
+    due: dt.date
+
+    def for_eds(self) -> dict[str, Any]:
+        return {
+            "crm_user_id": int(self.person_id),
+            "text": self.text.strip(),
+            "due": self.due.isoformat(),
+        }
+
+
 class LetterCloseIn(BaseModel):
     """«Закрыть без ответа»: код справочника `close-reasons` и пояснение (нужно ли — решает EDS)."""
 

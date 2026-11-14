@@ -432,3 +432,28 @@ describe("Исходы письма (решение владельца 2026-11-1
     expect(findLetter("ВХ-108/26")?.instructions).toEqual([]);
   });
 });
+
+describe("Соисполнители от ответственного (план 1.9)", () => {
+  it("ответственный привлекает соисполнителя: кто, что сделать, срок; поручение видно в карточке", async () => {
+    inExecution();
+    signIn("universal@demo.example");
+    renderAt(PATH);
+    fireEvent.click(await screen.findByRole("button", { name: "Ещё" }));
+    fireEvent.click(await screen.findByText("Привлечь соисполнителя"));
+    const dialog = await screen.findByRole("dialog", { name: /соисполнитель/ });
+    await chooseOption(within(dialog).getByLabelText("Сотрудник"), "Демо Бухгалтеров");
+    fireEvent.change(within(dialog).getByLabelText("Что сделать"), {
+      target: { value: "Сверить расчёт НДС" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Привлечь" }));
+    expect(await screen.findByText(/Соисполнитель привлечён/)).toBeVisible();
+    await waitFor(() => {
+      const letter = readLetters().find((l) => l.number === "ВХ-108/26");
+      expect(
+        letter?.instructions?.find(
+          (i) => i.role === "co_executor" && i.text === "Сверить расчёт НДС",
+        )?.person.name,
+      ).toBe("Демо Бухгалтеров");
+    });
+  });
+});

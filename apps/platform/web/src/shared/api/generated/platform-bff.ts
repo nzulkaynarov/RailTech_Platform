@@ -84,6 +84,7 @@ import type {
   CatalogItemReturn,
   CatalogItemUpdate,
   CatalogLookups,
+  CatalogMxikPage,
   CatalogOffer,
   CategoryProposalIn,
   CategoryRequest,
@@ -99,6 +100,7 @@ import type {
   ClientCard,
   ClientInvitation,
   ClientList,
+  CoExecutorIn,
   Colleague,
   CompanyArticle,
   CompanyArticleCreate,
@@ -413,6 +415,7 @@ import type {
   SaveBotSettingBody,
   SearchCalcCatalogParams,
   SearchEdsAddresseesParams,
+  SearchMxikParams,
   SearchParams,
   SearchResult,
   SearchStockTraceParams,
@@ -35619,6 +35622,133 @@ export const useAcknowledgeLetter = <
   return useMutation(getAcknowledgeLetterMutationOptions(options), queryClient);
 };
 
+export const getAddCoExecutorUrl = (id: string) => {
+  return `/api/v1/eds/letters/${id}/co-executors`;
+};
+
+/**
+ * План 1.9. EDS `POST /letters/{id}/co-executors`: ответственный исполнитель привлекает соисполнителя — кто, что сделать, срок не позже своего (решает EDS: не ответственный — 403 `not_responsible`; срок позже — 422 `details.fields.due`; уже работает с письмом — 422 `details.fields.person_id`). Соисполнитель отчитывается ответственному. Ответ — карточка.
+ * @summary EDS · Привлечь соисполнителя
+ */
+export const addCoExecutor = async (
+  id: string,
+  coExecutorIn: CoExecutorIn,
+  options?: Parameters<typeof http>[1],
+): Promise<LetterCard> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<LetterCard>(getAddCoExecutorUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(coExecutorIn),
+  });
+};
+
+export const getAddCoExecutorMutationKey = () => ["addCoExecutor"] as const;
+
+export const getAddCoExecutorMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | LetterConflictResponse
+    | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addCoExecutor>>,
+    TError,
+    AddCoExecutorMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof addCoExecutor>>,
+  TError,
+  AddCoExecutorMutationVariables,
+  TContext
+> => {
+  const mutationKey = getAddCoExecutorMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof addCoExecutor>>,
+    AddCoExecutorMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return addCoExecutor(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AddCoExecutorMutationResult = NonNullable<Awaited<ReturnType<typeof addCoExecutor>>>;
+export type AddCoExecutorMutationBody = CoExecutorIn;
+export type AddCoExecutorMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | LetterConflictResponse
+  | ValidationFailedResponse
+>;
+export type AddCoExecutorMutationVariables = { id: string; data: CoExecutorIn };
+
+/**
+ * @summary EDS · Привлечь соисполнителя
+ */
+export const useAddCoExecutor = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | LetterConflictResponse
+    | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof addCoExecutor>>,
+      TError,
+      AddCoExecutorMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof addCoExecutor>>,
+  TError,
+  AddCoExecutorMutationVariables,
+  TContext
+> => {
+  return useMutation(getAddCoExecutorMutationOptions(options), queryClient);
+};
+
 export const getCloseLetterWithoutReplyUrl = (id: string) => {
   return `/api/v1/eds/letters/${id}/close`;
 };
@@ -53880,6 +54010,142 @@ export function useListCatalogExchangeRates<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getListCatalogExchangeRatesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getSearchMxikUrl = (params?: SearchMxikParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/erp/catalog/mxik?${stringifiedParams}`
+    : `/api/v1/erp/catalog/mxik`;
+};
+
+/**
+ * План 1.8. ERP `master-data/mxik/?q=` → классификатор Налогового комитета (tasnif.soliq.uz): до 10 позиций с кодом, названием, группой, единицей и упаковкой; меньше двух знаков — пусто. Классификатор не ответил — 503 `details.reason = mxik_unavailable`, код вводится вручную. Раздел `erp.stock` — чтение.
+ * @summary Товары · Подбор МХИК (ИКПУ) из классификатора
+ */
+export const searchMxik = async (
+  params?: SearchMxikParams,
+  options?: Parameters<typeof http>[1],
+): Promise<CatalogMxikPage> => {
+  return http<CatalogMxikPage>(getSearchMxikUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getSearchMxikQueryKey = (params?: SearchMxikParams) => {
+  return [`/api/v1/erp/catalog/mxik`, ...(params ? [params] : [])] as const;
+};
+
+export const getSearchMxikQueryOptions = <
+  TData = Awaited<ReturnType<typeof searchMxik>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: SearchMxikParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchMxik>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getSearchMxikQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof searchMxik>>> = ({ signal }) =>
+    searchMxik(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof searchMxik>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type SearchMxikQueryResult = NonNullable<Awaited<ReturnType<typeof searchMxik>>>;
+export type SearchMxikQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useSearchMxik<
+  TData = Awaited<ReturnType<typeof searchMxik>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params: undefined | SearchMxikParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchMxik>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchMxik>>,
+          TError,
+          Awaited<ReturnType<typeof searchMxik>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchMxik<
+  TData = Awaited<ReturnType<typeof searchMxik>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: SearchMxikParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchMxik>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchMxik>>,
+          TError,
+          Awaited<ReturnType<typeof searchMxik>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchMxik<
+  TData = Awaited<ReturnType<typeof searchMxik>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: SearchMxikParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchMxik>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Товары · Подбор МХИК (ИКПУ) из классификатора
+ */
+
+export function useSearchMxik<
+  TData = Awaited<ReturnType<typeof searchMxik>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: SearchMxikParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchMxik>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getSearchMxikQueryOptions(params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

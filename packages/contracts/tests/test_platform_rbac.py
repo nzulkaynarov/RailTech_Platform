@@ -51,6 +51,8 @@ ANY_EMPLOYEE = {
     ("get", "/api/v1/numbering-labels"),
     ("get", "/api/v1/letters/{letter_id}"),
     ("post", "/api/v1/letters/{letter_id}/acquaint"),
+    # План 1.9: соисполнителя привлекает ответственный — проверка внутри операции
+    ("post", "/api/v1/letters/{letter_id}/co-executors"),
     ("post", "/api/v1/instructions/{instruction_id}/complete"),
     ("post", "/api/v1/instructions/{instruction_id}/extension"),
     ("post", "/api/v1/instructions/{instruction_id}/extension/decision"),
@@ -271,6 +273,7 @@ def test_eds_api_global_security_is_the_eds_access_token() -> None:
     scheme = EDS_YAML["components"]["securitySchemes"]["edsAccess"]
     assert (scheme["type"], scheme["scheme"], scheme["bearerFormat"]) == ("http", "bearer", "JWT")
     # 0.20.0 — помощник письма `/letter-assist` (план 1.4);
+    # 0.19.0 — соисполнители от ответственного (план 1.9);
     # 0.18.0 — визы бухгалтера и юриста маршрута подписи (ADR-0025);
     # 0.17.0 — согласующие от автора и получатели копии документа (пункт 1.6 плана);
     # 0.16.0 — обозначения номеров документооборота `/numbering-labels` (задача «Н2»);

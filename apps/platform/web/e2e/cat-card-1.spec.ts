@@ -167,6 +167,24 @@ test.describe("Карточка товара", () => {
   });
 });
 
+test("план 1.8: МХИК подбирается из классификатора и виден в карточке", async ({ page }) => {
+  await loginAndWait(page, "supply@demo.example");
+  const card = await openCard(page);
+  await card.getByRole("button", { name: "Изменить позицию" }).click();
+  const edit = page.getByRole("dialog", { name: "Изменить позицию" });
+  await edit.getByLabel("МХИК (ИКПУ)").fill("кабель");
+  await page.getByText("08544001001000000 · Кабели силовые с медными жилами · метр").click();
+  await expect(edit.getByText("Кабели силовые с медными жилами", { exact: true })).toBeVisible();
+  await settledScreenshot(page, "card-mxik-form");
+  await expectNoViolations(page, "карточка: подбор МХИК");
+  await edit.getByRole("button", { name: "Сохранить" }).click();
+  await expect(edit).toBeHidden();
+  await expect(
+    card.getByText("08544001001000000 · Кабели силовые с медными жилами · метр"),
+  ).toBeVisible();
+  await settledScreenshot(page, "card-mxik");
+});
+
 test("карточка товара на телефоне: фото и документы без горизонтальной прокрутки @mobile", async ({
   page,
 }, testInfo) => {

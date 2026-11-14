@@ -292,10 +292,28 @@ class PublishState(Out):
     missing: list[str]
 
 
+class Mxik(Out):
+    """План 1.8: МХИК (ИКПУ) товара — код и что о нём сказал классификатор."""
+
+    code: str
+    name: str
+    unit: str
+    package: str
+
+
+class MxikHit(Mxik):
+    group: str
+
+
+class MxikPage(Out):
+    items: list[MxikHit]
+
+
 class ItemDetail(Item):
     description: str
     gost_drawing: str
     hs_code: str
+    mxik: Mxik | None = None
     manufacturer_part_number: str
     brand: str | None
     brand_id: str | None
@@ -399,6 +417,7 @@ def to_item_detail(raw: Mapping[str, Any], *, show_prices: bool) -> ItemDetail:
         description=text(raw.get("description")),
         gost_drawing=text(raw.get("gost_drawing")),
         hs_code=text(raw.get("hs_code")),
+        **_mxik(raw.get("mxik")),
         manufacturer_part_number=text(raw.get("manufacturer_part_number")),
         brand=raw.get("brand"),
         brand_id=opt_ident(raw.get("brand_id")),
@@ -501,6 +520,11 @@ class ItemUpdate(Patch):
     country_of_origin_id: str | None = Field(default=None, pattern=r"^[0-9]+$")
     warranty_months: int | None = Field(default=None, ge=0, le=600)
     warranty_terms: str | None = Field(default=None, max_length=5000)
+    # План 1.8: МХИК из классификатора (код, название, единица, упаковка) или вручную (только код)
+    mxik_code: str | None = Field(default=None, pattern=r"^([0-9]{17})?$")
+    mxik_name: str | None = Field(default=None, max_length=500)
+    mxik_unit: str | None = Field(default=None, max_length=100)
+    mxik_package: str | None = Field(default=None, max_length=200)
 
 
 class ReturnIssue(Body):
@@ -525,6 +549,37 @@ class ItemImageUpdate(Patch):
     is_main: Literal[True] | None = None
     sort_order: int | None = Field(default=None, ge=0)
     alt_text: str | None = Field(default=None, max_length=255)
+
+
+def _mxik(raw: Any) -> dict[str, Any]:
+    """`mxik` карточки ERP → поле контракта; нет кода — `null` (значение по умолчанию)."""
+    if not isinstance(raw, dict) or not raw.get("code"):
+        return {}
+    return {
+        "mxik": Mxik(
+            code=str(raw["code"]),
+            name=text(raw.get("name")),
+            unit=text(raw.get("unit")),
+            package=text(raw.get("package")),
+        )
+    }
+
+
+def to_mxik_page(raw: Any) -> MxikPage:
+    rows = raw.get("results") if isinstance(raw, dict) else None
+    return MxikPage(
+        items=[
+            MxikHit(
+                code=str(row.get("code") or ""),
+                name=text(row.get("name")),
+                group=text(row.get("group")),
+                unit=text(row.get("unit")),
+                package=text(row.get("package")),
+            )
+            for row in rows or []
+            if isinstance(row, dict) and row.get("code")
+        ]
+    )
 
 
 def item_to_erp(sent: dict[str, Any]) -> dict[str, Any]:
