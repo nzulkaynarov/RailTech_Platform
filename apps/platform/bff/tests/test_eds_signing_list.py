@@ -50,3 +50,32 @@ async def test_rows_carry_document_and_amount_and_only_open_own_steps_are_asked(
         "12500.50",
         "UZS",
     )
+    assert (row.action, row.step) == ("sign", "Подписать")
+
+
+@pytest.mark.asyncio
+async def test_visa_step_is_a_visa_row() -> None:
+    """ADR-0025: шаг визы бухгалтера — строка `visa` с подписью шага."""
+    proxy = FakeProxy(
+        {
+            "items": [
+                {
+                    "id": "40000000-0000-4000-8000-000000000116",
+                    "title": "Договор Д-501",
+                    "created_at": "2026-11-14T08:00:00Z",
+                    "current_step": {
+                        "index": 1,
+                        "label": "Виза бухгалтера",
+                        "assignee": {"crm_user_id": None, "permission": "approvals.visa_finance"},
+                    },
+                    "object": {
+                        "kind": "signing",
+                        "signing_kind": "contract",
+                        "signing_number": "Д-501",
+                    },
+                }
+            ]
+        }
+    )
+    [row] = (await signing_page(proxy)).items  # type: ignore[arg-type]
+    assert (row.action, row.step) == ("visa", "Виза бухгалтера")

@@ -19380,7 +19380,7 @@ components:
     SigningApprovalRow:
       type: object
       additionalProperties: false
-      required: [id, kind, number, title, amount, currency, created_at]
+      required: [id, kind, action, step, number, title, amount, currency, created_at]
       properties:
         id:
           type: string
@@ -19388,6 +19388,13 @@ components:
         kind:
           type: string
           enum: [quote, contract, invoice, act]
+        action:
+          type: string
+          enum: [visa, sign]
+          description: 'ADR-0025: шаг сотрудника — виза (бухгалтер, юрист) или подпись'
+        step:
+          type: string
+          description: Подпись шага словами, например «Виза бухгалтера» или «Подписать»
         number:
           type: string
         title:
@@ -19415,7 +19422,8 @@ components:
       properties:
         decision:
           type: string
-          enum: [approve, reject]
+          enum: [approve, reject, return]
+          description: 'Виза — approve («Согласовать») или return («Вернуть с замечанием»); подпись — approve или reject. У reject и return нужен comment'
         comment:
           type: string
           maxLength: 4000

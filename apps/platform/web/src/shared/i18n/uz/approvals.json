@@ -190,10 +190,13 @@
     "hint": ""
   },
   "signing": {
-    "title": "Imzoingizni kutmoqda",
+    "title": "Vizalar va imzolar",
     "sign": "Imzolash",
+    "approve": "Kelishish",
     "reject": "Rad etish",
+    "return": "Izoh bilan qaytarish",
     "rejectTitle": "Rad etish sababi",
+    "returnTitle": "Izoh",
     "reason": "Sabab, muallif ko'radi",
     "done": "Qaror saqlandi",
     "failed": "Qarorni saqlab bo'lmadi"

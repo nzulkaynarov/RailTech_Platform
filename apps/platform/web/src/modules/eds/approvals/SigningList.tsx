@@ -43,7 +43,9 @@ export function SigningList() {
             <div className="pf-dec-card-head">
               <strong>{row.title}</strong>
               <span className="pf-hint">
-                {row.amount ? money(row.amount, { currency: row.currency }) : null}
+                {[row.step, row.amount ? money(row.amount, { currency: row.currency }) : null]
+                  .filter(Boolean)
+                  .join(" · ")}
               </span>
             </div>
             <div className="pf-dec-card-actions">
@@ -53,7 +55,7 @@ export function SigningList() {
                 loading={decide.isPending}
                 onClick={() => {
                   confirmAction({
-                    action: t("signing.sign"),
+                    action: row.action === "visa" ? t("signing.approve") : t("signing.sign"),
                     object: row.title,
                     onConfirm: () => {
                       decide.mutate({ id: row.id, data: { decision: "approve" } });
@@ -61,7 +63,7 @@ export function SigningList() {
                   });
                 }}
               >
-                {t("signing.sign")}
+                {row.action === "visa" ? t("signing.approve") : t("signing.sign")}
               </Button>
               <Button
                 size="small"
@@ -69,7 +71,7 @@ export function SigningList() {
                   setRejecting(row);
                 }}
               >
-                {t("signing.reject")}
+                {row.action === "visa" ? t("signing.return") : t("signing.reject")}
               </Button>
             </div>
           </li>
@@ -77,8 +79,8 @@ export function SigningList() {
       </ul>
       <Modal
         open={rejecting !== null}
-        title={t("signing.rejectTitle")}
-        okText={t("signing.reject")}
+        title={rejecting?.action === "visa" ? t("signing.returnTitle") : t("signing.rejectTitle")}
+        okText={rejecting?.action === "visa" ? t("signing.return") : t("signing.reject")}
         okButtonProps={{ disabled: !reason.trim(), loading: decide.isPending }}
         onCancel={() => {
           setRejecting(null);
@@ -87,7 +89,10 @@ export function SigningList() {
           if (rejecting)
             decide.mutate({
               id: rejecting.id,
-              data: { decision: "reject", comment: reason.trim() },
+              data: {
+                decision: rejecting.action === "visa" ? "return" : "reject",
+                comment: reason.trim(),
+              },
             });
         }}
       >
