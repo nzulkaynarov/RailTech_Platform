@@ -51,6 +51,10 @@ const CATEGORY: Record<QueueItemKind, Category> = {
   pay_memo: "invoices",
   overdue_invoice: "invoices",
   supplier_overdue: "deliveries",
+  send_supplier_order: "deliveries",
+  partner_date_change: "deliveries",
+  receive_goods: "deliveries",
+  partner_application: "tasks",
 };
 
 function toEvent(item: QueueItem): EventInput[] {

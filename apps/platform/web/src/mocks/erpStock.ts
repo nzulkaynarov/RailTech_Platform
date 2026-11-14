@@ -664,6 +664,62 @@ export function stockQueueItems(
     });
 }
 
+/**
+ * План 0.7 (FR-6): дела снабженца из ERP `/stock/tasks/` — здесь черновики заказов партнёрам («Отправить заказ … партнёру»).
+ * Тем же, кому просроченные заказы: `erp.stock` полный.
+ */
+export function supplyTaskQueueItems(
+  view: readonly { id: string; access: Partial<Record<string, string>> }[],
+): QueueItem[] {
+  const full = view.find((r) => r.access["erp.stock"] === "full");
+  if (!full) return [];
+  return read()
+    .orders.filter((o) => o.status === "draft")
+    .map((o): QueueItem => {
+      const supplier = SUPPLIERS.find((s) => s.id === o.supplierId)?.name ?? null;
+      return {
+        id: `send_supplier_order:${String(o.id)}`,
+        role_id: full.id,
+        kind: "send_supplier_order",
+        title: `Отправить заказ ${o.number} партнёру`,
+        subtitle: supplier ?? "",
+        due_label: "later",
+        object: {
+          kind: "supplier_order",
+          number: o.number,
+          ...(supplier ? { title: supplier } : {}),
+          path: `/erp/stock/${seg(o.number)}`,
+        },
+      };
+    });
+}
+
+/** Тестам (план 0.7): черновик заказа партнёру в демо-данных — как от «Заказать по дефициту». */
+export function seedDraftOrder(): string {
+  const state = read();
+  const source = state.orders[0];
+  if (!source) throw new Error("в демо нет заказов");
+  state.orderSeq += 1;
+  state.nextId += 1;
+  const number = `ЗП-${String(new Date().getFullYear())}-${String(state.orderSeq).padStart(3, "0")}`;
+  state.orders.push({
+    ...source,
+    id: state.nextId,
+    number,
+    status: "draft",
+    expectedDate: null,
+    sentAt: null,
+    sentTo: null,
+    confirmedAt: null,
+    receivedAt: null,
+    cancelledAt: null,
+    cancelReason: null,
+    log: [],
+  });
+  write(state);
+  return number;
+}
+
 export const erpStockHandlers = [
   http.get("*/api/v1/erp/stock/balances", ({ request }) => {
     const held = guard("erp.stock", "read");

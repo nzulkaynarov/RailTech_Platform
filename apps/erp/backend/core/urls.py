@@ -59,6 +59,7 @@ from supply.views import (
     OrderSendView,
     OrderView,
     OverdueListView,
+    SupplyTaskListView,
     PriceRequestAnswerView,
     PriceRequestListView,
     ReceiptListView,
@@ -377,6 +378,7 @@ urlpatterns = (
         path("api/v1/stock/orders/<int:order_id>/receipts/", OrderReceiptView.as_view(), name="stock-order-receive"),
         path("api/v1/stock/receipts/", ReceiptListView.as_view(), name="stock-receipts"),
         path("api/v1/stock/overdue/", OverdueListView.as_view(), name="stock-overdue"),
+        path("api/v1/stock/tasks/", SupplyTaskListView.as_view(), name="stock-tasks"),
         path("api/v1/stock/price-requests/", PriceRequestListView.as_view(), name="stock-price-requests"),
         path(
             "api/v1/stock/price-requests/<int:request_id>/answer/",

@@ -38,6 +38,7 @@ from app.feeds.numbers import (
     mail_ref,
     memo_ref,
     outgoing_document_path,
+    partner_application_ref,
     quote_number,
     quote_ref,
     supplier_order_ref,
@@ -45,6 +46,7 @@ from app.feeds.numbers import (
 )
 from app.feeds.rework import rework_item
 from app.feeds.snapshot import (
+    SUPPLY_TASK_KINDS,
     Covered,
     Snapshot,
     wants_approvals,
@@ -58,6 +60,7 @@ from app.feeds.snapshot import (
     wants_memos,
     wants_projects,
     wants_supplier_overdue,
+    wants_supply_tasks,
     wants_tickets,
 )
 from app.feeds.text import (
@@ -662,6 +665,65 @@ def supplier_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
     return out
 
 
+def _supply_task_item(task: dict[str, Any], kind: QueueItemKind, role_id: str) -> QueueItem | None:
+    """Строка дела снабженца (план 0.7, FR-6): ERP решает, что ждёт снабженца, BFF только
+    называет."""
+    supplier = _text(task.get("supplier_name"))
+    number = _text(task.get("number"))
+    note = _text(task.get("note"))
+    if kind == "partner_application":
+        if supplier is None:
+            return None
+        agreed = task.get("status") == "candidate_agreed"
+        return QueueItem(
+            id=f"partner_application:{task.get('id')}",
+            role_id=role_id,
+            kind=kind,
+            title=f"Заявка на партнёрство: {supplier}",
+            subtitle="Кандидат согласовал договор — одобрите" if agreed else "Отправьте договор",
+            due_label="later",
+            object=partner_application_ref(supplier),
+        )
+    if number is None:
+        return None
+    if kind == "send_supplier_order":
+        title, subtitle = f"Отправить заказ {number} партнёру", supplier or ""
+    elif kind == "partner_date_change":
+        wanted = parse_deadline(task.get("date"))
+        title = f"Партнёр просит перенести {number}" + (
+            f" на {wanted.astimezone(COMPANY_TZ):%d.%m}" if wanted else ""
+        )
+        subtitle = join(supplier, note)
+    else:
+        title, subtitle = (
+            f"Принять товар по {number}",
+            join(supplier, f"накладная {note}" if note else None),
+        )
+    return QueueItem(
+        id=f"{kind}:{task.get('id')}",
+        role_id=role_id,
+        kind=kind,
+        title=title,
+        subtitle=subtitle,
+        due_label="today" if kind == "receive_goods" else "later",
+        object=supplier_order_ref(number, supplier),
+    )
+
+
+def supply_task_rows(snap: Snapshot, view: View) -> list[Row]:
+    """Дела снабженца из ERP `/stock/tasks/`: черновик заказа, перенос даты, отгрузка, заявка на
+    партнёрство."""
+    out: list[Row] = []
+    for task in snap.supply_tasks:
+        kind = SUPPLY_TASK_KINDS.get(str(task.get("kind")))
+        if kind is None or not view.wants(kind):
+            continue
+        item = _supply_task_item(task, kind, _role_id(view, kind))
+        if item is not None:
+            out.append(Row(item, parse_dt(task.get("since"))))
+    return out
+
+
 def build_queue(feed: Feed, view: View, snap: Snapshot) -> list[QueueItem]:
     now = now_utc()
     rows_: list[Row] = []
@@ -686,6 +748,8 @@ def build_queue(feed: Feed, view: View, snap: Snapshot) -> list[QueueItem]:
         rows_ += mail_rows(snap, now, view)
     if wants_supplier_overdue(view):
         rows_ += supplier_rows(snap, now, view)
+    if wants_supply_tasks(view):
+        rows_ += supply_task_rows(snap, view)
 
     # D2-8: работа ERP — расчёт, счета и платёжки, договор и акт проекта
     def role_of(kind: QueueItemKind) -> str:
