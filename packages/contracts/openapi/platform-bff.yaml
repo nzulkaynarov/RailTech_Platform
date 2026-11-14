@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.76.0
+  version: 0.82.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -1949,7 +1949,9 @@ paths:
       summary: Сквозной поиск — номера, ИНН, название клиента, артикул; результаты группами по модулям
       description: >-
         Доступен сотруднику с любым видимым разделом (в том числе роли без «Моей очереди»): каждая группа и каждый
-        результат фильтруются по разделам ролей «вида»; источник без разделов у ролей — `not_applicable`.
+        результат фильтруются по разделам ролей «вида»; источник без разделов у ролей — `not_applicable`. Товары
+        каталога (группа `erp`, раздел каталога `erp.stock`) ERP ищет по названию, артикулу и ГОСТ, а если пусто — с
+        опечатками и в другой письменности (FR-26).
       parameters:
         - name: q
           in: query
@@ -16032,7 +16034,7 @@ components:
 
     ObjectKind:
       type: string
-      enum: [lead, client, request, project, letter, quote, contract, invoice, act, memo, chat, ticket, integration, supplier_order, partner_application]
+      enum: [lead, client, request, project, letter, quote, contract, invoice, act, memo, chat, ticket, integration, supplier_order, partner_application, product]
 
     ObjectRef:
       type: object

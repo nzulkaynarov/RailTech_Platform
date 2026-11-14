@@ -21,4 +21,5 @@ export const ObjectKind = {
   integration: "integration",
   supplier_order: "supplier_order",
   partner_application: "partner_application",
+  product: "product",
 } as const;

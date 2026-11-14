@@ -1548,14 +1548,17 @@ def line_zones(quote: Quote) -> list[str]:
 
 def catalog_search(user, q: str, *, limit: int = 20) -> list[dict]:
     """Сопоставление строки с каталогом: карточки, у которых в названии, артикуле, коде производителя или ГОСТ есть
-    каждое слово запроса. Детерминированно, без ИИ; человек выбирает карточку сам."""
+    каждое слово запроса. Ничего не нашлось — название с опечатками и в другой письменности (FR-26, `catalog.fuzzy`).
+    Детерминированно, без ИИ; человек выбирает карточку сам."""
+    from catalog.fuzzy import fuzzy_products
     from catalog.models import Product
 
     _require_staff(user)
     words = [w for w in (q or "").split() if w][:6]
     if not words:
         return []
-    qs = Product.objects.select_related("domain_type").exclude(status__code="ARCHIVED")
+    base = Product.objects.select_related("domain_type").exclude(status__code="ARCHIVED")
+    qs = base
     for word in words:
         qs = qs.filter(
             Q(name__icontains=word)
@@ -1563,7 +1566,7 @@ def catalog_search(user, q: str, *, limit: int = 20) -> list[dict]:
             | Q(manufacturer_part_number__icontains=word)
             | Q(gost_drawing__icontains=word)
         )
-    products = list(qs.order_by("name")[:limit])
+    products = list(qs.order_by("name")[:limit]) or fuzzy_products(base, " ".join(words), limit=limit)
     from inventory.services import stock as warehouse
 
     own = _own_offers([p.id for p in products])

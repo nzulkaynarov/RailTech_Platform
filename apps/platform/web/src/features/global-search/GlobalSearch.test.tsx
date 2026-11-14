@@ -43,6 +43,24 @@ describe("Глобальный поиск", () => {
     expect(box).toHaveAttribute("aria-expanded", "true");
   });
 
+  it("товар по названию латиницей — группа «Операции», вид «Товар», карточка каталога (FR-26)", async () => {
+    signInAs("universal@demo.example");
+    const { router } = renderApp("/dashboard/queue");
+    const box = await searchBox();
+
+    type(box, "kabel silovoy");
+
+    const list = await screen.findByRole("listbox", { name: "Результаты поиска" });
+    const group = within(list).getByRole("group", { name: "Операции" });
+    const option = within(group).getByRole("option", { name: /Кабель силовой ВВГнг/ });
+    expect(option).toHaveTextContent("Товар");
+    fireEvent.click(option);
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/erp/catalog");
+    });
+    expect(new URLSearchParams(router.state.location.search).get("item")).not.toBeNull();
+  });
+
   it("номер ЗВ открывает заявку в «Заявках в расчёте» с окном «Задание», а не подсказку «в старом ERP» (B-UIA-1)", async () => {
     signInAs("universal@demo.example");
     const { router } = renderApp("/dashboard/queue");

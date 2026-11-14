@@ -63,6 +63,7 @@ class FeedBackends:
                 "counts": {"new": 0, "in_progress": 0, "resolved": 0},
             },
             "documents": {"results": []},
+            "catalog": {"results": []},
             # Входящая почта общего ящика (W18A-P2): пусто, приём настроен
             "crm_mail": {
                 "items": [],
@@ -128,6 +129,8 @@ class FeedBackends:
             "documents": self._erp(
                 "documents", router.get(f"{base}/crm/analytics/search-documents/")
             ),
+            # FR-26: товары каталога в поиске ⌘K
+            "catalog": self._erp("catalog", router.get(f"{base}/calc/catalog/")),
             "activity_logs": self._erp("activity_logs", router.get(f"{base}/crm/activity-logs/")),
             "timeline": self._erp("timeline", router.get(f"{base}/crm/timeline/")),
             "overdue": self._erp("overdue", router.get(f"{base}/stock/overdue/")),
