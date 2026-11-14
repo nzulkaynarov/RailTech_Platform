@@ -202,8 +202,11 @@ function Content({ sheet }: { sheet: CalcSheet }) {
   const { t } = useTranslation(["calc"]);
   const { date } = useFormat();
   const { mobile } = useViewport();
-  const [, setParams] = useSearchParams();
-  const [dialog, setDialog] = useState<"add" | "parse" | "price" | "terms" | null>(null);
+  const [params, setParams] = useSearchParams();
+  // План 1.1: «Создать → Расчёт» открывает расчёт сразу с разбором файла заявки (`?parse=1`)
+  const [dialog, setDialog] = useState<"add" | "parse" | "price" | "terms" | null>(() =>
+    params.get("parse") === "1" && sheet.rights.build ? "parse" : null,
+  );
   // Строка вручную и запрос цены — короткие формы о расчёте: в боковом окне на вкладке «Задача» (§4.1a)
   const openForm = (kind: "add" | "price" | "terms") => {
     setDialog(kind);
@@ -346,6 +349,16 @@ function Content({ sheet }: { sheet: CalcSheet }) {
           sheet={sheet}
           onClose={() => {
             setDialog(null);
+            if (params.has("parse")) {
+              setParams(
+                (prev) => {
+                  const next = new URLSearchParams(prev);
+                  next.delete("parse");
+                  return next;
+                },
+                { replace: true },
+              );
+            }
           }}
         />
       ) : null}

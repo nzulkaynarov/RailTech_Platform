@@ -22,6 +22,39 @@ def _extension(filename: str) -> str:
     return name.rsplit(".", 1)[-1].lower() if "." in name else ""
 
 
+#: Word — текстом через docling-serve (план 1.1): таблицы заявки сохраняют строки и столбцы.
+WORD_TYPES = {"docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}
+
+
+def word_to_markdown(content: bytes, filename: str) -> str:
+    """docx → Markdown через docling-serve (`/v1/convert/file`). ``RuntimeError`` с кодом — сервис не настроен или
+    конвертация не удалась: заявку тогда вставляют текстом."""
+    import httpx
+    from django.conf import settings
+
+    base = getattr(settings, "DOCLING_URL", "")
+    if not base:
+        raise RuntimeError("AI_IMPORT_WORD_UNAVAILABLE")
+    try:
+        response = httpx.post(
+            f"{base}/v1/convert/file",
+            files={"files": (filename or "request.docx", content, WORD_TYPES["docx"])},
+            data={"to_formats": "md"},
+            headers={"X-Api-Key": getattr(settings, "DOCLING_API_KEY", "")},
+            timeout=getattr(settings, "DOCLING_TIMEOUT_S", 120.0),
+        )
+        response.raise_for_status()
+        payload = response.json()
+    except (httpx.HTTPError, ValueError) as exc:
+        raise RuntimeError(f"AI_IMPORT_WORD_UNAVAILABLE ({exc.__class__.__name__})") from exc
+    if payload.get("status") not in {"success", "partial_success"}:
+        raise RuntimeError("AI_IMPORT_WORD_UNAVAILABLE (conversion failed)")
+    text = ((payload.get("document") or {}).get("md_content") or "").strip()
+    if not text:
+        raise RuntimeError("AI_IMPORT_WORD_UNAVAILABLE (empty)")
+    return text
+
+
 def _data_url(media_type: str, content: bytes) -> str:
     return f"data:{media_type};base64,{base64.standard_b64encode(content).decode()}"
 
@@ -29,7 +62,7 @@ def _data_url(media_type: str, content: bytes) -> str:
 def file_to_payload(content: bytes, filename: str) -> tuple[str | None, dict | None]:
     """(текст, vision-блок) — ровно одно из двух задано.
 
-    xlsx/xls → CSV всех листов; csv/txt/tsv и неизвестное → декодированный текст;
+    xlsx/xls → CSV всех листов; docx → Markdown (docling-serve); csv/txt/tsv и неизвестное → декодированный текст;
     pdf → блок `file`; png/jpg/webp/gif → блок `image_url`.
     """
     ext = _extension(filename)
@@ -44,6 +77,8 @@ def file_to_payload(content: bytes, filename: str) -> tuple[str | None, dict | N
         return None, block
     if ext in IMAGE_TYPES:
         return None, {"type": "image_url", "image_url": {"url": _data_url(IMAGE_TYPES[ext], content)}}
+    if ext in WORD_TYPES:
+        return word_to_markdown(content, filename), None
     # csv / txt / tsv / неизвестное — текстом, модель разберётся.
     return content.decode("utf-8", errors="replace"), None
 

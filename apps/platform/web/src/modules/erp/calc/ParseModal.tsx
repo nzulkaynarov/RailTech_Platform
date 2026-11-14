@@ -1,4 +1,4 @@
-import { Alert, App, Button, Checkbox, Form, Input, Modal, Select, Spin } from "antd";
+import { Alert, App, Button, Checkbox, Form, Input, Modal, Select, Spin, Upload } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -7,21 +7,29 @@ import type { CalcProposalLine, CalcSheet } from "../../../shared/api/generated/
 import {
   useAddCalcLines,
   useGetCalcParse,
+  useParseCalcFile,
   useParseCalcText,
 } from "../../../shared/api/generated/platform-bff";
 import { calcRef, useApplySheet, useErrorText } from "./api";
+import { pastedRows } from "./pasteRows";
 
 const REASONS = new Set([
   "ai_disabled",
   "request_text_empty",
   "ai_extract_failed",
   "ai_budget_exceeded",
+  "word_unavailable",
+  "file_type_unsupported",
+  "file_too_large",
 ]);
+/** План 1.1: какие файлы заявки принимает разбор (тип и подпись проверяет ERP). */
+const FILE_TYPES = ".docx,.xlsx,.xls,.pdf,.png,.jpg,.jpeg,.webp,.csv,.txt,.tsv";
 type Kind = "goods" | "service";
 
 /**
- * ИИ-разбор текста заявки в строки (SPEC-v3 §7.4): модель только ПРЕДЛАГАЕТ строки, ничего не пишется, пока сотрудник
- * не отметит нужные и не нажмёт «Добавить выбранные» (инвариант «код решает, модель предлагает»).
+ * Разбор заявки в строки (SPEC-v3 §7.4; план 1.1): файл заявки (Word, Excel, PDF, фото) или текст — ИИ только ПРЕДЛАГАЕТ
+ * строки; таблица, вставленная из Excel, разбирается сразу без ИИ. Ничего не пишется, пока сотрудник не отметит нужные и
+ * не нажмёт «Добавить выбранные» (инвариант «код решает, модель предлагает»).
  */
 export function ParseModal({ sheet, onClose }: { sheet: CalcSheet; onClose: () => void }) {
   const { t } = useTranslation("calc");
@@ -33,27 +41,29 @@ export function ParseModal({ sheet, onClose }: { sheet: CalcSheet; onClose: () =
   const [startError, setStartError] = useState<string | null>(null);
   const [picked, setPicked] = useState<Record<number, boolean>>({});
   const [kinds, setKinds] = useState<Record<number, Kind>>({});
+  const [local, setLocal] = useState<CalcProposalLine[] | null>(null);
   const defaultKind: Kind = sheet.rights.goods ? "goods" : "service";
 
-  const start = useParseCalcText({
-    mutation: {
-      onSuccess: (job) => {
-        setJobId(job.job_id);
-        setPicked({});
-        setKinds({});
-      },
-      onError: (error) => {
-        const reason = error instanceof ApiError ? error.details["reason"] : undefined;
-        setStartError(
-          t("parse.failed", {
-            reason: t(
-              `parse.reasons.${typeof reason === "string" && REASONS.has(reason) ? reason : "other"}`,
-            ),
-          }),
-        );
-      },
+  const queued = {
+    onSuccess: (job: { job_id: string }) => {
+      setJobId(job.job_id);
+      setLocal(null);
+      setPicked({});
+      setKinds({});
     },
-  });
+    onError: (error: unknown) => {
+      const reason = error instanceof ApiError ? error.details["reason"] : undefined;
+      setStartError(
+        t("parse.failed", {
+          reason: t(
+            `parse.reasons.${typeof reason === "string" && REASONS.has(reason) ? reason : "other"}`,
+          ),
+        }),
+      );
+    },
+  };
+  const start = useParseCalcText({ mutation: queued });
+  const startFile = useParseCalcFile({ mutation: queued });
   const result = useGetCalcParse(jobId ?? "", {
     query: {
       enabled: jobId !== null,
@@ -73,7 +83,7 @@ export function ParseModal({ sheet, onClose }: { sheet: CalcSheet; onClose: () =
   });
 
   const data = result.data;
-  const lines: readonly CalcProposalLine[] = data?.status === "done" ? data.lines : [];
+  const lines: readonly CalcProposalLine[] = local ?? (data?.status === "done" ? data.lines : []);
   const isPicked = (index: number) => picked[index] ?? true;
   const kindOf = (index: number): Kind => kinds[index] ?? defaultKind;
   const chosen = lines
@@ -120,10 +130,38 @@ export function ParseModal({ sheet, onClose }: { sheet: CalcSheet; onClose: () =
       ]}
     >
       <p>{t("parse.intro")}</p>
+      {/* Форма начинается с загрузки (правило владельца): файл заявки сразу уходит в разбор. */}
+      <div className="pf-calc-parse-file">
+        <Upload
+          accept={FILE_TYPES}
+          maxCount={1}
+          showUploadList={false}
+          beforeUpload={(file) => {
+            setStartError(null);
+            startFile.mutate({ number: calcRef(sheet.number), data: { file } });
+            return false;
+          }}
+        >
+          <Button type="primary" loading={startFile.isPending}>
+            {t("parse.file")}
+          </Button>
+        </Upload>
+        <span className="pf-hint">{t("parse.fileHint")}</span>
+      </div>
       <Form
         layout="vertical"
         onFinish={() => {
           setStartError(null);
+          // Таблица из Excel — строки сразу, без ИИ (план 1.1); иначе текст уходит на ИИ-разбор.
+          const pasted = pastedRows(text);
+          if (pasted) {
+            setJobId(null);
+            setPicked({});
+            setKinds({});
+            setLocal(pasted);
+            return;
+          }
+          setLocal(null);
           start.mutate({ number: calcRef(sheet.number), data: { text } });
         }}
       >
@@ -165,8 +203,8 @@ export function ParseModal({ sheet, onClose }: { sheet: CalcSheet; onClose: () =
       ) : null}
       {lines.length ? (
         <fieldset className="pf-calc-proposal pf-calc-gap">
-          <legend>{t("parse.proposal")}</legend>
-          {data?.truncated ? (
+          <legend>{local ? t("parse.pasted") : t("parse.proposal")}</legend>
+          {!local && data?.truncated ? (
             <p className="pf-hint">{t("parse.truncated", { count: data.recognized ?? 0 })}</p>
           ) : null}
           <ul>

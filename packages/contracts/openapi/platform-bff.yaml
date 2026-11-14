@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.72.0
+  version: 0.73.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -11049,6 +11049,40 @@ paths:
         content:
           application/json:
             schema: {$ref: '#/components/schemas/CalcParseIn'}
+      responses:
+        '202':
+          description: Разбор поставлен в очередь
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CalcParseJob'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/CalcConflict'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/calc/{number}/parse-file:
+    post:
+      tags: [calc]
+      operationId: parseCalcFile
+      summary: 'Расчёт · ИИ-разбор файла заявки в строки (предложение)'
+      description: >-
+        План 1.1: файл заявки — Word (docx, через docling-serve), Excel (xlsx, xls), PDF, изображение (png, jpg, webp) или
+        текст (csv, txt, tsv), не больше 10 МБ. BFF читает тело ограниченно и передаёт ERP `POST /calc/{deal_id}/parse/`
+        как есть; итог — `GET /erp/calc-jobs/{job_id}`, как у разбора текста. Чужой тип или подпись — 422 с полем
+        `file` (`details.reason = file_type_unsupported`); больше 10 МБ — `file_too_large`; Word без docling-serve —
+        итог задания `failed` с `reason = word_unavailable`. Раздел `erp.calc` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CalcNumberPath'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CalcParseFileIn'
       responses:
         '202':
           description: Разбор поставлен в очередь
@@ -23780,6 +23814,15 @@ components:
       properties:
         text: {type: string, maxLength: 20000, description: Свой текст; без поля — текст заявки}
 
+    CalcParseFileIn:
+      type: object
+      additionalProperties: false
+      required: [file]
+      properties:
+        file:
+          type: string
+          format: binary
+          description: Файл заявки — docx, xlsx, xls, pdf, png, jpg, webp, csv, txt, tsv; до 10 МБ
     CalcParseJob:
       type: object
       additionalProperties: false

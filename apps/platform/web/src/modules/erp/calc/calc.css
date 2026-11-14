@@ -355,3 +355,12 @@
   gap: 8px;
   margin-top: 8px;
 }
+
+/* План 1.1: файл заявки — первым в окне разбора */
+.pf-calc-parse-file {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-bottom: 16px;
+}

@@ -316,9 +316,9 @@ class CalcParseView(RoleGatedViewMixin, APIView):
 
     @extend_schema(
         operation_id="calc_parse",
-        summary="ИИ-разбор текста заявки в строки (предложение)",
+        summary="ИИ-разбор текста или файла заявки в строки (предложение)",
         tags=TAGS,
-        request=CalcParseInSerializer,
+        request={"application/json": CalcParseInSerializer, "multipart/form-data": CalcParseInSerializer},
         responses={
             202: CalcJobSerializer,
             429: OpenApiResponse(CalcErrorSerializer, description="Дневной лимит ИИ компании"),
@@ -334,8 +334,17 @@ class CalcParseView(RoleGatedViewMixin, APIView):
         serializer = CalcParseInSerializer(data=request.data)
         if not serializer.is_valid():
             return _invalid(serializer)
+        uploaded = serializer.validated_data.get("file")
         try:
-            payload = calc.parse_payload(deal_id, request.user, serializer.validated_data.get("text"))
+            payload = calc.parse_payload(
+                deal_id, request.user, serializer.validated_data.get("text"), has_file=uploaded is not None
+            )
+            if uploaded is not None:
+                import base64
+
+                content = uploaded.read()
+                calc.parse_file_check(uploaded.name or "", content)
+                payload.update(file_b64=base64.b64encode(content).decode(), filename=(uploaded.name or "request")[:200])
         except CalcError as exc:
             return _fail(exc)
         if not getattr(settings, "AI_IMPORT_ENABLED", False):

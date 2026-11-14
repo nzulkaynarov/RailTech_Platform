@@ -3,7 +3,7 @@
 openapi: 3.0.3
 info:
   title: RailTech Platform ERP — Internal API (ERP SPA)
-  version: 1.13.0
+  version: 1.14.0
   description: 'Внутренний API ERP для ERP SPA (бэк-офис), пространство `/api/v1/` (CONTRACTS §1). Файл генерируется из схемы
     бэкенда — это не отдельное описание, а её срез; расхождение с кодом невозможно: CI перегенерирует схему и падает при diff.'
   contact:
@@ -3923,7 +3923,7 @@ paths:
       description: |-
         POST /api/v1/calc/<deal_id>/parse/ — ИИ-разбор текста заявки в строки: задание в очереди ИИ, ответ — предложение
         (`GET /api/v1/sourcing/ai-status/<task_id>/`, результат `{proposal: [...]}`); строки не пишутся.
-      summary: ИИ-разбор текста заявки в строки (предложение)
+      summary: ИИ-разбор текста или файла заявки в строки (предложение)
       parameters:
       - in: path
         name: deal_id
@@ -3935,9 +3935,6 @@ paths:
       requestBody:
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/CalcParseInRequest'
-          application/x-www-form-urlencoded:
             schema:
               $ref: '#/components/schemas/CalcParseInRequest'
           multipart/form-data:
@@ -21453,6 +21450,10 @@ components:
           type: string
           default: ''
           maxLength: 20000
+        file:
+          type: string
+          format: binary
+          description: docx, xlsx, xls, pdf, png, jpg, csv, txt — до 10 МБ
     CalcQuote:
       type: object
       properties:
