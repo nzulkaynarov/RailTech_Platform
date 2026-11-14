@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.84.0
+  version: 0.88.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -9625,7 +9625,9 @@ paths:
         ИСХ не найден — `details.fields = [outgoing_number]`. ИСХ «в ответ на» это письмо принимается; ИСХ без связи — тоже, и
         EDS записывает связь (EDS-REPLY-1); ИСХ в ответ на другое входящее — 409, `details.reason = outgoing_linked_elsewhere`.
         Все поручения письма исполнены — письмо «Исполнено», контроль снят, директор и делопроизводитель получают
-        уведомление. Ответ — карточка.
+        уведомление. «Передать в работу» (план 1.9, `handed_to`) — только ответственный (иначе 403 `not_responsible`):
+        заявку клиента BFF проверяет в CRM `GET /deals/{id}` от имени сотрудника, служебную записку — EDS (своя, с номером);
+        не найдено — 422, `details.fields.handed_to = not_found`. Ответ — карточка.
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
         - $ref: '#/components/parameters/InstructionIdPath'
@@ -21596,7 +21598,7 @@ components:
     LetterInstruction:
       type: object
       additionalProperties: false
-      required: [id, kind, role, person, due, text, status, overdue, report, files, outgoing, executed_at, extensions]
+      required: [id, kind, role, person, due, text, status, overdue, report, files, outgoing, handed_to, executed_at, extensions]
       description: Поручение по письму (P8b)
       properties:
         id: {type: string, format: uuid}
@@ -21621,6 +21623,17 @@ components:
                 path: {type: string, description: Путь документа в SPA}
             - type: 'null'
           description: Ответ — наш ИСХ
+        handed_to:
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required: [kind, number, path]
+              properties:
+                kind: {$ref: '#/components/schemas/HandoverKind'}
+                number: {type: string, examples: [З-0045/26]}
+                path: {type: [string, 'null'], description: Путь в SPA — у служебной записки}
+            - type: 'null'
+          description: «Передать в работу» (план 1.9) — объект, в который передано письмо
         executed_at: {type: [string, 'null'], format: date-time}
         extensions:
           type: array
@@ -21711,7 +21724,7 @@ components:
     InstructionCompleteIn:
       type: object
       additionalProperties: false
-      description: Отчёт (текст, файлы) или номер отправленного ИСХ — хотя бы что-то одно
+      description: Отчёт (текст, файлы), номер отправленного ИСХ или «Передать в работу» — хотя бы что-то одно
       properties:
         report: {type: [string, 'null'], maxLength: 10000}
         file_ids:
@@ -21720,6 +21733,23 @@ components:
           uniqueItems: true
           items: {type: string, format: uuid}
         outgoing_number: {type: [string, 'null'], minLength: 1, maxLength: 32, examples: [ИСХ-014/26]}
+        handed_to:
+          oneOf:
+            - $ref: '#/components/schemas/HandoverIn'
+            - type: 'null'
+
+    HandoverKind:
+      type: string
+      enum: [client_request, memo]
+      description: Во что передано письмо — заявка клиента (сделка CRM) или служебная записка (EDS)
+
+    HandoverIn:
+      type: object
+      additionalProperties: false
+      required: [kind, id]
+      properties:
+        kind: {$ref: '#/components/schemas/HandoverKind'}
+        id: {type: string, minLength: 1, maxLength: 64, description: 'Сделка CRM (заявка клиента) или id документа EDS'}
 
     InstructionExtensionIn:
       type: object

@@ -2603,6 +2603,18 @@ export interface components {
       /** Format: date-time */
       created_at: string;
     };
+    /**
+     * @description Во что передано письмо — заявка клиента (CRM) или служебная записка (EDS)
+     * @enum {string}
+     */
+    HandoverKind: "client_request" | "memo";
+    HandedTo: {
+      kind: components["schemas"]["HandoverKind"];
+      /** @description Идентификатор объекта в своей системе (id заявки CRM, id документа EDS) */
+      ref: string;
+      /** @description Номер объекта для людей; у служебной записки EDS берёт его из базы */
+      number: string;
+    };
     OutgoingRef: {
       id: components["schemas"]["Uuid"];
       number: components["schemas"]["OutgoingNumber"];
@@ -2642,6 +2654,8 @@ export interface components {
       files: components["schemas"]["FileRef"][];
       /** @description Ответ — наш ИСХ */
       outgoing: components["schemas"]["OutgoingRef"] | null;
+      /** @description «Передать в работу» (план 1.9) — объект, в который передано письмо */
+      handed_to: components["schemas"]["HandedTo"] | null;
       /** Format: date-time */
       executed_at: string | null;
       /** @description История переносов, старые первыми */
@@ -2679,6 +2693,8 @@ export interface components {
       file_ids?: components["schemas"]["Uuid"][];
       /** @description Номер нашего отправленного ИСХ — ответ на письмо */
       outgoing_number?: string | null;
+      /** @description «Передать в работу» (план 1.9): только ответственный (иначе 403 `not_responsible`); служебная записка — своя, внутренняя, с номером (иначе 422 `handed_to: not_found`); заявку клиента проверяет BFF по CRM */
+      handed_to?: components["schemas"]["HandedTo"] | null;
     };
     ExtensionRequestIn: {
       /** Format: date */

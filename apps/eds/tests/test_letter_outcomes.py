@@ -168,3 +168,57 @@ async def test_responsible_adds_a_co_executor_who_reports_back(
     assert (notice["kind"], notice["recipients"]) == ("letter_executed", [supplier.id])
     assert notice["title"] == f"Соисполнитель отчитался: {letter['number']}"
     assert done.json()["status"] == "in_execution", "исход письма выбирает ответственный"
+
+
+async def complete(client: httpx.AsyncClient, who: Person, instruction_id: str, **body: Any) -> httpx.Response:
+    return await client.post(f"/api/v1/instructions/{instruction_id}/complete", json=body, headers=who.headers)
+
+
+async def test_hand_over_to_a_memo_closes_the_instruction_with_a_link(
+    client: httpx.AsyncClient, staff: dict[str, Person]
+) -> None:
+    from tests.test_documents import create
+
+    letter = await in_execution(client, staff)
+    supplier, engineer = staff["supplier"], staff["engineer"]
+    mine = by_person(letter, supplier.id)
+    memo = await create(client, supplier, subject="Участие в конференции банка")
+    alien = await create(client, engineer, subject="Чужая записка")
+    hand = {"kind": "memo", "ref": memo["id"], "number": "подменённый"}
+
+    # Исход письма выбирает ответственный: соисполнитель не передаёт в работу
+    co = by_person(letter, engineer.id)
+    refused = await complete(client, engineer, co["id"], handed_to={**hand, "ref": alien["id"]})
+    assert_error(refused, 403, "FORBIDDEN")
+    assert refused.json()["details"]["reason"] == "not_responsible"
+    # Чужая записка и выдуманный id — не найдены
+    for ref in (alien["id"], "00000000-0000-7000-8000-000000000000", "не-uuid"):
+        missing = await complete(client, supplier, mine["id"], handed_to={**hand, "ref": ref})
+        assert_error(missing, 422, "VALIDATION_FAILED")
+
+    done = await complete(client, supplier, mine["id"], handed_to=hand)
+    assert done.status_code == 200, done.text
+    card = done.json()
+    validate("Letter", card)
+    executed = by_person(card, supplier.id)
+    assert executed["status"] == "executed"
+    assert executed["handed_to"] == {"kind": "memo", "ref": memo["id"], "number": memo["number"]}
+    journal = [e["comment"] for e in card["journal"] if e["action"] == "instruction.executed"]
+    assert journal == [f"Передано в работу: служебная записка {memo['number']}"]
+    assert by_person(card, engineer.id)["handed_to"] is None
+
+
+async def test_hand_over_to_a_client_request_keeps_the_number_from_bff(
+    client: httpx.AsyncClient, staff: dict[str, Person]
+) -> None:
+    letter = await in_execution(client, staff)
+    supplier = staff["supplier"]
+    mine = by_person(letter, supplier.id)
+    hand = {"kind": "client_request", "ref": "4512", "number": "З-0045"}
+    done = await complete(client, supplier, mine["id"], handed_to=hand, report="Клиент просит КП")
+    assert done.status_code == 200, done.text
+    executed = by_person(done.json(), supplier.id)
+    assert executed["handed_to"] == hand
+    assert executed["report"] == "Клиент просит КП"
+    bad = await complete(client, supplier, mine["id"], handed_to={**hand, "kind": "deal"})
+    assert_error(bad, 422, "VALIDATION_FAILED")

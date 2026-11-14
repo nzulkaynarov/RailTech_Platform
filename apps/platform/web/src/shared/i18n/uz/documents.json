@@ -435,6 +435,11 @@
       "files_few": "{{count}} ta ilova",
       "files_many": "{{count}} ta ilova",
       "files_other": "{{count}} ta ilova"
+    },
+    "handover": {
+      "from": "{{number}} xatini ishga topshirish: xat yuborilgach topshiriq yopiladi",
+      "done": "Xizmat xati {{number}} yuborildi, {{letter}} xati ishga topshirildi",
+      "failed": "Xat yuborildi, lekin topshiriq yopilmadi: {{reason}}"
     }
   },
   "preview": {

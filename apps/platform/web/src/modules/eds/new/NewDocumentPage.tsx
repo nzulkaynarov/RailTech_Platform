@@ -9,6 +9,7 @@ import { useViewport } from "../../../app/shell/useViewport";
 import { ApiError } from "../../../shared/api/errors";
 import type { EdsDocument, EdsDocumentKind } from "../../../shared/api/generated/model";
 import {
+  completeInstruction,
   createEdsDocument,
   requestEdsDocumentRegistration,
   useGetEdsDocument,
@@ -131,11 +132,14 @@ function DocumentForm({
   initial,
   draft,
   prefilledFrom = null,
+  handOver = null,
 }: {
   initial: FormValues;
   draft: EdsDocument | null;
   /** Номер ВХ, из которого заполнены корреспондент, почта и тема (EDS-REPLY-1) */
   prefilledFrom?: string | null;
+  /** «Передать в работу» (план 1.9): отправленная служебка закрывает поручение по письму ссылкой на себя */
+  handOver?: { instruction: string; letter: string } | null;
 }) {
   const { t, i18n } = useTranslation(["documents", "modules"]);
   const { me } = useAuth();
@@ -254,9 +258,25 @@ function DocumentForm({
           setHandingOver(false);
         }
       }
+      let handed = false;
+      if (handOver && action === "submit" && !letter) {
+        try {
+          await completeInstruction(handOver.instruction, {
+            handed_to: { kind: "memo", id: doc.id },
+          });
+          handed = true;
+        } catch (error) {
+          void message.error(
+            t("documents:form.handover.failed", {
+              reason: error instanceof ApiError ? error.message : "",
+            }),
+          );
+        }
+      }
       refresh();
-      const toast =
-        action === "draft"
+      const toast = handed
+        ? t("documents:form.handover.done", { number: doc.number ?? "", letter: handOver?.letter })
+        : action === "draft"
           ? t("documents:form.toast.draft")
           : action === "handover"
             ? t("documents:form.toast.handover")
@@ -891,6 +911,11 @@ function DocumentForm({
   return (
     <div className={letter ? "pf-newdoc pf-newdoc--letter" : "pf-newdoc"}>
       <PageHeader title={title} subtitle={subtitle} />
+      {handOver && !letter ? (
+        <p className="pf-hint" role="status">
+          {t("documents:form.handover.from", { number: handOver.letter })}
+        </p>
+      ) : null}
       {letter ? (
         <div className="pf-newdoc-letter">
           <div className="pf-newdoc-letter-form">{form}</div>
@@ -1020,6 +1045,11 @@ export function NewDocumentPage() {
   if (replyId && kindFromParam(params.get("type")) === "letter_out") {
     return <ReplyDraft id={replyId} number={params.get("reply_to")?.trim().slice(0, 32) ?? ""} />;
   }
+  // «Передать в работу» с экрана поручения (план 1.9): `?type=memo&handover=<поручение>&from=ВХ-112/26`
+  const instruction = parseDocumentId(params.get("handover"));
+  const handOver = instruction
+    ? { instruction, letter: params.get("from")?.trim().slice(0, 32) ?? "" }
+    : null;
   return (
     <DocumentForm
       key={params.get("type") ?? "memo"}
@@ -1030,6 +1060,7 @@ export function NewDocumentPage() {
         inReplyTo: params.get("reply_to")?.trim().slice(0, 32) ?? "",
       }}
       draft={null}
+      handOver={handOver}
     />
   );
 }

@@ -197,6 +197,18 @@ class LetterInstructionOutgoing(BaseModel):
     path: str
 
 
+HandoverKind = Literal["client_request", "memo"]
+
+
+class LetterInstructionHandedTo(BaseModel):
+    """«Передать в работу» (план 1.9): во что передано письмо.
+    Путь — только у служебной записки (карточка в реестре)."""
+
+    kind: HandoverKind
+    number: str
+    path: str | None
+
+
 class LetterInstruction(BaseModel):
     id: str
     kind: ResolutionKind
@@ -209,6 +221,7 @@ class LetterInstruction(BaseModel):
     report: str | None
     files: list[LetterFile]
     outgoing: LetterInstructionOutgoing | None
+    handed_to: LetterInstructionHandedTo | None
     executed_at: dt.datetime | None
     extensions: list[LetterInstructionExtension]
 
@@ -506,12 +519,23 @@ class InstructionReturnIn(BaseModel):
         return {"reason": reason}
 
 
+class HandoverIn(BaseModel):
+    """«Передать в работу»: объект из письма — сделка CRM (заявка клиента)
+    или документ EDS (служебная записка)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: HandoverKind
+    id: str = Field(min_length=1, max_length=64)
+
+
 class InstructionCompleteIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     report: str | None = Field(default=None, max_length=10000)
     file_ids: list[uuid.UUID] = Field(default_factory=list, max_length=20)
     outgoing_number: str | None = Field(default=None, min_length=1, max_length=32)
+    handed_to: HandoverIn | None = None
 
     def for_eds(self) -> dict[str, Any]:
         report = self.report.strip() if self.report is not None else None
@@ -802,6 +826,12 @@ class _Extension(BaseModel):
     comment: str | None = None
 
 
+class _HandedTo(BaseModel):
+    kind: HandoverKind
+    ref: str
+    number: str
+
+
 class _Instruction(BaseModel):
     id: str
     kind: ResolutionKind
@@ -814,6 +844,7 @@ class _Instruction(BaseModel):
     report: str | None = None
     files: list[_File] = []
     outgoing: _Outgoing | None = None
+    handed_to: _HandedTo | None = None
     executed_at: dt.datetime | None = None
     extensions: list[_Extension] = []
 
@@ -1095,6 +1126,15 @@ def _instruction(i: _Instruction) -> LetterInstruction:
         outgoing=(
             LetterInstructionOutgoing(number=i.outgoing.number, path=outgoing_path(i.outgoing.id))
             if i.outgoing
+            else None
+        ),
+        handed_to=(
+            LetterInstructionHandedTo(
+                kind=i.handed_to.kind,
+                number=i.handed_to.number,
+                path=outgoing_path(i.handed_to.ref) if i.handed_to.kind == "memo" else None,
+            )
+            if i.handed_to
             else None
         ),
         executed_at=i.executed_at,

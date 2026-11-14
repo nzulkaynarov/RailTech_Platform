@@ -14,6 +14,7 @@ from app.schemas.common import ErpLinks, IncomingLetterSender, SenderRef
 from app.schemas.letters import (
     AcquaintanceOut,
     Assignee,
+    HandedTo,
     InstructionExtensionOut,
     InstructionOut,
     LetterDuplicateRef,
@@ -249,6 +250,7 @@ async def present(session: AsyncSession, letter: Letter, viewer: Employee | None
                 outgoing=OutgoingRef(id=r.outgoing_document_id, number=numbers[r.outgoing_document_id])
                 if r.outgoing_document_id in numbers
                 else None,
+                handed_to=HandedTo.model_validate(r.handed_to) if r.handed_to else None,
                 executed_at=r.executed_at,
                 extensions=[
                     InstructionExtensionOut(
