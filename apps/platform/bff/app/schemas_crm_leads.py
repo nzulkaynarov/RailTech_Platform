@@ -282,7 +282,8 @@ class RequestFormIn(BaseModel):
     contact: RequestContactFormIn
     summary: str = Field(min_length=1, max_length=5000)
     urgency: Urgency
-    letter_file_id: str | None = Field(default=None, pattern=UUID_PATTERN)
+    # Basis of the request (plan 0.4, FR-9): the letter or request file uploaded to EDS first.
+    letter_file_id: str = Field(pattern=UUID_PATTERN)
     consent: RequestConsentIn | None = None
 
 

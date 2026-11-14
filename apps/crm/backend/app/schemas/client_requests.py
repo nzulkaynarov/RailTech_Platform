@@ -58,9 +58,10 @@ class RequestCreate(BaseModel):
     contact: RequestContactIn
     summary: str = Field(min_length=1, max_length=5000)
     urgency: Literal["normal", "urgent"] = "normal"
-    # Письмо на имя директора, загруженное в EDS до заявки (`POST /files` EDS через BFF): id файла
-    # EDS.
-    letter_file_id: uuid.UUID | None = None
+    # Основание заявки — письмо на имя директора или файл запроса, загруженный в EDS до заявки
+    # (`POST /files` EDS через BFF): id файла EDS. Без основания заявка не создаётся (план 0.4,
+    # FR-9): ВХ-письмо в EDS и расчёт ERP иначе начинались с пустого места.
+    letter_file_id: uuid.UUID
     consent: RequestConsentIn | None = None
 
 

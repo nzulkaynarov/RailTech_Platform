@@ -14682,8 +14682,11 @@ export interface components {
       summary: string;
       /** @enum {string} */
       urgency: "normal" | "urgent";
-      /** Format: uuid */
-      letter_file_id?: string | null;
+      /**
+       * Format: uuid
+       * @description Основание заявки — письмо или файл запроса, загруженный в EDS (`POST /files`); без него заявка не создаётся (план 0.4)
+       */
+      letter_file_id: string;
       consent?: {
         /** @enum {string} */
         method: "phone" | "email" | "paper";
