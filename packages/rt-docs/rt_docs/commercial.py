@@ -90,7 +90,9 @@ def _para(*parts: Node | str) -> Node:
 
 
 def _cell(value: str, *, header: bool = False, numeric: bool = False, bold: bool = False) -> Node:
-    node: Node = {"type": "tableHeader" if header else "tableCell", "content": [_para(_text(value, bold=bold))]}
+    # Пустая ячейка (нет единицы и т. п.) — пустой абзац: пустой текстовый узел контракт тела не допускает.
+    para = _para(_text(value, bold=bold)) if value else _para()
+    node: Node = {"type": "tableHeader" if header else "tableCell", "content": [para]}
     if numeric:
         node["attrs"] = {"numeric": True}
     return node

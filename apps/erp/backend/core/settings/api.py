@@ -255,7 +255,7 @@ ERP_VERSION = os.environ.get("ERP_VERSION", "0.1.0")
 # Документы ERP на общем генераторе rt_docs (план 2.6): виды, которые уже рендерит rt_docs, через запятую; остальные —
 # прежними шаблонами Django. Откат вида — убрать его из списка (`RT_DOCS_DOCUMENTS=`), без выпуска кода.
 RT_DOCS_DOCUMENTS = tuple(
-    kind.strip() for kind in os.environ.get("RT_DOCS_DOCUMENTS", "invoice,act").split(",") if kind.strip()
+    kind.strip() for kind in os.environ.get("RT_DOCS_DOCUMENTS", "invoice,act,contract").split(",") if kind.strip()
 )
 
 # Сопряжение с CRM (M3-ERP-05): срок жизни кода (сек) и переходный период ротации — сколько ещё действует прежний

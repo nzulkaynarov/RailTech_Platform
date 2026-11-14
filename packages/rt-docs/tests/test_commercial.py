@@ -66,3 +66,8 @@ def test_paid_rows_only_when_something_was_paid() -> None:
     rows = unpaid[0]["content"]
     assert len(rows) == 3
     assert "Amount in words" in str(unpaid[1])
+
+
+def test_line_without_unit_is_a_valid_empty_cell() -> None:
+    nodes = items_table([Line("Услуга", Decimal("1"), Decimal("10"), Decimal("10"))], "UZS", "ru")
+    validate_blocks({"doc.items_table": nodes})  # пустая единица — пустой абзац, не пустой текст

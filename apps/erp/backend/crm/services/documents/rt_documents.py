@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import base64
+import re
 from decimal import Decimal
 from typing import Any
 
@@ -163,6 +164,9 @@ def _sums(totals: dict[str, Any]):
     )
 
 
+_PLACE_DATE_RE = re.compile(r"<p>([^<]*\S)\s*<span>([^<]+)</span></p>")
+
+
 def _template_body(body_html: str, *, scalars: dict[str, Any], blocks: dict[str, Any], lang: str) -> dict[str, Any]:
     """Шаблон ERP (санитизированный `body_html`) → тело rt_docs: скаляры — текстом (экранированы), `{{doc.*}}` блоков —
     узлами-блоками `html_to_body`, данные которых передаются в рендер. Неизвестный код остаётся текстом, как и раньше.
@@ -171,6 +175,10 @@ def _template_body(body_html: str, *, scalars: dict[str, Any], blocks: dict[str,
     from rt_docs import html_to_body, load_catalog
 
     from crm.services.document_placeholders import PLACEHOLDER_RE
+
+    # «г. Ташкент<span>дата</span>»: прежняя вёрстка разносила место и дату по краям строки, в теле rt_docs такого
+    # выравнивания нет — печатаем через запятую, а не слитно.
+    body_html = _PLACE_DATE_RE.sub(r"<p>\1, \2</p>", body_html or "")
 
     def sub(match) -> str:
         code = match.group(1).strip()
@@ -394,6 +402,208 @@ def act_pdf(act, totals: dict[str, Any], brand: dict[str, Any], *, draft: bool, 
             title=_("Акт приёма-передачи"),
             number=act.number,
             date=_local_date(act.issued_at or act.created_at),
+            verification_code=code or None,
+            verification_url=f"{cabinet}/v/{code}" if code and cabinet else None,
+        ),
+        blocks=blocks,
+        draft=draft,
+        highlight_missing=False,
+    )
+    return result.pdf
+
+
+def _two_columns(left: list[dict[str, Any]], right: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "type": "table",
+        "attrs": {"columnWidths": [50, 50], "variant": "plain"},
+        "content": [
+            {
+                "type": "tableRow",
+                "content": [{"type": "tableCell", "content": left}, {"type": "tableCell", "content": right}],
+            }
+        ],
+    }
+
+
+def _requisites(title: str, name: str, org, profile=None) -> list[dict[str, Any]]:
+    """Полные реквизиты стороны договора: ИНН (или рег. номер), адрес, банк, телефон — как в прежнем блоке."""
+    lines: list[str] = []
+    inn = (getattr(profile, "inn", "") or getattr(org, "inn", "") or "").strip()
+    if inn:
+        lines.append(f"{_('ИНН:')} {inn}")
+    elif getattr(org, "registration_number", ""):
+        country = getattr(getattr(org, "country", None), "name", "")
+        lines.append(f"{_('Рег. номер:')} {org.registration_number}" + (f" ({country})" if country else ""))
+    address = (getattr(profile, "legal_address", "") or getattr(org, "legal_address", "") or "").strip()
+    if address:
+        lines.append(f"{_('Адрес:')} {address}")
+    lines += _bank_lines(org, profile)
+    if getattr(org, "phone", ""):
+        lines.append(f"{_('Тел.:')} {org.phone}")
+    signer = (getattr(profile, "signatory_name", "") or "").strip()
+    if signer:
+        position = (getattr(profile, "signatory_position", "") or "").strip() or _("Подписант")
+        lines.append(f"{position}: {signer}")
+    return [_para(_text(title, bold=True)), _para(_text(name or "—", bold=True)), *[_para(line) for line in lines]]
+
+
+def _pep(signer, signed_at) -> list[dict[str, Any]]:
+    who = signer.get_full_name() or signer.email
+    return [
+        _para(who),
+        _para(f"{_('Простая электронная подпись')} · {_moment(signed_at)}"),
+        _para(f"{_('Идентификация:')} {signer.email}"),
+    ]
+
+
+def _contract_tail(contract, seller, profile, article_no: str) -> list[dict[str, Any]]:
+    """Блок `{{doc.requisites_and_signatures}}`: статья «Реквизиты и подписи Сторон», реквизиты обеих сторон, подписи
+    (официальная — с кодом проверки, ПЭП — с идентификацией) и оговорка о ПЭП."""
+    company = contract.deal.company
+    seller_name = (getattr(profile, "legal_name", "") or getattr(seller, "name", "") or _("Поставщик")).strip()
+    seller_sign = [_para(_text(_("От Поставщика:"), bold=True)), _para(_SIGN_LINE)]
+    if contract.verification_code:
+        position = contract.signatory_position + (
+            f" · {contract.signatory_basis_text}" if contract.signatory_basis_text else ""
+        )
+        seller_sign += [
+            _para(_text(contract.signatory_name, bold=True)),
+            _para(f"{_('Официальная подпись')} · {_moment(contract.signed_at)}"),
+            *([_para(position)] if position.strip() else []),
+            _para(f"{_('Код проверки:')} ", _text(contract.verification_code, bold=True)),
+        ]
+    elif contract.manager_signer_id:
+        seller_sign += _pep(contract.manager_signer, contract.manager_signed_at)
+    else:
+        seller_sign.append(_para(_("Подпись / дата")))
+    seller_sign.append(_para(_("М.П.")))
+    buyer_sign = [_para(_text(_("От Покупателя:"), bold=True)), _para(_SIGN_LINE)]
+    if contract.client_signer_id:
+        buyer_sign += _pep(contract.client_signer, contract.client_signed_at)
+    else:
+        buyer_sign.append(_para(_("Подпись / дата")))
+    buyer_sign.append(_para(_("М.П.")))
+    nodes = [
+        {
+            "type": "heading",
+            "attrs": {"level": 2},
+            "content": [_text(_("%(no)s. Реквизиты и подписи Сторон") % {"no": article_no})],
+        },
+        _two_columns(
+            _requisites(_("Поставщик"), seller_name, seller, profile),
+            _requisites(_("Покупатель"), getattr(company, "name", "") or _("Покупатель"), company),
+        ),
+        _two_columns(seller_sign, buyer_sign),
+    ]
+    if contract.manager_signer_id or contract.client_signer_id:
+        nodes.append(
+            _para(
+                _(
+                    "Документ подписан простой электронной подписью (ПЭП) в соответствии с соглашением сторон об "
+                    "электронном документообороте. Подписант идентифицирован по учётной записи платформы; дата и "
+                    "время подписания зафиксированы системой."
+                )
+            )
+        )
+    return nodes
+
+
+def contract_pdf(
+    contract, items, totals: dict[str, Any], brand: dict[str, Any], *, draft: bool, body_html: str
+) -> bytes:
+    """Договор поставки на rt_docs: стороны в шапке, статьи по шаблону компании, замороженной редакции или образцу;
+    блоки — спецификация (Приложение № 1), итоги, формулировки приёмки и ответственности, особые условия, примечание,
+    реквизиты и подписи сторон. Подписанный — с кодом и QR проверки, проект — знаком «ПРОЕКТ»."""
+    from django.conf import settings as django_settings
+    from rt_docs import DocumentMeta, Layout, Money, format_money
+    from rt_docs.commercial import Line, items_table, totals_block
+    from rt_docs.pdf import render_pdf
+
+    from crm.document_wording import resolve_wording_selected
+    from crm.services.document_blocks import _contract_delivery_terms, _draft_scalars, format_document_date
+
+    lang = "ru"
+    seller, profile = brand.get("seller"), brand.get("seller_profile")
+    ccy = totals.get("ccy") or "UZS"
+    quote = contract.quote if contract.quote_id else None
+    selections = getattr(contract, "wording_selections", None)
+
+    def wording(field: str) -> list[dict[str, Any]]:
+        return [_para(line) for line in _lines(resolve_wording_selected(selections, profile, field))] or [_para()]
+
+    extra_terms = resolve_wording_selected(selections, profile, "contract_extra_terms_text").strip()
+    lines = [
+        Line(
+            name=(it.product.name if it.product_id else it.imported_raw_name) or "—",
+            quantity=Decimal(it.quantity),
+            price=Decimal(it.final_price_excl_vat or 0),
+            amount=Decimal(it.line_total or 0),
+            unit=it.unit or "",
+        )
+        for it in items
+    ]
+    blocks: dict[str, Any] = {
+        "doc.spec_table": [
+            _para(_text(_("Приложение № 1. Спецификация"), bold=True)),
+            *items_table(lines, ccy, lang, with_unit=True),
+        ],
+        "doc.totals": totals_block(_sums(totals), ccy, lang),
+        "doc.contract_acceptance": wording("contract_acceptance_text"),
+        "doc.contract_liability": wording("contract_liability_text"),
+        "doc.extra_terms_article": (
+            [
+                {"type": "heading", "attrs": {"level": 2}, "content": [_text(_("10. Особые условия"))]},
+                *[_para(line) for line in _lines(extra_terms)],
+            ]
+            if extra_terms
+            else [_para()]
+        ),
+        "doc.notes": (
+            [
+                _para(_text(_("Дополнительные условия:"), bold=True)),
+                *[_para(line) for line in _lines(contract.notes)],
+            ]
+            if (contract.notes or "").strip()
+            else [_para()]
+        ),
+        "doc.requisites_and_signatures": _contract_tail(contract, seller, profile, "11" if extra_terms else "10"),
+    }
+    vat_rate = getattr(quote, "vat_rate", None) if quote is not None else None
+    scalars = _draft_scalars(
+        {
+            "doc.number": contract.number,
+            "doc.date": format_document_date(contract.created_at),
+            "doc.total": format_money(Money(Decimal(contract.total_amount or 0), ccy), lang),
+            "doc.currency": ccy,
+            "doc.vat_rate": f"{int(round(float(vat_rate)))}" if vat_rate is not None else "",
+            "doc.delivery_terms": _contract_delivery_terms(quote),
+            "doc.valid_from": (
+                _("с %(day)s") % {"day": _date_text(contract.valid_from)}
+                if contract.valid_from
+                else _("с даты его подписания обеими Сторонами")
+            ),
+            "doc.valid_until": (
+                _("до %(day)s") % {"day": _date_text(contract.valid_until)}
+                if contract.valid_until
+                else _("до полного исполнения Сторонами своих обязательств")
+            ),
+        },
+        draft,
+    )
+    body = _template_body(body_html, scalars=scalars, blocks=blocks, lang=lang)
+    body["doc"]["content"] = [_parties(seller, profile, contract.deal.company, _("Покупатель"))] + body["doc"][
+        "content"
+    ]
+    code = "" if draft else (contract.verification_code or "")
+    cabinet = (getattr(django_settings, "CABINET_URL", "") or "").rstrip("/")
+    result = render_pdf(
+        body,
+        letterhead=letterhead_of(seller, profile),
+        layout=Layout.COMMERCIAL,
+        meta=DocumentMeta(
+            title=_("Договор поставки"),
+            number=contract.number,
+            date=_local_date(contract.created_at),
             verification_code=code or None,
             verification_url=f"{cabinet}/v/{code}" if code and cabinet else None,
         ),
