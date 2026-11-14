@@ -36,6 +36,9 @@ RUN pip install --upgrade pip && \
 # в site-packages префикса /install: никаких загрузок из сети при сборке и незакреплённых build-зависимостей (hatchling), миграции
 # Django (rt_bus/django/migrations) едут вместе с кодом.
 COPY --from=rtbus rt_bus /install/lib/python3.12/site-packages/rt_bus
+# rt_docs (план 2.6): общий генератор документов (КП, договор, счёт, акт — как письма EDS) из packages/rt-docs контекстом
+# `rtdocs`; чистый Python, зависимости (python-docx, markdown-it-py, jsonschema, qrcode, weasyprint 69) — в requirements.txt.
+COPY --from=rtdocs rt_docs /install/lib/python3.12/site-packages/rt_docs
 
 # ── Stage 2: Runtime ──────────────────────────────────────────────────────────
 FROM python:3.12-slim AS runtime
@@ -79,8 +82,11 @@ COPY --from=builder /install /usr/local
 # RT_BUS_CONTRACTS_DIR / RT_BUS_SUBSCRIPTIONS указывают на эту копию; тесты и стенд могут переопределить их.
 COPY --from=contracts events /opt/rt/contracts/events
 COPY --from=contracts bus /opt/rt/contracts/bus
+# Контракт документов rt_docs (схема тела, каталог переменных и блоков, план 2.6)
+COPY --from=contracts documents /opt/rt/contracts/documents
 ENV RT_BUS_CONTRACTS_DIR=/opt/rt/contracts/events \
-    RT_BUS_SUBSCRIPTIONS=/opt/rt/contracts/bus/subscriptions.yaml
+    RT_BUS_SUBSCRIPTIONS=/opt/rt/contracts/bus/subscriptions.yaml \
+    RT_DOCS_CONTRACTS_DIR=/opt/rt/contracts/documents
 
 # Создаём непривилегированного пользователя
 RUN useradd -m -u 1000 appuser
