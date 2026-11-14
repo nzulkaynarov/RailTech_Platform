@@ -121,6 +121,30 @@ describe("Admin · Компания: реквизиты для счетов (D26
   });
 });
 
+describe("Admin · Компания: банк из справочника (план 2.9)", () => {
+  it("название банка подсказывает справочник; выбор подставляет МФО", async () => {
+    updateCompanyMock((state) => {
+      state.bankAccounts = [];
+    });
+    await openTab("details", "admin@demo.example");
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Банковские счета/, expanded: false }),
+    );
+    fireEvent.click(
+      (await screen.findAllByRole("button", { name: "Добавить счёт" }))[0] as HTMLElement,
+    );
+    const dialog = await screen.findByRole("region", { name: "Новый банковский счёт" });
+    const bank = within(dialog).getByLabelText("Банк");
+    fireEvent.focus(bank);
+    fireEvent.change(bank, { target: { value: "демо" } });
+    fireEvent.click(await screen.findByText("АКБ «Демо Банк» · 00014"));
+    await waitFor(() => {
+      expect(within(dialog).getByLabelText("МФО")).toHaveValue("00014");
+    });
+    expect(bank).toHaveValue("АКБ «Демо Банк»");
+  });
+});
+
 describe("Admin · Компания: доступ и каркас", () => {
   it("директор и администратор открывают раздел; заголовок «Реквизиты и бланк», подзаголовок — название компании (SET-IA)", async () => {
     await openTab("details", "admin@demo.example");
