@@ -108,6 +108,9 @@ class DocumentMeta:
     basis_text: str | None = None
     verification_code: str | None = None
     verification_url: str | None = None
+    # Подпись QR вместо «Проверка подлинности документа» — для QR, ведущего не на проверку, а на онлайн-версию
+    # документа (КП): ссылка с токеном тогда не печатается, её заменяет QR (план 2.6).
+    qr_caption: str | None = None
 
 
 @dataclass(frozen=True)

@@ -612,3 +612,214 @@ def contract_pdf(
         highlight_missing=False,
     )
     return result.pdf
+
+
+def _cell(
+    content: list[dict[str, Any]] | str, *, header: bool = False, numeric: bool = False, colspan: int = 1, **attrs
+) -> dict[str, Any]:
+    paras = [_para(content)] if isinstance(content, str) else content
+    node: dict[str, Any] = {"type": "tableHeader" if header else "tableCell", "content": paras or [_para()]}
+    cell_attrs = {**({"numeric": True} if numeric else {}), **({"colspan": colspan} if colspan > 1 else {}), **attrs}
+    if cell_attrs:
+        node["attrs"] = cell_attrs
+    return node
+
+
+def _quote_lines_table(rows: list[dict[str, Any]], quote, *, lead: bool, numbered: bool) -> dict:
+    """Таблица КП как прежде: разделы с подытогом и примечания во всю ширину, артикул и ГОСТ под названием, колонка
+    «Срок / наличие» — только когда хоть у одной позиции свой срок; цены и суммы без НДС, расходы уже в цене строки."""
+    from rt_docs import format_number
+
+    def money(value) -> str:
+        return format_number(Decimal(value or 0), "ru")
+
+    def qty(item) -> str:
+        from crm.templatetags.document_format import qty as qty_filter
+
+        return qty_filter(item.get("quantity"), item.get("unit"))
+
+    def lead_text(item) -> str:
+        if item.get("lead_time_days"):
+            return _("до %(days)s дн.") % {"days": item["lead_time_days"]}
+        if quote.effective_delivery_lead_time_days:
+            return _("до %(days)s дн.") % {"days": quote.effective_delivery_lead_time_days}
+        return _("уточняется") if item.get("lead_pending") else _("В наличии")
+
+    columns = [_("№"), _("Наименование"), _("Кол-во"), *([_("Срок / наличие")] if lead else [])]
+    # Заголовки сумм — вправо, но с переносом (числовая ячейка не переносится и наползает на соседнюю).
+    header = [_cell(title, header=True) for title in columns] + [
+        _cell(_("Цена за ед. без НДС"), header=True, align="right"),
+        _cell(_("Сумма без НДС"), header=True, align="right"),
+    ]
+    width = len(header)
+    out = [{"type": "tableRow", "content": header}]
+    for index, item in enumerate(rows, start=1):
+        kind = item.get("display_type", "ITEM")
+        if kind == "SECTION":
+            out.append(
+                {
+                    "type": "tableRow",
+                    "content": [
+                        _cell([_para(_text(item.get("imported_raw_name") or "—", bold=True))], colspan=width - 1),
+                        _cell([_para(_text(money(item.get("section_subtotal")), bold=True))], numeric=True),
+                    ],
+                }
+            )
+            continue
+        if kind == "NOTE":
+            note = (item.get("imported_raw_name") or "").strip()
+            italic = {"type": "text", "text": note, "marks": [{"type": "italic"}]} if note else ""
+            out.append({"type": "tableRow", "content": [_cell([_para(italic)], colspan=width)]})
+            continue
+        product = item.get("product")
+        name = (getattr(product, "name", "") or item.get("imported_raw_name") or "—").strip() or "—"
+        sub = " · ".join(
+            part
+            for part in (
+                f"{_('Арт.:')} {item['mpn']}" if item.get("mpn") else "",
+                item.get("gost_drawing") or "",
+            )
+            if part
+        )
+        cells = [
+            _cell(str(item.get("line_no") if not numbered else index)),
+            _cell([_para(_text(name, bold=True)), *([_para(sub)] if sub else [])]),
+            _cell(qty(item), align="center"),
+        ]
+        if lead:
+            cells.append(_cell(lead_text(item), align="center"))
+        cells += [
+            _cell(money(item.get("final_price_excl_vat")), numeric=True),
+            _cell(money(item.get("line_total")), numeric=True),
+        ]
+        out.append({"type": "tableRow", "content": cells})
+    widths = [5, 43, 10, 12, 15, 15] if lead else [5, 55, 10, 15, 15]
+    return {"type": "table", "attrs": {"columnWidths": widths, "variant": "grid"}, "content": out}
+
+
+def _label_rows(rows: list[tuple[str, str]], widths: tuple[int, int] = (35, 65)) -> dict[str, Any]:
+    return {
+        "type": "table",
+        "attrs": {"columnWidths": list(widths), "variant": "plain"},
+        "content": [
+            {"type": "tableRow", "content": [_cell([_para(_text(label, bold=True))]), _cell(value)]}
+            for label, value in rows
+            if value
+        ],
+    }
+
+
+def quote_pdf(quote, *, items, optional_items, extras: dict[str, Any], brand: dict[str, Any], draft: bool) -> bytes:
+    """КП на rt_docs — письмо-предложение, как прежде: адресат справа, сведения о КП и менеджере, сопроводительный
+    текст, позиции (проекция для клиента: без себестоимости и наценки, расходы — в цене строки), итоги с НДС и
+    прописью, опциональные позиции вне итога, условия поставки, штамп подписи. QR — проверка подписанного КП или
+    онлайн-версия отправленного; проект — знаком «ПРОЕКТ» без номера."""
+    from django.conf import settings as django_settings
+    from rt_docs import DocumentMeta, Layout
+    from rt_docs.commercial import totals_block
+    from rt_docs.pdf import render_pdf
+
+    from crm.services.documents import public_quote_url
+
+    lang = "ru"
+    seller, profile = brand.get("seller"), brand.get("seller_profile")
+    totals = extras["totals"]
+    ccy = totals.get("ccy") or "UZS"
+    lead = bool(brand.get("show_lead_time", True)) and any(
+        it.get("lead_time_days") or it.get("lead_pending") for it in items
+    )
+    company, contact = quote.deal.company, getattr(quote.deal, "contact", None)
+    content: list[dict[str, Any]] = []
+
+    addressee: list[dict[str, Any]] = []
+    if company is not None:
+        addressee = [_para(_text(company.name, bold=True))]
+        if getattr(company, "contact_person", ""):
+            addressee.append(_para(company.contact_person))
+    elif contact is not None:
+        addressee = ([_para(contact.position)] if getattr(contact, "position", "") else []) + [
+            _para(_text(contact.name or "—", bold=True))
+        ]
+    if addressee:
+        content.append(
+            {
+                "type": "table",
+                "attrs": {"columnWidths": [55, 45], "variant": "plain"},
+                "content": [{"type": "tableRow", "content": [_cell([_para()]), _cell(addressee)]}],
+            }
+        )
+
+    manager = quote.prepared_by
+    info = [(_("Действительно до"), _date_text(quote.valid_until) if quote.valid_until else "")]
+    if quote.version and quote.version > 1 and not draft:
+        info.insert(0, (_("Версия"), str(quote.version)))
+    if manager is not None:
+        info += [
+            (_("Менеджер"), manager.get_full_name() or manager.email),
+            (_("Телефон"), getattr(manager, "phone", "") or getattr(seller, "phone", "") or ""),
+            (_("Почта"), manager.email or ""),
+        ]
+    if any(value for _label, value in info):
+        content.append(_label_rows(info))
+
+    content += [_para(line) for line in _lines(extras.get("cover_text"))]
+    content.append(_quote_lines_table(items, quote, lead=lead, numbered=False))
+    content += totals_block(_sums(totals), ccy, lang)
+
+    if optional_items:
+        content += [
+            {"type": "heading", "attrs": {"level": 3}, "content": [_text(_("Опционально (не входит в итог)"))]},
+            _para(_("Позиции ниже предлагаются дополнительно и не включены в сумму «Итого к оплате».")),
+            _quote_lines_table(
+                [{**it, "display_type": "ITEM"} for it in optional_items], quote, lead=lead, numbered=True
+            ),
+        ]
+
+    public_url = None if draft else public_quote_url(quote)
+    code = "" if draft else (quote.verification_code or "")
+
+    terms = extras.get("quote_terms") or []
+    if terms:
+        content += [
+            {"type": "heading", "attrs": {"level": 3}, "content": [_text(_("Условия поставки"))]},
+            _label_rows([(str(row["label"]), str(row["value"])) for row in terms]),
+        ]
+
+    if code:
+        content += [
+            _para(_text(_("ДОКУМЕНТ ОФИЦИАЛЬНО ПОДПИСАН"), bold=True)),
+            _para(f"{quote.signatory_name} ({quote.signatory_position})"),
+            _para(
+                f"{quote.signatory_basis_text or _('на основании Устава')} · {_moment(quote.signed_at)}",
+            ),
+        ]
+
+    cabinet = (getattr(django_settings, "CABINET_URL", "") or "").rstrip("/")
+    verify_url = (f"{cabinet}/v/{code}" if cabinet else None) if code else public_url
+    number = quote.number or f"{quote.deal_id}-{quote.version}"
+    body = _template_body("", scalars={}, blocks={}, lang=lang)  # пустое тело по контракту (версия, язык, поля)
+    body["doc"]["content"] = content
+    result = render_pdf(
+        body,
+        letterhead=letterhead_of(seller, profile),
+        layout=Layout.COMMERCIAL,
+        meta=DocumentMeta(
+            title=_("Коммерческое предложение"),
+            number=number,
+            date=_local_date(quote.created_at),
+            verification_code=code or None,
+            verification_url=verify_url or None,
+            # QR отправленного КП ведёт на онлайн-версию, а не на проверку: своя подпись, ссылка с токеном не печатается.
+            qr_caption=(
+                _(
+                    "Онлайн-версия предложения: отсканируйте QR-код, чтобы посмотреть актуальную версию КП; для "
+                    "подтверждения свяжитесь с вашим менеджером."
+                )
+                if verify_url and not code
+                else None
+            ),
+        ),
+        draft=draft,
+        highlight_missing=False,
+    )
+    return result.pdf

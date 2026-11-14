@@ -65,7 +65,7 @@ def test_quote_render_does_not_roll_back_client_acceptance(lookups, buyer_compan
     def client_accepts_mid_render():
         QuoteLifecycleService.approve_quote(quote.id, buyer)
 
-    with patch("weasyprint.HTML", _fake_html(client_accepts_mid_render)):
+    with patch("rt_docs.pdf.render_pdf", _fake_rt_render(client_accepts_mid_render)):
         _render_pdf_for("quote", quote.id)
 
     quote.refresh_from_db()

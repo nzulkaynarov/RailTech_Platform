@@ -93,6 +93,20 @@ class QuoteLifecycleService:
         # and the 3-line VAT totals — ONE shared builder (quote_document_extras) also used by the
         # public online page, so the PDF and its QR «оригинал» can never diverge. Read-only.
         extras = quote_document_extras(quote, seller_company)
+        from crm.services.documents import quote_pdf_filename, rt_documents
+
+        if rt_documents.enabled("quote"):
+            # План 2.6: КП на общем генераторе rt_docs — тот же состав и та же проекция для клиента.
+            pdf = rt_documents.quote_pdf(
+                quote,
+                items=projected_items,
+                optional_items=client_optional_items(quote),
+                extras=extras,
+                brand=document_brand_context(seller_company),
+                draft=quote_is_draft(quote),
+            )
+            save_rendered_pdf(quote, quote_pdf_filename(quote), ContentFile(pdf))
+            return quote
         html_string = render_to_string(
             "crm/quote_pdf.html",
             {
