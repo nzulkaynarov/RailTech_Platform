@@ -359,7 +359,7 @@ async def test_key_sync_registers_budget_and_aliases(monkeypatch: pytest.MonkeyP
     _, path, body = calls[-1]
     assert path == "/key/generate"
     assert (body["key_alias"], body["max_budget"], body["budget_duration"]) == ("eds", 1.5, "1d")
-    assert body["models"] == ["fallback-model", "intake-model"]
+    assert body["models"] == ["draft-model", "fallback-model", "intake-model"]  # план 1.4: помощник письма
     assert "sk-eds" not in calls[0][1]  # значение ключа не попадает в адрес
 
 

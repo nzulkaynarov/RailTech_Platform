@@ -245,6 +245,8 @@ import type {
   LeadIn,
   LeadManagerList,
   LeadPage,
+  LetterAssistIn,
+  LetterAssistSuggestion,
   LetterCard,
   LetterCloseIn,
   LetterConflictResponse,
@@ -37005,6 +37007,134 @@ export const useDeleteResolutionTemplate = <
   TContext
 > => {
   return useMutation(getDeleteResolutionTemplateMutationOptions(options), queryClient);
+};
+
+export const getAssistLetterTextUrl = () => {
+  return `/api/v1/eds/letter-assist`;
+};
+
+/**
+ * План 1.4. EDS `POST /letter-assist`: `draft` — текст письма по поручению (`brief`) на языке `lang`; `translate` — перевод тела `body` на язык `lang` и обратный перевод на русский (`back_translation`). Тело собирает EDS из Markdown модели (мост `rt_docs`, план 1.3); в документ ничего не сохраняется — тело вставляет человек. Пустое поручение — 422 `details.fields.brief`; перевод без текста — `details.fields.body`; помощник не настроен или не ответил — 409 `details.reason = ai_unavailable`; дневной лимит — 409 `ai_budget_exceeded`. Раздел `eds.memo.create` — полный.
+ * @summary EDS · Помощник письма: подготовить текст или перевести
+ */
+export const assistLetterText = async (
+  letterAssistIn: LetterAssistIn,
+  options?: Parameters<typeof http>[1],
+): Promise<LetterAssistSuggestion> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<LetterAssistSuggestion>(getAssistLetterTextUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(letterAssistIn),
+  });
+};
+
+export const getAssistLetterTextMutationKey = () => ["assistLetterText"] as const;
+
+export const getAssistLetterTextMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof assistLetterText>>,
+    TError,
+    AssistLetterTextMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof assistLetterText>>,
+  TError,
+  AssistLetterTextMutationVariables,
+  TContext
+> => {
+  const mutationKey = getAssistLetterTextMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof assistLetterText>>,
+    AssistLetterTextMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return assistLetterText(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AssistLetterTextMutationResult = NonNullable<
+  Awaited<ReturnType<typeof assistLetterText>>
+>;
+export type AssistLetterTextMutationBody = LetterAssistIn;
+export type AssistLetterTextMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | EdsConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type AssistLetterTextMutationVariables = { data: LetterAssistIn };
+
+/**
+ * @summary EDS · Помощник письма: подготовить текст или перевести
+ */
+export const useAssistLetterText = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof assistLetterText>>,
+      TError,
+      AssistLetterTextMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof assistLetterText>>,
+  TError,
+  AssistLetterTextMutationVariables,
+  TContext
+> => {
+  return useMutation(getAssistLetterTextMutationOptions(options), queryClient);
 };
 
 export const getSuggestLetterFromFileUrl = () => {

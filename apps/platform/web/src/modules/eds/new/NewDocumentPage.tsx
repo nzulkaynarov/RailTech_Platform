@@ -20,7 +20,8 @@ import {
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { BodyEditor } from "../../../shared/ui/BodyEditor/BodyEditor";
-import { bodyLang, isBlank } from "../../../shared/ui/BodyEditor/bodyModel";
+import { LetterAssist } from "./LetterAssist";
+import { type BodyLang, bodyLang, isBlank } from "../../../shared/ui/BodyEditor/bodyModel";
 import { DateField } from "../../../shared/ui/DateField";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { ErrorNote } from "../../../shared/ui/FormParts";
@@ -171,7 +172,11 @@ function DocumentForm({
   const letter = isLetter(values.kind);
   const letterhead = useGetEdsLetterhead({ query: { enabled: letter, staleTime: 60_000 } });
   const today = todayInCompanyZone();
-  const lang = bodyLang(i18n.language);
+  // План 1.4: «Перевести на английский» делает письмо английским; иначе язык письма — язык интерфейса
+  const [letterLang, setLetterLang] = useState<BodyLang | null>(null);
+  // Редактор неуправляемый: вставка помощника меняет revision — редактор берёт тело целиком
+  const [bodyRevision, setBodyRevision] = useState(0);
+  const lang = letterLang ?? bodyLang(i18n.language);
   const handover = letter && !canRegister;
   const sendToRecipient = letter && values.recipientEmail.trim() !== "";
 
@@ -357,6 +362,7 @@ function DocumentForm({
       error={errors.text ? fieldText(t, "text") : undefined}
     >
       <BodyEditor
+        revision={bodyRevision}
         id={ids.text}
         label={t("documents:form.body.label")}
         value={values.body}
@@ -364,6 +370,17 @@ function DocumentForm({
         describedBy={describedBy(ids.text, true, Boolean(errors.text))}
         onChange={(body) => {
           set("body", body);
+        }}
+      />
+      <LetterAssist
+        value={values.body}
+        lang={lang}
+        subject={values.subject}
+        recipient={values.recipientName}
+        onReplace={(doc, next) => {
+          set("body", doc);
+          setLetterLang(next);
+          setBodyRevision((n) => n + 1);
         }}
       />
     </Field>

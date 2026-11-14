@@ -435,6 +435,23 @@
       "files_few": "{{count}} attachments",
       "files_many": "{{count}} attachments",
       "files_other": "{{count}} attachments"
+    },
+    "assist": {
+      "draft": "Prepare the text",
+      "translate": "Translate into English",
+      "draftTitle": "Prepare the letter text",
+      "brief": "What the letter is about",
+      "briefHint": "For example: ask to confirm the delivery date under the contract",
+      "draftRun": "Prepare",
+      "replaces": "The text in the editor will be replaced — you can edit it afterwards",
+      "translateTitle": "English translation",
+      "translation": "Translation",
+      "back": "Back translation — check the meaning",
+      "insert": "Insert the translation",
+      "cancel": "Cancel",
+      "pending": "Preparing the translation…",
+      "inserted": "Text inserted — check it",
+      "failed": "The helper did not answer — write the text yourself"
     }
   },
   "preview": {

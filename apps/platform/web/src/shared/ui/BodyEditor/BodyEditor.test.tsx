@@ -80,4 +80,38 @@ describe("BodyEditor (Tiptap, план 2026-11-12 п. 1.2)", () => {
     });
     expect(screen.getByRole("group", { name: "Таблица" })).toBeInTheDocument();
   });
+
+  it("смена revision подставляет тело снаружи — вставка помощника письма (план 1.4)", async () => {
+    function Outer() {
+      const [value, setValue] = useState<BodyNode>({ type: "doc", content: [paragraphOf("Было")] });
+      const [revision, setRevision] = useState(0);
+      return (
+        <>
+          <BodyEditor
+            id="b"
+            label="Текст письма"
+            value={value}
+            revision={revision}
+            onChange={setValue}
+          />
+          <button
+            type="button"
+            onClick={() => {
+              setValue({ type: "doc", content: [paragraphOf("Черновик помощника")] });
+              setRevision((n) => n + 1);
+            }}
+          >
+            Вставить
+          </button>
+        </>
+      );
+    }
+    render(<Outer />);
+    const box = await screen.findByRole("textbox", { name: "Текст письма" });
+    expect(box).toHaveTextContent("Было");
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: "Вставить" }));
+    });
+    expect(box).toHaveTextContent("Черновик помощника");
+  });
 });

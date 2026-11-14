@@ -18,6 +18,8 @@ from app.schemas_eds_intake import (
     AiDecisionIn,
     DocflowSettings,
     DocflowSettingsPatch,
+    LetterAssistIn,
+    LetterAssistSuggestion,
     LetterIntakeIn,
     LetterIntakeSuggestion,
 )
@@ -34,6 +36,8 @@ SettingsReader = Annotated[
     Authed, Depends(require_any(("eds.inbox.register", "full"), ("admin", "read")))
 ]
 Admin = Annotated[Authed, Depends(require("admin", "full"))]
+# План 1.4: исходящее письмо пишет автор документов (`eds.memo.create`)
+Author = Annotated[Authed, Depends(require("eds.memo.create", "full"))]
 SuggestionId = Annotated[uuid.UUID, Path(alias="id")]
 
 
@@ -71,6 +75,25 @@ async def suggest_letter_from_file(
         wait_seconds=INTAKE_WAIT_SECONDS,
     )
     return _parse(LetterIntakeSuggestion, raw)
+
+
+@router.post(
+    "/letter-assist",
+    response_model=LetterAssistSuggestion,
+    response_model_exclude_unset=True,
+    operation_id="assistLetterText",
+)
+async def assist_letter_text(authed: Author, body: LetterAssistIn) -> LetterAssistSuggestion:
+    """План 1.4: «Подготовить текст» и «Перевести» — модель зовёт EDS, тело вставляет человек."""
+    raw = await _call(
+        authed,
+        "POST",
+        "/letter-assist",
+        200,
+        json=body.model_dump(mode="json", exclude_none=True),
+        wait_seconds=INTAKE_WAIT_SECONDS,
+    )
+    return _parse(LetterAssistSuggestion, raw)
 
 
 @router.post(

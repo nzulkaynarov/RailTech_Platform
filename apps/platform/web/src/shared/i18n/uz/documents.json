@@ -435,6 +435,23 @@
       "files_few": "{{count}} ta ilova",
       "files_many": "{{count}} ta ilova",
       "files_other": "{{count}} ta ilova"
+    },
+    "assist": {
+      "draft": "Matnni tayyorlash",
+      "translate": "Ingliz tiliga tarjima qilish",
+      "draftTitle": "Xat matnini tayyorlash",
+      "brief": "Xat nima haqida",
+      "briefHint": "Masalan: shartnoma bo‘yicha yetkazib berish muddatini tasdiqlashni so‘rash",
+      "draftRun": "Tayyorlash",
+      "replaces": "Muharrirdagi matn almashtiriladi — keyin uni tuzatish mumkin",
+      "translateTitle": "Ingliz tiliga tarjima",
+      "translation": "Tarjima",
+      "back": "Teskari tarjima — mazmunni tekshiring",
+      "insert": "Tarjimani qo‘yish",
+      "cancel": "Bekor qilish",
+      "pending": "Tarjima tayyorlanmoqda…",
+      "inserted": "Matn qo‘yildi — tekshiring",
+      "failed": "Yordamchi javob bermadi — matnni o‘zingiz yozing"
     }
   },
   "preview": {
