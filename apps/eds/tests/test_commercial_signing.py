@@ -45,11 +45,15 @@ def signing_requested(
 
 
 async def _open_ids(client: httpx.AsyncClient, staff: dict[str, Person]) -> list[str]:
-    resp = await client.get(
-        "/api/v1/approvals", params={"template": ["signing"], "status": ["open"]}, headers=staff["director"].headers
-    )
-    assert resp.status_code == 200, resp.text
-    return [item["id"] for item in resp.json()["items"]]
+    """Открытые маршруты подписи у тех, чей шаг сейчас (ADR-0025: виза бухгалтера, юриста или подпись директора)."""
+    found: list[str] = []
+    for who in ("director", "accountant", "lawyer"):
+        resp = await client.get(
+            "/api/v1/approvals", params={"template": ["signing"], "status": ["open"]}, headers=staff[who].headers
+        )
+        assert resp.status_code == 200, resp.text
+        found += [item["id"] for item in resp.json()["items"] if item["id"] not in found]
+    return found
 
 
 async def test_commercial_signing_approved_for_director(
@@ -203,6 +207,15 @@ def _request(staff: dict[str, Person], **extra: Any) -> dict[str, Any]:
     )
 
 
+async def _pass_visas(client: httpx.AsyncClient, staff: dict[str, Person], approval_id: str) -> None:
+    """ADR-0025: договор идёт к подписи после виз бухгалтера и юриста."""
+    for who in ("accountant", "lawyer"):
+        resp = await client.post(
+            f"/api/v1/approvals/{approval_id}/decision", json={"decision": "approve"}, headers=staff[who].headers
+        )
+        assert resp.status_code == 200, resp.text
+
+
 async def test_repeat_of_an_open_request_opens_nothing_new(
     client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
 ) -> None:
@@ -219,6 +232,7 @@ async def test_signed_version_cannot_be_signed_again(
     await _grant_director(client, staff)
     await deliver_erp(client, container, _request(staff))
     [approval_id] = await _open_ids(client, staff)
+    await _pass_visas(client, staff, approval_id)
     await client.post(
         f"/api/v1/approvals/{approval_id}/decision", json={"decision": "approve"}, headers=staff["director"].headers
     )
@@ -236,6 +250,7 @@ async def test_only_the_assigned_signer_can_sign(
     await _grant_director(client, staff)
     await deliver_erp(client, container, _request(staff))
     [approval_id] = await _open_ids(client, staff)
+    await _pass_visas(client, staff, approval_id)
     resp = await client.post(
         f"/api/v1/approvals/{approval_id}/decision", json={"decision": "approve"}, headers=staff["accountant"].headers
     )
@@ -249,6 +264,7 @@ async def test_refusal_reaches_the_author_with_the_reason(
     await _grant_director(client, staff)
     await deliver_erp(client, container, _request(staff))
     [approval_id] = await _open_ids(client, staff)
+    await _pass_visas(client, staff, approval_id)
     resp = await client.post(
         f"/api/v1/approvals/{approval_id}/decision",
         json={"decision": "reject", "comment": "Неверные реквизиты"},
@@ -266,6 +282,7 @@ async def test_authority_revoked_before_signing_blocks_the_signature(
     await _grant_director(client, staff)
     await deliver_erp(client, container, _request(staff))
     [approval_id] = await _open_ids(client, staff)
+    await _pass_visas(client, staff, approval_id)
     listed = await client.get(URL_AUTHORITIES, headers=staff["admin"].headers)
     authority = listed.json()["items"][0]["id"]
     revoked = await client.post(
@@ -279,6 +296,102 @@ async def test_authority_revoked_before_signing_blocks_the_signature(
 
     assert resp.status_code == 409, resp.text
     assert await outbox(container, "signing.decided") == []
+
+
+# ── ADR-0025: визы бухгалтера и юриста до подписи ───────────────────────────────────────────────
+
+
+async def _route(client: httpx.AsyncClient, staff: dict[str, Person], approval_id: str) -> dict[str, Any]:
+    resp = await client.get(f"/api/v1/approvals/{approval_id}", headers=staff["director"].headers)
+    assert resp.status_code == 200, resp.text
+    return dict(resp.json())
+
+
+async def test_contract_goes_to_the_signer_only_after_both_visas(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    await _grant_director(client, staff)
+    await deliver_erp(client, container, _request(staff))
+    [approval_id] = await _open_ids(client, staff)
+    route = await _route(client, staff, approval_id)
+    assert [step["label"] for step in route["steps"]] == ["Виза бухгалтера", "Виза юриста", "Подписать"]
+    assert route["steps"][0]["status"] == "current"
+
+    early = await client.post(
+        f"/api/v1/approvals/{approval_id}/decision", json={"decision": "approve"}, headers=staff["director"].headers
+    )
+    assert early.status_code in (403, 404, 409), "директор не подписывает до виз"
+    wrong = await client.post(
+        f"/api/v1/approvals/{approval_id}/decision", json={"decision": "approve"}, headers=staff["lawyer"].headers
+    )
+    assert wrong.status_code in (403, 404, 409), "юрист не визирует за бухгалтера"
+
+    await _pass_visas(client, staff, approval_id)
+    assert (await _route(client, staff, approval_id))["steps"][2]["status"] == "current"
+    signed = await client.post(
+        f"/api/v1/approvals/{approval_id}/decision", json={"decision": "approve"}, headers=staff["director"].headers
+    )
+    assert signed.status_code == 200, signed.text
+    assert [e["data"]["decision"] for e in await outbox(container, "signing.decided")] == ["signed"]
+
+
+async def test_visa_returned_with_a_remark_stops_the_round(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    await _grant_director(client, staff)
+    await deliver_erp(client, container, _request(staff))
+    [approval_id] = await _open_ids(client, staff)
+    resp = await client.post(
+        f"/api/v1/approvals/{approval_id}/decision",
+        json={"decision": "return", "comment": "Нет графика платежей"},
+        headers=staff["accountant"].headers,
+    )
+    assert resp.status_code == 200, resp.text
+    [event] = await outbox(container, "signing.decided")
+    assert event["data"]["decision"] == "rejected"
+    assert event["data"]["comment"] == "Виза бухгалтера: Нет графика платежей"
+    assert await _open_ids(client, staff) == []
+
+
+async def test_invoice_needs_only_the_accountant_visa(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    await _grant_director(client, staff)
+    await deliver_erp(
+        client,
+        container,
+        signing_requested(
+            kind="invoice",
+            object_id=610,
+            number="СЧ-2026/610",
+            signer_crm_user_id=staff["director"].id,
+            signer_name=staff["director"].name,
+        ),
+    )
+    [approval_id] = await _open_ids(client, staff)
+    route = await _route(client, staff, approval_id)
+    assert [step["label"] for step in route["steps"]] == ["Виза бухгалтера", "Подписать"]
+
+
+async def test_without_a_lawyer_the_contract_route_does_not_start(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    """Правило владельца 13: без держателя обязательной визы маршрут не стартует, ERP получает причину словами."""
+    from sqlalchemy import text
+
+    await _grant_director(client, staff)
+    async with container.session_factory() as session:
+        await session.execute(
+            text("UPDATE employees SET permissions_eds = array_remove(permissions_eds, 'approvals.visa_legal')")
+        )
+        await session.commit()
+
+    await deliver_erp(client, container, _request(staff))
+
+    assert await _open_ids(client, staff) == []
+    [event] = await outbox(container, "signing.decided")
+    assert event["data"]["decision"] == "rejected"
+    assert "«Юрист»" in event["data"]["comment"]
 
 
 # ── План 0.7 (FR-30): подписанный или принятый документ уходит из «Ждут вашей подписи» ─────────
@@ -324,7 +437,12 @@ async def test_contract_status_closes_signing_only_when_final(
 
 
 async def _open_titles(client: httpx.AsyncClient, staff: dict[str, Person]) -> list[str]:
-    resp = await client.get(
-        "/api/v1/approvals", params={"template": ["signing"], "status": ["open"]}, headers=staff["director"].headers
-    )
-    return [f"{item.get('title')} {item.get('object')}" for item in resp.json()["items"]]
+    """Открытые маршруты подписи у всех, чей шаг сейчас (ADR-0025: визы, затем подпись)."""
+    titles: dict[str, str] = {}
+    for who in ("director", "accountant", "lawyer"):
+        resp = await client.get(
+            "/api/v1/approvals", params={"template": ["signing"], "status": ["open"]}, headers=staff[who].headers
+        )
+        for item in resp.json()["items"]:
+            titles[item["id"]] = f"{item.get('title')} {item.get('object')}"
+    return list(titles.values())

@@ -184,6 +184,23 @@
     },
     "truncated": "{{count}} tadan birinchi 50 ta qator ko‘rsatilgan."
   },
+  "previous": {
+    "button": "O‘tgan arizadagidek",
+    "title": "O‘tgan arizadagidek",
+    "intro": "Shu mijozning o‘tgan hisob-kitobini tanlang: uning qatorlari bugungi narxlarda qo‘shiladi.",
+    "loading": "O‘tgan hisob-kitoblar yuklanmoqda…",
+    "empty": "Mijozda hali o‘tgan hisob-kitob yo‘q",
+    "lines_one": "{{count}} qator",
+    "lines_few": "{{count}} qator",
+    "lines_many": "{{count}} qator",
+    "lines_other": "{{count}} qator",
+    "copy": "Tarkibni nusxalash",
+    "done": "Qatorlar qo‘shildi",
+    "doneSkipped_one": "Qatorlar qo‘shildi; boshqa zonaning {{count}} qatorini hamkasb qo‘shadi",
+    "doneSkipped_few": "Qatorlar qo‘shildi; boshqa zonaning {{count}} qatorini hamkasb qo‘shadi",
+    "doneSkipped_many": "Qatorlar qo‘shildi; boshqa zonaning {{count}} qatorini hamkasb qo‘shadi",
+    "doneSkipped_other": "Qatorlar qo‘shildi; boshqa zonaning {{count}} qatorini hamkasb qo‘shadi"
+  },
   "match": {
     "title": "Katalog bilan solishtirish",
     "search": "Katalog bo‘yicha qidiruv",

@@ -15,6 +15,8 @@ from core.permissions import RoleGatedViewMixin
 
 from ..serializers.calc import (
     CalcCatalogSerializer,
+    CalcCopyInSerializer,
+    CalcCopyResultSerializer,
     CalcDealRefListSerializer,
     CalcErrorSerializer,
     CalcJobSerializer,
@@ -23,6 +25,7 @@ from ..serializers.calc import (
     CalcLinesInSerializer,
     CalcLostInSerializer,
     CalcParseInSerializer,
+    CalcPreviousListSerializer,
     CalcSheetSerializer,
     CalcTaskListSerializer,
     CalcTermsPatchSerializer,
@@ -240,6 +243,48 @@ class CalcTermsView(RoleGatedViewMixin, APIView):
             return Response(calc.update_terms(deal_id, request.user, dict(serializer.validated_data)))
         except CalcError as exc:
             return _fail(exc)
+
+
+class CalcPreviousView(APIView):
+    """GET /api/v1/calc/<deal_id>/previous/ — прошлые расчёты того же клиента (план 1.5)."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        operation_id="calc_previous_list",
+        summary="Прошлые расчёты клиента для «Как в прошлой заявке»",
+        tags=TAGS,
+        responses={200: CalcPreviousListSerializer, **ERRORS},
+    )
+    def get(self, request, deal_id: int):
+        try:
+            return Response({"results": calc.previous_calcs(deal_id, request.user)})
+        except CalcError as exc:
+            return _fail(exc)
+
+
+class CalcCopyView(RoleGatedViewMixin, APIView):
+    """POST /api/v1/calc/<deal_id>/copy/ — «Как в прошлой заявке»: состав прошлого расчёта, цены сегодняшние (план 1.5)."""
+
+    permission_classes = [IsAuthenticated]
+    required_permissions = {"POST": "quote.build"}
+
+    @extend_schema(
+        operation_id="calc_copy",
+        summary="Скопировать состав прошлого расчёта клиента",
+        tags=TAGS,
+        request=CalcCopyInSerializer,
+        responses={201: CalcCopyResultSerializer, **ERRORS},
+    )
+    def post(self, request, deal_id: int):
+        serializer = CalcCopyInSerializer(data=request.data)
+        if not serializer.is_valid():
+            return _invalid(serializer)
+        try:
+            result = calc.copy_lines(deal_id, request.user, serializer.validated_data["from_deal_id"])
+        except CalcError as exc:
+            return _fail(exc)
+        return Response(result, status=status.HTTP_201_CREATED)
 
 
 class CalcReadyView(RoleGatedViewMixin, APIView):

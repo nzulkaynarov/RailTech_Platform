@@ -241,6 +241,9 @@ EXPECTED: dict[tuple[str, str], tuple[set[str], set[str]]] = {
     ("eds.memo.approve", "read"): NOTHING,
     ("eds.memo.approve", "full"): NOTHING,
     ("eds.signing.manage", "full"): NOTHING,
+    # ADR-0025: визы перед подписью — только права EDS
+    ("eds.visa.finance", "full"): NOTHING,
+    ("eds.visa.legal", "full"): NOTHING,
     ("erp.calc", "read"): NOTHING,
     ("erp.calc", "full"): (set(), {"deal.manage", "quote.build", "quote.edit_pricing"}),
     ("erp.calc.goods", "full"): (set(), {"quote.build", "quote.edit_pricing", "quote.visa_goods"}),
@@ -423,7 +426,8 @@ def test_the_two_system_roles_are_fixed_by_the_catalog() -> None:
     read_only = {"admin", "crm.leads", "chats.external", "eds.payments", "crm.mail"}
     # D17G-1: разбор и передачу лидов (первая линия) директор не ведёт — раздела у него нет.
     # SIGN-2: реестр полномочий подписи ведёт администратор — у директора раздела нет.
-    hidden = {"crm.leads.triage", "eds.signing.manage"}
+    # ADR-0025: директор подписывает, визы бухгалтера и юриста у него нет.
+    hidden = {"crm.leads.triage", "eds.signing.manage", "eds.visa.finance", "eds.visa.legal"}
     assert {k for k, v in director.items() if v == "read"} == read_only
     assert {k: v for k, v in director.items() if k not in read_only} == {
         k: "full" for k in generated.RESOURCE_KEYS if k not in read_only | hidden
@@ -438,6 +442,7 @@ def test_the_two_system_roles_are_fixed_by_the_catalog() -> None:
         "tpl:ACCOUNTANT",
         "tpl:REGISTRAR",
         "tpl:MANAGER_ALL",
+        "tpl:LAWYER",  # ADR-0025: юрист обязателен (правило владельца 13)
     ]
 
 
@@ -495,6 +500,7 @@ def test_templates_keep_the_v1_matrix_column_plus_the_new_calc_sections(legacy: 
         "SUPPLY": {"erp.calc.goods": "full"},
         "ENGINEER": {"erp.calc.services": "full"},
         "MANAGER": {"erp.calc": "full"},  # 0.3 (FR-7): менеджер ведёт расчёт и КП
+        "ACCOUNTANT": {"eds.visa.finance": "full"},  # ADR-0025: виза бухгалтера
     }
     removed = {"SUPPLY": {"crm.clients"}}  # 0.3 (FR-13): снабженец видит только партнёров
     expected = {

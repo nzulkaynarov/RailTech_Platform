@@ -499,6 +499,7 @@ services:
       additional_contexts:
         rtbus: ../../packages/rt-bus
         contracts: ../../packages/contracts
+        rtdocs: ../../packages/rt-docs  # план 2.6: документы ERP на rt_docs
     # -v 0: без access-лога Daphne — он печатает путь `/auth/magic/<токен>` в stdout мимо фильтра токена (FIX-15);
     # журнал запросов ведёт Django (core.logging.AccessLogMiddleware: console + RedactPortalTokenFilter).
     command: ["daphne", "-v", "0", "-b", "0.0.0.0", "-p", "8000", "core.asgi:application"]

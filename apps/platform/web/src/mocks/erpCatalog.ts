@@ -251,6 +251,7 @@ function detailOf(item: MockItem, who: Caller): CatalogItemDetail {
     description: item.description,
     gost_drawing: item.gost_drawing,
     hs_code: item.hs_code,
+    mxik: item.mxik ?? null,
     manufacturer_part_number: item.mpn,
     brand: item.brand,
     brand_id: item.brandId,
@@ -785,6 +786,16 @@ export const erpCatalogHandlers = [
     }
     if (data.manufacturer_part_number !== undefined) item.mpn = data.manufacturer_part_number;
     if (data.hs_code !== undefined) item.hs_code = data.hs_code;
+    if (data.mxik_code !== undefined) {
+      item.mxik = data.mxik_code
+        ? {
+            code: data.mxik_code,
+            name: data.mxik_name ?? "",
+            unit: data.mxik_unit ?? "",
+            package: data.mxik_package ?? "",
+          }
+        : null;
+    }
     if (data.country_of_origin_id !== undefined) {
       if (data.country_of_origin_id !== null && !countryRef(data.country_of_origin_id))
         return invalid("country_of_origin_id", "country_not_found");
@@ -1227,6 +1238,41 @@ export const erpCatalogHandlers = [
       );
     return HttpResponse.json(pageOf(rows, params));
   }),
+  // План 1.8: подбор МХИК — две позиции классификатора на «кабел», «реле» — недоступный классификатор (проверка запаса)
+  http.get("*/erp/catalog/mxik", ({ request }) => {
+    const q = (new URL(request.url).searchParams.get("q") ?? "").toLowerCase();
+    if (q.startsWith("реле")) {
+      return HttpResponse.json(
+        {
+          code: "BACKEND_UNAVAILABLE",
+          message: "Классификатор МХИК не отвечает — введите код вручную.",
+          source: "erp",
+          details: { reason: "mxik_unavailable" },
+        },
+        { status: 503 },
+      );
+    }
+    const items = q.startsWith("кабел")
+      ? [
+          {
+            code: "08544001001000000",
+            name: "Кабели силовые с медными жилами",
+            group: "Кабели",
+            unit: "метр",
+            package: "барабан",
+          },
+          {
+            code: "08544001002000000",
+            name: "Кабели контрольные",
+            group: "Кабели",
+            unit: "метр",
+            package: "бухта",
+          },
+        ]
+      : [];
+    return HttpResponse.json({ items });
+  }),
+
   http.get("*/erp/catalog/hs-codes", ({ request }) => {
     const who = guard("read");
     if (isResponse(who)) return who;

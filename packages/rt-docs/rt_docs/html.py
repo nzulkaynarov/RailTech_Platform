@@ -327,10 +327,11 @@ def _render_verification_block(w: _Writer, meta: DocumentMeta) -> None:
     w.w('<div class="rt-verify-block">')
     w.w(f'<div class="rt-verify-qr">{qr_svg}</div>')
     w.w('<div class="rt-verify-info">')
-    w.w(f'<div class="rt-verify-title">{e(VERIFY_QR_NOTE[lang])}</div>')
+    w.w(f'<div class="rt-verify-title">{e(meta.qr_caption or VERIFY_QR_NOTE[lang])}</div>')
     if meta.verification_code:
         w.w(f'<div class="rt-verify-code">{e(VERIFY_CODE[lang])}<strong>{e(meta.verification_code)}</strong></div>')
-    w.w(f'<div class="rt-verify-url">{e(url)}</div>')
+    if not meta.qr_caption:
+        w.w(f'<div class="rt-verify-url">{e(url)}</div>')
     w.w("</div></div>")
 
 

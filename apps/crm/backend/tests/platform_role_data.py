@@ -8,7 +8,7 @@ from app.models.platform_roles import PlatformRole
 # Старые коды ролей в порядке прежнего контракта; id — условные, по порядку.
 LEGACY = ("MANAGER", "DIRECTOR", "SUPPLY", "ENGINEER", "ACCOUNTANT", "ADMIN")
 # Шаблоны пилота (P8) — без старого кода роли; id идут после LEGACY.
-PILOT = ("REGISTRAR", "MANAGER_ALL")
+PILOT = ("REGISTRAR", "MANAGER_ALL", "LAWYER")  # LAWYER — ADR-0025
 
 
 def make_role(legacy: str, role_id: int | None = None) -> PlatformRole:

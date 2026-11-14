@@ -188,7 +188,19 @@
     "previewKind": "Document type",
     "previewFrame": "Sample: {{kind}}",
     "previewHint": "The data in the sample is fictional.",
-    "inheritedEdit": "Edit company details"
+    "inheritedEdit": "Edit company details",
+    "languages": {
+      "title": "Letterhead in Uzbek and English",
+      "hint": "A letter is printed on the letterhead of its text language. An empty field is printed in Russian. Uzbek is in Latin script.",
+      "uz": "O‘zbekcha (UZ)",
+      "en": "English (EN)",
+      "fields": {
+        "legal_name": "Company name",
+        "legal_address": "Legal address",
+        "signatory_position": "Signatory position",
+        "footer_text": "Footer"
+      }
+    }
   },
   "numbering": {
     "title": "Document numbering",
@@ -522,6 +534,41 @@
     "empty": {
       "title": "No accounts yet",
       "text": "Add the default account in sums: without it an invoice cannot be issued."
+    }
+  },
+  "letterTemplates": {
+    "tab": "On letterhead",
+    "caption": "Letter and memo templates",
+    "create": "New template",
+    "createTitle": "New template",
+    "open": "Open: {{name}}",
+    "emptyTitle": "No templates",
+    "emptyText": "Create the first letter template.",
+    "name": "Name",
+    "language": "Variant language",
+    "body": "Text ({{lang}})",
+    "emptyLanguage": "An empty language is not saved: a document in it starts from a blank page.",
+    "makeDefault": "Default for this kind",
+    "save": "Save template",
+    "reset": "Restore default",
+    "resetTitle": "Restore «{{name}}» to default?",
+    "resetWhat": "Texts in all languages will be replaced with the originals. Your edits will be lost.",
+    "resetDone": "Template restored",
+    "preview": "PDF on letterhead",
+    "previewEmpty": "Write some text — the PDF on the letterhead appears here.",
+    "previewPending": "Preparing PDF…",
+    "previewFailed": "PDF was not built",
+    "default": "Default",
+    "changed": "Changed",
+    "columns": {
+      "name": "Name",
+      "kind": "Kind",
+      "languages": "Languages",
+      "label": "Label"
+    },
+    "kinds": {
+      "letter": "Letter",
+      "memo": "Memo"
     }
   }
 }

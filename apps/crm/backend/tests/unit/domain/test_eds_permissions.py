@@ -41,6 +41,9 @@ EXPECTED: dict[tuple[str, str], set[str]] = {
     ("eds.memo.approve", "full"): {"memos.approve"},
     # SIGN-2 (ADR-0024 п. 1): реестр полномочий подписи — только `full`.
     ("eds.signing.manage", "full"): {"signing.manage"},
+    # ADR-0025: визы бухгалтера и юриста перед подписью договора, счёта и акта — только `full`.
+    ("eds.visa.finance", "full"): {"approvals.visa_finance"},
+    ("eds.visa.legal", "full"): {"approvals.visa_legal"},
 }
 ACCOUNTANT = {
     "letters.read",
@@ -48,6 +51,7 @@ ACCOUNTANT = {
     "registry.export",
     "payments.confirm",
     "memos.create",
+    "approvals.visa_finance",
 }
 #: Журнал шины EDS (W13-A2): только раздел `admin` уровня `full`.
 BUS = "bus.manage"
@@ -58,7 +62,9 @@ SIGNING = "signing.manage"
 ROLE_EDS: dict[str, set[str]] = {
     "ADMIN": {"memos.create", BUS, SIGNING},
     # D2-4: «Счета и оплаты» у директора — read: оплату подтверждает бухгалтер
-    "DIRECTOR": set(EDS_PERMISSIONS) - {BUS, SIGNING, "payments.confirm"},
+    # ADR-0025: директор подписывает, визы бухгалтера и юриста у него нет
+    "DIRECTOR": set(EDS_PERMISSIONS)
+    - {BUS, SIGNING, "payments.confirm", "approvals.visa_finance", "approvals.visa_legal"},
     "MANAGER": {"letters.read", "registry.read", "memos.create", UPLOAD},
     "SUPPLY": {"registry.read", "memos.create"},
     "ENGINEER": {"registry.read", "memos.create"},
@@ -67,6 +73,8 @@ ROLE_EDS: dict[str, set[str]] = {
     # менеджер-универсал — бэк-офис бухгалтера.
     "REGISTRAR": {"letters.read", "letters.register", "registry.read", "memos.create"},
     "MANAGER_ALL": ACCOUNTANT | {UPLOAD},
+    # ADR-0025: юрист визирует договор
+    "LAWYER": {"letters.read", "registry.read", "memos.create", "approvals.visa_legal"},
 }
 
 
@@ -125,7 +133,13 @@ def test_every_system_role_and_template_gives_the_expected_eds_codes(legacy: str
 def test_director_exports_the_registry_but_does_not_confirm_payments() -> None:
     """D2-4 (Q-D2-4-1 п. 1): директор читает счета и выгружает реестр, оплату ведёт бухгалтер."""
     codes = set(eds_permissions_of([make_grant("DIRECTOR")]))
-    assert codes == set(EDS_PERMISSIONS) - {BUS, SIGNING, "payments.confirm"}
+    assert codes == set(EDS_PERMISSIONS) - {
+        BUS,
+        SIGNING,
+        "payments.confirm",
+        "approvals.visa_finance",
+        "approvals.visa_legal",
+    }
     assert {"registry.read", "registry.export"} <= codes
     # бухгалтер сохраняет всё, что имел
     assert set(eds_permissions_of([make_grant("ACCOUNTANT")])) == ACCOUNTANT

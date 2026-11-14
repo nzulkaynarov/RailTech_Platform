@@ -4,7 +4,10 @@ import type {
   CalcCatalogPage,
   CalcLine,
   CalcLinePatch,
+  CalcCopyIn,
+  CalcCopyResult,
   CalcLinesIn,
+  CalcPreviousPage,
   CalcParseResult,
   CalcRequestList,
   CalcRequestRow,
@@ -468,6 +471,58 @@ export const erpCalcHandlers = [
     calc.started = true;
     write(calcs);
     return HttpResponse.json<CalcSheet>(present(calc, held.user));
+  }),
+
+  // План 1.5: «Как в прошлой заявке». В демо у клиентов по одной заявке — прошлыми считаются другие расчёты со строками.
+  http.get("*/api/v1/erp/calc/:number/previous", ({ params }) => {
+    const held = guard("erp.calc", "full");
+    if ("error" in held) return held.error;
+    const calcs = read();
+    const calc = find(calcs, String(params["number"]));
+    if (!calc) return notFound();
+    return HttpResponse.json<CalcPreviousPage>({
+      items: calcs
+        .filter((other) => other.number !== calc.number && other.lines.length > 0)
+        .map((other) => ({
+          number: other.number,
+          title: other.title,
+          created_at: other.decidedAt,
+          lines: other.lines.length,
+          names: other.lines.slice(0, 3).map((line) => line.name),
+        })),
+    });
+  }),
+
+  http.post("*/api/v1/erp/calc/:number/copy", async ({ params, request }) => {
+    const held = guard("erp.calc", "full");
+    if ("error" in held) return held.error;
+    const body = (await request.json()) as CalcCopyIn;
+    const calcs = read();
+    const calc = find(calcs, String(params["number"]));
+    const source = calcs.find(
+      (other) => other.number === body.source && other.number !== calc?.number,
+    );
+    if (!calc || !source) return notFound();
+    const mine = source.lines.filter((line) =>
+      canZone(held.user, line.kind === "service" ? "services" : "goods"),
+    );
+    calc.started = true;
+    for (const line of mine) {
+      const product = CATALOG.find((p) => p.id === line.productId);
+      nextId += 1;
+      calc.lines.push({
+        ...line,
+        id: nextId,
+        purchase: product?.purchase ?? line.purchase,
+        client: 0,
+        visa: null,
+      });
+    }
+    write(calcs);
+    return HttpResponse.json<CalcCopyResult>(
+      { sheet: present(calc, held.user), skipped: source.lines.length - mine.length },
+      { status: 201 },
+    );
   }),
 
   http.post("*/api/v1/erp/calc/:number/lines", async ({ params, request }) => {

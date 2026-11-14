@@ -107,6 +107,7 @@ templates:
       eds.inbox: read
       eds.projects: full
       eds.payments: full
+      eds.visa.finance: full
       eds.memo.create: full
       erp.calc: read
       erp.stock: read
@@ -147,6 +148,7 @@ templates:
       eds.drafts: read
       eds.projects: full
       eds.payments: full
+      eds.visa.finance: full
       eds.memo.create: full
       erp.calc: full
       erp.calc.goods: full
@@ -155,6 +157,20 @@ templates:
       chats.internal: full
       chats.external: full
     restricted_fields: [cost_margin, supplier_prices]
+
+  # План 0.8 (ADR-0025; правила владельца 2026-11-09, п. 13): юрист обязателен, визирует договоры. Нет отдельного сотрудника —
+  # роль получает другой (администратор в «Ролях и правах»).
+  LAWYER:
+    name: { ru: Юрист, uz: Yurist, en: Lawyer }
+    access:
+      dashboard.queue: full
+      crm.clients: read
+      eds.inbox: read
+      eds.projects: read
+      eds.visa.legal: full
+      eds.memo.create: full
+      chats.internal: full
+    restricted_fields: [totals_only]
 
 # Базовая роль CRM (admin|manager|viewer) — признак, прав она не даёт (D1-8, B-014): права CRM сотрудника с ролями
 # Платформы — только из матриц его ролей. Признак нужен там, где считают людей, а не права: «последний администратор»,
@@ -293,6 +309,20 @@ resources:
     label: { ru: "Настройки · Права подписи", uz: "Sozlamalar · Imzo huquqlari", en: "Settings · Signing authority" }
     backend:
       eds: { full: [signing.manage] }
+  # План 0.8 (ADR-0025): визы договора, счёта и акта до подписи. Шаг визы ждёт любого держателя права EDS; без держателя
+  # маршрут подписи не стартует (правило владельца 13).
+  - key: eds.visa.finance
+    module: eds
+    levels: [full]
+    label: { ru: "Документы · Виза бухгалтера: договор, счёт, акт", uz: "Hujjatlar · Buxgalter vizasi: shartnoma, hisob, dalolatnoma", en: "Documents · Accountant visa: contract, invoice, act" }
+    backend:
+      eds: { full: [approvals.visa_finance] }
+  - key: eds.visa.legal
+    module: eds
+    levels: [full]
+    label: { ru: "Документы · Виза юриста: договор", uz: "Hujjatlar · Yurist vizasi: shartnoma", en: "Documents · Lawyer visa: contract" }
+    backend:
+      eds: { full: [approvals.visa_legal] }
   - key: erp.calc
     module: erp
     label: { ru: "Операции · Заявки · расчёт", uz: "Amallar · Arizalar · hisob-kitob", en: "Operations · Requests · costing" }

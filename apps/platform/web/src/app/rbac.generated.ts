@@ -161,6 +161,26 @@ export const RESOURCES = {
       en: "Settings · Signing authority",
     },
   },
+  "eds.visa.finance": {
+    module: "eds",
+    levels: ["full"],
+    backends: [],
+    label: {
+      ru: "Документы · Виза бухгалтера: договор, счёт, акт",
+      uz: "Hujjatlar · Buxgalter vizasi: shartnoma, hisob, dalolatnoma",
+      en: "Documents · Accountant visa: contract, invoice, act",
+    },
+  },
+  "eds.visa.legal": {
+    module: "eds",
+    levels: ["full"],
+    backends: [],
+    label: {
+      ru: "Документы · Виза юриста: договор",
+      uz: "Hujjatlar · Yurist vizasi: shartnoma",
+      en: "Documents · Lawyer visa: contract",
+    },
+  },
   "erp.calc": {
     module: "erp",
     levels: ["read", "full"],
@@ -596,6 +616,7 @@ export const TEMPLATES = {
       "eds.projects": "full",
       "eds.payments": "full",
       "eds.memo.create": "full",
+      "eds.visa.finance": "full",
       "erp.calc": "read",
       "erp.stock": "read",
       "chats.internal": "full",
@@ -638,6 +659,7 @@ export const TEMPLATES = {
       "eds.projects": "full",
       "eds.payments": "full",
       "eds.memo.create": "full",
+      "eds.visa.finance": "full",
       "erp.calc": "full",
       "erp.calc.goods": "full",
       "erp.calc.services": "full",
@@ -646,6 +668,23 @@ export const TEMPLATES = {
       "chats.external": "full",
     },
     restricted_fields: ["cost_margin", "supplier_prices"],
+  },
+  LAWYER: {
+    name: {
+      ru: "Юрист",
+      uz: "Yurist",
+      en: "Lawyer",
+    },
+    access: {
+      "dashboard.queue": "full",
+      "crm.clients": "read",
+      "eds.inbox": "read",
+      "eds.projects": "read",
+      "eds.memo.create": "full",
+      "eds.visa.legal": "full",
+      "chats.internal": "full",
+    },
+    restricted_fields: ["totals_only"],
   },
 } satisfies Record<string, CatalogRole>;
 

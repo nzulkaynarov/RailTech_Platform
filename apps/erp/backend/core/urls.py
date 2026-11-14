@@ -94,7 +94,7 @@ from accounts.views.setup import SetupCompanyView, SetupStatusView
 from accounts.wizard import WIZARD_FORMS, CompanyWizardView
 from catalog.desk.views_items import ItemDeskViewSet, ProposalDeskViewSet, SupplierDeskViewSet
 from catalog.desk.views_people import BrigadeDeskViewSet
-from catalog.desk.views_refs import ExchangeRateListViewSet, HsCodeDeskViewSet
+from catalog.desk.views_refs import ExchangeRateListViewSet, HsCodeDeskViewSet, MxikSearchView
 from catalog.desk.views_tech_docs import DocumentKindDeskViewSet, TechDocDeskViewSet
 from catalog.views import (
     CategoryRequestViewSet,
@@ -149,6 +149,7 @@ from crm.views import (
 )
 from crm.views.calc import (
     CalcCatalogView,
+    CalcCopyView,
     CalcDealRefsView,
     CalcLinesView,
     CalcLineView,
@@ -156,6 +157,7 @@ from crm.views.calc import (
     CalcLostView,
     CalcNewVersionView,
     CalcParseView,
+    CalcPreviousView,
     CalcReadyView,
     CalcSheetView,
     CalcStartView,
@@ -358,6 +360,8 @@ urlpatterns = (
         path("api/v1/calc/<int:deal_id>/new-version/", CalcNewVersionView.as_view(), name="calc-new-version"),
         path("api/v1/calc/<int:deal_id>/lost/", CalcLostView.as_view(), name="calc-lost"),
         path("api/v1/calc/<int:deal_id>/parse/", CalcParseView.as_view(), name="calc-parse"),
+        path("api/v1/calc/<int:deal_id>/previous/", CalcPreviousView.as_view(), name="calc-previous"),
+        path("api/v1/calc/<int:deal_id>/copy/", CalcCopyView.as_view(), name="calc-copy"),
         # D2-2 — «Склад» Платформы: остатки, резервы, заказы поставщикам, приёмка, отгрузки, запросы цен.
         path("api/v1/stock/balances/", StockBalanceListView.as_view(), name="stock-balances"),
         path("api/v1/stock/balances/<int:product_id>/", StockProductView.as_view(), name="stock-product"),
@@ -377,6 +381,7 @@ urlpatterns = (
         path("api/v1/stock/orders/<int:order_id>/cancel/", OrderCancelView.as_view(), name="stock-order-cancel"),
         path("api/v1/stock/orders/<int:order_id>/receipts/", OrderReceiptView.as_view(), name="stock-order-receive"),
         path("api/v1/stock/receipts/", ReceiptListView.as_view(), name="stock-receipts"),
+        path("api/v1/master-data/mxik/", MxikSearchView.as_view(), name="master-data-mxik"),
         path("api/v1/stock/overdue/", OverdueListView.as_view(), name="stock-overdue"),
         path("api/v1/stock/tasks/", SupplyTaskListView.as_view(), name="stock-tasks"),
         path("api/v1/stock/price-requests/", PriceRequestListView.as_view(), name="stock-price-requests"),

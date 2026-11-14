@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('parties', '0024_term_settings'),
+        ('parties', '0025_document_profile_translations'),
     ]
 
     operations = [

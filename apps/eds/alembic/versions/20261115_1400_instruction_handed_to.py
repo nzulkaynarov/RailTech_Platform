@@ -1,8 +1,8 @@
-"""«Передать в работу» (план 1.9): объект, в который передано письмо, — `instructions.handed_to` (JSONB {kind, ref, number}).
-Пусто у прежних поручений. Откат удаляет колонку.
+"""«Передать в работу» (план 1.9): объект, в который передано письмо, — `instructions.handed_to` (JSONB).
+Поля {kind, ref, number}; пусто у прежних поручений. Откат удаляет колонку.
 
 Revision ID: 2da01a5477bc
-Revises: 1ab826e3a38f
+Revises: f69980474676
 """
 
 from collections.abc import Sequence
@@ -12,7 +12,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "2da01a5477bc"
-down_revision: str | Sequence[str] | None = "1ab826e3a38f"
+down_revision: str | Sequence[str] | None = "f69980474676"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

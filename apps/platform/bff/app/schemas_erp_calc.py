@@ -442,3 +442,28 @@ def to_sheet(raw: dict[str, Any], fields: Collection[str], access: Mapping[str, 
         ready=CalcReady(**raw["ready"]),
         rights=CalcRights(**{**raw["rights"], "cost": bool(raw["rights"]["cost"]) and cost}),
     )
+
+
+class CalcPrevious(BaseModel):
+    """План 1.5: прошлый расчёт того же клиента — основа «Как в прошлой заявке»."""
+
+    number: str
+    title: str
+    created_at: dt.datetime
+    lines: int
+    names: list[str]
+
+
+class CalcPreviousPage(BaseModel):
+    items: list[CalcPrevious]
+
+
+class CalcCopyIn(BaseModel):
+    model_config = _STRICT
+
+    source: str = Field(min_length=1, max_length=40, description="Номер прошлой заявки (ЗВ-…)")
+
+
+class CalcCopyResult(BaseModel):
+    sheet: CalcSheet
+    skipped: int = Field(ge=0)

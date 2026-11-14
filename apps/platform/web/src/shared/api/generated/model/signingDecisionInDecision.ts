@@ -3,10 +3,14 @@
  * RailTech Platform — BFF API (Платформа → CRM и ERP)
  */
 
+/**
+ * Виза — approve («Согласовать») или return («Вернуть с замечанием»); подпись — approve или reject. У reject и return нужен comment
+ */
 export type SigningDecisionInDecision =
   (typeof SigningDecisionInDecision)[keyof typeof SigningDecisionInDecision];
 
 export const SigningDecisionInDecision = {
   approve: "approve",
   reject: "reject",
+  return: "return",
 } as const;

@@ -5,6 +5,7 @@
 import type { SigningDecisionInDecision } from "./signingDecisionInDecision";
 
 export interface SigningDecisionIn {
+  /** Виза — approve («Согласовать») или return («Вернуть с замечанием»); подпись — approve или reject. У reject и return нужен comment */
   decision: SigningDecisionInDecision;
   /** @maxLength 4000 */
   comment?: string;

@@ -139,15 +139,20 @@ def test_codes_become_roles_the_column_goes_and_downgrade_brings_the_codes_back(
         # Остальные роли — версия 1; «Бухгалтер» — 2 (0044: без цен поставщиков, D2-1);
         # «Делопроизводитель» — 2 (D17G-1: разбор и передача лидов вместо `crm.leads: full`);
         # «Администратор» — 2 (SIGN-2: реестр полномочий подписи `eds.signing.manage: full`);
-        # «Менеджер» и «Снабженец» — 2 (0.3: расчёт менеджеру, снабженцу — без клиентов CRM).
-        twice = ["ADMIN", "tpl:ACCOUNTANT", "tpl:REGISTRAR", "tpl:MANAGER", "tpl:SUPPLY"]
+        # «Менеджер» и «Снабженец» — 2 (0.3: расчёт менеджеру, снабженцу — без клиентов CRM);
+        # «Менеджер-универсал» — 2, «Бухгалтер» — 3 (ADR-0025: виза бухгалтера `eds.visa.finance`).
+        twice = ["ADMIN", "tpl:REGISTRAR", "tpl:MANAGER", "tpl:SUPPLY", "tpl:MANAGER_ALL"]
+        thrice = ["tpl:ACCOUNTANT"]
         assert conn.execute(
             "SELECT DISTINCT version FROM platform_roles WHERE NOT (code = ANY(%s))",
-            (["DIRECTOR", *twice],),
+            (["DIRECTOR", *twice, *thrice],),
         ).fetchall() == [(1,)]
         assert conn.execute(
             "SELECT DISTINCT version FROM platform_roles WHERE code = ANY(%s)", (twice,)
         ).fetchall() == [(2,)]
+        assert conn.execute(
+            "SELECT DISTINCT version FROM platform_roles WHERE code = ANY(%s)", (thrice,)
+        ).fetchall() == [(3,)]
         # Столбец с кодами удалён, связь по роли не даёт её удалить.
         columns = conn.execute(
             "SELECT column_name FROM information_schema.columns "
@@ -214,7 +219,12 @@ def test_a_migrated_manager_and_accountant_keeps_the_same_rights(
     )
     assert derived.crm_role == "manager"
     # Матрица разделов = объединение колонок версии 1; 0.3 (FR-7): у менеджера расчёт — `full`.
-    assert dict(derived.access) == {**_v1_union(["MANAGER", "ACCOUNTANT"]), "erp.calc": "full"}
+    # ADR-0025: роль бухгалтера после миграций визирует договор, счёт и акт.
+    assert dict(derived.access) == {
+        **_v1_union(["MANAGER", "ACCOUNTANT"]),
+        "erp.calc": "full",
+        "eds.visa.finance": "full",
+    }
     for resource, actions in crm_before.items():
         for action, allowed in actions.items():
             assert crm_after[resource][action] or not allowed, (resource, action)
@@ -264,7 +274,7 @@ def test_accountant_template_loses_supplier_prices_and_downgrade_returns_them(
     command.upgrade(alembic_config, "head")
     after, after_version = accountant()
     assert after == ["totals_only"]
-    assert after_version == version + 1
+    assert after_version == version + 2  # 0044 (без цен поставщиков) и ADR-0025 (виза бухгалтера)
 
     command.upgrade(alembic_config, "head")  # повтор — без изменений
     assert accountant() == (after, after_version)
@@ -396,7 +406,10 @@ def test_registrar_template_triages_leads_and_downgrade_returns_full(
         after, after_version = role(conn, "tpl:REGISTRAR")
         assert after == {**registrar, "crm.leads": "read", "crm.leads.triage": "full"}
         assert after_version == version + 1
-        assert role(conn, "tpl:MANAGER_ALL") == manager_all
+        # ADR-0025: менеджер-универсал на пилоте подтверждает оплату — получает визу бухгалтера.
+        all_after, all_version = role(conn, "tpl:MANAGER_ALL")
+        assert all_after == {**manager_all[0], "eds.visa.finance": "full"}
+        assert all_version == manager_all[1] + 1
         assert base_role(conn, clerk) == ["viewer"]
         assert base_role(conn, seller) == ["manager"]
         columns = {

@@ -192,6 +192,14 @@ WeasyPrint и по PDF через pypdf с допуском 0,03; точное �
     итог `crm.mail.sent|failed` → журнал `document_mailings` (B-W18AP1-1).
 - **ERP**: пакет копией в `site-packages` (как `rt_bus`); в образе ERP WeasyPrint 69.0 (`requirements.txt`) — та же мажорная версия,
   которую требует пакет (`weasyprint>=69,<70` в зависимостях, проверка при импорте `rt_docs.pdf`; lock пакета — 69.0).
+  **Подключено (план 2.6, 2026-11-15)**: контекст сборки `rtdocs` и `COPY --from=contracts documents` в образе ERP,
+  `RT_DOCS_CONTRACTS_DIR=/opt/rt/contracts/documents`; модуль `crm/services/documents/rt_documents.py`: бланк — те же реквизиты
+  профиля, что уходят в EDS; тело — шаблон ERP (`body_html`: свой, замороженный при выпуске или образец платформы) через
+  `html_to_body`, скаляры `{{doc.number}}` и т. п. подставляются текстом, `{{doc.*}}` блоков — данными
+  `rt_docs.commercial` (`items_table`, `totals_block`, `payment_requisites`); рамка документа (стороны, ссылки) — узлами
+  перед телом. Подписанный акт — код и QR проверки из `DocumentMeta.verification_*` (ADR-0024 п. 5), штамп ПЭП — текстом в
+  колонке подписей. Виды — `settings.RT_DOCS_DOCUMENTS` (env, по умолчанию `invoice,act,contract,quote`). КП — письмо-предложение, тело собирается кодом (проекция
+  для клиента); QR отправленного КП ведёт на онлайн-версию: `DocumentMeta.qr_caption` заменяет подпись блока и прячет ссылку с токеном. Рендер — в задаче Celery (очередь `pdf`).
 - **Правило встраивания (B-094):** рендер — только в фоновом воркере с параллельностью 1 и лимитом памяти контейнера; результат
   кэшируется по хешу тела и бланка; синхронный рендер в API не допускается.
 - **Рендер — только в воркере** (Procrastinate EDS, Celery ERP), не в запросе: с тайм-аутом `timeout_s` (по умолчанию 60 с;

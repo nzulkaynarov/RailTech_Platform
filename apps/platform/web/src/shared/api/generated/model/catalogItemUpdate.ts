@@ -30,6 +30,26 @@ export interface CatalogItemUpdate {
    * @pattern ^([0-9]{2}|[0-9]{4}|[0-9]{6}|[0-9]{8}|[0-9]{10})?$
    */
   hs_code?: string;
+  /**
+   * План 1.8: МХИК (ИКПУ) — 17 цифр; пусто — снять код вместе с названием, единицей и упаковкой
+   * @pattern ^([0-9]{17})?$
+   */
+  mxik_code?: string;
+  /**
+   * Название по классификатору (при выборе из него)
+   * @maxLength 500
+   */
+  mxik_name?: string;
+  /**
+   * Единица по классификатору
+   * @maxLength 100
+   */
+  mxik_unit?: string;
+  /**
+   * Упаковка по классификатору
+   * @maxLength 200
+   */
+  mxik_package?: string;
   /** Страна происхождения; `null` — страна бренда */
   country_of_origin_id?: CompanyItemRef | null;
   /**

@@ -29,6 +29,7 @@ SSO_SECRET = "integration-sso-secret-for-tests-only"
 USER_UPDATED = "uz.railtech.identity.user.updated.v1"
 USER_CREATED = "uz.railtech.identity.user.created.v1"
 ACCOUNTANT = [
+    "approvals.visa_finance",  # виза бухгалтера на договор, счёт и акт (план 0.8, ADR-0025)
     "letters.read",
     "memos.create",
     "payments.confirm",

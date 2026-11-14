@@ -440,6 +440,23 @@
       "from": "{{number}} xatini ishga topshirish: xat yuborilgach topshiriq yopiladi",
       "done": "Xizmat xati {{number}} yuborildi, {{letter}} xati ishga topshirildi",
       "failed": "Xat yuborildi, lekin topshiriq yopilmadi: {{reason}}"
+    },
+    "assist": {
+      "draft": "Matnni tayyorlash",
+      "translate": "Ingliz tiliga tarjima qilish",
+      "draftTitle": "Xat matnini tayyorlash",
+      "brief": "Xat nima haqida",
+      "briefHint": "Masalan: shartnoma bo‘yicha yetkazib berish muddatini tasdiqlashni so‘rash",
+      "draftRun": "Tayyorlash",
+      "replaces": "Muharrirdagi matn almashtiriladi — keyin uni tuzatish mumkin",
+      "translateTitle": "Ingliz tiliga tarjima",
+      "translation": "Tarjima",
+      "back": "Teskari tarjima — mazmunni tekshiring",
+      "insert": "Tarjimani qo‘yish",
+      "cancel": "Bekor qilish",
+      "pending": "Tarjima tayyorlanmoqda…",
+      "inserted": "Matn qo‘yildi — tekshiring",
+      "failed": "Yordamchi javob bermadi — matnni o‘zingiz yozing"
     }
   },
   "preview": {

@@ -56,6 +56,7 @@ from app.schemas_erp_catalog import (
     ManufacturerCreate,
     ManufacturerPage,
     ManufacturerUpdate,
+    MxikPage,
     Offer,
     OfferCreate,
     OfferHistory,
@@ -79,6 +80,7 @@ from app.schemas_erp_catalog import (
     to_item_page,
     to_manufacturer,
     to_manufacturer_page,
+    to_mxik_page,
     to_offer,
     to_offer_history,
     to_rate_page,
@@ -471,6 +473,25 @@ async def list_rates(
         "GET", "exchange-rates/", params=_params(currency=currency, page=page, page_size=page_size)
     )
     return to_rate_page(data, page, page_size)
+
+
+@router.get("/erp/catalog/mxik", response_model=MxikPage, operation_id="searchMxik")
+async def search_mxik(authed: Reader, q: Search = None) -> MxikPage:
+    """План 1.8: подбор МХИК (ИКПУ) из классификатора Налогового комитета. Классификатор не
+    ответил — 503 `details.reason = mxik_unavailable`: код вводится вручную."""
+    try:
+        data = await _erp(authed).data("GET", "master-data/mxik/", params=_params(q=q))
+    except PlatformError as exc:
+        if exc.status_code == 503:
+            raise PlatformError(
+                "BACKEND_UNAVAILABLE",
+                "Классификатор МХИК не отвечает — введите код вручную.",
+                status_code=503,
+                source="erp",
+                details={"reason": "mxik_unavailable"},
+            ) from exc
+        raise
+    return to_mxik_page(data)
 
 
 @router.get("/erp/catalog/hs-codes", response_model=HsCodePage, operation_id="listHsCodes")

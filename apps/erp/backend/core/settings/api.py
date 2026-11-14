@@ -144,7 +144,7 @@ SPECTACULAR_SETTINGS = {
         "Supports deal lifecycle management, quoting, product catalog (PIM), "
         "Excel imports, and real-time notifications via WebSocket."
     ),
-    "VERSION": "1.18.0",
+    "VERSION": "1.20.0",
     "CONTACT": {"name": "ERP API Support", "email": "support@example.com"},
     "LICENSE": {"name": "Proprietary"},
     "SERVE_INCLUDE_SCHEMA": False,
@@ -252,6 +252,14 @@ def _secret_list(name: str) -> list[str]:
 # Сервисный токен направления CRM → ERP (OpenAPI erp-integration.yaml).
 SERVICE_TOKEN_CRM_TO_ERP = _secret_list("SERVICE_TOKEN_CRM_TO_ERP")
 ERP_VERSION = os.environ.get("ERP_VERSION", "0.1.0")
+# Документы ERP на общем генераторе rt_docs (план 2.6): виды, которые уже рендерит rt_docs, через запятую; остальные —
+# прежними шаблонами Django. Откат вида — убрать его из списка (`RT_DOCS_DOCUMENTS=`), без выпуска кода.
+RT_DOCS_DOCUMENTS = tuple(
+    kind.strip()
+    for kind in os.environ.get("RT_DOCS_DOCUMENTS", "invoice,act,contract,quote").split(",")
+    if kind.strip()
+)
+
 # Сопряжение с CRM (M3-ERP-05): срок жизни кода (сек) и переходный период ротации — сколько ещё действует прежний
 # токен CRM→ERP после «Обновить ключи» (сек).
 PAIRING_CODE_TTL_SECONDS = int(os.environ.get("PAIRING_CODE_TTL_SECONDS", "900"))

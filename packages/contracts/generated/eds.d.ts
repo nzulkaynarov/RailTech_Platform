@@ -665,6 +665,138 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/templates": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Шаблоны писем и служебок (TPL-4, план 3.6)
+     * @description Варианты по языкам (`ru`, `uz`, `en` — полное тело rt-docs со своим `lang`), один шаблон по умолчанию на вид.
+     *     Встроенные (`origin = builtin`) добавляет код при первом чтении; `changed` — вариант разошёлся с исходником.
+     */
+    get: operations["listLetterTemplates"];
+    put?: never;
+    /**
+     * Новый шаблон
+     * @description Делопроизводитель и администратор. Язык тела совпадает с ключом варианта (иначе 422 `variants: <lang>_lang`), нужен хотя
+     *     бы один вариант (`variants: required`); тело — по схеме бланка (`body`). `is_default` снимает метку с прежнего.
+     */
+    post: operations["createLetterTemplate"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/template-previews": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Предпросмотр варианта на бланке
+     * @description Тело на бланке без документа — проект с подписантом бланка, та же очередь и кэш по хешу ввода, что у писем; повтор с
+     *     тем же телом — тот же `hash`. Нет бланка — 409 `letterhead_missing`.
+     */
+    post: operations["previewLetterTemplate"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/template-previews/{preview_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Состояние предпросмотра
+     * @description Только рендеры предпросмотра — черновик письма по хешу не выдаётся (404).
+     */
+    get: operations["getLetterTemplatePreview"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/template-previews/{preview_id}/file": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * PDF предпросмотра
+     * @description Готов — PDF; ещё строится или не удался — 409.
+     */
+    get: operations["downloadLetterTemplatePreview"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/templates/{template_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Шаблон */
+    get: operations["getLetterTemplate"];
+    /**
+     * Изменить шаблон
+     * @description Вид не меняется (`kind: immutable`). Снять «по умолчанию» можно только выбором другого (409 `default_required`).
+     */
+    put: operations["updateLetterTemplate"];
+    post?: never;
+    /**
+     * Удалить свой шаблон
+     * @description Встроенный не удаляется (409 `builtin`), шаблон по умолчанию — тоже (409 `default_required`).
+     */
+    delete: operations["deleteLetterTemplate"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/templates/{template_id}/reset": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Вернуть встроенный шаблон по умолчанию
+     * @description Варианты и название — снова из исходника; свой шаблон — 409 `not_builtin`.
+     */
+    post: operations["resetLetterTemplate"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/resolution-templates": {
     parameters: {
       query?: never;
@@ -896,6 +1028,31 @@ export interface paths {
      *     ответил), `ai_budget_exceeded`, `nothing_recognized`. 422: файл не PDF и не изображение (`file_id` с `unsupported_file`).
      */
     post: operations["suggestLetterFromFile"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/letter-assist": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Помощник письма — подготовить текст или перевести
+     * @description План 1.4. `draft` — текст письма по поручению (`brief`, необязательно `recipient`, `subject`, текущее тело `body`) на
+     *     языке `lang`; `translate` — перевод тела `body` на язык `lang` и обратный перевод на русский (`back_translation`), чтобы
+     *     сотрудник проверил смысл. Модель пишет Markdown, тело собирает мост `rt_docs.markdown_to_body` (план 1.3); в документ
+     *     ничего не сохраняется — тело вставляет человек. Шлюз — алиас `draft-model` ключом EDS, вызов — строка `ai_suggestions`.
+     *     Пустое поручение — 422 `details.fields.brief = required`; перевод без текста — `body = required`; помощник не настроен
+     *     или не ответил — 409 `ai_unavailable`; дневной лимит — 409 `ai_budget_exceeded`.
+     */
+    post: operations["assistLetterText"];
     delete?: never;
     options?: never;
     head?: never;
@@ -1683,7 +1840,8 @@ export interface components {
      *     маршрута служебной записки с суммой (решение архитектора). `bus.manage` (0.3.0, W13-A2) — «Журнал интеграций» шины:
      *     раздел `admin` каталога, уровень `full`. `files.upload` (D1-2b) — загрузить свой файл и читать свои файлы
      *     (письмо директору к «Создать заявку»): раздел `crm.clients`, уровень `full`. `signing.manage` (0.11.0, SIGN-2) — вести
-     *     реестр полномочий подписи: раздел `eds.signing.manage`, уровень `full`. В событиях шины (`identity`, `eds`) код — строка по шаблону
+     *     реестр полномочий подписи: раздел `eds.signing.manage`, уровень `full`. `approvals.visa_finance` и `approvals.visa_legal` (0.18.0, ADR-0025) — визы бухгалтера и юриста
+     *     маршрута подписи договора, счёта и акта: разделы `eds.visa.finance` и `eds.visa.legal`. В событиях шины (`identity`, `eds`) код — строка по шаблону
      *     `^[a-z_]+\.[a-z_]+$`, не перечень: новый код не ломает события v1.
      * @enum {string}
      */
@@ -1699,7 +1857,9 @@ export interface components {
       | "payments.confirm"
       | "bus.manage"
       | "files.upload"
-      | "signing.manage";
+      | "signing.manage"
+      | "approvals.visa_finance"
+      | "approvals.visa_legal";
     /** Format: uuid */
     Uuid: string;
     /** @description Имя подписчика шины (`crm`, `erp`, `platform-bff`) */
@@ -2244,6 +2404,30 @@ export interface components {
       kind: components["schemas"]["LetterKindCode"] | null;
       /** Format: date */
       document_due: string | null;
+    };
+    LetterAssistIn: {
+      /** @enum {string} */
+      action: "draft" | "translate";
+      /**
+       * @description Язык текста (draft) или перевода (translate)
+       * @enum {string}
+       */
+      lang: "ru" | "uz" | "en";
+      /** @description О чём письмо (draft) */
+      brief?: string | null;
+      recipient?: string | null;
+      subject?: string | null;
+      /** @description Текущее тело письма (обязательно для translate) */
+      body?: components["schemas"]["DocumentBody"] | null;
+    };
+    LetterAssistSuggestion: {
+      /** Format: uuid */
+      suggestion_id: string;
+      body: components["schemas"]["DocumentBody"];
+      /** @description Обратный перевод на русский в Markdown (translate) */
+      back_translation: string | null;
+      alias: string;
+      prompt_version: string;
     };
     LetterIntakeSuggestion: {
       suggestion_id: components["schemas"]["Uuid"];
@@ -2799,6 +2983,51 @@ export interface components {
       | "to_accountant"
       | "paid"
       | "sent";
+    /** @enum {string} */
+    LetterTemplateKind: "letter" | "memo";
+    /** @description Варианты по языкам — тело rt-docs, `lang` тела совпадает с ключом */
+    LetterTemplateVariants: {
+      ru?: components["schemas"]["DocumentBody"] | null;
+      uz?: components["schemas"]["DocumentBody"] | null;
+      en?: components["schemas"]["DocumentBody"] | null;
+    };
+    LetterTemplateIn: {
+      kind: components["schemas"]["LetterTemplateKind"];
+      name: string;
+      variants: components["schemas"]["LetterTemplateVariants"];
+      /** @default false */
+      is_default: boolean;
+      /** @default true */
+      active: boolean;
+    };
+    LetterTemplate: {
+      id: components["schemas"]["Uuid"];
+      kind: components["schemas"]["LetterTemplateKind"];
+      name: string;
+      variants: components["schemas"]["LetterTemplateVariants"];
+      languages: ("ru" | "uz" | "en")[];
+      is_default: boolean;
+      active: boolean;
+      /** @enum {string} */
+      origin: "builtin" | "custom";
+      /** @description Встроенный и разошёлся с исходником */
+      changed: boolean;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    LetterTemplateList: {
+      items: components["schemas"]["LetterTemplate"][];
+    };
+    TemplatePreviewIn: {
+      body: components["schemas"]["DocumentBody"];
+    };
+    TemplatePreview: {
+      hash: string;
+      /** @enum {string} */
+      status: "pending" | "ready" | "failed";
+      error: string | null;
+      pages: number | null;
+    };
     /**
      * @description Тело документа на бланке — контракт `packages/contracts/documents/body.schema.json` (D-DOC1, ADR-0020): узлы ProseMirror
      *     (`paragraph`, `heading`, списки, `table`, …), без цветов, шрифтов и HTML. EDS нормализует и проверяет тело `rt_docs`
@@ -4300,6 +4529,242 @@ export interface operations {
       422: components["responses"]["ValidationFailed"];
     };
   };
+  listLetterTemplates: {
+    parameters: {
+      query?: {
+        kind?: components["schemas"]["LetterTemplateKind"];
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Шаблоны по виду, по умолчанию — первыми */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterTemplateList"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  createLetterTemplate: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LetterTemplateIn"];
+      };
+    };
+    responses: {
+      /** @description Сохранено */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterTemplate"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  previewLetterTemplate: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TemplatePreviewIn"];
+      };
+    };
+    responses: {
+      /** @description Рендер поставлен в очередь или готов */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TemplatePreview"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  getLetterTemplatePreview: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        preview_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Состояние */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TemplatePreview"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+    };
+  };
+  downloadLetterTemplatePreview: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        preview_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description PDF */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/pdf": string;
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+    };
+  };
+  getLetterTemplate: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        template_id: components["schemas"]["Uuid"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Шаблон */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterTemplate"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+    };
+  };
+  updateLetterTemplate: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        template_id: components["schemas"]["Uuid"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LetterTemplateIn"];
+      };
+    };
+    responses: {
+      /** @description Сохранено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterTemplate"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  deleteLetterTemplate: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        template_id: components["schemas"]["Uuid"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Удалено */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+    };
+  };
+  resetLetterTemplate: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        template_id: components["schemas"]["Uuid"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Возвращён */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterTemplate"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+    };
+  };
   listResolutionTemplates: {
     parameters: {
       query?: never;
@@ -4695,6 +5160,34 @@ export interface operations {
       401: components["responses"]["Unauthorized"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  assistLetterText: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LetterAssistIn"];
+      };
+    };
+    responses: {
+      /** @description Предложение тела письма */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterAssistSuggestion"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
       409: components["responses"]["Conflict"];
       422: components["responses"]["ValidationFailed"];
     };

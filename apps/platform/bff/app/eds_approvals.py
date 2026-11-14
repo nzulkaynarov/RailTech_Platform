@@ -216,8 +216,13 @@ async def quote_page(
     return QuoteApprovalPage(items=rows, next_cursor=page.next_cursor)
 
 
+#: Права EDS шагов визы маршрута подписи (ADR-0025): шаг с таким исполнителем — виза, иначе подпись.
+VISA_PERMISSIONS = frozenset({"approvals.visa_finance", "approvals.visa_legal"})
+
+
 async def signing_page(proxy: EdsProxy) -> SigningApprovalPage:
-    """Открытые шаги «Подписать» текущего сотрудника (SIGN-4, FX-10): подписант назначен в EDS."""
+    """Открытые шаги маршрута подписи текущего сотрудника (SIGN-4, FX-10; ADR-0025 — визы, затем
+    подпись)."""
     data = await proxy.request(
         "GET",
         f"{API}/approvals",
@@ -227,10 +232,14 @@ async def signing_page(proxy: EdsProxy) -> SigningApprovalPage:
     for item in data.get("items", []):
         obj = item.get("object") or {}
         tiyins = obj.get("signing_amount_tiyins")
+        step = item.get("current_step") or {}
+        permission = (step.get("assignee") or {}).get("permission")
         rows.append(
             SigningApprovalRow(
                 id=item["id"],
                 kind=obj["signing_kind"],
+                action="visa" if permission in VISA_PERMISSIONS else "sign",
+                step=str(step.get("label") or "Подписать"),
                 number=obj["signing_number"],
                 title=item.get("title") or "",
                 amount=f"{Decimal(tiyins) / 100:.2f}" if tiyins is not None else None,

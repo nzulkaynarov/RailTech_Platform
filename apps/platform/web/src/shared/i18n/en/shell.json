@@ -224,7 +224,8 @@
       "memo": "Memo",
       "chat": "Chat",
       "ticket": "Staff request",
-      "integration": "Integration"
+      "integration": "Integration",
+      "product": "Product"
     },
     "actions": {
       "group": "Actions",
