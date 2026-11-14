@@ -84,6 +84,31 @@ def get_document_profile(company: Company) -> CompanyDocumentProfile:
     return company.document_profile
 
 
+def clean_translations(value) -> Optional[dict]:
+    """TPL-3: бланк на `uz` и `en` — только поля бланка, строки в пределах основных полей; пустые отбрасываются.
+    Неверная форма — None."""
+    from parties.models.document_profile import LETTERHEAD_LANG_FIELDS, LETTERHEAD_LANGS
+
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        return None
+    clean: dict = {}
+    for lang, fields in value.items():
+        if lang not in LETTERHEAD_LANGS or not isinstance(fields, dict):
+            return None
+        row = {}
+        for key, text in fields.items():
+            limit = LETTERHEAD_LANG_FIELDS.get(key)
+            if limit is None or not isinstance(text, (str, type(None))) or len(text or "") > limit:
+                return None
+            if (text or "").strip():
+                row[key] = text.strip()
+        if row:
+            clean[lang] = row
+    return clean
+
+
 def update_document_profile(
     user: "CustomUser", company: Company, data: dict
 ) -> Tuple[Optional[CompanyDocumentProfile], Optional[str]]:
@@ -106,8 +131,16 @@ def update_document_profile(
     for field, allowed in _EDITABLE_CHOICE_FIELDS.items():
         if field in data and data[field] not in allowed:
             return None, f"INVALID_{field.upper()}"
+    translations = None
+    if "translations" in data:
+        translations = clean_translations(data["translations"])
+        if translations is None:
+            return None, "INVALID_TRANSLATIONS"
     profile = get_document_profile(company)
     changed = []
+    if translations is not None:
+        profile.translations = translations
+        changed.append("translations")
     for field in _EDITABLE_FIELDS:
         if field in data:
             setattr(profile, field, data[field] or "")

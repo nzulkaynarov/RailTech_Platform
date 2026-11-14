@@ -5,6 +5,10 @@ from django.utils.translation import gettext_lazy as _
 
 from core.storage import company_document_profile_logo_path, get_public_storage
 
+#: TPL-3: языки бланка кроме основного (русского) и поля, у которых есть варианты, — с пределами длины
+LETTERHEAD_LANGS = ("uz", "en")
+LETTERHEAD_LANG_FIELDS = {"legal_name": 255, "legal_address": 2000, "signatory_position": 255, "footer_text": 2000}
+
 
 class CompanyDocumentProfile(models.Model):
     """Branded requisites a company prints on its OWN commercial documents (КП, договор).
@@ -68,6 +72,14 @@ class CompanyDocumentProfile(models.Model):
         blank=True,
         verbose_name=_("Колонтитул / оговорка"),
         help_text=_("Текст внизу документа: дисклеймер, условия, контакты"),
+    )
+    # TPL-3 (план 2.7): бланк на трёх языках — `{"uz": {...}, "en": {...}}`, поля LETTERHEAD_LANG_FIELDS; основной
+    # текст (русский) — в полях выше. Пустое значение — берётся русское.
+    translations = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name=_("Бланк на других языках"),
+        help_text=_("Название, адрес, должность подписанта и подвал на узбекском и английском"),
     )
     accent_color = models.CharField(
         max_length=20,
