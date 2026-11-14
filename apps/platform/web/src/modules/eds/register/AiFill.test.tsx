@@ -14,6 +14,7 @@ import { selectedLabel } from "../../../test/fields";
 import { renderAt, signIn } from "../../../test/edsKit";
 import { setupLetterTests } from "../../../test/lettersKit";
 import { server } from "../../../test/server";
+import { openStep, reveal } from "../../../test/steps";
 import { applySuggestion, decisionOf, revertSuggestion } from "./aiFill";
 import { emptyRegister } from "./registerModel";
 
@@ -28,8 +29,14 @@ async function openForm() {
   ).toBeVisible();
 }
 
+/** «Зарегистрировать» — в последней секции «Проверка и регистрация». */
+function registerButton(name: string | RegExp): HTMLElement {
+  openStep("Проверка и регистрация");
+  return screen.getByRole("button", { name });
+}
+
 async function attach(name = "trebovanie.pdf", type = "application/pdf") {
-  fireEvent.change(screen.getByLabelText("Файл документа"), {
+  fireEvent.change(reveal(screen.getByLabelText("Файл документа")), {
     target: { files: [new File(["%PDF-1.4"], name, { type })] },
   });
   const list = await screen.findByRole("list", { name: "Прикреплённые файлы" });
@@ -103,14 +110,15 @@ describe("«Заполнить из файла» (EDS-REG)", () => {
     expect(screen.getByLabelText("Тема")).toHaveValue(
       "Требование о пояснениях по НДС за III квартал",
     );
-    expect(selectedLabel(screen.getByLabelText("Вид документа"))).toBe(
+    expect(selectedLabel(reveal(screen.getByLabelText("Вид документа")))).toBe(
       "Требование или уведомление ГНК",
     );
-    expect(screen.getByRole("checkbox", { name: "Срочно" })).toBeChecked();
+    expect(reveal(screen.getByLabelText("Срочно"))).toBeChecked();
     expect(screen.getAllByText("Предложено ИИ")).toHaveLength(8);
 
     fireEvent.change(screen.getByLabelText("Тема"), { target: { value: "Пояснения по НДС" } });
     expect(screen.getAllByText("Предложено ИИ")).toHaveLength(7);
+    openStep("Файл письма");
     expect(await screen.findByText(/Возможная связь: ЗВ-2026-905/)).toBeVisible();
     expect(searched).toContain("301234567");
     expect(searched).toContain("ГНИ Демо-района");
@@ -118,7 +126,7 @@ describe("«Заполнить из файла» (EDS-REG)", () => {
     // способ получения помощник не предлагает — его выбирает человек
     fireEvent.mouseDown(screen.getByLabelText("Способ получения"));
     fireEvent.click(await screen.findByTitle("Почта"));
-    fireEvent.click(screen.getByRole("button", { name: "Зарегистрировать" }));
+    fireEvent.click(registerButton("Зарегистрировать"));
     expect(await screen.findByText(/Зарегистрировано: ВХ-/)).toBeVisible();
     await waitFor(() => {
       expect(intakeDecisions).toEqual(["edited"]);

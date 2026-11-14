@@ -1,7 +1,13 @@
 import AxeBuilder from "@axe-core/playwright";
 import { type Page, expect, test } from "@playwright/test";
 
-import { loginAndWait, openAvatarMenu, settledScreenshot, waitForMotionEnd } from "./support/app";
+import {
+  loginAndWait,
+  openAvatarMenu,
+  reveal,
+  settledScreenshot,
+  waitForMotionEnd,
+} from "./support/app";
 
 // EDS-REG PR 1 на MSW: Настройки · Процессы · Справочники (до SET-IA — «Документооборот») — администратор добавляет способ получения и скрывает
 // другой; делопроизводитель видит изменения в форме «Зарегистрировать входящее»; журнал отбирает письма по виду документа.
@@ -91,7 +97,7 @@ test.describe("EDS-REG · справочники документооборот�
     await expect(
       page.getByRole("heading", { level: 1, name: "Регистрация входящего документа" }),
     ).toBeVisible();
-    await page.getByLabel("Способ получения").click();
+    await (await reveal(page.getByLabel("Способ получения"))).click();
     const options = page.locator(".ant-select-dropdown:not(.ant-select-dropdown-hidden)");
     await expect(options.getByText("Фельдъегерская связь", { exact: true })).toBeVisible();
     await expect(options.getByText("Курьер", { exact: true })).toHaveCount(0);
@@ -100,7 +106,7 @@ test.describe("EDS-REG · справочники документооборот�
 
     // 4. Журнал: отбор по виду документа.
     await page.goto("/eds/inbox?status=all");
-    await page.getByLabel("Вид документа").click();
+    await (await reveal(page.getByLabel("Вид документа"))).click();
     await page
       .locator(".ant-select-dropdown:not(.ant-select-dropdown-hidden)")
       .getByText("Письмо банка", { exact: true })

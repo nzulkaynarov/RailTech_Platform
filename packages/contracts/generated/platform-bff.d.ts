@@ -10973,6 +10973,12 @@ export interface components {
       catalog_publish_threshold: number;
       /** @description Предельный возраст курса, дней */
       fx_rate_max_age_days: number;
+      /** @description Через сколько дней без подтверждения цена партнёра «устарела» (задача «Н3c») */
+      offer_confirm_days: number;
+      /** @description За сколько дней до окончания срока цена партнёра «истекает» */
+      offer_expiring_days: number;
+      /** @description Пауза между напоминаниями клиенту об акте, часов */
+      act_reminder_hours: number;
     };
     /** @description Поля маржи без права на `cost_margin` — 403 `FORBIDDEN` (`details.fields`). */
     QuoteDefaultsUpdate: {
@@ -11007,6 +11013,12 @@ export interface components {
       catalog_publish_threshold?: number;
       /** @description Предельный возраст курса, дней */
       fx_rate_max_age_days?: number;
+      /** @description Через сколько дней без подтверждения цена партнёра «устарела» (задача «Н3c») */
+      offer_confirm_days?: number;
+      /** @description За сколько дней до окончания срока цена партнёра «истекает» */
+      offer_expiring_days?: number;
+      /** @description Пауза между напоминаниями клиенту об акте, часов */
+      act_reminder_hours?: number;
     };
     ChargeType: {
       id: components["schemas"]["CompanyItemRef"];

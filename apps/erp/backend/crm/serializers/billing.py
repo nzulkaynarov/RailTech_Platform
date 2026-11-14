@@ -339,13 +339,11 @@ class ActSerializer(ViewerSidesMixin, serializers.ModelSerializer):
 
         from django.utils import timezone
 
-        from crm.services.billing import ACT_REMINDER_COOLDOWN_HOURS
+        from crm.services.billing import act_reminder_hours
 
         if obj.status_code != ActStatusCode.ISSUED or not self._is_issuer_side(obj):
             return False
-        if obj.reminder_sent_at and timezone.now() - obj.reminder_sent_at < timedelta(
-            hours=ACT_REMINDER_COOLDOWN_HOURS
-        ):
+        if obj.reminder_sent_at and timezone.now() - obj.reminder_sent_at < timedelta(hours=act_reminder_hours()):
             return False
         return True
 

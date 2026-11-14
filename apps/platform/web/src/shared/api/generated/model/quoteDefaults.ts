@@ -63,4 +63,22 @@ export interface QuoteDefaults {
    * @maximum 90
    */
   fx_rate_max_age_days: number;
+  /**
+   * Через сколько дней без подтверждения цена партнёра «устарела» (задача «Н3c»)
+   * @minimum 1
+   * @maximum 365
+   */
+  offer_confirm_days: number;
+  /**
+   * За сколько дней до окончания срока цена партнёра «истекает»
+   * @minimum 1
+   * @maximum 90
+   */
+  offer_expiring_days: number;
+  /**
+   * Пауза между напоминаниями клиенту об акте, часов
+   * @minimum 1
+   * @maximum 720
+   */
+  act_reminder_hours: number;
 }

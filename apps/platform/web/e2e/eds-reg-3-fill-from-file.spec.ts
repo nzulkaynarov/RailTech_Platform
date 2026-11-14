@@ -4,11 +4,12 @@ import { type Page, expect, test } from "@playwright/test";
 import {
   loginAndWait,
   openAvatarMenu,
+  reveal,
   settledScreenshot,
   spaGoto,
   waitForMotionEnd,
 } from "./support/app";
-import { pickFiles } from "./support/fields";
+import { openStep, pickFiles } from "./support/fields";
 
 // EDS-REG PR 3 на MSW: «Заполнить из файла» в «Зарегистрировать входящее» — PDF письма, предложенные поля с пометкой
 // «Предложено ИИ», правка, скан читается по умолчанию («Деловая» политика, PD-BIZ); «ИИ-помощник» в Настройках. Модели нет —
@@ -49,7 +50,7 @@ async function fillFromFile(page: Page, name: string, mimeType: string): Promise
   await expect(
     page.getByRole("heading", { level: 1, name: "Регистрация входящего документа" }),
   ).toBeVisible();
-  await pickFiles(page.getByLabel("Файл документа"), {
+  await pickFiles(await reveal(page.getByLabel("Файл документа")), {
     name,
     mimeType,
     buffer: Buffer.from("%PDF-1.4 demo"),
@@ -74,12 +75,15 @@ test.describe("EDS-REG · «Заполнить из файла»", () => {
         "ГНИ Демо-района",
       );
       await expect(page.getByText("Предложено ИИ", { exact: true })).toHaveCount(8);
-      await page.getByLabel("Тема", { exact: true }).fill("Пояснения по НДС за III квартал");
+      await (
+        await reveal(page.getByLabel("Тема", { exact: true }))
+      ).fill("Пояснения по НДС за III квартал");
       await expect(page.getByText("Предложено ИИ", { exact: true })).toHaveCount(7);
       await page.getByRole("heading", { level: 1 }).scrollIntoViewIfNeeded();
       await expectNoViolations(page, `register-filled ${String(width)}`);
       if (width === 390) await noHorizontalScroll(page);
       await settledScreenshot(page, "register-filled");
+      await openStep(page, "Файл письма");
       await page.getByRole("group", { name: "Заполнить из файла" }).scrollIntoViewIfNeeded();
       await settledScreenshot(page, "register-ai-bar");
 

@@ -440,6 +440,13 @@
         "DEFAULT": "Could not fill from the file. Fill in manually."
       },
       "reading": "Reading the file and filling the fields — you can keep typing."
+    },
+    "sections": {
+      "file": "Letter file",
+      "sender": "Sender",
+      "content": "Subject and content",
+      "route": "Deadline, addressee and resolution",
+      "review": "Review and register"
     }
   },
   "office": {
