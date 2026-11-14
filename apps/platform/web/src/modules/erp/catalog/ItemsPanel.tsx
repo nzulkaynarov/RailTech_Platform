@@ -44,6 +44,7 @@ import {
   ValidityTag,
 } from "./common";
 import { catalogErrorText, errorFields } from "./errors";
+import { MXIK_CODE, MxikField, type MxikValue } from "./MxikField";
 import { useDebounced } from "./useDebounced";
 import { KINDS } from "./kinds";
 import { localName } from "../../eds/dictionaries";
@@ -411,6 +412,12 @@ function ItemDrawer({ id, onClose }: { id: string; onClose: () => void }) {
                 { label: t("items.fields.mpn"), value: card.manufacturer_part_number },
                 { label: t("items.fields.gost"), value: card.gost_drawing },
                 { label: t("items.fields.hs"), value: card.hs_code },
+                {
+                  label: t("items.fields.mxik"),
+                  value: card.mxik
+                    ? [card.mxik.code, card.mxik.name, card.mxik.unit].filter(Boolean).join(" · ")
+                    : null,
+                },
                 { label: t("items.fields.source"), value: card.source_supplier?.name },
                 { label: t("catalogPrice.label"), value: <CatalogPriceValue card={card} /> },
                 {
@@ -680,6 +687,9 @@ function ItemForm({
   const [brand, setBrand] = useState<string | null>(item?.brand_id ?? null);
   const [mpn, setMpn] = useState(item?.manufacturer_part_number ?? "");
   const [hs, setHs] = useState(item?.hs_code ?? "");
+  const [mxik, setMxik] = useState<MxikValue>(
+    item?.mxik ?? { code: "", name: "", unit: "", package: "" },
+  );
   const [country, setCountry] = useState<string | null>(item?.origin.own?.id ?? null);
   const [warrantyMonths, setWarrantyMonths] = useState(
     item?.warranty.months === null || item === undefined ? "" : String(item.warranty.months),
@@ -696,12 +706,14 @@ function ItemForm({
     brand: useId(),
     mpn: useId(),
     hs: useId(),
+    mxik: useId(),
     country: useId(),
     wm: useId(),
     wt: useId(),
   };
   const monthsValid = /^\d{0,3}$/.test(warrantyMonths.trim()) && Number(warrantyMonths || 0) <= 600;
   const hsValid = /^(\d{2}|\d{4}|\d{6}|\d{8}|\d{10})?$/.test(hs.trim());
+  const mxikValid = MXIK_CODE.test(mxik.code);
   const done = (saved: CatalogItemDetail) => {
     void queryClient.invalidateQueries({ queryKey: getListCatalogItemsQueryKey() });
     void queryClient.invalidateQueries({ queryKey: getGetCatalogItemQueryKey(saved.id) });
@@ -739,6 +751,15 @@ function ItemForm({
         ? { manufacturer_part_number: mpn.trim() }
         : {}),
       ...(hs.trim() !== item.hs_code ? { hs_code: hs.trim() } : {}),
+      // План 1.8: МХИК — код и то, что о нём сказал классификатор (вручную — только код)
+      ...(mxik.code !== (item.mxik?.code ?? "") || mxik.name !== (item.mxik?.name ?? "")
+        ? {
+            mxik_code: mxik.code,
+            mxik_name: mxik.name,
+            mxik_unit: mxik.unit,
+            mxik_package: mxik.package,
+          }
+        : {}),
       ...(country !== (item.origin.own?.id ?? null) ? { country_of_origin_id: country } : {}),
       ...(monthsValue !== item.warranty.months ? { warranty_months: monthsValue } : {}),
       ...(warrantyTerms.trim() !== item.warranty.terms
@@ -757,7 +778,7 @@ function ItemForm({
       okLabel={item ? t("save") : t("items.form.add")}
       loading={mutation.isPending}
       error={mutation.error}
-      disabled={name.trim() === "" || !hsValid || !monthsValid}
+      disabled={name.trim() === "" || !hsValid || !mxikValid || !monthsValid}
       onOk={submit}
       onCancel={onClose}
     >
@@ -901,6 +922,14 @@ function ItemForm({
               onChange={(event) => {
                 setWarrantyTerms(event.target.value);
               }}
+            />
+          </FormField>
+          <FormField id={ids.mxik} label={t("items.form.mxik")} hint={t("items.form.mxikHint")}>
+            <MxikField
+              id={ids.mxik}
+              value={mxik}
+              invalid={!mxikValid || fields.includes("mxik_code")}
+              onChange={setMxik}
             />
           </FormField>
           <FormField id={ids.hs} label={t("items.form.hs")} hint={t("items.form.hsHint")}>

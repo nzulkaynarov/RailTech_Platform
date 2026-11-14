@@ -4,11 +4,13 @@ from django.db import transaction
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.exceptions import NotFound
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from catalog.desk import refs
 from catalog.desk.items import ItemError
-from catalog.desk.serializers import DeskExchangeRate, DeskHsCode, DeskHsCodeIn
+from catalog.desk.serializers import DeskExchangeRate, DeskHsCode, DeskHsCodeIn, DeskMxikSearch
 from catalog.desk.views_base import FORBIDDEN, NOT_FOUND, PAGE, PAGE_SIZE, REFUSED, SEARCH, DeskViewSet, refuse
 from catalog.models import HSCode
 from core.models import ExchangeRate
@@ -102,3 +104,30 @@ class ExchangeRateListViewSet(DeskViewSet):
     )
     def list(self, request):
         return self.page_of(refs.rates_queryset(request.query_params), lambda rows: [refs.rate_row(r) for r in rows])
+
+
+class MxikSearchView(APIView):
+    """GET /api/v1/master-data/mxik/?q= — подбор МХИК (ИКПУ) из классификатора Налогового комитета (план 1.8).
+
+    Классификатор внешний и без документации: не ответил — 503 `MXIK_UNAVAILABLE`, код вводится вручную."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        operation_id="master_data_mxik_search",
+        summary="Search the MXIK (IKPU) classifier",
+        parameters=[OpenApiParameter("q", str, description="Слово или код, от 2 знаков")],
+        responses={
+            200: DeskMxikSearch,
+            503: OpenApiResponse(description="MXIK_UNAVAILABLE — классификатор не ответил, код вводится вручную."),
+        },
+        tags=["Master Data"],
+    )
+    def get(self, request):
+        from catalog.mxik import MxikUnavailable, search
+
+        try:
+            rows = search(request.query_params.get("q", ""), lang=request.query_params.get("lang", "ru"))
+        except MxikUnavailable:
+            return Response({"detail": "MXIK_UNAVAILABLE"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        return Response({"results": rows})

@@ -901,3 +901,66 @@ async def test_lookups_skip_a_document_kind_with_a_code_outside_the_contract_pat
     assert response.status_code == 200
     check(response, "/erp/catalog/lookups", "get")
     assert [k["code"] for k in response.json()["document_kinds"]] == ["iso-9001"]
+
+
+# --- план 1.8: МХИК (ИКПУ) ------------------------------------------------------------------------
+
+MXIK_CODE = "08544001001000000"
+
+
+async def test_mxik_search_and_card_and_manual_code(
+    web: Web, be: Any, check: ContractChecker
+) -> None:
+    await web.login(["SUPPLY"])
+    router = mock(be)
+    hit = {
+        "code": MXIK_CODE,
+        "name": "Кабели силовые",
+        "group": "Кабели",
+        "unit": "метр",
+        "package": "барабан",
+    }
+    router.get(f"{API}/master-data/mxik/").mock(
+        return_value=httpx.Response(200, json={"results": [hit]})
+    )
+    found = await web.client.get("/api/v1/erp/catalog/mxik", params={"q": "кабель"})
+    assert found.status_code == 200, found.json()
+    check(found, "/erp/catalog/mxik", "get")
+    assert found.json() == {"items": [hit]}
+
+    mxik = {"code": MXIK_CODE, "name": "Кабели силовые", "unit": "метр", "package": "барабан"}
+    router.get(f"{API}/catalog/items/4/").mock(
+        return_value=httpx.Response(200, json={**ITEM_DETAIL, "mxik": mxik})
+    )
+    card = await web.client.get("/api/v1/erp/catalog/items/4")
+    check(card, "/erp/catalog/items/{id}", "get")
+    assert card.json()["mxik"] == mxik
+
+    router.get(f"{API}/catalog/items/4/").mock(
+        return_value=httpx.Response(200, json={**ITEM_DETAIL, "mxik": None})
+    )
+    empty = await web.client.get("/api/v1/erp/catalog/items/4")
+    check(empty, "/erp/catalog/items/{id}", "get")
+    assert empty.json()["mxik"] is None, "без кода — null"
+
+    patch = router.patch(f"{API}/catalog/items/4/").mock(
+        return_value=httpx.Response(200, json={**ITEM_DETAIL, "offers": []})
+    )
+    manual = await call(web, "PATCH", "/erp/catalog/items/4", {"mxik_code": MXIK_CODE})
+    assert manual.status_code == 200
+    assert body_of(patch) == {"mxik_code": MXIK_CODE}
+    bad = await call(web, "PATCH", "/erp/catalog/items/4", {"mxik_code": "0854"})
+    assert bad.status_code == 422
+
+
+async def test_mxik_classifier_down_is_503_with_a_reason(
+    web: Web, be: Any, check: ContractChecker
+) -> None:
+    await web.login(["SUPPLY"])
+    mock(be).get(f"{API}/master-data/mxik/").mock(
+        return_value=httpx.Response(503, json={"detail": "MXIK_UNAVAILABLE"})
+    )
+    response = await web.client.get("/api/v1/erp/catalog/mxik", params={"q": "кабель"})
+    assert response.status_code == 503
+    check(response, "/erp/catalog/mxik", "get")
+    assert response.json()["details"]["reason"] == "mxik_unavailable"
