@@ -903,6 +903,48 @@ async def test_search_merges_crm_and_erp_into_module_groups(
     assert len(groups["eds"]) == 3 + 1  # и проект ПР-… (сделка с совпавшей компанией)
 
 
+async def test_search_finds_catalog_products_by_name_for_roles_with_the_catalog(
+    web: Web, fb: FeedBackends, check: ContractChecker
+) -> None:
+    """FR-26: товар по названию (ERP ищет с опечатками) — группа ERP со ссылкой на карточку."""
+    search_data(fb)
+    fb.state["catalog"] = {
+        "results": [
+            {
+                "id": 7,
+                "name": "Перевод стрелочный Р65 1/11",
+                "article": "СП-Р65-11",
+                "kind": "goods",
+            },
+            {"id": 8, "name": "Монтаж стрелочного перевода", "article": "", "kind": "service"},
+        ]
+    }
+    await web.login(["SUPPLY"])
+
+    response = await web.client.get("/api/v1/search", params={"q": "strelochniy"})
+
+    check(response, "/search", "get")
+    groups = {g["module"]: g["items"] for g in response.json()["groups"]}
+    assert [
+        (h["object"]["kind"], h["object"]["number"], h.get("subtitle")) for h in groups["erp"]
+    ] == [
+        ("product", "СП-Р65-11", "СП-Р65-11"),
+        ("product", "8", None),
+    ]
+    assert groups["erp"][0]["object"]["path"] == "/erp/catalog?item=7"
+    assert fb.query(fb.erp["catalog"]) == {"q": "strelochniy"}
+
+
+async def test_search_skips_the_catalog_without_the_catalog_section(
+    web: Web, fb: FeedBackends
+) -> None:
+    search_data(fb)
+    await web.login(["REGISTRAR"])
+    response = await web.client.get("/api/v1/search", params={"q": "Демо"})
+    assert response.status_code == 200
+    assert fb.calls(fb.erp["catalog"]) == 0
+
+
 async def test_search_finds_a_deal_by_its_number(
     web: Web, fb: FeedBackends, check: ContractChecker
 ) -> None:

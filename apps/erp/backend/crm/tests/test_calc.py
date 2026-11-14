@@ -363,6 +363,21 @@ def test_catalog_search_for_matching(world):
     assert _api(world["supply"]).get("/api/v1/calc/catalog/").json() == {"results": []}
 
 
+def test_catalog_search_tolerates_typos_and_the_other_script(world):
+    """FR-26: строгий поиск пуст — название с опечаткой, латиницей или на узбекской латинице всё равно находится."""
+    wheel = Product.objects.create(name="Gʻildirak juftligi RU1-950")
+    found = {}
+    for query in ("стрелчный перевод", "strelochniy perevod", "Perevod strelochnyy R65", "гилдирак жуфтлиги"):
+        rows = _api(world["supply"]).get("/api/v1/calc/catalog/", {"q": query}).json()["results"]
+        found[query] = [r["id"] for r in rows]
+    assert found["стрелчный перевод"][0] == world["rail"].pk
+    assert found["strelochniy perevod"][0] == world["rail"].pk
+    assert found["Perevod strelochnyy R65"][0] == world["rail"].pk
+    assert found["гилдирак жуфтлиги"] == [wheel.pk]
+    # Случайные слова не тянут весь каталог
+    assert _api(world["supply"]).get("/api/v1/calc/catalog/", {"q": "холодильник"}).json() == {"results": []}
+
+
 def test_bind_free_line_to_catalog_card(world):
     _api(world["supply"]).post(_url(world, "start/"))
     created = _api(world["supply"]).post(
