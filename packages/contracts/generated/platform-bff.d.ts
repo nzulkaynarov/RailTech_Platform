@@ -11122,6 +11122,7 @@ export interface components {
       inherited: {
         [key: string]: string;
       } | null;
+      translations: components["schemas"]["BrandTranslations"];
     };
     BrandProfileUpdate: {
       legal_name?: string;
@@ -11157,6 +11158,19 @@ export interface components {
       show_logo?: boolean;
       show_lead_time?: boolean;
       show_fx_note?: boolean;
+      translations?: components["schemas"]["BrandTranslations"];
+    };
+    /** @description Бланк на другом языке (TPL-3, план 2.7) — пустое поле печатается русским текстом */
+    BrandVariant: {
+      legal_name?: string;
+      legal_address?: string;
+      signatory_position?: string;
+      footer_text?: string;
+    };
+    /** @description Бланк на узбекском и английском (TPL-3): письмо EDS печатается на языке своего текста; КП, договор, счёт и акт — после перехода на rt-docs (DOC-1…3) */
+    BrandTranslations: {
+      uz?: components["schemas"]["BrandVariant"];
+      en?: components["schemas"]["BrandVariant"];
     };
     ProjectSigningIn: {
       /** @enum {string} */

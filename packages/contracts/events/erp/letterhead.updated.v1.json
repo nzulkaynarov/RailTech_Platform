@@ -124,6 +124,57 @@
             "too_large"
           ],
           "description": "Почему логотипа нет при загруженном файле: hidden — «Показывать логотип» выключено, unsupported — SVG/GIF или файл не читается, too_large — больше 512 КиБ после уменьшения"
+        },
+        "translations": {
+          "type": "object",
+          "description": "TPL-3 (план 2.7): бланк на узбекском и английском — только заполненные поля; нет поля или языка — берётся основной (русский) текст. Добавлено в v1 необязательным",
+          "additionalProperties": false,
+          "properties": {
+            "uz": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "company_name": {
+                  "type": "string",
+                  "maxLength": 255
+                },
+                "legal_address": {
+                  "type": "string",
+                  "maxLength": 2000
+                },
+                "signatory_position": {
+                  "type": "string",
+                  "maxLength": 255
+                },
+                "footer_text": {
+                  "type": "string",
+                  "maxLength": 2000
+                }
+              }
+            },
+            "en": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "company_name": {
+                  "type": "string",
+                  "maxLength": 255
+                },
+                "legal_address": {
+                  "type": "string",
+                  "maxLength": 2000
+                },
+                "signatory_position": {
+                  "type": "string",
+                  "maxLength": 255
+                },
+                "footer_text": {
+                  "type": "string",
+                  "maxLength": 2000
+                }
+              }
+            }
+          }
         }
       },
       "additionalProperties": false

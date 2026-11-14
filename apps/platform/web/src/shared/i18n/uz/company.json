@@ -188,7 +188,19 @@
     "previewKind": "Hujjat turi",
     "previewFrame": "Namuna: {{kind}}",
     "previewHint": "Namunadagi ma'lumotlar xayoliy.",
-    "inheritedEdit": "Rekvizitlarni o‘zgartirish"
+    "inheritedEdit": "Rekvizitlarni o‘zgartirish",
+    "languages": {
+      "title": "O‘zbek va ingliz tilidagi blank",
+      "hint": "Xat o‘z matni tilidagi blankda chop etiladi. Bo‘sh maydon rus tilida chop etiladi. O‘zbekcha — lotin yozuvida.",
+      "uz": "O‘zbekcha (UZ)",
+      "en": "English (EN)",
+      "fields": {
+        "legal_name": "Kompaniya nomi",
+        "legal_address": "Yuridik manzil",
+        "signatory_position": "Imzolovchi lavozimi",
+        "footer_text": "Pastki qism"
+      }
+    }
   },
   "numbering": {
     "title": "Hujjatlarni raqamlash",

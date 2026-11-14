@@ -63,6 +63,8 @@ class Letterhead(Base):
     signatory_name: Mapped[str] = mapped_column(String(255))
     signatory_position: Mapped[str] = mapped_column(String(255))
     footer_text: Mapped[str] = mapped_column(Text)
+    # TPL-3 (план 2.7): бланк на `uz` и `en` — {lang: {company_name, legal_address, signatory_position, footer_text}}
+    translations: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))
     accent_color: Mapped[str] = mapped_column(String(7))
     font_family: Mapped[str] = mapped_column(String(5))
     logo_sha256: Mapped[str | None] = mapped_column(String(64), ForeignKey("letterhead_logos.sha256"))

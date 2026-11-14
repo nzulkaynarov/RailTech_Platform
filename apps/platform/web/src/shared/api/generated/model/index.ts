@@ -70,6 +70,8 @@ export * from "./brandProfileLayoutPreset";
 export * from "./brandProfileUpdate";
 export * from "./brandProfileUpdateFontFamily";
 export * from "./brandProfileUpdateLayoutPreset";
+export * from "./brandTranslations";
+export * from "./brandVariant";
 export * from "./brigade";
 export * from "./brigadeCreate";
 export * from "./brigadeCreateRateUnit";

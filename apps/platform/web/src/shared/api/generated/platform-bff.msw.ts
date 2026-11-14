@@ -12889,6 +12889,50 @@ export const getGetBrandProfileResponseMock = (
     },
     null,
   ]),
+  translations: {
+    uz: faker.helpers.arrayElement([
+      {
+        legal_name: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 255 } }),
+          undefined,
+        ]),
+        legal_address: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 2000 } }),
+          undefined,
+        ]),
+        signatory_position: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 255 } }),
+          undefined,
+        ]),
+        footer_text: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 2000 } }),
+          undefined,
+        ]),
+      },
+      undefined,
+    ]),
+    en: faker.helpers.arrayElement([
+      {
+        legal_name: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 255 } }),
+          undefined,
+        ]),
+        legal_address: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 2000 } }),
+          undefined,
+        ]),
+        signatory_position: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 255 } }),
+          undefined,
+        ]),
+        footer_text: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 2000 } }),
+          undefined,
+        ]),
+      },
+      undefined,
+    ]),
+  },
   ...overrideResponse,
 });
 
@@ -12927,6 +12971,50 @@ export const getUpdateBrandProfileResponseMock = (
     },
     null,
   ]),
+  translations: {
+    uz: faker.helpers.arrayElement([
+      {
+        legal_name: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 255 } }),
+          undefined,
+        ]),
+        legal_address: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 2000 } }),
+          undefined,
+        ]),
+        signatory_position: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 255 } }),
+          undefined,
+        ]),
+        footer_text: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 2000 } }),
+          undefined,
+        ]),
+      },
+      undefined,
+    ]),
+    en: faker.helpers.arrayElement([
+      {
+        legal_name: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 255 } }),
+          undefined,
+        ]),
+        legal_address: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 2000 } }),
+          undefined,
+        ]),
+        signatory_position: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 255 } }),
+          undefined,
+        ]),
+        footer_text: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 2000 } }),
+          undefined,
+        ]),
+      },
+      undefined,
+    ]),
+  },
   ...overrideResponse,
 });
 
@@ -12968,6 +13056,50 @@ export const getUploadBrandLogoResponseMock = (
     },
     null,
   ]),
+  translations: {
+    uz: faker.helpers.arrayElement([
+      {
+        legal_name: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 255 } }),
+          undefined,
+        ]),
+        legal_address: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 2000 } }),
+          undefined,
+        ]),
+        signatory_position: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 255 } }),
+          undefined,
+        ]),
+        footer_text: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 2000 } }),
+          undefined,
+        ]),
+      },
+      undefined,
+    ]),
+    en: faker.helpers.arrayElement([
+      {
+        legal_name: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 255 } }),
+          undefined,
+        ]),
+        legal_address: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 2000 } }),
+          undefined,
+        ]),
+        signatory_position: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 255 } }),
+          undefined,
+        ]),
+        footer_text: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 2000 } }),
+          undefined,
+        ]),
+      },
+      undefined,
+    ]),
+  },
   ...overrideResponse,
 });
 
