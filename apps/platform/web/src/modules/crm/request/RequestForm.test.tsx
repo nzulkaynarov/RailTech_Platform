@@ -46,6 +46,15 @@ function submitButton(panel: HTMLElement): HTMLElement {
   return within(panel).getByRole("button", { name: /Создать заявку/ });
 }
 
+/** Основание заявки (план 0.4): письмо или файл запроса в секции «Запрос». */
+async function attach(panel: HTMLElement, name = "pismo.pdf"): Promise<void> {
+  open(panel, "Запрос");
+  fireEvent.change(within(panel).getByLabelText("Письмо или файл запроса"), {
+    target: { files: [new File(["%PDF-1.4"], name, { type: "application/pdf" })] },
+  });
+  expect(await within(panel).findByText(`Загружено: ${name}`)).toBeVisible();
+}
+
 function requestsOf(clientName: string): number {
   return readLeads().clients.find((c) => c.name === clientName)?.requests.length ?? 0;
 }
@@ -59,18 +68,25 @@ describe("форма «Создать заявку»: правила до отп
     contacts: [],
   };
 
-  it("пустая форма: компания, контакт, канал, суть и согласие", () => {
+  it("пустая форма: компания, контакт, канал, суть, основание и согласие", () => {
     expect(validateRequest(emptyRequestForm(), lead)).toEqual({
       company: "company",
       contact: "contact",
       channel: "channel",
       summary: "summary",
+      letter: "letter_required",
       consent: "consent",
     });
   });
 
   it("лид из Telegram без согласия — согласие только в боте; неверный ИНН — словами", () => {
-    const state = { ...emptyRequestForm(), companyName: "ООО Демо", inn: "12ab", fullName: "Демо" };
+    const state = {
+      ...emptyRequestForm(),
+      companyName: "ООО Демо",
+      inn: "12ab",
+      fullName: "Демо",
+      letter: { name: "pismo.pdf", status: "done" as const, id: "f-1" },
+    };
     const errors = validateRequest(
       { ...state, useLeadTelegram: true, summary: "Шпалы" },
       { ...lead, leadChannel: "telegram", leadTelegram: "demo" },
@@ -79,7 +95,13 @@ describe("форма «Создать заявку»: правила до отп
   });
 
   it("контакт клиента без каналов не подходит", () => {
-    const state = { ...emptyRequestForm(), clientId: 4, contactId: 41, summary: "Колодки" };
+    const state = {
+      ...emptyRequestForm(),
+      clientId: 4,
+      contactId: 41,
+      summary: "Колодки",
+      letter: { name: "pismo.pdf", status: "done" as const, id: "f-1" },
+    };
     const ctx: RequestContext = {
       lead: null,
       leadChannel: null,
@@ -150,10 +172,7 @@ describe("«Создать заявку» из лида и из клиента (
     open(panel, "Запрос");
     expect(within(panel).getByLabelText("Суть запроса")).toHaveValue("Рельсы Р65, 40 т");
 
-    fireEvent.change(within(panel).getByLabelText("Письмо на имя директора"), {
-      target: { files: [new File(["%PDF-1.4"], "pismo.pdf", { type: "application/pdf" })] },
-    });
-    expect(await within(panel).findByText("Письмо загружено: pismo.pdf")).toBeVisible();
+    await attach(panel);
     fireEvent.click(within(panel).getByRole("radio", { name: "Срочная" }));
 
     const submit = submitButton(panel);
@@ -191,6 +210,7 @@ describe("«Создать заявку» из лида и из клиента (
     fireEvent.change(within(panel).getByLabelText("Суть запроса"), {
       target: { value: "Шпалы, 300 шт, до конца месяца" },
     });
+    await attach(panel);
     fireEvent.click(submitButton(panel));
     expect(
       await within(panel).findByText(
@@ -240,6 +260,7 @@ describe("«Создать заявку» из лида и из клиента (
     const panel = await openForm("/crm/leads?lead=L-2077&create=1&panel=open&tab=card");
     open(panel, "Запрос");
     expect(within(panel).getByText("Клиент ещё не дал согласие.")).toBeVisible();
+    await attach(panel);
     fireEvent.click(submitButton(panel));
     expect(await within(panel).findByText("Без согласия клиента заявку не создать")).toBeVisible();
 
@@ -264,6 +285,7 @@ describe("«Создать заявку» из лида и из клиента (
     fireEvent.change(within(panel).getByLabelText("Суть запроса"), {
       target: { value: "Накладки рельсовые" },
     });
+    await attach(panel);
     fireEvent.click(submitButton(panel));
     expect(await within(panel).findByText("Заявка создана")).toBeVisible();
     expect(requestsOf("ООО Рельс-Сервис Демо")).toBe(before + 1);
@@ -286,7 +308,7 @@ describe("письмо директору: из переписки и при с�
     const panel = await panelEl();
     await within(panel).findByRole("form", { name: "Создать заявку" });
     open(panel, "Запрос");
-    expect(await within(panel).findByText("Письмо загружено: письмо-директору.pdf")).toBeVisible();
+    expect(await within(panel).findByText("Загружено: письмо-директору.pdf")).toBeVisible();
     fireEvent.click(submitButton(panel));
     expect(await within(panel).findByText("Заявка создана")).toBeVisible();
     const created = readLeads().clients.find((c) => c.name === "ООО Демо-Логистик");
@@ -314,21 +336,28 @@ describe("письмо директору: из переписки и при с�
     server.events.removeAllListeners();
   });
 
-  it("письмо не загрузилось — заявка не уходит, пока файл не убран", async () => {
+  it("без основания и со сбоем загрузки заявка не уходит (план 0.4, FR-9)", async () => {
     const panel = await openForm("/crm/leads?lead=L-2044&create=1&panel=open&tab=card");
+    fireEvent.click(submitButton(panel));
+    expect(
+      await within(panel).findByText("Приложите письмо клиента или файл запроса"),
+    ).toBeInTheDocument();
+    expect(requestsOf("ООО Демо-Строй")).toBe(0);
+
     open(panel, "Запрос");
-    fireEvent.change(within(panel).getByLabelText("Письмо на имя директора"), {
+    fireEvent.change(within(panel).getByLabelText("Письмо или файл запроса"), {
       target: { files: [new File(["MZ"], "virus.exe", { type: "application/x-msdownload" })] },
     });
     expect(
       await within(panel).findByText("Подходит PDF, изображение или документ Office"),
     ).toBeVisible();
     fireEvent.click(submitButton(panel));
-    expect(await within(panel).findByText(/Письмо не загружено — уберите его/)).toBeVisible();
+    expect(await within(panel).findByText(/Файл не загрузился — выберите/)).toBeVisible();
     expect(requestsOf("ООО Демо-Строй")).toBe(0);
 
     open(panel, "Запрос");
-    fireEvent.click(within(panel).getByRole("button", { name: "Убрать письмо" }));
+    fireEvent.click(within(panel).getByRole("button", { name: "Убрать файл" }));
+    await attach(panel, "zapros.pdf");
     fireEvent.click(submitButton(panel));
     expect(await within(panel).findByText("Заявка создана")).toBeVisible();
   });

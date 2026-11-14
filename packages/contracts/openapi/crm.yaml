@@ -8150,11 +8150,9 @@ components:
         contact:
           $ref: '#/components/schemas/RequestContactIn'
         letter_file_id:
-          anyOf:
-          - format: uuid
-            type: string
-          - type: 'null'
+          format: uuid
           title: Letter File Id
+          type: string
         request_key:
           format: uuid
           title: Request Key
@@ -8175,6 +8173,7 @@ components:
       - request_key
       - contact
       - summary
+      - letter_file_id
       title: RequestCreate
       type: object
     RequestCreated:
@@ -10215,7 +10214,7 @@ components:
       type: http
 info:
   title: RailTech CRM API
-  version: 0.24.0
+  version: 0.25.0
 openapi: 3.1.0
 paths:
   /api/v1/admin/ai-spend:

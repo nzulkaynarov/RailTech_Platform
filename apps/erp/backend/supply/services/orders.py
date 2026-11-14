@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Optional
 
@@ -207,7 +207,12 @@ def _resolve_lines(lines: list[LineInput]) -> list[dict]:
                 "product": product,
                 "name": (line.name or product.name)[:500],
                 "article": (line.article or product.manufacturer_part_number or product.sku or "")[:120],
-                "unit": (line.unit or (product.uom.name if product.uom_id else ""))[:32],
+                # Plan 0.6 (FR-15): the unit the calculation line carries («компл.»), not the card default («шт.»).
+                "unit": (
+                    line.unit
+                    or (items[item_id].unit if item_id and items[item_id].unit else "")
+                    or (product.uom.name if product.uom_id else "")
+                )[:32],
                 "quantity": line.quantity,
                 "unit_price": line.unit_price,
                 "price_given": line.price_given,
@@ -298,8 +303,28 @@ def create_order(user, data: OrderInput) -> SupplierOrder:
         created_by=user if getattr(user, "pk", None) else None,
     )
     _write_lines(order, rows, user)
+    if order.expected_date is None:
+        _expect_by_lead_time(order)
     _log(order, OrderLogKind.CREATED, user, supplier.name)
     return order
+
+
+def _expect_by_lead_time(order: SupplierOrder) -> None:
+    """Plan 0.6 (FR-15): a new order without a date expects goods after the longest partner lead time of its lines.
+
+    The supply officer confirms or changes the date when the partner answers; no lead time — no date.
+    """
+    from crm.services.calculation import supplier_lead_days
+
+    days = [
+        supplier_lead_days(line.supplier_offer, line.quantity)
+        for line in order.lines.select_related("supplier_offer")
+        if line.supplier_offer_id
+    ]
+    longest = max((d for d in days if d), default=None)
+    if longest:
+        order.expected_date = today() + timedelta(days=longest)
+        order.save(update_fields=["expected_date", "updated_at"])
 
 
 @transaction.atomic

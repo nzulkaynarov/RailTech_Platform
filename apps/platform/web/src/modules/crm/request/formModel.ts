@@ -104,8 +104,9 @@ export function validateRequest(state: RequestFormState, ctx: RequestContext): R
     else if (contact.channels.length === 0) errors.channel = "contact_channel_required";
   }
   if (!state.summary.trim()) errors.summary = "summary";
-  // Письмо не загрузилось — заявка не уходит молча без него: убрать файл или выбрать другой.
+  // Основание обязательно (план 0.4, FR-9): без письма или файла запроса заявка не создаётся.
   if (state.letter?.status === "error") errors.letter = "letter_failed";
+  else if (!state.letter) errors.letter = "letter_required";
   if (consentNeeded(ctx)) {
     if (ctx.leadChannel === "telegram") errors.consent = "consent_via_bot";
     else if (!state.consentMarked) errors.consent = "consent";
@@ -138,13 +139,11 @@ export function toRequestPayload(
           },
     summary: state.summary.trim(),
     urgency: state.urgency,
+    letter_file_id: state.letter?.status === "done" && state.letter.id ? state.letter.id : "",
   };
   if (ctx.lead) payload.lead = ctx.lead;
   if (state.clientId !== null) payload.client_id = state.clientId;
   else payload.company = { name: state.companyName.trim(), inn: text(state.inn) };
-  if (state.letter?.status === "done" && state.letter.id) {
-    payload.letter_file_id = state.letter.id;
-  }
   if (consentNeeded(ctx) && state.consentMarked) {
     payload.consent = { method: state.consentMethod, comment: text(state.consentComment) };
   }
