@@ -494,6 +494,31 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/letters/{letter_id}/co-executors": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Привлечь соисполнителя
+     * @description План 1.9: ответственный исполнитель сам привлекает соисполнителя — кто, что сделать, срок. Уровень один:
+     *     соисполнитель дальше не передаёт. Срок в прошлом — 422 `details.fields.due = due_in_past`; позже срока
+     *     ответственного — `after_responsible_due`; сам себя — `crm_user_id = self`; сотрудник уже работает с письмом —
+     *     `already_assigned`; не найден или отключён — `not_active_employee`. Не ответственный — 403 `not_responsible`; письмо не
+     *     `in_execution` — 409 `invalid_state`. Соисполнителю — `notice.requested` (вид `instruction_assigned`); его «Исполнено»
+     *     уходит ответственному (`letter_executed`, заголовок «Соисполнитель отчитался: …»). Журнал `instruction.co_executor_added`.
+     */
+    post: operations["addCoExecutor"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/letters/{letter_id}/close": {
     parameters: {
       query?: never;
@@ -1658,7 +1683,8 @@ export interface components {
      *     маршрута служебной записки с суммой (решение архитектора). `bus.manage` (0.3.0, W13-A2) — «Журнал интеграций» шины:
      *     раздел `admin` каталога, уровень `full`. `files.upload` (D1-2b) — загрузить свой файл и читать свои файлы
      *     (письмо директору к «Создать заявку»): раздел `crm.clients`, уровень `full`. `signing.manage` (0.11.0, SIGN-2) — вести
-     *     реестр полномочий подписи: раздел `eds.signing.manage`, уровень `full`. В событиях шины (`identity`, `eds`) код — строка по шаблону
+     *     реестр полномочий подписи: раздел `eds.signing.manage`, уровень `full`. `approvals.visa_finance` и `approvals.visa_legal` (0.18.0, ADR-0025) — визы бухгалтера и юриста
+     *     маршрута подписи договора, счёта и акта: разделы `eds.visa.finance` и `eds.visa.legal`. В событиях шины (`identity`, `eds`) код — строка по шаблону
      *     `^[a-z_]+\.[a-z_]+$`, не перечень: новый код не ломает события v1.
      * @enum {string}
      */
@@ -1674,7 +1700,9 @@ export interface components {
       | "payments.confirm"
       | "bus.manage"
       | "files.upload"
-      | "signing.manage";
+      | "signing.manage"
+      | "approvals.visa_finance"
+      | "approvals.visa_legal";
     /** Format: uuid */
     Uuid: string;
     /** @description Имя подписчика шины (`crm`, `erp`, `platform-bff`) */
@@ -2626,6 +2654,16 @@ export interface components {
        * @description «Ознакомлен»; `null` — ждёт
        */
       acknowledged_at: string | null;
+    };
+    CoExecutorIn: {
+      crm_user_id: number;
+      /** @description Что сделать */
+      text: string;
+      /**
+       * Format: date
+       * @description Не раньше сегодня и не позже срока ответственного
+       */
+      due: string;
     };
     LetterCloseIn: {
       /** @description Код действующего значения справочника `close-reasons` */
@@ -4035,6 +4073,37 @@ export interface operations {
       };
       401: components["responses"]["Unauthorized"];
       404: components["responses"]["NotFound"];
+    };
+  };
+  addCoExecutor: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        letter_id: components["parameters"]["LetterId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CoExecutorIn"];
+      };
+    };
+    responses: {
+      /** @description Соисполнитель привлечён — карточка письма */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Letter"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationFailed"];
     };
   };
   closeLetterWithoutReply: {

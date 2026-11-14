@@ -99,6 +99,7 @@ import type {
   ClientCard,
   ClientInvitation,
   ClientList,
+  CoExecutorIn,
   Colleague,
   CompanyArticle,
   CompanyArticleCreate,
@@ -35615,6 +35616,133 @@ export const useAcknowledgeLetter = <
   TContext
 > => {
   return useMutation(getAcknowledgeLetterMutationOptions(options), queryClient);
+};
+
+export const getAddCoExecutorUrl = (id: string) => {
+  return `/api/v1/eds/letters/${id}/co-executors`;
+};
+
+/**
+ * План 1.9. EDS `POST /letters/{id}/co-executors`: ответственный исполнитель привлекает соисполнителя — кто, что сделать, срок не позже своего (решает EDS: не ответственный — 403 `not_responsible`; срок позже — 422 `details.fields.due`; уже работает с письмом — 422 `details.fields.person_id`). Соисполнитель отчитывается ответственному. Ответ — карточка.
+ * @summary EDS · Привлечь соисполнителя
+ */
+export const addCoExecutor = async (
+  id: string,
+  coExecutorIn: CoExecutorIn,
+  options?: Parameters<typeof http>[1],
+): Promise<LetterCard> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<LetterCard>(getAddCoExecutorUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(coExecutorIn),
+  });
+};
+
+export const getAddCoExecutorMutationKey = () => ["addCoExecutor"] as const;
+
+export const getAddCoExecutorMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | LetterConflictResponse
+    | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addCoExecutor>>,
+    TError,
+    AddCoExecutorMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof addCoExecutor>>,
+  TError,
+  AddCoExecutorMutationVariables,
+  TContext
+> => {
+  const mutationKey = getAddCoExecutorMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof addCoExecutor>>,
+    AddCoExecutorMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return addCoExecutor(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AddCoExecutorMutationResult = NonNullable<Awaited<ReturnType<typeof addCoExecutor>>>;
+export type AddCoExecutorMutationBody = CoExecutorIn;
+export type AddCoExecutorMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | LetterConflictResponse
+  | ValidationFailedResponse
+>;
+export type AddCoExecutorMutationVariables = { id: string; data: CoExecutorIn };
+
+/**
+ * @summary EDS · Привлечь соисполнителя
+ */
+export const useAddCoExecutor = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | LetterConflictResponse
+    | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof addCoExecutor>>,
+      TError,
+      AddCoExecutorMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof addCoExecutor>>,
+  TError,
+  AddCoExecutorMutationVariables,
+  TContext
+> => {
+  return useMutation(getAddCoExecutorMutationOptions(options), queryClient);
 };
 
 export const getCloseLetterWithoutReplyUrl = (id: string) => {

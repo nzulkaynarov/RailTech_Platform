@@ -27,7 +27,7 @@ import {
 /**
  * Каталог возможностей версии 2 (ADR-0012): сгенерированный файл = `packages/contracts/platform-rbac.yaml`, а функции
  * доступа считают по матрицам ролей (данным), а не по кодам. Эталон восьми предустановок — отдельно, дословно (как
- * tests/rbac_oracle.py в BFF): колонки ADMIN, DIRECTOR, MANAGER, SUPPLY, ENGINEER, ACCOUNTANT, REGISTRAR, MANAGER_ALL; F — full, R — read, H — скрыто.
+ * tests/rbac_oracle.py в BFF): колонки ADMIN, DIRECTOR, MANAGER, SUPPLY, ENGINEER, ACCOUNTANT, REGISTRAR, MANAGER_ALL, LAWYER; F — full, R — read, H — скрыто.
  */
 interface Yaml {
   version: number;
@@ -46,34 +46,37 @@ const spec = parse(
 ) as Yaml;
 
 const ORACLE: Record<string, string> = {
-  "dashboard.queue": "FFFFFFFF",
-  "dashboard.summary": "HFHHHRHH",
+  "dashboard.queue": "FFFFFFFFF",
+  "dashboard.summary": "HFHHHRHHH",
   // D17G-1: делопроизводитель — лиды только чтение + разбор и передача (`crm.leads.triage`)
-  "crm.leads": "HRFHHHRF",
-  "crm.leads.triage": "HHHHHHFH",
+  "crm.leads": "HRFHHHRFH",
+  "crm.leads.triage": "HHHHHHFHH",
   // 0.3 (FR-10): вся очередь «Почты» без действий — директор
-  "crm.mail": "HRHHHHHH",
+  "crm.mail": "HRHHHHHHH",
   // 0.3 (FR-13): снабженец видит в «Контрагентах» только партнёров — `crm.clients` у него нет
-  "crm.clients": "HFFHRRRF",
-  "eds.inbox": "HFRHHRRR",
+  "crm.clients": "HFFHRRRFR",
+  "eds.inbox": "HFRHHRRRR",
   // P8: регистрация входящих отдельно от резолюции
-  "eds.inbox.register": "HFHHHHFH",
-  "eds.drafts": "HFRHHHHR",
-  "eds.projects": "HFRRRFRF",
-  "eds.payments": "HRRHHFHF",
-  "eds.memo.create": "FFFFFFFF",
-  "eds.memo.approve": "HFHHHHHH",
+  "eds.inbox.register": "HFHHHHFHH",
+  "eds.drafts": "HFRHHHHRH",
+  "eds.projects": "HFRRRFRFR",
+  "eds.payments": "HRRHHFHFH",
+  "eds.memo.create": "FFFFFFFFF",
+  "eds.memo.approve": "HFHHHHHHH",
   // SIGN-2: реестр полномочий подписи ведёт администратор
-  "eds.signing.manage": "FHHHHHHH",
+  "eds.signing.manage": "FHHHHHHHH",
+  // ADR-0025: визы перед подписью — бухгалтер и менеджер-универсал (финансы), юрист (договор)
+  "eds.visa.finance": "HHHHHFHFH",
+  "eds.visa.legal": "HHHHHHHHF",
   // 0.3 (FR-7): менеджер ведёт расчёт и КП
-  "erp.calc": "HFFFFRHF",
-  "erp.calc.goods": "HFHFHHHF",
-  "erp.calc.services": "HFHHFHHF",
-  "erp.stock": "HFRFFRHF",
-  "chats.internal": "FFFFFFFF",
-  "chats.external": "HRFHHFRF",
-  admin: "FRHHHHHH",
-  "company.settings": "FFHHHHHH",
+  "erp.calc": "HFFFFRHFH",
+  "erp.calc.goods": "HFHFHHHFH",
+  "erp.calc.services": "HFHHFHHFH",
+  "erp.stock": "HFRFFRHFH",
+  "chats.internal": "FFFFFFFFF",
+  "chats.external": "HRFHHFRFH",
+  admin: "FRHHHHHHH",
+  "company.settings": "FFHHHHHHH",
 };
 const COLUMNS = [
   "ADMIN",
@@ -84,6 +87,7 @@ const COLUMNS = [
   "ACCOUNTANT",
   "REGISTRAR",
   "MANAGER_ALL",
+  "LAWYER",
 ] as const;
 type Column = (typeof COLUMNS)[number];
 
@@ -130,6 +134,7 @@ describe("rbac.generated: каталог = контракт", () => {
       "ACCOUNTANT",
       "REGISTRAR",
       "MANAGER_ALL",
+      "LAWYER",
     ]);
     for (const code of COLUMNS) {
       expect(catalog[code].access, code).toEqual(oracleAccess(code));

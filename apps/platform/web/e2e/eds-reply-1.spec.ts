@@ -334,4 +334,23 @@ test.describe("Исполнение письма из почты (решение
     await page.getByRole("button", { name: "Вернуть в работу" }).click();
     await expect(page.getByText(`${number} снова в работе`)).toBeVisible();
   });
+
+  test("ответственный привлекает соисполнителя (план 1.9)", async ({ page }) => {
+    const number = await mailLetterInExecution(page);
+
+    await switchTo(page, "universal@demo.example");
+    await spaGoto(page, `/eds/tasks/${encodeURIComponent(number)}`);
+    await page.getByRole("button", { name: "Ещё" }).click();
+    await page.getByRole("menuitem", { name: "Привлечь соисполнителя" }).click();
+    const dialog = page.getByRole("dialog", { name: `${number}: соисполнитель` });
+    await chooseOption(
+      await reveal(dialog.getByLabel("Сотрудник")),
+      "Демо Бухгалтеров · Бухгалтер",
+    );
+    await dialog.getByLabel("Что сделать").fill("Сверить акт с оборотами по счёту");
+    await both(page, "task-co-executor-dialog");
+    await dialog.getByRole("button", { name: "Привлечь" }).click();
+    await expect(page.getByText(`Соисполнитель привлечён: ${number}`)).toBeVisible();
+    await expect(page.getByText("Демо Бухгалтеров", { exact: true }).first()).toBeVisible();
+  });
 });

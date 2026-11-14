@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — EDS API (электронный документооборот)
-  version: 0.17.0
+  version: 0.19.0
   summary: Пространство `/api/v1/` сервиса EDS — вызывает BFF Платформы от имени сотрудника.
   description: |
     Контракт сервиса EDS (`apps/eds`, ADR-0015; `docs/history/runbooks/wave12-eds-c1.md` §2). EDS — владелец реестра документов и
@@ -28,6 +28,10 @@ info:
     `POST /letters/{id}/close` «Закрыть без ответа» с причиной из нового справочника `close-reasons`, `POST /letters/{id}/reopen`
     «Вернуть в работу» (автор резолюции), `POST /instructions/{id}/return` «Вернуть автору»; `Letter.close_reason`,
     `close_comment`; уведомления — существующими видами события `notice.requested` v1.
+
+    **0.18.0 (ADR-0025, визы договора, счёта и акта; по oasdiff ломающее — новые значения `EdsPermission` ответа `GET /me`, до 1.0
+    допустимо).** Права `approvals.visa_finance` и `approvals.visa_legal`: шаги «Виза бухгалтера» и «Виза юриста» маршрута `signing`
+    перед шагом «Подписать».
 
     **0.13.0 (исполнитель видит письмо и отвечает по любому поручению, решение владельца 2026-11-11).** `LetterSourceIn.text` —
     текст письма общего ящика при регистрации, `Letter.body_text` — он же в карточке ВХ. Регистрация ИСХ «в ответ на ВХ»
@@ -978,6 +982,44 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/v1/letters/{letter_id}/co-executors:
+    post:
+      tags: [letters]
+      operationId: addCoExecutor
+      summary: Привлечь соисполнителя
+      description: |
+        План 1.9: ответственный исполнитель сам привлекает соисполнителя — кто, что сделать, срок. Уровень один:
+        соисполнитель дальше не передаёт. Срок в прошлом — 422 `details.fields.due = due_in_past`; позже срока
+        ответственного — `after_responsible_due`; сам себя — `crm_user_id = self`; сотрудник уже работает с письмом —
+        `already_assigned`; не найден или отключён — `not_active_employee`. Не ответственный — 403 `not_responsible`; письмо не
+        `in_execution` — 409 `invalid_state`. Соисполнителю — `notice.requested` (вид `instruction_assigned`); его «Исполнено»
+        уходит ответственному (`letter_executed`, заголовок «Соисполнитель отчитался: …»). Журнал `instruction.co_executor_added`.
+      x-rt-permissions: []
+      parameters:
+        - $ref: '#/components/parameters/LetterId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CoExecutorIn'
+      responses:
+        '200':
+          description: Соисполнитель привлечён — карточка письма
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Letter'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
   /api/v1/letters/{letter_id}/close:
     post:
       tags: [letters]
@@ -2242,7 +2284,7 @@ paths:
         держит право шага). `mine=0` — без `registry.read` маршруты, где сотрудник автор или участник; с `registry.read` — все.
         Участник маршрута видит его всегда; остальные — маршрут документа, только если виден сам документ (исходящее письмо
         без `letters.read` и чужой черновик скрыты и при `registry.read`); КП — с `registry.read`.
-      x-rt-permissions: [memos.create, memos.approve, approvals.decide, payments.confirm, registry.read]
+      x-rt-permissions: [memos.create, memos.approve, approvals.decide, payments.confirm, registry.read, approvals.visa_finance, approvals.visa_legal]
       parameters:
         - name: mine
           in: query
@@ -2293,7 +2335,7 @@ paths:
         Автор объекта, участник маршрута (в том числе держатель права шага) или сотрудник с `registry.read`; иначе 404.
         Маршрут документа виден неучастнику, только если ему виден сам документ (D1-10); участнику — всегда.
         Снимок КП (`quote`) с себестоимостью и маржой — только тем, кто решает шаг маршрута КП (`approvals.decide`).
-      x-rt-permissions: [memos.create, memos.approve, approvals.decide, payments.confirm, registry.read]
+      x-rt-permissions: [memos.create, memos.approve, approvals.decide, payments.confirm, registry.read, approvals.visa_finance, approvals.visa_legal]
       parameters:
         - $ref: '#/components/parameters/ApprovalId'
       responses:
@@ -2327,7 +2369,7 @@ paths:
         (`details.reason = route_closed`). Каждое решение — строка журнала и `approval.decided`.
         Шаг «Бухгалтер» служебной записки с суммой: `approve` недоступно — 409 `CONFLICT`, `details.reason = payment_required`
         (оплату фиксирует `payDocument`: дата, сумма, платёжка); `return` и `reject` работают.
-      x-rt-permissions: [memos.approve, approvals.decide, payments.confirm]
+      x-rt-permissions: [memos.approve, approvals.decide, payments.confirm, approvals.visa_finance, approvals.visa_legal]
       parameters:
         - $ref: '#/components/parameters/ApprovalId'
       requestBody:
@@ -3192,12 +3234,15 @@ components:
         - bus.manage
         - files.upload
         - signing.manage
+        - approvals.visa_finance
+        - approvals.visa_legal
       description: |
         Код права EDS v1 (runbook волны 12 §2.2; `platform-rbac.yaml`, `backend.eds`). `payments.confirm` — шаг «бухгалтер»
         маршрута служебной записки с суммой (решение архитектора). `bus.manage` (0.3.0, W13-A2) — «Журнал интеграций» шины:
         раздел `admin` каталога, уровень `full`. `files.upload` (D1-2b) — загрузить свой файл и читать свои файлы
         (письмо директору к «Создать заявку»): раздел `crm.clients`, уровень `full`. `signing.manage` (0.11.0, SIGN-2) — вести
-        реестр полномочий подписи: раздел `eds.signing.manage`, уровень `full`. В событиях шины (`identity`, `eds`) код — строка по шаблону
+        реестр полномочий подписи: раздел `eds.signing.manage`, уровень `full`. `approvals.visa_finance` и `approvals.visa_legal` (0.18.0, ADR-0025) — визы бухгалтера и юриста
+        маршрута подписи договора, счёта и акта: разделы `eds.visa.finance` и `eds.visa.legal`. В событиях шины (`identity`, `eds`) код — строка по шаблону
         `^[a-z_]+\.[a-z_]+$`, не перечень: новый код не ломает события v1.
 
     Uuid:
@@ -4912,6 +4957,15 @@ components:
           type: [string, 'null']
           format: date-time
           description: '«Ознакомлен»; `null` — ждёт'
+    CoExecutorIn:
+      type: object
+      additionalProperties: false
+      required: [crm_user_id, text, due]
+      properties:
+        crm_user_id: {type: integer, minimum: 1}
+        text: {type: string, minLength: 1, maxLength: 2000, description: Что сделать}
+        due: {type: string, format: date, description: Не раньше сегодня и не позже срока ответственного}
+
     LetterCloseIn:
       type: object
       additionalProperties: false

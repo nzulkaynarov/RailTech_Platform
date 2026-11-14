@@ -408,6 +408,14 @@ class LetterCloseIn(Strict):
     comment: Annotated[str | None, Field(max_length=2000)] = None
 
 
+class CoExecutorIn(Strict):
+    """План 1.9: ответственный привлекает соисполнителя — кто, что сделать, срок не позже своего."""
+
+    crm_user_id: int = Field(ge=1)
+    text: Annotated[str, Field(min_length=1, max_length=2000)]
+    due: dt.date
+
+
 class InstructionReturnIn(Strict):
     """«Вернуть автору резолюции»: «не моё» или нужна другая резолюция — причина обязательна."""
 

@@ -5001,6 +5001,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/eds/letters/{id}/co-executors": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Привлечь соисполнителя
+     * @description План 1.9. EDS `POST /letters/{id}/co-executors`: ответственный исполнитель привлекает соисполнителя — кто, что сделать, срок не позже своего (решает EDS: не ответственный — 403 `not_responsible`; срок позже — 422 `details.fields.due`; уже работает с письмом — 422 `details.fields.person_id`). Соисполнитель отчитывается ответственному. Ответ — карточка.
+     */
+    post: operations["addCoExecutor"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/eds/letters/{id}/close": {
     parameters: {
       query?: never;
@@ -10940,6 +10960,13 @@ export interface components {
       id: string;
       /** @enum {string} */
       kind: "quote" | "contract" | "invoice" | "act";
+      /**
+       * @description ADR-0025: шаг сотрудника — виза (бухгалтер, юрист) или подпись
+       * @enum {string}
+       */
+      action: "visa" | "sign";
+      /** @description Подпись шага словами, например «Виза бухгалтера» или «Подписать» */
+      step: string;
       number: string;
       title: string;
       amount: string | null;
@@ -10951,8 +10978,11 @@ export interface components {
       items: components["schemas"]["SigningApprovalRow"][];
     };
     SigningDecisionIn: {
-      /** @enum {string} */
-      decision: "approve" | "reject";
+      /**
+       * @description Виза — approve («Согласовать») или return («Вернуть с замечанием»); подпись — approve или reject. У reject и return нужен comment
+       * @enum {string}
+       */
+      decision: "approve" | "reject" | "return";
       comment?: string;
     };
     /**
@@ -12200,6 +12230,17 @@ export interface components {
       text: string;
       co_executor_ids?: string[];
       acquaint_ids?: string[];
+    };
+    CoExecutorIn: {
+      /** @description Сотрудник (crm_user_id) */
+      person_id: string;
+      /** @description Что сделать */
+      text: string;
+      /**
+       * Format: date
+       * @description Не позже срока ответственного
+       */
+      due: string;
     };
     LetterCloseIn: {
       /** @description Код действующего значения справочника `close-reasons` */
@@ -25264,6 +25305,41 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       404: components["responses"]["NotFound"];
       503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  addCoExecutor: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description UUID входящего письма (EDS) */
+        id: components["parameters"]["LetterIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CoExecutorIn"];
+      };
+    };
+    responses: {
+      /** @description Соисполнитель привлечён — карточка письма */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["LetterConflict"];
+      422: components["responses"]["ValidationFailed"];
     };
   };
   closeLetterWithoutReply: {
