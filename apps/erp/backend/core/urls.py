@@ -159,6 +159,7 @@ from crm.views.calc import (
     CalcSheetView,
     CalcStartView,
     CalcTaskListView,
+    CalcTermsView,
 )
 from master_data.dictionary_views import (
     DictionaryCatalogView,
@@ -351,6 +352,7 @@ urlpatterns = (
         path("api/v1/calc/<int:deal_id>/lines/<int:item_id>/", CalcLineView.as_view(), name="calc-line"),
         path("api/v1/calc/<int:deal_id>/lines/<int:item_id>/visa/", CalcLineVisaView.as_view(), name="calc-line-visa"),
         path("api/v1/calc/<int:deal_id>/ready/", CalcReadyView.as_view(), name="calc-ready"),
+        path("api/v1/calc/<int:deal_id>/terms/", CalcTermsView.as_view(), name="calc-terms"),
         path("api/v1/calc/<int:deal_id>/new-version/", CalcNewVersionView.as_view(), name="calc-new-version"),
         path("api/v1/calc/<int:deal_id>/lost/", CalcLostView.as_view(), name="calc-lost"),
         path("api/v1/calc/<int:deal_id>/parse/", CalcParseView.as_view(), name="calc-parse"),

@@ -644,6 +644,18 @@ def deal_refs(user, number: str = "") -> list[dict]:
 # ── экран расчёта ──────────────────────────────────────────────────────────────────────────────────────────────────
 
 
+def _terms(quote: Quote, items: list[QuoteItem]) -> dict:
+    """Условия КП для экрана расчёта (FR-16): то, что клиент увидит в КП, PDF и кабинете."""
+    lines = [it.lead_time_days or 0 for it in items if it.display_type == QuoteItem.DisplayType.ITEM]
+    return {
+        "payment_terms": quote.payment_terms or None,
+        "valid_until": quote.valid_until.isoformat() if quote.valid_until else None,
+        "delivery_days": quote.delivery_lead_time_days,
+        "delivery_days_lines": max(lines, default=0),
+        "delivery_note": quote.delivery_note or None,
+    }
+
+
 def sheet(deal_id: int, user) -> dict:
     """Экран «Расчёт по заявке»: заявка, задание, КП, строки, итоги без НДС, визы, готовность."""
     _require_staff(user)
@@ -699,6 +711,7 @@ def _sheet(deal: Deal, task: CalcTask, user) -> dict:
                 "reject_reason": reject_reason,
                 "can_revise": _can_revise(deal, quote, user),
                 "vat_rate": f"{quote.vat_rate:.2f}",
+                "terms": _terms(quote, items),
             }
         ),
         "lines": lines,
@@ -1147,6 +1160,42 @@ def delete_line(deal_id: int, item_id: int, user) -> dict:
     item.delete()
     _recalc(quote)
     _log(deal, user, "Строка удалена из расчёта", f"«{name}»", "calc.line_deleted", {"item_id": item_id})
+    return _sheet(deal, task, user)
+
+
+# ── условия КП ─────────────────────────────────────────────────────────────────────────────────────────────────────
+
+#: Поле запроса → поле КП. Пустая строка и null очищают значение: срок поставки — снова максимум по строкам.
+_TERMS = {
+    "payment_terms": "payment_terms",
+    "valid_until": "valid_until",
+    "delivery_days": "delivery_lead_time_days",
+    "delivery_note": "delivery_note",
+}
+
+
+@transaction.atomic
+def update_terms(deal_id: int, user, data: dict) -> dict:
+    """Условия КП (FR-16): оплата, срок действия и срок поставки задаются в черновике; визы строк не снимаются."""
+    _require_staff(user)
+    _require(user, Permission.QUOTE_BUILD.value)
+    changes = {_TERMS[key]: value for key, value in data.items() if key in _TERMS}
+    if not changes:
+        raise CalcError("NOTHING_TO_CHANGE", 400)
+    deal = _deal_or_404(deal_id)
+    task = _task_or_404(deal)
+    quote = _draft_or_409(deal)
+    if changes.get("valid_until") is not None and changes["valid_until"] < timezone.localdate():
+        raise CalcError("VALID_UNTIL_IN_PAST", 400)
+    for field_name in ("payment_terms", "delivery_note"):
+        if field_name in changes:
+            changes[field_name] = (changes[field_name] or "").strip()
+    changed = [name for name, value in changes.items() if getattr(quote, name) != value]
+    if changed:
+        for name in changed:
+            setattr(quote, name, changes[name])
+        quote.save(update_fields=[*changed, "updated_at"])
+        _log(deal, user, "Условия КП изменены", ", ".join(changed), "calc.terms_updated", {"fields": changed})
     return _sheet(deal, task, user)
 
 

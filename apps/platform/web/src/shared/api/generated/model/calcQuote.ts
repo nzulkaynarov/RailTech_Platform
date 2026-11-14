@@ -4,6 +4,7 @@
  */
 import type { CalcQuoteRejectedBy } from "./calcQuoteRejectedBy";
 import type { CalcState } from "./calcState";
+import type { CalcTerms } from "./calcTerms";
 import type { DecimalString } from "./decimalString";
 
 export interface CalcQuote {
@@ -36,4 +37,5 @@ export interface CalcQuote {
   /** Клиент отклонил КП, заявка в расчёте и у сотрудника право `quote.build`: доступны «Новая версия КП» (`newCalcQuoteVersion`) и «Отказ по заявке» (`loseCalcRequest`) */
   can_revise: boolean;
   vat_rate: DecimalString;
+  terms?: CalcTerms;
 }

@@ -29,6 +29,7 @@ from app.schemas_erp_calc import (
     CalcProposalLine,
     CalcRequestList,
     CalcSheet,
+    CalcTermsPatch,
     to_row,
     to_sheet,
     zones_of,
@@ -56,6 +57,7 @@ _FIELD_OF = {
     "PRODUCT_NOT_FOUND": "product_id",
     "BAD_CURRENCY": "purchase_currency",
     "KIND_FROM_CATALOG": "kind",
+    "VALID_UNTIL_IN_PAST": "valid_until",
 }
 _MESSAGES = {
     "VISAS_MISSING": (
@@ -351,6 +353,31 @@ async def delete_line(authed: ZoneHolder, number: Number, line_id: LineId) -> Ca
 )
 async def sign_line(authed: ZoneHolder, number: Number, line_id: LineId) -> CalcSheet:
     return await _sheet(authed, number, "POST", f"lines/{line_id}/visa/")
+
+
+@router.patch(
+    "/calc/{number}/terms",
+    response_model=CalcSheet,
+    response_model_exclude_unset=True,
+    operation_id="updateCalcTerms",
+)
+async def update_terms(
+    authed: Builder, number: Number, body: Annotated[CalcTermsPatch, Body()]
+) -> CalcSheet:
+    """Условия КП в черновике: оплата, срок действия, срок поставки (FR-16)."""
+    patch = body.model_dump(exclude_unset=True, mode="json")
+    if not patch:
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "Проверьте заполнение полей.",
+            status_code=422,
+            details={"reason": "nothing_to_change"},
+        )
+    # Пустой текст — очистить: ERP хранит строки без null.
+    for key in ("payment_terms", "delivery_note"):
+        if key in patch and patch[key] is None:
+            patch[key] = ""
+    return await _sheet(authed, number, "PATCH", "terms/", patch)
 
 
 @router.post(

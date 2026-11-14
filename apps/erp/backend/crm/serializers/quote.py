@@ -390,6 +390,7 @@ class QuoteSerializer(serializers.ModelSerializer):
             "effective_delivery_lead_time_days",
             "delivery_note",
             "valid_until",
+            "payment_terms",
             "notes",
             "pdf_file",
             "frozen_at",

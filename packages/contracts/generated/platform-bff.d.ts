@@ -5806,6 +5806,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/erp/calc/{number}/terms": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Расчёт · Условия КП
+     * @description ERP `PATCH /calc/{deal_id}/terms/` (план 0.5, FR-16): условия оплаты, срок действия и срок поставки КП в черновике — их видит клиент в КП, PDF и кабинете. Новый КП получает условия оплаты и срок действия из настроек компании. Визы строк не снимаются. Пустой текст или `null` очищает значение; `delivery_days = null` — срок поставки по строкам. Срок действия в прошлом — 422 `details.fields = [valid_until]`; КП у директора — 409. Раздел `erp.calc` — полный.
+     */
+    patch: operations["updateCalcTerms"];
+    trace?: never;
+  };
   "/erp/calc/{number}/ready": {
     parameters: {
       query?: never;
@@ -10078,7 +10098,7 @@ export interface components {
       margin_pct: string;
       /** @description Порог маржи из резолюции, % */
       min_margin_pct: string | null;
-      /** @description Условия оплаты. ERP хранит их на уровне компании, а не КП, и в снимке КП их нет — пока всегда `null` (хвост в `docs/BACKLOG.md`) */
+      /** @description Условия оплаты КП из ERP (план 0.5); не заданы — `null` */
       payment_terms: string | null;
       /**
        * Format: date
@@ -13509,6 +13529,30 @@ export interface components {
       /** @description Клиент отклонил КП, заявка в расчёте и у сотрудника право `quote.build`: доступны «Новая версия КП» (`newCalcQuoteVersion`) и «Отказ по заявке» (`loseCalcRequest`) */
       can_revise: boolean;
       vat_rate: components["schemas"]["DecimalString"];
+      terms?: components["schemas"]["CalcTerms"];
+    };
+    /** @description Условия КП (FR-16) — то, что клиент увидит в КП, PDF и кабинете */
+    CalcTerms: {
+      /** @description Условия оплаты; новый КП — из настроек компании */
+      payment_terms: string | null;
+      /**
+       * Format: date
+       * @description КП действует до
+       */
+      valid_until: string | null;
+      /** @description Срок поставки КП, дней; null — максимум по строкам (`delivery_days_lines`) */
+      delivery_days: number | null;
+      /** @description Максимальный срок строк-товаров, дней */
+      delivery_days_lines: number;
+      /** @description Уточнение по срокам («в наличии», «под заказ») */
+      delivery_note: string | null;
+    };
+    CalcTermsPatch: {
+      payment_terms?: string | null;
+      /** Format: date */
+      valid_until?: string | null;
+      delivery_days?: number | null;
+      delivery_note?: string | null;
     };
     /**
      * @description Товар со склада (остаток покрывает количество), товар под заказ, услуга
@@ -26502,6 +26546,42 @@ export interface operations {
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
       409: components["responses"]["CalcConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  updateCalcTerms: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер заявки `ЗВ-ГГГГ-NNN` (как в списке «Заявки в расчёте») */
+        number: components["parameters"]["CalcNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CalcTermsPatch"];
+      };
+    };
+    responses: {
+      /** @description Расчёт по заявке */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalcSheet"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["CalcConflict"];
+      422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

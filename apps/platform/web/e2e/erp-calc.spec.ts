@@ -157,6 +157,38 @@ test.describe("Расчёт по заявке: снабженец и гл. ин�
     await expectNoViolations(page, "расчёт бухгалтера");
   });
 
+  test("условия КП: оплата, срок действия и срок поставки — в боковом окне (план 0.5)", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "supply@demo.example");
+    await openCalc(page);
+    const card = page.locator(".ant-card").filter({
+      has: page.getByRole("heading", { level: 2, name: "Условия КП" }),
+    });
+    await expect(card.getByText("100% предоплата")).toBeVisible();
+    await card.getByRole("button", { name: "Изменить" }).click();
+    const form = page.getByRole("region", { name: "Условия КП" });
+    await form.getByLabel("Условия оплаты").fill("50% предоплата, 50% по поставке");
+    await form.getByLabel("Срок поставки, дней").fill("60");
+    await form.getByLabel("Уточнение по сроку").fill("под заказ");
+    await settledScreenshot(page, "calc-terms-form");
+    await expectNoViolations(page, "условия КП, форма");
+    await form.getByRole("button", { name: "Сохранить" }).click();
+    await expect(form).toBeHidden();
+    await expect(card.getByText("50% предоплата, 50% по поставке")).toBeVisible();
+    await expect(card.getByText("60 дн. · под заказ")).toBeVisible();
+    await settledScreenshot(page, "calc-terms");
+    await expectNoViolations(page, "условия КП");
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(card.getByText("60 дн. · под заказ")).toBeVisible();
+    const overflow = await page.evaluate<number>(
+      "document.documentElement.scrollWidth - document.documentElement.clientWidth",
+    );
+    expect(overflow).toBeLessThanOrEqual(0);
+    await settledScreenshot(page, "calc-terms");
+    await expectNoViolations(page, "условия КП, 390");
+  });
+
   test("ИИ-разбор: предложение без записи, строки добавляет человек", async ({ page }) => {
     await loginAndWait(page, "engineer@demo.example");
     await spaGoto(page, `/erp/calc/${encodeURIComponent("ЗВ-2026-103")}`);

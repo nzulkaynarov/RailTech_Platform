@@ -143,7 +143,7 @@ def quote_document_extras(quote, seller_company) -> dict:
         ),
         lead_days=quote.effective_delivery_lead_time_days,
         delivery_note=quote.delivery_note or "",
-        payment=getattr(seller_settings, "default_payment_terms", "") or "",
+        payment=quote.payment_terms or getattr(seller_settings, "default_payment_terms", "") or "",
         incoterm=incoterm,
         warranty_months=getattr(seller_settings, "default_warranty_months", None),
         valid_until=quote.valid_until.strftime("%d.%m.%Y") if quote.valid_until else "",
