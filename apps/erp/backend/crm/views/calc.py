@@ -318,7 +318,11 @@ class CalcParseView(RoleGatedViewMixin, APIView):
         operation_id="calc_parse",
         summary="ИИ-разбор текста или файла заявки в строки (предложение)",
         tags=TAGS,
-        request={"application/json": CalcParseInSerializer, "multipart/form-data": CalcParseInSerializer},
+        request={
+            "application/json": CalcParseInSerializer,
+            "application/x-www-form-urlencoded": CalcParseInSerializer,
+            "multipart/form-data": CalcParseInSerializer,
+        },
         responses={
             202: CalcJobSerializer,
             429: OpenApiResponse(CalcErrorSerializer, description="Дневной лимит ИИ компании"),

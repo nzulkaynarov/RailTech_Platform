@@ -3937,6 +3937,9 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/CalcParseInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CalcParseInRequest'
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/CalcParseInRequest'
