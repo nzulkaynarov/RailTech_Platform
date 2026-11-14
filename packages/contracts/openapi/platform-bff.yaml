@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.79.0
+  version: 0.84.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -9476,6 +9476,43 @@ paths:
           $ref: '#/components/responses/NotFound'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/letters/{id}/co-executors:
+    post:
+      tags: [letters]
+      operationId: addCoExecutor
+      summary: 'EDS · Привлечь соисполнителя'
+      description: >-
+        План 1.9. EDS `POST /letters/{id}/co-executors`: ответственный исполнитель привлекает соисполнителя — кто, что
+        сделать, срок не позже своего (решает EDS: не ответственный — 403 `not_responsible`; срок позже — 422
+        `details.fields.due`; уже работает с письмом — 422 `details.fields.person_id`). Соисполнитель отчитывается
+        ответственному. Ответ — карточка.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/LetterIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CoExecutorIn'
+      responses:
+        '200':
+          description: Соисполнитель привлечён — карточка письма
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LetterCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/LetterConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
 
   /eds/letters/{id}/close:
     post:
@@ -21639,6 +21676,15 @@ components:
           maxItems: 50
           uniqueItems: true
           items: {type: string, pattern: '^[1-9][0-9]*$'}
+
+    CoExecutorIn:
+      type: object
+      additionalProperties: false
+      required: [person_id, text, due]
+      properties:
+        person_id: {type: string, pattern: '^[1-9][0-9]*$', description: Сотрудник (crm_user_id)}
+        text: {type: string, minLength: 1, maxLength: 2000, description: Что сделать}
+        due: {type: string, format: date, description: Не позже срока ответственного}
 
     LetterCloseIn:
       type: object
