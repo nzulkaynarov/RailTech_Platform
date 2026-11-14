@@ -24,6 +24,9 @@ class EdsPermission(StrEnum):
     FILES_UPLOAD = "files.upload"
     # eds.signing.manage (SIGN-2, ADR-0024): реестр полномочий подписи — выдать, изменить, отозвать.
     SIGNING_MANAGE = "signing.manage"
+    # eds.visa.finance / eds.visa.legal (ADR-0025): визы бухгалтера и юриста перед подписью договора, счёта и акта.
+    APPROVALS_VISA_FINANCE = "approvals.visa_finance"
+    APPROVALS_VISA_LEGAL = "approvals.visa_legal"
 
 
 KNOWN = frozenset(p.value for p in EdsPermission)

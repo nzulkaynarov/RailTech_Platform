@@ -961,6 +961,7 @@ export * from "./setupStepState";
 export * from "./signerCandidate";
 export * from "./signingApprovalPage";
 export * from "./signingApprovalRow";
+export * from "./signingApprovalRowAction";
 export * from "./signingApprovalRowKind";
 export * from "./signingAuthority";
 export * from "./signingAuthorityDetail";

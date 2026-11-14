@@ -29,6 +29,8 @@ EDS_CODES = {
     "bus.manage",
     "files.upload",
     "signing.manage",
+    "approvals.visa_finance",
+    "approvals.visa_legal",
 }
 #: Код журнала шины (W13-A2): только раздел `admin` уровня `full` — у директора (`admin: read`) его нет.
 BUS = "bus.manage"
@@ -36,6 +38,9 @@ BUS = "bus.manage"
 UPLOAD = "files.upload"
 #: Реестр полномочий подписи (SIGN-2): раздел `eds.signing.manage`, системная роль администратора.
 SIGNING = "signing.manage"
+#: Визы перед подписью (ADR-0025): бухгалтера — `eds.visa.finance`, юриста — `eds.visa.legal`.
+VISA_FINANCE = "approvals.visa_finance"
+VISA_LEGAL = "approvals.visa_legal"
 #: Публичные операции EDS: без токена доступа и без права.
 PUBLIC = {("get", "/health"), ("post", "/api/v1/auth/sso/exchange")}
 # Любой активный сотрудник, сужение — внутри операции (P8b, SPEC-v3 §3.2a «Права»: исполнитель видит письмо своего
@@ -88,17 +93,30 @@ def test_catalog_codes_are_exactly_the_eds_v1_codes() -> None:
 @pytest.mark.parametrize(
     ("code", "expected"),
     [
-        ("DIRECTOR", EDS_CODES - {BUS, SIGNING, "payments.confirm"}),
+        ("DIRECTOR", EDS_CODES - {BUS, SIGNING, "payments.confirm", VISA_FINANCE, VISA_LEGAL}),
         ("MANAGER", {"letters.read", "registry.read", "memos.create", UPLOAD}),
         ("SUPPLY", {"registry.read", "memos.create"}),
         ("ENGINEER", {"registry.read", "memos.create"}),
-        ("ACCOUNTANT", {"letters.read", "registry.read", "registry.export", "payments.confirm", "memos.create"}),
+        (
+            "ACCOUNTANT",
+            {"letters.read", "registry.read", "registry.export", "payments.confirm", "memos.create", VISA_FINANCE},
+        ),
+        # ADR-0025: юрист визирует договор.
+        ("LAWYER", {"letters.read", "registry.read", "memos.create", VISA_LEGAL}),
         # P8: делопроизводитель регистрирует входящие, резолюции не накладывает.
         ("REGISTRAR", {"letters.read", "letters.register", "registry.read", "memos.create"}),
         # P8: менеджер-универсал — договор, счёт, акт, сканы, оплаты; письма только читает.
         (
             "MANAGER_ALL",
-            {"letters.read", "registry.read", "registry.export", "payments.confirm", "memos.create", UPLOAD},
+            {
+                "letters.read",
+                "registry.read",
+                "registry.export",
+                "payments.confirm",
+                "memos.create",
+                UPLOAD,
+                VISA_FINANCE,
+            },
         ),
     ],
 )
@@ -128,8 +146,9 @@ def test_rework_row_belongs_to_the_author_of_documents_not_to_the_approver() -> 
 
 def test_director_gets_every_eds_code_except_the_bus_journal_and_the_payment_confirmation() -> None:
     """D2-4 (Q-D2-4-1 п. 1): «Счета и оплаты» у директора — `read`; оплату подтверждает бухгалтер."""
-    assert len(EDS_CODES) == 12
-    assert eds_permissions(role("DIRECTOR")) == EDS_CODES - {BUS, SIGNING, "payments.confirm"}
+    assert len(EDS_CODES) == 14
+    # ADR-0025: директор подписывает, а не визирует — визы бухгалтера и юриста у него нет.
+    assert eds_permissions(role("DIRECTOR")) == EDS_CODES - {BUS, SIGNING, "payments.confirm", VISA_FINANCE, VISA_LEGAL}
 
 
 def test_bus_journal_is_admin_full_only() -> None:
@@ -251,6 +270,7 @@ def test_eds_api_global_security_is_the_eds_access_token() -> None:
     assert EDS_YAML["security"] == [{"edsAccess": []}]
     scheme = EDS_YAML["components"]["securitySchemes"]["edsAccess"]
     assert (scheme["type"], scheme["scheme"], scheme["bearerFormat"]) == ("http", "bearer", "JWT")
+    # 0.18.0 — визы бухгалтера и юриста маршрута подписи (ADR-0025);
     # 0.17.0 — согласующие от автора и получатели копии документа (пункт 1.6 плана);
     # 0.16.0 — обозначения номеров документооборота `/numbering-labels` (задача «Н2»);
     # 0.15.0 — `stage` реестра («Исходящие» и «Архив») и сумма строки (FR-5);
@@ -263,7 +283,7 @@ def test_eds_api_global_security_is_the_eds_access_token() -> None:
     # 0.8.0 — статусы пути делопроизводства и поручения (P8b); 0.7.0 — договоры, счета, акты в реестре (D2-5);
     # 0.6.0 — код files.upload в перечне ответов EdsPermission (D1-2b);
     # 0.5.0 — зона исполнителя резолюции (D1-8); 0.4.0 — PATCH /documents/{id} (D1-5); 0.3.0 — журнал шины (W13-A2)
-    assert EDS_YAML["info"]["version"] == "0.17.0"
+    assert EDS_YAML["info"]["version"] == "0.18.0"
 
 
 # Коды справочников (EDS-REG) — слаги `^[a-z][a-z_-]…$` без «/», поэтому могут быть в пути.

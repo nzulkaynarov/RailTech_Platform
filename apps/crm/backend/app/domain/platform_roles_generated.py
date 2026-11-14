@@ -21,6 +21,7 @@ TEMPLATE_ROLE_CODES: Final[tuple[str, ...]] = (
     "ACCOUNTANT",
     "REGISTRAR",
     "MANAGER_ALL",
+    "LAWYER",
 )
 
 # Разделы каталога в порядке файла.
@@ -39,6 +40,8 @@ RESOURCE_KEYS: Final[tuple[str, ...]] = (
     "eds.memo.create",
     "eds.memo.approve",
     "eds.signing.manage",
+    "eds.visa.finance",
+    "eds.visa.legal",
     "erp.calc",
     "erp.calc.goods",
     "erp.calc.services",
@@ -95,6 +98,8 @@ RESOURCE_LEVELS: Final[dict[str, tuple[str, ...]]] = {
         "full",
     ),
     "eds.signing.manage": ("full",),
+    "eds.visa.finance": ("full",),
+    "eds.visa.legal": ("full",),
     "erp.calc": (
         "read",
         "full",
@@ -192,6 +197,8 @@ CRM_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
     "eds.memo.create": {},
     "eds.memo.approve": {},
     "eds.signing.manage": {},
+    "eds.visa.finance": {},
+    "eds.visa.legal": {},
     "erp.calc": {},
     "erp.calc.goods": {},
     "erp.calc.services": {},
@@ -295,6 +302,8 @@ ERP_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
     "eds.memo.create": {},
     "eds.memo.approve": {},
     "eds.signing.manage": {},
+    "eds.visa.finance": {},
+    "eds.visa.legal": {},
     "erp.calc": {
         "full": (
             "deal.manage",
@@ -390,6 +399,12 @@ EDS_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
     "eds.signing.manage": {
         "full": ("signing.manage",),
     },
+    "eds.visa.finance": {
+        "full": ("approvals.visa_finance",),
+    },
+    "eds.visa.legal": {
+        "full": ("approvals.visa_legal",),
+    },
     "erp.calc": {},
     "erp.calc.goods": {},
     "erp.calc.services": {},
@@ -450,6 +465,11 @@ ROLE_NAMES: Final[dict[str, dict[str, str]]] = {
         "ru": "Менеджер-универсал",
         "uz": "Universal menejer",
         "en": "All-round manager",
+    },
+    "LAWYER": {
+        "ru": "Юрист",
+        "uz": "Yurist",
+        "en": "Lawyer",
     },
 }
 
@@ -525,6 +545,7 @@ ROLE_ACCESS: Final[dict[str, dict[str, str]]] = {
         "eds.inbox": "read",
         "eds.projects": "full",
         "eds.payments": "full",
+        "eds.visa.finance": "full",
         "eds.memo.create": "full",
         "erp.calc": "read",
         "erp.stock": "read",
@@ -551,6 +572,7 @@ ROLE_ACCESS: Final[dict[str, dict[str, str]]] = {
         "eds.drafts": "read",
         "eds.projects": "full",
         "eds.payments": "full",
+        "eds.visa.finance": "full",
         "eds.memo.create": "full",
         "erp.calc": "full",
         "erp.calc.goods": "full",
@@ -558,6 +580,15 @@ ROLE_ACCESS: Final[dict[str, dict[str, str]]] = {
         "erp.stock": "full",
         "chats.internal": "full",
         "chats.external": "full",
+    },
+    "LAWYER": {
+        "dashboard.queue": "full",
+        "crm.clients": "read",
+        "eds.inbox": "read",
+        "eds.projects": "read",
+        "eds.visa.legal": "full",
+        "eds.memo.create": "full",
+        "chats.internal": "full",
     },
 }
 
@@ -580,6 +611,7 @@ ROLE_RESTRICTED_FIELDS: Final[dict[str, tuple[str, ...]]] = {
         "cost_margin",
         "supplier_prices",
     ),
+    "LAWYER": ("totals_only",),
 }
 
 # Роли версии 1 (порядок — прежние шесть); признак базовой роли они не задают (D1-8).

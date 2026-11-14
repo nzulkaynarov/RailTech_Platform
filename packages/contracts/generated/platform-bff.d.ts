@@ -10874,6 +10874,13 @@ export interface components {
       id: string;
       /** @enum {string} */
       kind: "quote" | "contract" | "invoice" | "act";
+      /**
+       * @description ADR-0025: шаг сотрудника — виза (бухгалтер, юрист) или подпись
+       * @enum {string}
+       */
+      action: "visa" | "sign";
+      /** @description Подпись шага словами, например «Виза бухгалтера» или «Подписать» */
+      step: string;
       number: string;
       title: string;
       amount: string | null;
@@ -10885,8 +10892,11 @@ export interface components {
       items: components["schemas"]["SigningApprovalRow"][];
     };
     SigningDecisionIn: {
-      /** @enum {string} */
-      decision: "approve" | "reject";
+      /**
+       * @description Виза — approve («Согласовать») или return («Вернуть с замечанием»); подпись — approve или reject. У reject и return нужен comment
+       * @enum {string}
+       */
+      decision: "approve" | "reject" | "return";
       comment?: string;
     };
     /**

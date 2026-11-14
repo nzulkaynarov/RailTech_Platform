@@ -321,13 +321,15 @@ class MemoDecisionIn(_DecisionIn):
 class SigningDecisionIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    decision: Literal["approve", "reject"]
+    # ADR-0025: виза — «Согласовать» (approve) или «Вернуть с замечанием» (return);
+    # подпись — approve или reject.
+    decision: Literal["approve", "reject", "return"]
     comment: str | None = Field(default=None, max_length=4000)
 
     @model_validator(mode="after")
     def _reason_for_reject(self) -> "SigningDecisionIn":
-        if self.decision == "reject" and not (self.comment or "").strip():
-            raise ValueError("comment is required for reject")
+        if self.decision in ("reject", "return") and not (self.comment or "").strip():
+            raise ValueError("comment is required for reject and return")
         return self
 
     def for_eds(self) -> dict[str, Any]:
@@ -337,6 +339,9 @@ class SigningDecisionIn(BaseModel):
 class SigningApprovalRow(BaseModel):
     id: UUID
     kind: Literal["quote", "contract", "invoice", "act"]
+    # ADR-0025: шаг сотрудника — виза (бухгалтер, юрист) или подпись; `step` — подпись шага.
+    action: Literal["visa", "sign"]
+    step: str
     number: str
     title: str
     amount: str | None

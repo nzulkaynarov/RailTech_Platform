@@ -139,7 +139,9 @@
         "payments.confirm",
         "bus.manage",
         "files.upload",
-        "signing.manage"
+        "signing.manage",
+        "approvals.visa_finance",
+        "approvals.visa_legal"
       ],
       "description": "Код права EDS v1 (docs/history/runbooks/wave12-eds-c1.md §2.2; EdsPermission в openapi/eds.yaml)"
     },

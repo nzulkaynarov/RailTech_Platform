@@ -16,7 +16,7 @@ from typing import Any
 
 import structlog
 from rt_bus.sqlalchemy import AsyncBus
-from sqlalchemy import select
+from sqlalchemy import any_, literal, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import clock
@@ -25,12 +25,37 @@ from app.config import get_settings
 from app.errors import conflict
 from app.models import ApprovalRoute, ApprovalStep, Employee
 from app.schemas.approvals import ApprovalTemplate, Decision, DecisionIn, RouteStatus
+from app.security.permissions import EdsPermission
 from app.services import approvals, documents, events, journal, signing_resolve
 
 log = structlog.get_logger(__name__)
 
 SIGN_LABEL = "Подписать"
 _TITLES = {"quote": "КП", "contract": "Договор", "invoice": "Счёт", "act": "Акт"}
+
+#: ADR-0025: визы перед подписью по виду документа — (подпись шага, право EDS, роль словами для причины отказа).
+#: Первая версия данных маршрута; состав настраивается в шаблоне документа (план маршрутов, партия 3).
+FINANCE_VISA = ("Виза бухгалтера", EdsPermission.APPROVALS_VISA_FINANCE.value, "Бухгалтер")
+LEGAL_VISA = ("Виза юриста", EdsPermission.APPROVALS_VISA_LEGAL.value, "Юрист")
+DOCUMENT_VISAS: dict[str, tuple[tuple[str, str, str], ...]] = {
+    "contract": (FINANCE_VISA, LEGAL_VISA),
+    "invoice": (FINANCE_VISA,),
+    "act": (FINANCE_VISA,),
+}
+VISA_PERMISSIONS = frozenset(permission for _, permission, _ in (FINANCE_VISA, LEGAL_VISA))
+
+
+async def _missing_visa_role(session: AsyncSession, kind: str) -> str | None:
+    """Роль визы, у которой нет ни одного активного держателя права (правило владельца 13): маршрут не стартует."""
+    for _, permission, role in DOCUMENT_VISAS.get(kind, ()):
+        holder = await session.scalar(
+            select(Employee.crm_user_id)
+            .where(Employee.is_active.is_(True), literal(permission) == any_(Employee.permissions_eds))
+            .limit(1)
+        )
+        if holder is None:
+            return role
+    return None
 
 
 def _object_ref(snap: dict[str, Any]) -> dict[str, Any]:
@@ -161,15 +186,38 @@ async def handle_signing_request(
             None,
         )
 
+    missing = await _missing_visa_role(session, obj.kind)
+    if missing is not None:
+        return await _publish_rejected(
+            session,
+            bus,
+            snap,
+            fallback,
+            f"Нет сотрудника с ролью «{missing}»: назначьте её в «Ролях и правах», затем отправьте на подпись снова.",
+            None,
+        )
+
+    # ADR-0025: визы по должности, затем «Подписать»; виза инициатора — строкой журнала, без шага.
+    visas = [
+        approvals.StepSpec(label, permission=permission) for label, permission, _ in DOCUMENT_VISAS.get(obj.kind, ())
+    ]
     route = await approvals.open_route(
         session,
         bus,
         template=ApprovalTemplate.SIGNING,
         title=f"{_TITLES.get(obj.kind, obj.kind)} {obj.number}",
-        steps=[approvals.StepSpec(SIGN_LABEL, crm_user_id=signer_id)],
+        steps=[*visas, approvals.StepSpec(SIGN_LABEL, crm_user_id=signer_id)],
         actor_id=data.requested_by.crm_user_id,
         round_no=len(routes) + 1,
         fields={"signing_snapshot": snap, "erp_deal_id": obj.deal_id},
+    )
+    await journal.record(
+        session,
+        "approval.initiator_visa",
+        by=data.requested_by.crm_user_id,
+        approval_id=route.id,
+        comment=f"Инициатор {data.requested_by.name} согласовал, отправив на подпись",
+        version=route.round,
     )
     log.info("commercial_signing_requested", kind=obj.kind, number=obj.number, route=str(route.id), signer=signer_id)
     return {"decision": "pending", "route": str(route.id)}
@@ -184,9 +232,22 @@ async def decide(
     current: ApprovalStep,
     body: DecisionIn,
 ) -> ApprovalRoute:
-    """Шаг «Подписать»: подпись только при действующем полномочии; отказ и возврат уходят автору с причиной."""
+    """Виза (ADR-0025) или «Подписать»: подпись — только при действующем полномочии; отказ и возврат уходят автору
+    с причиной."""
     snap = route.signing_snapshot or {}
     now = clock.now()
+    if current.assignee_permission in VISA_PERMISSIONS:
+        result = await approvals.complete_step(session, bus, employee, route, steps, current, body)
+        if body.decision is not Decision.APPROVE:
+            # Несогласие останавливает круг (правило владельца 7): ERP получает отказ с замечанием визирующего.
+            visa = {
+                "crm_user_id": employee.crm_user_id,
+                "full_name": employee.full_name,
+                "position": employee.position or "",
+            }
+            note = f"{current.label}: {body.comment or 'возвращено с замечанием'}"
+            await _publish_rejected(session, bus, snap, visa, note, employee.crm_user_id)
+        return result
     if body.decision is not Decision.APPROVE:
         result = await approvals.complete_step(session, bus, employee, route, steps, current, body)
         signer = {
