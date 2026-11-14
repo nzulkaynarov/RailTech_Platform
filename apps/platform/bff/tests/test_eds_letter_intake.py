@@ -4,6 +4,7 @@
 BFF модели не зовёт.
 """
 
+import json
 from typing import Any
 
 import httpx
@@ -12,6 +13,7 @@ import pytest
 from tests.backends import Backends
 from tests.conftest import ContractChecker, Web
 from tests.eds_letters_support import FILE_ID, EdsFake, eds_error_body
+from tests.roles import custom
 
 BASE = "/api/v1/eds"
 SUGGESTION_ID = "8a6f3c9e-1d2b-4c5d-9e8f-0a1b2c3d4e5f"
@@ -127,3 +129,58 @@ async def test_helper_waits_for_the_model_longer_than_the_default_timeout(
     await web.client.get(f"{BASE}/docflow-settings")
     settings_call = eds.made("GET", "docflow-settings")[-1]
     assert settings_call.extensions["timeout"]["read"] < INTAKE_WAIT_SECONDS
+
+
+# --- план 1.4: помощник письма -------------------------------------------------------------------
+
+BODY = {
+    "version": 1,
+    "lang": "en",
+    "doc": {
+        "type": "doc",
+        "content": [
+            {"type": "paragraph", "content": [{"type": "text", "text": "Please confirm."}]}
+        ],
+    },
+}
+
+
+async def test_author_gets_a_translation_with_back_translation(
+    web: Web, eds: EdsFake, check: ContractChecker
+) -> None:
+    eds.answer(
+        "POST",
+        "letter-assist",
+        httpx.Response(
+            200,
+            json={
+                "suggestion_id": SUGGESTION_ID,
+                "body": BODY,
+                "back_translation": "Просим подтвердить.",
+                "alias": "draft-model",
+                "prompt_version": "0123456789ab",
+            },
+        ),
+    )
+    assert (await web.login(["MANAGER"])).status_code == 200
+    source = {**BODY, "lang": "ru"}
+    response = await web.send(
+        "POST", f"{BASE}/letter-assist", json={"action": "translate", "lang": "en", "body": source}
+    )
+    assert response.status_code == 200, response.text
+    check(response, "/eds/letter-assist", "post")
+    assert response.json()["back_translation"] == "Просим подтвердить."
+    assert "alias" not in response.json()
+    [sent] = eds.made("POST", "letter-assist")
+    assert json.loads(sent.read()) == {"action": "translate", "lang": "en", "body": source}
+
+
+async def test_assist_needs_the_author_section(web: Web, eds: EdsFake) -> None:
+    assert (
+        await web.login([custom(77, "Без документов", {"dashboard.queue": "full"})])
+    ).status_code == 200
+    response = await web.send(
+        "POST", f"{BASE}/letter-assist", json={"action": "draft", "lang": "ru", "brief": "x"}
+    )
+    assert response.status_code == 403
+    assert eds.made("POST", "letter-assist") == []

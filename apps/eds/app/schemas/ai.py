@@ -3,8 +3,9 @@
 import datetime as dt
 import uuid
 from enum import StrEnum
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.schemas.common import Strict
 
@@ -33,6 +34,27 @@ class LetterIntakeSuggestion(BaseModel):
     suggestion_id: uuid.UUID
     source: IntakeSource
     fields: LetterIntakeFields
+    alias: str
+    prompt_version: str
+
+
+class LetterAssistIn(Strict):
+    """План 1.4: «Подготовить текст» (`draft`: о чём письмо) или «Перевести» (`translate`: тело на язык `lang`)."""
+
+    action: Literal["draft", "translate"]
+    lang: Literal["ru", "uz", "en"]
+    brief: Annotated[str | None, Field(max_length=4000)] = None
+    recipient: Annotated[str | None, Field(max_length=300)] = None
+    subject: Annotated[str | None, Field(max_length=300)] = None
+    body: dict[str, Any] | None = None
+
+
+class LetterAssistSuggestion(BaseModel):
+    """Предложение помощника: тело письма по контракту документов; у перевода — обратный перевод на русский."""
+
+    suggestion_id: uuid.UUID
+    body: dict[str, Any]
+    back_translation: str | None
     alias: str
     prompt_version: str
 

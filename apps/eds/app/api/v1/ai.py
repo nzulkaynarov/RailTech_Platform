@@ -10,14 +10,24 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_container, get_session, get_storage, require_permission
 from app.container import Container
 from app.models import Employee
-from app.schemas.ai import AiDecisionIn, DocflowSettings, DocflowSettingsPatch, LetterIntakeIn, LetterIntakeSuggestion
+from app.schemas.ai import (
+    AiDecisionIn,
+    DocflowSettings,
+    DocflowSettingsPatch,
+    LetterAssistIn,
+    LetterAssistSuggestion,
+    LetterIntakeIn,
+    LetterIntakeSuggestion,
+)
 from app.security.permissions import EdsPermission as P
-from app.services import docflow_settings, letter_intake
+from app.services import docflow_settings, letter_assist, letter_intake
 from app.services.storage import ObjectStorage
 
 router = APIRouter(prefix="/api/v1", tags=["letters"])
 
 Registrar = Annotated[Employee, Depends(require_permission(P.LETTERS_REGISTER))]
+# План 1.4: исходящее письмо пишет автор документов (`memos.create`) — ему и помощник текста
+Author = Annotated[Employee, Depends(require_permission(P.MEMOS_CREATE))]
 SettingsReader = Annotated[Employee, Depends(require_permission(P.LETTERS_REGISTER, P.BUS_MANAGE))]
 Admin = Annotated[Employee, Depends(require_permission(P.BUS_MANAGE))]
 Session = Annotated[AsyncSession, Depends(get_session)]
@@ -30,6 +40,14 @@ async def suggest_letter_from_file(
     body: LetterIntakeIn, employee: Registrar, session: Session, storage: Storage, box: Box
 ) -> LetterIntakeSuggestion:
     return await letter_intake.suggest(session, box.settings, storage, employee, body.file_id)
+
+
+@router.post("/letter-assist", response_model=LetterAssistSuggestion, operation_id="assistLetterText")
+async def assist_letter_text(
+    body: LetterAssistIn, employee: Author, session: Session, box: Box
+) -> LetterAssistSuggestion:
+    """План 1.4: «Подготовить текст» и «Перевести» — тело письма от модели; вставляет его человек."""
+    return await letter_assist.suggest(session, box.settings, employee, body)
 
 
 @router.post(
