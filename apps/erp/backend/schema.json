@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "ERP API",
-        "version": "1.14.0",
+        "version": "1.15.0",
         "description": "ERP Platform API. Supports deal lifecycle management, quoting, product catalog (PIM), Excel imports, and real-time notifications via WebSocket.",
         "contact": {
             "name": "ERP API Support",
@@ -9305,7 +9305,7 @@
             "post": {
                 "operationId": "calc_parse",
                 "description": "POST /api/v1/calc/<deal_id>/parse/ — ИИ-разбор текста заявки в строки: задание в очереди ИИ, ответ — предложение\n(`GET /api/v1/sourcing/ai-status/<task_id>/`, результат `{proposal: [...]}`); строки не пишутся.",
-                "summary": "ИИ-разбор текста заявки в строки (предложение)",
+                "summary": "ИИ-разбор текста или файла заявки в строки (предложение)",
                 "parameters": [
                     {
                         "in": "path",
@@ -36392,6 +36392,11 @@
                         "type": "string",
                         "default": "",
                         "maxLength": 20000
+                    },
+                    "file": {
+                        "type": "string",
+                        "format": "binary",
+                        "description": "docx, xlsx, xls, pdf, png, jpg, csv, txt — до 10 МБ"
                     }
                 }
             },

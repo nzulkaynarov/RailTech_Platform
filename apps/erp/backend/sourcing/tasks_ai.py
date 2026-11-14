@@ -327,10 +327,15 @@ def _handle_calc_parse_text(payload: dict) -> dict:
     user = CustomUser.objects.filter(pk=payload["user_id"]).first()
     if user is None:
         return {"error": "ROLE_NOT_PERMITTED"}
+    encoded = payload.get("file_b64")
     try:
-        checked = parse_payload(payload["deal_id"], user, payload.get("text"))
+        checked = parse_payload(payload["deal_id"], user, payload.get("text"), has_file=bool(encoded))
     except CalcError as exc:
         return {"error": exc.code}
+    if encoded:  # план 1.1: файл заявки (Word, Excel, PDF…) — байты в задаче, как у импорта каталога
+        import base64
+
+        return parse_proposal("", content=base64.b64decode(encoded), filename=payload.get("filename") or "request")
     return parse_proposal(checked["text"])
 
 

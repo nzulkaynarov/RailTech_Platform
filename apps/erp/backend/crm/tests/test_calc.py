@@ -406,6 +406,75 @@ def test_parse_queues_a_job_and_the_job_only_proposes(world, settings):
     assert not Quote.objects.filter(deal=world["deal"]).exists(), "предложение ничего не пишет"
 
 
+def test_parse_of_a_request_file_sends_its_bytes_to_the_model(world, settings):
+    """План 1.1: файл заявки (Excel) — в задаче ИИ байтами, модель получает файл с его именем."""
+    import base64
+    import io
+
+    import openpyxl
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    from sourcing.tasks_ai import FEATURE_HANDLERS
+
+    settings.AI_IMPORT_ENABLED = True
+    book = openpyxl.Workbook()
+    book.active.append(["Наименование", "Кол-во", "Ед."])
+    book.active.append(["Болт путевой М22", 400, "шт."])
+    buffer = io.BytesIO()
+    book.save(buffer)
+    upload = SimpleUploadedFile("заявка.xlsx", buffer.getvalue())
+    with mock.patch("sourcing.ai_jobs.run_ai_job.apply_async") as queued:
+        response = _api(world["supply"]).post(_url(world, "parse/"), {"file": upload}, format="multipart")
+    assert response.status_code == 202, response.content
+    _, payload = queued.call_args.kwargs["args"]
+    assert payload["filename"] == "заявка.xlsx" and base64.b64decode(payload["file_b64"]) == buffer.getvalue()
+
+    rows = [{"name": "Болт путевой М22", "quantity": 400, "unit": "шт."}]
+    with mock.patch("ai.services.intake.extract_request_items", return_value=rows) as extract:
+        result = FEATURE_HANDLERS["calc_parse_text"](payload)
+    assert extract.call_args.args == (buffer.getvalue(), "заявка.xlsx")
+    assert result["proposal"][0]["name"] == "Болт путевой М22"
+
+
+def test_parse_refuses_a_file_of_another_type(world, settings):
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    settings.AI_IMPORT_ENABLED = True
+    bad = SimpleUploadedFile("virus.exe", b"MZ\x90\x00")
+    response = _api(world["supply"]).post(_url(world, "parse/"), {"file": bad}, format="multipart")
+    assert response.status_code == 400 and response.json() == {"detail": "FILE_TYPE_UNSUPPORTED"}
+    spoof = SimpleUploadedFile("заявка.xlsx", b"not a zip at all")
+    response = _api(world["supply"]).post(_url(world, "parse/"), {"file": spoof}, format="multipart")
+    assert response.status_code == 400 and response.json() == {"detail": "FILE_TYPE_UNSUPPORTED"}
+
+
+def test_word_without_docling_is_a_clear_reason(settings):
+    """План 1.1: Word разбирается через docling-serve; сервис не настроен — причина словами, не сбой."""
+    from crm.services.calculation import parse_proposal
+
+    settings.AI_IMPORT_ENABLED = True
+    settings.DOCLING_URL = ""
+    with mock.patch("ai.services.intake.unit_code_reference", return_value=(set(), "")):
+        result = parse_proposal("", content=b"PK\x03\x04 docx", filename="заявка.docx")
+    assert result == {"error": "WORD_UNAVAILABLE"}
+
+
+def test_word_goes_to_docling_as_markdown(settings):
+    from ai.services.payloads import file_to_payload
+
+    settings.DOCLING_URL = "http://docling:5001"
+    settings.DOCLING_API_KEY = "test-key"
+    reply = mock.Mock()
+    reply.json.return_value = {"status": "success", "document": {"md_content": "| Болт М22 | 400 | шт. |"}}
+    reply.raise_for_status.return_value = None
+    with mock.patch("httpx.post", return_value=reply) as post:
+        text, vision = file_to_payload(b"PK\x03\x04 docx", "заявка.docx")
+    assert (text, vision) == ("| Болт М22 | 400 | шт. |", None)
+    assert post.call_args.args[0] == "http://docling:5001/v1/convert/file"
+    assert post.call_args.kwargs["data"] == {"to_formats": "md"}
+    assert post.call_args.kwargs["headers"] == {"X-Api-Key": "test-key"}
+
+
 def test_parse_without_text_is_409(world, settings):
     settings.AI_IMPORT_ENABLED = True
     Deal.objects.filter(pk=world["deal"].pk).update(notes="")

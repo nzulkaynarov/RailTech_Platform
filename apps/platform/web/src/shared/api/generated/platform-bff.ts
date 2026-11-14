@@ -60,6 +60,7 @@ import type {
   CalcLinePatch,
   CalcLinesIn,
   CalcLostIn,
+  CalcParseFileIn,
   CalcParseIn,
   CalcParseJob,
   CalcParseResult,
@@ -42408,6 +42409,122 @@ export const useParseCalcText = <
   TContext
 > => {
   return useMutation(getParseCalcTextMutationOptions(options), queryClient);
+};
+
+export const getParseCalcFileUrl = (number: string) => {
+  return `/api/v1/erp/calc/${number}/parse-file`;
+};
+
+/**
+ * План 1.1: файл заявки — Word (docx, через docling-serve), Excel (xlsx, xls), PDF, изображение (png, jpg, webp) или текст (csv, txt, tsv), не больше 10 МБ. BFF читает тело ограниченно и передаёт ERP `POST /calc/{deal_id}/parse/` как есть; итог — `GET /erp/calc-jobs/{job_id}`, как у разбора текста. Чужой тип или подпись — 422 с полем `file` (`details.reason = file_type_unsupported`); больше 10 МБ — `file_too_large`; Word без docling-serve — итог задания `failed` с `reason = word_unavailable`. Раздел `erp.calc` — полный.
+ * @summary Расчёт · ИИ-разбор файла заявки в строки (предложение)
+ */
+export const parseCalcFile = async (
+  number: string,
+  calcParseFileIn: CalcParseFileIn,
+  options?: Parameters<typeof http>[1],
+): Promise<CalcParseJob> => {
+  const formData = new FormData();
+  formData.append(`file`, calcParseFileIn.file);
+
+  return http<CalcParseJob>(getParseCalcFileUrl(number), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const getParseCalcFileMutationKey = () => ["parseCalcFile"] as const;
+
+export const getParseCalcFileMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CalcConflictResponse
+    | ValidationFailedResponse
+    | TooManyRequestsResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof parseCalcFile>>,
+    TError,
+    ParseCalcFileMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof parseCalcFile>>,
+  TError,
+  ParseCalcFileMutationVariables,
+  TContext
+> => {
+  const mutationKey = getParseCalcFileMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof parseCalcFile>>,
+    ParseCalcFileMutationVariables
+  > = (props) => {
+    const { number, data } = props ?? {};
+
+    return parseCalcFile(number, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ParseCalcFileMutationResult = NonNullable<Awaited<ReturnType<typeof parseCalcFile>>>;
+export type ParseCalcFileMutationBody = CalcParseFileIn;
+export type ParseCalcFileMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | CalcConflictResponse
+  | ValidationFailedResponse
+  | TooManyRequestsResponse
+  | BackendUnavailableResponse
+>;
+export type ParseCalcFileMutationVariables = { number: string; data: CalcParseFileIn };
+
+/**
+ * @summary Расчёт · ИИ-разбор файла заявки в строки (предложение)
+ */
+export const useParseCalcFile = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CalcConflictResponse
+    | ValidationFailedResponse
+    | TooManyRequestsResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof parseCalcFile>>,
+      TError,
+      ParseCalcFileMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof parseCalcFile>>,
+  TError,
+  ParseCalcFileMutationVariables,
+  TContext
+> => {
+  return useMutation(getParseCalcFileMutationOptions(options), queryClient);
 };
 
 export const getListStockBalancesUrl = (params?: ListStockBalancesParams) => {

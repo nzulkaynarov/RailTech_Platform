@@ -113,6 +113,7 @@ export * from "./calcLinePatchKind";
 export * from "./calcLinesIn";
 export * from "./calcLineVisa";
 export * from "./calcLostIn";
+export * from "./calcParseFileIn";
 export * from "./calcParseIn";
 export * from "./calcParseJob";
 export * from "./calcParseResult";

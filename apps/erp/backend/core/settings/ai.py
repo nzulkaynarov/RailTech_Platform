@@ -50,6 +50,11 @@ AI_DAILY_BUDGET_USD = float((os.environ.get("AI_DAILY_BUDGET_USD") or "1").strip
 # as one base64 request, so an oversized file means a 413 + wasted spend — reject it
 # early. Default 10 MB (the upload endpoint already caps the raw file at 20 MB).
 AI_IMPORT_MAX_BYTES = int(os.environ.get("AI_IMPORT_MAX_BYTES", str(10 * 1024 * 1024)))
+# docling-serve (план 1.1): Word (docx) → Markdown для разбора заявки в строки. Пустой адрес — Word не разбирается,
+# сотрудник вставляет текст. Тот же сервис, что у базы знаний CRM (infra/compose/base.yml).
+DOCLING_URL = (os.environ.get("DOCLING_URL") or "").strip().rstrip("/")
+DOCLING_API_KEY = os.environ.get("DOCLING_API_KEY") or ""
+DOCLING_TIMEOUT_S = float(os.environ.get("DOCLING_TIMEOUT_S") or "120")
 
 # ── КП: санитарные потолки ввода строки ─────────────────────────────────────
 # Верхние границы на количество/цену строки КП. Это НЕ бизнес-лимиты, а защита
