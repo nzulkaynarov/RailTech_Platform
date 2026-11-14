@@ -18,7 +18,7 @@ from parties.models import Company
 
 from catalog.desk.access import can_view_supplier_prices
 from catalog.desk.audit import record, snapshot
-from catalog.desk.items import EXPIRING_SOON_DAYS, ItemError, current_offer_q, offer_row
+from catalog.desk.items import ItemError, current_offer_q, expiring_days, offer_row
 from catalog.models import StockStatus, SupplierOffer
 from catalog.services import offer_validity_error
 
@@ -49,7 +49,7 @@ def supplier_queryset(params):
                 filter=Q(
                     supplier_offers__is_active=True,
                     supplier_offers__valid_until__gte=today,
-                    supplier_offers__valid_until__lte=today + timedelta(days=EXPIRING_SOON_DAYS),
+                    supplier_offers__valid_until__lte=today + timedelta(days=expiring_days()),
                 ),
                 distinct=True,
             ),
@@ -84,6 +84,7 @@ def supplier_row(company) -> dict:
 def supplier_detail(company, user) -> dict:
     today = timezone.localdate()
     show_price = can_view_supplier_prices(user)
+    soon_days = expiring_days()
     from catalog.models import Manufacturer
 
     offers = list(
@@ -103,7 +104,7 @@ def supplier_detail(company, user) -> dict:
             "email": company.email or "",
             "website": company.website or "",
             "legal_address": company.legal_address or "",
-            "offers": [offer_row(o, show_price=show_price, today=today) for o in offers],
+            "offers": [offer_row(o, show_price=show_price, today=today, expiring=soon_days) for o in offers],
             "prices_visible": show_price,
             "brands": [{"id": pk, "name": name} for pk, name in sorted(supplied.items(), key=lambda x: x[1].lower())],
             "manufactured_brands": [{"id": pk, "name": name} for pk, name in made],

@@ -54,6 +54,9 @@ class CompanySettingsSerializer(serializers.ModelSerializer):
             "catalog_price_visibility",
             "catalog_publish_threshold",
             "fx_rate_max_age_days",
+            "offer_confirm_days",
+            "offer_expiring_days",
+            "act_reminder_hours",
             "doc_number_prefix",
             "created_at",
             "updated_at",
@@ -96,6 +99,9 @@ class CompanySettingsUpdateSerializer(serializers.ModelSerializer):
             "catalog_price_visibility",
             "catalog_publish_threshold",
             "fx_rate_max_age_days",
+            "offer_confirm_days",
+            "offer_expiring_days",
+            "act_reminder_hours",
             "doc_number_prefix",
         ]
         extra_kwargs = {"min_margin_percent": {"required": False}, "target_margin_percent": {"required": False}}

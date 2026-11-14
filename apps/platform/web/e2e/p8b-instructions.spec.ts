@@ -1,8 +1,8 @@
 import AxeBuilder from "@axe-core/playwright";
 import { type Page, expect, test } from "@playwright/test";
 
-import { loginAndWait, openAvatarMenu, spaGoto, waitForMotionEnd } from "./support/app";
-import { chooseOption, fillDate, pickFiles } from "./support/fields";
+import { loginAndWait, openAvatarMenu, reveal, spaGoto, waitForMotionEnd } from "./support/app";
+import { chooseOption, fillDate, openStep, pickFiles } from "./support/fields";
 
 // P8b «Поручения по входящим» на MSW (SPEC-v3 §3.2a п. 1–6): делопроизводитель регистрирует письмо с проектом резолюции,
 // директор утверждает его одним нажатием, исполнитель видит поручение в «Моих задачах», просит перенос, директор
@@ -67,8 +67,8 @@ async function switchTo(page: Page, email: string): Promise<void> {
   await openAvatarMenu(page);
   await page.getByRole("menuitem", { name: "Выйти" }).click();
   await expect(page).toHaveURL(/\/login/);
-  await page.getByLabel("Электронная почта").fill(email);
-  await page.getByLabel("Пароль").fill("demo-pass-1");
+  await (await reveal(page.getByLabel("Электронная почта"))).fill(email);
+  await (await reveal(page.getByLabel("Пароль"))).fill("demo-pass-1");
   await page.getByRole("button", { name: "Войти" }).click();
   await expect(page).toHaveURL(/\/dashboard\/queue$/);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
@@ -98,24 +98,34 @@ test.describe("P8b: поручения по входящим", () => {
       page.getByRole("heading", { level: 1, name: "Регистрация входящего документа" }),
     ).toBeVisible();
     // Требование ГНК: «срочно» и кабинет налогоплательщика подставляются сами.
-    await chooseOption(page.getByLabel("Вид документа"), "Требование или уведомление ГНК");
-    await expect(page.getByRole("checkbox", { name: "Срочно" })).toBeChecked();
-    await page.getByLabel("Корреспондент", { exact: true }).fill("ГНИ Демо-района");
-    await page.getByLabel("Исходящий номер отправителя").fill("04-12/5100");
-    await page.getByLabel("Тема").fill("Требование о представлении документов по контрагенту");
-    await pickFiles(page.getByLabel("Файл документа"), {
+    await chooseOption(
+      await reveal(page.getByLabel("Вид документа")),
+      "Требование или уведомление ГНК",
+    );
+    await expect(await reveal(page.getByLabel("Срочно", { exact: true }))).toBeChecked();
+    await (await reveal(page.getByLabel("Корреспондент", { exact: true }))).fill("ГНИ Демо-района");
+    await (await reveal(page.getByLabel("Исходящий номер отправителя"))).fill("04-12/5100");
+    await (
+      await reveal(page.getByLabel("Тема", { exact: true }))
+    ).fill("Требование о представлении документов по контрагенту");
+    await pickFiles(await reveal(page.getByLabel("Файл документа")), {
       name: "trebovanie.pdf",
       mimeType: "application/pdf",
       buffer: Buffer.from("%PDF-1.4 demo"),
     });
     await expect(page.getByText("загружен")).toBeVisible();
-    await chooseOption(page.getByLabel("Тип резолюции"), "К исполнению");
-    await chooseOption(page.getByLabel("Ответственный"), "Демо Широков · Менеджер-универсал");
+    await openStep(page, "Срок, адресат и резолюция");
+    await chooseOption(await reveal(page.getByLabel("Тип резолюции")), "К исполнению");
+    await chooseOption(
+      await reveal(page.getByLabel("Ответственный")),
+      "Демо Широков · Менеджер-универсал",
+    );
     await fillDate(page.getByLabel("Срок исполнения"), due);
     await expect(page.getByLabel("Текст резолюции")).toHaveValue(
       "Прошу исполнить и доложить в срок.",
     );
     await both(page, "register-draft");
+    await openStep(page, "Проверка и регистрация");
     await page.getByRole("button", { name: "Зарегистрировать", exact: true }).click();
     await expect(page.getByText(/Зарегистрировано: ВХ-109\/26/)).toBeVisible();
 
@@ -159,7 +169,7 @@ test.describe("P8b: поручения по входящим", () => {
     await expect(page).toHaveURL(/\/eds\/tasks\/[0-9a-f-]{36}$/);
     const ext = page.getByRole("form", { name: "Не успеваете? Запросите перенос" });
     await fillDate(ext.getByLabel("Новый срок"), later);
-    await ext.getByLabel("Причина").fill("Ждём выписку банка по контрагенту");
+    await (await reveal(ext.getByLabel("Причина"))).fill("Ждём выписку банка по контрагенту");
     await ext.getByRole("button", { name: "Запросить перенос" }).click();
     await expect(page.getByText("Запрос переноса отправлен директору")).toBeVisible();
     await expect(
@@ -185,9 +195,9 @@ test.describe("P8b: поручения по входящим", () => {
       .click();
     await expect(page.getByText(/отклонено/).first()).toBeVisible();
     const done = page.getByRole("form", { name: "Отметить исполнение" });
-    await done
-      .getByLabel("Отчёт", { exact: true })
-      .fill("Документы по контрагенту переданы инспектору, акт приёма в файле.");
+    await (
+      await reveal(done.getByLabel("Отчёт", { exact: true }))
+    ).fill("Документы по контрагенту переданы инспектору, акт приёма в файле.");
     await done.getByRole("button", { name: "Исполнено" }).click();
     await expect(page.getByText("Поручение исполнено", { exact: true })).toBeVisible();
     await expect(queueRow(page, "ВХ-109/26")).toHaveCount(0);
@@ -209,7 +219,10 @@ test.describe("P8b: поручения по входящим", () => {
     await at(page, WIDE);
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, "/eds/inbox/%D0%92%D0%A5-108%2F26?panel=open&tab=resolution");
-    await chooseOption(page.getByLabel("Ответственный"), "Демо Широков · Менеджер-универсал");
+    await chooseOption(
+      await reveal(page.getByLabel("Ответственный")),
+      "Демо Широков · Менеджер-универсал",
+    );
     await page.getByRole("button", { name: "Наложить резолюцию" }).click();
     await expect(page.getByText("Резолюция наложена: поручение ушло исполнителям")).toBeVisible();
 
@@ -219,7 +232,7 @@ test.describe("P8b: поручения по входящим", () => {
       .click();
     const ext = page.getByRole("form", { name: "Не успеваете? Запросите перенос" });
     await fillDate(ext.getByLabel("Новый срок"), companyDay(30));
-    await ext.getByLabel("Причина").fill("Нужна сверка с банком");
+    await (await reveal(ext.getByLabel("Причина"))).fill("Нужна сверка с банком");
     await ext.getByRole("button", { name: "Запросить перенос" }).click();
     await expect(page.getByText("Запрос переноса отправлен директору")).toBeVisible();
 
@@ -243,7 +256,7 @@ test.describe("P8b: поручения по входящим", () => {
     const form = page.getByRole("form", { name: "Резолюция директора" });
     await form.getByRole("radio", { name: /Для сведения/ }).check();
     await expect(form.getByLabel("Ответственный")).toHaveCount(0);
-    await chooseOption(form.getByLabel("Ознакомить"), "Демо Бухгалтеров · Бухгалтер");
+    await chooseOption(await reveal(form.getByLabel("Ознакомить")), "Демо Бухгалтеров · Бухгалтер");
     // множественный выбор не закрывает список сам: закрыть, как сотрудник (Escape)
     await form.getByLabel("Ознакомить").press("Escape");
     await page.getByRole("button", { name: "Наложить резолюцию" }).first().click();

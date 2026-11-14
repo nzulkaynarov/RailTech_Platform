@@ -77,3 +77,17 @@ export function partnerCard(page: Page, name: string): Locator {
     .locator("#pf-context-panel, .pf-crm-sheet")
     .filter({ has: page.getByRole("heading", { name, level: 3 }) });
 }
+
+/**
+ * Формы секциями (`StepSections`, platform-frontend.md §4.1a): открыть секцию, в которой лежит поле, если она свёрнута.
+ * Возвращает тот же локатор — удобно в цепочке: `(await reveal(form.getByLabel("Тема"))).fill(...)`.
+ */
+export async function reveal(locator: Locator): Promise<Locator> {
+  await locator.first().waitFor({ state: "attached" });
+  const body = locator.locator("xpath=ancestor::*[contains(@class, 'pf-fstep-body')][1]");
+  if ((await body.count()) > 0 && (await body.getAttribute("hidden")) !== null) {
+    const head = await body.getAttribute("aria-labelledby");
+    if (head) await locator.page().locator(`[id="${head}"]`).click();
+  }
+  return locator;
+}

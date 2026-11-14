@@ -256,7 +256,10 @@
     "invalidField": "Qiymatni tekshiring",
     "note": "Yangi TT shu qiymatlarni oladi; rasmiylashtirilgan TT o‘zgarmaydi.",
     "remindOverdue": "Mijozlarga muddati oʻtgan hisob-fakturalar haqida eslatish",
-    "remindOverdueHint": "Kuniga bir marta, Toshkent vaqti bilan 10:00 da — toʻlov muddati uch kundan ortiq oʻtgan har bir hisob-faktura boʻyicha bitta eslatma: mijoz kabinetidagi qoʻngʻiroqchada va loyiha kontaktiga hamda kabinetga taklif qilinganlarga xat bilan. Sukut boʻyicha oʻchirilgan."
+    "remindOverdueHint": "Kuniga bir marta, Toshkent vaqti bilan 10:00 da — toʻlov muddati uch kundan ortiq oʻtgan har bir hisob-faktura boʻyicha bitta eslatma: mijoz kabinetidagi qoʻngʻiroqchada va loyiha kontaktiga hamda kabinetga taklif qilinganlarga xat bilan. Sukut boʻyicha oʻchirilgan.",
+    "confirmDays": "Hamkor narxini tasdiqlash, kun",
+    "expiringDays": "Hamkor narxi tugashidan oldin ogohlantirish, kun",
+    "actReminderHours": "Dalolatnoma eslatmalari orasidagi tanaffus, soat"
   },
   "charges": {
     "title": "TT xarajat moddalari",
