@@ -877,6 +877,31 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/letter-assist": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Помощник письма — подготовить текст или перевести
+     * @description План 1.4. `draft` — текст письма по поручению (`brief`, необязательно `recipient`, `subject`, текущее тело `body`) на
+     *     языке `lang`; `translate` — перевод тела `body` на язык `lang` и обратный перевод на русский (`back_translation`), чтобы
+     *     сотрудник проверил смысл. Модель пишет Markdown, тело собирает мост `rt_docs.markdown_to_body` (план 1.3); в документ
+     *     ничего не сохраняется — тело вставляет человек. Шлюз — алиас `draft-model` ключом EDS, вызов — строка `ai_suggestions`.
+     *     Пустое поручение — 422 `details.fields.brief = required`; перевод без текста — `body = required`; помощник не настроен
+     *     или не ответил — 409 `ai_unavailable`; дневной лимит — 409 `ai_budget_exceeded`.
+     */
+    post: operations["assistLetterText"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/ai-suggestions/{suggestion_id}/decision": {
     parameters: {
       query?: never;
@@ -2219,6 +2244,30 @@ export interface components {
       kind: components["schemas"]["LetterKindCode"] | null;
       /** Format: date */
       document_due: string | null;
+    };
+    LetterAssistIn: {
+      /** @enum {string} */
+      action: "draft" | "translate";
+      /**
+       * @description Язык текста (draft) или перевода (translate)
+       * @enum {string}
+       */
+      lang: "ru" | "uz" | "en";
+      /** @description О чём письмо (draft) */
+      brief?: string | null;
+      recipient?: string | null;
+      subject?: string | null;
+      /** @description Текущее тело письма (обязательно для translate) */
+      body?: components["schemas"]["DocumentBody"] | null;
+    };
+    LetterAssistSuggestion: {
+      /** Format: uuid */
+      suggestion_id: string;
+      body: components["schemas"]["DocumentBody"];
+      /** @description Обратный перевод на русский в Markdown (translate) */
+      back_translation: string | null;
+      alias: string;
+      prompt_version: string;
     };
     LetterIntakeSuggestion: {
       suggestion_id: components["schemas"]["Uuid"];
@@ -4613,6 +4662,34 @@ export interface operations {
       401: components["responses"]["Unauthorized"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  assistLetterText: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LetterAssistIn"];
+      };
+    };
+    responses: {
+      /** @description Предложение тела письма */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterAssistSuggestion"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
       409: components["responses"]["Conflict"];
       422: components["responses"]["ValidationFailed"];
     };

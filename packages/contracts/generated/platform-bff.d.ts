@@ -5169,6 +5169,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/eds/letter-assist": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Помощник письма: подготовить текст или перевести
+     * @description План 1.4. EDS `POST /letter-assist`: `draft` — текст письма по поручению (`brief`) на языке `lang`; `translate` — перевод тела `body` на язык `lang` и обратный перевод на русский (`back_translation`). Тело собирает EDS из Markdown модели (мост `rt_docs`, план 1.3); в документ ничего не сохраняется — тело вставляет человек. Пустое поручение — 422 `details.fields.brief`; перевод без текста — `details.fields.body`; помощник не настроен или не ответил — 409 `details.reason = ai_unavailable`; дневной лимит — 409 `ai_budget_exceeded`. Раздел `eds.memo.create` — полный.
+     */
+    post: operations["assistLetterText"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/eds/letter-intake": {
     parameters: {
       query?: never;
@@ -11986,6 +12006,28 @@ export interface components {
       kind: string | null;
       /** Format: date */
       document_due: string | null;
+    };
+    LetterAssistIn: {
+      /** @enum {string} */
+      action: "draft" | "translate";
+      /**
+       * @description Язык текста (draft) или перевода (translate)
+       * @enum {string}
+       */
+      lang: "ru" | "uz" | "en";
+      /** @description О чём письмо (draft) */
+      brief?: string | null;
+      recipient?: string | null;
+      subject?: string | null;
+      /** @description Текущее тело письма (обязательно для translate) */
+      body?: components["schemas"]["EdsDocumentBody"] | null;
+    };
+    LetterAssistSuggestion: {
+      /** Format: uuid */
+      suggestion_id: string;
+      body: components["schemas"]["EdsDocumentBody"];
+      /** @description Обратный перевод на русский в Markdown (translate) */
+      back_translation: string | null;
     };
     LetterIntakeSuggestion: {
       /** Format: uuid */
@@ -25530,6 +25572,38 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  assistLetterText: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LetterAssistIn"];
+      };
+    };
+    responses: {
+      /** @description Предложение тела письма */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterAssistSuggestion"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["EdsConflict"];
+      422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
     };
   };
