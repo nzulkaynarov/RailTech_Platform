@@ -1,13 +1,16 @@
-import { Alert, App, Button, Dropdown, Input, Modal, Select } from "antd";
+import { Alert, App, Button, Dropdown, Input, Modal, Radio, Select } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router";
 
+import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { ApiError } from "../../../shared/api/errors";
 import type { LetterCard, LetterInstruction } from "../../../shared/api/generated/model";
 import {
   addCoExecutor,
   closeLetterWithoutReply,
+  completeInstruction,
   reopenLetter,
   returnInstructionToAuthor,
   useListDictionaryItems,
@@ -17,6 +20,7 @@ import { DateField } from "../../../shared/ui/DateField";
 import { companyDate } from "../inbox/api";
 import { localName } from "../dictionaries";
 import { useRefreshLetters } from "../inbox/api";
+import { RequestForm } from "../../crm/request/RequestForm";
 
 const CLOSE_REASONS = "close-reasons";
 
@@ -282,7 +286,117 @@ function CoExecutorDialog({
 }
 
 /**
- * «Ещё» у поручения ответственного (решение владельца 2026-11-11): «Закрыть без ответа» и «Вернуть автору».
+ * «Передать в работу» (план 1.9, исследование 2026-11-11 §4.2): из письма создаётся заявка клиента (форма с файлом этого
+ * письма) или служебная записка (форма документа); созданный объект закрывает поручение ссылкой на себя.
+ */
+function HandOverDialog({
+  letter,
+  instruction,
+  onClose,
+}: {
+  letter: LetterCard;
+  instruction: LetterInstruction;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation("letters");
+  const { me } = useAuth();
+  const { message } = App.useApp();
+  const navigate = useNavigate();
+  const refresh = useRefreshLetters();
+  const canRequest = canEdit(me, "crm.clients");
+  const canMemo = canEdit(me, "eds.memo.create");
+  const [kind, setKind] = useState<"client_request" | "memo">(
+    canRequest ? "client_request" : "memo",
+  );
+  const [step, setStep] = useState<"choose" | "request">("choose");
+  const [error, setError] = useState<string | null>(null);
+  const file = letter.files[0];
+
+  const next = () => {
+    if (kind === "memo") {
+      const search = new URLSearchParams({
+        type: "memo",
+        handover: instruction.id,
+        from: letter.number,
+      });
+      void navigate(`/eds/new?${search.toString()}`);
+      return;
+    }
+    setStep("request");
+  };
+  const linkRequest = async (deal: number) => {
+    setError(null);
+    try {
+      await completeInstruction(instruction.id, {
+        handed_to: { kind: "client_request", id: String(deal) },
+      });
+      void message.success(t("outcome.hand.done", { number: letter.number }));
+      await refresh();
+    } catch (failure) {
+      setError(errorText(failure, t("outcome.failed")));
+    }
+  };
+
+  if (step === "request") {
+    return (
+      <Modal
+        open
+        width={720}
+        title={t("outcome.hand.title", { number: letter.number })}
+        onCancel={onClose}
+        footer={null}
+        destroyOnHidden
+      >
+        {error ? <Alert type="error" showIcon role="alert" message={error} /> : null}
+        <RequestForm
+          lead={null}
+          clientId={null}
+          letterFile={file ? { id: file.id, name: file.name } : null}
+          onCreated={(result) => void linkRequest(result.deal)}
+          onCancel={onClose}
+        />
+      </Modal>
+    );
+  }
+  return (
+    <Modal
+      open
+      width={480}
+      title={t("outcome.hand.title", { number: letter.number })}
+      onCancel={onClose}
+      footer={null}
+      destroyOnHidden
+    >
+      <div className="pf-mail-actions">
+        <Radio.Group
+          aria-label={t("outcome.hand.what")}
+          value={kind}
+          onChange={(event) => {
+            setKind(event.target.value as "client_request" | "memo");
+          }}
+          options={[
+            { value: "client_request", label: t("outcome.hand.request"), disabled: !canRequest },
+            { value: "memo", label: t("outcome.hand.memo"), disabled: !canMemo },
+          ]}
+        />
+        <div className="pf-res-actions">
+          <Button onClick={onClose}>{t("outcome.cancel")}</Button>
+          <Button
+            type="primary"
+            disabled={kind === "client_request" ? !canRequest : !canMemo}
+            onClick={next}
+          >
+            {t("outcome.hand.next")}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+/**
+ * «Ещё» у поручения ответственного (решение владельца 2026-11-11): «Передать в работу», соисполнитель, «Закрыть без
+ * ответа» и «Вернуть автору».
  * Соисполнителю исход письма не положен — меню нет.
  */
 export function OutcomeMenu({
@@ -293,7 +407,7 @@ export function OutcomeMenu({
   instruction: LetterInstruction;
 }) {
   const { t } = useTranslation("letters");
-  const [open, setOpen] = useState<"close" | "return" | "co" | null>(null);
+  const [open, setOpen] = useState<"hand" | "close" | "return" | "co" | null>(null);
   if (instruction.role !== "responsible" || instruction.status !== "in_work") return null;
   const someoneDone = (letter.instructions ?? []).some((i) => i.status === "executed");
   return (
@@ -302,12 +416,13 @@ export function OutcomeMenu({
         trigger={["click"]}
         menu={{
           items: [
+            { key: "hand", label: t("outcome.hand.action") },
             { key: "co", label: t("outcome.co.action") },
             { key: "close", label: t("outcome.close.action") },
             { key: "return", label: t("outcome.return.action"), disabled: someoneDone },
           ],
           onClick: ({ key }) => {
-            setOpen(key === "co" ? "co" : key === "close" ? "close" : "return");
+            setOpen(key as "hand" | "close" | "return" | "co");
           },
         }}
       >
@@ -316,6 +431,15 @@ export function OutcomeMenu({
       {open === "close" ? (
         <CloseDialog
           letter={letter}
+          onClose={() => {
+            setOpen(null);
+          }}
+        />
+      ) : null}
+      {open === "hand" ? (
+        <HandOverDialog
+          letter={letter}
+          instruction={instruction}
           onClose={() => {
             setOpen(null);
           }}

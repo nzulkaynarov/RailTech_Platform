@@ -4,6 +4,7 @@
  */
 import type { LetterFile } from "./letterFile";
 import type { LetterInstructionExtension } from "./letterInstructionExtension";
+import type { LetterInstructionHandedTo } from "./letterInstructionHandedTo";
 import type { LetterInstructionOutgoing } from "./letterInstructionOutgoing";
 import type { LetterInstructionRole } from "./letterInstructionRole";
 import type { LetterInstructionStatus } from "./letterInstructionStatus";
@@ -29,6 +30,8 @@ export interface LetterInstruction {
   files: LetterFile[];
   /** Ответ — наш ИСХ */
   outgoing: LetterInstructionOutgoing;
+  /** «Передать в работу» (план 1.9) — объект, в который передано письмо */
+  handed_to: LetterInstructionHandedTo;
   /** @nullable */
   executed_at: string | null;
   extensions: LetterInstructionExtension[];

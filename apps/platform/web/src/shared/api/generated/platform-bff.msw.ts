@@ -39,6 +39,7 @@ import {
   EdsRegistryKind,
   EmployeeStatus,
   ErpSyncState,
+  HandoverKind,
   InboundMailOutcome,
   InboundMailStatus,
   IntegrationAccess,
@@ -14581,6 +14582,17 @@ export const getRegisterLetterResponseMock = (
         },
         null,
       ]),
+      handed_to: faker.helpers.arrayElement([
+        {
+          kind: faker.helpers.arrayElement(Object.values(HandoverKind)),
+          number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          path: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+        },
+        null,
+      ]),
       executed_at: faker.helpers.arrayElement([
         faker.date.past().toISOString().slice(0, 19) + "Z",
         null,
@@ -15350,6 +15362,17 @@ export const getGetLetterResponseMock = (
         },
         null,
       ]),
+      handed_to: faker.helpers.arrayElement([
+        {
+          kind: faker.helpers.arrayElement(Object.values(HandoverKind)),
+          number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          path: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+        },
+        null,
+      ]),
       executed_at: faker.helpers.arrayElement([
         faker.date.past().toISOString().slice(0, 19) + "Z",
         null,
@@ -15728,6 +15751,17 @@ export const getResolveLetterResponseMock = (
         {
           number: faker.string.alpha({ length: { min: 10, max: 20 } }),
           path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        null,
+      ]),
+      handed_to: faker.helpers.arrayElement([
+        {
+          kind: faker.helpers.arrayElement(Object.values(HandoverKind)),
+          number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          path: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
         },
         null,
       ]),
@@ -16115,6 +16149,17 @@ export const getReturnLetterResponseMock = (
         },
         null,
       ]),
+      handed_to: faker.helpers.arrayElement([
+        {
+          kind: faker.helpers.arrayElement(Object.values(HandoverKind)),
+          number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          path: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+        },
+        null,
+      ]),
       executed_at: faker.helpers.arrayElement([
         faker.date.past().toISOString().slice(0, 19) + "Z",
         null,
@@ -16496,6 +16541,17 @@ export const getRejectLetterResponseMock = (
         {
           number: faker.string.alpha({ length: { min: 10, max: 20 } }),
           path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        null,
+      ]),
+      handed_to: faker.helpers.arrayElement([
+        {
+          kind: faker.helpers.arrayElement(Object.values(HandoverKind)),
+          number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          path: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
         },
         null,
       ]),
@@ -16925,6 +16981,17 @@ export const getMarkLetterDuplicateResponseMock = (
         },
         null,
       ]),
+      handed_to: faker.helpers.arrayElement([
+        {
+          kind: faker.helpers.arrayElement(Object.values(HandoverKind)),
+          number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          path: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+        },
+        null,
+      ]),
       executed_at: faker.helpers.arrayElement([
         faker.date.past().toISOString().slice(0, 19) + "Z",
         null,
@@ -17324,6 +17391,17 @@ export const getSaveResolutionDraftResponseMock = (
         {
           number: faker.string.alpha({ length: { min: 10, max: 20 } }),
           path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        null,
+      ]),
+      handed_to: faker.helpers.arrayElement([
+        {
+          kind: faker.helpers.arrayElement(Object.values(HandoverKind)),
+          number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          path: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
         },
         null,
       ]),
@@ -17729,6 +17807,17 @@ export const getResolveOfficeLetterResponseMock = (
         },
         null,
       ]),
+      handed_to: faker.helpers.arrayElement([
+        {
+          kind: faker.helpers.arrayElement(Object.values(HandoverKind)),
+          number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          path: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+        },
+        null,
+      ]),
       executed_at: faker.helpers.arrayElement([
         faker.date.past().toISOString().slice(0, 19) + "Z",
         null,
@@ -18128,6 +18217,17 @@ export const getAcknowledgeLetterResponseMock = (
         },
         null,
       ]),
+      handed_to: faker.helpers.arrayElement([
+        {
+          kind: faker.helpers.arrayElement(Object.values(HandoverKind)),
+          number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          path: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+        },
+        null,
+      ]),
       executed_at: faker.helpers.arrayElement([
         faker.date.past().toISOString().slice(0, 19) + "Z",
         null,
@@ -18509,6 +18609,17 @@ export const getAddCoExecutorResponseMock = (
         {
           number: faker.string.alpha({ length: { min: 10, max: 20 } }),
           path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        null,
+      ]),
+      handed_to: faker.helpers.arrayElement([
+        {
+          kind: faker.helpers.arrayElement(Object.values(HandoverKind)),
+          number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          path: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
         },
         null,
       ]),
@@ -18920,6 +19031,17 @@ export const getCloseLetterWithoutReplyResponseMock = (
         },
         null,
       ]),
+      handed_to: faker.helpers.arrayElement([
+        {
+          kind: faker.helpers.arrayElement(Object.values(HandoverKind)),
+          number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          path: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+        },
+        null,
+      ]),
       executed_at: faker.helpers.arrayElement([
         faker.date.past().toISOString().slice(0, 19) + "Z",
         null,
@@ -19301,6 +19423,17 @@ export const getReopenLetterResponseMock = (
         {
           number: faker.string.alpha({ length: { min: 10, max: 20 } }),
           path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        null,
+      ]),
+      handed_to: faker.helpers.arrayElement([
+        {
+          kind: faker.helpers.arrayElement(Object.values(HandoverKind)),
+          number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          path: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
         },
         null,
       ]),
@@ -19712,6 +19845,17 @@ export const getReturnInstructionToAuthorResponseMock = (
         },
         null,
       ]),
+      handed_to: faker.helpers.arrayElement([
+        {
+          kind: faker.helpers.arrayElement(Object.values(HandoverKind)),
+          number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          path: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+        },
+        null,
+      ]),
       executed_at: faker.helpers.arrayElement([
         faker.date.past().toISOString().slice(0, 19) + "Z",
         null,
@@ -20111,6 +20255,17 @@ export const getCompleteInstructionResponseMock = (
         {
           number: faker.string.alpha({ length: { min: 10, max: 20 } }),
           path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        null,
+      ]),
+      handed_to: faker.helpers.arrayElement([
+        {
+          kind: faker.helpers.arrayElement(Object.values(HandoverKind)),
+          number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          path: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
         },
         null,
       ]),
@@ -20522,6 +20677,17 @@ export const getRequestInstructionExtensionResponseMock = (
         },
         null,
       ]),
+      handed_to: faker.helpers.arrayElement([
+        {
+          kind: faker.helpers.arrayElement(Object.values(HandoverKind)),
+          number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          path: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+        },
+        null,
+      ]),
       executed_at: faker.helpers.arrayElement([
         faker.date.past().toISOString().slice(0, 19) + "Z",
         null,
@@ -20927,6 +21093,17 @@ export const getDecideInstructionExtensionResponseMock = (
         {
           number: faker.string.alpha({ length: { min: 10, max: 20 } }),
           path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        null,
+      ]),
+      handed_to: faker.helpers.arrayElement([
+        {
+          kind: faker.helpers.arrayElement(Object.values(HandoverKind)),
+          number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          path: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
         },
         null,
       ]),

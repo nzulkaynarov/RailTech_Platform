@@ -436,6 +436,11 @@
       "files_many": "{{count}} attachments",
       "files_other": "{{count}} attachments"
     },
+    "handover": {
+      "from": "Handing over letter {{number}}: the task closes once the memo is sent",
+      "done": "Memo {{number}} sent, letter {{letter}} handed over",
+      "failed": "Memo sent, but the task is not closed: {{reason}}"
+    },
     "assist": {
       "draft": "Prepare the text",
       "translate": "Translate into English",

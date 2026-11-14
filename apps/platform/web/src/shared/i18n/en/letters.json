@@ -607,7 +607,12 @@
       "waiting": "waiting",
       "done": "acknowledged {{date}}"
     },
-    "none": "No instructions."
+    "none": "No instructions.",
+    "handedTo": {
+      "label": "Handed over",
+      "client_request": "Client request",
+      "memo": "Memo"
+    }
   },
   "tasks": {
     "title": "Instruction on letter {{number}}",
@@ -1242,6 +1247,15 @@
     "more": "More",
     "cancel": "Cancel",
     "failed": "Failed. Try again.",
+    "hand": {
+      "action": "Hand over",
+      "title": "{{number}}: hand over",
+      "what": "What to create",
+      "request": "Client request",
+      "memo": "Memo",
+      "next": "Continue",
+      "done": "Letter {{number}} handed over"
+    },
     "co": {
       "action": "Add a co-executor",
       "title": "{{number}}: co-executor",

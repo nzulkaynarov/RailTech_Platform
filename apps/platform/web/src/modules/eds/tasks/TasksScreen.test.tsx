@@ -41,6 +41,7 @@ function instruction(patch: Partial<LetterInstruction> = {}): LetterInstruction 
     report: null,
     files: [],
     outgoing: null,
+    handed_to: null,
     executed_at: null,
     extensions: [],
     ...patch,
@@ -454,6 +455,64 @@ describe("Соисполнители от ответственного (план
           (i) => i.role === "co_executor" && i.text === "Сверить расчёт НДС",
         )?.person.name,
       ).toBe("Демо Бухгалтеров");
+    });
+  });
+});
+
+describe("«Передать в работу» (план 1.9)", () => {
+  const HAND_ID = "50000000-0000-4000-8000-000000000109";
+
+  it("служебная записка: форма документа открывается с поручением; заявка клиента — форма с файлом письма", async () => {
+    inExecution({ instructions: [instruction({ id: HAND_ID })] });
+    signIn("universal@demo.example");
+    const { router } = renderAt(PATH);
+    fireEvent.click(await screen.findByRole("button", { name: "Ещё" }));
+    fireEvent.click(await screen.findByText("Передать в работу"));
+    let dialog = await screen.findByRole("dialog", { name: /передать в работу/ });
+    fireEvent.click(within(dialog).getByLabelText("Заявка клиента"));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Продолжить" }));
+    dialog = await screen.findByRole("dialog", { name: /передать в работу/ });
+    const file = findLetter("ВХ-108/26")?.files[0]?.name ?? "";
+    expect(file).not.toBe("");
+    fireEvent.click(within(dialog).getByRole("button", { name: /^Запрос/, expanded: false }));
+    expect(within(dialog).getByText(new RegExp(file.replace(".", "\\.")))).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: /close|закрыть/i }));
+
+    fireEvent.click(await screen.findByRole("button", { name: "Ещё" }));
+    fireEvent.click(await screen.findByText("Передать в работу"));
+    dialog = await screen.findByRole("dialog", { name: /передать в работу/ });
+    fireEvent.click(within(dialog).getByLabelText("Служебная записка"));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Продолжить" }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/eds/new");
+    });
+    const params = new URLSearchParams(router.state.location.search);
+    expect([params.get("type"), params.get("handover"), params.get("from")]).toEqual([
+      "memo",
+      HAND_ID,
+      "ВХ-108/26",
+    ]);
+    expect(
+      await screen.findByText(
+        "Передача в работу письма ВХ-108/26: после отправки записки поручение закроется",
+      ),
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Тема"), { target: { value: "Участие в конференции" } });
+    fireEvent.click(screen.getByRole("button", { name: /Текст и вложения/, expanded: false }));
+    fireEvent.change(screen.getByLabelText("Текст"), {
+      target: { value: "Прошу оплатить участие." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Проверка и отправка/, expanded: false }));
+    fireEvent.click(await screen.findByRole("button", { name: /Отправить на согласование$/ }));
+    expect(await screen.findByText(/письмо ВХ-108\/26 передано в работу/)).toBeInTheDocument();
+    const memo = readEds().documents.find((d) => d.subject === "Участие в конференции");
+    const handed = findLetter("ВХ-108/26")?.instructions?.[0];
+    expect(handed?.status).toBe("executed");
+    expect(handed?.handed_to).toEqual({
+      kind: "memo",
+      number: memo?.number,
+      path: `/eds/documents?scope=all&doc=${memo?.id ?? ""}&panel=open`,
     });
   });
 });
