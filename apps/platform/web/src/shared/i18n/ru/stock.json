@@ -188,7 +188,12 @@
     "done": "Создан черновик {{number}}",
     "productHint": "Введите не меньше двух букв названия или артикула",
     "productSearching": "Ищем…",
-    "productNone": "Ничего не найдено"
+    "productNone": "Ничего не найдено",
+    "sections": {
+      "supplier": "Партнёр и способ",
+      "lines": "Строки"
+    },
+    "linesSummary": "Строк: {{count}}"
   },
   "order": {
     "title": "Заказ партнёру {{number}}",
