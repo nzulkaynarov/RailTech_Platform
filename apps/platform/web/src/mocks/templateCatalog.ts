@@ -3,6 +3,7 @@ import { HttpResponse, http } from "msw";
 import type {
   DocumentTemplate,
   EmailTemplate,
+  EdsTemplate,
   ReplyTemplate,
   ResolutionTemplate,
   TemplateRow,
@@ -35,11 +36,12 @@ export const templateCatalogHandlers = [
       );
     }
     const base = request.url;
-    const [docs, emails, resolutions, replies] = await Promise.all([
+    const [docs, emails, resolutions, replies, letters] = await Promise.all([
       items<DocumentTemplate>(base, "/api/v1/admin/company/document-templates"),
       items<EmailTemplate>(base, "/api/v1/admin/company/email-templates"),
       items<ResolutionTemplate>(base, "/api/v1/eds/resolution-templates"),
       items<ReplyTemplate>(base, "/api/v1/admin/bot/reply-templates"),
+      items<EdsTemplate>(base, "/api/v1/eds/templates"),
     ]);
     const rows: TemplateRow[] = [];
     if (docs) {
@@ -84,6 +86,18 @@ export const templateCatalogHandlers = [
           path: `/admin/templates?tab=emails&template=${first.id}`,
         });
       }
+    }
+    for (const item of letters ?? []) {
+      rows.push({
+        id: `eds.template:${item.id}`,
+        kind: item.kind,
+        name: item.name,
+        domain: "eds",
+        languages: item.languages,
+        origin: item.origin,
+        active: item.active,
+        path: `/admin/templates?tab=letters&template=${item.id}`,
+      });
     }
     for (const item of resolutions ?? []) {
       rows.push({

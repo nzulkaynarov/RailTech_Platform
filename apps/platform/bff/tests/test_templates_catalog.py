@@ -56,6 +56,26 @@ def eds(be: Backends) -> EdsFake:
             json={"items": [{"id": "6f1c1a52-0f6a-4f4e-9d0b-1b2c3d4e5f60", "name": "Налоговая"}]},
         ),
     )
+    fake.answer(
+        "GET",
+        "templates",
+        httpx.Response(
+            200,
+            json={
+                "items": [
+                    {
+                        "id": "5d1d0e1a-0000-4000-8000-000000000001",
+                        "kind": "letter",
+                        "name": "Деловое письмо",
+                        "languages": ["ru", "uz", "en"],
+                        "origin": "builtin",
+                        "active": True,
+                        "updated_at": "2026-11-15T09:00:00Z",
+                    }
+                ]
+            },
+        ),
+    )
     return fake
 
 
@@ -105,6 +125,12 @@ async def test_director_sees_all_domains_in_one_list(
     assert items["erp.email:invoice_issued"]["name"] == "Счёт выставлен"
     assert items["eds.resolution:6f1c1a52-0f6a-4f4e-9d0b-1b2c3d4e5f60"]["languages"] == []
     assert items["crm.reply:3"]["languages"] == ["ru", "en"]
+    letter = items["eds.template:5d1d0e1a-0000-4000-8000-000000000001"]
+    assert (letter["kind"], letter["languages"], letter["origin"]) == (
+        "letter",
+        ["ru", "uz", "en"],
+        "builtin",
+    )
     assert items["crm.reply:3"]["path"] == "/admin/telegram?tab=templates&template=3"
 
 
@@ -113,4 +139,4 @@ async def test_role_sees_only_its_sources(web: Web, eds: EdsFake, domains: None)
     response = await web.client.get("/api/v1/templates")
     assert response.status_code == 200
     kinds = {row["kind"] for row in response.json()["items"]}
-    assert kinds == {"resolution"}
+    assert kinds == {"resolution", "letter"}

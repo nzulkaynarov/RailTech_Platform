@@ -13,6 +13,7 @@ export const TemplateKind = {
   receipt: "receipt",
   delivery_note: "delivery_note",
   letter: "letter",
+  memo: "memo",
   report: "report",
   custom: "custom",
   email: "email",

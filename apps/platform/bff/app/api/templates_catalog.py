@@ -35,6 +35,7 @@ TemplateKind = Literal[
     "receipt",
     "delivery_note",
     "letter",
+    "memo",
     "report",
     "custom",
     "email",
@@ -137,6 +138,27 @@ def _resolutions(payload: Any) -> list[TemplateRow]:
     ]
 
 
+def _letters(payload: Any) -> list[TemplateRow]:
+    """Письма и служебки на бланке EDS (TPL-4): варианты по языкам, встроенные и свои."""
+    out: list[TemplateRow] = []
+    for row in rows(payload):
+        kind = "memo" if row.get("kind") == "memo" else "letter"
+        out.append(
+            TemplateRow(
+                id=f"eds.template:{row.get('id')}",
+                kind=kind,
+                name=str(row.get("name") or ""),
+                domain="eds",
+                languages=_langs(row.get("languages") or []),
+                origin="builtin" if row.get("origin") == "builtin" else "custom",
+                active=bool(row.get("active", True)),
+                updated_at=str(row.get("updated_at") or "") or None,
+                path=f"/admin/templates?tab=letters&template={row.get('id')}",
+            )
+        )
+    return out
+
+
 def _replies(payload: Any) -> list[TemplateRow]:
     out: list[TemplateRow] = []
     for row in rows(payload):
@@ -183,6 +205,11 @@ async def catalog(feed: Feed, access: Access) -> TemplateCatalog:
         or allows(access, "admin", "read")
     )
     replies = allows(access, "admin", "read") or allows(access, "crm.leads", "full")
+    letters = (
+        allows(access, "eds.memo.create", "read")
+        or allows(access, "eds.inbox.register", "full")
+        or allows(access, "admin", "read")
+    )
 
     def source(
         enabled: bool,
@@ -200,6 +227,7 @@ async def catalog(feed: Feed, access: Access) -> TemplateCatalog:
     parts = await asyncio.gather(
         source(company, "erp", "/api/v1/crm/document-templates/", _documents),
         source(company, "erp", "/api/v1/settings/email-templates/", _emails),
+        source(letters, "eds", "/api/v1/templates", _letters),
         source(resolutions, "eds", "/api/v1/resolution-templates", _resolutions),
         source(replies, "crm", "/api/v1/reply-templates", _replies),
     )
