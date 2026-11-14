@@ -26,7 +26,7 @@ export interface QuoteInternal {
    */
   min_margin_pct: string | null;
   /**
-   * Условия оплаты. ERP хранит их на уровне компании, а не КП, и в снимке КП их нет — пока всегда `null` (хвост в `docs/BACKLOG.md`)
+   * Условия оплаты КП из ERP (план 0.5); не заданы — `null`
    * @nullable
    */
   payment_terms: string | null;

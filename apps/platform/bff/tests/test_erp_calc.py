@@ -747,3 +747,62 @@ async def test_sheet_blocker_not_in_calculation_passes_through(
 
     check(response, "/erp/calc/{number}", "get")
     assert response.json()["ready"]["blocker"] == "not_in_calculation"
+
+
+TERMS = {
+    "payment_terms": "100% предоплата",
+    "valid_until": "2026-12-31",
+    "delivery_days": None,
+    "delivery_days_lines": 45,
+    "delivery_note": None,
+}
+
+
+async def test_terms_are_shown_and_patched_with_empty_text_clearing_the_value(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    await web.login(["SUPPLY"])
+    with_terms = sheet()
+    with_terms["quote"]["terms"] = TERMS
+    route = erp.patch(f"{CALC}/104/terms/").mock(
+        side_effect=[
+            httpx.Response(200, json=with_terms),
+            httpx.Response(400, json={"detail": "VALID_UNTIL_IN_PAST"}),
+            httpx.Response(409, json={"detail": "QUOTE_NOT_DRAFT"}),
+        ]
+    )
+
+    ok = await call(
+        web,
+        "PATCH",
+        f"/erp/calc/{ENCODED}/terms",
+        {"payment_terms": None, "delivery_days": 30, "valid_until": "2026-12-31"},
+    )
+    assert ok.status_code == 200
+    check(ok, "/erp/calc/{number}/terms", "patch")
+    assert ok.json()["quote"]["terms"] == TERMS
+    assert json.loads(route.calls[0].request.content) == {
+        "payment_terms": "",
+        "delivery_days": 30,
+        "valid_until": "2026-12-31",
+    }
+
+    past = await call(web, "PATCH", f"/erp/calc/{ENCODED}/terms", {"valid_until": "2020-01-01"})
+    assert past.status_code == 422
+    assert past.json()["details"]["fields"] == ["valid_until"]
+
+    locked = await call(web, "PATCH", f"/erp/calc/{ENCODED}/terms", {"payment_terms": "x"})
+    assert locked.status_code == 409
+    check(locked, "/erp/calc/{number}/terms", "patch")
+
+    empty = await call(web, "PATCH", f"/erp/calc/{ENCODED}/terms", {})
+    assert empty.status_code == 422
+    assert len(route.calls) == 3
+
+
+async def test_terms_need_the_full_calc_section(web: Web, erp: respx.MockRouter) -> None:
+    await web.login(["ACCOUNTANT"])
+    route = erp.patch(f"{CALC}/104/terms/")
+    denied = await call(web, "PATCH", f"/erp/calc/{ENCODED}/terms", {"payment_terms": "x"})
+    assert denied.status_code == 403
+    assert not route.called

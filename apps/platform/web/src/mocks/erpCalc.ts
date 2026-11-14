@@ -9,6 +9,8 @@ import type {
   CalcRequestList,
   CalcRequestRow,
   CalcSheet,
+  CalcTerms,
+  CalcTermsPatch,
   CalcVisaState,
   Me,
 } from "../shared/api/generated/model";
@@ -224,6 +226,19 @@ const canRevise = (calc: MockCalc) =>
 const editableOf = (calc: MockCalc) =>
   calc.started && (calc.state === "in_progress" || calc.state === "returned");
 
+/** Умолчания компании мока для нового КП (как ERP `apply_company_quote_defaults`). */
+const DEFAULT_TERMS = {
+  payment_terms: "100% предоплата",
+  valid_until: "2026-12-31",
+  delivery_days: null,
+  delivery_note: null,
+};
+
+function termsOf(calc: MockCalc): CalcTerms {
+  const lines = calc.lines.filter((line) => zoneOf(line) === "goods").map((l) => l.leadDays ?? 0);
+  return { ...(calc.terms ?? DEFAULT_TERMS), delivery_days_lines: Math.max(0, ...lines) };
+}
+
 function present(calc: MockCalc, user: Me): CalcSheet {
   const held = fields(user);
   const cost = held.has("cost_margin");
@@ -269,6 +284,7 @@ function present(calc: MockCalc, user: Me): CalcSheet {
           reject_reason: calc.state === "rejected" ? (calc.rejectReason ?? null) : null,
           can_revise: canRevise(calc) && level(user, "erp.calc") === "full",
           vat_rate: "12.00",
+          terms: termsOf(calc),
         }
       : null,
     lines,
@@ -628,6 +644,34 @@ export const erpCalcHandlers = [
     line.visa = { by: user.name, at: new Date().toISOString(), zone: zoneOf(line) };
     write(calcs);
     return HttpResponse.json<CalcSheet>(present(calc, user));
+  }),
+
+  http.patch("*/api/v1/erp/calc/:number/terms", async ({ params, request }) => {
+    const held = guard("erp.calc", "full");
+    if ("error" in held) return held.error;
+    const calcs = read();
+    const calc = find(calcs, String(params["number"]));
+    if (!calc) return notFound();
+    if (!editableOf(calc)) return conflict("quote_not_draft", "Расчёт уже у директора.");
+    const body = (await request.json()) as CalcTermsPatch;
+    const today = new Date().toISOString().slice(0, 10);
+    if (body.valid_until && body.valid_until < today) {
+      return failure(422, "VALIDATION_FAILED", "Проверьте заполнение полей.", {
+        source: "erp",
+        reason: "valid_until_in_past",
+        fields: ["valid_until"],
+      });
+    }
+    const text = (value: string | null | undefined) => (value ? value.trim() || null : null);
+    const current = calc.terms ?? DEFAULT_TERMS;
+    calc.terms = {
+      payment_terms: "payment_terms" in body ? text(body.payment_terms) : current.payment_terms,
+      valid_until: "valid_until" in body ? (body.valid_until ?? null) : current.valid_until,
+      delivery_days: "delivery_days" in body ? (body.delivery_days ?? null) : current.delivery_days,
+      delivery_note: "delivery_note" in body ? text(body.delivery_note) : current.delivery_note,
+    };
+    write(calcs);
+    return HttpResponse.json<CalcSheet>(present(calc, held.user));
   }),
 
   http.post("*/api/v1/erp/calc/:number/ready", ({ params }) => {

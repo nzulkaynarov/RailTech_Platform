@@ -131,6 +131,8 @@ export * from "./calcState";
 export * from "./calcStock";
 export * from "./calcSupplier";
 export * from "./calcTask";
+export * from "./calcTerms";
+export * from "./calcTermsPatch";
 export * from "./calcTotals";
 export * from "./calcVisaGroup";
 export * from "./calcVisaGroups";
