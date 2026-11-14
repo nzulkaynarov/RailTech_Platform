@@ -964,10 +964,7 @@
       "U pozitsiya kartasida va «Texnik hujjatlar» bo‘limida paydo bo‘ladi.",
       "«Mijozga ko‘rinadi» belgisi saqlanadi; mijoz kabinetida keyinroq ko‘rinadi."
     ],
-    "editSteps": [
-      "O‘zgarishlar hujjatda saqlanadi.",
-      "Faylning o‘zi o‘zgarmaydi."
-    ],
+    "editSteps": ["O‘zgarishlar hujjatda saqlanadi.", "Faylning o‘zi o‘zgarmaydi."],
     "saved": "Hujjat saqlandi."
   },
   "queue": {

@@ -964,10 +964,7 @@
       "It appears on the item card and in “Technical documents”.",
       "The “Visible to client” mark is saved; the client portal will show it later."
     ],
-    "editSteps": [
-      "The changes are saved in the document.",
-      "The file itself does not change."
-    ],
+    "editSteps": ["The changes are saved in the document.", "The file itself does not change."],
     "saved": "Document saved."
   },
   "queue": {
