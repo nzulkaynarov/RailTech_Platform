@@ -158,6 +158,19 @@ class Product(models.Model):
         verbose_name=_("Код ТНВЭД"),
         help_text=_("Код товарной номенклатуры ВЭД (ТНВЭД/HS). Хранится в карточке, чтобы не искать заново."),
     )
+    # План 1.8: МХИК (ИКПУ) — код товара в классификаторе Налогового комитета для счетов-фактур. Подбирается из
+    # классификатора tasnif.soliq.uz или вводится вручную; название, единица и упаковка — оттуда же.
+    mxik_code = models.CharField(
+        max_length=17,
+        blank=True,
+        default="",
+        db_index=True,
+        verbose_name=_("Код МХИК"),
+        help_text=_("17 цифр кода МХИК (ИКПУ) из классификатора Налогового комитета."),
+    )
+    mxik_name = models.CharField(max_length=500, blank=True, default="", verbose_name=_("Название по МХИК"))
+    mxik_unit = models.CharField(max_length=100, blank=True, default="", verbose_name=_("Единица по МХИК"))
+    mxik_package = models.CharField(max_length=200, blank=True, default="", verbose_name=_("Упаковка по МХИК"))
     # CAT-CARD-1: страна происхождения и гарантия карточки. Пусто — показывается страна бренда / срок компании
     # (`catalog.desk.items.effective_origin`, `effective_warranty`); в КП гарантию по-прежнему берёт настройка компании.
     country_of_origin = models.ForeignKey(

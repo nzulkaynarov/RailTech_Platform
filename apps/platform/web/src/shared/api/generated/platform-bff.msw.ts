@@ -132,6 +132,8 @@ import type {
   CatalogItemPage,
   CatalogLookups,
   CatalogMoney,
+  CatalogMxik,
+  CatalogMxikPage,
   CatalogNamedRef,
   CatalogOffer,
   CatalogProductRef,
@@ -28573,6 +28575,18 @@ export const getCreateCatalogItemResponseCatalogNamedRefMock = (
   ...overrideResponse,
 });
 
+export const getCreateCatalogItemResponseCatalogMxikMock = (
+  overrideResponse: Partial<CatalogMxik> = {},
+): CatalogMxik => ({
+  ...{
+    code: faker.helpers.fromRegExp("^[0-9]{17}$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    package: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getCreateCatalogItemResponseCatalogMoneyMock = (
   overrideResponse: Partial<CatalogMoney> = {},
 ): CatalogMoney => ({
@@ -28629,6 +28643,7 @@ export const getCreateCatalogItemResponseMock = (
   description: faker.string.alpha({ length: { min: 10, max: 20 } }),
   gost_drawing: faker.string.alpha({ length: { min: 10, max: 20 } }),
   hs_code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  mxik: faker.helpers.arrayElement([{ ...getCreateCatalogItemResponseCatalogMxikMock() }, null]),
   manufacturer_part_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   brand: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   brand_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
@@ -28784,6 +28799,18 @@ export const getGetCatalogItemResponseCatalogNamedRefMock = (
   ...overrideResponse,
 });
 
+export const getGetCatalogItemResponseCatalogMxikMock = (
+  overrideResponse: Partial<CatalogMxik> = {},
+): CatalogMxik => ({
+  ...{
+    code: faker.helpers.fromRegExp("^[0-9]{17}$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    package: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getGetCatalogItemResponseCatalogMoneyMock = (
   overrideResponse: Partial<CatalogMoney> = {},
 ): CatalogMoney => ({
@@ -28840,6 +28867,7 @@ export const getGetCatalogItemResponseMock = (
   description: faker.string.alpha({ length: { min: 10, max: 20 } }),
   gost_drawing: faker.string.alpha({ length: { min: 10, max: 20 } }),
   hs_code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  mxik: faker.helpers.arrayElement([{ ...getGetCatalogItemResponseCatalogMxikMock() }, null]),
   manufacturer_part_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   brand: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   brand_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
@@ -28986,6 +29014,18 @@ export const getUpdateCatalogItemResponseCatalogNamedRefMock = (
   ...overrideResponse,
 });
 
+export const getUpdateCatalogItemResponseCatalogMxikMock = (
+  overrideResponse: Partial<CatalogMxik> = {},
+): CatalogMxik => ({
+  ...{
+    code: faker.helpers.fromRegExp("^[0-9]{17}$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    package: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getUpdateCatalogItemResponseCatalogMoneyMock = (
   overrideResponse: Partial<CatalogMoney> = {},
 ): CatalogMoney => ({
@@ -29042,6 +29082,7 @@ export const getUpdateCatalogItemResponseMock = (
   description: faker.string.alpha({ length: { min: 10, max: 20 } }),
   gost_drawing: faker.string.alpha({ length: { min: 10, max: 20 } }),
   hs_code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  mxik: faker.helpers.arrayElement([{ ...getUpdateCatalogItemResponseCatalogMxikMock() }, null]),
   manufacturer_part_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   brand: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   brand_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
@@ -29220,6 +29261,18 @@ export const getPublishCatalogItemResponseCatalogNamedRefMock = (
   ...overrideResponse,
 });
 
+export const getPublishCatalogItemResponseCatalogMxikMock = (
+  overrideResponse: Partial<CatalogMxik> = {},
+): CatalogMxik => ({
+  ...{
+    code: faker.helpers.fromRegExp("^[0-9]{17}$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    package: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getPublishCatalogItemResponseCatalogMoneyMock = (
   overrideResponse: Partial<CatalogMoney> = {},
 ): CatalogMoney => ({
@@ -29276,6 +29329,7 @@ export const getPublishCatalogItemResponseMock = (
   description: faker.string.alpha({ length: { min: 10, max: 20 } }),
   gost_drawing: faker.string.alpha({ length: { min: 10, max: 20 } }),
   hs_code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  mxik: faker.helpers.arrayElement([{ ...getPublishCatalogItemResponseCatalogMxikMock() }, null]),
   manufacturer_part_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   brand: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   brand_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
@@ -29431,6 +29485,18 @@ export const getUnpublishCatalogItemResponseCatalogNamedRefMock = (
   ...overrideResponse,
 });
 
+export const getUnpublishCatalogItemResponseCatalogMxikMock = (
+  overrideResponse: Partial<CatalogMxik> = {},
+): CatalogMxik => ({
+  ...{
+    code: faker.helpers.fromRegExp("^[0-9]{17}$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    package: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getUnpublishCatalogItemResponseCatalogMoneyMock = (
   overrideResponse: Partial<CatalogMoney> = {},
 ): CatalogMoney => ({
@@ -29487,6 +29553,7 @@ export const getUnpublishCatalogItemResponseMock = (
   description: faker.string.alpha({ length: { min: 10, max: 20 } }),
   gost_drawing: faker.string.alpha({ length: { min: 10, max: 20 } }),
   hs_code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  mxik: faker.helpers.arrayElement([{ ...getUnpublishCatalogItemResponseCatalogMxikMock() }, null]),
   manufacturer_part_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   brand: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   brand_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
@@ -29642,6 +29709,18 @@ export const getReturnCatalogItemResponseCatalogNamedRefMock = (
   ...overrideResponse,
 });
 
+export const getReturnCatalogItemResponseCatalogMxikMock = (
+  overrideResponse: Partial<CatalogMxik> = {},
+): CatalogMxik => ({
+  ...{
+    code: faker.helpers.fromRegExp("^[0-9]{17}$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    package: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getReturnCatalogItemResponseCatalogMoneyMock = (
   overrideResponse: Partial<CatalogMoney> = {},
 ): CatalogMoney => ({
@@ -29698,6 +29777,7 @@ export const getReturnCatalogItemResponseMock = (
   description: faker.string.alpha({ length: { min: 10, max: 20 } }),
   gost_drawing: faker.string.alpha({ length: { min: 10, max: 20 } }),
   hs_code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  mxik: faker.helpers.arrayElement([{ ...getReturnCatalogItemResponseCatalogMxikMock() }, null]),
   manufacturer_part_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   brand: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   brand_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
@@ -29853,6 +29933,18 @@ export const getAcceptCatalogProposalResponseCatalogNamedRefMock = (
   ...overrideResponse,
 });
 
+export const getAcceptCatalogProposalResponseCatalogMxikMock = (
+  overrideResponse: Partial<CatalogMxik> = {},
+): CatalogMxik => ({
+  ...{
+    code: faker.helpers.fromRegExp("^[0-9]{17}$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    package: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getAcceptCatalogProposalResponseCatalogMoneyMock = (
   overrideResponse: Partial<CatalogMoney> = {},
 ): CatalogMoney => ({
@@ -29912,6 +30004,10 @@ export const getAcceptCatalogProposalResponseMock = (
   description: faker.string.alpha({ length: { min: 10, max: 20 } }),
   gost_drawing: faker.string.alpha({ length: { min: 10, max: 20 } }),
   hs_code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  mxik: faker.helpers.arrayElement([
+    { ...getAcceptCatalogProposalResponseCatalogMxikMock() },
+    null,
+  ]),
   manufacturer_part_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   brand: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   brand_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
@@ -30067,6 +30163,18 @@ export const getRejectCatalogProposalResponseCatalogNamedRefMock = (
   ...overrideResponse,
 });
 
+export const getRejectCatalogProposalResponseCatalogMxikMock = (
+  overrideResponse: Partial<CatalogMxik> = {},
+): CatalogMxik => ({
+  ...{
+    code: faker.helpers.fromRegExp("^[0-9]{17}$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    package: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getRejectCatalogProposalResponseCatalogMoneyMock = (
   overrideResponse: Partial<CatalogMoney> = {},
 ): CatalogMoney => ({
@@ -30126,6 +30234,10 @@ export const getRejectCatalogProposalResponseMock = (
   description: faker.string.alpha({ length: { min: 10, max: 20 } }),
   gost_drawing: faker.string.alpha({ length: { min: 10, max: 20 } }),
   hs_code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  mxik: faker.helpers.arrayElement([
+    { ...getRejectCatalogProposalResponseCatalogMxikMock() },
+    null,
+  ]),
   manufacturer_part_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   brand: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   brand_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
@@ -31877,6 +31989,19 @@ export const getListCatalogExchangeRatesResponseMock = (
   total: faker.number.int({ min: 0 }),
   page: faker.number.int({ min: 1 }),
   page_size: faker.number.int({ min: 1 }),
+  ...overrideResponse,
+});
+
+export const getSearchMxikResponseMock = (
+  overrideResponse: Partial<Extract<CatalogMxikPage, object>> = {},
+): CatalogMxikPage => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    code: faker.helpers.fromRegExp("^[0-9]{17}$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    group: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    package: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
   ...overrideResponse,
 });
 
@@ -42260,6 +42385,30 @@ export const getListCatalogExchangeRatesMockHandler = (
   );
 };
 
+export const getSearchMxikMockHandler = (
+  overrideResponse?:
+    | CatalogMxikPage
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<CatalogMxikPage> | CatalogMxikPage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/catalog/mxik",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSearchMxikResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getListHsCodesMockHandler = (
   overrideResponse?:
     | HsCodePage
@@ -42987,6 +43136,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getListCatalogCategoryRequestsMockHandler(),
   getCreateCatalogCategoryRequestMockHandler(),
   getListCatalogExchangeRatesMockHandler(),
+  getSearchMxikMockHandler(),
   getListHsCodesMockHandler(),
   getCreateHsCodeMockHandler(),
   getUpdateHsCodeMockHandler(),
