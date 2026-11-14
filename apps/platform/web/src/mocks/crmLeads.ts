@@ -377,7 +377,7 @@ export const crmLeadsHandlers = [
       transfer: erpDown ? "failed" : "done",
       transfer_error: erpDown ? "erp_unavailable" : null,
       created_at: now,
-      letter_file_id: body.letter_file_id ?? null,
+      letter_file_id: body.letter_file_id,
     };
     client.requests.unshift(row);
     if (!erpDown) {

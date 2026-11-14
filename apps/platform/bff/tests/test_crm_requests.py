@@ -133,6 +133,8 @@ async def test_bad_form_is_422_before_crm(web: Web, crm: CrmLeadsFake) -> None:
         request_form(lead="2041"),
         request_form(consent={"method": "bot"}),
         request_form(extra="x"),
+        request_form(letter_file_id=None),  # plan 0.4 (FR-9): no basis — no request
+        {k: v for k, v in request_form().items() if k != "letter_file_id"},
     ):
         assert (await web.send("POST", BASE, json=bad)).status_code == 422, bad
     assert crm.calls == []
