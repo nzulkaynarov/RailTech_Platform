@@ -3,7 +3,7 @@ import { HttpResponse, http } from "msw";
 import type { SentMail, SentMailStatus } from "../shared/api/generated/model";
 import { readSession } from "./mockSession";
 
-/** «Почта · Отправленные» (план 2.8) на моках: журнал писем ансамбля с текстом по запросу. */
+/** «Почта · Отправленные» (план 2.8) на моках: журнал писем ансамбля с текстом по запросу и «Отправить ещё раз». */
 const ROWS: (SentMail & { text: string })[] = [
   {
     id: "41",
@@ -13,6 +13,7 @@ const ROWS: (SentMail & { text: string })[] = [
     error: null,
     source: "eds",
     attachments: 1,
+    resendable: true,
     requested_by: "Демо Делопроизводителев",
     created_at: "2026-11-14T10:15:00+05:00",
     sent_at: "2026-11-14T10:15:04+05:00",
@@ -27,6 +28,7 @@ const ROWS: (SentMail & { text: string })[] = [
     error: null,
     source: "erp",
     attachments: 1,
+    resendable: true,
     requested_by: "Демо Менеджеров",
     created_at: "2026-11-13T16:40:00+05:00",
     sent_at: "2026-11-13T16:40:06+05:00",
@@ -41,11 +43,13 @@ const ROWS: (SentMail & { text: string })[] = [
     error: "Почтовый сервер адресата отказал: ящик не существует",
     source: "crm",
     attachments: 0,
+    resendable: false,
     requested_by: "Демо Менеджеров",
     created_at: "2026-11-12T09:05:00+05:00",
     sent_at: null,
     path: null,
-    text: "Вас пригласили в кабинет клиента RailTech.",
+    // Приглашение (письмо со входом): текст не хранится и не отправляется ещё раз (MAIL-2).
+    text: "",
   },
 ];
 
@@ -85,8 +89,33 @@ export const sentMailHandlers = [
       );
     return HttpResponse.json({
       id: row.id,
-      text: row.text,
+      text: row.text || null,
       attachments: row.attachments ? ["letter.pdf"] : [],
     });
+  }),
+  http.post("*/api/v1/mail/sent/:id/resend", ({ params }) => {
+    if (!readSession()) return expired();
+    const row = ROWS.find((r) => r.id === params["id"]);
+    if (!row?.resendable)
+      return HttpResponse.json(
+        {
+          code: "CONFLICT",
+          message: "Письмо нельзя отправить ещё раз",
+          source: "crm",
+          details: { reason: "mail_not_resendable" },
+        },
+        { status: 409 },
+      );
+    const copy = {
+      ...row,
+      id: String(Math.max(...ROWS.map((r) => Number(r.id))) + 1),
+      status: "queued" as const,
+      resendable: false,
+      error: null,
+      sent_at: null,
+      created_at: new Date().toISOString(),
+    };
+    ROWS.unshift(copy);
+    return HttpResponse.json(listed(copy), { status: 201 });
   }),
 ];

@@ -426,6 +426,7 @@ import type {
   SearchParams,
   SearchResult,
   SearchStockTraceParams,
+  SentMail,
   SentMailBody,
   SentMailPage,
   SentMessage,
@@ -6739,7 +6740,7 @@ export const getGetSentMailBodyUrl = (id: number) => {
 };
 
 /**
- * CRM `GET /mail/sent/{id}`: текст по запросу, CRM пишет просмотр в аудит; `text = null` — тело удалено по сроку хранения. Чужое письмо сотруднику — 404.
+ * CRM `GET /mail/sent/{id}`: текст по запросу, CRM пишет просмотр в аудит; `text = null` — тело удалено по сроку хранения (год) или не хранится (письмо со входом, паролем или кодом). Чужое письмо сотруднику — 404.
  * @summary Почта · Текст отправленного письма
  */
 export const getSentMailBody = async (
@@ -6870,6 +6871,111 @@ export function useGetSentMailBody<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getResendSentMailUrl = (id: number) => {
+  return `/api/v1/mail/sent/${id}/resend`;
+};
+
+/**
+ * CRM `POST /mail/sent/{id}/resend`: новое письмо в очередь с тем же адресатом, темой, текстом и вложениями; исходное не меняется, в аудит CRM — `mail.resend`. Текст хранится год (DECISIONS 2026-11-11 п. 3), у писем со входом, паролем, кодом или приглашением не хранится — 409 `mail_not_resendable` (как и у письма в очереди); почта не настроена — 409 `smtp_not_configured`. Чужое письмо сотруднику — 404.
+ * @summary Почта · Отправить ещё раз (план 3.7, MAIL-2)
+ */
+export const resendSentMail = async (
+  id: number,
+  options?: Parameters<typeof http>[1],
+): Promise<SentMail> => {
+  return http<SentMail>(getResendSentMailUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getResendSentMailMutationKey = () => ["resendSentMail"] as const;
+
+export const getResendSentMailMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | InboundMailConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resendSentMail>>,
+    TError,
+    ResendSentMailMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resendSentMail>>,
+  TError,
+  ResendSentMailMutationVariables,
+  TContext
+> => {
+  const mutationKey = getResendSentMailMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resendSentMail>>,
+    ResendSentMailMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return resendSentMail(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResendSentMailMutationResult = NonNullable<Awaited<ReturnType<typeof resendSentMail>>>;
+
+export type ResendSentMailMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | InboundMailConflictResponse
+  | BackendUnavailableResponse
+>;
+export type ResendSentMailMutationVariables = { id: number };
+
+/**
+ * @summary Почта · Отправить ещё раз (план 3.7, MAIL-2)
+ */
+export const useResendSentMail = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | InboundMailConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof resendSentMail>>,
+      TError,
+      ResendSentMailMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof resendSentMail>>,
+  TError,
+  ResendSentMailMutationVariables,
+  TContext
+> => {
+  return useMutation(getResendSentMailMutationOptions(options), queryClient);
+};
 
 export const getSearchUrl = (params: SearchParams) => {
   const normalizedParams = new URLSearchParams();

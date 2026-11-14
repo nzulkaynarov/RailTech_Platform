@@ -949,11 +949,31 @@ export interface paths {
     };
     /**
      * Почта · Текст отправленного письма
-     * @description CRM `GET /mail/sent/{id}`: текст по запросу, CRM пишет просмотр в аудит; `text = null` — тело удалено по сроку хранения. Чужое письмо сотруднику — 404.
+     * @description CRM `GET /mail/sent/{id}`: текст по запросу, CRM пишет просмотр в аудит; `text = null` — тело удалено по сроку хранения (год) или не хранится (письмо со входом, паролем или кодом). Чужое письмо сотруднику — 404.
      */
     get: operations["getSentMailBody"];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/mail/sent/{id}/resend": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Почта · Отправить ещё раз (план 3.7, MAIL-2)
+     * @description CRM `POST /mail/sent/{id}/resend`: новое письмо в очередь с тем же адресатом, темой, текстом и вложениями; исходное не меняется, в аудит CRM — `mail.resend`. Текст хранится год (DECISIONS 2026-11-11 п. 3), у писем со входом, паролем, кодом или приглашением не хранится — 409 `mail_not_resendable` (как и у письма в очереди); почта не настроена — 409 `smtp_not_configured`. Чужое письмо сотруднику — 404.
+     */
+    post: operations["resendSentMail"];
     delete?: never;
     options?: never;
     head?: never;
@@ -7989,6 +8009,8 @@ export interface components {
       /** @enum {string} */
       source: "crm" | "erp" | "eds";
       attachments: number;
+      /** @description Можно «Отправить ещё раз»: текст хранится и письмо без секрета (MAIL-2) */
+      resendable: boolean;
       /** @description Кто отправил */
       requested_by: string | null;
       /** Format: date-time */
@@ -16433,7 +16455,7 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
-    /** @description 409 `CONFLICT` — письмо уже в работе у другого (`details.reason = mail_in_work_by_other`, `details.assignee_name`, `details.assigned_at`), уже разобрано (`mail_handled`), письмо уже регистрируется (`mail_registering`), не возвращается в «Новые» (`mail_not_returnable`), тип отключён (`mail_type_inactive`), правило уже есть (`mail_rule_exists`), некому передать (`mail_no_handover_target`), почта не настроена (`smtp_not_configured`) или помощник выключен (`assist_disabled`) */
+    /** @description 409 `CONFLICT` — письмо уже в работе у другого (`details.reason = mail_in_work_by_other`, `details.assignee_name`, `details.assigned_at`), уже разобрано (`mail_handled`), письмо уже регистрируется (`mail_registering`), не возвращается в «Новые» (`mail_not_returnable`), тип отключён (`mail_type_inactive`), правило уже есть (`mail_rule_exists`), некому передать (`mail_no_handover_target`), почта не настроена (`smtp_not_configured`), помощник выключен (`assist_disabled`) или письмо нельзя отправить ещё раз (`mail_not_resendable`) */
     InboundMailConflict: {
       headers: {
         [name: string]: unknown;
@@ -18258,6 +18280,36 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  resendSentMail: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Новое письмо журнала */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SentMail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["InboundMailConflict"];
       503: components["responses"]["BackendUnavailable"];
     };
   };
