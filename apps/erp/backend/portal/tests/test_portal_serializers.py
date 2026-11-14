@@ -223,11 +223,37 @@ def test_quote_list_item_has_no_subtotal_and_vat(contract_world):
 
 def test_quote_detail_has_no_internal_fields(contract_world):
     data = QuoteSerializer(contract_world["quotes"]["sent"]).data
-    for internal in ("vat_rate", "items", "payment_terms", "delivery_basis", "lead_time_days", "updated_at"):
+    for internal in ("vat_rate", "items", "delivery_basis", "lead_time_days", "updated_at"):
         assert internal not in data
     for line in data["lines"]:
         for internal in ("id", "name", "price", "total_price", "vat_amount", "cost", "margin"):
             assert internal not in line
+
+
+def test_quote_detail_shows_terms_like_the_pdf(contract_world):
+    """Plan 0.5 (FR-16): the client sees payment terms and the delivery term the PDF prints."""
+    quote = contract_world["quotes"]["sent"]
+    Quote.objects.filter(pk=quote.pk).update(
+        payment_terms="50% предоплата", delivery_lead_time_days=45, delivery_note="после предоплаты"
+    )
+    data = QuoteSerializer(Quote.objects.get(pk=quote.pk)).data
+    assert data["payment_terms"] == "50% предоплата"
+    assert data["delivery_days"] == 45
+    assert data["delivery_note"] == "после предоплаты"
+    assert_matches_contract(data, "Quote")
+
+
+def test_quote_detail_terms_fall_back_to_lines_and_null(contract_world):
+    quote = contract_world["quotes"]["sent"]
+    Quote.objects.filter(pk=quote.pk).update(payment_terms="", delivery_lead_time_days=None, delivery_note="")
+    quote = Quote.objects.get(pk=quote.pk)
+    data = QuoteSerializer(quote).data
+    assert data["payment_terms"] is None and data["delivery_note"] is None
+    assert data["delivery_days"] == (quote.effective_delivery_lead_time_days or None)
+    quote.items.update(lead_time_days=0)
+    data = QuoteSerializer(Quote.objects.get(pk=quote.pk)).data
+    assert data["delivery_days"] is None
+    assert_matches_contract(data, "Quote")
 
 
 def test_quote_charges_are_spread_into_line_prices_not_listed_separately(contract_world):

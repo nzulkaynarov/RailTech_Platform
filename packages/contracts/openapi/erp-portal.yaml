@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Portal API (Cabinet → ERP)
-  version: 0.15.0
+  version: 0.16.0
   summary: Пространство `/api/portal/v1/` — вызывает Cabinet SPA от имени клиента.
   description: |
     Контракт по `docs/architecture/CONTRACTS.md` §4 и ADR-0004 (Cabinet без бэкенда). Версия 0 (M0-INF-02):
@@ -5189,8 +5189,18 @@ components:
       allOf:
         - $ref: '#/components/schemas/QuoteListItem'
         - type: object
-          required: [lines, public_url, subtotal, vat, comments]
+          required: [lines, public_url, subtotal, vat, comments, payment_terms, delivery_days, delivery_note]
           properties:
+            payment_terms:
+              type: [string, 'null']
+              description: Условия оплаты КП (FR-16); `null`, если не заданы
+            delivery_days:
+              type: [integer, 'null']
+              minimum: 1
+              description: "Срок поставки, дней: срок КП, иначе самый долгий срок обязательной строки — как в PDF; `null`, если не задан"
+            delivery_note:
+              type: [string, 'null']
+              description: Пояснение к сроку поставки; `null`, если его нет
             subtotal:
               description: Итого без НДС — сумма `total` строк (Q-FIX21-2)
               $ref: '#/components/schemas/Money'

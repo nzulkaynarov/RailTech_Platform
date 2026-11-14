@@ -2488,6 +2488,12 @@ export interface components {
             promised_date?: string | null;
         };
         Quote: components["schemas"]["QuoteListItem"] & {
+            /** @description Условия оплаты КП (FR-16); `null`, если не заданы */
+            payment_terms: string | null;
+            /** @description Срок поставки, дней: срок КП, иначе самый долгий срок обязательной строки — как в PDF; `null`, если не задан */
+            delivery_days: number | null;
+            /** @description Пояснение к сроку поставки; `null`, если его нет */
+            delivery_note: string | null;
             /** @description Итого без НДС — сумма `total` строк (Q-FIX21-2) */
             subtotal: components["schemas"]["Money"];
             /** @description НДС; `subtotal + vat = total`, как в PDF КП */
