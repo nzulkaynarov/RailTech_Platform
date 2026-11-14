@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "ERP API",
-        "version": "1.15.0",
+        "version": "1.18.0",
         "description": "ERP Platform API. Supports deal lifecycle management, quoting, product catalog (PIM), Excel imports, and real-time notifications via WebSocket.",
         "contact": {
             "name": "ERP API Support",
@@ -12499,6 +12499,74 @@
                     },
                     "403": {
                         "$ref": "#/components/responses/ForbiddenResponse"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_partner_applications_create",
+                "description": "План 1.9, «Передать в работу»: сотрудник снабжения заводит заявку кандидата по входящему письму (`source = letter`, `source_ref` — номер ВХ). Согласия кандидата нет — дальше договорный шлюз.",
+                "summary": "Create a partner application from an incoming letter",
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskPartnerApplicationCreateInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskPartnerApplicationCreateInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskPartnerApplicationCreateInRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskPartnerApplicationDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
                     }
                 }
             }
@@ -41832,6 +41900,88 @@
                     "contract_number"
                 ]
             },
+            "DeskPartnerApplicationCreateInKindEnum": {
+                "enum": [
+                    "manufacturer",
+                    "supplier",
+                    "principal",
+                    "other"
+                ],
+                "type": "string",
+                "description": "* `manufacturer` - manufacturer\n* `supplier` - supplier\n* `principal` - principal\n* `other` - other"
+            },
+            "DeskPartnerApplicationCreateInRequest": {
+                "type": "object",
+                "description": "Заявка кандидата по входящему письму (план 1.9, «Передать в работу»): заводит сотрудник снабжения.",
+                "properties": {
+                    "company_name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 255
+                    },
+                    "inn": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 32
+                    },
+                    "country": {
+                        "type": "string",
+                        "minLength": 1,
+                        "default": "UZ",
+                        "maxLength": 2
+                    },
+                    "kind": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DeskPartnerApplicationCreateInKindEnum"
+                            }
+                        ],
+                        "default": "supplier"
+                    },
+                    "categories_description": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 4000
+                    },
+                    "contact_name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 255
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "minLength": 1,
+                        "maxLength": 254
+                    },
+                    "phone": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 32
+                    },
+                    "language": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/LanguageEnum"
+                            }
+                        ],
+                        "default": "ru"
+                    },
+                    "source_ref": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Номер входящего письма (ВХ)",
+                        "maxLength": 32
+                    }
+                },
+                "required": [
+                    "categories_description",
+                    "company_name",
+                    "contact_name",
+                    "email",
+                    "source_ref"
+                ]
+            },
             "DeskPartnerApplicationDetail": {
                 "type": "object",
                 "properties": {
@@ -41840,6 +41990,10 @@
                     },
                     "source": {
                         "$ref": "#/components/schemas/PartnerApplicationSourceEnum"
+                    },
+                    "source_ref": {
+                        "type": "string",
+                        "description": "Номер ВХ, если заявку завёл сотрудник по письму (план 1.9)"
                     },
                     "status": {
                         "$ref": "#/components/schemas/PartnerApplicationStatusEnum"
@@ -41999,6 +42153,10 @@
                     },
                     "source": {
                         "$ref": "#/components/schemas/PartnerApplicationSourceEnum"
+                    },
+                    "source_ref": {
+                        "type": "string",
+                        "description": "Номер ВХ, если заявку завёл сотрудник по письму (план 1.9)"
                     },
                     "status": {
                         "$ref": "#/components/schemas/PartnerApplicationStatusEnum"
@@ -47803,10 +47961,11 @@
             "PartnerApplicationSourceEnum": {
                 "enum": [
                     "public",
-                    "client_cabinet"
+                    "client_cabinet",
+                    "letter"
                 ],
                 "type": "string",
-                "description": "* `public` - public\n* `client_cabinet` - client_cabinet"
+                "description": "* `public` - public\n* `client_cabinet` - client_cabinet\n* `letter` - letter"
             },
             "PartnerApplicationStatusEnum": {
                 "enum": [

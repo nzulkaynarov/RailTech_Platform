@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.81.0
+  version: 0.83.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -9626,7 +9626,7 @@ paths:
         EDS записывает связь (EDS-REPLY-1); ИСХ в ответ на другое входящее — 409, `details.reason = outgoing_linked_elsewhere`.
         Все поручения письма исполнены — письмо «Исполнено», контроль снят, директор и делопроизводитель получают
         уведомление. «Передать в работу» (план 1.9, `handed_to`) — только ответственный (иначе 403 `not_responsible`):
-        заявку клиента BFF проверяет в CRM `GET /deals/{id}` от имени сотрудника, служебную записку — EDS (своя, с номером);
+        заявку клиента BFF проверяет в CRM `GET /deals/{id}`, подключение партнёра — в ERP от имени сотрудника, служебную записку — EDS (своя, с номером);
         не найдено — 422, `details.fields.handed_to = not_found`. Ответ — карточка.
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
@@ -13105,6 +13105,37 @@ paths:
           $ref: '#/components/responses/SessionExpired'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    post:
+      tags: [erp-catalog]
+      operationId: createPartnerApplication
+      summary: 'Расчёт · Заявка в партнёры по входящему письму (план 1.9)'
+      description: >-
+        ERP `POST catalog/partner-applications/` — право `supply.manage` (раздел каталога полный). «Передать в работу»:
+        сотрудник заводит заявку кандидата по письму (`source = letter`, `source_ref` — номер ВХ); согласия кандидата ещё
+        нет, дальше — договорный шлюз.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerApplicationCreateRequest'
+      responses:
+        '201':
+          description: Заявка заведена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerApplicationItem'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
   /erp/catalog/partner-applications/{id}/send-contract:
@@ -21571,7 +21602,7 @@ components:
               properties:
                 kind: {$ref: '#/components/schemas/HandoverKind'}
                 number: {type: string, examples: [З-0045/26]}
-                path: {type: [string, 'null'], description: Путь в SPA — у служебной записки}
+                path: {type: [string, 'null'], description: Путь в SPA — у служебной записки и заявки партнёра}
             - type: 'null'
           description: «Передать в работу» (план 1.9) — объект, в который передано письмо
         executed_at: {type: [string, 'null'], format: date-time}
@@ -21680,8 +21711,8 @@ components:
 
     HandoverKind:
       type: string
-      enum: [client_request, memo]
-      description: Во что передано письмо — заявка клиента (сделка CRM) или служебная записка (EDS)
+      enum: [client_request, partner_application, memo]
+      description: Во что передано письмо — заявка клиента (сделка CRM), подключение партнёра (заявка ERP) или служебная записка (EDS)
 
     HandoverIn:
       type: object
@@ -21689,7 +21720,7 @@ components:
       required: [kind, id]
       properties:
         kind: {$ref: '#/components/schemas/HandoverKind'}
-        id: {type: string, minLength: 1, maxLength: 64, description: 'Сделка CRM (заявка клиента) или id документа EDS'}
+        id: {type: string, minLength: 1, maxLength: 64, description: 'Сделка CRM (заявка клиента), заявка ERP (подключение партнёра) или id документа EDS'}
 
     InstructionExtensionIn:
       type: object
@@ -25791,7 +25822,8 @@ components:
         contract_date: {type: [string, 'null'], format: date, description: 'Дата партнёрского договора'}
     PartnerApplicationSource:
       type: string
-      enum: [public, client_cabinet]
+      enum: [public, client_cabinet, letter]
+      description: Откуда заявка — внешний вход, кабинет клиента или входящее письмо (сотрудник, план 1.9)
     PartnerApplicationStatus:
       type: string
       enum: [submitted, contract_sent, candidate_agreed, approved, rejected]
@@ -25805,6 +25837,7 @@ components:
       properties:
         id: {$ref: '#/components/schemas/CompanyItemRef'}
         source: {$ref: '#/components/schemas/PartnerApplicationSource'}
+        source_ref: {type: string, description: 'Номер ВХ, если заявку завёл сотрудник по письму (план 1.9); иначе пусто'}
         status: {$ref: '#/components/schemas/PartnerApplicationStatus'}
         kind: {$ref: '#/components/schemas/PartnerApplicationKind'}
         company_name: {type: string}
@@ -25905,6 +25938,20 @@ components:
       required: [reason]
       properties:
         reason: {type: string, minLength: 1, maxLength: 1000}
+    PartnerApplicationCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [company_name, categories_description, contact_name, email, source_ref]
+      properties:
+        company_name: {type: string, minLength: 1, maxLength: 255}
+        inn: {type: string, maxLength: 32}
+        kind: {type: string, enum: [manufacturer, supplier, principal, other]}
+        categories_description: {type: string, minLength: 1, maxLength: 4000}
+        contact_name: {type: string, minLength: 1, maxLength: 255}
+        email: {type: string, format: email, maxLength: 254}
+        phone: {type: string, maxLength: 32}
+        language: {type: string, enum: [ru, uz, en]}
+        source_ref: {type: string, minLength: 1, maxLength: 32, description: Номер входящего письма (ВХ)}
     PartnerApplicationRejectRequest:
       type: object
       additionalProperties: false

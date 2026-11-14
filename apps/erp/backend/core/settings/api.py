@@ -144,7 +144,7 @@ SPECTACULAR_SETTINGS = {
         "Supports deal lifecycle management, quoting, product catalog (PIM), "
         "Excel imports, and real-time notifications via WebSocket."
     ),
-    "VERSION": "1.15.0",
+    "VERSION": "1.18.0",
     "CONTACT": {"name": "ERP API Support", "email": "support@example.com"},
     "LICENSE": {"name": "Proprietary"},
     "SERVE_INCLUDE_SCHEMA": False,
@@ -222,7 +222,7 @@ SPECTACULAR_SETTINGS = {
         "TraceKindEnum": "inventory.serializers.TRACE_KINDS",
         "TraceStatusEnum": "inventory.serializers.TRACE_STATUSES",
         # PART-ONBOARD-2: заявки кандидатов в партнёры
-        "PartnerApplicationSourceEnum": ["public", "client_cabinet"],
+        "PartnerApplicationSourceEnum": ["public", "client_cabinet", "letter"],
         "PartnerApplicationStatusEnum": ["submitted", "contract_sent", "candidate_agreed", "approved", "rejected"],
     },
     "TAGS": [

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — EDS API (электронный документооборот)
-  version: 0.21.0
+  version: 0.22.0
   summary: Пространство `/api/v1/` сервиса EDS — вызывает BFF Платформы от имени сотрудника.
   description: |
     Контракт сервиса EDS (`apps/eds`, ADR-0015; `docs/history/runbooks/wave12-eds-c1.md` §2). EDS — владелец реестра документов и
@@ -4841,8 +4841,8 @@ components:
           format: date-time
     HandoverKind:
       type: string
-      enum: [client_request, memo]
-      description: Во что передано письмо — заявка клиента (CRM) или служебная записка (EDS)
+      enum: [client_request, partner_application, memo]
+      description: Во что передано письмо — заявка клиента (CRM), подключение партнёра (ERP) или служебная записка (EDS)
     HandedTo:
       type: object
       additionalProperties: false
@@ -5032,7 +5032,7 @@ components:
             - type: 'null'
           description: >-
             «Передать в работу» (план 1.9): только ответственный (иначе 403 `not_responsible`); служебная записка —
-            своя, внутренняя, с номером (иначе 422 `handed_to: not_found`); заявку клиента проверяет BFF по CRM
+            своя, внутренняя, с номером (иначе 422 `handed_to: not_found`); заявку клиента (CRM) и подключение партнёра (ERP) проверяет BFF
     ExtensionRequestIn:
       type: object
       additionalProperties: false

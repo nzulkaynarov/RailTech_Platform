@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas_company import Body, ident, text
 
-PartnerApplicationSource = Literal["public", "client_cabinet"]
+PartnerApplicationSource = Literal["public", "client_cabinet", "letter"]
 PartnerApplicationStatus = Literal[
     "submitted", "contract_sent", "candidate_agreed", "approved", "rejected"
 ]
@@ -24,6 +24,8 @@ class Out(BaseModel):
 class PartnerApplicationItem(Out):
     id: str
     source: PartnerApplicationSource
+    # План 1.9: номер ВХ, если заявку завёл сотрудник по письму
+    source_ref: str = ""
     status: PartnerApplicationStatus
     kind: PartnerApplicationKind
     company_name: str
@@ -65,6 +67,20 @@ class PartnerApplicationApproveRequest(Body):
     override_reason: str | None = Field(default=None, max_length=1000)
 
 
+class PartnerApplicationCreateRequest(Body):
+    """«Передать в работу» по входящему письму (план 1.9): заявку кандидата заводит снабжение."""
+
+    company_name: str = Field(min_length=1, max_length=255)
+    inn: str = Field(default="", max_length=32)
+    kind: Literal["manufacturer", "supplier", "principal", "other"] = "supplier"
+    categories_description: str = Field(min_length=1, max_length=4000)
+    contact_name: str = Field(min_length=1, max_length=255)
+    email: str = Field(min_length=3, max_length=254, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    phone: str = Field(default="", max_length=32)
+    language: Language = "ru"
+    source_ref: str = Field(min_length=1, max_length=32)
+
+
 class PartnerApplicationRejectRequest(Body):
     rejected_reason: str = Field(min_length=1, max_length=1000)
 
@@ -80,7 +96,7 @@ def to_partner_application(raw: Mapping[str, Any]) -> PartnerApplicationItem:
     status: PartnerApplicationStatus = raw_status if raw_status in allowed_statuses else "submitted"
     raw_source = raw.get("source")
     source: PartnerApplicationSource = (
-        raw_source if raw_source in ("public", "client_cabinet") else "public"
+        raw_source if raw_source in ("public", "client_cabinet", "letter") else "public"
     )
     raw_kind = raw.get("kind")
     allowed_kinds = ("", "manufacturer", "supplier", "principal", "other")
@@ -91,6 +107,7 @@ def to_partner_application(raw: Mapping[str, Any]) -> PartnerApplicationItem:
     return PartnerApplicationItem(
         id=ident(raw.get("id")),
         source=source,
+        source_ref=text(raw.get("source_ref")),
         status=status,
         kind=kind,
         company_name=text(raw.get("company_name")),

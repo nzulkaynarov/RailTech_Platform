@@ -363,4 +363,25 @@ test.describe("Исполнение письма из почты (решение
     await expect(page.getByText("Передано в работу", { exact: true })).toBeVisible();
     await both(page, "task-handed-over");
   });
+
+  test("«Передать в работу» подключением партнёра: заявка в очереди, поручение закрыто (план 1.9)", async ({
+    page,
+  }) => {
+    const number = await mailLetterInExecution(page);
+
+    await switchTo(page, "universal@demo.example");
+    await spaGoto(page, `/eds/tasks/${encodeURIComponent(number)}`);
+    await page.getByRole("button", { name: "Ещё" }).click();
+    await page.getByRole("menuitem", { name: "Передать в работу" }).click();
+    const choose = page.getByRole("dialog", { name: `${number}: передать в работу` });
+    await choose.getByLabel("Подключение партнёра").check();
+    await choose.getByRole("button", { name: "Продолжить" }).click();
+    const form = page.getByRole("dialog", { name: `${number}: подключение партнёра` });
+    await form.getByLabel("Контактное лицо").fill("Анвар Колёсов");
+    await form.getByLabel("Почта").fill("wheels@example.com");
+    await both(page, "task-hand-over-partner");
+    await form.getByRole("button", { name: "Создать заявку" }).click();
+    await expect(page.getByText(`Письмо ${number} передано в работу`)).toBeVisible();
+    await expect(page.getByText("Передано в работу", { exact: true })).toBeVisible();
+  });
 });

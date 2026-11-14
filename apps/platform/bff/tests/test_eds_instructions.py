@@ -16,7 +16,7 @@ import pytest
 
 from tests.backends import Backends
 from tests.conftest import ContractChecker, Web
-from tests.consts import CRM_URL
+from tests.consts import CRM_URL, ERP_URL
 from tests.eds_letters_support import (
     FILE_ID,
     LETTER_ID,
@@ -713,3 +713,42 @@ async def test_hand_over_checks_the_client_request_in_crm_and_the_memo_in_eds(
         assert missing.status_code == 422, bad
         assert missing.json()["details"]["fields"] == {"handed_to": "not_found"}
     assert len(eds.made("POST", f"{path}/complete")) == sent, "до EDS не доходит"
+
+
+async def test_hand_over_to_a_partner_application_is_checked_in_erp(
+    web: Web, eds: EdsFake, be: Backends
+) -> None:
+    path = f"instructions/{INSTRUCTION_ID}"
+    handed = office_letter()
+    handed["instructions"][0]["handed_to"] = {
+        "kind": "partner_application",
+        "ref": "16",
+        "number": "ООО Демо Колёса",
+    }
+    eds.answer("POST", f"{path}/complete", httpx.Response(200, json=handed))
+    be.router.get(f"{ERP_URL}/api/v1/catalog/partner-applications/16/").mock(
+        return_value=httpx.Response(200, json={"id": 16, "company_name": "ООО Демо Колёса"})
+    )
+    be.router.get(f"{ERP_URL}/api/v1/catalog/partner-applications/17/").mock(
+        return_value=httpx.Response(404, json={"detail": "NOT_FOUND"})
+    )
+    assert (await web.login(["SUPPLY"])).status_code == 200
+
+    done = await web.send(
+        "POST",
+        f"{BASE}/{path}/complete",
+        json={"handed_to": {"kind": "partner_application", "id": "16"}},
+    )
+    assert done.status_code == 200, done.text
+    assert json.loads(eds.made("POST", f"{path}/complete")[-1].content)["handed_to"] == {
+        "kind": "partner_application",
+        "ref": "16",
+        "number": "ООО Демо Колёса",
+    }
+    assert done.json()["instructions"][0]["handed_to"]["path"] == "/crm/clients?kind=applications"
+    missing = await web.send(
+        "POST",
+        f"{BASE}/{path}/complete",
+        json={"handed_to": {"kind": "partner_application", "id": "17"}},
+    )
+    assert missing.status_code == 422
