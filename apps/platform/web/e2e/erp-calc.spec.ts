@@ -214,6 +214,24 @@ test.describe("Расчёт по заявке: снабженец и гл. ин�
   });
 });
 
+test.describe("План 1.5: «Как в прошлой заявке»", () => {
+  test("снабженец берёт состав прошлого расчёта клиента с сегодняшними ценами", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "supply@demo.example");
+    await spaGoto(page, `/erp/calc/${encodeURIComponent("ЗВ-2026-097")}`);
+    await page.getByRole("button", { name: "Как в прошлой заявке" }).click();
+    const dialog = page.getByRole("dialog", { name: "Как в прошлой заявке" });
+    await expect(dialog.getByRole("radio").first()).toBeVisible();
+    await dialog.getByRole("radio").first().check();
+    await settledScreenshot(page, "calc-previous");
+    await expectNoViolations(page, "«Как в прошлой заявке»");
+    await dialog.getByRole("button", { name: "Скопировать состав" }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByText(/^Строки добавлены/)).toBeVisible();
+  });
+});
+
 test.describe("Расчёт на телефоне @mobile", () => {
   test.skip(({ isMobile }) => !isMobile, "только проект mobile (390 px)");
 

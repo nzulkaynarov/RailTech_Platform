@@ -24,6 +24,7 @@ import { AddLineForm } from "./AddLineForm";
 import { calcRef, readyHintKey, useApplySheet, useErrorText, useStateLabels } from "./api";
 import { LinesTable } from "./LinesTable";
 import { ParseModal } from "./ParseModal";
+import { PreviousModal } from "./PreviousModal";
 import { PriceRequestForm } from "./PriceRequestForm";
 import { PriceRequests } from "./PriceRequests";
 import { ClientRejection } from "./Rejection";
@@ -203,7 +204,9 @@ function Content({ sheet }: { sheet: CalcSheet }) {
   const { date } = useFormat();
   const { mobile } = useViewport();
   const [, setParams] = useSearchParams();
-  const [dialog, setDialog] = useState<"add" | "parse" | "price" | "terms" | null>(null);
+  const [dialog, setDialog] = useState<"add" | "parse" | "previous" | "price" | "terms" | null>(
+    null,
+  );
   // Строка вручную и запрос цены — короткие формы о расчёте: в боковом окне на вкладке «Задача» (§4.1a)
   const openForm = (kind: "add" | "price" | "terms") => {
     setDialog(kind);
@@ -303,6 +306,15 @@ function Content({ sheet }: { sheet: CalcSheet }) {
                     {t("parse.button")}
                   </Button>
                 ) : null}
+                {sheet.rights.build ? (
+                  <Button
+                    onClick={() => {
+                      setDialog("previous");
+                    }}
+                  >
+                    {t("previous.button")}
+                  </Button>
+                ) : null}
               </div>
             ) : null
           }
@@ -343,6 +355,14 @@ function Content({ sheet }: { sheet: CalcSheet }) {
       ) : null}
       {dialog === "parse" ? (
         <ParseModal
+          sheet={sheet}
+          onClose={() => {
+            setDialog(null);
+          }}
+        />
+      ) : null}
+      {dialog === "previous" ? (
+        <PreviousModal
           sheet={sheet}
           onClose={() => {
             setDialog(null);

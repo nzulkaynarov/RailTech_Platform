@@ -806,3 +806,51 @@ async def test_terms_need_the_full_calc_section(web: Web, erp: respx.MockRouter)
     denied = await call(web, "PATCH", f"/erp/calc/{ENCODED}/terms", {"payment_terms": "x"})
     assert denied.status_code == 403
     assert not route.called
+
+
+# --- план 1.5: «Как в прошлой заявке» --------------------------------------------------------
+
+
+PREVIOUS = {
+    "results": [
+        {
+            "deal_id": 77,
+            "number": "ЗВ-2026-077",
+            "title": "Стрелочные переводы",
+            "created_at": "2026-09-01T10:00:00+05:00",
+            "lines": 3,
+            "names": ["Перевод Р65", "Монтаж", "Шпала"],
+        }
+    ]
+}
+
+
+async def test_previous_calcs_and_copy_by_number(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    await web.login(["SUPPLY"])
+    erp.get(f"{CALC}/104/previous/").mock(return_value=httpx.Response(200, json=PREVIOUS))
+    listed = await web.client.get(f"/api/v1/erp/calc/{ENCODED}/previous")
+    assert listed.status_code == 200, listed.json()
+    check(listed, "/erp/calc/{number}/previous", "get")
+    assert listed.json()["items"][0]["number"] == "ЗВ-2026-077"
+    assert "deal_id" not in listed.json()["items"][0], "внутренний id наружу не идёт"
+
+    copy = erp.post(f"{CALC}/104/copy/").mock(
+        return_value=httpx.Response(201, json={**sheet(), "created": [1, 2], "skipped": 1})
+    )
+    response = await call(web, "POST", f"/erp/calc/{ENCODED}/copy", {"source": "ЗВ-2026-077"})
+    assert response.status_code == 201, response.json()
+    check(response, "/erp/calc/{number}/copy", "post")
+    assert response.json()["skipped"] == 1
+    assert json.loads(copy.calls.last.request.content) == {"from_deal_id": 77}
+
+
+async def test_copy_from_a_request_not_in_the_list_is_404(web: Web, erp: respx.MockRouter) -> None:
+    await web.login(["SUPPLY"])
+    erp.get(f"{CALC}/104/previous/").mock(return_value=httpx.Response(200, json=PREVIOUS))
+    copy = erp.post(f"{CALC}/104/copy/")
+    response = await call(web, "POST", f"/erp/calc/{ENCODED}/copy", {"source": "ЗВ-2026-999"})
+    assert response.status_code == 404
+    assert response.json()["details"]["reason"] == "previous_not_found"
+    assert not copy.called

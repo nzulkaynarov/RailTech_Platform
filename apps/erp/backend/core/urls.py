@@ -148,6 +148,7 @@ from crm.views import (
 )
 from crm.views.calc import (
     CalcCatalogView,
+    CalcCopyView,
     CalcDealRefsView,
     CalcLinesView,
     CalcLineView,
@@ -155,6 +156,7 @@ from crm.views.calc import (
     CalcLostView,
     CalcNewVersionView,
     CalcParseView,
+    CalcPreviousView,
     CalcReadyView,
     CalcSheetView,
     CalcStartView,
@@ -357,6 +359,8 @@ urlpatterns = (
         path("api/v1/calc/<int:deal_id>/new-version/", CalcNewVersionView.as_view(), name="calc-new-version"),
         path("api/v1/calc/<int:deal_id>/lost/", CalcLostView.as_view(), name="calc-lost"),
         path("api/v1/calc/<int:deal_id>/parse/", CalcParseView.as_view(), name="calc-parse"),
+        path("api/v1/calc/<int:deal_id>/previous/", CalcPreviousView.as_view(), name="calc-previous"),
+        path("api/v1/calc/<int:deal_id>/copy/", CalcCopyView.as_view(), name="calc-copy"),
         # D2-2 — «Склад» Платформы: остатки, резервы, заказы поставщикам, приёмка, отгрузки, запросы цен.
         path("api/v1/stock/balances/", StockBalanceListView.as_view(), name="stock-balances"),
         path("api/v1/stock/balances/<int:product_id>/", StockProductView.as_view(), name="stock-product"),

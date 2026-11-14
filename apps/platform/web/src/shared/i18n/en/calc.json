@@ -177,6 +177,19 @@
     },
     "truncated": "Showing the first 50 lines of {{count}}."
   },
+  "previous": {
+    "button": "As in a past request",
+    "title": "As in a past request",
+    "intro": "Pick a past calculation of this client: its rows are added at today’s prices.",
+    "loading": "Loading past calculations…",
+    "empty": "The client has no past calculations yet",
+    "lines_one": "{{count}} row",
+    "lines_other": "{{count}} rows",
+    "copy": "Copy the rows",
+    "done": "Rows added",
+    "doneSkipped_one": "Rows added; a colleague adds {{count}} row of the other zone",
+    "doneSkipped_other": "Rows added; a colleague adds {{count}} rows of the other zone"
+  },
   "match": {
     "title": "Match with catalogue",
     "search": "Search the catalogue",

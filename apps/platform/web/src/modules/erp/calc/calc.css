@@ -355,3 +355,10 @@
   gap: 8px;
   margin-top: 8px;
 }
+
+/* План 1.5: прошлые расчёты клиента — по строке на расчёт */
+.pf-calc-previous {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}

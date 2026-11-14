@@ -20,12 +20,16 @@ from app.feeds.numbers import deal_number, number_query
 from app.schemas_erp_calc import (
     CalcCatalogItem,
     CalcCatalogPage,
+    CalcCopyIn,
+    CalcCopyResult,
     CalcLinePatch,
     CalcLinesIn,
     CalcLostIn,
     CalcParseIn,
     CalcParseJob,
     CalcParseResult,
+    CalcPrevious,
+    CalcPreviousPage,
     CalcProposalLine,
     CalcRequestList,
     CalcSheet,
@@ -291,6 +295,69 @@ async def add_lines(authed: Builder, number: Number, body: CalcLinesIn) -> CalcS
             row["product_id"] = int(row["product_id"])
         rows.append(row)
     return await _sheet(authed, number, "POST", "lines/", {"lines": rows})
+
+
+async def _previous(authed: Authed, deal_id: int) -> list[dict[str, Any]]:
+    data = await _erp(authed).call_calc("GET", f"{deal_id}/previous/")
+    return [row for row in (data.get("results") or []) if isinstance(row, dict)]
+
+
+@router.get(
+    "/calc/{number}/previous",
+    response_model=CalcPreviousPage,
+    operation_id="listCalcPrevious",
+)
+async def list_previous(authed: Builder, number: Number) -> CalcPreviousPage:
+    """План 1.5: прошлые расчёты того же клиента для «Как в прошлой заявке» (новые сверху)."""
+    deal_id = await _erp(authed).deal_id(number)
+    return CalcPreviousPage(
+        items=[
+            CalcPrevious(
+                number=deal_number(row) or str(row.get("number") or ""),
+                title=str(row.get("title") or ""),
+                created_at=row["created_at"],
+                lines=int(row.get("lines") or 0),
+                names=[str(name) for name in row.get("names") or []],
+            )
+            for row in await _previous(authed, deal_id)
+        ]
+    )
+
+
+@router.post(
+    "/calc/{number}/copy",
+    response_model=CalcCopyResult,
+    response_model_exclude_unset=True,
+    status_code=status.HTTP_201_CREATED,
+    operation_id="copyCalcLines",
+)
+async def copy_lines(authed: ZoneHolder, number: Number, body: CalcCopyIn) -> CalcCopyResult:
+    """План 1.5: состав прошлого расчёта того же клиента, цены сегодняшние. Прошлая заявка ищется
+    только среди прошлых расчётов этого клиента — чужой клиент невозможен по построению."""
+    erp = _erp(authed)
+    deal_id = await erp.deal_id(number)
+    source = next(
+        (
+            row
+            for row in await _previous(authed, deal_id)
+            if (deal_number(row) or str(row.get("number") or "")) == body.source
+        ),
+        None,
+    )
+    if source is None:
+        raise PlatformError(
+            "NOT_FOUND",
+            "Прошлого расчёта с таким номером у клиента нет.",
+            status_code=404,
+            source="erp",
+            details={"reason": "previous_not_found"},
+        )
+    raw = await erp.call_calc(
+        "POST", f"{deal_id}/copy/", json={"from_deal_id": int(source["deal_id"])}
+    )
+    return CalcCopyResult(
+        sheet=to_sheet(raw, authed.fields, authed.access), skipped=int(raw.get("skipped") or 0)
+    )
 
 
 @router.patch(
