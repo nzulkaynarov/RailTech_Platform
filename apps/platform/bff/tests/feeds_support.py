@@ -76,6 +76,8 @@ class FeedBackends:
             },
             # Просроченные заказы поставщикам (ERP `stock/overdue`, D2-2): пусто, пока нет строк
             "overdue": {"results": []},
+            # Дела снабженца (ERP `stock/tasks`, план 0.7): пусто, пока нет строк
+            "supply_tasks": {"results": []},
             "activity_logs": (403, {"detail": "PLATFORM_ADMIN_REQUIRED"}),
             "timeline": [],
             # EDS (D1-6): письма «Ждут резолюции», маршруты на моём шаге, реестр для поиска
@@ -129,6 +131,7 @@ class FeedBackends:
             "activity_logs": self._erp("activity_logs", router.get(f"{base}/crm/activity-logs/")),
             "timeline": self._erp("timeline", router.get(f"{base}/crm/timeline/")),
             "overdue": self._erp("overdue", router.get(f"{base}/stock/overdue/")),
+            "supply_tasks": self._erp("supply_tasks", router.get(f"{base}/stock/tasks/")),
             "calc_tasks": self._erp("calc_tasks", router.get(f"{base}/calc/tasks/")),
             "receivables": router.get(f"{base}/finance/receivables/").mock(
                 side_effect=self._receivables

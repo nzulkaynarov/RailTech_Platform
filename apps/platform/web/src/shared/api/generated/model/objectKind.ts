@@ -20,4 +20,5 @@ export const ObjectKind = {
   ticket: "ticket",
   integration: "integration",
   supplier_order: "supplier_order",
+  partner_application: "partner_application",
 } as const;

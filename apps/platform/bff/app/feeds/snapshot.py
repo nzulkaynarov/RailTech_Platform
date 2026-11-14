@@ -86,6 +86,8 @@ class Snapshot:
     mail_configured: bool = True
     # Просроченные заказы поставщикам (ERP `stock/overdue`): снабженцу — «Мои задачи» (D2-2).
     overdue_orders: list[dict[str, Any]] = field(default_factory=list)
+    # План 0.7 (FR-6): дела снабженца — ERP `/stock/tasks/`
+    supply_tasks: list[dict[str, Any]] = field(default_factory=list)
     # P8b: мои поручения, переносы на решение и ознакомления (EDS `GET /letter-tasks`); `None` —
     # EDS не читали или он не ответил (строк нет).
     letter_tasks: dict[str, list[dict[str, Any]]] | None = None
@@ -152,6 +154,19 @@ def wants_mail_mine(view: View) -> bool:
 
 def wants_supplier_overdue(view: View) -> bool:
     return view.wants("supplier_overdue")
+
+
+#: Виды очереди из ERP `/stock/tasks/` (план 0.7, FR-6) и вид строки ERP → вид очереди.
+SUPPLY_TASK_KINDS: dict[str, QueueItemKind] = {
+    "send_order": "send_supplier_order",
+    "partner_date_change": "partner_date_change",
+    "receive_goods": "receive_goods",
+    "partner_application": "partner_application",
+}
+
+
+def wants_supply_tasks(view: View) -> bool:
+    return any(view.wants(kind) for kind in SUPPLY_TASK_KINDS.values())
 
 
 # Работа ERP «Моих задач» (D2-8): расчёт, счета и платёжки, договор и акт проекта.
@@ -229,6 +244,7 @@ async def _quote_snapshots(feed: Feed, routes: list[dict[str, Any]]) -> dict[str
 
 
 OVERDUE_PATH = "/api/v1/stock/overdue/"
+SUPPLY_TASKS_PATH = "/api/v1/stock/tasks/"
 TICKETS_PATH = "/api/v1/staff-tickets"
 TICKETS_PARAMS = {"status": "new", "limit": 20}
 MAIL_PATH = "/api/v1/inbound-mail"
@@ -322,6 +338,9 @@ async def load_snapshot(
             # ERP не ответил — очередь без просроченных заказов, `sources.erp = unavailable`.
             payload = await feed.get("erp", OVERDUE_PATH, ttl=SNAPSHOT_TTL_SECONDS)
             snap.overdue_orders = rows(payload)
+        if stock and wants_supply_tasks(view):
+            payload = await feed.get("erp", SUPPLY_TASKS_PATH, ttl=SNAPSHOT_TTL_SECONDS)
+            snap.supply_tasks = rows(payload)
 
     async def load_calc() -> None:
         if work and wants_calc_tasks(view):
