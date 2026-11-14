@@ -294,7 +294,8 @@
         "ENGINEER",
         "ACCOUNTANT",
         "REGISTRAR",
-        "MANAGER_ALL"
+        "MANAGER_ALL",
+        "LAWYER"
       ],
       "properties": {
         "MANAGER": {
@@ -313,6 +314,9 @@
           "$ref": "#/$defs/role"
         },
         "MANAGER_ALL": {
+          "$ref": "#/$defs/role"
+        },
+        "LAWYER": {
           "$ref": "#/$defs/role"
         }
       }
