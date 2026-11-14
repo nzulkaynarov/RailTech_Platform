@@ -3,7 +3,7 @@
 openapi: 3.0.3
 info:
   title: RailTech Platform ERP — Internal API (ERP SPA)
-  version: 1.17.0
+  version: 1.19.0
   description: 'Внутренний API ERP для ERP SPA (бэк-офис), пространство `/api/v1/` (CONTRACTS §1). Файл генерируется из схемы
     бэкенда — это не отдельное описание, а её срез; расхождение с кодом невозможно: CI перегенерирует схему и падает при diff.'
   contact:
@@ -624,7 +624,7 @@ paths:
                 $ref: '#/components/schemas/CompanyDocumentProfile'
           description: ''
         '400':
-          description: INVALID_ACCENT_COLOR / INVALID_SECONDARY_COLOR / INVALID_LAYOUT_PRESET / INVALID_FONT_FAMILY
+          description: INVALID_ACCENT_COLOR / INVALID_SECONDARY_COLOR / INVALID_LAYOUT_PRESET / INVALID_FONT_FAMILY / INVALID_TRANSLATIONS
           content:
             application/json:
               schema:
@@ -675,7 +675,7 @@ paths:
                 $ref: '#/components/schemas/CompanyDocumentProfile'
           description: ''
         '400':
-          description: INVALID_ACCENT_COLOR / INVALID_SECONDARY_COLOR / INVALID_LAYOUT_PRESET / INVALID_FONT_FAMILY
+          description: INVALID_ACCENT_COLOR / INVALID_SECONDARY_COLOR / INVALID_LAYOUT_PRESET / INVALID_FONT_FAMILY / INVALID_TRANSLATIONS
           content:
             application/json:
               schema:
@@ -22930,6 +22930,13 @@ components:
           type: string
           title: Колонтитул / оговорка
           description: 'Текст внизу документа: дисклеймер, условия, контакты'
+        translations:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties:
+              type: string
+          description: 'Бланк на uz и en: legal_name, legal_address, signatory_position, footer_text'
         accent_color:
           type: string
           title: Акцентный цвет
@@ -30852,6 +30859,13 @@ components:
           type: string
           title: Колонтитул / оговорка
           description: 'Текст внизу документа: дисклеймер, условия, контакты'
+        translations:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties:
+              type: string
+          description: 'Бланк на uz и en: legal_name, legal_address, signatory_position, footer_text'
         accent_color:
           type: string
           title: Акцентный цвет
