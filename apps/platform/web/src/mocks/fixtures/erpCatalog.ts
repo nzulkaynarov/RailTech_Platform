@@ -79,6 +79,8 @@ export interface MockImage {
 
 export interface MockItem {
   id: string;
+  /** План 1.8: МХИК (ИКПУ); нет — код не задан */
+  mxik?: { code: string; name: string; unit: string; package: string } | null;
   sku: string;
   name: string;
   kind: "stock" | "on_order" | "service_fixed" | "service_milestones" | "service_time";

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.82.0
+  version: 0.91.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -13609,6 +13609,30 @@ paths:
           $ref: '#/components/responses/ValidationFailed'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/mxik:
+    get:
+      tags: [erp-catalog]
+      operationId: searchMxik
+      summary: 'Товары · Подбор МХИК (ИКПУ) из классификатора'
+      description: >-
+        План 1.8. ERP `master-data/mxik/?q=` → классификатор Налогового комитета (tasnif.soliq.uz): до 10 позиций с кодом,
+        названием, группой, единицей и упаковкой; меньше двух знаков — пусто. Классификатор не ответил — 503
+        `details.reason = mxik_unavailable`, код вводится вручную. Раздел `erp.stock` — чтение.
+      parameters:
+        - name: q
+          in: query
+          required: false
+          description: Слово или код
+          schema: {type: string, maxLength: 200}
+      responses:
+        '200':
+          description: Позиции классификатора
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CatalogMxikPage'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
   /erp/catalog/hs-codes:
     get:
       tags: [erp-catalog]
@@ -25208,6 +25232,36 @@ components:
       type: string
       enum: [stock, on_order, service_fixed, service_milestones, service_time]
       description: 'Товар со склада, товар под заказ, услуга: фикс / по этапам / по времени (ERP вычисляет)'
+    CatalogMxik:
+      type: object
+      additionalProperties: false
+      required: [code, name, unit, package]
+      properties:
+        code: {type: string, pattern: '^[0-9]{17}$'}
+        name: {type: string}
+        unit: {type: string}
+        package: {type: string}
+
+    CatalogMxikHit:
+      type: object
+      additionalProperties: false
+      required: [code, name, group, unit, package]
+      properties:
+        code: {type: string, pattern: '^[0-9]{17}$'}
+        name: {type: string}
+        group: {type: string, description: Группа или класс классификатора}
+        unit: {type: string}
+        package: {type: string}
+
+    CatalogMxikPage:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/CatalogMxikHit'}
+
     CatalogNamedRef:
       type: object
       additionalProperties: false
@@ -25404,6 +25458,9 @@ components:
         description: {type: string}
         gost_drawing: {type: string}
         hs_code: {type: string}
+        mxik:
+          oneOf: [{$ref: '#/components/schemas/CatalogMxik'}, {type: 'null'}]
+          description: 'План 1.8: МХИК (ИКПУ); нет кода — null'
         manufacturer_part_number: {type: string}
         brand: {type: [string, 'null'], description: Изготовитель (бренд)}
         brand_id: {oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}]}
@@ -25516,6 +25573,10 @@ components:
         brand_id: {oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}], description: Изготовитель (бренд)}
         manufacturer_part_number: {type: string, maxLength: 120, description: Артикул изготовителя}
         hs_code: {type: string, pattern: '^([0-9]{2}|[0-9]{4}|[0-9]{6}|[0-9]{8}|[0-9]{10})?$', description: 'Код ТН ВЭД: 2–10 цифр; пусто — снять'}
+        mxik_code: {type: string, pattern: '^([0-9]{17})?$', description: 'План 1.8: МХИК (ИКПУ) — 17 цифр; пусто — снять код вместе с названием, единицей и упаковкой'}
+        mxik_name: {type: string, maxLength: 500, description: Название по классификатору (при выборе из него)}
+        mxik_unit: {type: string, maxLength: 100, description: Единица по классификатору}
+        mxik_package: {type: string, maxLength: 200, description: Упаковка по классификатору}
         country_of_origin_id: {oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}], description: 'Страна происхождения; `null` — страна бренда'}
         warranty_months: {type: [integer, 'null'], minimum: 0, maximum: 600, description: 'Гарантия, мес.; `null` — срок компании по умолчанию'}
         warranty_terms: {type: string, maxLength: 5000, description: Условия гарантии}

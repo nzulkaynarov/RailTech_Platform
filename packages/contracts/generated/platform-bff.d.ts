@@ -7438,6 +7438,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/erp/catalog/mxik": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Товары · Подбор МХИК (ИКПУ) из классификатора
+     * @description План 1.8. ERP `master-data/mxik/?q=` → классификатор Налогового комитета (tasnif.soliq.uz): до 10 позиций с кодом, названием, группой, единицей и упаковкой; меньше двух знаков — пусто. Классификатор не ответил — 503 `details.reason = mxik_unavailable`, код вводится вручную. Раздел `erp.stock` — чтение.
+     */
+    get: operations["searchMxik"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/erp/catalog/hs-codes": {
     parameters: {
       query?: never;
@@ -14855,6 +14875,23 @@ export interface components {
      * @enum {string}
      */
     CatalogItemKind: "stock" | "on_order" | "service_fixed" | "service_milestones" | "service_time";
+    CatalogMxik: {
+      code: string;
+      name: string;
+      unit: string;
+      package: string;
+    };
+    CatalogMxikHit: {
+      code: string;
+      name: string;
+      /** @description Группа или класс классификатора */
+      group: string;
+      unit: string;
+      package: string;
+    };
+    CatalogMxikPage: {
+      items: components["schemas"]["CatalogMxikHit"][];
+    };
     CatalogNamedRef: {
       id: components["schemas"]["CompanyItemRef"];
       name: string;
@@ -15049,6 +15086,8 @@ export interface components {
       description: string;
       gost_drawing: string;
       hs_code: string;
+      /** @description План 1.8: МХИК (ИКПУ); нет кода — null */
+      mxik?: components["schemas"]["CatalogMxik"] | null;
       manufacturer_part_number: string;
       /** @description Изготовитель (бренд) */
       brand: string | null;
@@ -15196,6 +15235,14 @@ export interface components {
       manufacturer_part_number?: string;
       /** @description Код ТН ВЭД: 2–10 цифр; пусто — снять */
       hs_code?: string;
+      /** @description План 1.8: МХИК (ИКПУ) — 17 цифр; пусто — снять код вместе с названием, единицей и упаковкой */
+      mxik_code?: string;
+      /** @description Название по классификатору (при выборе из него) */
+      mxik_name?: string;
+      /** @description Единица по классификатору */
+      mxik_unit?: string;
+      /** @description Упаковка по классификатору */
+      mxik_package?: string;
       /** @description Страна происхождения; `null` — страна бренда */
       country_of_origin_id?: components["schemas"]["CompanyItemRef"] | null;
       /** @description Гарантия, мес.; `null` — срок компании по умолчанию */
@@ -29672,6 +29719,32 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  searchMxik: {
+    parameters: {
+      query?: {
+        /** @description Слово или код */
+        q?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Позиции классификатора */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CatalogMxikPage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

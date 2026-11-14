@@ -216,10 +216,28 @@ class DeskReturnIn(serializers.Serializer):
     issues = DeskReturnIssue(many=True, required=False, allow_null=True, max_length=MAX_ISSUES)
 
 
+class DeskMxik(serializers.Serializer):
+    """План 1.8: МХИК (ИКПУ) товара — код и что о нём сказал классификатор."""
+
+    code = serializers.CharField(help_text="17 цифр")
+    name = serializers.CharField(allow_blank=True)
+    unit = serializers.CharField(allow_blank=True)
+    package = serializers.CharField(allow_blank=True)
+
+
+class DeskMxikHit(DeskMxik):
+    group = serializers.CharField(allow_blank=True, help_text="Группа или класс классификатора")
+
+
+class DeskMxikSearch(serializers.Serializer):
+    results = DeskMxikHit(many=True)
+
+
 class DeskItemDetail(DeskItemRow):
     description = serializers.CharField()
     gost_drawing = serializers.CharField()
     hs_code = serializers.CharField()
+    mxik = DeskMxik(allow_null=True, help_text="МХИК (ИКПУ); нет кода — null")
     manufacturer_part_number = serializers.CharField()
     brand = serializers.CharField(allow_null=True)
     brand_id = serializers.IntegerField(allow_null=True, help_text="Изготовитель (бренд) — id справочника.")
@@ -249,6 +267,12 @@ class DeskItemIn(serializers.Serializer):
     brand_id = serializers.IntegerField(required=False, allow_null=True, help_text="Изготовитель (бренд).")
     manufacturer_part_number = serializers.CharField(required=False, allow_blank=True, max_length=120)
     hs_code = serializers.CharField(required=False, allow_blank=True, max_length=20, help_text="2–10 цифр.")
+    mxik_code = serializers.CharField(
+        required=False, allow_blank=True, max_length=17, help_text="МХИК: 17 цифр; пусто — снять."
+    )
+    mxik_name = serializers.CharField(required=False, allow_blank=True, max_length=500)
+    mxik_unit = serializers.CharField(required=False, allow_blank=True, max_length=100)
+    mxik_package = serializers.CharField(required=False, allow_blank=True, max_length=200)
     country_of_origin_id = serializers.IntegerField(
         required=False, allow_null=True, help_text="Страна происхождения; пусто — страна бренда."
     )
