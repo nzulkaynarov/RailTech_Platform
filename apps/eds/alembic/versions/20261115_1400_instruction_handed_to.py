@@ -2,7 +2,7 @@
 Поля {kind, ref, number}; пусто у прежних поручений. Откат удаляет колонку.
 
 Revision ID: 2da01a5477bc
-Revises: e435ea723f87
+Revises: f69980474676
 """
 
 from collections.abc import Sequence
@@ -12,7 +12,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "2da01a5477bc"
-down_revision: str | Sequence[str] | None = "e435ea723f87"
+down_revision: str | Sequence[str] | None = "f69980474676"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
