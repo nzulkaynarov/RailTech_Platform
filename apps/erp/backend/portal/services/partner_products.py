@@ -37,7 +37,7 @@ from catalog.models import (
     SupplierOffer,
     TechDocument,
 )
-from catalog.offer_freshness import EXPIRING_DAYS, freshness
+from catalog.offer_freshness import freshness
 from catalog.policy import policy_for
 from catalog.published import client_visible_documents
 from catalog.review_flow import close_pending_review
@@ -152,11 +152,12 @@ def offers_attention(company) -> dict:
     актуальность» над списком (карточки страницы всех цен не покрывают).
     """
     today, now = timezone.localdate(), timezone.now()
-    confirm_days = policy_for(own_company_id()).offer_confirm_days or DEFAULT_OFFER_CONFIRM_DAYS
+    policy = policy_for(own_company_id())
+    confirm_days = policy.offer_confirm_days or DEFAULT_OFFER_CONFIRM_DAYS
     moment = Greatest("confirmed_at", "updated_at")
     expired = Q(valid_until__lt=today)
     stale = ~expired & Q(_moment__lt=now - timedelta(days=confirm_days))
-    expiring = ~expired & ~stale & Q(valid_until__lte=today + timedelta(days=EXPIRING_DAYS))
+    expiring = ~expired & ~stale & Q(valid_until__lte=today + timedelta(days=policy.offer_expiring_days))
     totals = (
         SupplierOffer.objects.filter(supplier=company, is_active=True)
         .annotate(_moment=moment)
@@ -180,7 +181,7 @@ def partner_completeness(product, ctx: CompletenessContext) -> dict:
     return {"percent": percent, "missing": missing}
 
 
-def _offer_view(offer, *, today, now, confirm_days: int) -> dict:
+def _offer_view(offer, *, today, now, confirm_days: int, expiring_days: int) -> dict:
     currency = offer.currency.code if offer.currency_id else None
     return {
         "price": {"amount": f"{offer.base_price:.2f}", "currency": currency} if currency else None,
@@ -189,7 +190,7 @@ def _offer_view(offer, *, today, now, confirm_days: int) -> dict:
         "delivery_basis": offer.delivery_basis.code if offer.delivery_basis_id else None,
         "min_order_qty": offer.min_order_qty,
         "confirmed_at": offer.confirmed_at,
-        "freshness": freshness(offer, today=today, now=now, confirm_days=confirm_days),
+        "freshness": freshness(offer, today=today, now=now, confirm_days=confirm_days, expiring_days=expiring_days),
     }
 
 
@@ -204,7 +205,8 @@ def project_cards(company, products: list, language: str | None = None) -> list[
         return []
     ids = [product.pk for product in products]
     today, now = timezone.localdate(), timezone.now()
-    confirm_days = policy_for(own_company_id()).offer_confirm_days or DEFAULT_OFFER_CONFIRM_DAYS
+    policy = policy_for(own_company_id())
+    confirm_days = policy.offer_confirm_days or DEFAULT_OFFER_CONFIRM_DAYS
     my_offers = {
         offer.product_id: offer
         for offer in SupplierOffer.objects.filter(supplier=company, product_id__in=ids).select_related(
@@ -228,7 +230,13 @@ def project_cards(company, products: list, language: str | None = None) -> list[
         status = card_status(product, company.pk)
         my_offer = my_offers.get(product.pk)
         offer = my_offer if my_offer is not None and my_offer.is_active else None
-        offer_view = _offer_view(offer, today=today, now=now, confirm_days=confirm_days) if offer else None
+        offer_view = (
+            _offer_view(
+                offer, today=today, now=now, confirm_days=confirm_days, expiring_days=policy.offer_expiring_days
+            )
+            if offer
+            else None
+        )
         if status == MATCHED:
             # Цена привязалась к чужой неопубликованной карточке: только то, что партнёр прислал сам. Ни названия, ни категории,
             # ни полноты, ни статуса и даты правок чужой карточки (эталон — Amazon «matched to existing listing»).

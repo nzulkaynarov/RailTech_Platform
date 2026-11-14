@@ -893,6 +893,9 @@ def settings_json(**extra: Any) -> dict[str, Any]:
         "catalog_price_visibility": "cabinet",
         "catalog_publish_threshold": 70,
         "fx_rate_max_age_days": 7,
+        "offer_confirm_days": 30,
+        "offer_expiring_days": 10,
+        "act_reminder_hours": 48,
         "doc_number_prefix": "DEMO",
         "created_at": NOW,
         "updated_at": NOW,
@@ -916,6 +919,8 @@ async def test_quote_defaults_director_sees_margins(
     assert body["default_margin_percent"] == "18.00"
     assert body["min_margin_percent"] == "5.00"
     assert "doc_number_prefix" not in body
+    # сроки — настройки компании (задача «Н3c»)
+    assert (body["offer_expiring_days"], body["act_reminder_hours"]) == (10, 48)
 
 
 async def test_quote_defaults_administrator_does_not_get_margin_fields(

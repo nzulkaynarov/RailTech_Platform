@@ -256,7 +256,10 @@
     "invalidField": "Check the value",
     "note": "New quotes take these values; issued quotes do not change.",
     "remindOverdue": "Remind customers about overdue invoices",
-    "remindOverdueHint": "Once a day at 10:00 Tashkent time — one reminder per invoice more than three days past due: in the customer portal bell and by email to the project contact and to contacts invited to the portal. Off by default."
+    "remindOverdueHint": "Once a day at 10:00 Tashkent time — one reminder per invoice more than three days past due: in the customer portal bell and by email to the project contact and to contacts invited to the portal. Off by default.",
+    "confirmDays": "Partner price confirmation, days",
+    "expiringDays": "Warn before a partner price expires, days",
+    "actReminderHours": "Pause between act reminders, hours"
   },
   "charges": {
     "title": "Quote charge items",

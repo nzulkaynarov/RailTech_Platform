@@ -8,7 +8,7 @@
 - «срок истёк» — `valid_until` раньше сегодняшнего дня; подтвердить такую цену нельзя, нужен новый прайс;
 - «устарела» — не подтверждена дольше `offer_confirm_days` (настройка компании, по умолчанию 30) дней; точкой отсчёта
   служит позднее из даты подтверждения и даты последнего изменения цены;
-- «истекает» — `valid_until` через `EXPIRING_DAYS` дней или раньше;
+- «истекает» — `valid_until` через `offer_expiring_days` (настройка компании, по умолчанию 14; задача «Н3c») дней или раньше;
 - иначе «актуальна».
 Приоритет: срок истёк > устарела > истекает > актуальна.
 """
@@ -17,8 +17,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, timedelta
 
-#: За сколько дней до конца срока цена помечается «истекает».
-EXPIRING_DAYS = 7
+from .constants import DEFAULT_OFFER_EXPIRING_DAYS
 
 FRESH = "fresh"
 EXPIRING = "expiring"
@@ -36,13 +35,15 @@ def reference_moment(offer) -> datetime | None:
     return max(moments) if moments else offer.created_at
 
 
-def freshness(offer, *, today: date, now: datetime, confirm_days: int) -> str:
+def freshness(
+    offer, *, today: date, now: datetime, confirm_days: int, expiring_days: int = DEFAULT_OFFER_EXPIRING_DAYS
+) -> str:
     valid_until = offer.valid_until
     if valid_until is not None and valid_until < today:
         return EXPIRED
     since = reference_moment(offer)
     if since is not None and now - since > timedelta(days=confirm_days):
         return STALE
-    if valid_until is not None and valid_until <= today + timedelta(days=EXPIRING_DAYS):
+    if valid_until is not None and valid_until <= today + timedelta(days=expiring_days):
         return EXPIRING
     return FRESH

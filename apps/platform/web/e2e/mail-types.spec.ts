@@ -186,10 +186,14 @@ for (const width of WIDTHS) {
     await settledScreenshot(page, "mail-types-price-step", "Тип письма");
     await page.getByRole("button", { name: "Прайс загружен — убрать из очереди" }).click();
     await expect(page.getByText("Письмо разобрано: прайс загружен")).toBeVisible();
-    await spaGoto(page, "/eds/mail?tab=done");
     const done = page.getByRole("list", { name: "Разобранные письма" });
     const row = done.getByRole("listitem").filter({ hasText: "Коммерческое предложение" });
-    await expect(row).toContainText("Прайс загружен");
+    // На загруженном раннере CI список «Разобранные» иногда приходит раньше, чем мок записал решение: открываем вкладку
+    // заново, пока строка не появится (локально — с первого раза).
+    await expect(async () => {
+      await spaGoto(page, "/eds/mail?tab=done");
+      await expect(row).toContainText("Прайс загружен", { timeout: 3_000 });
+    }).toPass({ timeout: 20_000 });
     // ошибочно закрытое письмо не потеряно: его можно вернуть в «Новые»
     await row.getByRole("button", { name: "Вернуть в Новые" }).click();
     await expect(page.getByText("Письмо вернулось в «Новые»")).toBeVisible();
