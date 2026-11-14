@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — EDS API (электронный документооборот)
-  version: 0.18.0
+  version: 0.19.0
   summary: Пространство `/api/v1/` сервиса EDS — вызывает BFF Платформы от имени сотрудника.
   description: |
     Контракт сервиса EDS (`apps/eds`, ADR-0015; `docs/history/runbooks/wave12-eds-c1.md` §2). EDS — владелец реестра документов и
@@ -982,6 +982,44 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/v1/letters/{letter_id}/co-executors:
+    post:
+      tags: [letters]
+      operationId: addCoExecutor
+      summary: Привлечь соисполнителя
+      description: |
+        План 1.9: ответственный исполнитель сам привлекает соисполнителя — кто, что сделать, срок. Уровень один:
+        соисполнитель дальше не передаёт. Срок в прошлом — 422 `details.fields.due = due_in_past`; позже срока
+        ответственного — `after_responsible_due`; сам себя — `crm_user_id = self`; сотрудник уже работает с письмом —
+        `already_assigned`; не найден или отключён — `not_active_employee`. Не ответственный — 403 `not_responsible`; письмо не
+        `in_execution` — 409 `invalid_state`. Соисполнителю — `notice.requested` (вид `instruction_assigned`); его «Исполнено»
+        уходит ответственному (`letter_executed`, заголовок «Соисполнитель отчитался: …»). Журнал `instruction.co_executor_added`.
+      x-rt-permissions: []
+      parameters:
+        - $ref: '#/components/parameters/LetterId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CoExecutorIn'
+      responses:
+        '200':
+          description: Соисполнитель привлечён — карточка письма
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Letter'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
   /api/v1/letters/{letter_id}/close:
     post:
       tags: [letters]
@@ -4919,6 +4957,15 @@ components:
           type: [string, 'null']
           format: date-time
           description: '«Ознакомлен»; `null` — ждёт'
+    CoExecutorIn:
+      type: object
+      additionalProperties: false
+      required: [crm_user_id, text, due]
+      properties:
+        crm_user_id: {type: integer, minimum: 1}
+        text: {type: string, minLength: 1, maxLength: 2000, description: Что сделать}
+        due: {type: string, format: date, description: Не раньше сегодня и не позже срока ответственного}
+
     LetterCloseIn:
       type: object
       additionalProperties: false

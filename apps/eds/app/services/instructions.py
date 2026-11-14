@@ -34,6 +34,7 @@ from app.errors import EdsError, conflict, forbidden, forbidden_reason, invalid_
 from app.models import Acquaintance, Document, Employee, Instruction, InstructionExtension, Letter
 from app.schemas.letters import (
     AcquaintanceTask,
+    CoExecutorIn,
     EmployeeChoice,
     EmployeeList,
     ExtensionDecision,
@@ -504,6 +505,19 @@ async def complete(
     instruction.outgoing_document_id = outgoing.id if outgoing else None
     comment = report if outgoing is None else f"Ответ {outgoing.number}" + (f". {report}" if report else "")
     await journal.record(session, "instruction.executed", by=actor_id, letter_id=letter.id, comment=comment)
+    if instruction.role == "co_executor" and instruction.created_by != letter.resolution_decided_by:
+        # План 1.9: соисполнитель, которого привлёк ответственный, отчитывается ему, а не автору резолюции
+        await notify(
+            session,
+            bus,
+            letter=letter,
+            kind="letter_executed",  # вид v1; что случилось — в заголовке
+            key=f"letter:{letter.id}:co-done:{instruction.id}",
+            recipients=[instruction.created_by],
+            title=f"Соисполнитель отчитался: {letter.number}",
+            subtitle=comment,
+            actor_id=actor_id,
+        )
     await _finish_if_done(session, bus, letter, actor_id)
     return letter
 
@@ -529,6 +543,64 @@ async def _responsible(session: AsyncSession, letter: Letter, actor_id: int) -> 
     if row.status != IN_WORK or letter.status != LetterStatus.IN_EXECUTION.value:
         raise conflict("invalid_state", "Поручение уже закрыто.", status=row.status, expected=IN_WORK)
     return row
+
+
+async def add_co_executor(
+    session: AsyncSession, bus: AsyncBus, *, actor_id: int, letter_id: uuid.UUID, data: CoExecutorIn
+) -> Letter:
+    """План 1.9: ответственный сам привлекает соисполнителя (уровень один: соисполнитель дальше не передаёт). Срок — не
+    раньше сегодня и не позже срока ответственного; соисполнитель отчитывается ответственному."""
+    letter = await _letter_for_update(session, letter_id)
+    mine = await _responsible(session, letter, actor_id)
+    today = _today()
+    _check_due(data.due, today)
+    if data.due > mine.due:
+        raise invalid_fields("Срок соисполнителя — не позже вашего.", due="after_responsible_due")
+    if data.crm_user_id == actor_id:
+        raise invalid_fields("Соисполнитель — другой сотрудник.", crm_user_id="self")
+    if data.crm_user_id not in await active_ids(session, [data.crm_user_id]):
+        raise invalid_fields("Сотрудник не найден или отключён.", crm_user_id="not_active_employee")
+    taken = await session.execute(
+        select(Instruction.id).where(Instruction.letter_id == letter.id, Instruction.crm_user_id == data.crm_user_id)
+    )
+    if taken.scalar_one_or_none() is not None:
+        raise invalid_fields("Сотрудник уже работает с этим письмом.", crm_user_id="already_assigned")
+    now = clock.now()
+    text = data.text.strip()
+    session.add(
+        Instruction(
+            letter_id=letter.id,
+            crm_user_id=data.crm_user_id,
+            role="co_executor",
+            kind="execute",
+            due=data.due,
+            text=text,
+            status=IN_WORK,
+            created_by=actor_id,
+            created_at=now,
+            updated_at=now,
+        )
+    )
+    await journal.record(
+        session,
+        "instruction.co_executor_added",
+        by=actor_id,
+        letter_id=letter.id,
+        comment=f"{text} — до {_fmt(data.due)}",
+    )
+    await notify(
+        session,
+        bus,
+        letter=letter,
+        kind="instruction_assigned",
+        key=f"letter:{letter.id}:co:{data.crm_user_id}:{int(now.timestamp() * 1000)}",
+        recipients=[data.crm_user_id],
+        title=f"Соисполнитель по {letter.number}",
+        subtitle=text,
+        due=data.due,
+        actor_id=actor_id,
+    )
+    return letter
 
 
 async def close_letter(

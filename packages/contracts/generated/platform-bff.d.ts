@@ -949,7 +949,7 @@ export interface paths {
     };
     /**
      * Сквозной поиск — номера, ИНН, название клиента, артикул; результаты группами по модулям
-     * @description Доступен сотруднику с любым видимым разделом (в том числе роли без «Моей очереди»): каждая группа и каждый результат фильтруются по разделам ролей «вида»; источник без разделов у ролей — `not_applicable`.
+     * @description Доступен сотруднику с любым видимым разделом (в том числе роли без «Моей очереди»): каждая группа и каждый результат фильтруются по разделам ролей «вида»; источник без разделов у ролей — `not_applicable`. Товары каталога (группа `erp`, раздел каталога `erp.stock`) ERP ищет по названию, артикулу и ГОСТ, а если пусто — с опечатками и в другой письменности (FR-26).
      */
     get: operations["search"];
     put?: never;
@@ -5021,6 +5021,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/eds/letters/{id}/co-executors": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Привлечь соисполнителя
+     * @description План 1.9. EDS `POST /letters/{id}/co-executors`: ответственный исполнитель привлекает соисполнителя — кто, что сделать, срок не позже своего (решает EDS: не ответственный — 403 `not_responsible`; срок позже — 422 `details.fields.due`; уже работает с письмом — 422 `details.fields.person_id`). Соисполнитель отчитывается ответственному. Ответ — карточка.
+     */
+    post: operations["addCoExecutor"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/eds/letters/{id}/close": {
     parameters: {
       query?: never;
@@ -7438,6 +7458,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/erp/catalog/mxik": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Товары · Подбор МХИК (ИКПУ) из классификатора
+     * @description План 1.8. ERP `master-data/mxik/?q=` → классификатор Налогового комитета (tasnif.soliq.uz): до 10 позиций с кодом, названием, группой, единицей и упаковкой; меньше двух знаков — пусто. Классификатор не ответил — 503 `details.reason = mxik_unavailable`, код вводится вручную. Раздел `erp.stock` — чтение.
+     */
+    get: operations["searchMxik"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/erp/catalog/hs-codes": {
     parameters: {
       query?: never;
@@ -8827,7 +8867,8 @@ export interface components {
       | "ticket"
       | "integration"
       | "supplier_order"
-      | "partner_application";
+      | "partner_application"
+      | "product";
     ObjectRef: {
       kind: components["schemas"]["ObjectKind"];
       /**
@@ -12267,6 +12308,17 @@ export interface components {
       co_executor_ids?: string[];
       acquaint_ids?: string[];
     };
+    CoExecutorIn: {
+      /** @description Сотрудник (crm_user_id) */
+      person_id: string;
+      /** @description Что сделать */
+      text: string;
+      /**
+       * Format: date
+       * @description Не позже срока ответственного
+       */
+      due: string;
+    };
     LetterCloseIn: {
       /** @description Код действующего значения справочника `close-reasons` */
       reason: string;
@@ -14880,6 +14932,23 @@ export interface components {
      * @enum {string}
      */
     CatalogItemKind: "stock" | "on_order" | "service_fixed" | "service_milestones" | "service_time";
+    CatalogMxik: {
+      code: string;
+      name: string;
+      unit: string;
+      package: string;
+    };
+    CatalogMxikHit: {
+      code: string;
+      name: string;
+      /** @description Группа или класс классификатора */
+      group: string;
+      unit: string;
+      package: string;
+    };
+    CatalogMxikPage: {
+      items: components["schemas"]["CatalogMxikHit"][];
+    };
     CatalogNamedRef: {
       id: components["schemas"]["CompanyItemRef"];
       name: string;
@@ -15074,6 +15143,8 @@ export interface components {
       description: string;
       gost_drawing: string;
       hs_code: string;
+      /** @description План 1.8: МХИК (ИКПУ); нет кода — null */
+      mxik?: components["schemas"]["CatalogMxik"] | null;
       manufacturer_part_number: string;
       /** @description Изготовитель (бренд) */
       brand: string | null;
@@ -15221,6 +15292,14 @@ export interface components {
       manufacturer_part_number?: string;
       /** @description Код ТН ВЭД: 2–10 цифр; пусто — снять */
       hs_code?: string;
+      /** @description План 1.8: МХИК (ИКПУ) — 17 цифр; пусто — снять код вместе с названием, единицей и упаковкой */
+      mxik_code?: string;
+      /** @description Название по классификатору (при выборе из него) */
+      mxik_name?: string;
+      /** @description Единица по классификатору */
+      mxik_unit?: string;
+      /** @description Упаковка по классификатору */
+      mxik_package?: string;
       /** @description Страна происхождения; `null` — страна бренда */
       country_of_origin_id?: components["schemas"]["CompanyItemRef"] | null;
       /** @description Гарантия, мес.; `null` — срок компании по умолчанию */
@@ -25354,6 +25433,41 @@ export interface operations {
       503: components["responses"]["BackendUnavailable"];
     };
   };
+  addCoExecutor: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description UUID входящего письма (EDS) */
+        id: components["parameters"]["LetterIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CoExecutorIn"];
+      };
+    };
+    responses: {
+      /** @description Соисполнитель привлечён — карточка письма */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["LetterConflict"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
   closeLetterWithoutReply: {
     parameters: {
       query?: never;
@@ -29684,6 +29798,32 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  searchMxik: {
+    parameters: {
+      query?: {
+        /** @description Слово или код */
+        q?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Позиции классификатора */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CatalogMxikPage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

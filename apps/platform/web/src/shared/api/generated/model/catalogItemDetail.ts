@@ -4,6 +4,7 @@
  */
 import type { CatalogImage } from "./catalogImage";
 import type { CatalogItemKind } from "./catalogItemKind";
+import type { CatalogMxik } from "./catalogMxik";
 import type { CatalogNamedRef } from "./catalogNamedRef";
 import type { CatalogOffer } from "./catalogOffer";
 import type { CatalogOrigin } from "./catalogOrigin";
@@ -42,6 +43,8 @@ export interface CatalogItemDetail {
   description: string;
   gost_drawing: string;
   hs_code: string;
+  /** План 1.8: МХИК (ИКПУ); нет кода — null */
+  mxik?: CatalogMxik | null;
   manufacturer_part_number: string;
   /**
    * Изготовитель (бренд)

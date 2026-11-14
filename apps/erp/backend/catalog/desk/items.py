@@ -262,6 +262,16 @@ def item_detail(product, user) -> dict:
             "description": product.description,
             "gost_drawing": product.gost_drawing,
             "hs_code": product.hs_code,
+            "mxik": (
+                {
+                    "code": product.mxik_code,
+                    "name": product.mxik_name,
+                    "unit": product.mxik_unit,
+                    "package": product.mxik_package,
+                }
+                if product.mxik_code
+                else None
+            ),
             "manufacturer_part_number": product.manufacturer_part_number,
             "brand": product.brand.name if product.brand_id else None,
             "brand_id": product.brand_id,
@@ -481,6 +491,17 @@ def update_item(product: Product, data: dict, actor=None) -> Product:
     old_hs = product.hs_code or ""
     if "hs_code" in data:
         product.hs_code = _hs_code(data["hs_code"])
+    # План 1.8: МХИК — из классификатора (код, название, единица, упаковка) или вручную (только код).
+    if "mxik_code" in data:
+        from catalog.mxik import normalize_code
+
+        try:
+            product.mxik_code = normalize_code(data["mxik_code"])
+        except ValueError as exc:
+            raise ItemError("ITEM_MXIK_CODE_INVALID", "mxik_code") from exc
+        for field in ("mxik_name", "mxik_unit", "mxik_package"):
+            limit = Product._meta.get_field(field).max_length
+            setattr(product, field, (str(data.get(field) or "").strip()[:limit]) if product.mxik_code else "")
     product.save()
     if "hs_code" in data:
         from catalog.services import log_hs_code_change
