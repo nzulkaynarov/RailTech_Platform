@@ -168,6 +168,7 @@ import type {
   DocumentPreview,
   DocumentTemplate,
   DocumentTemplateList,
+  EdsAddresseeList,
   EdsDealOptions,
   EdsDealRef,
   EdsDocument,
@@ -29478,6 +29479,23 @@ export const getRejectCatalogProposalResponseMock = (
   ...overrideResponse,
 });
 
+export const getSearchEdsAddresseesResponseMock = (
+  overrideResponse: Partial<Extract<EdsAddresseeList, object>> = {},
+): EdsAddresseeList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    attention: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    kind: faker.helpers.arrayElement(["client", "partner"] as const),
+  })),
+  ...overrideResponse,
+});
+
 export const getListCounterpartyPeopleResponseMock = (
   overrideResponse: Partial<Extract<CounterpartyPersonPage, object>> = {},
 ): CounterpartyPersonPage => ({
@@ -40401,6 +40419,30 @@ export const getRejectCatalogProposalMockHandler = (
   );
 };
 
+export const getSearchEdsAddresseesMockHandler = (
+  overrideResponse?:
+    | EdsAddresseeList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<EdsAddresseeList> | EdsAddresseeList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/addressees",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSearchEdsAddresseesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getListCounterpartyPeopleMockHandler = (
   overrideResponse?:
     | CounterpartyPersonPage
@@ -41820,6 +41862,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getReturnCatalogItemMockHandler(),
   getAcceptCatalogProposalMockHandler(),
   getRejectCatalogProposalMockHandler(),
+  getSearchEdsAddresseesMockHandler(),
   getListCounterpartyPeopleMockHandler(),
   getRevealCounterpartyContactsMockHandler(),
   getListCatalogSuppliersMockHandler(),

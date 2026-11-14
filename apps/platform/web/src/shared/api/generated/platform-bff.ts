@@ -134,6 +134,7 @@ import type {
   DocumentTemplateUpdate,
   DownloadCsvExportParams,
   DownloadEdsProjectFileParams,
+  EdsAddresseeList,
   EdsConflictResponse,
   EdsDealOptions,
   EdsDocument,
@@ -405,6 +406,7 @@ import type {
   SandboxTurn,
   SaveBotSettingBody,
   SearchCalcCatalogParams,
+  SearchEdsAddresseesParams,
   SearchParams,
   SearchResult,
   SearchStockTraceParams,
@@ -48930,6 +48932,154 @@ export const useRejectCatalogProposal = <
 > => {
   return useMutation(getRejectCatalogProposalMutationOptions(options), queryClient);
 };
+
+export const getSearchEdsAddresseesUrl = (params: SearchEdsAddresseesParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/eds/addressees?${stringifiedParams}`
+    : `/api/v1/eds/addressees`;
+};
+
+/**
+ * ERP `parties/organizations/` (пункт «Ш» плана 2026-11-12): клиенты своей компании и партнёры по названию или ИНН, первые 10. Название, ИНН, общая почта и контактное лицо организации — реквизиты для письма; своя компания не входит. Ручной ввод адресата остаётся. Право `eds.memo.create` (полный доступ) — как у создания документа.
+ * @summary Письмо: адресат из контрагентов
+ */
+export const searchEdsAddressees = async (
+  params: SearchEdsAddresseesParams,
+  options?: Parameters<typeof http>[1],
+): Promise<EdsAddresseeList> => {
+  return http<EdsAddresseeList>(getSearchEdsAddresseesUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getSearchEdsAddresseesQueryKey = (params?: SearchEdsAddresseesParams) => {
+  return [`/api/v1/eds/addressees`, ...(params ? [params] : [])] as const;
+};
+
+export const getSearchEdsAddresseesQueryOptions = <
+  TData = Awaited<ReturnType<typeof searchEdsAddressees>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+>(
+  params: SearchEdsAddresseesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchEdsAddressees>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getSearchEdsAddresseesQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof searchEdsAddressees>>> = ({ signal }) =>
+    searchEdsAddressees(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof searchEdsAddressees>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type SearchEdsAddresseesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof searchEdsAddressees>>
+>;
+export type SearchEdsAddresseesQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse
+>;
+
+export function useSearchEdsAddressees<
+  TData = Awaited<ReturnType<typeof searchEdsAddressees>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+>(
+  params: SearchEdsAddresseesParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchEdsAddressees>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchEdsAddressees>>,
+          TError,
+          Awaited<ReturnType<typeof searchEdsAddressees>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchEdsAddressees<
+  TData = Awaited<ReturnType<typeof searchEdsAddressees>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+>(
+  params: SearchEdsAddresseesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchEdsAddressees>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchEdsAddressees>>,
+          TError,
+          Awaited<ReturnType<typeof searchEdsAddressees>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchEdsAddressees<
+  TData = Awaited<ReturnType<typeof searchEdsAddressees>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+>(
+  params: SearchEdsAddresseesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchEdsAddressees>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Письмо: адресат из контрагентов
+ */
+
+export function useSearchEdsAddressees<
+  TData = Awaited<ReturnType<typeof searchEdsAddressees>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+>(
+  params: SearchEdsAddresseesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchEdsAddressees>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getSearchEdsAddresseesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getListCounterpartyPeopleUrl = (params?: ListCounterpartyPeopleParams) => {
   const normalizedParams = new URLSearchParams();

@@ -12482,6 +12482,34 @@ paths:
           $ref: '#/components/responses/CatalogConflict'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+  /eds/addressees:
+    get:
+      tags: [eds-documents]
+      operationId: searchEdsAddressees
+      summary: 'Письмо: адресат из контрагентов'
+      description: >-
+        ERP `parties/organizations/` (пункт «Ш» плана 2026-11-12): клиенты своей компании и партнёры по названию или ИНН,
+        первые 10. Название, ИНН, общая почта и контактное лицо организации — реквизиты для письма; своя компания не входит.
+        Ручной ввод адресата остаётся. Право `eds.memo.create` (полный доступ) — как у создания документа.
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Часть названия или ИНН
+          schema: {type: string, minLength: 2, maxLength: 100}
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdsAddresseeList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
   /people/contacts:
     get:
       tags: [chats]
@@ -25367,6 +25395,26 @@ components:
         expired_count: {type: integer, minimum: 0, description: Действующих предложений с истёкшим сроком цены}
         expiring_count: {type: integer, minimum: 0, description: Срок цены истекает в ближайшие 14 дней}
         nearest_valid_until: {type: [string, 'null'], format: date}
+    EdsAddressee:
+      type: object
+      additionalProperties: false
+      required: [id, name, inn, email, attention, kind]
+      description: Организация-контрагент для поля «Организация» письма; `attention` — контактное лицо для строки «Кому».
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        name: {type: string}
+        inn: {type: [string, 'null']}
+        email: {type: [string, 'null']}
+        attention: {type: [string, 'null']}
+        kind: {type: string, enum: [client, partner]}
+    EdsAddresseeList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/EdsAddressee'}
     CounterpartyPerson:
       type: object
       additionalProperties: false

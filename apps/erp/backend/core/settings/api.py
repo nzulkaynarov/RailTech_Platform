@@ -185,6 +185,8 @@ SPECTACULAR_SETTINGS = {
         # D2-3: «Номенклатура и поставщики» — одноимённые поля `kind` и `unit` у разных схем.
         "DeskItemKindEnum": ["stock", "on_order", "service_fixed", "service_milestones", "service_time"],
         "BrigadeKindEnum": ["brigade", "person", "subcontractor"],
+        # «Люди» и адресат письма («Ш»): клиент или партнёр — одно перечисление на оба ответа.
+        "DeskPersonKindEnum": ["client", "partner"],
         "TechDocKindEnum": ["tz", "drawing", "certificate", "pnr", "other"],
         "CrewRateUnitEnum": ["day", "hour"],
         # CAT-1: источник цены поставщика и поле предложения изменений карточки.
