@@ -188,6 +188,9 @@ import type {
   EdsRecipient,
   EdsReplyTo,
   EdsStaffList,
+  EdsTemplate,
+  EdsTemplateList,
+  EdsTemplatePreview,
   EmailTemplate,
   EmailTemplateList,
   EmailTemplatePreview,
@@ -6332,6 +6335,131 @@ export const getGetEdsDocumentPdfResponseMock = (
   ready_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   ...overrideResponse,
 });
+
+export const getListEdsTemplatesResponseMock = (
+  overrideResponse: Partial<Extract<EdsTemplateList, object>> = {},
+): EdsTemplateList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.uuid(),
+    kind: faker.helpers.arrayElement(["letter", "memo"] as const),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    variants: {
+      ru: faker.helpers.arrayElement([{}, undefined]),
+      uz: faker.helpers.arrayElement([{}, undefined]),
+      en: faker.helpers.arrayElement([{}, undefined]),
+    },
+    languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+    is_default: faker.datatype.boolean(),
+    active: faker.datatype.boolean(),
+    origin: faker.helpers.arrayElement(["builtin", "custom"] as const),
+    changed: faker.datatype.boolean(),
+    updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  })),
+  ...overrideResponse,
+});
+
+export const getCreateEdsTemplateResponseMock = (
+  overrideResponse: Partial<Extract<EdsTemplate, object>> = {},
+): EdsTemplate => ({
+  id: faker.string.uuid(),
+  kind: faker.helpers.arrayElement(["letter", "memo"] as const),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  variants: {
+    ru: faker.helpers.arrayElement([{}, undefined]),
+    uz: faker.helpers.arrayElement([{}, undefined]),
+    en: faker.helpers.arrayElement([{}, undefined]),
+  },
+  languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+  is_default: faker.datatype.boolean(),
+  active: faker.datatype.boolean(),
+  origin: faker.helpers.arrayElement(["builtin", "custom"] as const),
+  changed: faker.datatype.boolean(),
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getGetEdsTemplateResponseMock = (
+  overrideResponse: Partial<Extract<EdsTemplate, object>> = {},
+): EdsTemplate => ({
+  id: faker.string.uuid(),
+  kind: faker.helpers.arrayElement(["letter", "memo"] as const),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  variants: {
+    ru: faker.helpers.arrayElement([{}, undefined]),
+    uz: faker.helpers.arrayElement([{}, undefined]),
+    en: faker.helpers.arrayElement([{}, undefined]),
+  },
+  languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+  is_default: faker.datatype.boolean(),
+  active: faker.datatype.boolean(),
+  origin: faker.helpers.arrayElement(["builtin", "custom"] as const),
+  changed: faker.datatype.boolean(),
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getUpdateEdsTemplateResponseMock = (
+  overrideResponse: Partial<Extract<EdsTemplate, object>> = {},
+): EdsTemplate => ({
+  id: faker.string.uuid(),
+  kind: faker.helpers.arrayElement(["letter", "memo"] as const),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  variants: {
+    ru: faker.helpers.arrayElement([{}, undefined]),
+    uz: faker.helpers.arrayElement([{}, undefined]),
+    en: faker.helpers.arrayElement([{}, undefined]),
+  },
+  languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+  is_default: faker.datatype.boolean(),
+  active: faker.datatype.boolean(),
+  origin: faker.helpers.arrayElement(["builtin", "custom"] as const),
+  changed: faker.datatype.boolean(),
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getResetEdsTemplateResponseMock = (
+  overrideResponse: Partial<Extract<EdsTemplate, object>> = {},
+): EdsTemplate => ({
+  id: faker.string.uuid(),
+  kind: faker.helpers.arrayElement(["letter", "memo"] as const),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  variants: {
+    ru: faker.helpers.arrayElement([{}, undefined]),
+    uz: faker.helpers.arrayElement([{}, undefined]),
+    en: faker.helpers.arrayElement([{}, undefined]),
+  },
+  languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+  is_default: faker.datatype.boolean(),
+  active: faker.datatype.boolean(),
+  origin: faker.helpers.arrayElement(["builtin", "custom"] as const),
+  changed: faker.datatype.boolean(),
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getPreviewEdsTemplateResponseMock = (
+  overrideResponse: Partial<Extract<EdsTemplatePreview, object>> = {},
+): EdsTemplatePreview => ({
+  hash: faker.helpers.fromRegExp("^[0-9a-f]{64}$"),
+  status: faker.helpers.arrayElement(["pending", "ready", "failed"] as const),
+  error: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  pages: faker.helpers.arrayElement([faker.number.int(), null]),
+  ...overrideResponse,
+});
+
+export const getGetEdsTemplatePreviewResponseMock = (
+  overrideResponse: Partial<Extract<EdsTemplatePreview, object>> = {},
+): EdsTemplatePreview => ({
+  hash: faker.helpers.fromRegExp("^[0-9a-f]{64}$"),
+  status: faker.helpers.arrayElement(["pending", "ready", "failed"] as const),
+  error: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  pages: faker.helpers.arrayElement([faker.number.int(), null]),
+  ...overrideResponse,
+});
+
+export const getDownloadEdsTemplatePreviewResponseMock = (): Blob =>
+  new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
 
 export const getDownloadEdsDocumentPdfResponseMock = (): Blob =>
   new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
@@ -34062,6 +34190,211 @@ export const getGetEdsDocumentPdfMockHandler = (
   );
 };
 
+export const getListEdsTemplatesMockHandler = (
+  overrideResponse?:
+    | EdsTemplateList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<EdsTemplateList> | EdsTemplateList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/templates",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListEdsTemplatesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateEdsTemplateMockHandler = (
+  overrideResponse?:
+    | EdsTemplate
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<EdsTemplate> | EdsTemplate),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/templates",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateEdsTemplateResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetEdsTemplateMockHandler = (
+  overrideResponse?:
+    | EdsTemplate
+    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<EdsTemplate> | EdsTemplate),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/templates/:id",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetEdsTemplateResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateEdsTemplateMockHandler = (
+  overrideResponse?:
+    | EdsTemplate
+    | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<EdsTemplate> | EdsTemplate),
+  options?: RequestHandlerOptions,
+) => {
+  return http.put(
+    "*/eds/templates/:id",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateEdsTemplateResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeleteEdsTemplateMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete(
+    "*/eds/templates/:id",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getResetEdsTemplateMockHandler = (
+  overrideResponse?:
+    | EdsTemplate
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<EdsTemplate> | EdsTemplate),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/templates/:id/reset",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getResetEdsTemplateResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getPreviewEdsTemplateMockHandler = (
+  overrideResponse?:
+    | EdsTemplatePreview
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<EdsTemplatePreview> | EdsTemplatePreview),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/template-previews",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getPreviewEdsTemplateResponseMock(),
+        { status: 202 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetEdsTemplatePreviewMockHandler = (
+  overrideResponse?:
+    | EdsTemplatePreview
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<EdsTemplatePreview> | EdsTemplatePreview),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/template-previews/:id",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetEdsTemplatePreviewResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDownloadEdsTemplatePreviewMockHandler = (
+  overrideResponse?:
+    Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/template-previews/:id/file",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      const binaryBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDownloadEdsTemplatePreviewResponseMock();
+      return new HttpResponse(binaryBody, {
+        status: 200,
+        headers: { "Content-Type": "application/pdf" },
+      });
+    },
+    options,
+  );
+};
+
 export const getDownloadEdsDocumentPdfMockHandler = (
   overrideResponse?:
     Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
@@ -42616,6 +42949,15 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getDownloadEdsProjectFileMockHandler(),
   getRequestEdsDocumentPdfMockHandler(),
   getGetEdsDocumentPdfMockHandler(),
+  getListEdsTemplatesMockHandler(),
+  getCreateEdsTemplateMockHandler(),
+  getGetEdsTemplateMockHandler(),
+  getUpdateEdsTemplateMockHandler(),
+  getDeleteEdsTemplateMockHandler(),
+  getResetEdsTemplateMockHandler(),
+  getPreviewEdsTemplateMockHandler(),
+  getGetEdsTemplatePreviewMockHandler(),
+  getDownloadEdsTemplatePreviewMockHandler(),
   getDownloadEdsDocumentPdfMockHandler(),
   getRequestEdsDocumentRegistrationMockHandler(),
   getSendEdsDocumentMockHandler(),

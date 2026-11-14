@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.88.0
+  version: 0.98.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -1949,7 +1949,9 @@ paths:
       summary: Сквозной поиск — номера, ИНН, название клиента, артикул; результаты группами по модулям
       description: >-
         Доступен сотруднику с любым видимым разделом (в том числе роли без «Моей очереди»): каждая группа и каждый
-        результат фильтруются по разделам ролей «вида»; источник без разделов у ролей — `not_applicable`.
+        результат фильтруются по разделам ролей «вида»; источник без разделов у ролей — `not_applicable`. Товары
+        каталога (группа `erp`, раздел каталога `erp.stock`) ERP ищет по названию, артикулу и ГОСТ, а если пусто — с
+        опечатками и в другой письменности (FR-26).
       parameters:
         - name: q
           in: query
@@ -2660,6 +2662,226 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /eds/templates:
+    get:
+      tags: [eds-documents]
+      operationId: listEdsTemplates
+      summary: 'EDS · Шаблоны писем и служебок (TPL-4, план 3.6)'
+      description: >-
+        EDS `GET /templates`: варианты по языкам, встроенные и свои, один шаблон по умолчанию на вид. Читают те, кто создаёт
+        документы (`eds.memo.create`), делопроизводитель и администратор.
+      parameters:
+        - {name: kind, in: query, required: false, schema: {type: string, enum: [letter, memo]}}
+      responses:
+        '200':
+          description: Шаблоны
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/EdsTemplateList'}
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    post:
+      tags: [eds-documents]
+      operationId: createEdsTemplate
+      summary: 'EDS · Новый шаблон'
+      description: EDS `POST /templates` — делопроизводитель (`eds.inbox.register` полный) и администратор; правила — EDS (422, 409).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/EdsTemplateIn'}
+      responses:
+        '201':
+          description: Сохранено
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/EdsTemplate'}
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/EdsConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /eds/templates/{id}:
+    get:
+      tags: [eds-documents]
+      operationId: getEdsTemplate
+      summary: 'EDS · Шаблон'
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Шаблон
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/EdsTemplate'}
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    put:
+      tags: [eds-documents]
+      operationId: updateEdsTemplate
+      summary: 'EDS · Изменить шаблон'
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/EdsTemplateIn'}
+      responses:
+        '200':
+          description: Сохранено
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/EdsTemplate'}
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/EdsConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    delete:
+      tags: [eds-documents]
+      operationId: deleteEdsTemplate
+      summary: 'EDS · Удалить свой шаблон'
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '204':
+          description: Удалено
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/EdsConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /eds/templates/{id}/reset:
+    post:
+      tags: [eds-documents]
+      operationId: resetEdsTemplate
+      summary: 'EDS · Вернуть встроенный шаблон по умолчанию'
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Возвращён
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/EdsTemplate'}
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/EdsConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /eds/template-previews:
+    post:
+      tags: [eds-documents]
+      operationId: previewEdsTemplate
+      summary: 'EDS · Предпросмотр варианта шаблона на бланке'
+      description: EDS `POST /template-previews` — та же очередь и кэш по хешу, что у писем; нет бланка — 409 `letterhead_missing`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/EdsTemplatePreviewIn'}
+      responses:
+        '202':
+          description: В очереди или готов
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/EdsTemplatePreview'}
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/EdsConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /eds/template-previews/{id}:
+    get:
+      tags: [eds-documents]
+      operationId: getEdsTemplatePreview
+      summary: 'EDS · Состояние предпросмотра'
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, pattern: '^[0-9a-f]{64}$'}}
+      responses:
+        '200':
+          description: Состояние
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/EdsTemplatePreview'}
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /eds/template-previews/{id}/file:
+    get:
+      tags: [eds-documents]
+      operationId: downloadEdsTemplatePreview
+      summary: 'EDS · PDF предпросмотра'
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, pattern: '^[0-9a-f]{64}$'}}
+      responses:
+        '200':
+          description: PDF
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/EdsConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /eds/documents/{id}/pdf/file:
     get:
       tags: [eds-documents]
@@ -16095,7 +16317,7 @@ components:
 
     ObjectKind:
       type: string
-      enum: [lead, client, request, project, letter, quote, contract, invoice, act, memo, chat, ticket, integration, supplier_order, partner_application]
+      enum: [lead, client, request, project, letter, quote, contract, invoice, act, memo, chat, ticket, integration, supplier_order, partner_application, product]
 
     ObjectRef:
       type: object
@@ -18213,6 +18435,70 @@ components:
         number: {type: string, examples: [ВХ-104/26]}
         subject: {type: string}
         path: {type: string, description: 'Карточка ВХ в SPA, `/eds/inbox/{номер}` (если нет раздела «Входящие» — рабочий экран `/eds/tasks/{id}`)'}
+    EdsTemplateVariants:
+      type: object
+      additionalProperties: false
+      properties:
+        ru: {$ref: '#/components/schemas/EdsDocumentBody'}
+        uz: {$ref: '#/components/schemas/EdsDocumentBody'}
+        en: {$ref: '#/components/schemas/EdsDocumentBody'}
+    EdsTemplateIn:
+      type: object
+      additionalProperties: false
+      required: [kind, name, variants]
+      properties:
+        kind: {type: string, enum: [letter, memo]}
+        name: {type: string, minLength: 1, maxLength: 120}
+        variants: {$ref: '#/components/schemas/EdsTemplateVariants'}
+        is_default: {type: boolean}
+        active: {type: boolean}
+    EdsTemplate:
+      type: object
+      additionalProperties: false
+      required: [id, kind, name, variants, languages, is_default, active, origin, changed, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        kind: {type: string, enum: [letter, memo]}
+        name: {type: string}
+        variants:
+          type: object
+          additionalProperties: false
+          description: Тела по языкам, как хранит EDS
+          properties:
+            ru: {type: object, additionalProperties: true}
+            uz: {type: object, additionalProperties: true}
+            en: {type: object, additionalProperties: true}
+        languages:
+          type: array
+          items: {type: string, enum: [ru, uz, en]}
+        is_default: {type: boolean}
+        active: {type: boolean}
+        origin: {type: string, enum: [builtin, custom]}
+        changed: {type: boolean, description: Встроенный и разошёлся с исходником}
+        updated_at: {type: string, format: date-time}
+    EdsTemplateList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/EdsTemplate'}
+    EdsTemplatePreviewIn:
+      type: object
+      additionalProperties: false
+      required: [body]
+      properties:
+        body: {$ref: '#/components/schemas/EdsDocumentBody'}
+    EdsTemplatePreview:
+      type: object
+      additionalProperties: false
+      required: [hash, status, error, pages]
+      properties:
+        hash: {type: string, pattern: '^[0-9a-f]{64}$'}
+        status: {type: string, enum: [pending, ready, failed]}
+        error: {type: [string, 'null']}
+        pages: {type: [integer, 'null']}
     EdsDocumentBody:
       type: object
       additionalProperties: false

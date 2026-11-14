@@ -21,6 +21,7 @@ import { erpWorkCards, erpWorkCounters, erpWorkQueueItems } from "./erpWork";
 import { edsDecisionQueueItems, quoteCounter, quotesToApprove } from "./edsQueue";
 import { coveredQueueItems } from "./profileStore";
 import { handOverNotificationsOf, handOverQueueItems } from "./crmMessages";
+import { readErpCatalog } from "./fixtures/erpCatalog";
 
 /**
  * Имитация сбоя ERP для скриншотов и e2e: `localStorage["rt-pf-mock-erp-down"] = "1"` (страница с MSW читает его при
@@ -328,12 +329,77 @@ export const feedHandlers = [
       );
     }
     const resources = new Set(Object.keys(computeAccess(roles.view).resources));
-    const groups = searchIndex(q, resources, edsDown()).filter(
-      (g) => !erpDown() || g.module === "crm",
-    );
+    const products = resources.has("erp.stock") ? productHits(q) : [];
+    const groups = [
+      ...searchIndex(q, resources, edsDown()),
+      ...(products.length > 0 ? [{ module: "erp" as const, items: products }] : []),
+    ].filter((g) => !erpDown() || g.module === "crm");
     return HttpResponse.json({ groups, sources: sources() });
   }),
 ];
+
+/** Латиница → кириллица для мока FR-26 (в ERP — `catalog.fuzzy`, с опечатками через `pg_trgm`). */
+const LATIN: [string, string][] = [
+  ["sh", "ш"],
+  ["ch", "ч"],
+  ["zh", "ж"],
+  ["ya", "я"],
+  ["yu", "ю"],
+  ["a", "а"],
+  ["b", "б"],
+  ["v", "в"],
+  ["g", "г"],
+  ["d", "д"],
+  ["e", "е"],
+  ["z", "з"],
+  ["i", "и"],
+  ["y", "ы"],
+  ["k", "к"],
+  ["l", "л"],
+  ["m", "м"],
+  ["n", "н"],
+  ["o", "о"],
+  ["p", "п"],
+  ["r", "р"],
+  ["s", "с"],
+  ["t", "т"],
+  ["u", "у"],
+  ["f", "ф"],
+  ["h", "х"],
+  ["x", "х"],
+  ["c", "ц"],
+];
+
+function cyrillic(text: string): string {
+  let out = text;
+  for (const [from, to] of LATIN) out = out.replaceAll(from, to);
+  return out;
+}
+
+/** Товары каталога по названию или артикулу: слово совпадает началом (4 буквы) — грубая замена `pg_trgm` в моке. */
+function productHits(query: string) {
+  const words = cyrillic(query.trim().toLowerCase())
+    .split(/\s+/)
+    .filter((w) => w.length >= 4)
+    .map((w) => w.slice(0, 4));
+  if (words.length === 0) return [];
+  return readErpCatalog()
+    .items.filter((item) => {
+      const hay = `${item.name} ${item.sku}`.toLowerCase();
+      return words.every((w) => hay.includes(w));
+    })
+    .slice(0, 10)
+    .map((item) => ({
+      object: {
+        kind: "product" as const,
+        number: item.sku || item.id,
+        title: item.name,
+        path: `/erp/catalog?item=${item.id}`,
+      },
+      title: item.name,
+      ...(item.sku ? { subtitle: item.sku } : {}),
+    }));
+}
 
 /** Сбросить состояние «прочитано» между тестами. */
 export function resetFeedMocks(): void {
