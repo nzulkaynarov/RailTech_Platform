@@ -320,11 +320,11 @@ describe("единая кнопка «Создать»", () => {
       "aria-disabled",
       "true",
     );
-    // чего роли нельзя — того в окне нет; расчёт у менеджера есть с 0.3 (FR-7), пока «скоро»
+    // чего роли нельзя — того в окне нет; расчёт у менеджера есть с 0.3 (FR-7), с 1.1 — ведёт к выбору заявки
     expect(within(dialog).queryByText("Входящий документ")).toBeNull();
-    expect(within(dialog).getByText("Расчёт").closest("[aria-disabled]")).toHaveAttribute(
-      "aria-disabled",
-      "true",
+    expect(within(dialog).getByText("Расчёт").closest("a")).toHaveAttribute(
+      "href",
+      "/erp/requests?mine=1&new=calc",
     );
   });
 });

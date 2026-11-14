@@ -24270,6 +24270,13 @@ export const getParseCalcTextResponseMock = (
   ...overrideResponse,
 });
 
+export const getParseCalcFileResponseMock = (
+  overrideResponse: Partial<Extract<CalcParseJob, object>> = {},
+): CalcParseJob => ({
+  job_id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
 export const getListStockBalancesResponseMock = (
   overrideResponse: Partial<Extract<StockBalanceList, object>> = {},
 ): StockBalanceList => ({
@@ -39346,6 +39353,30 @@ export const getParseCalcTextMockHandler = (
   );
 };
 
+export const getParseCalcFileMockHandler = (
+  overrideResponse?:
+    | CalcParseJob
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<CalcParseJob> | CalcParseJob),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/calc/:number/parse-file",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getParseCalcFileResponseMock(),
+        { status: 202 },
+      );
+    },
+    options,
+  );
+};
+
 export const getListStockBalancesMockHandler = (
   overrideResponse?:
     | StockBalanceList
@@ -41960,6 +41991,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getNewCalcQuoteVersionMockHandler(),
   getLoseCalcRequestMockHandler(),
   getParseCalcTextMockHandler(),
+  getParseCalcFileMockHandler(),
   getListStockBalancesMockHandler(),
   getGetStockProductMockHandler(),
   getAdjustStockMockHandler(),

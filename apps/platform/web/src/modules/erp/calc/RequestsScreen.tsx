@@ -1,4 +1,4 @@
-import { Button, Card, Segmented } from "antd";
+import { Alert, Button, Card, Segmented } from "antd";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router";
 
@@ -65,11 +65,17 @@ function Stage({ row }: { row: CalcRequestRow }) {
 }
 
 function selectHref(params: URLSearchParams, number: string): string {
+  // План 1.1, «Создать → Расчёт»: выбор заявки открывает расчёт сразу с разбором файла
+  if (params.get("new") === "calc") return `${calcPath(number)}?parse=1`;
   const next = new URLSearchParams(params);
   next.set("request", number);
   next.set("panel", "open");
   next.set("tab", "task");
   return `?${next.toString()}`;
+}
+
+function openPath(params: URLSearchParams, number: string): string {
+  return params.get("new") === "calc" ? `${calcPath(number)}?parse=1` : calcPath(number);
 }
 
 function Rows({ items, selected }: { items: readonly CalcRequestRow[]; selected: string | null }) {
@@ -84,7 +90,7 @@ function Rows({ items, selected }: { items: readonly CalcRequestRow[]; selected:
         {items.map((row) => (
           <li key={row.number}>
             <div className="pf-calc-card-head">
-              <Link className="pf-focusable pf-calc-number" to={calcPath(row.number)}>
+              <Link className="pf-focusable pf-calc-number" to={openPath(params, row.number)}>
                 {row.number}
               </Link>
               <Due due={row.due} />
@@ -98,7 +104,7 @@ function Rows({ items, selected }: { items: readonly CalcRequestRow[]; selected:
               <span className="pf-hint">{row.responsible ?? "—"}</span>
               <LinkButton
                 size="small"
-                to={calcPath(row.number)}
+                to={openPath(params, row.number)}
                 aria-label={t("list.openLabel", { number: row.number })}
               >
                 {t("list.open")}
@@ -121,7 +127,7 @@ function Rows({ items, selected }: { items: readonly CalcRequestRow[]; selected:
           <Link
             className="pf-focusable pf-calc-number"
             to={selectHref(params, row.number)}
-            replace
+            replace={params.get("new") !== "calc"}
             aria-label={t("list.select", { number: row.number })}
             aria-current={selected === row.number ? "true" : undefined}
           >
@@ -255,6 +261,9 @@ export function RequestsScreen() {
           );
         }}
       />
+      {params.get("new") === "calc" ? (
+        <Alert type="info" showIcon message={t("calc:list.pickForCalc")} />
+      ) : null}
       <Card styles={{ body: { padding: 0 } }}>
         <QueryState query={query} labels={labels} rows={10}>
           {(data) =>

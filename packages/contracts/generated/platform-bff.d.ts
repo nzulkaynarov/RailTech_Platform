@@ -5906,6 +5906,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/erp/calc/{number}/parse-file": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · ИИ-разбор файла заявки в строки (предложение)
+     * @description План 1.1: файл заявки — Word (docx, через docling-serve), Excel (xlsx, xls), PDF, изображение (png, jpg, webp) или текст (csv, txt, tsv), не больше 10 МБ. BFF читает тело ограниченно и передаёт ERP `POST /calc/{deal_id}/parse/` как есть; итог — `GET /erp/calc-jobs/{job_id}`, как у разбора текста. Чужой тип или подпись — 422 с полем `file` (`details.reason = file_type_unsupported`); больше 10 МБ — `file_too_large`; Word без docling-serve — итог задания `failed` с `reason = word_unavailable`. Раздел `erp.calc` — полный.
+     */
+    post: operations["parseCalcFile"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/erp/stock/balances": {
     parameters: {
       query?: never;
@@ -13783,6 +13803,13 @@ export interface components {
     CalcParseIn: {
       /** @description Свой текст; без поля — текст заявки */
       text?: string;
+    };
+    CalcParseFileIn: {
+      /**
+       * Format: binary
+       * @description Файл заявки — docx, xlsx, xls, pdf, png, jpg, webp, csv, txt, tsv; до 10 МБ
+       */
+      file: string;
     };
     CalcParseJob: {
       job_id: string;
@@ -26787,6 +26814,43 @@ export interface operations {
     requestBody?: {
       content: {
         "application/json": components["schemas"]["CalcParseIn"];
+      };
+    };
+    responses: {
+      /** @description Разбор поставлен в очередь */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalcParseJob"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["CalcConflict"];
+      422: components["responses"]["ValidationFailed"];
+      429: components["responses"]["TooManyRequests"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  parseCalcFile: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер заявки `ЗВ-ГГГГ-NNN` (как в списке «Заявки в расчёте») */
+        number: components["parameters"]["CalcNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["CalcParseFileIn"];
       };
     };
     responses: {

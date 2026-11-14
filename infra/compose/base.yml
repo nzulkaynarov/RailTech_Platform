@@ -527,6 +527,10 @@ services:
       LITELLM_API_KEY: ${ERP_LITELLM_API_KEY:-${LITELLM_MASTER_KEY}}
       AI_IMPORT_ENABLED: ${ERP_AI_ENABLED:-true}
       AI_DAILY_BUDGET_USD: ${ERP_AI_DAILY_BUDGET_USD:-1}
+      # Word-заявка в расчёт (план 1.1): docx → Markdown через тот же docling-serve, что у базы знаний CRM. На проде сервис
+      # под профилем kb-ingest; без него Word не разбирается (сотрудник вставляет текст), остальные файлы — как раньше.
+      DOCLING_URL: ${ERP_DOCLING_URL:-http://docling:5001}
+      DOCLING_API_KEY: ${DOCLING_API_KEY:-}
       # Шов CRM ↔ ERP (CONTRACTS §0, FIX-01): значений по умолчанию в коде нет; без DEBUG ERP без них
       # не стартует. Имена в .env — как в контракте (WEBHOOK_SECRET); ERP читает их под своими.
       SERVICE_TOKEN_CRM_TO_ERP: ${SERVICE_TOKEN_CRM_TO_ERP:?set in .env}

@@ -290,6 +290,8 @@ class CalcLostInSerializer(serializers.Serializer):
 
 class CalcParseInSerializer(serializers.Serializer):
     text = serializers.CharField(max_length=20000, allow_blank=True, required=False, default="")
+    # План 1.1: файл заявки — Word, Excel, PDF, изображение или текст; модель разбирает его в предложение строк.
+    file = serializers.FileField(required=False, help_text="docx, xlsx, xls, pdf, png, jpg, csv, txt — до 10 МБ")
 
 
 class CalcJobSerializer(serializers.Serializer):

@@ -44,7 +44,8 @@ export const CREATE_KINDS: readonly CreateKind[] = [
     key: "calc",
     group: "sales",
     resources: ["erp.calc"],
-    soon: "soon",
+    // План 1.1: выбор заявки из «Моих расчётов» — расчёт открывается сразу с разбором файла заявки
+    to: "/erp/requests?mine=1&new=calc",
     keywords: ["расчёт", "расчет", "costing", "hisob-kitob"],
   },
   {
