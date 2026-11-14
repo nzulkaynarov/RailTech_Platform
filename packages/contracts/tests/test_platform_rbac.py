@@ -46,6 +46,8 @@ ANY_EMPLOYEE = {
     ("get", "/api/v1/numbering-labels"),
     ("get", "/api/v1/letters/{letter_id}"),
     ("post", "/api/v1/letters/{letter_id}/acquaint"),
+    # План 1.9: соисполнителя привлекает ответственный — проверка внутри операции
+    ("post", "/api/v1/letters/{letter_id}/co-executors"),
     ("post", "/api/v1/instructions/{instruction_id}/complete"),
     ("post", "/api/v1/instructions/{instruction_id}/extension"),
     ("post", "/api/v1/instructions/{instruction_id}/extension/decision"),
@@ -251,6 +253,7 @@ def test_eds_api_global_security_is_the_eds_access_token() -> None:
     assert EDS_YAML["security"] == [{"edsAccess": []}]
     scheme = EDS_YAML["components"]["securitySchemes"]["edsAccess"]
     assert (scheme["type"], scheme["scheme"], scheme["bearerFormat"]) == ("http", "bearer", "JWT")
+    # 0.18.0 — соисполнители от ответственного (план 1.9);
     # 0.17.0 — согласующие от автора и получатели копии документа (пункт 1.6 плана);
     # 0.16.0 — обозначения номеров документооборота `/numbering-labels` (задача «Н2»);
     # 0.15.0 — `stage` реестра («Исходящие» и «Архив») и сумма строки (FR-5);
@@ -263,7 +266,7 @@ def test_eds_api_global_security_is_the_eds_access_token() -> None:
     # 0.8.0 — статусы пути делопроизводства и поручения (P8b); 0.7.0 — договоры, счета, акты в реестре (D2-5);
     # 0.6.0 — код files.upload в перечне ответов EdsPermission (D1-2b);
     # 0.5.0 — зона исполнителя резолюции (D1-8); 0.4.0 — PATCH /documents/{id} (D1-5); 0.3.0 — журнал шины (W13-A2)
-    assert EDS_YAML["info"]["version"] == "0.17.0"
+    assert EDS_YAML["info"]["version"] == "0.18.0"
 
 
 # Коды справочников (EDS-REG) — слаги `^[a-z][a-z_-]…$` без «/», поэтому могут быть в пути.

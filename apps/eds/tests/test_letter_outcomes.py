@@ -122,3 +122,49 @@ async def test_close_reasons_are_a_dictionary(client: httpx.AsyncClient, staff: 
     items = {i["code"]: i for i in listed.json()["items"]}
     assert list(items) == ["no_reply_needed", "advertising", "unreliable_counterparty", "other"]
     assert items["other"]["attrs"]["comment_required"] is True
+
+
+# ── План 1.9: соисполнителей привлекает ответственный ───────────────────────────────────────────
+
+
+async def add_co(client: httpx.AsyncClient, who: Person, letter_id: str, **body: Any) -> httpx.Response:
+    return await client.post(f"/api/v1/letters/{letter_id}/co-executors", json=body, headers=who.headers)
+
+
+async def test_responsible_adds_a_co_executor_who_reports_back(
+    client: httpx.AsyncClient, staff: dict[str, Person], container: Container
+) -> None:
+    import datetime as dt
+
+    letter = await in_execution(client, staff)
+    supplier, engineer, accountant = staff["supplier"], staff["engineer"], staff["accountant"]
+    task = {"crm_user_id": accountant.id, "text": "Сверить тарифы с договором банка", "due": DUE}
+
+    assert_error(await add_co(client, engineer, letter["id"], **task), 403, "FORBIDDEN")
+    later = (dt.date.fromisoformat(DUE) + dt.timedelta(days=5)).isoformat()
+    assert_error(await add_co(client, supplier, letter["id"], **{**task, "due": later}), 422, "VALIDATION_FAILED")
+    assert_error(
+        await add_co(client, supplier, letter["id"], **{**task, "crm_user_id": engineer.id}), 422, "VALIDATION_FAILED"
+    )
+
+    added = await add_co(client, supplier, letter["id"], **task)
+    assert added.status_code == 200, added.text
+    card = added.json()
+    validate("Letter", card)
+    mine = by_person(card, accountant.id)
+    assert (mine["role"], mine["status"], mine["text"]) == (
+        "co_executor",
+        "in_work",
+        "Сверить тарифы с договором банка",
+    )
+    notice = (await notices(container))[-1]
+    assert (notice["kind"], notice["recipients"]) == ("instruction_assigned", [accountant.id])
+
+    done = await client.post(
+        f"/api/v1/instructions/{mine['id']}/complete", json={"report": "Тарифы совпадают"}, headers=accountant.headers
+    )
+    assert done.status_code == 200, done.text
+    notice = (await notices(container))[-1]
+    assert (notice["kind"], notice["recipients"]) == ("letter_executed", [supplier.id])
+    assert notice["title"] == f"Соисполнитель отчитался: {letter['number']}"
+    assert done.json()["status"] == "in_execution", "исход письма выбирает ответственный"
