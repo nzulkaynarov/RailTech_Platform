@@ -153,6 +153,11 @@ import type {
   EdsLetterhead,
   EdsPayloadTooLargeResponse,
   EdsStaffList,
+  EdsTemplate,
+  EdsTemplateIn,
+  EdsTemplateList,
+  EdsTemplatePreview,
+  EdsTemplatePreviewIn,
   EdsUnsupportedMediaResponse,
   EmailTemplate,
   EmailTemplateIn,
@@ -275,6 +280,7 @@ import type {
   ListEdsDealOptionsParams,
   ListEdsDocumentsParams,
   ListEdsProjectsParams,
+  ListEdsTemplatesParams,
   ListEmployeesParams,
   ListExternalChatsParams,
   ListHsCodesParams,
@@ -9253,6 +9259,1198 @@ export function useGetEdsDocumentPdf<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getGetEdsDocumentPdfQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListEdsTemplatesUrl = (params?: ListEdsTemplatesParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/eds/templates?${stringifiedParams}`
+    : `/api/v1/eds/templates`;
+};
+
+/**
+ * EDS `GET /templates`: варианты по языкам, встроенные и свои, один шаблон по умолчанию на вид. Читают те, кто создаёт документы (`eds.memo.create`), делопроизводитель и администратор.
+ * @summary EDS · Шаблоны писем и служебок (TPL-4, план 3.6)
+ */
+export const listEdsTemplates = async (
+  params?: ListEdsTemplatesParams,
+  options?: Parameters<typeof http>[1],
+): Promise<EdsTemplateList> => {
+  return http<EdsTemplateList>(getListEdsTemplatesUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListEdsTemplatesQueryKey = (params?: ListEdsTemplatesParams) => {
+  return [`/api/v1/eds/templates`, ...(params ? [params] : [])] as const;
+};
+
+export const getListEdsTemplatesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listEdsTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListEdsTemplatesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsTemplates>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListEdsTemplatesQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listEdsTemplates>>> = ({ signal }) =>
+    listEdsTemplates(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listEdsTemplates>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListEdsTemplatesQueryResult = NonNullable<Awaited<ReturnType<typeof listEdsTemplates>>>;
+export type ListEdsTemplatesQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListEdsTemplates<
+  TData = Awaited<ReturnType<typeof listEdsTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params: undefined | ListEdsTemplatesParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsTemplates>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEdsTemplates>>,
+          TError,
+          Awaited<ReturnType<typeof listEdsTemplates>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListEdsTemplates<
+  TData = Awaited<ReturnType<typeof listEdsTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListEdsTemplatesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsTemplates>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEdsTemplates>>,
+          TError,
+          Awaited<ReturnType<typeof listEdsTemplates>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListEdsTemplates<
+  TData = Awaited<ReturnType<typeof listEdsTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListEdsTemplatesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsTemplates>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Шаблоны писем и служебок (TPL-4, план 3.6)
+ */
+
+export function useListEdsTemplates<
+  TData = Awaited<ReturnType<typeof listEdsTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListEdsTemplatesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsTemplates>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListEdsTemplatesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateEdsTemplateUrl = () => {
+  return `/api/v1/eds/templates`;
+};
+
+/**
+ * EDS `POST /templates` — делопроизводитель (`eds.inbox.register` полный) и администратор; правила — EDS (422, 409).
+ * @summary EDS · Новый шаблон
+ */
+export const createEdsTemplate = async (
+  edsTemplateIn: EdsTemplateIn,
+  options?: Parameters<typeof http>[1],
+): Promise<EdsTemplate> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<EdsTemplate>(getCreateEdsTemplateUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(edsTemplateIn),
+  });
+};
+
+export const getCreateEdsTemplateMutationKey = () => ["createEdsTemplate"] as const;
+
+export const getCreateEdsTemplateMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createEdsTemplate>>,
+    TError,
+    CreateEdsTemplateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createEdsTemplate>>,
+  TError,
+  CreateEdsTemplateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateEdsTemplateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createEdsTemplate>>,
+    CreateEdsTemplateMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createEdsTemplate(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateEdsTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createEdsTemplate>>
+>;
+export type CreateEdsTemplateMutationBody = EdsTemplateIn;
+export type CreateEdsTemplateMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | EdsConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type CreateEdsTemplateMutationVariables = { data: EdsTemplateIn };
+
+/**
+ * @summary EDS · Новый шаблон
+ */
+export const useCreateEdsTemplate = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createEdsTemplate>>,
+      TError,
+      CreateEdsTemplateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createEdsTemplate>>,
+  TError,
+  CreateEdsTemplateMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateEdsTemplateMutationOptions(options), queryClient);
+};
+
+export const getGetEdsTemplateUrl = (id: string) => {
+  return `/api/v1/eds/templates/${id}`;
+};
+
+/**
+ * @summary EDS · Шаблон
+ */
+export const getEdsTemplate = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<EdsTemplate> => {
+  return http<EdsTemplate>(getGetEdsTemplateUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetEdsTemplateQueryKey = (id: string) => {
+  return [`/api/v1/eds/templates/${id}`] as const;
+};
+
+export const getGetEdsTemplateQueryOptions = <
+  TData = Awaited<ReturnType<typeof getEdsTemplate>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getEdsTemplate>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetEdsTemplateQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getEdsTemplate>>> = ({ signal }) =>
+    getEdsTemplate(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getEdsTemplate>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetEdsTemplateQueryResult = NonNullable<Awaited<ReturnType<typeof getEdsTemplate>>>;
+export type GetEdsTemplateQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetEdsTemplate<
+  TData = Awaited<ReturnType<typeof getEdsTemplate>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getEdsTemplate>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEdsTemplate>>,
+          TError,
+          Awaited<ReturnType<typeof getEdsTemplate>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetEdsTemplate<
+  TData = Awaited<ReturnType<typeof getEdsTemplate>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getEdsTemplate>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEdsTemplate>>,
+          TError,
+          Awaited<ReturnType<typeof getEdsTemplate>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetEdsTemplate<
+  TData = Awaited<ReturnType<typeof getEdsTemplate>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getEdsTemplate>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Шаблон
+ */
+
+export function useGetEdsTemplate<
+  TData = Awaited<ReturnType<typeof getEdsTemplate>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getEdsTemplate>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetEdsTemplateQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getUpdateEdsTemplateUrl = (id: string) => {
+  return `/api/v1/eds/templates/${id}`;
+};
+
+/**
+ * @summary EDS · Изменить шаблон
+ */
+export const updateEdsTemplate = async (
+  id: string,
+  edsTemplateIn: EdsTemplateIn,
+  options?: Parameters<typeof http>[1],
+): Promise<EdsTemplate> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<EdsTemplate>(getUpdateEdsTemplateUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(edsTemplateIn),
+  });
+};
+
+export const getUpdateEdsTemplateMutationKey = () => ["updateEdsTemplate"] as const;
+
+export const getUpdateEdsTemplateMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateEdsTemplate>>,
+    TError,
+    UpdateEdsTemplateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateEdsTemplate>>,
+  TError,
+  UpdateEdsTemplateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateEdsTemplateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateEdsTemplate>>,
+    UpdateEdsTemplateMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateEdsTemplate(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateEdsTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateEdsTemplate>>
+>;
+export type UpdateEdsTemplateMutationBody = EdsTemplateIn;
+export type UpdateEdsTemplateMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | EdsConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UpdateEdsTemplateMutationVariables = { id: string; data: EdsTemplateIn };
+
+/**
+ * @summary EDS · Изменить шаблон
+ */
+export const useUpdateEdsTemplate = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateEdsTemplate>>,
+      TError,
+      UpdateEdsTemplateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateEdsTemplate>>,
+  TError,
+  UpdateEdsTemplateMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateEdsTemplateMutationOptions(options), queryClient);
+};
+
+export const getDeleteEdsTemplateUrl = (id: string) => {
+  return `/api/v1/eds/templates/${id}`;
+};
+
+/**
+ * @summary EDS · Удалить свой шаблон
+ */
+export const deleteEdsTemplate = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getDeleteEdsTemplateUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteEdsTemplateMutationKey = () => ["deleteEdsTemplate"] as const;
+
+export const getDeleteEdsTemplateMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteEdsTemplate>>,
+    TError,
+    DeleteEdsTemplateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteEdsTemplate>>,
+  TError,
+  DeleteEdsTemplateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteEdsTemplateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteEdsTemplate>>,
+    DeleteEdsTemplateMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteEdsTemplate(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteEdsTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteEdsTemplate>>
+>;
+
+export type DeleteEdsTemplateMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | EdsConflictResponse
+  | BackendUnavailableResponse
+>;
+export type DeleteEdsTemplateMutationVariables = { id: string };
+
+/**
+ * @summary EDS · Удалить свой шаблон
+ */
+export const useDeleteEdsTemplate = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteEdsTemplate>>,
+      TError,
+      DeleteEdsTemplateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteEdsTemplate>>,
+  TError,
+  DeleteEdsTemplateMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteEdsTemplateMutationOptions(options), queryClient);
+};
+
+export const getResetEdsTemplateUrl = (id: string) => {
+  return `/api/v1/eds/templates/${id}/reset`;
+};
+
+/**
+ * @summary EDS · Вернуть встроенный шаблон по умолчанию
+ */
+export const resetEdsTemplate = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<EdsTemplate> => {
+  return http<EdsTemplate>(getResetEdsTemplateUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getResetEdsTemplateMutationKey = () => ["resetEdsTemplate"] as const;
+
+export const getResetEdsTemplateMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resetEdsTemplate>>,
+    TError,
+    ResetEdsTemplateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resetEdsTemplate>>,
+  TError,
+  ResetEdsTemplateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getResetEdsTemplateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resetEdsTemplate>>,
+    ResetEdsTemplateMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return resetEdsTemplate(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResetEdsTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof resetEdsTemplate>>
+>;
+
+export type ResetEdsTemplateMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | EdsConflictResponse
+  | BackendUnavailableResponse
+>;
+export type ResetEdsTemplateMutationVariables = { id: string };
+
+/**
+ * @summary EDS · Вернуть встроенный шаблон по умолчанию
+ */
+export const useResetEdsTemplate = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof resetEdsTemplate>>,
+      TError,
+      ResetEdsTemplateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof resetEdsTemplate>>,
+  TError,
+  ResetEdsTemplateMutationVariables,
+  TContext
+> => {
+  return useMutation(getResetEdsTemplateMutationOptions(options), queryClient);
+};
+
+export const getPreviewEdsTemplateUrl = () => {
+  return `/api/v1/eds/template-previews`;
+};
+
+/**
+ * EDS `POST /template-previews` — та же очередь и кэш по хешу, что у писем; нет бланка — 409 `letterhead_missing`.
+ * @summary EDS · Предпросмотр варианта шаблона на бланке
+ */
+export const previewEdsTemplate = async (
+  edsTemplatePreviewIn: EdsTemplatePreviewIn,
+  options?: Parameters<typeof http>[1],
+): Promise<EdsTemplatePreview> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<EdsTemplatePreview>(getPreviewEdsTemplateUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(edsTemplatePreviewIn),
+  });
+};
+
+export const getPreviewEdsTemplateMutationKey = () => ["previewEdsTemplate"] as const;
+
+export const getPreviewEdsTemplateMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof previewEdsTemplate>>,
+    TError,
+    PreviewEdsTemplateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof previewEdsTemplate>>,
+  TError,
+  PreviewEdsTemplateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getPreviewEdsTemplateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof previewEdsTemplate>>,
+    PreviewEdsTemplateMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return previewEdsTemplate(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PreviewEdsTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof previewEdsTemplate>>
+>;
+export type PreviewEdsTemplateMutationBody = EdsTemplatePreviewIn;
+export type PreviewEdsTemplateMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | EdsConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type PreviewEdsTemplateMutationVariables = { data: EdsTemplatePreviewIn };
+
+/**
+ * @summary EDS · Предпросмотр варианта шаблона на бланке
+ */
+export const usePreviewEdsTemplate = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof previewEdsTemplate>>,
+      TError,
+      PreviewEdsTemplateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof previewEdsTemplate>>,
+  TError,
+  PreviewEdsTemplateMutationVariables,
+  TContext
+> => {
+  return useMutation(getPreviewEdsTemplateMutationOptions(options), queryClient);
+};
+
+export const getGetEdsTemplatePreviewUrl = (id: string) => {
+  return `/api/v1/eds/template-previews/${id}`;
+};
+
+/**
+ * @summary EDS · Состояние предпросмотра
+ */
+export const getEdsTemplatePreview = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<EdsTemplatePreview> => {
+  return http<EdsTemplatePreview>(getGetEdsTemplatePreviewUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetEdsTemplatePreviewQueryKey = (id: string) => {
+  return [`/api/v1/eds/template-previews/${id}`] as const;
+};
+
+export const getGetEdsTemplatePreviewQueryOptions = <
+  TData = Awaited<ReturnType<typeof getEdsTemplatePreview>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getEdsTemplatePreview>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetEdsTemplatePreviewQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getEdsTemplatePreview>>> = ({ signal }) =>
+    getEdsTemplatePreview(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getEdsTemplatePreview>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetEdsTemplatePreviewQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getEdsTemplatePreview>>
+>;
+export type GetEdsTemplatePreviewQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetEdsTemplatePreview<
+  TData = Awaited<ReturnType<typeof getEdsTemplatePreview>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getEdsTemplatePreview>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEdsTemplatePreview>>,
+          TError,
+          Awaited<ReturnType<typeof getEdsTemplatePreview>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetEdsTemplatePreview<
+  TData = Awaited<ReturnType<typeof getEdsTemplatePreview>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getEdsTemplatePreview>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEdsTemplatePreview>>,
+          TError,
+          Awaited<ReturnType<typeof getEdsTemplatePreview>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetEdsTemplatePreview<
+  TData = Awaited<ReturnType<typeof getEdsTemplatePreview>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getEdsTemplatePreview>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Состояние предпросмотра
+ */
+
+export function useGetEdsTemplatePreview<
+  TData = Awaited<ReturnType<typeof getEdsTemplatePreview>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getEdsTemplatePreview>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetEdsTemplatePreviewQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getDownloadEdsTemplatePreviewUrl = (id: string) => {
+  return `/api/v1/eds/template-previews/${id}/file`;
+};
+
+/**
+ * @summary EDS · PDF предпросмотра
+ */
+export const downloadEdsTemplatePreview = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<Blob> => {
+  return http<Blob>(getDownloadEdsTemplatePreviewUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getDownloadEdsTemplatePreviewQueryKey = (id: string) => {
+  return [`/api/v1/eds/template-previews/${id}/file`] as const;
+};
+
+export const getDownloadEdsTemplatePreviewQueryOptions = <
+  TData = Awaited<ReturnType<typeof downloadEdsTemplatePreview>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadEdsTemplatePreview>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getDownloadEdsTemplatePreviewQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadEdsTemplatePreview>>> = ({
+    signal,
+  }) => downloadEdsTemplatePreview(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof downloadEdsTemplatePreview>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type DownloadEdsTemplatePreviewQueryResult = NonNullable<
+  Awaited<ReturnType<typeof downloadEdsTemplatePreview>>
+>;
+export type DownloadEdsTemplatePreviewQueryError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | EdsConflictResponse
+  | BackendUnavailableResponse
+>;
+
+export function useDownloadEdsTemplatePreview<
+  TData = Awaited<ReturnType<typeof downloadEdsTemplatePreview>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadEdsTemplatePreview>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadEdsTemplatePreview>>,
+          TError,
+          Awaited<ReturnType<typeof downloadEdsTemplatePreview>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadEdsTemplatePreview<
+  TData = Awaited<ReturnType<typeof downloadEdsTemplatePreview>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadEdsTemplatePreview>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadEdsTemplatePreview>>,
+          TError,
+          Awaited<ReturnType<typeof downloadEdsTemplatePreview>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadEdsTemplatePreview<
+  TData = Awaited<ReturnType<typeof downloadEdsTemplatePreview>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadEdsTemplatePreview>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · PDF предпросмотра
+ */
+
+export function useDownloadEdsTemplatePreview<
+  TData = Awaited<ReturnType<typeof downloadEdsTemplatePreview>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadEdsTemplatePreview>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getDownloadEdsTemplatePreviewQueryOptions(id, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
