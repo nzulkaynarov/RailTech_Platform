@@ -116,6 +116,10 @@ function seed(): CompanyMock {
       show_logo: true,
       show_lead_time: true,
       show_fx_note: false,
+      translations: {
+        uz: { legal_name: "", legal_address: "", signatory_position: "Direktor", footer_text: "" },
+        en: { legal_name: "", legal_address: "", signatory_position: "", footer_text: "" },
+      },
       logo_url: null,
       inherited: {
         legal_name: "ООО «Демо Рейл»",

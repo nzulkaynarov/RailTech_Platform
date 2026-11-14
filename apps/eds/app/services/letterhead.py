@@ -38,6 +38,15 @@ class LogoIn(_Tolerant):
     size: int
 
 
+class LetterheadVariant(_Tolerant):
+    """Бланк на другом языке (TPL-3): только заполненные поля; пустое — берётся основной текст."""
+
+    company_name: str = ""
+    legal_address: str = ""
+    signatory_position: str = ""
+    footer_text: str = ""
+
+
 class LetterheadIn(_Tolerant):
     company_name: str = ""
     inn: str = ""
@@ -50,6 +59,7 @@ class LetterheadIn(_Tolerant):
     font_family: str = "sans"
     logo: LogoIn | None = None
     logo_omitted: str | None = None
+    translations: dict[str, LetterheadVariant] = Field(default_factory=dict)
 
 
 class LetterheadUpdated(_Tolerant):
@@ -102,6 +112,11 @@ async def apply(session: AsyncSession, data: LetterheadUpdated, *, moment: datet
         "signatory_name": src.signatory_name[:255],
         "signatory_position": src.signatory_position[:255],
         "footer_text": src.footer_text,
+        "translations": {
+            lang: variant.model_dump(exclude_defaults=True)
+            for lang, variant in src.translations.items()
+            if lang in VARIANT_LANGS and variant.model_dump(exclude_defaults=True)
+        },
         "accent_color": accent,
         "font_family": src.font_family if src.font_family in ("sans", "serif") else "sans",
         "logo_sha256": logo_sha,
@@ -125,14 +140,25 @@ async def current(session: AsyncSession) -> Letterhead | None:
 _INN = {"ru": "ИНН", "uz": "STIR", "en": "TIN"}
 
 
+#: TPL-3: языки бланка кроме основного (русского)
+VARIANT_LANGS = ("uz", "en")
+
+
+def text(row: Letterhead, field: str, lang: str) -> str:
+    """Поле бланка на языке письма: вариант `uz`/`en`, если он заполнен, иначе основной текст."""
+    variant = (row.translations or {}).get(lang) or {}
+    value = str(variant.get(field) or "").strip()
+    return value or str(getattr(row, field) or "")
+
+
 def requisites(row: Letterhead, lang: str = "ru") -> list[str]:
-    """Строки под названием компании: адрес, ИНН (на языке письма), банк; пустые не печатаются."""
-    lines = [line.strip() for line in row.legal_address.splitlines() if line.strip()]
+    """Строки под названием компании: адрес (на языке письма), ИНН, банк; пустые не печатаются."""
+    lines = [line.strip() for line in text(row, "legal_address", lang).splitlines() if line.strip()]
     if row.inn.strip():
         lines.append(f"{_INN.get(lang, _INN['ru'])} {row.inn.strip()}")
     lines.extend(line.strip() for line in row.bank_details.splitlines() if line.strip())
     return lines
 
 
-def footer(row: Letterhead) -> list[str]:
-    return [line.strip() for line in row.footer_text.splitlines() if line.strip()]
+def footer(row: Letterhead, lang: str = "ru") -> list[str]:
+    return [line.strip() for line in text(row, "footer_text", lang).splitlines() if line.strip()]
