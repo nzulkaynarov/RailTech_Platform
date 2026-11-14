@@ -273,6 +273,7 @@ def test_eds_api_global_security_is_the_eds_access_token() -> None:
     scheme = EDS_YAML["components"]["securitySchemes"]["edsAccess"]
     assert (scheme["type"], scheme["scheme"], scheme["bearerFormat"]) == ("http", "bearer", "JWT")
     # 0.25.0 — «Передать в работу»: `handed_to` поручения (план 1.9);
+    # 0.24.0 — помощник письма `/letter-assist` (план 1.4);
     # 0.23.0 — шаблоны писем и служебок `/templates` (TPL-4, план 3.6);
     # 0.19.0 — соисполнители от ответственного (план 1.9);
     # 0.18.0 — визы бухгалтера и юриста маршрута подписи (ADR-0025);

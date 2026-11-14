@@ -29,6 +29,8 @@ export interface BodyEditorProps {
   invalid?: boolean;
   describedBy?: string | undefined;
   disabled?: boolean;
+  /** Номер замены тела снаружи (помощник письма, план 1.4): смена — редактор берёт `value` целиком */
+  revision?: number;
 }
 
 const EXTENSIONS = [
@@ -57,6 +59,7 @@ export function BodyEditor({
   invalid = false,
   describedBy,
   disabled = false,
+  revision = 0,
 }: BodyEditorProps) {
   const { t } = useTranslation("ui");
   const editor = useEditor({
@@ -76,6 +79,13 @@ export function BodyEditor({
       onChange(current.getJSON() as BodyNode);
     },
   });
+
+  // Тело заменили снаружи (вставка помощника): содержимое — из `value`, без события изменения.
+  useEffect(() => {
+    if (revision > 0) editor.commands.setContent(value, { emitUpdate: false });
+    // value берётся на момент замены; следующий набор идёт через onUpdate
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [revision, editor]);
 
   // Атрибуты, которые меняются после создания: ошибка и подсказки.
   useEffect(() => {
