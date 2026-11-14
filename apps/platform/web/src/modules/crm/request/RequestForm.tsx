@@ -17,6 +17,7 @@ import {
 import { useFormat } from "../../../shared/lib/useFormat";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
+import { StepSections } from "../../../shared/ui/StepSections/StepSections";
 import { reasonError } from "../common/errors";
 import { clientPath, useRefreshCrm } from "../common/params";
 import {
@@ -97,6 +98,19 @@ function ClientMatches({
   );
 }
 
+type SectionKey = "client" | "contact" | "request" | "review";
+
+/** Поле с ошибкой → его секция (форма секциями, platform-frontend.md §4.1a) */
+const SECTION_OF: Record<keyof RequestErrors, SectionKey> = {
+  company: "client",
+  inn: "client",
+  contact: "contact",
+  channel: "contact",
+  summary: "request",
+  letter: "request",
+  consent: "request",
+};
+
 /** Вложение сообщения лида, которое станет письмом директору */
 export interface LetterSource {
   message: number;
@@ -155,6 +169,9 @@ export function RequestForm({ lead, clientId, letterFrom = null, onCancel }: Req
       });
   }, [letterFrom, lead, copy, t]);
   const [tried, setTried] = useState(false);
+  const [active, setActive] = useState<SectionKey>(() =>
+    clientId !== null || lead?.client != null ? "contact" : "client",
+  );
   const [serverError, setServerError] = useState<string | null>(null);
   const [done, setDone] = useState<RequestCreatedView | null>(null);
   const create = useCreateCrmRequest();
@@ -185,6 +202,16 @@ export function RequestForm({ lead, clientId, letterFrom = null, onCancel }: Req
   const set = (change: Partial<RequestFormState>) => {
     setState((prev) => ({ ...prev, ...change }));
   };
+  const sectionInvalid = (key: SectionKey) =>
+    (Object.keys(errors) as (keyof RequestErrors)[]).some((field) => SECTION_OF[field] === key);
+  const clientSummary =
+    state.clientId !== null
+      ? (state.clientName ?? client.data?.name ?? "")
+      : [state.companyName.trim(), state.inn.trim()].filter(Boolean).join(" · ");
+  const picked = contacts.find((c) => c.id === form.contactId);
+  const contactSummary = picked
+    ? contactLabel(picked, t)
+    : [state.fullName.trim(), state.phone.trim() || state.email.trim()].filter(Boolean).join(" · ");
   const describedBy = (field: keyof RequestErrors, hint = false) =>
     [hint ? `${id(field)}-hint` : null, errors[field] ? `${id(field)}-error` : null]
       .filter(Boolean)
@@ -211,7 +238,13 @@ export function RequestForm({ lead, clientId, letterFrom = null, onCancel }: Req
     if (create.isPending) return;
     setTried(true);
     setServerError(null);
-    if (Object.keys(validateRequest(form, ctx)).length > 0) return;
+    const found = validateRequest(form, ctx);
+    // Ошибка открывает свою секцию (platform-frontend.md §4.1a)
+    const first = (Object.keys(found) as (keyof RequestErrors)[])[0];
+    if (first) {
+      setActive(SECTION_OF[first]);
+      return;
+    }
     if (state.letter?.status === "uploading") return;
     create.mutate(
       { data: toRequestPayload(form, ctx, requestKey) },
@@ -248,290 +281,336 @@ export function RequestForm({ lead, clientId, letterFrom = null, onCancel }: Req
         <p className="pf-fp-sub">{t("request:intro")}</p>
       </div>
 
-      <fieldset className="pf-req-group">
-        <legend>{t("request:client.legend")}</legend>
-        {state.clientId !== null ? (
-          <div className="pf-fp-row" style={{ alignItems: "center" }}>
-            <span>
-              {t("request:client.picked", {
-                name: state.clientName ?? client.data?.name ?? `#${String(state.clientId)}`,
-              })}
-            </span>
-            {fixedClient ? null : (
-              <Button
-                type="link"
-                size="small"
-                style={{ padding: 0 }}
-                onClick={() => {
-                  setContactTouched(false);
-                  set({ clientId: null, clientName: null, contactId: null });
-                }}
-              >
-                {t("request:client.change")}
-              </Button>
-            )}
-          </div>
-        ) : (
-          <>
-            <FormField id={id("company")} label={t("request:client.name")}>
-              <Input
-                id={id("company")}
-                value={state.companyName}
-                maxLength={255}
-                aria-invalid={errors.company ? true : undefined}
-                aria-describedby={describedBy("company")}
-                onChange={(event) => {
-                  set({ companyName: event.target.value });
-                }}
-              />
-              <FieldError id={`${id("company")}-error`} text={err("company")} />
-            </FormField>
-            <ClientMatches
-              name={state.companyName}
-              onPick={(picked, name) => {
-                setContactTouched(false);
-                set({ clientId: picked, clientName: name, contactId: null });
-              }}
-            />
-            <FormField
-              id={id("inn")}
-              label={t("request:client.inn")}
-              hint={t("request:client.innHint")}
-            >
-              <Input
-                id={id("inn")}
-                value={state.inn}
-                inputMode="numeric"
-                maxLength={14}
-                aria-invalid={errors.inn ? true : undefined}
-                aria-describedby={describedBy("inn", true)}
-                onChange={(event) => {
-                  set({ inn: event.target.value });
-                }}
-              />
-              <FieldError id={`${id("inn")}-error`} text={err("inn")} />
-            </FormField>
-          </>
-        )}
-      </fieldset>
-
-      <fieldset className="pf-req-group">
-        <legend>{t("request:contact.legend")}</legend>
-        {state.clientId !== null && client.isPending ? (
-          <Skeleton active paragraph={{ rows: 1 }} title={false} />
-        ) : null}
-        {contacts.length > 0 ? (
-          <FormField id={id("contact-pick")} label={t("request:contact.existing")}>
-            <Select
-              id={id("contact-pick")}
-              value={form.contactId ?? 0}
-              options={[
-                ...contacts.map((c) => ({ value: c.id, label: contactLabel(c, t) })),
-                { value: 0, label: t("request:contact.newContact") },
-              ]}
-              onChange={(value: number) => {
-                setContactTouched(true);
-                set({ contactId: value === 0 ? null : value });
-              }}
-            />
-          </FormField>
-        ) : null}
-        {form.contactId === null ? (
-          <>
-            <FormField id={id("contact")} label={t("request:contact.name")}>
-              <Input
-                id={id("contact")}
-                value={state.fullName}
-                maxLength={255}
-                aria-invalid={errors.contact ? true : undefined}
-                aria-describedby={describedBy("contact")}
-                onChange={(event) => {
-                  set({ fullName: event.target.value });
-                }}
-              />
-              <FieldError id={`${id("contact")}-error`} text={err("contact")} />
-            </FormField>
-            <FormField id={id("position")} label={t("request:contact.position")}>
-              <Input
-                id={id("position")}
-                value={state.position}
-                maxLength={255}
-                onChange={(event) => {
-                  set({ position: event.target.value });
-                }}
-              />
-            </FormField>
-            <p className="pf-hint" id={`${id("channel")}-hint`}>
-              {t("request:contact.channelsHint")}
-            </p>
-            {leadTelegram ? (
-              <Checkbox
-                checked={state.useLeadTelegram}
-                onChange={(event) => {
-                  set({ useLeadTelegram: event.target.checked });
-                }}
-              >
-                {t("request:contact.telegram", { username: `@${leadTelegram}` })}
-              </Checkbox>
-            ) : null}
-            <FormField id={id("phone")} label={t("request:contact.phone")}>
-              <Input
-                id={id("phone")}
-                value={state.phone}
-                type="tel"
-                maxLength={32}
-                aria-invalid={errors.channel ? true : undefined}
-                aria-describedby={describedBy("channel", true)}
-                onChange={(event) => {
-                  set({ phone: event.target.value });
-                }}
-              />
-            </FormField>
-            <FormField id={id("email")} label={t("request:contact.email")}>
-              <Input
-                id={id("email")}
-                value={state.email}
-                type="email"
-                maxLength={255}
-                aria-invalid={errors.channel ? true : undefined}
-                aria-describedby={describedBy("channel", true)}
-                onChange={(event) => {
-                  set({ email: event.target.value });
-                }}
-              />
-            </FormField>
-          </>
-        ) : null}
-        <FieldError id={`${id("channel")}-error`} text={err("channel")} />
-      </fieldset>
-
-      <FormField
-        id={id("summary")}
-        label={t("request:summary.label")}
-        hint={t("request:summary.hint")}
-      >
-        <Input.TextArea
-          id={id("summary")}
-          value={state.summary}
-          maxLength={5000}
-          autoSize={{ minRows: 3, maxRows: 8 }}
-          aria-invalid={errors.summary ? true : undefined}
-          aria-describedby={describedBy("summary", true)}
-          onChange={(event) => {
-            set({ summary: event.target.value });
-          }}
-        />
-        <FieldError id={`${id("summary")}-error`} text={err("summary")} />
-      </FormField>
-
-      <FormField
-        id={id("letter")}
-        label={t("request:letter.label")}
-        hint={t("request:letter.hint")}
-      >
-        <LetterField
-          id={id("letter")}
-          value={state.letter}
-          onChange={(letter) => {
-            set({ letter });
-          }}
-        />
-        <FieldError id={`${id("letter")}-error`} text={err("letter")} />
-      </FormField>
-
-      <fieldset className="pf-req-group">
-        <legend>{t("request:urgency.legend")}</legend>
-        <Radio.Group
-          value={state.urgency}
-          onChange={(event) => {
-            set({ urgency: event.target.value as RequestFormState["urgency"] });
-          }}
-          options={[
-            { value: "normal", label: t("request:urgency.normal") },
-            { value: "urgent", label: t("request:urgency.urgent") },
-          ]}
-        />
-      </fieldset>
-
-      {lead ? (
-        <fieldset className="pf-req-group">
-          <legend>{t("request:consent.legend")}</legend>
-          {lead.consent.given_at ? (
-            <p className="pf-fp-sub">
-              {t(
-                lead.consent.method === null
-                  ? "request:consent.given"
-                  : "request:consent.givenStaff",
-                {
-                  date: fmt.date(lead.consent.given_at),
-                },
-              )}
-            </p>
-          ) : (
-            <>
-              <p className="pf-fp-sub">{t("request:consent.missing")}</p>
-              {lead.channel === "telegram" ? (
-                <p className="pf-fp-sub">{t("request:consent.viaBot")}</p>
-              ) : (
-                <>
-                  <Checkbox
-                    checked={state.consentMarked}
-                    aria-invalid={errors.consent ? true : undefined}
+      <StepSections
+        headingLevel={4}
+        active={active}
+        onActiveChange={(key) => {
+          setActive(key as SectionKey);
+        }}
+        sections={[
+          {
+            key: "client",
+            title: t("request:client.legend"),
+            summary: clientSummary,
+            complete: state.clientId !== null || state.companyName.trim() !== "",
+            invalid: sectionInvalid("client"),
+            content: (
+              <div className="pf-fp-stack">
+                {state.clientId !== null ? (
+                  <div className="pf-fp-row" style={{ alignItems: "center" }}>
+                    <span>
+                      {t("request:client.picked", {
+                        name: state.clientName ?? client.data?.name ?? `#${String(state.clientId)}`,
+                      })}
+                    </span>
+                    {fixedClient ? null : (
+                      <Button
+                        type="link"
+                        size="small"
+                        style={{ padding: 0 }}
+                        onClick={() => {
+                          setContactTouched(false);
+                          set({ clientId: null, clientName: null, contactId: null });
+                        }}
+                      >
+                        {t("request:client.change")}
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <FormField id={id("company")} label={t("request:client.name")}>
+                      <Input
+                        id={id("company")}
+                        value={state.companyName}
+                        maxLength={255}
+                        aria-invalid={errors.company ? true : undefined}
+                        aria-describedby={describedBy("company")}
+                        onChange={(event) => {
+                          set({ companyName: event.target.value });
+                        }}
+                      />
+                      <FieldError id={`${id("company")}-error`} text={err("company")} />
+                    </FormField>
+                    <ClientMatches
+                      name={state.companyName}
+                      onPick={(picked, name) => {
+                        setContactTouched(false);
+                        set({ clientId: picked, clientName: name, contactId: null });
+                      }}
+                    />
+                    <FormField
+                      id={id("inn")}
+                      label={t("request:client.inn")}
+                      hint={t("request:client.innHint")}
+                    >
+                      <Input
+                        id={id("inn")}
+                        value={state.inn}
+                        inputMode="numeric"
+                        maxLength={14}
+                        aria-invalid={errors.inn ? true : undefined}
+                        aria-describedby={describedBy("inn", true)}
+                        onChange={(event) => {
+                          set({ inn: event.target.value });
+                        }}
+                      />
+                      <FieldError id={`${id("inn")}-error`} text={err("inn")} />
+                    </FormField>
+                  </>
+                )}
+              </div>
+            ),
+          },
+          {
+            key: "contact",
+            title: t("request:contact.legend"),
+            summary: contactSummary,
+            complete: form.contactId !== null || state.fullName.trim() !== "",
+            invalid: sectionInvalid("contact"),
+            content: (
+              <div className="pf-fp-stack">
+                {state.clientId !== null && client.isPending ? (
+                  <Skeleton active paragraph={{ rows: 1 }} title={false} />
+                ) : null}
+                {contacts.length > 0 ? (
+                  <FormField id={id("contact-pick")} label={t("request:contact.existing")}>
+                    <Select
+                      id={id("contact-pick")}
+                      value={form.contactId ?? 0}
+                      options={[
+                        ...contacts.map((c) => ({ value: c.id, label: contactLabel(c, t) })),
+                        { value: 0, label: t("request:contact.newContact") },
+                      ]}
+                      onChange={(value: number) => {
+                        setContactTouched(true);
+                        set({ contactId: value === 0 ? null : value });
+                      }}
+                    />
+                  </FormField>
+                ) : null}
+                {form.contactId === null ? (
+                  <>
+                    <FormField id={id("contact")} label={t("request:contact.name")}>
+                      <Input
+                        id={id("contact")}
+                        value={state.fullName}
+                        maxLength={255}
+                        aria-invalid={errors.contact ? true : undefined}
+                        aria-describedby={describedBy("contact")}
+                        onChange={(event) => {
+                          set({ fullName: event.target.value });
+                        }}
+                      />
+                      <FieldError id={`${id("contact")}-error`} text={err("contact")} />
+                    </FormField>
+                    <FormField id={id("position")} label={t("request:contact.position")}>
+                      <Input
+                        id={id("position")}
+                        value={state.position}
+                        maxLength={255}
+                        onChange={(event) => {
+                          set({ position: event.target.value });
+                        }}
+                      />
+                    </FormField>
+                    <p className="pf-hint" id={`${id("channel")}-hint`}>
+                      {t("request:contact.channelsHint")}
+                    </p>
+                    {leadTelegram ? (
+                      <Checkbox
+                        checked={state.useLeadTelegram}
+                        onChange={(event) => {
+                          set({ useLeadTelegram: event.target.checked });
+                        }}
+                      >
+                        {t("request:contact.telegram", { username: `@${leadTelegram}` })}
+                      </Checkbox>
+                    ) : null}
+                    <FormField id={id("phone")} label={t("request:contact.phone")}>
+                      <Input
+                        id={id("phone")}
+                        value={state.phone}
+                        type="tel"
+                        maxLength={32}
+                        aria-invalid={errors.channel ? true : undefined}
+                        aria-describedby={describedBy("channel", true)}
+                        onChange={(event) => {
+                          set({ phone: event.target.value });
+                        }}
+                      />
+                    </FormField>
+                    <FormField id={id("email")} label={t("request:contact.email")}>
+                      <Input
+                        id={id("email")}
+                        value={state.email}
+                        type="email"
+                        maxLength={255}
+                        aria-invalid={errors.channel ? true : undefined}
+                        aria-describedby={describedBy("channel", true)}
+                        onChange={(event) => {
+                          set({ email: event.target.value });
+                        }}
+                      />
+                    </FormField>
+                  </>
+                ) : null}
+                <FieldError id={`${id("channel")}-error`} text={err("channel")} />
+              </div>
+            ),
+          },
+          {
+            key: "request",
+            title: t("request:sections.request"),
+            summary: state.summary.trim().slice(0, 80),
+            complete: state.summary.trim() !== "",
+            invalid: sectionInvalid("request"),
+            content: (
+              <div className="pf-fp-stack">
+                <FormField
+                  id={id("summary")}
+                  label={t("request:summary.label")}
+                  hint={t("request:summary.hint")}
+                >
+                  <Input.TextArea
+                    id={id("summary")}
+                    value={state.summary}
+                    maxLength={5000}
+                    autoSize={{ minRows: 3, maxRows: 8 }}
+                    aria-invalid={errors.summary ? true : undefined}
+                    aria-describedby={describedBy("summary", true)}
                     onChange={(event) => {
-                      set({ consentMarked: event.target.checked });
+                      set({ summary: event.target.value });
                     }}
+                  />
+                  <FieldError id={`${id("summary")}-error`} text={err("summary")} />
+                </FormField>
+                <FormField
+                  id={id("letter")}
+                  label={t("request:letter.label")}
+                  hint={t("request:letter.hint")}
+                >
+                  <LetterField
+                    id={id("letter")}
+                    value={state.letter}
+                    onChange={(letter) => {
+                      set({ letter });
+                    }}
+                  />
+                  <FieldError id={`${id("letter")}-error`} text={err("letter")} />
+                </FormField>
+                <fieldset className="pf-req-group">
+                  <legend>{t("request:urgency.legend")}</legend>
+                  <Radio.Group
+                    value={state.urgency}
+                    onChange={(event) => {
+                      set({ urgency: event.target.value as RequestFormState["urgency"] });
+                    }}
+                    options={[
+                      { value: "normal", label: t("request:urgency.normal") },
+                      { value: "urgent", label: t("request:urgency.urgent") },
+                    ]}
+                  />
+                </fieldset>
+                {lead ? (
+                  <fieldset className="pf-req-group">
+                    <legend>{t("request:consent.legend")}</legend>
+                    {lead.consent.given_at ? (
+                      <p className="pf-fp-sub">
+                        {t(
+                          lead.consent.method === null
+                            ? "request:consent.given"
+                            : "request:consent.givenStaff",
+                          {
+                            date: fmt.date(lead.consent.given_at),
+                          },
+                        )}
+                      </p>
+                    ) : (
+                      <>
+                        <p className="pf-fp-sub">{t("request:consent.missing")}</p>
+                        {lead.channel === "telegram" ? (
+                          <p className="pf-fp-sub">{t("request:consent.viaBot")}</p>
+                        ) : (
+                          <>
+                            <Checkbox
+                              checked={state.consentMarked}
+                              aria-invalid={errors.consent ? true : undefined}
+                              onChange={(event) => {
+                                set({ consentMarked: event.target.checked });
+                              }}
+                            >
+                              {t("request:consent.mark")}
+                            </Checkbox>
+                            {state.consentMarked ? (
+                              <>
+                                <FormField
+                                  id={id("consent-method")}
+                                  label={t("request:consent.method")}
+                                >
+                                  <Select
+                                    id={id("consent-method")}
+                                    value={state.consentMethod}
+                                    options={(["phone", "email", "paper"] as const).map(
+                                      (value) => ({
+                                        value,
+                                        label: t(`request:consent.methods.${value}`),
+                                      }),
+                                    )}
+                                    onChange={(value) => {
+                                      set({ consentMethod: value });
+                                    }}
+                                  />
+                                </FormField>
+                                <FormField
+                                  id={id("consent-comment")}
+                                  label={t("request:consent.comment")}
+                                >
+                                  <Input
+                                    id={id("consent-comment")}
+                                    value={state.consentComment}
+                                    maxLength={500}
+                                    onChange={(event) => {
+                                      set({ consentComment: event.target.value });
+                                    }}
+                                  />
+                                </FormField>
+                              </>
+                            ) : null}
+                          </>
+                        )}
+                      </>
+                    )}
+                    <FieldError id={`${id("consent")}-error`} text={err("consent")} />
+                  </fieldset>
+                ) : null}
+              </div>
+            ),
+          },
+          {
+            key: "review",
+            title: t("request:sections.review"),
+            content: (
+              <div className="pf-fp-stack">
+                <p className="pf-fp-sub">{t("request:clientGets")}</p>
+                <ErrorNote message={serverError} />
+
+                <div className="pf-crm-actions" data-sheet={mobile}>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    loading={create.isPending}
+                    disabled={state.letter?.status === "uploading"}
                   >
-                    {t("request:consent.mark")}
-                  </Checkbox>
-                  {state.consentMarked ? (
-                    <>
-                      <FormField id={id("consent-method")} label={t("request:consent.method")}>
-                        <Select
-                          id={id("consent-method")}
-                          value={state.consentMethod}
-                          options={(["phone", "email", "paper"] as const).map((value) => ({
-                            value,
-                            label: t(`request:consent.methods.${value}`),
-                          }))}
-                          onChange={(value) => {
-                            set({ consentMethod: value });
-                          }}
-                        />
-                      </FormField>
-                      <FormField id={id("consent-comment")} label={t("request:consent.comment")}>
-                        <Input
-                          id={id("consent-comment")}
-                          value={state.consentComment}
-                          maxLength={500}
-                          onChange={(event) => {
-                            set({ consentComment: event.target.value });
-                          }}
-                        />
-                      </FormField>
-                    </>
-                  ) : null}
-                </>
-              )}
-            </>
-          )}
-          <FieldError id={`${id("consent")}-error`} text={err("consent")} />
-        </fieldset>
-      ) : null}
-
-      <p className="pf-fp-sub">{t("request:clientGets")}</p>
-      <ErrorNote message={serverError} />
-
-      <div className="pf-crm-actions" data-sheet={mobile}>
-        <Button
-          type="primary"
-          htmlType="submit"
-          loading={create.isPending}
-          disabled={state.letter?.status === "uploading"}
-        >
-          {create.isPending ? t("request:submitting") : t("request:submit")}
-        </Button>
-        <Button onClick={onCancel}>{t("request:cancel")}</Button>
-      </div>
+                    {create.isPending ? t("request:submitting") : t("request:submit")}
+                  </Button>
+                  <Button onClick={onCancel}>{t("request:cancel")}</Button>
+                </div>
+              </div>
+            ),
+          },
+        ]}
+      />
     </form>
   );
 }

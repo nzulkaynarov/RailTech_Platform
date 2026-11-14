@@ -23,8 +23,11 @@ export interface StepSectionsProps {
   sections: readonly StepSection[];
   active: string;
   onActiveChange: (key: string) => void;
-  /** Уровень заголовков секций: 2 — на странице документа, 3 — внутри вкладки с заголовком `h2` (настройки) */
-  headingLevel?: 2 | 3;
+  /**
+   * Уровень заголовков секций: 2 — на странице документа, 3 — внутри вкладки с заголовком `h2` (настройки), 4 — в боковом
+   * окне под заголовком формы `h3`
+   */
+  headingLevel?: 2 | 3 | 4;
 }
 
 /**
@@ -38,7 +41,7 @@ export function StepSections({
   headingLevel = 2,
 }: StepSectionsProps) {
   const { t } = useTranslation("ui");
-  const Heading = headingLevel === 3 ? "h3" : "h2";
+  const Heading = headingLevel === 4 ? "h4" : headingLevel === 3 ? "h3" : "h2";
   const base = useId();
   return (
     <ol className="pf-fsteps">

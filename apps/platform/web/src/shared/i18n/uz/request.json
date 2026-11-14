@@ -94,5 +94,9 @@
     "request_not_retryable": "Qayta yuborish yordam bermaydi: yuborilgandan keyin ariza ma’lumotlari o‘zgardi — arizani qayta yarating",
     "enqueue_failed": "Yuborishni navbatga qo‘yib bo‘lmadi — birozdan keyin qayta urinib ko‘ring",
     "generic": "Ariza yaratib bo‘lmadi. Shakl ma’lumotlari saqlandi — qayta urinib ko‘ring"
+  },
+  "sections": {
+    "request": "So‘rov",
+    "review": "Tekshirish va yuborish"
   }
 }
