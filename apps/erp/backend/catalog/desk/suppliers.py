@@ -19,6 +19,7 @@ from parties.models import Company
 from catalog.desk.access import can_view_supplier_prices
 from catalog.desk.audit import record, snapshot
 from catalog.desk.items import ItemError, current_offer_q, expiring_days, offer_row
+from catalog.lead_time import lead_days_from_text
 from catalog.models import StockStatus, SupplierOffer
 from catalog.services import offer_validity_error
 
@@ -298,6 +299,11 @@ def _apply_terms(offer: SupplierOffer, data: dict) -> None:
         offer.delivery_basis = basis
     if "lead_time" in data:
         offer.delivery_lead_time = (data["lead_time"] or "").strip()[:100]
+        if "in_stock_lead_days" not in data and "order_lead_days" not in data:
+            # Plan 0.6 (FR-15): «30 дн.» typed as words must reach the calculation and the order as days.
+            days = lead_days_from_text(offer.delivery_lead_time)
+            if days is not None:
+                offer.order_lead_time_days = days
     if "supplier_sku" in data:
         offer.supplier_sku = (data["supplier_sku"] or "").strip()[:100]
     if "source" in data:

@@ -42,6 +42,8 @@ import pandas as pd
 import pghistory
 from django.db import transaction
 
+from catalog.lead_time import lead_days_from_text
+
 logger = logging.getLogger(__name__)
 
 MAX_EXCEL_ROWS = 50_000
@@ -539,6 +541,9 @@ def _upsert_offer(ctx: _Ctx, product, offer: dict) -> bool:
     for key in ("valid_from", "valid_until"):
         if offer.get(key) is not None:
             defaults[key] = offer[key]
+    lead_days = lead_days_from_text(offer["lead"])
+    if lead_days is not None:  # plan 0.6 (FR-15): the price-list term reaches the calculation as days
+        defaults["order_lead_time_days"] = lead_days
     if ctx.contact is not None:
         # Свежий прайс из кабинета сам подтверждает актуальность загруженных цен (PART-2) — кроме цены, срок которой уже
         # прошёл (по дню Ташкента): подтвердить истёкшую цену нельзя ни кнопкой, ни загрузкой.

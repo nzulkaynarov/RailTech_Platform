@@ -136,6 +136,32 @@ def test_supplier_card_lists_supplied_and_manufactured_brands(world):
 # --- цена поставщика вручную и история ----------------------------------------------------------------------------
 
 
+def test_offer_lead_time_in_words_reaches_the_calculation_as_days(world):
+    """Plan 0.6 (FR-15): «30 дн.» from the price form becomes order_lead_time_days; explicit days win."""
+    plant = _plant("Завод Срочный", inn="302222233")
+    path = f"/api/v1/catalog/suppliers/{plant.pk}/offers/"
+    body = {"product_id": world["relay"].pk, "price": {"amount": "250.00", "currency": "USD"}, "lead_time": "30 дн."}
+    created = world["clients"]["supply"].post(path, body, format="json")
+    assert created.status_code == 201, created.content
+    offer = SupplierOffer.objects.get(pk=created.json()["id"])
+    assert (offer.delivery_lead_time, offer.order_lead_time_days) == ("30 дн.", 30)
+
+    patched = world["clients"]["supply"].patch(f"{path}{offer.pk}/", {"lead_time": "2-3 недели"}, format="json")
+    assert patched.status_code == 200, patched.content
+    offer.refresh_from_db()
+    assert offer.order_lead_time_days == 21
+
+    world["clients"]["supply"].patch(
+        f"{path}{offer.pk}/", {"lead_time": "6 недель", "order_lead_days": 40}, format="json"
+    )
+    offer.refresh_from_db()
+    assert offer.order_lead_time_days == 40, "days typed as a number win over the words"
+
+    world["clients"]["supply"].patch(f"{path}{offer.pk}/", {"lead_time": "по запросу"}, format="json")
+    offer.refresh_from_db()
+    assert offer.order_lead_time_days == 40, "unreadable words keep the days"
+
+
 def test_offer_create_with_incoterms_and_history(world):
     basis = DeliveryBasis.objects.get_or_create(code="FCA", defaults={"name": "Free Carrier"})[0]
     plant = _plant("Завод Полярный", inn="302222222")
@@ -191,6 +217,8 @@ def test_staff_import_writes_offers_of_the_chosen_supplier_with_validity(world, 
     assert offer.base_price == Decimal("120.00") and offer.currency.code == "USD" and offer.min_order_qty == 10
     assert (offer.valid_from, offer.valid_until) == (date(2026, 11, 1), date(2027, 3, 31))
     assert offer.source == SupplierOffer.Source.PRICE_LIST
+    # Plan 0.6 (FR-15): «Срок поставки: 30 дн.» of the price list reaches the calculation as days
+    assert (offer.delivery_lead_time, offer.order_lead_time_days) == ("30 дн.", 30)
     product = offer.product
     assert product.owner_company_id == world["own"].pk and product.source_supplier_id == plant.pk
     assert product.status.code == "DRAFT"
