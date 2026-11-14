@@ -929,7 +929,7 @@ export interface paths {
     };
     /**
      * Сквозной поиск — номера, ИНН, название клиента, артикул; результаты группами по модулям
-     * @description Доступен сотруднику с любым видимым разделом (в том числе роли без «Моей очереди»): каждая группа и каждый результат фильтруются по разделам ролей «вида»; источник без разделов у ролей — `not_applicable`.
+     * @description Доступен сотруднику с любым видимым разделом (в том числе роли без «Моей очереди»): каждая группа и каждый результат фильтруются по разделам ролей «вида»; источник без разделов у ролей — `not_applicable`. Товары каталога (группа `erp`, раздел каталога `erp.stock`) ERP ищет по названию, артикулу и ГОСТ, а если пусто — с опечатками и в другой письменности (FR-26).
      */
     get: operations["search"];
     put?: never;
@@ -1263,6 +1263,120 @@ export interface paths {
      * @description EDS `POST /documents/{id}/pdf` (P4). PDF строит фоновый воркер EDS (`rt-docs`), ответ сразу — состояние `pending` или `ready` (кэш по хешу тела и бланка); экран опрашивает `GET /eds/documents/{id}/pdf`. Только письмо с телом (`letter.body`). Бланк компании ещё не получен — 409 `CONFLICT` (`details.reason = letterhead_missing`): админ сохраняет «Компания и бланки» (Настройки), и бланк приходит в EDS сам.
      */
     post: operations["requestEdsDocumentPdf"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/templates": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Шаблоны писем и служебок (TPL-4, план 3.6)
+     * @description EDS `GET /templates`: варианты по языкам, встроенные и свои, один шаблон по умолчанию на вид. Читают те, кто создаёт документы (`eds.memo.create`), делопроизводитель и администратор.
+     */
+    get: operations["listEdsTemplates"];
+    put?: never;
+    /**
+     * EDS · Новый шаблон
+     * @description EDS `POST /templates` — делопроизводитель (`eds.inbox.register` полный) и администратор; правила — EDS (422, 409).
+     */
+    post: operations["createEdsTemplate"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/templates/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** EDS · Шаблон */
+    get: operations["getEdsTemplate"];
+    /** EDS · Изменить шаблон */
+    put: operations["updateEdsTemplate"];
+    post?: never;
+    /** EDS · Удалить свой шаблон */
+    delete: operations["deleteEdsTemplate"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/templates/{id}/reset": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** EDS · Вернуть встроенный шаблон по умолчанию */
+    post: operations["resetEdsTemplate"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/template-previews": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Предпросмотр варианта шаблона на бланке
+     * @description EDS `POST /template-previews` — та же очередь и кэш по хешу, что у писем; нет бланка — 409 `letterhead_missing`.
+     */
+    post: operations["previewEdsTemplate"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/template-previews/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** EDS · Состояние предпросмотра */
+    get: operations["getEdsTemplatePreview"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/template-previews/{id}/file": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** EDS · PDF предпросмотра */
+    get: operations["downloadEdsTemplatePreview"];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -5001,6 +5115,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/eds/letters/{id}/co-executors": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Привлечь соисполнителя
+     * @description План 1.9. EDS `POST /letters/{id}/co-executors`: ответственный исполнитель привлекает соисполнителя — кто, что сделать, срок не позже своего (решает EDS: не ответственный — 403 `not_responsible`; срок позже — 422 `details.fields.due`; уже работает с письмом — 422 `details.fields.person_id`). Соисполнитель отчитывается ответственному. Ответ — карточка.
+     */
+    post: operations["addCoExecutor"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/eds/letters/{id}/close": {
     parameters: {
       query?: never;
@@ -7418,6 +7552,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/erp/catalog/mxik": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Товары · Подбор МХИК (ИКПУ) из классификатора
+     * @description План 1.8. ERP `master-data/mxik/?q=` → классификатор Налогового комитета (tasnif.soliq.uz): до 10 позиций с кодом, названием, группой, единицей и упаковкой; меньше двух знаков — пусто. Классификатор не ответил — 503 `details.reason = mxik_unavailable`, код вводится вручную. Раздел `erp.stock` — чтение.
+     */
+    get: operations["searchMxik"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/erp/catalog/hs-codes": {
     parameters: {
       query?: never;
@@ -8770,7 +8924,8 @@ export interface components {
       | "ticket"
       | "integration"
       | "supplier_order"
-      | "partner_application";
+      | "partner_application"
+      | "product";
     ObjectRef: {
       kind: components["schemas"]["ObjectKind"];
       /**
@@ -9938,6 +10093,60 @@ export interface components {
       subject: string;
       /** @description Карточка ВХ в SPA, `/eds/inbox/{номер}` (если нет раздела «Входящие» — рабочий экран `/eds/tasks/{id}`) */
       path: string;
+    };
+    EdsTemplateVariants: {
+      ru?: components["schemas"]["EdsDocumentBody"];
+      uz?: components["schemas"]["EdsDocumentBody"];
+      en?: components["schemas"]["EdsDocumentBody"];
+    };
+    EdsTemplateIn: {
+      /** @enum {string} */
+      kind: "letter" | "memo";
+      name: string;
+      variants: components["schemas"]["EdsTemplateVariants"];
+      is_default?: boolean;
+      active?: boolean;
+    };
+    EdsTemplate: {
+      /** Format: uuid */
+      id: string;
+      /** @enum {string} */
+      kind: "letter" | "memo";
+      name: string;
+      /** @description Тела по языкам, как хранит EDS */
+      variants: {
+        ru?: {
+          [key: string]: unknown;
+        };
+        uz?: {
+          [key: string]: unknown;
+        };
+        en?: {
+          [key: string]: unknown;
+        };
+      };
+      languages: ("ru" | "uz" | "en")[];
+      is_default: boolean;
+      active: boolean;
+      /** @enum {string} */
+      origin: "builtin" | "custom";
+      /** @description Встроенный и разошёлся с исходником */
+      changed: boolean;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    EdsTemplateList: {
+      items: components["schemas"]["EdsTemplate"][];
+    };
+    EdsTemplatePreviewIn: {
+      body: components["schemas"]["EdsDocumentBody"];
+    };
+    EdsTemplatePreview: {
+      hash: string;
+      /** @enum {string} */
+      status: "pending" | "ready" | "failed";
+      error: string | null;
+      pages: number | null;
     };
     /** @description Тело документа на бланке — контракт `packages/contracts/documents/body.schema.json` (D-DOC1): абзацы, заголовки, списки, таблицы; без цветов, шрифтов и HTML. Проверяет EDS (422, `details.fields = [body]`). */
     EdsDocumentBody: {
@@ -12223,6 +12432,17 @@ export interface components {
       text: string;
       co_executor_ids?: string[];
       acquaint_ids?: string[];
+    };
+    CoExecutorIn: {
+      /** @description Сотрудник (crm_user_id) */
+      person_id: string;
+      /** @description Что сделать */
+      text: string;
+      /**
+       * Format: date
+       * @description Не позже срока ответственного
+       */
+      due: string;
     };
     LetterCloseIn: {
       /** @description Код действующего значения справочника `close-reasons` */
@@ -14837,6 +15057,23 @@ export interface components {
      * @enum {string}
      */
     CatalogItemKind: "stock" | "on_order" | "service_fixed" | "service_milestones" | "service_time";
+    CatalogMxik: {
+      code: string;
+      name: string;
+      unit: string;
+      package: string;
+    };
+    CatalogMxikHit: {
+      code: string;
+      name: string;
+      /** @description Группа или класс классификатора */
+      group: string;
+      unit: string;
+      package: string;
+    };
+    CatalogMxikPage: {
+      items: components["schemas"]["CatalogMxikHit"][];
+    };
     CatalogNamedRef: {
       id: components["schemas"]["CompanyItemRef"];
       name: string;
@@ -15031,6 +15268,8 @@ export interface components {
       description: string;
       gost_drawing: string;
       hs_code: string;
+      /** @description План 1.8: МХИК (ИКПУ); нет кода — null */
+      mxik?: components["schemas"]["CatalogMxik"] | null;
       manufacturer_part_number: string;
       /** @description Изготовитель (бренд) */
       brand: string | null;
@@ -15178,6 +15417,14 @@ export interface components {
       manufacturer_part_number?: string;
       /** @description Код ТН ВЭД: 2–10 цифр; пусто — снять */
       hs_code?: string;
+      /** @description План 1.8: МХИК (ИКПУ) — 17 цифр; пусто — снять код вместе с названием, единицей и упаковкой */
+      mxik_code?: string;
+      /** @description Название по классификатору (при выборе из него) */
+      mxik_name?: string;
+      /** @description Единица по классификатору */
+      mxik_unit?: string;
+      /** @description Упаковка по классификатору */
+      mxik_package?: string;
       /** @description Страна происхождения; `null` — страна бренда */
       country_of_origin_id?: components["schemas"]["CompanyItemRef"] | null;
       /** @description Гарантия, мес.; `null` — срок компании по умолчанию */
@@ -18498,6 +18745,267 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["EdsDocumentPdf"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["EdsConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listEdsTemplates: {
+    parameters: {
+      query?: {
+        kind?: "letter" | "memo";
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Шаблоны */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsTemplateList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createEdsTemplate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EdsTemplateIn"];
+      };
+    };
+    responses: {
+      /** @description Сохранено */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsTemplate"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["EdsConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getEdsTemplate: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Шаблон */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsTemplate"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  updateEdsTemplate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EdsTemplateIn"];
+      };
+    };
+    responses: {
+      /** @description Сохранено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsTemplate"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["EdsConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  deleteEdsTemplate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Удалено */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["EdsConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  resetEdsTemplate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Возвращён */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsTemplate"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["EdsConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  previewEdsTemplate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EdsTemplatePreviewIn"];
+      };
+    };
+    responses: {
+      /** @description В очереди или готов */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsTemplatePreview"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["EdsConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getEdsTemplatePreview: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Состояние */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsTemplatePreview"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  downloadEdsTemplatePreview: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description PDF */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/pdf": string;
         };
       };
       401: components["responses"]["SessionExpired"];
@@ -25289,6 +25797,41 @@ export interface operations {
       503: components["responses"]["BackendUnavailable"];
     };
   };
+  addCoExecutor: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description UUID входящего письма (EDS) */
+        id: components["parameters"]["LetterIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CoExecutorIn"];
+      };
+    };
+    responses: {
+      /** @description Соисполнитель привлечён — карточка письма */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["LetterConflict"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
   closeLetterWithoutReply: {
     parameters: {
       query?: never;
@@ -29619,6 +30162,32 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  searchMxik: {
+    parameters: {
+      query?: {
+        /** @description Слово или код */
+        q?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Позиции классификатора */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CatalogMxikPage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

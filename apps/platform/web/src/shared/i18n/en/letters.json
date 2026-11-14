@@ -1242,6 +1242,15 @@
     "more": "More",
     "cancel": "Cancel",
     "failed": "Failed. Try again.",
+    "co": {
+      "action": "Add a co-executor",
+      "title": "{{number}}: co-executor",
+      "person": "Employee",
+      "text": "What to do",
+      "due": "Due — not later than yours",
+      "submit": "Add",
+      "done": "Co-executor added: {{number}}"
+    },
     "close": {
       "action": "Close without reply",
       "title": "{{number}}: close without reply",

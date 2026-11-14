@@ -2,7 +2,7 @@
 Пусто у прежнего бланка — письма печатаются основным текстом, как раньше. Откат удаляет колонку.
 
 Revision ID: f69980474676
-Revises: 1ab826e3a38f
+Revises: e435ea723f87
 """
 
 from collections.abc import Sequence
@@ -12,7 +12,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "f69980474676"
-down_revision: str | Sequence[str] | None = "1ab826e3a38f"
+down_revision: str | Sequence[str] | None = "e435ea723f87"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

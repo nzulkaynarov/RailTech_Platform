@@ -324,3 +324,49 @@ describe("Карточка товара: страна происхождения
     expect(within(form).getByRole("button", { name: "Сохранить" })).toBeDisabled();
   });
 });
+
+describe("МХИК в карточке товара (план 1.8)", () => {
+  it("подбор из классификатора: выбор подставляет код и название; карточка показывает их", async () => {
+    let sent: unknown = null;
+    server.use(
+      http.patch("*/erp/catalog/items/:id", async ({ request }) => {
+        sent = await request.clone().json();
+        return undefined;
+      }),
+    );
+    const drawer = await openCable("supply@demo.example");
+    fireEvent.click(await within(drawer).findByRole("button", { name: "Изменить позицию" }));
+    const form = await findModal("Изменить позицию");
+    const field = within(form).getByLabelText("МХИК (ИКПУ)");
+    fireEvent.change(field, { target: { value: "кабель" } });
+    fireEvent.click(await screen.findByText(/08544001001000000 · Кабели силовые с медными жилами/));
+    fireEvent.click(within(form).getByRole("button", { name: "Сохранить" }));
+    await waitFor(() => {
+      expect(sent).toEqual({
+        mxik_code: "08544001001000000",
+        mxik_name: "Кабели силовые с медными жилами",
+        mxik_unit: "метр",
+        mxik_package: "барабан",
+      });
+    });
+    await modalClosed("Изменить позицию");
+    expect(
+      await within(drawer).findByText("08544001001000000 · Кабели силовые с медными жилами · метр"),
+    ).toBeVisible();
+  });
+
+  it("классификатор не отвечает — подсказка и ввод кода вручную; неполный код не уходит", async () => {
+    const drawer = await openCable("supply@demo.example");
+    fireEvent.click(await within(drawer).findByRole("button", { name: "Изменить позицию" }));
+    const form = await findModal("Изменить позицию");
+    const field = within(form).getByLabelText("МХИК (ИКПУ)");
+    fireEvent.change(field, { target: { value: "реле" } });
+    expect(
+      await within(form).findByText("Классификатор не отвечает — введите код вручную"),
+    ).toBeInTheDocument();
+    fireEvent.change(field, { target: { value: "0854" } });
+    expect(within(form).getByRole("button", { name: "Сохранить" })).toBeDisabled();
+    fireEvent.change(field, { target: { value: "08544001001000000" } });
+    expect(within(form).getByRole("button", { name: "Сохранить" })).toBeEnabled();
+  });
+});

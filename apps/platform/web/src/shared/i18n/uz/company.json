@@ -535,5 +535,40 @@
       "title": "Hozircha hisoblar yo‘q",
       "text": "So‘mdagi asosiy hisobni qo‘shing: usiz mijozga hisob-faktura chiqarib bo‘lmaydi."
     }
+  },
+  "letterTemplates": {
+    "tab": "Blankda",
+    "caption": "Xat va xizmat xatlari shablonlari",
+    "create": "Yangi shablon",
+    "createTitle": "Yangi shablon",
+    "open": "Ochish: {{name}}",
+    "emptyTitle": "Shablonlar yo‘q",
+    "emptyText": "Birinchi xat shablonini yarating.",
+    "name": "Nomi",
+    "language": "Variant tili",
+    "body": "Matn ({{lang}})",
+    "emptyLanguage": "Bo‘sh til saqlanmaydi: shu tildagi hujjat bo‘sh varaqdan boshlanadi.",
+    "makeDefault": "Shu tur uchun asosiy",
+    "save": "Shablonni saqlash",
+    "reset": "Asl holiga qaytarish",
+    "resetTitle": "«{{name}}» asl holiga qaytarilsinmi?",
+    "resetWhat": "Barcha tillardagi matnlar asl nusxa bilan almashtiriladi. Tuzatishlaringiz yo‘qoladi.",
+    "resetDone": "Shablon qaytarildi",
+    "preview": "Blankdagi PDF",
+    "previewEmpty": "Matn yozing — bu yerda blankdagi PDF paydo bo‘ladi.",
+    "previewPending": "PDF tayyorlanmoqda…",
+    "previewFailed": "PDF yaratilmadi",
+    "default": "Asosiy",
+    "changed": "O‘zgartirilgan",
+    "columns": {
+      "name": "Nomi",
+      "kind": "Turi",
+      "languages": "Tillar",
+      "label": "Belgi"
+    },
+    "kinds": {
+      "letter": "Xat",
+      "memo": "Xizmat xati"
+    }
   }
 }

@@ -40,6 +40,7 @@ from app.schemas_eds_letters import (
     NUMBER_RE,
     UUID_RE,
     ZONES,
+    CoExecutorIn,
     EdsStaffList,
     EdsStaffMember,
     InstructionCompleteIn,
@@ -409,6 +410,17 @@ async def complete_instruction(
 async def close_letter(id: LetterId, body: LetterCloseIn, authed: Participant) -> LetterCard:
     """«Закрыть без ответа» (решение владельца 2026-11-11): ответственного проверяет EDS."""
     return await _card(authed, await _letters(authed).close(str(id), body.for_eds()))
+
+
+@router.post(
+    "/letters/{id}/co-executors",
+    response_model=LetterCard,
+    response_model_exclude_unset=True,
+    operation_id="addCoExecutor",
+)
+async def add_co_executor(id: LetterId, body: CoExecutorIn, authed: Participant) -> LetterCard:
+    """План 1.9: ответственный привлекает соисполнителя; ответственного и срок проверяет EDS."""
+    return await _card(authed, await _letters(authed).add_co_executor(str(id), body.for_eds()))
 
 
 @router.post(

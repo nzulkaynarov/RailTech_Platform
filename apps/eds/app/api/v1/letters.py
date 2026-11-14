@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_bus, get_session, require_permission
 from app.models import Employee
 from app.schemas.letters import (
+    CoExecutorIn,
     EmployeeList,
     ExtensionDecisionIn,
     ExtensionRequestIn,
@@ -251,6 +252,18 @@ async def close_letter(
     """«Закрыть без ответа» — ответственный исполнитель, причина из справочника `close-reasons`."""
     async with session.begin():
         letter = await instructions.close_letter(
+            session, bus, actor_id=employee.crm_user_id, letter_id=letter_id, data=body
+        )
+        return await letters_read.present(session, letter, employee)
+
+
+@router.post("/letters/{letter_id}/co-executors", response_model=Letter, operation_id="addCoExecutor")
+async def add_co_executor(
+    letter_id: uuid.UUID, body: CoExecutorIn, employee: Anyone, session: Session, bus: Bus
+) -> Letter:
+    """План 1.9: ответственный привлекает соисполнителя; срок — не позже своего."""
+    async with session.begin():
+        letter = await instructions.add_co_executor(
             session, bus, actor_id=employee.crm_user_id, letter_id=letter_id, data=body
         )
         return await letters_read.present(session, letter, employee)

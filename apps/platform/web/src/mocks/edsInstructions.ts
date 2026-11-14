@@ -8,6 +8,7 @@ import type {
   InstructionExtensionIn,
   LetterCard,
   LetterCloseIn,
+  CoExecutorIn,
   LetterInstruction,
   LetterReply,
   LetterResolutionDraft,
@@ -712,6 +713,56 @@ export const edsInstructionsHandlers = [
         journal: [...letter.journal, entry("letter.acknowledged", user)],
       }),
     );
+  }),
+
+  // План 1.9: соисполнителя привлекает ответственный; срок не позже своего — правила как у EDS.
+  http.post("*/eds/letters/:id/co-executors", async ({ request, params }) => {
+    const user = me();
+    if (!user) return expired();
+    const letter = readLetters().find((l) => l.id === String(params["id"]));
+    if (!letter) return notFound();
+    const mine = (letter.instructions ?? []).find(
+      (i) => i.person.id === user.id && i.role === "responsible",
+    );
+    if (!mine) {
+      return failure(403, "FORBIDDEN", "Исход письма выбирает ответственный.", {
+        reason: "not_responsible",
+      });
+    }
+    if (mine.status !== "in_work" || letter.status !== "in_execution") {
+      return conflict("invalid_state", "Поручение уже закрыто.");
+    }
+    const body = (await request.json()) as CoExecutorIn;
+    if (body.due > mine.due)
+      return invalid("due", "after_responsible_due", "Срок — не позже вашего.");
+    const person = personOf(body.person_id);
+    if (!person) return invalid("person_id", "not_active_employee", "Сотрудник не найден.");
+    if ((letter.instructions ?? []).some((i) => i.person.id === person.id)) {
+      return invalid("person_id", "already_assigned", "Сотрудник уже работает с этим письмом.");
+    }
+    const next: LetterCard = {
+      ...letter,
+      instructions: [
+        ...(letter.instructions ?? []),
+        {
+          id: `co-${String(Date.now())}`,
+          kind: "execute",
+          role: "co_executor",
+          person,
+          due: body.due,
+          text: body.text,
+          status: "in_work",
+          overdue: false,
+          report: null,
+          files: [],
+          outgoing: null,
+          executed_at: null,
+          extensions: [],
+        },
+      ],
+      journal: [...letter.journal, entry("instruction.co_executor_added", user, body.text)],
+    };
+    return HttpResponse.json(save(next));
   }),
 
   // Исходы письма (решение владельца 2026-11-11) — правила как у EDS.
