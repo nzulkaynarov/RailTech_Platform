@@ -68,7 +68,11 @@ async def test_visa_step_is_a_visa_row() -> None:
                         "label": "Виза бухгалтера",
                         "assignee": {"crm_user_id": None, "permission": "approvals.visa_finance"},
                     },
-                    "object": {"kind": "signing", "signing_kind": "contract", "signing_number": "Д-501"},
+                    "object": {
+                        "kind": "signing",
+                        "signing_kind": "contract",
+                        "signing_number": "Д-501",
+                    },
                 }
             ]
         }
