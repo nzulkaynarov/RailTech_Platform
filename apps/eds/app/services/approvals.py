@@ -291,7 +291,8 @@ async def _apply(
         )
     if route.template != ApprovalTemplate.SIGNING.value:
         await _publish_decided(session, bus, employee, route, document, current, body, route_status, now)
-    if route_status is RouteStatus.OPEN and following is not None:
+    if route_status is RouteStatus.OPEN and following is not None and route.template != ApprovalTemplate.SIGNING.value:
+        # Маршрут подписи (ADR-0025: визы, затем «Подписать») `approval.*` не публикует: итог — `signing.decided`.
         await _publish_step_requested(session, bus, employee, route, document, following)
     if document is not None:  # статус документа и архив — после решения: события идут в порядке причин
         await document_state.apply_decision(

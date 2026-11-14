@@ -5020,6 +5020,8 @@ export const getListSigningApprovalsResponseMock = (
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.string.uuid(),
     kind: faker.helpers.arrayElement(["quote", "contract", "invoice", "act"] as const),
+    action: faker.helpers.arrayElement(["visa", "sign"] as const),
+    step: faker.string.alpha({ length: { min: 10, max: 20 } }),
     number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     title: faker.string.alpha({ length: { min: 10, max: 20 } }),
     amount: faker.helpers.arrayElement([
