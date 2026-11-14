@@ -11097,6 +11097,58 @@ paths:
         '429': {$ref: '#/components/responses/TooManyRequests'}
         '503': {$ref: '#/components/responses/BackendUnavailable'}
 
+  /erp/calc/{number}/previous:
+    get:
+      tags: [calc]
+      operationId: listCalcPrevious
+      summary: 'Расчёт · Прошлые расчёты клиента для «Как в прошлой заявке»'
+      description: >-
+        План 1.5. ERP `GET /calc/{deal_id}/previous/`: прошлые заявки того же клиента с непустым расчётом, новые сверху,
+        до 20; у каждой — число строк и первые три позиции. Раздел `erp.calc` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CalcNumberPath'
+      responses:
+        '200':
+          description: Прошлые расчёты
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CalcPreviousPage'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/calc/{number}/copy:
+    post:
+      tags: [calc]
+      operationId: copyCalcLines
+      summary: 'Расчёт · «Как в прошлой заявке»: состав прошлого расчёта, цены сегодняшние'
+      description: >-
+        План 1.5. ERP `POST /calc/{deal_id}/copy/`: строки прошлого расчёта того же клиента — новыми строками черновика
+        тем же путём, что ручные (цены партнёров — действующие сегодня). Копируются строки своей зоны (товары или услуги);
+        `skipped` — сколько строк чужой зоны добавит коллега. Прошлая заявка ищется только среди прошлых расчётов клиента:
+        другой номер — 404 `previous_not_found`. Раздел `erp.calc.goods` или `erp.calc.services` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CalcNumberPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CalcCopyIn'}
+      responses:
+        '201':
+          description: Строки добавлены
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CalcCopyResult'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/CalcConflict'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
   /erp/stock/balances:
     get:
       tags: [stock]
@@ -23835,6 +23887,41 @@ components:
           type: string
           format: binary
           description: Файл заявки — docx, xlsx, xls, pdf, png, jpg, webp, csv, txt, tsv; до 10 МБ
+    CalcPrevious:
+      type: object
+      additionalProperties: false
+      required: [number, title, created_at, lines, names]
+      properties:
+        number: {type: string, description: Номер прошлой заявки (ЗВ-…)}
+        title: {type: string}
+        created_at: {type: string, format: date-time}
+        lines: {type: integer, minimum: 0, description: Сколько строк скопируется}
+        names: {type: array, items: {type: string}, description: Первые три позиции}
+
+    CalcPreviousPage:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/CalcPrevious'}
+
+    CalcCopyIn:
+      type: object
+      additionalProperties: false
+      required: [source]
+      properties:
+        source: {type: string, minLength: 1, maxLength: 40, description: Номер прошлой заявки (ЗВ-…)}
+
+    CalcCopyResult:
+      type: object
+      additionalProperties: false
+      required: [sheet, skipped]
+      properties:
+        sheet: {$ref: '#/components/schemas/CalcSheet'}
+        skipped: {type: integer, minimum: 0, description: Строки чужой зоны — их добавит коллега}
+
     CalcParseJob:
       type: object
       additionalProperties: false
