@@ -28,6 +28,9 @@ INTAKE_MODEL: Final = "intake-model"
 # Функция → алиас. Новая функция без строки здесь не позовёт модель (KeyError — ошибка кода, а не тихий выбор модели).
 FUNCTION_ALIASES: Final[dict[str, str]] = {
     "letter_intake": INTAKE_MODEL,  # письмо организации (PDF-текст или скан) → поля карточки входящего
+    # План 1.4: помощник исходящего письма — черновик по поручению и перевод с обратным переводом
+    "letter_draft": "draft-model",
+    "letter_translate": "draft-model",
 }
 FALLBACK_ALIAS: Final = "fallback-model"
 CHAT_PATH: Final = "/v1/chat/completions"

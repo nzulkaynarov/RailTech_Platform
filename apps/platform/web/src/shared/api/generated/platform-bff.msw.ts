@@ -240,6 +240,7 @@ import type {
   LeadManagerList,
   LeadNotice,
   LeadPage,
+  LetterAssistSuggestion,
   LetterCard,
   LetterClient,
   LetterDuplicateList,
@@ -21025,6 +21026,23 @@ export const getUpdateResolutionTemplateResponseMock = (
   ...overrideResponse,
 });
 
+export const getAssistLetterTextResponseMock = (
+  overrideResponse: Partial<Extract<LetterAssistSuggestion, object>> = {},
+): LetterAssistSuggestion => ({
+  suggestion_id: faker.string.uuid(),
+  body: {
+    version: 1,
+    lang: faker.helpers.arrayElement(["ru", "uz", "en"] as const),
+    page: faker.helpers.arrayElement([{}, undefined]),
+    doc: {},
+  },
+  back_translation: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  ...overrideResponse,
+});
+
 export const getSuggestLetterFromFileResponseMock = (
   overrideResponse: Partial<Extract<LetterIntakeSuggestion, object>> = {},
 ): LetterIntakeSuggestion => ({
@@ -39406,6 +39424,30 @@ export const getDeleteResolutionTemplateMockHandler = (
   );
 };
 
+export const getAssistLetterTextMockHandler = (
+  overrideResponse?:
+    | LetterAssistSuggestion
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<LetterAssistSuggestion> | LetterAssistSuggestion),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/letter-assist",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getAssistLetterTextResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getSuggestLetterFromFileMockHandler = (
   overrideResponse?:
     | LetterIntakeSuggestion
@@ -43009,6 +43051,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getCreateResolutionTemplateMockHandler(),
   getUpdateResolutionTemplateMockHandler(),
   getDeleteResolutionTemplateMockHandler(),
+  getAssistLetterTextMockHandler(),
   getSuggestLetterFromFileMockHandler(),
   getDecideAiSuggestionMockHandler(),
   getGetDocflowSettingsMockHandler(),

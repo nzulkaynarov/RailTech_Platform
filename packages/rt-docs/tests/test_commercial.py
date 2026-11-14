@@ -1,6 +1,7 @@
 """Блоки коммерческих документов (план 2.6): узлы по контракту, подписи на языке документа, суммы и прописью."""
 
 from decimal import Decimal
+from typing import Any
 
 from rt_docs import Layout, Letterhead, validate_blocks
 from rt_docs.commercial import Line, Totals, items_table, payment_requisites, totals_block
@@ -20,7 +21,7 @@ TOTALS = Totals(
 )
 
 
-def blocks(lang: str) -> dict[str, list[dict]]:
+def blocks(lang: str) -> dict[str, list[dict[str, Any]]]:
     return {
         "doc.items_table": items_table(LINES, "UZS", lang),  # type: ignore[arg-type]
         "doc.totals": totals_block(TOTALS, "UZS", lang),  # type: ignore[arg-type]
