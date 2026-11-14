@@ -395,6 +395,39 @@ def test_order_for_a_project_shortage(world):
     assert again.status_code == 409 and again.json() == {"detail": "NO_SHORTAGE"}, "уже заказано в живом ЗП"
 
 
+def test_order_for_a_project_keeps_the_calc_unit_and_expects_the_partner_lead_time(world):
+    """Plan 0.6 (FR-15): «компл.» of the calculation line reaches the order; the date follows the partner lead time."""
+    from sales.models import QuoteItem
+
+    from catalog.models import SupplierOffer
+    from master_data.models import Currency
+
+    deal, _q, (rail,) = make_deal(world, [(world["rail"], 2)])
+    QuoteItem.objects.filter(pk=rail.pk).update(unit="компл.")
+    SupplierOffer.objects.update_or_create(
+        product=world["rail"],
+        supplier=world["vendor"],
+        defaults={
+            "base_price": Decimal("900.00"),
+            "currency": Currency.objects.get(code="UZS"),
+            "order_lead_time_days": 30,
+            "in_stock_lead_time_days": 0,
+            "stock_quantity": 0,
+            "is_active": True,
+        },
+    )
+    response = api(world["supply"]).post(
+        f"{STOCK}orders/from-deal/", {"deal_id": deal.pk, "supplier_id": world["vendor"].pk}, format="json"
+    )
+    assert response.status_code == 201, response.json()
+    order = SupplierOrder.objects.get(pk=response.json()["id"])
+    assert [line.unit for line in order.lines.all()] == ["компл."]
+    assert order.expected_date == timezone.localdate() + timedelta(days=30)
+
+    dated = _create(world, [_line(world["rail"], 1)], expected_date=_tomorrow())
+    assert dated.json()["expected_date"] == _tomorrow(), "a date the officer typed is kept"
+
+
 # ── права ───────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 
