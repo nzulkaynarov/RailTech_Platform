@@ -233,3 +233,27 @@ describe("Входящая почта: «Подозрительные» и «и�
     expect(screen.getByRole("radio", { name: "Из истории · 0" })).toBeChecked();
   });
 });
+
+describe("Почта · Отправленные (план 2.8, MAIL-1)", () => {
+  it("вкладка рядом с входящими: поиск по адресату и теме, статус доставки, текст по нажатию", async () => {
+    signIn(REGISTRAR);
+    renderAt("/eds/mail?tab=sent");
+    const table = await screen.findByRole("table", { name: "Отправленные письма" });
+    expect(within(table).getAllByRole("row")).toHaveLength(4);
+    expect(within(table).getByText("Не доставлено")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Поиск по отправленным" }), {
+      target: { value: "требование" },
+    });
+    await waitFor(() => {
+      expect(
+        within(screen.getByRole("table", { name: "Отправленные письма" })).getAllByRole("row"),
+      ).toHaveLength(2);
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Ответ на требование о пояснениях/ }));
+    const drawer = await screen.findByRole("dialog", { name: /Ответ на требование/ });
+    expect(await within(drawer).findByText(/Направляем ответ на требование/)).toBeInTheDocument();
+    expect(within(drawer).getByRole("link", { name: "Открыть документ" })).toBeInTheDocument();
+  });
+});

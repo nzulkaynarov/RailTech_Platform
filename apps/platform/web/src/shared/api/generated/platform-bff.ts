@@ -292,6 +292,7 @@ import type {
   ListPaymentMemosParams,
   ListPaymentsParams,
   ListQuoteApprovalsParams,
+  ListSentMailParams,
   ListSigningAuthoritiesParams,
   ListStockBalancesParams,
   ListStockReservationsParams,
@@ -417,6 +418,8 @@ import type {
   SearchParams,
   SearchResult,
   SearchStockTraceParams,
+  SentMailBody,
+  SentMailPage,
   SentMessage,
   ServiceConsoleKey,
   ServiceConsoleList,
@@ -6554,6 +6557,304 @@ export function useStreamEvents<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getStreamEventsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListSentMailUrl = (params?: ListSentMailParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/mail/sent?${stringifiedParams}`
+    : `/api/v1/mail/sent`;
+};
+
+/**
+ * CRM `GET /mail/sent`: письма ансамбля новыми первыми — поиск по адресату и теме, статус, курсор. Сотрудник видит письма, отправленные по его запросу, администратор (`integrations:read` CRM) — все. `path` — карточка документа EDS у письма на бланке.
+ * @summary Почта · Отправленные (план 2.8, MAIL-1)
+ */
+export const listSentMail = async (
+  params?: ListSentMailParams,
+  options?: Parameters<typeof http>[1],
+): Promise<SentMailPage> => {
+  return http<SentMailPage>(getListSentMailUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListSentMailQueryKey = (params?: ListSentMailParams) => {
+  return [`/api/v1/mail/sent`, ...(params ? [params] : [])] as const;
+};
+
+export const getListSentMailQueryOptions = <
+  TData = Awaited<ReturnType<typeof listSentMail>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListSentMailParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listSentMail>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListSentMailQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listSentMail>>> = ({ signal }) =>
+    listSentMail(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listSentMail>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListSentMailQueryResult = NonNullable<Awaited<ReturnType<typeof listSentMail>>>;
+export type ListSentMailQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+
+export function useListSentMail<
+  TData = Awaited<ReturnType<typeof listSentMail>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: undefined | ListSentMailParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listSentMail>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listSentMail>>,
+          TError,
+          Awaited<ReturnType<typeof listSentMail>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListSentMail<
+  TData = Awaited<ReturnType<typeof listSentMail>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListSentMailParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listSentMail>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listSentMail>>,
+          TError,
+          Awaited<ReturnType<typeof listSentMail>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListSentMail<
+  TData = Awaited<ReturnType<typeof listSentMail>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListSentMailParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listSentMail>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Почта · Отправленные (план 2.8, MAIL-1)
+ */
+
+export function useListSentMail<
+  TData = Awaited<ReturnType<typeof listSentMail>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListSentMailParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listSentMail>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListSentMailQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetSentMailBodyUrl = (id: number) => {
+  return `/api/v1/mail/sent/${id}`;
+};
+
+/**
+ * CRM `GET /mail/sent/{id}`: текст по запросу, CRM пишет просмотр в аудит; `text = null` — тело удалено по сроку хранения. Чужое письмо сотруднику — 404.
+ * @summary Почта · Текст отправленного письма
+ */
+export const getSentMailBody = async (
+  id: number,
+  options?: Parameters<typeof http>[1],
+): Promise<SentMailBody> => {
+  return http<SentMailBody>(getGetSentMailBodyUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetSentMailBodyQueryKey = (id: number) => {
+  return [`/api/v1/mail/sent/${id}`] as const;
+};
+
+export const getGetSentMailBodyQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSentMailBody>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSentMailBody>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetSentMailBodyQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getSentMailBody>>> = ({ signal }) =>
+    getSentMailBody(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getSentMailBody>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetSentMailBodyQueryResult = NonNullable<Awaited<ReturnType<typeof getSentMailBody>>>;
+export type GetSentMailBodyQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetSentMailBody<
+  TData = Awaited<ReturnType<typeof getSentMailBody>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSentMailBody>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSentMailBody>>,
+          TError,
+          Awaited<ReturnType<typeof getSentMailBody>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSentMailBody<
+  TData = Awaited<ReturnType<typeof getSentMailBody>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSentMailBody>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSentMailBody>>,
+          TError,
+          Awaited<ReturnType<typeof getSentMailBody>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSentMailBody<
+  TData = Awaited<ReturnType<typeof getSentMailBody>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSentMailBody>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Почта · Текст отправленного письма
+ */
+
+export function useGetSentMailBody<
+  TData = Awaited<ReturnType<typeof getSentMailBody>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSentMailBody>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetSentMailBodyQueryOptions(id, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

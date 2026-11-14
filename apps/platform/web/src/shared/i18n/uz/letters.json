@@ -850,7 +850,8 @@
       "in_work": "Hammasi ishda",
       "done": "Ko‘rib chiqilgan",
       "all": "Hammasi",
-      "ownAll": "Mening xatlarim"
+      "ownAll": "Mening xatlarim",
+      "sent": "Yuborilganlar"
     },
     "filter": {
       "label": "Koʻrsatish",
@@ -1021,6 +1022,36 @@
         "mailbox_missing": "Pochta serverida bunday papka yo‘q"
       },
       "resultLabel": "Pochta tekshiruvi natijasi"
+    },
+    "sent": {
+      "caption": "Yuborilgan xatlar",
+      "scroll": "Yuborilgan xatlar jadvali, aylantirish",
+      "search": "Yuborilganlar bo‘yicha qidiruv",
+      "searchHint": "Qabul qiluvchi yoki mavzu",
+      "statusFilter": "Yetkazish holati",
+      "statusAll": "Barcha holatlar",
+      "emptyTitle": "Xatlar yo‘q",
+      "emptyText": "Sizning so‘rovingiz bilan yuborilgan xatlar shu yerda bo‘ladi.",
+      "emptySearch": "Hech narsa topilmadi — qidiruv yoki holatni o‘zgartiring.",
+      "first": "Yangilariga",
+      "more": "Yana",
+      "to": "Kimga: {{to}}",
+      "openDocument": "Hujjatni ochish",
+      "noText": "Xat matni endi saqlanmaydi.",
+      "attachments": "Ilovalar: {{names}}",
+      "columns": {
+        "date": "Sana",
+        "to": "Kimga",
+        "subject": "Mavzu",
+        "status": "Holat",
+        "by": "Yuborgan"
+      },
+      "status": {
+        "sent": "Yetkazildi",
+        "queued": "Navbatda",
+        "failed": "Yetkazilmadi",
+        "skipped_no_smtp": "Pochta sozlanmagan"
+      }
     }
   },
   "settings": {

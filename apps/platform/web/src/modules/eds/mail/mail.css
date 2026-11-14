@@ -283,3 +283,10 @@
     text-align: left;
   }
 }
+
+/* «Отправленные» (план 2.8): текст письма в боковом окне — как отправлен, с переносами */
+.pf-mail-sent-text {
+  white-space: pre-wrap;
+  font: inherit;
+  margin: 16px 0 0;
+}
