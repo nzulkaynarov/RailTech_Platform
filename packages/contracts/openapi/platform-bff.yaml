@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.79.0
+  version: 0.87.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -19198,6 +19198,7 @@ components:
         - show_fx_note
         - logo_url
         - inherited
+        - translations
       properties:
         legal_name:
           type: string
@@ -19268,6 +19269,8 @@ components:
           additionalProperties:
             type: string
           description: Что напечатается из реквизитов компании при включённом «Брать реквизиты из карточки компании»
+        translations:
+          $ref: '#/components/schemas/BrandTranslations'
     BrandProfileUpdate:
       type: object
       additionalProperties: false
@@ -19330,6 +19333,26 @@ components:
           type: boolean
         show_fx_note:
           type: boolean
+        translations:
+          $ref: '#/components/schemas/BrandTranslations'
+    BrandVariant:
+      type: object
+      additionalProperties: false
+      description: Бланк на другом языке (TPL-3, план 2.7) — пустое поле печатается русским текстом
+      properties:
+        legal_name: {type: string, maxLength: 255}
+        legal_address: {type: string, maxLength: 2000}
+        signatory_position: {type: string, maxLength: 255}
+        footer_text: {type: string, maxLength: 2000}
+    BrandTranslations:
+      type: object
+      additionalProperties: false
+      description: >-
+        Бланк на узбекском и английском (TPL-3): письмо EDS печатается на языке своего текста; КП, договор, счёт и акт —
+        после перехода на rt-docs (DOC-1…3)
+      properties:
+        uz: {$ref: '#/components/schemas/BrandVariant'}
+        en: {$ref: '#/components/schemas/BrandVariant'}
     ProjectSigningIn:
       type: object
       additionalProperties: false

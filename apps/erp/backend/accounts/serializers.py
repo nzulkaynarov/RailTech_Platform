@@ -121,6 +121,13 @@ class CompanyDocumentProfileSerializer(serializers.ModelSerializer):
     # и адрес, и р/с с МФО из карточки компании. Продавец делал вывод, что реквизитов у его
     # документов нет (найдено прогоном глазами 19-08). Считает ТА ЖЕ функция, что и печать.
     inherited_preview = serializers.SerializerMethodField()
+    # TPL-3 (план 2.7): бланк на узбекском и английском — {"uz": {legal_name, legal_address, signatory_position,
+    # footer_text}, "en": {...}}; проверяет сервис (`clean_translations`), основной текст — русский в полях выше
+    translations = serializers.DictField(
+        child=serializers.DictField(child=serializers.CharField(allow_blank=True)),
+        required=False,
+        help_text="Бланк на uz и en: legal_name, legal_address, signatory_position, footer_text",
+    )
 
     class Meta:
         model = CompanyDocumentProfile
@@ -136,6 +143,7 @@ class CompanyDocumentProfileSerializer(serializers.ModelSerializer):
             "signatory_name",
             "signatory_position",
             "footer_text",
+            "translations",
             "accent_color",
             "secondary_color",
             "layout_preset",

@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "ERP API",
-        "version": "1.16.0",
+        "version": "1.19.0",
         "description": "ERP Platform API. Supports deal lifecycle management, quoting, product catalog (PIM), Excel imports, and real-time notifications via WebSocket.",
         "contact": {
             "name": "ERP API Support",
@@ -4196,7 +4196,7 @@
                         "description": ""
                     },
                     "400": {
-                        "description": "INVALID_ACCENT_COLOR / INVALID_SECONDARY_COLOR / INVALID_LAYOUT_PRESET / INVALID_FONT_FAMILY",
+                        "description": "INVALID_ACCENT_COLOR / INVALID_SECONDARY_COLOR / INVALID_LAYOUT_PRESET / INVALID_FONT_FAMILY / INVALID_TRANSLATIONS",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -4277,7 +4277,7 @@
                         "description": ""
                     },
                     "400": {
-                        "description": "INVALID_ACCENT_COLOR / INVALID_SECONDARY_COLOR / INVALID_LAYOUT_PRESET / INVALID_FONT_FAMILY",
+                        "description": "INVALID_ACCENT_COLOR / INVALID_SECONDARY_COLOR / INVALID_LAYOUT_PRESET / INVALID_FONT_FAMILY / INVALID_TRANSLATIONS",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -38299,6 +38299,16 @@
                         "title": "Колонтитул / оговорка",
                         "description": "Текст внизу документа: дисклеймер, условия, контакты"
                     },
+                    "translations": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        },
+                        "description": "Бланк на uz и en: legal_name, legal_address, signatory_position, footer_text"
+                    },
                     "accent_color": {
                         "type": "string",
                         "title": "Акцентный цвет",
@@ -48431,6 +48441,16 @@
                         "type": "string",
                         "title": "Колонтитул / оговорка",
                         "description": "Текст внизу документа: дисклеймер, условия, контакты"
+                    },
+                    "translations": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        },
+                        "description": "Бланк на uz и en: legal_name, legal_address, signatory_position, footer_text"
                     },
                     "accent_color": {
                         "type": "string",

@@ -104,7 +104,37 @@ def letterhead_data(company, profile, user=None) -> Dict[str, Any]:
     }
     if omitted:
         head["logo_omitted"] = omitted
+    translations = _translations(profile)
+    if translations:
+        head["translations"] = translations
     return {"erp_company_id": int(company.id), "actor": build_actor(user), "letterhead": head}
+
+
+#: TPL-3: поле профиля → поле бланка в событии
+_LANG_FIELDS = {
+    "legal_name": ("company_name", 255),
+    "legal_address": ("legal_address", 2000),
+    "signatory_position": ("signatory_position", 255),
+    "footer_text": ("footer_text", 2000),
+}
+
+
+def _translations(profile) -> Dict[str, Dict[str, str]]:
+    """Бланк на узбекском и английском (TPL-3): только заполненные поля; пустой язык не уходит."""
+    raw = getattr(profile, "translations", None) or {}
+    out: Dict[str, Dict[str, str]] = {}
+    for lang in ("uz", "en"):
+        fields = raw.get(lang) if isinstance(raw, dict) else None
+        if not isinstance(fields, dict):
+            continue
+        row = {
+            name: _text(fields.get(key), limit)
+            for key, (name, limit) in _LANG_FIELDS.items()
+            if _text(fields.get(key), limit)
+        }
+        if row:
+            out[lang] = row
+    return out
 
 
 def publish_company_letterhead(company, user=None):

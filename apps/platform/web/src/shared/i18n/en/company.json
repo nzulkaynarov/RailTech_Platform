@@ -188,7 +188,19 @@
     "previewKind": "Document type",
     "previewFrame": "Sample: {{kind}}",
     "previewHint": "The data in the sample is fictional.",
-    "inheritedEdit": "Edit company details"
+    "inheritedEdit": "Edit company details",
+    "languages": {
+      "title": "Letterhead in Uzbek and English",
+      "hint": "A letter is printed on the letterhead of its text language. An empty field is printed in Russian. Uzbek is in Latin script.",
+      "uz": "O‘zbekcha (UZ)",
+      "en": "English (EN)",
+      "fields": {
+        "legal_name": "Company name",
+        "legal_address": "Legal address",
+        "signatory_position": "Signatory position",
+        "footer_text": "Footer"
+      }
+    }
   },
   "numbering": {
     "title": "Document numbering",

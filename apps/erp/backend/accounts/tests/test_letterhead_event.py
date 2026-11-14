@@ -139,3 +139,28 @@ def test_saving_unrelated_company_fields_or_another_company_does_not_publish(own
     other = Company.objects.create(name="Клиент", inn="301111111")
     other.save()
     assert len(_letterheads()) == before
+
+
+@pytest.mark.django_db
+def test_letterhead_in_uzbek_and_english_goes_to_eds(own):
+    """TPL-3 (план 2.7): варианты бланка на uz и en уходят в событии; пустые поля и языки — нет."""
+    company, head = own
+    profile, error = update_document_profile(
+        head,
+        company,
+        {
+            "translations": {
+                "uz": {"legal_name": "«RemPut» MChJ", "signatory_position": "Direktor", "footer_text": " "},
+                "en": {"legal_address": "", "footer_text": ""},
+            }
+        },
+    )
+    assert error is None and profile is not None
+    assert profile.translations == {"uz": {"legal_name": "«RemPut» MChJ", "signatory_position": "Direktor"}}
+    [envelope] = _letterheads()
+    assert_matches_contract(envelope)
+    assert envelope["data"]["letterhead"]["translations"] == {
+        "uz": {"company_name": "«RemPut» MChJ", "signatory_position": "Direktor"}
+    }
+    for bad in ({"de": {"legal_name": "X"}}, {"uz": {"inn": "1"}}, {"uz": {"legal_name": "x" * 256}}, ["uz"]):
+        assert update_document_profile(head, company, {"translations": bad}) == (None, "INVALID_TRANSLATIONS")

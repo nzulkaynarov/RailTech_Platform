@@ -2308,3 +2308,36 @@ async def test_numbering_preview_adds_eds_kinds_with_the_draft_label(
     assert numbers["quote"] == "QT-2026/001"
     assert numbers["memo"] == "SZ-2026/001", "несохранённое обозначение — в образце"
     assert numbers["letter_in"] == "IN-001/26"
+
+
+async def test_brand_translations_go_to_erp_and_come_back_with_both_languages(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    """TPL-3 (план 2.7): бланк на uz и en — в ERP уходит как прислан, обратно всегда оба языка."""
+    await web.login(["ADMIN"])
+    patch = erp.patch(f"{COMPANY}/document-profile/").mock(
+        return_value=httpx.Response(
+            200,
+            json=brand_json(
+                translations={"uz": {"legal_name": "«Demo» MChJ", "inn": "x"}, "de": {}}
+            ),
+        )
+    )
+    body = {
+        "translations": {"uz": {"legal_name": "«Demo» MChJ"}, "en": {"footer_text": "Tashkent"}}
+    }
+    changed = await web.send("PATCH", "/api/v1/admin/company/brand", json=body)
+    check(changed, "/admin/company/brand", "patch")
+    assert sent(patch)["translations"]["uz"]["legal_name"] == "«Demo» MChJ"
+    assert sent(patch)["translations"]["en"]["footer_text"] == "Tashkent"
+    assert changed.json()["translations"]["uz"] == {
+        "legal_name": "«Demo» MChJ",
+        "legal_address": "",
+        "signatory_position": "",
+        "footer_text": "",
+    }
+    assert changed.json()["translations"]["en"]["legal_name"] == ""
+    bad = await web.send(
+        "PATCH", "/api/v1/admin/company/brand", json={"translations": {"de": {"legal_name": "x"}}}
+    )
+    assert bad.status_code == 422
