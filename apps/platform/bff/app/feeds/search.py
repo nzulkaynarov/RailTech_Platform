@@ -79,6 +79,21 @@ def _client_hit(client: dict[str, Any]) -> SearchHit | None:
     return SearchHit(object=ref, title=name, subtitle=f"ИНН {inn}" if inn else None)
 
 
+def _product_hit(product: dict[str, Any]) -> SearchHit | None:
+    """FR-26: товар каталога по названию (ERP ищет с опечатками и в другой письменности)."""
+    if not isinstance(product.get("id"), int):
+        return None
+    name = str(product.get("name") or product["id"])
+    article = str(product.get("article") or "").strip()
+    ref = ObjectRef(
+        kind="product",
+        number=article or str(product["id"]),
+        title=name,
+        path=f"/erp/catalog?item={product['id']}",
+    )
+    return SearchHit(object=ref, title=name, subtitle=article or None)
+
+
 def _deal_hit(deal: dict[str, Any]) -> SearchHit:
     ref = deal_ref(deal)
     company = deal.get("company_name")
@@ -207,15 +222,25 @@ async def search(feed: Feed, access: Access, query: str) -> SearchResult:
         )
         return rows(deal_rows), rows(doc_rows)
 
+    async def products() -> list[SearchHit]:
+        if not allows(access, "erp.stock", "read"):
+            return []
+        payload = await feed.get("erp", "/api/v1/calc/catalog/", {"q": query.strip()})
+        return [h for p in rows(payload)[:HITS_LIMIT] if (h := _product_hit(p)) is not None]
+
     async def registry() -> list[dict[str, Any]]:
         if not can_registry:
             return []
         payload = await feed.get("eds", "/api/v1/registry", {"q": typed, "limit": HITS_LIMIT})
         return rows(payload)
 
-    lead_hits, client_hits, (all_deals, all_docs), registry_rows = await asyncio.gather(
-        leads(), clients(), deals_and_docs(), registry()
-    )
+    (
+        lead_hits,
+        client_hits,
+        (all_deals, all_docs),
+        registry_rows,
+        product_hits,
+    ) = await asyncio.gather(leads(), clients(), deals_and_docs(), registry(), products())
     matching = [d for d in all_deals if isinstance(d.get("id"), int)]
     index = await _deals_of_documents(feed, matching, all_docs)
     requests = [_deal_hit(d) for d in matching if deal_ref(d).kind == "request" and can_requests]
@@ -248,6 +273,7 @@ async def search(feed: Feed, access: Access, query: str) -> SearchResult:
     by_module: dict[ModuleCode, list[SearchHit]] = {
         "crm": [*lead_hits, *client_hits, *requests],
         "eds": [*projects, *documents, *from_registry],
+        "erp": product_hits,
     }
     groups = [
         SearchGroup(module=module, items=hits[:GROUP_LIMIT])
