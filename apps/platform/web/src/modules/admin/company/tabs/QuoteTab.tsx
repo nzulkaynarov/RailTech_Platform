@@ -163,6 +163,16 @@ function QuoteForm({ defaults }: { defaults: QuoteDefaults }) {
         >
           <InputNumber min={1} max={90} precision={0} {...NUMBER} />
         </Form.Item>
+        {/* Сроки (задача «Н3c»): раньше были константами в коде */}
+        <Form.Item name="offer_confirm_days" label={t("quote.confirmDays")}>
+          <InputNumber min={1} max={365} precision={0} {...NUMBER} />
+        </Form.Item>
+        <Form.Item name="offer_expiring_days" label={t("quote.expiringDays")}>
+          <InputNumber min={1} max={90} precision={0} {...NUMBER} />
+        </Form.Item>
+        <Form.Item name="act_reminder_hours" label={t("quote.actReminderHours")}>
+          <InputNumber min={1} max={720} precision={0} {...NUMBER} />
+        </Form.Item>
       </div>
       <SaveBlock
         label={t("quote.save")}

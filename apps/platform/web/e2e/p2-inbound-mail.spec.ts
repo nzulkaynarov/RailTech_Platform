@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { type Page, expect, test } from "@playwright/test";
 
 import { loginAndWait, spaGoto, waitForMotionEnd } from "./support/app";
+import { openStep } from "./support/fields";
 
 // W18A-P2 «Входящая почта» на MSW: письмо общего ящика в «Моих задачах» и очереди делопроизводителя; «Подсказать» — только
 // по кнопке, ничего не делает сама; одним подтверждением письмо становится ВХ (форма P8 с вложением), лидом или уходит в
@@ -96,6 +97,7 @@ test.describe("P2: входящая почта общего ящика", () => {
       await expect(page.getByText("акт-сверки-октябрь.pdf")).toBeVisible();
       await shot(page, "register-from-mail");
       await expectNoViolations(page, `форма ${String(width)}`);
+      await openStep(page, "Проверка и регистрация");
       await page.getByRole("button", { name: "Зарегистрировать", exact: true }).click();
       await expect(
         page.getByText(/Входящее ВХ-.* зарегистрировано|зарегистрировано/i).first(),

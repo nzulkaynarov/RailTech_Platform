@@ -29,7 +29,14 @@ SERVICE_KINDS = {
 }
 ALL_KINDS = (KIND_STOCK, KIND_ON_ORDER, *SERVICE_KINDS)
 #: Предложение «скоро истекает»: срок действия цены в ближайшие дни (подсказка снабженцу).
-EXPIRING_SOON_DAYS = 14
+
+
+def expiring_days() -> int:
+    """За сколько дней до окончания цена партнёра «скоро истекает» — настройка своей компании (задача «Н3c»)."""
+    from catalog.policy import policy_for
+    from core.tenant import own_company_id
+
+    return policy_for(own_company_id()).offer_expiring_days
 
 
 def current_offer_q(prefix: str = "", today=None) -> Q:
@@ -192,14 +199,15 @@ def item_row(product, vat_default) -> dict:
     }
 
 
-def offer_row(offer, *, show_price: bool, today=None) -> dict:
+def offer_row(offer, *, show_price: bool, today=None, expiring: int | None = None) -> dict:
     """Предложение поставщика. Цена и валюта — только тому, кто видит `supplier_prices`; иначе `price = null`."""
     today = today or timezone.localdate()
     price = None
     if show_price:
         price = {"amount": f"{offer.base_price:.2f}", "currency": offer.currency.code if offer.currency_id else None}
     expired = bool(offer.valid_until and offer.valid_until < today)
-    soon = bool(offer.valid_until and today <= offer.valid_until <= today + timedelta(days=EXPIRING_SOON_DAYS))
+    days = expiring if expiring is not None else expiring_days()  # в цикле вызывающий передаёт значение один раз
+    soon = bool(offer.valid_until and today <= offer.valid_until <= today + timedelta(days=days))
     return {
         "id": offer.pk,
         "supplier": {"id": offer.supplier_id, "name": offer.supplier.name},
@@ -225,6 +233,7 @@ def offer_row(offer, *, show_price: bool, today=None) -> dict:
 def item_detail(product, user) -> dict:
     today = timezone.localdate()
     show_price = can_view_supplier_prices(user)
+    soon_days = expiring_days()
     from catalog.completeness import completeness
     from catalog.desk.proposals import proposal_row
 
@@ -261,7 +270,7 @@ def item_detail(product, user) -> dict:
                 if product.source_supplier_id
                 else None
             ),
-            "offers": [offer_row(o, show_price=show_price, today=today) for o in offers],
+            "offers": [offer_row(o, show_price=show_price, today=today, expiring=soon_days) for o in offers],
             "prices_visible": show_price,
             "tech_docs": [doc_fields(d, names, today) for d in docs],
             "images": [image_service.image_row(i) for i in image_service.ordered(product)],

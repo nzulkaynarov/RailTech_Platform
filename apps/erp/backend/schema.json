@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "ERP API",
-        "version": "1.11.0",
+        "version": "1.13.0",
         "description": "ERP Platform API. Supports deal lifecycle management, quoting, product catalog (PIM), Excel imports, and real-time notifications via WebSocket.",
         "contact": {
             "name": "ERP API Support",
@@ -38478,6 +38478,26 @@
                         "title": "Максимальный возраст курса валюты (дней)",
                         "description": "Если курс ЦБ старше N дней, КП требует обновления курса или договорного курса."
                     },
+                    "offer_confirm_days": {
+                        "type": "integer",
+                        "maximum": 365,
+                        "minimum": 1,
+                        "title": "Срок подтверждения цен поставщика (дней)",
+                        "description": "Цена поставщика без подтверждения дольше этого срока помечается «устарела»."
+                    },
+                    "offer_expiring_days": {
+                        "type": "integer",
+                        "maximum": 90,
+                        "minimum": 1,
+                        "title": "Предупреждать об окончании цены (дней)",
+                        "description": "Цена поставщика со сроком действия ближе этого числа дней помечается «истекает»."
+                    },
+                    "act_reminder_hours": {
+                        "type": "integer",
+                        "maximum": 720,
+                        "minimum": 1,
+                        "title": "Пауза между напоминаниями об акте (часов)"
+                    },
                     "doc_number_prefix": {
                         "type": "string",
                         "title": "Префикс нумерации документов",
@@ -48213,6 +48233,26 @@
                         "minimum": 1,
                         "title": "Максимальный возраст курса валюты (дней)",
                         "description": "Если курс ЦБ старше N дней, КП требует обновления курса или договорного курса."
+                    },
+                    "offer_confirm_days": {
+                        "type": "integer",
+                        "maximum": 365,
+                        "minimum": 1,
+                        "title": "Срок подтверждения цен поставщика (дней)",
+                        "description": "Цена поставщика без подтверждения дольше этого срока помечается «устарела»."
+                    },
+                    "offer_expiring_days": {
+                        "type": "integer",
+                        "maximum": 90,
+                        "minimum": 1,
+                        "title": "Предупреждать об окончании цены (дней)",
+                        "description": "Цена поставщика со сроком действия ближе этого числа дней помечается «истекает»."
+                    },
+                    "act_reminder_hours": {
+                        "type": "integer",
+                        "maximum": 720,
+                        "minimum": 1,
+                        "title": "Пауза между напоминаниями об акте (часов)"
                     },
                     "doc_number_prefix": {
                         "type": "string",

@@ -43,6 +43,8 @@ DEFAULT_PUBLISH_THRESHOLD = 100
 
 #: PART-2: через сколько дней без подтверждения цена поставщика считается устаревшей (настройка компании может изменить).
 DEFAULT_OFFER_CONFIRM_DAYS = 30
+# Задача «Н3c»: «истекает» — за сколько дней до `valid_until` цена партнёра помечается; начальное значение настройки.
+DEFAULT_OFFER_EXPIRING_DAYS = 14
 
 
 class TrackingClass(models.TextChoices):

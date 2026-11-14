@@ -188,7 +188,12 @@
     "done": "{{number}} qoralamasi yaratildi",
     "productHint": "Nom yoki artikuldan kamida ikkita harf kiriting",
     "productSearching": "Qidirilmoqda…",
-    "productNone": "Hech narsa topilmadi"
+    "productNone": "Hech narsa topilmadi",
+    "sections": {
+      "supplier": "Hamkor va usul",
+      "lines": "Qatorlar"
+    },
+    "linesSummary": "Qatorlar: {{count}}"
   },
   "order": {
     "title": "Hamkorga buyurtma {{number}}",

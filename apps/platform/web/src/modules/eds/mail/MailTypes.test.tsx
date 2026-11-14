@@ -6,6 +6,7 @@ import { readEmployees, writeEmployees } from "../../../mocks/fixtures/employees
 import { readRules } from "../../../mocks/mailTypes";
 import { resetInboundMailMock } from "../../../mocks/inboundMail";
 import { renderAt, setupLetterTests, signIn } from "../../../test/lettersKit";
+import { reveal } from "../../../test/steps";
 
 setupLetterTests();
 beforeEach(() => {
@@ -213,7 +214,7 @@ describe("Типы входящих писем: тег, фильтр, основ
       await screen.findByText(/Из письма: «Требование о предоставлении документов»/),
     ).toBeVisible();
     // у «Официального письма» вид документа — «Письмо госоргана» (код government)
-    expect(await screen.findByText("Письмо госоргана")).toBeVisible();
+    expect(reveal(await screen.findByText("Письмо госоргана"))).toBeVisible();
   });
 
   it("рассылка из меню действий: «В Подозрительные» уносит письмо во вкладку «Подозрительные»", async () => {

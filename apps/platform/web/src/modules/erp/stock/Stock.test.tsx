@@ -162,14 +162,17 @@ describe("Склад · заказы партнёрам", () => {
 
   it("новый заказ: черновик → отправлен (письмо в журнале) → подтверждён; недопустимые кнопки не показываются", async () => {
     await openStock("supply@demo.example", "orders");
-    fireEvent.click(await screen.findByRole("button", { name: "Создать заказ" }));
-    const modal = await screen.findByRole("dialog");
+    // новый заказ — страница с секциями (platform-frontend.md §4.1a)
+    fireEvent.click(await screen.findByRole("link", { name: "Создать заказ" }));
+    await screen.findByRole("heading", { level: 1, name: "Новый заказ партнёру" });
+    const modal = document.body;
     fireEvent.mouseDown(within(modal).getByRole("combobox", { name: "Партнёр" }));
     fireEvent.click(
       await screen.findByText("ООО «Вымышленная Сталь»", {
         selector: ".ant-select-item-option-content",
       }),
     );
+    fireEvent.click(screen.getByRole("button", { name: /^Строки/, expanded: false }));
     fireEvent.mouseDown(within(modal).getByRole("combobox", { name: "Товар, строка 1" }));
     fireEvent.change(within(modal).getByRole("combobox", { name: "Товар, строка 1" }), {
       target: { value: "перевод" },
@@ -216,14 +219,17 @@ describe("Склад · заказы партнёрам", () => {
 
   it("партнёр без почты: отправка требует адрес", async () => {
     await openStock("supply@demo.example", "orders");
-    fireEvent.click(await screen.findByRole("button", { name: "Создать заказ" }));
-    const modal = await screen.findByRole("dialog");
+    // новый заказ — страница с секциями (platform-frontend.md §4.1a)
+    fireEvent.click(await screen.findByRole("link", { name: "Создать заказ" }));
+    await screen.findByRole("heading", { level: 1, name: "Новый заказ партнёру" });
+    const modal = document.body;
     fireEvent.mouseDown(within(modal).getByRole("combobox", { name: "Партнёр" }));
     fireEvent.click(
       await screen.findByText(/ООО «Пример Лес» · нет почты/, {
         selector: ".ant-select-item-option-content",
       }),
     );
+    fireEvent.click(screen.getByRole("button", { name: /^Строки/, expanded: false }));
     fireEvent.mouseDown(within(modal).getByRole("combobox", { name: "Товар, строка 1" }));
     fireEvent.change(within(modal).getByRole("combobox", { name: "Товар, строка 1" }), {
       target: { value: "брус" },

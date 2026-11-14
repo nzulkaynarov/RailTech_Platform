@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { resetInboundMailMock } from "../../../mocks/inboundMail";
 import { renderAt, setupLetterTests, signIn } from "../../../test/lettersKit";
 import { server } from "../../../test/server";
+import { reveal } from "../../../test/steps";
 
 setupLetterTests();
 beforeEach(() => {
@@ -64,10 +65,11 @@ describe("Карточка письма: подсказка и действия 
     expect(
       await screen.findByText("Из письма: «Акт сверки за октябрь» от ООО «Демо-Поставка»"),
     ).toBeVisible();
-    expect(screen.getByLabelText(/Тема/)).toHaveValue("Акт сверки за октябрь");
+    // регистрация — секциями (§4.1a): тема и вид документа — в свёрнутых секциях, файл — в открытой первой
+    expect(screen.getByLabelText("Тема", { exact: true })).toHaveValue("Акт сверки за октябрь");
     expect(await screen.findByText("акт-сверки-октябрь.pdf")).toBeVisible();
     // вид документа предзаполнен по типу письма («Документ партнёра» → «Письмо партнёра»)
-    expect(await screen.findByText("Письмо партнёра")).toBeVisible();
+    expect(reveal(await screen.findByText("Письмо партнёра"))).toBeVisible();
   });
 });
 
