@@ -57,6 +57,8 @@ test.describe("Лиды → «Создать заявку» → карточка
     await page.getByRole("link", { name: "Создать заявку для Азиз Демо" }).click();
     const form = panel.getByRole("form", { name: "Создать заявку" });
     await expect(form.getByLabel("Название компании")).toHaveValue("ООО Демо-Логистик");
+    // форма секциями (§4.1a): письмо и срочность — в «Запросе», кнопка — в «Проверке и отправке»
+    await form.getByRole("button", { name: /^Запрос/, expanded: false }).click();
     await pickFiles(form.getByLabel("Письмо на имя директора"), LETTER);
     await expect(form.getByText(`Письмо загружено: ${LETTER.name}`)).toBeVisible();
     await form.getByRole("radio", { name: "Срочная" }).check();
@@ -64,6 +66,7 @@ test.describe("Лиды → «Создать заявку» → карточка
     await expectNoViolations(page, "форма «Создать заявку»");
 
     // Двойной клик: одна заявка (кнопка занята, ключ формы тот же)
+    await form.getByRole("button", { name: /^Проверка и отправка/, expanded: false }).click();
     await form.getByRole("button", { name: /Создать заявку/ }).dblclick();
     await expect(panel.getByText("Заявка создана")).toBeVisible();
     await panel.getByRole("link", { name: "Открыть карточку клиента" }).click();
@@ -88,6 +91,7 @@ test.describe("Лиды → «Создать заявку» → карточка
     await page.getByRole("link", { name: "В заявку: Заявка-демо.pdf — письмом директору" }).click();
     const panel = page.locator("#pf-context-panel");
     const form = panel.getByRole("form", { name: "Создать заявку" });
+    await form.getByRole("button", { name: /^Запрос/, expanded: false }).click();
     await expect(form.getByText("Письмо загружено: письмо-директору.pdf")).toBeVisible();
     await expectNoViolations(page, "форма с письмом из переписки");
   });
@@ -134,6 +138,7 @@ test(
     await list.getByRole("link", { name: "Создать заявку для Азиз Демо" }).click();
     const sheet = page.getByRole("dialog", { name: "Создать заявку" });
     await expect(sheet.getByLabel("Название компании")).toHaveValue("ООО Демо-Логистик");
+    await sheet.getByRole("button", { name: /^Проверка и отправка/, expanded: false }).click();
     const submit = sheet.getByRole("button", { name: /Создать заявку/ });
     await expect(submit).toBeVisible();
     await settledScreenshot(page, "create-request");

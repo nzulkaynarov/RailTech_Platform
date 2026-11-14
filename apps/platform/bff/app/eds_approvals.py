@@ -674,7 +674,7 @@ async def quote_card(authed: Authed, proxy: EdsProxy, body: Any) -> QuoteApprova
             margin_amount=snap.margin_amount,
             margin_pct=snap.margin_pct,
             min_margin_pct=snap.min_margin_pct,
-            payment_terms=None,
+            payment_terms=(erp_quote or {}).get("payment_terms") or None,
             valid_until=snap.valid_until,
             supplier_price_until=None,
         )

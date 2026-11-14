@@ -106,6 +106,19 @@ describe("EDS · Создать документ: форма", () => {
     expect(screen.getByRole("button", { name: "Отправить на согласование" })).toBeVisible();
   });
 
+  it("адресат письма из контрагентов: подсказка по названию подставляет ИНН, почту и «Кому»; вручную — тоже можно", async () => {
+    await openForm("director@demo.example", "?type=letter");
+    type("Адресат (организация)", "демо");
+    fireEvent.click(await screen.findByText("АО «Демо-Путь»"));
+    expect(screen.getByLabelText("Адресат (организация)")).toHaveValue("АО «Демо-Путь»");
+    expect(screen.getByLabelText("ИНН адресата")).toHaveValue("300000777");
+    expect(screen.getByLabelText("Почта адресата")).toHaveValue("office@demo-put.example");
+    expect(screen.getByLabelText("Кому (должность и ФИО)")).toHaveValue("Демо Клиентов");
+    // адресата нет в книге — пишем вручную, подсказки не мешают
+    type("Адресат (организация)", "ГНИ Мирабадского района");
+    expect(screen.getByLabelText("Адресат (организация)")).toHaveValue("ГНИ Мирабадского района");
+  });
+
   it("?type=letter у роли с доступом к входящим: письмо на бланке — адресат, почта, «кому», блоки, подписант; без суммы и срока", async () => {
     await openForm("director@demo.example", "?type=letter");
 

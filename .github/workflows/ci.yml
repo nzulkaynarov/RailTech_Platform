@@ -390,6 +390,7 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
           python-version: ${{ env.PYTHON_VERSION }}
+          ignore-nothing-to-cache: true
       - name: pip-audit (backend, prod-зависимости)
         working-directory: apps/crm/backend
         run: |
@@ -413,6 +414,7 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
           python-version: ${{ env.PYTHON_VERSION }}
+          ignore-nothing-to-cache: true
       - name: Install (линтеры бэкенда)
         run: make -C apps/erp install
       # flake8, black, isort
@@ -445,10 +447,12 @@ jobs:
       ERP_TEST_NS: ci-${{ github.run_id }}-schema
     steps:
       - uses: actions/checkout@v7
+      # Миграции и схема идут в контейнере: кэша uv на раннере нет, а пустой кэш роняет пост-шаг setup-uv (DECISIONS 2026-11-14)
       - uses: astral-sh/setup-uv@v7
         with:
           version: ${{ env.UV_VERSION }}
           python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: false
       - name: Миграции на чистой базе и отсутствие дрейфа моделей
         run: apps/erp/scripts/test_backend_local.sh --migration-check
       # schema.json и packages/contracts/openapi/erp-internal.yaml перегенерируются из кода; diff = падение (FIX-40)

@@ -206,7 +206,7 @@ async def test_quote_card_collects_route_erp_lines_and_the_internal_block(
         "margin_amount": "22000000.00",
         "margin_pct": "17.6",
         "min_margin_pct": "15",
-        "payment_terms": None,
+        "payment_terms": "100% предоплата",
         "valid_until": "2026-11-27",
         "supplier_price_until": None,
     }

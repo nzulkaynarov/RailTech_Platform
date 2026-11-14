@@ -191,6 +191,7 @@ def erp_quote(**over: Any) -> dict[str, Any]:
         "vat_amount": "13392857.14",
         "total_incl_vat": "125000000.00",
         "valid_until": "2026-11-27",
+        "payment_terms": "100% предоплата",
         "margin_percent": "17.60",
         "charges_total": "100.00",
         "economics": {"cost": "103000000.00"},

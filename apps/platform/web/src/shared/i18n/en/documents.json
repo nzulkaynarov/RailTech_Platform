@@ -246,7 +246,9 @@
     "recipient": {
       "label": "Addressee (organization)",
       "inn": "Addressee tax ID",
-      "innHint": "Optional."
+      "innHint": "Optional.",
+      "placeholder": "Name or tax ID",
+      "innShort": "Tax ID {{inn}}"
     },
     "text": {
       "label": "Text",

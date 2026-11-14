@@ -28,6 +28,7 @@ import { PriceRequestForm } from "./PriceRequestForm";
 import { PriceRequests } from "./PriceRequests";
 import { ClientRejection } from "./Rejection";
 import { TaskSlot } from "./TaskPanel";
+import { TermsCard, TermsForm } from "./Terms";
 
 import "./calc.css";
 
@@ -202,9 +203,9 @@ function Content({ sheet }: { sheet: CalcSheet }) {
   const { date } = useFormat();
   const { mobile } = useViewport();
   const [, setParams] = useSearchParams();
-  const [dialog, setDialog] = useState<"add" | "parse" | "price" | null>(null);
+  const [dialog, setDialog] = useState<"add" | "parse" | "price" | "terms" | null>(null);
   // Строка вручную и запрос цены — короткие формы о расчёте: в боковом окне на вкладке «Задача» (§4.1a)
-  const openForm = (kind: "add" | "price") => {
+  const openForm = (kind: "add" | "price" | "terms") => {
     setDialog(kind);
     if (mobile) return;
     setParams(
@@ -311,6 +312,15 @@ function Content({ sheet }: { sheet: CalcSheet }) {
           <Ready sheet={sheet} />
         </Card>
       )}
+      {sheet.quote !== null ? (
+        <TermsCard
+          sheet={sheet}
+          editable={editable}
+          onEdit={() => {
+            openForm("terms");
+          }}
+        />
+      ) : null}
       {sheet.quote !== null ? <PriceRequests sheet={sheet} /> : null}
       {dialog === "price" ? (
         <Sheet
@@ -326,6 +336,11 @@ function Content({ sheet }: { sheet: CalcSheet }) {
           <AddLineForm sheet={sheet} onClose={closeForm} />
         </Sheet>
       ) : null}
+      {dialog === "terms" ? (
+        <Sheet tab="task" label={t("terms.title")} onClose={closeForm}>
+          <TermsForm sheet={sheet} onClose={closeForm} />
+        </Sheet>
+      ) : null}
       {dialog === "parse" ? (
         <ParseModal
           sheet={sheet}
@@ -334,7 +349,9 @@ function Content({ sheet }: { sheet: CalcSheet }) {
           }}
         />
       ) : null}
-      {dialog === "add" || dialog === "price" ? null : <TaskSlot number={sheet.number} />}
+      {dialog === "add" || dialog === "price" || dialog === "terms" ? null : (
+        <TaskSlot number={sheet.number} />
+      )}
     </div>
   );
 }

@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "ERP API",
-        "version": "1.12.0",
+        "version": "1.13.0",
         "description": "ERP Platform API. Supports deal lifecycle management, quoting, product catalog (PIM), Excel imports, and real-time notifications via WebSocket.",
         "contact": {
             "name": "ERP API Support",
@@ -9518,6 +9518,105 @@
                 "tags": [
                     "Calc"
                 ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcSheet"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcError"
+                                }
+                            }
+                        },
+                        "description": "Тело не прошло проверку или отказ правила строки"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcError"
+                                }
+                            }
+                        },
+                        "description": "Нет права (зона строки, роль) или не сотрудник"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcError"
+                                }
+                            }
+                        },
+                        "description": "Заявки, задания расчёта или строки нет"
+                    },
+                    "409": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcError"
+                                }
+                            }
+                        },
+                        "description": "Состояние не позволяет (КП не черновик, нет виз, ИИ выключен)"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/calc/{deal_id}/terms/": {
+            "patch": {
+                "operationId": "calc_terms_update",
+                "description": "PATCH /api/v1/calc/<deal_id>/terms/ — условия КП: оплата, срок действия, срок поставки (FR-16).",
+                "summary": "Изменить условия КП (черновик)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "deal_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Calc"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedCalcTermsPatchRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedCalcTermsPatchRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedCalcTermsPatchRequest"
+                            }
+                        }
+                    }
+                },
                 "security": [
                     {
                         "jwtAuth": []
@@ -30303,6 +30402,63 @@
                 }
             }
         },
+        "/api/v1/parties/organizations/": {
+            "get": {
+                "operationId": "parties_organizations_list",
+                "description": "Клиенты своей компании и партнёры для поля «Организация» письма: поиск по названию и ИНН, в ответе ИНН, общая почта и контактное лицо.",
+                "summary": "Search counterparty organizations",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page_size",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Поиск по названию и ИНН"
+                    }
+                ],
+                "tags": [
+                    "Parties"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedDeskOrganizationPageList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/parties/people/": {
             "get": {
                 "operationId": "parties_people_list",
@@ -36244,6 +36400,9 @@
                         "type": "string",
                         "format": "decimal",
                         "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$"
+                    },
+                    "terms": {
+                        "$ref": "#/components/schemas/CalcTerms"
                     }
                 },
                 "required": [
@@ -36254,6 +36413,7 @@
                     "reject_reason",
                     "rejected_by",
                     "state",
+                    "terms",
                     "vat_rate",
                     "version"
                 ]
@@ -36578,6 +36738,44 @@
                     "rejected_by",
                     "state",
                     "visas"
+                ]
+            },
+            "CalcTerms": {
+                "type": "object",
+                "description": "Условия КП, которые видит клиент (FR-16): оплата, срок действия, срок поставки.",
+                "properties": {
+                    "payment_terms": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Условия оплаты; новый КП — из настроек компании"
+                    },
+                    "valid_until": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true,
+                        "description": "КП действует до"
+                    },
+                    "delivery_days": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "Срок поставки КП, дней; null — максимум по строкам (`delivery_days_lines`)"
+                    },
+                    "delivery_days_lines": {
+                        "type": "integer",
+                        "description": "Максимальный срок строк-товаров, дней"
+                    },
+                    "delivery_note": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Уточнение по срокам («в наличии», «под заказ»)"
+                    }
+                },
+                "required": [
+                    "delivery_days",
+                    "delivery_days_lines",
+                    "delivery_note",
+                    "payment_terms",
+                    "valid_until"
                 ]
             },
             "CalcTotals": {
@@ -41429,6 +41627,71 @@
                 "required": [
                     "id",
                     "name"
+                ]
+            },
+            "DeskOrganization": {
+                "type": "object",
+                "description": "Организация-контрагент для поля «Организация» письма (пункт «Ш»).",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "inn": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "email": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Общая почта организации (`Company.email`)"
+                    },
+                    "contact_person": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Контактное лицо — для строки «Кому»"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/DeskPersonKindEnum"
+                    }
+                },
+                "required": [
+                    "contact_person",
+                    "email",
+                    "id",
+                    "inn",
+                    "kind",
+                    "name"
+                ]
+            },
+            "DeskOrganizationPage": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer"
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DeskOrganization"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "next",
+                    "previous",
+                    "results"
                 ]
             },
             "DeskOrigin": {
@@ -46964,6 +47227,37 @@
                     }
                 }
             },
+            "PaginatedDeskOrganizationPageList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DeskOrganizationPage"
+                        }
+                    }
+                }
+            },
             "PaginatedDeskPartnerApplicationListResponseList": {
                 "type": "object",
                 "required": [
@@ -47586,6 +47880,30 @@
                     },
                     "kind": {
                         "$ref": "#/components/schemas/CalcItemKindEnum"
+                    }
+                }
+            },
+            "PatchedCalcTermsPatchRequest": {
+                "type": "object",
+                "properties": {
+                    "payment_terms": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "valid_until": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "delivery_days": {
+                        "type": "integer",
+                        "maximum": 3650,
+                        "minimum": 0,
+                        "nullable": true
+                    },
+                    "delivery_note": {
+                        "type": "string",
+                        "maxLength": 255
                     }
                 }
             },
@@ -49503,6 +49821,12 @@
                         "nullable": true,
                         "title": "Действует до",
                         "description": "Дата окончания действия коммерческого предложения"
+                    },
+                    "payment_terms": {
+                        "type": "string",
+                        "title": "Условия оплаты",
+                        "description": "Условия оплаты этого КП; новый КП получает их из настроек компании",
+                        "maxLength": 255
                     },
                     "notes": {
                         "type": "string",
@@ -52015,6 +52339,12 @@
                         "title": "Действует до",
                         "description": "Дата окончания действия коммерческого предложения"
                     },
+                    "payment_terms": {
+                        "type": "string",
+                        "title": "Условия оплаты",
+                        "description": "Условия оплаты этого КП; новый КП получает их из настроек компании",
+                        "maxLength": 255
+                    },
                     "notes": {
                         "type": "string",
                         "title": "Примечания",
@@ -53196,6 +53526,12 @@
                         "nullable": true,
                         "title": "Действует до",
                         "description": "Дата окончания действия коммерческого предложения"
+                    },
+                    "payment_terms": {
+                        "type": "string",
+                        "title": "Условия оплаты",
+                        "description": "Условия оплаты этого КП; новый КП получает их из настроек компании",
+                        "maxLength": 255
                     },
                     "notes": {
                         "type": "string",

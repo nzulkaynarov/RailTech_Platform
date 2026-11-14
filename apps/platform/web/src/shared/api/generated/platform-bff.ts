@@ -65,6 +65,7 @@ import type {
   CalcParseResult,
   CalcRequestList,
   CalcSheet,
+  CalcTermsPatch,
   CatalogCategory,
   CatalogCategoryIn,
   CatalogCategoryList,
@@ -133,6 +134,7 @@ import type {
   DocumentTemplateUpdate,
   DownloadCsvExportParams,
   DownloadEdsProjectFileParams,
+  EdsAddresseeList,
   EdsConflictResponse,
   EdsDealOptions,
   EdsDocument,
@@ -404,6 +406,7 @@ import type {
   SandboxTurn,
   SaveBotSettingBody,
   SearchCalcCatalogParams,
+  SearchEdsAddresseesParams,
   SearchParams,
   SearchResult,
   SearchStockTraceParams,
@@ -41670,6 +41673,138 @@ export const useSignCalcLine = <
   return useMutation(getSignCalcLineMutationOptions(options), queryClient);
 };
 
+export const getUpdateCalcTermsUrl = (number: string) => {
+  return `/api/v1/erp/calc/${number}/terms`;
+};
+
+/**
+ * ERP `PATCH /calc/{deal_id}/terms/` (план 0.5, FR-16): условия оплаты, срок действия и срок поставки КП в черновике — их видит клиент в КП, PDF и кабинете. Новый КП получает условия оплаты и срок действия из настроек компании. Визы строк не снимаются. Пустой текст или `null` очищает значение; `delivery_days = null` — срок поставки по строкам. Срок действия в прошлом — 422 `details.fields = [valid_until]`; КП у директора — 409. Раздел `erp.calc` — полный.
+ * @summary Расчёт · Условия КП
+ */
+export const updateCalcTerms = async (
+  number: string,
+  calcTermsPatch: CalcTermsPatch,
+  options?: Parameters<typeof http>[1],
+): Promise<CalcSheet> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CalcSheet>(getUpdateCalcTermsUrl(number), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(calcTermsPatch),
+  });
+};
+
+export const getUpdateCalcTermsMutationKey = () => ["updateCalcTerms"] as const;
+
+export const getUpdateCalcTermsMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CalcConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateCalcTerms>>,
+    TError,
+    UpdateCalcTermsMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateCalcTerms>>,
+  TError,
+  UpdateCalcTermsMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateCalcTermsMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateCalcTerms>>,
+    UpdateCalcTermsMutationVariables
+  > = (props) => {
+    const { number, data } = props ?? {};
+
+    return updateCalcTerms(number, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateCalcTermsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateCalcTerms>>
+>;
+export type UpdateCalcTermsMutationBody = CalcTermsPatch;
+export type UpdateCalcTermsMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | CalcConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UpdateCalcTermsMutationVariables = { number: string; data: CalcTermsPatch };
+
+/**
+ * @summary Расчёт · Условия КП
+ */
+export const useUpdateCalcTerms = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CalcConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateCalcTerms>>,
+      TError,
+      UpdateCalcTermsMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateCalcTerms>>,
+  TError,
+  UpdateCalcTermsMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateCalcTermsMutationOptions(options), queryClient);
+};
+
 export const getMarkCalcReadyUrl = (number: string) => {
   return `/api/v1/erp/calc/${number}/ready`;
 };
@@ -48797,6 +48932,154 @@ export const useRejectCatalogProposal = <
 > => {
   return useMutation(getRejectCatalogProposalMutationOptions(options), queryClient);
 };
+
+export const getSearchEdsAddresseesUrl = (params: SearchEdsAddresseesParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/eds/addressees?${stringifiedParams}`
+    : `/api/v1/eds/addressees`;
+};
+
+/**
+ * ERP `parties/organizations/` (пункт «Ш» плана 2026-11-12): клиенты своей компании и партнёры по названию или ИНН, первые 10. Название, ИНН, общая почта и контактное лицо организации — реквизиты для письма; своя компания не входит. Ручной ввод адресата остаётся. Право `eds.memo.create` (полный доступ) — как у создания документа.
+ * @summary Письмо: адресат из контрагентов
+ */
+export const searchEdsAddressees = async (
+  params: SearchEdsAddresseesParams,
+  options?: Parameters<typeof http>[1],
+): Promise<EdsAddresseeList> => {
+  return http<EdsAddresseeList>(getSearchEdsAddresseesUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getSearchEdsAddresseesQueryKey = (params?: SearchEdsAddresseesParams) => {
+  return [`/api/v1/eds/addressees`, ...(params ? [params] : [])] as const;
+};
+
+export const getSearchEdsAddresseesQueryOptions = <
+  TData = Awaited<ReturnType<typeof searchEdsAddressees>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+>(
+  params: SearchEdsAddresseesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchEdsAddressees>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getSearchEdsAddresseesQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof searchEdsAddressees>>> = ({ signal }) =>
+    searchEdsAddressees(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof searchEdsAddressees>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type SearchEdsAddresseesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof searchEdsAddressees>>
+>;
+export type SearchEdsAddresseesQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse
+>;
+
+export function useSearchEdsAddressees<
+  TData = Awaited<ReturnType<typeof searchEdsAddressees>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+>(
+  params: SearchEdsAddresseesParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchEdsAddressees>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchEdsAddressees>>,
+          TError,
+          Awaited<ReturnType<typeof searchEdsAddressees>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchEdsAddressees<
+  TData = Awaited<ReturnType<typeof searchEdsAddressees>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+>(
+  params: SearchEdsAddresseesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchEdsAddressees>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchEdsAddressees>>,
+          TError,
+          Awaited<ReturnType<typeof searchEdsAddressees>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchEdsAddressees<
+  TData = Awaited<ReturnType<typeof searchEdsAddressees>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+>(
+  params: SearchEdsAddresseesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchEdsAddressees>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Письмо: адресат из контрагентов
+ */
+
+export function useSearchEdsAddressees<
+  TData = Awaited<ReturnType<typeof searchEdsAddressees>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+>(
+  params: SearchEdsAddresseesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof searchEdsAddressees>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getSearchEdsAddresseesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getListCounterpartyPeopleUrl = (params?: ListCounterpartyPeopleParams) => {
   const normalizedParams = new URLSearchParams();

@@ -1,6 +1,10 @@
 import { HttpResponse, http } from "msw";
 
-import type { CounterpartyContacts, CounterpartyPerson } from "../shared/api/generated/model";
+import type {
+  CounterpartyContacts,
+  CounterpartyPerson,
+  EdsAddressee,
+} from "../shared/api/generated/model";
 
 /** Люди клиентов и партнёров (FR-11): контакты контрагентов демо-мира, как их отдаёт ERP `parties/people/`. */
 const PEOPLE: CounterpartyPerson[] = [
@@ -32,7 +36,34 @@ const CONTACTS: Record<string, CounterpartyContacts> = {
   "42": { id: "42", phone: null, email: "partner@demo.example" },
 };
 
+/** Организации-контрагенты для «Организации» письма (пункт «Ш»): ERP `parties/organizations/`. */
+const ADDRESSEES: EdsAddressee[] = [
+  {
+    id: "7",
+    name: "АО «Демо-Путь»",
+    inn: "300000777",
+    email: "office@demo-put.example",
+    attention: "Демо Клиентов",
+    kind: "client",
+  },
+  {
+    id: "9",
+    name: "ООО «Поставщик Север»",
+    inn: null,
+    email: null,
+    attention: null,
+    kind: "partner",
+  },
+];
+
 export const peopleContactsHandlers = [
+  http.get("*/eds/addressees", ({ request }) => {
+    const q = (new URL(request.url).searchParams.get("q") ?? "").toLocaleLowerCase("ru");
+    const items = ADDRESSEES.filter(
+      (item) => item.name.toLocaleLowerCase("ru").includes(q) || (item.inn ?? "").includes(q),
+    );
+    return HttpResponse.json({ items });
+  }),
   http.get("*/people/contacts", ({ request }) => {
     const url = new URL(request.url);
     const kind = url.searchParams.get("kind");

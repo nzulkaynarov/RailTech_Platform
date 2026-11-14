@@ -88,6 +88,25 @@ class CalcRequestSerializer(serializers.Serializer):
     lines = serializers.IntegerField()
 
 
+class CalcTermsSerializer(serializers.Serializer):
+    """Условия КП, которые видит клиент (FR-16): оплата, срок действия, срок поставки."""
+
+    payment_terms = serializers.CharField(allow_null=True, help_text="Условия оплаты; новый КП — из настроек компании")
+    valid_until = serializers.DateField(allow_null=True, help_text="КП действует до")
+    delivery_days = serializers.IntegerField(
+        allow_null=True, help_text="Срок поставки КП, дней; null — максимум по строкам (`delivery_days_lines`)"
+    )
+    delivery_days_lines = serializers.IntegerField(help_text="Максимальный срок строк-товаров, дней")
+    delivery_note = serializers.CharField(allow_null=True, help_text="Уточнение по срокам («в наличии», «под заказ»)")
+
+
+class CalcTermsPatchSerializer(serializers.Serializer):
+    payment_terms = serializers.CharField(max_length=255, allow_blank=True, required=False)
+    valid_until = serializers.DateField(allow_null=True, required=False)
+    delivery_days = serializers.IntegerField(min_value=0, max_value=3650, allow_null=True, required=False)
+    delivery_note = serializers.CharField(max_length=255, allow_blank=True, required=False)
+
+
 class CalcQuoteSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     version = serializers.IntegerField()
@@ -107,6 +126,7 @@ class CalcQuoteSerializer(serializers.Serializer):
         )
     )
     vat_rate = serializers.DecimalField(max_digits=5, decimal_places=2)
+    terms = CalcTermsSerializer()
 
 
 class CalcStockSerializer(serializers.Serializer):

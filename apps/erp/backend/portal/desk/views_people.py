@@ -11,7 +11,7 @@ from django.db.models import Q
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from parties.models import Company, Contact
 from parties.models.relationships import RelationshipRole
-from portal.desk.serializers import DeskPeoplePage, DeskPersonContacts
+from portal.desk.serializers import DeskOrganizationPage, DeskPeoplePage, DeskPersonContacts
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 
@@ -22,12 +22,17 @@ from catalog.desk.views_base import NOT_FOUND, DeskViewSet
 KINDS = ("client", "partner")
 
 
-def people_queryset(user, kind: str | None, q: str):
+def counterparty_ids(user) -> tuple[set, set]:
+    """Клиенты своей компании и партнёры (компания и клиент, и поставщик — клиент)."""
     client_ids = set(seller_clients(user).values_list("pk", flat=True))
     partner_ids = set(suppliers.supplier_queryset({}).values_list("pk", flat=True)) | set(
         Company.objects.filter(relationships__role=RelationshipRole.PARTNER).values_list("pk", flat=True)
     )
-    partner_ids -= client_ids
+    return client_ids, partner_ids - client_ids
+
+
+def people_queryset(user, kind: str | None, q: str):
+    client_ids, partner_ids = counterparty_ids(user)
     wanted = {"client": client_ids, "partner": partner_ids}.get(kind or "", client_ids | partner_ids)
     queryset = Contact.objects.select_related("company").filter(company_id__in=wanted)
     if q:
@@ -91,4 +96,52 @@ class PeopleDeskViewSet(DeskViewSet):
             raise NotFound()
         return Response(
             {"id": contact.pk, "name": contact.name, "phone": contact.phone or None, "email": contact.email or None}
+        )
+
+
+def organization_row(company: Company, client_ids: set) -> dict:
+    return {
+        "id": company.pk,
+        "name": company.name,
+        "inn": company.inn or None,
+        "email": company.email or None,
+        "contact_person": company.contact_person or None,
+        "kind": "client" if company.pk in client_ids else "partner",
+    }
+
+
+class OrganizationsDeskViewSet(DeskViewSet):
+    """`/api/v1/parties/organizations/` — адресат письма из контрагентов (пункт «Ш» плана 2026-11-12).
+
+    Организации в тех же границах, что и «Люди»: клиенты своей компании и партнёры, своя компания не входит. Название,
+    ИНН, общая почта и контактное лицо организации — реквизиты для письма, не личные контакты человека, поэтому
+    отдаются списком (почта и телефон людей — по-прежнему по одному, с записью в журнал).
+    """
+
+    queryset = Company.objects.none()
+    serializer_class = DeskOrganizationPage
+
+    @extend_schema(
+        operation_id="parties_organizations_list",
+        summary="Search counterparty organizations",
+        description=(
+            "Клиенты своей компании и партнёры для поля «Организация» письма: поиск по названию и ИНН, "
+            "в ответе ИНН, общая почта и контактное лицо."
+        ),
+        parameters=[
+            OpenApiParameter("q", str, required=False, description="Поиск по названию и ИНН"),
+            OpenApiParameter("page", int, required=False),
+            OpenApiParameter("page_size", int, required=False),
+        ],
+        responses={200: DeskOrganizationPage},
+        tags=["Parties"],
+    )
+    def list(self, request):
+        client_ids, partner_ids = counterparty_ids(request.user)
+        queryset = Company.objects.filter(pk__in=client_ids | partner_ids)
+        q = (request.query_params.get("q") or "").strip()[:100]
+        if q:
+            queryset = queryset.filter(Q(name__icontains=q) | Q(inn__icontains=q))
+        return self.page_of(
+            queryset.order_by("name", "pk"), lambda rows: [organization_row(r, client_ids) for r in rows]
         )
