@@ -39,6 +39,14 @@ const WORDINGS = [
   "act_closing_text",
 ] as const;
 const HEX = /^#[0-9a-fA-F]{6}$/;
+/** TPL-3 (план 2.7): поля бланка, у которых есть варианты на узбекском и английском */
+const VARIANT_LANGS = ["uz", "en"] as const;
+const VARIANT_FIELDS = [
+  ["legal_name", 255],
+  ["legal_address", 2000],
+  ["signatory_position", 255],
+  ["footer_text", 2000],
+] as const;
 
 const toValues = (brand: BrandProfile): Values => omit(brand, ["logo_url", "inherited"]);
 
@@ -230,6 +238,34 @@ function BrandForm({ brand }: { brand: BrandProfile }) {
           <Collapse
             ghost
             items={[
+              {
+                key: "languages",
+                label: t("brand.languages.title"),
+                forceRender: true,
+                children: (
+                  <>
+                    <p className="pf-co-hint">{t("brand.languages.hint")}</p>
+                    {VARIANT_LANGS.map((lang) => (
+                      <fieldset key={lang} className="pf-co-fieldset">
+                        <legend className="pf-co-legend">{t(`brand.languages.${lang}`)}</legend>
+                        {VARIANT_FIELDS.map(([field, max]) => (
+                          <Form.Item
+                            key={field}
+                            name={["translations", lang, field]}
+                            label={t(`brand.languages.fields.${field}`)}
+                          >
+                            {max > 255 ? (
+                              <Input.TextArea rows={2} maxLength={max} />
+                            ) : (
+                              <Input maxLength={max} />
+                            )}
+                          </Form.Item>
+                        ))}
+                      </fieldset>
+                    ))}
+                  </>
+                ),
+              },
               {
                 key: "wording",
                 label: t("brand.wordingTitle"),
