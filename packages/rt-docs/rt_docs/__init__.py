@@ -18,6 +18,7 @@ from .docx_export import DocxResult, to_docx
 from .errors import BodyError, ContractsNotFoundError, LetterheadError, RenderTimeoutError, RtDocsError
 from .formatters import amount_in_words, currency_label, format_date, format_money, format_number, format_value
 from .html_import import ImportResult, Loss, html_to_body
+from .markdown import body_to_markdown, markdown_to_body
 from .model import (
     Density,
     DocumentMeta,
@@ -52,6 +53,7 @@ __all__ = [
     "RtDocsError",
     "Tuning",
     "amount_in_words",
+    "body_to_markdown",
     "clean_text",
     "contracts_dir",
     "currency_label",
@@ -61,6 +63,7 @@ __all__ = [
     "format_value",
     "html_to_body",
     "load_catalog",
+    "markdown_to_body",
     "normalize_blocks",
     "normalize_body",
     "to_docx",

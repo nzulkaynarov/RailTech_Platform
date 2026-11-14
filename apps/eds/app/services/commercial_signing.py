@@ -102,6 +102,43 @@ async def _supersede(session: AsyncSession, route: ApprovalRoute, version: int |
     )
 
 
+#: Final ERP statuses of a project document (`project_documents.source_of`): nobody signs it any more (FR-30).
+FINAL_STATUSES: dict[str, frozenset[str]] = {
+    "contract": frozenset({"signed", "rejected", "cancelled"}),
+    "act": frozenset({"signed"}),
+}
+
+
+async def withdraw_finished(session: AsyncSession, kind: str, erp_id: int, status: str) -> int:
+    """Plan 0.7 (FR-30): the document was signed, accepted or cancelled in ERP — its open «Sign» route closes.
+
+    Otherwise the signer keeps «Ждут вашей подписи» for a document that is already done. Idempotent: a closed route is
+    not touched; returns how many routes were closed.
+    """
+    if status not in FINAL_STATUSES.get(kind, frozenset()):
+        return 0
+    closed = 0
+    for route in await _routes_of(session, {"kind": kind, "object_id": erp_id}):
+        if route.status != RouteStatus.OPEN.value:
+            continue
+        for step in await approvals.load_steps(session, route.id):
+            if step.status in ("current", "pending"):
+                step.status = "skipped"
+        route.status, route.current_step, route.closed_at = RouteStatus.RETURNED.value, None, clock.now()
+        await journal.record(
+            session,
+            "approval.withdrawn",
+            by=None,
+            approval_id=route.id,
+            comment=f"{_TITLES.get(kind, kind)} уже в статусе «{status}» в ERP — подпись не нужна",
+            version=route.round,
+        )
+        closed += 1
+    if closed:
+        log.info("commercial_signing_withdrawn", kind=kind, erp_id=erp_id, status=status, routes=closed)
+    return closed
+
+
 async def handle_signing_request(
     session: AsyncSession,
     bus: AsyncBus,

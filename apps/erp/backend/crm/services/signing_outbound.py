@@ -73,8 +73,21 @@ def _person(user: CustomUser, fallback_position: str) -> dict[str, Any]:
     }
 
 
+#: Plan 0.7 (FR-30): statuses after which nobody signs the document — the signer would wait for nothing.
+_CLOSED_STATUSES = {
+    "contract": {"SIGNED", "CANCELLED", "REJECTED"},
+    "act": {"SIGNED", "CANCELLED"},
+    "invoice": {"CANCELLED"},
+}
+
+
 def _check_can_be_signed(kind: str, doc: Any) -> None:
     if doc.verification_code:
+        raise SigningRequestError("ALREADY_SIGNED", "Документ уже подписан. Исправление — новый документ.")
+    status = getattr(doc, "status_code", None)
+    if status in _CLOSED_STATUSES.get(kind, set()):
+        if status == "CANCELLED":
+            raise SigningRequestError("DOCUMENT_CLOSED", "Документ отменён — подписывать нечего.")
         raise SigningRequestError("ALREADY_SIGNED", "Документ уже подписан. Исправление — новый документ.")
     if kind in ("invoice", "act") and doc.status_code == "DRAFT":
         raise SigningRequestError("NOT_ISSUED", "Сначала выпустите документ: у черновика нет номера.")

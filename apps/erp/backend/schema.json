@@ -34571,6 +34571,46 @@
                 }
             }
         },
+        "/api/v1/stock/tasks/": {
+            "get": {
+                "operationId": "stock_tasks_list",
+                "description": "GET /api/v1/stock/tasks/ — дела снабженца: черновики, переносы дат, отгрузки, заявки на партнёрство (план 0.7).",
+                "summary": "Дела снабженца",
+                "tags": [
+                    "Stock"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SupplyTaskList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Нет права, не сотрудник или нет права на цены поставщиков"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/stock/trace/": {
             "get": {
                 "operationId": "stock_trace_search",
@@ -56335,6 +56375,84 @@
                 ],
                 "type": "string",
                 "description": "* `draft` - draft\n* `sent` - sent\n* `confirmed` - confirmed\n* `received` - received\n* `cancelled` - cancelled"
+            },
+            "SupplyTask": {
+                "type": "object",
+                "description": "Строка списка дел снабженца (план 0.7, FR-6): заказ партнёру или заявка на партнёрство.",
+                "properties": {
+                    "kind": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/SupplyTaskKindEnum"
+                            }
+                        ],
+                        "description": "send_order — черновик не отправлен; partner_date_change — партнёр просит перенести дату; receive_goods — партнёр отгрузил, товар не принят; partner_application — заявка на партнёрство ждёт решения\n\n* `send_order` - send_order\n* `partner_date_change` - partner_date_change\n* `receive_goods` - receive_goods\n* `partner_application` - partner_application"
+                    },
+                    "id": {
+                        "type": "integer",
+                        "description": "Заказ партнёру или заявка на партнёрство"
+                    },
+                    "number": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Номер заказа; у заявки на партнёрство — null"
+                    },
+                    "supplier_name": {
+                        "type": "string",
+                        "description": "Партнёр или компания-заявитель"
+                    },
+                    "since": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true,
+                        "description": "С какого момента дело ждёт снабженца"
+                    },
+                    "date": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "partner_date_change: на какую дату просит партнёр"
+                    },
+                    "note": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Причина переноса или накладная отгрузки"
+                    },
+                    "status": {
+                        "type": "string",
+                        "description": "partner_application: submitted или candidate_agreed"
+                    }
+                },
+                "required": [
+                    "id",
+                    "kind",
+                    "number",
+                    "since",
+                    "supplier_name"
+                ]
+            },
+            "SupplyTaskKindEnum": {
+                "enum": [
+                    "send_order",
+                    "partner_date_change",
+                    "receive_goods",
+                    "partner_application"
+                ],
+                "type": "string",
+                "description": "* `send_order` - send_order\n* `partner_date_change` - partner_date_change\n* `receive_goods` - receive_goods\n* `partner_application` - partner_application"
+            },
+            "SupplyTaskList": {
+                "type": "object",
+                "properties": {
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SupplyTask"
+                        }
+                    }
+                },
+                "required": [
+                    "results"
+                ]
             },
             "SystemRoleLookup": {
                 "type": "object",

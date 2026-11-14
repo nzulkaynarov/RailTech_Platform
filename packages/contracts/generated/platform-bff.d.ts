@@ -8749,7 +8749,8 @@ export interface components {
       | "chat"
       | "ticket"
       | "integration"
-      | "supplier_order";
+      | "supplier_order"
+      | "partner_application";
     ObjectRef: {
       kind: components["schemas"]["ObjectKind"];
       /**
@@ -9199,6 +9200,10 @@ export interface components {
       | "problem_project"
       | "calc_task"
       | "supplier_overdue"
+      | "send_supplier_order"
+      | "partner_date_change"
+      | "receive_goods"
+      | "partner_application"
       | "confirm_payment"
       | "issue_invoice"
       | "issue_contract"

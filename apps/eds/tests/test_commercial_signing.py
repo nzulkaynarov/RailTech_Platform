@@ -8,7 +8,7 @@ import httpx
 import pytest
 
 from app.container import Container
-from tests.domain import Person, deliver_erp, outbox
+from tests.domain import Person, deliver_erp, erp_event, outbox
 from tests.helpers import example
 
 pytestmark = pytest.mark.pg
@@ -279,3 +279,52 @@ async def test_authority_revoked_before_signing_blocks_the_signature(
 
     assert resp.status_code == 409, resp.text
     assert await outbox(container, "signing.decided") == []
+
+
+# ── План 0.7 (FR-30): подписанный или принятый документ уходит из «Ждут вашей подписи» ─────────
+
+
+async def test_accepted_act_closes_its_open_signing_route(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    await _grant_director(client, staff)
+    await deliver_erp(
+        client,
+        container,
+        signing_requested(
+            kind="act",
+            object_id=520,
+            number="АКТ-2026/001",
+            signer_crm_user_id=staff["director"].id,
+            signer_name=staff["director"].name,
+        ),
+    )
+    await deliver_erp(client, container, _request(staff))  # договор 500 — другой документ
+    assert len(await _open_ids(client, staff)) == 2
+
+    accepted = erp_event("erp/act.accepted.v1", erp_act_id=520, number="АКТ-2026/001")
+    await deliver_erp(client, container, accepted)
+    await deliver_erp(client, container, accepted)  # повтор доставки — без второго эффекта
+
+    open_titles = await _open_titles(client, staff)
+    assert len(open_titles) == 1 and all("АКТ-2026/001" not in t for t in open_titles)
+    assert await outbox(container, "signing.decided") == [], "закрытие — не решение подписанта"
+
+
+@pytest.mark.parametrize(("status", "closes"), [("signed", True), ("cancelled", True), ("project", False)])
+async def test_contract_status_closes_signing_only_when_final(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person], status: str, closes: bool
+) -> None:
+    await _grant_director(client, staff)
+    await deliver_erp(client, container, _request(staff))
+    await deliver_erp(
+        client, container, erp_event("erp/contract.status_changed.v1", erp_contract_id=500, status=status)
+    )
+    assert (await _open_ids(client, staff) == []) is closes
+
+
+async def _open_titles(client: httpx.AsyncClient, staff: dict[str, Person]) -> list[str]:
+    resp = await client.get(
+        "/api/v1/approvals", params={"template": ["signing"], "status": ["open"]}, headers=staff["director"].headers
+    )
+    return [f"{item.get('title')} {item.get('object')}" for item in resp.json()["items"]]

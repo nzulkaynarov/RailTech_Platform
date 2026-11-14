@@ -286,7 +286,10 @@ function ActBody({
         <p className="pf-hint">{t("act.readOnly")}</p>
       ) : null}
 
-      <SigningButton objectId={objectId} kind="act" documentId={act.id} />
+      {/* План 0.7 (FR-30): подписанный или отменённый акт на подпись не отправляют */}
+      {act.status !== "signed" && act.status !== "cancelled" ? (
+        <SigningButton objectId={objectId} kind="act" documentId={act.id} />
+      ) : null}
 
       <section aria-label={t("act.history")}>
         <h3 className="pf-dec-subhead">{t("act.history")}</h3>

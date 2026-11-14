@@ -217,6 +217,27 @@ class OverdueListSerializer(serializers.Serializer):
     results = OverdueOrderSerializer(many=True)
 
 
+class SupplyTaskSerializer(serializers.Serializer):
+    """Строка списка дел снабженца (план 0.7, FR-6): заказ партнёру или заявка на партнёрство."""
+
+    kind = serializers.ChoiceField(
+        choices=["send_order", "partner_date_change", "receive_goods", "partner_application"],
+        help_text="send_order — черновик не отправлен; partner_date_change — партнёр просит перенести дату; "
+        "receive_goods — партнёр отгрузил, товар не принят; partner_application — заявка на партнёрство ждёт решения",
+    )
+    id = serializers.IntegerField(help_text="Заказ партнёру или заявка на партнёрство")
+    number = serializers.CharField(allow_null=True, help_text="Номер заказа; у заявки на партнёрство — null")
+    supplier_name = serializers.CharField(help_text="Партнёр или компания-заявитель")
+    since = serializers.DateTimeField(allow_null=True, help_text="С какого момента дело ждёт снабженца")
+    date = serializers.DateField(required=False, help_text="partner_date_change: на какую дату просит партнёр")
+    note = serializers.CharField(required=False, allow_null=True, help_text="Причина переноса или накладная отгрузки")
+    status = serializers.CharField(required=False, help_text="partner_application: submitted или candidate_agreed")
+
+
+class SupplyTaskListSerializer(serializers.Serializer):
+    results = SupplyTaskSerializer(many=True)
+
+
 # ── запросы ────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 

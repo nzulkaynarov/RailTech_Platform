@@ -388,6 +388,22 @@ export const QUEUE = {
     resource: "erp.stock",
     level: "full",
   },
+  send_supplier_order: {
+    resource: "erp.stock",
+    level: "full",
+  },
+  partner_date_change: {
+    resource: "erp.stock",
+    level: "full",
+  },
+  receive_goods: {
+    resource: "erp.stock",
+    level: "full",
+  },
+  partner_application: {
+    resource: "erp.stock",
+    level: "full",
+  },
   confirm_payment: {
     resource: "eds.payments",
     level: "full",
