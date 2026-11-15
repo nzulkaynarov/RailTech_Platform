@@ -13,6 +13,8 @@ import { DefinitionList } from "../../../../shared/ui/DefinitionList";
 import { QueryGate, SaveBlock, TabHeader, ReadOnlyFence } from "../common";
 import { errorFields } from "../errors";
 import { FxRateSection } from "./FxRateSection";
+import { UnitLabel } from "../../../../shared/ui/UnitLabel";
+import { unitOf } from "../../../../shared/lib/unit";
 
 interface Values {
   vat_rate: string;
@@ -75,11 +77,18 @@ function PlatformForm({ settings }: { settings: PlatformSettings }) {
       <div className="pf-co-grid">
         <Form.Item
           name="vat_rate"
-          label={t("platform.vat")}
+          label={<UnitLabel label={t("platform.vat")} />}
           extra={t("platform.vatHint")}
           rules={[{ required: true, message: t("required") }]}
         >
-          <InputNumber stringMode min="0" max="100" step="0.5" style={{ width: "100%" }} />
+          <InputNumber
+            suffix={unitOf(t("platform.vat"))}
+            stringMode
+            min="0"
+            max="100"
+            step="0.5"
+            style={{ width: "100%" }}
+          />
         </Form.Item>
       </div>
       <DefinitionList

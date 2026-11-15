@@ -46,6 +46,8 @@ import { ConfirmModal, ListTable, TabHeader } from "../company/common";
 import { DictionaryFile } from "./DictionaryFile";
 import { dictionaryErrorText } from "./errors";
 import { NameCode } from "../../../shared/ui/NameCode";
+import { UnitLabel } from "../../../shared/ui/UnitLabel";
+import { unitOf } from "../../../shared/lib/unit";
 
 /**
  * Настройки · Документооборот · Справочники (EDS-REG; исследование «Настройки» §4.3): справочник сверху переключателем,
@@ -598,18 +600,25 @@ function ItemForm({
             <Form.Item
               key={attr.key}
               name={["attrs", attr.key]}
-              label={localName(attr.name, i18n.language)}
+              label={<UnitLabel label={localName(attr.name, i18n.language)} />}
             >
-              <InputNumber stringMode min="0" step="0.01" style={{ width: "100%" }} />
+              <InputNumber
+                suffix={unitOf(localName(attr.name, i18n.language))}
+                stringMode
+                min="0"
+                step="0.01"
+                style={{ width: "100%" }}
+              />
             </Form.Item>
           ) : (
             <Form.Item
               key={attr.key}
               name={["attrs", attr.key]}
-              label={localName(attr.name, i18n.language)}
+              label={<UnitLabel label={localName(attr.name, i18n.language)} />}
               extra={attr.key === "due_days" ? t("settings.dict.dueHint") : undefined}
             >
               <InputNumber
+                suffix={unitOf(localName(attr.name, i18n.language))}
                 min={attr.minimum ?? undefined}
                 max={attr.maximum ?? undefined}
                 precision={0}

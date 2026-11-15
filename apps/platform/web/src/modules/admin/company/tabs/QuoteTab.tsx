@@ -13,6 +13,8 @@ import {
 import { QueryGate, SaveBlock, TabHeader, ReadOnlyFence } from "../common";
 import { changedFields, codeLabel, isEmptyObject } from "../diff";
 import { errorFields } from "../errors";
+import { UnitLabel } from "../../../../shared/ui/UnitLabel";
+import { unitOf } from "../../../../shared/lib/unit";
 
 type Values = Omit<QuoteDefaults, never>;
 
@@ -106,21 +108,38 @@ function QuoteForm({ defaults }: { defaults: QuoteDefaults }) {
         >
           <Select allowClear loading={bases.isPending} options={active(bases.data?.items)} />
         </Form.Item>
-        <Form.Item name="default_vat_rate" label={t("quote.vat")}>
-          <InputNumber stringMode min="0" max="100" step="0.5" {...NUMBER} />
+        <Form.Item name="default_vat_rate" label={<UnitLabel label={t("quote.vat")} />}>
+          <InputNumber
+            suffix={unitOf(t("quote.vat"))}
+            stringMode
+            min="0"
+            max="100"
+            step="0.5"
+            {...NUMBER}
+          />
         </Form.Item>
         {marginsVisible
           ? MARGINS.map((name) => (
-              <Form.Item key={name} name={name} label={t(`quote.${name}`)}>
-                <InputNumber stringMode min="0" max="100" step="0.5" {...NUMBER} />
+              <Form.Item key={name} name={name} label={<UnitLabel label={t(`quote.${name}`)} />}>
+                <InputNumber
+                  suffix={unitOf(t(`quote.${name}`))}
+                  stringMode
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  {...NUMBER}
+                />
               </Form.Item>
             ))
           : null}
-        <Form.Item name="default_offer_validity_days" label={t("quote.validity")}>
-          <InputNumber min={0} precision={0} {...NUMBER} />
+        <Form.Item
+          name="default_offer_validity_days"
+          label={<UnitLabel label={t("quote.validity")} />}
+        >
+          <InputNumber suffix={unitOf(t("quote.validity"))} min={0} precision={0} {...NUMBER} />
         </Form.Item>
-        <Form.Item name="payment_terms_days" label={t("quote.paymentDays")}>
-          <InputNumber min={0} precision={0} {...NUMBER} />
+        <Form.Item name="payment_terms_days" label={<UnitLabel label={t("quote.paymentDays")} />}>
+          <InputNumber suffix={unitOf(t("quote.paymentDays"))} min={0} precision={0} {...NUMBER} />
         </Form.Item>
         <Form.Item
           name="remind_overdue_invoices"
@@ -131,8 +150,8 @@ function QuoteForm({ defaults }: { defaults: QuoteDefaults }) {
         >
           <Switch />
         </Form.Item>
-        <Form.Item name="default_warranty_months" label={t("quote.warranty")}>
-          <InputNumber min={0} precision={0} {...NUMBER} />
+        <Form.Item name="default_warranty_months" label={<UnitLabel label={t("quote.warranty")} />}>
+          <InputNumber suffix={unitOf(t("quote.warranty"))} min={0} precision={0} {...NUMBER} />
         </Form.Item>
         <Form.Item
           name="default_payment_terms"
@@ -151,27 +170,54 @@ function QuoteForm({ defaults }: { defaults: QuoteDefaults }) {
         </Form.Item>
         <Form.Item
           name="catalog_publish_threshold"
-          label={t("quote.threshold")}
+          label={<UnitLabel label={t("quote.threshold")} />}
           extra={t("quote.thresholdHint")}
         >
-          <InputNumber min={1} max={100} precision={0} {...NUMBER} />
+          <InputNumber
+            suffix={unitOf(t("quote.threshold"))}
+            min={1}
+            max={100}
+            precision={0}
+            {...NUMBER}
+          />
         </Form.Item>
         <Form.Item
           name="fx_rate_max_age_days"
-          label={t("quote.fxAge")}
+          label={<UnitLabel label={t("quote.fxAge")} />}
           extra={t("quote.fxAgeHint")}
         >
-          <InputNumber min={1} max={90} precision={0} {...NUMBER} />
+          <InputNumber
+            suffix={unitOf(t("quote.fxAge"))}
+            min={1}
+            max={90}
+            precision={0}
+            {...NUMBER}
+          />
         </Form.Item>
         {/* Сроки (задача «Н3c»): раньше были константами в коде */}
-        <Form.Item name="offer_confirm_days" label={t("quote.confirmDays")}>
-          <InputNumber min={1} max={365} precision={0} {...NUMBER} />
+        <Form.Item name="offer_confirm_days" label={<UnitLabel label={t("quote.confirmDays")} />}>
+          <InputNumber
+            suffix={unitOf(t("quote.confirmDays"))}
+            min={1}
+            max={365}
+            precision={0}
+            {...NUMBER}
+          />
         </Form.Item>
         <Form.Item name="offer_expiring_days" label={t("quote.expiringDays")}>
           <InputNumber min={1} max={90} precision={0} {...NUMBER} />
         </Form.Item>
-        <Form.Item name="act_reminder_hours" label={t("quote.actReminderHours")}>
-          <InputNumber min={1} max={720} precision={0} {...NUMBER} />
+        <Form.Item
+          name="act_reminder_hours"
+          label={<UnitLabel label={t("quote.actReminderHours")} />}
+        >
+          <InputNumber
+            suffix={unitOf(t("quote.actReminderHours"))}
+            min={1}
+            max={720}
+            precision={0}
+            {...NUMBER}
+          />
         </Form.Item>
       </div>
       <SaveBlock
