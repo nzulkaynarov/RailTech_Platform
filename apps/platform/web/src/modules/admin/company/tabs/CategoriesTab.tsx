@@ -135,17 +135,22 @@ function CategoryTree() {
           const roots = buildTree(items);
           return (
             <>
-              {items.length > 0 ? <div>{add}</div> : null}
-              {fileOf ? (
-                <DictionaryFile
-                  dictionary={fileOf}
-                  readOnly={readOnly}
-                  onApplied={() => {
-                    void queryClient.invalidateQueries({
-                      queryKey: getListCatalogCategoriesQueryKey(),
-                    });
-                  }}
-                />
+              {/* «Добавить» и файл категорий — одной строкой над деревом (план 3.8) */}
+              {items.length > 0 || fileOf ? (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {items.length > 0 ? add : null}
+                  {fileOf ? (
+                    <DictionaryFile
+                      dictionary={fileOf}
+                      readOnly={readOnly}
+                      onApplied={() => {
+                        void queryClient.invalidateQueries({
+                          queryKey: getListCatalogCategoriesQueryKey(),
+                        });
+                      }}
+                    />
+                  ) : null}
+                </div>
               ) : null}
               {items.length === 0 ? (
                 <div className="pf-co-hint">

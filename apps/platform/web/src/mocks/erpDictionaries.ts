@@ -1,3 +1,4 @@
+import { CATALOG_FILE_DICTIONARIES } from "./catalogFiles";
 import { HttpResponse, http } from "msw";
 
 import { allows } from "../app/rbac.generated";
@@ -196,9 +197,12 @@ function guard(kind: unknown, write: boolean): Response | ReferenceKind | undefi
 
 /** Каталог ERP мока: у валют — источник с датой обновления. */
 export function erpCatalog(): Dictionary[] {
-  return ERP_CATALOG.map((d) =>
-    d.source ? { ...d, source: { ...d.source, synced_at: cbuSyncedAt() } } : d,
-  );
+  return [
+    ...ERP_CATALOG.map((d) =>
+      d.source ? { ...d, source: { ...d.source, synced_at: cbuSyncedAt() } } : d,
+    ),
+    ...CATALOG_FILE_DICTIONARIES,
+  ];
 }
 
 export const erpDictionaryHandlers = [

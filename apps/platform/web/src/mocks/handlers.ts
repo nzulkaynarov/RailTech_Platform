@@ -25,6 +25,7 @@ import { peopleContactsHandlers } from "./peopleContacts";
 import { edsPaymentsHandlers } from "./edsPayments";
 import { edsInstructionsHandlers } from "./edsInstructions";
 import { banksHandlers } from "./banks";
+import { catalogFilesHandlers } from "./catalogFiles";
 import { dictionariesHandlers } from "./dictionaries";
 import { erpDictionaryHandlers } from "./erpDictionaries";
 import { edsLettersHandlers } from "./edsLetters";
@@ -189,6 +190,7 @@ export const handlers = [
   ...edsInstructionsHandlers, // P8b: до писем — `*/eds/letters/*` иначе перехватил бы POST-пути
   ...edsLettersHandlers,
   ...banksHandlers, // раньше общих справочников: `/dictionaries/banks` — свой мок
+  ...catalogFilesHandlers, // категории и производители каталога (план 3.8) — тоже свой мок
   ...erpDictionaryHandlers,
   ...dictionariesHandlers,
   ...resolutionTemplatesHandlers,
