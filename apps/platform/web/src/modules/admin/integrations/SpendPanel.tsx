@@ -11,7 +11,7 @@ import type {
 } from "../../../shared/api/generated/model";
 import { useGetAiSpendReport, useGetSpendReport } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
-import { Field, LevelTag, PanelState, PanelTitle, ScrollTable } from "./parts";
+import { Field, LevelTag, PanelState, PanelTitle, ReportTable } from "./parts";
 
 const PERIODS = [7, 30, 90] as const;
 const GROUPS: readonly GetAiSpendReportGroup[] = ["day", "system", "feature", "model"];
@@ -49,48 +49,54 @@ function ProvidersTable({ providers }: { providers: SpendReport["providers"] }) 
   const usd = useUsd();
   if (providers.length === 0) return null;
   return (
-    <ScrollTable label={t("spend.providers.title")}>
-      <table className="pf-int-table" aria-label={t("spend.providers.title")}>
-        <thead>
-          <tr>
-            <th scope="col">{t("spend.providers.provider")}</th>
-            <th scope="col" className="pf-col-num">
-              {t("spend.providers.spent")}
-            </th>
-            <th scope="col" className="pf-col-num">
-              {t("spend.providers.limit")}
-            </th>
-            <th scope="col">{t("spend.providers.state")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {providers.map((provider) => {
+    <ReportTable<ProviderToday>
+      id="providers"
+      label={t("spend.providers.title")}
+      rows={providers}
+      rowKey={(provider) => provider.provider}
+      columns={[
+        {
+          id: "provider",
+          header: t("spend.providers.provider"),
+          width: null,
+          rowHeader: true,
+          cell: (provider) => provider.provider,
+        },
+        {
+          id: "spent",
+          header: t("spend.providers.spent"),
+          width: 120,
+          numeric: true,
+          cell: (provider) => usd(provider.spent_usd),
+        },
+        {
+          id: "limit",
+          header: t("spend.providers.limit"),
+          width: 120,
+          numeric: true,
+          cell: (provider) =>
+            provider.limit_usd > 0 ? usd(provider.limit_usd) : t("spend.providers.noLimit"),
+        },
+        {
+          id: "state",
+          header: t("spend.providers.state"),
+          width: 180,
+          cell: (provider) => {
             const { level, ratio } = budgetLevel(provider);
-            return (
-              <tr key={provider.provider}>
-                <th scope="row">{provider.provider}</th>
-                <td className="pf-col-num">{usd(provider.spent_usd)}</td>
-                <td className="pf-col-num">
-                  {provider.limit_usd > 0 ? usd(provider.limit_usd) : t("spend.providers.noLimit")}
-                </td>
-                <td>
-                  {level === "off" ? (
-                    t("spend.providers.noLimit")
-                  ) : (
-                    <>
-                      <LevelTag level={level} />{" "}
-                      <span className="pf-hint">
-                        {percent((ratio ?? 0) * 100, { fractionDigits: 0 })}
-                      </span>
-                    </>
-                  )}
-                </td>
-              </tr>
+            return level === "off" ? (
+              t("spend.providers.noLimit")
+            ) : (
+              <>
+                <LevelTag level={level} />{" "}
+                <span className="pf-hint">
+                  {percent((ratio ?? 0) * 100, { fractionDigits: 0 })}
+                </span>
+              </>
             );
-          })}
-        </tbody>
-      </table>
-    </ScrollTable>
+          },
+        },
+      ]}
+    />
   );
 }
 
@@ -131,56 +137,66 @@ function BotSpend() {
             />
             <ProvidersTable providers={report.providers} />
             {report.series.length > 0 ? (
-              <ScrollTable label={t("spend.series.title")}>
-                <table className="pf-int-table" aria-label={t("spend.series.title")}>
-                  <thead>
-                    <tr>
-                      <th scope="col">{t("spend.series.day")}</th>
-                      <th scope="col" className="pf-col-num">
-                        {t("spend.series.work")}
-                      </th>
-                      <th scope="col" className="pf-col-num">
-                        {t("spend.series.test")}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {report.series.slice(-10).map((row) => (
-                      <tr key={row.day}>
-                        <th scope="row">{date(row.day)}</th>
-                        <td className="pf-col-num">{usd(row.work_usd)}</td>
-                        <td className="pf-col-num">{usd(row.test_usd)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </ScrollTable>
+              <ReportTable<SpendReport["series"][number]>
+                id="series"
+                label={t("spend.series.title")}
+                rows={report.series.slice(-10)}
+                rowKey={(row) => row.day}
+                columns={[
+                  {
+                    id: "day",
+                    header: t("spend.series.day"),
+                    width: null,
+                    rowHeader: true,
+                    cell: (row) => date(row.day),
+                  },
+                  {
+                    id: "work",
+                    header: t("spend.series.work"),
+                    width: 140,
+                    numeric: true,
+                    cell: (row) => usd(row.work_usd),
+                  },
+                  {
+                    id: "test",
+                    header: t("spend.series.test"),
+                    width: 140,
+                    numeric: true,
+                    cell: (row) => usd(row.test_usd),
+                  },
+                ]}
+              />
             ) : null}
             {report.by_purpose.length > 0 ? (
-              <ScrollTable label={t("spend.purpose.title")}>
-                <table className="pf-int-table" aria-label={t("spend.purpose.title")}>
-                  <thead>
-                    <tr>
-                      <th scope="col">{t("spend.purpose.key")}</th>
-                      <th scope="col" className="pf-col-num">
-                        {t("spend.purpose.calls")}
-                      </th>
-                      <th scope="col" className="pf-col-num">
-                        {t("spend.purpose.cost")}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {report.by_purpose.map((row) => (
-                      <tr key={row.key}>
-                        <th scope="row">{row.key}</th>
-                        <td className="pf-col-num">{number(row.calls)}</td>
-                        <td className="pf-col-num">{usd(row.cost_usd)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </ScrollTable>
+              <ReportTable<SpendReport["by_purpose"][number]>
+                id="purpose"
+                label={t("spend.purpose.title")}
+                rows={report.by_purpose}
+                rowKey={(row) => row.key}
+                columns={[
+                  {
+                    id: "key",
+                    header: t("spend.purpose.key"),
+                    width: null,
+                    rowHeader: true,
+                    cell: (row) => row.key,
+                  },
+                  {
+                    id: "calls",
+                    header: t("spend.purpose.calls"),
+                    width: 120,
+                    numeric: true,
+                    cell: (row) => number(row.calls),
+                  },
+                  {
+                    id: "cost",
+                    header: t("spend.purpose.cost"),
+                    width: 140,
+                    numeric: true,
+                    cell: (row) => usd(row.cost_usd),
+                  },
+                ]}
+              />
             ) : null}
           </>
         )}
@@ -212,79 +228,97 @@ function EnsembleBody({ report }: { report: AiSpendReport }) {
       />
       {report.truncated ? <p className="pf-int-sub">{t("spend.ensemble.truncated")}</p> : null}
       {report.systems.length > 0 ? (
-        <ScrollTable label={t("spend.ensemble.systems")}>
-          <table className="pf-int-table" aria-label={t("spend.ensemble.systems")}>
-            <thead>
-              <tr>
-                <th scope="col">{t("spend.ensemble.system")}</th>
-                <th scope="col" className="pf-col-num">
-                  {t("spend.ensemble.budget")}
-                </th>
-                <th scope="col" className="pf-col-num">
-                  {t("spend.ensemble.today")}
-                </th>
-                <th scope="col">{t("spend.ensemble.state")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {report.systems.map((system) => (
-                <tr key={system.system}>
-                  <th scope="row">{system.system}</th>
-                  <td className="pf-col-num">
-                    {system.daily_usd > 0 ? usd(system.daily_usd) : t("spend.providers.noLimit")}
-                  </td>
-                  <td className="pf-col-num">{usd(system.today_usd)}</td>
-                  <td>
-                    {!system.connected ? (
-                      <LevelTag level="off" />
-                    ) : system.over_today ? (
-                      <LevelTag level="fail" />
-                    ) : system.days_over > 0 ? (
-                      <LevelTag level="warn" />
-                    ) : (
-                      <LevelTag level="ok" />
-                    )}{" "}
-                    <span className="pf-hint">
-                      {!system.connected
-                        ? t("spend.ensemble.notConnected")
-                        : t("spend.ensemble.daysOver", { count: system.days_over })}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </ScrollTable>
+        <ReportTable<AiSpendReport["systems"][number]>
+          id="systems"
+          label={t("spend.ensemble.systems")}
+          rows={report.systems}
+          rowKey={(system) => system.system}
+          columns={[
+            {
+              id: "system",
+              header: t("spend.ensemble.system"),
+              width: null,
+              rowHeader: true,
+              cell: (system) => system.system,
+            },
+            {
+              id: "budget",
+              header: t("spend.ensemble.budget"),
+              width: 130,
+              numeric: true,
+              cell: (system) =>
+                system.daily_usd > 0 ? usd(system.daily_usd) : t("spend.providers.noLimit"),
+            },
+            {
+              id: "today",
+              header: t("spend.ensemble.today"),
+              width: 120,
+              numeric: true,
+              cell: (system) => usd(system.today_usd),
+            },
+            {
+              id: "state",
+              header: t("spend.ensemble.state"),
+              width: 240,
+              cell: (system) => (
+                <>
+                  {!system.connected ? (
+                    <LevelTag level="off" />
+                  ) : system.over_today ? (
+                    <LevelTag level="fail" />
+                  ) : system.days_over > 0 ? (
+                    <LevelTag level="warn" />
+                  ) : (
+                    <LevelTag level="ok" />
+                  )}{" "}
+                  <span className="pf-hint">
+                    {!system.connected
+                      ? t("spend.ensemble.notConnected")
+                      : t("spend.ensemble.daysOver", { count: system.days_over })}
+                  </span>
+                </>
+              ),
+            },
+          ]}
+        />
       ) : null}
       {report.rows.length > 0 ? (
-        <ScrollTable label={t("spend.ensemble.rows")}>
-          <table className="pf-int-table" aria-label={t("spend.ensemble.rows")}>
-            <thead>
-              <tr>
-                <th scope="col">{t(`spend.ensemble.group.${report.group}`)}</th>
-                <th scope="col" className="pf-col-num">
-                  {t("spend.ensemble.calls")}
-                </th>
-                <th scope="col" className="pf-col-num">
-                  {t("spend.ensemble.tokens")}
-                </th>
-                <th scope="col" className="pf-col-num">
-                  {t("spend.ensemble.cost")}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {report.rows.map((row) => (
-                <tr key={row.key}>
-                  <th scope="row">{report.group === "day" ? date(row.key) : row.key}</th>
-                  <td className="pf-col-num">{number(row.calls)}</td>
-                  <td className="pf-col-num">{number(row.input_tokens + row.output_tokens)}</td>
-                  <td className="pf-col-num">{usd(row.cost_usd)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </ScrollTable>
+        <ReportTable<AiSpendReport["rows"][number]>
+          id="ensemble"
+          label={t("spend.ensemble.rows")}
+          rows={report.rows}
+          rowKey={(row) => row.key}
+          columns={[
+            {
+              id: "key",
+              header: t(`spend.ensemble.group.${report.group}`),
+              width: null,
+              rowHeader: true,
+              cell: (row) => (report.group === "day" ? date(row.key) : row.key),
+            },
+            {
+              id: "calls",
+              header: t("spend.ensemble.calls"),
+              width: 110,
+              numeric: true,
+              cell: (row) => number(row.calls),
+            },
+            {
+              id: "tokens",
+              header: t("spend.ensemble.tokens"),
+              width: 130,
+              numeric: true,
+              cell: (row) => number(row.input_tokens + row.output_tokens),
+            },
+            {
+              id: "cost",
+              header: t("spend.ensemble.cost"),
+              width: 120,
+              numeric: true,
+              cell: (row) => usd(row.cost_usd),
+            },
+          ]}
+        />
       ) : null}
       {report.overruns.length > 0 ? (
         <ul className="pf-int-list" aria-label={t("spend.ensemble.overruns")}>

@@ -58,6 +58,24 @@ beforeEach(() => {
 });
 
 describe("DataTable", () => {
+  it("renders a row header cell and hides the column settings when the tools target is null", () => {
+    render(
+      <DataTable
+        tableId="test.report"
+        caption="Сводка"
+        scrollLabel="Сводка"
+        columns={[{ ...COLUMNS[0], rowHeader: true } as DataColumn<Doc>, ...COLUMNS.slice(1)]}
+        rows={ROWS}
+        rowKey={(row) => row.id}
+        toolsTarget={null}
+      />,
+    );
+    const rowHeaders = screen.getAllByRole("rowheader");
+    expect(rowHeaders.map((th) => th.textContent)).toEqual(["СЗ-001", "СЗ-002"]);
+    expect(rowHeaders[0]).toHaveAttribute("scope", "row");
+    expect(screen.queryByRole("button", { name: "Столбцы" })).toBeNull();
+  });
+
   it("по умолчанию: ширина по типу столбца, гибкий столбец без ширины, число вправо", () => {
     renderTable();
     expect(headers()).toEqual(["Номер", "Тема", "Сумма"]);

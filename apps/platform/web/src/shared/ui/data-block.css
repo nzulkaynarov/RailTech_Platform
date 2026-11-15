@@ -115,6 +115,19 @@ table.pf-fixed-table > * > tr > :is(th, td):last-child {
   text-transform: uppercase;
   color: var(--rt-color-text-secondary);
 }
+/* Заголовок строки (`rowHeader` у `DataTable`: сводки и отчёты) выглядит как обычная ячейка, а не как шапка. */
+.pf-fixed-table tbody th[scope="row"] {
+  overflow: visible;
+  white-space: normal;
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--rt-color-text-default);
+  background: transparent;
+  overflow-wrap: break-word;
+}
 /* Переход к объекту в строке — стрелка, а не кнопка в рамке (стандарт интерфейса §7). */
 .pf-fixed-table .pf-row-open {
   color: var(--rt-color-text-tertiary);
