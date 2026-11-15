@@ -15,6 +15,8 @@ from app.domain.errors import ForbiddenError, PasswordChangeRequiredError
 from app.schemas.mail_types import (
     DICTIONARY_KIND,
     Code,
+    DictionaryImportIn,
+    DictionaryImportOut,
     DictionaryItem,
     DictionaryItemIn,
     DictionaryItemList,
@@ -112,6 +114,15 @@ async def reorder_dictionary_items(
     who: Admin, container: ContainerDep, kind: Kind, body: DictionaryOrderIn
 ) -> DictionaryItemList:
     return await container.mail_types.reorder(who, kind, body.codes)
+
+
+@router.post("/dictionaries/{kind}/import", response_model=DictionaryImportOut)
+async def import_dictionary_items(
+    who: Admin, container: ContainerDep, kind: Kind, body: DictionaryImportIn
+) -> DictionaryImportOut:
+    """Загрузка файла (план 2.9): все строки одной транзакцией — ошибка хотя бы в одной, и не
+    записано ничего (`applied = false`, у строки причина)."""
+    return await container.mail_types.import_rows(who, kind, body.rows)
 
 
 @router.patch("/dictionaries/{kind}/{code}", response_model=DictionaryItem)

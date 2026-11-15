@@ -865,3 +865,61 @@ async def test_no_trusted_servers_and_unknown_host_means_nobody_is_believed(stan
     first, second = await stand.mails()
     for mail in (first, second):
         assert (mail.type_code, mail.sender_auth, mail.rule_skipped) == (None, "unknown", True)
+
+
+async def test_file_import_is_one_transaction(
+    client: tuple[TestClient, Stand], sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    """План 2.9: строки файла применяются целиком или не применяются; ошибка называет строку."""
+    http, stand = client
+    admin = await _staff(http, sessions, "admin-i@railtech.uz", "ADMIN")
+    clerk = await _staff(http, sessions, "clerk-i@railtech.uz", "tpl:REGISTRAR")
+    url = "/api/v1/dictionaries/mail-types/import"
+    complaint = {
+        "name": {"ru": "Жалоба", "en": "Complaint"},
+        "attrs": {"default_action": "create_lead"},
+    }
+    before = await _types(stand)
+    official_name = before["official"].name_ru
+
+    bad = http.post(
+        url,
+        json={
+            "rows": [
+                {"line": 2, "create": complaint},
+                {"line": 3, "code": "official", "patch": {"name": {"ru": "Госорганы"}}},
+                {"line": 4, "create": {**complaint, "name": {"ru": "жалоба"}}},
+            ]
+        },
+        headers=admin,
+    )
+    assert bad.status_code == 200, bad.text
+    assert bad.json()["applied"] is False
+    assert [(r["line"], r["reason"]) for r in bad.json()["rows"]] == [
+        (2, None),
+        (3, None),
+        (4, "mail_type_name_taken"),
+    ]
+    after = await _types(stand)
+    assert set(after) == set(before), "ошибка в одной строке — не записано ничего"
+    assert after["official"].name_ru == official_name
+
+    good = http.post(
+        url,
+        json={
+            "rows": [
+                {"line": 2, "create": complaint},
+                {"line": 3, "code": "official", "patch": {"name": {"ru": "Госорганы"}}},
+            ]
+        },
+        headers=admin,
+    )
+    assert good.json()["applied"] is True
+    assert good.json()["rows"][0]["code"] == "complaint"
+    after = await _types(stand)
+    assert after["complaint"].name_ru == "Жалоба"
+    assert after["official"].name_ru == "Госорганы"
+    assert (
+        http.post(url, json={"rows": [{"line": 2, "create": complaint}]}, headers=clerk).status_code
+        == 403
+    )

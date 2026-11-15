@@ -15,6 +15,8 @@ from app.models import Employee
 from app.schemas.dictionaries import (
     DICTIONARY_CODE,
     DICTIONARY_KIND,
+    DictionaryImportIn,
+    DictionaryImportOut,
     DictionaryItem,
     DictionaryItemIn,
     DictionaryItemList,
@@ -65,6 +67,25 @@ async def reorder_dictionary_items(
 ) -> DictionaryItemList:
     async with session.begin():
         return await dictionaries.reorder(session, kind, body.codes, actor_id=admin.crm_user_id)
+
+
+@router.post("/{kind}/import", response_model=DictionaryImportOut, operation_id="importDictionaryItems")
+async def import_dictionary_items(
+    admin: Admin, session: Session, kind: Kind, body: DictionaryImportIn
+) -> DictionaryImportOut:
+    """Загрузка файла справочника (2.9): все строки одной транзакцией — ошибка хотя бы в одной, и не пишется ничего;
+    ответ называет строки с ошибкой. Файл читает и проверяет BFF, сюда приходят готовые действия."""
+    await session.begin()
+    try:
+        result = await dictionaries.import_rows(session, kind, body.rows, actor_id=admin.crm_user_id)
+    except BaseException:
+        await session.rollback()
+        raise
+    if result.applied:
+        await session.commit()
+    else:
+        await session.rollback()
+    return result
 
 
 @router.patch("/{kind}/{code}", response_model=DictionaryItem, operation_id="updateDictionaryItem")
