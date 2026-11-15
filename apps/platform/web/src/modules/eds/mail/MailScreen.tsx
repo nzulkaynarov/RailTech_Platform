@@ -23,6 +23,7 @@ import { BulkBar } from "./BulkArchive";
 import { MailCheck } from "./MailCheck";
 import { MailRow } from "./MailRow";
 import { MailView } from "./MailView";
+import { SentMail } from "./SentMail";
 import {
   ADMIN_MAIL_PATH,
   BULK_TABS,
@@ -62,6 +63,8 @@ function MailList({ own }: { own: boolean }) {
   const [params, setParams] = useSearchParams();
   const tabs = own ? OWN_TABS : CLERK_TABS;
   const fallback: MailTab = own ? "mine" : "new";
+  // «Отправленные» (план 2.8) — своя вкладка рядом с входящими: журнал CRM, не очередь писем
+  const sent = params.get("tab") === "sent";
   const asked = params.get("tab") as MailTab | null;
   const tab: MailTab = asked && tabs.includes(asked) ? asked : fallback;
   const show: Show = tab === "new" && params.get("show") === "history" ? "history" : "all";
@@ -89,6 +92,7 @@ function MailList({ own }: { own: boolean }) {
         // вкладка видна (в фоне TanStack Query не опрашивает), и при возврате на вкладку.
         refetchInterval: LIST_REFRESH_MS,
         refetchOnWindowFocus: true,
+        enabled: !sent,
       },
     },
   );
@@ -198,89 +202,100 @@ function MailList({ own }: { own: boolean }) {
         <TabsBar
           id="pf-mail-tabs"
           label={t("letters:mail.tabs.label")}
-          activeKey={tab}
+          activeKey={sent ? "sent" : tab}
           onChange={(key) => {
+            if (key === "sent") {
+              setParams(new URLSearchParams({ tab: "sent" }), { replace: true });
+              return;
+            }
             go({ tab: key as MailTab });
           }}
           tabBarStyle={{ margin: 0, padding: "0 16px" }}
-          items={tabs.map((key) => ({ key, label: label(key) }))}
+          items={[
+            ...tabs.map((key) => ({ key, label: label(key) })),
+            { key: "sent", label: t("letters:mail.tabs.sent") },
+          ]}
         >
-          <div className="pf-mail-body">
-            <div className="pf-mail-tools">
-              <Input.Search
-                allowClear
-                className="pf-mail-search"
-                aria-label={t("letters:mail.search.label")}
-                placeholder={t("letters:mail.search.placeholder")}
-                value={search}
-                maxLength={100}
-                onChange={(event) => {
-                  setSearch(event.target.value);
-                  setPicked([]);
-                }}
-              />
-              {!own && (types.data?.items.length ?? 0) > 0 ? (
-                <Select
-                  className="pf-mail-type-filter"
-                  aria-label={t("letters:mail.type.filter.label")}
-                  value={typeCode ?? ""}
-                  onChange={(value) => {
-                    go({ type: value || null });
-                  }}
-                  options={[
-                    { value: "", label: t("letters:mail.type.filter.all") },
-                    ...(types.data?.items ?? []).map((item) => ({
-                      value: item.code,
-                      label: localName(item.name, i18n.language),
-                    })),
-                  ]}
-                />
-              ) : null}
-              {tab === "new" && !own ? (
-                <Segmented<Show>
-                  aria-label={t("letters:mail.filter.label")}
-                  value={show}
-                  onChange={(value) => {
-                    go({ show: value });
-                  }}
-                  options={[
-                    { value: "all", label: t("letters:mail.filter.all") },
-                    {
-                      value: "history",
-                      label: data
-                        ? `${t("letters:mail.filter.history")} · ${String(data.counts.history)}`
-                        : t("letters:mail.filter.history"),
-                    },
-                  ]}
-                />
-              ) : null}
-            </div>
-            {tab === "spam" ? (
-              <p className="pf-hint pf-mail-what">{t("letters:mail.spamIntro")}</p>
-            ) : null}
-            {canBulk && data && data.items.length > 0 ? (
-              <div className="pf-mail-pick">
-                <Checkbox
-                  checked={picked.length > 0 && picked.length === pageIds.length}
-                  indeterminate={picked.length > 0 && picked.length < pageIds.length}
+          {sent ? (
+            <SentMail />
+          ) : (
+            <div className="pf-mail-body">
+              <div className="pf-mail-tools">
+                <Input.Search
+                  allowClear
+                  className="pf-mail-search"
+                  aria-label={t("letters:mail.search.label")}
+                  placeholder={t("letters:mail.search.placeholder")}
+                  value={search}
+                  maxLength={100}
                   onChange={(event) => {
-                    setPicked(event.target.checked ? pageIds : []);
+                    setSearch(event.target.value);
+                    setPicked([]);
                   }}
-                >
-                  {t("letters:mail.bulk.all")}
-                </Checkbox>
+                />
+                {!own && (types.data?.items.length ?? 0) > 0 ? (
+                  <Select
+                    className="pf-mail-type-filter"
+                    aria-label={t("letters:mail.type.filter.label")}
+                    value={typeCode ?? ""}
+                    onChange={(value) => {
+                      go({ type: value || null });
+                    }}
+                    options={[
+                      { value: "", label: t("letters:mail.type.filter.all") },
+                      ...(types.data?.items ?? []).map((item) => ({
+                        value: item.code,
+                        label: localName(item.name, i18n.language),
+                      })),
+                    ]}
+                  />
+                ) : null}
+                {tab === "new" && !own ? (
+                  <Segmented<Show>
+                    aria-label={t("letters:mail.filter.label")}
+                    value={show}
+                    onChange={(value) => {
+                      go({ show: value });
+                    }}
+                    options={[
+                      { value: "all", label: t("letters:mail.filter.all") },
+                      {
+                        value: "history",
+                        label: data
+                          ? `${t("letters:mail.filter.history")} · ${String(data.counts.history)}`
+                          : t("letters:mail.filter.history"),
+                      },
+                    ]}
+                  />
+                ) : null}
               </div>
-            ) : null}
-            {picked.length > 0 ? (
-              <BulkBar
-                ids={picked}
-                onClear={() => {
-                  setPicked([]);
-                }}
-              />
-            ) : null}
-            {body}
-          </div>
+              {tab === "spam" ? (
+                <p className="pf-hint pf-mail-what">{t("letters:mail.spamIntro")}</p>
+              ) : null}
+              {canBulk && data && data.items.length > 0 ? (
+                <div className="pf-mail-pick">
+                  <Checkbox
+                    checked={picked.length > 0 && picked.length === pageIds.length}
+                    indeterminate={picked.length > 0 && picked.length < pageIds.length}
+                    onChange={(event) => {
+                      setPicked(event.target.checked ? pageIds : []);
+                    }}
+                  >
+                    {t("letters:mail.bulk.all")}
+                  </Checkbox>
+                </div>
+              ) : null}
+              {picked.length > 0 ? (
+                <BulkBar
+                  ids={picked}
+                  onClear={() => {
+                    setPicked([]);
+                  }}
+                />
+              ) : null}
+              {body}
+            </div>
+          )}
         </TabsBar>
       </Card>
     </div>
