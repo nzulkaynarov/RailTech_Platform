@@ -11,19 +11,6 @@
   align-items: flex-end;
   gap: 12px 16px;
 }
-.pf-cat-control {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-.pf-cat-control > label {
-  color: var(--rt-color-text-secondary);
-  font-size: 12px;
-}
-.pf-cat-spacer {
-  flex: 1 1 auto;
-}
 .pf-cat-table {
   width: 100%;
   border-collapse: collapse;
@@ -165,10 +152,6 @@
   display: flex;
   align-items: flex-end;
   padding-bottom: 2px;
-}
-.pf-cat-control-check {
-  justify-content: flex-end;
-  min-height: 32px;
 }
 .pf-cat-report {
   display: flex;

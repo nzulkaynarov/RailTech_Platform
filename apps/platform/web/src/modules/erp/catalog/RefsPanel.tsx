@@ -34,6 +34,7 @@ import { useDebounced } from "./useDebounced";
 import { errorFields } from "./errors";
 import { queryLabels } from "./labels";
 import { RequestsPanel } from "./RequestsPanel";
+import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 
 const PARTS = ["hs", "brands", "requests"] as const;
 type Part = (typeof PARTS)[number];
@@ -107,14 +108,28 @@ export function RatesView() {
   ];
   return (
     <>
-      <div className="pf-cat-controls">
-        <div className="pf-cat-control">
-          <label htmlFor={id}>{t("refs.rates.filter")}</label>
+      <FilterBar
+        tools
+        actions={
+          <>
+            {canEdit(me, "company.settings") ? (
+              <Button
+                type="primary"
+                onClick={() => {
+                  setEntering(true);
+                }}
+              >
+                {t("refs.rates.enter")}
+              </Button>
+            ) : null}
+          </>
+        }
+      >
+        <FilterField id={id} label={t("refs.rates.filter")} width={160}>
           <Select
             id={id}
             allowClear
             placeholder={t("refs.rates.any")}
-            style={{ width: 160 }}
             value={currency}
             onChange={(value: string | undefined) => {
               setCurrency(value);
@@ -122,19 +137,8 @@ export function RatesView() {
             }}
             options={currencies.map((c) => ({ value: c, label: c }))}
           />
-        </div>
-        <span className="pf-cat-spacer" />
-        {canEdit(me, "company.settings") ? (
-          <Button
-            type="primary"
-            onClick={() => {
-              setEntering(true);
-            }}
-          >
-            {t("refs.rates.enter")}
-          </Button>
-        ) : null}
-      </div>
+        </FilterField>
+      </FilterBar>
       <QueryState query={query} labels={queryLabels(t)} rows={PAGE_SIZE}>
         {(data) =>
           data.items.length === 0 ? (
@@ -286,28 +290,41 @@ function HsView() {
   ];
   return (
     <>
-      <div className="pf-cat-controls">
-        <div className="pf-cat-control">
-          <label htmlFor={ids.q}>{t("refs.hs.search")}</label>
+      <FilterBar
+        tools
+        actions={
+          <>
+            {edit ? (
+              <Button
+                type="primary"
+                onClick={() => {
+                  setEditing("new");
+                }}
+              >
+                {t("refs.hs.add")}
+              </Button>
+            ) : null}
+          </>
+        }
+      >
+        <FilterField id={ids.q} label={t("refs.hs.search")} grow>
           <Input
             id={ids.q}
             type="search"
+            placeholder={t("refs.hs.search")}
             allowClear
             value={text}
-            style={{ width: 260 }}
             onChange={(e) => {
               setText(e.target.value);
               setPage(1);
             }}
           />
-        </div>
-        <div className="pf-cat-control">
-          <label htmlFor={ids.level}>{t("refs.hs.level")}</label>
+        </FilterField>
+        <FilterField id={ids.level} label={t("refs.hs.level")} width={160}>
           <Select
             id={ids.level}
             allowClear
             placeholder={t("refs.hs.anyLevel")}
-            style={{ width: 160 }}
             value={level}
             onChange={(value: number | undefined) => {
               setLevel(value);
@@ -318,7 +335,7 @@ function HsView() {
               label: t("refs.hs.digits", { count: n }),
             }))}
           />
-        </div>
+        </FilterField>
         <label htmlFor={ids.active} className="pf-cat-check">
           <input
             id={ids.active}
@@ -331,18 +348,7 @@ function HsView() {
           />{" "}
           {t("refs.hs.onlyActive")}
         </label>
-        <span className="pf-cat-spacer" />
-        {edit ? (
-          <Button
-            type="primary"
-            onClick={() => {
-              setEditing("new");
-            }}
-          >
-            {t("refs.hs.add")}
-          </Button>
-        ) : null}
-      </div>
+      </FilterBar>
       <QueryState query={query} labels={queryLabels(t)} rows={PAGE_SIZE}>
         {(data) =>
           data.items.length === 0 ? (
@@ -522,21 +528,36 @@ function BrandsView() {
   ];
   return (
     <>
-      <div className="pf-cat-controls">
-        <div className="pf-cat-control">
-          <label htmlFor={ids.q}>{t("refs.brands.search")}</label>
+      <FilterBar
+        tools
+        actions={
+          <>
+            {edit ? (
+              <Button
+                type="primary"
+                onClick={() => {
+                  setEditing("new");
+                }}
+              >
+                {t("refs.brands.add")}
+              </Button>
+            ) : null}
+          </>
+        }
+      >
+        <FilterField id={ids.q} label={t("refs.brands.search")} grow>
           <Input
             id={ids.q}
             type="search"
+            placeholder={t("refs.brands.search")}
             allowClear
             value={text}
-            style={{ width: 260 }}
             onChange={(e) => {
               setText(e.target.value);
               setPage(1);
             }}
           />
-        </div>
+        </FilterField>
         {edit ? (
           <label htmlFor={ids.inactive} className="pf-cat-check">
             <input
@@ -551,18 +572,7 @@ function BrandsView() {
             {t("refs.brands.showInactive")}
           </label>
         ) : null}
-        <span className="pf-cat-spacer" />
-        {edit ? (
-          <Button
-            type="primary"
-            onClick={() => {
-              setEditing("new");
-            }}
-          >
-            {t("refs.brands.add")}
-          </Button>
-        ) : null}
-      </div>
+      </FilterBar>
       <QueryState query={query} labels={queryLabels(t)} rows={PAGE_SIZE}>
         {(data) =>
           data.items.length === 0 ? (

@@ -54,6 +54,7 @@ import { ItemPhotos } from "./ItemPhotos";
 import { queryLabels } from "./labels";
 import { CatalogPriceValue, DueCell, QueueSwitch, ReturnButton, ReviewBlock } from "./ReviewQueue";
 import { NameCode } from "../../../shared/ui/NameCode";
+import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 
 export function KindTag({ kind }: { kind: CatalogItemKind }) {
   const { t } = useTranslation("catalog");
@@ -229,33 +230,47 @@ export function ItemsPanel() {
   };
   return (
     <div className="pf-cat">
-      <div className="pf-cat-controls">
-        <div className="pf-cat-control">
-          <QueueSwitch waiting={waiting} onChange={setWaiting} />
-        </div>
-        <div className="pf-cat-control">
-          <label htmlFor={searchId}>{t("items.search")}</label>
+      <FilterBar
+        tools
+        actions={
+          <>
+            {canEdit(me, "erp.stock") ? (
+              <>
+                <LinkButton to="/erp/catalog?part=import">{t("items.uploadPrice")}</LinkButton>
+                <Button
+                  type="primary"
+                  onClick={() => {
+                    setCreating(true);
+                  }}
+                >
+                  {t("items.add")}
+                </Button>
+              </>
+            ) : null}
+          </>
+        }
+      >
+        <QueueSwitch waiting={waiting} onChange={setWaiting} />
+        <FilterField id={searchId} label={t("items.search")} grow>
           <Input
             id={searchId}
             type="search"
+            placeholder={t("items.search")}
             allowClear
             value={text}
-            style={{ width: 280 }}
             onChange={(event) => {
               setText(event.target.value);
               setPage(1);
             }}
           />
-        </div>
+        </FilterField>
         {waiting ? null : (
           <>
-            <div className="pf-cat-control">
-              <label htmlFor={kindId}>{t("items.filterKind")}</label>
+            <FilterField id={kindId} label={t("items.filterKind")} width={200}>
               <Select
                 id={kindId}
                 allowClear
                 placeholder={t("items.anyKind")}
-                style={{ width: 200 }}
                 value={kind}
                 onChange={(value: CatalogItemKind | undefined) => {
                   setKind(value);
@@ -263,16 +278,14 @@ export function ItemsPanel() {
                 }}
                 options={KINDS.map((k) => ({ value: k, label: t(`kinds.${k}`) }))}
               />
-            </div>
-            <div className="pf-cat-control">
-              <label htmlFor={categoryId}>{t("items.filterCategory")}</label>
+            </FilterField>
+            <FilterField id={categoryId} label={t("items.filterCategory")} width={220}>
               <Select
                 id={categoryId}
                 allowClear
                 showSearch
                 optionFilterProp="label"
                 placeholder={t("items.anyCategory")}
-                style={{ width: 220 }}
                 value={category}
                 onChange={(value: string | undefined) => {
                   setCategory(value);
@@ -283,44 +296,28 @@ export function ItemsPanel() {
                   label: c.name,
                 }))}
               />
-            </div>
-            <div className="pf-cat-control pf-cat-control-check">
-              <Checkbox
-                id={pendingId}
-                checked={pending}
-                onChange={(event) => {
-                  setParams(
-                    (prev) => {
-                      const next = new URLSearchParams(prev);
-                      if (event.target.checked) next.set("proposals", "pending");
-                      else next.delete("proposals");
-                      return next;
-                    },
-                    { replace: true },
-                  );
-                  setPage(1);
-                }}
-              >
-                {t("proposals.filter")}
-              </Checkbox>
-            </div>
-          </>
-        )}
-        <span className="pf-cat-spacer" />
-        {canEdit(me, "erp.stock") ? (
-          <>
-            <LinkButton to="/erp/catalog?part=import">{t("items.uploadPrice")}</LinkButton>
-            <Button
-              type="primary"
-              onClick={() => {
-                setCreating(true);
+            </FilterField>
+            <Checkbox
+              id={pendingId}
+              checked={pending}
+              onChange={(event) => {
+                setParams(
+                  (prev) => {
+                    const next = new URLSearchParams(prev);
+                    if (event.target.checked) next.set("proposals", "pending");
+                    else next.delete("proposals");
+                    return next;
+                  },
+                  { replace: true },
+                );
+                setPage(1);
               }}
             >
-              {t("items.add")}
-            </Button>
+              {t("proposals.filter")}
+            </Checkbox>
           </>
-        ) : null}
-      </div>
+        )}
+      </FilterBar>
       <QueryState query={query} labels={queryLabels(t)} rows={PAGE_SIZE}>
         {(data) =>
           data.items.length === 0 ? (

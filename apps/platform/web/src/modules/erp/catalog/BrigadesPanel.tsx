@@ -22,6 +22,7 @@ import { useDebounced } from "./useDebounced";
 import { errorFields } from "./errors";
 import { queryLabels } from "./labels";
 import { HOME_CURRENCY, currencyLabel } from "../../../shared/lib/money";
+import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 
 const KINDS: readonly BrigadeKind[] = ["brigade", "person", "subcontractor"];
 
@@ -106,21 +107,36 @@ export function BrigadesPanel() {
   ];
   return (
     <div className="pf-cat">
-      <div className="pf-cat-controls">
-        <div className="pf-cat-control">
-          <label htmlFor={searchId}>{t("brigades.search")}</label>
+      <FilterBar
+        tools
+        actions={
+          <>
+            {edit ? (
+              <Button
+                type="primary"
+                onClick={() => {
+                  setEditing("new");
+                }}
+              >
+                {t("brigades.add")}
+              </Button>
+            ) : null}
+          </>
+        }
+      >
+        <FilterField id={searchId} label={t("brigades.search")} grow>
           <Input
             id={searchId}
             type="search"
+            placeholder={t("brigades.search")}
             allowClear
             value={text}
-            style={{ width: 280 }}
             onChange={(event) => {
               setText(event.target.value);
               setPage(1);
             }}
           />
-        </div>
+        </FilterField>
         <label htmlFor={inactiveId} className="pf-cat-check">
           <input
             id={inactiveId}
@@ -133,18 +149,7 @@ export function BrigadesPanel() {
           />{" "}
           {t("brigades.showInactive")}
         </label>
-        <span className="pf-cat-spacer" />
-        {edit ? (
-          <Button
-            type="primary"
-            onClick={() => {
-              setEditing("new");
-            }}
-          >
-            {t("brigades.add")}
-          </Button>
-        ) : null}
-      </div>
+      </FilterBar>
       <QueryState query={query} labels={queryLabels(t)} rows={PAGE_SIZE}>
         {(data) =>
           data.items.length === 0 ? (
