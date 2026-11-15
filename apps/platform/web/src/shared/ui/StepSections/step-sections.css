@@ -58,7 +58,7 @@
   border-color: var(--rt-color-primary-default);
   color: var(--rt-color-text-inverse);
 }
-.pf-fstep:not([data-open]) .pf-fstep-badge:has(.anticon-check) {
+.pf-fstep:not([data-open]) .pf-fstep-badge:has(.lucide-check) {
   background: var(--rt-color-success-text);
   border-color: var(--rt-color-success-text);
   color: var(--rt-color-text-inverse);

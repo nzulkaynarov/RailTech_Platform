@@ -1,4 +1,4 @@
-import { ArrowDownOutlined, ArrowUpOutlined, StarFilled, StarOutlined } from "@ant-design/icons";
+import { ArrowDownIcon, ArrowUpIcon, StarFilledIcon, StarIcon } from "../../../shared/ui/lucide";
 import { useQueryClient } from "@tanstack/react-query";
 import { App, Button } from "antd";
 import { useState } from "react";
@@ -107,12 +107,12 @@ export function ItemPhotos({ card, editable }: { card: CatalogItemDetail; editab
                 <div className="pf-cat-photo-bar">
                   {image.is_main ? (
                     <span className="pf-cat-photo-main">
-                      <StarFilled aria-hidden /> {t("photos.main")}
+                      <StarFilledIcon aria-hidden /> {t("photos.main")}
                     </span>
                   ) : editable ? (
                     <Button
                       size="small"
-                      icon={<StarOutlined aria-hidden />}
+                      icon={<StarIcon aria-hidden />}
                       aria-label={t("photos.makeMainNamed", { n })}
                       disabled={update.isPending}
                       onClick={() => {
@@ -126,7 +126,7 @@ export function ItemPhotos({ card, editable }: { card: CatalogItemDetail; editab
                     <span className="pf-cat-photo-tools">
                       <Button
                         size="small"
-                        icon={<ArrowUpOutlined aria-hidden />}
+                        icon={<ArrowUpIcon aria-hidden />}
                         aria-label={t("photos.upNamed", { n })}
                         disabled={index === 0 || update.isPending}
                         onClick={() => {
@@ -139,7 +139,7 @@ export function ItemPhotos({ card, editable }: { card: CatalogItemDetail; editab
                       />
                       <Button
                         size="small"
-                        icon={<ArrowDownOutlined aria-hidden />}
+                        icon={<ArrowDownIcon aria-hidden />}
                         aria-label={t("photos.downNamed", { n })}
                         disabled={index === images.length - 1 || update.isPending}
                         onClick={() => {

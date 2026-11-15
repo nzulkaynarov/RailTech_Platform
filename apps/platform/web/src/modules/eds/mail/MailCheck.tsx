@@ -1,4 +1,4 @@
-import { SyncOutlined } from "@ant-design/icons";
+import { RefreshIcon } from "../../../shared/ui/lucide";
 import { Button } from "antd";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -103,7 +103,7 @@ export function MailCheck({
       <div className="pf-mail-check-row">
         {checked ? <span className="pf-hint pf-mail-checked">{checked}</span> : null}
         <Button
-          icon={<SyncOutlined spin={check.isPending} />}
+          icon={<RefreshIcon spin={check.isPending} />}
           aria-busy={check.isPending}
           aria-label={check.isPending ? t("mail.check.busy") : t("mail.check.button")}
           disabled={check.isPending}

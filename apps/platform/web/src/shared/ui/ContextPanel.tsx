@@ -1,9 +1,4 @@
-import {
-  ArrowsAltOutlined,
-  PushpinFilled,
-  PushpinOutlined,
-  ShrinkOutlined,
-} from "@ant-design/icons";
+import { ExpandIcon, PinFilledIcon, PinIcon, ShrinkIcon } from "./lucide";
 import { Drawer, Tabs } from "antd";
 import type { KeyboardEvent, ReactNode } from "react";
 
@@ -91,7 +86,7 @@ function PanelBody({
           }}
           style={{ width: 28, height: 28 }}
         >
-          {panelWidth === "wide" ? <ShrinkOutlined /> : <ArrowsAltOutlined />}
+          {panelWidth === "wide" ? <ShrinkIcon /> : <ExpandIcon />}
         </button>
       ) : null}
       {canDock && onModeChange && controlLabels ? (
@@ -107,9 +102,9 @@ function PanelBody({
           style={{ width: 28, height: 28 }}
         >
           {panelMode === "docked" ? (
-            <PushpinFilled style={{ color: "var(--rt-color-primary-default)" }} />
+            <PinFilledIcon style={{ color: "var(--rt-color-primary-default)" }} />
           ) : (
-            <PushpinOutlined />
+            <PinIcon />
           )}
         </button>
       ) : null}

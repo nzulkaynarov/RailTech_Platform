@@ -676,3 +676,18 @@ tr > td.pf-col-num {
   line-height: 16px;
   color: var(--rt-color-text-tertiary);
 }
+
+/* Вращение значка занятости (`spin` у значков `lucide.tsx`) */
+.pf-icon-spin {
+  animation: pf-icon-spin 1s linear infinite;
+}
+@keyframes pf-icon-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pf-icon-spin {
+    animation: none;
+  }
+}
