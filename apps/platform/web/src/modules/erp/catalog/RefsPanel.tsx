@@ -35,6 +35,8 @@ import { errorFields } from "./errors";
 import { queryLabels } from "./labels";
 import { RequestsPanel } from "./RequestsPanel";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
+import { UnitLabel } from "../../../shared/ui/UnitLabel";
+import { unitOf } from "../../../shared/lib/unit";
 
 const PARTS = ["hs", "brands", "requests"] as const;
 type Part = (typeof PARTS)[number];
@@ -206,11 +208,12 @@ function RateForm({ onClose }: { onClose: () => void }) {
       </FormField>
       <FormField
         id={ids.rate}
-        label={t("refs.rates.form.rate")}
+        label={<UnitLabel label={t("refs.rates.form.rate")} />}
         hint={t("refs.rates.form.rateHint")}
       >
         <Input
           id={ids.rate}
+          suffix={unitOf(t("refs.rates.form.rate"))}
           inputMode="decimal"
           value={rate}
           status={fields.includes("rate_to_uzs") ? "error" : undefined}

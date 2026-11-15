@@ -33,6 +33,8 @@ import { localName } from "../../eds/dictionaries";
 import { queryLabels } from "./labels";
 import { OFFER_SOURCES } from "./kinds";
 import { useDebounced } from "./useDebounced";
+import { UnitLabel } from "../../../shared/ui/UnitLabel";
+import { unitOf } from "../../../shared/lib/unit";
 
 /** Поля секции «Компания»: ошибка сервера в них отмечает секцию */
 const COMPANY_FIELDS: ReadonlySet<string> = new Set([
@@ -378,9 +380,16 @@ export function OfferCreateForm({
       <div className="pf-cat-form-row">
         <FormField
           id={ids.amount}
-          label={t("offers.form.price", { currency: currencyLabel(currency, i18n.language) })}
+          label={
+            <UnitLabel
+              label={t("offers.form.price", { currency: currencyLabel(currency, i18n.language) })}
+            />
+          }
         >
           <Input
+            suffix={unitOf(
+              t("offers.form.price", { currency: currencyLabel(currency, i18n.language) }),
+            )}
             id={ids.amount}
             inputMode="decimal"
             value={amount}
@@ -417,8 +426,9 @@ export function OfferCreateForm({
             }))}
           />
         </FormField>
-        <FormField id={ids.min} label={t("offers.form.min")}>
+        <FormField id={ids.min} label={<UnitLabel label={t("offers.form.min")} />}>
           <Input
+            suffix={unitOf(t("offers.form.min"))}
             id={ids.min}
             inputMode="numeric"
             value={min}

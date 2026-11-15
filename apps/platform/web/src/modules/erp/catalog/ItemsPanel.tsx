@@ -55,6 +55,8 @@ import { queryLabels } from "./labels";
 import { CatalogPriceValue, DueCell, QueueSwitch, ReturnButton, ReviewBlock } from "./ReviewQueue";
 import { NameCode } from "../../../shared/ui/NameCode";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
+import { UnitLabel } from "../../../shared/ui/UnitLabel";
+import { unitOf } from "../../../shared/lib/unit";
 
 export function KindTag({ kind }: { kind: CatalogItemKind }) {
   const { t } = useTranslation("catalog");
@@ -828,8 +830,13 @@ function ItemForm({
             options={(lookups.data?.units ?? []).map((u) => ({ value: u.id, label: u.name }))}
           />
         </FormField>
-        <FormField id={ids.vat} label={t("items.form.vat")} hint={t("items.form.vatHint")}>
+        <FormField
+          id={ids.vat}
+          label={<UnitLabel label={t("items.form.vat")} />}
+          hint={t("items.form.vatHint")}
+        >
           <Input
+            suffix={unitOf(t("items.form.vat"))}
             id={ids.vat}
             inputMode="decimal"
             value={vat}

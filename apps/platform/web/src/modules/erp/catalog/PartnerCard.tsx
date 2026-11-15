@@ -31,6 +31,8 @@ import { RowActions, ROW_ACTIONS_WIDTH } from "../../../shared/ui/RowActions";
 
 import "./catalog.css";
 import { NameCode } from "../../../shared/ui/NameCode";
+import { UnitLabel } from "../../../shared/ui/UnitLabel";
+import { unitOf } from "../../../shared/lib/unit";
 
 /**
  * Карточка партнёра: реквизиты, доступ в кабинет, цены и сроки. Живёт в «Контакты · Контрагенты» (`?partner=<id>`), в том же
@@ -357,9 +359,16 @@ function OfferForm({
       {pricesVisible ? (
         <FormField
           id={ids.amount}
-          label={t("offers.form.price", { currency: currencyLabel(currency, i18n.language) })}
+          label={
+            <UnitLabel
+              label={t("offers.form.price", { currency: currencyLabel(currency, i18n.language) })}
+            />
+          }
         >
           <Input
+            suffix={unitOf(
+              t("offers.form.price", { currency: currencyLabel(currency, i18n.language) }),
+            )}
             id={ids.amount}
             inputMode="decimal"
             value={amount}
@@ -373,8 +382,13 @@ function OfferForm({
         <p className="pf-cat-note">{t("offers.form.noPrice")}</p>
       )}
       <div className="pf-cat-form-row">
-        <FormField id={ids.quota} label={t("offers.form.quota")} hint={t("offers.form.quotaHint")}>
+        <FormField
+          id={ids.quota}
+          label={<UnitLabel label={t("offers.form.quota")} />}
+          hint={t("offers.form.quotaHint")}
+        >
           <Input
+            suffix={unitOf(t("offers.form.quota"))}
             id={ids.quota}
             inputMode="numeric"
             value={quota}
@@ -383,8 +397,9 @@ function OfferForm({
             }}
           />
         </FormField>
-        <FormField id={ids.min} label={t("offers.form.min")}>
+        <FormField id={ids.min} label={<UnitLabel label={t("offers.form.min")} />}>
           <Input
+            suffix={unitOf(t("offers.form.min"))}
             id={ids.min}
             inputMode="numeric"
             value={min}
@@ -395,8 +410,9 @@ function OfferForm({
         </FormField>
       </div>
       <div className="pf-cat-form-row">
-        <FormField id={ids.stock} label={t("offers.form.stockLead")}>
+        <FormField id={ids.stock} label={<UnitLabel label={t("offers.form.stockLead")} />}>
           <Input
+            suffix={unitOf(t("offers.form.stockLead"))}
             id={ids.stock}
             inputMode="numeric"
             value={stockLead}
@@ -405,8 +421,9 @@ function OfferForm({
             }}
           />
         </FormField>
-        <FormField id={ids.order} label={t("offers.form.orderLead")}>
+        <FormField id={ids.order} label={<UnitLabel label={t("offers.form.orderLead")} />}>
           <Input
+            suffix={unitOf(t("offers.form.orderLead"))}
             id={ids.order}
             inputMode="numeric"
             value={orderLead}

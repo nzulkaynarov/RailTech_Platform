@@ -23,6 +23,8 @@ import { errorFields } from "./errors";
 import { queryLabels } from "./labels";
 import { HOME_CURRENCY, currencyLabel } from "../../../shared/lib/money";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
+import { UnitLabel } from "../../../shared/ui/UnitLabel";
+import { unitOf } from "../../../shared/lib/unit";
 
 const KINDS: readonly BrigadeKind[] = ["brigade", "person", "subcontractor"];
 
@@ -295,10 +297,19 @@ function BrigadeForm({ brigade, onClose }: { brigade?: Brigade | undefined; onCl
         <div className="pf-cat-form-row">
           <FormField
             id={ids.rate}
-            label={t("brigades.form.rate", { currency: currencyLabel(currency, i18n.language) })}
+            label={
+              <UnitLabel
+                label={t("brigades.form.rate", {
+                  currency: currencyLabel(currency, i18n.language),
+                })}
+              />
+            }
             hint={t("brigades.form.rateHint")}
           >
             <Input
+              suffix={unitOf(
+                t("brigades.form.rate", { currency: currencyLabel(currency, i18n.language) }),
+              )}
               id={ids.rate}
               inputMode="decimal"
               value={amount}
