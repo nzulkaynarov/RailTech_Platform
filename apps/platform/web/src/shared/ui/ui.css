@@ -691,3 +691,29 @@ tr > td.pf-col-num {
     animation: none;
   }
 }
+
+/* Панель выбора «Выбрано: N» (`SelectionBar`, стандарт §7): всплывает внизу списка поверх строк */
+.pf-selection-bar {
+  position: sticky;
+  bottom: 16px;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 8px 0;
+  padding: 8px 12px 8px 16px;
+  border: 1px solid var(--rt-color-surface-split);
+  border-radius: 8px;
+  background: var(--rt-color-surface-background);
+  box-shadow: var(--pf-selection-shadow);
+}
+.pf-selection-count {
+  font-weight: 600;
+}
+.pf-selection-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-right: auto;
+}

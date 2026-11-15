@@ -922,9 +922,7 @@
     },
     "bulk": {
       "label": "Tanlangan xatlar",
-      "selected": "Tanlandi: {{count}}",
       "all": "Hammasini tanlash",
-      "clear": "Tanlovni bekor qilish",
       "archive": "Arxivga",
       "title": "Arxivga: {{count}}",
       "hint": "Masalan: reklama, xabarnoma",

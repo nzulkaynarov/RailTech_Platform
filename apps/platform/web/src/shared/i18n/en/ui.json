@@ -147,5 +147,9 @@
   "formSheet": {
     "cancel": "Cancel",
     "close": "Close"
+  },
+  "selection": {
+    "count": "Selected: {{count}}",
+    "clear": "Clear selection"
   }
 }

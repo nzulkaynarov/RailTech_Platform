@@ -1,5 +1,6 @@
 import { Alert, App, Button, Input } from "antd";
 import { Dialog } from "../../../shared/ui/Dialog";
+import { SelectionBar } from "../../../shared/ui/SelectionBar";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -52,17 +53,13 @@ export function BulkBar({ ids, onClear }: { ids: readonly number[]; onClear: () 
     }
   };
   return (
-    <div className="pf-mail-bulk" role="region" aria-label={t("mail.bulk.label")}>
-      <span>{t("mail.bulk.selected", { count: ids.length })}</span>
+    <SelectionBar count={ids.length} label={t("mail.bulk.label")} onClear={onClear}>
       <Button
         onClick={() => {
           setOpen(true);
         }}
       >
         {t("mail.bulk.archive")}
-      </Button>
-      <Button type="link" onClick={onClear}>
-        {t("mail.bulk.clear")}
       </Button>
       <Dialog
         open={open}
@@ -101,6 +98,6 @@ export function BulkBar({ ids, onClear }: { ids: readonly number[]; onClear: () 
           {error ? <Alert type="error" showIcon role="alert" message={error} /> : null}
         </div>
       </Dialog>
-    </div>
+    </SelectionBar>
   );
 }
