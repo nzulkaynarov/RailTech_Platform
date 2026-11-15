@@ -29,6 +29,7 @@ import { articleErrorText } from "./errors";
 import "../../../features/help/help.css";
 import "./articles.css";
 import { DataTable } from "../../../shared/ui/DataTable/DataTable";
+import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 
 const EDIT_PARAM = "edit";
 const STATUSES: readonly CompanyArticleStatus[] = ["draft", "published"];
@@ -379,21 +380,22 @@ export function ArticlesPage() {
                 {t("admin.readOnly")}
               </p>
             ) : null}
-            <form
-              className="pf-ticket-filters"
-              role="search"
-              aria-label={t("admin.filtersLabel")}
-              onSubmit={(event) => {
-                event.preventDefault();
-              }}
+            <FilterBar
+              inset
+              label={t("admin.filtersLabel")}
+              actions={
+                list.data ? (
+                  <span className="pf-hint" aria-live="polite">
+                    {t("admin.counts", { total: all.length, drafts })}
+                  </span>
+                ) : undefined
+              }
             >
-              <div className="pf-ticket-field">
-                <label htmlFor={`${base}-status`}>{t("admin.status")}</label>
+              <FilterField id={`${base}-status`} label={t("admin.status")}>
                 <Select<CompanyArticleStatus>
                   id={`${base}-status`}
                   allowClear
                   placeholder={t("admin.allStatuses")}
-                  style={{ minWidth: 200 }}
                   value={status}
                   options={STATUSES.map((value) => ({
                     value,
@@ -403,13 +405,8 @@ export function ArticlesPage() {
                     setStatus(value);
                   }}
                 />
-              </div>
-              {list.data ? (
-                <span className="pf-hint" aria-live="polite" style={{ marginLeft: "auto" }}>
-                  {t("admin.counts", { total: all.length, drafts })}
-                </span>
-              ) : null}
-            </form>
+              </FilterField>
+            </FilterBar>
             {body}
           </>
         )}

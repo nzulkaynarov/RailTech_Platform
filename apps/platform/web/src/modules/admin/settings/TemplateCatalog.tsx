@@ -8,6 +8,7 @@ import { useListTemplateCatalog } from "../../../shared/api/generated/platform-b
 import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTable";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { StatusTag } from "../../../shared/ui/StatusTag";
+import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 
 const LANGS = ["ru", "uz", "en"] as const;
 
@@ -92,19 +93,20 @@ export function TemplateCatalog() {
   return (
     <div className="pf-fp-stack">
       {down.length > 0 ? <Alert type="warning" showIcon message={t("catalog.partial")} /> : null}
-      <div className="pf-tpl-filter">
-        <Select
-          aria-label={t("catalog.filter")}
-          allowClear
-          style={{ minWidth: 220 }}
-          placeholder={t("catalog.all")}
-          value={kind}
-          onChange={(value: TemplateKind | undefined) => {
-            setKind(value ?? null);
-          }}
-          options={kinds.map((value) => ({ value, label: t(`catalog.kinds.${value}`) }))}
-        />
-      </div>
+      <FilterBar tools>
+        <FilterField id="pf-tpl-kind" label={t("catalog.filter")} width={240}>
+          <Select
+            id="pf-tpl-kind"
+            allowClear
+            placeholder={t("catalog.all")}
+            value={kind}
+            onChange={(value: TemplateKind | undefined) => {
+              setKind(value ?? null);
+            }}
+            options={kinds.map((value) => ({ value, label: t(`catalog.kinds.${value}`) }))}
+          />
+        </FilterField>
+      </FilterBar>
       <DataTable
         tableId="admin.templates"
         caption={t("catalog.caption")}

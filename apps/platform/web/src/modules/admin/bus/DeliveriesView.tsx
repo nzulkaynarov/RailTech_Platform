@@ -32,6 +32,7 @@ import {
 } from "./format";
 import { BusSourcesNote, FilterSelect } from "./parts";
 import { DataTable } from "../../../shared/ui/DataTable/DataTable";
+import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 
 const STATUSES: readonly BusDeliveryStatus[] = ["dead", "pending", "in_flight", "delivered"];
 const PAGE = 50;
@@ -302,9 +303,8 @@ export function DeliveriesView({ mode, subscribers, selectedKey, onOpen }: Deliv
         }}
       />
       <Card styles={{ body: { padding: 0 } }}>
-        <div className="pf-bus-filters" role="group" aria-label={t("filters.label")}>
-          <div className="pf-bus-field">
-            <label htmlFor={id("domain")}>{t("filters.domain")}</label>
+        <FilterBar inset tools label={t("filters.label")}>
+          <FilterField id={id("domain")} label={t("filters.domain")}>
             <FilterSelect<BusDomain | "all">
               id={id("domain")}
               value={domain}
@@ -314,10 +314,9 @@ export function DeliveriesView({ mode, subscribers, selectedKey, onOpen }: Deliv
                 ...DOMAINS.map((d) => ({ value: d, label: domainName(t, d) })),
               ]}
             />
-          </div>
+          </FilterField>
           {mode === "all" ? (
-            <div className="pf-bus-field">
-              <label htmlFor={id("status")}>{t("filters.status")}</label>
+            <FilterField id={id("status")} label={t("filters.status")}>
               <FilterSelect<BusDeliveryStatus | "all">
                 id={id("status")}
                 value={status}
@@ -327,10 +326,9 @@ export function DeliveriesView({ mode, subscribers, selectedKey, onOpen }: Deliv
                   ...STATUSES.map((s) => ({ value: s, label: t(`delivery.${s}`) })),
                 ]}
               />
-            </div>
+            </FilterField>
           ) : null}
-          <div className="pf-bus-field">
-            <label htmlFor={id("subscriber")}>{t("filters.subscriber")}</label>
+          <FilterField id={id("subscriber")} label={t("filters.subscriber")}>
             <FilterSelect<string>
               id={id("subscriber")}
               value={subscriber}
@@ -340,28 +338,29 @@ export function DeliveriesView({ mode, subscribers, selectedKey, onOpen }: Deliv
                 ...subscribers.map((s) => ({ value: s, label: subscriberName(t, s) })),
               ]}
             />
-          </div>
-          <div className="pf-bus-field">
-            <label htmlFor={id("type")}>{t("filters.type")}</label>
+          </FilterField>
+          <FilterField id={id("type")} label={t("filters.type")}>
             <Input
               id={id("type")}
               value={type}
               maxLength={200}
               allowClear
               placeholder={t("filters.typePlaceholder")}
-              style={{ width: 200 }}
               onChange={(event) => {
                 setType(event.target.value);
               }}
             />
-          </div>
+          </FilterField>
           <DateRangeField
             idFrom={id("from")}
             idTo={id("to")}
             labelFrom={t("filters.from")}
             labelTo={t("filters.to")}
-            fieldClassName="pf-bus-field"
-            style={{ width: 150 }}
+            wrap={({ id: fieldId, label, children }) => (
+              <FilterField id={fieldId} label={label} width={190} visibleLabel>
+                {children}
+              </FilterField>
+            )}
             value={{ from, to }}
             onChange={(range) => {
               setFrom(range.from);
@@ -373,7 +372,7 @@ export function DeliveriesView({ mode, subscribers, selectedKey, onOpen }: Deliv
               {t("filters.reset")}
             </Button>
           ) : null}
-        </div>
+        </FilterBar>
         <DataBlock busy={query.isPlaceholderData} resetKey={shownKey}>
           {body}
         </DataBlock>

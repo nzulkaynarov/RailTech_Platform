@@ -27,6 +27,7 @@ import {
 } from "./format";
 import { BusSourcesNote, FilterSelect } from "./parts";
 import { DataTable } from "../../../shared/ui/DataTable/DataTable";
+import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 
 const PAGE = 50;
 
@@ -250,9 +251,8 @@ export function InboxView({ selectedKey, onOpen }: InboxViewProps) {
         }}
       />
       <Card styles={{ body: { padding: 0 } }}>
-        <div className="pf-bus-filters" role="group" aria-label={t("filters.label")}>
-          <div className="pf-bus-field">
-            <label htmlFor="pf-bus-inbox-domain">{t("filters.domain")}</label>
+        <FilterBar inset tools label={t("filters.label")}>
+          <FilterField id="pf-bus-inbox-domain" label={t("filters.domain")}>
             <FilterSelect<BusDomain | "all">
               id="pf-bus-inbox-domain"
               value={domain}
@@ -262,8 +262,8 @@ export function InboxView({ selectedKey, onOpen }: InboxViewProps) {
                 ...DOMAINS.map((d) => ({ value: d, label: domainName(t, d) })),
               ]}
             />
-          </div>
-        </div>
+          </FilterField>
+        </FilterBar>
         <DataBlock busy={query.isPlaceholderData} resetKey={shownKey}>
           {body}
         </DataBlock>

@@ -10,6 +10,7 @@ import {
 } from "../../../entities/audit/labels";
 import { DateRangeField } from "../../../shared/ui/DateField";
 import { type AuditFilterValues, hasFilters } from "./filters";
+import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 
 export interface AuditFiltersProps {
   value: AuditFilterValues;
@@ -21,7 +22,7 @@ export interface AuditFiltersProps {
   onReset: () => void;
 }
 
-/** Фильтры журнала: автор, действие, объект, период и показ входов; каждый — с подписью над полем. */
+/** Фильтры журнала: автор, действие, объект, период и показ входов — общая строка фильтров (UI-8). */
 export function AuditFilters({ value, onChange, actors, entityId, onReset }: AuditFiltersProps) {
   const { t } = useTranslation("audit");
   const base = useId();
@@ -29,67 +30,57 @@ export function AuditFilters({ value, onChange, actors, entityId, onReset }: Aud
     onChange({ ...value, ...patch });
   };
   return (
-    <form
-      className="pf-audit-filters"
-      role="search"
-      aria-label={t("filters.label")}
-      onSubmit={(event) => {
-        event.preventDefault();
-      }}
-    >
-      <div className="pf-audit-field">
-        <label htmlFor={`${base}-actor`}>{t("filters.actor")}</label>
+    <FilterBar inset label={t("filters.label")}>
+      <FilterField id={`${base}-actor`} label={t("filters.actor")}>
         <Select
           id={`${base}-actor`}
           showSearch
           allowClear
           optionFilterProp="label"
           placeholder={t("filters.allActors")}
-          style={{ minWidth: 200 }}
           value={value.actor || undefined}
           options={actors.map((a) => ({ value: a.id, label: a.name }))}
           onChange={(v?: string) => {
             set({ actor: v ?? "" });
           }}
         />
-      </div>
-      <div className="pf-audit-field">
-        <label htmlFor={`${base}-action`}>{t("filters.action")}</label>
+      </FilterField>
+      <FilterField id={`${base}-action`} label={t("filters.action")}>
         <Select
           id={`${base}-action`}
           showSearch
           allowClear
           optionFilterProp="label"
           placeholder={t("filters.allActions")}
-          style={{ minWidth: 240 }}
           value={value.action || undefined}
           options={AUDIT_ACTIONS.map((code) => ({ value: code, label: actionLabel(t, code) }))}
           onChange={(v?: string) => {
             set({ action: v ?? "" });
           }}
         />
-      </div>
-      <div className="pf-audit-field">
-        <label htmlFor={`${base}-entity`}>{t("filters.entity")}</label>
+      </FilterField>
+      <FilterField id={`${base}-entity`} label={t("filters.entity")}>
         <Select
           id={`${base}-entity`}
           allowClear
           placeholder={t("filters.allEntities")}
-          style={{ minWidth: 200 }}
           value={value.entityType || undefined}
           options={AUDIT_ENTITIES.map((type) => ({ value: type, label: entityLabel(t, type) }))}
           onChange={(v?: string) => {
             set({ entityType: v ?? "" });
           }}
         />
-      </div>
+      </FilterField>
       <DateRangeField
         idFrom={`${base}-from`}
         idTo={`${base}-to`}
         labelFrom={t("filters.from")}
         labelTo={t("filters.to")}
-        fieldClassName="pf-audit-field"
-        style={{ width: 160 }}
+        wrap={({ id, label, children }) => (
+          <FilterField id={id} label={label} width={190} visibleLabel>
+            {children}
+          </FilterField>
+        )}
         value={{ from: value.from, to: value.to }}
         onChange={(range) => {
           set(range);
@@ -106,6 +97,6 @@ export function AuditFilters({ value, onChange, actors, entityId, onReset }: Aud
         <label htmlFor={`${base}-logins`}>{t("filters.logins")}</label>
       </div>
       {hasFilters(value, entityId) ? <Button onClick={onReset}>{t("filters.reset")}</Button> : null}
-    </form>
+    </FilterBar>
   );
 }

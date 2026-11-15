@@ -1,23 +1,4 @@
 /* Admin · Журнал аудита и вкладка «Журнал» роли (W13-A6). Значения — макет v3 и docs/architecture/platform-frontend.md. */
-.pf-audit-filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 12px;
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--rt-color-surface-split);
-}
-.pf-audit-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-.pf-audit-field > label {
-  font-size: 12px;
-  line-height: 20px;
-  color: var(--rt-color-text-secondary);
-}
 .pf-audit-logins {
   display: inline-flex;
   align-items: center;

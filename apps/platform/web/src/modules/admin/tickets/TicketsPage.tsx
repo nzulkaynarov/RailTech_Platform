@@ -26,6 +26,7 @@ import { TicketCard } from "./TicketCard";
 
 import "../../../features/help/help.css";
 import { DataTable } from "../../../shared/ui/DataTable/DataTable";
+import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 
 const PATH = "/admin/tickets";
 const PAGE = 50;
@@ -197,21 +198,24 @@ export function TicketsPage({ objectId }: { objectId?: string | undefined }) {
       <PageHeader title={title} subtitle={t("admin.subtitle")} />
       <div ref={blockRef}>
         <Card styles={{ body: { padding: 0 } }}>
-          <form
-            className="pf-ticket-filters"
-            role="search"
-            aria-label={t("admin.filtersLabel")}
-            onSubmit={(event) => {
-              event.preventDefault();
-            }}
+          <FilterBar
+            inset
+            label={t("admin.filtersLabel")}
+            actions={
+              counts ? (
+                <span className="pf-hint" aria-live="polite">
+                  {t("admin.countsNew", { count: counts.new })} ·{" "}
+                  {t("admin.countsWork", { count: counts.in_progress })} ·{" "}
+                  {t("admin.countsDone", { count: counts.resolved })}
+                </span>
+              ) : undefined
+            }
           >
-            <div className="pf-ticket-field">
-              <label htmlFor={`${base}-status`}>{t("admin.status")}</label>
+            <FilterField id={`${base}-status`} label={t("admin.status")}>
               <Select<TicketStatus>
                 id={`${base}-status`}
                 allowClear
                 placeholder={t("admin.allStatuses")}
-                style={{ minWidth: 180 }}
                 value={status}
                 options={TICKET_STATUSES.map((value) => ({
                   value,
@@ -222,14 +226,12 @@ export function TicketsPage({ objectId }: { objectId?: string | undefined }) {
                   setPage(1);
                 }}
               />
-            </div>
-            <div className="pf-ticket-field">
-              <label htmlFor={`${base}-subject`}>{t("admin.subject")}</label>
+            </FilterField>
+            <FilterField id={`${base}-subject`} label={t("admin.subject")}>
               <Select<TicketSubject>
                 id={`${base}-subject`}
                 allowClear
                 placeholder={t("admin.allSubjects")}
-                style={{ minWidth: 220 }}
                 value={subject}
                 options={TICKET_SUBJECTS.map((value) => ({
                   value,
@@ -240,16 +242,9 @@ export function TicketsPage({ objectId }: { objectId?: string | undefined }) {
                   setPage(1);
                 }}
               />
-            </div>
+            </FilterField>
             {filtered ? <Button onClick={reset}>{t("admin.reset")}</Button> : null}
-            {counts ? (
-              <span className="pf-hint" aria-live="polite" style={{ marginLeft: "auto" }}>
-                {t("admin.countsNew", { count: counts.new })} ·{" "}
-                {t("admin.countsWork", { count: counts.in_progress })} ·{" "}
-                {t("admin.countsDone", { count: counts.resolved })}
-              </span>
-            ) : null}
-          </form>
+          </FilterBar>
           <DataBlock busy={list.isPlaceholderData} resetKey={shownKey}>
             {body}
           </DataBlock>

@@ -48,24 +48,34 @@ export function FilterField({
   label,
   grow = false,
   width,
+  visibleLabel = false,
   children,
 }: {
   id: string;
-  label: string;
+  label: ReactNode;
   grow?: boolean;
   width?: number;
+  /** Короткая подпись слева от поля («С», «По») — когда значение поля само не говорит, что это за поле */
+  visibleLabel?: boolean;
   children: ReactNode;
 }) {
+  const classes = [
+    "pf-filter-field",
+    grow ? "pf-filter-field--grow" : "",
+    visibleLabel ? "pf-filter-field--labeled" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
   return (
     <div
-      className={grow ? "pf-filter-field pf-filter-field--grow" : "pf-filter-field"}
+      className={classes}
       style={
         grow || width === undefined
           ? undefined
           : ({ "--pf-filter-width": `${String(width)}px` } as CSSProperties)
       }
     >
-      <label htmlFor={id} className="pf-sr-only">
+      <label htmlFor={id} className={visibleLabel ? "pf-filter-label" : "pf-sr-only"}>
         {label}
       </label>
       {children}

@@ -23,6 +23,7 @@ import { useBasisText } from "./useBasisText";
 
 import "./signing.css";
 import type { DataColumn } from "../../../shared/ui/DataTable/DataTable";
+import { FilterBar } from "../../../shared/ui/FilterBar";
 
 type Filter = "active" | "all";
 const KINDS_SHOWN = 2;
@@ -199,7 +200,7 @@ export function SigningPage() {
             }
           />
         ) : null}
-        <div className="pf-sign-toolbar">
+        <FilterBar>
           <Segmented<Filter>
             aria-label={t("filter.label")}
             value={filter}
@@ -209,7 +210,7 @@ export function SigningPage() {
               { value: "all", label: t("filter.all") },
             ]}
           />
-        </div>
+        </FilterBar>
         {list.isError ? (
           <Alert type="error" showIcon role="alert" message={t("unavailable")} />
         ) : null}
