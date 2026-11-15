@@ -5,18 +5,14 @@ import { useTranslation } from "react-i18next";
 import type { KbDocument } from "../../../shared/api/generated/model";
 import { useListKbDocuments } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
-import { TableCols } from "../../../shared/ui/DataBlock";
-import { tableMinWidth } from "../../../shared/ui/tableWidth";
+import { DataTable } from "../../../shared/ui/DataTable/DataTable";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { LinkButton } from "../../../shared/ui/LinkButton";
-import { QueryState, ScrollRegion } from "../../../shared/ui/FormParts";
+import { QueryState } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { KbSearch } from "./KbSearch";
 import { useKbStateLabels } from "./labels";
 import { parseId, withParams } from "./refresh";
-
-/** Ширины колонок: название (гибкая), язык, продукт, индексация, частей, обновлён (UX-1c, S9) */
-const COLS = [null, 120, 170, 170, 110, 150] as const;
 
 export function IngestTag({ status }: { status: KbDocument["ingest_status"] }) {
   const { t } = useTranslation("kb");
@@ -48,57 +44,76 @@ function DocumentsTable({ items, editable }: { items: readonly KbDocument[]; edi
     );
   }
   return (
-    <ScrollRegion label={t("documents.tableScroll")}>
-      <table className="pf-kb-table pf-fixed-table" style={{ minWidth: tableMinWidth(COLS, 240) }}>
-        <caption className="pf-sr-only">{t("documents.caption")}</caption>
-        <TableCols widths={COLS} />
-        <thead>
-          <tr>
-            <th scope="col">{t("documents.columns.title")}</th>
-            <th scope="col">{t("documents.columns.language")}</th>
-            <th scope="col">{t("documents.columns.product")}</th>
-            <th scope="col">{t("documents.columns.status")}</th>
-            <th scope="col" className="pf-col-num">
-              {t("documents.columns.chunks")}
-            </th>
-            <th scope="col">{t("documents.columns.updated")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((doc) => (
-            <tr key={doc.id} data-selected={selected === doc.id}>
-              <td>
-                <Link
-                  className="pf-focusable pf-kb-doc-link"
-                  to={withParams(params, { doc: String(doc.id), new: null, panel: "open" })}
-                  aria-label={t("documents.open", { title: doc.title })}
-                  aria-current={selected === doc.id ? "true" : undefined}
-                >
-                  {doc.title}
-                </Link>
-                {doc.is_active ? null : (
-                  <>
-                    {" "}
-                    <StatusTag kind="activity" status="inactive">
-                      {t("documents.disabled")}
-                    </StatusTag>
-                  </>
-                )}
-              </td>
-              <td>{t(`languages.${doc.language}`)}</td>
-              <td className="pf-ell" title={doc.product_key ?? undefined}>
-                {doc.product_key ?? t("documents.noProduct")}
-              </td>
-              <td>
-                <IngestTag status={doc.ingest_status} />
-              </td>
-              <td className="pf-col-num">{doc.chunk_count}</td>
-              <td>{date(doc.updated_at, "datetime")}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </ScrollRegion>
+    <DataTable<KbDocument>
+      tableId="crm.kb.documents"
+      caption={t("documents.caption")}
+      scrollLabel={t("documents.tableScroll")}
+      className="pf-kb-table"
+      flexMin={240}
+      rows={items}
+      rowKey={(doc) => String(doc.id)}
+      rowAttrs={(doc) => ({ "data-selected": selected === doc.id })}
+      columns={[
+        {
+          id: "title",
+          header: t("documents.columns.title"),
+          width: null,
+          cell: (doc) => (
+            <>
+              <Link
+                className="pf-focusable pf-kb-doc-link"
+                to={withParams(params, { doc: String(doc.id), new: null, panel: "open" })}
+                aria-label={t("documents.open", { title: doc.title })}
+                aria-current={selected === doc.id ? "true" : undefined}
+              >
+                {doc.title}
+              </Link>
+              {doc.is_active ? null : (
+                <>
+                  {" "}
+                  <StatusTag kind="activity" status="inactive">
+                    {t("documents.disabled")}
+                  </StatusTag>
+                </>
+              )}
+            </>
+          ),
+        },
+        {
+          id: "language",
+          header: t("documents.columns.language"),
+          width: 120,
+          cell: (doc) => t(`languages.${doc.language}`),
+        },
+        {
+          id: "product",
+          header: t("documents.columns.product"),
+          width: 170,
+          cellClassName: "pf-ell",
+          cellTitle: (doc) => doc.product_key ?? undefined,
+          cell: (doc) => doc.product_key ?? t("documents.noProduct"),
+        },
+        {
+          id: "status",
+          header: t("documents.columns.status"),
+          width: 170,
+          cell: (doc) => <IngestTag status={doc.ingest_status} />,
+        },
+        {
+          id: "chunks",
+          header: t("documents.columns.chunks"),
+          width: 110,
+          numeric: true,
+          cell: (doc) => doc.chunk_count,
+        },
+        {
+          id: "updated",
+          header: t("documents.columns.updated"),
+          width: 150,
+          cell: (doc) => date(doc.updated_at, "datetime"),
+        },
+      ]}
+    />
   );
 }
 

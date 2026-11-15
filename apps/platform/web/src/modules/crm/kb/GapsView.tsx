@@ -6,17 +6,13 @@ import { canSee } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import type { KbGap, KbGapStatus } from "../../../shared/api/generated/model";
 import { useListKbGaps } from "../../../shared/api/generated/platform-bff";
-import { TableCols } from "../../../shared/ui/DataBlock";
-import { tableMinWidth } from "../../../shared/ui/tableWidth";
+import { DataTable } from "../../../shared/ui/DataTable/DataTable";
 import { EmptyState } from "../../../shared/ui/EmptyState";
-import { QueryState, ScrollRegion } from "../../../shared/ui/FormParts";
+import { QueryState } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { GAP_STATUSES, PAGE_SIZE, gapPageParam, gapStatusParam, leadNumber } from "./gaps";
 import { useKbStateLabels } from "./labels";
 import { parseId, withParams } from "./refresh";
-
-/** Ширины колонок: вопрос (гибкая), раз, язык, оценка, лид (UX-1c, S9) */
-const COLS = [null, 110, 120, 110, 140] as const;
 
 export function LeadRef({ id }: { id: number | null }) {
   const { me } = useAuth();
@@ -41,49 +37,59 @@ function GapsTable({ items, status }: { items: readonly KbGap[]; status: KbGapSt
     );
   }
   return (
-    <ScrollRegion label={t("gaps.tableScroll")}>
-      <table className="pf-kb-table pf-fixed-table" style={{ minWidth: tableMinWidth(COLS, 280) }}>
-        <caption className="pf-sr-only">{t("gaps.caption")}</caption>
-        <TableCols widths={COLS} />
-        <thead>
-          <tr>
-            <th scope="col">{t("gaps.columns.question")}</th>
-            <th scope="col" className="pf-col-num">
-              {t("gaps.columns.occurrences")}
-            </th>
-            <th scope="col">{t("gaps.columns.language")}</th>
-            <th scope="col" className="pf-col-num">
-              {t("gaps.columns.score")}
-            </th>
-            <th scope="col">{t("gaps.columns.lead")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((gap) => (
-            <tr key={gap.id} data-selected={selected === gap.id}>
-              <td>
-                <Link
-                  className="pf-focusable pf-kb-doc-link"
-                  to={withParams(params, { gap: String(gap.id), new: null, panel: "open" })}
-                  aria-label={t("gaps.open", { question: gap.question })}
-                  aria-current={selected === gap.id ? "true" : undefined}
-                >
-                  {gap.question}
-                </Link>
-              </td>
-              <td className="pf-col-num">{gap.occurrences}</td>
-              <td>{t(`languages.${gap.language}`)}</td>
-              <td className="pf-col-num">
-                {gap.best_score === null ? "—" : gap.best_score.toFixed(2)}
-              </td>
-              <td>
-                <LeadRef id={gap.lead_id} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </ScrollRegion>
+    <DataTable<KbGap>
+      tableId="crm.kb.gaps"
+      caption={t("gaps.caption")}
+      scrollLabel={t("gaps.tableScroll")}
+      className="pf-kb-table"
+      flexMin={280}
+      rows={items}
+      rowKey={(gap) => String(gap.id)}
+      rowAttrs={(gap) => ({ "data-selected": selected === gap.id })}
+      columns={[
+        {
+          id: "question",
+          header: t("gaps.columns.question"),
+          width: null,
+          cell: (gap) => (
+            <Link
+              className="pf-focusable pf-kb-doc-link"
+              to={withParams(params, { gap: String(gap.id), new: null, panel: "open" })}
+              aria-label={t("gaps.open", { question: gap.question })}
+              aria-current={selected === gap.id ? "true" : undefined}
+            >
+              {gap.question}
+            </Link>
+          ),
+        },
+        {
+          id: "occurrences",
+          header: t("gaps.columns.occurrences"),
+          width: 110,
+          numeric: true,
+          cell: (gap) => gap.occurrences,
+        },
+        {
+          id: "language",
+          header: t("gaps.columns.language"),
+          width: 120,
+          cell: (gap) => t(`languages.${gap.language}`),
+        },
+        {
+          id: "score",
+          header: t("gaps.columns.score"),
+          width: 110,
+          numeric: true,
+          cell: (gap) => (gap.best_score === null ? "—" : gap.best_score.toFixed(2)),
+        },
+        {
+          id: "lead",
+          header: t("gaps.columns.lead"),
+          width: 140,
+          cell: (gap) => <LeadRef id={gap.lead_id} />,
+        },
+      ]}
+    />
   );
 }
 
