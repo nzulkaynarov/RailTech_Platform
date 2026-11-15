@@ -84,7 +84,7 @@ test.describe("витрина общих компонентов", () => {
       width: 24,
       background: "rgb(239, 246, 255)",
       border: "rgb(29, 78, 216)",
-      color: "rgb(29, 78, 216)",
+      color: "rgb(37, 99, 235)",
     });
     expect(await box(".pf-step-label")).toMatchObject({ size: "12px" });
     const upcoming = await box(".pf-step--upcoming .pf-step-num");
@@ -117,7 +117,7 @@ test.describe("витрина общих компонентов", () => {
     // ContextPanel (закреплённое): 440, вкладки с активной линией #1668dc и текстом #0958d9
     expect(await box(".pf-panel-docked")).toMatchObject({ width: 480 });
     const activeTab = await box(".pf-panel-tabs .ant-tabs-tab-active .ant-tabs-tab-btn");
-    expect(activeTab).toMatchObject({ color: "rgb(29, 78, 216)", weight: "400" }); // без смены насыщенности (UX-1b, S13)
+    expect(activeTab).toMatchObject({ color: "rgb(37, 99, 235)", weight: "400" }); // без смены насыщенности (UX-1b, S13)
     const ink = await box(".pf-panel-tabs .ant-tabs-ink-bar");
     expect(ink).toMatchObject({ height: 2, background: "rgb(29, 78, 216)" });
     const hide = await box("button[aria-label='Скрыть боковое окно']");

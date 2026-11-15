@@ -159,7 +159,8 @@ const antd = {
   colorInfoBg: c.info.bg,
   colorInfoBorder: c.info.border,
   colorInfoText: c.info.text,
-  colorLink: c.primary.default,
+  // Ссылка в строке текста отличается от него не только цветом (axe link-in-text-block): ≥ 3:1 к основному тексту.
+  colorLink: c.primary.text,
   colorLinkHover: c.primary.hover,
   colorLinkActive: c.primary.active,
   colorText: c.text.default,

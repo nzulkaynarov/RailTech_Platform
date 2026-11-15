@@ -238,8 +238,13 @@ test("версия пакета 0.3.0", () => {
 test("значения стандарта интерфейса §2 (docs/architecture/ui-standard.md)", () => {
   assert.deepEqual(
     [c.primary.default, c.primary.hover, c.primary.bg, c.primary.text],
-    ["#1d4ed8", "#1e40af", "#eff6ff", "#1d4ed8"],
+    ["#1d4ed8", "#1e40af", "#eff6ff", "#2563eb"],
   );
+  // Ссылка внутри текста: ≥ 3:1 к основному тексту (axe link-in-text-block) и ≥ 4.5:1 на поверхностях
+  assert.ok(contrast(c.primary.text, c.text.default) >= 3);
+  for (const surface of [c.surface.background, c.surface.layout, c.surface.muted, c.primary.bg]) {
+    assert.ok(contrast(c.primary.text, surface) >= 4.5, surface);
+  }
   // Текст «готово» и «ждёт» — ступень 800: ступень 700 на 10-процентной заливке бейджа даёт 4,0–4,4:1
   assert.deepEqual([c.success.default, c.success.text], ["#16a34a", "#166534"]);
   assert.deepEqual([c.warning.default, c.warning.text], ["#d97706", "#92400e"]);
