@@ -570,5 +570,40 @@
       "letter": "Letter",
       "memo": "Memo"
     }
+  },
+  "catalog": {
+    "tab": "All templates",
+    "caption": "Templates of all sections",
+    "scroll": "Templates table, scroll",
+    "filter": "Template kind",
+    "all": "All kinds",
+    "partial": "Some sections did not answer — not all templates are shown.",
+    "error": "Templates did not load",
+    "errorText": "Refresh the page.",
+    "columns": {
+      "name": "Name",
+      "kind": "Kind",
+      "languages": "Languages",
+      "label": "Label"
+    },
+    "labels": {
+      "builtin": "Sample",
+      "off": "Off"
+    },
+    "kinds": {
+      "quote": "Quote",
+      "contract": "Contract",
+      "invoice": "Invoice",
+      "act": "Act",
+      "receipt": "Receipt",
+      "delivery_note": "Delivery note",
+      "letter": "Letter",
+      "report": "Report",
+      "custom": "Document",
+      "email": "Client email",
+      "resolution": "Resolution",
+      "reply": "Bot reply",
+      "memo": "Memo"
+    }
   }
 }

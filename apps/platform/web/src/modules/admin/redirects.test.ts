@@ -37,7 +37,7 @@ const LEGACY: [string, string][] = [
   ["/admin/company?tab=numbering", "/admin/numbering"],
   ["/admin/company?tab=quote", "/admin/templates?tab=quote"],
   ["/admin/company?tab=charges", "/admin/dictionaries?list=charges"],
-  ["/admin/company?tab=templates", "/admin/templates"],
+  ["/admin/company?tab=templates", "/admin/templates?tab=documents"],
   ["/admin/company?tab=reference", "/admin/dictionaries?list=countries"],
   ["/admin/company?tab=categories", "/admin/dictionaries?list=categories"],
   ["/admin/company?tab=platform", "/admin/taxes"],

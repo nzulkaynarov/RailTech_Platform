@@ -570,5 +570,40 @@
       "letter": "Xat",
       "memo": "Xizmat xati"
     }
+  },
+  "catalog": {
+    "tab": "Barcha shablonlar",
+    "caption": "Barcha bo‘limlar shablonlari",
+    "scroll": "Shablonlar jadvali, aylantirish",
+    "filter": "Shablon turi",
+    "all": "Barcha turlar",
+    "partial": "Ba’zi bo‘limlar javob bermadi — hamma shablonlar ko‘rsatilmagan.",
+    "error": "Shablonlar yuklanmadi",
+    "errorText": "Sahifani yangilang.",
+    "columns": {
+      "name": "Nomi",
+      "kind": "Turi",
+      "languages": "Tillar",
+      "label": "Belgi"
+    },
+    "labels": {
+      "builtin": "Namuna",
+      "off": "O‘chirilgan"
+    },
+    "kinds": {
+      "quote": "TK",
+      "contract": "Shartnoma",
+      "invoice": "Hisob",
+      "act": "Dalolatnoma",
+      "receipt": "Kvitansiya",
+      "delivery_note": "Yuk xati",
+      "letter": "Xat",
+      "report": "Hisobot",
+      "custom": "Hujjat",
+      "email": "Mijozga xat",
+      "resolution": "Rezolyutsiya",
+      "reply": "Bot javobi",
+      "memo": "Xizmat xati"
+    }
   }
 }
