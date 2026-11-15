@@ -13,6 +13,7 @@ import { endSession, updateSession } from "../../../mocks/mockSession";
 import { resetTicketsMock } from "../../../mocks/ticketsStore";
 import i18n from "../../../shared/i18n";
 import { renderApp, signInAs } from "../../../test/renderApp";
+import { pickRowAction, rowActionItems } from "../../../test/rowActions";
 import { server } from "../../../test/server";
 import { setViewportWidth } from "../../../test/viewport";
 
@@ -194,7 +195,7 @@ describe("Настройки · Статьи компании (W18A-P5, B-079)",
     signInAs("admin@demo.example");
     renderApp("/admin/articles");
     const row = await rowOf("Где лежат шаблоны писем");
-    fireEvent.click(within(row).getByRole("button", { name: "Править: Где лежат шаблоны писем" }));
+    fireEvent.click(within(row).getByRole("button", { name: "Где лежат шаблоны писем" }));
     const title = await screen.findByRole("textbox", { name: "Заголовок" });
     expect(title).toHaveValue("Где лежат шаблоны писем");
     expect(screen.queryByRole("button", { name: "Сохранить" })).toBeNull();
@@ -215,9 +216,7 @@ describe("Настройки · Статьи компании (W18A-P5, B-079)",
     signInAs("admin@demo.example");
     renderApp("/admin/articles");
     const draft = await rowOf("График отпусков на следующий год");
-    fireEvent.click(
-      within(draft).getByRole("button", { name: "Опубликовать: График отпусков на следующий год" }),
-    );
+    await pickRowAction("График отпусков на следующий год", "Опубликовать", draft);
     expect(
       await screen.findByText("Статья опубликована: теперь её видят все сотрудники."),
     ).toBeInTheDocument();
@@ -226,19 +225,15 @@ describe("Настройки · Статьи компании (W18A-P5, B-079)",
     });
 
     const published = await rowOf("График отпусков на следующий год");
-    fireEvent.click(
-      within(published).getByRole("button", {
-        name: "Снять с публикации: График отпусков на следующий год",
-      }),
-    );
+    await pickRowAction("График отпусков на следующий год", "Снять с публикации", published);
     const dialog = await lastDialog("Снять статью с публикации?");
     fireEvent.click(within(dialog).getByRole("button", { name: "Оставить" }));
     expect(readCompanyArticles().articles.find((a) => a.id === 3)?.status).toBe("published");
 
-    fireEvent.click(
-      within(await rowOf("График отпусков на следующий год")).getByRole("button", {
-        name: "Снять с публикации: График отпусков на следующий год",
-      }),
+    await pickRowAction(
+      "График отпусков на следующий год",
+      "Снять с публикации",
+      await rowOf("График отпусков на следующий год"),
     );
     const again = await lastDialog("Снять статью с публикации?", 1);
     fireEvent.click(within(again).getByRole("button", { name: "Снять с публикации" }));
@@ -252,16 +247,16 @@ describe("Настройки · Статьи компании (W18A-P5, B-079)",
     signInAs("admin@demo.example");
     renderApp("/admin/articles");
     const row = await rowOf("Где лежат шаблоны писем");
-    fireEvent.click(within(row).getByRole("button", { name: "Удалить: Где лежат шаблоны писем" }));
+    await pickRowAction("Где лежат шаблоны писем", "Удалить", row);
     const dialog = await lastDialog("Удалить статью?");
     expect(dialog).toHaveTextContent("«Где лежат шаблоны писем» будет удалена насовсем");
     fireEvent.click(within(dialog).getByRole("button", { name: "Не удалять" }));
     expect(readCompanyArticles().articles).toHaveLength(3);
 
-    fireEvent.click(
-      within(await rowOf("Где лежат шаблоны писем")).getByRole("button", {
-        name: "Удалить: Где лежат шаблоны писем",
-      }),
+    await pickRowAction(
+      "Где лежат шаблоны писем",
+      "Удалить",
+      await rowOf("Где лежат шаблоны писем"),
     );
     const confirm = await lastDialog("Удалить статью?", 1);
     fireEvent.click(within(confirm).getByRole("button", { name: "Удалить" }));
@@ -331,10 +326,9 @@ describe("Настройки · Статьи компании (W18A-P5, B-079)",
     expect(screen.queryByRole("button", { name: "Новая статья" })).toBeNull();
     expect(screen.getByText(/Писать и публиковать их может администратор/)).toBeInTheDocument();
     const draft = await rowOf("График отпусков на следующий год");
-    expect(within(draft).queryByRole("button", { name: /Опубликовать/ })).toBeNull();
-    expect(within(draft).queryByRole("button", { name: /Удалить/ })).toBeNull();
+    expect(await rowActionItems("График отпусков на следующий год", draft)).toEqual([]);
     fireEvent.click(
-      within(draft).getByRole("button", { name: "Открыть: График отпусков на следующий год" }),
+      within(draft).getByRole("button", { name: "График отпусков на следующий год" }),
     );
     expect(await screen.findByRole("heading", { name: "Статья компании (чтение)" })).toBeVisible();
     expect(screen.getByRole("textbox", { name: "Заголовок" })).toHaveAttribute("readonly");
@@ -364,9 +358,10 @@ describe("Настройки · Статьи компании (W18A-P5, B-079)",
     expect(await heading()).toBeInTheDocument();
     const list = await screen.findByRole("list", { name: "Статьи компании" });
     expect(within(list).getAllByRole("listitem")).toHaveLength(3);
-    expect(
-      within(list).getByRole("button", { name: "Удалить: Кто согласует договор" }),
-    ).toBeVisible();
+    expect(await rowActionItems("Кто согласует договор", list)).toEqual([
+      "Снять с публикации",
+      "Удалить",
+    ]);
   });
 
   it("интерфейс на узбекском и английском", async () => {

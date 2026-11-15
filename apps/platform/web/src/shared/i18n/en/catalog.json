@@ -257,7 +257,6 @@
     "openSupplier": "Open partner {{name}}",
     "openProduct": "Open item {{name}}",
     "edit": "Edit",
-    "editNamed": "Edit the offer for item {{name}}",
     "form": {
       "title": "Offer: {{name}}",
       "price": "Purchase price, {{currency}}",
@@ -807,8 +806,7 @@
     "table": "Price history",
     "at": "When",
     "source": "Source",
-    "open": "History",
-    "openNamed": "Price history for {{name}}"
+    "open": "History"
   },
   "proposals": {
     "count": "to approve: {{count}}",

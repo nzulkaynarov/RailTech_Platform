@@ -11,6 +11,7 @@ import {
   partnerCard,
 } from "./support/app";
 import { chooseOption, pickFiles } from "./support/fields";
+import { pickRowAction } from "./support/rowActions";
 
 // CAT-1 (L0-2) на MSW: снабженец заводит иностранный завод без ИНН, загружает его прайс по шаблону (проверка ничего не
 // пишет, отчёт с ошибками строк и изменениями на одобрение), применяет; в карточке позиции решает изменение от завода и
@@ -117,9 +118,7 @@ test.describe("CAT-1: загрузка прайса партнёра", () => {
     await settledScreenshot(page, "cat1-offer-create");
     await form.getByRole("button", { name: "Добавить" }).click();
     await expect(form).toBeHidden();
-    await supplier
-      .getByRole("button", { name: "История цены по позиции Реле защиты РЗ-1" })
-      .click();
+    await pickRowAction(page, "Реле защиты РЗ-1", "История", supplier);
     const history = page.getByRole("dialog", { name: /История цены/ });
     await expect(history.getByText("вручную")).toBeVisible();
     await expectNoViolations(page, "история цены");

@@ -14,6 +14,7 @@ import {
   setupCatalogTests,
   signIn,
 } from "../../../test/catalogKit";
+import { pickRowAction } from "../../../test/rowActions";
 
 setupCatalogTests();
 
@@ -161,11 +162,7 @@ describe("Номенклатура: партнёры", () => {
 
     const drawer = await findPartnerCard("ООО «Поставщик Север»");
     expect(await within(drawer).findByText("Кабель силовой ВВГнг 3×2,5")).toBeVisible();
-    fireEvent.click(
-      within(drawer).getByRole("button", {
-        name: "Изменить предложение по позиции Кабель силовой ВВГнг 3×2,5",
-      }),
-    );
+    await pickRowAction("Кабель силовой ВВГнг 3×2,5", "Изменить", drawer);
     const form = await findModal(/Предложение: Кабель/);
     expect(await within(form).findByText(/Цену партнёра вы не видите/)).toBeInTheDocument();
     expect(within(form).queryByLabelText(/Цена закупки/)).toBeNull();
@@ -181,11 +178,7 @@ describe("Номенклатура: партнёры", () => {
     signIn("supply@demo.example");
     renderAt(partnerPath("1"));
     const drawer = await findPartnerCard("ООО «Поставщик Север»");
-    fireEvent.click(
-      await within(drawer).findByRole("button", {
-        name: "Изменить предложение по позиции Кабель силовой ВВГнг 3×2,5",
-      }),
-    );
+    await pickRowAction("Кабель силовой ВВГнг 3×2,5", "Изменить", drawer);
     const form = await findModal(/Предложение: Кабель/);
     fireEvent.change(await within(form).findByLabelText("Цена закупки, USD"), {
       target: { value: "13,75" },

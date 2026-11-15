@@ -257,7 +257,6 @@
     "openSupplier": "{{name}} hamkorsini ochish",
     "openProduct": "{{name}} pozitsiyasini ochish",
     "edit": "O'zgartirish",
-    "editNamed": "{{name}} pozitsiyasi bo'yicha taklifni o'zgartirish",
     "form": {
       "title": "Taklif: {{name}}",
       "price": "Xarid narxi, {{currency}}",
@@ -807,8 +806,7 @@
     "table": "Narx tarixi",
     "at": "Qachon",
     "source": "Manba",
-    "open": "Tarix",
-    "openNamed": "{{name}} narx tarixi"
+    "open": "Tarix"
   },
   "proposals": {
     "count": "tasdiqlashda: {{count}}",

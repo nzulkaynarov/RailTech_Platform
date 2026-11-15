@@ -33,13 +33,10 @@
     "readOnly": "Siz maqolalarni, shu jumladan qoralamalarni ham o‘qiy olasiz. Yozish va e’lon qilish administratorning ishi.",
     "counts": "Jami maqolalar: {{total}}, shundan qoralamalar: {{drafts}}",
     "actions": {
-      "edit": "Tahrirlash",
-      "view": "Ochish",
       "publish": "E’lon qilish",
       "unpublish": "E’londan olish",
       "delete": "O‘chirish"
     },
-    "actionFor": "{{action}}: {{title}}",
     "done": {
       "created": "Qoralama saqlandi.",
       "updated": "O‘zgarishlar saqlandi.",

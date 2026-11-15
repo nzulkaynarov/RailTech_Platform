@@ -27,6 +27,7 @@ import { HOME_CURRENCY, currencyLabel } from "../../../shared/lib/money";
 import { OFFER_SOURCES } from "./kinds";
 import { OfferCreateForm, OfferHistoryModal, SupplierForm } from "./supplierForms";
 import { SupplierCabinetAccess } from "./SupplierCabinetAccess";
+import { RowActions, ROW_ACTIONS_WIDTH } from "../../../shared/ui/RowActions";
 
 import "./catalog.css";
 
@@ -137,7 +138,11 @@ export function PartnerCard({ id }: { id: string }) {
                       <th scope="col">{t("offers.quota")}</th>
                       <th scope="col">{t("offers.lead")}</th>
                       <th scope="col">{t("offers.validUntil")}</th>
-                      {canEdit(me, "erp.stock") ? <th scope="col">{t("actions")}</th> : null}
+                      {canEdit(me, "erp.stock") ? (
+                        <th scope="col" style={{ width: ROW_ACTIONS_WIDTH }}>
+                          <span className="pf-sr-only">{t("actions")}</span>
+                        </th>
+                      ) : null}
                     </tr>
                   </thead>
                   <tbody>
@@ -184,27 +189,26 @@ export function PartnerCard({ id }: { id: string }) {
                           ) : null}
                         </td>
                         {canEdit(me, "erp.stock") ? (
-                          <td>
-                            <div className="pf-cat-actions">
-                              <Button
-                                size="small"
-                                aria-label={t("offers.editNamed", { name: offer.product.name })}
-                                onClick={() => {
-                                  setEditing(offer);
-                                }}
-                              >
-                                {t("offers.edit")}
-                              </Button>
-                              <Button
-                                size="small"
-                                aria-label={t("history.openNamed", { name: offer.product.name })}
-                                onClick={() => {
-                                  setHistory(offer);
-                                }}
-                              >
-                                {t("history.open")}
-                              </Button>
-                            </div>
+                          <td style={{ textAlign: "center" }}>
+                            <RowActions
+                              name={offer.product.name}
+                              items={[
+                                {
+                                  key: "edit",
+                                  label: t("offers.edit"),
+                                  onClick: () => {
+                                    setEditing(offer);
+                                  },
+                                },
+                                {
+                                  key: "history",
+                                  label: t("history.open"),
+                                  onClick: () => {
+                                    setHistory(offer);
+                                  },
+                                },
+                              ]}
+                            />
                           </td>
                         ) : null}
                       </tr>
