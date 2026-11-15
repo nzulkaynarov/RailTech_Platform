@@ -13,18 +13,18 @@
   --rt-color-info-text: #1d4ed8;
   --rt-color-info-foreground: #ffffff;
   --rt-color-success-default: #16a34a;
-  --rt-color-success-hover: #166534;
-  --rt-color-success-active: #14532d;
+  --rt-color-success-hover: #14532d;
+  --rt-color-success-active: #052e16;
   --rt-color-success-bg: #f0fdf4;
   --rt-color-success-border: #bbf7d0;
-  --rt-color-success-text: #15803d;
+  --rt-color-success-text: #166534;
   --rt-color-success-foreground: #ffffff;
   --rt-color-warning-default: #d97706;
-  --rt-color-warning-hover: #92400e;
-  --rt-color-warning-active: #78350f;
+  --rt-color-warning-hover: #78350f;
+  --rt-color-warning-active: #451a03;
   --rt-color-warning-bg: #fffbeb;
   --rt-color-warning-border: #fde68a;
-  --rt-color-warning-text: #b45309;
+  --rt-color-warning-text: #92400e;
   --rt-color-warning-foreground: #ffffff;
   --rt-color-error-default: #e11d48;
   --rt-color-error-hover: #9f1239;
@@ -56,16 +56,14 @@
   --rt-color-surface-split: #f1f5f9;
   --rt-color-surface-ring: #1d4ed8;
   --rt-color-tag-blue: #1d4ed8;
-  --rt-color-tag-green: #15803d;
+  --rt-color-tag-green: #166534;
   --rt-color-tag-cyan: #0e7490;
-  --rt-color-tag-orange: #b45309;
-  --rt-color-tag-gold: #b45309;
+  --rt-color-tag-orange: #92400e;
+  --rt-color-tag-gold: #92400e;
   --rt-color-tag-red: #be123c;
   --rt-color-tag-purple: #6d28d9;
-  --rt-font-family: "Inter Variable", Inter, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-  --rt-font-family-mono:
-    "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas,
-    monospace;
+  --rt-font-family: 'Inter Variable', Inter, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --rt-font-family-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --rt-font-size-xs: 12px;
   --rt-font-size-sm: 13px;
   --rt-font-size-base: 14px;
