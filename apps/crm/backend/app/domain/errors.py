@@ -101,6 +101,9 @@ class Reason(StrEnum):
     SMTP_AUTH_FAILED = "smtp_auth_failed"
     SMTP_TLS_FAILED = "smtp_tls_failed"
     SMTP_REJECTED = "smtp_rejected"
+    # «Отправить ещё раз» (MAIL-2): текста письма уже нет — истёк срок хранения или письмо со
+    # входом, паролем, кодом или приглашением (такие не хранятся и не повторяются).
+    MAIL_NOT_RESENDABLE = "mail_not_resendable"
     # Внешняя копия бэкапов на Google Drive (OPS-GDRIVE-2): ключ или ID папки не те, нет
     # настройки, ключ не дошёл до сервиса копирования (хранилище RustFS недоступно).
     OFFSITE_KEY_INVALID = "offsite_key_invalid"

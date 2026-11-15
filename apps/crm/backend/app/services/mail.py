@@ -5,6 +5,10 @@ Procrastinate (`tasks/mail.py` → `deliver()`), чтобы медленный �
 коннектора письмо не ставится: в журнале `skipped_no_smtp`, вызывающему — 409 `smtp_not_configured`
 («Настройте коннектор «Почта»»). Тело письма содержит временный пароль, поэтому до отправки лежит
 в журнале только шифртекстом (`SECRETS_KEY`) и стирается после отправки или последней попытки.
+Исключение (MAIL-2, DECISIONS 2026-11-11 п. 3): текст писем без секретов (документы, письма EDS
+и ERP) хранится год ради «Почта · Отправленные» и «Отправить ещё раз» (`resend()`); письма со
+входом, паролем, кодом или приглашением (`keeps_body()` — нет) стираются как прежде и не
+повторяются.
 Рассылки клиентам этим сервисом не делаются (ARCHITECTURE §18).
 
 Выключатель «Почта» в центре внешних сервисов (ADR-0024) — пауза очереди: письмо остаётся в
@@ -20,13 +24,14 @@ Procrastinate (`tasks/mail.py` → `deliver()`), чтобы медленный �
 транзакции, что и статус (`app/bus/events.py`).
 """
 
+import re
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Final
 
 import structlog
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bus import events as bus_events
@@ -47,6 +52,33 @@ Enqueue = Callable[[int], Awaitable[object]]
 Paused = Callable[[], Awaitable[bool]]
 #: Письмо `queued` старше этого срока сборщик ставит в очередь снова (потерянная постановка).
 SWEEP_AFTER: Final = timedelta(minutes=2)
+#: Срок хранения текста отправленного письма (DECISIONS 2026-11-11 п. 3): дальше — только
+#: адресат, тема и статус.
+BODY_RETENTION: Final = timedelta(days=365)
+#: Запас до конца срока ссылок на вложения: повтор, который не успеет скачать вложение, не
+#: предлагается.
+LINKS_MARGIN: Final = timedelta(minutes=10)
+#: Назначения и шаблоны с секретом в тексте (временный пароль, ссылка или код входа,
+#: приглашение): текст не хранится.
+_SECRET_MAIL: Final = re.compile(
+    r"invite|password|magic|login|otp|code|token|setup|reset|verif|2fa|auth|test"
+)
+
+
+def keeps_body(row: EmailLog) -> bool:
+    """Хранить ли текст письма после отправки (просмотр и повтор): нет — у писем с секретом."""
+    return not _SECRET_MAIL.search(f"{row.template} {row.purpose or ''}".lower())
+
+
+def can_resend(row: EmailLog, now: datetime | None = None) -> bool:
+    """«Отправить ещё раз» (MAIL-2): письмо не в очереди, текст хранится, нет секрета, а ссылки на
+    вложения (письма ERP и EDS) ещё живы — иначе документ отправляют заново из его карточки."""
+    if row.status == "queued" or row.body_ciphertext is None or not keeps_body(row):
+        return False
+    if row.links_ciphertext is None:
+        return True
+    border = (now or datetime.now(UTC)) + LINKS_MARGIN
+    return row.links_expire_at is not None and row.links_expire_at > border
 
 
 async def _never_paused() -> bool:
@@ -245,7 +277,7 @@ class MailService:
         except Exception as exc:  # noqa: BLE001 — непредвиденный сбой отправки — тоже попытка
             error = f"unexpected: {type(exc).__name__}"
             return await self._failed_attempt(email_log_id, attempt, error, last, exc)
-        await self._finish(email_log_id, "sent", None, attempts=attempt, clear_body=True)
+        await self._finish(email_log_id, "sent", None, attempts=attempt)
         logger.info("email_sent", email_log_id=email_log_id)
         return True
 
@@ -263,7 +295,7 @@ class MailService:
             final=final,
         )
         status = "failed" if final else "queued"
-        await self._finish(email_log_id, status, error, attempts=attempt, clear_body=final)
+        await self._finish(email_log_id, status, error, attempts=attempt)
         if final:
             return False
         raise exc
@@ -272,6 +304,7 @@ class MailService:
         """Сборщик: письма `queued` с телом, которые давно не ушли (постановка потерялась после
         коммита), — снова в очередь. Повторная постановка безопасна: задача с блокировкой по
         строке, а отправленная строка уже не `queued`."""
+        await self.purge_bodies(now)
         if await self._paused():
             return 0
         border = (now or datetime.now(UTC)) - SWEEP_AFTER
@@ -293,6 +326,60 @@ class MailService:
         if ids:
             logger.info("email_queue_swept", count=len(ids))
         return len(ids)
+
+    async def purge_bodies(self, now: datetime | None = None) -> int:
+        """Текст писем старше срока хранения стирается; адресат, тема, статус и ссылка на документ
+        остаются."""
+        border = (now or datetime.now(UTC)) - BODY_RETENTION
+        async with self._sessions() as session, session.begin():
+            result = await session.execute(
+                update(EmailLog)
+                .where(
+                    EmailLog.status.in_(("sent", "failed", "skipped_no_smtp")),
+                    EmailLog.created_at < border,
+                    EmailLog.body_ciphertext.is_not(None),
+                )
+                .values(body_ciphertext=None, html_ciphertext=None, links_ciphertext=None)
+            )
+        purged = int(getattr(result, "rowcount", 0) or 0)
+        if purged:
+            logger.info("email_bodies_purged", count=purged)
+        return purged
+
+    async def resend(self, email_log_id: int, requested_by: int | None) -> EmailLogView:
+        """«Отправить ещё раз» (MAIL-2): новая строка журнала с тем же адресатом, темой, текстом и
+        вложениями — в очередь. Исходная строка не меняется; итог повтора в шину не уходит (у копии
+        нет ключа запроса)."""
+        async with self._sessions() as session:
+            row = await session.get(EmailLog, email_log_id)
+            if row is None or not can_resend(row):
+                raise ConflictError("mail cannot be resent", reason=Reason.MAIL_NOT_RESENDABLE)
+            copy = EmailLog(
+                to_email=row.to_email,
+                subject=row.subject,
+                template=row.template,
+                lang=row.lang,
+                status="queued",
+                user_id=row.user_id,
+                requested_by=requested_by,
+                body_ciphertext=row.body_ciphertext,
+                html_ciphertext=row.html_ciphertext,
+                links_ciphertext=row.links_ciphertext,
+                links_expire_at=row.links_expire_at,
+                attachments=row.attachments,
+                source=row.source,
+                purpose=row.purpose,
+                ref_kind=row.ref_kind,
+                ref_id=row.ref_id,
+                reply_to=row.reply_to,
+                thread_headers=row.thread_headers,
+            )
+        await self.ensure_configured()
+        view = await self._insert(copy)
+        if not await self._paused():
+            await self._enqueue(view.id)
+        logger.info("email_resent", email_log_id=view.id, original_id=email_log_id)
+        return view
 
     async def resume_queued(self) -> int:
         """После паузы: письма `queued` с телом — снова в очередь. Возвращает их число."""
@@ -346,7 +433,7 @@ class MailService:
                 row.attempts = attempts
             if status == "sent":
                 row.sent_at = datetime.now(UTC)
-            if clear_body or status == "sent":
+            if clear_body or (status in ("sent", "failed") and not keeps_body(row)):
                 row.body_ciphertext = None
                 row.html_ciphertext = None
                 row.links_ciphertext = None

@@ -1057,6 +1057,12 @@
         "queued": "Navbatda",
         "failed": "Yetkazilmadi",
         "skipped_no_smtp": "Pochta sozlanmagan"
+      },
+      "resend": "Qayta yuborish",
+      "resent": "{{to}} uchun xat navbatga qoʻyildi",
+      "resendError": {
+        "mail_not_resendable": "Bu xatni qayta yuborib boʻlmaydi: uning matni saqlanmaydi.",
+        "smtp_not_configured": "Pochta sozlanmagan — Sozlamalar · Ulanishlar · Pochta."
       }
     }
   },

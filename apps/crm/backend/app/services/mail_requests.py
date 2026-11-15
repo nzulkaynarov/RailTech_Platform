@@ -16,7 +16,8 @@
 """
 
 import json
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Awaitable, Callable, Iterable, Sequence
+from datetime import UTC, datetime
 from typing import Any, Final
 
 import structlog
@@ -166,3 +167,18 @@ class MailRequestService:
             row.html_ciphertext = cipher.encrypt(opened.html)
         if opened.links:
             row.links_ciphertext = cipher.encrypt(json.dumps([link.url for link in opened.links]))
+            row.links_expire_at = _earliest(link.expires_at for link in opened.links)
+
+
+def _earliest(values: Iterable[str | None]) -> datetime | None:
+    """Ближайший срок ссылок (MAIL-2); у какой-то ссылки срока нет — неизвестно, повтора нет."""
+    moments: list[datetime] = []
+    for value in values:
+        if not value:
+            return None
+        try:
+            moment = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+        moments.append(moment if moment.tzinfo else moment.replace(tzinfo=UTC))
+    return min(moments) if moments else None

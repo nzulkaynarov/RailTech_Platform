@@ -2,7 +2,9 @@
 
 Кому какие строки — решает CRM: сотрудник видит письма, отправленные по его запросу, администратор —
 все. Текст письма — отдельным запросом, CRM пишет его просмотр в аудит. Письмо EDS ведёт на карточку
-документа в «Все документы»."""
+документа в «Все документы». «Отправить ещё раз» (MAIL-2) — CRM `POST /mail/sent/{id}/resend`:
+новая строка журнала; у писем со входом, паролем или кодом текста нет — 409
+`mail_not_resendable`."""
 
 from datetime import datetime
 from typing import Annotated, Literal
@@ -34,6 +36,7 @@ class _CrmItem(BaseModel):
     ref_kind: str | None
     ref_id: str | None
     attachments: int
+    resendable: bool = False
     requested_by: int | None
     requested_by_name: str | None
     created_at: datetime
@@ -53,6 +56,7 @@ class SentMail(BaseModel):
     error: str | None
     source: Source
     attachments: int
+    resendable: bool
     requested_by: str | None
     created_at: datetime
     sent_at: datetime | None
@@ -75,6 +79,23 @@ def _path(item: _CrmItem) -> str | None:
     if item.source == "eds" and item.ref_kind == "document" and item.ref_id:
         return outgoing_document_path(item.ref_id)
     return None
+
+
+def _mail(i: _CrmItem) -> SentMail:
+    return SentMail(
+        id=str(i.id),
+        to=i.to_email,
+        subject=i.subject,
+        status=i.status,
+        error=i.error,
+        source=i.source,
+        attachments=i.attachments,
+        resendable=i.resendable,
+        requested_by=i.requested_by_name,
+        created_at=i.created_at,
+        sent_at=i.sent_at,
+        path=_path(i),
+    )
 
 
 async def _crm(authed: Authed, path: str, params: dict[str, str | int] | None = None) -> object:
@@ -107,22 +128,7 @@ async def list_sent_mail(
     except ValidationError as exc:
         raise backend_unavailable("crm", "bad_response") from exc
     return SentMailPage(
-        items=[
-            SentMail(
-                id=str(i.id),
-                to=i.to_email,
-                subject=i.subject,
-                status=i.status,
-                error=i.error,
-                source=i.source,
-                attachments=i.attachments,
-                requested_by=i.requested_by_name,
-                created_at=i.created_at,
-                sent_at=i.sent_at,
-                path=_path(i),
-            )
-            for i in page.items
-        ],
+        items=[_mail(i) for i in page.items],
         next_cursor=page.next_cursor,
     )
 
@@ -137,3 +143,20 @@ async def get_sent_mail_body(id: Annotated[int, Path(ge=1)], authed: Member) -> 
     except (ValidationError, KeyError) as exc:
         raise backend_unavailable("crm", "bad_response") from exc
     return body
+
+
+@router.post(
+    "/mail/sent/{id}/resend",
+    response_model=SentMail,
+    status_code=201,
+    operation_id="resendSentMail",
+)
+async def resend_sent_mail(id: Annotated[int, Path(ge=1)], authed: Member) -> SentMail:
+    """Новое письмо с тем же адресатом, темой, текстом и вложениями; исходное не меняется."""
+    response = await CrmProxy(authed.call).raw("POST", f"/api/v1/mail/sent/{id}/resend")
+    if response.status_code != 201:
+        raise crm_error(response)
+    try:
+        return _mail(_CrmItem.model_validate(response.json()))
+    except (ValidationError, ValueError) as exc:
+        raise backend_unavailable("crm", "bad_response") from exc

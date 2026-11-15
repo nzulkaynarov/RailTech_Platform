@@ -19,11 +19,12 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.bus import runtime
 from app.bus.runtime import CrmBus, build_bus
 from app.config import Settings
+from app.domain.errors import ConflictError
 from app.integrations.mail_attachments import AttachmentError, AttachmentRef
 from app.integrations.smtp import MailAttachment, SmtpCheck, SmtpConnection, SmtpProbeError
 from app.models.email import EmailLog
 from app.security.secrets_store import SecretCipher, SecretsStore
-from app.services.mail import MailService
+from app.services.mail import MailService, can_resend
 from app.services.mail_content import MailContent, MailLink, seal
 from app.services.mail_requests import MailRequestService
 from app.services.settings import SettingsService
@@ -367,3 +368,58 @@ async def test_eds_request_uses_its_own_pair_and_lost_enqueue_is_swept(stand: St
     later = datetime.now(UTC) + timedelta(minutes=10)
     assert await stand.mail.sweep(now=later) == 1
     assert stand.queued == [row.id]
+
+
+async def test_letter_text_is_kept_for_resend_and_a_login_mail_is_not(stand: Stand) -> None:
+    """MAIL-2: письмо EDS после отправки хранит текст (год) и повторяется новой строкой; письмо со
+    входом стирает текст и не повторяется; по сроку хранения текст стирается."""
+    letter = MailContent("Ответ на требование — во вложении.", "<p>Ответ</p>", ())
+    await stand.request(
+        key="eds:letter:78", publisher="eds", secret=PAIR_EDS, content=letter, purpose="eds_letter"
+    )
+    await stand.request()  # portal_magic_link
+    letter_row, login_row = await stand.rows()
+    assert await stand.mail.deliver(letter_row.id) is True
+    assert await stand.mail.deliver(login_row.id) is True
+    letter_row, login_row = await stand.rows()
+    assert letter_row.body_ciphertext is not None, "текст письма хранится для просмотра и повтора"
+    assert login_row.body_ciphertext is None, "письмо со входом текст не хранит"
+
+    stand.queued.clear()
+    copy = await stand.mail.resend(letter_row.id, requested_by=None)
+    assert (copy.status, copy.to_email, copy.source) == ("queued", letter_row.to_email, "eds")
+    assert stand.queued == [copy.id]
+    with pytest.raises(ConflictError):
+        await stand.mail.resend(login_row.id, requested_by=None)
+    assert await stand.mail.deliver(copy.id) is True
+    assert [sent["to"] for sent in stand.transport.sent][-1] == letter_row.to_email
+    outbox_types = [event_type for event_type, _ in await stand.outbox()]
+    sent_events = outbox_types.count("uz.railtech.crm.mail.sent.v1")
+    assert sent_events == 2, "повтор итога в шину не публикует"
+
+    assert await stand.mail.purge_bodies() == 0, "свежий текст не стирается"
+    assert await stand.mail.purge_bodies(now=datetime.now(UTC) + timedelta(days=366)) == 2
+    with pytest.raises(ConflictError):
+        await stand.mail.resend(letter_row.id, requested_by=None)
+
+
+async def test_letter_with_attachment_is_resent_only_while_its_links_live(stand: Stand) -> None:
+    """MAIL-2: вложения повтора скачиваются заново по ссылкам отправителя — повтор, пока ссылки
+    живы; после срока документ отправляют заново из его карточки."""
+    soon = (datetime.now(UTC) + timedelta(hours=24)).isoformat()
+    letter = MailContent("КП во вложении.", None, (MailLink(LINK, soon),))
+    await stand.request(content=letter, attachments=True, purpose="quote_sent")
+    (row,) = await stand.rows()
+    assert row.links_expire_at is not None
+    assert await stand.mail.deliver(row.id) is True
+    (row,) = await stand.rows()
+    assert can_resend(row) is True
+    assert can_resend(row, now=datetime.now(UTC) + timedelta(hours=24)) is False
+    copy = await stand.mail.resend(row.id, requested_by=None)
+    assert copy.attachments == 1
+
+    await stand.request(key="erp:email_log:2", attachments=True, purpose="quote_sent")
+    old = (await stand.rows())[-1]
+    assert old.links_expire_at is not None
+    assert old.links_expire_at < datetime.now(UTC)
+    assert can_resend(old) is False, "ссылка уже истекла"
