@@ -49,7 +49,7 @@ test.describe("L0-3: прослеживаемость", () => {
       await spaGoto(page, "/admin/company?tab=categories");
       await expect(page.getByText("Электрооборудование · серийный · документ")).toBeVisible();
       await page.getByRole("button", { name: "Изменить: Электрооборудование" }).click();
-      const dialog = page.getByRole("dialog", { name: "Изменить категорию" });
+      const dialog = page.getByRole("region", { name: "Изменить категорию" });
       await expect(dialog.getByText("Серийный номер каждой единицы")).toBeVisible();
       await expect(
         dialog.getByRole("checkbox", { name: /Нужен документ соответствия/ }),
