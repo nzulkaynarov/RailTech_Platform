@@ -23,7 +23,7 @@
 }
 .pf-ca-error {
   color: var(--rt-color-error-hover);
-  font-size: 13px;
+  font-size: 12px;
 }
 .pf-ca-preview {
   min-width: 0;

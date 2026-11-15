@@ -62,8 +62,10 @@
   --rt-color-tag-gold: #b45309;
   --rt-color-tag-red: #be123c;
   --rt-color-tag-purple: #6d28d9;
-  --rt-font-family: 'Inter Variable', Inter, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-  --rt-font-family-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  --rt-font-family: "Inter Variable", Inter, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --rt-font-family-mono:
+    "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas,
+    monospace;
   --rt-font-size-xs: 12px;
   --rt-font-size-sm: 13px;
   --rt-font-size-base: 14px;

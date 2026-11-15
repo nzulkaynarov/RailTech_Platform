@@ -41,7 +41,7 @@
 }
 .pf-int-attention-detail {
   color: var(--rt-color-text-secondary);
-  font-size: 13px;
+  font-size: 12px;
   line-height: 20px;
   overflow-wrap: anywhere;
 }
@@ -83,7 +83,7 @@
 .pf-int-card-purpose {
   margin: 0;
   color: var(--rt-color-text-secondary);
-  font-size: 13px;
+  font-size: 12px;
   line-height: 20px;
 }
 .pf-int-card-note {
@@ -189,7 +189,7 @@
 .pf-int-sub {
   margin: 0;
   color: var(--rt-color-text-secondary);
-  font-size: 13px;
+  font-size: 12px;
   line-height: 20px;
   overflow-wrap: anywhere;
 }
@@ -199,7 +199,7 @@
 .pf-int-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 14px;
 }
 .pf-int-table th,
 .pf-int-table td {
@@ -282,7 +282,7 @@
   gap: 2px 16px;
   margin: 0;
   color: var(--rt-color-text-secondary);
-  font-size: 13px;
+  font-size: 12px;
   line-height: 20px;
 }
 .pf-health-label {
@@ -340,7 +340,7 @@
 
 .pf-int-catalog-group {
   margin: 0 0 8px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--rt-color-text-secondary);
 }

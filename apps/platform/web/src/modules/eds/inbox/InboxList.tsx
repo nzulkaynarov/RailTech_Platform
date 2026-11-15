@@ -8,6 +8,7 @@ import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { useViewport } from "../../../app/shell/useViewport";
 import { ApiError } from "../../../shared/api/errors";
+import { Code } from "../../../shared/ui/Code";
 import { ChevronRightIcon } from "../../../shared/ui/icons";
 import type {
   LetterRow,
@@ -205,9 +206,9 @@ function Rows({
         <>
           <div>{row.client_name ?? "—"}</div>
           {row.request_number ? (
-            <div className="pf-hint pf-num pf-ell">
+            <div className="pf-ell">
               <span className="pf-sr-only">{t("list.columns.request")}: </span>
-              {row.request_number}
+              <Code quiet>{row.request_number}</Code>
             </div>
           ) : null}
         </>

@@ -125,7 +125,7 @@ tr > td.pf-col-num {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--rt-color-text-default);
 }
 .pf-step--upcoming .pf-step-label {
@@ -333,7 +333,7 @@ tr > td.pf-col-num {
   gap: 10px;
   padding: 8px 0;
   border-bottom: 1px solid var(--rt-color-surface-split);
-  font-size: 13px;
+  font-size: 12px;
   line-height: 20px;
 }
 .pf-check:last-child {
@@ -663,4 +663,16 @@ tr > td.pf-col-num {
 }
 .pf-onbehalf-block > p {
   margin: 0;
+}
+
+/* Коды и номера — моноширинным (стандарт интерфейса §3; компонент `Code`, он же внутри `DocNumber`). */
+.pf-code {
+  font-family: var(--rt-font-family-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.pf-code--quiet {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--rt-color-text-tertiary);
 }

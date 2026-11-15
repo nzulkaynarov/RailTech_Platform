@@ -76,7 +76,7 @@ function RailItemWithFlyout({ module, menuOpen }: { module: RailModule; menuOpen
       <div
         style={{
           fontWeight: 600,
-          fontSize: 13,
+          fontSize: 14,
           padding: "4px 8px 6px",
           borderBottom: "1px solid var(--rt-color-surface-split)",
           marginBottom: 4,
@@ -123,7 +123,7 @@ function RailItemWithFlyout({ module, menuOpen }: { module: RailModule; menuOpen
                 justifyContent: "space-between",
                 padding: "6px 8px",
                 borderRadius: 4,
-                fontSize: 13,
+                fontSize: 14,
                 textDecoration: "none",
                 color: sec.active
                   ? "var(--rt-color-primary-text)"
@@ -228,7 +228,7 @@ export function ModuleRail({
             alignItems: "center",
             justifyContent: "center",
             fontWeight: 700,
-            fontSize: 13,
+            fontSize: 14,
             marginBottom: 12,
             textDecoration: "none",
           }}

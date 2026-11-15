@@ -41,7 +41,7 @@ export function DocNumber({ number, base, copyable = true }: DocNumberProps) {
   };
 
   const numberNode = (
-    <span className="pf-docnum" translate="no">
+    <span className="pf-docnum pf-code" translate="no">
       {number}
     </span>
   );

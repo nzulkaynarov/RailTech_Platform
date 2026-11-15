@@ -29,7 +29,7 @@
   padding: 0 4px;
   border-radius: 4px;
   background: var(--rt-color-surface-layout);
-  font-size: 13px;
+  font-size: 14px;
 }
 .pf-help-block {
   display: flex;
@@ -81,7 +81,7 @@
   background: var(--rt-color-primary-bg);
   color: var(--rt-color-primary-text);
   font-weight: 600;
-  font-size: 13px;
+  font-size: 14px;
 }
 .pf-help-term {
   font-weight: 600;
@@ -94,7 +94,7 @@
   border-radius: 4px;
   background: var(--rt-color-surface-subtle);
   font-family: inherit;
-  font-size: 13px;
+  font-size: 12px;
   white-space: nowrap;
 }
 .pf-help-actions {
@@ -245,7 +245,7 @@
   border-radius: 6px;
   background: var(--rt-color-surface-subtle);
   font-family: inherit;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 20px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;

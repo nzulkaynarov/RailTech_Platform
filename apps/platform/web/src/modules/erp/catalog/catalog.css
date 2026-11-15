@@ -19,7 +19,7 @@
 }
 .pf-cat-control > label {
   color: var(--rt-color-text-secondary);
-  font-size: 13px;
+  font-size: 12px;
 }
 .pf-cat-spacer {
   flex: 1 1 auto;
@@ -39,7 +39,7 @@
 .pf-cat-table th {
   color: var(--rt-color-text-secondary);
   font-weight: 500;
-  font-size: 13px;
+  font-size: 12px;
   white-space: nowrap;
 }
 .pf-cat-table tr[data-selected="true"] {
@@ -52,7 +52,7 @@
 .pf-cat-sub {
   display: block;
   color: var(--rt-color-text-secondary);
-  font-size: 13px;
+  font-size: 12px;
 }
 .pf-cat-linkbtn.ant-btn {
   height: auto;
@@ -78,7 +78,7 @@
   grid-template-columns: max-content 1fr;
   gap: 2px 12px;
   margin: 0;
-  font-size: 13px;
+  font-size: 14px;
 }
 .pf-cat-card dt {
   color: var(--rt-color-text-secondary);
@@ -121,13 +121,13 @@
 .pf-cat-note {
   margin: 0;
   color: var(--rt-color-text-secondary);
-  font-size: 13px;
+  font-size: 12px;
   line-height: 20px;
 }
 .pf-cat-offers {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 14px;
 }
 .pf-cat-offers th,
 .pf-cat-offers td {
@@ -188,7 +188,7 @@
 }
 .pf-cat-stat dt {
   color: var(--rt-color-text-secondary);
-  font-size: 13px;
+  font-size: 12px;
 }
 .pf-cat-stat dd {
   margin: 0;
@@ -212,7 +212,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 /* Карточка товара · Фото (CAT-CARD-1) */
@@ -255,7 +255,7 @@
 }
 .pf-cat-photo-main {
   color: var(--rt-color-warning-text);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
 }
 .pf-cat-photo-add {
@@ -305,7 +305,7 @@
 }
 .pf-cat-rights legend {
   padding: 0 4px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
 }
 .pf-cat-switch {
@@ -343,7 +343,7 @@
 .pf-cat-contact-right {
   flex-basis: 100%;
   align-items: center;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 /* PART-3: очередь проверки — замечания по полям в окне возврата */

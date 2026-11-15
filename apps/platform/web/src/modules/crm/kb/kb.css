@@ -161,11 +161,11 @@
   border: 1px solid var(--rt-color-surface-border);
   border-radius: 4px;
   background: var(--rt-color-surface-subtle);
-  font-size: 13px;
+  font-size: 14px;
 }
 .pf-kb-why {
   margin-top: 8px;
-  font-size: 13px;
+  font-size: 12px;
 }
 .pf-kb-why summary {
   cursor: pointer;

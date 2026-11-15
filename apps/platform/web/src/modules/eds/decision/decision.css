@@ -137,7 +137,7 @@
 }
 .pf-dec-optional {
   color: var(--rt-color-text-secondary);
-  font-size: 13px;
+  font-size: 12px;
 }
 .pf-dec-internal {
   border: 1px dashed var(--rt-color-surface-border);
@@ -181,7 +181,7 @@
 }
 .pf-dec-subhead {
   margin: 8px 0 0;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 20px;
   font-weight: 600;
 }
@@ -223,7 +223,7 @@
   border: 1px solid var(--rt-color-warning-border);
   border-radius: 6px;
   background: var(--rt-color-warning-bg);
-  font-size: 13px;
+  font-size: 12px;
 }
 .pf-dec-actions {
   display: flex;

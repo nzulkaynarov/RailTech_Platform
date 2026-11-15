@@ -45,7 +45,8 @@ export const RT_TOKENS = {
   colorBgLayout: "#f8fafc",
   colorBgContainer: "#ffffff",
   fontFamily: "'Inter Variable', Inter, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
-  fontFamilyCode: "ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace",
+  fontFamilyCode:
+    "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
   fontSize: 14,
   borderRadius: 6,
   borderRadiusSM: 4,

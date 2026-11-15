@@ -35,7 +35,7 @@ export function AuthLayout({
             alignItems: "center",
             justifyContent: "center",
             fontWeight: 700,
-            fontSize: 13,
+            fontSize: 12,
             marginBottom: 16,
           }}
         >

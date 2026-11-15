@@ -37,7 +37,7 @@
 }
 .pf-co-hint {
   margin: 0;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 20px;
   color: var(--rt-color-text-secondary);
 }
@@ -146,7 +146,7 @@
   background: var(--rt-color-surface-background);
 }
 .pf-co-mono {
-  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-family: var(--rt-font-family-mono);
 }
 .pf-co-numbers {
   margin: 0;
@@ -237,7 +237,7 @@
 }
 .pf-co-details {
   margin: 0 0 16px;
-  font-size: 13px;
+  font-size: 12px;
 }
 .pf-co-details summary {
   cursor: pointer;

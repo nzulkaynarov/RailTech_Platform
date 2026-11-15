@@ -42,7 +42,7 @@
 .pf-crm-table th {
   color: var(--rt-color-text-secondary);
   font-weight: 500;
-  font-size: 13px;
+  font-size: 12px;
   white-space: nowrap;
 }
 .pf-crm-table tr[data-selected="true"],
@@ -106,7 +106,7 @@
   flex-wrap: wrap;
   gap: 4px 12px;
   color: var(--rt-color-text-secondary);
-  font-size: 13px;
+  font-size: 12px;
 }
 .pf-crm-entries {
   display: flex;
@@ -167,7 +167,7 @@
 }
 .pf-req-error {
   color: var(--rt-color-error-text);
-  font-size: 13px;
+  font-size: 12px;
 }
 /* Кнопки формы и карточки: в боковом окне — под содержимым, на мобильном листе — прижаты к низу */
 .pf-crm-actions {

@@ -35,7 +35,7 @@
 .pf-docs-table th {
   color: var(--rt-color-text-secondary);
   font-weight: 500;
-  font-size: 13px;
+  font-size: 12px;
   white-space: nowrap;
 }
 .pf-docs-table tr[data-selected="true"] {
@@ -85,7 +85,7 @@
   flex-wrap: wrap;
   gap: 4px 12px;
   color: var(--rt-color-text-secondary);
-  font-size: 13px;
+  font-size: 12px;
 }
 .pf-doc-text {
   margin: 0;

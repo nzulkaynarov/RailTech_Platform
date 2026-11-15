@@ -85,6 +85,8 @@
 .pf-letters-number {
   color: var(--rt-color-primary-text);
   white-space: nowrap;
+  font-family: var(--rt-font-family-mono);
+  font-weight: 500;
 }
 .pf-letters-cards {
   margin: 0;
@@ -160,7 +162,7 @@
 }
 .pf-res-subhead {
   margin: 8px 0 0;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 20px;
   font-weight: 600;
 }
@@ -215,7 +217,7 @@
 }
 .pf-res-error {
   color: var(--rt-color-error-hover);
-  font-size: 13px;
+  font-size: 12px;
   line-height: 20px;
 }
 .pf-res-note {
@@ -227,7 +229,7 @@
   border: 1px solid var(--rt-color-warning-border);
   border-radius: 6px;
   background: var(--rt-color-warning-bg);
-  font-size: 13px;
+  font-size: 12px;
 }
 .pf-res-actions {
   display: flex;

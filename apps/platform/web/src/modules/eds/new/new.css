@@ -19,7 +19,7 @@
 }
 .pf-field-error {
   color: var(--rt-color-error-hover);
-  font-size: 13px;
+  font-size: 12px;
   line-height: 20px;
 }
 .pf-newdoc-route {

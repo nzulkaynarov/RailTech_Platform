@@ -81,7 +81,7 @@
 }
 .pf-set-tile-desc {
   color: var(--rt-color-text-secondary);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 20px;
 }
 .pf-set-tile-hit {
@@ -164,7 +164,7 @@
 }
 .pf-set-step-state {
   color: var(--rt-color-text-secondary);
-  font-size: 13px;
+  font-size: 14px;
 }
 .pf-set-card {
   min-width: 0;

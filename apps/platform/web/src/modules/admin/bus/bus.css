@@ -65,7 +65,7 @@
   overflow: hidden;
   max-width: 280px;
   color: var(--rt-color-text-secondary);
-  font-size: 13px;
+  font-size: 12px;
   line-height: 20px;
   overflow-wrap: anywhere;
 }
