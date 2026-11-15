@@ -13,14 +13,9 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { EmptyState } from "../../../shared/ui/EmptyState";
-import {
-  ActionToggle,
-  ErrorNote,
-  FormField,
-  QueryState,
-  ScrollRegion,
-} from "../../../shared/ui/FormParts";
+import { ActionToggle, ErrorNote, FormField, QueryState } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
+import { DataTable } from "../../../shared/ui/DataTable/DataTable";
 import { botErrorText } from "./errors";
 import { useBotStateLabels } from "./labels";
 import { parseId, useRefreshBot, withParams } from "./refresh";
@@ -215,36 +210,45 @@ export function TemplatesView({ editable }: { editable: boolean }) {
                     }
                   />
                 ) : (
-                  <ScrollRegion label={t("templates.tableScroll")}>
-                    <table className="pf-bot-table">
-                      <caption className="pf-sr-only">{t("templates.caption")}</caption>
-                      <thead>
-                        <tr>
-                          <th scope="col">{t("templates.columns.title")}</th>
-                          <th scope="col">{t("templates.columns.text")}</th>
-                          <th scope="col">{t("templates.columns.updated")}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {data.items.map((tpl) => (
-                          <tr key={tpl.id} data-selected={selectedId === tpl.id}>
-                            <td>
-                              <Link
-                                className="pf-focusable pf-bot-link"
-                                to={withParams(params, { template: String(tpl.id), panel: "open" })}
-                                aria-label={t("templates.open", { title: tpl.title })}
-                                aria-current={selectedId === tpl.id ? "true" : undefined}
-                              >
-                                {tpl.title}
-                              </Link>
-                            </td>
-                            <td className="pf-bot-excerpt">{tpl.text.ru}</td>
-                            <td>{date(tpl.updated_at, "datetime")}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </ScrollRegion>
+                  <DataTable<ReplyTemplate>
+                    tableId="admin.bot.templates"
+                    caption={t("templates.caption")}
+                    scrollLabel={t("templates.tableScroll")}
+                    className="pf-bot-table"
+                    rows={data.items}
+                    rowKey={(tpl) => String(tpl.id)}
+                    rowAttrs={(tpl) => ({ "data-selected": selectedId === tpl.id })}
+                    columns={[
+                      {
+                        id: "title",
+                        header: t("templates.columns.title"),
+                        width: 280,
+                        cell: (tpl) => (
+                          <Link
+                            className="pf-focusable pf-bot-link"
+                            to={withParams(params, { template: String(tpl.id), panel: "open" })}
+                            aria-label={t("templates.open", { title: tpl.title })}
+                            aria-current={selectedId === tpl.id ? "true" : undefined}
+                          >
+                            {tpl.title}
+                          </Link>
+                        ),
+                      },
+                      {
+                        id: "text",
+                        header: t("templates.columns.text"),
+                        width: null,
+                        cellClassName: "pf-bot-excerpt",
+                        cell: (tpl) => tpl.text.ru,
+                      },
+                      {
+                        id: "updated",
+                        header: t("templates.columns.updated"),
+                        width: 160,
+                        cell: (tpl) => date(tpl.updated_at, "datetime"),
+                      },
+                    ]}
+                  />
                 )}
                 {creating ? (
                   <PanelPortal tab="card">

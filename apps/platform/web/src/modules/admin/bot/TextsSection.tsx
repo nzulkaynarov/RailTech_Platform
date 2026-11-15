@@ -5,7 +5,7 @@ import { useNavigate, useSearchParams } from "react-router";
 
 import { PanelPortal } from "../../../app/shell/PanelSlot";
 import { useViewport } from "../../../app/shell/useViewport";
-import { ScrollRegion } from "../../../shared/ui/FormParts";
+import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTable";
 import { withParams } from "./refresh";
 import { fieldLabel } from "./fieldLabel";
 import { LocalizedFields, SchemaField } from "./SchemaField";
@@ -57,68 +57,52 @@ interface Row {
   invalid: boolean;
 }
 
-function TextsTable({
-  rows,
-  onEdit,
-  editable,
-}: {
-  rows: Row[];
-  onEdit: (key: string) => void;
-  editable: boolean;
-}) {
+function TextsTable({ rows, onEdit }: { rows: Row[]; onEdit: (key: string) => void }) {
   const { t } = useTranslation(["bot", "kb"]);
   const { mobile } = useViewport();
+  const columns: DataColumn<Row>[] = [
+    {
+      id: "name",
+      header: t("bot:texts.name"),
+      width: mobile ? null : 260,
+      cell: (row) => (
+        <>
+          <Button
+            type="link"
+            className="pf-bot-text-open"
+            onClick={() => {
+              onEdit(row.key);
+            }}
+          >
+            {row.label}
+          </Button>{" "}
+          {row.invalid ? <StatusTag tone="red">{t("bot:texts.invalid")}</StatusTag> : null}
+          {row.when ? <div className="pf-hint">{row.when}</div> : null}
+          {mobile ? <EmptyMark field={row.key} /> : null}
+        </>
+      ),
+    },
+    ...(mobile
+      ? []
+      : LANGS.map((lang) => ({
+          id: lang,
+          header: t(`kb:languages.${lang}`),
+          width: null,
+          cell: (row: Row) => <LangCell field={row.key} lang={lang} />,
+        }))),
+  ];
   return (
-    <ScrollRegion label={t("bot:texts.tableScroll")}>
-      <table className={mobile ? "pf-bot-table" : "pf-bot-table pf-bot-table--texts"}>
-        <caption className="pf-sr-only">{t("bot:texts.caption")}</caption>
-        <thead>
-          <tr>
-            <th scope="col">{t("bot:texts.name")}</th>
-            {mobile
-              ? null
-              : LANGS.map((lang) => (
-                  <th scope="col" key={lang}>
-                    {t(`kb:languages.${lang}`)}
-                  </th>
-                ))}
-            <th scope="col">
-              <span className="pf-sr-only">{t("bot:texts.actions")}</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.key}>
-              <td>
-                <strong>{row.label}</strong>{" "}
-                {row.invalid ? <StatusTag tone="red">{t("bot:texts.invalid")}</StatusTag> : null}
-                {row.when ? <div className="pf-hint">{row.when}</div> : null}
-                {mobile ? <EmptyMark field={row.key} /> : null}
-              </td>
-              {mobile
-                ? null
-                : LANGS.map((lang) => (
-                    <td key={lang}>
-                      <LangCell field={row.key} lang={lang} />
-                    </td>
-                  ))}
-              <td>
-                <Button
-                  type="link"
-                  aria-label={`${t(editable ? "bot:texts.edit" : "bot:texts.view")}: ${row.label}`}
-                  onClick={() => {
-                    onEdit(row.key);
-                  }}
-                >
-                  {t(editable ? "bot:texts.edit" : "bot:texts.view")}
-                </Button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </ScrollRegion>
+    <DataTable<Row>
+      tableId="admin.bot.texts"
+      caption={t("bot:texts.caption")}
+      scrollLabel={t("bot:texts.tableScroll")}
+      className="pf-bot-table"
+      flexMin={mobile ? 200 : 140}
+      rows={rows}
+      rowKey={(row) => row.key}
+      columns={columns}
+      toolsTarget={null}
+    />
   );
 }
 
@@ -211,11 +195,7 @@ export function TextsSection({ schema, samples, saving, invalid, editable }: Pro
             label: `${t(`bot:texts.groups.${group.key}`, { defaultValue: group.key })} · ${String(group.fields.length)}`,
             children: (
               <>
-                <TextsTable
-                  rows={group.fields.filter(isText).map(row)}
-                  onEdit={edit}
-                  editable={editable}
-                />
+                <TextsTable rows={group.fields.filter(isText).map(row)} onEdit={edit} />
                 {group.fields
                   .filter((key) => !isText(key))
                   .map((key) => (
