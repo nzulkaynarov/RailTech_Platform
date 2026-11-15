@@ -7979,6 +7979,7 @@ components:
       - smtp_auth_failed
       - smtp_tls_failed
       - smtp_rejected
+      - mail_not_resendable
       - offsite_key_invalid
       - offsite_folder_invalid
       - offsite_not_configured
@@ -8617,6 +8618,9 @@ components:
           - type: string
           - type: 'null'
           title: Requested By Name
+        resendable:
+          title: Resendable
+          type: boolean
         sent_at:
           anyOf:
           - format: date-time
@@ -8656,6 +8660,7 @@ components:
       - ref_kind
       - ref_id
       - attachments
+      - resendable
       - requested_by
       - requested_by_name
       - created_at
@@ -10425,7 +10430,7 @@ components:
       type: http
 info:
   title: RailTech CRM API
-  version: 0.28.0
+  version: 0.29.0
 openapi: 3.1.0
 paths:
   /api/v1/admin/ai-spend:
@@ -16204,6 +16209,39 @@ paths:
       security:
       - HTTPBearer: []
       summary: Read Sent
+      tags:
+      - mail
+  /api/v1/mail/sent/{email_id}/resend:
+    post:
+      description: '«Отправить ещё раз»: тот же круг, что видит строку. 409 `mail_not_resendable` — текста нет
+
+        (срок хранения истёк, письмо со входом или паролем) или письмо ещё в очереди; без «Почты» — 409
+
+        `smtp_not_configured`.'
+      operationId: resend_sent
+      parameters:
+      - in: path
+        name: email_id
+        required: true
+        schema:
+          title: Email Id
+          type: integer
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SentMailItem'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Resend Sent
       tags:
       - mail
   /api/v1/me:

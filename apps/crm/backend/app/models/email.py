@@ -86,6 +86,8 @@ class EmailLog(TimestampMixin, Base):
     notify: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=false())
     html_ciphertext: Mapped[bytes | None] = mapped_column(LargeBinary)
     links_ciphertext: Mapped[bytes | None] = mapped_column(LargeBinary)
+    #: Ближайший срок ссылок на вложения (MAIL-2): повтор письма — пока ссылки живы.
+    links_expire_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Только метаданные вложений: имя, тип, размер, sha256 (ссылки — в `links_ciphertext`).
     attachments: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB)
     # Ответ в ту же цепочку (W18A-P2): `In-Reply-To` и `References` письма, на которое отвечаем.

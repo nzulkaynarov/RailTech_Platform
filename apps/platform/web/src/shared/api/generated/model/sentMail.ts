@@ -15,6 +15,8 @@ export interface SentMail {
   source: SentMailSource;
   /** @minimum 0 */
   attachments: number;
+  /** Можно «Отправить ещё раз»: текст хранится и письмо без секрета (MAIL-2) */
+  resendable: boolean;
   /**
    * Кто отправил
    * @nullable

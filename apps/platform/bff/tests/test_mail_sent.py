@@ -22,6 +22,7 @@ async def test_sent_mail_page_and_body(web: Web, be: Backends, check: ContractCh
         "ref_kind": "document",
         "ref_id": DOC_ID,
         "attachments": 1,
+        "resendable": True,
         "requested_by": 7,
         "requested_by_name": "Демо Делопроизводителев",
         "created_at": "2026-11-15T09:00:00Z",
@@ -66,3 +67,55 @@ async def test_sent_mail_page_and_body(web: Web, be: Backends, check: ContractCh
         "attachments": ["letter.pdf"],
     }
     assert (await web.client.get("/api/v1/mail/sent/9")).status_code == 404
+
+
+async def test_resend_creates_a_new_journal_row(
+    web: Web, be: Backends, check: ContractChecker
+) -> None:
+    """MAIL-2: «Отправить ещё раз» — новая строка журнала CRM; нельзя — 409 CRM как есть."""
+    resent = be.router.post(f"{CRM_URL}/api/v1/mail/sent/5/resend").mock(
+        return_value=httpx.Response(
+            201,
+            json={
+                "id": 12,
+                "to_email": "gni@example.uz",
+                "subject": "Ответ на требование",
+                "status": "queued",
+                "error": None,
+                "lang": "ru",
+                "source": "eds",
+                "purpose": "eds_letter",
+                "ref_kind": "document",
+                "ref_id": DOC_ID,
+                "attachments": 1,
+                "resendable": False,
+                "requested_by": 7,
+                "requested_by_name": "Демо Делопроизводителев",
+                "created_at": "2026-11-15T10:00:00Z",
+                "sent_at": None,
+            },
+        )
+    )
+    be.router.post(f"{CRM_URL}/api/v1/mail/sent/6/resend").mock(
+        return_value=httpx.Response(
+            409,
+            json={
+                "code": "conflict",
+                "message": "mail cannot be resent",
+                "details": {"reason": "mail_not_resendable"},
+            },
+        )
+    )
+    assert (await web.login(["REGISTRAR"])).status_code == 200
+
+    created = await web.send("POST", "/api/v1/mail/sent/5/resend")
+    check(created, "/mail/sent/{id}/resend", "post")
+    assert resent.called
+    assert (created.status_code, created.json()["id"], created.json()["status"]) == (
+        201,
+        "12",
+        "queued",
+    )
+    refused = await web.send("POST", "/api/v1/mail/sent/6/resend")
+    assert refused.status_code == 409
+    assert refused.json()["details"]["reason"] == "mail_not_resendable"

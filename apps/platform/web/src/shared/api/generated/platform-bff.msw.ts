@@ -331,6 +331,7 @@ import type {
   RolePreview,
   SandboxTurn,
   SearchResult,
+  SentMail,
   SentMailBody,
   SentMailPage,
   SentMessage,
@@ -1890,6 +1891,7 @@ export const getListSentMailResponseMock = (
     error: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
     source: faker.helpers.arrayElement(["crm", "erp", "eds"] as const),
     attachments: faker.number.int({ min: 0 }),
+    resendable: faker.datatype.boolean(),
     requested_by: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
@@ -1913,6 +1915,27 @@ export const getGetSentMailBodyResponseMock = (
   attachments: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => faker.string.alpha({ length: { min: 10, max: 20 } }),
   ),
+  ...overrideResponse,
+});
+
+export const getResendSentMailResponseMock = (
+  overrideResponse: Partial<Extract<SentMail, object>> = {},
+): SentMail => ({
+  id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  to: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  status: faker.helpers.arrayElement(Object.values(SentMailStatus)),
+  error: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  source: faker.helpers.arrayElement(["crm", "erp", "eds"] as const),
+  attachments: faker.number.int({ min: 0 }),
+  resendable: faker.datatype.boolean(),
+  requested_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+  path: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   ...overrideResponse,
 });
 
@@ -34075,6 +34098,28 @@ export const getGetSentMailBodyMockHandler = (
   );
 };
 
+export const getResendSentMailMockHandler = (
+  overrideResponse?:
+    | SentMail
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<SentMail> | SentMail),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/mail/sent/:id/resend",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getResendSentMailResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
 export const getSearchMockHandler = (
   overrideResponse?:
     | SearchResult
@@ -43333,6 +43378,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getListTemplateCatalogMockHandler(),
   getListSentMailMockHandler(),
   getGetSentMailBodyMockHandler(),
+  getResendSentMailMockHandler(),
   getSearchMockHandler(),
   getListEdsDocumentsMockHandler(),
   getCreateEdsDocumentMockHandler(),

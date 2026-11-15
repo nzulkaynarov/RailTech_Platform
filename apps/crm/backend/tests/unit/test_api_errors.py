@@ -223,6 +223,7 @@ def test_reason_values_are_a_stable_contract() -> None:
         "smtp_auth_failed",
         "smtp_tls_failed",
         "smtp_rejected",
+        "mail_not_resendable",
         "offsite_key_invalid",
         "offsite_folder_invalid",
         "offsite_not_configured",

@@ -1,10 +1,17 @@
-import { Alert, Button, Drawer, Input, Select, Skeleton } from "antd";
+import { useQueryClient } from "@tanstack/react-query";
+import { Alert, App, Button, Drawer, Input, Select, Skeleton } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import type { SentMail as SentMailRow, SentMailStatus } from "../../../shared/api/generated/model";
-import { useGetSentMailBody, useListSentMail } from "../../../shared/api/generated/platform-bff";
+import { ApiError } from "../../../shared/api/errors";
+import {
+  getListSentMailQueryKey,
+  resendSentMail,
+  useGetSentMailBody,
+  useListSentMail,
+} from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTable";
 import { EmptyState } from "../../../shared/ui/EmptyState";
@@ -14,7 +21,8 @@ const STATUSES: SentMailStatus[] = ["sent", "queued", "failed", "skipped_no_smtp
 
 /**
  * «Почта · Отправленные» (план 2.8, MAIL-1): письма, отправленные по вашему запросу (администратору — все), поиск по
- * адресату и теме, статус доставки; текст открывается по нажатию — его просмотр попадает в журнал аудита.
+ * адресату и теме, статус доставки; текст открывается по нажатию — его просмотр попадает в журнал аудита. «Отправить ещё
+ * раз» (MAIL-2) — новое письмо с тем же текстом; у писем со входом, паролем или кодом текст не хранится, кнопки нет.
  */
 export function SentMail() {
   const { t } = useTranslation("letters");
@@ -181,9 +189,48 @@ export function SentMail() {
 
 function SentMailDrawer({ row, onClose }: { row: SentMailRow; onClose: () => void }) {
   const { t } = useTranslation("letters");
+  const { message } = App.useApp();
+  const queryClient = useQueryClient();
   const body = useGetSentMailBody(Number(row.id));
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const resend = async () => {
+    setPending(true);
+    setError(null);
+    try {
+      await resendSentMail(Number(row.id));
+      void message.success(t("mail.sent.resent", { to: row.to }));
+      await queryClient.invalidateQueries({ queryKey: getListSentMailQueryKey() });
+      onClose();
+    } catch (failure) {
+      const reason = failure instanceof ApiError ? failure.details["reason"] : undefined;
+      setError(
+        reason === "mail_not_resendable" || reason === "smtp_not_configured"
+          ? t(`mail.sent.resendError.${reason}`)
+          : failure instanceof ApiError
+            ? failure.message
+            : String(failure),
+      );
+    } finally {
+      setPending(false);
+    }
+  };
   return (
-    <Drawer open width={560} title={row.subject} onClose={onClose} destroyOnHidden>
+    <Drawer
+      open
+      width={560}
+      title={row.subject}
+      onClose={onClose}
+      destroyOnHidden
+      extra={
+        row.resendable ? (
+          <Button type="primary" loading={pending} onClick={() => void resend()}>
+            {t("mail.sent.resend")}
+          </Button>
+        ) : null
+      }
+    >
+      {error ? <Alert type="error" showIcon message={error} /> : null}
       <p className="pf-hint">{t("mail.sent.to", { to: row.to })}</p>
       {row.error ? <Alert type="error" showIcon message={row.error} /> : null}
       {row.path ? <Link to={row.path}>{t("mail.sent.openDocument")}</Link> : null}

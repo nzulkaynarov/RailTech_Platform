@@ -1057,6 +1057,12 @@
         "queued": "Queued",
         "failed": "Not delivered",
         "skipped_no_smtp": "Mail not set up"
+      },
+      "resend": "Send again",
+      "resent": "The email to {{to}} is queued",
+      "resendError": {
+        "mail_not_resendable": "This email cannot be sent again: its text is not kept.",
+        "smtp_not_configured": "Mail is not set up — Settings · Connections · Mail."
       }
     }
   },

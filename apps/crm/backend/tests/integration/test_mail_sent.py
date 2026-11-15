@@ -90,3 +90,46 @@ async def test_employee_sees_own_admin_sees_all_body_is_audited(
             await session.scalars(select(AuditLog).where(AuditLog.action == "mail.body_view"))
         ).all()
     assert [a.entity_id for a in audited] == [str(own_row["id"])]
+
+
+async def test_resend_is_offered_only_for_kept_text_and_own_mail(
+    sessions: async_sessionmaker[AsyncSession], client: TestClient
+) -> None:
+    """MAIL-2: «Отправить ещё раз» — у письма с хранимым текстом; у письма со входом текста нет
+    (409 `mail_not_resendable`); чужое письмо сотруднику не видно (404)."""
+    manager, password = await make_user(sessions, "resend@railtech.uz", ["manager"])
+    other, _ = await make_user(sessions, "other@railtech.uz", ["manager"])
+    cipher = SecretCipher(SECRETS_KEY)
+    async with sessions() as session, session.begin():
+        for to, template, purpose, who in (
+            ("letter@example.uz", "eds_letter", "eds_letter", manager.id),
+            ("login@example.uz", "erp_mail", "portal_magic_link", manager.id),
+            ("foreign@example.uz", "eds_letter", "eds_letter", other.id),
+        ):
+            session.add(
+                EmailLog(
+                    to_email=to,
+                    subject="Письмо",
+                    template=template,
+                    purpose=purpose,
+                    lang="ru",
+                    status="sent",
+                    source="eds",
+                    requested_by=who,
+                    body_ciphertext=cipher.encrypt("Текст"),
+                )
+            )
+    mine = login(client, manager.email, password)
+    items = {i["to_email"]: i for i in client.get(URL, headers=mine).json()["items"]}
+    assert items["letter@example.uz"]["resendable"] is True
+    assert items["login@example.uz"]["resendable"] is False
+    refused = client.post(f"{URL}/{items['login@example.uz']['id']}/resend", headers=mine)
+    assert refused.status_code == 409
+    assert refused.json()["details"]["reason"] == "mail_not_resendable"
+    async with sessions() as session:
+        foreign = (
+            await session.scalars(select(EmailLog).where(EmailLog.to_email == "foreign@example.uz"))
+        ).one()
+    assert client.post(f"{URL}/{foreign.id}/resend", headers=mine).status_code == 404
+    no_smtp = client.post(f"{URL}/{items['letter@example.uz']['id']}/resend", headers=mine)
+    assert no_smtp.json()["details"]["reason"] == "smtp_not_configured"

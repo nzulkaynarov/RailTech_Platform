@@ -2,7 +2,9 @@
 
 Журнал писем ансамбля (`email_log`: CRM и запросы ERP, EDS по шине) с поиском: сотрудник видит
 письма, отправленные по его запросу, администратор (`integrations:read`) — все. Текст письма —
-только по отдельному запросу и с записью в аудит (`mail.body_view`); тело хранится зашифрованным.
+только по отдельному запросу и с записью в аудит (`mail.body_view`); тело хранится зашифрованным
+год, у писем со входом, паролем или кодом — не хранится. «Отправить ещё раз» (MAIL-2) — новая строка
+журнала с тем же текстом, в аудит `mail.resend`.
 """
 
 import base64
@@ -22,6 +24,7 @@ from app.security import audit
 from app.security.principal import Principal
 from app.security.rbac import Rbac
 from app.security.secrets_store import SecretCipher, SecretsKeyError
+from app.services.mail import can_resend
 
 router = APIRouter(prefix="/api/v1/mail/sent", tags=["mail"])
 
@@ -41,10 +44,33 @@ class SentMailItem(BaseModel):
     ref_kind: str | None
     ref_id: str | None
     attachments: int
+    #: Можно «Отправить ещё раз» (MAIL-2): текст хранится и письмо без секрета.
+    resendable: bool
     requested_by: int | None
     requested_by_name: str | None
     created_at: datetime
     sent_at: datetime | None
+
+
+def _item(r: EmailLog, names: dict[int, str]) -> SentMailItem:
+    return SentMailItem(
+        id=r.id,
+        to_email=r.to_email,
+        subject=r.subject,
+        status=r.status,
+        error=r.error,
+        lang=r.lang,
+        source=r.source,
+        purpose=r.purpose,
+        ref_kind=r.ref_kind,
+        ref_id=r.ref_id,
+        attachments=len(r.attachments or []),
+        resendable=can_resend(r),
+        requested_by=r.requested_by,
+        requested_by_name=names.get(r.requested_by) if r.requested_by is not None else None,
+        created_at=r.created_at,
+        sent_at=r.sent_at,
+    )
 
 
 class SentMailPage(BaseModel):
@@ -132,26 +158,7 @@ async def list_sent(
             found = await session.execute(select(User.id, User.full_name).where(User.id.in_(ids)))
             names = {int(user_id): str(name) for user_id, name in found.all()}
     return SentMailPage(
-        items=[
-            SentMailItem(
-                id=r.id,
-                to_email=r.to_email,
-                subject=r.subject,
-                status=r.status,
-                error=r.error,
-                lang=r.lang,
-                source=r.source,
-                purpose=r.purpose,
-                ref_kind=r.ref_kind,
-                ref_id=r.ref_id,
-                attachments=len(r.attachments or []),
-                requested_by=r.requested_by,
-                requested_by_name=names.get(r.requested_by) if r.requested_by is not None else None,
-                created_at=r.created_at,
-                sent_at=r.sent_at,
-            )
-            for r in page
-        ],
+        items=[_item(r, names) for r in page],
         next_cursor=_encode(page[-1]) if more and page else None,
     )
 
@@ -182,3 +189,38 @@ async def read_sent(
         text=text,
         attachments=[str(a.get("filename") or "") for a in (row.attachments or [])],
     )
+
+
+@router.post("/{email_id}/resend", response_model=SentMailItem, status_code=201)
+async def resend_sent(
+    email_id: int, who: PrincipalDep, rbac: RbacDep, container: ContainerDep
+) -> SentMailItem:
+    """«Отправить ещё раз»: тот же круг, что видит строку. 409 `mail_not_resendable` — текста нет
+    (срок хранения истёк, письмо со входом или паролем) или письмо ещё в очереди; без «Почты» — 409
+    `smtp_not_configured`."""
+    async with container.session_factory() as session:
+        row = (
+            await session.scalars(
+                _scope(select(EmailLog).where(EmailLog.id == email_id), rbac, who)
+            )
+        ).first()
+    if row is None:
+        raise NotFoundError("email not found")
+    view = await container.mail_service.resend(row.id, who.user_id)
+    async with container.session_factory() as session, session.begin():
+        await audit.record(
+            session,
+            who.actor,
+            "mail.resend",
+            "email_log",
+            str(view.id),
+            after={"original_id": row.id},
+        )
+        copy = await session.get(EmailLog, view.id)
+        names: dict[int, str] = {}
+        if who.user_id is not None:
+            user = await session.get(User, who.user_id)
+            names = {who.user_id: user.full_name} if user is not None else {}
+    if copy is None:
+        raise NotFoundError("email not found")
+    return _item(copy, names)

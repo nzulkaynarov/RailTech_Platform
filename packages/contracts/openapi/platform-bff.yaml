@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.112.0
+  version: 0.113.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -2004,7 +2004,7 @@ paths:
       summary: 'Почта · Текст отправленного письма'
       description: >-
         CRM `GET /mail/sent/{id}`: текст по запросу, CRM пишет просмотр в аудит; `text = null` — тело удалено по сроку
-        хранения. Чужое письмо сотруднику — 404.
+        хранения (год) или не хранится (письмо со входом, паролем или кодом). Чужое письмо сотруднику — 404.
       parameters:
         - {name: id, in: path, required: true, schema: {type: integer, minimum: 1}}
       responses:
@@ -2019,6 +2019,35 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /mail/sent/{id}/resend:
+    post:
+      tags: [mail]
+      operationId: resendSentMail
+      summary: 'Почта · Отправить ещё раз (план 3.7, MAIL-2)'
+      description: >-
+        CRM `POST /mail/sent/{id}/resend`: новое письмо в очередь с тем же адресатом, темой, текстом и вложениями; исходное
+        не меняется, в аудит CRM — `mail.resend`. Текст хранится год (DECISIONS 2026-11-11 п. 3), у писем со входом, паролем,
+        кодом или приглашением не хранится — 409 `mail_not_resendable` (как и у письма в очереди); почта не настроена — 409
+        `smtp_not_configured`. Чужое письмо сотруднику — 404.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, schema: {type: integer, minimum: 1}}
+      responses:
+        '201':
+          description: Новое письмо журнала
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SentMail'}
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/InboundMailConflict'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
   /search:
@@ -14887,7 +14916,8 @@ components:
         409 `CONFLICT` — письмо уже в работе у другого (`details.reason = mail_in_work_by_other`, `details.assignee_name`,
         `details.assigned_at`), уже разобрано (`mail_handled`), письмо уже регистрируется (`mail_registering`), не возвращается в «Новые» (`mail_not_returnable`), тип отключён (`mail_type_inactive`), правило уже есть (`mail_rule_exists`),
         некому передать (`mail_no_handover_target`), почта не
-        настроена (`smtp_not_configured`) или помощник выключен (`assist_disabled`)
+        настроена (`smtp_not_configured`), помощник выключен (`assist_disabled`) или письмо нельзя отправить ещё раз
+        (`mail_not_resendable`)
       content:
         application/json:
           schema:
@@ -15209,7 +15239,7 @@ components:
     SentMail:
       type: object
       additionalProperties: false
-      required: [id, to, subject, status, error, source, attachments, requested_by, created_at, sent_at, path]
+      required: [id, to, subject, status, error, source, attachments, resendable, requested_by, created_at, sent_at, path]
       properties:
         id: {type: string}
         to: {type: string}
@@ -15218,6 +15248,7 @@ components:
         error: {type: [string, 'null']}
         source: {type: string, enum: [crm, erp, eds]}
         attachments: {type: integer, minimum: 0}
+        resendable: {type: boolean, description: 'Можно «Отправить ещё раз»: текст хранится и письмо без секрета (MAIL-2)'}
         requested_by: {type: [string, 'null'], description: Кто отправил}
         created_at: {type: string, format: date-time}
         sent_at: {type: [string, 'null'], format: date-time}
