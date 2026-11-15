@@ -8,6 +8,7 @@ import { useListStockBalances } from "../../../shared/api/generated/platform-bff
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTable";
 import { EmptyState } from "../../../shared/ui/EmptyState";
+import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 import { QueryState } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { useStateLabels } from "./api";
@@ -193,14 +194,15 @@ export function BalancesTab() {
   return (
     <>
       <Card styles={{ body: { padding: 0 } }}>
-        <div className="pf-stock-toolbar">
-          <Input.Search
-            allowClear
-            aria-label={t("balances.search")}
-            placeholder={t("balances.search")}
-            onSearch={setQ}
-            className="pf-stock-search"
-          />
+        <FilterBar inset>
+          <FilterField id="pf-balances-q" label={t("balances.search")} grow>
+            <Input.Search
+              id="pf-balances-q"
+              allowClear
+              placeholder={t("balances.search")}
+              onSearch={setQ}
+            />
+          </FilterField>
           <Checkbox
             checked={reservedOnly}
             onChange={(event) => {
@@ -209,7 +211,7 @@ export function BalancesTab() {
           >
             {t("balances.only")}
           </Checkbox>
-        </div>
+        </FilterBar>
         <QueryState query={query} labels={labels} rows={10}>
           {(data) =>
             data.items.length === 0 ? (
