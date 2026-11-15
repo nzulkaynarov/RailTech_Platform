@@ -157,6 +157,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/dictionaries/{kind}/import": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Загрузка файла справочника одной транзакцией
+     * @description План 2.9: строки файла, уже прочитанные и проверенные BFF, — `create` (новое значение) или `patch` по `code`. Применяются теми же правилами, что по одной, но в одной транзакции: ошибка хотя бы в одной строке — не пишется ничего, `applied = false`, у строк с ошибкой `field` и `reason` (`name_taken`, `dictionary_closed`, …). В журнале одна запись `dictionary.imported` с итогами.
+     */
+    post: operations["importDictionaryItems"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/dictionaries/{kind}/{code}": {
     parameters: {
       query?: never;
@@ -1834,6 +1854,29 @@ export interface components {
     };
     DictionaryOrderIn: {
       codes: components["schemas"]["DictionaryCode"][];
+    };
+    /** @description Ровно одно из `create` и `patch`; у `patch` обязателен `code` */
+    DictionaryImportRow: {
+      /** @description Строка файла */
+      line: number;
+      code?: components["schemas"]["DictionaryCode"] | null;
+      create?: components["schemas"]["DictionaryItemIn"];
+      patch?: components["schemas"]["DictionaryItemPatch"];
+    };
+    DictionaryImportIn: {
+      rows: components["schemas"]["DictionaryImportRow"][];
+    };
+    DictionaryImportRowResult: {
+      line: number;
+      /** @description Код строки (у новой — выданный доменом) */
+      code: string | null;
+      field?: string | null;
+      /** @description Причина ошибки строки; нет — строка применилась бы */
+      reason?: string | null;
+    };
+    DictionaryImportOut: {
+      applied: boolean;
+      rows: components["schemas"]["DictionaryImportRowResult"][];
     };
     /**
      * @description Код права EDS v1 (runbook волны 12 §2.2; `platform-rbac.yaml`, `backend.eds`). `payments.confirm` — шаг «бухгалтер»
@@ -3853,6 +3896,37 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["DictionaryItemList"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  importDictionaryItems: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Вид справочника (`letter-kinds`, `receipt-methods`, `resolution-kinds`, `signing-kinds`, `close-reasons`); неизвестный — 404 */
+        kind: components["parameters"]["DictionaryKind"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DictionaryImportIn"];
+      };
+    };
+    responses: {
+      /** @description Итог по строкам; `applied = false` — ничего не записано */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DictionaryImportOut"];
         };
       };
       401: components["responses"]["Unauthorized"];

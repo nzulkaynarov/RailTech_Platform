@@ -398,21 +398,68 @@ async def test_dry_run_shows_the_difference_and_writes_nothing(
     assert eds.made("PATCH", "dictionaries/letter-kinds/bank") == []
 
 
-async def test_apply_goes_through_the_usual_domain_actions(web: Web, eds: EdsFake) -> None:
+async def test_apply_is_one_domain_transaction(web: Web, eds: EdsFake) -> None:
+    """План 2.9: EDS применяет проверенные строки одним запросом — всё или ничего."""
+    eds.answer(
+        "POST",
+        "dictionaries/letter-kinds/import",
+        httpx.Response(
+            200,
+            json={
+                "applied": True,
+                "rows": [{"line": 2, "code": "bank"}, {"line": 3, "code": "pretenziya"}],
+            },
+        ),
+    )
     assert (await web.login(["ADMIN"])).status_code == 200
     response = await _upload(web, CSV, dry_run=False)
     assert response.status_code == 200, response.text
     assert response.json()["applied"] is True
-    [created] = eds.made("POST", "dictionaries/letter-kinds")
-    assert json.loads(created.read()) == {
-        "name": {"ru": "Претензия", "uz": "", "en": ""},
-        "attrs": {"urgent": False, "due_days": 10},
+    assert [r["code"] for r in response.json()["rows"]] == ["bank", "pretenziya"]
+    [sent] = eds.made("POST", "dictionaries/letter-kinds/import")
+    assert json.loads(sent.read()) == {
+        "rows": [
+            {
+                "line": 2,
+                "code": "bank",
+                "patch": {
+                    "name": {"ru": "Письмо банка", "uz": "Bank xati", "en": "Bank notice"},
+                    "attrs": {"urgent": True},
+                },
+            },
+            {
+                "line": 3,
+                "code": None,
+                "create": {
+                    "name": {"ru": "Претензия", "uz": "", "en": ""},
+                    "attrs": {"urgent": False, "due_days": 10},
+                },
+            },
+        ]
     }
-    [patched] = eds.made("PATCH", "dictionaries/letter-kinds/bank")
-    assert json.loads(patched.read()) == {
-        "name": {"ru": "Письмо банка", "uz": "Bank xati", "en": "Bank notice"},
-        "attrs": {"urgent": True},
-    }
+    assert eds.made("POST", "dictionaries/letter-kinds") == []
+    assert eds.made("PATCH", "dictionaries/letter-kinds/bank") == []
+
+
+async def test_domain_refusal_marks_the_row_and_nothing_is_written(web: Web, eds: EdsFake) -> None:
+    eds.answer(
+        "POST",
+        "dictionaries/letter-kinds/import",
+        httpx.Response(
+            200,
+            json={
+                "applied": False,
+                "rows": [
+                    {"line": 2, "code": "bank"},
+                    {"line": 3, "code": None, "field": "name", "reason": "name_taken"},
+                ],
+            },
+        ),
+    )
+    assert (await web.login(["ADMIN"])).status_code == 200
+    body = (await _upload(web, CSV, dry_run=False)).json()
+    assert (body["applied"], body["failed"]) == (False, 1)
+    assert body["rows"][1]["errors"] == [{"field": "name", "reason": "name_taken"}]
 
 
 async def test_bad_file_names_the_problem_and_only_admin_uploads(web: Web, eds: EdsFake) -> None:
