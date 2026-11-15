@@ -4,6 +4,7 @@ Cabinet — кабинет клиента (веб и Telegram Mini App) без �
 
 **Прочитай:** `docs/systems/cabinet/CONVENTIONS.md` (правила кода; в коде ссылки `CONVENTIONS.md §N` ведут туда) и
 `docs/ORCHESTRATOR.md` (процесс, инварианты, протокол сессии); правило среды, тестов и CI — `CLAUDE.md` корня.
+Любой экран и компонент — строго по `docs/architecture/ui-standard.md` (цвет, шрифт, окна, таблицы, формы, чек-лист перед PR); кнопки, поля, таблицы и окна — только общие компоненты.
 Запуск и устройство — `docs/systems/cabinet/README.md`. Контракт портала — `packages/contracts/openapi/erp-portal.yaml`, объяснение — `docs/architecture/CONTRACTS.md` §4.
 
 Документация — только в `docs/` (ORCHESTRATOR §3 п. 17): здесь новых `.md` не заводить.

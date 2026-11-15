@@ -4,10 +4,11 @@ Re-exported here for backward compatibility.
 """
 
 from catalog.models import HSCode
-from core.models import AbstractLookup, Country, Currency, DeliveryBasis, ExchangeRate, UnitOfMeasure
+from core.models import AbstractLookup, Bank, Country, Currency, DeliveryBasis, ExchangeRate, UnitOfMeasure
 
 __all__ = [
     "AbstractLookup",
+    "Bank",
     "Country",
     "Currency",
     "DeliveryBasis",
