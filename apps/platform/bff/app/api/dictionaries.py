@@ -83,6 +83,8 @@ OWNERS: Final[dict[str, Owner]] = {
     "currencies": _CALC,
     "units": _CALC,
     "delivery-basis": _CALC,
+    # План 2.9: банки (МФО) — подстановка в диалоге счёта компании; файл ЦБ загружает администратор
+    "banks": _CALC,
     "signing-kinds": _SIGNING,
     "close-reasons": _CLOSE_REASONS,
     "letter-kinds": _DOCUMENTS,

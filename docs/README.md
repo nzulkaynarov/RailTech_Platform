@@ -63,6 +63,7 @@
 | SSO-токен сотрудника | [`architecture/sso-token.md`](architecture/sso-token.md) | действует | архитектор |
 | Платформа: BFF, вход, события, развёртывание | [`architecture/platform-bff.md`](architecture/platform-bff.md) | действует | архитектор |
 | Платформа: фронтенд, каркас, размеры, тема | [`architecture/platform-frontend.md`](architecture/platform-frontend.md) | действует | архитектор |
+| Стандарт интерфейса Платформы и Cabinet: цвет, шрифт, окна, таблицы, формы, чек-лист экрана | [`architecture/ui-standard.md`](architecture/ui-standard.md), разбор — [`research/2026-11-15-ui-standard-assessment.md`](research/2026-11-15-ui-standard-assessment.md) | действует | архитектор |
 | Документы: формат тела, бланк, рендер PDF и DOCX, «Подогнать» (пакет `rt-docs`, контракт `documents/`) | [`architecture/rt-docs.md`](architecture/rt-docs.md), решение — [ADR-0020](adr/0020-documents-letterhead-body-rendering.md) | действует | архитектор |
 | Карта интеграции: экран → BFF → домены, разрывы | [`architecture/integration-map.md`](architecture/integration-map.md) | действует | архитектор |
 | Система: назначение, запуск, команды | `systems/<crm\|erp\|cabinet\|platform\|eds\|infra\|contracts\|ui-tokens>/README.md`; пакеты `rt-bus` и `rt-docs` — их документы в `architecture/` | действует | лид |
