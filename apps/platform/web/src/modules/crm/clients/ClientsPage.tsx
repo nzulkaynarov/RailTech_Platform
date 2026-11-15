@@ -31,7 +31,7 @@ import { ClientPanel } from "./ClientPanel";
 import "../../eds/payments/payments.css";
 import "../../erp/catalog/catalog.css";
 import "../crm.css";
-import { ToolsSlot } from "../../../shared/ui/DataTable/RegistryTools";
+import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 
 /** Ширины колонок: название, ИНН, заявки, ERP, последняя активность (UX-1c, S9; по типу — platform-frontend.md §4.2) */
 const COLS = {
@@ -346,7 +346,7 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
           ) : undefined
         }
       />
-      <div className="pf-crm-controls">
+      <FilterBar tools>
         <Segmented
           aria-label={t("clients:kinds.filter")}
           value={kind}
@@ -356,8 +356,7 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
           }}
         />
         {queue ? null : (
-          <div className="pf-crm-filter pf-crm-search">
-            <label htmlFor="pf-clients-q">{t("clients:search.label")}</label>
+          <FilterField id="pf-clients-q" label={t("clients:search.label")} grow>
             <Input.Search
               id="pf-clients-q"
               defaultValue={q}
@@ -367,10 +366,9 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
                 change({ q: value.trim() ? value.trim() : null });
               }}
             />
-          </div>
+          </FilterField>
         )}
-        <ToolsSlot />
-      </div>
+      </FilterBar>
       {kind === "applications" ? <PartnerApplicationsPanel /> : null}
       {kind === "bank_changes" ? <BankChangesPanel /> : null}
       {queue ? null : (

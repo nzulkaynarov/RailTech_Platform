@@ -38,7 +38,7 @@ import { Conversations } from "../messages/MessagesPage";
 import { LeadPanel } from "./LeadPanel";
 
 import "../crm.css";
-import { ToolsSlot } from "../../../shared/ui/DataTable/RegistryTools";
+import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 
 const PAGE_SIZE = 50;
 const TABS = [
@@ -464,7 +464,7 @@ export function LeadsPage({ objectId }: { objectId?: string | undefined }) {
         {mobile && lead ? null : (
           <>
             <PageHeader title={title} />
-            <div className="pf-crm-controls">{viewSwitch}</div>
+            <FilterBar>{viewSwitch}</FilterBar>
           </>
         )}
         <Conversations />
@@ -475,27 +475,23 @@ export function LeadsPage({ objectId }: { objectId?: string | undefined }) {
   return (
     <div className="pf-crm">
       <PageHeader title={title} />
-      <div className="pf-crm-controls">
+      <FilterBar tools>
         {viewSwitch}
         {mobile ? (
-          <div className="pf-crm-filter">
-            <label htmlFor="pf-leads-tab">{t("leads:tabs.label")}</label>
+          <FilterField id="pf-leads-tab" label={t("leads:tabs.label")}>
             <Select
               id="pf-leads-tab"
-              style={{ minWidth: 160 }}
               value={tab}
               options={TABS.map((value) => ({ value, label: t(`leads:tabs.${value}`) }))}
               onChange={(value) => {
                 change({ status: value === "all" ? null : value, offset: null });
               }}
             />
-          </div>
+          </FilterField>
         ) : null}
-        <div className="pf-crm-filter">
-          <label htmlFor="pf-leads-channel">{t("leads:channel.label")}</label>
+        <FilterField id="pf-leads-channel" label={t("leads:channel.label")}>
           <Select
             id="pf-leads-channel"
-            style={{ minWidth: 160 }}
             value={channel}
             options={[
               { value: "", label: t("leads:channel.any") },
@@ -505,9 +501,8 @@ export function LeadsPage({ objectId }: { objectId?: string | undefined }) {
               change({ channel: value === "" ? null : value, offset: null });
             }}
           />
-        </div>
-        <div className="pf-crm-filter pf-crm-search">
-          <label htmlFor="pf-leads-q">{t("leads:search.label")}</label>
+        </FilterField>
+        <FilterField id="pf-leads-q" label={t("leads:search.label")} grow>
           <Input.Search
             id="pf-leads-q"
             defaultValue={q}
@@ -517,9 +512,8 @@ export function LeadsPage({ objectId }: { objectId?: string | undefined }) {
               change({ q: value.trim() ? value.trim() : null, offset: null });
             }}
           />
-        </div>
-        <ToolsSlot />
-      </div>
+        </FilterField>
+      </FilterBar>
       <ErrorNote message={actionFailure} />
       <Card styles={{ body: { padding: 0 } }}>
         {mobile ? (
