@@ -68,7 +68,7 @@ export function HelpDrawer() {
         <Button
           variant="ghost"
           size="icon"
-          className="size-9 rounded-xl text-muted-foreground hover:bg-accent hover:text-primary focus-visible:ring-2 focus-visible:ring-ring"
+          className="size-9 rounded-lg text-muted-foreground hover:bg-accent hover:text-primary focus-visible:ring-2 focus-visible:ring-ring"
           aria-label={t('help.trigger', 'Справка и подсказки')}
           title={t('help.trigger', 'Справка и подсказки')}
         >
@@ -113,7 +113,7 @@ export function HelpDrawer() {
                 return (
                   <div
                     key={article.id}
-                    className={`rounded-xl border transition-all ${
+                    className={`rounded-lg border transition-all ${
                       isContextMatch
                         ? 'border-primary/30 bg-primary/[0.02]'
                         : 'border-border/60 bg-card'
@@ -122,7 +122,7 @@ export function HelpDrawer() {
                     <button
                       type="button"
                       onClick={() => setExpandedId(isExpanded ? null : article.id)}
-                      className="w-full text-left p-3.5 flex items-start justify-between gap-3 outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-xl"
+                      className="w-full text-left p-3.5 flex items-start justify-between gap-3 outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg"
                       aria-expanded={isExpanded}
                     >
                       <div className="space-y-1 pr-1">
@@ -180,4 +180,3 @@ export function HelpDrawer() {
     </Sheet>
   );
 }
-

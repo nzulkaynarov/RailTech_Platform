@@ -33,7 +33,7 @@ export function NotificationBell() {
     <Sheet open={open} onOpenChange={setOpen}>
       <button
         type="button"
-        className="relative rounded-xl p-2 text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-primary focus-visible:ring-2 focus-visible:ring-ring"
+        className="relative rounded-lg p-2 text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-primary focus-visible:ring-2 focus-visible:ring-ring"
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-describedby={unread > 0 ? noteId : undefined}
@@ -45,7 +45,7 @@ export function NotificationBell() {
         {unread > 0 ? (
           <span
             aria-hidden="true"
-            className="absolute -top-0.5 -right-0.5 inline-flex min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-xs leading-5 font-semibold text-destructive-foreground tabular-nums"
+            className="absolute -top-0.5 -right-0.5 inline-flex min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-xs leading-5 font-semibold text-primary ring-1 ring-primary/20 ring-inset tabular-nums"
           >
             {unread > 99 ? '99+' : unread}
           </span>
@@ -109,7 +109,7 @@ function NotificationPanel({ onClose, unread }: { onClose: () => void; unread: n
           <ErrorState error={feed.error} onRetry={() => void feed.refetch()} />
         ) : items.length === 0 ? (
           <div className="flex flex-col items-center gap-3 px-4 py-12 text-center">
-            <div className="flex size-12 items-center justify-center rounded-2xl bg-accent text-primary">
+            <div className="flex size-12 items-center justify-center rounded-lg bg-accent text-primary">
               <BellOff className="size-6" aria-hidden="true" />
             </div>
             <p className="text-base font-semibold">{t('notifications.emptyTitle')}</p>

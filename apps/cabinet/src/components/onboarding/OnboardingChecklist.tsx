@@ -225,7 +225,7 @@ export function OnboardingChecklist() {
             const content = (
               <div
                 className={cn(
-                  'flex items-center justify-between gap-3 rounded-xl border p-3 transition-colors',
+                  'flex items-center justify-between gap-3 rounded-lg border p-3 transition-colors',
                   step.done
                     ? 'border-border/40 bg-muted/30 text-muted-foreground'
                     : 'border-border bg-background hover:border-ring/50 hover:bg-accent/40 text-foreground',
@@ -270,7 +270,7 @@ export function OnboardingChecklist() {
                   key={step.id}
                   type="button"
                   onClick={step.onClick}
-                  className="w-full text-left outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl"
+                  className="w-full text-left outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
                 >
                   {content}
                 </button>
@@ -281,7 +281,7 @@ export function OnboardingChecklist() {
               <Link
                 key={step.id}
                 to={step.to ?? '#'}
-                className="w-full outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl"
+                className="w-full outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
               >
                 {content}
               </Link>

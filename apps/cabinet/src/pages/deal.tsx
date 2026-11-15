@@ -236,7 +236,7 @@ function DealRow({ to, title, meta, children }: { to: string; title: string; met
 function DealStages({ progress }: { progress: DealProgress }) {
   const { t } = useTranslation();
   return (
-    <section aria-labelledby="deal-stages" className="mb-6 rounded-2xl border border-border/60 bg-muted/60 p-4">
+    <section aria-labelledby="deal-stages" className="mb-6 rounded-lg border border-border/60 bg-muted/60 p-4">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs">
         <h2 id="deal-stages" className="font-semibold tracking-wider text-primary uppercase">
           {t('pages.deal.stages.title')}
@@ -259,7 +259,7 @@ function DealStages({ progress }: { progress: DealProgress }) {
               key={stage.id}
               aria-current={stage.current ? 'step' : undefined}
               className={cn(
-                'flex items-center gap-2 rounded-xl border p-2.5 text-xs',
+                'flex items-center gap-2 rounded-lg border p-2.5 text-xs',
                 stage.state === 'done'
                   ? 'border-success/30 bg-success/10 font-medium text-success'
                   : stage.current

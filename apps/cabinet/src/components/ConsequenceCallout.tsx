@@ -13,7 +13,7 @@ export function ConsequenceCallout({ text, className }: { text: string; classNam
   return (
     <div
       role="note"
-      className={cn('flex items-start gap-3 rounded-xl border border-border/60 bg-accent/80 p-3.5 text-xs text-primary', className)}
+      className={cn('flex items-start gap-3 rounded-lg border border-border/60 bg-accent/80 p-3.5 text-xs text-primary', className)}
     >
       <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
         <Info className="size-3 text-primary-foreground" aria-hidden="true" />

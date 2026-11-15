@@ -24,6 +24,8 @@ import { ProjectStatusTag } from "./status";
 
 import "../decision/decision.css";
 import "./projects.css";
+import { ToolsSlot } from "../../../shared/ui/DataTable/RegistryTools";
+import { RowOpenLink } from "../../../shared/ui/RowOpenLink";
 
 /**
  * Ширины колонок: номер и сумма, клиент и название (гибкая), шаг, статус клиента, документы, срок, ответственный, действие
@@ -214,13 +216,11 @@ function Rows({ items }: { items: readonly ProjectRow[] }) {
       width: COLS.action,
       cell: (row) => (
         <>
-          <LinkButton
-            size="small"
+          <RowOpenLink
             to={projectPath(row.number)}
-            aria-label={t("list.openLabel", { number: row.number })}
-          >
-            {t("list.open")}
-          </LinkButton>
+            label={t("list.openLabel", { number: row.number })}
+            title={t("list.open")}
+          />
         </>
       ),
     },
@@ -409,6 +409,7 @@ export function ProjectList() {
             }}
           />
         </div>
+        <ToolsSlot />
       </div>
       <Card styles={{ body: { padding: 0 } }}>
         <DataBlock busy={query.isPlaceholderData} resetKey={shownKey}>

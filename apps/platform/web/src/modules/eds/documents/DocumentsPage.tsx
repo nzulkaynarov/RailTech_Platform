@@ -29,6 +29,7 @@ import { parseDocumentId, withParams } from "./params";
 import { DocumentStatusTag } from "./status";
 
 import "./documents.css";
+import { ToolsSlot } from "../../../shared/ui/DataTable/RegistryTools";
 
 const PAGE_SIZE = 25;
 /**
@@ -600,6 +601,7 @@ export function DocumentsPage() {
             }}
           />
         </div>
+        <ToolsSlot />
       </div>
       <Card styles={{ body: { padding: 0 } }}>
         {mobile ? (

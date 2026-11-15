@@ -155,7 +155,7 @@ export function CatalogPage() {
             <aside
               role="region"
               aria-label={t('pages.catalog.selectedCount', { count: selectedItems.length })}
-              className="sticky bottom-4 z-20 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card/95 p-4 shadow-lg backdrop-blur"
+              className="sticky bottom-4 z-20 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card/95 p-4 shadow-lg backdrop-blur"
             >
               <div className="flex items-center gap-2">
                 <ToneBadge tone="info">{selectedItems.length}</ToneBadge>
