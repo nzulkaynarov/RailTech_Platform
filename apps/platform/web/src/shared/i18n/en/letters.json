@@ -856,7 +856,8 @@
       "in_work": "All in progress",
       "done": "Handled",
       "all": "All",
-      "ownAll": "All mine"
+      "ownAll": "All mine",
+      "sent": "Sent"
     },
     "filter": {
       "label": "Show",
@@ -1027,6 +1028,36 @@
         "mailbox_missing": "There is no such folder on the mail server"
       },
       "resultLabel": "Mail check result"
+    },
+    "sent": {
+      "caption": "Sent emails",
+      "scroll": "Sent emails table, scroll",
+      "search": "Search sent emails",
+      "searchHint": "Recipient or subject",
+      "statusFilter": "Delivery status",
+      "statusAll": "All statuses",
+      "emptyTitle": "No emails",
+      "emptyText": "Emails sent at your request will appear here.",
+      "emptySearch": "Nothing found — change the search or status.",
+      "first": "Newest",
+      "more": "More",
+      "to": "To: {{to}}",
+      "openDocument": "Open document",
+      "noText": "The email text is no longer stored.",
+      "attachments": "Attachments: {{names}}",
+      "columns": {
+        "date": "Date",
+        "to": "To",
+        "subject": "Subject",
+        "status": "Status",
+        "by": "Sent by"
+      },
+      "status": {
+        "sent": "Delivered",
+        "queued": "Queued",
+        "failed": "Not delivered",
+        "skipped_no_smtp": "Mail not set up"
+      }
     }
   },
   "settings": {
