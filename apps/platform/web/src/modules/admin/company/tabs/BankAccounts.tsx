@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Alert, App, Button, Checkbox, Form, Input, Select } from "antd";
-import type { FormInstance } from "antd";
+import { Alert, App, AutoComplete, Button, Checkbox, Form, Input, Select } from "antd";
+import type { FormInstance, SelectProps } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -13,6 +13,7 @@ import {
   useCreateCompanyBankAccount,
   useDeleteCompanyBankAccount,
   useListCompanyBankAccounts,
+  useListDictionaryItems,
   useListReferenceItems,
   useUpdateCompanyBankAccount,
 } from "../../../../shared/api/generated/platform-bff";
@@ -226,6 +227,16 @@ export function BankAccounts() {
   );
 }
 
+/**
+ * Выбор с поиском в обязательном поле формы: Form.Item ставит `aria-required` на корень antd Select (`div` без роли —
+ * axe aria-allowed-attr); обязательность и так видна в метке и проверяется правилом формы.
+ */
+function SearchSelect(props: SelectProps & { "aria-required"?: unknown }) {
+  const rest: SelectProps & { "aria-required"?: unknown } = { ...props };
+  delete rest["aria-required"];
+  return <Select {...rest} />;
+}
+
 function BankAccountForm({
   form,
   row,
@@ -241,6 +252,19 @@ function BankAccountForm({
   const formId = useId();
   const initial = row ? valuesOf(row) : EMPTY;
   const currencies = useListReferenceItems("currencies");
+  // План 2.9: банки из справочника (файл ЦБ) — выбор подставляет МФО и SWIFT; банк не из списка вводится руками
+  const { i18n } = useTranslation();
+  const banks = useListDictionaryItems("banks", undefined, { query: { staleTime: 5 * 60_000 } });
+  const lang = (["ru", "uz", "en"] as const).find((l) => i18n.language.startsWith(l)) ?? "ru";
+  const bankOptions = (banks.data?.items ?? []).map((bank) => {
+    const name = bank.name[lang] || bank.name.ru;
+    return {
+      value: name,
+      label: `${name} · ${bank.code}`,
+      code: bank.code,
+      swift: String(bank.attrs["swift"] ?? ""),
+    };
+  });
   const create = useCreateCompanyBankAccount({ mutation: { onSuccess: onSaved } });
   const update = useUpdateCompanyBankAccount({ mutation: { onSuccess: onSaved } });
   const mutation = row ? update : create;
@@ -284,7 +308,7 @@ function BankAccountForm({
           label={t("bank.currency")}
           rules={[{ required: true, message: t("required") }]}
         >
-          <Select
+          <SearchSelect
             showSearch
             optionFilterProp="label"
             loading={currencies.isPending}
@@ -303,7 +327,19 @@ function BankAccountForm({
         </Form.Item>
         <div className="pf-co-grid">
           <Form.Item name="bank_name" label={t("bank.bankName")}>
-            <Input maxLength={255} autoComplete="off" />
+            <AutoComplete
+              maxLength={255}
+              options={bankOptions}
+              filterOption={(input, option) =>
+                (option?.label ?? "").toLowerCase().includes(input.trim().toLowerCase())
+              }
+              onSelect={(_value: string, option: (typeof bankOptions)[number]) => {
+                form.setFieldsValue({
+                  mfo: option.code,
+                  ...(option.swift && !form.getFieldValue("swift") ? { swift: option.swift } : {}),
+                });
+              }}
+            />
           </Form.Item>
           <Form.Item name="mfo" label={t("bank.mfo")}>
             <Input maxLength={10} autoComplete="off" inputMode="numeric" />

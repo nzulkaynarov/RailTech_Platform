@@ -25,10 +25,10 @@ def _api(user):
 
 
 @pytest.mark.django_db
-def test_catalog_lists_the_four_kinds_with_fields(operator):  # noqa: F811
+def test_catalog_lists_the_kinds_with_fields(operator):  # noqa: F811
     body = _api(operator).get(BASE).json()
     kinds = {d["kind"]: d for d in body["items"]}
-    assert list(kinds) == ["countries", "currencies", "units", "delivery-basis"]
+    assert list(kinds) == ["countries", "currencies", "units", "banks", "delivery-basis"]
     assert kinds["currencies"]["codes"] == "given"
     assert [a["key"] for a in kinds["countries"]["attrs"]] == ["alpha3", "iso_numeric", "vat_rate"]
     assert {a["type"] for a in kinds["delivery-basis"]["attrs"]} == {"text", "boolean"}
@@ -82,3 +82,18 @@ def test_writes_need_settings_edit(db):
     assert api.get(f"{BASE}/units").status_code == 200
     assert api.post(f"{BASE}/units", {"code": "x", "name": {"ru": "X"}}, format="json").status_code == 403
     assert APIClient().get(BASE).status_code == 401
+
+
+@pytest.mark.django_db
+def test_banks_by_mfo_with_swift(operator):  # noqa: F811
+    """План 2.9: банк — МФО и название на трёх языках, SWIFT для валютных счетов; код как ввели (цифры)."""
+    api = _api(operator)
+    created = api.post(
+        f"{BASE}/banks",
+        {"code": "00014", "name": {"ru": "АКБ «Демо Банк»", "uz": "«Demo Bank» ATB"}, "attrs": {"swift": "DEMOUZ22"}},
+        format="json",
+    )
+    assert created.status_code == 201, created.content
+    assert (created.json()["code"], created.json()["attrs"]) == ("00014", {"swift": "DEMOUZ22"})
+    listed = api.get(f"{BASE}/banks").json()["items"]
+    assert [(r["code"], r["name"]["uz"]) for r in listed] == [("00014", "«Demo Bank» ATB")]
