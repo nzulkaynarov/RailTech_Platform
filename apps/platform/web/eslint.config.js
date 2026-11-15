@@ -139,6 +139,31 @@ export default tseslint.config(
     },
   },
   {
+    // Стандарт интерфейса §5: один набор значков — Lucide через `shared/ui/lucide`; значки внутри компонентов AntD — его.
+    files: ["src/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@ant-design/icons",
+              message: "Значки — из shared/ui/lucide (стандарт интерфейса §5).",
+            },
+            {
+              name: "lucide-react",
+              message: "Значки — из shared/ui/lucide: там заданы размер 16 и линия 1,75.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/shared/ui/lucide.tsx"],
+    rules: { "no-restricted-imports": "off" },
+  },
+  {
     files: ["**/*.js"],
     extends: [js.configs.recommended],
     languageOptions: { globals: globals.node },

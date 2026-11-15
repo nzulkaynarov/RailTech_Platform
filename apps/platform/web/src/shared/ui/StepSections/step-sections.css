@@ -11,15 +11,15 @@
 .pf-fstep {
   /* Свои имена классов: `.pf-step*` занят шкалой этапов (ui.css), его `display: flex` сдвигал шаг за край экрана на 390 */
   min-width: 0;
-  background: #fff;
-  border: 1px solid #f0f0f0;
+  background: var(--rt-color-surface-background);
+  border: 1px solid var(--rt-color-surface-split);
   border-radius: 8px;
 }
 .pf-fstep[data-open] {
-  border-color: #91caff;
+  border-color: var(--rt-color-primary-border);
 }
 .pf-fstep[data-invalid] {
-  border-color: #ffccc7;
+  border-color: var(--rt-color-error-border);
 }
 .pf-fstep-heading {
   margin: 0;
@@ -37,7 +37,7 @@
   align-items: center;
   gap: 12px;
   cursor: pointer;
-  color: #1f1f1f;
+  color: var(--rt-color-text-default);
   font: inherit;
 }
 .pf-fstep-badge {
@@ -45,8 +45,8 @@
   height: 24px;
   flex: 0 0 24px;
   border-radius: 12px;
-  border: 1px solid #d9d9d9;
-  color: #595959;
+  border: 1px solid var(--rt-color-surface-border);
+  color: var(--rt-color-text-secondary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -54,19 +54,19 @@
   font-weight: 600;
 }
 .pf-fstep[data-open] .pf-fstep-badge {
-  background: #1668dc;
-  border-color: #1668dc;
-  color: #fff;
+  background: var(--rt-color-primary-default);
+  border-color: var(--rt-color-primary-default);
+  color: var(--rt-color-text-inverse);
 }
-.pf-fstep:not([data-open]) .pf-fstep-badge:has(.anticon-check) {
-  background: #237804;
-  border-color: #237804;
-  color: #fff;
+.pf-fstep:not([data-open]) .pf-fstep-badge:has(.lucide-check) {
+  background: var(--rt-color-success-text);
+  border-color: var(--rt-color-success-text);
+  color: var(--rt-color-text-inverse);
 }
 .pf-fstep[data-invalid] .pf-fstep-badge {
-  background: #fff2f0;
-  border-color: #a8071a;
-  color: #a8071a;
+  background: var(--rt-color-error-bg);
+  border-color: var(--rt-color-error-text);
+  color: var(--rt-color-error-text);
 }
 .pf-fstep-text {
   display: flex;
@@ -79,18 +79,18 @@
 }
 .pf-fstep-summary {
   font-size: 12px;
-  color: #595959;
+  color: var(--rt-color-text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .pf-fstep-error {
   font-size: 12px;
-  color: #a8071a;
+  color: var(--rt-color-error-text);
 }
 .pf-fstep-edit {
-  color: #0958d9;
-  font-size: 13px;
+  color: var(--rt-color-primary-text);
+  font-size: 12px;
   flex: 0 0 auto;
 }
 .pf-fstep-body {

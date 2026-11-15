@@ -5,7 +5,7 @@
   align-items: flex-end;
   gap: 12px;
   padding: 16px 24px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--rt-color-surface-split);
 }
 .pf-audit-field {
   display: flex;
@@ -16,7 +16,7 @@
 .pf-audit-field > label {
   font-size: 12px;
   line-height: 20px;
-  color: #595959;
+  color: var(--rt-color-text-secondary);
 }
 .pf-audit-logins {
   display: inline-flex;
@@ -31,10 +31,10 @@
   justify-content: space-between;
   gap: 12px;
   padding: 12px 24px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--rt-color-surface-split);
 }
 .pf-audit-link {
-  color: #0958d9;
+  color: var(--rt-color-primary-text);
   font-weight: 500;
   text-decoration: none;
 }
@@ -42,25 +42,25 @@
   text-decoration: underline;
 }
 .pf-audit-link[aria-current="true"] {
-  color: #1f1f1f;
+  color: var(--rt-color-text-default);
 }
 .pf-audit-row {
   display: flex;
   flex-direction: column;
   gap: 4px;
   padding: 14px 16px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--rt-color-surface-split);
   overflow-wrap: break-word;
 }
 .pf-audit-row:last-child {
   border-bottom: 0;
 }
 .pf-audit-row-selected {
-  background: #e6f4ff;
+  background: var(--rt-color-primary-bg);
 }
 .ant-table-wrapper .ant-table-tbody > tr.pf-audit-table-row-selected > td,
 .ant-table-wrapper .ant-table-tbody > tr.pf-audit-table-row-selected:hover > td {
-  background: #e6f4ff;
+  background: var(--rt-color-primary-bg);
 }
 .pf-audit-lines {
   margin: 0;
@@ -73,7 +73,7 @@
   display: grid;
   gap: 2px;
   padding: 8px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--rt-color-surface-split);
   overflow-wrap: anywhere;
 }
 .pf-audit-change:last-child {

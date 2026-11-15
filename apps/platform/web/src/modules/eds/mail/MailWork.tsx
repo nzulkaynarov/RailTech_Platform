@@ -1,4 +1,4 @@
-import { DownOutlined } from "@ant-design/icons";
+import { ChevronDownIcon } from "../../../shared/ui/lucide";
 import { Alert, Button, Dropdown, Input, Select } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -318,7 +318,7 @@ export function Working({
               }}
             >
               <Button aria-haspopup="menu">
-                {t("mail.action.more")} <DownOutlined aria-hidden />
+                {t("mail.action.more")} <ChevronDownIcon aria-hidden />
               </Button>
             </Dropdown>
           </>

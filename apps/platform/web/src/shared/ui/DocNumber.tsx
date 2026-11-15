@@ -1,4 +1,4 @@
-import { CopyOutlined } from "@ant-design/icons";
+import { CopyIcon } from "./lucide";
 import { App } from "antd";
 import type React from "react";
 import { useTranslation } from "react-i18next";
@@ -41,7 +41,7 @@ export function DocNumber({ number, base, copyable = true }: DocNumberProps) {
   };
 
   const numberNode = (
-    <span className="pf-docnum" translate="no">
+    <span className="pf-docnum pf-code" translate="no">
       {number}
     </span>
   );
@@ -69,7 +69,7 @@ export function DocNumber({ number, base, copyable = true }: DocNumberProps) {
           title={t("docNumber.copy")}
           aria-label={t("docNumber.copyNumber", { number })}
         >
-          <CopyOutlined />
+          <CopyIcon />
         </button>
       ) : (
         <span className="pf-docnum-copy-btn pf-docnum-copy-slot" aria-hidden="true" />

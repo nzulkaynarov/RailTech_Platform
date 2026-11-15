@@ -1,4 +1,4 @@
-import { ArrowDownOutlined, ArrowUpOutlined } from "@ant-design/icons";
+import { ArrowDownIcon, ArrowUpIcon } from "../../../shared/ui/lucide";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Alert,
@@ -347,7 +347,7 @@ function DictionaryTable({ dictionary, readOnly }: { dictionary: Dictionary; rea
                 <span className="pf-co-actions">
                   <Button
                     size="small"
-                    icon={<ArrowUpOutlined />}
+                    icon={<ArrowUpIcon />}
                     aria-label={t("settings.dict.up", { name: name(row) })}
                     disabled={readOnly || index === 0 || reorder.isPending}
                     onClick={() => {
@@ -356,7 +356,7 @@ function DictionaryTable({ dictionary, readOnly }: { dictionary: Dictionary; rea
                   />
                   <Button
                     size="small"
-                    icon={<ArrowDownOutlined />}
+                    icon={<ArrowDownIcon />}
                     aria-label={t("settings.dict.down", { name: name(row) })}
                     disabled={readOnly || index === items.length - 1 || reorder.isPending}
                     onClick={() => {

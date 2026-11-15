@@ -140,5 +140,9 @@
     "next": "Keyingi: {{title}}",
     "edit": "O‘zgartirish",
     "invalid": "Tuzatish kerak"
+  },
+  "formSheet": {
+    "cancel": "Bekor qilish",
+    "close": "Yopish"
   }
 }

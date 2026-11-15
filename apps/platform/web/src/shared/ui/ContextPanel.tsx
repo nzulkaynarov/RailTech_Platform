@@ -1,9 +1,4 @@
-import {
-  ArrowsAltOutlined,
-  PushpinFilled,
-  PushpinOutlined,
-  ShrinkOutlined,
-} from "@ant-design/icons";
+import { ExpandIcon, PinFilledIcon, PinIcon, ShrinkIcon } from "./lucide";
 import { Drawer, Tabs } from "antd";
 import type { KeyboardEvent, ReactNode } from "react";
 
@@ -16,6 +11,10 @@ export interface ContextTab {
   key: string;
   label: string;
 }
+
+/** Ширины бокового окна (стандарт интерфейса §6): других ширин у панели нет. */
+export const PANEL_DEFAULT = 480;
+export const PANEL_WIDE = 640;
 
 export interface ContextPanelProps {
   id: string;
@@ -32,7 +31,7 @@ export interface ContextPanelProps {
   /** Режим отображения: 'overlay' (slide-over поверх контента) или 'docked' (в сетке) */
   panelMode?: PanelLayoutMode;
   onModeChange?: (mode: PanelLayoutMode) => void;
-  /** Ширина: 'default' (440px) или 'wide' (600px) */
+  /** Ширина: 'default' (480px) или 'wide' (640px) — стандарт интерфейса §6 */
   panelWidth?: PanelWidthPreset;
   onWidthChange?: (width: PanelWidthPreset) => void;
   /** Доступен ли режим docked (экран >= 1280px) */
@@ -87,7 +86,7 @@ function PanelBody({
           }}
           style={{ width: 28, height: 28 }}
         >
-          {panelWidth === "wide" ? <ShrinkOutlined /> : <ArrowsAltOutlined />}
+          {panelWidth === "wide" ? <ShrinkIcon /> : <ExpandIcon />}
         </button>
       ) : null}
       {canDock && onModeChange && controlLabels ? (
@@ -103,9 +102,9 @@ function PanelBody({
           style={{ width: 28, height: 28 }}
         >
           {panelMode === "docked" ? (
-            <PushpinFilled style={{ color: "var(--ant-color-primary, #1668dc)" }} />
+            <PinFilledIcon style={{ color: "var(--rt-color-primary-default)" }} />
           ) : (
-            <PushpinOutlined />
+            <PinIcon />
           )}
         </button>
       ) : null}
@@ -168,7 +167,7 @@ function hideOnEscape(onHide: () => void) {
  * По умолчанию — поверх основного окна у правого края (overlay): таблицы и карточки не сжимаются. Это немодальная
  * область `complementary`, а не Drawer: у Drawer `aria-modal` и ловушка фокуса, а окно не модальное — Tab уходит обратно
  * в таблицу. Рядом (docked) — только когда пользователь закрепил окно булавкой и оно помещается (`docked` решает каркас:
- * ≥ 1280 px и рабочей области ≥ 760 px). Ширина 440 или 600 px — выбор пользователя.
+ * ≥ 1280 px и рабочей области ≥ 736 px). Ширина 480 или 640 px — выбор пользователя.
  *
  * «Рядом» и «поверх» — одна обёртка, меняется только класс (UX-1a): булавка и переход порога ширины не размонтируют
  * вкладки и формы окна. Закрытое окно остаётся в документе скрытым (`hidden`) — цель `aria-controls` кнопки «Панель».
@@ -185,7 +184,7 @@ export function ContextPanel({
   /** Окно сейчас в сетке рядом с основным: закреплено булавкой и помещается (решает каркас) */
   docked?: boolean;
 }) {
-  const widthPx = panelWidth === "wide" ? 600 : 440;
+  const widthPx = panelWidth === "wide" ? PANEL_WIDE : PANEL_DEFAULT;
   return (
     <aside
       id={props.id}
@@ -222,12 +221,16 @@ export function ContextPanelDrawer({
       mask={false}
       closable={false}
       keyboard
-      width={440}
+      width={PANEL_DEFAULT}
       placement="right"
       rootStyle={{ top: offsetTop, bottom: offsetBottom, height: "auto" }}
       styles={{
         body: { padding: 0 },
-        wrapper: { maxWidth: "100vw", boxShadow: "none", borderLeft: "1px solid #f0f0f0" },
+        wrapper: {
+          maxWidth: "100vw",
+          boxShadow: "none",
+          borderLeft: "1px solid var(--rt-color-surface-split)",
+        },
       }}
       aria-label={props.label}
       id={props.id}

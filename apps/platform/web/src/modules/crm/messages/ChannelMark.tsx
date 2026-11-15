@@ -1,4 +1,4 @@
-import { DesktopOutlined, SendOutlined } from "@ant-design/icons";
+import { MonitorIcon, SendIcon } from "../../../shared/ui/lucide";
 import { useTranslation } from "react-i18next";
 
 import { channelLabel } from "./labels";
@@ -11,7 +11,7 @@ export function ChannelMark({ channel }: { channel: string }) {
   const { t } = useTranslation("messages");
   if (channel !== "telegram" && channel !== "cabinet") return null;
   const label = t("list.channel", { channel: channelLabel(t, channel) });
-  const Icon = channel === "cabinet" ? DesktopOutlined : SendOutlined;
+  const Icon = channel === "cabinet" ? MonitorIcon : SendIcon;
   return (
     <span
       className={`pf-msg-channel pf-msg-channel--${channel}`}

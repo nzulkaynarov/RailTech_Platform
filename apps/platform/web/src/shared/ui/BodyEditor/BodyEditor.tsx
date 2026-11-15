@@ -1,13 +1,13 @@
 import {
-  BoldOutlined,
-  FontSizeOutlined,
-  ItalicOutlined,
-  LinkOutlined,
-  OrderedListOutlined,
-  TableOutlined,
-  UnderlineOutlined,
-  UnorderedListOutlined,
-} from "@ant-design/icons";
+  BoldIcon,
+  ItalicIcon,
+  LinkIcon,
+  ListIcon,
+  ListOrderedIcon,
+  TableIcon,
+  TextSizeIcon,
+  UnderlineIcon,
+} from "../lucide";
 import { Button, Input, Tooltip } from "antd";
 import { TableKit } from "@tiptap/extension-table";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
@@ -144,33 +144,28 @@ export function BodyEditor({
           "heading",
           state.heading,
           () => chain().toggleHeading({ level: 2 }).run(),
-          <FontSizeOutlined />,
+          <TextSizeIcon />,
         )}
-        {tool("bold", state.bold, () => chain().toggleBold().run(), <BoldOutlined />)}
-        {tool("italic", state.italic, () => chain().toggleItalic().run(), <ItalicOutlined />)}
+        {tool("bold", state.bold, () => chain().toggleBold().run(), <BoldIcon />)}
+        {tool("italic", state.italic, () => chain().toggleItalic().run(), <ItalicIcon />)}
         {tool(
           "underline",
           state.underline,
           () => chain().toggleUnderline().run(),
-          <UnderlineOutlined />,
+          <UnderlineIcon />,
         )}
-        {tool(
-          "bullet",
-          state.bullet,
-          () => chain().toggleBulletList().run(),
-          <UnorderedListOutlined />,
-        )}
+        {tool("bullet", state.bullet, () => chain().toggleBulletList().run(), <ListIcon />)}
         {tool(
           "ordered",
           state.ordered,
           () => chain().toggleOrderedList().run(),
-          <OrderedListOutlined />,
+          <ListOrderedIcon />,
         )}
         {tool(
           "table",
           state.table,
           () => chain().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
-          <TableOutlined />,
+          <TableIcon />,
         )}
         {tool(
           "link",
@@ -179,7 +174,7 @@ export function BodyEditor({
             setHref(String(editor.getAttributes("link")["href"] ?? ""));
             setLinkOpen((open) => !open);
           },
-          <LinkOutlined />,
+          <LinkIcon />,
         )}
       </div>
       {linkOpen ? (

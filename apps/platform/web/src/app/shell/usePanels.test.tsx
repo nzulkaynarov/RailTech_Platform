@@ -168,7 +168,7 @@ describe("usePanels", () => {
       wrapper: createWrapper("/crm/leads/L-2041"),
     });
     expect(card.result.current.panelMode).toBe("overlay");
-    // 600 px — не умолчание раздела, а выбор «Шире»
+    // 640 px — не умолчание раздела, а выбор «Шире»
     expect(card.result.current.panelWidth).toBe("default");
     act(() => {
       card.result.current.setPanelMode("docked");

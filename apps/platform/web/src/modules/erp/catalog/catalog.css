@@ -18,8 +18,8 @@
   min-width: 0;
 }
 .pf-cat-control > label {
-  color: #595959;
-  font-size: 13px;
+  color: var(--rt-color-text-secondary);
+  font-size: 12px;
 }
 .pf-cat-spacer {
   flex: 1 1 auto;
@@ -34,16 +34,16 @@
   padding: 10px 16px;
   text-align: left;
   vertical-align: top;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--rt-color-surface-split);
 }
 .pf-cat-table th {
-  color: #595959;
+  color: var(--rt-color-text-secondary);
   font-weight: 500;
-  font-size: 13px;
+  font-size: 12px;
   white-space: nowrap;
 }
 .pf-cat-table tr[data-selected="true"] {
-  background: #e6f4ff;
+  background: var(--rt-color-primary-bg);
 }
 .pf-cat-main {
   overflow-wrap: anywhere;
@@ -51,8 +51,8 @@
 }
 .pf-cat-sub {
   display: block;
-  color: #595959;
-  font-size: 13px;
+  color: var(--rt-color-text-secondary);
+  font-size: 12px;
 }
 .pf-cat-linkbtn.ant-btn {
   height: auto;
@@ -71,17 +71,17 @@
   flex-direction: column;
   gap: 6px;
   padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--rt-color-surface-split);
 }
 .pf-cat-card dl {
   display: grid;
   grid-template-columns: max-content 1fr;
   gap: 2px 12px;
   margin: 0;
-  font-size: 13px;
+  font-size: 14px;
 }
 .pf-cat-card dt {
-  color: #595959;
+  color: var(--rt-color-text-secondary);
 }
 .pf-cat-card dd {
   margin: 0;
@@ -120,24 +120,24 @@
 }
 .pf-cat-note {
   margin: 0;
-  color: #595959;
-  font-size: 13px;
+  color: var(--rt-color-text-secondary);
+  font-size: 12px;
   line-height: 20px;
 }
 .pf-cat-offers {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 14px;
 }
 .pf-cat-offers th,
 .pf-cat-offers td {
   padding: 8px 8px;
   text-align: left;
   vertical-align: top;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--rt-color-surface-split);
 }
 .pf-cat-offers th {
-  color: #595959;
+  color: var(--rt-color-text-secondary);
   font-weight: 500;
 }
 .pf-doc-viewer-image {
@@ -183,12 +183,12 @@
 }
 .pf-cat-stat {
   padding: 10px 12px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--rt-color-surface-split);
   border-radius: 6px;
 }
 .pf-cat-stat dt {
-  color: #595959;
-  font-size: 13px;
+  color: var(--rt-color-text-secondary);
+  font-size: 12px;
 }
 .pf-cat-stat dd {
   margin: 0;
@@ -205,14 +205,14 @@
   flex-direction: column;
   gap: 6px;
   padding: 10px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--rt-color-surface-split);
   overflow-wrap: anywhere;
 }
 .pf-cat-proposal-values {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 /* Карточка товара · Фото (CAT-CARD-1) */
@@ -230,7 +230,7 @@
   gap: 6px;
   min-width: 0;
   padding: 8px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--rt-color-surface-split);
   border-radius: 6px;
 }
 .pf-cat-photo img {
@@ -238,7 +238,7 @@
   width: 100%;
   aspect-ratio: 1 / 1;
   object-fit: contain;
-  background: #fafafa;
+  background: var(--rt-color-surface-subtle);
 }
 .pf-cat-photo-bar {
   display: flex;
@@ -254,8 +254,8 @@
   gap: 4px;
 }
 .pf-cat-photo-main {
-  color: #7a4d00;
-  font-size: 13px;
+  color: var(--rt-color-warning-text);
+  font-size: 14px;
   font-weight: 600;
 }
 .pf-cat-photo-add {
@@ -287,7 +287,7 @@
   gap: 4px;
   min-width: 0;
   padding: 8px 12px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--rt-color-surface-split);
   border-radius: 6px;
   overflow-wrap: anywhere;
 }
@@ -299,13 +299,13 @@
   gap: 12px;
   margin: 12px 0 0;
   padding: 12px;
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--rt-color-surface-border);
   border-radius: 8px;
   min-width: 0;
 }
 .pf-cat-rights legend {
   padding: 0 4px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
 }
 .pf-cat-switch {
@@ -332,7 +332,7 @@
   justify-content: space-between;
   gap: 8px 16px;
   padding: 10px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--rt-color-surface-split);
 }
 .pf-cat-contact-info {
   display: flex;
@@ -343,7 +343,7 @@
 .pf-cat-contact-right {
   flex-basis: 100%;
   align-items: center;
-  font-size: 13px;
+  font-size: 14px;
 }
 
 /* PART-3: очередь проверки — замечания по полям в окне возврата */
@@ -395,14 +395,14 @@
   display: inline-block;
   margin-top: 4px;
   padding: 2px 6px;
-  background: #f6ffed;
-  border: 1px solid #b7eb8f;
+  background: var(--rt-color-success-bg);
+  border: 1px solid var(--rt-color-success-border);
   border-radius: 4px;
   font-size: 12px;
-  color: #237804;
+  color: var(--rt-color-success-text);
 }
 .pf-cat-danger {
-  color: #cf1322;
+  color: var(--rt-color-error-hover);
 }
 .pf-cat-contract-fields {
   display: flex;

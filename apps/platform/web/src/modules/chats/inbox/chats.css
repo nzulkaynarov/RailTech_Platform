@@ -6,7 +6,7 @@
 
 .pf-chats .cs-main-container {
   height: 560px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--rt-color-surface-split);
   border-radius: 8px;
 }
 
@@ -18,7 +18,7 @@
   margin: 0 0 8px;
   font-size: 12px;
   font-weight: 600;
-  color: #595959;
+  color: var(--rt-color-text-secondary);
 }
 
 .pf-chats .pf-chats-empty {
@@ -26,7 +26,7 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #595959;
+  color: var(--rt-color-text-secondary);
 }
 
 @media (max-width: 767px) {

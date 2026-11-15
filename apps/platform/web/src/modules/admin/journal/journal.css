@@ -4,7 +4,7 @@
   margin: 0;
   padding: 2px;
   list-style: none;
-  background: #f0f0f0;
+  background: var(--rt-color-surface-split);
   border-radius: 6px;
   gap: 2px;
   flex-wrap: wrap;
@@ -13,15 +13,15 @@
   display: inline-block;
   padding: 4px 12px;
   border-radius: 4px;
-  color: #1f1f1f;
+  color: var(--rt-color-text-default);
   text-decoration: none;
   line-height: 22px;
 }
 .pf-journal-filter-item:hover {
-  color: #0958d9;
+  color: var(--rt-color-primary-text);
 }
 .pf-journal-filter-item[aria-current="page"] {
-  background: #fff;
-  color: #0958d9;
+  background: var(--rt-color-surface-background);
+  color: var(--rt-color-primary-text);
   font-weight: 500;
 }

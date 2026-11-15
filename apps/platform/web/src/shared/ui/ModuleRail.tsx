@@ -76,11 +76,11 @@ function RailItemWithFlyout({ module, menuOpen }: { module: RailModule; menuOpen
       <div
         style={{
           fontWeight: 600,
-          fontSize: 13,
+          fontSize: 14,
           padding: "4px 8px 6px",
-          borderBottom: "1px solid #f0f0f0",
+          borderBottom: "1px solid var(--rt-color-surface-split)",
           marginBottom: 4,
-          color: "#1f1f1f",
+          color: "var(--rt-color-text-default)",
         }}
       >
         {module.title ?? module.name}
@@ -105,7 +105,7 @@ function RailItemWithFlyout({ module, menuOpen }: { module: RailModule; menuOpen
                   fontSize: 12,
                   lineHeight: "20px",
                   fontWeight: 600,
-                  color: "#595959",
+                  color: "var(--rt-color-text-secondary)",
                 }}
               >
                 {sec.group}
@@ -123,10 +123,12 @@ function RailItemWithFlyout({ module, menuOpen }: { module: RailModule; menuOpen
                 justifyContent: "space-between",
                 padding: "6px 8px",
                 borderRadius: 4,
-                fontSize: 13,
+                fontSize: 14,
                 textDecoration: "none",
-                color: sec.active ? "#0958d9" : "#334155",
-                background: sec.active ? "#e6f4ff" : "transparent",
+                color: sec.active
+                  ? "var(--rt-color-primary-text)"
+                  : "var(--rt-color-text-secondary)",
+                background: sec.active ? "var(--rt-color-primary-bg)" : "transparent",
               }}
             >
               <span>{sec.label}</span>
@@ -198,7 +200,7 @@ export function ModuleRail({
       width={64}
       theme="light"
       role="presentation"
-      style={{ borderRight: "1px solid #f0f0f0", overflow: "visible" }}
+      style={{ borderRight: "1px solid var(--rt-color-surface-split)", overflow: "visible" }}
     >
       <nav
         aria-label={label}
@@ -220,13 +222,13 @@ export function ModuleRail({
             width: 36,
             height: 36,
             borderRadius: 8,
-            background: "#1668dc",
+            background: "var(--rt-color-primary-default)",
             color: "#fff",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             fontWeight: 700,
-            fontSize: 13,
+            fontSize: 14,
             marginBottom: 12,
             textDecoration: "none",
           }}

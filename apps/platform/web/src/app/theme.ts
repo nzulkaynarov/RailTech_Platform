@@ -1,6 +1,6 @@
 import type { ThemeConfig } from "antd";
 
-import { RT_TOKENS } from "./tokens.generated";
+import { RT_ACTION, RT_COMPONENTS, RT_TOKENS } from "./tokens.generated";
 
 /**
  * Тема Платформы: токены общего пакета `packages/ui-tokens` (через `tokens.generated.ts`, копию
@@ -15,15 +15,15 @@ const reduceMotion =
   typeof window.matchMedia === "function" &&
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-/** Цвета макета v3 §5.2, одинаковые в ui-tokens 0.1 и 0.2. */
+/** Цвета каркаса — из токенов (стандарт интерфейса §2, `packages/ui-tokens/tokens.json`). */
 export const PF_COLORS = {
-  layoutBg: "#f5f5f5",
-  containerBg: "#ffffff",
-  tableHeaderBg: "#fafafa",
-  split: "#f0f0f0",
-  border: "#d9d9d9",
-  selectedBg: "#e6f4ff",
-  selectedText: "#0958d9",
+  layoutBg: RT_TOKENS.colorBgLayout,
+  containerBg: RT_TOKENS.colorBgContainer,
+  tableHeaderBg: RT_COMPONENTS.Table.headerBg,
+  split: RT_TOKENS.colorSplit,
+  border: RT_TOKENS.colorBorder,
+  selectedBg: RT_TOKENS.colorPrimaryBg,
+  selectedText: RT_TOKENS.colorPrimaryText,
 } as const;
 
 /**
@@ -31,21 +31,16 @@ export const PF_COLORS = {
  * не дают 4.5:1, поэтому слово статуса красится этими значениями (docs/architecture/platform-frontend.md §3).
  */
 export const TAG_TEXT = {
-  success: "#237804",
-  warning: "#874d00",
-  error: "#a8071a",
-  default: "#595959",
+  success: RT_TOKENS.colorSuccessText,
+  warning: RT_TOKENS.colorWarningText,
+  error: RT_TOKENS.colorErrorText,
+  default: RT_TOKENS.colorTextSecondary,
 } as const;
 
 export const appTheme: ThemeConfig = {
   cssVar: true,
   token: {
     ...RT_TOKENS,
-    colorBgLayout: PF_COLORS.layoutBg,
-    colorBgContainer: PF_COLORS.containerBg,
-    colorBorder: PF_COLORS.border,
-    colorSplit: PF_COLORS.split,
-    colorBorderSecondary: PF_COLORS.split,
     controlHeightSM: 24,
     motion: !reduceMotion,
   },
@@ -66,9 +61,20 @@ export const appTheme: ThemeConfig = {
       cellPaddingBlock: 12,
       cellPaddingInline: 16,
     },
+    // Стандарт интерфейса §2: главная кнопка — графитовая, одна на экран; ссылки, выбор и фокус — акцентным синим.
+    Button: {
+      colorPrimary: RT_ACTION.default,
+      colorPrimaryHover: RT_ACTION.hover,
+      colorPrimaryActive: RT_ACTION.active,
+      primaryShadow: "none",
+      defaultShadow: "none",
+      dangerShadow: "none",
+    },
+    // Подложка переключателя заметна на холсте: вторичная поверхность, активный пункт — белый.
+    Segmented: { trackBg: PF_COLORS.tableHeaderBg },
     Card: {
       boxShadowTertiary: "none",
-      colorBorderSecondary: PF_COLORS.split,
+      colorBorderSecondary: RT_TOKENS.colorBorderSecondary,
       borderRadiusLG: 8,
       headerFontSize: 16,
     },

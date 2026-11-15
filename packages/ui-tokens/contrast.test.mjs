@@ -217,34 +217,44 @@ const cabinetNonText = [cabLight, cabDark].flatMap((t, i) => {
 });
 
 // Пары ниже 4.5:1, которые фиксирует SPEC-v3 §5.2 или действующие компоненты. Вопросы — docs/QUESTIONS.md, Q-INF-P0-2-*.
-const KNOWN_BELOW_AA = [
-  ["white на shadcn bg-primary/90 (hover кнопок Cabinet/ERP до перехода на bg-primary-hover, 4.36:1, Q-INF-P0-2-1)", v["primary-foreground"], over(v["primary"], 0.9, v["background"])],
-  ["shadcn text-success на bg-success/10 поверх muted #f5f5f5 (4.49:1, Q-INF-P0-2-3)", v["success"], over(v["success"], 0.1, v["muted"])],
-];
+// С палитрой стандарта интерфейса (0.3.0) исключений нет: обе прежние пары проходят и стоят в основном списке.
+const KNOWN_BELOW_AA = [];
+pairs.push(
+  ["white на shadcn bg-primary/90 (hover кнопок)", v["primary-foreground"], over(v["primary"], 0.9, v["background"])],
+  ["shadcn text-success на bg-success/10 (muted)", v["success"], over(v["success"], 0.1, v["muted"])],
+);
 
 test("эталонные значения контраста", () => {
   assert.ok(Math.abs(contrast("#000000", "#ffffff") - 21) < 0.01);
   assert.ok(Math.abs(contrast("#6e6e6e", "#ffffff") - 5.10) < 0.01);
+  assert.ok(Math.abs(contrast("#5f6f86", "#f1f5f9") - 4.67) < 0.02);
   assert.ok(Math.abs(contrast("#1677ff", "#ffffff") - 4.1) < 0.05);
 });
 
-test("версия пакета 0.2.0", () => {
-  assert.equal(tokens.version, "0.2.0");
+test("версия пакета 0.3.0", () => {
+  assert.equal(tokens.version, "0.3.0");
 });
 
-test("значения SPEC-v3 §5.2 / docs/architecture/platform-frontend.md §3", () => {
+test("значения стандарта интерфейса §2 (docs/architecture/ui-standard.md)", () => {
   assert.deepEqual(
     [c.primary.default, c.primary.hover, c.primary.bg, c.primary.text],
-    // hover: SPEC-v3 §5.2 даёт #1677ff (4.10:1 с белым), решение архитектора 2026-10-22 — #0958d9 (критерий §11.2 п. 6)
-    ["#1668dc", "#0958d9", "#e6f4ff", "#0958d9"],
+    ["#1d4ed8", "#1e40af", "#eff6ff", "#2563eb"],
   );
-  assert.deepEqual([c.success.default, c.success.text], ["#52c41a", "#237804"]);
-  assert.deepEqual([c.warning.default, c.warning.text], ["#faad14", "#874d00"]);
-  assert.deepEqual([c.error.default, c.error.text], ["#ff4d4f", "#a8071a"]);
-  assert.deepEqual([c.tag.purple, c.tag.cyan], ["#531dab", "#006d75"]);
-  assert.deepEqual([c.text.default, c.text.secondary, c.text.tertiary], ["#1f1f1f", "#595959", "#6e6e6e"]);
-  assert.deepEqual([c.surface.border, c.surface.split], ["#d9d9d9", "#f0f0f0"]);
-  assert.deepEqual([c.surface.layout, c.surface.background], ["#f5f5f5", "#ffffff"]);
+  // Ссылка внутри текста: ≥ 3:1 к основному тексту (axe link-in-text-block) и ≥ 4.5:1 на поверхностях
+  assert.ok(contrast(c.primary.text, c.text.default) >= 3);
+  for (const surface of [c.surface.background, c.surface.layout, c.surface.muted, c.primary.bg]) {
+    assert.ok(contrast(c.primary.text, surface) >= 4.5, surface);
+  }
+  // Текст «готово» и «ждёт» — ступень 800: ступень 700 на 10-процентной заливке бейджа даёт 4,0–4,4:1
+  assert.deepEqual([c.success.default, c.success.text], ["#16a34a", "#166534"]);
+  assert.deepEqual([c.warning.default, c.warning.text], ["#d97706", "#92400e"]);
+  assert.deepEqual([c.error.default, c.error.text], ["#e11d48", "#be123c"]);
+  assert.deepEqual([c.tag.purple, c.tag.cyan], ["#6d28d9", "#0e7490"]);
+  // Приглушённый текст — не #94a3b8 исходного документа (2,56:1) и не #64748b (4,34:1 на вторичной поверхности)
+  assert.deepEqual([c.text.default, c.text.secondary, c.text.tertiary], ["#0f172a", "#475569", "#5f6f86"]);
+  assert.deepEqual([c.surface.border, c.surface.control, c.surface.split], ["#e2e8f0", "#cbd5e1", "#f1f5f9"]);
+  assert.deepEqual([c.surface.layout, c.surface.background], ["#f8fafc", "#ffffff"]);
+  assert.deepEqual([c.action.default, c.action.foreground], ["#0f172a", "#ffffff"]);
   assert.deepEqual([tokens.radius.md, tokens.radius.lg], [6, 8]);
   assert.equal(tokens.font.family, `'Inter Variable', Inter, -apple-system, "Segoe UI", Roboto, Arial, sans-serif`);
 });
@@ -253,8 +263,8 @@ test("AntD: статусные цвета — «text», затравки тол�
   assert.equal(a.colorError, c.error.text);
   assert.equal(a.colorWarning, c.warning.text);
   assert.equal(a.colorSuccess, c.success.text);
-  assert.equal(a.colorPrimaryHover, "#0958d9");
-  assert.match(antdTs, /RT_STATUS_FILL = \{\n  error: "#ff4d4f",\n  warning: "#faad14",\n  success: "#52c41a",/);
+  assert.equal(a.colorPrimaryHover, "#1e40af");
+  assert.match(antdTs, /RT_STATUS_FILL = \{\n  error: "#e11d48",\n  warning: "#d97706",\n  success: "#16a34a",/);
 });
 
 test("затравочные цвета статусов не попадают в текст shadcn", () => {
