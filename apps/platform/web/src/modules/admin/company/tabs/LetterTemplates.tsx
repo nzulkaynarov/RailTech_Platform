@@ -30,8 +30,8 @@ import {
 } from "../../../../shared/ui/BodyEditor/bodyModel";
 import type { DataColumn } from "../../../../shared/ui/DataTable/DataTable";
 import { StatusTag } from "../../../../shared/ui/StatusTag";
-import { useRequestedTemplate } from "../../settings/useRequestedTemplate";
-import { ConfirmModal, FormModal, ListTable } from "../common";
+import { useEditParam } from "../../settings/useEditParam";
+import { ConfirmModal, EditorPage, ListTable } from "../common";
 
 const PdfViewer = lazy(() => import("../../../../shared/ui/PdfViewer"));
 
@@ -48,9 +48,8 @@ export function LetterTemplates() {
   const { me } = useAuth();
   const editable = canEdit(me, "eds.inbox.register") || canEdit(me, "admin");
   const query = useListEdsTemplates();
-  const [editing, setEditing] = useState<EdsTemplate | "new" | null>(null);
   const items = query.data?.items ?? [];
-  useRequestedTemplate(query.data?.items, setEditing);
+  const [editing, setEditing] = useEditParam(query.data?.items);
 
   const columns: DataColumn<EdsTemplate>[] = [
     {
@@ -100,26 +99,30 @@ export function LetterTemplates() {
 
   return (
     <div className="pf-fp-stack">
-      {editable ? (
-        <div>
-          <Button
-            onClick={() => {
-              setEditing("new");
-            }}
-          >
-            {t("letterTemplates.create")}
-          </Button>
-        </div>
+      {editing === null ? (
+        <>
+          {editable ? (
+            <div>
+              <Button
+                onClick={() => {
+                  setEditing("new");
+                }}
+              >
+                {t("letterTemplates.create")}
+              </Button>
+            </div>
+          ) : null}
+          <ListTable
+            tableId="admin.templates.letters"
+            label={t("letterTemplates.caption")}
+            columns={columns}
+            data={items}
+            rowKey={(row) => row.id}
+            loading={query.isPending}
+            empty={{ title: t("letterTemplates.emptyTitle"), text: t("letterTemplates.emptyText") }}
+          />
+        </>
       ) : null}
-      <ListTable
-        tableId="admin.templates.letters"
-        label={t("letterTemplates.caption")}
-        columns={columns}
-        data={items}
-        rowKey={(row) => row.id}
-        loading={query.isPending}
-        empty={{ title: t("letterTemplates.emptyTitle"), text: t("letterTemplates.emptyText") }}
-      />
       {editing !== null ? (
         <TemplateEditor
           row={editing === "new" ? null : editing}
@@ -191,9 +194,7 @@ function TemplateEditor({
   };
 
   return (
-    <FormModal
-      open
-      width={1200}
+    <EditorPage
       title={row ? row.name : t("letterTemplates.createTitle")}
       formId="letter-template-form"
       submitLabel={t("letterTemplates.save")}
@@ -312,7 +313,7 @@ function TemplateEditor({
           <p>{t("letterTemplates.resetWhat")}</p>
         </ConfirmModal>
       ) : null}
-    </FormModal>
+    </EditorPage>
   );
 }
 

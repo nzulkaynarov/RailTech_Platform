@@ -10,7 +10,7 @@ test("шаблон письма: варианты по языкам и PDF на 
   await loginAndWait(page, "director@demo.example");
   await spaGoto(page, "/admin/templates?tab=letters");
   await page.getByRole("button", { name: "Открыть: Деловое письмо" }).click();
-  const dialog = page.getByRole("dialog", { name: "Деловое письмо" });
+  const dialog = page.getByRole("region", { name: "Деловое письмо" });
   await dialog.getByText("UZ", { exact: true }).click();
   await expect(dialog.getByRole("textbox", { name: "Текст (UZ)" })).toContainText(
     "Hurmatli hamkasblar!",

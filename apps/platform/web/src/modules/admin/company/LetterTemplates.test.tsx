@@ -57,7 +57,7 @@ describe("Письма на бланке (TPL-4)", () => {
     signInAs("director@demo.example");
     renderApp("/admin/templates?tab=letters");
     fireEvent.click(await screen.findByRole("button", { name: "Открыть: Деловое письмо" }));
-    const dialog = await screen.findByRole("dialog", { name: "Деловое письмо" });
+    const dialog = await screen.findByRole("region", { name: "Деловое письмо" });
     expect(within(dialog).getByLabelText("Текст (RU)")).toHaveValue(
       "Уважаемые коллеги!\n\nСообщаем следующее.\n\nС уважением,",
     );

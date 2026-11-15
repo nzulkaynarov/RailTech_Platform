@@ -320,3 +320,33 @@
   gap: 8px;
   align-items: center;
 }
+
+/* Редактор шаблона страницей на месте списка (стандарт интерфейса §6): шапка «К списку» и название, закреплённый подвал. */
+.pf-co-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.pf-co-editor-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pf-co-editor-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+}
+.pf-co-editor-foot {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 0;
+  background: var(--rt-color-surface-background);
+  border-top: 1px solid var(--rt-color-surface-split);
+}

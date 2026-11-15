@@ -304,7 +304,7 @@ test.describe("Компания: статьи расхода, шаблоны, с
     await expect(toast(page, "Копия создана")).toBeVisible();
 
     await page.getByRole("button", { name: "Изменить: Договор поставки (рельсы)" }).click();
-    const editor = page.getByRole("dialog", { name: "Изменить шаблон документа" });
+    const editor = page.getByRole("region", { name: "Изменить шаблон документа" });
     const body = editor.getByLabel(/^Текст шаблона/);
     await body.fill(
       "<p>{{buyer_name}} {{mystery}}</p>{{doc.spec_table}}{{doc.totals}}{{doc.requisites_and_signatures}}",
@@ -338,7 +338,7 @@ test.describe("Компания: статьи расхода, шаблоны, с
     await openCompany(page, "templates");
     await page.getByRole("tab", { name: "Письма" }).click();
     await page.getByRole("button", { name: "Изменить: quote_sent" }).click();
-    const editor = page.getByRole("dialog", { name: "Изменить шаблон письма" });
+    const editor = page.getByRole("region", { name: "Изменить шаблон письма" });
     await editor.getByLabel("Шаблон действует").check();
     await expect(editor.getByText(/сразу заменит файловый/)).toBeVisible();
     await editor.getByRole("button", { name: "Показать образец" }).click();
@@ -350,7 +350,7 @@ test.describe("Компания: статьи расхода, шаблоны, с
     await expect(toast(page, "Сохранено")).toBeVisible();
 
     await page.getByRole("button", { name: "Создать шаблон письма" }).click();
-    const create = page.getByRole("dialog", { name: "Новый шаблон письма" });
+    const create = page.getByRole("region", { name: "Новый шаблон письма" });
     await create.getByLabel("Ключ письма").fill("act_issued");
     await create.getByLabel("Тема").fill("Акт {{number}}");
     await create.getByLabel("Текст письма", { exact: true }).fill("Акт выпущен.");
@@ -599,7 +599,7 @@ test.describe("Компания: axe и снимки", () => {
 
       await openCompany(page, "templates");
       await page.getByRole("button", { name: "Изменить: Акт приёмки" }).click();
-      const editor = page.getByRole("dialog", { name: "Изменить шаблон документа" });
+      const editor = page.getByRole("region", { name: "Изменить шаблон документа" });
       await expect(editor.frameLocator("iframe").getByText("[seller_name]")).toBeVisible();
       await expectNoViolations(page, `document editor ${String(width)}`);
       await settledScreenshot(page, "company-templates-editor-modal");

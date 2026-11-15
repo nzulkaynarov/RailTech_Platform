@@ -18,11 +18,11 @@ import {
   useUpdateDocumentTemplate,
 } from "../../../../shared/api/generated/platform-bff";
 import { StatusTag } from "../../../../shared/ui/StatusTag";
-import { ConfirmModal, FormModal, ListTable, PreviewFrame, QueryGate } from "../common";
+import { ConfirmModal, EditorPage, FormModal, ListTable, PreviewFrame, QueryGate } from "../common";
 import { useReadOnly } from "../useReadOnly";
 import { changedFields, isEmptyObject, omit } from "../diff";
 import { errorFields } from "../errors";
-import { useRequestedTemplate } from "../../settings/useRequestedTemplate";
+import { useEditParam } from "../../settings/useEditParam";
 
 interface Values {
   name: string;
@@ -48,10 +48,9 @@ export function DocumentTemplates() {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
   const query = useListDocumentTemplates();
-  const [editing, setEditing] = useState<DocumentTemplate | "new" | null>(null);
   const [copying, setCopying] = useState<DocumentTemplate | null>(null);
   const [removing, setRemoving] = useState<DocumentTemplate | null>(null);
-  useRequestedTemplate(query.data?.items, setEditing);
+  const [editing, setEditing] = useEditParam(query.data?.items);
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: getListDocumentTemplatesQueryKey() });
   const remove = useDeleteDocumentTemplate({
@@ -80,114 +79,122 @@ export function DocumentTemplates() {
     <QueryGate query={query}>
       {({ items }) => (
         <>
-          {items.length > 0 ? <div>{add}</div> : null}
-          <ListTable<DocumentTemplate>
-            tableId="admin.company.documentTemplates"
-            label={t("templates.parts.documents")}
-            data={items}
-            rowKey={(row) => row.id}
-            empty={{
-              title: t("templates.documents.empty.title"),
-              text: t("templates.documents.empty.text"),
-              action: add,
-            }}
-            columns={[
-              {
-                id: "name",
-                header: t("templates.documents.name"),
-                width: null,
-                cell: (row) => row.name,
-              },
-              {
-                id: "kind_name",
-                header: t("templates.documents.kind"),
-                width: null,
-                cell: (row) => row.kind_name,
-              },
-              {
-                id: "status",
-                header: t("status"),
-                width: null,
-                cell: (row) => (
-                  <span className="pf-co-actions">
-                    <StatusTag kind="origin" status={row.is_sample ? "sample" : "own"}>
-                      {t(row.is_sample ? "templates.documents.sample" : "templates.documents.own")}
-                    </StatusTag>
-                    {!row.is_active ? (
-                      <StatusTag kind="activity" status="inactive">
-                        {t("inactive")}
-                      </StatusTag>
-                    ) : null}
-                  </span>
-                ),
-              },
-              {
-                id: "actions",
-                header: t("actions"),
-                width: 160,
-                cell: (row) =>
-                  readOnly ? (
-                    <Button
-                      type="link"
-                      size="small"
-                      aria-label={t("templates.documents.openNamed", { name: row.name })}
-                      onClick={() => {
-                        setEditing(row);
-                      }}
-                    >
-                      {t("templates.documents.open")}
-                    </Button>
-                  ) : row.is_sample ? (
-                    <span className="pf-co-actions">
-                      <Button
-                        type="primary"
-                        size="small"
-                        aria-label={t("templates.documents.previewNamed", { name: row.name })}
-                        onClick={() => {
-                          setEditing(row);
-                        }}
-                      >
-                        {t("templates.documents.preview")}
-                      </Button>
-                      <Button
-                        size="small"
-                        aria-label={t("templates.documents.copyNamed", { name: row.name })}
-                        onClick={() => {
-                          setCopying(row);
-                        }}
-                      >
-                        {t("templates.documents.copy")}
-                      </Button>
-                    </span>
-                  ) : (
-                    <span className="pf-co-actions">
-                      <Button
-                        type="link"
-                        size="small"
-                        aria-label={t("editNamed", { name: row.name })}
-                        onClick={() => {
-                          setEditing(row);
-                        }}
-                      >
-                        {t("edit")}
-                      </Button>
-                      <Button
-                        type="link"
-                        size="small"
-                        danger
-                        aria-label={t("deleteNamed", { name: row.name })}
-                        onClick={() => {
-                          remove.reset();
-                          setRemoving(row);
-                        }}
-                      >
-                        {t("delete")}
-                      </Button>
-                    </span>
-                  ),
-              },
-            ]}
-          />
+          {editing === null ? (
+            <>
+              {items.length > 0 ? <div>{add}</div> : null}
+              <ListTable<DocumentTemplate>
+                tableId="admin.company.documentTemplates"
+                label={t("templates.parts.documents")}
+                data={items}
+                rowKey={(row) => row.id}
+                empty={{
+                  title: t("templates.documents.empty.title"),
+                  text: t("templates.documents.empty.text"),
+                  action: add,
+                }}
+                columns={[
+                  {
+                    id: "name",
+                    header: t("templates.documents.name"),
+                    width: null,
+                    cell: (row) => row.name,
+                  },
+                  {
+                    id: "kind_name",
+                    header: t("templates.documents.kind"),
+                    width: null,
+                    cell: (row) => row.kind_name,
+                  },
+                  {
+                    id: "status",
+                    header: t("status"),
+                    width: null,
+                    cell: (row) => (
+                      <span className="pf-co-actions">
+                        <StatusTag kind="origin" status={row.is_sample ? "sample" : "own"}>
+                          {t(
+                            row.is_sample
+                              ? "templates.documents.sample"
+                              : "templates.documents.own",
+                          )}
+                        </StatusTag>
+                        {!row.is_active ? (
+                          <StatusTag kind="activity" status="inactive">
+                            {t("inactive")}
+                          </StatusTag>
+                        ) : null}
+                      </span>
+                    ),
+                  },
+                  {
+                    id: "actions",
+                    header: t("actions"),
+                    width: 160,
+                    cell: (row) =>
+                      readOnly ? (
+                        <Button
+                          type="link"
+                          size="small"
+                          aria-label={t("templates.documents.openNamed", { name: row.name })}
+                          onClick={() => {
+                            setEditing(row);
+                          }}
+                        >
+                          {t("templates.documents.open")}
+                        </Button>
+                      ) : row.is_sample ? (
+                        <span className="pf-co-actions">
+                          <Button
+                            type="primary"
+                            size="small"
+                            aria-label={t("templates.documents.previewNamed", { name: row.name })}
+                            onClick={() => {
+                              setEditing(row);
+                            }}
+                          >
+                            {t("templates.documents.preview")}
+                          </Button>
+                          <Button
+                            size="small"
+                            aria-label={t("templates.documents.copyNamed", { name: row.name })}
+                            onClick={() => {
+                              setCopying(row);
+                            }}
+                          >
+                            {t("templates.documents.copy")}
+                          </Button>
+                        </span>
+                      ) : (
+                        <span className="pf-co-actions">
+                          <Button
+                            type="link"
+                            size="small"
+                            aria-label={t("editNamed", { name: row.name })}
+                            onClick={() => {
+                              setEditing(row);
+                            }}
+                          >
+                            {t("edit")}
+                          </Button>
+                          <Button
+                            type="link"
+                            size="small"
+                            danger
+                            aria-label={t("deleteNamed", { name: row.name })}
+                            onClick={() => {
+                              remove.reset();
+                              setRemoving(row);
+                            }}
+                          >
+                            {t("delete")}
+                          </Button>
+                        </span>
+                      ),
+                  },
+                ]}
+              />
+            </>
+          ) : null}
           {editing !== null ? (
             <DocumentEditor
               row={editing === "new" ? null : editing}
@@ -315,9 +322,7 @@ function DocumentEditor({
   };
 
   return (
-    <FormModal
-      open
-      width={1040}
+    <EditorPage
       title={
         readOnly
           ? row?.is_sample
@@ -445,7 +450,7 @@ function DocumentEditor({
           ))}
         </div>
       </div>
-    </FormModal>
+    </EditorPage>
   );
 }
 
