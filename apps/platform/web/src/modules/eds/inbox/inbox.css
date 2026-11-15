@@ -285,9 +285,6 @@
   align-items: center;
   gap: 8px 12px;
 }
-.pf-letters-tools {
-  margin-left: auto;
-}
 .pf-letters-kind {
   width: 240px;
   max-width: 100%;

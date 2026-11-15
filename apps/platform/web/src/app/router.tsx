@@ -10,6 +10,7 @@ import { ResetPasswordPage } from "./auth/ResetPasswordPage";
 import { SetupPage } from "./auth/SetupPage";
 import { NotFoundPage } from "./NotFoundPage";
 import { AppShell } from "./shell/AppShell";
+import { RegistryTools } from "../shared/ui/DataTable/RegistryTools";
 import { PanelSlotProvider } from "./shell/PanelSlot";
 
 /**
@@ -34,7 +35,9 @@ export const routes: RouteObject[] = [
       {
         element: (
           <PanelSlotProvider>
-            <AppShell />
+            <RegistryTools>
+              <AppShell />
+            </RegistryTools>
           </PanelSlotProvider>
         ),
         children: [
