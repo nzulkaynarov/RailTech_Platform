@@ -4,11 +4,12 @@
  */
 
 /**
- * Во что передано письмо — заявка клиента (сделка CRM) или служебная записка (EDS)
+ * Во что передано письмо — заявка клиента (сделка CRM), подключение партнёра (заявка ERP) или служебная записка (EDS)
  */
 export type HandoverKind = (typeof HandoverKind)[keyof typeof HandoverKind];
 
 export const HandoverKind = {
   client_request: "client_request",
+  partner_application: "partner_application",
   memo: "memo",
 } as const;

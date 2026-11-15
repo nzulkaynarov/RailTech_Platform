@@ -77,6 +77,7 @@ import {
   ResolutionTemplateResponsibleType,
   ResolutionTemplateScope,
   RestrictedField,
+  SentMailStatus,
   ServiceAction,
   ServiceConsoleKey,
   ServiceOwner,
@@ -329,6 +330,8 @@ import type {
   RolePreview,
   SandboxTurn,
   SearchResult,
+  SentMailBody,
+  SentMailPage,
   SentMessage,
   ServiceConsoleList,
   Session,
@@ -1845,6 +1848,43 @@ export const getListNotificationsResponseMock = (
 });
 
 export const getStreamEventsResponseMock = (): string => faker.word.sample();
+
+export const getListSentMailResponseMock = (
+  overrideResponse: Partial<Extract<SentMailPage, object>> = {},
+): SentMailPage => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    to: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement(Object.values(SentMailStatus)),
+    error: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    source: faker.helpers.arrayElement(["crm", "erp", "eds"] as const),
+    attachments: faker.number.int({ min: 0 }),
+    requested_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+    path: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  })),
+  next_cursor: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getGetSentMailBodyResponseMock = (
+  overrideResponse: Partial<Extract<SentMailBody, object>> = {},
+): SentMailBody => ({
+  id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  text: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  attachments: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ),
+  ...overrideResponse,
+});
 
 export const getSearchResponseMock = (
   overrideResponse: Partial<Extract<SearchResult, object>> = {},
@@ -31845,6 +31885,10 @@ export const getListPartnerApplicationsResponseMock = (
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     source: faker.helpers.arrayElement(Object.values(PartnerApplicationSource)),
+    source_ref: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
     status: faker.helpers.arrayElement(Object.values(PartnerApplicationStatus)),
     kind: faker.helpers.arrayElement(Object.values(PartnerApplicationKind)),
     company_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -31883,11 +31927,60 @@ export const getListPartnerApplicationsResponseMock = (
   ...overrideResponse,
 });
 
+export const getCreatePartnerApplicationResponseMock = (
+  overrideResponse: Partial<Extract<PartnerApplicationItem, object>> = {},
+): PartnerApplicationItem => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  source: faker.helpers.arrayElement(Object.values(PartnerApplicationSource)),
+  source_ref: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  status: faker.helpers.arrayElement(Object.values(PartnerApplicationStatus)),
+  kind: faker.helpers.arrayElement(Object.values(PartnerApplicationKind)),
+  company_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  inn: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  contact_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  phone: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  language: faker.helpers.arrayElement(["ru", "uz", "en"] as const),
+  categories_description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  contract_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  contract_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  rejected_reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  reviewed_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  matching_company_id: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  matching_company_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  company_match_pending: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["inn", "registration_number"] as const),
+    null,
+  ]),
+  invite_delivery: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["queued", "sent", "failed"] as const),
+    null,
+  ]),
+  ...overrideResponse,
+});
+
 export const getSendContractPartnerApplicationResponseMock = (
   overrideResponse: Partial<Extract<PartnerApplicationItem, object>> = {},
 ): PartnerApplicationItem => ({
   id: faker.helpers.fromRegExp("^[0-9]+$"),
   source: faker.helpers.arrayElement(Object.values(PartnerApplicationSource)),
+  source_ref: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
   status: faker.helpers.arrayElement(Object.values(PartnerApplicationStatus)),
   kind: faker.helpers.arrayElement(Object.values(PartnerApplicationKind)),
   company_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -31929,6 +32022,10 @@ export const getApprovePartnerApplicationResponseMock = (
 ): PartnerApplicationItem => ({
   id: faker.helpers.fromRegExp("^[0-9]+$"),
   source: faker.helpers.arrayElement(Object.values(PartnerApplicationSource)),
+  source_ref: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
   status: faker.helpers.arrayElement(Object.values(PartnerApplicationStatus)),
   kind: faker.helpers.arrayElement(Object.values(PartnerApplicationKind)),
   company_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -31970,6 +32067,10 @@ export const getRejectPartnerApplicationResponseMock = (
 ): PartnerApplicationItem => ({
   id: faker.helpers.fromRegExp("^[0-9]+$"),
   source: faker.helpers.arrayElement(Object.values(PartnerApplicationSource)),
+  source_ref: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
   status: faker.helpers.arrayElement(Object.values(PartnerApplicationStatus)),
   kind: faker.helpers.arrayElement(Object.values(PartnerApplicationKind)),
   company_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -33867,6 +33968,54 @@ export const getStreamEventsMockHandler = (
         status: 200,
         headers: { "Content-Type": "text/event-stream" },
       });
+    },
+    options,
+  );
+};
+
+export const getListSentMailMockHandler = (
+  overrideResponse?:
+    | SentMailPage
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<SentMailPage> | SentMailPage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/mail/sent",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListSentMailResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetSentMailBodyMockHandler = (
+  overrideResponse?:
+    | SentMailBody
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<SentMailBody> | SentMailBody),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/mail/sent/:id",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetSentMailBodyResponseMock(),
+        { status: 200 },
+      );
     },
     options,
   );
@@ -42407,6 +42556,30 @@ export const getListPartnerApplicationsMockHandler = (
   );
 };
 
+export const getCreatePartnerApplicationMockHandler = (
+  overrideResponse?:
+    | PartnerApplicationItem
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<PartnerApplicationItem> | PartnerApplicationItem),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/catalog/partner-applications",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreatePartnerApplicationResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
 export const getSendContractPartnerApplicationMockHandler = (
   overrideResponse?:
     | PartnerApplicationItem
@@ -43103,6 +43276,8 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getMarkNotificationReadMockHandler(),
   getMarkAllNotificationsReadMockHandler(),
   getStreamEventsMockHandler(),
+  getListSentMailMockHandler(),
+  getGetSentMailBodyMockHandler(),
   getSearchMockHandler(),
   getListEdsDocumentsMockHandler(),
   getCreateEdsDocumentMockHandler(),
@@ -43474,6 +43649,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getConfirmSupplierCrmClientMockHandler(),
   getRejectSupplierCrmClientMockHandler(),
   getListPartnerApplicationsMockHandler(),
+  getCreatePartnerApplicationMockHandler(),
   getSendContractPartnerApplicationMockHandler(),
   getApprovePartnerApplicationMockHandler(),
   getRejectPartnerApplicationMockHandler(),

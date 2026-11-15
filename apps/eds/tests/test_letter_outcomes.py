@@ -222,3 +222,18 @@ async def test_hand_over_to_a_client_request_keeps_the_number_from_bff(
     assert executed["report"] == "Клиент просит КП"
     bad = await complete(client, supplier, mine["id"], handed_to={**hand, "kind": "deal"})
     assert_error(bad, 422, "VALIDATION_FAILED")
+
+
+async def test_hand_over_to_a_partner_application_journals_it(
+    client: httpx.AsyncClient, staff: dict[str, Person]
+) -> None:
+    letter = await in_execution(client, staff)
+    supplier = staff["supplier"]
+    mine = by_person(letter, supplier.id)
+    hand = {"kind": "partner_application", "ref": "12", "number": "ООО Демо Колёса"}
+    done = await complete(client, supplier, mine["id"], handed_to=hand)
+    assert done.status_code == 200, done.text
+    card = done.json()
+    assert by_person(card, supplier.id)["handed_to"] == hand
+    journal = [e["comment"] for e in card["journal"] if e["action"] == "instruction.executed"]
+    assert journal == ["Передано в работу: подключение партнёра ООО Демо Колёса"]

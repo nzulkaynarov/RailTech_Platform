@@ -300,6 +300,7 @@ import type {
   ListPaymentMemosParams,
   ListPaymentsParams,
   ListQuoteApprovalsParams,
+  ListSentMailParams,
   ListSigningAuthoritiesParams,
   ListStockBalancesParams,
   ListStockReservationsParams,
@@ -341,6 +342,7 @@ import type {
   OffsiteBackupIn,
   OffsiteCheck,
   PartnerApplicationApproveRequest,
+  PartnerApplicationCreateRequest,
   PartnerApplicationItem,
   PartnerApplicationListResponse,
   PartnerApplicationRejectRequest,
@@ -425,6 +427,8 @@ import type {
   SearchParams,
   SearchResult,
   SearchStockTraceParams,
+  SentMailBody,
+  SentMailPage,
   SentMessage,
   ServiceConsoleKey,
   ServiceConsoleList,
@@ -6562,6 +6566,304 @@ export function useStreamEvents<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getStreamEventsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListSentMailUrl = (params?: ListSentMailParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/mail/sent?${stringifiedParams}`
+    : `/api/v1/mail/sent`;
+};
+
+/**
+ * CRM `GET /mail/sent`: письма ансамбля новыми первыми — поиск по адресату и теме, статус, курсор. Сотрудник видит письма, отправленные по его запросу, администратор (`integrations:read` CRM) — все. `path` — карточка документа EDS у письма на бланке.
+ * @summary Почта · Отправленные (план 2.8, MAIL-1)
+ */
+export const listSentMail = async (
+  params?: ListSentMailParams,
+  options?: Parameters<typeof http>[1],
+): Promise<SentMailPage> => {
+  return http<SentMailPage>(getListSentMailUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListSentMailQueryKey = (params?: ListSentMailParams) => {
+  return [`/api/v1/mail/sent`, ...(params ? [params] : [])] as const;
+};
+
+export const getListSentMailQueryOptions = <
+  TData = Awaited<ReturnType<typeof listSentMail>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListSentMailParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listSentMail>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListSentMailQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listSentMail>>> = ({ signal }) =>
+    listSentMail(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listSentMail>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListSentMailQueryResult = NonNullable<Awaited<ReturnType<typeof listSentMail>>>;
+export type ListSentMailQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+
+export function useListSentMail<
+  TData = Awaited<ReturnType<typeof listSentMail>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: undefined | ListSentMailParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listSentMail>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listSentMail>>,
+          TError,
+          Awaited<ReturnType<typeof listSentMail>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListSentMail<
+  TData = Awaited<ReturnType<typeof listSentMail>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListSentMailParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listSentMail>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listSentMail>>,
+          TError,
+          Awaited<ReturnType<typeof listSentMail>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListSentMail<
+  TData = Awaited<ReturnType<typeof listSentMail>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListSentMailParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listSentMail>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Почта · Отправленные (план 2.8, MAIL-1)
+ */
+
+export function useListSentMail<
+  TData = Awaited<ReturnType<typeof listSentMail>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListSentMailParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listSentMail>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListSentMailQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetSentMailBodyUrl = (id: number) => {
+  return `/api/v1/mail/sent/${id}`;
+};
+
+/**
+ * CRM `GET /mail/sent/{id}`: текст по запросу, CRM пишет просмотр в аудит; `text = null` — тело удалено по сроку хранения. Чужое письмо сотруднику — 404.
+ * @summary Почта · Текст отправленного письма
+ */
+export const getSentMailBody = async (
+  id: number,
+  options?: Parameters<typeof http>[1],
+): Promise<SentMailBody> => {
+  return http<SentMailBody>(getGetSentMailBodyUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetSentMailBodyQueryKey = (id: number) => {
+  return [`/api/v1/mail/sent/${id}`] as const;
+};
+
+export const getGetSentMailBodyQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSentMailBody>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSentMailBody>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetSentMailBodyQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getSentMailBody>>> = ({ signal }) =>
+    getSentMailBody(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getSentMailBody>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetSentMailBodyQueryResult = NonNullable<Awaited<ReturnType<typeof getSentMailBody>>>;
+export type GetSentMailBodyQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetSentMailBody<
+  TData = Awaited<ReturnType<typeof getSentMailBody>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSentMailBody>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSentMailBody>>,
+          TError,
+          Awaited<ReturnType<typeof getSentMailBody>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSentMailBody<
+  TData = Awaited<ReturnType<typeof getSentMailBody>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSentMailBody>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSentMailBody>>,
+          TError,
+          Awaited<ReturnType<typeof getSentMailBody>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSentMailBody<
+  TData = Awaited<ReturnType<typeof getSentMailBody>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSentMailBody>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Почта · Текст отправленного письма
+ */
+
+export function useGetSentMailBody<
+  TData = Awaited<ReturnType<typeof getSentMailBody>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSentMailBody>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetSentMailBodyQueryOptions(id, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
@@ -37324,7 +37626,7 @@ export const getCompleteInstructionUrl = (id: string) => {
 };
 
 /**
- * EDS `POST /instructions/{id}/complete`. Любой сотрудник; отмечает только исполнитель поручения (решает EDS: чужое — 403, `details.reason = not_executor`; не в работе — 409 `invalid_state`). Нужен отчёт (текст или файлы — загрузка `POST /eds/document-files`) или номер отправленного ИСХ (`outgoing_number`); иначе 422, `details.fields = [report]`; ИСХ не найден — `details.fields = [outgoing_number]`. ИСХ «в ответ на» это письмо принимается; ИСХ без связи — тоже, и EDS записывает связь (EDS-REPLY-1); ИСХ в ответ на другое входящее — 409, `details.reason = outgoing_linked_elsewhere`. Все поручения письма исполнены — письмо «Исполнено», контроль снят, директор и делопроизводитель получают уведомление. «Передать в работу» (план 1.9, `handed_to`) — только ответственный (иначе 403 `not_responsible`): заявку клиента BFF проверяет в CRM `GET /deals/{id}` от имени сотрудника, служебную записку — EDS (своя, с номером); не найдено — 422, `details.fields.handed_to = not_found`. Ответ — карточка.
+ * EDS `POST /instructions/{id}/complete`. Любой сотрудник; отмечает только исполнитель поручения (решает EDS: чужое — 403, `details.reason = not_executor`; не в работе — 409 `invalid_state`). Нужен отчёт (текст или файлы — загрузка `POST /eds/document-files`) или номер отправленного ИСХ (`outgoing_number`); иначе 422, `details.fields = [report]`; ИСХ не найден — `details.fields = [outgoing_number]`. ИСХ «в ответ на» это письмо принимается; ИСХ без связи — тоже, и EDS записывает связь (EDS-REPLY-1); ИСХ в ответ на другое входящее — 409, `details.reason = outgoing_linked_elsewhere`. Все поручения письма исполнены — письмо «Исполнено», контроль снят, директор и делопроизводитель получают уведомление. «Передать в работу» (план 1.9, `handed_to`) — только ответственный (иначе 403 `not_responsible`): заявку клиента BFF проверяет в CRM `GET /deals/{id}`, подключение партнёра — в ERP от имени сотрудника, служебную записку — EDS (своя, с номером); не найдено — 422, `details.fields.handed_to = not_found`. Ответ — карточка.
  * @summary EDS · Поручение исполнено (P8b)
  */
 export const completeInstruction = async (
@@ -53248,6 +53550,128 @@ export function useListPartnerApplications<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getCreatePartnerApplicationUrl = () => {
+  return `/api/v1/erp/catalog/partner-applications`;
+};
+
+/**
+ * ERP `POST catalog/partner-applications/` — право `supply.manage` (раздел каталога полный). «Передать в работу»: сотрудник заводит заявку кандидата по письму (`source = letter`, `source_ref` — номер ВХ); согласия кандидата ещё нет, дальше — договорный шлюз.
+ * @summary Расчёт · Заявка в партнёры по входящему письму (план 1.9)
+ */
+export const createPartnerApplication = async (
+  partnerApplicationCreateRequest: PartnerApplicationCreateRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<PartnerApplicationItem> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<PartnerApplicationItem>(getCreatePartnerApplicationUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(partnerApplicationCreateRequest),
+  });
+};
+
+export const getCreatePartnerApplicationMutationKey = () => ["createPartnerApplication"] as const;
+
+export const getCreatePartnerApplicationMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createPartnerApplication>>,
+    TError,
+    CreatePartnerApplicationMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createPartnerApplication>>,
+  TError,
+  CreatePartnerApplicationMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreatePartnerApplicationMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createPartnerApplication>>,
+    CreatePartnerApplicationMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createPartnerApplication(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreatePartnerApplicationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createPartnerApplication>>
+>;
+export type CreatePartnerApplicationMutationBody = PartnerApplicationCreateRequest;
+export type CreatePartnerApplicationMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+export type CreatePartnerApplicationMutationVariables = { data: PartnerApplicationCreateRequest };
+
+/**
+ * @summary Расчёт · Заявка в партнёры по входящему письму (план 1.9)
+ */
+export const useCreatePartnerApplication = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createPartnerApplication>>,
+      TError,
+      CreatePartnerApplicationMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createPartnerApplication>>,
+  TError,
+  CreatePartnerApplicationMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreatePartnerApplicationMutationOptions(options), queryClient);
+};
 
 export const getSendContractPartnerApplicationUrl = (id: CompanyItemRef) => {
   return `/api/v1/erp/catalog/partner-applications/${id}/send-contract`;

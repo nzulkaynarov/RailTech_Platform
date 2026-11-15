@@ -3,10 +3,14 @@
  * RailTech Platform — BFF API (Платформа → CRM и ERP)
  */
 
+/**
+ * Откуда заявка — внешний вход, кабинет клиента или входящее письмо (сотрудник, план 1.9)
+ */
 export type PartnerApplicationSource =
   (typeof PartnerApplicationSource)[keyof typeof PartnerApplicationSource];
 
 export const PartnerApplicationSource = {
   public: "public",
   client_cabinet: "client_cabinet",
+  letter: "letter",
 } as const;
