@@ -11,7 +11,8 @@ import { listPayments, useGetPayment } from "../../../shared/api/generated/platf
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { EmptyState } from "../../../shared/ui/EmptyState";
-import { ScrollRegion } from "../../../shared/ui/FormParts";
+import { DataTable } from "../../../shared/ui/DataTable/DataTable";
+import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { QueryState } from "../../../shared/ui/FormParts";
 import { History, type HistoryItem } from "../../../shared/ui/History";
 import { LinkButton } from "../../../shared/ui/LinkButton";
@@ -23,63 +24,68 @@ import { ProofList } from "./ProofsBlock";
 import { useStateLabels } from "./labels";
 import { invoicePath, isOpen, moneyProps } from "./model";
 
+type Line = PaymentCard["items"][number];
+type Paid = PaymentCard["payments"][number];
+
+/** Строки счёта — общая таблица без «Столбцов» (стандарт §7), итоги — списком под ней, как в КП. */
 function Items({ card }: { card: PaymentCard }) {
   const { t } = useTranslation("payments");
   const money = (amount: string) => (
     <MoneyText {...moneyProps({ amount, currency: card.amount.currency })} />
   );
   return (
-    <ScrollRegion label={t("items.caption")}>
-      <table className="pf-dec-table pf-dec-lines">
-        <caption className="pf-sr-only">{t("items.caption")}</caption>
-        <thead>
-          <tr>
-            <th scope="col">{t("items.columns.name")}</th>
-            <th scope="col" className="pf-col-num">
-              {t("items.columns.quantity")}
-            </th>
-            <th scope="col" className="pf-col-num">
-              {t("items.columns.price")}
-            </th>
-            <th scope="col" className="pf-col-num">
-              {t("items.columns.total")}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {card.items.map((item, index) => (
-            <tr key={index}>
-              <td>{item.description}</td>
-              <td className="pf-col-num">{item.quantity}</td>
-              <td className="pf-col-num">{money(item.unit_price)}</td>
-              <td className="pf-col-num">{money(item.total)}</td>
-            </tr>
-          ))}
-        </tbody>
-        <tfoot>
-          <tr>
-            <td colSpan={3} className="pf-col-num">
-              {t("items.subtotal")}
-            </td>
-            <td className="pf-col-num">{money(card.subtotal)}</td>
-          </tr>
-          <tr>
-            <td colSpan={3} className="pf-col-num">
-              {t("items.vat")}
-            </td>
-            <td className="pf-col-num">{money(card.vat)}</td>
-          </tr>
-          <tr>
-            <td colSpan={3} className="pf-col-num">
-              <strong>{t("items.total")}</strong>
-            </td>
-            <td className="pf-col-num">
-              <MoneyText strong {...moneyProps(card.amount)} />
-            </td>
-          </tr>
-        </tfoot>
-      </table>
-    </ScrollRegion>
+    <>
+      <DataTable<Line>
+        tableId="eds.payment.items"
+        caption={t("items.caption")}
+        scrollLabel={t("items.caption")}
+        className="pf-dec-table pf-dec-lines"
+        rows={card.items}
+        rowKey={(item) => String(card.items.indexOf(item))}
+        toolsTarget={null}
+        columns={[
+          {
+            id: "name",
+            header: t("items.columns.name"),
+            width: null,
+            cell: (item) => item.description,
+          },
+          {
+            id: "quantity",
+            header: t("items.columns.quantity"),
+            width: 96,
+            numeric: true,
+            cell: (item) => item.quantity,
+          },
+          {
+            id: "price",
+            header: t("items.columns.price"),
+            width: 160,
+            numeric: true,
+            cell: (item) => money(item.unit_price),
+          },
+          {
+            id: "total",
+            header: t("items.columns.total"),
+            width: 160,
+            numeric: true,
+            cell: (item) => money(item.total),
+          },
+        ]}
+      />
+      <div className="pf-dec-totals">
+        <DefinitionList
+          items={[
+            { label: t("items.subtotal"), value: money(card.subtotal) },
+            { label: t("items.vat"), value: money(card.vat) },
+            {
+              label: t("items.total"),
+              value: <MoneyText strong {...moneyProps(card.amount)} />,
+            },
+          ]}
+        />
+      </div>
+    </>
   );
 }
 
@@ -88,35 +94,48 @@ function Payments({ card }: { card: PaymentCard }) {
   const { date } = useFormat();
   if (card.payments.length === 0) return <p className="pf-hint">{t("payments.none")}</p>;
   return (
-    <ScrollRegion label={t("payments.caption")}>
-      <table className="pf-dec-table">
-        <caption className="pf-sr-only">{t("payments.caption")}</caption>
-        <thead>
-          <tr>
-            <th scope="col">{t("payments.columns.date")}</th>
-            <th scope="col" className="pf-col-num">
-              {t("payments.columns.amount")}
-            </th>
-            <th scope="col">{t("payments.columns.reference")}</th>
-            <th scope="col">{t("payments.columns.by")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {card.payments.map((payment) => (
-            <tr key={payment.id}>
-              <td className="pf-num">{date(payment.paid_at)}</td>
-              <td className="pf-col-num">
-                <MoneyText
-                  {...moneyProps({ amount: payment.amount, currency: card.amount.currency })}
-                />
-              </td>
-              <td className="pf-num">{payment.reference || "—"}</td>
-              <td>{payment.recorded_by ?? "—"}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </ScrollRegion>
+    <DataTable<Paid>
+      tableId="eds.payment.payments"
+      caption={t("payments.caption")}
+      scrollLabel={t("payments.caption")}
+      className="pf-dec-table"
+      rows={card.payments}
+      rowKey={(payment) => String(payment.id)}
+      toolsTarget={null}
+      columns={[
+        {
+          id: "date",
+          header: t("payments.columns.date"),
+          width: 120,
+          cellClassName: "pf-num",
+          cell: (payment) => date(payment.paid_at),
+        },
+        {
+          id: "amount",
+          header: t("payments.columns.amount"),
+          width: 160,
+          numeric: true,
+          cell: (payment) => (
+            <MoneyText
+              {...moneyProps({ amount: payment.amount, currency: card.amount.currency })}
+            />
+          ),
+        },
+        {
+          id: "reference",
+          header: t("payments.columns.reference"),
+          width: null,
+          cellClassName: "pf-num",
+          cell: (payment) => payment.reference || "—",
+        },
+        {
+          id: "by",
+          header: t("payments.columns.by"),
+          width: 180,
+          cell: (payment) => payment.recorded_by ?? "—",
+        },
+      ]}
+    />
   );
 }
 
