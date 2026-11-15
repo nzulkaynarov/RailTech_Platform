@@ -30,7 +30,7 @@ const SIDEBAR_STORAGE_KEY = 'rt-cab-sidebar-collapsed-v1';
  * Оболочка кабинета (Floating Canvas):
  * - Внешний фон — рамка bg-muted (в Mini App — secondary_bg_color Telegram).
  * - Слева сворачиваемый сайдбар SideNav (управление кнопкой и ⌘\ / Ctrl+\).
- * - Справа плавающий скругленный холст bg-background (rounded-2xl border border-border; в Mini App — bg_color Telegram).
+ * - Справа плавающий скругленный холст bg-background (rounded-lg border border-border; в Mini App — bg_color Telegram).
  */
 export function AppShell() {
   const { t } = useTranslation();
@@ -143,7 +143,7 @@ export function AppShell() {
       <div className="min-h-dvh bg-muted text-foreground md:flex">
         <a
           href="#main"
-          className="sr-only z-50 rounded-xl bg-primary px-3 py-2 text-sm text-primary-foreground focus:not-sr-only focus:fixed focus:top-2 focus:left-2"
+          className="sr-only z-50 rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground focus:not-sr-only focus:fixed focus:top-2 focus:left-2"
         >
           {t('app.skipToContent')}
         </a>
@@ -151,7 +151,7 @@ export function AppShell() {
         <SideNav companyName={me?.company.name} collapsed={sidebarCollapsed} onToggleCollapse={toggleSidebar} />
 
         <div className="flex min-w-0 flex-1 flex-col md:p-2.5">
-          <div className="flex min-w-0 flex-1 flex-col rounded-none border-0 bg-background shadow-none md:rounded-2xl md:border md:border-border md:shadow-xs">
+          <div className="flex min-w-0 flex-1 flex-col rounded-none border-0 bg-background shadow-none md:rounded-lg md:border md:border-border md:shadow-xs">
             {mode === 'web' ? (
               <header
                 role="banner"
@@ -178,7 +178,7 @@ export function AppShell() {
                   <Link
                     to="/"
                     title={t('app.name')}
-                    className="shrink-0 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+                    className="shrink-0 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring md:hidden"
                   >
                     <BrandMark className="size-8" />
                     <span className="sr-only">{t('app.name')}</span>
@@ -232,7 +232,7 @@ export function AppShell() {
                   <MessagesLink />
                   <Link
                     to="/profile"
-                    className="rounded-xl p-2 text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-primary focus-visible:ring-2 focus-visible:ring-ring"
+                    className="rounded-lg p-2 text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-primary focus-visible:ring-2 focus-visible:ring-ring"
                     aria-label={t('nav.profile')}
                     title={t('nav.profile')}
                   >
@@ -250,7 +250,7 @@ export function AppShell() {
               {me && !canAct ? (
                 <div
                   role="status"
-                  className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-accent/60 p-3.5 text-sm text-primary"
+                  className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/60 bg-accent/60 p-3.5 text-sm text-primary"
                 >
                   <div className="flex items-center gap-2.5">
                     <Eye className="size-4 shrink-0 text-primary" aria-hidden="true" />
@@ -260,7 +260,7 @@ export function AppShell() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="rounded-xl border-border bg-background text-xs text-primary hover:bg-accent"
+                      className="rounded-lg border-border bg-background text-xs text-primary hover:bg-accent"
                       onClick={() => void copyPageLink()}
                     >
                       <Copy className="size-3.5" aria-hidden="true" />

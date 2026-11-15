@@ -337,7 +337,7 @@ function ActionRequiredSkeleton() {
         {[0, 1, 2, 3].map((index) => (
           <Skeleton
             key={index}
-            className={cn('h-[5.75rem] rounded-2xl', index > 0 && 'hidden sm:block', index > 1 && 'sm:hidden lg:block')}
+            className={cn('h-[5.75rem] rounded-lg', index > 0 && 'hidden sm:block', index > 1 && 'sm:hidden lg:block')}
           />
         ))}
       </div>

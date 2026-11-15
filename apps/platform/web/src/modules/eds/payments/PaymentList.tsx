@@ -25,6 +25,7 @@ import { PaymentSlot } from "./PaymentPanel";
 import { BankDetailsNotice } from "./BankDetailsNotice";
 import { useStateLabels } from "./labels";
 import { INVOICE_TABS, type InvoiceTab, PAGE, showTab } from "./model";
+import { ToolsSlot } from "../../../shared/ui/DataTable/RegistryTools";
 
 /** Куда ведёт кнопка пустого состояния вкладки (SPEC-v3 §7: пустое состояние — словами и с действием). */
 const NEXT: Record<InvoiceTab, InvoiceTab | null> = {
@@ -304,6 +305,7 @@ export function PaymentList() {
               go({ q: text === "" ? null : text, payment: null });
             }}
           />
+          <ToolsSlot />
         </div>
       )}
       {tab === "to_issue" && first?.bank_details_ready === false ? <BankDetailsNotice /> : null}

@@ -1,6 +1,5 @@
 import { Button, Card, Segmented, Select } from "antd";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router";
 
@@ -9,7 +8,7 @@ import { useAuth } from "../../../app/auth/useAuth";
 import { useViewport } from "../../../app/shell/useViewport";
 import { ApiError } from "../../../shared/api/errors";
 import { Code } from "../../../shared/ui/Code";
-import { ChevronRightIcon } from "../../../shared/ui/icons";
+import { ToolsSlot } from "../../../shared/ui/DataTable/RegistryTools";
 import type {
   LetterRow,
   LetterStatus,
@@ -29,6 +28,7 @@ import { STATUS_FILTERS, letterPath, withParams } from "./api";
 import { localName, useLetterDictionary } from "../dictionaries";
 import { useStateLabels } from "./labels";
 import { ResolutionSlot } from "./ResolutionPanel";
+import { RowOpenLink } from "../../../shared/ui/RowOpenLink";
 
 const PAGE = 25;
 /**
@@ -105,15 +105,7 @@ function useSelect() {
     });
 }
 
-function Rows({
-  items,
-  selected,
-  toolsTarget,
-}: {
-  items: readonly LetterRow[];
-  selected: string | null;
-  toolsTarget: HTMLElement | null;
-}) {
+function Rows({ items, selected }: { items: readonly LetterRow[]; selected: string | null }) {
   const { t } = useTranslation("letters");
   const { date } = useFormat();
   const { mobile } = useViewport();
@@ -248,14 +240,10 @@ function Rows({
       headerHidden: true,
       width: COLS.action,
       cell: (row) => (
-        <LinkButton
-          type="text"
-          size="small"
-          className="pf-row-open"
-          icon={<ChevronRightIcon />}
+        <RowOpenLink
           to={letterPath(row.number)}
+          label={t("list.openLabel", { number: row.number })}
           title={t("list.open")}
-          aria-label={t("list.openLabel", { number: row.number })}
         />
       ),
     },
@@ -267,7 +255,6 @@ function Rows({
       scrollLabel={t("list.scroll")}
       className="pf-letters-table"
       flexMin={224}
-      toolsTarget={toolsTarget}
       columns={columns}
       rows={items}
       rowKey={(row) => row.id}
@@ -286,7 +273,6 @@ function Rows({
 /** EDS · Входящие письма (SPEC-v3 §7.3): список со статусом словами, фильтр (по умолчанию «Ждёт резолюции»), письмо — в боковом окне. */
 export function InboxList() {
   const { t, i18n } = useTranslation(["letters", "modules", "dictionary"]);
-  const [tools, setTools] = useState<HTMLElement | null>(null);
   const { me } = useAuth();
   const [params, setParams] = useSearchParams();
   const labels = useStateLabels();
@@ -393,7 +379,7 @@ export function InboxList() {
   } else {
     body = (
       <>
-        <Rows items={rows} selected={selected} toolsTarget={tools} />
+        <Rows items={rows} selected={selected} />
         {query.hasNextPage ? (
           <div className="pf-letters-pager">
             <Button
@@ -468,7 +454,7 @@ export function InboxList() {
           }}
         />
         {/* «Столбцы» таблицы стоят в этой же строке справа (стандарт интерфейса §9) */}
-        <div className="pf-letters-tools" ref={setTools} />
+        <ToolsSlot />
       </div>
       <Card styles={{ body: { padding: 0 } }}>
         <DataBlock busy={query.isPlaceholderData} resetKey={shownKey}>

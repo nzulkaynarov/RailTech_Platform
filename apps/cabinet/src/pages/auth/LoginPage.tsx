@@ -141,7 +141,7 @@ export function LoginPage() {
       {isPortalMock() ? (
         // Демо-вход только в dev с моком (VITE_PORTAL_MOCK=1): под своим заголовком после основных путей, чтобы его
         // кнопки «Войти как…» не путались с «Войти» по magic-link (CAB-FIX-2, K1).
-        <Card className="border-primary/20 bg-accent/40 shadow-sm">
+        <Card className="border-primary/20 bg-accent/40">
           <CardHeader>
             <div className="flex items-center gap-2">
               <Sparkles className="size-5 shrink-0 text-primary" aria-hidden="true" />

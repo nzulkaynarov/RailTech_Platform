@@ -112,7 +112,7 @@ export function TelegramNotifications({ autoStart = false }: { autoStart?: boole
               ) : confirming ? (
                 <section
                   aria-labelledby="telegram-unlink-title"
-                  className="flex flex-col gap-3 rounded-xl border border-border p-3.5"
+                  className="flex flex-col gap-3 rounded-lg border border-border p-3.5"
                 >
                   <h3 id="telegram-unlink-title" className="text-sm font-semibold">
                     {t('profile.notifications.confirmTitle')}
@@ -191,7 +191,7 @@ function LinkPanel({ link, showQr }: { link: TelegramLink; showQr: boolean }) {
       {showQr ? (
         // QR — изображение для камеры: тёмные модули на светлом поле с «тихой зоной» по стандарту (marginSize),
         // в тёмной теме тоже, поэтому цвета — по умолчанию библиотеки, а не токены темы.
-        <div className="self-center overflow-hidden rounded-xl border border-border sm:self-auto">
+        <div className="self-center overflow-hidden rounded-lg border border-border sm:self-auto">
           <QRCodeSVG
             value={link.url}
             size={184}

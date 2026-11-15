@@ -23,9 +23,10 @@
 }
 
 @layer utilities {
-  /* Карточка: подъём при наведении — только если человек не просил меньше движения (K12) */
+  /* Карточка (стандарт интерфейса §4): белый блок с рамкой 1 px и скруглением 8 — без тени и подъёма; при наведении
+     рамка заметнее. */
   .portal-card {
-    @apply rounded-2xl border border-border bg-card hover:border-ring/40 hover:shadow-lg hover:shadow-primary/5 motion-safe:transition-[transform,box-shadow,border-color] motion-safe:duration-200 motion-safe:hover:-translate-y-0.5;
+    @apply rounded-lg border border-border bg-card hover:border-ring/40 motion-safe:transition-[border-color] motion-safe:duration-200;
   }
 }
 
