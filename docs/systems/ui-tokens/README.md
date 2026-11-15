@@ -78,6 +78,6 @@ Eminence» кабинета клиента: navy `--primary`, холст `--back
 
 `make -C apps/platform tokens` копирует в приложение и `dist/tokens.css` — `apps/platform/web/src/app/tokens.generated.css`
 (подключён в `main.tsx`). Стили Платформы берут цвета только из переменных `var(--rt-color-…)`
-(стандарт интерфейса `docs/architecture/ui-standard.md` §2); литерал цвета в CSS ловит тест
+(стандарт интерфейса §2, решение владельца 2026-11-15); литерал цвета в CSS ловит тест
 `src/shared/ui/colorLiterals.test.ts`, свежесть копии — `make -C apps/platform tokens-check`. Для этого добавлены токены
 `surface.subtle` (фон шапки таблицы) и `text.disabled`.
