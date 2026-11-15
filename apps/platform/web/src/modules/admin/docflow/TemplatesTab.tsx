@@ -25,6 +25,8 @@ import { useResolutionKindName } from "../../eds/dictionaries";
 import { RESOLUTION_KINDS, needsExecutor } from "../../eds/inbox/officeModel";
 import { ConfirmModal, ListTable, TabHeader } from "../company/common";
 import { useRequestedTemplate } from "../settings/useRequestedTemplate";
+import { UnitLabel } from "../../../shared/ui/UnitLabel";
+import { unitOf } from "../../../shared/lib/unit";
 
 const ADDRESSEE = "addressee";
 const NONE = "none";
@@ -343,10 +345,16 @@ function TemplateModal({
             </Form.Item>
             <Form.Item
               name="dueDays"
-              label={t("settings.templates.dueDays")}
+              label={<UnitLabel label={t("settings.templates.dueDays")} />}
               extra={t("settings.templates.dueHint")}
             >
-              <InputNumber min={1} max={365} precision={0} style={{ width: "100%" }} />
+              <InputNumber
+                suffix={unitOf(t("settings.templates.dueDays"))}
+                min={1}
+                max={365}
+                precision={0}
+                style={{ width: "100%" }}
+              />
             </Form.Item>
           </>
         ) : null}

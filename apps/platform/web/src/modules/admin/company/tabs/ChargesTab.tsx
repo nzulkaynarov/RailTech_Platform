@@ -22,6 +22,8 @@ import { StatusTag } from "../../../../shared/ui/StatusTag";
 import { ConfirmModal, ListTable, QueryGate, TabHeader, ReadOnlyFence, FormSheet } from "../common";
 import { changedFields, codeLabel } from "../diff";
 import { errorFields } from "../errors";
+import { UnitLabel } from "../../../../shared/ui/UnitLabel";
+import { unitOf } from "../../../../shared/lib/unit";
 
 interface Values {
   delivery_basis: string;
@@ -312,10 +314,17 @@ function ChargeModal({
           </Form.Item>
           <Form.Item
             name="default_rate_percent"
-            label={t("charges.rate")}
+            label={<UnitLabel label={t("charges.rate")} />}
             extra={t("charges.rateHint")}
           >
-            <InputNumber stringMode min="0" max="100" step="0.01" style={{ width: "100%" }} />
+            <InputNumber
+              suffix={unitOf(t("charges.rate"))}
+              stringMode
+              min="0"
+              max="100"
+              step="0.01"
+              style={{ width: "100%" }}
+            />
           </Form.Item>
           <Form.Item name="sort_order" label={t("charges.order")}>
             <InputNumber precision={0} style={{ width: "100%" }} />
