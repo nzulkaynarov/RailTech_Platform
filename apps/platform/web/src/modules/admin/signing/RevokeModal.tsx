@@ -1,4 +1,5 @@
-import { App, Button, Form, Input, Modal } from "antd";
+import { App, Button, Form, Input } from "antd";
+import { Dialog } from "../../../shared/ui/Dialog";
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -31,13 +32,10 @@ export function RevokeModal({
       ? t("errors.revoked")
       : t("errors.DEFAULT");
   return (
-    <Modal
+    <Dialog
       open
-      width={480}
       title={t("revoke.title", { name: authority.holder.name })}
       onCancel={onClose}
-      destroyOnHidden
-      maskClosable={false}
       footer={[
         <Button key="cancel" onClick={onClose}>
           {t("form.cancel")}
@@ -81,6 +79,6 @@ export function RevokeModal({
           <Input.TextArea maxLength={1000} autoSize={{ minRows: 2, maxRows: 5 }} />
         </Form.Item>
       </Form>
-    </Modal>
+    </Dialog>
   );
 }

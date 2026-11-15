@@ -1,4 +1,5 @@
-import { Alert, App, Button, Dropdown, Input, Modal, Radio, Select } from "antd";
+import { Alert, App, Button, Dropdown, Input, Radio, Select } from "antd";
+import { Dialog } from "../../../shared/ui/Dialog";
 import { FormSheet } from "../../../shared/ui/FormSheet";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -73,13 +74,15 @@ function CloseDialog({ letter, onClose }: { letter: LetterCard; onClose: () => v
     }
   };
   return (
-    <Modal
+    <Dialog
       open
-      width={480}
       title={t("outcome.close.title", { number: letter.number })}
       onCancel={onClose}
-      footer={null}
-      destroyOnHidden
+      okLabel={t("outcome.close.submit")}
+      loading={pending}
+      okDisabled={!reason || (needComment && !comment.trim())}
+      onOk={() => void run()}
+      cancelLabel={t("outcome.cancel")}
     >
       <div className="pf-mail-actions">
         <label htmlFor="close-reason">{t("outcome.close.reason")}</label>
@@ -108,19 +111,8 @@ function CloseDialog({ letter, onClose }: { letter: LetterCard; onClose: () => v
           }}
         />
         {error ? <Alert type="error" showIcon role="alert" message={error} /> : null}
-        <div className="pf-fp-row">
-          <Button
-            type="primary"
-            loading={pending}
-            disabled={!reason || (needComment && !comment.trim())}
-            onClick={() => void run()}
-          >
-            {t("outcome.close.submit")}
-          </Button>
-          <Button onClick={onClose}>{t("outcome.cancel")}</Button>
-        </div>
       </div>
-    </Modal>
+    </Dialog>
   );
 }
 
@@ -155,13 +147,15 @@ function ReturnDialog({
     }
   };
   return (
-    <Modal
+    <Dialog
       open
-      width={480}
       title={t("outcome.return.title", { number: letter.number })}
       onCancel={onClose}
-      footer={null}
-      destroyOnHidden
+      okLabel={t("outcome.return.submit")}
+      loading={pending}
+      okDisabled={!reason.trim()}
+      onOk={() => void run()}
+      cancelLabel={t("outcome.cancel")}
     >
       <div className="pf-mail-actions">
         <label htmlFor="return-reason">{t("outcome.return.reason")}</label>
@@ -176,19 +170,8 @@ function ReturnDialog({
           }}
         />
         {error ? <Alert type="error" showIcon role="alert" message={error} /> : null}
-        <div className="pf-fp-row">
-          <Button
-            type="primary"
-            loading={pending}
-            disabled={!reason.trim()}
-            onClick={() => void run()}
-          >
-            {t("outcome.return.submit")}
-          </Button>
-          <Button onClick={onClose}>{t("outcome.cancel")}</Button>
-        </div>
       </div>
-    </Modal>
+    </Dialog>
   );
 }
 
@@ -228,13 +211,15 @@ function CoExecutorDialog({
     }
   };
   return (
-    <Modal
+    <Dialog
       open
-      width={480}
       title={t("outcome.co.title", { number: letter.number })}
       onCancel={onClose}
-      footer={null}
-      destroyOnHidden
+      okLabel={t("outcome.co.submit")}
+      loading={pending}
+      okDisabled={!person || !due || !text.trim()}
+      onOk={() => void run()}
+      cancelLabel={t("outcome.cancel")}
     >
       <div className="pf-mail-actions">
         <label htmlFor="co-person">{t("outcome.co.person")}</label>
@@ -271,19 +256,8 @@ function CoExecutorDialog({
           onChange={setDue}
         />
         {error ? <Alert type="error" showIcon role="alert" message={error} /> : null}
-        <div className="pf-res-actions">
-          <Button onClick={onClose}>{t("outcome.cancel")}</Button>
-          <Button
-            type="primary"
-            loading={pending}
-            disabled={!person || !due || !text.trim()}
-            onClick={() => void run()}
-          >
-            {t("outcome.co.submit")}
-          </Button>
-        </div>
       </div>
-    </Modal>
+    </Dialog>
   );
 }
 
@@ -453,15 +427,15 @@ function HandOverDialog({
   }
   if (step === "request") {
     return (
-      <Modal
-        open
-        width={720}
+      // Заявка клиента — длинная форма со своими кнопками: широкая панель без подвала (стандарт интерфейса §6)
+      <FormSheet
+        layer="drawer"
+        wide
+        readOnly
         title={t("outcome.hand.title", { number: letter.number })}
         onCancel={onClose}
-        footer={null}
-        destroyOnHidden
+        error={error ? <Alert type="error" showIcon role="alert" message={error} /> : undefined}
       >
-        {error ? <Alert type="error" showIcon role="alert" message={error} /> : null}
         <RequestForm
           lead={null}
           clientId={null}
@@ -469,17 +443,20 @@ function HandOverDialog({
           onCreated={(result) => void linkRequest(result.deal)}
           onCancel={onClose}
         />
-      </Modal>
+      </FormSheet>
     );
   }
   return (
-    <Modal
+    <Dialog
       open
-      width={480}
       title={t("outcome.hand.title", { number: letter.number })}
       onCancel={onClose}
-      footer={null}
-      destroyOnHidden
+      okLabel={t("outcome.hand.next")}
+      okDisabled={
+        kind === "client_request" ? !canRequest : kind === "memo" ? !canMemo : !canPartner
+      }
+      onOk={next}
+      cancelLabel={t("outcome.cancel")}
     >
       <div className="pf-mail-actions">
         <Radio.Group
@@ -498,20 +475,8 @@ function HandOverDialog({
             { value: "memo", label: t("outcome.hand.memo"), disabled: !canMemo },
           ]}
         />
-        <div className="pf-res-actions">
-          <Button onClick={onClose}>{t("outcome.cancel")}</Button>
-          <Button
-            type="primary"
-            disabled={
-              kind === "client_request" ? !canRequest : kind === "memo" ? !canMemo : !canPartner
-            }
-            onClick={next}
-          >
-            {t("outcome.hand.next")}
-          </Button>
-        </div>
       </div>
-    </Modal>
+    </Dialog>
   );
 }
 

@@ -1,4 +1,5 @@
-import { Alert, App, Button, Checkbox, Input, Modal } from "antd";
+import { Alert, App, Button, Checkbox, Input } from "antd";
+import { Dialog } from "../../../shared/ui/Dialog";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
@@ -97,13 +98,16 @@ export function MarkDuplicateAction({ letter }: { letter: LetterCard }) {
       >
         {t("card.dup.action")}
       </Button>
-      <Modal
+      <Dialog
         open={open}
-        width={480}
         title={t("card.dup.title", { number: letter.number })}
         onCancel={close}
-        footer={null}
-        destroyOnHidden
+        okLabel={t("card.dup.submit")}
+        danger
+        loading={pending}
+        okDisabled={!number.trim() || (needConfirm && !confirm)}
+        onOk={() => void run()}
+        cancelLabel={t("card.dup.cancel")}
       >
         <div className="pf-mail-actions">
           <label htmlFor="dup-original">{t("card.dup.original")}</label>
@@ -138,20 +142,8 @@ export function MarkDuplicateAction({ letter }: { letter: LetterCard }) {
             </Checkbox>
           ) : null}
           {error ? <Alert type="error" showIcon role="alert" message={error} /> : null}
-          <div className="pf-fp-row">
-            <Button
-              type="primary"
-              danger
-              loading={pending}
-              disabled={!number.trim() || (needConfirm && !confirm)}
-              onClick={() => void run()}
-            >
-              {t("card.dup.submit")}
-            </Button>
-            <Button onClick={close}>{t("card.dup.cancel")}</Button>
-          </div>
         </div>
-      </Modal>
+      </Dialog>
     </>
   );
 }

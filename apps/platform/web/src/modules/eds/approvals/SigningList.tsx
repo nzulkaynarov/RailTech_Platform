@@ -1,4 +1,5 @@
-import { App, Button, Card, Input, Modal } from "antd";
+import { App, Button, Card, Input } from "antd";
+import { Dialog } from "../../../shared/ui/Dialog";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -77,11 +78,12 @@ export function SigningList() {
           </li>
         ))}
       </ul>
-      <Modal
+      <Dialog
         open={rejecting !== null}
         title={rejecting?.action === "visa" ? t("signing.returnTitle") : t("signing.rejectTitle")}
-        okText={rejecting?.action === "visa" ? t("signing.return") : t("signing.reject")}
-        okButtonProps={{ disabled: !reason.trim(), loading: decide.isPending }}
+        okLabel={rejecting?.action === "visa" ? t("signing.return") : t("signing.reject")}
+        okDisabled={!reason.trim()}
+        loading={decide.isPending}
         onCancel={() => {
           setRejecting(null);
         }}
@@ -106,7 +108,7 @@ export function SigningList() {
             setReason(event.target.value);
           }}
         />
-      </Modal>
+      </Dialog>
     </Card>
   );
 }

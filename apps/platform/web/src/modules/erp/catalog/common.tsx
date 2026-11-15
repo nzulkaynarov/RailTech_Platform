@@ -1,4 +1,5 @@
-import { Alert, Button, Modal, Pagination } from "antd";
+import { Alert, Button, Pagination } from "antd";
+import { Dialog } from "../../../shared/ui/Dialog";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -157,12 +158,10 @@ export function FormModal({
 }) {
   const { t } = useTranslation("catalog");
   return (
-    <Modal
+    <Dialog
       open
       title={title}
       onCancel={onCancel}
-      destroyOnHidden
-      maskClosable={false}
       footer={[
         <Button key="cancel" onClick={onCancel}>
           {t("cancel")}
@@ -178,7 +177,7 @@ export function FormModal({
           <Alert type="error" showIcon role="alert" message={catalogErrorText(t, error)} />
         ) : null}
       </div>
-    </Modal>
+    </Dialog>
   );
 }
 

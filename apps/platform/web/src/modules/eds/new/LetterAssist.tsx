@@ -1,4 +1,5 @@
-import { Alert, App, Button, Input, Modal, Spin } from "antd";
+import { Alert, App, Button, Input, Spin } from "antd";
+import { Dialog } from "../../../shared/ui/Dialog";
 import { FormSheet } from "../../../shared/ui/FormSheet";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -98,12 +99,10 @@ export function LetterAssist({
       ) : null}
 
       {open === "draft" ? (
-        <Modal
+        <Dialog
           open
-          width={560}
           title={t("form.assist.draftTitle")}
           onCancel={close}
-          destroyOnHidden
           footer={[
             <Button key="cancel" onClick={close}>
               {t("form.assist.cancel")}
@@ -132,7 +131,7 @@ export function LetterAssist({
           />
           {!blank ? <p className="pf-hint">{t("form.assist.replaces")}</p> : null}
           {error ? <Alert type="error" showIcon role="alert" message={error} /> : null}
-        </Modal>
+        </Dialog>
       ) : null}
 
       {open === "translate" ? (

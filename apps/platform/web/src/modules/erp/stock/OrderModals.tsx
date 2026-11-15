@@ -1,4 +1,5 @@
-import { App, Button, Input, InputNumber, Modal, Skeleton } from "antd";
+import { App, Button, Input, InputNumber, Skeleton } from "antd";
+import { Dialog } from "../../../shared/ui/Dialog";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -82,11 +83,10 @@ export function SendModal({ order, onClose }: { order: SupplierOrderDetail; onCl
   const send = useSendSupplierOrder({ mutation: action.options(onClose) });
   const missing = !order.supplier.email && email.trim() === "";
   return (
-    <Modal
+    <Dialog
       open
       title={t("order.send.title", { number: order.number })}
       onCancel={onClose}
-      destroyOnHidden
       footer={Footer({
         onClose,
         pending: send.isPending,
@@ -122,7 +122,7 @@ export function SendModal({ order, onClose }: { order: SupplierOrderDetail; onCl
         </FormField>
         <ErrorNote message={action.error} />
       </div>
-    </Modal>
+    </Dialog>
   );
 }
 
@@ -140,11 +140,10 @@ export function ConfirmModal({
   const [date, setDate] = useState(order.expected_date ?? "");
   const confirm = useConfirmSupplierOrder({ mutation: action.options(onClose) });
   return (
-    <Modal
+    <Dialog
       open
       title={t("order.confirm.title", { number: order.number })}
       onCancel={onClose}
-      destroyOnHidden
       footer={Footer({
         onClose,
         pending: confirm.isPending,
@@ -163,7 +162,7 @@ export function ConfirmModal({
         </FormField>
         <ErrorNote message={action.error} />
       </div>
-    </Modal>
+    </Dialog>
   );
 }
 
@@ -181,11 +180,10 @@ export function CancelModal({
   const [reason, setReason] = useState("");
   const cancel = useCancelSupplierOrder({ mutation: action.options(onClose) });
   return (
-    <Modal
+    <Dialog
       open
       title={t("order.cancel.title", { number: order.number })}
       onCancel={onClose}
-      destroyOnHidden
       footer={Footer({
         onClose,
         pending: cancel.isPending,
@@ -212,7 +210,7 @@ export function CancelModal({
         </FormField>
         <ErrorNote message={action.error} />
       </div>
-    </Modal>
+    </Dialog>
   );
 }
 

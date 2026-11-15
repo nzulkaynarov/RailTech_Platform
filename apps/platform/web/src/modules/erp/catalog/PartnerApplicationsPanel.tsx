@@ -1,4 +1,5 @@
-import { Button, Input, Modal, Radio, Select } from "antd";
+import { Button, Input, Radio, Select } from "antd";
+import { Dialog } from "../../../shared/ui/Dialog";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
@@ -563,12 +564,14 @@ function RejectModal({
   const fields = errorFields(reject.error);
 
   return (
-    <Modal
+    <Dialog
       open
       title={t("partnerApplications.rejectModal.title", { name: item.company_name })}
-      okText={t("partnerApplications.rejectModal.ok")}
-      okButtonProps={{ danger: true, loading: reject.isPending, disabled: !reason.trim() }}
-      cancelText={t("cancel")}
+      okLabel={t("partnerApplications.rejectModal.ok")}
+      danger={true}
+      loading={reject.isPending}
+      okDisabled={!reason.trim()}
+      cancelLabel={t("cancel")}
       onOk={() => {
         reject.mutate({
           id: item.id,
@@ -594,6 +597,6 @@ function RejectModal({
           showCount
         />
       </FormField>
-    </Modal>
+    </Dialog>
   );
 }

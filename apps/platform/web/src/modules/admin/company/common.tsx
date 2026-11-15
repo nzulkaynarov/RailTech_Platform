@@ -1,5 +1,6 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import { Alert, Button, Modal, Skeleton } from "antd";
+import { Dialog } from "../../../shared/ui/Dialog";
 import { type ReactNode, useContext, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -424,12 +425,10 @@ export function ConfirmModal({
 }) {
   const { t } = useTranslation("company");
   return (
-    <Modal
+    <Dialog
       open={open}
       title={title}
       onCancel={onCancel}
-      destroyOnHidden
-      maskClosable={false}
       footer={[
         <Button key="cancel" onClick={onCancel}>
           {t("cancel")}
@@ -445,7 +444,7 @@ export function ConfirmModal({
           <Alert type="error" showIcon role="alert" message={companyErrorText(t, error)} />
         ) : null}
       </div>
-    </Modal>
+    </Dialog>
   );
 }
 

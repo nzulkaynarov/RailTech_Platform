@@ -1,4 +1,5 @@
-import { App, Button, Input, Modal } from "antd";
+import { App, Button, Input } from "antd";
+import { Dialog } from "../../../shared/ui/Dialog";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -117,9 +118,8 @@ function DeliveryDialog({
   };
   const title = t(`card.delivery.dialog.${action}`);
   return (
-    <Modal
+    <Dialog
       open
-      width={480}
       title={title}
       onCancel={onClose}
       footer={[
@@ -189,6 +189,6 @@ function DeliveryDialog({
         ) : null}
         <ErrorNote message={failure} />
       </form>
-    </Modal>
+    </Dialog>
   );
 }

@@ -1,4 +1,5 @@
-import { App, Button, Form, Input, Modal } from "antd";
+import { App, Button, Form, Input } from "antd";
+import { Dialog } from "../../../shared/ui/Dialog";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -43,12 +44,11 @@ export function MatchModal({
   });
   const items = search.data?.items ?? [];
   return (
-    <Modal
+    <Dialog
       open
       title={t("match.title")}
       onCancel={onClose}
       footer={<Button onClick={onClose}>{t("match.cancel")}</Button>}
-      destroyOnHidden
     >
       <Form
         layout="vertical"
@@ -114,6 +114,6 @@ export function MatchModal({
           </li>
         ))}
       </ul>
-    </Modal>
+    </Dialog>
   );
 }
