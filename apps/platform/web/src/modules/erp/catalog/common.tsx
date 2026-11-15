@@ -183,8 +183,9 @@ export function FormModal({
 }
 
 /**
- * Форма на 4 и больше полей — в боковой панели (стандарт интерфейса §6, общий `FormSheet`): подвал с «Отмена» и главной
- * кнопкой закреплён, ошибка словами — над полями. Те же свойства, что у `FormModal`: замена обёртки без правки формы.
+ * Форма на 4 и больше полей — выезжающей панелью 480 px (стандарт интерфейса §6, общий `FormSheet` в режиме `drawer`:
+ * карточки каталога сами открыты выезжающим окном, форма встаёт поверх): подвал с «Отмена» и главной кнопкой закреплён,
+ * ошибка словами — над полями. Те же свойства, что у `FormModal`: замена обёртки без правки формы.
  */
 export function FormPanel({
   title,
@@ -214,6 +215,7 @@ export function FormPanel({
       submitLabel={okLabel}
       saving={loading}
       submitDisabled={disabled}
+      layer="drawer"
       {...(dirty === undefined ? {} : { dirty })}
       onSubmit={onOk}
       onCancel={onCancel}

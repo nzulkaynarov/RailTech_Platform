@@ -1,9 +1,7 @@
-import { App, Button } from "antd";
-import { useEffect, type ReactNode } from "react";
+import { App, Button, Drawer } from "antd";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { useSearchParams } from "react-router";
 
-import { useViewport } from "../../app/shell/useViewport";
 import { Sheet } from "./Sheet";
 import "./form-parts.css";
 
@@ -12,9 +10,13 @@ import "./form-parts.css";
  * колонку, подвал закреплён — «Отмена» и справа главная кнопка. Кнопка либо отправляет форму вызывающего (`formId`),
  * либо зовёт `onSubmit`. Изменённую форму (`dirty`) нельзя закрыть молча: «Отмена» спрашивает, выйти ли без сохранения.
  *
- * Панель открывается сама и закрывается вместе с формой, если до неё была закрыта; карточка объекта, уже открытая в
- * панели, на время формы скрыта и возвращается после. На телефоне — лист на весь экран (`Sheet`).
+ * Пока форма открыта, каркас держит панель открытой (адрес и выбор пользователя не меняются), а карточка объекта,
+ * уже открытая в панели, скрыта и возвращается после. На телефоне — лист на весь экран (`Sheet`). Форма из карточки,
+ * открытой выезжающим окном, — `layer="drawer"`: своя панель поверх карточки с теми же шапкой и подвалом.
  */
+/** Ширина выезжающей формы (стандарт интерфейса §6): 480 px, на узком экране — вся ширина. */
+const FORM_DRAWER_WIDTH = 480;
+
 export function FormSheet({
   title,
   formId,
@@ -24,6 +26,7 @@ export function FormSheet({
   dirty = false,
   readOnly = false,
   submitDisabled = false,
+  layer = "panel",
   onSubmit,
   onCancel,
   children,
@@ -40,46 +43,17 @@ export function FormSheet({
   /** Просмотр без права на изменение: вместо «Отмена» и главной кнопки — «Закрыть» */
   readOnly?: boolean;
   submitDisabled?: boolean;
+  /**
+   * Где открыть форму: `panel` — боковое окно каркаса (форма о строке списка); `drawer` — выезжающая панель 480 px
+   * поверх всего, для формы из карточки объекта, которая сама открыта выезжающим окном.
+   */
+  layer?: "panel" | "drawer";
   onSubmit?: () => void;
   onCancel: () => void;
   children: ReactNode;
 }) {
   const { t } = useTranslation("ui");
   const { modal } = App.useApp();
-  const { mobile } = useViewport();
-  const [, setParams] = useSearchParams();
-  // Панель под форму: открыть, а при закрытии формы вернуть адрес как был (закрытая панель снова закрыта).
-  useEffect(() => {
-    if (mobile) return;
-    let before: { panel: string | null; tab: string | null } | null = null;
-    setParams(
-      (prev) => {
-        before = { panel: prev.get("panel"), tab: prev.get("tab") };
-        if (before.panel === "open" && (before.tab ?? "card") === "card") return prev;
-        const next = new URLSearchParams(prev);
-        next.set("panel", "open");
-        next.set("tab", "card");
-        return next;
-      },
-      { replace: true },
-    );
-    return () => {
-      setParams(
-        (prev) => {
-          if (!before || (before.panel === "open" && (before.tab ?? "card") === "card"))
-            return prev;
-          const next = new URLSearchParams(prev);
-          if (before.panel === null) next.delete("panel");
-          else next.set("panel", before.panel);
-          if (before.tab === null) next.delete("tab");
-          else next.set("tab", before.tab);
-          return next;
-        },
-        { replace: true },
-      );
-    };
-  }, [mobile, setParams]);
-
   const close = () => {
     if (!dirty || readOnly) {
       onCancel();
@@ -95,6 +69,41 @@ export function FormSheet({
     });
   };
   const titleId = `${formId ?? "pf-fsheet"}-title`;
+  const buttons = readOnly ? (
+    <Button onClick={onCancel}>{t("formSheet.close")}</Button>
+  ) : (
+    <>
+      <Button onClick={close}>{t("formSheet.cancel")}</Button>
+      <Button
+        type="primary"
+        loading={saving}
+        disabled={submitDisabled}
+        {...(formId ? { htmlType: "submit" as const, form: formId } : {})}
+        {...(onSubmit ? { onClick: onSubmit } : {})}
+      >
+        {submitLabel}
+      </Button>
+    </>
+  );
+  if (layer === "drawer") {
+    return (
+      <Drawer
+        open
+        width={FORM_DRAWER_WIDTH}
+        title={title}
+        onClose={close}
+        destroyOnHidden
+        maskClosable={!dirty}
+        rootClassName="pf-fdrawer"
+        footer={<div className="pf-fdrawer-foot">{buttons}</div>}
+      >
+        <div className="pf-fsheet-stack">
+          {error}
+          {children}
+        </div>
+      </Drawer>
+    );
+  }
   return (
     <Sheet label={title} onClose={close} over>
       <section className="pf-fsheet" aria-labelledby={titleId}>
@@ -103,24 +112,7 @@ export function FormSheet({
         </h3>
         {error}
         <div className="pf-fsheet-body">{children}</div>
-        <div className="pf-fsheet-foot">
-          {readOnly ? (
-            <Button onClick={onCancel}>{t("formSheet.close")}</Button>
-          ) : (
-            <>
-              <Button onClick={close}>{t("formSheet.cancel")}</Button>
-              <Button
-                type="primary"
-                loading={saving}
-                disabled={submitDisabled}
-                {...(formId ? { htmlType: "submit" as const, form: formId } : {})}
-                {...(onSubmit ? { onClick: onSubmit } : {})}
-              >
-                {submitLabel}
-              </Button>
-            </>
-          )}
-        </div>
+        <div className="pf-fsheet-foot">{buttons}</div>
       </section>
     </Sheet>
   );

@@ -86,3 +86,18 @@
   border-top: 1px solid var(--rt-color-surface-border);
   background: var(--rt-color-surface-layout);
 }
+
+/* FormSheet layer="drawer": выезжающая форма поверх карточки — подвал справа, на узком экране во всю ширину. */
+.pf-fdrawer .ant-drawer-content-wrapper {
+  max-width: 100vw;
+}
+.pf-fdrawer-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.pf-fsheet-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
