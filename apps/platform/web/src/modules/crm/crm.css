@@ -6,27 +6,6 @@
   gap: 16px;
   min-width: 0;
 }
-.pf-crm-controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px 16px;
-}
-.pf-crm-filter {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-.pf-crm-filter > label {
-  color: var(--rt-color-text-secondary);
-  font-size: 14px;
-  white-space: nowrap;
-}
-.pf-crm-search {
-  flex: 1 1 260px;
-  max-width: 420px;
-}
 .pf-crm-table {
   width: 100%;
   border-collapse: collapse;
@@ -186,13 +165,4 @@
 }
 .pf-crm-actions[data-sheet="true"] > * {
   flex: 1 1 0;
-}
-@media (max-width: 767px) {
-  .pf-crm-search {
-    flex-basis: 100%;
-    max-width: none;
-  }
-  .pf-crm-filter {
-    flex-wrap: wrap;
-  }
 }
