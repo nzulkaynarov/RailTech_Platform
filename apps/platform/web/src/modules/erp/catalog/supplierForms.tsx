@@ -1,4 +1,5 @@
-import { Alert, Button, Checkbox, Input, Modal, Select } from "antd";
+import { Alert, Button, Checkbox, Input, Select } from "antd";
+import { FormSheet } from "../../../shared/ui/FormSheet";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
@@ -476,12 +477,11 @@ export function OfferHistoryModal({
   const { date } = useFormat();
   const query = useGetSupplierOfferHistory(supplierId, offer.id);
   return (
-    <Modal
-      open
+    <FormSheet
+      layer="drawer"
+      readOnly
       title={t("history.title", { name: offer.product.name })}
       onCancel={onClose}
-      footer={null}
-      destroyOnHidden
     >
       <QueryState query={query} labels={queryLabels(t)} level={3} compact>
         {(data) =>
@@ -527,6 +527,6 @@ export function OfferHistoryModal({
           )
         }
       </QueryState>
-    </Modal>
+    </FormSheet>
   );
 }

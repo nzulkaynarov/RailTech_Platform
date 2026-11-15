@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Alert, App, Button, Form, Input, InputNumber, Modal, Radio, Select } from "antd";
+import { Alert, App, Button, Form, Input, InputNumber, Radio, Select } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -19,6 +19,7 @@ import {
   useListResolutionTemplates,
   useUpdateResolutionTemplate,
 } from "../../../shared/api/generated/platform-bff";
+import { FormSheet } from "../../../shared/ui/FormSheet";
 import { useResolutionKindName } from "../../eds/dictionaries";
 import { RESOLUTION_KINDS, needsExecutor } from "../../eds/inbox/officeModel";
 import { ConfirmModal, ListTable, TabHeader } from "../company/common";
@@ -254,6 +255,7 @@ function TemplateModal({
   const formId = useId();
   const kindName = useResolutionKindName();
   const [form] = Form.useForm<Values>();
+  const [dirty, setDirty] = useState(false);
   // До первой отрисовки формы `useWatch` даёт `undefined` (тип antd этого не отражает).
   const watched = Form.useWatch("kind", form) as LetterResolutionKind | undefined;
   const kind = watched ?? template?.kind ?? "execute";
@@ -285,41 +287,27 @@ function TemplateModal({
   ];
 
   return (
-    <Modal
-      open
+    <FormSheet
       title={template ? t("settings.templates.editTitle") : t("settings.templates.addTitle")}
+      formId={formId}
+      submitLabel={t("settings.dict.save")}
+      saving={mutation.isPending}
+      dirty={dirty}
       onCancel={onClose}
-      destroyOnHidden
-      maskClosable={false}
-      footer={[
-        <Button key="cancel" onClick={onClose}>
-          {t("settings.dict.cancel")}
-        </Button>,
-        <Button
-          key="submit"
-          type="primary"
-          htmlType="submit"
-          form={formId}
-          loading={mutation.isPending}
-        >
-          {t("settings.dict.save")}
-        </Button>,
-      ]}
+      error={
+        mutation.isError ? (
+          <Alert type="error" showIcon role="alert" message={errorText(t, mutation.error)} />
+        ) : undefined
+      }
     >
-      {mutation.isError ? (
-        <Alert
-          type="error"
-          showIcon
-          role="alert"
-          message={errorText(t, mutation.error)}
-          style={{ marginBottom: 16 }}
-        />
-      ) : null}
       <Form<Values>
         id={formId}
         form={form}
         layout="vertical"
         initialValues={initial}
+        onValuesChange={() => {
+          setDirty(true);
+        }}
         onFinish={(values) => {
           const data = toBody(values, scope);
           if (template) update.mutate({ id: template.id, data });
@@ -367,6 +355,6 @@ function TemplateModal({
           <Select mode="multiple" optionFilterProp="label" options={people} />
         </Form.Item>
       </Form>
-    </Modal>
+    </FormSheet>
   );
 }

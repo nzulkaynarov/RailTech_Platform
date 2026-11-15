@@ -1,4 +1,4 @@
-import { Alert, App, Button, Checkbox, Form, Input, Modal, Select, Spin, Upload } from "antd";
+import { Alert, App, Button, Checkbox, Form, Input, Select, Spin, Upload } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -10,6 +10,7 @@ import {
   useParseCalcFile,
   useParseCalcText,
 } from "../../../shared/api/generated/platform-bff";
+import { FormSheet } from "../../../shared/ui/FormSheet";
 import { calcRef, useApplySheet, useErrorText } from "./api";
 import { pastedRows } from "./pasteRows";
 
@@ -92,42 +93,31 @@ export function ParseModal({ sheet, onClose }: { sheet: CalcSheet; onClose: () =
   const failedReason = data?.status === "failed" ? (data.reason ?? "other") : null;
 
   return (
-    <Modal
-      open
-      width={720}
+    <FormSheet
+      layer="drawer"
+      wide
       title={t("parse.title")}
+      submitLabel={t("parse.addSelected", { count: chosen.length })}
+      saving={add.isPending}
+      // Пока строк нет, главная кнопка панели — загрузка файла; «Добавить выбранные» появляется со строками.
+      readOnly={lines.length === 0}
+      submitDisabled={chosen.length === 0}
+      onSubmit={() => {
+        add.mutate({
+          number: calcRef(sheet.number),
+          data: {
+            lines: chosen.map(({ line, index }) => ({
+              name: line.name,
+              quantity: line.quantity,
+              kind: kindOf(index),
+              ...(line.unit ? { unit: line.unit } : {}),
+              ...(line.article ? { article: line.article } : {}),
+              ...(line.note ? { note: line.note } : {}),
+            })),
+          },
+        });
+      }}
       onCancel={onClose}
-      destroyOnHidden
-      footer={[
-        <Button key="close" onClick={onClose}>
-          {t("parse.cancel")}
-        </Button>,
-        lines.length ? (
-          <Button
-            key="add"
-            type="primary"
-            disabled={chosen.length === 0}
-            loading={add.isPending}
-            onClick={() => {
-              add.mutate({
-                number: calcRef(sheet.number),
-                data: {
-                  lines: chosen.map(({ line, index }) => ({
-                    name: line.name,
-                    quantity: line.quantity,
-                    kind: kindOf(index),
-                    ...(line.unit ? { unit: line.unit } : {}),
-                    ...(line.article ? { article: line.article } : {}),
-                    ...(line.note ? { note: line.note } : {}),
-                  })),
-                },
-              });
-            }}
-          >
-            {t("parse.addSelected", { count: chosen.length })}
-          </Button>
-        ) : null,
-      ]}
     >
       <p>{t("parse.intro")}</p>
       {/* Форма начинается с загрузки (правило владельца): файл заявки сразу уходит в разбор. */}
@@ -142,7 +132,7 @@ export function ParseModal({ sheet, onClose }: { sheet: CalcSheet; onClose: () =
             return false;
           }}
         >
-          <Button type="primary" loading={startFile.isPending}>
+          <Button type={lines.length === 0 ? "primary" : "default"} loading={startFile.isPending}>
             {t("parse.file")}
           </Button>
         </Upload>
@@ -240,6 +230,6 @@ export function ParseModal({ sheet, onClose }: { sheet: CalcSheet; onClose: () =
           </ul>
         </fieldset>
       ) : null}
-    </Modal>
+    </FormSheet>
   );
 }

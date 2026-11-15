@@ -1,4 +1,5 @@
 import { Alert, App, Button, Dropdown, Input, Modal, Radio, Select } from "antd";
+import { FormSheet } from "../../../shared/ui/FormSheet";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
@@ -342,13 +343,15 @@ function PartnerDialog({
     ["email", 254],
   ] as const;
   return (
-    <Modal
-      open
-      width={520}
+    <FormSheet
+      layer="drawer"
       title={t("outcome.hand.partnerTitle", { number: letter.number })}
+      submitLabel={t("outcome.hand.partnerSubmit")}
+      saving={pending}
+      submitDisabled={!ready}
+      onSubmit={() => void run()}
       onCancel={onClose}
-      footer={null}
-      destroyOnHidden
+      error={error ? <Alert type="error" showIcon role="alert" message={error} /> : undefined}
     >
       <div className="pf-mail-actions">
         {fields.map(([key, max]) => (
@@ -374,15 +377,8 @@ function PartnerDialog({
             setValues((prev) => ({ ...prev, offer: event.target.value }));
           }}
         />
-        {error ? <Alert type="error" showIcon role="alert" message={error} /> : null}
-        <div className="pf-res-actions">
-          <Button onClick={onClose}>{t("outcome.cancel")}</Button>
-          <Button type="primary" loading={pending} disabled={!ready} onClick={() => void run()}>
-            {t("outcome.hand.partnerSubmit")}
-          </Button>
-        </div>
       </div>
-    </Modal>
+    </FormSheet>
   );
 }
 

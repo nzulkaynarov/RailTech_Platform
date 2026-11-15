@@ -1,4 +1,5 @@
 import { Alert, App, Button, Input, Modal, Spin } from "antd";
+import { FormSheet } from "../../../shared/ui/FormSheet";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -135,30 +136,20 @@ export function LetterAssist({
       ) : null}
 
       {open === "translate" ? (
-        <Modal
-          open
-          width={880}
+        <FormSheet
+          layer="drawer"
+          wide
           title={t("form.assist.translateTitle")}
+          submitLabel={t("form.assist.insert")}
+          saving={false}
+          submitDisabled={!result}
+          onSubmit={() => {
+            if (!result) return;
+            onReplace(result.body.doc as unknown as BodyNode, "en");
+            void message.success(t("form.assist.inserted"));
+            close();
+          }}
           onCancel={close}
-          destroyOnHidden
-          footer={[
-            <Button key="cancel" onClick={close}>
-              {t("form.assist.cancel")}
-            </Button>,
-            <Button
-              key="insert"
-              type="primary"
-              disabled={!result}
-              onClick={() => {
-                if (!result) return;
-                onReplace(result.body.doc as unknown as BodyNode, "en");
-                void message.success(t("form.assist.inserted"));
-                close();
-              }}
-            >
-              {t("form.assist.insert")}
-            </Button>,
-          ]}
         >
           {pending ? (
             <div role="status">
@@ -178,7 +169,7 @@ export function LetterAssist({
               </section>
             </div>
           ) : null}
-        </Modal>
+        </FormSheet>
       ) : null}
     </div>
   );
