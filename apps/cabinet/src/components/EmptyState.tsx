@@ -14,8 +14,8 @@ export function EmptyState({
   children?: ReactNode;
 }) {
   return (
-    <section className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-muted/60 px-6 py-12 text-center">
-      <div className="flex size-12 items-center justify-center rounded-2xl bg-accent text-primary">
+    <section className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border bg-muted/60 px-6 py-12 text-center">
+      <div className="flex size-12 items-center justify-center rounded-lg bg-accent text-primary">
         <Icon className="size-6 text-primary" aria-hidden="true" />
       </div>
       <h2 className="text-base font-semibold text-foreground">{title}</h2>

@@ -99,7 +99,7 @@ export function NotificationSettingsCard() {
         ) : !localGroups ? null : (
           <>
             {!data.telegram_connected && (
-              <div className="flex items-start gap-2.5 p-3 rounded-xl bg-muted/60 border border-border/60 text-xs text-muted-foreground">
+              <div className="flex items-start gap-2.5 p-3 rounded-lg bg-muted/60 border border-border/60 text-xs text-muted-foreground">
                 <AlertCircle className="size-4 text-muted-foreground shrink-0 mt-0.5" aria-hidden="true" />
                 <span>
                   {t(
@@ -110,7 +110,7 @@ export function NotificationSettingsCard() {
               </div>
             )}
 
-            <div className="rounded-xl border border-border/60 overflow-hidden">
+            <div className="rounded-lg border border-border/60 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm border-collapse">
                   <thead>

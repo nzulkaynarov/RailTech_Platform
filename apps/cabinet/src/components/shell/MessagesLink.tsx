@@ -15,7 +15,8 @@ export function UnreadBadge({ count, className }: { count: number; className?: s
     <span
       aria-hidden="true"
       className={cn(
-        'inline-flex min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-xs leading-5 font-semibold text-destructive-foreground tabular-nums',
+        // Стандарт интерфейса §2: счётчик — пастельный, сплошной красный остаётся просрочке и ошибке
+        'inline-flex min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-xs leading-5 font-semibold text-primary ring-1 ring-primary/20 ring-inset tabular-nums',
         className,
       )}
     >
@@ -44,7 +45,7 @@ export function MessagesLink() {
     <>
       <Link
         to="/messages"
-        className="relative rounded-xl p-2 text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-primary focus-visible:ring-2 focus-visible:ring-ring"
+        className="relative rounded-lg p-2 text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-primary focus-visible:ring-2 focus-visible:ring-ring"
         aria-describedby={text ? noteId : undefined}
         title={text ?? t('nav.messages')}
       >

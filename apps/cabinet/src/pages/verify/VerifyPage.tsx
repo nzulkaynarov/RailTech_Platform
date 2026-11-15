@@ -148,7 +148,7 @@ export function VerifyPage() {
               {query.data.status === 'valid' ? (
                 <div
                   data-testid="status-valid"
-                  className="flex items-start gap-3.5 rounded-xl border border-success/30 bg-success/10 p-4 text-foreground"
+                  className="flex items-start gap-3.5 rounded-lg border border-success/30 bg-success/10 p-4 text-foreground"
                 >
                   <ShieldCheck className="size-6 shrink-0 text-success" />
                   <div>
@@ -165,7 +165,7 @@ export function VerifyPage() {
               ) : (
                 <div
                   data-testid="status-revoked"
-                  className="flex items-start gap-3.5 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-destructive-foreground dark:border-destructive/20"
+                  className="flex items-start gap-3.5 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-destructive-foreground dark:border-destructive/20"
                 >
                   <AlertTriangle className="size-6 shrink-0 text-destructive" />
                   <div>

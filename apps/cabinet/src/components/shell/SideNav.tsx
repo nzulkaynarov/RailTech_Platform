@@ -167,7 +167,7 @@ function NavList({ items, collapsed, className }: { items: NavItem[]; collapsed:
               title={collapsed ? label : undefined}
               className={({ isActive }) =>
                 cn(
-                  'group relative flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm text-foreground outline-none transition-colors hover:bg-accent/60 hover:text-primary focus-visible:ring-2 focus-visible:ring-ring',
+                  'group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-foreground outline-none transition-colors hover:bg-accent/60 hover:text-primary focus-visible:ring-2 focus-visible:ring-ring',
                   isActive && 'bg-accent font-semibold text-primary',
                   collapsed && 'justify-center px-0',
                 )
