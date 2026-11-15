@@ -47,7 +47,7 @@ describe("«Все шаблоны» (план 2.7)", () => {
 
     fireEvent.click(within(table).getByRole("link", { name: "Договор поставки (наш)" }));
     expect(
-      await screen.findByRole("dialog", { name: "Изменить шаблон документа" }),
+      await screen.findByRole("region", { name: "Изменить шаблон документа" }),
     ).toBeInTheDocument();
     await waitFor(() => {
       expect(new URLSearchParams(router.state.location.search).get("template")).toBeNull();

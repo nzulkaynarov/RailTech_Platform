@@ -2,6 +2,7 @@ import {
   Calendar,
   Landmark,
   ArrowDown,
+  ArrowLeft,
   ArrowUp,
   Ban,
   Bold,
@@ -60,6 +61,7 @@ function make(Shape: LucideIcon, filled = false): IconComponent {
   };
 }
 
+export const ArrowLeftIcon = make(ArrowLeft);
 export const ArrowUpIcon = make(ArrowUp);
 export const ArrowDownIcon = make(ArrowDown);
 export const PinIcon = make(Pin);

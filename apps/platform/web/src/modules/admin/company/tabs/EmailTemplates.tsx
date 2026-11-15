@@ -13,11 +13,11 @@ import {
   useUpdateEmailTemplate,
 } from "../../../../shared/api/generated/platform-bff";
 import { StatusTag } from "../../../../shared/ui/StatusTag";
-import { ConfirmModal, FormModal, ListTable, PreviewFrame, QueryGate } from "../common";
+import { ConfirmModal, EditorPage, ListTable, PreviewFrame, QueryGate } from "../common";
 import { useReadOnly } from "../useReadOnly";
 import { changedFields, isEmptyObject } from "../diff";
 import { errorFields } from "../errors";
-import { useRequestedTemplate } from "../../settings/useRequestedTemplate";
+import { useEditParam } from "../../settings/useEditParam";
 
 interface Values {
   key: string;
@@ -37,9 +37,8 @@ export function EmailTemplates() {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
   const query = useListEmailTemplates();
-  const [editing, setEditing] = useState<EmailTemplate | "new" | null>(null);
   const [removing, setRemoving] = useState<EmailTemplate | null>(null);
-  useRequestedTemplate(query.data?.items, setEditing);
+  const [editing, setEditing] = useEditParam(query.data?.items);
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: getListEmailTemplatesQueryKey() });
   const remove = useDeleteEmailTemplate({
@@ -68,91 +67,97 @@ export function EmailTemplates() {
     <QueryGate query={query}>
       {({ items }) => (
         <>
-          {items.length > 0 ? <div>{add}</div> : null}
-          <ListTable<EmailTemplate>
-            tableId="admin.company.emailTemplates"
-            label={t("templates.parts.emails")}
-            data={items}
-            rowKey={(row) => row.id}
-            empty={{
-              title: t("templates.emails.empty.title"),
-              text: t("templates.emails.empty.text"),
-              action: add,
-            }}
-            columns={[
-              {
-                id: "key",
-                header: t("templates.emails.key"),
-                width: null,
-                cell: (row) => <b className="pf-co-mono">{row.key}</b>,
-              },
-              {
-                id: "language",
-                header: t("templates.emails.language"),
-                width: null,
-                cell: (row) => row.language,
-              },
-              {
-                id: "subject",
-                header: t("templates.emails.subject"),
-                width: null,
-                cell: (row) => row.subject,
-              },
-              {
-                id: "is_active",
-                header: t("status"),
-                width: null,
-                cell: (row) => (
-                  <StatusTag kind="activity" status={row.is_active ? "active" : "inactive"}>
-                    {t(row.is_active ? "templates.emails.replaces" : "templates.emails.fileUsed")}
-                  </StatusTag>
-                ),
-              },
-              {
-                id: "actions",
-                header: t("actions"),
-                width: 160,
-                cell: (row) =>
-                  readOnly ? (
-                    <Button
-                      type="link"
-                      size="small"
-                      aria-label={t("templates.emails.openNamed", { name: row.key })}
-                      onClick={() => {
-                        setEditing(row);
-                      }}
-                    >
-                      {t("templates.emails.open")}
-                    </Button>
-                  ) : (
-                    <span className="pf-co-actions">
-                      <Button
-                        type="link"
-                        size="small"
-                        aria-label={t("editNamed", { name: row.key })}
-                        onClick={() => {
-                          setEditing(row);
-                        }}
-                      >
-                        {t("edit")}
-                      </Button>
-                      <Button
-                        type="link"
-                        size="small"
-                        danger
-                        aria-label={t("deleteNamed", { name: row.key })}
-                        onClick={() => {
-                          remove.reset();
-                          setRemoving(row);
-                        }}
-                      >
-                        {t("delete")}
-                      </Button>
-                    </span>
-                  ),
-              },
-            ]}
-          />
+          {editing === null ? (
+            <>
+              {items.length > 0 ? <div>{add}</div> : null}
+              <ListTable<EmailTemplate>
+                tableId="admin.company.emailTemplates"
+                label={t("templates.parts.emails")}
+                data={items}
+                rowKey={(row) => row.id}
+                empty={{
+                  title: t("templates.emails.empty.title"),
+                  text: t("templates.emails.empty.text"),
+                  action: add,
+                }}
+                columns={[
+                  {
+                    id: "key",
+                    header: t("templates.emails.key"),
+                    width: null,
+                    cell: (row) => <b className="pf-co-mono">{row.key}</b>,
+                  },
+                  {
+                    id: "language",
+                    header: t("templates.emails.language"),
+                    width: null,
+                    cell: (row) => row.language,
+                  },
+                  {
+                    id: "subject",
+                    header: t("templates.emails.subject"),
+                    width: null,
+                    cell: (row) => row.subject,
+                  },
+                  {
+                    id: "is_active",
+                    header: t("status"),
+                    width: null,
+                    cell: (row) => (
+                      <StatusTag kind="activity" status={row.is_active ? "active" : "inactive"}>
+                        {t(
+                          row.is_active ? "templates.emails.replaces" : "templates.emails.fileUsed",
+                        )}
+                      </StatusTag>
+                    ),
+                  },
+                  {
+                    id: "actions",
+                    header: t("actions"),
+                    width: 160,
+                    cell: (row) =>
+                      readOnly ? (
+                        <Button
+                          type="link"
+                          size="small"
+                          aria-label={t("templates.emails.openNamed", { name: row.key })}
+                          onClick={() => {
+                            setEditing(row);
+                          }}
+                        >
+                          {t("templates.emails.open")}
+                        </Button>
+                      ) : (
+                        <span className="pf-co-actions">
+                          <Button
+                            type="link"
+                            size="small"
+                            aria-label={t("editNamed", { name: row.key })}
+                            onClick={() => {
+                              setEditing(row);
+                            }}
+                          >
+                            {t("edit")}
+                          </Button>
+                          <Button
+                            type="link"
+                            size="small"
+                            danger
+                            aria-label={t("deleteNamed", { name: row.key })}
+                            onClick={() => {
+                              remove.reset();
+                              setRemoving(row);
+                            }}
+                          >
+                            {t("delete")}
+                          </Button>
+                        </span>
+                      ),
+                  },
+                ]}
+              />
+            </>
+          ) : null}
           {editing !== null ? (
             <EmailEditor
               row={editing === "new" ? null : editing}
@@ -250,9 +255,7 @@ function EmailEditor({
   };
 
   return (
-    <FormModal
-      open
-      width={1040}
+    <EditorPage
       title={
         readOnly
           ? t("templates.emails.viewTitle")
@@ -368,7 +371,7 @@ function EmailEditor({
           )}
         </div>
       </div>
-    </FormModal>
+    </EditorPage>
   );
 }
 

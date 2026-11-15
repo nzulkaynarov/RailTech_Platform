@@ -1,6 +1,5 @@
 import type { UseQueryResult } from "@tanstack/react-query";
-import { Alert, Button, Modal, Skeleton } from "antd";
-import { Dialog } from "../../../shared/ui/Dialog";
+import { Alert, Button, Skeleton } from "antd";
 import { type ReactNode, useContext, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -8,6 +7,8 @@ import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { ApiError } from "../../../shared/api/errors";
 import { ContextualSaveBar } from "../../../shared/ui/ContextualSaveBar";
+import { Dialog } from "../../../shared/ui/Dialog";
+import { ArrowLeftIcon } from "../../../shared/ui/lucide";
 import { type DataColumn, DataTable } from "../../../shared/ui/DataTable/DataTable";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { FilePicker } from "../../../shared/ui/FileField";
@@ -331,8 +332,8 @@ export function FormSheet({
 }
 
 /**
- * Окно с формой: «Отмена» и главная кнопка окна, связанная с формой атрибутом `form` (кнопка вне `<form>`). Заголовок —
- * имя действия; блок «Что произойдёт» (если есть) лежит под полями, внутри формы.
+ * Короткая форма по центру (1–3 поля, стандарт интерфейса §6): общий `Dialog` 448, «Отмена» и главная кнопка, связанная
+ * с формой атрибутом `form` (кнопка вне `<form>`). Форма длиннее — `FormSheet`, редактор с предпросмотром — `EditorPage`.
  */
 export function FormModal({
   open,
@@ -342,8 +343,6 @@ export function FormModal({
   saving,
   error,
   onCancel,
-  width = 560,
-  readOnly = false,
   children,
 }: {
   open: boolean;
@@ -353,51 +352,91 @@ export function FormModal({
   saving: boolean;
   error?: unknown;
   onCancel: () => void;
-  width?: number;
-  /** Просмотр без права на изменение: вместо «Отмена» и главной кнопки — «Закрыть» */
-  readOnly?: boolean;
   children: ReactNode;
 }) {
   const { t } = useTranslation("company");
   return (
-    <Modal
+    <Dialog
       open={open}
       title={title}
-      width={width}
       onCancel={onCancel}
-      destroyOnHidden
-      maskClosable={false}
       footer={
-        readOnly
-          ? [
-              <Button key="close" onClick={onCancel}>
-                {t("close")}
-              </Button>,
-            ]
-          : [
-              <Button key="cancel" onClick={onCancel}>
-                {t("cancel")}
-              </Button>,
-              <Button key="submit" type="primary" htmlType="submit" form={formId} loading={saving}>
-                {submitLabel}
-              </Button>,
-            ]
+        <>
+          <Button onClick={onCancel}>{t("cancel")}</Button>
+          <Button type="primary" htmlType="submit" form={formId} loading={saving}>
+            {submitLabel}
+          </Button>
+        </>
       }
     >
-      {error ? (
-        <Alert
-          type="error"
-          showIcon
-          role="alert"
-          message={companyErrorText(t, error)}
-          description={
-            missingBlocks(error).length > 0 ? <MissingBlocks error={error} /> : undefined
-          }
-          style={{ marginBottom: 16 }}
-        />
-      ) : null}
+      {error ? <CompanyError error={error} /> : null}
       {children}
-    </Modal>
+    </Dialog>
+  );
+}
+
+function CompanyError({ error }: { error: unknown }) {
+  const { t } = useTranslation("company");
+  return (
+    <Alert
+      type="error"
+      showIcon
+      role="alert"
+      message={companyErrorText(t, error)}
+      description={missingBlocks(error).length > 0 ? <MissingBlocks error={error} /> : undefined}
+      style={{ marginBottom: 16 }}
+    />
+  );
+}
+
+/**
+ * Редактор шаблона страницей на месте списка (стандарт интерфейса §6: больше 15 полей и предпросмотр): сверху «К списку»
+ * и название, слева поля, справа предпросмотр (две колонки от 900 px), подвал с «Отмена» и главной кнопкой закреплён у
+ * низа рабочей области. Открытый шаблон — в адресе (`useEditParam`), «Назад» браузера возвращает к списку.
+ */
+export function EditorPage({
+  title,
+  formId,
+  submitLabel,
+  saving,
+  error,
+  readOnly = false,
+  onCancel,
+  children,
+}: {
+  title: string;
+  formId: string;
+  submitLabel: string;
+  saving: boolean;
+  error?: unknown;
+  /** Просмотр без права на изменение: вместо «Отмена» и главной кнопки — «К списку» */
+  readOnly?: boolean;
+  onCancel: () => void;
+  children: ReactNode;
+}) {
+  const { t } = useTranslation("company");
+  const titleId = `${formId}-title`;
+  return (
+    <section className="pf-co-editor" aria-labelledby={titleId}>
+      <div className="pf-co-editor-head">
+        <Button type="text" icon={<ArrowLeftIcon />} onClick={onCancel}>
+          {t("backToList")}
+        </Button>
+        <h2 className="pf-co-editor-title" id={titleId}>
+          {title}
+        </h2>
+      </div>
+      {error ? <CompanyError error={error} /> : null}
+      {children}
+      {readOnly ? null : (
+        <div className="pf-co-editor-foot">
+          <Button onClick={onCancel}>{t("cancel")}</Button>
+          <Button type="primary" htmlType="submit" form={formId} loading={saving}>
+            {submitLabel}
+          </Button>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -428,15 +467,12 @@ export function ConfirmModal({
     <Dialog
       open={open}
       title={title}
+      okLabel={okLabel}
+      danger={danger}
+      loading={loading}
+      cancelLabel={t("cancel")}
+      onOk={onOk}
       onCancel={onCancel}
-      footer={[
-        <Button key="cancel" onClick={onCancel}>
-          {t("cancel")}
-        </Button>,
-        <Button key="ok" type="primary" danger={danger} loading={loading} onClick={onOk}>
-          {okLabel}
-        </Button>,
-      ]}
     >
       <div className="pf-co-save" style={{ maxWidth: "none" }}>
         {children}

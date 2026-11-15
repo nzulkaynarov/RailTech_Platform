@@ -267,11 +267,11 @@ describe("Admin · Компания: доступ и каркас", () => {
     // Раздел открывается на «Все шаблоны» (план 2.7): шаблоны документов — своя вкладка
     fireEvent.click(await screen.findByRole("tab", { name: "Документы" }));
     fireEvent.click(await screen.findByRole("button", { name: "Открыть: Договор поставки (наш)" }));
-    const viewer = await screen.findByRole("dialog", { name: "Шаблон документа" });
+    const viewer = await screen.findByRole("region", { name: "Шаблон документа" });
     expect(within(viewer).getByLabelText(/^Текст шаблона/)).toBeDisabled();
     expect(within(viewer).queryByRole("button", { name: "Сохранить" })).toBeNull();
     expect(await within(viewer).findByTitle("Образец документа по шаблону")).toBeInTheDocument();
-    fireEvent.click(within(viewer).getByRole("button", { name: "Закрыть" }));
+    fireEvent.click(within(viewer).getByRole("button", { name: "К списку" }));
     expect(screen.getByRole("button", { name: "Создать шаблон" })).toBeDisabled();
     expect(screen.queryByRole("button", { name: /^Изменить:/ })).toBeNull();
 
@@ -609,11 +609,11 @@ describe("Шаблоны документов и писем", () => {
     ).not.toHaveClass("ant-btn-primary");
 
     fireEvent.click(view);
-    const dialog = await screen.findByRole("dialog", { name: "Образец платформы" });
+    const dialog = await screen.findByRole("region", { name: "Образец платформы" });
     expect(within(dialog).getByText(/Образец только для просмотра/)).toBeInTheDocument();
     expect(within(dialog).getByLabelText(/^Текст шаблона/)).toBeDisabled();
     expect(within(dialog).queryByRole("button", { name: "Сохранить" })).not.toBeInTheDocument();
-    expect(within(dialog).getByRole("button", { name: "Закрыть" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "К списку" })).toBeInTheDocument();
     await waitFor(() => {
       expect(previews.at(-1)?.kind).toBe("contract"); // каркас своего вида
     });
@@ -636,7 +636,7 @@ describe("Шаблоны документов и писем", () => {
     });
     await openTab("templates");
     fireEvent.click(await screen.findByRole("button", { name: "Создать шаблон" }));
-    const dialog = await screen.findByRole("dialog", { name: "Новый шаблон документа" });
+    const dialog = await screen.findByRole("region", { name: "Новый шаблон документа" });
     expect(within(dialog).getByText(/\{\{counterparty\.name\}\}/)).toBeInTheDocument();
     expect(within(dialog).queryByText(/buyer_name/)).not.toBeInTheDocument();
 
@@ -657,7 +657,7 @@ describe("Шаблоны документов и писем", () => {
   it("редактор документа: подстановки, образец в рамке и предупреждение об неизвестной подстановке", async () => {
     await openTab("templates");
     fireEvent.click(await screen.findByRole("button", { name: "Изменить: Акт приёмки" }));
-    const dialog = await screen.findByRole("dialog", { name: "Изменить шаблон документа" });
+    const dialog = await screen.findByRole("region", { name: "Изменить шаблон документа" });
     const frame = await within(dialog).findByTitle("Образец документа по шаблону");
     await waitFor(() => {
       expect(frame.getAttribute("srcdoc")).toContain("[seller_name]");
@@ -679,7 +679,7 @@ describe("Шаблоны документов и писем", () => {
   it("неизвестная подстановка отмечена в списке «Подстановки» (C2A-G-5)", async () => {
     await openTab("templates");
     fireEvent.click(await screen.findByRole("button", { name: "Изменить: Акт приёмки" }));
-    const dialog = await screen.findByRole("dialog", { name: "Изменить шаблон документа" });
+    const dialog = await screen.findByRole("region", { name: "Изменить шаблон документа" });
 
     fireEvent.change(within(dialog).getByLabelText(/^Текст шаблона/), {
       target: { value: "<p>{{buyer_name}} {{mystery}}</p>" },
@@ -700,7 +700,7 @@ describe("Шаблоны документов и писем", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: "Изменить: Договор поставки (наш)" }),
     );
-    const dialog = await screen.findByRole("dialog", { name: "Изменить шаблон документа" });
+    const dialog = await screen.findByRole("region", { name: "Изменить шаблон документа" });
 
     fireEvent.change(within(dialog).getByLabelText(/^Текст шаблона/), {
       target: { value: "<p>{{buyer_name}}</p>" },
@@ -739,7 +739,7 @@ describe("Шаблоны документов и писем", () => {
     fireEvent.click(await screen.findByRole("tab", { name: "Письма" }));
     expect(await screen.findByText("invoice_issued")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Изменить: quote_sent" }));
-    const dialog = await screen.findByRole("dialog", { name: "Изменить шаблон письма" });
+    const dialog = await screen.findByRole("region", { name: "Изменить шаблон письма" });
     fireEvent.click(within(dialog).getByLabelText("Шаблон действует"));
     expect(
       await within(dialog).findByText(/сразу заменит файловый для всех получателей/),
