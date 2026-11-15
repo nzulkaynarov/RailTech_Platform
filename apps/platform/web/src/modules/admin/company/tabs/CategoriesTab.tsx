@@ -26,7 +26,7 @@ import { useAuth } from "../../../../app/auth/useAuth";
 import { StatusTag } from "../../../../shared/ui/StatusTag";
 import { DictionaryFile } from "../../docflow/DictionaryFile";
 import { useFormat } from "../../../../shared/lib/useFormat";
-import { ConfirmModal, FormModal, ListTable, QueryGate, TabHeader, ReadOnlyFence } from "../common";
+import { ConfirmModal, ListTable, QueryGate, TabHeader, ReadOnlyFence, FormSheet } from "../common";
 import { errorFields } from "../errors";
 
 type Part = "categories" | "requests";
@@ -375,8 +375,7 @@ function CategoryModal({
   };
 
   return (
-    <FormModal
-      open
+    <FormSheet
       title={node ? t("categories.editTitle") : t("categories.addTitle")}
       formId={formId}
       submitLabel={t("save")}
@@ -431,7 +430,7 @@ function CategoryModal({
           <Checkbox>{t("categories.doc")}</Checkbox>
         </Form.Item>
       </Form>
-    </FormModal>
+    </FormSheet>
   );
 }
 

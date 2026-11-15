@@ -18,7 +18,7 @@ import {
   useUpdateChargeTemplate,
 } from "../../../../shared/api/generated/platform-bff";
 import { StatusTag } from "../../../../shared/ui/StatusTag";
-import { ConfirmModal, FormModal, ListTable, QueryGate, TabHeader, ReadOnlyFence } from "../common";
+import { ConfirmModal, ListTable, QueryGate, TabHeader, ReadOnlyFence, FormSheet } from "../common";
 import { changedFields, codeLabel } from "../diff";
 import { errorFields } from "../errors";
 
@@ -263,8 +263,7 @@ function ChargeModal({
   };
 
   return (
-    <FormModal
-      open
+    <FormSheet
       title={row ? t("charges.editTitle") : t("charges.addTitle")}
       formId={formId}
       submitLabel={t("save")}
@@ -330,6 +329,6 @@ function ChargeModal({
           <Checkbox>{t("charges.activeLabel")}</Checkbox>
         </Form.Item>
       </Form>
-    </FormModal>
+    </FormSheet>
   );
 }

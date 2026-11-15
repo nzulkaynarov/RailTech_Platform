@@ -549,7 +549,7 @@ describe("Статьи расхода", () => {
     expect(await screen.findByText("Страхование груза")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Изменить: Фрахт · FCA" }));
-    const dialog = await screen.findByRole("dialog", { name: "Изменить статью расхода" });
+    const dialog = await screen.findByRole("region", { name: "Изменить статью расхода" });
     fireEvent.change(within(dialog).getByLabelText("Сумма"), { target: { value: "1800" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Сохранить" }));
     expect(await screen.findByText("Сохранено")).toBeInTheDocument();
@@ -835,7 +835,7 @@ describe("Категории и запросы", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Подкатегория: добавить в «Электрооборудование»" }),
     );
-    const dialog = await screen.findByRole("dialog", { name: "Новая категория" });
+    const dialog = await screen.findByRole("region", { name: "Новая категория" });
     fireEvent.change(within(dialog).getByLabelText("Название"), { target: { value: "Кабели" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Сохранить" }));
     expect(await screen.findByText("Кабели")).toBeInTheDocument();
