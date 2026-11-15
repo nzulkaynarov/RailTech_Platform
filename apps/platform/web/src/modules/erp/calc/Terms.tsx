@@ -10,6 +10,8 @@ import { useFormat } from "../../../shared/lib/useFormat";
 import { DateField } from "../../../shared/ui/DateField";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { calcRef, useApplySheet, useErrorText } from "./api";
+import { UnitLabel } from "../../../shared/ui/UnitLabel";
+import { unitOf } from "../../../shared/lib/unit";
 
 interface Values {
   payment_terms?: string;
@@ -127,10 +129,10 @@ export function TermsForm({ sheet, onClose }: { sheet: CalcSheet; onClose: () =>
         </Form.Item>
         <Form.Item
           name="delivery_days"
-          label={t("terms.deliveryDays")}
+          label={<UnitLabel label={t("terms.deliveryDays")} />}
           extra={t("terms.byLines", { count: terms.delivery_days_lines })}
         >
-          <InputNumber min={0} max={3650} precision={0} />
+          <InputNumber suffix={unitOf(t("terms.deliveryDays"))} min={0} max={3650} precision={0} />
         </Form.Item>
         <Form.Item name="delivery_note" label={t("terms.note")}>
           <Input maxLength={255} />
