@@ -13,6 +13,7 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { DateField } from "../../../shared/ui/DateField";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
+import { FormSheet } from "../../../shared/ui/FormSheet";
 import { clean, useErrorText, useRefreshStock } from "./api";
 import { EMPTY_TRACE, type TraceDraft, needsTracking, traceFields, traceProblem } from "./trace";
 import { ReceiveTracking } from "./Tracking";
@@ -256,37 +257,31 @@ export function ReceiveModal({
     .filter((p) => p.problem !== null);
   const [tried, setTried] = useState(false);
   return (
-    <Modal
-      open
-      width={680}
+    <FormSheet
+      layer="drawer"
+      wide
       title={t("order.receive.title", { number })}
+      submitLabel={t("order.receive.submit")}
+      saving={receive.isPending}
+      submitDisabled={picked.length === 0}
       onCancel={onClose}
-      destroyOnHidden
-      footer={Footer({
-        onClose,
-        pending: receive.isPending,
-        disabled: picked.length === 0,
-        submit: {
-          label: t("order.receive.submit"),
-          run: () => {
-            setTried(true);
-            if (problems.length > 0) return;
-            const supplierDoc = clean(doc);
-            receive.mutate({
-              orderNumber: ref(number),
-              data: {
-                lines: picked.map(({ line: l, draft }) => ({
-                  order_line_id: l.id,
-                  quantity: draft.quantity,
-                  ...(clean(draft.cell) ? { cell: clean(draft.cell) } : {}),
-                  ...traceFields(l, draft.trace),
-                })),
-                ...(supplierDoc ? { supplier_doc: supplierDoc } : {}),
-              },
-            });
+      onSubmit={() => {
+        setTried(true);
+        if (problems.length > 0) return;
+        const supplierDoc = clean(doc);
+        receive.mutate({
+          orderNumber: ref(number),
+          data: {
+            lines: picked.map(({ line: l, draft }) => ({
+              order_line_id: l.id,
+              quantity: draft.quantity,
+              ...(clean(draft.cell) ? { cell: clean(draft.cell) } : {}),
+              ...traceFields(l, draft.trace),
+            })),
+            ...(supplierDoc ? { supplier_doc: supplierDoc } : {}),
           },
-        },
-      })}
+        });
+      }}
     >
       {!order ? (
         <Skeleton active paragraph={{ rows: 3 }} title={false} />
@@ -366,7 +361,7 @@ export function ReceiveModal({
           />
         </div>
       )}
-    </Modal>
+    </FormSheet>
   );
 }
 
@@ -383,34 +378,28 @@ export function EditModal({ order, onClose }: { order: SupplierOrderDetail; onCl
   const update = useUpdateSupplierOrder({ mutation: action.options(onClose) });
   const kept = order.lines.filter((l) => !removed.has(l.id));
   return (
-    <Modal
-      open
-      width={680}
+    <FormSheet
+      layer="drawer"
+      wide
       title={t("order.edit.title", { number: order.number })}
+      submitLabel={t("order.edit.submit")}
+      saving={update.isPending}
+      submitDisabled={kept.length === 0}
       onCancel={onClose}
-      destroyOnHidden
-      footer={Footer({
-        onClose,
-        pending: update.isPending,
-        disabled: kept.length === 0,
-        submit: {
-          label: t("order.edit.submit"),
-          run: () => {
-            update.mutate({
-              orderNumber: ref(order.number),
-              data: {
-                expected_date: date === "" ? null : date,
-                note,
-                lines: kept.map((l) => ({
-                  id: l.id,
-                  product_id: l.product_id ?? "",
-                  quantity: quantities[l.id] ?? l.quantity,
-                })),
-              },
-            });
+      onSubmit={() => {
+        update.mutate({
+          orderNumber: ref(order.number),
+          data: {
+            expected_date: date === "" ? null : date,
+            note,
+            lines: kept.map((l) => ({
+              id: l.id,
+              product_id: l.product_id ?? "",
+              quantity: quantities[l.id] ?? l.quantity,
+            })),
           },
-        },
-      })}
+        });
+      }}
     >
       <div className="pf-calc-stack">
         <FormField id={dateId} label={t("order.edit.date")}>
@@ -455,6 +444,6 @@ export function EditModal({ order, onClose }: { order: SupplierOrderDetail; onCl
         </ul>
         <ErrorNote message={action.error} />
       </div>
-    </Modal>
+    </FormSheet>
   );
 }
