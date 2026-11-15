@@ -25,7 +25,7 @@ import { PaymentSlot } from "./PaymentPanel";
 import { BankDetailsNotice } from "./BankDetailsNotice";
 import { useStateLabels } from "./labels";
 import { INVOICE_TABS, type InvoiceTab, PAGE, showTab } from "./model";
-import { ToolsSlot } from "../../../shared/ui/DataTable/RegistryTools";
+import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 
 /** Куда ведёт кнопка пустого состояния вкладки (SPEC-v3 §7: пустое состояние — словами и с действием). */
 const NEXT: Record<InvoiceTab, InvoiceTab | null> = {
@@ -278,7 +278,7 @@ export function PaymentList() {
           }}
         />
       ) : (
-        <div className="pf-pay-toolbar">
+        <FilterBar tools>
           <Segmented
             aria-label={t("payments:list.tabsLabel")}
             value={tab}
@@ -290,23 +290,23 @@ export function PaymentList() {
               go({ show: value, payment: null, memo: null, sheet: null, panel: null, tab: null });
             }}
           />
-          <Input
-            className="pf-pay-search"
-            value={draft}
-            allowClear
-            aria-label={t("payments:list.search.label")}
-            placeholder={t("payments:list.search.placeholder")}
-            onChange={(event) => {
-              setDraft(event.target.value);
-              if (event.target.value === "" && query !== "") go({ q: null });
-            }}
-            onPressEnter={() => {
-              const text = draft.trim();
-              go({ q: text === "" ? null : text, payment: null });
-            }}
-          />
-          <ToolsSlot />
-        </div>
+          <FilterField id="pf-pay-search" label={t("payments:list.search.label")} grow>
+            <Input
+              id="pf-pay-search"
+              value={draft}
+              allowClear
+              placeholder={t("payments:list.search.placeholder")}
+              onChange={(event) => {
+                setDraft(event.target.value);
+                if (event.target.value === "" && query !== "") go({ q: null });
+              }}
+              onPressEnter={() => {
+                const text = draft.trim();
+                go({ q: text === "" ? null : text, payment: null });
+              }}
+            />
+          </FilterField>
+        </FilterBar>
       )}
       {tab === "to_issue" && first?.bank_details_ready === false ? <BankDetailsNotice /> : null}
       <Card styles={{ body: { padding: 0 } }}>

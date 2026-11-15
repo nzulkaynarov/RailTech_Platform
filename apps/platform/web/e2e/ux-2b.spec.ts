@@ -215,7 +215,7 @@ test.describe("UX-2b: суммы, статусы, телефон", () => {
     expect(await settledOverflow(page)).toEqual({ page: 0, main: 0 });
     await expectNoViolations(page, "входящие 390");
     await settledScreenshot(page, "inbox");
-    const filter = page.locator(".pf-letters-filter");
+    const filter = page.getByRole("search").locator(".ant-segmented");
     const all = filter.getByText("Все", { exact: true });
     await all.scrollIntoViewIfNeeded();
     await all.click();

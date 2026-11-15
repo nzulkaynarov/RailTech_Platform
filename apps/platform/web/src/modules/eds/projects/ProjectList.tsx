@@ -24,8 +24,8 @@ import { ProjectStatusTag } from "./status";
 
 import "../decision/decision.css";
 import "./projects.css";
-import { ToolsSlot } from "../../../shared/ui/DataTable/RegistryTools";
 import { RowOpenLink } from "../../../shared/ui/RowOpenLink";
+import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 
 /**
  * Ширины колонок: номер и сумма, клиент и название (гибкая), шаг, статус клиента, документы, срок, ответственный, действие
@@ -361,7 +361,7 @@ export function ProjectList() {
   return (
     <div className="pf-dec-page">
       <PageHeader title={title} subtitle={t("list.subtitle")} />
-      <div className="pf-proj-filters" role="search" aria-label={t("list.filters")}>
+      <FilterBar label={t("list.filters")} tools>
         <Segmented
           aria-label={t("list.scope.label")}
           value={scope}
@@ -381,12 +381,10 @@ export function ProjectList() {
         >
           {t("list.problems")}
         </Checkbox>
-        <div className="pf-fp-field">
-          <label htmlFor={`${ids}-step`}>{t("list.step.label")}</label>
+        <FilterField id={`${ids}-step`} label={t("list.step.label")}>
           <Select
             id={`${ids}-step`}
             value={step ?? ""}
-            style={{ minWidth: 160 }}
             options={[
               { value: "", label: t("list.step.all") },
               ...STEPS.map((s) => ({ value: s, label: t(`dictionary:stage.${s}`) })),
@@ -395,9 +393,8 @@ export function ProjectList() {
               change({ step: value });
             }}
           />
-        </div>
-        <div className="pf-fp-field pf-proj-search">
-          <label htmlFor={`${ids}-q`}>{t("list.search.label")}</label>
+        </FilterField>
+        <FilterField id={`${ids}-q`} label={t("list.search.label")} grow>
           <Input.Search
             id={`${ids}-q`}
             key={q}
@@ -408,9 +405,8 @@ export function ProjectList() {
               change({ q: value.trim() || null });
             }}
           />
-        </div>
-        <ToolsSlot />
-      </div>
+        </FilterField>
+      </FilterBar>
       <Card styles={{ body: { padding: 0 } }}>
         <DataBlock busy={query.isPlaceholderData} resetKey={shownKey}>
           {body}

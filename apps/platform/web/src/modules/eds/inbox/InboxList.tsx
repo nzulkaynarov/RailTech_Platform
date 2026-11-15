@@ -7,7 +7,6 @@ import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { useViewport } from "../../../app/shell/useViewport";
 import { ApiError } from "../../../shared/api/errors";
-import { ToolsSlot } from "../../../shared/ui/DataTable/RegistryTools";
 import type {
   LetterRow,
   LetterStatus,
@@ -29,6 +28,7 @@ import { useStateLabels } from "./labels";
 import { ResolutionSlot } from "./ResolutionPanel";
 import { RowOpenLink } from "../../../shared/ui/RowOpenLink";
 import { NameCode } from "../../../shared/ui/NameCode";
+import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 
 const PAGE = 25;
 /**
@@ -405,53 +405,44 @@ export function InboxList() {
           ) : undefined
         }
       />
-      {/* На узком экране фильтр прокручивается вбок, обрезанный край виден — все варианты доступны (UX-2b) */}
-      <div className="pf-letters-filters">
-        <div className="pf-letters-filter">
-          <Segmented
-            aria-label={t("letters:list.filter.label")}
-            value={filter}
-            options={MAIN_FILTERS.map((value) => ({ value, label: filterLabel(value, t) }))}
-            onChange={(value) => {
-              setFilter(value);
+      <FilterBar tools>
+        <Segmented
+          aria-label={t("letters:list.filter.label")}
+          value={filter}
+          options={MAIN_FILTERS.map((value) => ({ value, label: filterLabel(value, t) }))}
+          onChange={(value) => {
+            setFilter(value);
+          }}
+        />
+        <FilterField id="pf-letters-status" label={t("letters:list.filter.more")} width={240}>
+          <Select
+            id="pf-letters-status"
+            allowClear
+            value={MORE_FILTERS.includes(filter) ? filter : undefined}
+            placeholder={t("letters:list.filter.more")}
+            options={MORE_FILTERS.map((value) => ({ value, label: filterLabel(value, t) }))}
+            onChange={(value: Filter | undefined) => {
+              setFilter(value ?? "awaiting_resolution");
             }}
           />
-        </div>
-        <label htmlFor="pf-letters-status" className="pf-sr-only">
-          {t("letters:list.filter.more")}
-        </label>
-        <Select
-          id="pf-letters-status"
-          className="pf-letters-kind"
-          allowClear
-          value={MORE_FILTERS.includes(filter) ? filter : undefined}
-          placeholder={t("letters:list.filter.more")}
-          options={MORE_FILTERS.map((value) => ({ value, label: filterLabel(value, t) }))}
-          onChange={(value: Filter | undefined) => {
-            setFilter(value ?? "awaiting_resolution");
-          }}
-        />
-        <label htmlFor="pf-letters-kind" className="pf-sr-only">
-          {t("letters:listKind.label")}
-        </label>
-        <Select
-          id="pf-letters-kind"
-          className="pf-letters-kind"
-          allowClear
-          value={kind ?? undefined}
-          placeholder={t("letters:listKind.all")}
-          loading={kinds.isPending}
-          options={(kinds.data?.items ?? []).map((item) => ({
-            value: item.code,
-            label: localName(item.name, i18n.language),
-          }))}
-          onChange={(value: string | undefined) => {
-            setKind(value);
-          }}
-        />
-        {/* «Столбцы» таблицы стоят в этой же строке справа (стандарт интерфейса §9) */}
-        <ToolsSlot />
-      </div>
+        </FilterField>
+        <FilterField id="pf-letters-kind" label={t("letters:listKind.label")} width={240}>
+          <Select
+            id="pf-letters-kind"
+            allowClear
+            value={kind ?? undefined}
+            placeholder={t("letters:listKind.all")}
+            loading={kinds.isPending}
+            options={(kinds.data?.items ?? []).map((item) => ({
+              value: item.code,
+              label: localName(item.name, i18n.language),
+            }))}
+            onChange={(value: string | undefined) => {
+              setKind(value);
+            }}
+          />
+        </FilterField>
+      </FilterBar>
       <Card styles={{ body: { padding: 0 } }}>
         <DataBlock busy={query.isPlaceholderData} resetKey={shownKey}>
           {body}
