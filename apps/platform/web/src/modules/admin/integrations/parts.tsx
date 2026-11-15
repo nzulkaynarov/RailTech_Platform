@@ -1,9 +1,11 @@
 import { Alert, Button, Input, Skeleton } from "antd";
 import { type FormEvent, type ReactNode, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { RowData } from "@tanstack/react-table";
 
 import { ApiError } from "../../../shared/api/errors";
 import type { IntegrationStatus } from "../../../shared/api/generated/model";
+import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTable";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { integrationErrorText, isForbidden, isWrongPassword } from "./errors";
@@ -245,18 +247,36 @@ export function PanelTitle({
   );
 }
 
-/** Таблица, которая прокручивается по горизонтали на узком экране: область доступна с клавиатуры (WCAG 2.1.1). */
-export function ScrollTable({ label, children }: { label: string; children: ReactNode }) {
+/**
+ * Таблица сводки или отчёта в панели подключения — общая `DataTable` без «Столбцов» (стандарт §7): первый столбец
+ * называет строку (`rowHeader`), числа справа; на узком экране прокручивается в своей области (WCAG 2.1.1).
+ */
+export function ReportTable<Row extends RowData>({
+  id,
+  label,
+  rows,
+  rowKey,
+  columns,
+}: {
+  id: string;
+  label: string;
+  rows: readonly Row[];
+  rowKey: (row: Row) => string;
+  columns: readonly DataColumn<Row>[];
+}) {
   const { t } = useTranslation("integrations");
   return (
-    <div
-      className="pf-int-table-wrap"
-      role="region"
-      tabIndex={0}
-      aria-label={t("common.tableScroll", { name: label })}
-    >
-      {children}
-    </div>
+    <DataTable<Row>
+      tableId={`admin.integrations.${id}`}
+      caption={label}
+      scrollLabel={t("common.tableScroll", { name: label })}
+      className="pf-int-table"
+      flexMin={140}
+      rows={rows}
+      rowKey={rowKey}
+      columns={columns}
+      toolsTarget={null}
+    />
   );
 }
 

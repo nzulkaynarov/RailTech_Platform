@@ -171,7 +171,7 @@ test.describe("Настройки бота: администратор", () => {
     await expect(page.getByText("Передача менеджеру (нерабочее время)")).toBeVisible();
     await page.getByRole("searchbox", { name: "Найти текст по названию или ситуации" }).fill("");
 
-    await page.getByRole("button", { name: "Изменить: Приветствие" }).click();
+    await page.getByRole("button", { name: "Приветствие", exact: true }).click();
     const panel = side(page);
     await expect(panel.getByRole("heading", { level: 3, name: "Приветствие" })).toBeVisible();
     await panel

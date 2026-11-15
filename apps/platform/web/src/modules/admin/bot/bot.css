@@ -129,21 +129,19 @@
 .pf-bot-table tr[data-selected="true"] td {
   background: var(--rt-color-primary-bg);
 }
-.pf-bot-table--texts {
-  table-layout: fixed;
-  min-width: 720px;
-}
-.pf-bot-table--texts th:first-child {
-  width: 28%;
-}
-.pf-bot-table--texts th:last-child {
-  width: 96px;
-}
 .pf-bot-text-cell {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+/* Название текста бота — ссылка на правку (стандарт §7: строка открывается по названию) */
+.pf-bot-text-open.ant-btn {
+  height: auto;
+  padding: 0;
+  font-weight: 600;
+  text-align: left;
+  white-space: normal;
 }
 .pf-bot-link {
   color: var(--rt-color-primary-text);

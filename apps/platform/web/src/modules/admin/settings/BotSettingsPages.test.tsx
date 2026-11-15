@@ -255,7 +255,7 @@ describe("Настройки · Telegram: тексты", () => {
   it("правка текста в боковом окне: три языка, предпросмотр подстановок, без «Что произойдёт», сохранение раздела", async () => {
     await openTelegram("admin@demo.example", "?tab=texts");
 
-    fireEvent.click(await screen.findByRole("button", { name: "Изменить: Приветствие" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Приветствие" }));
     const panel = await panelEl();
     expect(
       await within(panel).findByRole("heading", { level: 3, name: "Приветствие" }),
@@ -275,7 +275,7 @@ describe("Настройки · Telegram: тексты", () => {
   it("пустой перевод: CRM называет путь, панель открывается на нём, исправление сохраняется", async () => {
     await openTelegram("admin@demo.example", "?tab=texts");
 
-    fireEvent.click(await screen.findByRole("button", { name: "Изменить: Приветствие" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Приветствие" }));
     const panel = await panelEl();
     fireEvent.change(await within(panel).findByLabelText("Приветствие · Узбекский"), {
       target: { value: "" },

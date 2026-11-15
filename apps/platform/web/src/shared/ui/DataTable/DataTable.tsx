@@ -56,6 +56,8 @@ export interface DataColumn<Row> {
   cellTitle?: (row: Row) => string | undefined;
   /** Можно ли скрыть; первый столбец (номер или название) скрыть нельзя никогда */
   hideable?: boolean;
+  /** Ячейка — заголовок строки (`<th scope="row">`): сводки и отчёты, где первая ячейка называет строку */
+  rowHeader?: boolean;
 }
 
 export interface DataTableProps<Row> {
@@ -395,16 +397,18 @@ export function DataTable<Row extends RowData>({
                       const classes = [def.numeric ? "pf-col-num" : "", def.cellClassName ?? ""]
                         .filter(Boolean)
                         .join(" ");
+                      const Cell = def.rowHeader ? "th" : "td";
                       return (
-                        <td
+                        <Cell
                           key={column.id}
+                          scope={def.rowHeader ? "row" : undefined}
                           className={classes || undefined}
                           title={def.cellTitle?.(original)}
                           data-pinned={column.id === lastPinned ? "last" : undefined}
                           style={stick(column)}
                         >
                           {def.cell(original)}
-                        </td>
+                        </Cell>
                       );
                     })}
                   </tr>
