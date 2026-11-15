@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Alert, App, Button, Modal, Upload } from "antd";
+import { Alert, App, Button, Upload } from "antd";
 import type { TFunction } from "i18next";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -18,6 +18,7 @@ import {
 import { downloadFile } from "../../../shared/api/download";
 import { localName } from "../../eds/dictionaries";
 import { DataTable } from "../../../shared/ui/DataTable/DataTable";
+import { FormSheet } from "../../../shared/ui/FormSheet";
 
 const ACCEPT =
   ".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv";
@@ -130,80 +131,73 @@ export function DictionaryFile({
       >
         <Button disabled={readOnly}>{t("settings.dict.file.upload")}</Button>
       </Upload>
-      <Modal
-        open={file !== null}
-        width={720}
-        title={t("settings.dict.file.title", { name: title })}
-        onCancel={close}
-        footer={null}
-        destroyOnHidden
-      >
-        <div className="pf-mail-actions">
-          {error ? <Alert type="error" showIcon role="alert" message={error} /> : null}
-          {result ? (
-            <Alert
-              type={result.failed > 0 ? "warning" : "info"}
-              showIcon
-              role="status"
-              message={t("settings.dict.file.summary", {
-                added: result.added,
-                updated: result.updated,
-                unchanged: result.unchanged,
-                failed: result.failed,
-              })}
-            />
-          ) : null}
-          {shown.length > 0 ? (
-            <DataTable<DictionaryImportRow>
-              tableId="admin.docflow.dictionaryFile"
-              caption={t("settings.dict.file.title", { name: title })}
-              scrollLabel={t("settings.dict.file.title", { name: title })}
-              rows={shown}
-              rowKey={(row) => String(row.line)}
-              pageSize={20}
-              columns={[
-                {
-                  id: "line",
-                  header: t("settings.dict.file.line"),
-                  width: 72,
-                  cell: (row) => row.line,
-                },
-                {
-                  id: "name",
-                  header: t("settings.dict.name"),
-                  width: null,
-                  cell: (row) => row.name,
-                },
-                {
-                  id: "action",
-                  header: t("settings.dict.file.action"),
-                  width: null,
-                  cell: (row) => t(`settings.dict.file.actions.${row.action}`),
-                },
-                {
-                  id: "details",
-                  header: t("settings.dict.file.details"),
-                  width: null,
-                  cell: (row) => rowText(t, dictionary, row, i18n.language),
-                },
-              ]}
-            />
-          ) : null}
-          <div className="pf-fp-row">
-            <Button
-              type="primary"
-              loading={pending}
-              disabled={!file || !result || result.failed > 0 || changes === 0}
-              onClick={() => {
-                if (file) void run(file, false);
-              }}
-            >
-              {t("settings.dict.file.apply")}
-            </Button>
-            <Button onClick={close}>{t("settings.dict.file.cancel")}</Button>
+      {file !== null ? (
+        <FormSheet
+          layer="drawer"
+          wide
+          title={t("settings.dict.file.title", { name: title })}
+          submitLabel={t("settings.dict.file.apply")}
+          saving={pending}
+          submitDisabled={!result || result.failed > 0 || changes === 0}
+          onSubmit={() => {
+            void run(file, false);
+          }}
+          onCancel={close}
+        >
+          <div className="pf-mail-actions">
+            {error ? <Alert type="error" showIcon role="alert" message={error} /> : null}
+            {result ? (
+              <Alert
+                type={result.failed > 0 ? "warning" : "info"}
+                showIcon
+                role="status"
+                message={t("settings.dict.file.summary", {
+                  added: result.added,
+                  updated: result.updated,
+                  unchanged: result.unchanged,
+                  failed: result.failed,
+                })}
+              />
+            ) : null}
+            {shown.length > 0 ? (
+              <DataTable<DictionaryImportRow>
+                tableId="admin.docflow.dictionaryFile"
+                caption={t("settings.dict.file.title", { name: title })}
+                scrollLabel={t("settings.dict.file.title", { name: title })}
+                rows={shown}
+                rowKey={(row) => String(row.line)}
+                pageSize={20}
+                columns={[
+                  {
+                    id: "line",
+                    header: t("settings.dict.file.line"),
+                    width: 72,
+                    cell: (row) => row.line,
+                  },
+                  {
+                    id: "name",
+                    header: t("settings.dict.name"),
+                    width: null,
+                    cell: (row) => row.name,
+                  },
+                  {
+                    id: "action",
+                    header: t("settings.dict.file.action"),
+                    width: null,
+                    cell: (row) => t(`settings.dict.file.actions.${row.action}`),
+                  },
+                  {
+                    id: "details",
+                    header: t("settings.dict.file.details"),
+                    width: null,
+                    cell: (row) => rowText(t, dictionary, row, i18n.language),
+                  },
+                ]}
+              />
+            ) : null}
           </div>
-        </div>
-      </Modal>
+        </FormSheet>
+      ) : null}
     </>
   );
 }

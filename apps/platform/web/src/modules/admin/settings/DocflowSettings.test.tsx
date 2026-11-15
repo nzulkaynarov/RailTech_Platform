@@ -131,7 +131,7 @@ describe("Настройки · Процессы · Справочники пи�
     // Личный шаблон директора администратору не виден.
     expect(screen.queryByText("Налоговая — ответ бухгалтерии")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Добавить шаблон" }));
-    const dialog = await screen.findByRole("dialog", { name: "Новый шаблон резолюции" });
+    const dialog = await screen.findByRole("region", { name: "Новый шаблон резолюции" });
     fireEvent.change(within(dialog).getByRole("textbox", { name: "Название шаблона" }), {
       target: { value: "Госорган — к исполнению" },
     });

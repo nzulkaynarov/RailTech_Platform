@@ -1,10 +1,11 @@
-import { App, Button, Empty, Modal, Radio, Spin } from "antd";
+import { App, Empty, Radio, Spin } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { CalcSheet } from "../../../shared/api/generated/model";
 import { useCopyCalcLines, useListCalcPrevious } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
+import { FormSheet } from "../../../shared/ui/FormSheet";
 import { calcRef, useApplySheet, useErrorText } from "./api";
 
 /**
@@ -38,28 +39,17 @@ export function PreviousModal({ sheet, onClose }: { sheet: CalcSheet; onClose: (
   const items = list.data?.items ?? [];
 
   return (
-    <Modal
-      open
-      width={640}
+    <FormSheet
+      layer="drawer"
+      wide
       title={t("previous.title")}
+      submitLabel={t("previous.copy")}
+      saving={copy.isPending}
+      submitDisabled={source === null}
+      onSubmit={() => {
+        if (source) copy.mutate({ number: calcRef(sheet.number), data: { source } });
+      }}
       onCancel={onClose}
-      destroyOnHidden
-      footer={[
-        <Button key="close" onClick={onClose}>
-          {t("parse.cancel")}
-        </Button>,
-        <Button
-          key="copy"
-          type="primary"
-          disabled={source === null}
-          loading={copy.isPending}
-          onClick={() => {
-            if (source) copy.mutate({ number: calcRef(sheet.number), data: { source } });
-          }}
-        >
-          {t("previous.copy")}
-        </Button>,
-      ]}
     >
       <p>{t("previous.intro")}</p>
       {list.isPending ? (
@@ -86,6 +76,6 @@ export function PreviousModal({ sheet, onClose }: { sheet: CalcSheet; onClose: (
           ))}
         </Radio.Group>
       )}
-    </Modal>
+    </FormSheet>
   );
 }

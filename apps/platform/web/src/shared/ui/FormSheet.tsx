@@ -21,8 +21,8 @@ const FORM_DRAWER_WIDE = 640;
 export function FormSheet({
   title,
   formId,
-  submitLabel,
-  saving,
+  submitLabel = "",
+  saving = false,
   error,
   dirty = false,
   readOnly = false,
@@ -36,8 +36,9 @@ export function FormSheet({
   title: string;
   /** Id формы вызывающего: главная кнопка отправляет её. Нет — нужен `onSubmit` */
   formId?: string;
-  submitLabel: string;
-  saving: boolean;
+  /** Подпись главной кнопки; не нужна только при `readOnly` (журнал, справка, предпросмотр) */
+  submitLabel?: string;
+  saving?: boolean;
   /** Ошибка без своего поля — над полями; ошибки полей стоят под полями */
   error?: ReactNode;
   /** В форме есть несохранённые изменения */
@@ -99,7 +100,8 @@ export function FormSheet({
         destroyOnHidden
         maskClosable={!dirty}
         rootClassName="pf-fdrawer"
-        footer={<div className="pf-fdrawer-foot">{buttons}</div>}
+        // Справка, журнал, предпросмотр: закрывает крестик шапки (Esc), второй «Закрыть» в подвале не нужен
+        footer={readOnly ? null : <div className="pf-fdrawer-foot">{buttons}</div>}
       >
         <div className="pf-fsheet-stack">
           {error}

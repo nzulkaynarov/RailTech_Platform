@@ -1,4 +1,5 @@
-import { Alert, App, Button, Input, Modal } from "antd";
+import { Alert, App, Button, Input } from "antd";
+import { Dialog } from "../../../shared/ui/Dialog";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -33,12 +34,10 @@ function LostModal({ sheet, onClose }: { sheet: CalcSheet; onClose: () => void }
   });
   const text = reason.trim();
   return (
-    <Modal
+    <Dialog
       open
-      width={560}
       title={t("rejection.lost.title", { number: sheet.number })}
       onCancel={onClose}
-      destroyOnHidden
       footer={[
         <Button key="cancel" onClick={onClose}>
           {t("rejection.cancel")}
@@ -74,7 +73,7 @@ function LostModal({ sheet, onClose }: { sheet: CalcSheet; onClose: () => void }
         </FormField>
         <ErrorNote message={error} />
       </div>
-    </Modal>
+    </Dialog>
   );
 }
 

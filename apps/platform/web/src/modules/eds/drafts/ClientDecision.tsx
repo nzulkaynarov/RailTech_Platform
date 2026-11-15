@@ -1,4 +1,5 @@
-import { App, Button, Card, Input, Modal } from "antd";
+import { App, Button, Card, Input } from "antd";
+import { Dialog } from "../../../shared/ui/Dialog";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -181,9 +182,8 @@ function ClientDecisionDialog({
       ? t("card.clientDecision.dialog.commentReject")
       : t("card.clientDecision.dialog.comment");
   return (
-    <Modal
+    <Dialog
       open
-      width={480}
       title={t(`card.clientDecision.dialog.${decision}`)}
       onCancel={onClose}
       footer={[
@@ -265,6 +265,6 @@ function ClientDecisionDialog({
         </FormField>
         <ErrorNote message={failure} />
       </form>
-    </Modal>
+    </Dialog>
   );
 }

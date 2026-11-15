@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Alert, App, Button, Checkbox, Input, Modal, Select } from "antd";
+import { Alert, App, Button, Checkbox, Input, Select } from "antd";
+import { Dialog } from "../../../shared/ui/Dialog";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -122,14 +123,12 @@ export function ResolutionTemplatePicker({
       >
         {t("office.templates.saveAs")}
       </Button>
-      <Modal
+      <Dialog
         open={saving}
         title={t("office.templates.saveTitle")}
         onCancel={() => {
           setSaving(false);
         }}
-        destroyOnHidden
-        maskClosable={false}
         footer={[
           <Button
             key="cancel"
@@ -205,7 +204,7 @@ export function ResolutionTemplatePicker({
             {t("office.templates.shared")}
           </Checkbox>
         ) : null}
-      </Modal>
+      </Dialog>
     </div>
   );
 }

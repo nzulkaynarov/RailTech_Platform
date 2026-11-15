@@ -32,7 +32,7 @@ import { FileField } from "../../../shared/ui/FileField";
 import { FormField, QueryState } from "../../../shared/ui/FormParts";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { StatusTag } from "../../../shared/ui/StatusTag";
-import { type Column, DataList, FormModal, PAGE_SIZE, Pager } from "../catalog/common";
+import { type Column, DataList, FormModal, FormPanel, PAGE_SIZE, Pager } from "../catalog/common";
 import { DocPassportFields } from "../catalog/DocPassport";
 import { passportFields, usePassport } from "../catalog/passportState";
 import { DocValidity } from "../catalog/ItemDocs";
@@ -552,7 +552,7 @@ function UploadForm({
     if (selected && title === "") setTitle(selected.name.replace(/\.[^.]+$/, ""));
   };
   return (
-    <FormModal
+    <FormPanel
       title={t("docs.form.title")}
       okLabel={t("docs.form.ok")}
       loading={mutation.isPending}
@@ -637,6 +637,6 @@ function UploadForm({
           }))}
         />
       </FormField>
-    </FormModal>
+    </FormPanel>
   );
 }

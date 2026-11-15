@@ -29,7 +29,7 @@ import { DateField } from "../../../shared/ui/DateField";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { FormField, QueryState } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
-import { type Column, DataList, FormModal, PAGE_SIZE, Pager } from "./common";
+import { type Column, DataList, FormModal, FormPanel, PAGE_SIZE, Pager } from "./common";
 import { useDebounced } from "./useDebounced";
 import { errorFields } from "./errors";
 import { queryLabels } from "./labels";
@@ -389,7 +389,7 @@ function HsForm({ code, onClose }: { code?: HsCode | undefined; onClose: () => v
   const mutation = code ? update : create;
   const fields = errorFields(mutation.error);
   return (
-    <FormModal
+    <FormPanel
       title={code ? t("refs.hs.form.editTitle", { code: code.code }) : t("refs.hs.form.addTitle")}
       okLabel={code ? t("save") : t("refs.hs.form.add")}
       loading={mutation.isPending}
@@ -460,7 +460,7 @@ function HsForm({ code, onClose }: { code?: HsCode | undefined; onClose: () => v
           onChange={setUntil}
         />
       </FormField>
-    </FormModal>
+    </FormPanel>
   );
 }
 
@@ -607,7 +607,7 @@ function BrandForm({ brand, onClose }: { brand?: Manufacturer | undefined; onClo
   const update = useUpdateManufacturer({ mutation: { onSuccess: done } });
   const mutation = brand ? update : create;
   return (
-    <FormModal
+    <FormPanel
       title={brand ? t("refs.brands.form.editTitle") : t("refs.brands.form.addTitle")}
       okLabel={brand ? t("save") : t("refs.brands.form.add")}
       loading={mutation.isPending}
@@ -669,6 +669,6 @@ function BrandForm({ brand, onClose }: { brand?: Manufacturer | undefined; onClo
         />{" "}
         {t("refs.brands.form.active")}
       </label>
-    </FormModal>
+    </FormPanel>
   );
 }

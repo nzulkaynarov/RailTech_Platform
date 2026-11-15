@@ -1,4 +1,5 @@
-import { App, Button, Collapse, Input, Modal, Select } from "antd";
+import { App, Button, Collapse, Input, Select } from "antd";
+import { FormSheet } from "../../../shared/ui/FormSheet";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router";
@@ -87,27 +88,21 @@ function FormatHelp() {
           },
         ]}
       />
-      <Modal
-        open={specOpen}
-        title={t("format.specTitle")}
-        width={760}
-        onCancel={() => {
-          setSpecOpen(false);
-        }}
-        footer={
-          <Button
-            onClick={() => {
-              setSpecOpen(false);
-            }}
-          >
-            {t("format.close")}
-          </Button>
-        }
-      >
-        <pre tabIndex={0} aria-label={t("format.specTitle")} className="pf-kb-spec">
-          {KB_FORMAT_MD}
-        </pre>
-      </Modal>
+      {specOpen ? (
+        <FormSheet
+          layer="drawer"
+          wide
+          readOnly
+          title={t("format.specTitle")}
+          onCancel={() => {
+            setSpecOpen(false);
+          }}
+        >
+          <pre tabIndex={0} aria-label={t("format.specTitle")} className="pf-kb-spec">
+            {KB_FORMAT_MD}
+          </pre>
+        </FormSheet>
+      ) : null}
     </>
   );
 }

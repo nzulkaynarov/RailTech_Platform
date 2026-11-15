@@ -1,4 +1,5 @@
-import { App, Button, Input, Modal, Select } from "antd";
+import { App, Button, Input, Select } from "antd";
+import { Dialog } from "../../../shared/ui/Dialog";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -90,7 +91,7 @@ function HandOverDialog({ lead, onClose }: { lead: string; onClose: () => void }
     });
   };
   return (
-    <Modal
+    <Dialog
       open
       title={t("handOver.title")}
       onCancel={onClose}
@@ -165,6 +166,6 @@ function HandOverDialog({ lead, onClose }: { lead: string; onClose: () => void }
         </FormField>
         <ErrorNote message={failure} />
       </div>
-    </Modal>
+    </Dialog>
   );
 }

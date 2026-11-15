@@ -62,7 +62,7 @@ test.describe("EDS-REG · шаблоны резолюций", () => {
     // Список загружен (общий шаблон мока виден) — кнопка «Добавить шаблон» одна.
     await expect(page.getByText("Банк — к сведению бухгалтерии", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Добавить шаблон" }).click();
-    const dialog = page.getByRole("dialog", { name: "Новый шаблон резолюции" });
+    const dialog = page.getByRole("region", { name: "Новый шаблон резолюции" });
     await dialog.getByLabel("Название шаблона").fill("Госорган — к исполнению");
     await dialog.getByLabel("Текст резолюции").fill("Исполнить в срок и доложить.");
     await dialog.getByLabel("Срок, дней").fill("10");

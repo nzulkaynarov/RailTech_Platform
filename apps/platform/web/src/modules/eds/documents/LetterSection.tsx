@@ -1,4 +1,5 @@
-import { Alert, App, Button, Checkbox, Modal, Radio, Space } from "antd";
+import { Alert, App, Button, Checkbox, Radio, Space } from "antd";
+import { Dialog } from "../../../shared/ui/Dialog";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -281,7 +282,7 @@ export function LetterSection({ doc }: { doc: EdsDocument }) {
         ) : null}
       </div>
 
-      <Modal
+      <Dialog
         open={signModalOpen}
         onCancel={() => {
           if (busy !== "sign") setSignModalOpen(false);
@@ -308,7 +309,6 @@ export function LetterSection({ doc }: { doc: EdsDocument }) {
             {t("panel.letter.confirmSign")}
           </Button>,
         ]}
-        destroyOnHidden
       >
         <p className="pf-fp-sub" style={{ marginBottom: 16 }}>
           {t("panel.letter.signModalDesc")}
@@ -351,7 +351,7 @@ export function LetterSection({ doc }: { doc: EdsDocument }) {
             </Checkbox>
           </div>
         ) : null}
-      </Modal>
+      </Dialog>
     </>
   );
 }

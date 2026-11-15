@@ -1,4 +1,5 @@
-import { Alert, App, Button, Input, Modal } from "antd";
+import { Alert, App, Button, Input } from "antd";
+import { Dialog } from "../../../shared/ui/Dialog";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -63,13 +64,15 @@ export function BulkBar({ ids, onClear }: { ids: readonly number[]; onClear: () 
       <Button type="link" onClick={onClear}>
         {t("mail.bulk.clear")}
       </Button>
-      <Modal
+      <Dialog
         open={open}
-        width={480}
         title={t("mail.bulk.title", { count: ids.length })}
         onCancel={close}
-        footer={null}
-        destroyOnHidden
+        okLabel={t("mail.bulk.confirm")}
+        loading={pending}
+        okDisabled={reason.trim().length < 3}
+        onOk={() => void run()}
+        cancelLabel={t("mail.actions.cancel")}
       >
         <div className="pf-mail-actions">
           <label htmlFor="mail-bulk-reason">{t("mail.actions.archiveReason")}</label>
@@ -96,19 +99,8 @@ export function BulkBar({ ids, onClear }: { ids: readonly number[]; onClear: () 
             ))}
           </div>
           {error ? <Alert type="error" showIcon role="alert" message={error} /> : null}
-          <div className="pf-fp-row">
-            <Button
-              type="primary"
-              loading={pending}
-              disabled={reason.trim().length < 3}
-              onClick={() => void run()}
-            >
-              {t("mail.bulk.confirm")}
-            </Button>
-            <Button onClick={close}>{t("mail.actions.cancel")}</Button>
-          </div>
         </div>
-      </Modal>
+      </Dialog>
     </div>
   );
 }

@@ -1,4 +1,5 @@
-import { Alert, Button, Input, Modal, Segmented } from "antd";
+import { Alert, Button, Input, Segmented } from "antd";
+import { Dialog } from "../../../shared/ui/Dialog";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -189,12 +190,10 @@ function ApproveModal({ item, onClose }: { item: BankChangeItem; onClose: () => 
   const done = useAfterDecision(onClose);
   const approve = useApproveBankChangeRequest({ mutation: { onSuccess: done } });
   return (
-    <Modal
+    <Dialog
       open
       title={t("bankChanges.approveModal.title", { name: item.company_name })}
       onCancel={onClose}
-      destroyOnHidden
-      maskClosable={false}
       footer={[
         <Button key="cancel" onClick={onClose}>
           {t("bankChanges.cancel")}
@@ -217,7 +216,7 @@ function ApproveModal({ item, onClose }: { item: BankChangeItem; onClose: () => 
       {approve.isError ? (
         <Alert type="error" showIcon role="alert" message={conflictMessage(approve.error, t)} />
       ) : null}
-    </Modal>
+    </Dialog>
   );
 }
 
@@ -228,12 +227,10 @@ function RejectModal({ item, onClose }: { item: BankChangeItem; onClose: () => v
   const [reason, setReason] = useState("");
   const id = useId();
   return (
-    <Modal
+    <Dialog
       open
       title={t("bankChanges.rejectModal.title", { name: item.company_name })}
       onCancel={onClose}
-      destroyOnHidden
-      maskClosable={false}
       footer={[
         <Button key="cancel" onClick={onClose}>
           {t("bankChanges.cancel")}
@@ -265,6 +262,6 @@ function RejectModal({ item, onClose }: { item: BankChangeItem; onClose: () => v
       {reject.isError ? (
         <Alert type="error" showIcon role="alert" message={conflictMessage(reject.error, t)} />
       ) : null}
-    </Modal>
+    </Dialog>
   );
 }

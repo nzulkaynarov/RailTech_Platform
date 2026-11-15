@@ -1,4 +1,5 @@
-import { App, Button, Form, Input, InputNumber, Modal } from "antd";
+import { App, Button, Form, Input, InputNumber } from "antd";
+import { Dialog } from "../../../shared/ui/Dialog";
 import { useTranslation } from "react-i18next";
 
 import type { StockRow } from "../../../shared/api/generated/model";
@@ -31,11 +32,10 @@ export function AdjustModal({ row, onClose }: { row: StockRow; onClose: () => vo
     },
   });
   return (
-    <Modal
+    <Dialog
       open
       title={t("adjust.title", { name: row.name })}
       onCancel={onClose}
-      destroyOnHidden
       footer={[
         <Button key="cancel" onClick={onClose}>
           {t("common.cancel")}
@@ -91,6 +91,6 @@ export function AdjustModal({ row, onClose }: { row: StockRow; onClose: () => vo
           <Input maxLength={500} />
         </Form.Item>
       </Form>
-    </Modal>
+    </Dialog>
   );
 }
