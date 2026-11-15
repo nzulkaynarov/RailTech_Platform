@@ -1,12 +1,4 @@
 /* Admin · Оргструктура (PLT-15): фильтры, строки списка, инициалы. Значения — макет v3 и docs/architecture/platform-frontend.md. */
-.pf-org-filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--rt-color-surface-split);
-}
 .pf-org-tags {
   display: inline-flex;
   flex-wrap: wrap;

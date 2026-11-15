@@ -160,25 +160,6 @@
   border: 1px solid var(--rt-color-surface-split);
   background: var(--rt-color-surface-subtle);
 }
-.pf-ticket-filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 12px;
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--rt-color-surface-split);
-}
-.pf-ticket-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-.pf-ticket-field > label {
-  font-size: 12px;
-  line-height: 20px;
-  color: var(--rt-color-text-secondary);
-}
 .pf-ticket-row {
   display: flex;
   flex-direction: column;

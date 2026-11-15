@@ -20,6 +20,7 @@ import { EmployeeCard } from "./EmployeeCard";
 import { EmployeeList } from "./EmployeeList";
 
 import "./org.css";
+import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 
 const PATH = "/admin/org";
 /** Уже этой ширины блока таблица из пяти колонок не помещается без горизонтальной прокрутки */
@@ -199,36 +200,42 @@ export function OrgPage({ objectId }: { objectId?: string }) {
       />
       <div ref={blockRef}>
         <Card styles={{ body: { padding: 0 } }}>
-          <div className="pf-org-filters">
-            <Input.Search
-              allowClear
-              value={query}
-              onChange={(event) => {
-                setQuery(event.target.value);
-              }}
-              aria-label={t("modules:admin.org.search.label")}
-              placeholder={t("modules:admin.org.search.placeholder")}
-              style={{ maxWidth: 320 }}
-            />
-            <Select<EmployeeStatus | "all">
-              value={status}
-              onChange={setStatus}
-              aria-label={t("modules:admin.org.statusFilter.label")}
-              style={{ minWidth: 180 }}
-              options={[
-                { value: "all", label: t("modules:admin.org.statusFilter.all") },
-                ...EMPLOYEE_STATUSES.map((value) => ({
-                  value,
-                  label: t(`modules:admin.org.status.${value}`),
-                })),
-              ]}
-            />
-            {list.data ? (
-              <span className="pf-hint" aria-live="polite">
-                {t("modules:admin.org.count", { count: filtered.length })}
-              </span>
-            ) : null}
-          </div>
+          <FilterBar
+            inset
+            actions={
+              list.data ? (
+                <span className="pf-hint" aria-live="polite">
+                  {t("modules:admin.org.count", { count: filtered.length })}
+                </span>
+              ) : undefined
+            }
+          >
+            <FilterField id="pf-org-q" label={t("modules:admin.org.search.label")} grow>
+              <Input.Search
+                id="pf-org-q"
+                allowClear
+                value={query}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                }}
+                placeholder={t("modules:admin.org.search.placeholder")}
+              />
+            </FilterField>
+            <FilterField id="pf-org-status" label={t("modules:admin.org.statusFilter.label")}>
+              <Select<EmployeeStatus | "all">
+                id="pf-org-status"
+                value={status}
+                onChange={setStatus}
+                options={[
+                  { value: "all", label: t("modules:admin.org.statusFilter.all") },
+                  ...EMPLOYEE_STATUSES.map((value) => ({
+                    value,
+                    label: t(`modules:admin.org.status.${value}`),
+                  })),
+                ]}
+              />
+            </FilterField>
+          </FilterBar>
           {body}
         </Card>
       </div>

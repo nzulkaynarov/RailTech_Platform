@@ -315,11 +315,6 @@
   font-weight: 400;
   text-decoration: line-through;
 }
-.pf-tpl-filter {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
 
 /* Редактор шаблона страницей на месте списка (стандарт интерфейса §6): шапка «К списку» и название, закреплённый подвал. */
 .pf-co-editor {

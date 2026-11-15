@@ -750,6 +750,20 @@ tr > td.pf-col-num {
 .pf-filter-field > .ant-picker {
   width: 100%;
 }
+.pf-filter-field--labeled {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pf-filter-field--labeled > :not(label) {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.pf-filter-label {
+  flex: none;
+  color: var(--rt-color-text-secondary);
+  white-space: nowrap;
+}
 .pf-filter-field--grow {
   flex: 1 1 240px;
   width: auto;
