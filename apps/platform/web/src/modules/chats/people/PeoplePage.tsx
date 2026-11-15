@@ -16,6 +16,7 @@ import { type DataColumn, DataTable } from "../../../shared/ui/DataTable/DataTab
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { SoonButton } from "../../../shared/ui/SoonButton";
 import "./people.css";
+import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 
 const KINDS = ["all", "employees", "clients", "partners", "leads"] as const;
 type Kind = (typeof KINDS)[number];
@@ -195,24 +196,25 @@ export function PeoplePage() {
   return (
     <div className="pf-people">
       <PageHeader title={title} />
-      <div className="pf-people-controls">
+      <FilterBar tools>
         <Segmented
           aria-label={t("modules:chats.people.filter")}
           value={kind}
           options={KINDS.map((value) => ({ value, label: kindLabel(value) }))}
           onChange={setKind}
         />
-        <Input.Search
-          allowClear
-          aria-label={t("modules:chats.people.search")}
-          placeholder={t("modules:chats.people.search")}
-          value={search}
-          onChange={(event) => {
-            setSearch(event.target.value);
-          }}
-          style={{ maxWidth: 280 }}
-        />
-      </div>
+        <FilterField id="pf-people-q" label={t("modules:chats.people.search")} grow>
+          <Input.Search
+            id="pf-people-q"
+            allowClear
+            placeholder={t("modules:chats.people.search")}
+            value={search}
+            onChange={(event) => {
+              setSearch(event.target.value);
+            }}
+          />
+        </FilterField>
+      </FilterBar>
       {loading ? (
         <Skeleton active paragraph={{ rows: 4 }} />
       ) : rows.length === 0 ? (
