@@ -4,6 +4,7 @@
  */
 import type { BrandProfileUpdateFontFamily } from "./brandProfileUpdateFontFamily";
 import type { BrandProfileUpdateLayoutPreset } from "./brandProfileUpdateLayoutPreset";
+import type { BrandTranslations } from "./brandTranslations";
 
 export interface BrandProfileUpdate {
   legal_name?: string;
@@ -33,4 +34,5 @@ export interface BrandProfileUpdate {
   show_logo?: boolean;
   show_lead_time?: boolean;
   show_fx_note?: boolean;
+  translations?: BrandTranslations;
 }

@@ -142,7 +142,7 @@ jobs:
           # (шина rt_bus и контракты, L14). scope кэша прежние — кэш не теряется.
           images='[
             {"image":"rt-crm-backend","context":"apps/crm/backend","target":"prod","contexts":"rtbus=packages/rt-bus\ncontracts=packages/contracts","args":"","scope":"crm-backend"},
-            {"image":"rt-erp-backend","context":"apps/erp/backend","target":"","contexts":"rtbus=packages/rt-bus\ncontracts=packages/contracts","args":"","scope":"erp-backend"},
+            {"image":"rt-erp-backend","context":"apps/erp/backend","target":"","contexts":"rtbus=packages/rt-bus\ncontracts=packages/contracts\nrtdocs=packages/rt-docs","args":"","scope":"erp-backend"},
             {"image":"rt-cabinet","context":"apps/cabinet","target":"","contexts":"","args":"VITE_API_URL=","scope":"cabinet"},
             {"image":"rt-litellm","context":"infra/ai/litellm","target":"","contexts":"","args":"","scope":"litellm"},
             {"image":"rt-platform-bff","context":"apps/platform/bff","target":"prod","contexts":"rtbus=packages/rt-bus\ncontracts=packages/contracts","args":"","scope":"platform-bff"},

@@ -88,6 +88,7 @@ if [ "${ERP_TEST_SKIP_BUILD:-}" != 1 ]; then
   docker build -q ${NO_CACHE[@]+"${NO_CACHE[@]}"} -t "$IMAGE" \
     --build-context "rtbus=$ROOT/../../packages/rt-bus" \
     --build-context "contracts=$ROOT/../../packages/contracts" \
+    --build-context "rtdocs=$ROOT/../../packages/rt-docs" \
     "$ROOT/backend" >/dev/null
 fi
 

@@ -5,6 +5,7 @@
 import type { BrandProfileFontFamily } from "./brandProfileFontFamily";
 import type { BrandProfileInherited } from "./brandProfileInherited";
 import type { BrandProfileLayoutPreset } from "./brandProfileLayoutPreset";
+import type { BrandTranslations } from "./brandTranslations";
 
 /**
  * Бланк и бренд документов компании (ERP `document-profile`): реквизиты на бланке КП, договора, счёта и акта.
@@ -47,4 +48,5 @@ export interface BrandProfile {
    * @nullable
    */
   inherited: BrandProfileInherited;
+  translations: BrandTranslations;
 }

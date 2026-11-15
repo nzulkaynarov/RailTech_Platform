@@ -236,6 +236,24 @@ _PRESETS = ("light", "boxed", "bold", "striped")
 _FONTS = ("sans", "serif")
 
 
+class BrandVariant(BaseModel):
+    """Бланк на узбекском или английском (TPL-3): пустое поле — печатается русский текст."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    legal_name: str = Field(default="", max_length=255)
+    legal_address: str = Field(default="", max_length=2000)
+    signatory_position: str = Field(default="", max_length=255)
+    footer_text: str = Field(default="", max_length=2000)
+
+
+class BrandTranslations(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    uz: BrandVariant = Field(default_factory=BrandVariant)
+    en: BrandVariant = Field(default_factory=BrandVariant)
+
+
 class BrandProfile(BaseModel):
     legal_name: str
     inn: str
@@ -261,6 +279,7 @@ class BrandProfile(BaseModel):
     show_fx_note: bool
     logo_url: str | None
     inherited: dict[str, str] | None
+    translations: BrandTranslations
 
 
 class BrandProfileUpdate(Patch):
@@ -286,6 +305,7 @@ class BrandProfileUpdate(Patch):
     show_logo: bool | None = None
     show_lead_time: bool | None = None
     show_fx_note: bool | None = None
+    translations: BrandTranslations | None = None
 
 
 class BrandPreviewIn(BaseModel):
@@ -313,7 +333,22 @@ def to_brand(raw: Mapping[str, Any]) -> BrandProfile:
         inherited={k: text(v) for k, v in inherited.items()}
         if isinstance(inherited, dict)
         else None,
+        translations=_translations(raw.get("translations")),
     )
+
+
+def _translations(raw: Any) -> BrandTranslations:
+    """Варианты бланка из ERP: только известные языки и поля, остальное отбрасывается."""
+    if not isinstance(raw, dict):
+        return BrandTranslations()
+    fields = BrandVariant.model_fields
+
+    def variant(value: Any) -> BrandVariant:
+        if not isinstance(value, dict):
+            return BrandVariant()
+        return BrandVariant(**{k: text(v) for k, v in value.items() if k in fields})
+
+    return BrandTranslations(uz=variant(raw.get("uz")), en=variant(raw.get("en")))
 
 
 # --- нумерация ---------------------------------------------------------------------------------
