@@ -1,20 +1,6 @@
 /* Расчёт · Склад (D2-2). Таблицы и карточки — классы расчёта (`pf-calc-*`, calc.css); здесь только то, чего там нет. */
-.pf-stock-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--rt-color-surface-split);
-}
 .pf-stock-search {
   max-width: 320px;
-}
-.pf-stock-select {
-  min-width: 180px;
-}
-.pf-stock-toolbar-action {
-  margin-left: auto;
 }
 /* Место кнопки «Новый заказ» до ответа: ширина и высота кнопки antd, невидимо (UX-1c, S10). */
 .pf-stock-action-slot {
@@ -134,9 +120,6 @@
   .pf-stock-search {
     max-width: none;
     width: 100%;
-  }
-  .pf-stock-toolbar-action {
-    margin-left: 0;
   }
 }
 

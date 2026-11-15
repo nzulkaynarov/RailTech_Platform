@@ -39,12 +39,12 @@ describe("Очередь заявок кандидатов в партнёры (
     expect(within(vostokRow).getByText("№ ПД-2026/102")).toBeVisible();
 
     // Фильтр по статусу «Новые»
-    fireEvent.click(screen.getByRole("button", { name: "Новые" }));
+    fireEvent.click(screen.getByText("Новые", { selector: ".ant-segmented-item-label" }));
     expect(screen.getByText("ООО «Сталь-Транс»")).toBeVisible();
     expect(screen.queryByText("ООО «Восток Снаб»")).toBeNull();
 
     // Фильтр по «Все заявки»
-    fireEvent.click(screen.getByRole("button", { name: "Все заявки" }));
+    fireEvent.click(screen.getByText("Все заявки", { selector: ".ant-segmented-item-label" }));
     expect(screen.getByText("ООО «Восток Снаб»")).toBeVisible();
   });
 

@@ -9,13 +9,13 @@ import { useListSupplierOrders } from "../../../shared/api/generated/platform-bf
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTable";
 import { EmptyState } from "../../../shared/ui/EmptyState";
+import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 import { QueryState } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { ORDER_STATUSES, useStateLabels } from "./api";
 import { NEW_ORDER_PATH } from "./OrderCreatePage";
 import { MoneyText } from "../../../shared/ui/MoneyText";
-import { ToolsSlot } from "../../../shared/ui/DataTable/RegistryTools";
 import { RowOpenLink } from "../../../shared/ui/RowOpenLink";
 
 /** Ширины колонок: номер, поставщик (гибкая), заявки, ожидается, статус, приёмка, [сумма], действие (UX-1c, S9) */
@@ -220,25 +220,42 @@ export function OrdersTab() {
   return (
     <>
       <Card styles={{ body: { padding: 0 } }}>
-        <div className="pf-stock-toolbar">
-          <Input.Search
-            allowClear
-            aria-label={t("orders.search")}
-            placeholder={t("orders.search")}
-            onSearch={setQ}
-            className="pf-stock-search"
-          />
-          <Select<SupplierOrderStatus>
-            allowClear
-            aria-label={t("orders.statusFilter")}
-            placeholder={t("orders.statusFilter")}
-            value={status}
-            onChange={(value) => {
-              setParam("status", value);
-            }}
-            options={ORDER_STATUSES.map((s) => ({ value: s, label: t(`orders.status.${s}`) }))}
-            className="pf-stock-select"
-          />
+        <FilterBar
+          inset
+          tools
+          actions={
+            query.data?.rights.manage ? (
+              <LinkButton type="primary" to={NEW_ORDER_PATH}>
+                {t("orders.create")}
+              </LinkButton>
+            ) : query.isPending ? (
+              // До ответа право неизвестно: место кнопки держится, чтобы строка не переносилась, когда она появится (UX-1c, S10)
+              <span className="pf-stock-action-slot" aria-hidden="true">
+                {t("orders.create")}
+              </span>
+            ) : null
+          }
+        >
+          <FilterField id="pf-orders-q" label={t("orders.search")} grow>
+            <Input.Search
+              id="pf-orders-q"
+              allowClear
+              placeholder={t("orders.search")}
+              onSearch={setQ}
+            />
+          </FilterField>
+          <FilterField id="pf-orders-status" label={t("orders.statusFilter")}>
+            <Select<SupplierOrderStatus>
+              id="pf-orders-status"
+              allowClear
+              placeholder={t("orders.statusFilter")}
+              value={status}
+              onChange={(value) => {
+                setParam("status", value);
+              }}
+              options={ORDER_STATUSES.map((s) => ({ value: s, label: t(`orders.status.${s}`) }))}
+            />
+          </FilterField>
           <Checkbox
             checked={overdue}
             onChange={(event) => {
@@ -247,18 +264,7 @@ export function OrdersTab() {
           >
             {t("orders.overdueOnly")}
           </Checkbox>
-          {query.data?.rights.manage ? (
-            <LinkButton type="primary" className="pf-stock-toolbar-action" to={NEW_ORDER_PATH}>
-              {t("orders.create")}
-            </LinkButton>
-          ) : query.isPending ? (
-            // До ответа право неизвестно: место кнопки держится, чтобы панель не переносилась, когда она появится (UX-1c, S10)
-            <span className="pf-stock-toolbar-action pf-stock-action-slot" aria-hidden="true">
-              {t("orders.create")}
-            </span>
-          ) : null}
-          <ToolsSlot />
-        </div>
+        </FilterBar>
         <QueryState query={query} labels={labels} rows={10}>
           {(data) =>
             data.items.length === 0 ? (

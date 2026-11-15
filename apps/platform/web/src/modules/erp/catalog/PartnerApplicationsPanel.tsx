@@ -1,4 +1,4 @@
-import { Button, Input, Radio, Select } from "antd";
+import { Button, Input, Radio, Segmented, Select } from "antd";
 import { Dialog } from "../../../shared/ui/Dialog";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -21,6 +21,7 @@ import {
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DateField } from "../../../shared/ui/DateField";
 import { EmptyState } from "../../../shared/ui/EmptyState";
+import { FilterBar } from "../../../shared/ui/FilterBar";
 import { FormField, QueryState } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { type Column, DataList, FormPanel } from "./common";
@@ -216,26 +217,19 @@ export function PartnerApplicationsPanel() {
 
   return (
     <div className="pf-cat-applications">
-      <div className="pf-cat-toolbar">
-        <div
-          className="pf-cat-filters"
-          role="group"
+      <FilterBar>
+        <Segmented
           aria-label={t("partnerApplications.filterLabel")}
-        >
-          {STATUS_FILTERS.map((s) => (
-            <Button
-              key={s}
-              type={filter === s ? "primary" : "default"}
-              size="small"
-              onClick={() => {
-                setFilter(s);
-              }}
-            >
-              {t(`partnerApplications.filter.${s}`)}
-            </Button>
-          ))}
-        </div>
-      </div>
+          value={filter}
+          options={STATUS_FILTERS.map((s) => ({
+            value: s,
+            label: t(`partnerApplications.filter.${s}`),
+          }))}
+          onChange={(value) => {
+            setFilter(value);
+          }}
+        />
+      </FilterBar>
 
       <QueryState query={query} labels={queryLabels(t)}>
         {(data) =>

@@ -12,18 +12,29 @@ import "./ui.css";
 export function FilterBar({
   label,
   tools = false,
+  inset = false,
+  actions,
   children,
 }: {
   /** Имя группы для экранного чтеца, например «Фильтры проектов» */
   label?: string;
   /** Поставить сюда «Столбцы» таблицы экрана (`ToolsSlot`) */
   tools?: boolean;
+  /** Строка внутри карточки над таблицей: поля карточки и черта снизу */
+  inset?: boolean;
+  /** Действие вкладки у правого края, после «Столбцов» («Новый заказ»), когда шапки страницы у вкладки нет */
+  actions?: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <div className="pf-filter-bar" role="search" aria-label={label}>
+    <div
+      className={inset ? "pf-filter-bar pf-filter-bar--inset" : "pf-filter-bar"}
+      role="search"
+      aria-label={label}
+    >
       {children}
       {tools ? <ToolsSlot /> : null}
+      {actions ? <div className="pf-filter-actions">{actions}</div> : null}
     </div>
   );
 }
