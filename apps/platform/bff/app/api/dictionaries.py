@@ -63,7 +63,7 @@ _DOCUMENTS = Owner(
     atomic_import=True,
 )
 # Типы писем читает первая линия (она ставит и меняет тип), правит администратор.
-_MAIL = Owner("crm", "mail", (("crm.leads.triage", "read"), ("admin", "read")))
+_MAIL = Owner("crm", "mail", (("crm.leads.triage", "read"), ("admin", "read")), atomic_import=True)
 # Виды документов полномочий подписи (SIGN-2): читает держатель реестра, правит администратор.
 _SIGNING = Owner(
     "eds", "documents", (("eds.signing.manage", "full"), ("admin", "read")), atomic_import=True
@@ -306,7 +306,7 @@ async def _apply_atomic(
             continue
         if row.reason:
             item.action = "error"
-            item.errors.append((row.field or "name", row.reason))
+            item.errors.append((row.field or "name", _CRM_REASONS.get(row.reason, row.reason)))
         elif item.create is not None:
             item.code = row.code
     return result.applied

@@ -562,3 +562,42 @@ async def test_close_reasons_are_read_by_any_employee_and_listed_for_admin(
     assert "close-reasons" in kinds
     assert (await web.login(["SUPPLY"])).status_code == 200
     assert (await web.client.get(f"{BASE}/close-reasons")).status_code == 200
+
+
+async def test_crm_types_are_imported_in_one_crm_transaction(
+    web: Web, be: Backends, eds: EdsFake
+) -> None:
+    """План 2.9: типы писем CRM — тоже одним запросом; причина CRM — под именем справочника."""
+    mail_item = {
+        "code": "official",
+        "name": {"ru": "Госорганы", "uz": "", "en": ""},
+        "attrs": {"default_action": "create_lead"},
+        "active": True,
+        "position": 10,
+        "used": None,
+    }
+    be.router.get(f"{CRM_URL}/api/v1/dictionaries/mail-types").mock(
+        return_value=httpx.Response(200, json={"items": [mail_item]})
+    )
+    imported = be.router.post(f"{CRM_URL}/api/v1/dictionaries/mail-types/import").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "applied": False,
+                "rows": [
+                    {"line": 2, "code": None, "field": "name", "reason": "mail_type_name_taken"}
+                ],
+            },
+        )
+    )
+    assert (await web.login(["ADMIN"])).status_code == 200
+    response = await web.client.post(
+        f"{BASE}/mail-types/import",
+        params={"dry_run": "false"},
+        content="code;name_ru;name_uz;name_en;active;default_action\n;Жалоба;;;;create_lead\n".encode(),
+        headers={CSRF_HEADER: web.csrf, "Content-Type": "application/octet-stream"},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert (body["applied"], body["failed"], imported.call_count) == (False, 1, 1)
+    assert body["rows"][0]["errors"] == [{"field": "name", "reason": "name_taken"}]
