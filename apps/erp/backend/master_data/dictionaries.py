@@ -18,7 +18,7 @@ from django.db import IntegrityError, models, transaction
 from django.db.models import ProtectedError
 
 from .country_names import fill_missing_names
-from .models import Country, Currency, DeliveryBasis, UnitOfMeasure
+from .models import Bank, Country, Currency, DeliveryBasis, UnitOfMeasure
 
 AttrType = Literal["boolean", "text", "decimal"]
 CODE_MAX = 50
@@ -73,6 +73,14 @@ SPECS: dict[str, Spec] = {
             source="cbu",
         ),
         Spec("units", UnitOfMeasure, ("Единицы измерения", "O‘lchov birliklari", "Units"), code_upper=False),
+        # План 2.9: код — МФО (5 цифр), список — файлом ЦБ; SWIFT — для валютных счетов
+        Spec(
+            "banks",
+            Bank,
+            ("Банки", "Banklar", "Banks"),
+            attrs=(Attr("swift", "text", ("SWIFT", "SWIFT", "SWIFT"), 11),),
+            code_upper=False,
+        ),
         Spec(
             "delivery-basis",
             DeliveryBasis,

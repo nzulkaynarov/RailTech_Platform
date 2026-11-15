@@ -1,12 +1,13 @@
 from .external_services import ExternalServiceSwitch
 from .lookups import AbstractLookup
-from .master_data import Country, Currency, DeliveryBasis, ExchangeRate, UnitOfMeasure
+from .master_data import Bank, Country, Currency, DeliveryBasis, ExchangeRate, UnitOfMeasure
 from .notifications import EmailLog, EmailTemplate, Notification, NotificationType
 from .settings import SYSTEM_SETTING_CACHE_KEY, SYSTEM_SETTING_CACHE_TTL, SystemSetting
 
 __all__ = [
     "AbstractLookup",
     "Country",
+    "Bank",
     "Currency",
     "DeliveryBasis",
     "ExchangeRate",

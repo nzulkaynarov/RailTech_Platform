@@ -4,6 +4,7 @@
 
 **Прочитай:** `docs/systems/platform/CONVENTIONS.md` (правила кода; в коде ссылки `CONVENTIONS.md §N` ведут туда) и
 `docs/ORCHESTRATOR.md` (процесс, инварианты, протокол сессии); правило среды, тестов и CI — `CLAUDE.md` корня.
+Любой экран и компонент — строго по `docs/architecture/ui-standard.md` (цвет, шрифт, окна, таблицы, формы, чек-лист перед PR); кнопки, поля, таблицы и окна — только общие компоненты.
 Запуск и устройство — `docs/systems/platform/README.md`. Спецификация — `docs/product/SPEC-v3.md`; архитектура — `docs/architecture/platform-bff.md`, `platform-frontend.md`, `integration-map.md`.
 
 Документация — только в `docs/` (ORCHESTRATOR §3 п. 17): здесь новых `.md` не заводить.
