@@ -22,7 +22,7 @@ export async function rowActionItems(
   const menus = await screen.findAllByRole("menu");
   const items = within(menus.at(-1) as HTMLElement)
     .getAllByRole("menuitem")
-    .map((element) => element.textContent ?? "");
+    .map((element) => element.textContent);
   fireEvent.click(button);
   return items;
 }

@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { pickRowAction, rowActionItems } from "../../../test/rowActions";
+import { rowActionItems } from "../../../test/rowActions";
 
 import { usePanelsStore } from "../../../app/shell/panelsStore";
 import { readDictionaries } from "../../../mocks/dictionaries";
