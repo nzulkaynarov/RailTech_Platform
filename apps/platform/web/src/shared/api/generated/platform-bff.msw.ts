@@ -77,6 +77,7 @@ import {
   ResolutionTemplateResponsibleType,
   ResolutionTemplateScope,
   RestrictedField,
+  SentMailStatus,
   ServiceAction,
   ServiceConsoleKey,
   ServiceOwner,
@@ -330,6 +331,8 @@ import type {
   RolePreview,
   SandboxTurn,
   SearchResult,
+  SentMailBody,
+  SentMailPage,
   SentMessage,
   ServiceConsoleList,
   Session,
@@ -1873,6 +1876,43 @@ export const getListTemplateCatalogResponseMock = (
       undefined,
     ]),
   },
+  ...overrideResponse,
+});
+
+export const getListSentMailResponseMock = (
+  overrideResponse: Partial<Extract<SentMailPage, object>> = {},
+): SentMailPage => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    to: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement(Object.values(SentMailStatus)),
+    error: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    source: faker.helpers.arrayElement(["crm", "erp", "eds"] as const),
+    attachments: faker.number.int({ min: 0 }),
+    requested_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+    path: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  })),
+  next_cursor: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getGetSentMailBodyResponseMock = (
+  overrideResponse: Partial<Extract<SentMailBody, object>> = {},
+): SentMailBody => ({
+  id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  text: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  attachments: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ),
   ...overrideResponse,
 });
 
@@ -33926,6 +33966,54 @@ export const getListTemplateCatalogMockHandler = (
   );
 };
 
+export const getListSentMailMockHandler = (
+  overrideResponse?:
+    | SentMailPage
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<SentMailPage> | SentMailPage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/mail/sent",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListSentMailResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetSentMailBodyMockHandler = (
+  overrideResponse?:
+    | SentMailBody
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<SentMailBody> | SentMailBody),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/mail/sent/:id",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetSentMailBodyResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getSearchMockHandler = (
   overrideResponse?:
     | SearchResult
@@ -43158,6 +43246,8 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getMarkAllNotificationsReadMockHandler(),
   getStreamEventsMockHandler(),
   getListTemplateCatalogMockHandler(),
+  getListSentMailMockHandler(),
+  getGetSentMailBodyMockHandler(),
   getSearchMockHandler(),
   getListEdsDocumentsMockHandler(),
   getCreateEdsDocumentMockHandler(),

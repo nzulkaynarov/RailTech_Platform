@@ -31,6 +31,7 @@ import { edsLettersHandlers } from "./edsLetters";
 import { letterIntakeHandlers } from "./letterIntake";
 import { edsTemplatesHandlers } from "./edsTemplates";
 import { resolutionTemplatesHandlers } from "./resolutionTemplates";
+import { sentMailHandlers } from "./sentMail";
 import { templateCatalogHandlers } from "./templateCatalog";
 import { signingHandlers } from "./signing";
 import { erpCalcHandlers } from "./erpCalc";
@@ -193,6 +194,7 @@ export const handlers = [
   ...dictionariesHandlers,
   ...resolutionTemplatesHandlers,
   ...templateCatalogHandlers,
+  ...sentMailHandlers,
   ...edsTemplatesHandlers,
   ...signingHandlers,
   ...letterIntakeHandlers,

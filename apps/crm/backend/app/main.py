@@ -31,6 +31,7 @@ from app.api.v1 import (
     lead_attachments,
     lead_intake,
     leads,
+    mail_sent,
     mail_types,
     me,
     models_admin,
@@ -133,7 +134,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # колокольчик /me/notifications, флаг тура users.onboarding_done; 0.10.0 (D1-9):
         # приглашение в кабинет и подтверждение запроса; 0.9.0 (D1-1): записка передачи,
         # ответы; 0.8.0 (W15-H6): профиль; 0.6.0 — W15-H3.
-        version="0.25.0",
+        version="0.26.0",
         lifespan=lifespan,
         # operationId = имя функции роута → читаемые имена в клиенте orval.
         generate_unique_id_function=lambda route: route.name,
@@ -183,6 +184,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         external_services,
         models_admin,
         integrations,
+        mail_sent,
         mail_types,  # раньше inbound_mail: `/inbound-mail/handover-targets` не `{mail_id}`
         inbound_mail,
         bus,
