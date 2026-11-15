@@ -920,6 +920,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/mail/sent": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Почта · Отправленные (план 2.8, MAIL-1)
+     * @description CRM `GET /mail/sent`: письма ансамбля новыми первыми — поиск по адресату и теме, статус, курсор. Сотрудник видит письма, отправленные по его запросу, администратор (`integrations:read` CRM) — все. `path` — карточка документа EDS у письма на бланке.
+     */
+    get: operations["listSentMail"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/mail/sent/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Почта · Текст отправленного письма
+     * @description CRM `GET /mail/sent/{id}`: текст по запросу, CRM пишет просмотр в аудит; `text = null` — тело удалено по сроку хранения. Чужое письмо сотруднику — 404.
+     */
+    get: operations["getSentMailBody"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/search": {
     parameters: {
       query?: never;
@@ -7938,6 +7978,35 @@ export interface components {
      * @enum {string}
      */
     SourceState: "ok" | "unavailable" | "not_applicable";
+    /** @enum {string} */
+    SentMailStatus: "queued" | "sent" | "failed" | "skipped_no_smtp";
+    SentMail: {
+      id: string;
+      to: string;
+      subject: string;
+      status: components["schemas"]["SentMailStatus"];
+      error: string | null;
+      /** @enum {string} */
+      source: "crm" | "erp" | "eds";
+      attachments: number;
+      /** @description Кто отправил */
+      requested_by: string | null;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      sent_at: string | null;
+      /** @description Объект письма в SPA */
+      path: string | null;
+    };
+    SentMailPage: {
+      items: components["schemas"]["SentMail"][];
+      next_cursor: string | null;
+    };
+    SentMailBody: {
+      id: string;
+      text: string | null;
+      attachments: string[];
+    };
     Sources: {
       crm: components["schemas"]["SourceState"];
       erp: components["schemas"]["SourceState"];
@@ -18168,6 +18237,61 @@ export interface operations {
       };
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
+    };
+  };
+  listSentMail: {
+    parameters: {
+      query?: {
+        q?: string;
+        status?: components["schemas"]["SentMailStatus"];
+        cursor?: string;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Страница писем */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SentMailPage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getSentMailBody: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Текст и вложения */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SentMailBody"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
     };
   };
   search: {

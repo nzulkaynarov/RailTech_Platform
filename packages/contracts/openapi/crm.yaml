@@ -8550,6 +8550,135 @@ components:
       - level
       title: SectionLevel
       type: object
+    SentMailBody:
+      description: 'Текст письма по запросу: `null` — тело уже удалено по сроку хранения или ключ сменился.'
+      properties:
+        attachments:
+          items:
+            type: string
+          title: Attachments
+          type: array
+        id:
+          title: Id
+          type: integer
+        text:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Text
+      required:
+      - id
+      - text
+      - attachments
+      title: SentMailBody
+      type: object
+    SentMailItem:
+      properties:
+        attachments:
+          title: Attachments
+          type: integer
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+        error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Error
+        id:
+          title: Id
+          type: integer
+        lang:
+          title: Lang
+          type: string
+        purpose:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Purpose
+        ref_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Ref Id
+        ref_kind:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Ref Kind
+        requested_by:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Requested By
+        requested_by_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Requested By Name
+        sent_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: Sent At
+        source:
+          enum:
+          - crm
+          - erp
+          - eds
+          title: Source
+          type: string
+        status:
+          enum:
+          - queued
+          - sent
+          - failed
+          - skipped_no_smtp
+          title: Status
+          type: string
+        subject:
+          title: Subject
+          type: string
+        to_email:
+          title: To Email
+          type: string
+      required:
+      - id
+      - to_email
+      - subject
+      - status
+      - error
+      - lang
+      - source
+      - purpose
+      - ref_kind
+      - ref_id
+      - attachments
+      - requested_by
+      - requested_by_name
+      - created_at
+      - sent_at
+      title: SentMailItem
+      type: object
+    SentMailPage:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/SentMailItem'
+          title: Items
+          type: array
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+      required:
+      - items
+      - next_cursor
+      title: SentMailPage
+      type: object
     ServiceCheckOut:
       properties:
         checked_at:
@@ -15947,6 +16076,136 @@ paths:
       summary: Delete Mail Sender Rule
       tags:
       - mail-types
+  /api/v1/mail/sent:
+    get:
+      description: 'Письма новыми первыми: поиск по адресату и теме, статус, объект (`ref_kind` + `ref_id`),
+
+        период; курсор.'
+      operationId: list_sent
+      parameters:
+      - in: query
+        name: q
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 120
+            type: string
+          - type: 'null'
+          title: Q
+      - in: query
+        name: status
+        required: false
+        schema:
+          anyOf:
+          - enum:
+            - queued
+            - sent
+            - failed
+            - skipped_no_smtp
+            type: string
+          - type: 'null'
+          title: Status
+      - in: query
+        name: ref_kind
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 32
+            type: string
+          - type: 'null'
+          title: Ref Kind
+      - in: query
+        name: ref_id
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 64
+            type: string
+          - type: 'null'
+          title: Ref Id
+      - in: query
+        name: since
+        required: false
+        schema:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: Since
+      - in: query
+        name: until
+        required: false
+        schema:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: Until
+      - in: query
+        name: cursor
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 200
+            type: string
+          - type: 'null'
+          title: Cursor
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 50
+          maximum: 100
+          minimum: 1
+          title: Limit
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SentMailPage'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: List Sent
+      tags:
+      - mail
+  /api/v1/mail/sent/{email_id}:
+    get:
+      description: 'Текст письма: тот же круг, что видит строку; каждый просмотр — в аудит.'
+      operationId: read_sent
+      parameters:
+      - in: path
+        name: email_id
+        required: true
+        schema:
+          title: Email Id
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SentMailBody'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Read Sent
+      tags:
+      - mail
   /api/v1/me:
     get:
       operationId: me

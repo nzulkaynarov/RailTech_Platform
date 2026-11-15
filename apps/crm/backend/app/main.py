@@ -31,6 +31,7 @@ from app.api.v1 import (
     lead_attachments,
     lead_intake,
     leads,
+    mail_sent,
     mail_types,
     me,
     models_admin,
@@ -183,6 +184,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         external_services,
         models_admin,
         integrations,
+        mail_sent,
         mail_types,  # раньше inbound_mail: `/inbound-mail/handover-targets` не `{mail_id}`
         inbound_mail,
         bus,
