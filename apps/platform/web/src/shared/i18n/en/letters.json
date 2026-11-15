@@ -611,7 +611,8 @@
     "handedTo": {
       "label": "Handed over",
       "client_request": "Client request",
-      "memo": "Memo"
+      "memo": "Memo",
+      "partner_application": "Partner onboarding"
     }
   },
   "tasks": {
@@ -1291,7 +1292,15 @@
       "request": "Client request",
       "memo": "Memo",
       "next": "Continue",
-      "done": "Letter {{number}} handed over"
+      "done": "Letter {{number}} handed over",
+      "partner": "Partner onboarding",
+      "partnerTitle": "{{number}}: partner onboarding",
+      "company": "Company",
+      "inn": "Tax ID",
+      "contact": "Contact person",
+      "email": "Email",
+      "offer": "What they offer",
+      "partnerSubmit": "Create application"
     },
     "co": {
       "action": "Add a co-executor",

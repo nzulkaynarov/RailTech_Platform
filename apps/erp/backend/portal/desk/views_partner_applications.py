@@ -9,6 +9,7 @@ from parties.models import PartnerApplication
 from portal.desk import service_partner_applications as service
 from portal.desk.serializers import (
     DeskPartnerApplicationApproveIn,
+    DeskPartnerApplicationCreateIn,
     DeskPartnerApplicationDetail,
     DeskPartnerApplicationListResponse,
     DeskPartnerApplicationRejectIn,
@@ -29,6 +30,7 @@ def _refused(error: AccessError) -> Response:
 
 class PartnerApplicationDeskViewSet(DeskViewSet):
     required_permissions = {
+        "create": SUPPLY_MANAGE,
         "send_contract": SUPPLY_MANAGE,
         "approve": SUPPLY_MANAGE,
         "reject": SUPPLY_MANAGE,
@@ -52,6 +54,22 @@ class PartnerApplicationDeskViewSet(DeskViewSet):
     def list(self, request):
         status_filter = request.query_params.get("status")
         return Response(service.list_applications(status_filter=status_filter))
+
+    @extend_schema(
+        operation_id="catalog_partner_applications_create",
+        summary="Create a partner application from an incoming letter",
+        description=(
+            "План 1.9, «Передать в работу»: сотрудник снабжения заводит заявку кандидата по входящему письму "
+            "(`source = letter`, `source_ref` — номер ВХ). Согласия кандидата нет — дальше договорный шлюз."
+        ),
+        request=DeskPartnerApplicationCreateIn,
+        responses={201: DeskPartnerApplicationDetail, 400: REFUSED, 403: FORBIDDEN},
+        tags=["Catalog"],
+    )
+    def create(self, request):
+        body = DeskPartnerApplicationCreateIn(data=request.data)
+        body.is_valid(raise_exception=True)
+        return Response(service.create_from_letter(dict(body.validated_data), request.user), status=201)
 
     @extend_schema(
         operation_id="catalog_partner_applications_retrieve",

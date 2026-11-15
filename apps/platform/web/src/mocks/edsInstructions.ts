@@ -24,6 +24,7 @@ import { DEMO_USERS } from "./fixtures/users";
 import { type MockDocument, readEds, writeEds } from "./fixtures/edsDocuments";
 import { readDictionaries } from "./dictionaries";
 import { findLetter, readLetters, writeLetters } from "./fixtures/letters";
+import { findPartnerApplication } from "./erpPartnerApplications";
 import type { MockRole } from "./fixtures/roles";
 import { buildMe, readSession, sessionRoles } from "./mockSession";
 
@@ -902,6 +903,14 @@ export const edsInstructionsHandlers = [
         const memo = readEds().documents.find((d) => d.id === ref && d.kind !== "letter_out");
         if (!memo?.number) return invalid("handed_to", "not_found", "Объект не найден.");
         handed = { kind: "memo", number: memo.number, path: outgoingPath(memo.id) };
+      } else if (body.handed_to.kind === "partner_application") {
+        const app = findPartnerApplication(ref);
+        if (!app) return invalid("handed_to", "not_found", "Объект не найден.");
+        handed = {
+          kind: "partner_application",
+          number: app.company_name.slice(0, 32),
+          path: "/crm/clients?kind=applications",
+        };
       } else {
         if (!/^[1-9]\d*$/.test(ref)) return invalid("handed_to", "not_found", "Объект не найден.");
         handed = { kind: "client_request", number: ref, path: null };

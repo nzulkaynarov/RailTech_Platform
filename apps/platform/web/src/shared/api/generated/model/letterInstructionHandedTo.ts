@@ -11,7 +11,7 @@ export type LetterInstructionHandedTo = {
   kind: HandoverKind;
   number: string;
   /**
-   * Путь в SPA — у служебной записки
+   * Путь в SPA — у служебной записки и заявки партнёра
    * @nullable
    */
   path: string | null;

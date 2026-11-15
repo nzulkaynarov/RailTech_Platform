@@ -283,3 +283,36 @@ class TestSupplierAccessContractFields:
         rel.refresh_from_db()
         assert rel.contract_number == "SUPP-CT-202"
         assert str(rel.contract_date) == "2026-11-01"
+
+
+class TestCreateFromLetter:
+    """План 1.9: «Передать в работу» — снабжение заводит заявку кандидата по входящему письму."""
+
+    BODY = {
+        "company_name": "ООО Демо Колёса",
+        "inn": "301234500",
+        "categories_description": "Колёсные пары, буксы",
+        "contact_name": "Анвар Колёсов",
+        "email": "Wheels@Example.com",
+        "source_ref": "ВХ-112/26",
+    }
+
+    def test_supply_creates_an_application_without_consent(self, world):
+        resp = world["clients"]["supply"].post("/api/v1/catalog/partner-applications/", self.BODY, format="json")
+        assert resp.status_code == 201, resp.content
+        data = resp.json()
+        assert (data["source"], data["source_ref"], data["status"]) == ("letter", "ВХ-112/26", "submitted")
+        assert data["email"] == "wheels@example.com"
+        app = PartnerApplication.objects.get(pk=data["id"])
+        assert app.consent is False and app.kind == "supplier" and app.country.code == "UZ"
+        listed = world["clients"]["supply"].get("/api/v1/catalog/partner-applications/").json()
+        assert [i["source_ref"] for i in listed["items"]] == ["ВХ-112/26"]
+
+    def test_without_supply_manage_it_is_refused_and_input_is_checked(self, world):
+        refused = world["clients"]["manager"].post("/api/v1/catalog/partner-applications/", self.BODY, format="json")
+        assert refused.status_code == 403
+        bad = world["clients"]["supply"].post(
+            "/api/v1/catalog/partner-applications/", {**self.BODY, "email": "нет"}, format="json"
+        )
+        assert bad.status_code == 400
+        assert PartnerApplication.objects.count() == 0

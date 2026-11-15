@@ -11,6 +11,7 @@ import {
   addCoExecutor,
   closeLetterWithoutReply,
   completeInstruction,
+  createPartnerApplication,
   reopenLetter,
   returnInstructionToAuthor,
   useListDictionaryItems,
@@ -285,6 +286,106 @@ function CoExecutorDialog({
   );
 }
 
+type Kind = "client_request" | "partner_application" | "memo";
+
+/**
+ * Подключение партнёра из письма (план 1.9): компания, ИНН, почта и суть подставлены из письма; заявка уходит в очередь
+ * «Заявки на подключение» — дальше обычный договорный шлюз. Поручение закрывается ссылкой на заявку.
+ */
+function PartnerDialog({
+  letter,
+  onClose,
+  onCreated,
+}: {
+  letter: LetterCard;
+  onClose: () => void;
+  onCreated: (id: string) => Promise<void>;
+}) {
+  const { t } = useTranslation("letters");
+  const sender = letter.sender.contact ?? "";
+  const [values, setValues] = useState({
+    company: letter.sender.name ?? "",
+    inn: letter.sender.inn ?? "",
+    contact: "",
+    email: /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(sender) ? sender : "",
+    offer: letter.summary,
+  });
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const ready = [values.company, values.contact, values.email, values.offer].every(
+    (v) => v.trim() !== "",
+  );
+  const run = async () => {
+    if (!ready) return;
+    setPending(true);
+    setError(null);
+    try {
+      const created = await createPartnerApplication({
+        company_name: values.company.trim(),
+        inn: values.inn.trim(),
+        contact_name: values.contact.trim(),
+        email: values.email.trim(),
+        categories_description: values.offer.trim(),
+        source_ref: letter.number,
+      });
+      await onCreated(created.id);
+    } catch (failure) {
+      setError(errorText(failure, t("outcome.failed")));
+    } finally {
+      setPending(false);
+    }
+  };
+  const fields = [
+    ["company", 255],
+    ["inn", 32],
+    ["contact", 255],
+    ["email", 254],
+  ] as const;
+  return (
+    <Modal
+      open
+      width={520}
+      title={t("outcome.hand.partnerTitle", { number: letter.number })}
+      onCancel={onClose}
+      footer={null}
+      destroyOnHidden
+    >
+      <div className="pf-mail-actions">
+        {fields.map(([key, max]) => (
+          <div key={key} className="pf-mail-actions">
+            <label htmlFor={`hand-${key}`}>{t(`outcome.hand.${key}`)}</label>
+            <Input
+              id={`hand-${key}`}
+              maxLength={max}
+              value={values[key]}
+              onChange={(event) => {
+                setValues((prev) => ({ ...prev, [key]: event.target.value }));
+              }}
+            />
+          </div>
+        ))}
+        <label htmlFor="hand-offer">{t("outcome.hand.offer")}</label>
+        <Input.TextArea
+          id="hand-offer"
+          rows={3}
+          maxLength={4000}
+          value={values.offer}
+          onChange={(event) => {
+            setValues((prev) => ({ ...prev, offer: event.target.value }));
+          }}
+        />
+        {error ? <Alert type="error" showIcon role="alert" message={error} /> : null}
+        <div className="pf-res-actions">
+          <Button onClick={onClose}>{t("outcome.cancel")}</Button>
+          <Button type="primary" loading={pending} disabled={!ready} onClick={() => void run()}>
+            {t("outcome.hand.partnerSubmit")}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 /**
  * «Передать в работу» (план 1.9, исследование 2026-11-11 §4.2): из письма создаётся заявка клиента (форма с файлом этого
  * письма) или служебная записка (форма документа); созданный объект закрывает поручение ссылкой на себя.
@@ -304,11 +405,12 @@ function HandOverDialog({
   const navigate = useNavigate();
   const refresh = useRefreshLetters();
   const canRequest = canEdit(me, "crm.clients");
+  const canPartner = canEdit(me, "erp.stock");
   const canMemo = canEdit(me, "eds.memo.create");
-  const [kind, setKind] = useState<"client_request" | "memo">(
-    canRequest ? "client_request" : "memo",
+  const [kind, setKind] = useState<Kind>(
+    canRequest ? "client_request" : canPartner ? "partner_application" : "memo",
   );
-  const [step, setStep] = useState<"choose" | "request">("choose");
+  const [step, setStep] = useState<"choose" | "request" | "partner">("choose");
   const [error, setError] = useState<string | null>(null);
   const file = letter.files[0];
 
@@ -322,7 +424,7 @@ function HandOverDialog({
       void navigate(`/eds/new?${search.toString()}`);
       return;
     }
-    setStep("request");
+    setStep(kind === "partner_application" ? "partner" : "request");
   };
   const linkRequest = async (deal: number) => {
     setError(null);
@@ -337,6 +439,22 @@ function HandOverDialog({
     }
   };
 
+  if (step === "partner") {
+    return (
+      <PartnerDialog
+        letter={letter}
+        onClose={onClose}
+        onCreated={async (id) => {
+          await completeInstruction(instruction.id, {
+            handed_to: { kind: "partner_application", id },
+          });
+          void message.success(t("outcome.hand.done", { number: letter.number }));
+          onClose();
+          await refresh();
+        }}
+      />
+    );
+  }
   if (step === "request") {
     return (
       <Modal
@@ -372,10 +490,15 @@ function HandOverDialog({
           aria-label={t("outcome.hand.what")}
           value={kind}
           onChange={(event) => {
-            setKind(event.target.value as "client_request" | "memo");
+            setKind(event.target.value as Kind);
           }}
           options={[
             { value: "client_request", label: t("outcome.hand.request"), disabled: !canRequest },
+            {
+              value: "partner_application",
+              label: t("outcome.hand.partner"),
+              disabled: !canPartner,
+            },
             { value: "memo", label: t("outcome.hand.memo"), disabled: !canMemo },
           ]}
         />
@@ -383,7 +506,9 @@ function HandOverDialog({
           <Button onClick={onClose}>{t("outcome.cancel")}</Button>
           <Button
             type="primary"
-            disabled={kind === "client_request" ? !canRequest : !canMemo}
+            disabled={
+              kind === "client_request" ? !canRequest : kind === "memo" ? !canMemo : !canPartner
+            }
             onClick={next}
           >
             {t("outcome.hand.next")}

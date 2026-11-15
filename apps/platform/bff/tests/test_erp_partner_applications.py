@@ -220,3 +220,30 @@ async def test_access_control(web: Web) -> None:
     resp = await call(web, "GET", BASE)
     assert resp.status_code == 403
     assert resp.json()["details"]["resource"] == "erp.stock"
+
+
+async def test_create_from_letter(web: Web, be: Any, check: ContractChecker) -> None:
+    """План 1.9: снабжение заводит заявку кандидата по входящему письму."""
+    await web.login(["SUPPLY"])
+    created = {**APPLICATION_RAW, "id": 16, "source": "letter", "source_ref": "ВХ-112/26"}
+    route = (
+        mock(be)
+        .post(f"{API}/catalog/partner-applications/")
+        .mock(return_value=httpx.Response(201, json=created))
+    )
+    body = {
+        "company_name": "ООО Демо Колёса",
+        "categories_description": "Колёсные пары",
+        "contact_name": "Анвар Колёсов",
+        "email": "wheels@example.com",
+        "source_ref": "ВХ-112/26",
+    }
+    response = await call(web, "POST", BASE, body)
+    assert response.status_code == 201, response.text
+    check(response, "/erp/catalog/partner-applications", "post")
+    assert (response.json()["source"], response.json()["source_ref"]) == ("letter", "ВХ-112/26")
+    assert json.loads(route.calls.last.request.content) == body
+    bad = await call(web, "POST", BASE, {**body, "email": "нет"})
+    assert bad.status_code == 422
+    await web.login(["MANAGER"])
+    assert (await call(web, "POST", BASE, body)).status_code == 403

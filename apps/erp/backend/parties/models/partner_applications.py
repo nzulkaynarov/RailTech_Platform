@@ -24,6 +24,7 @@ from .relationships import PartnerKind
 class PartnerApplicationSource(models.TextChoices):
     PUBLIC = "public", _("Внешний вход")
     CLIENT_CABINET = "client_cabinet", _("Кабинет клиента")
+    LETTER = "letter", _("Входящее письмо")
 
 
 class PartnerApplicationStatus(models.TextChoices):
@@ -131,6 +132,13 @@ class PartnerApplication(models.Model):
     consent = models.BooleanField(
         default=True,
         verbose_name=_("Согласие на обработку ПДн"),
+    )
+    source_ref = models.CharField(
+        max_length=32,
+        blank=True,
+        default="",
+        verbose_name=_("Номер входящего письма"),
+        help_text=_("План 1.9: заявку завёл сотрудник по входящему письму (ВХ) — «Передать в работу»"),
     )
     contract_number = models.CharField(
         max_length=64,

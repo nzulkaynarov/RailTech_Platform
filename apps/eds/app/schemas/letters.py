@@ -329,9 +329,11 @@ class ExtensionStatus(StrEnum):
 
 
 class HandoverKind(StrEnum):
-    """Во что передано письмо (план 1.9): заявка клиента в CRM или служебная записка здесь же."""
+    """Во что передано письмо (план 1.9): заявка клиента (CRM), заявка на подключение партнёра (ERP) или служебная
+    записка здесь же."""
 
     CLIENT_REQUEST = "client_request"
+    PARTNER_APPLICATION = "partner_application"
     MEMO = "memo"
 
 
