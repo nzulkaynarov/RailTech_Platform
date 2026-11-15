@@ -132,7 +132,7 @@ export function NotificationCenter({ variant, onClose }: NotificationCenterProps
             flexWrap: "wrap",
             gap: 8,
             padding: "8px 16px",
-            borderBottom: "1px solid #f0f0f0",
+            borderBottom: "1px solid var(--rt-color-surface-split)",
             background: "#fff",
             flex: "0 0 auto",
           }}

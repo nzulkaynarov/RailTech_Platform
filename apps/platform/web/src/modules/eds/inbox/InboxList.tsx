@@ -1,5 +1,6 @@
 import { Button, Card, Segmented, Select } from "antd";
 import { useInfiniteQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router";
 
@@ -7,6 +8,8 @@ import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { useViewport } from "../../../app/shell/useViewport";
 import { ApiError } from "../../../shared/api/errors";
+import { Code } from "../../../shared/ui/Code";
+import { ChevronRightIcon } from "../../../shared/ui/icons";
 import type {
   LetterRow,
   LetterStatus,
@@ -35,12 +38,13 @@ const PAGE = 25;
  */
 const COLS = {
   number: 108,
-  correspondent: 160,
+  correspondent: 208,
   executor: 136,
   due: 104,
   received: 104,
   status: 168,
-  action: 104,
+  // Стандарт интерфейса §7: вместо кнопки «Открыть» в каждой строке — стрелка перехода к письму.
+  action: 56,
 };
 /** Фильтры журнала (P8b, SPEC-v3 §3.2a п. 6): «На контроле» и «Просрочено» — признаки EDS, не статусы. */
 type Flag = "on_control" | "overdue";
@@ -101,7 +105,15 @@ function useSelect() {
     });
 }
 
-function Rows({ items, selected }: { items: readonly LetterRow[]; selected: string | null }) {
+function Rows({
+  items,
+  selected,
+  toolsTarget,
+}: {
+  items: readonly LetterRow[];
+  selected: string | null;
+  toolsTarget: HTMLElement | null;
+}) {
   const { t } = useTranslation("letters");
   const { date } = useFormat();
   const { mobile } = useViewport();
@@ -192,13 +204,11 @@ function Rows({ items, selected }: { items: readonly LetterRow[]; selected: stri
       width: COLS.correspondent,
       cell: (row) => (
         <>
-          <div className="pf-ell" title={row.client_name ?? undefined}>
-            {row.client_name ?? "—"}
-          </div>
+          <div>{row.client_name ?? "—"}</div>
           {row.request_number ? (
-            <div className="pf-hint pf-num pf-ell">
+            <div className="pf-ell">
               <span className="pf-sr-only">{t("list.columns.request")}: </span>
-              {row.request_number}
+              <Code quiet>{row.request_number}</Code>
             </div>
           ) : null}
         </>
@@ -239,12 +249,14 @@ function Rows({ items, selected }: { items: readonly LetterRow[]; selected: stri
       width: COLS.action,
       cell: (row) => (
         <LinkButton
+          type="text"
           size="small"
+          className="pf-row-open"
+          icon={<ChevronRightIcon />}
           to={letterPath(row.number)}
+          title={t("list.open")}
           aria-label={t("list.openLabel", { number: row.number })}
-        >
-          {t("list.open")}
-        </LinkButton>
+        />
       ),
     },
   ];
@@ -255,6 +267,7 @@ function Rows({ items, selected }: { items: readonly LetterRow[]; selected: stri
       scrollLabel={t("list.scroll")}
       className="pf-letters-table"
       flexMin={224}
+      toolsTarget={toolsTarget}
       columns={columns}
       rows={items}
       rowKey={(row) => row.id}
@@ -273,6 +286,7 @@ function Rows({ items, selected }: { items: readonly LetterRow[]; selected: stri
 /** EDS · Входящие письма (SPEC-v3 §7.3): список со статусом словами, фильтр (по умолчанию «Ждёт резолюции»), письмо — в боковом окне. */
 export function InboxList() {
   const { t, i18n } = useTranslation(["letters", "modules", "dictionary"]);
+  const [tools, setTools] = useState<HTMLElement | null>(null);
   const { me } = useAuth();
   const [params, setParams] = useSearchParams();
   const labels = useStateLabels();
@@ -379,7 +393,7 @@ export function InboxList() {
   } else {
     body = (
       <>
-        <Rows items={rows} selected={selected} />
+        <Rows items={rows} selected={selected} toolsTarget={tools} />
         {query.hasNextPage ? (
           <div className="pf-letters-pager">
             <Button
@@ -453,6 +467,8 @@ export function InboxList() {
             setKind(value);
           }}
         />
+        {/* «Столбцы» таблицы стоят в этой же строке справа (стандарт интерфейса §9) */}
+        <div className="pf-letters-tools" ref={setTools} />
       </div>
       <Card styles={{ body: { padding: 0 } }}>
         <DataBlock busy={query.isPlaceholderData} resetKey={shownKey}>

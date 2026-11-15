@@ -154,7 +154,7 @@ export function AvatarCropper({
           position: "relative",
           overflow: "hidden",
           borderRadius: "50%",
-          background: "#f0f0f0",
+          background: "var(--rt-color-surface-split)",
           touchAction: "none",
           cursor: "grab",
           outlineOffset: 2,

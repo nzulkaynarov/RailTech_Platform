@@ -122,7 +122,7 @@ test.describe("панели", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Письмо ВХ-104/26" })).toBeVisible();
     await expect(panel).toBeVisible();
     await expect(panel).toHaveClass(/pf-panel-overlay/);
-    await expect(panel).toHaveCSS("width", "440px");
+    await expect(panel).toHaveCSS("width", "480px");
     expect(await mainWidth()).toBe(listWidth);
     await page.getByRole("button", { name: "Скрыть панель" }).click();
     await expect(panel).toHaveCount(0);

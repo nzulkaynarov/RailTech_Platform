@@ -1,5 +1,4 @@
-import { RT_TAG_TEXT } from "../../app/tokens.generated";
-import { PF_COLORS, TAG_TEXT } from "../../app/theme";
+import { RT_TAG_TEXT, RT_TOKENS } from "../../app/tokens.generated";
 
 /**
  * Цвета тегов статусов (SPEC-v3 §5.2): blue, green, gold, red, purple, cyan, default. Цвет текста — всегда из колонки
@@ -15,14 +14,24 @@ export interface ToneStyle {
   borderColor: string;
 }
 
+const T = RT_TOKENS;
+/** Пастельная тройка «фон · текст · рамка» (стандарт интерфейса §2): значения — из токенов, сплошных заливок нет. */
 export const TONE_STYLE: Record<StatusTone, ToneStyle> = {
-  blue: { color: RT_TAG_TEXT["blue"] ?? "", background: "#e6f4ff", borderColor: "#91caff" },
-  green: { color: RT_TAG_TEXT["green"] ?? "", background: "#f6ffed", borderColor: "#b7eb8f" },
-  gold: { color: RT_TAG_TEXT["gold"] ?? "", background: "#fffbe6", borderColor: "#ffe58f" },
-  red: { color: RT_TAG_TEXT["red"] ?? "", background: "#fff2f0", borderColor: "#ffccc7" },
-  purple: { color: RT_TAG_TEXT["purple"] ?? "", background: "#f9f0ff", borderColor: "#d3adf7" },
-  cyan: { color: RT_TAG_TEXT["cyan"] ?? "", background: "#e6fffb", borderColor: "#87e8de" },
-  default: { color: TAG_TEXT.default, background: "#fafafa", borderColor: PF_COLORS.border },
+  blue: { color: T.colorInfoText, background: T.colorInfoBg, borderColor: T.colorInfoBorder },
+  green: {
+    color: T.colorSuccessText,
+    background: T.colorSuccessBg,
+    borderColor: T.colorSuccessBorder,
+  },
+  gold: {
+    color: T.colorWarningText,
+    background: T.colorWarningBg,
+    borderColor: T.colorWarningBorder,
+  },
+  red: { color: T.colorErrorText, background: T.colorErrorBg, borderColor: T.colorErrorBorder },
+  purple: { color: RT_TAG_TEXT["purple"] ?? "", background: "#f5f3ff", borderColor: "#ddd6fe" },
+  cyan: { color: RT_TAG_TEXT["cyan"] ?? "", background: "#ecfeff", borderColor: "#a5f3fc" },
+  default: { color: "#334155", background: "#f1f5f9", borderColor: "#e2e8f0" },
 };
 
 /** Семь стадий заявки SPEC-v3 §2.3 (код для интеграции) и «Отказ». */

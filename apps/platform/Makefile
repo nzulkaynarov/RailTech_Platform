@@ -51,15 +51,18 @@ crm-models-check: ## Модели CRM совпадают с crm.yaml
 # build.mjs пакета ui-tokens не знает про Платформу, поэтому копию делает этот Makefile
 # (флаги --no-* не трогают сгенерированные файлы CRM, Cabinet и ERP).
 .PHONY: tokens
-tokens: ## packages/ui-tokens → web/src/app/tokens.generated.ts
+tokens: ## packages/ui-tokens → web/src/app/tokens.generated.ts и tokens.generated.css (переменные --rt-*)
 	node $(TOKENS)/build.mjs --no-cabinet
 	cp $(TOKENS)/dist/antd.ts $(WEB)/src/app/tokens.generated.ts
+	cp $(TOKENS)/dist/tokens.css $(WEB)/src/app/tokens.generated.css
 
 .PHONY: tokens-check
 tokens-check: ## Копия токенов совпадает с packages/ui-tokens
 	node $(TOKENS)/build.mjs --no-cabinet >/dev/null
 	cmp -s $(TOKENS)/dist/antd.ts $(WEB)/src/app/tokens.generated.ts \
 	  || { echo "tokens.generated.ts устарел — make -C apps/platform tokens и закоммитьте"; exit 1; }
+	cmp -s $(TOKENS)/dist/tokens.css $(WEB)/src/app/tokens.generated.css \
+	  || { echo "tokens.generated.css устарел — make -C apps/platform tokens и закоммитьте"; exit 1; }
 
 # RBAC: матрица ролей, меню и поля с ограничением — из packages/contracts/platform-rbac.yaml (PLT-11).
 # Генератор лежит в scripts/ и запускается в окружении bff (pyyaml, jsonschema).

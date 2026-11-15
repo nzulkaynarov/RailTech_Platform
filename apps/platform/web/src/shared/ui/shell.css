@@ -21,17 +21,17 @@
   z-index: 2000;
   padding: 8px 16px;
   border-radius: 6px;
-  background: #1668dc;
-  color: #fff;
+  background: var(--rt-color-primary-default);
+  color: var(--rt-color-text-inverse);
   text-decoration: none;
 }
 .pf-skip-link:focus {
   top: 8px;
-  color: #fff;
+  color: var(--rt-color-text-inverse);
 }
 
 .pf-focusable:focus-visible {
-  outline: 2px solid #1668dc;
+  outline: 2px solid var(--rt-color-primary-default);
   outline-offset: 2px;
 }
 
@@ -47,7 +47,7 @@
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: #595959;
+  color: var(--rt-color-text-secondary);
   font: inherit;
   font-size: 10px;
   line-height: 1.2;
@@ -67,12 +67,12 @@
   text-align: center;
 }
 .pf-rail-btn:hover {
-  background: #f5f5f5;
-  color: #1f1f1f;
+  background: var(--rt-color-surface-layout);
+  color: var(--rt-color-text-default);
 }
 .pf-rail-btn[aria-current="page"] {
-  background: #e6f4ff;
-  color: #0958d9;
+  background: var(--rt-color-primary-bg);
+  color: var(--rt-color-primary-text);
 }
 
 /* Нижняя панель модулей (< 768) */
@@ -87,8 +87,8 @@
   justify-content: space-around;
   height: 60px;
   padding: 0 4px;
-  background: #fff;
-  border-top: 1px solid #f0f0f0;
+  background: var(--rt-color-surface-background);
+  border-top: 1px solid var(--rt-color-surface-split);
 }
 .pf-bottom-bar .pf-rail-btn {
   width: auto;
@@ -120,12 +120,12 @@
   margin: 0 -8px 12px;
   padding: 0 8px 12px;
   scroll-padding-bottom: 12px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--rt-color-surface-split);
 }
 .pf-menu-group {
   margin: 0;
   padding: 2px 12px 0;
-  color: #595959;
+  color: var(--rt-color-text-secondary);
   font-size: 12px;
   line-height: 20px;
   font-weight: 600;
@@ -147,16 +147,16 @@
   height: 40px;
   padding: 0 12px;
   border-radius: 6px;
-  color: #1f1f1f;
+  color: var(--rt-color-text-default);
   text-decoration: none;
 }
 .pf-menu-item:hover {
-  background: #f5f5f5;
-  color: #1f1f1f;
+  background: var(--rt-color-surface-layout);
+  color: var(--rt-color-text-default);
 }
 .pf-menu-item[aria-current="page"] {
-  background: #e6f4ff;
-  color: #0958d9;
+  background: var(--rt-color-primary-bg);
+  color: var(--rt-color-primary-text);
 }
 
 /* Бейдж очереди: красный требует действия, серый — счётчик */
@@ -166,8 +166,10 @@
   height: 20px;
   padding: 0 6px;
   border-radius: 10px;
-  background: #a8071a;
-  color: #fff;
+  /* Стандарт интерфейса §2: счётчик «ждёт вас» — пастельный акцент, не сплошной красный (красный — только просрочка). */
+  background: var(--rt-color-primary-bg);
+  color: var(--rt-color-primary-text);
+  box-shadow: inset 0 0 0 1px var(--rt-color-primary-border);
   font-size: 12px;
   font-weight: 500;
   line-height: 20px;
@@ -182,11 +184,12 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #a8071a;
+  background: var(--rt-color-error-text);
 }
 .pf-badge--quiet {
-  background: #f0f0f0;
-  color: #595959;
+  background: var(--rt-color-surface-muted);
+  color: var(--rt-color-text-secondary);
+  box-shadow: none;
 }
 
 /* Поиск в шапке: фон #f5f5f5, без рамки */
@@ -196,30 +199,30 @@
   padding: 0 52px 0 32px;
   border: 1px solid transparent;
   border-radius: 6px;
-  background: #f5f5f5;
-  color: #1f1f1f;
+  background: var(--rt-color-surface-layout);
+  color: var(--rt-color-text-default);
   font: inherit;
 }
 .pf-search::placeholder {
-  color: #6e6e6e;
+  color: var(--rt-color-text-tertiary);
 }
 .pf-search:hover {
-  border-color: #1677ff;
+  border-color: var(--rt-color-primary-default);
 }
 .pf-search:focus-visible {
-  outline: 2px solid #1668dc;
+  outline: 2px solid var(--rt-color-primary-default);
   outline-offset: 1px;
-  background: #fff;
+  background: var(--rt-color-surface-background);
 }
 .pf-kbd {
   position: absolute;
   right: 8px;
   top: 6px;
   padding: 0 5px;
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--rt-color-surface-border);
   border-radius: 4px;
-  background: #fff;
-  color: #6e6e6e;
+  background: var(--rt-color-surface-background);
+  color: var(--rt-color-text-tertiary);
   font: inherit;
   font-size: 11px;
   line-height: 18px;
@@ -239,16 +242,16 @@
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: #1f1f1f;
+  color: var(--rt-color-text-default);
   cursor: pointer;
 }
 .pf-icon-btn:hover {
-  background: #f5f5f5;
-  color: #1677ff;
+  background: var(--rt-color-surface-layout);
+  color: var(--rt-color-primary-default);
 }
 .pf-icon-btn[aria-expanded="true"] {
-  background: #e6f4ff;
-  color: #0958d9;
+  background: var(--rt-color-primary-bg);
+  color: var(--rt-color-primary-text);
 }
 
 /* Крошки — гибкая область шапки: длинные обрезаются многоточием и не сдвигают поиск, «?» и колокольчик (UX-1b, S5) */
@@ -260,7 +263,7 @@
   margin: 0;
   padding: 0;
   list-style: none;
-  color: #595959;
+  color: var(--rt-color-text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -272,21 +275,21 @@
   margin: 0 8px;
 }
 .pf-crumbs a {
-  color: #595959;
+  color: var(--rt-color-text-secondary);
   text-decoration: none;
 }
 .pf-crumbs a:hover {
-  color: #1677ff;
+  color: var(--rt-color-primary-default);
 }
 
 /* Боковое окно — лист на весь экран < 768 px (B-020, `SectionConfig.sheetOnMobile`) */
 .pf-sheet-close {
   min-height: 32px;
   padding: 0 12px;
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--rt-color-surface-border);
   border-radius: 6px;
-  background: #fff;
-  color: #1f1f1f;
+  background: var(--rt-color-surface-background);
+  color: var(--rt-color-text-default);
   font: inherit;
   cursor: pointer;
 }
@@ -300,23 +303,23 @@
   flex-wrap: wrap;
   gap: 4px 24px;
   margin-bottom: 16px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--rt-color-surface-split);
 }
 
 .pf-shell-tab {
   padding: 8px 0;
-  color: #595959;
+  color: var(--rt-color-text-secondary);
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
 }
 
 .pf-shell-tab:hover {
-  color: #1f1f1f;
+  color: var(--rt-color-text-default);
 }
 
 .pf-shell-tab[aria-current="page"] {
-  color: #0958d9;
-  border-bottom-color: #1668dc;
+  color: var(--rt-color-primary-text);
+  border-bottom-color: var(--rt-color-primary-default);
 }
 
 .pf-rail-create {

@@ -1,7 +1,7 @@
 /* Раскладка витрины /dev/ui — только для проверки глазами; значения компонентов живут в shared/ui/ui.css. */
 .dev-page {
   min-height: 100vh;
-  background: #f5f5f5;
+  background: var(--rt-color-surface-layout);
 }
 .dev-main {
   max-width: 1100px;
@@ -64,9 +64,9 @@
   max-width: 100%;
   overflow: hidden;
   align-self: flex-start;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--rt-color-surface-split);
   border-radius: 8px;
-  background: #fff;
+  background: var(--rt-color-surface-background);
 }
 @media (max-width: 800px) {
   .dev-columns {

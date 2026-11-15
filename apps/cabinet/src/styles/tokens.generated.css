@@ -1,4 +1,4 @@
-/* Сгенерировано из packages/ui-tokens/tokens.json (v0.2.0) — не править руками, запускать make tokens. */
+/* Сгенерировано из packages/ui-tokens/tokens.json (v0.3.0) — не править руками, запускать make tokens. */
 /* Тема кабинета клиента (shadcnThemes.cabinet): переменные shadcn со значениями темы; только Cabinet
    (копия apps/cabinet/src/styles/tokens.generated.css). .dark — тёмная тема Mini App (src/telegram/theme.ts);
    цвета themeParams Telegram ложатся поверх тех же переменных inline-стилем. */
@@ -31,7 +31,7 @@
   --ring: #1f2e4a;
   --radius: 0.75rem;
   --font-sans: 'Inter Variable', Inter, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 .dark {

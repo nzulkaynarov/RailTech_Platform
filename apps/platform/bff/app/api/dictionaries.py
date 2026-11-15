@@ -49,19 +49,27 @@ class Owner:
     readers: tuple[Rule, ...]
     #: Кто правит вручную; загрузку файла запускает только администратор (решение 2026-11-11)
     writers: tuple[Rule, ...] = (("admin", "full"),)
+    #: Домен применяет файл одной транзакцией (`POST /dictionaries/{kind}/import`, план 2.9);
+    #: иначе BFF пишет строки по одной.
+    atomic_import: bool = False
 
 
 # Справочники документооборота читают те, кто работает с письмами, и администратор;
 # меняет — `admin: full`.
 _DOCUMENTS = Owner(
-    "eds", "documents", (("eds.inbox", "read"), ("eds.inbox.register", "full"), ("admin", "read"))
+    "eds",
+    "documents",
+    (("eds.inbox", "read"), ("eds.inbox.register", "full"), ("admin", "read")),
+    atomic_import=True,
 )
 # Типы писем читает первая линия (она ставит и меняет тип), правит администратор.
-_MAIL = Owner("crm", "mail", (("crm.leads.triage", "read"), ("admin", "read")))
+_MAIL = Owner("crm", "mail", (("crm.leads.triage", "read"), ("admin", "read")), atomic_import=True)
 # Виды документов полномочий подписи (SIGN-2): читает держатель реестра, правит администратор.
-_SIGNING = Owner("eds", "documents", (("eds.signing.manage", "full"), ("admin", "read")))
+_SIGNING = Owner(
+    "eds", "documents", (("eds.signing.manage", "full"), ("admin", "read")), atomic_import=True
+)
 # Причины «Закрыть без ответа» читает любой сотрудник (исполнитель поручения), правит администратор.
-_CLOSE_REASONS = Owner("eds", "documents", ())
+_CLOSE_REASONS = Owner("eds", "documents", (), atomic_import=True)
 # Справочники «Расчёта» (ERP; решение владельца 2026-11-11 — один механизм): читает тот, кто
 # видит настройки компании, и администратор; правит администратор (ERP проверяет `settings.edit`).
 _CALC = Owner(
@@ -265,6 +273,47 @@ async def export_dictionary(
     )
 
 
+class _AtomicRow(BaseModel):
+    line: int
+    code: str | None
+    field: str | None = None
+    reason: str | None = None
+
+
+class _AtomicResult(BaseModel):
+    applied: bool
+    rows: list[_AtomicRow]
+
+
+async def _apply_atomic(
+    authed: Authed, owner: Owner, kind: str, plans: list[files.RowPlan]
+) -> bool:
+    """Файл одной транзакцией домена: ошибка в одной строке — не записано ничего, строки с ошибкой
+    помечаются причиной домена."""
+    rows = [
+        {"line": p.line, "code": p.code, "create": p.create}
+        if p.create is not None
+        else {"line": p.line, "code": p.code, "patch": p.patch}
+        for p in plans
+        if p.create is not None or (p.patch is not None and p.code)
+    ]
+    if not rows:
+        return True
+    response = await _call(authed, owner, "POST", f"/{kind}/import", json={"rows": rows})
+    result = _parse(_AtomicResult, response, owner)
+    by_line = {p.line: p for p in plans}
+    for row in result.rows:
+        item = by_line.get(row.line)
+        if item is None:
+            continue
+        if row.reason:
+            item.action = "error"
+            item.errors.append((row.field or "name", _CRM_REASONS.get(row.reason, row.reason)))
+        elif item.create is not None:
+            item.code = row.code
+    return result.applied
+
+
 @router.post(
     "/{kind}/import", response_model=DictionaryImportResult, operation_id="importDictionary"
 )
@@ -292,7 +341,10 @@ async def import_dictionary(
         ) from exc
     failed = sum(1 for p in plans if p.action == "error")
     applied = False
-    if not dry_run and failed == 0:
+    if not dry_run and failed == 0 and owner.atomic_import:
+        applied = await _apply_atomic(authed, owner, kind, plans)
+        failed = sum(1 for p in plans if p.action == "error")
+    elif not dry_run and failed == 0:
         applied = True
         for item in plans:
             try:

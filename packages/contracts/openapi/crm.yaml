@@ -2499,6 +2499,88 @@ components:
       - name
       title: DictionaryAttrOption
       type: object
+    DictionaryImportIn:
+      additionalProperties: false
+      properties:
+        rows:
+          items:
+            $ref: '#/components/schemas/DictionaryImportRow'
+          maxItems: 2000
+          minItems: 1
+          title: Rows
+          type: array
+      required:
+      - rows
+      title: DictionaryImportIn
+      type: object
+    DictionaryImportOut:
+      description: '`applied = false` — у строк с `reason` ошибка, не записано ничего.'
+      properties:
+        applied:
+          title: Applied
+          type: boolean
+        rows:
+          items:
+            $ref: '#/components/schemas/DictionaryImportRowResult'
+          title: Rows
+          type: array
+      required:
+      - applied
+      - rows
+      title: DictionaryImportOut
+      type: object
+    DictionaryImportRow:
+      additionalProperties: false
+      description: 'Строка файла, уже проверенная BFF (план 2.9): `create` или `patch` по `code`.'
+      properties:
+        code:
+          anyOf:
+          - pattern: ^[a-z][a-z_]{0,31}$
+            type: string
+          - type: 'null'
+          title: Code
+        create:
+          anyOf:
+          - $ref: '#/components/schemas/DictionaryItemIn'
+          - type: 'null'
+        line:
+          maximum: 1000000.0
+          minimum: 1.0
+          title: Line
+          type: integer
+        patch:
+          anyOf:
+          - $ref: '#/components/schemas/DictionaryItemPatch'
+          - type: 'null'
+      required:
+      - line
+      title: DictionaryImportRow
+      type: object
+    DictionaryImportRowResult:
+      properties:
+        code:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Code
+        field:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Field
+        line:
+          title: Line
+          type: integer
+        reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Reason
+      required:
+      - line
+      - code
+      title: DictionaryImportRowResult
+      type: object
     DictionaryItem:
       properties:
         active:
@@ -10348,7 +10430,7 @@ components:
       type: http
 info:
   title: RailTech CRM API
-  version: 0.27.0
+  version: 0.29.0
 openapi: 3.1.0
 paths:
   /api/v1/admin/ai-spend:
@@ -12433,6 +12515,44 @@ paths:
       security:
       - HTTPBearer: []
       summary: Create Dictionary Item
+      tags:
+      - mail-types
+  /api/v1/dictionaries/{kind}/import:
+    post:
+      description: 'Загрузка файла (план 2.9): все строки одной транзакцией — ошибка хотя бы в одной, и не
+
+        записано ничего (`applied = false`, у строки причина).'
+      operationId: import_dictionary_items
+      parameters:
+      - in: path
+        name: kind
+        required: true
+        schema:
+          pattern: ^[a-z][a-z-]{0,31}$
+          title: Kind
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DictionaryImportIn'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DictionaryImportOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Import Dictionary Items
       tags:
       - mail-types
   /api/v1/dictionaries/{kind}/order:

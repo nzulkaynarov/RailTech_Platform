@@ -1,6 +1,6 @@
 /* Admin · Внешние интеграции (W13-A1): «Требует внимания», карточки со статусом, панели настроек.
-   Значения — макет v3 и docs/architecture/platform-frontend.md §5: рамка #f0f0f0, радиус 8, без теней и градиентов;
-   второстепенный текст #595959 и #6e6e6e (контраст ≥ 4.5:1 на белом). */
+   Значения — макет v3 и docs/architecture/platform-frontend.md §5: рамка var(--rt-color-surface-split), радиус 8, без теней и градиентов;
+   второстепенный текст var(--rt-color-text-secondary) и var(--rt-color-text-tertiary) (контраст ≥ 4.5:1 на белом). */
 .pf-int {
   display: flex;
   flex-direction: column;
@@ -23,7 +23,7 @@
   align-items: flex-start;
   gap: 8px 12px;
   padding: 12px 24px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--rt-color-surface-split);
 }
 .pf-int-attention li:first-child {
   border-top: 0;
@@ -40,15 +40,15 @@
   line-height: 22px;
 }
 .pf-int-attention-detail {
-  color: #595959;
-  font-size: 13px;
+  color: var(--rt-color-text-secondary);
+  font-size: 12px;
   line-height: 20px;
   overflow-wrap: anywhere;
 }
 .pf-int-empty {
   margin: 0;
   padding: 16px 24px;
-  color: #595959;
+  color: var(--rt-color-text-secondary);
 }
 .pf-int-grid {
   display: grid;
@@ -60,13 +60,13 @@
   flex-direction: column;
   gap: 8px;
   padding: 16px;
-  background: #fff;
-  border: 1px solid #f0f0f0;
+  background: var(--rt-color-surface-background);
+  border: 1px solid var(--rt-color-surface-split);
   border-radius: 8px;
 }
 .pf-int-card[data-selected="true"] {
-  background: #e6f4ff;
-  border-color: #91caff;
+  background: var(--rt-color-primary-bg);
+  border-color: var(--rt-color-primary-border);
 }
 .pf-int-card-head {
   display: flex;
@@ -82,8 +82,8 @@
 }
 .pf-int-card-purpose {
   margin: 0;
-  color: #595959;
-  font-size: 13px;
+  color: var(--rt-color-text-secondary);
+  font-size: 12px;
   line-height: 20px;
 }
 .pf-int-card-note {
@@ -108,7 +108,7 @@
   flex-direction: column;
   gap: 12px;
   padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--rt-color-surface-split);
 }
 .pf-int-block > h4 {
   margin: 0;
@@ -130,7 +130,7 @@
 .pf-int-field > .pf-int-label {
   font-size: 14px;
   line-height: 22px;
-  color: #1f1f1f;
+  color: var(--rt-color-text-default);
 }
 /* Выбор провайдера внешней копии (OPS-YADISK): группа радиокнопок с подписью, без рамки fieldset. */
 .pf-int-fieldset {
@@ -147,7 +147,7 @@
   margin-bottom: 4px;
   font-size: 14px;
   line-height: 22px;
-  color: #1f1f1f;
+  color: var(--rt-color-text-default);
 }
 .pf-int-fieldset .ant-radio-group {
   display: flex;
@@ -169,7 +169,7 @@
   flex-direction: column;
   gap: 6px;
   padding: 12px 0;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--rt-color-surface-split);
 }
 .pf-int-list > li:first-child {
   border-top: 0;
@@ -188,8 +188,8 @@
 }
 .pf-int-sub {
   margin: 0;
-  color: #595959;
-  font-size: 13px;
+  color: var(--rt-color-text-secondary);
+  font-size: 12px;
   line-height: 20px;
   overflow-wrap: anywhere;
 }
@@ -199,17 +199,17 @@
 .pf-int-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 14px;
 }
 .pf-int-table th,
 .pf-int-table td {
   padding: 6px 8px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--rt-color-surface-split);
   text-align: left;
   vertical-align: top;
 }
 .pf-int-table th {
-  background: #fafafa;
+  background: var(--rt-color-surface-subtle);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -220,13 +220,13 @@
 }
 .pf-int-tile {
   padding: 8px 12px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--rt-color-surface-split);
   border-radius: 8px;
 }
 .pf-int-tile dt {
   font-size: 12px;
   line-height: 20px;
-  color: #595959;
+  color: var(--rt-color-text-secondary);
 }
 .pf-int-tile dd {
   margin: 0;
@@ -240,20 +240,20 @@
   width: 96px;
   height: 6px;
   border-radius: 3px;
-  background: #f0f0f0;
+  background: var(--rt-color-surface-split);
   vertical-align: middle;
 }
 .pf-int-meter > span {
   display: block;
   height: 100%;
   border-radius: 3px;
-  background: #1668dc;
+  background: var(--rt-color-primary-default);
 }
 .pf-int-meter[data-tone="warn"] > span {
-  background: #874d00;
+  background: var(--rt-color-warning-text);
 }
 .pf-int-meter[data-tone="fail"] > span {
-  background: #a8071a;
+  background: var(--rt-color-error-text);
 }
 
 /* Строка «Требует внимания» с причиной (W15-H3): состояние словом, «с …», «Кто исправляет», действия, подробности. */
@@ -281,19 +281,19 @@
   flex-wrap: wrap;
   gap: 2px 16px;
   margin: 0;
-  color: #595959;
-  font-size: 13px;
+  color: var(--rt-color-text-secondary);
+  font-size: 12px;
   line-height: 20px;
 }
 .pf-health-label {
-  color: #595959;
+  color: var(--rt-color-text-secondary);
 }
 .pf-health-write {
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 12px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--rt-color-surface-split);
   border-radius: 8px;
 }
 .pf-health-tech {
@@ -316,8 +316,8 @@
   padding: 8px 12px;
   max-height: 200px;
   overflow: auto;
-  background: #fafafa;
-  border: 1px solid #f0f0f0;
+  background: var(--rt-color-surface-subtle);
+  border: 1px solid var(--rt-color-surface-split);
   border-radius: 8px;
   font-size: 12px;
   line-height: 18px;
@@ -340,9 +340,9 @@
 
 .pf-int-catalog-group {
   margin: 0 0 8px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
-  color: #595959;
+  color: var(--rt-color-text-secondary);
 }
 
 .pf-int-catalog-grid {

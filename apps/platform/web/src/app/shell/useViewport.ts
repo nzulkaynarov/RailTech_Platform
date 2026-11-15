@@ -42,10 +42,10 @@ export function useMediaQuery(query: string): boolean {
 export const RAIL_WIDTH = 64;
 export const MENU_WIDTH = 200;
 /** Закреплённому окну рядом нужна рабочая область не уже этого (UX-1a), иначе окно — поверх. */
-export const MIN_MAIN_WITH_DOCK = 760;
+export const MIN_MAIN_WITH_DOCK = 736;
 
 /**
- * Помещается ли окно ширины `panelWidth` рядом: экран ≥ рейл + подменю (если открыто) + окно + 760 px рабочей области.
+ * Помещается ли окно ширины `panelWidth` рядом: экран ≥ рейл + подменю (если открыто) + окно + 736 px рабочей области.
  * Считается по ширине экрана, а не по замеру — решение готово в том же кадре, что и смена подменю.
  */
 export function useDockFits(menuOpen: boolean, panelWidth: number): boolean {

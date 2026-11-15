@@ -22,7 +22,7 @@
   padding: 0;
   border: 0;
   background: none;
-  color: #0958d9;
+  color: var(--rt-color-primary-text);
   font: inherit;
   text-align: left;
   cursor: pointer;

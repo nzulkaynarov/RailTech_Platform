@@ -17,7 +17,7 @@
   flex-direction: column;
   gap: 4px;
   padding: 12px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--rt-color-surface-split);
 }
 
 .pf-mail-row:last-child {
@@ -101,9 +101,9 @@
   align-items: center;
   gap: 12px;
   padding: 8px 12px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--rt-color-surface-split);
   border-radius: 8px;
-  background: #fafafa;
+  background: var(--rt-color-surface-subtle);
 }
 
 .pf-mail-row {
@@ -157,7 +157,7 @@
 
 .pf-mail-entry {
   padding-top: 12px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--rt-color-surface-split);
 }
 
 .pf-mail-entry:first-child {
@@ -192,7 +192,7 @@
 /* Показ письма (W18A-P2-4): превью, «…» с цитатой, HTML во фрейме без внутренней прокрутки. */
 .pf-mail-text--quote {
   margin-top: 8px;
-  color: #595959;
+  color: var(--rt-color-text-secondary);
 }
 
 .pf-mail-quote {
@@ -203,10 +203,10 @@
   min-width: 32px;
   min-height: 24px;
   padding: 0 8px;
-  border: 1px solid #d9d9d9;
+  border: 1px solid var(--rt-color-surface-border);
   border-radius: 4px;
-  background: #fff;
-  color: #595959;
+  background: var(--rt-color-surface-background);
+  color: var(--rt-color-text-secondary);
   cursor: pointer;
   font: inherit;
   line-height: 1;
@@ -236,7 +236,7 @@
   max-width: 100%;
   border: 0;
   overflow: hidden;
-  background: #fff;
+  background: var(--rt-color-surface-background);
 }
 
 /* «Всегда считать письма от …»: длинное название типа переносится, кнопка не шире колонки (390 px). */

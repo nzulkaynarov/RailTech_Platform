@@ -20,12 +20,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 
 from app import clock
-from app.errors import conflict, invalid_fields, not_found
+from app.errors import EdsError, conflict, invalid_fields, not_found
 from app.models import DictionaryItem, Letter, SigningAuthority
 from app.schemas.dictionaries import (
     AttrValue,
     Dictionary,
     DictionaryAttr,
+    DictionaryImportOut,
+    DictionaryImportRow,
+    DictionaryImportRowResult,
     DictionaryItemIn,
     DictionaryItemList,
     DictionaryItemPatch,
@@ -263,7 +266,9 @@ def _closed(spec: Spec) -> None:
         raise conflict("dictionary_closed", "Этот список задаёт поведение системы: его можно только переименовать.")
 
 
-async def create(session: AsyncSession, kind: str, data: DictionaryItemIn, *, actor_id: int) -> ItemOut:
+async def create(
+    session: AsyncSession, kind: str, data: DictionaryItemIn, *, actor_id: int, journal_entry: bool = True
+) -> ItemOut:
     spec = _spec(kind)
     _closed(spec)
     if await _name_taken(session, kind, data.name.ru):
@@ -287,11 +292,20 @@ async def create(session: AsyncSession, kind: str, data: DictionaryItemIn, *, ac
     )
     session.add(row)
     await session.flush()
-    await journal.record(session, "dictionary.created", by=actor_id, comment=f"{kind}: {row.code}")
+    if journal_entry:
+        await journal.record(session, "dictionary.created", by=actor_id, comment=f"{kind}: {row.code}")
     return present(row, spec, used=False)
 
 
-async def update(session: AsyncSession, kind: str, code: str, patch: DictionaryItemPatch, *, actor_id: int) -> ItemOut:
+async def update(
+    session: AsyncSession,
+    kind: str,
+    code: str,
+    patch: DictionaryItemPatch,
+    *,
+    actor_id: int,
+    journal_entry: bool = True,
+) -> ItemOut:
     spec = _spec(kind)
     row = await _get(session, kind, code, lock=True)
     if patch.active is not None and patch.active != row.active:
@@ -308,7 +322,8 @@ async def update(session: AsyncSession, kind: str, code: str, patch: DictionaryI
     action = (
         "dictionary.updated" if patch.active is None else ("dictionary.shown" if row.active else "dictionary.hidden")
     )
-    await journal.record(session, action, by=actor_id, comment=f"{kind}: {code}")
+    if journal_entry:
+        await journal.record(session, action, by=actor_id, comment=f"{kind}: {code}")
     return present(row, spec, used=code in await _used_codes(session, spec))
 
 
@@ -339,3 +354,36 @@ async def reorder(session: AsyncSession, kind: str, codes: list[str], *, actor_i
     await journal.record(session, "dictionary.reordered", by=actor_id, comment=kind)
     used = await _used_codes(session, spec)
     return DictionaryItemList(items=[present(by_code[code], spec, code in used) for code in codes])
+
+
+async def import_rows(
+    session: AsyncSession, kind: str, rows: list[DictionaryImportRow], *, actor_id: int
+) -> DictionaryImportOut:
+    """Загрузка файла справочника (2.9, исследование 2026-11-11 «Справочники» §C1): строки применяются теми же
+    правилами, что по одной, но в одной транзакции вызывающего — каждая в своей точке сохранения, чтобы собрать ошибки
+    всех строк. Есть ошибка — `applied = false`, и вызывающий откатывает всё; иначе в журнале одна запись с итогами."""
+    results: list[DictionaryImportRowResult] = []
+    added = updated = 0
+    for row in rows:
+        try:
+            async with session.begin_nested():
+                if row.create is not None:
+                    created = await create(session, kind, row.create, actor_id=actor_id, journal_entry=False)
+                    results.append(DictionaryImportRowResult(line=row.line, code=created.code))
+                    added += 1
+                elif row.patch is not None and row.code is not None:
+                    await update(session, kind, row.code, row.patch, actor_id=actor_id, journal_entry=False)
+                    results.append(DictionaryImportRowResult(line=row.line, code=row.code))
+                    updated += 1
+        except EdsError as exc:
+            details = exc.body.details or {}
+            fields = details.get("fields") or []
+            field = str(fields[0].get("field")) if fields and isinstance(fields[0], dict) else "name"
+            reason = str(details.get("reason") or exc.body.code.lower())
+            results.append(DictionaryImportRowResult(line=row.line, code=row.code, field=field, reason=reason))
+    applied = all(r.reason is None for r in results)
+    if applied:
+        await journal.record(
+            session, "dictionary.imported", by=actor_id, comment=f"{kind}: добавлено {added}, изменено {updated}"
+        )
+    return DictionaryImportOut(applied=applied, rows=results)

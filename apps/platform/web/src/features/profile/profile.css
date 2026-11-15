@@ -33,7 +33,7 @@
   margin: 0 0 12px;
 }
 .pf-profile-readonly dt {
-  color: #6e6e6e;
+  color: var(--rt-color-text-tertiary);
   font-size: 12px;
   line-height: 20px;
 }
