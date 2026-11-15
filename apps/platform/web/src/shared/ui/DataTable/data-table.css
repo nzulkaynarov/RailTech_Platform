@@ -76,3 +76,8 @@
   margin-top: 16px;
   justify-content: flex-end;
 }
+
+/* Место «Столбцов» в строке фильтров экрана (`ToolsSlot`): у правого края строки. */
+.pf-tools-slot {
+  margin-left: auto;
+}

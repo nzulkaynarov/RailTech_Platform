@@ -4,32 +4,32 @@
    цвета themeParams Telegram ложатся поверх тех же переменных inline-стилем. */
 :root {
   --background: #ffffff;
-  --foreground: #343a40;
+  --foreground: #0f172a;
   --card: #ffffff;
-  --card-foreground: #343a40;
+  --card-foreground: #0f172a;
   --popover: #ffffff;
-  --popover-foreground: #343a40;
+  --popover-foreground: #0f172a;
   --primary: #1f2e4a;
   --primary-foreground: #ffffff;
   --primary-hover: #162238;
-  --secondary: #f1f3f5;
+  --secondary: #f1f5f9;
   --secondary-foreground: #1f2e4a;
-  --muted: #f8f9fa;
-  --muted-foreground: #5f6b76;
+  --muted: #f8fafc;
+  --muted-foreground: #475569;
   --accent: #edf2f8;
   --accent-foreground: #1f2e4a;
-  --destructive: #9e2a2b;
+  --destructive: #be123c;
   --destructive-foreground: #ffffff;
-  --success: #1e7550;
+  --success: #166534;
   --success-foreground: #ffffff;
-  --warning: #8a5a19;
+  --warning: #92400e;
   --warning-foreground: #ffffff;
-  --info: #2b4c7e;
+  --info: #1d4ed8;
   --info-foreground: #ffffff;
-  --border: #ced4da;
-  --input: #ced4da;
+  --border: #e2e8f0;
+  --input: #cbd5e1;
   --ring: #1f2e4a;
-  --radius: 0.75rem;
+  --radius: 0.5rem;
   --font-sans: 'Inter Variable', Inter, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }

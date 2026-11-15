@@ -19,6 +19,7 @@ import { TaskSlot } from "./TaskPanel";
 import { VisaIndicators } from "./VisaIndicators";
 
 import "./calc.css";
+import { RowOpenLink } from "../../../shared/ui/RowOpenLink";
 
 /**
  * Ширины колонок: номер, клиент и тема (гибкая), этап, срок, визы, ответственный, действие (UX-1c, S9). Ширина — по типу колонки (platform-frontend.md §4.2), на 1440 с открытым подменю — без прокрутки вбок (T1).
@@ -192,13 +193,11 @@ function Rows({ items, selected }: { items: readonly CalcRequestRow[]; selected:
       width: COLS.action,
       cell: (row) => (
         <>
-          <LinkButton
-            size="small"
+          <RowOpenLink
             to={calcPath(row.number)}
-            aria-label={t("list.openLabel", { number: row.number })}
-          >
-            {t("list.open")}
-          </LinkButton>
+            label={t("list.openLabel", { number: row.number })}
+            title={t("list.open")}
+          />
         </>
       ),
     },

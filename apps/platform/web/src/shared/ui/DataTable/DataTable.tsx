@@ -29,6 +29,7 @@ import { TableCols } from "../DataBlock";
 import { ScrollRegion } from "../FormParts";
 import { tableMinWidth } from "../tableWidth";
 import { ColumnsMenu } from "./ColumnsMenu";
+import { useToolsTarget } from "./toolsContext";
 import { type TableSettings, tableKey, useTablesStore } from "./tableSettings";
 
 import "./data-table.css";
@@ -112,8 +113,11 @@ export function DataTable<Row extends RowData>({
   className,
   flexMin = 170,
   pageSize,
-  toolsTarget,
+  toolsTarget: ownTarget,
 }: DataTableProps<Row>) {
+  // Место «Столбцов»: своё (свойство) или объявленное экраном через `RegistryTools`.
+  const slotTarget = useToolsTarget();
+  const toolsTarget = ownTarget !== undefined ? ownTarget : slotTarget;
   const { t } = useTranslation("ui");
   const userId = useContext(AuthContext)?.me.id ?? "-";
   const key = tableKey(userId, tableId);

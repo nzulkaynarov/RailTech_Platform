@@ -26,7 +26,7 @@ export function BillingNavTabs() {
 
   return (
     <nav aria-label={t('nav.billingTabs')} className="-mx-4 mb-4 overflow-x-auto px-4 md:mx-0 md:px-0">
-      <ul className="flex w-max items-center gap-1 rounded-xl border border-border/60 bg-muted p-1 text-xs">
+      <ul className="flex w-max items-center gap-1 rounded-lg border border-border/60 bg-muted p-1 text-xs">
         {tabs.map((tab) => {
           const current = pathname === tab.to;
           return (

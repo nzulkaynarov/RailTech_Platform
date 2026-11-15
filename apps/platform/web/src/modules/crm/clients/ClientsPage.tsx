@@ -31,6 +31,7 @@ import { ClientPanel } from "./ClientPanel";
 import "../../eds/payments/payments.css";
 import "../../erp/catalog/catalog.css";
 import "../crm.css";
+import { ToolsSlot } from "../../../shared/ui/DataTable/RegistryTools";
 
 /** Ширины колонок: название, ИНН, заявки, ERP, последняя активность (UX-1c, S9; по типу — platform-frontend.md §4.2) */
 const COLS = {
@@ -368,6 +369,7 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
             />
           </div>
         )}
+        <ToolsSlot />
       </div>
       {kind === "applications" ? <PartnerApplicationsPanel /> : null}
       {kind === "bank_changes" ? <BankChangesPanel /> : null}

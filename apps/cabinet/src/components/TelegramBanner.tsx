@@ -21,7 +21,7 @@ export function TelegramBanner({ onProfile }: { onProfile: boolean }) {
   return (
     <section
       aria-label={t('telegramBanner.label')}
-      className="fixed inset-x-3 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-30 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-background p-3.5 text-sm shadow-lg md:inset-x-auto md:right-6 md:bottom-6 md:w-96"
+      className="fixed inset-x-3 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-30 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-background p-3.5 text-sm shadow-lg md:inset-x-auto md:right-6 md:bottom-6 md:w-96"
     >
       <div className="flex min-w-0 items-center gap-2.5">
         <BellRing className="size-4 shrink-0 text-primary" aria-hidden="true" />

@@ -15,6 +15,8 @@ import { StatusTag } from "../../../shared/ui/StatusTag";
 import { ORDER_STATUSES, useStateLabels } from "./api";
 import { NEW_ORDER_PATH } from "./OrderCreatePage";
 import { MoneyText } from "../../../shared/ui/MoneyText";
+import { ToolsSlot } from "../../../shared/ui/DataTable/RegistryTools";
+import { RowOpenLink } from "../../../shared/ui/RowOpenLink";
 
 /** Ширины колонок: номер, поставщик (гибкая), заявки, ожидается, статус, приёмка, [сумма], действие (UX-1c, S9) */
 export function OrderStatusTag({ status }: { status: SupplierOrderStatus }) {
@@ -169,13 +171,11 @@ function Rows({ items, prices }: { items: readonly SupplierOrderRow[]; prices: b
       headerHidden: true,
       width: 120,
       cell: (row) => (
-        <LinkButton
-          size="small"
+        <RowOpenLink
           to={row.path}
-          aria-label={t("orders.openLabel", { number: row.number })}
-        >
-          {t("orders.open")}
-        </LinkButton>
+          label={t("orders.openLabel", { number: row.number })}
+          title={t("orders.open")}
+        />
       ),
     },
   ];
@@ -257,6 +257,7 @@ export function OrdersTab() {
               {t("orders.create")}
             </span>
           ) : null}
+          <ToolsSlot />
         </div>
         <QueryState query={query} labels={labels} rows={10}>
           {(data) =>
