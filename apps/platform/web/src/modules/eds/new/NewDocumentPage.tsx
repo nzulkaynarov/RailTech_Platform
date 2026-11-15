@@ -63,6 +63,8 @@ import {
 
 import "../documents/documents.css";
 import "./new.css";
+import { UnitLabel } from "../../../shared/ui/UnitLabel";
+import { unitOf } from "../../../shared/lib/unit";
 
 /** Типы внутреннего документа; исходящее письмо — отдельный экран без выбора типа (план 2026-11-12 п. 0.2). */
 const INTERNAL_KINDS: readonly EdsDocumentKind[] = ["memo", "application", "report"];
@@ -681,7 +683,7 @@ function DocumentForm({
               <div className="pf-newdoc-row">
                 <Field
                   id={ids.amount}
-                  label={t("documents:form.amount.label")}
+                  label={<UnitLabel label={t("documents:form.amount.label")} />}
                   hint={t(
                     values.kind === "memo"
                       ? "documents:form.amount.hint"
@@ -690,6 +692,7 @@ function DocumentForm({
                   error={errors.amount ? fieldText(t, "amount") : undefined}
                 >
                   <Input
+ suffix={unitOf(t("documents:form.amount.label"))}
                     id={ids.amount}
                     value={values.amount}
                     inputMode="decimal"

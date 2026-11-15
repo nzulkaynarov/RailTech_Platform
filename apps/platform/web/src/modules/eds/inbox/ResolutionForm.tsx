@@ -16,6 +16,8 @@ import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { companyDate, fieldsOf, reasonOf, useRefreshLetters } from "./api";
 import { type ResolutionDraft, type ZonePick, clearDraft, readDraft, writeDraft } from "./draft";
 import { shortAction, useConfirmAction } from "../../../shared/ui/useConfirmAction";
+import { UnitLabel } from "../../../shared/ui/UnitLabel";
+import { unitOf } from "../../../shared/lib/unit";
 
 const ZONES: readonly LetterZone[] = ["goods", "services", "payment_terms"];
 // Бухгалтер (условия оплаты) по умолчанию выключен — SPEC-v3 §7.3.
@@ -345,10 +347,11 @@ export function ResolutionForm({ letter, variant = "panel", onDone }: Resolution
       {canMargin ? (
         <FormField
           id={id("margin")}
-          label={t("form.margin.label")}
+          label={<UnitLabel label={t("form.margin.label")} />}
           hint={errors.margin ? undefined : t("form.margin.hint")}
         >
           <Input
+ suffix={unitOf(t("form.margin.label"))}
             id={id("margin")}
             inputMode="decimal"
             value={state.margin}

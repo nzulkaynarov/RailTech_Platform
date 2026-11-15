@@ -20,6 +20,8 @@ import { type MemoReason, isMemoStale, memoReason, useRefreshPayments } from "./
 import { normalizeAmount, toCents } from "./model";
 import { HOME_CURRENCY } from "../../../shared/lib/money";
 import { useConfirmAction } from "../../../shared/ui/useConfirmAction";
+import { UnitLabel } from "../../../shared/ui/UnitLabel";
+import { unitOf } from "../../../shared/lib/unit";
 
 export interface PayMemoFormProps {
   memo: PaymentMemoCard;
@@ -156,10 +158,11 @@ export function PayMemoForm({ memo, variant = "panel", onDone }: PayMemoFormProp
       </FormField>
       <FormField
         id={id("amount")}
-        label={t("memo.form.amount.label", { currency: currencyText(currency) })}
+        label={<UnitLabel label={t("memo.form.amount.label", { currency: currencyText(currency) })} />}
         hint={t("memo.form.amount.hint", { approved: fmt(approved) })}
       >
         <Input
+ suffix={unitOf(t("memo.form.amount.label", { currency: currencyText(currency) }))}
           id={id("amount")}
           value={amount}
           inputMode="decimal"
