@@ -67,7 +67,8 @@ export function DictionariesPage() {
             label: t("modules:admin.dictionaries.calc"),
             items: [
               ...(catalog.data?.items ?? [])
-                .filter((d) => d.area === "calc")
+                // Категории — деревом на своей вкладке ниже; файлом их выгружает и загружает она же (план 3.8).
+                .filter((d) => d.area === "calc" && d.kind !== "categories")
                 .map((d) => ({
                   key: `${DOC_PREFIX}${d.kind}`,
                   label: localName(d.name, i18n.language),

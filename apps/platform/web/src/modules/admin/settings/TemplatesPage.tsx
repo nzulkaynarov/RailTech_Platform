@@ -7,11 +7,12 @@ import { EmailTemplates } from "../company/tabs/EmailTemplates";
 import { LetterTemplates } from "../company/tabs/LetterTemplates";
 import { QuoteTab } from "../company/tabs/QuoteTab";
 import { SettingsPage } from "./SettingsPage";
+import { TemplateCatalog } from "./TemplateCatalog";
 import { useTabParam } from "./useTabParam";
 
 import "../company/company.css";
 
-const TABS = ["documents", "letters", "emails", "quote"] as const;
+const TABS = ["all", "documents", "letters", "emails", "quote"] as const;
 
 /**
  * Процессы · Шаблоны документов (SET-IA): шаблоны КП, договоров, счетов и актов, шаблоны писем клиентам и условия КП по
@@ -32,12 +33,18 @@ export function TemplatesPage() {
             label:
               key === "quote"
                 ? t("tabs.quote")
-                : key === "letters"
-                  ? t("letterTemplates.tab")
-                  : t(`templates.parts.${key}`),
+                : key === "all"
+                  ? t("catalog.tab")
+                  : key === "letters"
+                    ? t("letterTemplates.tab")
+                    : t(`templates.parts.${key}`),
           }))}
         >
-          {active === "documents" ? (
+          {active === "all" ? (
+            <div className="pf-co-body">
+              <TemplateCatalog />
+            </div>
+          ) : active === "documents" ? (
             <div className="pf-co-body">
               <DocumentTemplates />
             </div>

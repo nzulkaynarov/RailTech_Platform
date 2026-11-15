@@ -62,9 +62,12 @@ function rowText(
 export function DictionaryFile({
   dictionary,
   readOnly,
+  onApplied,
 }: {
   dictionary: Dictionary;
   readOnly: boolean;
+  /** Список показан своим экраном (дерево категорий): после загрузки обновить и его. */
+  onApplied?: () => void;
 }) {
   const { t, i18n } = useTranslation("letters");
   const { message } = App.useApp();
@@ -96,6 +99,7 @@ export function DictionaryFile({
       setResult(next);
       if (next.applied) {
         void queryClient.invalidateQueries({ queryKey: getListDictionaryItemsQueryKey(kind) });
+        onApplied?.();
         void message.success(
           t("settings.dict.file.done", { added: next.added, updated: next.updated }),
         );

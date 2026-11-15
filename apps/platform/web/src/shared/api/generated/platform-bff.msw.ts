@@ -91,6 +91,7 @@ import {
   StepCode,
   SupplierOrderStatus,
   TechDocReviewState,
+  TemplateKind,
   TicketStatus,
   TicketSubject,
   TrackingClass,
@@ -380,6 +381,7 @@ import type {
   TelegramChannelList,
   TelegramConnector,
   TelegramLink,
+  TemplateCatalog,
   Ticket,
   TicketList,
   TicketPage,
@@ -1849,6 +1851,34 @@ export const getListNotificationsResponseMock = (
 });
 
 export const getStreamEventsResponseMock = (): string => faker.word.sample();
+
+export const getListTemplateCatalogResponseMock = (
+  overrideResponse: Partial<Extract<TemplateCatalog, object>> = {},
+): TemplateCatalog => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(Object.values(TemplateKind)),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    domain: faker.helpers.arrayElement(["erp", "eds", "crm"] as const),
+    languages: faker.helpers.arrayElements(["ru", "uz", "en"] as const),
+    origin: faker.helpers.arrayElement(["builtin", "custom"] as const),
+    active: faker.datatype.boolean(),
+    updated_at: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
+  sources: {
+    crm: faker.helpers.arrayElement(Object.values(SourceState)),
+    erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
+  },
+  ...overrideResponse,
+});
 
 export const getListSentMailResponseMock = (
   overrideResponse: Partial<Extract<SentMailPage, object>> = {},
@@ -33996,6 +34026,30 @@ export const getStreamEventsMockHandler = (
   );
 };
 
+export const getListTemplateCatalogMockHandler = (
+  overrideResponse?:
+    | TemplateCatalog
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<TemplateCatalog> | TemplateCatalog),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/templates",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListTemplateCatalogResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getListSentMailMockHandler = (
   overrideResponse?:
     | SentMailPage
@@ -43321,6 +43375,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getMarkNotificationReadMockHandler(),
   getMarkAllNotificationsReadMockHandler(),
   getStreamEventsMockHandler(),
+  getListTemplateCatalogMockHandler(),
   getListSentMailMockHandler(),
   getGetSentMailBodyMockHandler(),
   getResendSentMailMockHandler(),

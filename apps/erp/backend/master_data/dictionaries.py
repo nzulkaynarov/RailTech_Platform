@@ -10,6 +10,8 @@
 в очередь ту же задачу, что идёт по расписанию.
 """
 
+import functools
+from collections.abc import Callable
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from typing import Any, Literal, Optional
@@ -20,7 +22,7 @@ from django.db.models import ProtectedError
 from .country_names import fill_missing_names
 from .models import Bank, Country, Currency, DeliveryBasis, UnitOfMeasure
 
-AttrType = Literal["boolean", "text", "decimal"]
+AttrType = Literal["boolean", "text", "decimal", "choice"]
 CODE_MAX = 50
 
 
@@ -36,6 +38,12 @@ class Attr:
     type: AttrType
     name: tuple[str, str, str]
     max_length: int = 255
+    #: Значения `choice`: (значение, названия ru/uz/en)
+    options: tuple[tuple[str, tuple[str, str, str]], ...] = ()
+    #: Поле — ссылка (родитель категории, страна производителя): чтение и запись своими функциями;
+    #: запись возвращает код ошибки поля или None.
+    getter: Optional[Callable[[models.Model], Any]] = None
+    setter: Optional[Callable[[models.Model, Any], Optional[str]]] = None
 
 
 @dataclass(frozen=True)
@@ -47,6 +55,123 @@ class Spec:
     code_upper: bool = True
     #: Код открытого источника, который ведёт список (`master_data/cbu.py`); None — список ведут руками.
     source: Optional[str] = None
+    #: `given` — код задаёт человек или файл (`USD`); `generated` — код строки — её номер в базе, новой его выдаёт
+    #: ERP (категории и производители каталога, план 3.8).
+    codes: Literal["given", "generated"] = "given"
+    related: tuple[str, ...] = ()
+
+
+def _category_parent(row: models.Model) -> str:
+    return str(row.parent_id) if row.parent_id else ""
+
+
+def _set_category_parent(row: models.Model, value: Any) -> Optional[str]:
+    """Родитель категории — код (номер) другой категории; пусто — корень. Своё поддерево родителем не бывает."""
+    from catalog.models import Category
+
+    text = "" if value is None else str(value).strip()
+    if not text:
+        row.parent = None
+        return None
+    if not text.isdigit():
+        return "unknown"
+    parent = Category.objects.filter(pk=int(text)).first()
+    if parent is None:
+        return "unknown"
+    seen: set[int] = set()
+    node: Optional[models.Model] = parent
+    while node is not None and node.pk not in seen:
+        if row.pk is not None and node.pk == row.pk:
+            return "cycle"
+        seen.add(node.pk)
+        node = node.parent
+    row.parent = parent
+    return None
+
+
+def _manufacturer_country(row: models.Model) -> str:
+    return row.country.code if row.country_id else ""
+
+
+def _set_manufacturer_country(row: models.Model, value: Any) -> Optional[str]:
+    text = "" if value is None else str(value).strip().upper()
+    if not text:
+        row.country = None
+        return None
+    country = Country.objects.filter(code=text).first()
+    if country is None:
+        return "unknown"
+    row.country = country
+    return None
+
+
+def _set_website(row: models.Model, value: Any) -> Optional[str]:
+    text = "" if value is None else str(value).strip()
+    if text and not text.lower().startswith(("http://", "https://")):
+        return "invalid_value"
+    if len(text) > 200:
+        return "too_long"
+    row.website = text
+    return None
+
+
+def _catalog_specs() -> tuple["Spec", ...]:
+    from catalog.constants import TrackingClass
+    from catalog.models import Category, Manufacturer
+
+    tracking_names = {
+        TrackingClass.SERIAL: ("Серийный", "Seriyali", "Serial"),
+        TrackingClass.LOT: ("Партия", "Partiya", "Lot"),
+        TrackingClass.NONE: ("Только количество", "Faqat miqdor", "Quantity only"),
+    }
+    return (
+        Spec(
+            "categories",
+            Category,
+            ("Категории товаров", "Mahsulot toifalari", "Product categories"),
+            attrs=(
+                Attr(
+                    "parent",
+                    "text",
+                    ("Родитель (код)", "Ota toifa (kodi)", "Parent (code)"),
+                    20,
+                    getter=_category_parent,
+                    setter=_set_category_parent,
+                ),
+                Attr(
+                    "tracking",
+                    "choice",
+                    ("Учёт единиц", "Birliklar hisobi", "Unit tracking"),
+                    options=tuple((value, tracking_names[value]) for value in TrackingClass.values),
+                ),
+                Attr(
+                    "requires_conformity_doc",
+                    "boolean",
+                    ("Нужен документ соответствия", "Muvofiqlik hujjati kerak", "Conformity document required"),
+                ),
+            ),
+            codes="generated",
+            related=("parent",),
+        ),
+        Spec(
+            "manufacturers",
+            Manufacturer,
+            ("Производители", "Ishlab chiqaruvchilar", "Manufacturers"),
+            attrs=(
+                Attr(
+                    "country",
+                    "text",
+                    ("Страна (код)", "Mamlakat (kodi)", "Country (code)"),
+                    3,
+                    getter=_manufacturer_country,
+                    setter=_set_manufacturer_country,
+                ),
+                Attr("website", "text", ("Сайт", "Sayt", "Website"), 200, setter=_set_website),
+            ),
+            codes="generated",
+            related=("country",),
+        ),
+    )
 
 
 SPECS: dict[str, Spec] = {
@@ -115,8 +240,25 @@ def _names(values: tuple[str, str, str]) -> dict[str, str]:
     return {"ru": values[0], "uz": values[1], "en": values[2]}
 
 
+@functools.cache
+def specs() -> dict[str, Spec]:
+    """Все виды: справочники «Расчёта» и каталога. Виды каталога подключаются при первом обращении — модели каталога
+    импортируются после загрузки приложений."""
+    return {**SPECS, **{spec.kind: spec for spec in _catalog_specs()}}
+
+
+def _key(spec: Spec, row: models.Model) -> str:
+    return str(row.pk) if spec.codes == "generated" else row.code
+
+
+def _by_key(spec: Spec, code: str) -> dict[str, Any]:
+    if spec.codes == "generated":
+        return {"pk": int(code)} if str(code).isdigit() else {"pk": -1}
+    return {"code": code}
+
+
 def spec_of(kind: str) -> Spec:
-    spec = SPECS.get(kind)
+    spec = specs().get(kind)
     if spec is None:
         raise DictionaryError(404, "NOT_FOUND", "Такого справочника нет.")
     return spec
@@ -146,30 +288,35 @@ def catalog() -> dict[str, Any]:
                 "kind": spec.kind,
                 "name": _names(spec.name),
                 "closed": False,
-                "codes": "given",
-                "attrs": [
-                    {"key": a.key, "type": a.type, "name": _names(a.name), "required": False} for a in spec.attrs
-                ],
+                "codes": spec.codes,
+                "attrs": [_attr_spec(a) for a in spec.attrs],
                 "source": _catalog_source(spec),
             }
-            for spec in SPECS.values()
+            for spec in specs().values()
         ]
     }
+
+
+def _attr_spec(attr: Attr) -> dict[str, Any]:
+    out: dict[str, Any] = {"key": attr.key, "type": attr.type, "name": _names(attr.name), "required": False}
+    if attr.type == "choice":
+        out["options"] = [{"value": value, "name": _names(names)} for value, names in attr.options]
+    return out
 
 
 def _attr_out(attr: Attr, value: Any) -> Any:
     if attr.type == "decimal":
         return None if value is None else str(value)
-    if attr.type == "text":
+    if attr.type in ("text", "choice"):
         return value or ""
     return bool(value)
 
 
 def present(spec: Spec, row: models.Model) -> dict[str, Any]:
     return {
-        "code": row.code,
+        "code": _key(spec, row),
         "name": {"ru": row.name, "uz": row.name_uz, "en": row.name_en},
-        "attrs": {a.key: _attr_out(a, getattr(row, a.key)) for a in spec.attrs},
+        "attrs": {a.key: _attr_out(a, a.getter(row) if a.getter else getattr(row, a.key)) for a in spec.attrs},
         "active": row.is_active,
         "position": row.sort_order,
         "used": None,
@@ -191,7 +338,7 @@ def _row_source(row: models.Model) -> Optional[dict[str, Any]]:
 
 def items(kind: str, *, include_hidden: bool) -> dict[str, Any]:
     spec = spec_of(kind)
-    rows = spec.model.objects.all().order_by("sort_order", "name")
+    rows = spec.model.objects.select_related(*spec.related).order_by("sort_order", "name")
     if not include_hidden:
         rows = rows.filter(is_active=True)
     return {"items": [present(spec, row) for row in rows]}
@@ -223,7 +370,16 @@ def _apply(spec: Spec, row: models.Model, data: dict[str, Any]) -> None:
         if attr is None:
             errors[f"attrs.{key}"] = "unknown_attr"
             continue
-        if attr.type == "boolean":
+        if attr.setter is not None:
+            problem = attr.setter(row, value)
+            if problem:
+                errors[f"attrs.{key}"] = problem
+        elif attr.type == "choice":
+            if value not in {option for option, _names_ in attr.options}:
+                errors[f"attrs.{key}"] = "invalid_value"
+                continue
+            setattr(row, key, value)
+        elif attr.type == "boolean":
             if not isinstance(value, bool):
                 errors[f"attrs.{key}"] = "invalid_value"
                 continue
@@ -259,6 +415,8 @@ def _code(spec: Spec, raw: Any) -> str:
 @transaction.atomic
 def create(kind: str, data: dict[str, Any]) -> dict[str, Any]:
     spec = spec_of(kind)
+    if spec.codes == "generated":
+        return _create_generated(spec, data)
     code = _code(spec, data.get("code"))
     if spec.model.objects.filter(code=code).exists():
         raise DictionaryError(409, "CONFLICT", "Такой код уже есть.", {"reason": "code_taken", "fields": ["code"]})
@@ -279,8 +437,30 @@ def create(kind: str, data: dict[str, Any]) -> dict[str, Any]:
     return present(spec, row)
 
 
+def _create_generated(spec: Spec, data: dict[str, Any]) -> dict[str, Any]:
+    """Новая строка списка, где код выдаёт ERP (категория, производитель): код — номер строки в базе."""
+    row = spec.model()
+    if not str((data.get("name") or {}).get("ru") or "").strip():
+        raise _invalid({"name.ru": "required"})
+    _apply(spec, row, data)
+    last = spec.model.objects.order_by("-sort_order").values_list("sort_order", flat=True).first() or 0
+    row.sort_order = last + 10
+    _save_named(row)
+    return present(spec, row)
+
+
+def _save_named(row: models.Model) -> None:
+    try:
+        with transaction.atomic():
+            row.save()
+    except IntegrityError as exc:
+        raise DictionaryError(
+            409, "CONFLICT", "Такое название уже есть.", {"reason": "name_taken", "fields": ["name"]}
+        ) from exc
+
+
 def _get(spec: Spec, code: str) -> models.Model:
-    row = spec.model.objects.select_for_update().filter(code=code).first()
+    row = spec.model.objects.select_for_update().filter(**_by_key(spec, code)).first()
     if row is None:
         raise DictionaryError(404, "NOT_FOUND", "Такого значения в справочнике нет.")
     return row
@@ -295,7 +475,7 @@ def update(kind: str, code: str, data: dict[str, Any]) -> dict[str, Any]:
     if getattr(row, "source", ""):
         touched = {f for f, value in before.items() if getattr(row, f, None) != value}
         row.manual_fields = sorted(set(row.manual_fields or []) | touched)
-    row.save()
+    _save_named(row)
     return present(spec, row)
 
 
@@ -313,7 +493,7 @@ def sync(kind: str) -> dict[str, Any]:
 @transaction.atomic
 def reorder(kind: str, codes: list[str]) -> dict[str, Any]:
     spec = spec_of(kind)
-    rows = {row.code: row for row in spec.model.objects.select_for_update()}
+    rows = {_key(spec, row): row for row in spec.model.objects.select_for_update()}
     if sorted(codes) != sorted(rows):
         raise _invalid({"codes": "must_list_all"}, "Перечислите все коды справочника.")
     for index, code in enumerate(codes):

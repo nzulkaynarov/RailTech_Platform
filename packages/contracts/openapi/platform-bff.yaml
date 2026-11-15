@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.111.0
+  version: 0.113.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -380,6 +380,8 @@ tags:
   - name: dashboard
   - name: notifications
   - name: search
+  - name: templates
+    description: Каталог шаблонов всех доменов — «Настройки · Шаблоны» (план 2.7, TPL-1)
   - name: mail
     description: Почта · Отправленные — журнал писем ансамбля из CRM (план 2.8, MAIL-1)
   - name: eds-documents
@@ -1944,6 +1946,29 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  /templates:
+    get:
+      tags: [templates]
+      operationId: listTemplateCatalog
+      summary: 'Шаблоны всех доменов одним списком (план 2.7, TPL-1)'
+      description: >-
+        BFF собирает шаблоны из API доменов от имени сотрудника: документы и письма ERP (раздел `company.settings`), письма и
+        служебки на бланке EDS (`eds.memo.create`, `eds.inbox.register` полный или `admin`),
+        резолюции EDS (`eds.inbox` или `eds.inbox.register` полный, либо `admin`), быстрые ответы бота CRM (`admin` или
+        `crm.leads` полный) и встроенный шаблон КП. Источник без раздела не опрашивается; упавший — в `sources`, остальное
+        показывается. `path` ведёт в редактор шаблона. Письма ERP — одна строка на ключ, `languages` — у каких вариантов
+        есть запись.
+      responses:
+        '200':
+          description: Каталог
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateCatalog'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /mail/sent:
     get:
       tags: [mail]
@@ -15179,6 +15204,35 @@ components:
       enum: [ok, unavailable, not_applicable]
       description: '`not_applicable` — у сотрудника нет доступа к этому бэкенду'
 
+    TemplateKind:
+      type: string
+      enum: [quote, contract, invoice, act, receipt, delivery_note, letter, memo, report, custom, email, resolution, reply]
+    TemplateRow:
+      type: object
+      additionalProperties: false
+      required: [id, kind, name, domain, languages, origin, active, path]
+      properties:
+        id: {type: string, description: 'Домен, вид и id в домене: `erp.document:5`, `eds.resolution:<uuid>`'}
+        kind: {$ref: '#/components/schemas/TemplateKind'}
+        name: {type: string}
+        domain: {type: string, enum: [erp, eds, crm]}
+        languages:
+          type: array
+          description: Языки, на которых шаблон есть; пусто — шаблон без языка (резолюция)
+          items: {type: string, enum: [ru, uz, en]}
+        origin: {type: string, enum: [builtin, custom], description: Встроенный образец платформы или свой}
+        active: {type: boolean}
+        updated_at: {type: string}
+        path: {type: string, description: Редактор шаблона в SPA}
+    TemplateCatalog:
+      type: object
+      additionalProperties: false
+      required: [items, sources]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/TemplateRow'}
+        sources: {$ref: '#/components/schemas/Sources'}
     SentMailStatus:
       type: string
       enum: [queued, sent, failed, skipped_no_smtp]

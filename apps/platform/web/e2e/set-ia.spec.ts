@@ -57,7 +57,7 @@ const LEGACY = [
   ["/admin/company?tab=brand", "/admin/company?part=brand", "Реквизиты и бланк"],
   ["/admin/company?tab=numbering", "/admin/numbering", "Нумерация"],
   ["/admin/company?tab=platform", "/admin/taxes", "Налоги и валюты"],
-  ["/admin/company?tab=templates", "/admin/templates", "Шаблоны документов"],
+  ["/admin/company?tab=templates", "/admin/templates?tab=documents", "Шаблоны документов"],
   ["/admin/company?tab=quote", "/admin/templates?tab=quote", "Шаблоны документов"],
   ["/admin/company?tab=reference", "/admin/dictionaries?list=countries", "Справочники"],
   ["/admin/company?tab=categories", "/admin/dictionaries?list=categories", "Справочники"],
