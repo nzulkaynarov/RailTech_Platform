@@ -30,6 +30,7 @@ import {
 } from "../../../../shared/ui/BodyEditor/bodyModel";
 import type { DataColumn } from "../../../../shared/ui/DataTable/DataTable";
 import { StatusTag } from "../../../../shared/ui/StatusTag";
+import { useRequestedTemplate } from "../../settings/useRequestedTemplate";
 import { ConfirmModal, FormModal, ListTable } from "../common";
 
 const PdfViewer = lazy(() => import("../../../../shared/ui/PdfViewer"));
@@ -49,6 +50,7 @@ export function LetterTemplates() {
   const query = useListEdsTemplates();
   const [editing, setEditing] = useState<EdsTemplate | "new" | null>(null);
   const items = query.data?.items ?? [];
+  useRequestedTemplate(query.data?.items, setEditing);
 
   const columns: DataColumn<EdsTemplate>[] = [
     {

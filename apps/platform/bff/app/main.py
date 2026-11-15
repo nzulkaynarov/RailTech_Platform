@@ -59,6 +59,7 @@ from app.api import (
     people_contacts,
     search,
     setup,
+    templates_catalog,
     tickets,
 )
 from app.bus import create_receiver
@@ -167,6 +168,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(dashboard.router, prefix=API_PREFIX)
     app.include_router(notifications.router, prefix=API_PREFIX)
     app.include_router(search.router, prefix=API_PREFIX)
+    app.include_router(templates_catalog.router, prefix=API_PREFIX)
     app.include_router(mail_sent.router, prefix=API_PREFIX)
     app.include_router(eds_templates.router, prefix=API_PREFIX)
     app.include_router(events.router, prefix=API_PREFIX)

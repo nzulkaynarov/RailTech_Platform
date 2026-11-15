@@ -920,6 +920,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/templates": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Шаблоны всех доменов одним списком (план 2.7, TPL-1)
+     * @description BFF собирает шаблоны из API доменов от имени сотрудника: документы и письма ERP (раздел `company.settings`), письма и служебки на бланке EDS (`eds.memo.create`, `eds.inbox.register` полный или `admin`), резолюции EDS (`eds.inbox` или `eds.inbox.register` полный, либо `admin`), быстрые ответы бота CRM (`admin` или `crm.leads` полный) и встроенный шаблон КП. Источник без раздела не опрашивается; упавший — в `sources`, остальное показывается. `path` ведёт в редактор шаблона. Письма ERP — одна строка на ключ, `languages` — у каких вариантов есть запись.
+     */
+    get: operations["listTemplateCatalog"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/mail/sent": {
     parameters: {
       query?: never;
@@ -7982,6 +8002,44 @@ export interface components {
      * @enum {string}
      */
     SourceState: "ok" | "unavailable" | "not_applicable";
+    /** @enum {string} */
+    TemplateKind:
+      | "quote"
+      | "contract"
+      | "invoice"
+      | "act"
+      | "receipt"
+      | "delivery_note"
+      | "letter"
+      | "memo"
+      | "report"
+      | "custom"
+      | "email"
+      | "resolution"
+      | "reply";
+    TemplateRow: {
+      /** @description Домен, вид и id в домене: `erp.document:5`, `eds.resolution:<uuid>` */
+      id: string;
+      kind: components["schemas"]["TemplateKind"];
+      name: string;
+      /** @enum {string} */
+      domain: "erp" | "eds" | "crm";
+      /** @description Языки, на которых шаблон есть; пусто — шаблон без языка (резолюция) */
+      languages: ("ru" | "uz" | "en")[];
+      /**
+       * @description Встроенный образец платформы или свой
+       * @enum {string}
+       */
+      origin: "builtin" | "custom";
+      active: boolean;
+      updated_at?: string;
+      /** @description Редактор шаблона в SPA */
+      path: string;
+    };
+    TemplateCatalog: {
+      items: components["schemas"]["TemplateRow"][];
+      sources: components["schemas"]["Sources"];
+    };
     /** @enum {string} */
     SentMailStatus: "queued" | "sent" | "failed" | "skipped_no_smtp";
     SentMail: {
@@ -18257,6 +18315,28 @@ export interface operations {
         };
         content: {
           "text/event-stream": string;
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  listTemplateCatalog: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Каталог */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TemplateCatalog"];
         };
       };
       401: components["responses"]["SessionExpired"];

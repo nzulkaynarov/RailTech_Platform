@@ -22,6 +22,7 @@ import {
 import { useResolutionKindName } from "../../eds/dictionaries";
 import { RESOLUTION_KINDS, needsExecutor } from "../../eds/inbox/officeModel";
 import { ConfirmModal, ListTable, TabHeader } from "../company/common";
+import { useRequestedTemplate } from "../settings/useRequestedTemplate";
 
 const ADDRESSEE = "addressee";
 const NONE = "none";
@@ -61,6 +62,7 @@ export function TemplatesTab({ readOnly }: { readOnly: boolean }) {
   const query = useListResolutionTemplates();
   const [editing, setEditing] = useState<ResolutionTemplate | "new" | null>(null);
   const [removing, setRemoving] = useState<ResolutionTemplate | null>(null);
+  useRequestedTemplate(query.data?.items, setEditing);
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: getListResolutionTemplatesQueryKey() });
   };

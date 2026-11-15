@@ -22,6 +22,7 @@ import { ConfirmModal, FormModal, ListTable, PreviewFrame, QueryGate } from "../
 import { useReadOnly } from "../useReadOnly";
 import { changedFields, isEmptyObject, omit } from "../diff";
 import { errorFields } from "../errors";
+import { useRequestedTemplate } from "../../settings/useRequestedTemplate";
 
 interface Values {
   name: string;
@@ -50,6 +51,7 @@ export function DocumentTemplates() {
   const [editing, setEditing] = useState<DocumentTemplate | "new" | null>(null);
   const [copying, setCopying] = useState<DocumentTemplate | null>(null);
   const [removing, setRemoving] = useState<DocumentTemplate | null>(null);
+  useRequestedTemplate(query.data?.items, setEditing);
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: getListDocumentTemplatesQueryKey() });
   const remove = useDeleteDocumentTemplate({

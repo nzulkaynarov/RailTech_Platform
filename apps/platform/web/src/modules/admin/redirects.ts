@@ -41,7 +41,7 @@ const COMPANY_TAB: Record<string, string> = {
   numbering: "/admin/numbering",
   quote: "/admin/templates?tab=quote",
   charges: "/admin/dictionaries?list=charges",
-  templates: "/admin/templates",
+  templates: "/admin/templates?tab=documents", // бывшая вкладка — шаблоны документов, не «Все шаблоны»
   reference: "/admin/dictionaries?list=countries",
   categories: "/admin/dictionaries?list=categories",
   platform: "/admin/taxes",
