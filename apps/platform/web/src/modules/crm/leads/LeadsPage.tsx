@@ -38,6 +38,7 @@ import { Conversations } from "../messages/MessagesPage";
 import { LeadPanel } from "./LeadPanel";
 
 import "../crm.css";
+import { ToolsSlot } from "../../../shared/ui/DataTable/RegistryTools";
 
 const PAGE_SIZE = 50;
 const TABS = [
@@ -517,6 +518,7 @@ export function LeadsPage({ objectId }: { objectId?: string | undefined }) {
             }}
           />
         </div>
+        <ToolsSlot />
       </div>
       <ErrorNote message={actionFailure} />
       <Card styles={{ body: { padding: 0 } }}>
