@@ -20,7 +20,7 @@ import { useFormat } from "../../../shared/lib/useFormat";
 import { DateField } from "../../../shared/ui/DateField";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { FormField, QueryState } from "../../../shared/ui/FormParts";
-import { FormModal, PriceCell, ValidityTag } from "./common";
+import { FormPanel, PriceCell, ValidityTag } from "./common";
 import { errorFields } from "./errors";
 import { queryLabels } from "./labels";
 import { HOME_CURRENCY, currencyLabel } from "../../../shared/lib/money";
@@ -326,7 +326,7 @@ function OfferForm({
     });
   };
   return (
-    <FormModal
+    <FormPanel
       title={t("offers.form.title", { name: offer.product.name })}
       okLabel={t("save")}
       loading={mutation.isPending}
@@ -455,6 +455,6 @@ function OfferForm({
         />{" "}
         {t("offers.form.active")}
       </label>
-    </FormModal>
+    </FormPanel>
   );
 }

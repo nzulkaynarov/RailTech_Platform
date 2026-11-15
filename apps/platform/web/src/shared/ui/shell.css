@@ -332,3 +332,8 @@
   max-width: 100%;
   overflow-x: auto;
 }
+
+/* Форма в боковом окне поверх карточки (стандарт интерфейса §6): пока форма открыта, карточка под ней не показывается. */
+:has(> .pf-panel-host--over) > .pf-panel-host:not(.pf-panel-host--over) {
+  display: none;
+}

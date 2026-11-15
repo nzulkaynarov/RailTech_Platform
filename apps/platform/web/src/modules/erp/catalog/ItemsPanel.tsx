@@ -37,7 +37,7 @@ import { StatusTag } from "../../../shared/ui/StatusTag";
 import {
   type Column,
   DataList,
-  FormModal,
+  FormPanel,
   PAGE_SIZE,
   Pager,
   PriceCell,
@@ -773,7 +773,7 @@ function ItemForm({
     update.mutate({ id: item.id, data: changed });
   };
   return (
-    <FormModal
+    <FormPanel
       title={item ? t("items.form.editTitle") : t("items.form.addTitle")}
       okLabel={item ? t("save") : t("items.form.add")}
       loading={mutation.isPending}
@@ -957,6 +957,6 @@ function ItemForm({
           }}
         />
       </FormField>
-    </FormModal>
+    </FormPanel>
   );
 }

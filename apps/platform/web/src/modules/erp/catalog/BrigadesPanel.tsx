@@ -17,7 +17,7 @@ import { EmptyState } from "../../../shared/ui/EmptyState";
 import { FormField, QueryState } from "../../../shared/ui/FormParts";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { StatusTag } from "../../../shared/ui/StatusTag";
-import { type Column, DataList, FormModal, PAGE_SIZE, Pager } from "./common";
+import { type Column, DataList, FormPanel, PAGE_SIZE, Pager } from "./common";
 import { useDebounced } from "./useDebounced";
 import { errorFields } from "./errors";
 import { queryLabels } from "./labels";
@@ -234,7 +234,7 @@ function BrigadeForm({ brigade, onClose }: { brigade?: Brigade | undefined; onCl
     else create.mutate({ data });
   };
   return (
-    <FormModal
+    <FormPanel
       title={brigade ? t("brigades.form.editTitle") : t("brigades.form.addTitle")}
       okLabel={brigade ? t("save") : t("brigades.form.add")}
       loading={mutation.isPending}
@@ -338,6 +338,6 @@ function BrigadeForm({ brigade, onClose }: { brigade?: Brigade | undefined; onCl
         />{" "}
         {t("brigades.form.active")}
       </label>
-    </FormModal>
+    </FormPanel>
   );
 }

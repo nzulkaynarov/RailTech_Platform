@@ -26,7 +26,7 @@ import { useFormat } from "../../../shared/lib/useFormat";
 import { DateField } from "../../../shared/ui/DateField";
 import { FormField, QueryState } from "../../../shared/ui/FormParts";
 import { StepSections } from "../../../shared/ui/StepSections/StepSections";
-import { FormModal, PriceCell } from "./common";
+import { FormPanel, PriceCell } from "./common";
 import { catalogErrorText, errorFields } from "./errors";
 import { localName } from "../../eds/dictionaries";
 import { queryLabels } from "./labels";
@@ -334,7 +334,7 @@ export function OfferCreateForm({
   const amountValue = amount.trim().replace(",", ".");
   const valid = product !== null && /^\d+(\.\d{1,2})?$/.test(amountValue) && /^[1-9]\d*$/.test(min);
   return (
-    <FormModal
+    <FormPanel
       title={t("offerCreate.title", { name: supplier.name })}
       okLabel={t("offerCreate.add")}
       loading={mutation.isPending}
@@ -458,7 +458,7 @@ export function OfferCreateForm({
           options={OFFER_SOURCES.map((s) => ({ value: s, label: t(`offerSource.${s}`) }))}
         />
       </FormField>
-    </FormModal>
+    </FormPanel>
   );
 }
 

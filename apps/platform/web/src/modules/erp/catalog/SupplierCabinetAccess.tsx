@@ -28,7 +28,7 @@ import { DateField } from "../../../shared/ui/DateField";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { ErrorNote, FormField, QueryState } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
-import { FormModal } from "./common";
+import { FormPanel } from "./common";
 import { catalogErrorText, errorFields } from "./errors";
 import { queryLabels } from "./labels";
 
@@ -452,7 +452,7 @@ function ContactForm({
     else create.mutate({ id: supplierId, data });
   };
   return (
-    <FormModal
+    <FormPanel
       title={
         contact ? t("cabinetAccess.contactForm.editTitle") : t("cabinetAccess.contactForm.addTitle")
       }
@@ -524,7 +524,7 @@ function ContactForm({
         />
         <span id={`${ids.canAct}-label`}>{t("cabinetAccess.contactForm.canAct")}</span>
       </div>
-    </FormModal>
+    </FormPanel>
   );
 }
 
@@ -636,7 +636,7 @@ function SuspendModal({
   const { t } = useTranslation("catalog");
   const suspend = useSuspendSupplierCabinetAccess({ mutation: { onSuccess: onDone } });
   return (
-    <FormModal
+    <FormPanel
       title={t("cabinetAccess.suspendForm.title")}
       okLabel={t("cabinetAccess.suspendForm.ok")}
       loading={suspend.isPending}
@@ -647,7 +647,7 @@ function SuspendModal({
       onCancel={onClose}
     >
       <p>{t("cabinetAccess.suspendForm.text")}</p>
-    </FormModal>
+    </FormPanel>
   );
 }
 
