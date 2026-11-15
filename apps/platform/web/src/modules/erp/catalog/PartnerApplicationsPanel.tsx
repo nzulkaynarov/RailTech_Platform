@@ -22,7 +22,7 @@ import { DateField } from "../../../shared/ui/DateField";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { FormField, QueryState } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
-import { type Column, DataList, FormModal } from "./common";
+import { type Column, DataList, FormPanel } from "./common";
 import { errorFields } from "./errors";
 import { queryLabels } from "./labels";
 
@@ -373,7 +373,7 @@ function SendContractModal({
   });
 
   return (
-    <FormModal
+    <FormPanel
       title={t("partnerApplications.sendContractModal.title", { name: item.company_name })}
       okLabel={t("partnerApplications.sendContractModal.ok")}
       loading={sendContract.isPending}
@@ -414,7 +414,7 @@ function SendContractModal({
           }}
         />
       </FormField>
-    </FormModal>
+    </FormPanel>
   );
 }
 
@@ -451,7 +451,7 @@ function ApproveModal({
   const reasonId = useId();
 
   return (
-    <FormModal
+    <FormPanel
       title={t("partnerApplications.approveModal.title", { name: item.company_name })}
       okLabel={t("partnerApplications.approveModal.ok")}
       loading={approve.isPending}
@@ -537,7 +537,7 @@ function ApproveModal({
           }))}
         />
       </FormField>
-    </FormModal>
+    </FormPanel>
   );
 }
 

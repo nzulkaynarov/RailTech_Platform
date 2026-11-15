@@ -28,10 +28,19 @@ export function setupCatalogTests(width = 1440): void {
  */
 export async function findModal(title: string | RegExp): Promise<HTMLElement> {
   return waitFor(() => {
-    const hit = Array.from(document.querySelectorAll<HTMLElement>(".ant-modal")).find((modal) => {
-      const text = modal.querySelector(".ant-modal-title")?.textContent ?? "";
-      return typeof title === "string" ? text === title : title.test(text);
-    });
+    const matches = (text: string) =>
+      typeof title === "string" ? text === title : title.test(text);
+    // Окно по центру (до 3 полей) или форма `FormSheet`: выезжающая поверх карточки либо в боковом окне каркаса
+    const hit =
+      Array.from(document.querySelectorAll<HTMLElement>(".ant-modal")).find((modal) =>
+        matches(modal.querySelector(".ant-modal-title")?.textContent ?? ""),
+      ) ??
+      Array.from(document.querySelectorAll<HTMLElement>(".pf-fdrawer")).find((drawer) =>
+        matches(drawer.querySelector(".ant-drawer-title")?.textContent ?? ""),
+      ) ??
+      Array.from(document.querySelectorAll<HTMLElement>(".pf-fsheet")).find((sheet) =>
+        matches(sheet.querySelector(".pf-fp-title")?.textContent ?? ""),
+      );
     if (!hit) throw new Error(`нет окна «${String(title)}»`);
     return hit;
   });

@@ -10,6 +10,9 @@ export interface PanelSlotValue {
   /** Активная вкладка окна: сообщает каркас */
   tab: string;
   setTab: (tab: string) => void;
+  /** Сколько форм сейчас открыто поверх карточки (`PanelPortal over`): пока есть хоть одна, окно открыто на «Карточке» */
+  overs: number;
+  claimOver: () => () => void;
 }
 
 export const PanelSlotContext = createContext<PanelSlotValue | null>(null);
@@ -26,4 +29,9 @@ export function usePanelSlotHost(activeTab: string) {
     attach: slot?.setElement,
     claimed: slot?.claimed.includes(activeTab) ?? false,
   };
+}
+
+/** Для каркаса: в окне открыта форма (`FormSheet`) — окно показывается независимо от адреса и выбора пользователя. */
+export function usePanelForced(): boolean {
+  return (useContext(PanelSlotContext)?.overs ?? 0) > 0;
 }

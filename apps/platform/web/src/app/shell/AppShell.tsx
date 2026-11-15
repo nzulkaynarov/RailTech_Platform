@@ -40,7 +40,7 @@ import { useAuth } from "../auth/useAuth";
 import { AvatarMenu } from "./AvatarMenu";
 import { CreateMenu } from "./CreateMenu";
 import { PanelContent } from "./PanelContent";
-import { usePanelSlotHost } from "./panelSlotContext";
+import { usePanelForced, usePanelSlotHost } from "./panelSlotContext";
 import { usePanels } from "./usePanels";
 import { useDockFits, useViewport } from "./useViewport";
 import { useProductName } from "../../shared/lib/useProductName";
@@ -74,7 +74,10 @@ export function AppShell() {
   const match = matchSection(location.pathname, location.search);
   // В списках и таблицах боковое окно закрыто по умолчанию (открывается по ?panel=open);
   // на карточке конкретного объекта (:id) открыто на широком экране, если не закрыто явно.
-  const panels = usePanels(me.id, match?.section, Boolean(match?.objectId));
+  const ownPanels = usePanels(me.id, match?.section, Boolean(match?.objectId));
+  // Форма в окне (`FormSheet`) открывает его сама и на «Карточке», не меняя адрес и выбор пользователя.
+  const panelForced = usePanelForced();
+  const panels = panelForced ? { ...ownPanels, panelOpen: true, tab: "card" } : ownPanels;
   const setupKnown = useSetupKnown();
   const setupBannerLate = useLateSetupBanner(setupKnown);
   const { attach: attachPanelSlot, claimed: panelClaimed } = usePanelSlotHost(panels.tab);

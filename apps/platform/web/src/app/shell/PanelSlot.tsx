@@ -13,6 +13,13 @@ export function PanelSlotProvider({ children }: { children: ReactNode }) {
   const [element, setElement] = useState<HTMLElement | null>(null);
   const [claimed, setClaimed] = useState<readonly string[]>([]);
   const [tab, setTab] = useState("card");
+  const [overs, setOvers] = useState(0);
+  const claimOver = useCallback(() => {
+    setOvers((count) => count + 1);
+    return () => {
+      setOvers((count) => count - 1);
+    };
+  }, []);
   const claim = useCallback((name: string) => {
     setClaimed((prev) => [...prev, name]);
     return () => {
@@ -23,8 +30,8 @@ export function PanelSlotProvider({ children }: { children: ReactNode }) {
     };
   }, []);
   const value = useMemo(
-    () => ({ element, setElement, claimed, claim, tab, setTab }),
-    [element, claimed, claim, tab],
+    () => ({ element, setElement, claimed, claim, tab, setTab, overs, claimOver }),
+    [element, claimed, claim, tab, overs, claimOver],
   );
   return <PanelSlotContext.Provider value={value}>{children}</PanelSlotContext.Provider>;
 }
@@ -37,12 +44,31 @@ export function PanelSlotProvider({ children }: { children: ReactNode }) {
  * пересоздал бы содержимое и потерял несохранённое (форму приглашения, подтверждение удаления роли). С постоянным узлом
  * дерево страницы не пересоздаётся: пока окна нет (закрыто, перестраивается), узел просто отсоединён от документа.
  */
-export function PanelPortal({ tab, children }: { tab: string; children: ReactNode }) {
+export function PanelPortal({
+  tab,
+  over = false,
+  children,
+}: {
+  tab: string;
+  /** Форма поверх карточки: пока она открыта, остальное содержимое вкладки скрыто (стандарт интерфейса §6) */
+  over?: boolean;
+  children: ReactNode;
+}) {
   const slot = useContext(PanelSlotContext);
   const claim = slot?.claim;
   // До отрисовки (S12): окно наполняется в том же кадре, без промежуточного пустого состояния каркаса.
   useLayoutEffect(() => claim?.(tab), [claim, tab]);
-  const [host] = useState(() => document.createElement("div"));
+  const [host] = useState(() => {
+    const node = document.createElement("div");
+    node.className = "pf-panel-host";
+    return node;
+  });
+  const claimOver = slot?.claimOver;
+  useLayoutEffect(() => {
+    host.classList.toggle("pf-panel-host--over", over);
+    // Форма поверх карточки держит окно открытым, пока сама открыта (адрес и выбор пользователя не меняются).
+    return over ? claimOver?.() : undefined;
+  }, [host, over, claimOver]);
   const target = slot?.tab === tab ? slot.element : null;
   useLayoutEffect(() => {
     if (!target) return;

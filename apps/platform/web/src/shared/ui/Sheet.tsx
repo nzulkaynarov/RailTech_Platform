@@ -13,10 +13,13 @@ export function Sheet({
   onClose,
   children,
   tab = "card",
+  over = false,
 }: {
   label: string;
   onClose: () => void;
   children: ReactNode;
+  /** Форма поверх карточки объекта: карточка скрыта, пока форма открыта */
+  over?: boolean;
   /** Вкладка бокового окна раздела (у расчёта — `task`, у остальных — `card`) */
   tab?: string;
 }) {
@@ -38,5 +41,9 @@ export function Sheet({
       </Drawer>
     );
   }
-  return <PanelPortal tab={tab}>{children}</PanelPortal>;
+  return (
+    <PanelPortal tab={tab} over={over}>
+      {children}
+    </PanelPortal>
+  );
 }

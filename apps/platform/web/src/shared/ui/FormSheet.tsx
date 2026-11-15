@@ -1,4 +1,4 @@
-import { App, Button } from "antd";
+import { App, Button, Drawer } from "antd";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -7,10 +7,16 @@ import "./form-parts.css";
 
 /**
  * Форма на 4–15 полей или карточка объекта — в боковой панели (стандарт интерфейса §6): заголовок сверху, поля в одну
- * колонку, подвал закреплён — «Отмена» и справа главная кнопка, связанная с формой атрибутом `form`. Изменённую форму
- * (`dirty`) нельзя закрыть молча: «Отмена» спрашивает, выйти ли без сохранения. Сама форма (`formId`) — у вызывающего.
- * На телефоне — лист на весь экран (`Sheet`).
+ * колонку, подвал закреплён — «Отмена» и справа главная кнопка. Кнопка либо отправляет форму вызывающего (`formId`),
+ * либо зовёт `onSubmit`. Изменённую форму (`dirty`) нельзя закрыть молча: «Отмена» спрашивает, выйти ли без сохранения.
+ *
+ * Пока форма открыта, каркас держит панель открытой (адрес и выбор пользователя не меняются), а карточка объекта,
+ * уже открытая в панели, скрыта и возвращается после. На телефоне — лист на весь экран (`Sheet`). Форма из карточки,
+ * открытой выезжающим окном, — `layer="drawer"`: своя панель поверх карточки с теми же шапкой и подвалом.
  */
+/** Ширина выезжающей формы (стандарт интерфейса §6): 480 px, на узком экране — вся ширина. */
+const FORM_DRAWER_WIDTH = 480;
+
 export function FormSheet({
   title,
   formId,
@@ -19,11 +25,15 @@ export function FormSheet({
   error,
   dirty = false,
   readOnly = false,
+  submitDisabled = false,
+  layer = "panel",
+  onSubmit,
   onCancel,
   children,
 }: {
   title: string;
-  formId: string;
+  /** Id формы вызывающего: главная кнопка отправляет её. Нет — нужен `onSubmit` */
+  formId?: string;
   submitLabel: string;
   saving: boolean;
   /** Ошибка без своего поля — над полями; ошибки полей стоят под полями */
@@ -32,6 +42,13 @@ export function FormSheet({
   dirty?: boolean;
   /** Просмотр без права на изменение: вместо «Отмена» и главной кнопки — «Закрыть» */
   readOnly?: boolean;
+  submitDisabled?: boolean;
+  /**
+   * Где открыть форму: `panel` — боковое окно каркаса (форма о строке списка); `drawer` — выезжающая панель 480 px
+   * поверх всего, для формы из карточки объекта, которая сама открыта выезжающим окном.
+   */
+  layer?: "panel" | "drawer";
+  onSubmit?: () => void;
   onCancel: () => void;
   children: ReactNode;
 }) {
@@ -51,26 +68,51 @@ export function FormSheet({
       onOk: onCancel,
     });
   };
+  const titleId = `${formId ?? "pf-fsheet"}-title`;
+  const buttons = readOnly ? (
+    <Button onClick={onCancel}>{t("formSheet.close")}</Button>
+  ) : (
+    <>
+      <Button onClick={close}>{t("formSheet.cancel")}</Button>
+      <Button
+        type="primary"
+        loading={saving}
+        disabled={submitDisabled}
+        {...(formId ? { htmlType: "submit" as const, form: formId } : {})}
+        {...(onSubmit ? { onClick: onSubmit } : {})}
+      >
+        {submitLabel}
+      </Button>
+    </>
+  );
+  if (layer === "drawer") {
+    return (
+      <Drawer
+        open
+        width={FORM_DRAWER_WIDTH}
+        title={title}
+        onClose={close}
+        destroyOnHidden
+        maskClosable={!dirty}
+        rootClassName="pf-fdrawer"
+        footer={<div className="pf-fdrawer-foot">{buttons}</div>}
+      >
+        <div className="pf-fsheet-stack">
+          {error}
+          {children}
+        </div>
+      </Drawer>
+    );
+  }
   return (
-    <Sheet label={title} onClose={close}>
-      <section className="pf-fsheet" aria-labelledby={`${formId}-title`}>
-        <h3 className="pf-fp-title" id={`${formId}-title`}>
+    <Sheet label={title} onClose={close} over>
+      <section className="pf-fsheet" aria-labelledby={titleId}>
+        <h3 className="pf-fp-title" id={titleId}>
           {title}
         </h3>
         {error}
         <div className="pf-fsheet-body">{children}</div>
-        <div className="pf-fsheet-foot">
-          {readOnly ? (
-            <Button onClick={onCancel}>{t("formSheet.close")}</Button>
-          ) : (
-            <>
-              <Button onClick={close}>{t("formSheet.cancel")}</Button>
-              <Button type="primary" htmlType="submit" form={formId} loading={saving}>
-                {submitLabel}
-              </Button>
-            </>
-          )}
-        </div>
+        <div className="pf-fsheet-foot">{buttons}</div>
       </section>
     </Sheet>
   );

@@ -8,6 +8,7 @@ import { TableCols } from "../../../shared/ui/DataBlock";
 import { tableMinWidth } from "../../../shared/ui/tableWidth";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { ScrollRegion } from "../../../shared/ui/FormParts";
+import { FormSheet } from "../../../shared/ui/FormSheet";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { catalogErrorText } from "./errors";
 
@@ -178,6 +179,54 @@ export function FormModal({
         ) : null}
       </div>
     </Modal>
+  );
+}
+
+/**
+ * Форма на 4 и больше полей — выезжающей панелью 480 px (стандарт интерфейса §6, общий `FormSheet` в режиме `drawer`:
+ * карточки каталога сами открыты выезжающим окном, форма встаёт поверх): подвал с «Отмена» и главной кнопкой закреплён,
+ * ошибка словами — над полями. Те же свойства, что у `FormModal`: замена обёртки без правки формы.
+ */
+export function FormPanel({
+  title,
+  okLabel,
+  loading,
+  error,
+  disabled = false,
+  dirty,
+  onOk,
+  onCancel,
+  children,
+}: {
+  title: string;
+  okLabel: string;
+  loading: boolean;
+  error?: unknown;
+  disabled?: boolean;
+  dirty?: boolean;
+  onOk: () => void;
+  onCancel: () => void;
+  children: ReactNode;
+}) {
+  const { t } = useTranslation("catalog");
+  return (
+    <FormSheet
+      title={title}
+      submitLabel={okLabel}
+      saving={loading}
+      submitDisabled={disabled}
+      layer="drawer"
+      {...(dirty === undefined ? {} : { dirty })}
+      onSubmit={onOk}
+      onCancel={onCancel}
+      error={
+        error ? (
+          <Alert type="error" showIcon role="alert" message={catalogErrorText(t, error)} />
+        ) : undefined
+      }
+    >
+      <div className="pf-cat-form">{children}</div>
+    </FormSheet>
   );
 }
 
