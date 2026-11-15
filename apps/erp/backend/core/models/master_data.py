@@ -177,3 +177,14 @@ class ExchangeRate(models.Model):
 
     def __str__(self):
         return f"{self.currency.code} = {self.rate_to_uzs} UZS @ {self.rate_date}"
+
+
+class Bank(LocalizedNames, AbstractLookup):
+    """Банки (план 2.9, исследование 2026-11-11 «Справочники» §D п. 7): код — МФО, название; список загружается файлом
+    ЦБ через «Настройки · Справочники» и подставляется в диалоге банковского счёта компании."""
+
+    swift = models.CharField(max_length=11, blank=True, default="", verbose_name=_("SWIFT"))
+
+    class Meta(AbstractLookup.Meta):
+        verbose_name = _("Банк")
+        verbose_name_plural = _("Справочник: Банки")
