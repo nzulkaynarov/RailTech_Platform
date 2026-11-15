@@ -5,10 +5,8 @@ import { useTranslation } from "react-i18next";
 
 import { useViewport } from "../../../app/shell/useViewport";
 import type { CatalogOffer } from "../../../shared/api/generated/model";
-import { TableCols } from "../../../shared/ui/DataBlock";
-import { tableMinWidth } from "../../../shared/ui/tableWidth";
+import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTable";
 import { MoneyText } from "../../../shared/ui/MoneyText";
-import { ScrollRegion } from "../../../shared/ui/FormParts";
 import { FormSheet } from "../../../shared/ui/FormSheet";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { catalogErrorText } from "./errors";
@@ -37,12 +35,15 @@ function columnWidth<T>(column: Column<T>): number | null {
  * колонка — «главная»: в ней находится кнопка открытия строки (название), у карточки это её заголовок.
  */
 export function DataList<T extends object>({
+  tableId,
   label,
   rows,
   columns,
   rowKey,
   selectedKey,
 }: {
+  /** Идентификатор таблицы для настроек столбцов сотрудника, например `erp.catalog.items` */
+  tableId: string;
   label: string;
   rows: readonly T[];
   columns: readonly Column<T>[];
@@ -71,42 +72,57 @@ export function DataList<T extends object>({
       </ul>
     );
   }
-  const widths = columns.map(columnWidth);
   return (
-    <ScrollRegion label={label}>
-      <table
-        className="pf-cat-table pf-fixed-table"
-        style={{ minWidth: tableMinWidth(widths, 160) }}
-      >
-        <caption className="pf-sr-only">{label}</caption>
-        <TableCols widths={widths} />
-        <thead>
-          <tr>
-            {columns.map((column) => (
-              <th key={column.key} scope="col" className={column.num ? "pf-col-num" : undefined}>
-                {column.title}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={rowKey(row)} data-selected={selectedKey === rowKey(row)}>
-              {columns.map((column, index) => (
-                <td
-                  key={column.key}
-                  className={[column.num ? "pf-col-num" : "", index === 0 ? "pf-cat-main" : ""]
-                    .filter(Boolean)
-                    .join(" ")}
-                >
-                  {column.render(row)}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </ScrollRegion>
+    <DataTable<T>
+      tableId={tableId}
+      caption={label}
+      scrollLabel={label}
+      className="pf-cat-table"
+      flexMin={160}
+      rows={rows}
+      rowKey={rowKey}
+      rowAttrs={(row) => ({ "data-selected": selectedKey === rowKey(row) })}
+      columns={columns.map((column, index) => ({
+        id: column.key,
+        header: column.title,
+        width: columnWidth(column),
+        numeric: column.num,
+        cellClassName: index === 0 ? "pf-cat-main" : undefined,
+        cell: column.render,
+      }))}
+    />
+  );
+}
+
+/**
+ * Таблица внутри карточки или окна (предложения, история цены, отчёт загрузки прайса) — общая `DataTable` без «Столбцов»
+ * (стандарт §7): ширины по типу, числа справа, прокрутка в своей области.
+ */
+export function PanelTable<T extends object>({
+  tableId,
+  label,
+  rows,
+  columns,
+  rowKey,
+}: {
+  tableId: string;
+  label: string;
+  rows: readonly T[];
+  columns: readonly DataColumn<T>[];
+  rowKey: (row: T) => string;
+}) {
+  return (
+    <DataTable<T>
+      tableId={tableId}
+      caption={label}
+      scrollLabel={label}
+      className="pf-cat-offers"
+      flexMin={140}
+      rows={rows}
+      rowKey={rowKey}
+      columns={columns}
+      toolsTarget={null}
+    />
   );
 }
 

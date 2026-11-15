@@ -39,6 +39,7 @@ import {
   DataList,
   FormPanel,
   PAGE_SIZE,
+  PanelTable,
   Pager,
   PriceCell,
   ValidityTag,
@@ -338,6 +339,7 @@ export function ItemsPanel() {
           ) : (
             <>
               <DataList
+                tableId="erp.catalog.items"
                 label={waiting ? t("queue.table") : t("items.table")}
                 rows={data.items}
                 columns={shownColumns}
@@ -618,55 +620,66 @@ function OffersTable({
 }) {
   const { t } = useTranslation("catalog");
   return (
-    <div className="pf-fp-scroll" role="region" tabIndex={0} aria-label={t("items.offersTable")}>
-      <table className="pf-cat-offers">
-        <caption className="pf-sr-only">{t("items.offersTable")}</caption>
-        <thead>
-          <tr>
-            <th scope="col">{t("offers.supplier")}</th>
-            <th scope="col">{t("offers.price")}</th>
-            <th scope="col">{t("offers.quota")}</th>
-            <th scope="col">{t("offers.lead")}</th>
-            <th scope="col">{t("offers.validUntil")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {card.offers.map((offer) => (
-            <tr key={offer.id}>
-              <td>
-                <Button
-                  type="link"
-                  className="pf-cat-linkbtn"
-                  aria-label={t("offers.openSupplier", { name: offer.supplier.name })}
-                  onClick={() => {
-                    onSupplier(offer.supplier.id);
-                  }}
-                >
-                  {offer.supplier.name}
-                </Button>
-              </td>
-              <td>
-                <PriceCell price={offer.price} />
-              </td>
-              <td>{t("offers.quotaValue", { qty: offer.quota_qty, min: offer.min_order_qty })}</td>
-              <td>
-                {t("offers.leadValue", {
-                  stock: offer.in_stock_lead_days,
-                  order: offer.order_lead_days,
-                })}
-              </td>
-              <td>
-                {offer.valid_until ? date(offer.valid_until) : t("offers.noLimit")}{" "}
-                <ValidityTag validity={offer.validity} />
-                {!offer.is_active ? (
-                  <span className="pf-cat-sub">{t("offers.inactive")}</span>
-                ) : null}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <PanelTable<CatalogItemDetail["offers"][number]>
+      tableId="erp.catalog.itemOffers"
+      label={t("items.offersTable")}
+      rows={card.offers}
+      rowKey={(offer) => offer.id}
+      columns={[
+        {
+          id: "supplier",
+          header: t("offers.supplier"),
+          width: null,
+          cell: (offer) => (
+            <Button
+              type="link"
+              className="pf-cat-linkbtn"
+              aria-label={t("offers.openSupplier", { name: offer.supplier.name })}
+              onClick={() => {
+                onSupplier(offer.supplier.id);
+              }}
+            >
+              {offer.supplier.name}
+            </Button>
+          ),
+        },
+        {
+          id: "price",
+          header: t("offers.price"),
+          width: 140,
+          cell: (offer) => <PriceCell price={offer.price} />,
+        },
+        {
+          id: "quota",
+          header: t("offers.quota"),
+          width: 130,
+          cell: (offer) =>
+            t("offers.quotaValue", { qty: offer.quota_qty, min: offer.min_order_qty }),
+        },
+        {
+          id: "lead",
+          header: t("offers.lead"),
+          width: 150,
+          cell: (offer) =>
+            t("offers.leadValue", {
+              stock: offer.in_stock_lead_days,
+              order: offer.order_lead_days,
+            }),
+        },
+        {
+          id: "validUntil",
+          header: t("offers.validUntil"),
+          width: 160,
+          cell: (offer) => (
+            <>
+              {offer.valid_until ? date(offer.valid_until) : t("offers.noLimit")}{" "}
+              <ValidityTag validity={offer.validity} />
+              {!offer.is_active ? <span className="pf-cat-sub">{t("offers.inactive")}</span> : null}
+            </>
+          ),
+        },
+      ]}
+    />
   );
 }
 

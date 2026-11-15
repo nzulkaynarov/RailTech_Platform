@@ -142,6 +142,7 @@ export function RatesView() {
           ) : (
             <>
               <DataList
+                tableId="erp.catalog.rates"
                 label={t("refs.rates.table")}
                 rows={data.items}
                 columns={columns}
@@ -349,6 +350,7 @@ function HsView() {
           ) : (
             <>
               <DataList
+                tableId="erp.catalog.hs"
                 label={t("refs.hs.table")}
                 rows={data.items}
                 columns={columns}
@@ -568,6 +570,7 @@ function BrandsView() {
           ) : (
             <>
               <DataList
+                tableId="erp.catalog.brands"
                 label={t("refs.brands.table")}
                 rows={data.items}
                 columns={columns}

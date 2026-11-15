@@ -131,6 +131,7 @@ export function RequestsPanel() {
             <EmptyState title={t("requests.empty.title")} text={t("requests.empty.text")} />
           ) : (
             <DataList
+              tableId="erp.catalog.requests"
               label={t("requests.table")}
               rows={data.items}
               columns={columns}

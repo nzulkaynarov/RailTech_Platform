@@ -30,6 +30,7 @@ import { FileField } from "../../../shared/ui/FileField";
 import { FormField } from "../../../shared/ui/FormParts";
 import { Sheet } from "../../../shared/ui/Sheet";
 import { catalogErrorText } from "./errors";
+import { PanelTable } from "./common";
 import { SupplierForm } from "./supplierForms";
 import { useDebounced } from "./useDebounced";
 
@@ -384,36 +385,34 @@ function ImportReport({
         <>
           <h3 className="pf-cat-section">{t("import.proposalsTitle")}</h3>
           <p className="pf-cat-note">{t("import.proposalsNote")}</p>
-          <div
-            className="pf-fp-scroll"
-            role="region"
-            tabIndex={0}
-            aria-label={t("import.proposalsTitle")}
-          >
-            <table className="pf-cat-offers">
-              <caption className="pf-sr-only">{t("import.proposalsTitle")}</caption>
-              <thead>
-                <tr>
-                  <th scope="col">{t("import.row")}</th>
-                  <th scope="col">{t("import.item")}</th>
-                  <th scope="col">{t("import.field")}</th>
-                  <th scope="col">{t("proposals.current")}</th>
-                  <th scope="col">{t("proposals.proposed")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.proposals.map((p) => (
-                  <tr key={`${String(p.row)}-${p.field}`}>
-                    <td className="pf-col-num">{p.row}</td>
-                    <td>{p.product_name}</td>
-                    <td>{t(`proposalField.${p.field}`)}</td>
-                    <td>{p.current || "—"}</td>
-                    <td>{p.proposed}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <PanelTable<(typeof report.proposals)[number]>
+            tableId="erp.catalog.importProposals"
+            label={t("import.proposalsTitle")}
+            rows={report.proposals}
+            rowKey={(p) => `${String(p.row)}-${p.field}`}
+            columns={[
+              { id: "row", header: t("import.row"), width: 80, numeric: true, cell: (p) => p.row },
+              { id: "item", header: t("import.item"), width: null, cell: (p) => p.product_name },
+              {
+                id: "field",
+                header: t("import.field"),
+                width: 150,
+                cell: (p) => t(`proposalField.${p.field}`),
+              },
+              {
+                id: "current",
+                header: t("proposals.current"),
+                width: 150,
+                cell: (p) => p.current || "—",
+              },
+              {
+                id: "proposed",
+                header: t("proposals.proposed"),
+                width: 150,
+                cell: (p) => p.proposed,
+              },
+            ]}
+          />
           {!report.checked ? (
             <Button className="pf-cat-linkbtn" type="link" onClick={onPending}>
               {t("import.openPending")}
@@ -448,30 +447,31 @@ function RowNotes({
       {total > notes.length ? (
         <p className="pf-cat-note">{t("import.shown", { shown: notes.length, total })}</p>
       ) : null}
-      <div className="pf-fp-scroll" role="region" tabIndex={0} aria-label={title}>
-        <table className="pf-cat-offers">
-          <caption className="pf-sr-only">{title}</caption>
-          <thead>
-            <tr>
-              <th scope="col">{t("import.row")}</th>
-              <th scope="col">{t("import.reason")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {notes.map((note) => (
-              <tr key={`${String(note.row)}-${note.code}`}>
-                <td className="pf-col-num">{note.row}</td>
-                <td>
-                  {t(`import.codes.${note.code}`, {
-                    value: note.value,
-                    defaultValue: t("import.codes.DEFAULT", { value: note.value }),
-                  })}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <PanelTable<PriceImportRowNote>
+        tableId="erp.catalog.importNotes"
+        label={title}
+        rows={notes}
+        rowKey={(note) => `${String(note.row)}-${note.code}`}
+        columns={[
+          {
+            id: "row",
+            header: t("import.row"),
+            width: 80,
+            numeric: true,
+            cell: (note) => note.row,
+          },
+          {
+            id: "reason",
+            header: t("import.reason"),
+            width: null,
+            cell: (note) =>
+              t(`import.codes.${note.code}`, {
+                value: note.value,
+                defaultValue: t("import.codes.DEFAULT", { value: note.value }),
+              }),
+          },
+        ]}
+      />
     </>
   );
 }
