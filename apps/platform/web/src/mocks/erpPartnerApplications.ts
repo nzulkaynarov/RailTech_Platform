@@ -1,6 +1,9 @@
 import { HttpResponse, http } from "msw";
 
-import type { PartnerApplicationItem } from "../shared/api/generated/model";
+import type {
+  PartnerApplicationCreateRequest,
+  PartnerApplicationItem,
+} from "../shared/api/generated/model";
 import { readSession } from "./mockSession";
 
 const SEED_APPLICATIONS: PartnerApplicationItem[] = [
@@ -74,11 +77,47 @@ const SEED_APPLICATIONS: PartnerApplicationItem[] = [
 
 let items: PartnerApplicationItem[] = structuredClone(SEED_APPLICATIONS);
 
+/** Заявка партнёра по id — для «Передать в работу» в моке поручений (план 1.9). */
+export function findPartnerApplication(id: string): PartnerApplicationItem | undefined {
+  return items.find((i) => i.id === id);
+}
+
 export function resetPartnerApplications(): void {
   items = structuredClone(SEED_APPLICATIONS);
 }
 
 export const erpPartnerApplicationsHandlers = [
+  // План 1.9: заявка кандидата по входящему письму — заводит снабжение
+  http.post("*/erp/catalog/partner-applications", async ({ request }) => {
+    const session = readSession();
+    if (!session) return new HttpResponse(null, { status: 401 });
+    const body = (await request.json()) as PartnerApplicationCreateRequest;
+    const created: PartnerApplicationItem = {
+      id: String(200 + items.length),
+      source: "letter",
+      source_ref: body.source_ref,
+      status: "submitted",
+      kind: body.kind ?? "supplier",
+      company_name: body.company_name,
+      inn: body.inn ?? "",
+      contact_name: body.contact_name,
+      email: body.email.toLowerCase(),
+      phone: body.phone ?? "",
+      language: body.language ?? "ru",
+      categories_description: body.categories_description,
+      contract_number: "",
+      contract_date: null,
+      rejected_reason: "",
+      created_at: new Date().toISOString(),
+      reviewed_at: null,
+      matching_company_id: null,
+      matching_company_name: null,
+      company_match_pending: null,
+      invite_delivery: null,
+    };
+    items = [created, ...items];
+    return HttpResponse.json(created, { status: 201 });
+  }),
   http.get("*/erp/catalog/partner-applications", ({ request }) => {
     const session = readSession();
     if (!session) return new HttpResponse(null, { status: 401 });

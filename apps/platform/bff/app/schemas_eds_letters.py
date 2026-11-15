@@ -197,7 +197,7 @@ class LetterInstructionOutgoing(BaseModel):
     path: str
 
 
-HandoverKind = Literal["client_request", "memo"]
+HandoverKind = Literal["client_request", "partner_application", "memo"]
 
 
 class LetterInstructionHandedTo(BaseModel):
@@ -996,6 +996,15 @@ def letter_path(number: str) -> str:
     return f"/eds/inbox/{quote(number, safe='')}"
 
 
+def _handed_path(kind: str, ref: str) -> str | None:
+    """«Передать в работу»: служебка — карточка в реестре, заявка партнёра — очередь заявок."""
+    if kind == "memo":
+        return outgoing_path(ref)
+    if kind == "partner_application":
+        return "/crm/clients?kind=applications"
+    return None
+
+
 def outgoing_path(document_id: str) -> str:
     """Наш ИСХ в реестре «Все документы» с открытой карточкой."""
     return outgoing_document_path(document_id)
@@ -1132,7 +1141,7 @@ def _instruction(i: _Instruction) -> LetterInstruction:
             LetterInstructionHandedTo(
                 kind=i.handed_to.kind,
                 number=i.handed_to.number,
-                path=outgoing_path(i.handed_to.ref) if i.handed_to.kind == "memo" else None,
+                path=_handed_path(i.handed_to.kind, i.handed_to.ref),
             )
             if i.handed_to
             else None

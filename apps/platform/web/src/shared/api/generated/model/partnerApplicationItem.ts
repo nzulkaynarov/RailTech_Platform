@@ -13,6 +13,8 @@ import type { PartnerApplicationStatus } from "./partnerApplicationStatus";
 export interface PartnerApplicationItem {
   id: CompanyItemRef;
   source: PartnerApplicationSource;
+  /** Номер ВХ, если заявку завёл сотрудник по письму (план 1.9); иначе пусто */
+  source_ref?: string;
   status: PartnerApplicationStatus;
   kind: PartnerApplicationKind;
   company_name: string;

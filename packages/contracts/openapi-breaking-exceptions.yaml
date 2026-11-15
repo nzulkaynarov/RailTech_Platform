@@ -60,6 +60,13 @@ exceptions:
     text: "candidate_agreed"
     reason: "PART-PIPELINE-1: добавлен статус candidate_agreed в PartnerApplication; потребители — BFF Платформы и Cabinet"
     until: 2026-12-31
+  # План 1.9 «Передать в работу»: источник заявки кандидата `letter` (заявку завёл сотрудник по входящему письму).
+  # Потребитель — BFF Платформы: неизвестный источник он принимает (`to_partner_application`), новый — в том же PR.
+  - file: erp-internal.yaml
+    id: response-property-enum-value-added
+    text: "`letter`"
+    reason: "План 1.9: источник letter у PartnerApplication; потребитель — BFF Платформы, обновлён в том же PR"
+    until: 2026-12-31
   # Снос старых фронтов (2026-11-11): выдача токена ERP для перехода в старую CRM и адрес старой CRM (`crm_frontend_url`)
   # нужны были только старому SPA ERP, которого больше нет. BFF Платформы эти поля и путь не читает (grep `apps/platform`).
   # Удалить записи после слияния (проверка напечатает предупреждение, что они ничему не соответствуют).
