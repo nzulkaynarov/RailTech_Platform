@@ -141,6 +141,9 @@
     "edit": "Change",
     "invalid": "Needs fixing"
   },
+  "rowActions": {
+    "label": "Actions: {{name}}"
+  },
   "formSheet": {
     "cancel": "Cancel",
     "close": "Close"

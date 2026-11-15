@@ -11,6 +11,7 @@ import {
   waitForMotionEnd,
 } from "./support/app";
 import { chooseOption, pickFiles } from "./support/fields";
+import { pickRowAction } from "./support/rowActions";
 
 // Компания на MSW (W13-A3; SET-IA — бывшие вкладки «Компании и бланков» стали страницами групп «Компания» и «Процессы», старый
 // адрес `?tab=` уводит на новую): каждое действие экрана, права, axe на 1440, 1280 и 390, снимки (`E2E_SCREENSHOT_DIR`).
@@ -278,13 +279,13 @@ test.describe("Компания: статьи расхода, шаблоны, с
     await expect(toast(page, "Сохранено")).toBeVisible();
     await expect(page.getByRole("row", { name: /Доставка до склада/ })).toContainText("250");
 
-    await page.getByRole("button", { name: "Изменить: Доставка до склада · DAP" }).click();
+    await pickRowAction(page, "Доставка до склада · DAP", "Изменить");
     const edit = page.getByRole("region", { name: "Изменить статью расхода" });
     await edit.getByLabel("Сумма").fill("300");
     await edit.getByRole("button", { name: "Сохранить" }).click();
     await expect(page.getByRole("row", { name: /Доставка до склада/ })).toContainText("300");
 
-    await page.getByRole("button", { name: "Удалить: Доставка до склада · DAP" }).click();
+    await pickRowAction(page, "Доставка до склада · DAP", "Удалить");
     const confirm = page.getByRole("dialog", { name: /Удалить статью/ });
     await confirm.getByRole("button", { name: "Удалить" }).click();
     await expect(page.getByRole("row", { name: /Доставка до склада/ })).toHaveCount(0);
@@ -295,15 +296,13 @@ test.describe("Компания: статьи расхода, шаблоны, с
   }) => {
     await loginAndWait(page, "director@demo.example");
     await openCompany(page, "templates");
-    await page
-      .getByRole("button", { name: "Скопировать к себе: Образец: договор поставки" })
-      .click();
+    await pickRowAction(page, "Образец: договор поставки", "Скопировать к себе");
     const copy = page.getByRole("dialog", { name: /Скопировать/ });
     await copy.getByLabel("Название").fill("Договор поставки (рельсы)");
     await copy.getByRole("button", { name: "Скопировать к себе" }).click();
     await expect(toast(page, "Копия создана")).toBeVisible();
 
-    await page.getByRole("button", { name: "Изменить: Договор поставки (рельсы)" }).click();
+    await pickRowAction(page, "Договор поставки (рельсы)", "Изменить");
     const editor = page.getByRole("region", { name: "Изменить шаблон документа" });
     const body = editor.getByLabel(/^Текст шаблона/);
     await body.fill(
@@ -317,7 +316,7 @@ test.describe("Компания: статьи расхода, шаблоны, с
     await editor.getByRole("button", { name: "Сохранить" }).click();
     await expect(toast(page, "Сохранено")).toBeVisible();
 
-    await page.getByRole("button", { name: "Удалить: Договор поставки (наш)" }).click();
+    await pickRowAction(page, "Договор поставки (наш)", "Удалить");
     const confirm = page.getByRole("dialog", { name: /Удалить шаблон/ });
     await confirm.getByRole("button", { name: "Удалить" }).click();
     await expect(
@@ -325,7 +324,7 @@ test.describe("Компания: статьи расхода, шаблоны, с
     ).toBeVisible();
     await confirm.getByRole("button", { name: "Отмена" }).click();
 
-    await page.getByRole("button", { name: "Удалить: Договор поставки (рельсы)" }).click();
+    await pickRowAction(page, "Договор поставки (рельсы)", "Удалить");
     await page
       .getByRole("dialog", { name: /Удалить шаблон/ })
       .getByRole("button", { name: "Удалить" })
@@ -337,7 +336,7 @@ test.describe("Компания: статьи расхода, шаблоны, с
     await loginAndWait(page, "director@demo.example");
     await openCompany(page, "templates");
     await page.getByRole("tab", { name: "Письма" }).click();
-    await page.getByRole("button", { name: "Изменить: quote_sent" }).click();
+    await pickRowAction(page, "quote_sent", "Изменить");
     const editor = page.getByRole("region", { name: "Изменить шаблон письма" });
     await editor.getByLabel("Шаблон действует").check();
     await expect(editor.getByText(/сразу заменит файловый/)).toBeVisible();
@@ -357,7 +356,7 @@ test.describe("Компания: статьи расхода, шаблоны, с
     await create.getByRole("button", { name: "Сохранить" }).click();
     await expect(page.getByRole("row", { name: /act_issued/ })).toBeVisible();
 
-    await page.getByRole("button", { name: "Удалить: act_issued" }).click();
+    await pickRowAction(page, "act_issued", "Удалить");
     await page
       .getByRole("dialog", { name: /Удалить шаблон/ })
       .getByRole("button", { name: "Удалить" })
@@ -378,16 +377,16 @@ test.describe("Компания: статьи расхода, шаблоны, с
     await dialog.getByRole("button", { name: "Сохранить" }).click();
     await expect(page.getByRole("row", { name: /Турция/ })).toBeVisible();
 
-    await page.getByRole("button", { name: "Удалить: Узбекистан" }).click();
+    await pickRowAction(page, "Узбекистан", "Удалить");
     const confirm = page.getByRole("dialog", { name: /Удалить/ });
     await confirm.getByRole("button", { name: "Удалить" }).click();
     await expect(confirm.getByText(/можно только скрыть/)).toBeVisible();
     await confirm.getByRole("button", { name: "Отмена" }).click();
 
     await pickList(page, "Валюты");
-    await page.getByRole("button", { name: "Скрыть: Евро" }).click();
+    await pickRowAction(page, "Евро", "Скрыть");
     await expect(page.getByRole("row", { name: /Евро/ })).toContainText("Скрыто");
-    await page.getByRole("button", { name: "Вернуть: Евро" }).click();
+    await pickRowAction(page, "Евро", "Вернуть");
     await expect(page.getByRole("row", { name: /Евро/ })).toContainText("Действует");
     // Валюты ведёт ЦБ (2026-11-11): источник и дата видны, «Обновить» — только у администратора.
     await expect(page.getByText(/^Источник: ЦБ · /)).toBeVisible();
@@ -598,7 +597,7 @@ test.describe("Компания: axe и снимки", () => {
       await loginAndWait(page, "admin@demo.example");
 
       await openCompany(page, "templates");
-      await page.getByRole("button", { name: "Изменить: Акт приёмки" }).click();
+      await pickRowAction(page, "Акт приёмки", "Изменить");
       const editor = page.getByRole("region", { name: "Изменить шаблон документа" });
       await expect(editor.frameLocator("iframe").getByText("[seller_name]")).toBeVisible();
       await expectNoViolations(page, `document editor ${String(width)}`);

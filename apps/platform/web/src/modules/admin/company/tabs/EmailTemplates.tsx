@@ -1,5 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { App, Button, Checkbox, Form, Input, Select } from "antd";
+import { Code } from "../../../../shared/ui/Code";
+import { RowActions, ROW_ACTIONS_WIDTH } from "../../../../shared/ui/RowActions";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -85,7 +87,18 @@ export function EmailTemplates() {
                     id: "key",
                     header: t("templates.emails.key"),
                     width: null,
-                    cell: (row) => <b className="pf-co-mono">{row.key}</b>,
+                    cell: (row) => (
+                      <Button
+                        type="link"
+                        className="pf-co-link"
+                        aria-label={t("templates.emails.openNamed", { name: row.key })}
+                        onClick={() => {
+                          setEditing(row);
+                        }}
+                      >
+                        <Code>{row.key}</Code>
+                      </Button>
+                    ),
                   },
                   {
                     id: "language",
@@ -114,44 +127,31 @@ export function EmailTemplates() {
                   {
                     id: "actions",
                     header: t("actions"),
-                    width: 160,
+                    headerHidden: true,
+                    width: ROW_ACTIONS_WIDTH,
                     cell: (row) =>
-                      readOnly ? (
-                        <Button
-                          type="link"
-                          size="small"
-                          aria-label={t("templates.emails.openNamed", { name: row.key })}
-                          onClick={() => {
-                            setEditing(row);
-                          }}
-                        >
-                          {t("templates.emails.open")}
-                        </Button>
-                      ) : (
-                        <span className="pf-co-actions">
-                          <Button
-                            type="link"
-                            size="small"
-                            aria-label={t("editNamed", { name: row.key })}
-                            onClick={() => {
-                              setEditing(row);
-                            }}
-                          >
-                            {t("edit")}
-                          </Button>
-                          <Button
-                            type="link"
-                            size="small"
-                            danger
-                            aria-label={t("deleteNamed", { name: row.key })}
-                            onClick={() => {
-                              remove.reset();
-                              setRemoving(row);
-                            }}
-                          >
-                            {t("delete")}
-                          </Button>
-                        </span>
+                      readOnly ? null : (
+                        <RowActions
+                          name={row.key}
+                          items={[
+                            {
+                              key: "edit",
+                              label: t("edit"),
+                              onClick: () => {
+                                setEditing(row);
+                              },
+                            },
+                            {
+                              key: "delete",
+                              label: t("delete"),
+                              danger: true,
+                              onClick: () => {
+                                remove.reset();
+                                setRemoving(row);
+                              },
+                            },
+                          ]}
+                        />
                       ),
                   },
                 ]}

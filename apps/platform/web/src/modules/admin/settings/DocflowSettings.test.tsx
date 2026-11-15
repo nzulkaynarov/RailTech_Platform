@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { pickRowAction, rowActionItems } from "../../../test/rowActions";
 
 import { usePanelsStore } from "../../../app/shell/panelsStore";
 import { readDictionaries, resetDictionariesMock } from "../../../mocks/dictionaries";
@@ -56,8 +57,8 @@ describe("Настройки · Процессы · Справочники пи�
       "page",
     );
     // Письмо банка есть у демо-писем — удалить нельзя, только скрыть.
-    expect(screen.queryByRole("button", { name: "Удалить: Письмо банка" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Удалить: Письмо партнёра" })).toBeEnabled();
+    expect(await rowActionItems("Письмо банка")).not.toContain("Удалить");
+    expect(await rowActionItems("Письмо партнёра")).toContain("Удалить");
   });
 
   it("добавляет вид документа: код из названия, «срочный» и срок; значение в конце списка", async () => {
@@ -87,7 +88,7 @@ describe("Настройки · Процессы · Справочники пи�
     await heading();
     fireEvent.click(await screen.findByRole("link", { name: "Способы получения" }));
     const post = await rowOf("Почта");
-    fireEvent.click(within(post).getByRole("button", { name: "Скрыть: Почта" }));
+    await pickRowAction("Почта", "Скрыть", post);
     await waitFor(async () => {
       expect(await rowOf("Почта")).toHaveTextContent("Скрыто");
     });
@@ -114,9 +115,7 @@ describe("Настройки · Процессы · Справочники пи�
     await heading();
     fireEvent.click(await screen.findByRole("link", { name: "Виды резолюции" }));
     const row = await rowOf("Для сведения");
-    expect(within(row).getByRole("button", { name: "Изменить: Для сведения" })).toBeEnabled();
-    expect(within(row).queryByRole("button", { name: "Скрыть: Для сведения" })).toBeNull();
-    expect(within(row).queryByRole("button", { name: "Удалить: Для сведения" })).toBeNull();
+    expect(await rowActionItems("Для сведения", row)).toEqual(["Изменить"]);
   });
 
   it("шаблоны резолюций: администратор видит общий и добавляет новый", async () => {

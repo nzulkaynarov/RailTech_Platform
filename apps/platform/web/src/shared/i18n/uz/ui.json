@@ -141,6 +141,9 @@
     "edit": "O‘zgartirish",
     "invalid": "Tuzatish kerak"
   },
+  "rowActions": {
+    "label": "Amallar: {{name}}"
+  },
   "formSheet": {
     "cancel": "Bekor qilish",
     "close": "Yopish"
