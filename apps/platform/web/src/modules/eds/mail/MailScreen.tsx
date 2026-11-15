@@ -285,6 +285,7 @@ function MailList({ own }: { own: boolean }) {
                   </Checkbox>
                 </div>
               ) : null}
+              {body}
               {picked.length > 0 ? (
                 <BulkBar
                   ids={picked}
@@ -293,7 +294,6 @@ function MailList({ own }: { own: boolean }) {
                   }}
                 />
               ) : null}
-              {body}
             </div>
           )}
         </TabsBar>

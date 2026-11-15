@@ -147,5 +147,9 @@
   "formSheet": {
     "cancel": "Отмена",
     "close": "Закрыть"
+  },
+  "selection": {
+    "count": "Выбрано: {{count}}",
+    "clear": "Снять выбор"
   }
 }

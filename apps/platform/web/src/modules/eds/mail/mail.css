@@ -95,17 +95,6 @@
   padding: 0;
 }
 
-.pf-mail-bulk {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 12px;
-  border: 1px solid var(--rt-color-surface-split);
-  border-radius: 8px;
-  background: var(--rt-color-surface-subtle);
-}
-
 .pf-mail-row {
   flex-direction: row;
   align-items: flex-start;

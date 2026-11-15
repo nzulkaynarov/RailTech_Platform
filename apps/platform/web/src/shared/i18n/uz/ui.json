@@ -147,5 +147,9 @@
   "formSheet": {
     "cancel": "Bekor qilish",
     "close": "Yopish"
+  },
+  "selection": {
+    "count": "Tanlandi: {{count}}",
+    "clear": "Tanlovni bekor qilish"
   }
 }

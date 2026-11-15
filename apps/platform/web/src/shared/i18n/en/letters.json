@@ -922,9 +922,7 @@
     },
     "bulk": {
       "label": "Selected letters",
-      "selected": "Selected: {{count}}",
       "all": "Select all",
-      "clear": "Clear selection",
       "archive": "Archive",
       "title": "Archive: {{count}}",
       "hint": "For example: newsletter, notification",
