@@ -73,7 +73,7 @@ function Items({ card }: { card: PaymentCard }) {
           },
         ]}
       />
-      <div className="pf-dec-totals">
+      <div className="pf-table-totals">
         <DefinitionList
           items={[
             { label: t("items.subtotal"), value: money(card.subtotal) },

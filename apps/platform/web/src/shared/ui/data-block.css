@@ -185,3 +185,17 @@ table.pf-fixed-table > * > tr > :is(th, td):last-child {
 .pf-tabs-bar > .ant-tabs-nav > .ant-tabs-nav-operations {
   display: none;
 }
+
+/* Итоги под строками документа (счёт, КП, заказ) — списком справа, под столбцом сумм (стандарт документов: «итоги справа») */
+.pf-table-totals {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+.pf-table-totals .pf-dl-wrap {
+  width: max-content;
+  max-width: 100%;
+}
+.pf-table-totals dd {
+  text-align: right;
+}
