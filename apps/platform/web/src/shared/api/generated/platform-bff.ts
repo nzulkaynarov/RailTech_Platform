@@ -342,6 +342,7 @@ import type {
   OffsiteBackupIn,
   OffsiteCheck,
   PartnerApplicationApproveRequest,
+  PartnerApplicationCreateRequest,
   PartnerApplicationItem,
   PartnerApplicationListResponse,
   PartnerApplicationRejectRequest,
@@ -37750,7 +37751,7 @@ export const getCompleteInstructionUrl = (id: string) => {
 };
 
 /**
- * EDS `POST /instructions/{id}/complete`. Любой сотрудник; отмечает только исполнитель поручения (решает EDS: чужое — 403, `details.reason = not_executor`; не в работе — 409 `invalid_state`). Нужен отчёт (текст или файлы — загрузка `POST /eds/document-files`) или номер отправленного ИСХ (`outgoing_number`); иначе 422, `details.fields = [report]`; ИСХ не найден — `details.fields = [outgoing_number]`. ИСХ «в ответ на» это письмо принимается; ИСХ без связи — тоже, и EDS записывает связь (EDS-REPLY-1); ИСХ в ответ на другое входящее — 409, `details.reason = outgoing_linked_elsewhere`. Все поручения письма исполнены — письмо «Исполнено», контроль снят, директор и делопроизводитель получают уведомление. «Передать в работу» (план 1.9, `handed_to`) — только ответственный (иначе 403 `not_responsible`): заявку клиента BFF проверяет в CRM `GET /deals/{id}` от имени сотрудника, служебную записку — EDS (своя, с номером); не найдено — 422, `details.fields.handed_to = not_found`. Ответ — карточка.
+ * EDS `POST /instructions/{id}/complete`. Любой сотрудник; отмечает только исполнитель поручения (решает EDS: чужое — 403, `details.reason = not_executor`; не в работе — 409 `invalid_state`). Нужен отчёт (текст или файлы — загрузка `POST /eds/document-files`) или номер отправленного ИСХ (`outgoing_number`); иначе 422, `details.fields = [report]`; ИСХ не найден — `details.fields = [outgoing_number]`. ИСХ «в ответ на» это письмо принимается; ИСХ без связи — тоже, и EDS записывает связь (EDS-REPLY-1); ИСХ в ответ на другое входящее — 409, `details.reason = outgoing_linked_elsewhere`. Все поручения письма исполнены — письмо «Исполнено», контроль снят, директор и делопроизводитель получают уведомление. «Передать в работу» (план 1.9, `handed_to`) — только ответственный (иначе 403 `not_responsible`): заявку клиента BFF проверяет в CRM `GET /deals/{id}`, подключение партнёра — в ERP от имени сотрудника, служебную записку — EDS (своя, с номером); не найдено — 422, `details.fields.handed_to = not_found`. Ответ — карточка.
  * @summary EDS · Поручение исполнено (P8b)
  */
 export const completeInstruction = async (
@@ -53674,6 +53675,128 @@ export function useListPartnerApplications<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getCreatePartnerApplicationUrl = () => {
+  return `/api/v1/erp/catalog/partner-applications`;
+};
+
+/**
+ * ERP `POST catalog/partner-applications/` — право `supply.manage` (раздел каталога полный). «Передать в работу»: сотрудник заводит заявку кандидата по письму (`source = letter`, `source_ref` — номер ВХ); согласия кандидата ещё нет, дальше — договорный шлюз.
+ * @summary Расчёт · Заявка в партнёры по входящему письму (план 1.9)
+ */
+export const createPartnerApplication = async (
+  partnerApplicationCreateRequest: PartnerApplicationCreateRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<PartnerApplicationItem> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<PartnerApplicationItem>(getCreatePartnerApplicationUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(partnerApplicationCreateRequest),
+  });
+};
+
+export const getCreatePartnerApplicationMutationKey = () => ["createPartnerApplication"] as const;
+
+export const getCreatePartnerApplicationMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createPartnerApplication>>,
+    TError,
+    CreatePartnerApplicationMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createPartnerApplication>>,
+  TError,
+  CreatePartnerApplicationMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreatePartnerApplicationMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createPartnerApplication>>,
+    CreatePartnerApplicationMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createPartnerApplication(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreatePartnerApplicationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createPartnerApplication>>
+>;
+export type CreatePartnerApplicationMutationBody = PartnerApplicationCreateRequest;
+export type CreatePartnerApplicationMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+export type CreatePartnerApplicationMutationVariables = { data: PartnerApplicationCreateRequest };
+
+/**
+ * @summary Расчёт · Заявка в партнёры по входящему письму (план 1.9)
+ */
+export const useCreatePartnerApplication = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createPartnerApplication>>,
+      TError,
+      CreatePartnerApplicationMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createPartnerApplication>>,
+  TError,
+  CreatePartnerApplicationMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreatePartnerApplicationMutationOptions(options), queryClient);
+};
 
 export const getSendContractPartnerApplicationUrl = (id: CompanyItemRef) => {
   return `/api/v1/erp/catalog/partner-applications/${id}/send-contract`;

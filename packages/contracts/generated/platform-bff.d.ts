@@ -5266,7 +5266,7 @@ export interface paths {
     put?: never;
     /**
      * EDS · Поручение исполнено (P8b)
-     * @description EDS `POST /instructions/{id}/complete`. Любой сотрудник; отмечает только исполнитель поручения (решает EDS: чужое — 403, `details.reason = not_executor`; не в работе — 409 `invalid_state`). Нужен отчёт (текст или файлы — загрузка `POST /eds/document-files`) или номер отправленного ИСХ (`outgoing_number`); иначе 422, `details.fields = [report]`; ИСХ не найден — `details.fields = [outgoing_number]`. ИСХ «в ответ на» это письмо принимается; ИСХ без связи — тоже, и EDS записывает связь (EDS-REPLY-1); ИСХ в ответ на другое входящее — 409, `details.reason = outgoing_linked_elsewhere`. Все поручения письма исполнены — письмо «Исполнено», контроль снят, директор и делопроизводитель получают уведомление. «Передать в работу» (план 1.9, `handed_to`) — только ответственный (иначе 403 `not_responsible`): заявку клиента BFF проверяет в CRM `GET /deals/{id}` от имени сотрудника, служебную записку — EDS (своя, с номером); не найдено — 422, `details.fields.handed_to = not_found`. Ответ — карточка.
+     * @description EDS `POST /instructions/{id}/complete`. Любой сотрудник; отмечает только исполнитель поручения (решает EDS: чужое — 403, `details.reason = not_executor`; не в работе — 409 `invalid_state`). Нужен отчёт (текст или файлы — загрузка `POST /eds/document-files`) или номер отправленного ИСХ (`outgoing_number`); иначе 422, `details.fields = [report]`; ИСХ не найден — `details.fields = [outgoing_number]`. ИСХ «в ответ на» это письмо принимается; ИСХ без связи — тоже, и EDS записывает связь (EDS-REPLY-1); ИСХ в ответ на другое входящее — 409, `details.reason = outgoing_linked_elsewhere`. Все поручения письма исполнены — письмо «Исполнено», контроль снят, директор и делопроизводитель получают уведомление. «Передать в работу» (план 1.9, `handed_to`) — только ответственный (иначе 403 `not_responsible`): заявку клиента BFF проверяет в CRM `GET /deals/{id}`, подключение партнёра — в ERP от имени сотрудника, служебную записку — EDS (своя, с номером); не найдено — 422, `details.fields.handed_to = not_found`. Ответ — карточка.
      */
     post: operations["completeInstruction"];
     delete?: never;
@@ -7377,7 +7377,11 @@ export interface paths {
      */
     get: operations["listPartnerApplications"];
     put?: never;
-    post?: never;
+    /**
+     * Расчёт · Заявка в партнёры по входящему письму (план 1.9)
+     * @description ERP `POST catalog/partner-applications/` — право `supply.manage` (раздел каталога полный). «Передать в работу»: сотрудник заводит заявку кандидата по письму (`source = letter`, `source_ref` — номер ВХ); согласия кандидата ещё нет, дальше — договорный шлюз.
+     */
+    post: operations["createPartnerApplication"];
     delete?: never;
     options?: never;
     head?: never;
@@ -12571,7 +12575,7 @@ export interface components {
         kind: components["schemas"]["HandoverKind"];
         /** @example З-0045/26 */
         number: string;
-        /** @description Путь в SPA — у служебной записки */
+        /** @description Путь в SPA — у служебной записки и заявки партнёра */
         path: string | null;
       } | null;
       /** Format: date-time */
@@ -12639,13 +12643,13 @@ export interface components {
       handed_to?: components["schemas"]["HandoverIn"] | null;
     };
     /**
-     * @description Во что передано письмо — заявка клиента (сделка CRM) или служебная записка (EDS)
+     * @description Во что передано письмо — заявка клиента (сделка CRM), подключение партнёра (заявка ERP) или служебная записка (EDS)
      * @enum {string}
      */
-    HandoverKind: "client_request" | "memo";
+    HandoverKind: "client_request" | "partner_application" | "memo";
     HandoverIn: {
       kind: components["schemas"]["HandoverKind"];
-      /** @description Сделка CRM (заявка клиента) или id документа EDS */
+      /** @description Сделка CRM (заявка клиента), заявка ERP (подключение партнёра) или id документа EDS */
       id: string;
     };
     InstructionExtensionIn: {
@@ -15915,8 +15919,11 @@ export interface components {
        */
       contract_date?: string | null;
     };
-    /** @enum {string} */
-    PartnerApplicationSource: "public" | "client_cabinet";
+    /**
+     * @description Откуда заявка — внешний вход, кабинет клиента или входящее письмо (сотрудник, план 1.9)
+     * @enum {string}
+     */
+    PartnerApplicationSource: "public" | "client_cabinet" | "letter";
     /** @enum {string} */
     PartnerApplicationStatus:
       | "submitted"
@@ -15929,6 +15936,8 @@ export interface components {
     PartnerApplicationItem: {
       id: components["schemas"]["CompanyItemRef"];
       source: components["schemas"]["PartnerApplicationSource"];
+      /** @description Номер ВХ, если заявку завёл сотрудник по письму (план 1.9); иначе пусто */
+      source_ref?: string;
       status: components["schemas"]["PartnerApplicationStatus"];
       kind: components["schemas"]["PartnerApplicationKind"];
       company_name: string;
@@ -16017,6 +16026,21 @@ export interface components {
     };
     BankChangeRejectRequest: {
       reason: string;
+    };
+    PartnerApplicationCreateRequest: {
+      company_name: string;
+      inn?: string;
+      /** @enum {string} */
+      kind?: "manufacturer" | "supplier" | "principal" | "other";
+      categories_description: string;
+      contact_name: string;
+      /** Format: email */
+      email: string;
+      phone?: string;
+      /** @enum {string} */
+      language?: "ru" | "uz" | "en";
+      /** @description Номер входящего письма (ВХ) */
+      source_ref: string;
     };
     PartnerApplicationRejectRequest: {
       rejected_reason: string;
@@ -29990,6 +30014,37 @@ export interface operations {
       };
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createPartnerApplication: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PartnerApplicationCreateRequest"];
+      };
+    };
+    responses: {
+      /** @description Заявка заведена */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerApplicationItem"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

@@ -12,6 +12,7 @@ from app.clients.erp_company import ErpCompany
 from app.deps import Authed, require
 from app.schemas_partner_applications import (
     PartnerApplicationApproveRequest,
+    PartnerApplicationCreateRequest,
     PartnerApplicationItem,
     PartnerApplicationListResponse,
     PartnerApplicationRejectRequest,
@@ -49,6 +50,20 @@ async def list_partner_applications(
     params = {"status": status} if status else {}
     raw = await _erp(authed).data("GET", "catalog/partner-applications/", params=params)
     return to_partner_applications_list(raw)
+
+
+@router.post(
+    "/erp/catalog/partner-applications",
+    response_model=PartnerApplicationItem,
+    status_code=201,
+    operation_id="createPartnerApplication",
+)
+async def create_partner_application(
+    body: PartnerApplicationCreateRequest, authed: Writer
+) -> PartnerApplicationItem:
+    """План 1.9: заявка кандидата по входящему письму; право решает ERP (`supply.manage`)."""
+    raw = await _erp(authed).data("POST", "catalog/partner-applications/", json=body.sent())
+    return to_partner_application(raw)
 
 
 @router.post(

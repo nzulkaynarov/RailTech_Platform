@@ -515,4 +515,35 @@ describe("«Передать в работу» (план 1.9)", () => {
       path: `/eds/documents?scope=all&doc=${memo?.id ?? ""}&panel=open`,
     });
   });
+
+  it("подключение партнёра: форма с данными письма создаёт заявку и закрывает поручение", async () => {
+    inExecution({ instructions: [instruction({ id: HAND_ID })] });
+    signIn("universal@demo.example");
+    renderAt(PATH);
+    fireEvent.click(await screen.findByRole("button", { name: "Ещё" }));
+    fireEvent.click(await screen.findByText("Передать в работу"));
+    let dialog = await screen.findByRole("dialog", { name: /передать в работу/ });
+    fireEvent.click(within(dialog).getByLabelText("Подключение партнёра"));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Продолжить" }));
+    dialog = await screen.findByRole("dialog", { name: /подключение партнёра/ });
+    expect(within(dialog).getByLabelText("Компания")).not.toHaveValue("");
+    const create = within(dialog).getByRole("button", { name: "Создать заявку" });
+    expect(create).toBeDisabled();
+    fireEvent.change(within(dialog).getByLabelText("Контактное лицо"), {
+      target: { value: "Анвар Колёсов" },
+    });
+    fireEvent.change(within(dialog).getByLabelText("Почта"), {
+      target: { value: "wheels@example.com" },
+    });
+    fireEvent.change(within(dialog).getByLabelText("Что предлагает"), {
+      target: { value: "Колёсные пары" },
+    });
+    fireEvent.click(create);
+    expect(await screen.findByText(/передано в работу/)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(findLetter("ВХ-108/26")?.instructions?.[0]?.handed_to?.kind).toBe(
+        "partner_application",
+      );
+    });
+  });
 });

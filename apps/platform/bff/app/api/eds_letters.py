@@ -423,6 +423,8 @@ async def _handed_to(authed: Authed, handover: HandoverIn) -> dict[str, str]:
         return {"kind": "memo", "ref": handover.id, "number": "-"}
     if not handover.id.isdigit() or int(handover.id) < 1:
         raise _handover_missing()
+    if handover.kind == "partner_application":
+        return await _partner_application(authed, int(handover.id))
     upstream = await CrmProxy(authed.call).raw("GET", f"/api/v1/deals/{int(handover.id)}")
     if upstream.status_code in (403, 404, 422):
         raise _handover_missing()
@@ -434,6 +436,27 @@ async def _handed_to(authed: Authed, handover: HandoverIn) -> dict[str, str]:
         raise backend_unavailable("crm", "bad_response") from exc
     number = (deal.erp_number or "").strip()[:32] or str(deal.id)
     return {"kind": "client_request", "ref": str(deal.id), "number": number}
+
+
+async def _partner_application(authed: Authed, application_id: int) -> dict[str, str]:
+    """Заявку партнёра BFF проверяет в ERP от имени сотрудника; номер — название компании."""
+    path = f"/api/v1/catalog/partner-applications/{application_id}/"
+    upstream = await authed.call("erp", "GET", path)
+    if upstream.status_code in (403, 404):
+        raise _handover_missing()
+    if upstream.status_code != 200:
+        raise backend_unavailable("erp", f"http_{upstream.status_code}")
+    try:
+        found = _ErpApplication.model_validate(upstream.json())
+    except ValueError as exc:
+        raise backend_unavailable("erp", "bad_response") from exc
+    number = found.company_name.strip()[:32] or str(found.id)
+    return {"kind": "partner_application", "ref": str(found.id), "number": number}
+
+
+class _ErpApplication(BaseModel):
+    id: int
+    company_name: str = ""
 
 
 class _CrmDeal(BaseModel):
