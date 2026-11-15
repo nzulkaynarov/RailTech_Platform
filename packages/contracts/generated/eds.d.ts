@@ -2828,10 +2828,10 @@ export interface components {
       created_at: string;
     };
     /**
-     * @description Во что передано письмо — заявка клиента (CRM) или служебная записка (EDS)
+     * @description Во что передано письмо — заявка клиента (CRM), подключение партнёра (ERP) или служебная записка (EDS)
      * @enum {string}
      */
-    HandoverKind: "client_request" | "memo";
+    HandoverKind: "client_request" | "partner_application" | "memo";
     HandedTo: {
       kind: components["schemas"]["HandoverKind"];
       /** @description Идентификатор объекта в своей системе (id заявки CRM, id документа EDS) */
@@ -2917,7 +2917,7 @@ export interface components {
       file_ids?: components["schemas"]["Uuid"][];
       /** @description Номер нашего отправленного ИСХ — ответ на письмо */
       outgoing_number?: string | null;
-      /** @description «Передать в работу» (план 1.9): только ответственный (иначе 403 `not_responsible`); служебная записка — своя, внутренняя, с номером (иначе 422 `handed_to: not_found`); заявку клиента проверяет BFF по CRM */
+      /** @description «Передать в работу» (план 1.9): только ответственный (иначе 403 `not_responsible`); служебная записка — своя, внутренняя, с номером (иначе 422 `handed_to: not_found`); заявку клиента (CRM) и подключение партнёра (ERP) проверяет BFF */
       handed_to?: components["schemas"]["HandedTo"] | null;
     };
     ExtensionRequestIn: {

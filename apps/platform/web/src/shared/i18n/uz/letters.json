@@ -611,7 +611,8 @@
     "handedTo": {
       "label": "Ishga topshirildi",
       "client_request": "Mijoz arizasi",
-      "memo": "Xizmat xati"
+      "memo": "Xizmat xati",
+      "partner_application": "Hamkorni ulash"
     }
   },
   "tasks": {
@@ -1285,7 +1286,15 @@
       "request": "Mijoz arizasi",
       "memo": "Xizmat xati",
       "next": "Davom etish",
-      "done": "{{number}} xati ishga topshirildi"
+      "done": "{{number}} xati ishga topshirildi",
+      "partner": "Hamkorni ulash",
+      "partnerTitle": "{{number}}: hamkorni ulash",
+      "company": "Kompaniya",
+      "inn": "STIR",
+      "contact": "Aloqa shaxsi",
+      "email": "Pochta",
+      "offer": "Nima taklif qiladi",
+      "partnerSubmit": "Ariza yaratish"
     },
     "co": {
       "action": "Hamijrochini jalb qilish",

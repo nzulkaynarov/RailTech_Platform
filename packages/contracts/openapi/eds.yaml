@@ -5197,8 +5197,8 @@ components:
           format: date-time
     HandoverKind:
       type: string
-      enum: [client_request, memo]
-      description: Во что передано письмо — заявка клиента (CRM) или служебная записка (EDS)
+      enum: [client_request, partner_application, memo]
+      description: Во что передано письмо — заявка клиента (CRM), подключение партнёра (ERP) или служебная записка (EDS)
     HandedTo:
       type: object
       additionalProperties: false
@@ -5388,7 +5388,7 @@ components:
             - type: 'null'
           description: >-
             «Передать в работу» (план 1.9): только ответственный (иначе 403 `not_responsible`); служебная записка —
-            своя, внутренняя, с номером (иначе 422 `handed_to: not_found`); заявку клиента проверяет BFF по CRM
+            своя, внутренняя, с номером (иначе 422 `handed_to: not_found`); заявку клиента (CRM) и подключение партнёра (ERP) проверяет BFF
     ExtensionRequestIn:
       type: object
       additionalProperties: false
