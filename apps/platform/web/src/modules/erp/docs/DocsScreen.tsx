@@ -41,6 +41,7 @@ import { errorFields } from "../catalog/errors";
 import { queryLabels } from "../catalog/labels";
 
 import "../catalog/catalog.css";
+import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 
 const PdfViewer = lazy(() => import("./PdfViewer"));
 
@@ -178,28 +179,41 @@ export function DocsScreen() {
   return (
     <div className="pf-cat">
       <PageHeader title={t("modules:erp.sections.docs")} subtitle={t("catalog:docs.subtitle")} />
-      <div className="pf-cat-controls">
-        <div className="pf-cat-control">
-          <label htmlFor={searchId}>{t("catalog:docs.search")}</label>
+      <FilterBar
+        tools
+        actions={
+          <>
+            {canEdit(me, "erp.stock") ? (
+              <Button
+                type="primary"
+                onClick={() => {
+                  setUploading(true);
+                }}
+              >
+                {t("catalog:docs.upload")}
+              </Button>
+            ) : null}
+          </>
+        }
+      >
+        <FilterField id={searchId} label={t("catalog:docs.search")} grow>
           <Input
             id={searchId}
             type="search"
+            placeholder={t("catalog:docs.search")}
             allowClear
             value={text}
-            style={{ width: 280 }}
             onChange={(event) => {
               setText(event.target.value);
               setPage(1);
             }}
           />
-        </div>
-        <div className="pf-cat-control">
-          <label htmlFor={kindId}>{t("catalog:docs.filterKind")}</label>
+        </FilterField>
+        <FilterField id={kindId} label={t("catalog:docs.filterKind")} width={220}>
           <Select
             id={kindId}
             allowClear
             placeholder={t("catalog:docs.anyKind")}
-            style={{ width: 220 }}
             value={kind}
             onChange={(value: string | undefined) => {
               setKind(value);
@@ -207,12 +221,10 @@ export function DocsScreen() {
             }}
             options={kinds.map((k) => ({ value: k.code, label: k.name }))}
           />
-        </div>
-        <div className="pf-cat-control">
-          <label htmlFor={reviewId}>{t("docs.review.filter")}</label>
+        </FilterField>
+        <FilterField id={reviewId} label={t("docs.review.filter")} width={220}>
           <Select
             id={reviewId}
-            style={{ width: 220 }}
             value={pendingOnly ? "pending" : "all"}
             onChange={(value: string) => {
               setPendingOnly(value === "pending");
@@ -223,22 +235,11 @@ export function DocsScreen() {
               { value: "pending", label: t("docs.review.pending") },
             ]}
           />
-        </div>
+        </FilterField>
         {productFilter || dealFilter ? (
           <Button onClick={clearLinks}>{t("catalog:docs.clearLinks")}</Button>
         ) : null}
-        <span className="pf-cat-spacer" />
-        {canEdit(me, "erp.stock") ? (
-          <Button
-            type="primary"
-            onClick={() => {
-              setUploading(true);
-            }}
-          >
-            {t("catalog:docs.upload")}
-          </Button>
-        ) : null}
-      </div>
+      </FilterBar>
       <QueryState query={query} labels={queryLabels(t)} rows={PAGE_SIZE}>
         {(data) =>
           data.items.length === 0 ? (
