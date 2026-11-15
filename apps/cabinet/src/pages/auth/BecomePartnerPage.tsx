@@ -123,7 +123,7 @@ export function BecomePartnerPage() {
   return (
     <AuthLayout title={t('pages.becomePartner.title')}>
       {mutation.isSuccess ? (
-        <Card className="border-border shadow-sm">
+        <Card className="border-border">
           <CardHeader className="text-center">
             <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-accent text-primary">
               <CheckCircle2 className="size-8" aria-hidden="true" />
@@ -166,7 +166,7 @@ export function BecomePartnerPage() {
           </CardContent>
         </Card>
       ) : (
-        <Card className="border-border shadow-sm">
+        <Card className="border-border">
           <CardHeader>
             <div className="flex items-center gap-2">
               <Handshake className="size-6 text-primary" aria-hidden="true" />

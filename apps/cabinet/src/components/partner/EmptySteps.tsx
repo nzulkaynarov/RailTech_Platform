@@ -11,9 +11,9 @@ import { CanAct } from '@/session/CanAct';
 export function EmptySteps({ onTemplate, onUpload }: { onTemplate: () => void; onUpload: () => void }) {
   const { t } = useTranslation();
   return (
-    <section aria-labelledby="empty-products" className="flex flex-col gap-6 rounded-2xl border border-dashed border-border bg-muted/60 px-4 py-8 sm:px-8">
+    <section aria-labelledby="empty-products" className="flex flex-col gap-6 rounded-lg border border-dashed border-border bg-muted/60 px-4 py-8 sm:px-8">
       <div className="flex flex-col items-center gap-2 text-center">
-        <div className="flex size-12 items-center justify-center rounded-2xl bg-accent text-primary">
+        <div className="flex size-12 items-center justify-center rounded-lg bg-accent text-primary">
           <PackageOpen className="size-6" aria-hidden="true" />
         </div>
         <h2 id="empty-products" className="text-base font-semibold">
@@ -46,7 +46,7 @@ export function EmptySteps({ onTemplate, onUpload }: { onTemplate: () => void; o
 
 function Step({ number, title, text, children }: { number: number; title: string; text: string; children: React.ReactNode }) {
   return (
-    <li className="flex flex-col items-start gap-2 rounded-xl border bg-card p-4">
+    <li className="flex flex-col items-start gap-2 rounded-lg border bg-card p-4">
       <span className="flex size-7 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground" aria-hidden="true">
         {number}
       </span>

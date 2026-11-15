@@ -252,7 +252,7 @@ export function InvoicesPage() {
                   />
                   {invoiceOpen(row) ? (
                     <CanAct>
-                      <Button size="sm" onClick={() => setPaying(row)} aria-label={t('pages.invoices.payNamed', { number: row.number })}>
+                      <Button size="sm" variant="outline" onClick={() => setPaying(row)} aria-label={t('pages.invoices.payNamed', { number: row.number })}>
                         <Upload aria-hidden="true" />
                         {t('pages.invoices.payButton')}
                       </Button>
