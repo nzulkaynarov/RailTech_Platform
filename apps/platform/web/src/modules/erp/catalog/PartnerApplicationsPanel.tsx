@@ -246,6 +246,7 @@ export function PartnerApplicationsPanel() {
             />
           ) : (
             <DataList
+              tableId="erp.catalog.applications"
               label={t("partnerApplications.title")}
               columns={columns}
               rows={data.items}

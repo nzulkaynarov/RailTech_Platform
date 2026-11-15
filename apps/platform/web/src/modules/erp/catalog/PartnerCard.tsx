@@ -20,7 +20,7 @@ import { useFormat } from "../../../shared/lib/useFormat";
 import { DateField } from "../../../shared/ui/DateField";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { FormField, QueryState } from "../../../shared/ui/FormParts";
-import { FormPanel, PriceCell, ValidityTag } from "./common";
+import { FormPanel, PanelTable, PriceCell, ValidityTag } from "./common";
 import { errorFields } from "./errors";
 import { queryLabels } from "./labels";
 import { HOME_CURRENCY, currencyLabel } from "../../../shared/lib/money";
@@ -124,77 +124,88 @@ export function PartnerCard({ id }: { id: string }) {
             {card.offers.length === 0 ? (
               <p className="pf-cat-note">{t("suppliers.noOffers")}</p>
             ) : (
-              <div
-                className="pf-fp-scroll"
-                role="region"
-                tabIndex={0}
-                aria-label={t("suppliers.offersTable")}
-              >
-                <table className="pf-cat-offers">
-                  <caption className="pf-sr-only">{t("suppliers.offersTable")}</caption>
-                  <thead>
-                    <tr>
-                      <th scope="col">{t("offers.product")}</th>
-                      <th scope="col">{t("offers.price")}</th>
-                      <th scope="col">{t("offers.quota")}</th>
-                      <th scope="col">{t("offers.lead")}</th>
-                      <th scope="col">{t("offers.validUntil")}</th>
-                      {canEdit(me, "erp.stock") ? (
-                        <th scope="col" style={{ width: ROW_ACTIONS_WIDTH }}>
-                          <span className="pf-sr-only">{t("actions")}</span>
-                        </th>
-                      ) : null}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {card.offers.map((offer) => (
-                      <tr key={offer.id}>
-                        <td>
-                          <NameCode
-                            code={offer.product.sku}
-                            name={
-                              <Button
-                                type="link"
-                                className="pf-cat-linkbtn"
-                                aria-label={t("offers.openProduct", { name: offer.product.name })}
-                                onClick={() => {
-                                  void navigate(`/erp/catalog?part=items&item=${offer.product.id}`);
-                                }}
-                              >
-                                {offer.product.name}
-                              </Button>
-                            }
-                          />
-                        </td>
-                        <td>
-                          <PriceCell price={offer.price} />
-                          <span className="pf-cat-sub">
-                            {[offer.delivery_basis, t(`offerSource.${offer.source}`)]
-                              .filter(Boolean)
-                              .join(" · ")}
-                          </span>
-                        </td>
-                        <td>
-                          {t("offers.quotaValue", {
-                            qty: offer.quota_qty,
-                            min: offer.min_order_qty,
-                          })}
-                        </td>
-                        <td>
-                          {t("offers.leadValue", {
-                            stock: offer.in_stock_lead_days,
-                            order: offer.order_lead_days,
-                          })}
-                        </td>
-                        <td>
-                          {offer.valid_until ? date(offer.valid_until) : t("offers.noLimit")}{" "}
-                          <ValidityTag validity={offer.validity} />
-                          {!offer.is_active ? (
-                            <span className="pf-cat-sub">{t("offers.inactive")}</span>
-                          ) : null}
-                        </td>
-                        {canEdit(me, "erp.stock") ? (
-                          <td style={{ textAlign: "center" }}>
+              <PanelTable<CatalogOffer>
+                tableId="erp.catalog.partnerOffers"
+                label={t("suppliers.offersTable")}
+                rows={card.offers}
+                rowKey={(offer) => offer.id}
+                columns={[
+                  {
+                    id: "product",
+                    header: t("offers.product"),
+                    width: null,
+                    cell: (offer) => (
+                      <NameCode
+                        code={offer.product.sku}
+                        name={
+                          <Button
+                            type="link"
+                            className="pf-cat-linkbtn"
+                            aria-label={t("offers.openProduct", { name: offer.product.name })}
+                            onClick={() => {
+                              void navigate(`/erp/catalog?part=items&item=${offer.product.id}`);
+                            }}
+                          >
+                            {offer.product.name}
+                          </Button>
+                        }
+                      />
+                    ),
+                  },
+                  {
+                    id: "price",
+                    header: t("offers.price"),
+                    width: 150,
+                    cell: (offer) => (
+                      <>
+                        <PriceCell price={offer.price} />
+                        <span className="pf-cat-sub">
+                          {[offer.delivery_basis, t(`offerSource.${offer.source}`)]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                      </>
+                    ),
+                  },
+                  {
+                    id: "quota",
+                    header: t("offers.quota"),
+                    width: 130,
+                    cell: (offer) =>
+                      t("offers.quotaValue", { qty: offer.quota_qty, min: offer.min_order_qty }),
+                  },
+                  {
+                    id: "lead",
+                    header: t("offers.lead"),
+                    width: 150,
+                    cell: (offer) =>
+                      t("offers.leadValue", {
+                        stock: offer.in_stock_lead_days,
+                        order: offer.order_lead_days,
+                      }),
+                  },
+                  {
+                    id: "validUntil",
+                    header: t("offers.validUntil"),
+                    width: 160,
+                    cell: (offer) => (
+                      <>
+                        {offer.valid_until ? date(offer.valid_until) : t("offers.noLimit")}{" "}
+                        <ValidityTag validity={offer.validity} />
+                        {!offer.is_active ? (
+                          <span className="pf-cat-sub">{t("offers.inactive")}</span>
+                        ) : null}
+                      </>
+                    ),
+                  },
+                  ...(canEdit(me, "erp.stock")
+                    ? [
+                        {
+                          id: "actions",
+                          header: t("actions"),
+                          headerHidden: true,
+                          width: ROW_ACTIONS_WIDTH,
+                          cell: (offer: CatalogOffer) => (
                             <RowActions
                               name={offer.product.name}
                               items={[
@@ -214,13 +225,12 @@ export function PartnerCard({ id }: { id: string }) {
                                 },
                               ]}
                             />
-                          </td>
-                        ) : null}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                          ),
+                        },
+                      ]
+                    : []),
+                ]}
+              />
             )}
             {history ? (
               <OfferHistoryModal

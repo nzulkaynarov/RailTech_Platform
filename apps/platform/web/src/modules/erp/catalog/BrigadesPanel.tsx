@@ -158,6 +158,7 @@ export function BrigadesPanel() {
                 <p className="pf-cat-note">{t("brigades.ratesNote")}</p>
               ) : null}
               <DataList
+                tableId="erp.catalog.brigades"
                 label={t("brigades.table")}
                 rows={data.items}
                 columns={columns}

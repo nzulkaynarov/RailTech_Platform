@@ -27,7 +27,7 @@ import { useFormat } from "../../../shared/lib/useFormat";
 import { DateField } from "../../../shared/ui/DateField";
 import { FormField, QueryState } from "../../../shared/ui/FormParts";
 import { StepSections } from "../../../shared/ui/StepSections/StepSections";
-import { FormPanel, PriceCell } from "./common";
+import { FormPanel, PanelTable, PriceCell } from "./common";
 import { catalogErrorText, errorFields } from "./errors";
 import { localName } from "../../eds/dictionaries";
 import { queryLabels } from "./labels";
@@ -488,42 +488,50 @@ export function OfferHistoryModal({
           data.items.length === 0 ? (
             <p className="pf-cat-note">{t("history.empty")}</p>
           ) : (
-            <div
-              className="pf-fp-scroll"
-              role="region"
-              tabIndex={0}
-              aria-label={t("history.table")}
-            >
-              <table className="pf-cat-offers">
-                <caption className="pf-sr-only">{t("history.table")}</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">{t("history.at")}</th>
-                    <th scope="col">{t("offers.price")}</th>
-                    <th scope="col">{t("offers.validUntil")}</th>
-                    <th scope="col">{t("history.source")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.items.map((row) => (
-                    <tr key={row.at}>
-                      <td>
-                        {date(row.at, "datetime")}
-                        {row.by ? <span className="pf-cat-sub">{row.by}</span> : null}
-                      </td>
-                      <td>
-                        <PriceCell price={row.price} />
-                        {row.delivery_basis ? (
-                          <span className="pf-cat-sub">{row.delivery_basis}</span>
-                        ) : null}
-                      </td>
-                      <td>{row.valid_until ? date(row.valid_until) : t("offers.noLimit")}</td>
-                      <td>{t(`offerSource.${row.source}`)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <PanelTable<(typeof data.items)[number]>
+              tableId="erp.catalog.offerHistory"
+              label={t("history.table")}
+              rows={data.items}
+              rowKey={(row) => row.at}
+              columns={[
+                {
+                  id: "at",
+                  header: t("history.at"),
+                  width: 170,
+                  cell: (row) => (
+                    <>
+                      {date(row.at, "datetime")}
+                      {row.by ? <span className="pf-cat-sub">{row.by}</span> : null}
+                    </>
+                  ),
+                },
+                {
+                  id: "price",
+                  header: t("offers.price"),
+                  width: null,
+                  cell: (row) => (
+                    <>
+                      <PriceCell price={row.price} />
+                      {row.delivery_basis ? (
+                        <span className="pf-cat-sub">{row.delivery_basis}</span>
+                      ) : null}
+                    </>
+                  ),
+                },
+                {
+                  id: "validUntil",
+                  header: t("offers.validUntil"),
+                  width: 140,
+                  cell: (row) => (row.valid_until ? date(row.valid_until) : t("offers.noLimit")),
+                },
+                {
+                  id: "source",
+                  header: t("history.source"),
+                  width: 140,
+                  cell: (row) => t(`offerSource.${row.source}`),
+                },
+              ]}
+            />
           )
         }
       </QueryState>

@@ -253,6 +253,7 @@ export function DocsScreen() {
           ) : (
             <>
               <DataList
+                tableId="erp.docs"
                 label={t("catalog:docs.table")}
                 rows={data.items}
                 columns={columns}
