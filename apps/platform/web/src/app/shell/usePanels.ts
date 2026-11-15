@@ -63,7 +63,7 @@ export function usePanels(
   const panelMode: PanelLayoutMode = isStrictlyOverlay
     ? "overlay"
     : (userEntry?.panelMode ?? "overlay");
-  // 600 px — только выбор пользователя («Шире»), не умолчание раздела.
+  // 640 px — только выбор пользователя («Шире»), не умолчание раздела.
   const panelWidth: PanelWidthPreset = userEntry?.panelWidth ?? "default";
 
   const menuOpen = userEntry?.menuOpen ?? menuWide;

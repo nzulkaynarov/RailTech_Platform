@@ -24,7 +24,13 @@ import { useGetMenuCounters } from "../../shared/api/generated/platform-bff";
 import type { MenuCounter } from "../../shared/api/generated/model";
 import { usePollQuery } from "../../shared/api/polling";
 import { useEventStream } from "../../shared/api/useEventStream";
-import { ContextPanel, ContextPanelDrawer, ContextPanelSheet } from "../../shared/ui/ContextPanel";
+import {
+  ContextPanel,
+  ContextPanelDrawer,
+  ContextPanelSheet,
+  PANEL_DEFAULT,
+  PANEL_WIDE,
+} from "../../shared/ui/ContextPanel";
 import { ModuleMenu, ModuleMenuContent, type MenuItem } from "../../shared/ui/ModuleMenu";
 import { ModuleRail, type RailModule } from "../../shared/ui/ModuleRail";
 import { TopBar, type Crumb } from "../../shared/ui/TopBar";
@@ -48,7 +54,7 @@ function isMac(): boolean {
 }
 
 /**
- * Каркас Платформы (docs/architecture/platform-frontend.md §4): рейл 56 · подменю 208 · шапка 56 · основное окно · боковое окно 440/600 (Slide-over).
+ * Каркас Платформы (docs/architecture/platform-frontend.md §4): рейл 56 · подменю 208 · шапка 56 · основное окно · боковое окно 480/640 (Slide-over).
  * Модули и разделы — из `Me.modules` и `Me.resources`; подменю, режим и ширина окна запоминаются по пользователю, вкладка — по разделу.
  * < 1440 px подменю свёрнуто, пока пользователь его не откроет (хоткей ⌘\); < 768 px рейл — нижняя панель, подменю — Drawer; раздел с `sheetOnMobile` на телефоне
  * показывает боковое окно листом на весь экран (B-020).
@@ -72,7 +78,7 @@ export function AppShell() {
   const setupKnown = useSetupKnown();
   const setupBannerLate = useLateSetupBanner(setupKnown);
   const { attach: attachPanelSlot, claimed: panelClaimed } = usePanelSlotHost(panels.tab);
-  const panelWidthPx = panels.panelWidth === "wide" ? 600 : 440;
+  const panelWidthPx = panels.panelWidth === "wide" ? PANEL_WIDE : PANEL_DEFAULT;
   const dockFits = useDockFits(!viewport.mobile && panels.menuOpen, panelWidthPx);
 
   const sectionAllowed = (s: SectionConfig) => canSee(me, s.access);

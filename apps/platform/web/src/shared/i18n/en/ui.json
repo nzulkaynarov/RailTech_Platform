@@ -140,5 +140,9 @@
     "next": "Next: {{title}}",
     "edit": "Change",
     "invalid": "Needs fixing"
+  },
+  "formSheet": {
+    "cancel": "Cancel",
+    "close": "Close"
   }
 }

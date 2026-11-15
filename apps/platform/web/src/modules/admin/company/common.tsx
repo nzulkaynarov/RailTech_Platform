@@ -11,7 +11,7 @@ import { type DataColumn, DataTable } from "../../../shared/ui/DataTable/DataTab
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { FilePicker } from "../../../shared/ui/FileField";
 import { ErrorNote } from "../../../shared/ui/FormParts";
-import { Sheet } from "../../../shared/ui/Sheet";
+import { FormSheet as SharedFormSheet } from "../../../shared/ui/FormSheet";
 import { companyErrorText, isCompanyNotSet, missingBlocks } from "./errors";
 import { SoloSection } from "./solo";
 
@@ -279,8 +279,8 @@ function MissingBlocks({ error }: { error: unknown }) {
 }
 
 /**
- * Короткая форма о выбранной строке настроек — в боковом окне (platform-frontend.md §4.1a), на телефоне — лист на весь
- * экран; тот же порядок, что у `FormModal`: ошибка сверху, кнопки — в конце формы. Форма (`formId`) — у вызывающего.
+ * Короткая форма о выбранной строке настроек — в боковом окне (общий `FormSheet`, стандарт интерфейса §6): подвал с
+ * «Отмена» и главной кнопкой закреплён, ошибка компании — словами над полями. Форма (`formId`) — у вызывающего.
  */
 export function FormSheet({
   title,
@@ -288,6 +288,7 @@ export function FormSheet({
   submitLabel,
   saving,
   error,
+  dirty,
   onCancel,
   children,
 }: {
@@ -296,17 +297,21 @@ export function FormSheet({
   submitLabel: string;
   saving: boolean;
   error?: unknown;
+  dirty?: boolean;
   onCancel: () => void;
   children: ReactNode;
 }) {
   const { t } = useTranslation("company");
   return (
-    <Sheet label={title} onClose={onCancel}>
-      <section aria-labelledby={`${formId}-title`}>
-        <h3 className="pf-fp-title" id={`${formId}-title`}>
-          {title}
-        </h3>
-        {error ? (
+    <SharedFormSheet
+      title={title}
+      formId={formId}
+      submitLabel={submitLabel}
+      saving={saving}
+      {...(dirty === undefined ? {} : { dirty })}
+      onCancel={onCancel}
+      error={
+        error ? (
           <Alert
             type="error"
             showIcon
@@ -315,18 +320,12 @@ export function FormSheet({
             description={
               missingBlocks(error).length > 0 ? <MissingBlocks error={error} /> : undefined
             }
-            style={{ marginBottom: 16 }}
           />
-        ) : null}
-        {children}
-        <div className="pf-fp-row">
-          <Button type="primary" htmlType="submit" form={formId} loading={saving}>
-            {submitLabel}
-          </Button>
-          <Button onClick={onCancel}>{t("cancel")}</Button>
-        </div>
-      </section>
-    </Sheet>
+        ) : undefined
+      }
+    >
+      {children}
+    </SharedFormSheet>
   );
 }
 
