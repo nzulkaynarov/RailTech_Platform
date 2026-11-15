@@ -112,7 +112,7 @@ async def build_payload(session: AsyncSession, document: Document) -> tuple[dict
     final = is_final(document)
     directory = await load_directory(session, [document.author_crm_user_id])
     name = (document.signatory_name or head.signatory_name).strip()
-    position = (document.signatory_position or head.signatory_position).strip()
+    position = (document.signatory_position or letterhead.text(head, "signatory_position", lang)).strip()
     addressee = [line for line in (document.recipient_attention, document.recipient_name) if line and line.strip()]
     basis_text = document.signatory_basis_text if final else None
     verification_code = document.verification_code if final else None
@@ -134,9 +134,9 @@ async def build_payload(session: AsyncSession, document: Document) -> tuple[dict
             "verification_url": verification_url,
         },
         "letterhead": {
-            "company_name": head.company_name,
+            "company_name": letterhead.text(head, "company_name", lang),
             "requisites": letterhead.requisites(head, lang),
-            "footer": letterhead.footer(head),
+            "footer": letterhead.footer(head, lang),
             "accent": head.accent_color or DEFAULT_ACCENT,
             "font": head.font_family,
         },
@@ -157,7 +157,9 @@ async def request_preview(session: AsyncSession, body: dict[str, Any]) -> Docume
     payload: dict[str, Any] = {
         "renderer": RENDERER_VERSION,
         "layout": LAYOUT,
-        "body": _with_signature(body, head.signatory_name.strip(), head.signatory_position.strip()),
+        "body": _with_signature(
+            body, head.signatory_name.strip(), letterhead.text(head, "signatory_position", lang).strip()
+        ),
         "meta": {
             "number": None,
             "date": None,
@@ -169,9 +171,9 @@ async def request_preview(session: AsyncSession, body: dict[str, Any]) -> Docume
             "verification_url": None,
         },
         "letterhead": {
-            "company_name": head.company_name,
+            "company_name": letterhead.text(head, "company_name", lang),
             "requisites": letterhead.requisites(head, lang),
-            "footer": letterhead.footer(head),
+            "footer": letterhead.footer(head, lang),
             "accent": head.accent_color or DEFAULT_ACCENT,
             "font": head.font_family,
         },

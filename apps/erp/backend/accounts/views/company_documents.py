@@ -99,7 +99,7 @@ class CompanyDocumentsMixin:
         responses={
             200: CompanyDocumentProfileSerializer,
             400: OpenApiResponse(
-                description="INVALID_ACCENT_COLOR / INVALID_SECONDARY_COLOR / INVALID_LAYOUT_PRESET / INVALID_FONT_FAMILY"
+                description="INVALID_ACCENT_COLOR / INVALID_SECONDARY_COLOR / INVALID_LAYOUT_PRESET / INVALID_FONT_FAMILY / INVALID_TRANSLATIONS"
             ),
             403: OpenApiResponse(description="NOT_COMPANY_OWNER: only the company OWNER may read/update the profile"),
         },

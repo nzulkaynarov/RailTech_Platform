@@ -124,6 +124,10 @@ export interface RequestFormProps {
   clientId: number | null;
   /** «В заявку» у файла клиента: BFF копирует вложение в EDS, форма получает готовое письмо */
   letterFrom?: LetterSource | null;
+  /** Файл письма уже в EDS («Передать в работу» из входящего, план 1.9): форма получает готовое письмо */
+  letterFile?: { id: string; name: string } | null;
+  /** Заявка создана — вызывающий связывает её со своим объектом (поручение по ВХ) */
+  onCreated?: (result: RequestCreatedView) => void;
   onCancel: () => void;
 }
 
@@ -133,7 +137,14 @@ export interface RequestFormProps {
  * один на открытие: повтор после сбоя или двойной клик не создаёт вторую заявку (CRM вернёт ту же). Ошибка оставляет
  * введённое; на телефоне форма — лист на весь экран с кнопками внизу.
  */
-export function RequestForm({ lead, clientId, letterFrom = null, onCancel }: RequestFormProps) {
+export function RequestForm({
+  lead,
+  clientId,
+  letterFrom = null,
+  letterFile = null,
+  onCreated,
+  onCancel,
+}: RequestFormProps) {
   const { t } = useTranslation(["request", "clients"]);
   const { mobile } = useViewport();
   const fmt = useFormat();
@@ -143,6 +154,9 @@ export function RequestForm({ lead, clientId, letterFrom = null, onCancel }: Req
   const [state, setState] = useState<RequestFormState>(() => ({
     ...initialState(lead, clientId),
     ...(letterFrom && lead ? { letter: { name: "", status: "uploading" as const } } : {}),
+    ...(letterFile
+      ? { letter: { name: letterFile.name, status: "done" as const, id: letterFile.id } }
+      : {}),
   }));
   const copy = useCopyCrmMessageAttachmentToRequest();
   const copied = useRef(false);
@@ -252,6 +266,7 @@ export function RequestForm({ lead, clientId, letterFrom = null, onCancel }: Req
         onSuccess: (result) => {
           refresh();
           setDone(result);
+          onCreated?.(result);
         },
         onError: (error) => {
           setServerError(reasonError(t, "request:errors", error));

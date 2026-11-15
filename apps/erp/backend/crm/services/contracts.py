@@ -230,6 +230,23 @@ def _render_contract_pdf(contract) -> None:
 
     frozen_body = contract.frozen_template_body
     contract_template = None if frozen_body else company_template_for(supplier, "CONTRACT")
+    from .documents import rt_documents
+
+    if rt_documents.enabled("contract"):
+        # План 2.6: договор на общем генераторе rt_docs — по шаблону компании, замороженной редакции или образцу.
+        from core.seeds.documents import CONTRACT_BODY
+
+        pdf = rt_documents.contract_pdf(
+            contract,
+            items,
+            totals,
+            brand,
+            draft=is_draft,
+            body_html=frozen_body or (contract_template.body_html if contract_template is not None else CONTRACT_BODY),
+        )
+        save_rendered_pdf(contract, f"Contract_{contract.number}.pdf", ContentFile(pdf))
+        remember_pdf_state("contract", contract.pk, is_draft)
+        return
     if frozen_body or contract_template is not None:
         html_string = render_to_string(
             "crm/contract_pdf_templated.html",

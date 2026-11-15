@@ -708,6 +708,16 @@ class DocumentCreatedV1(BaseModel):
     payload: DocumentCreated
 
 
+class En(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    company_name: Annotated[str | None, Field(max_length=255)] = None
+    legal_address: Annotated[str | None, Field(max_length=2000)] = None
+    signatory_position: Annotated[str | None, Field(max_length=255)] = None
+    footer_text: Annotated[str | None, Field(max_length=2000)] = None
+
+
 class FontFamily(StrEnum):
     sans = "sans"
     serif = "serif"
@@ -980,6 +990,10 @@ class Letterhead(BaseModel):
     logo_omitted: LogoOmitted | None = None
     """
     Почему логотипа нет при загруженном файле: hidden — «Показывать логотип» выключено, unsupported — SVG/GIF или файл не читается, too_large — больше 512 КиБ после уменьшения
+    """
+    translations: Translations | None = None
+    """
+    TPL-3 (план 2.7): бланк на узбекском и английском — только заполненные поля; нет поля или языка — берётся основной (русский) текст. Добавлено в v1 необязательным
     """
 
 
@@ -1702,6 +1716,18 @@ class ToItem(RootModel[EmailStr]):
     root: Annotated[EmailStr, Field(max_length=255)]
 
 
+class Translations(BaseModel):
+    """
+    TPL-3 (план 2.7): бланк на узбекском и английском — только заполненные поля; нет поля или языка — берётся основной (русский) текст. Добавлено в v1 необязательным
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    uz: Uz | None = None
+    en: En | None = None
+
+
 class Type(StrEnum):
     system = "system"
     staff = "staff"
@@ -1715,3 +1741,13 @@ class Urgency(StrEnum):
 
     normal = "normal"
     urgent = "urgent"
+
+
+class Uz(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    company_name: Annotated[str | None, Field(max_length=255)] = None
+    legal_address: Annotated[str | None, Field(max_length=2000)] = None
+    signatory_position: Annotated[str | None, Field(max_length=255)] = None
+    footer_text: Annotated[str | None, Field(max_length=2000)] = None
