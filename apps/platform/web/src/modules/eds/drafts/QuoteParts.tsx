@@ -3,10 +3,12 @@ import { useTranslation } from "react-i18next";
 import type { QuoteApprovalCard } from "../../../shared/api/generated/model";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
-import { ScrollRegion } from "../../../shared/ui/FormParts";
+import { DataTable } from "../../../shared/ui/DataTable/DataTable";
 import { LockIcon } from "../../../shared/ui/icons";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { Restricted } from "../decision/Restricted";
+
+type QuoteLine = NonNullable<QuoteApprovalCard["lines"]>[number];
 
 /** Состав КП из ERP: № · наименование · кол-во · цена · сумма · срок; итоги без НДС / НДС / с НДС (SPEC-v3 §7.3). */
 export function QuoteLines({ quote }: { quote: QuoteApprovalCard }) {
@@ -24,54 +26,71 @@ export function QuoteLines({ quote }: { quote: QuoteApprovalCard }) {
   if (quote.lines.length === 0) return <p className="pf-hint">{t("card.emptyLines")}</p>;
   return (
     <>
-      <ScrollRegion label={t("card.linesScroll")}>
-        <table className="pf-dec-table pf-dec-lines">
-          <caption className="pf-sr-only">{t("card.lines")}</caption>
-          <thead>
-            <tr>
-              <th scope="col">{t("card.columns.position")}</th>
-              <th scope="col">{t("card.columns.name")}</th>
-              <th scope="col" className="pf-col-num">
-                {t("card.columns.quantity")}
-              </th>
-              <th scope="col" className="pf-col-num">
-                {t("card.columns.price")}
-              </th>
-              <th scope="col" className="pf-col-num">
-                {t("card.columns.amount")}
-              </th>
-              <th scope="col" className="pf-col-num">
-                {t("card.columns.term")}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {quote.lines.map((line) => (
-              <tr key={line.position}>
-                <td className="pf-num">{line.position}</td>
-                <td>
-                  {line.name}
-                  {line.optional ? (
-                    <span className="pf-dec-optional"> · {t("card.optional")}</span>
-                  ) : null}
-                </td>
-                <td className="pf-col-num">
-                  {line.quantity}
-                  {line.unit ? ` ${line.unit}` : ""}
-                </td>
-                <td className="pf-col-num">{money(line.unit_price)}</td>
-                <td className="pf-col-num">{money(line.amount)}</td>
-                <td className="pf-col-num">
-                  {line.lead_time_days !== null
-                    ? t("card.days", { count: line.lead_time_days })
-                    : "—"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </ScrollRegion>
-      {quote.totals ? <Totals quote={quote} /> : null}
+      <DataTable<QuoteLine>
+        tableId="eds.quote.lines"
+        caption={t("card.lines")}
+        scrollLabel={t("card.linesScroll")}
+        className="pf-dec-table pf-dec-lines"
+        rows={quote.lines}
+        rowKey={(line) => String(line.position)}
+        toolsTarget={null}
+        columns={[
+          {
+            id: "position",
+            header: t("card.columns.position"),
+            width: 56,
+            cellClassName: "pf-num",
+            cell: (line) => line.position,
+          },
+          {
+            id: "name",
+            header: t("card.columns.name"),
+            width: null,
+            cell: (line) => (
+              <>
+                {line.name}
+                {line.optional ? (
+                  <span className="pf-dec-optional"> · {t("card.optional")}</span>
+                ) : null}
+              </>
+            ),
+          },
+          {
+            id: "quantity",
+            header: t("card.columns.quantity"),
+            width: 110,
+            numeric: true,
+            cell: (line) => `${String(line.quantity)}${line.unit ? ` ${line.unit}` : ""}`,
+          },
+          {
+            id: "price",
+            header: t("card.columns.price"),
+            width: 150,
+            numeric: true,
+            cell: (line) => money(line.unit_price),
+          },
+          {
+            id: "amount",
+            header: t("card.columns.amount"),
+            width: 150,
+            numeric: true,
+            cell: (line) => money(line.amount),
+          },
+          {
+            id: "term",
+            header: t("card.columns.term"),
+            width: 110,
+            numeric: true,
+            cell: (line) =>
+              line.lead_time_days !== null ? t("card.days", { count: line.lead_time_days }) : "—",
+          },
+        ]}
+      />
+      {quote.totals ? (
+        <div className="pf-dec-totals">
+          <Totals quote={quote} />
+        </div>
+      ) : null}
       <Mismatch quote={quote} />
     </>
   );

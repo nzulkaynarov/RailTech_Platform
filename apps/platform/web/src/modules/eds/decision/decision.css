@@ -100,6 +100,19 @@
   background: var(--rt-color-surface-subtle);
   border-bottom: 0;
 }
+/* Итоги под строками документа — справа, под суммой (стандарт документов: «итоги справа») */
+.pf-dec-totals {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+.pf-dec-totals .pf-dl-wrap {
+  width: max-content;
+  max-width: 100%;
+}
+.pf-dec-totals dd {
+  text-align: right;
+}
 .pf-dec-number {
   color: var(--rt-color-primary-text);
   white-space: nowrap;
