@@ -53,7 +53,9 @@ describe("Настройки · Процессы · Справочники · Т
     expect(await rowOf("Спам")).toHaveTextContent("В «Подозрительные» (спам)");
     expect(readDictionaries()["mail-types"]).toHaveLength(9);
     // «Документ партнёра» уже стоит у демо-писем — удалить нельзя, только скрыть; «Приглашение на встречу» не использовано
-    expect(await rowActionItems("Документ партнёра (договор, акт сверки)")).not.toContain("Удалить");
+    expect(await rowActionItems("Документ партнёра (договор, акт сверки)")).not.toContain(
+      "Удалить",
+    );
     expect(await rowActionItems("Приглашение на встречу")).toContain("Удалить");
   });
 
