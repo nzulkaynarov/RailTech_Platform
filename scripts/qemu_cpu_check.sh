@@ -234,7 +234,7 @@ cmd_build() {
     args+=(--build-context "rtbus=$ROOT/packages/rt-bus" --build-context "contracts=$ROOT/packages/contracts")
   fi
   # EDS: письма на бланке (P4) — пакет rt-docs отдельным контекстом.
-  [[ "$name" != "rt-eds" ]] || args+=(--build-context "rtdocs=$ROOT/packages/rt-docs")
+  [[ "$name" != "rt-eds" && "$name" != "rt-erp-backend" ]] || args+=(--build-context "rtdocs=$ROOT/packages/rt-docs")
   say "сборка $name (linux/amd64, $ctx) → $CHECK_REPO/$name:amd64"
   docker build --platform linux/amd64 "${args[@]+"${args[@]}"}" -t "$CHECK_REPO/$name:amd64" "$ROOT/$ctx"
 }

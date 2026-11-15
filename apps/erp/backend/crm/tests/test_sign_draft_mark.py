@@ -62,6 +62,12 @@ class _FakeHTML:
         target.write(b"%PDF-1.7 stub")
 
 
+@pytest.fixture(autouse=True)
+def _django_templates(settings):
+    """Здесь проверяется прежний путь шаблонов Django (он остаётся откатом); счёт на rt_docs — test_invoice_rt_docs."""
+    settings.RT_DOCS_DOCUMENTS = ()
+
+
 @pytest.fixture
 def world(db):
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})

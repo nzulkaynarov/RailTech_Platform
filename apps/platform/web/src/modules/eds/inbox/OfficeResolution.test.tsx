@@ -155,6 +155,7 @@ describe("Резолюция делопроизводства (P8b, SPEC-v3 §3.
           report: null,
           files: [],
           outgoing: null,
+          handed_to: null,
           executed_at: null,
           extensions: [
             {
@@ -222,6 +223,7 @@ describe("Срочное письмо: перенос можно запроси�
           report: null,
           files: [],
           outgoing: null,
+          handed_to: null,
           executed_at: null,
           extensions: [
             {
@@ -269,6 +271,7 @@ describe("Журнал «Входящие письма»: фильтры и ко
           report: null,
           files: [],
           outgoing: null,
+          handed_to: null,
           executed_at: null,
           extensions: [],
         },

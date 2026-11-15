@@ -4,6 +4,7 @@
 Рендер PDF — `rt_docs.pdf.render_pdf` и `rt_docs.fit.fit` (импорт требует pango и harfbuzz); остальное — без них.
 """
 
+from . import commercial
 from .contracts import (
     Catalog,
     clean_text,
@@ -55,6 +56,7 @@ __all__ = [
     "amount_in_words",
     "body_to_markdown",
     "clean_text",
+    "commercial",
     "contracts_dir",
     "currency_label",
     "format_date",

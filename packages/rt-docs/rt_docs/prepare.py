@@ -88,7 +88,14 @@ def prepare(
         # Номер, дата и код проверки проекта не печатаются, даже если вызывающий передал их.
         lang: Lang = clean_body["lang"]
         given = {**given, "document.number": NO_NUMBER[lang], "document.date": NO_DATE}
-        meta = replace(meta or DocumentMeta(), number=None, date=None, verification_code=None, verification_url=None)
+        meta = replace(
+            meta or DocumentMeta(),
+            number=None,
+            date=None,
+            verification_code=None,
+            verification_url=None,
+            qr_caption=None,
+        )
     resolved = resolve(clean_body, values=given, blocks=clean_blocks, catalog=catalog)
     page: Mapping[str, Any] = clean_body.get("page") or {}
     meta = meta or DocumentMeta()
@@ -106,6 +113,7 @@ def prepare(
             meta.basis_text or "",
             meta.verification_code or "",
             meta.verification_url or "",
+            meta.qr_caption or "",
         ]
     )
     warnings = resolved.warnings()
