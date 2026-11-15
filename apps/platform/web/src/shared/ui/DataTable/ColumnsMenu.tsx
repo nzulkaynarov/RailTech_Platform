@@ -1,12 +1,12 @@
 import {
-  ArrowDownOutlined,
-  ArrowUpOutlined,
-  MinusOutlined,
-  PlusOutlined,
-  PushpinFilled,
-  PushpinOutlined,
-  SettingOutlined,
-} from "@ant-design/icons";
+  AddIcon,
+  ArrowDownIcon,
+  ArrowUpIcon,
+  GearIcon,
+  PinFilledIcon,
+  PinIcon,
+  RemoveIcon,
+} from "../lucide";
 import { Button, Checkbox, Popover } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -95,7 +95,7 @@ export function ColumnsMenu({
                 <Button
                   type="text"
                   size="small"
-                  icon={isPinned ? <PushpinFilled /> : <PushpinOutlined />}
+                  icon={isPinned ? <PinFilledIcon /> : <PinIcon />}
                   aria-pressed={isPinned}
                   aria-label={t(isPinned ? "table.unpin" : "table.pin", { name: column.header })}
                   title={t(isPinned ? "table.unpin" : "table.pin", { name: column.header })}
@@ -108,7 +108,7 @@ export function ColumnsMenu({
                 <Button
                   type="text"
                   size="small"
-                  icon={<MinusOutlined />}
+                  icon={<RemoveIcon />}
                   aria-label={t("table.narrower", { name: column.header })}
                   title={t("table.narrower", { name: column.header })}
                   onClick={() => {
@@ -118,7 +118,7 @@ export function ColumnsMenu({
                 <Button
                   type="text"
                   size="small"
-                  icon={<PlusOutlined />}
+                  icon={<AddIcon />}
                   aria-label={t("table.wider", { name: column.header })}
                   title={t("table.wider", { name: column.header })}
                   onClick={() => {
@@ -128,7 +128,7 @@ export function ColumnsMenu({
                 <Button
                   type="text"
                   size="small"
-                  icon={<ArrowUpOutlined />}
+                  icon={<ArrowUpIcon />}
                   disabled={index === 0}
                   aria-label={t("table.moveUp", { name: column.header })}
                   title={t("table.moveUp", { name: column.header })}
@@ -139,7 +139,7 @@ export function ColumnsMenu({
                 <Button
                   type="text"
                   size="small"
-                  icon={<ArrowDownOutlined />}
+                  icon={<ArrowDownIcon />}
                   disabled={index === list.length - 1}
                   aria-label={t("table.moveDown", { name: column.header })}
                   title={t("table.moveDown", { name: column.header })}
@@ -172,7 +172,7 @@ export function ColumnsMenu({
       open={open}
       onOpenChange={setOpen}
     >
-      <Button size="small" type="text" icon={<SettingOutlined aria-hidden />} aria-expanded={open}>
+      <Button size="small" type="text" icon={<GearIcon aria-hidden />} aria-expanded={open}>
         {t("table.columns")}
       </Button>
     </Popover>

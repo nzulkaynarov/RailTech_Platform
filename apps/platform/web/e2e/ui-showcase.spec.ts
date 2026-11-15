@@ -78,31 +78,31 @@ test.describe("витрина общих компонентов", () => {
 
     // RequestSteps: круг 24, подпись 13; пройденный — заливка #1668dc, текущий — #e6f4ff, рамка #1668dc
     const done = await box(".pf-step--done .pf-step-num");
-    expect(done).toMatchObject({ width: 24, height: 24, background: "rgb(22, 104, 220)" });
+    expect(done).toMatchObject({ width: 24, height: 24, background: "rgb(29, 78, 216)" });
     const current = await box(".pf-step--current .pf-step-num");
     expect(current).toMatchObject({
       width: 24,
-      background: "rgb(230, 244, 255)",
-      border: "rgb(22, 104, 220)",
-      color: "rgb(9, 88, 217)",
+      background: "rgb(239, 246, 255)",
+      border: "rgb(29, 78, 216)",
+      color: "rgb(37, 99, 235)",
     });
-    expect(await box(".pf-step-label")).toMatchObject({ size: "13px" });
+    expect(await box(".pf-step-label")).toMatchObject({ size: "12px" });
     const upcoming = await box(".pf-step--upcoming .pf-step-num");
-    expect(upcoming).toMatchObject({ border: "rgb(217, 217, 217)", color: "rgb(89, 89, 89)" });
+    expect(upcoming).toMatchObject({ border: "rgb(226, 232, 240)", color: "rgb(71, 85, 105)" });
 
     // CounterCard: число 28/600, подпись 12
     expect(await box(".pf-counter-value")).toMatchObject({ size: "28px", weight: "600" });
     expect(await box(".pf-counter-label")).toMatchObject({
       size: "12px",
-      color: "rgb(110, 110, 110)",
+      color: "rgb(95, 111, 134)",
     });
 
     // History: точка 16
     expect(await box(".pf-history-dot")).toMatchObject({ width: 16, height: 16 });
-    expect(await box(".pf-history-dot--done")).toMatchObject({ background: "rgb(35, 120, 4)" });
+    expect(await box(".pf-history-dot--done")).toMatchObject({ background: "rgb(22, 101, 52)" });
 
     // Checklist: строка 13 px
-    expect(await box(".pf-check")).toMatchObject({ size: "13px" });
+    expect(await box(".pf-check")).toMatchObject({ size: "14px" });
 
     // DocRow: первая колонка 150
     const columns = await page.evaluate<string>(
@@ -112,14 +112,14 @@ test.describe("витрина общих компонентов", () => {
 
     // DefinitionList: подпись 130, цвет #595959
     const dt = await box(".pf-dl dt");
-    expect(dt).toMatchObject({ width: 130, color: "rgb(89, 89, 89)" });
+    expect(dt).toMatchObject({ width: 130, color: "rgb(71, 85, 105)" });
 
     // ContextPanel (закреплённое): 440, вкладки с активной линией #1668dc и текстом #0958d9
-    expect(await box(".pf-panel-docked")).toMatchObject({ width: 440 });
+    expect(await box(".pf-panel-docked")).toMatchObject({ width: 480 });
     const activeTab = await box(".pf-panel-tabs .ant-tabs-tab-active .ant-tabs-tab-btn");
-    expect(activeTab).toMatchObject({ color: "rgb(9, 88, 217)", weight: "400" }); // без смены насыщенности (UX-1b, S13)
+    expect(activeTab).toMatchObject({ color: "rgb(37, 99, 235)", weight: "400" }); // без смены насыщенности (UX-1b, S13)
     const ink = await box(".pf-panel-tabs .ant-tabs-ink-bar");
-    expect(ink).toMatchObject({ height: 2, background: "rgb(22, 104, 220)" });
+    expect(ink).toMatchObject({ height: 2, background: "rgb(29, 78, 216)" });
     const hide = await box("button[aria-label='Скрыть боковое окно']");
     expect(hide).toMatchObject({ width: 28, height: 28 });
 

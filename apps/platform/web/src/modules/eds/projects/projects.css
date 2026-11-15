@@ -1,5 +1,5 @@
 /* EDS · Проекты (D2-5): фильтры списка, исполнение, пометки. Значения — макет v3: рамка #f0f0f0, радиус 8, без теней;
-   второстепенный текст #595959 (контраст ≥ 4.5:1 на белом). Остальное переиспользует decision.css и form-parts.css. */
+   второстепенный текст var(--rt-color-text-secondary) (контраст ≥ 4.5:1 на белом). Остальное переиспользует decision.css и form-parts.css. */
 .pf-proj-filters {
   display: flex;
   flex-wrap: wrap;
@@ -39,10 +39,10 @@
 .pf-proj-done {
   margin: 0;
   padding: 8px 12px;
-  border: 1px solid #b7eb8f;
+  border: 1px solid var(--rt-color-success-border);
   border-radius: 8px;
-  background: #f6ffed;
-  color: #135200;
+  background: var(--rt-color-success-bg);
+  color: var(--rt-color-success-hover);
 }
 .pf-proj-exec {
   display: grid;

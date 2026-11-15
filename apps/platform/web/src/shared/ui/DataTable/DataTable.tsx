@@ -21,6 +21,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 
 import { AuthContext } from "../../../app/auth/useAuth";
@@ -70,6 +71,11 @@ export interface DataTableProps<Row> {
   flexMin?: number;
   /** Страницы на клиенте: строк больше — под таблицей переключатель страниц (справочник стран на 250 строк) */
   pageSize?: number;
+  /**
+   * Куда поставить «Столбцы»: элемент строки фильтров экрана (стандарт интерфейса §9 — фильтры и «Столбцы» в одну
+   * строку). Не задан — кнопка над таблицей, как прежде.
+   */
+  toolsTarget?: HTMLElement | null;
 }
 
 const features = tableFeatures({
@@ -106,6 +112,7 @@ export function DataTable<Row extends RowData>({
   className,
   flexMin = 170,
   pageSize,
+  toolsTarget,
 }: DataTableProps<Row>) {
   const { t } = useTranslation("ui");
   const userId = useContext(AuthContext)?.me.id ?? "-";
@@ -304,34 +311,40 @@ export function DataTable<Row extends RowData>({
 
   const lastPinned = pinnedIds.at(-1);
 
+  const columnsMenu = (
+    <ColumnsMenu
+      columns={columns.map((column) => ({
+        id: column.id,
+        header: column.header,
+        canHide: column.id !== firstId && column.hideable !== false,
+      }))}
+      order={state.columnOrder}
+      hidden={Object.keys(state.columnVisibility)}
+      pinned={pinnedIds}
+      changed={saved !== EMPTY}
+      onOrder={(order) => {
+        save({ order });
+      }}
+      onHidden={(hidden) => {
+        save({ hidden });
+      }}
+      onPinned={(pinned) => {
+        save({ pinned });
+      }}
+      onWidth={step}
+      onReset={() => {
+        reset(key);
+      }}
+    />
+  );
+
   return (
     <div className="pf-dt">
-      <div className="pf-dt-tools">
-        <ColumnsMenu
-          columns={columns.map((column) => ({
-            id: column.id,
-            header: column.header,
-            canHide: column.id !== firstId && column.hideable !== false,
-          }))}
-          order={state.columnOrder}
-          hidden={Object.keys(state.columnVisibility)}
-          pinned={pinnedIds}
-          changed={saved !== EMPTY}
-          onOrder={(order) => {
-            save({ order });
-          }}
-          onHidden={(hidden) => {
-            save({ hidden });
-          }}
-          onPinned={(pinned) => {
-            save({ pinned });
-          }}
-          onWidth={step}
-          onReset={() => {
-            reset(key);
-          }}
-        />
-      </div>
+      {toolsTarget ? (
+        createPortal(columnsMenu, toolsTarget)
+      ) : toolsTarget === undefined ? (
+        <div className="pf-dt-tools">{columnsMenu}</div>
+      ) : null}
       <ScrollRegion label={scrollLabel}>
         <div className="pf-dt-frame">
           <table

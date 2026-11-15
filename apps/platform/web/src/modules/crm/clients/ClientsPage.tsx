@@ -36,9 +36,9 @@ import "../crm.css";
 const COLS = {
   inn: 140,
   kind: 150,
-  requests: 144,
+  requests: 160,
   erp: 170,
-  last: 184,
+  last: 200,
 };
 
 const KINDS = ["all", "clients", "partners", "applications", "bank_changes"] as const;

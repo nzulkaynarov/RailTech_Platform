@@ -1,4 +1,4 @@
-import { CheckOutlined, ExclamationOutlined } from "@ant-design/icons";
+import { AlertIcon, CheckMarkIcon } from "../lucide";
 import { Button } from "antd";
 import { type ReactNode, useId } from "react";
 import { useTranslation } from "react-i18next";
@@ -70,9 +70,9 @@ export function StepSections({
               >
                 <span className="pf-fstep-badge" aria-hidden="true">
                   {section.invalid ? (
-                    <ExclamationOutlined />
+                    <AlertIcon />
                   ) : section.complete && !open ? (
-                    <CheckOutlined />
+                    <CheckMarkIcon />
                   ) : (
                     index + 1
                   )}

@@ -7,9 +7,9 @@
   border-radius: 6px;
 }
 .pf-file-field-drag {
-  outline: 1px dashed #1668dc;
+  outline: 1px dashed var(--rt-color-primary-default);
   outline-offset: 4px;
-  background: #e6f4ff;
+  background: var(--rt-color-primary-bg);
 }
 .pf-file-field-row {
   display: flex;
@@ -41,7 +41,7 @@
   padding: 0;
 }
 .pf-file-error {
-  color: #cf1322;
+  color: var(--rt-color-error-hover);
   font-size: 12px;
   line-height: 20px;
 }

@@ -12,7 +12,7 @@
 from datetime import datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 from app.domain.mail_types import CODE_PATTERN
 
@@ -91,6 +91,41 @@ class DictionaryItemPatch(_Strict):
     name: LocalizedNameIn | None = None
     attrs: dict[str, AttrValue] | None = None
     active: bool | None = None
+
+
+class DictionaryImportRow(_Strict):
+    """Строка файла, уже проверенная BFF (план 2.9): `create` или `patch` по `code`."""
+
+    line: Annotated[int, Field(ge=1, le=1_000_000)]
+    code: Code | None = None
+    create: DictionaryItemIn | None = None
+    patch: DictionaryItemPatch | None = None
+
+    @model_validator(mode="after")
+    def _one_action(self) -> "DictionaryImportRow":
+        if (self.create is None) == (self.patch is None):
+            raise ValueError("exactly one of create and patch")
+        if self.patch is not None and self.code is None:
+            raise ValueError("patch needs code")
+        return self
+
+
+class DictionaryImportIn(_Strict):
+    rows: Annotated[list[DictionaryImportRow], Field(min_length=1, max_length=2000)]
+
+
+class DictionaryImportRowResult(BaseModel):
+    line: int
+    code: str | None
+    field: str | None = None
+    reason: str | None = None
+
+
+class DictionaryImportOut(BaseModel):
+    """`applied = false` — у строк с `reason` ошибка, не записано ничего."""
+
+    applied: bool
+    rows: list[DictionaryImportRowResult]
 
 
 class DictionaryOrderIn(_Strict):

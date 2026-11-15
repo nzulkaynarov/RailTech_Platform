@@ -159,7 +159,8 @@ const antd = {
   colorInfoBg: c.info.bg,
   colorInfoBorder: c.info.border,
   colorInfoText: c.info.text,
-  colorLink: c.primary.default,
+  // Ссылка в строке текста отличается от него не только цветом (axe link-in-text-block): ≥ 3:1 к основному тексту.
+  colorLink: c.primary.text,
   colorLinkHover: c.primary.hover,
   colorLinkActive: c.primary.active,
   colorText: c.text.default,
@@ -191,9 +192,10 @@ const antd = {
   colorWarningBg: c.warning.bg,
   colorWarningBorder: c.warning.border,
   colorWarningText: c.warning.text,
-  colorBorder: c.surface.border,
+  // Стандарт интерфейса §2: рамка контрола (поле, кнопка) заметнее рамки карточки; разделитель строк — самый тихий.
+  colorBorder: c.surface.control ?? c.surface.border,
   colorSplit: c.surface.split,
-  colorBorderSecondary: c.surface.split,
+  colorBorderSecondary: c.surface.border,
   colorBgLayout: c.surface.layout,
   colorBgContainer: c.surface.card,
   fontFamily: tokens.font.family,
@@ -216,6 +218,9 @@ export const RT_TOKENS = ${tsObject(antd)} as const;
 
 /** Текст preset-тегов Tag color="blue|green|cyan|orange|gold|red|purple" с контрастом ≥ 4.5:1 на фоне тега. */
 export const RT_TAG_TEXT: Record<string, string> = ${tsObject(c.tag)};
+
+/** Главная кнопка (стандарт интерфейса §2): графитовая заливка; акцент ссылок, выбора и фокуса — colorPrimary. */
+export const RT_ACTION = ${tsObject(c.action)};
 
 /** Затравочные цвета статусов (SPEC-v3 §5.2) — для графиков и заливок БЕЗ текста; в текст и под белый текст не идут. */
 export const RT_STATUS_FILL = ${tsObject({ error: c.error.default, warning: c.warning.default, success: c.success.default })};

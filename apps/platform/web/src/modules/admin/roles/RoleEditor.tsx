@@ -84,7 +84,9 @@ export function SystemRoleCard({ role, readOnly = false }: { role: Role; readOnl
           </StatusTag>
         </div>
         {role.description ? (
-          <p style={{ margin: "4px 0 0", color: "#595959" }}>{role.description}</p>
+          <p style={{ margin: "4px 0 0", color: "var(--rt-color-text-secondary)" }}>
+            {role.description}
+          </p>
         ) : null}
       </div>
       <Alert

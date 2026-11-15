@@ -80,7 +80,7 @@ export function SummaryPage() {
               height={240}
               animate={false}
               axis={{ x: { title: false }, y: { title: false, tickCount: 4 } }}
-              style={{ fill: "#1668dc", maxWidth: 56 }}
+              style={{ fill: "var(--rt-color-primary-default)", maxWidth: 56 }}
               label={{ text: "value", position: "inside", style: { fill: "#fff" } }}
             />
           </div>

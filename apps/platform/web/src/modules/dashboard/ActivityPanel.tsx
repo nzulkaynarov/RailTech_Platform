@@ -32,7 +32,7 @@ function Row({ item }: { item: ActivityItem }) {
       <span style={{ minWidth: 0 }}>
         <span style={{ display: "block" }}>
           <b style={{ fontWeight: 500 }}>{item.actor.name}</b>{" "}
-          <span style={{ color: "#595959" }}>{text}</span>
+          <span style={{ color: "var(--rt-color-text-secondary)" }}>{text}</span>
         </span>
         {/* Номер объекта бывает длинным словом без пробелов (id из домена): переносится, а не раздвигает экран на 390 */}
         <span className="pf-hint" style={{ display: "block", overflowWrap: "anywhere" }}>

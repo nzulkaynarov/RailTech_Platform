@@ -34,7 +34,7 @@ export interface Panels {
  * пока не закрыто явно (`?panel=closed`).
  * Режим окна (overlay/docked) и ширина (default/wide) — как подменю, одни на пользователя (оболочка не зависит от
  * раздела); последняя вкладка lastTab — по разделу (panelsStore, localStorage ключ rt-pf-panels-v2). Режим по умолчанию — поверх везде; рядом — только выбор пользователя (булавка),
- * а поместится ли окно рядом, решает каркас (`AppShell`, рабочей области ≥ 760 px).
+ * а поместится ли окно рядом, решает каркас (`AppShell`, рабочей области ≥ 736 px).
  */
 export function usePanels(
   userId: string,
@@ -59,11 +59,11 @@ export function usePanels(
 
   const isStrictlyOverlay = Boolean(section?.path.startsWith("/chats"));
   // Поверх — везде по умолчанию (решение владельца 2026-10-30, п. 2): таблицы и карточки не сжимаются. Рядом — только
-  // булавкой пользователя; закрепление действует на ≥ 1280 px и при рабочей области ≥ 760 px (AppShell), иначе — поверх.
+  // булавкой пользователя; закрепление действует на ≥ 1280 px и при рабочей области ≥ 736 px (AppShell), иначе — поверх.
   const panelMode: PanelLayoutMode = isStrictlyOverlay
     ? "overlay"
     : (userEntry?.panelMode ?? "overlay");
-  // 600 px — только выбор пользователя («Шире»), не умолчание раздела.
+  // 640 px — только выбор пользователя («Шире»), не умолчание раздела.
   const panelWidth: PanelWidthPreset = userEntry?.panelWidth ?? "default";
 
   const menuOpen = userEntry?.menuOpen ?? menuWide;

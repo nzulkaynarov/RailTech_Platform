@@ -11,8 +11,9 @@
   z-index: 2;
   height: 2px;
   background:
-    linear-gradient(90deg, transparent 0%, #1668dc 50%, transparent 100%) 0 0 / 40% 100% no-repeat,
-    #e6f4ff;
+    linear-gradient(90deg, transparent 0%, var(--rt-color-primary-default) 50%, transparent 100%) 0
+      0 / 40% 100% no-repeat,
+    var(--rt-color-primary-bg);
   opacity: 0;
   pointer-events: none;
   animation:
@@ -39,7 +40,7 @@
 @media (prefers-reduced-motion: reduce) {
   .pf-data-block[data-busy]::before {
     animation: pf-busy-in 0s linear 150ms forwards;
-    background: #1668dc;
+    background: var(--rt-color-primary-default);
   }
 }
 
@@ -51,7 +52,7 @@
   display: flex;
   align-items: center;
   height: var(--pf-skel-row, 44px);
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--rt-color-surface-split);
 }
 .pf-list-skel-row:last-child {
   border-bottom: 0;
@@ -105,6 +106,21 @@ table.pf-fixed-table > * > tr > :is(th, td):last-child {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  /* Стандарт интерфейса §3: шапка — 11/16, 600, капсом, вторичным цветом (≥ 4.5:1 на вторичной поверхности). */
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 600;
+  /* Без разрядки и с узкими цифрами ширины: капс шире строчных, а ширины колонок подобраны впритык (T1). */
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  color: var(--rt-color-text-secondary);
+}
+/* Переход к объекту в строке — стрелка, а не кнопка в рамке (стандарт интерфейса §7). */
+.pf-fixed-table .pf-row-open {
+  color: var(--rt-color-text-tertiary);
+}
+.pf-fixed-table tr:hover .pf-row-open {
+  color: var(--rt-color-text-default);
 }
 /* Перенос — по словам; слово рвётся, только если само не помещается в колонку (длинный адрес, артикул). */
 .pf-fixed-table td {

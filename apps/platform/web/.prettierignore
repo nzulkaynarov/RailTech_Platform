@@ -3,5 +3,6 @@ coverage
 pnpm-lock.yaml
 test-results
 playwright-report
+src/app/tokens.generated.css
 src/generated/kb-docs
 src/generated/help-articles
