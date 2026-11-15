@@ -80,3 +80,14 @@ def test_verification_code_suppressed_in_draft() -> None:
     assert '<div class="rt-verify-block">' not in out
     assert '<div class="rt-verify-code-inline">' not in out
     assert '<div class="rt-draft-mark">' in out
+
+
+def test_qr_caption_replaces_the_title_and_hides_the_link() -> None:
+    """QR онлайн-версии (КП): своя подпись, ссылка с токеном не печатается — её заменяет QR."""
+    body = samples.body([samples.para("Предложение.")])
+    url = "https://erp.example.test/api/v1/public/quotes/secret-token/"
+    meta = DocumentMeta(number="КП-1", verification_url=url, qr_caption="Онлайн-версия предложения")
+    out = render(body, draft=False, meta=meta)
+    assert "Онлайн-версия предложения" in out
+    assert '<div class="rt-verify-qr">' in out
+    assert url not in out

@@ -341,6 +341,27 @@ describe("Бланк и бренд", () => {
     expect(readCompanyMock().brand.accent_color).toBe("#1668dc");
   });
 
+  it("бланк на узбекском и английском (TPL-3): варианты полей сохраняются, пустое печатается по-русски", async () => {
+    await openTab("brand");
+    await screen.findByTitle("Образец: КП");
+    fireEvent.click(screen.getByRole("button", { name: /Бланк на узбекском и английском/ }));
+    const uz = screen.getByRole("group", { name: "O‘zbekcha (UZ)" });
+    expect(within(uz).getByLabelText("Должность подписанта")).toHaveValue("Direktor");
+    fireEvent.change(within(uz).getByLabelText("Название компании"), {
+      target: { value: "«Demo Temir Yo‘l» MChJ" },
+    });
+    const en = screen.getByRole("group", { name: "English (EN)" });
+    fireEvent.change(within(en).getByLabelText("Подвал"), {
+      target: { value: "Tashkent, Uzbekistan" },
+    });
+    fireEvent.click(await button("Сохранить бланк"));
+    expect(await screen.findByText("Сохранено")).toBeInTheDocument();
+    const saved = readCompanyMock().brand.translations;
+    expect(saved.uz?.legal_name).toBe("«Demo Temir Yo‘l» MChJ");
+    expect(saved.uz?.signatory_position).toBe("Direktor");
+    expect(saved.en?.footer_text).toBe("Tashkent, Uzbekistan");
+  });
+
   it("вид документа переключает образец; сохранение уходит с изменённым полем", async () => {
     await openTab("brand");
     await screen.findByTitle("Образец: КП");

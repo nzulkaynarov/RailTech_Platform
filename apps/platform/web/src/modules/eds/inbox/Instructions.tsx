@@ -237,6 +237,27 @@ function InstructionItem({
           ]}
         />
       ) : null}
+      {instruction.handed_to ? (
+        <DefinitionList
+          items={[
+            {
+              label: t("instr.handedTo.label"),
+              value: (
+                <>
+                  {t(`instr.handedTo.${instruction.handed_to.kind}`)}{" "}
+                  {instruction.handed_to.path ? (
+                    <Link className="pf-focusable" to={instruction.handed_to.path}>
+                      {instruction.handed_to.number}
+                    </Link>
+                  ) : (
+                    instruction.handed_to.number
+                  )}
+                </>
+              ),
+            },
+          ]}
+        />
+      ) : null}
       {instruction.files.length > 0 ? (
         <>
           <h4 className="pf-res-subhead">{t("instr.files")}</h4>

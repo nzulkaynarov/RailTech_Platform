@@ -16,6 +16,7 @@ import pytest
 
 from tests.backends import Backends
 from tests.conftest import ContractChecker, Web
+from tests.consts import CRM_URL
 from tests.eds_letters_support import (
     FILE_ID,
     LETTER_ID,
@@ -659,3 +660,56 @@ async def test_responsible_adds_a_co_executor_eds_decides(
         "POST", f"{CARD}/co-executors", json={"person_id": "x", "text": "a", "due": "2026-11-20"}
     )
     assert bad.status_code == 422
+
+
+async def test_hand_over_checks_the_client_request_in_crm_and_the_memo_in_eds(
+    web: Web, eds: EdsFake, be: Backends, check: ContractChecker
+) -> None:
+    """План 1.9: «Передать в работу» — заявку клиента проверяет BFF по CRM, записку — EDS."""
+    path = f"instructions/{INSTRUCTION_ID}"
+    handed = office_letter()
+    handed["instructions"][0]["handed_to"] = {"kind": "memo", "ref": OUT_ID, "number": "СЗ-0012/26"}
+    eds.answer("POST", f"{path}/complete", httpx.Response(200, json=handed))
+    deal = be.router.get(f"{CRM_URL}/api/v1/deals/45").mock(
+        return_value=httpx.Response(200, json={"id": 45, "erp_number": "З-0045/26", "client_id": 3})
+    )
+    be.router.get(f"{CRM_URL}/api/v1/deals/46").mock(return_value=httpx.Response(404, json={}))
+    assert (await web.login(["SUPPLY"])).status_code == 200
+
+    done = await web.send(
+        "POST",
+        f"{BASE}/{path}/complete",
+        json={"handed_to": {"kind": "client_request", "id": "45"}},
+    )
+    assert done.status_code == 200, done.text
+    assert deal.called
+    assert json.loads(eds.made("POST", f"{path}/complete")[-1].content)["handed_to"] == {
+        "kind": "client_request",
+        "ref": "45",
+        "number": "З-0045/26",
+    }
+
+    memo = await web.send(
+        "POST", f"{BASE}/{path}/complete", json={"handed_to": {"kind": "memo", "id": OUT_ID}}
+    )
+    assert memo.status_code == 200
+    check(memo, "/eds/instructions/{id}/complete", "post")
+    assert memo.json()["instructions"][0]["handed_to"] == {
+        "kind": "memo",
+        "number": "СЗ-0012/26",
+        "path": f"/eds/documents?scope=all&doc={OUT_ID}&panel=open",
+    }
+    assert (
+        json.loads(eds.made("POST", f"{path}/complete")[-1].content)["handed_to"]["kind"] == "memo"
+    )
+
+    sent = len(eds.made("POST", f"{path}/complete"))
+    for bad in ("46", "0", "abc"):
+        missing = await web.send(
+            "POST",
+            f"{BASE}/{path}/complete",
+            json={"handed_to": {"kind": "client_request", "id": bad}},
+        )
+        assert missing.status_code == 422, bad
+        assert missing.json()["details"]["fields"] == {"handed_to": "not_found"}
+    assert len(eds.made("POST", f"{path}/complete")) == sent, "до EDS не доходит"

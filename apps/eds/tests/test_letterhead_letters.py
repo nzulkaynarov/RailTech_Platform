@@ -393,3 +393,45 @@ def test_logo_bytes_of_the_example_are_a_png() -> None:
     logo = example("erp/letterhead.updated.v1")["data"]["letterhead"]["logo"]
     raw = base64.b64decode(logo["data_base64"])
     assert raw.startswith(b"\x89PNG") and hashlib.sha256(raw).hexdigest() == logo["sha256"]
+
+
+async def test_letter_in_uzbek_or_english_uses_the_letterhead_of_its_language(
+    client: httpx.AsyncClient, staff: dict[str, Person], container: Container
+) -> None:
+    """TPL-3 (план 2.7): название, адрес, подвал и должность подписанта — на языке письма; нет варианта — русский."""
+    from app.models import Document
+
+    await deliver_letterhead(
+        client,
+        container,
+        translations={
+            "uz": {"company_name": "«RailTech» MChJ", "signatory_position": "Direktor", "footer_text": "Toshkent"},
+            "en": {"company_name": "RailTech LLC"},
+            "de": {"company_name": "ignoriert"},
+        },
+    )
+    payloads: dict[str, dict[str, Any]] = {}
+    for lang in ("uz", "en", "ru"):
+        body = copy.deepcopy(BODY)
+        body["lang"] = lang
+        created = await client.post(
+            "/api/v1/documents",
+            json=letter_json(letter={**letter_json()["letter"], "body": body}),
+            headers=staff["manager"].headers,
+        )
+        assert created.status_code == 201, created.text
+        async with container.session_factory() as session:
+            document = await session.get(Document, created.json()["id"])
+            assert document is not None
+            payload, _ = await renders.build_payload(session, document)
+        payloads[lang] = payload["letterhead"]
+    assert payloads["uz"]["company_name"] == "«RailTech» MChJ"
+    assert payloads["uz"]["footer"] == ["Toshkent"]
+    assert payloads["en"]["company_name"] == "RailTech LLC"
+    assert payloads["en"]["footer"] == payloads["ru"]["footer"]
+    assert payloads["ru"]["company_name"] == "ООО «RailTech»"
+    async with container.session_factory() as session:
+        from app.services import letterhead
+
+        head = await letterhead.current(session)
+        assert head is not None and set(head.translations) == {"uz", "en"}
