@@ -30,6 +30,7 @@ import { SupplierCabinetAccess } from "./SupplierCabinetAccess";
 import { RowActions, ROW_ACTIONS_WIDTH } from "../../../shared/ui/RowActions";
 
 import "./catalog.css";
+import { NameCode } from "../../../shared/ui/NameCode";
 
 /**
  * Карточка партнёра: реквизиты, доступ в кабинет, цены и сроки. Живёт в «Контакты · Контрагенты» (`?partner=<id>`), в том же
@@ -149,17 +150,21 @@ export function PartnerCard({ id }: { id: string }) {
                     {card.offers.map((offer) => (
                       <tr key={offer.id}>
                         <td>
-                          <Button
-                            type="link"
-                            className="pf-cat-linkbtn"
-                            aria-label={t("offers.openProduct", { name: offer.product.name })}
-                            onClick={() => {
-                              void navigate(`/erp/catalog?part=items&item=${offer.product.id}`);
-                            }}
-                          >
-                            {offer.product.name}
-                          </Button>
-                          <span className="pf-cat-sub">{offer.product.sku}</span>
+                          <NameCode
+                            code={offer.product.sku}
+                            name={
+                              <Button
+                                type="link"
+                                className="pf-cat-linkbtn"
+                                aria-label={t("offers.openProduct", { name: offer.product.name })}
+                                onClick={() => {
+                                  void navigate(`/erp/catalog?part=items&item=${offer.product.id}`);
+                                }}
+                              >
+                                {offer.product.name}
+                              </Button>
+                            }
+                          />
                         </td>
                         <td>
                           <PriceCell price={offer.price} />

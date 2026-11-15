@@ -52,6 +52,7 @@ import { ItemDocs } from "./ItemDocs";
 import { ItemPhotos } from "./ItemPhotos";
 import { queryLabels } from "./labels";
 import { CatalogPriceValue, DueCell, QueueSwitch, ReturnButton, ReviewBlock } from "./ReviewQueue";
+import { NameCode } from "../../../shared/ui/NameCode";
 
 export function KindTag({ kind }: { kind: CatalogItemKind }) {
   const { t } = useTranslation("catalog");
@@ -109,18 +110,22 @@ export function ItemsPanel() {
     title: t("items.columns.name"),
     render: (row) => (
       <>
-        <Button
-          type="link"
-          className="pf-cat-linkbtn"
-          aria-label={t("items.open", { name: row.name })}
-          aria-current={selected === row.id ? "true" : undefined}
-          onClick={() => {
-            open(row.id);
-          }}
-        >
-          {row.name}
-        </Button>
-        <span className="pf-cat-sub">{row.sku}</span>
+        <NameCode
+          code={row.sku}
+          name={
+            <Button
+              type="link"
+              className="pf-cat-linkbtn"
+              aria-label={t("items.open", { name: row.name })}
+              aria-current={selected === row.id ? "true" : undefined}
+              onClick={() => {
+                open(row.id);
+              }}
+            >
+              {row.name}
+            </Button>
+          }
+        />
         {waiting && row.review ? (
           <StatusTag kind="validity" status="expiring">
             {t(`queue.kind.${row.review.kind}`)}

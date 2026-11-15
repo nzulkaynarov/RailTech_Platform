@@ -45,6 +45,7 @@ import { useSheetPanel } from "../../../shared/ui/useSheetPanel";
 import { ConfirmModal, ListTable, TabHeader } from "../company/common";
 import { DictionaryFile } from "./DictionaryFile";
 import { dictionaryErrorText } from "./errors";
+import { NameCode } from "../../../shared/ui/NameCode";
 
 /**
  * Настройки · Документооборот · Справочники (EDS-REG; исследование «Настройки» §4.3): справочник сверху переключателем,
@@ -278,21 +279,17 @@ function DictionaryTable({ dictionary, readOnly }: { dictionary: Dictionary; rea
           action: query.isPending ? undefined : add,
         }}
         columns={[
-          ...(dictionary.codes === "given"
-            ? [
-                {
-                  id: "code",
-                  header: t("settings.dict.code"),
-                  width: null,
-                  cell: (row: DictionaryItem) => row.code,
-                },
-              ]
-            : []),
           {
             id: "name",
             header: t("settings.dict.name"),
             width: null,
-            cell: (row) => <b>{name(row)}</b>,
+            cell: (row) => (
+              <NameCode
+                name={<b>{name(row)}</b>}
+                code={dictionary.codes === "given" ? row.code : null}
+                codeLabel={t("settings.dict.code")}
+              />
+            ),
           },
           // «Значок» виден в самой метке типа; в таблице он только отнимал бы ширину.
           ...dictionary.attrs
