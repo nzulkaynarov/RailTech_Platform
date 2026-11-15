@@ -22,6 +22,7 @@ import { useFormat } from "../../../shared/lib/useFormat";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { StatusTag } from "../../../shared/ui/StatusTag";
+import { RowActions, ROW_ACTIONS_WIDTH } from "../../../shared/ui/RowActions";
 import { ArticleEditor, type Outcome } from "./ArticleEditor";
 import { articleErrorText } from "./errors";
 
@@ -129,64 +130,46 @@ export function ArticlesPage() {
   };
 
   const busy = publish.isPending || unpublish.isPending || remove.isPending;
-  const actionButtons = (article: CompanyArticle) => {
-    const label = (key: "edit" | "view" | "publish" | "unpublish" | "delete") =>
-      t("admin.actionFor", { action: t(`admin.actions.${key}`), title: article.title });
-    return (
-      <div className="pf-ca-actions">
-        <Button
-          size="small"
-          aria-label={label(editable ? "edit" : "view")}
-          onClick={() => {
-            open(String(article.id));
-          }}
-        >
-          {editable ? t("admin.actions.edit") : t("admin.actions.view")}
-        </Button>
-        {editable ? (
-          <>
-            {article.status === "draft" ? (
-              <Button
-                size="small"
-                disabled={busy}
-                aria-label={label("publish")}
-                onClick={() => {
+  const actionMenu = (article: CompanyArticle) => (
+    <RowActions
+      name={article.title}
+      items={
+        editable
+          ? [
+              article.status === "draft"
+                ? {
+                    key: "publish",
+                    label: t("admin.actions.publish"),
+                    disabled: busy,
+                    onClick: () => {
+                      setNotice("");
+                      publish.mutate({ id: article.id });
+                    },
+                  }
+                : {
+                    key: "unpublish",
+                    label: t("admin.actions.unpublish"),
+                    disabled: busy,
+                    onClick: () => {
+                      setNotice("");
+                      confirmUnpublish(article);
+                    },
+                  },
+              {
+                key: "delete",
+                label: t("admin.actions.delete"),
+                danger: true,
+                disabled: busy,
+                onClick: () => {
                   setNotice("");
-                  publish.mutate({ id: article.id });
-                }}
-              >
-                {t("admin.actions.publish")}
-              </Button>
-            ) : (
-              <Button
-                size="small"
-                disabled={busy}
-                aria-label={label("unpublish")}
-                onClick={() => {
-                  setNotice("");
-                  confirmUnpublish(article);
-                }}
-              >
-                {t("admin.actions.unpublish")}
-              </Button>
-            )}
-            <Button
-              size="small"
-              danger
-              disabled={busy}
-              aria-label={label("delete")}
-              onClick={() => {
-                setNotice("");
-                confirmDelete(article);
-              }}
-            >
-              {t("admin.actions.delete")}
-            </Button>
-          </>
-        ) : null}
-      </div>
-    );
-  };
+                  confirmDelete(article);
+                },
+              },
+            ]
+          : []
+      }
+    />
+  );
 
   const statusTag = (article: CompanyArticle) => (
     <StatusTag kind="article" status={article.status}>
@@ -266,11 +249,11 @@ export function ArticlesPage() {
                 {article.title}
               </button>
               {statusTag(article)}
+              <span style={{ marginLeft: "auto" }}>{actionMenu(article)}</span>
             </div>
             <div className="pf-hint" style={{ margin: "4px 0 8px" }}>
               {t(`admin.language.${article.language}`)} · {changed(article)}
             </div>
-            {actionButtons(article)}
           </li>
         ))}
       </ul>
@@ -321,8 +304,9 @@ export function ArticlesPage() {
           {
             id: "actions",
             header: t("admin.columns.actions"),
-            width: 220,
-            cell: (article) => actionButtons(article),
+            headerHidden: true,
+            width: ROW_ACTIONS_WIDTH,
+            cell: (article) => actionMenu(article),
           },
         ]}
       />

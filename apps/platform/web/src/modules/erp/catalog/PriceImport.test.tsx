@@ -11,6 +11,7 @@ import {
   setupCatalogTests,
   signIn,
 } from "../../../test/catalogKit";
+import { pickRowAction } from "../../../test/rowActions";
 
 setupCatalogTests();
 
@@ -99,11 +100,7 @@ describe("Партнёр и его цена", () => {
     fireEvent.click(within(form).getByRole("button", { name: "Добавить" }));
     await modalClosed(/Цена партнёра/);
 
-    fireEvent.click(
-      await within(drawer).findByRole("button", {
-        name: "История цены по позиции Реле защиты РЗ-1",
-      }),
-    );
+    await pickRowAction("Реле защиты РЗ-1", "История", drawer);
     const history = await findModal(/История цены/);
     expect(await within(history).findByText(/295 сум/)).toBeInTheDocument();
     expect(within(history).getByText("вручную")).toBeInTheDocument();

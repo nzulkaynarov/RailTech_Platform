@@ -8,6 +8,7 @@ import {
   settledScreenshot,
   waitForMotionEnd,
 } from "./support/app";
+import { pickRowAction } from "./support/rowActions";
 
 // W18A-P5 на MSW: Настройки · Статьи компании (список, редактор с предпросмотром, публикация, удаление) и «Как у нас принято»
 // в Помощи (окно и страница, общий поиск). axe 0 и снимки 1440 и 390 (`E2E_SCREENSHOT_DIR`).
@@ -149,7 +150,7 @@ test.describe("Статьи компании", () => {
     await loginAndWait(page, "admin@demo.example");
     await page.goto("/admin/articles");
     const row = page.getByRole("row", { name: /Где лежат шаблоны писем/ });
-    await row.getByRole("button", { name: "Удалить: Где лежат шаблоны писем" }).click();
+    await pickRowAction(page, "Где лежат шаблоны писем", "Удалить", row);
     const dialog = page.getByRole("dialog", { name: "Удалить статью?" });
     await expect(dialog).toContainText("будет удалена насовсем");
     await shoot(page, "articles-delete", async () => {
