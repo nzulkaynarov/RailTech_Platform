@@ -7,7 +7,6 @@ import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { useViewport } from "../../../app/shell/useViewport";
 import { ApiError } from "../../../shared/api/errors";
-import { Code } from "../../../shared/ui/Code";
 import { ToolsSlot } from "../../../shared/ui/DataTable/RegistryTools";
 import type {
   LetterRow,
@@ -29,6 +28,7 @@ import { localName, useLetterDictionary } from "../dictionaries";
 import { useStateLabels } from "./labels";
 import { ResolutionSlot } from "./ResolutionPanel";
 import { RowOpenLink } from "../../../shared/ui/RowOpenLink";
+import { NameCode } from "../../../shared/ui/NameCode";
 
 const PAGE = 25;
 /**
@@ -195,15 +195,11 @@ function Rows({ items, selected }: { items: readonly LetterRow[]; selected: stri
       header: t("list.columns.correspondent"),
       width: COLS.correspondent,
       cell: (row) => (
-        <>
-          <div>{row.client_name ?? "—"}</div>
-          {row.request_number ? (
-            <div className="pf-ell">
-              <span className="pf-sr-only">{t("list.columns.request")}: </span>
-              <Code quiet>{row.request_number}</Code>
-            </div>
-          ) : null}
-        </>
+        <NameCode
+          name={row.client_name ?? "—"}
+          code={row.request_number}
+          codeLabel={t("list.columns.request")}
+        />
       ),
     },
     {
