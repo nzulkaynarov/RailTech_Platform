@@ -87,7 +87,7 @@ export function QuoteLines({ quote }: { quote: QuoteApprovalCard }) {
         ]}
       />
       {quote.totals ? (
-        <div className="pf-dec-totals">
+        <div className="pf-table-totals">
           <Totals quote={quote} />
         </div>
       ) : null}

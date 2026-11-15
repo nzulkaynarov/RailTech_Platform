@@ -12,7 +12,9 @@ import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { EmptyState } from "../../../shared/ui/EmptyState";
-import { QueryState, ScrollRegion } from "../../../shared/ui/FormParts";
+import { QueryState } from "../../../shared/ui/FormParts";
+import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTable";
+import { NameCode } from "../../../shared/ui/NameCode";
 import { History, type HistoryItem } from "../../../shared/ui/History";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { PageHeader } from "../../../shared/ui/PageHeader";
@@ -61,82 +63,90 @@ function Lines({ order }: { order: SupplierOrderDetail }) {
   const { t } = useTranslation("stock");
   const { number } = useFormat();
   const priced = order.lines.some((l) => l.unit_price !== null);
+  type Line = SupplierOrderDetail["lines"][number];
+  const columns: DataColumn<Line>[] = [
+    {
+      id: "position",
+      header: t("order.lines.position"),
+      width: null,
+      cell: (l) => (
+        <>
+          <NameCode name={l.name} code={l.article} />
+          {l.offer ? <OfferNote offer={l.offer} /> : null}
+        </>
+      ),
+    },
+    {
+      id: "request",
+      header: t("order.lines.request"),
+      width: 140,
+      cell: (l) =>
+        l.request ? (
+          <Link className="pf-focusable" to={l.request.path}>
+            {l.request.number}
+          </Link>
+        ) : (
+          <span className="pf-hint">—</span>
+        ),
+    },
+    {
+      id: "quantity",
+      header: t("order.lines.quantity"),
+      width: 120,
+      numeric: true,
+      cell: (l) => `${number(l.quantity)} ${l.unit}`,
+    },
+    {
+      id: "received",
+      header: t("order.lines.received"),
+      width: 110,
+      numeric: true,
+      cell: (l) => number(l.received_quantity),
+    },
+    ...(priced
+      ? [
+          {
+            id: "price",
+            header: t("order.lines.price"),
+            width: 140,
+            numeric: true,
+            cell: (l: Line) => <MoneyText value={l.unit_price} currency={order.currency} />,
+          },
+          {
+            id: "total",
+            header: t("order.lines.total"),
+            width: 150,
+            numeric: true,
+            cell: (l: Line) => <MoneyText value={l.line_total} currency={order.currency} />,
+          },
+        ]
+      : []),
+  ];
   return (
-    <ScrollRegion label={t("order.lines.scroll")}>
-      <table className="pf-calc-table">
-        <caption className="pf-sr-only">
-          {t("order.lines.caption", { number: order.number })}
-        </caption>
-        <thead>
-          <tr>
-            <th scope="col">{t("order.lines.position")}</th>
-            <th scope="col">{t("order.lines.request")}</th>
-            <th scope="col" className="pf-col-num">
-              {t("order.lines.quantity")}
-            </th>
-            <th scope="col" className="pf-col-num">
-              {t("order.lines.received")}
-            </th>
-            {priced ? (
-              <th scope="col" className="pf-col-num">
-                {t("order.lines.price")}
-              </th>
-            ) : null}
-            {priced ? (
-              <th scope="col" className="pf-col-num">
-                {t("order.lines.total")}
-              </th>
-            ) : null}
-          </tr>
-        </thead>
-        <tbody>
-          {order.lines.map((l) => (
-            <tr key={l.id}>
-              <td>
-                <div>{l.name}</div>
-                <div className="pf-hint pf-num">{l.article}</div>
-                {l.offer ? <OfferNote offer={l.offer} /> : null}
-              </td>
-              <td>
-                {l.request ? (
-                  <Link className="pf-focusable" to={l.request.path}>
-                    {l.request.number}
-                  </Link>
-                ) : (
-                  <span className="pf-hint">—</span>
-                )}
-              </td>
-              <td className="pf-col-num">
-                {number(l.quantity)} {l.unit}
-              </td>
-              <td className="pf-col-num">{number(l.received_quantity)}</td>
-              {priced ? (
-                <td className="pf-col-num">
-                  <MoneyText value={l.unit_price} currency={order.currency} />
-                </td>
-              ) : null}
-              {priced ? (
-                <td className="pf-col-num">
-                  <MoneyText value={l.line_total} currency={order.currency} />
-                </td>
-              ) : null}
-            </tr>
-          ))}
-        </tbody>
-        {order.total ? (
-          <tfoot>
-            <tr className="pf-calc-totals">
-              <th scope="row" colSpan={priced ? 5 : 4}>
-                {t("order.lines.totals")}
-              </th>
-              <td className="pf-col-num">
-                <MoneyText value={order.total} currency={order.currency} strong />
-              </td>
-            </tr>
-          </tfoot>
-        ) : null}
-      </table>
-    </ScrollRegion>
+    <>
+      <DataTable<Line>
+        tableId="erp.stock.orderLines"
+        caption={t("order.lines.caption", { number: order.number })}
+        scrollLabel={t("order.lines.scroll")}
+        className="pf-calc-table"
+        rows={order.lines}
+        rowKey={(l) => l.id}
+        columns={columns}
+        toolsTarget={null}
+      />
+      {order.total ? (
+        <div className="pf-table-totals">
+          <DefinitionList
+            items={[
+              {
+                label: t("order.lines.totals"),
+                value: <MoneyText value={order.total} currency={order.currency} strong />,
+              },
+            ]}
+          />
+        </div>
+      ) : null}
+    </>
   );
 }
 
