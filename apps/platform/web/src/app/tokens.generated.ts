@@ -65,6 +65,14 @@ export const RT_TAG_TEXT: Record<string, string> = {
   purple: "#6d28d9",
 };
 
+/** Главная кнопка (стандарт интерфейса §2): графитовая заливка; акцент ссылок, выбора и фокуса — colorPrimary. */
+export const RT_ACTION = {
+  default: "#0f172a",
+  hover: "#1e293b",
+  active: "#020617",
+  foreground: "#ffffff",
+};
+
 /** Затравочные цвета статусов (SPEC-v3 §5.2) — для графиков и заливок БЕЗ текста; в текст и под белый текст не идут. */
 export const RT_STATUS_FILL = {
   error: "#e11d48",

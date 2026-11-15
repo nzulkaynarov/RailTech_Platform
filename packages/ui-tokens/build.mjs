@@ -218,6 +218,9 @@ export const RT_TOKENS = ${tsObject(antd)} as const;
 /** Текст preset-тегов Tag color="blue|green|cyan|orange|gold|red|purple" с контрастом ≥ 4.5:1 на фоне тега. */
 export const RT_TAG_TEXT: Record<string, string> = ${tsObject(c.tag)};
 
+/** Главная кнопка (стандарт интерфейса §2): графитовая заливка; акцент ссылок, выбора и фокуса — colorPrimary. */
+export const RT_ACTION = ${tsObject(c.action)};
+
 /** Затравочные цвета статусов (SPEC-v3 §5.2) — для графиков и заливок БЕЗ текста; в текст и под белый текст не идут. */
 export const RT_STATUS_FILL = ${tsObject({ error: c.error.default, warning: c.warning.default, success: c.success.default })};
 

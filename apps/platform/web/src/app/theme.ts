@@ -1,6 +1,6 @@
 import type { ThemeConfig } from "antd";
 
-import { RT_COMPONENTS, RT_TOKENS } from "./tokens.generated";
+import { RT_ACTION, RT_COMPONENTS, RT_TOKENS } from "./tokens.generated";
 
 /**
  * Тема Платформы: токены общего пакета `packages/ui-tokens` (через `tokens.generated.ts`, копию
@@ -61,9 +61,20 @@ export const appTheme: ThemeConfig = {
       cellPaddingBlock: 12,
       cellPaddingInline: 16,
     },
+    // Стандарт интерфейса §2: главная кнопка — графитовая, одна на экран; ссылки, выбор и фокус — акцентным синим.
+    Button: {
+      colorPrimary: RT_ACTION.default,
+      colorPrimaryHover: RT_ACTION.hover,
+      colorPrimaryActive: RT_ACTION.active,
+      primaryShadow: "none",
+      defaultShadow: "none",
+      dangerShadow: "none",
+    },
+    // Подложка переключателя заметна на холсте: вторичная поверхность, активный пункт — белый.
+    Segmented: { trackBg: PF_COLORS.tableHeaderBg },
     Card: {
       boxShadowTertiary: "none",
-      colorBorderSecondary: PF_COLORS.split,
+      colorBorderSecondary: RT_TOKENS.colorBorderSecondary,
       borderRadiusLG: 8,
       headerFontSize: 16,
     },

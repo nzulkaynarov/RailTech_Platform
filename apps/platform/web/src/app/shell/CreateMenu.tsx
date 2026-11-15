@@ -29,7 +29,6 @@ export function CreateMenu({ block = false }: { block?: boolean }) {
 
   const trigger = block ? (
     <Button
-      type="primary"
       block
       icon={<PlusIcon />}
       onClick={() => {
@@ -40,7 +39,6 @@ export function CreateMenu({ block = false }: { block?: boolean }) {
     </Button>
   ) : (
     <Button
-      type="primary"
       icon={<PlusIcon />}
       aria-label={t("create.label")}
       title={t("create.label")}

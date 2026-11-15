@@ -106,6 +106,20 @@ table.pf-fixed-table > * > tr > :is(th, td):last-child {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  /* Стандарт интерфейса §3: шапка — 11/16, 600, капсом с разрядкой, вторичным цветом (≥ 4.5:1 на вторичной поверхности). */
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--rt-color-text-secondary);
+}
+/* Переход к объекту в строке — стрелка, а не кнопка в рамке (стандарт интерфейса §7). */
+.pf-fixed-table .pf-row-open {
+  color: var(--rt-color-text-tertiary);
+}
+.pf-fixed-table tr:hover .pf-row-open {
+  color: var(--rt-color-text-default);
 }
 /* Перенос — по словам; слово рвётся, только если само не помещается в колонку (длинный адрес, артикул). */
 .pf-fixed-table td {

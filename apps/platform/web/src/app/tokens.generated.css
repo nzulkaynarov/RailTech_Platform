@@ -33,6 +33,10 @@
   --rt-color-error-border: #fecdd3;
   --rt-color-error-text: #be123c;
   --rt-color-error-foreground: #ffffff;
+  --rt-color-action-default: #0f172a;
+  --rt-color-action-hover: #1e293b;
+  --rt-color-action-active: #020617;
+  --rt-color-action-foreground: #ffffff;
   --rt-color-neutral-bg: #f1f5f9;
   --rt-color-neutral-border: #e2e8f0;
   --rt-color-neutral-text: #334155;
@@ -58,9 +62,8 @@
   --rt-color-tag-gold: #b45309;
   --rt-color-tag-red: #be123c;
   --rt-color-tag-purple: #6d28d9;
-  --rt-font-family: "Inter Variable", Inter, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-  --rt-font-family-mono:
-    ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  --rt-font-family: 'Inter Variable', Inter, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --rt-font-family-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
   --rt-font-size-xs: 12px;
   --rt-font-size-sm: 13px;
   --rt-font-size-base: 14px;
