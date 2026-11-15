@@ -29,7 +29,7 @@ import { parseDocumentId, withParams } from "./params";
 import { DocumentStatusTag } from "./status";
 
 import "./documents.css";
-import { ToolsSlot } from "../../../shared/ui/DataTable/RegistryTools";
+import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 
 const PAGE_SIZE = 25;
 /**
@@ -552,7 +552,7 @@ export function DocumentsPage() {
               ),
             })}
       />
-      <div className="pf-docs-controls">
+      <FilterBar tools>
         {canViewAll ? (
           <Segmented
             aria-label={t("documents:list.scope.label")}
@@ -567,11 +567,9 @@ export function DocumentsPage() {
           />
         ) : null}
         {mobile ? (
-          <div className="pf-docs-filter">
-            <label htmlFor="pf-docs-kind">{t("documents:list.tabs.label")}</label>
+          <FilterField id="pf-docs-kind" label={t("documents:list.tabs.label")}>
             <Select
               id="pf-docs-kind"
-              style={{ minWidth: 180 }}
               value={tab}
               options={kindTabs.map((key) => ({
                 value: key,
@@ -581,13 +579,11 @@ export function DocumentsPage() {
                 setFilter({ kind: key === "all" ? null : key });
               }}
             />
-          </div>
+          </FilterField>
         ) : null}
-        <div className="pf-docs-filter">
-          <label htmlFor="pf-docs-status">{t("documents:list.status.label")}</label>
+        <FilterField id="pf-docs-status" label={t("documents:list.status.label")} width={240}>
           <Select
             id="pf-docs-status"
-            style={{ minWidth: 220 }}
             value={status}
             options={[
               { value: "", label: t("documents:list.status.any") },
@@ -600,9 +596,8 @@ export function DocumentsPage() {
               setFilter({ status: value === "" ? null : value });
             }}
           />
-        </div>
-        <ToolsSlot />
-      </div>
+        </FilterField>
+      </FilterBar>
       <Card styles={{ body: { padding: 0 } }}>
         {mobile ? (
           body

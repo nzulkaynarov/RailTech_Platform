@@ -15,16 +15,6 @@
   background: var(--rt-color-error-bg);
   color: var(--rt-color-error-text);
 }
-.pf-pay-search {
-  max-width: 420px;
-}
-.pf-pay-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
 .pf-pay-form {
   display: flex;
   flex-direction: column;

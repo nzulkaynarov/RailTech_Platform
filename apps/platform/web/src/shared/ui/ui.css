@@ -717,3 +717,43 @@ tr > td.pf-col-num {
   gap: 8px;
   margin-right: auto;
 }
+
+/* Строка фильтров реестра (`FilterBar`, UI-8): одна на все модули — перенос, поля одной высоты по центру */
+.pf-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  min-width: 0;
+}
+.pf-filter-field {
+  width: var(--pf-filter-width, 200px);
+  max-width: 100%;
+  min-width: 0;
+}
+.pf-filter-field > .ant-select,
+.pf-filter-field > .ant-input-affix-wrapper,
+.pf-filter-field > .ant-input-search,
+.pf-filter-field > .ant-input,
+.pf-filter-field > .ant-picker {
+  width: 100%;
+}
+.pf-filter-field--grow {
+  flex: 1 1 240px;
+  width: auto;
+  min-width: 200px;
+}
+@media (max-width: 599px) {
+  .pf-filter-field,
+  .pf-filter-field--grow {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+  }
+}
+/* Вкладки статусов не помещаются на узком экране — прокручиваются вбок, обрезанный край виден (UX-2b) */
+.pf-filter-bar > .ant-segmented {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
