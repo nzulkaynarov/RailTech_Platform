@@ -1,5 +1,5 @@
 /* Настройки (SET-IA): индекс `/admin` и страницы групп. Макет v3 и docs/architecture/platform-frontend.md §5: рамка #f0f0f0,
-   радиус 8, без теней, градиентов и цветных полосок; второстепенный текст #595959 (контраст ≥ 4.5:1 на белом и на #f5f5f5).
+   радиус 8, без теней, градиентов и цветных полосок; второстепенный текст var(--rt-color-text-secondary) (контраст ≥ 4.5:1 на белом и на var(--rt-color-surface-layout)).
    Индекс — как у Shopify и Stripe: название группы слева, карточки справа; на узком экране группа над карточками. */
 .pf-set-home,
 .pf-set-page {
@@ -19,7 +19,7 @@
   font-size: 16px;
   line-height: 24px;
   font-weight: 600;
-  color: #1f1f1f;
+  color: var(--rt-color-text-default);
 }
 .pf-set-group {
   display: grid;
@@ -55,15 +55,15 @@
   box-sizing: border-box;
   min-height: 84px;
   padding: 12px 16px;
-  background: #fff;
-  border: 1px solid #f0f0f0;
+  background: var(--rt-color-surface-background);
+  border: 1px solid var(--rt-color-surface-split);
   border-radius: 8px;
-  color: #1f1f1f;
+  color: var(--rt-color-text-default);
   text-decoration: none;
 }
 .pf-set-tile:hover {
-  border-color: #91caff;
-  color: #1f1f1f;
+  border-color: var(--rt-color-primary-border);
+  color: var(--rt-color-text-default);
 }
 .pf-set-tile-head {
   display: flex;
@@ -80,12 +80,12 @@
   line-height: 22px;
 }
 .pf-set-tile-desc {
-  color: #595959;
+  color: var(--rt-color-text-secondary);
   font-size: 13px;
   line-height: 20px;
 }
 .pf-set-tile-hit {
-  color: #0958d9;
+  color: var(--rt-color-primary-text);
   font-size: 12px;
   line-height: 20px;
 }
@@ -103,13 +103,13 @@
   padding: 0;
   border: 0;
   background: none;
-  color: #0958d9;
+  color: var(--rt-color-primary-text);
   cursor: pointer;
   font: inherit;
 }
 .pf-set-tickets {
   margin: 0;
-  color: #595959;
+  color: var(--rt-color-text-secondary);
 }
 
 /* Чек-лист «Первый запуск» (Shopify setup guide): шаги — последовательность, поэтому нумерованным списком с отметками. */
@@ -118,8 +118,8 @@
   flex-direction: column;
   gap: 12px;
   padding: 16px 20px;
-  background: #fff;
-  border: 1px solid #f0f0f0;
+  background: var(--rt-color-surface-background);
+  border: 1px solid var(--rt-color-surface-split);
   border-radius: 8px;
 }
 .pf-set-setup-head {
@@ -131,7 +131,7 @@
 }
 .pf-set-setup-note {
   margin: 0;
-  color: #595959;
+  color: var(--rt-color-text-secondary);
 }
 .pf-set-steps {
   list-style: none;
@@ -151,19 +151,19 @@
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  border: 2px solid #8c8c8c;
+  border: 2px solid var(--rt-color-text-disabled);
   box-sizing: border-box;
   flex: 0 0 auto;
 }
 .pf-set-steps li[data-state="done"] .pf-set-step-mark {
-  border-color: #1668dc;
-  background: #1668dc;
+  border-color: var(--rt-color-primary-default);
+  background: var(--rt-color-primary-default);
 }
 .pf-set-steps li[data-state="unknown"] .pf-set-step-mark {
   border-style: dashed;
 }
 .pf-set-step-state {
-  color: #595959;
+  color: var(--rt-color-text-secondary);
   font-size: 13px;
 }
 .pf-set-card {
@@ -180,6 +180,6 @@
   flex-wrap: wrap;
 }
 .pf-set-more {
-  color: #0958d9;
+  color: var(--rt-color-primary-text);
   line-height: 32px;
 }

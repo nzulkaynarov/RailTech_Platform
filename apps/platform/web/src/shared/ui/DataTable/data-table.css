@@ -32,18 +32,18 @@
 }
 .pf-dt-resize:hover::after,
 .pf-dt-resize:focus-visible::after {
-  background: #8c8c8c;
+  background: var(--rt-color-text-disabled);
 }
 .pf-dt-resize:focus-visible {
-  outline: 2px solid #1668dc;
+  outline: 2px solid var(--rt-color-primary-default);
   outline-offset: -2px;
 }
 /* Закреплённые столбцы остаются на месте при прокрутке вбок; у последнего — тень по краю */
 .pf-dt-table [style*="sticky"] {
-  background: #fff;
+  background: var(--rt-color-surface-background);
 }
 .pf-dt-table thead [style*="sticky"] {
-  background: #fafafa;
+  background: var(--rt-color-surface-subtle);
 }
 .pf-dt-table [data-pinned="last"] {
   box-shadow: 4px 0 4px -2px rgba(0, 0, 0, 0.08);

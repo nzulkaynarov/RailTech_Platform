@@ -4,6 +4,14 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const css = readFileSync(join(process.cwd(), "src/shared/ui/ui.css"), "utf8");
+// Цвета в CSS — переменные токенов (стандарт интерфейса, UI-1): значение читается из tokens.generated.css.
+const tokens = readFileSync(join(process.cwd(), "src/app/tokens.generated.css"), "utf8");
+function resolve(text: string): string {
+  return text.replace(/var\((--rt-[a-z0-9-]+)\)/g, (whole, name: string) => {
+    const found = new RegExp(`${name}:\\s*([^;]+);`).exec(tokens);
+    return found?.[1] ?? whole;
+  });
+}
 
 /**
  * Контраст пар цветов, заданных в `ui.css`: значения берутся из самого файла, так что правка токена, после которой пара
@@ -28,7 +36,7 @@ function value(selector: string, property: string): string {
   const rule = new RegExp(`(?:^|\\n)${escaped}\\s*\\{([^}]*)\\}`).exec(css);
   if (!rule) throw new Error(`нет правила ${selector}`);
   const declaration = new RegExp(`(?:^|;|\\s)${property}:\\s*([^;]+);`).exec(rule[1] ?? "");
-  const hex = /#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b/.exec(declaration?.[1] ?? "");
+  const hex = /#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b/.exec(resolve(declaration?.[1] ?? ""));
   if (!hex) throw new Error(`нет цвета ${property} в ${selector}`);
   const [, h = ""] = /#(.*)/.exec(hex[0]) ?? [];
   return h.length === 3 ? `#${h.replace(/./g, "$&$&")}` : hex[0];

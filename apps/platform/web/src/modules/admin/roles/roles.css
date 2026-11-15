@@ -1,5 +1,5 @@
 /* Admin · Ролевая матрица (R-2): таблица «разделы × роли», ячейки-уровни, столбец выбранной роли. Макет v3 «Admin —
-   ролевая матрица»; «скрыто» — #6e6e6e (контраст ≥ 4.5:1 на белом и на #e6f4ff), не #bfbfbf макета. */
+   ролевая матрица»; «скрыто» — var(--rt-color-text-tertiary) (контраст ≥ 4.5:1 на белом и на var(--rt-color-primary-bg)), не var(--rt-color-text-disabled) макета. */
 .pf-roles-legend {
   display: inline-flex;
   flex-wrap: wrap;
@@ -7,7 +7,7 @@
   gap: 4px 12px;
   font-size: 12px;
   line-height: 20px;
-  color: #595959;
+  color: var(--rt-color-text-secondary);
 }
 .pf-roles-legend > span {
   display: inline-flex;
@@ -31,13 +31,13 @@
 .pf-matrix th,
 .pf-matrix td {
   padding: 8px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--rt-color-surface-split);
   text-align: center;
   vertical-align: middle;
-  background: #fff;
+  background: var(--rt-color-surface-background);
 }
 .pf-matrix thead th {
-  background: #fafafa;
+  background: var(--rt-color-surface-subtle);
   font-weight: 600;
   white-space: nowrap;
   vertical-align: bottom;
@@ -62,18 +62,18 @@
 }
 .pf-matrix thead th:first-child {
   font-weight: 600;
-  background: #fafafa;
+  background: var(--rt-color-surface-subtle);
 }
 .pf-matrix tr.pf-matrix-group th {
   text-align: left;
   padding-left: 24px;
-  background: #fafafa;
+  background: var(--rt-color-surface-subtle);
   font-weight: 600;
-  color: #595959;
+  color: var(--rt-color-text-secondary);
   font-size: 12px;
 }
 .pf-matrix .pf-matrix-sel {
-  background: #e6f4ff;
+  background: var(--rt-color-primary-bg);
 }
 .pf-matrix-role {
   display: inline-flex;
@@ -86,11 +86,11 @@
   border-radius: 6px;
   font: inherit;
   font-weight: 600;
-  color: #1f1f1f;
+  color: var(--rt-color-text-default);
   cursor: pointer;
 }
 .pf-matrix-role:hover {
-  color: #0958d9;
+  color: var(--rt-color-primary-text);
 }
 .pf-matrix-role-sub {
   display: inline-flex;
@@ -98,7 +98,7 @@
   gap: 4px;
   font-size: 12px;
   font-weight: 400;
-  color: #595959;
+  color: var(--rt-color-text-secondary);
 }
 .pf-lvl {
   display: inline-grid;
@@ -108,15 +108,15 @@
   border-radius: 50%;
 }
 .pf-lvl-full {
-  background: #1668dc;
-  color: #fff;
+  background: var(--rt-color-primary-default);
+  color: var(--rt-color-text-inverse);
 }
 .pf-lvl-read {
-  border: 2px solid #1668dc;
-  color: #0958d9;
+  border: 2px solid var(--rt-color-primary-default);
+  color: var(--rt-color-primary-text);
 }
 .pf-lvl-none {
-  color: #6e6e6e;
+  color: var(--rt-color-text-tertiary);
   font-weight: 600;
 }
 /* Уровень раздела в столбце изменяемой роли: antd Select малого размера (UX-2a). */
@@ -140,7 +140,7 @@
   justify-content: space-between;
   gap: 8px;
   padding: 8px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--rt-color-surface-split);
 }
 .pf-role-employees li:last-child {
   border-bottom: 0;

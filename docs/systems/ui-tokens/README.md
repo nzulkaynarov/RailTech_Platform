@@ -73,3 +73,11 @@ Eminence» кабинета клиента: navy `--primary`, холст `--back
 явно (новая пара в интерфейсе → строка в массиве). Пары ниже 4.5:1, которые фиксирует SPEC-v3 §5.2, вынесены в
 `KNOWN_BELOW_AA` со ссылкой на вопрос в `docs/QUESTIONS.md` (Q-INF-P0-2-1): тест держит их в 3:1…4.5:1 и просит перенести в
 основной список, когда пара начнёт проходить.
+
+## Платформа: переменные в CSS (UI-1, 2026-11-15)
+
+`make -C apps/platform tokens` копирует в приложение и `dist/tokens.css` — `apps/platform/web/src/app/tokens.generated.css`
+(подключён в `main.tsx`). Стили Платформы берут цвета только из переменных `var(--rt-color-…)`
+([стандарт интерфейса](../../architecture/ui-standard.md) §2); литерал цвета в CSS ловит тест
+`src/shared/ui/colorLiterals.test.ts`, свежесть копии — `make -C apps/platform tokens-check`. Для этого добавлены токены
+`surface.subtle` (фон шапки таблицы) и `text.disabled`.

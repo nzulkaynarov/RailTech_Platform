@@ -1,5 +1,5 @@
 /* Расчёт · Заявки в расчёте и расчёт по заявке (D2-1). Значения — макет v3 «4. ERP — Расчёт» и
-   docs/architecture/platform-frontend.md §5: рамка #f0f0f0, радиус 8, без теней и градиентов; второстепенный текст #595959
+   docs/architecture/platform-frontend.md §5: рамка var(--rt-color-surface-split), радиус 8, без теней и градиентов; второстепенный текст var(--rt-color-text-secondary)
    (контраст ≥ 4.5:1 на белом), числа — tabular-nums. */
 .pf-calc {
   display: flex;
@@ -54,12 +54,12 @@
 .pf-calc-table th,
 .pf-calc-table td {
   padding: 10px 12px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--rt-color-surface-split);
   text-align: left;
   vertical-align: top;
 }
 .pf-calc-table thead th {
-  background: #fafafa;
+  background: var(--rt-color-surface-subtle);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -67,7 +67,7 @@
   cursor: pointer;
 }
 .pf-calc-table tr[data-selected="true"] td {
-  background: #e6f4ff;
+  background: var(--rt-color-primary-bg);
 }
 /* Строки расчёта: 9 колонок помещаются в основное окно 1440 при открытом боковом окне (макет v3 «4. ERP — Расчёт»). */
 .pf-calc-lines {
@@ -82,7 +82,7 @@
   padding-left: 12px;
 }
 .pf-calc-number {
-  color: #0958d9;
+  color: var(--rt-color-primary-text);
   white-space: nowrap;
 }
 .pf-calc-due,
@@ -163,7 +163,7 @@
 }
 .pf-calc-totals th,
 .pf-calc-totals td {
-  background: #fafafa;
+  background: var(--rt-color-surface-subtle);
   font-weight: 600;
   border-bottom: none;
 }
@@ -174,11 +174,11 @@
   flex-direction: column;
   gap: 12px;
   padding: 16px 24px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--rt-color-surface-split);
 }
 .pf-calc-ready-hint {
   margin: 0;
-  color: #595959;
+  color: var(--rt-color-text-secondary);
 }
 
 /* Боковое окно «Задание» */
@@ -208,8 +208,8 @@
 .pf-calc-quote {
   margin: 0;
   padding: 8px 12px;
-  border-left: 3px solid #d9d9d9;
-  background: #fafafa;
+  border-left: 3px solid var(--rt-color-surface-border);
+  background: var(--rt-color-surface-subtle);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -258,7 +258,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 8px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--rt-color-surface-split);
 }
 .pf-calc-match-text {
   display: flex;
@@ -267,7 +267,7 @@
   align-items: flex-start;
 }
 .pf-calc-proposal {
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--rt-color-surface-split);
   border-radius: 8px;
   padding: 12px;
 }
@@ -289,7 +289,7 @@
   flex-direction: column;
   gap: 8px;
   padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--rt-color-surface-split);
 }
 .pf-calc-card-head,
 .pf-calc-card-foot {
@@ -329,7 +329,7 @@
   flex-direction: column;
   gap: 4px;
   padding: 12px 16px;
-  background: #fafafa;
+  background: var(--rt-color-surface-subtle);
 }
 @media (max-width: 767px) {
   .pf-calc-ready {

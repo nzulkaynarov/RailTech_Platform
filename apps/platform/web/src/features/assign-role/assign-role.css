@@ -14,7 +14,7 @@
   font-size: 14px;
   font-weight: 600;
   line-height: 22px;
-  color: #1f1f1f;
+  color: var(--rt-color-text-default);
 }
 .pf-roles-list {
   margin: 0;
@@ -23,7 +23,7 @@
 }
 .pf-roles-list li {
   padding: 6px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--rt-color-surface-split);
 }
 .pf-roles-list li:last-child {
   border-bottom: 0;
@@ -36,13 +36,13 @@
   display: block;
   font-size: 12px;
   line-height: 20px;
-  color: #6e6e6e;
+  color: var(--rt-color-text-tertiary);
 }
 .pf-roles-note {
   margin: 8px 0 0;
   font-size: 13px;
   line-height: 20px;
-  color: #a8071a;
+  color: var(--rt-color-error-text);
 }
 .pf-panel-stack {
   display: flex;
@@ -51,5 +51,5 @@
 }
 .pf-role-system {
   font-size: 12px;
-  color: #6e6e6e;
+  color: var(--rt-color-text-tertiary);
 }

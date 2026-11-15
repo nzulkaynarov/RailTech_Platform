@@ -1,5 +1,5 @@
 /* Общие части экранов с формами и состояниями запроса (W13-A5): поле с подписью, ошибка, таблица с прокруткой.
-   Значения — макет v3: рамка #f0f0f0, второстепенный текст #595959; без теней и градиентов. */
+   Значения — макет v3: рамка var(--rt-color-surface-split), второстепенный текст var(--rt-color-text-secondary); без теней и градиентов. */
 .pf-fp-field {
   display: flex;
   flex-direction: column;
@@ -9,7 +9,7 @@
 .pf-fp-field > .pf-fp-label {
   font-size: 14px;
   line-height: 22px;
-  color: #1f1f1f;
+  color: var(--rt-color-text-default);
 }
 .pf-fp-form {
   display: flex;
@@ -31,7 +31,7 @@
   flex-direction: column;
   gap: 12px;
   padding-top: 16px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--rt-color-surface-split);
 }
 .pf-fp-block > h4 {
   margin: 0;
@@ -48,7 +48,7 @@
 }
 .pf-fp-sub {
   margin: 0;
-  color: #595959;
+  color: var(--rt-color-text-secondary);
   font-size: 13px;
   line-height: 20px;
   overflow-wrap: anywhere;
@@ -59,6 +59,6 @@
   overflow-x: auto;
 }
 .pf-fp-scroll:focus-visible {
-  outline: 2px solid #1668dc;
+  outline: 2px solid var(--rt-color-primary-default);
   outline-offset: 2px;
 }

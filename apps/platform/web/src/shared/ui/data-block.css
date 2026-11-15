@@ -11,8 +11,9 @@
   z-index: 2;
   height: 2px;
   background:
-    linear-gradient(90deg, transparent 0%, #1668dc 50%, transparent 100%) 0 0 / 40% 100% no-repeat,
-    #e6f4ff;
+    linear-gradient(90deg, transparent 0%, var(--rt-color-primary-default) 50%, transparent 100%) 0
+      0 / 40% 100% no-repeat,
+    var(--rt-color-primary-bg);
   opacity: 0;
   pointer-events: none;
   animation:
@@ -39,7 +40,7 @@
 @media (prefers-reduced-motion: reduce) {
   .pf-data-block[data-busy]::before {
     animation: pf-busy-in 0s linear 150ms forwards;
-    background: #1668dc;
+    background: var(--rt-color-primary-default);
   }
 }
 
@@ -51,7 +52,7 @@
   display: flex;
   align-items: center;
   height: var(--pf-skel-row, 44px);
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--rt-color-surface-split);
 }
 .pf-list-skel-row:last-child {
   border-bottom: 0;

@@ -1,6 +1,6 @@
 /* Admin · Настройки бота (W13-A5): навигация по разделам, формы по схемам CRM, таблицы текстов и шаблонов, выгрузки.
-   Значения — макет v3 и docs/architecture/platform-frontend.md §5: рамка #f0f0f0, радиус 8, без теней и градиентов;
-   второстепенный текст #595959 и #6e6e6e (контраст ≥ 4.5:1 на белом). */
+   Значения — макет v3 и docs/architecture/platform-frontend.md §5: рамка var(--rt-color-surface-split), радиус 8, без теней и градиентов;
+   второстепенный текст var(--rt-color-text-secondary) и var(--rt-color-text-tertiary) (контраст ≥ 4.5:1 на белом). */
 .pf-bot {
   display: flex;
   flex-direction: column;
@@ -28,13 +28,13 @@
   flex-direction: column;
   gap: 12px;
   padding: 12px;
-  background: #fff;
-  border: 1px solid #f0f0f0;
+  background: var(--rt-color-surface-background);
+  border: 1px solid var(--rt-color-surface-split);
   border-radius: 8px;
 }
 .pf-bot-nav-title {
   margin: 0 0 4px;
-  color: #595959;
+  color: var(--rt-color-text-secondary);
   font-size: 12px;
   line-height: 20px;
   font-weight: 600;
@@ -48,12 +48,12 @@
   display: block;
   padding: 6px 8px;
   border-radius: 6px;
-  color: #1f1f1f;
+  color: var(--rt-color-text-default);
   line-height: 22px;
 }
 .pf-bot-nav-link[aria-current="page"] {
-  background: #e6f4ff;
-  color: #0958d9;
+  background: var(--rt-color-primary-bg);
+  color: var(--rt-color-primary-text);
   font-weight: 500;
 }
 .pf-bot-section-title {
@@ -96,7 +96,7 @@
 .pf-bot-group {
   margin: 0 0 16px;
   padding: 12px 16px 0;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--rt-color-surface-split);
   border-radius: 8px;
 }
 .pf-bot-group legend {
@@ -117,17 +117,17 @@
 .pf-bot-table th,
 .pf-bot-table td {
   padding: 10px 12px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--rt-color-surface-split);
   text-align: left;
   vertical-align: top;
 }
 .pf-bot-table th {
-  background: #fafafa;
+  background: var(--rt-color-surface-subtle);
   font-weight: 600;
   white-space: nowrap;
 }
 .pf-bot-table tr[data-selected="true"] td {
-  background: #e6f4ff;
+  background: var(--rt-color-primary-bg);
 }
 .pf-bot-table--texts {
   table-layout: fixed;
@@ -146,7 +146,7 @@
   white-space: nowrap;
 }
 .pf-bot-link {
-  color: #0958d9;
+  color: var(--rt-color-primary-text);
   overflow-wrap: anywhere;
 }
 .pf-bot-excerpt {
@@ -158,8 +158,8 @@
   flex-direction: column;
   gap: 12px;
   padding: 16px;
-  background: #fff;
-  border: 1px solid #f0f0f0;
+  background: var(--rt-color-surface-background);
+  border: 1px solid var(--rt-color-surface-split);
   border-radius: 8px;
 }
 .pf-bot-dryrun {
@@ -175,13 +175,13 @@
 }
 .pf-bot-tiles > div {
   padding: 8px 12px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--rt-color-surface-split);
   border-radius: 8px;
 }
 .pf-bot-tiles dt {
   font-size: 12px;
   line-height: 20px;
-  color: #595959;
+  color: var(--rt-color-text-secondary);
 }
 .pf-bot-tiles dd {
   margin: 0;
@@ -201,7 +201,7 @@
   align-items: center;
   gap: 4px 12px;
   padding: 8px 0;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--rt-color-surface-split);
 }
 .pf-bot-exports {
   display: grid;
@@ -213,7 +213,7 @@
   flex-direction: column;
   gap: 8px;
   padding: 16px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--rt-color-surface-split);
   border-radius: 8px;
 }
 /* Вкладки экрана «Telegram-бот» (W15-H4): лента над содержимым, без своих полей */
@@ -233,5 +233,5 @@
 .pf-bot-form .ant-select-disabled .ant-select-selection-item,
 .pf-bot-form .ant-input-number-disabled .ant-input-number-suffix,
 .pf-bot-form .ant-input-number-affix-wrapper-disabled .ant-input-number-suffix {
-  color: #595959;
+  color: var(--rt-color-text-secondary);
 }
