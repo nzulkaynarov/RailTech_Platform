@@ -269,7 +269,7 @@ test.describe("Компания: статьи расхода, шаблоны, с
     await loginAndWait(page, "director@demo.example");
     await openCompany(page, "charges");
     await page.getByRole("button", { name: "Добавить статью" }).click();
-    const dialog = page.getByRole("dialog", { name: "Новая статья расхода" });
+    const dialog = page.getByRole("region", { name: "Новая статья расхода" });
     await choose(page, dialog.getByLabel("Базис поставки"), "DAP");
     await choose(page, dialog.getByLabel("Статья", { exact: true }), "Доставка до склада");
     await dialog.getByLabel("Сумма").fill("250");
@@ -279,7 +279,7 @@ test.describe("Компания: статьи расхода, шаблоны, с
     await expect(page.getByRole("row", { name: /Доставка до склада/ })).toContainText("250");
 
     await page.getByRole("button", { name: "Изменить: Доставка до склада · DAP" }).click();
-    const edit = page.getByRole("dialog", { name: "Изменить статью расхода" });
+    const edit = page.getByRole("region", { name: "Изменить статью расхода" });
     await edit.getByLabel("Сумма").fill("300");
     await edit.getByRole("button", { name: "Сохранить" }).click();
     await expect(page.getByRole("row", { name: /Доставка до склада/ })).toContainText("300");
@@ -420,13 +420,13 @@ test.describe("Компания: категории, запросы, платф�
     await page
       .getByRole("button", { name: "Подкатегория: добавить в «Электрооборудование»" })
       .click();
-    const dialog = page.getByRole("dialog", { name: "Новая категория" });
+    const dialog = page.getByRole("region", { name: "Новая категория" });
     await dialog.getByLabel("Название").fill("Кабели");
     await dialog.getByRole("button", { name: "Сохранить" }).click();
     await expect(page.getByText("Кабели", { exact: true })).toBeVisible();
 
     await page.getByRole("button", { name: "Изменить: Кабели" }).click();
-    const edit = page.getByRole("dialog", { name: "Изменить категорию" });
+    const edit = page.getByRole("region", { name: "Изменить категорию" });
     await edit.getByLabel("Название").fill("Силовые кабели");
     await edit.getByRole("button", { name: "Сохранить" }).click();
     await expect(page.getByText("Силовые кабели", { exact: true })).toBeVisible();

@@ -14,8 +14,9 @@ import "./form-parts.css";
  * уже открытая в панели, скрыта и возвращается после. На телефоне — лист на весь экран (`Sheet`). Форма из карточки,
  * открытой выезжающим окном, — `layer="drawer"`: своя панель поверх карточки с теми же шапкой и подвалом.
  */
-/** Ширина выезжающей формы (стандарт интерфейса §6): 480 px, на узком экране — вся ширина. */
+/** Ширины выезжающей формы (стандарт интерфейса §6): 480 и 640 px, на узком экране — вся ширина. */
 const FORM_DRAWER_WIDTH = 480;
+const FORM_DRAWER_WIDE = 640;
 
 export function FormSheet({
   title,
@@ -27,6 +28,7 @@ export function FormSheet({
   readOnly = false,
   submitDisabled = false,
   layer = "panel",
+  wide = false,
   onSubmit,
   onCancel,
   children,
@@ -48,6 +50,8 @@ export function FormSheet({
    * поверх всего, для формы из карточки объекта, которая сама открыта выезжающим окном.
    */
   layer?: "panel" | "drawer";
+  /** Широкая выезжающая панель 640 px: форма с таблицей строк или предпросмотром (только `layer="drawer"`) */
+  wide?: boolean;
   onSubmit?: () => void;
   onCancel: () => void;
   children: ReactNode;
@@ -89,7 +93,7 @@ export function FormSheet({
     return (
       <Drawer
         open
-        width={FORM_DRAWER_WIDTH}
+        width={wide ? FORM_DRAWER_WIDE : FORM_DRAWER_WIDTH}
         title={title}
         onClose={close}
         destroyOnHidden
