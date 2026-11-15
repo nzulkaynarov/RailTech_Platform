@@ -43,7 +43,8 @@ function value(selector: string, property: string): string {
 }
 
 const WHITE = "#ffffff";
-const SURFACES = [WHITE, "#f5f5f5", "#fafafa", "#e6f4ff", "#f0f7ff"];
+// Поверхности стандарта интерфейса §2: холст, вторичная, фон выбранного и фоны статусов.
+const SURFACES = [WHITE, "#f8fafc", "#f1f5f9", "#eff6ff", "#fffbeb", "#f0fdf4", "#fef2f2"];
 
 describe("контраст общих компонентов (ui.css)", () => {
   it.each(SURFACES)("подпись .pf-hint на %s ≥ 4.5:1", (surface) => {

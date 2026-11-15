@@ -1,5 +1,5 @@
 /* Admin · Ролевая матрица (R-2): таблица «разделы × роли», ячейки-уровни, столбец выбранной роли. Макет v3 «Admin —
-   ролевая матрица»; «скрыто» — var(--rt-color-text-tertiary) (контраст ≥ 4.5:1 на белом и на var(--rt-color-primary-bg)), не var(--rt-color-text-disabled) макета. */
+   ролевая матрица»; «скрыто» — var(--rt-color-text-tertiary) (контраст ≥ 4.5:1 на белом и на var(--rt-color-primary-bg)), не var(--rt-color-text-tertiary) макета. */
 .pf-roles-legend {
   display: inline-flex;
   flex-wrap: wrap;

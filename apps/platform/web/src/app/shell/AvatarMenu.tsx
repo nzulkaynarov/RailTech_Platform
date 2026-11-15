@@ -88,7 +88,11 @@ export function AvatarMenu({
       key: "account",
       label: (
         <span style={{ display: "block", lineHeight: "20px" }}>
-          <span style={{ display: "block", fontWeight: 500, color: "#1f1f1f" }}>{me.name}</span>
+          <span
+            style={{ display: "block", fontWeight: 500, color: "var(--rt-color-text-default)" }}
+          >
+            {me.name}
+          </span>
           <span style={{ display: "block" }}>{me.email}</span>
         </span>
       ),
@@ -116,7 +120,11 @@ export function AvatarMenu({
         <span style={{ display: "block", lineHeight: "18px" }}>
           <span style={{ display: "block" }}>{t("help:about.menu")}</span>
           {release ? (
-            <span style={{ display: "block", fontSize: 12, color: "#595959" }}>{release}</span>
+            <span
+              style={{ display: "block", fontSize: 12, color: "var(--rt-color-text-secondary)" }}
+            >
+              {release}
+            </span>
           ) : null}
         </span>
       ),
@@ -175,7 +183,7 @@ export function AvatarMenu({
           style={{
             fontSize: 10,
             lineHeight: "12px",
-            color: "#6e6e6e",
+            color: "var(--rt-color-text-tertiary)",
             maxWidth: 60,
             whiteSpace: "nowrap",
             overflow: "hidden",

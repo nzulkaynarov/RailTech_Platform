@@ -302,7 +302,7 @@ tr > td.pf-col-num {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid var(--rt-color-text-disabled);
+  border: 2px solid var(--rt-color-text-tertiary);
   border-radius: 50%;
   background: var(--rt-color-surface-background);
   color: var(--rt-color-text-inverse);

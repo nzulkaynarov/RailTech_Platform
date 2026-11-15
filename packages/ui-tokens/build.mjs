@@ -191,9 +191,10 @@ const antd = {
   colorWarningBg: c.warning.bg,
   colorWarningBorder: c.warning.border,
   colorWarningText: c.warning.text,
-  colorBorder: c.surface.border,
+  // Стандарт интерфейса §2: рамка контрола (поле, кнопка) заметнее рамки карточки; разделитель строк — самый тихий.
+  colorBorder: c.surface.control ?? c.surface.border,
   colorSplit: c.surface.split,
-  colorBorderSecondary: c.surface.split,
+  colorBorderSecondary: c.surface.border,
   colorBgLayout: c.surface.layout,
   colorBgContainer: c.surface.card,
   fontFamily: tokens.font.family,

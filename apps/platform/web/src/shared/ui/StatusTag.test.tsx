@@ -18,9 +18,9 @@ describe("StatusTag", () => {
     renderUi(<StatusTag kind="invoice" status="paid" />);
     const tag = screen.getByText("Оплачен").closest<HTMLElement>(".ant-tag");
     expect(tag).toHaveStyle({
-      color: "#237804",
-      backgroundColor: "#f6ffed",
-      borderColor: "#b7eb8f",
+      color: "#15803d",
+      backgroundColor: "#f0fdf4",
+      borderColor: "#bbf7d0",
     });
   });
 

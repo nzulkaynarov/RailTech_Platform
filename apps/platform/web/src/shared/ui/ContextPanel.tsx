@@ -103,7 +103,7 @@ function PanelBody({
           style={{ width: 28, height: 28 }}
         >
           {panelMode === "docked" ? (
-            <PushpinFilled style={{ color: "var(--ant-color-primary, #1668dc)" }} />
+            <PushpinFilled style={{ color: "var(--rt-color-primary-default)" }} />
           ) : (
             <PushpinOutlined />
           )}
@@ -227,7 +227,11 @@ export function ContextPanelDrawer({
       rootStyle={{ top: offsetTop, bottom: offsetBottom, height: "auto" }}
       styles={{
         body: { padding: 0 },
-        wrapper: { maxWidth: "100vw", boxShadow: "none", borderLeft: "1px solid #f0f0f0" },
+        wrapper: {
+          maxWidth: "100vw",
+          boxShadow: "none",
+          borderLeft: "1px solid var(--rt-color-surface-split)",
+        },
       }}
       aria-label={props.label}
       id={props.id}

@@ -149,7 +149,7 @@ export function WriteToAdminModal({
             onChange={setSubject}
           />
           {subjectError ? (
-            <div role="alert" style={{ color: "#cf1322", fontSize: 13 }}>
+            <div role="alert" style={{ color: "var(--rt-color-error-hover)", fontSize: 13 }}>
               {subjectError}
             </div>
           ) : null}
@@ -174,7 +174,7 @@ export function WriteToAdminModal({
             {t("help:write.bodyHint")}
           </div>
           {bodyError ? (
-            <div role="alert" style={{ color: "#cf1322", fontSize: 13 }}>
+            <div role="alert" style={{ color: "var(--rt-color-error-hover)", fontSize: 13 }}>
               {bodyError}
             </div>
           ) : null}

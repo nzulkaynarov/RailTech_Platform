@@ -94,7 +94,10 @@ export function Glossary() {
       <p style={{ margin: 0 }}>{t("glossary.intro")}</p>
       <dl style={{ margin: 0 }}>
         {items.map((item) => (
-          <div key={item.term} style={{ padding: "8px 0", borderBottom: "1px solid #f0f0f0" }}>
+          <div
+            key={item.term}
+            style={{ padding: "8px 0", borderBottom: "1px solid var(--rt-color-surface-split)" }}
+          >
             <dt className="pf-help-term">{item.term}</dt>
             <dd style={{ margin: 0 }}>{item.text}</dd>
           </div>
@@ -117,7 +120,7 @@ export function Hotkeys() {
             key={item.keys}
             style={{
               padding: "8px 0",
-              borderBottom: "1px solid #f0f0f0",
+              borderBottom: "1px solid var(--rt-color-surface-split)",
               display: "flex",
               gap: 12,
             }}

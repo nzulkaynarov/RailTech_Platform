@@ -32,7 +32,7 @@
 }
 .pf-dt-resize:hover::after,
 .pf-dt-resize:focus-visible::after {
-  background: var(--rt-color-text-disabled);
+  background: var(--rt-color-text-tertiary);
 }
 .pf-dt-resize:focus-visible {
   outline: 2px solid var(--rt-color-primary-default);

@@ -210,7 +210,7 @@ export function ModuleMenu({ open, ...content }: ModuleMenuContentProps & { open
         maxWidth: MENU_WIDTH,
         boxSizing: "border-box",
         background: "#fff",
-        borderRight: "1px solid #f0f0f0",
+        borderRight: "1px solid var(--rt-color-surface-split)",
         overflow: "hidden",
       }}
     >

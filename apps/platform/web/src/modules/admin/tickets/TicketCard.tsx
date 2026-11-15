@@ -189,7 +189,7 @@ export function TicketCard({ number }: { number: string }) {
               }}
             />
             {replyError ? (
-              <div role="alert" style={{ color: "#cf1322", fontSize: 13 }}>
+              <div role="alert" style={{ color: "var(--rt-color-error-hover)", fontSize: 13 }}>
                 {replyError}
               </div>
             ) : null}
