@@ -1,6 +1,8 @@
 # rt_docs — документы: формат тела, бланк, рендер PDF и DOCX
 Статус: действует · Владелец: архитектор · Обновлено: 2026-11-02 (P4 волны 18a — письмо на бланке в EDS)
 
+Вид документов (шрифт, палитра печати, бланк, письмо, КП, договор, почта) — [стандарт документов](documents-standard.md); при расхождении по виду главный он.
+
 Пакет [`packages/rt-docs`](../../packages/rt-docs/) (дистрибутив `rt-docs`, импорт `rt_docs`, Python ≥ 3.12, без фреймворков) и
 контракт [`packages/contracts/documents/`](../../packages/contracts/documents/) — ядро документов на бланке: тело JSON → HTML →
 PDF (WeasyPrint), DOCX, «Подогнать», форматтеры ru/uz/en, миграция HTML-шаблонов ERP. Решение — [ADR-0020](../adr/0020-documents-letterhead-body-rendering.md),
