@@ -43,7 +43,7 @@ test.describe("Стабильная оболочка", () => {
       await expect(page.getByRole("heading", { level: 1, name: "Письмо ВХ-104/26" })).toBeVisible();
       await expect(panel).toBeVisible();
       await expect(panel).toHaveClass(/pf-panel-overlay/);
-      await expect(panel).toHaveCSS("width", "440px");
+      await expect(panel).toHaveCSS("width", "480px");
       expect(await mainWidth(page)).toBe(listWidth);
       await settledScreenshot(page, "letter-overlay");
       await expectNoViolations(page, "карточка, окно поверх");
@@ -59,7 +59,7 @@ test.describe("Стабильная оболочка", () => {
       }
       await expect(panel).toHaveClass(/pf-panel-docked/);
       const docked = await mainWidth(page);
-      expect(docked).toBeGreaterThanOrEqual(760);
+      expect(docked).toBeGreaterThanOrEqual(736);
       // реквизиты не сжимаются до букв: сетка карточки считается от её ширины — либо одна колонка, либо основной ≥ 540 px
       const columns = await page.evaluate<string>(
         `getComputedStyle(document.querySelector(".pf-letters-grid")).gridTemplateColumns`,

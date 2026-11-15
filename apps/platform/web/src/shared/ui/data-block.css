@@ -106,11 +106,12 @@ table.pf-fixed-table > * > tr > :is(th, td):last-child {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  /* Стандарт интерфейса §3: шапка — 11/16, 600, капсом с разрядкой, вторичным цветом (≥ 4.5:1 на вторичной поверхности). */
+  /* Стандарт интерфейса §3: шапка — 11/16, 600, капсом, вторичным цветом (≥ 4.5:1 на вторичной поверхности). */
   font-size: 11px;
   line-height: 16px;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  /* Без разрядки и с узкими цифрами ширины: капс шире строчных, а ширины колонок подобраны впритык (T1). */
+  letter-spacing: -0.01em;
   text-transform: uppercase;
   color: var(--rt-color-text-secondary);
 }

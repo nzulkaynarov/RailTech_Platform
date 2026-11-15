@@ -329,7 +329,7 @@ export function AppShell() {
 
   const hasPanel = match !== undefined && sectionAllowed(match.section);
   const menuHidden = viewport.mobile ? true : !panels.menuOpen;
-  // Рядом — только булавкой и если помещается (≥ 1280 px и рабочей области ≥ 760 px); иначе поверх, выбор помнится.
+  // Рядом — только булавкой и если помещается (≥ 1280 px и рабочей области ≥ 736 px); иначе поверх, выбор помнится.
   const panelDocked = panels.panelMode === "docked" && viewport.canDock && dockFits;
   // Окно поверх закрывает правый край основного окна: страницы, которым нужен этот край (поле ответа в переписке),
   // берут отступ из `--pf-overlay-inset`. Ширина самого основного окна не меняется.

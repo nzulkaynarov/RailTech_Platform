@@ -333,7 +333,7 @@ tr > td.pf-col-num {
   gap: 10px;
   padding: 8px 0;
   border-bottom: 1px solid var(--rt-color-surface-split);
-  font-size: 12px;
+  font-size: 14px;
   line-height: 20px;
 }
 .pf-check:last-child {
