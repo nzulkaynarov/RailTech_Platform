@@ -34,7 +34,7 @@ export interface ModuleMenuContentProps {
   title: string;
   items: readonly MenuItem[];
   labels: ModuleMenuLabels;
-  /** Главное действие модуля — primary-кнопка на всю ширину внизу */
+  /** Действие внизу подменю (на телефоне — «Создать»): обычная кнопка на всю ширину, не главная (стандарт §5, UI-8) */
   action?: ReactNode;
   /** Кнопка «‹‹» в заголовке: свернуть (desktop) или закрыть (Drawer) */
   onCollapse: () => void;
