@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { App, Button, Checkbox, Form, InputNumber, Select } from "antd";
+import { RowActions, ROW_ACTIONS_WIDTH } from "../../../../shared/ui/RowActions";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -151,34 +152,32 @@ export function ChargesTab() {
                   {
                     id: "actions",
                     header: t("actions"),
-                    width: 160,
+                    headerHidden: true,
+                    width: ROW_ACTIONS_WIDTH,
                     cell: (row) => {
                       const name = `${row.charge_type_name} · ${row.delivery_basis}`;
                       return (
-                        <span className="pf-co-actions">
-                          <Button
-                            type="link"
-                            size="small"
-                            aria-label={t("editNamed", { name })}
-                            onClick={() => {
-                              setEditing(row);
-                            }}
-                          >
-                            {t("edit")}
-                          </Button>
-                          <Button
-                            type="link"
-                            size="small"
-                            danger
-                            aria-label={t("deleteNamed", { name })}
-                            onClick={() => {
-                              remove.reset();
-                              setRemoving(row);
-                            }}
-                          >
-                            {t("delete")}
-                          </Button>
-                        </span>
+                        <RowActions
+                          name={name}
+                          items={[
+                            {
+                              key: "edit",
+                              label: t("edit"),
+                              onClick: () => {
+                                setEditing(row);
+                              },
+                            },
+                            {
+                              key: "delete",
+                              label: t("delete"),
+                              danger: true,
+                              onClick: () => {
+                                remove.reset();
+                                setRemoving(row);
+                              },
+                            },
+                          ]}
+                        />
                       );
                     },
                   },

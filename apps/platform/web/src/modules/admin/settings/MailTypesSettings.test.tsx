@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { rowActionItems } from "../../../test/rowActions";
 
 import { usePanelsStore } from "../../../app/shell/panelsStore";
 import { readDictionaries } from "../../../mocks/dictionaries";
@@ -52,10 +53,10 @@ describe("Настройки · Процессы · Справочники · Т
     expect(await rowOf("Спам")).toHaveTextContent("В «Подозрительные» (спам)");
     expect(readDictionaries()["mail-types"]).toHaveLength(9);
     // «Документ партнёра» уже стоит у демо-писем — удалить нельзя, только скрыть; «Приглашение на встречу» не использовано
-    expect(
-      screen.queryByRole("button", { name: "Удалить: Документ партнёра (договор, акт сверки)" }),
-    ).toBeNull();
-    expect(screen.getByRole("button", { name: "Удалить: Приглашение на встречу" })).toBeEnabled();
+    expect(await rowActionItems("Документ партнёра (договор, акт сверки)")).not.toContain(
+      "Удалить",
+    );
+    expect(await rowActionItems("Приглашение на встречу")).toContain("Удалить");
   });
 
   it("добавляет тип: действие по умолчанию обязательно и берётся из закрытого списка, код создаёт система", async () => {

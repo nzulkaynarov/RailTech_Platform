@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Alert, App, AutoComplete, Button, Checkbox, Form, Input, Select } from "antd";
+import { RowActions, ROW_ACTIONS_WIDTH } from "../../../../shared/ui/RowActions";
 import type { FormInstance, SelectProps } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -162,32 +163,30 @@ export function BankAccounts() {
                   {
                     id: "actions",
                     header: t("actions"),
-                    width: 160,
+                    headerHidden: true,
+                    width: ROW_ACTIONS_WIDTH,
                     cell: (row) => (
-                      <span className="pf-co-actions">
-                        <Button
-                          type="link"
-                          size="small"
-                          aria-label={t("editNamed", { name: row.account })}
-                          onClick={() => {
-                            setEditing(row);
-                          }}
-                        >
-                          {t("edit")}
-                        </Button>
-                        <Button
-                          type="link"
-                          size="small"
-                          danger
-                          aria-label={t("deleteNamed", { name: row.account })}
-                          onClick={() => {
-                            remove.reset();
-                            setRemoving(row);
-                          }}
-                        >
-                          {t("delete")}
-                        </Button>
-                      </span>
+                      <RowActions
+                        name={row.account}
+                        items={[
+                          {
+                            key: "edit",
+                            label: t("edit"),
+                            onClick: () => {
+                              setEditing(row);
+                            },
+                          },
+                          {
+                            key: "delete",
+                            label: t("delete"),
+                            danger: true,
+                            onClick: () => {
+                              remove.reset();
+                              setRemoving(row);
+                            },
+                          },
+                        ]}
+                      />
                     ),
                   },
                 ]}

@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Alert, App, Button, Form, Input, InputNumber, Radio, Select } from "antd";
+import { RowActions, ROW_ACTIONS_WIDTH } from "../../../shared/ui/RowActions";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -154,34 +155,32 @@ export function TemplatesTab({ readOnly }: { readOnly: boolean }) {
           {
             id: "actions",
             header: t("settings.dict.actions"),
-            width: 160,
+            headerHidden: true,
+            width: ROW_ACTIONS_WIDTH,
             cell: (row) => (
-              <span className="pf-co-actions">
-                <Button
-                  type="link"
-                  size="small"
-                  disabled={!row.editable}
-                  aria-label={t("settings.dict.editNamed", { name: row.name })}
-                  onClick={() => {
-                    setEditing(row);
-                  }}
-                >
-                  {t("settings.dict.edit")}
-                </Button>
-                <Button
-                  type="link"
-                  size="small"
-                  danger
-                  disabled={!row.editable}
-                  aria-label={t("settings.dict.deleteNamed", { name: row.name })}
-                  onClick={() => {
-                    remove.reset();
-                    setRemoving(row);
-                  }}
-                >
-                  {t("settings.dict.delete")}
-                </Button>
-              </span>
+              <RowActions
+                name={row.name}
+                items={[
+                  {
+                    key: "edit",
+                    label: t("settings.dict.edit"),
+                    disabled: !row.editable,
+                    onClick: () => {
+                      setEditing(row);
+                    },
+                  },
+                  {
+                    key: "delete",
+                    label: t("settings.dict.delete"),
+                    danger: true,
+                    disabled: !row.editable,
+                    onClick: () => {
+                      remove.reset();
+                      setRemoving(row);
+                    },
+                  },
+                ]}
+              />
             ),
           },
         ]}

@@ -4,6 +4,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { type Page, expect, test } from "@playwright/test";
 
 import { loginAndWait, settledScreenshot, spaGoto, waitForMotionEnd } from "./support/app";
+import { pickRowAction } from "./support/rowActions";
 
 // W13C-F5 (малые дефекты гейта C2a, G-5 и G-6) на MSW: редактор договора без обязательных блоков называет недостающие;
 // «Что найдёт бот» без ключа эмбеддингов — словами и с подсказкой, куда идти; axe и снимки 1440 и 390 (`E2E_SCREENSHOT_DIR`).
@@ -39,7 +40,7 @@ test.describe("Мелкие дефекты гейта C2a: G-5 и G-6", () => {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
       await loginAndWait(page, "director@demo.example");
       await spaGoto(page, "/admin/company?tab=templates");
-      await page.getByRole("button", { name: "Изменить: Договор поставки (наш)" }).click();
+      await pickRowAction(page, "Договор поставки (наш)", "Изменить");
       const editor = page.getByRole("region", { name: "Изменить шаблон документа" });
       await editor.getByLabel(/^Текст шаблона/).fill("<p>{{buyer_name}} {{mystery}}</p>");
       await expect(editor.getByText("Неизвестная подстановка {{mystery}}")).toBeVisible();

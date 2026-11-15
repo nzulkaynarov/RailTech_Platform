@@ -8,6 +8,7 @@ import {
   settledScreenshot,
   waitForMotionEnd,
 } from "./support/app";
+import { pickRowAction } from "./support/rowActions";
 
 // EDS-REG PR 1 на MSW: Настройки · Процессы · Справочники (до SET-IA — «Документооборот») — администратор добавляет способ получения и скрывает
 // другой; делопроизводитель видит изменения в форме «Зарегистрировать входящее»; журнал отбирает письма по виду документа.
@@ -85,8 +86,8 @@ test.describe("EDS-REG · справочники документооборот�
     await dialog.getByRole("button", { name: "Сохранить" }).click();
     await expect(dialog).toBeHidden();
     await expect(page.getByText("Фельдъегерская связь", { exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "Скрыть: Курьер" }).click();
-    await expect(page.getByRole("button", { name: "Вернуть: Курьер" })).toBeVisible();
+    await pickRowAction(page, "Курьер", "Скрыть");
+    await expect(page.getByRole("row", { name: /Курьер/ }).getByText("Скрыто")).toBeVisible();
     await expect(page.locator(".ant-message-notice")).toHaveCount(0, { timeout: 10_000 });
     await shoot(page, "dictionaries-methods");
     await signOut(page);

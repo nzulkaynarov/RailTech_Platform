@@ -12,6 +12,7 @@ import {
   Select,
   Skeleton,
 } from "antd";
+import { RowActions, ROW_ACTIONS_WIDTH } from "../../../shared/ui/RowActions";
 import type { FormInstance } from "antd";
 import type { TFunction } from "i18next";
 import { useId, useState } from "react";
@@ -370,55 +371,48 @@ function DictionaryTable({ dictionary, readOnly }: { dictionary: Dictionary; rea
           {
             id: "actions",
             header: t("settings.dict.actions"),
-            width: 160,
+            headerHidden: true,
+            width: ROW_ACTIONS_WIDTH,
             cell: (row) => (
-              <span className="pf-co-actions">
-                <Button
-                  type="link"
-                  size="small"
-                  disabled={readOnly}
-                  aria-label={t("settings.dict.editNamed", { name: name(row) })}
-                  onClick={() => {
-                    setEditing(row);
-                  }}
-                >
-                  {t("settings.dict.edit")}
-                </Button>
-                {dictionary.closed ? null : (
-                  <Button
-                    type="link"
-                    size="small"
-                    disabled={readOnly}
-                    loading={toggle.isPending && toggle.variables.code === row.code}
-                    aria-label={t(
-                      row.active ? "settings.dict.hideNamed" : "settings.dict.showNamed",
-                      {
-                        name: name(row),
-                      },
-                    )}
-                    onClick={() => {
-                      toggle.mutate({ kind, code: row.code, data: { active: !row.active } });
-                    }}
-                  >
-                    {t(row.active ? "settings.dict.hide" : "settings.dict.show")}
-                  </Button>
-                )}
-                {dictionary.closed || row.used === true ? null : (
-                  <Button
-                    type="link"
-                    size="small"
-                    danger
-                    disabled={readOnly}
-                    aria-label={t("settings.dict.deleteNamed", { name: name(row) })}
-                    onClick={() => {
-                      remove.reset();
-                      setRemoving(row);
-                    }}
-                  >
-                    {t("settings.dict.delete")}
-                  </Button>
-                )}
-              </span>
+              <RowActions
+                name={name(row)}
+                items={[
+                  {
+                    key: "edit",
+                    label: t("settings.dict.edit"),
+                    disabled: readOnly,
+                    onClick: () => {
+                      setEditing(row);
+                    },
+                  },
+                  ...(dictionary.closed
+                    ? []
+                    : [
+                        {
+                          key: "toggle",
+                          label: t(row.active ? "settings.dict.hide" : "settings.dict.show"),
+                          disabled: readOnly || toggle.isPending,
+                          onClick: () => {
+                            toggle.mutate({ kind, code: row.code, data: { active: !row.active } });
+                          },
+                        },
+                      ]),
+                  ...(dictionary.closed || row.used === true
+                    ? []
+                    : [
+                        {
+                          key: "delete",
+                          label: t("settings.dict.delete"),
+                          danger: true,
+                          disabled: readOnly,
+                          onClick: () => {
+                            remove.reset();
+                            setRemoving(row);
+                          },
+                        },
+                      ]),
+                ]}
+              />
             ),
           },
         ]}

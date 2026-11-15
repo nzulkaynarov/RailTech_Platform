@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { App, Button, Checkbox, Form, Input, Select } from "antd";
+import { RowActions, ROW_ACTIONS_WIDTH } from "../../../../shared/ui/RowActions";
 import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -97,7 +98,23 @@ export function DocumentTemplates() {
                     id: "name",
                     header: t("templates.documents.name"),
                     width: null,
-                    cell: (row) => row.name,
+                    cell: (row) => (
+                      <Button
+                        type="link"
+                        className="pf-co-link"
+                        aria-label={t(
+                          row.is_sample && !readOnly
+                            ? "templates.documents.previewNamed"
+                            : "templates.documents.openNamed",
+                          { name: row.name },
+                        )}
+                        onClick={() => {
+                          setEditing(row);
+                        }}
+                      >
+                        {row.name}
+                      </Button>
+                    ),
                   },
                   {
                     id: "kind_name",
@@ -129,66 +146,43 @@ export function DocumentTemplates() {
                   {
                     id: "actions",
                     header: t("actions"),
-                    width: 160,
+                    headerHidden: true,
+                    width: ROW_ACTIONS_WIDTH,
                     cell: (row) =>
-                      readOnly ? (
-                        <Button
-                          type="link"
-                          size="small"
-                          aria-label={t("templates.documents.openNamed", { name: row.name })}
-                          onClick={() => {
-                            setEditing(row);
-                          }}
-                        >
-                          {t("templates.documents.open")}
-                        </Button>
-                      ) : row.is_sample ? (
-                        <span className="pf-co-actions">
-                          <Button
-                            type="primary"
-                            size="small"
-                            aria-label={t("templates.documents.previewNamed", { name: row.name })}
-                            onClick={() => {
-                              setEditing(row);
-                            }}
-                          >
-                            {t("templates.documents.preview")}
-                          </Button>
-                          <Button
-                            size="small"
-                            aria-label={t("templates.documents.copyNamed", { name: row.name })}
-                            onClick={() => {
-                              setCopying(row);
-                            }}
-                          >
-                            {t("templates.documents.copy")}
-                          </Button>
-                        </span>
-                      ) : (
-                        <span className="pf-co-actions">
-                          <Button
-                            type="link"
-                            size="small"
-                            aria-label={t("editNamed", { name: row.name })}
-                            onClick={() => {
-                              setEditing(row);
-                            }}
-                          >
-                            {t("edit")}
-                          </Button>
-                          <Button
-                            type="link"
-                            size="small"
-                            danger
-                            aria-label={t("deleteNamed", { name: row.name })}
-                            onClick={() => {
-                              remove.reset();
-                              setRemoving(row);
-                            }}
-                          >
-                            {t("delete")}
-                          </Button>
-                        </span>
+                      readOnly ? null : (
+                        <RowActions
+                          name={row.name}
+                          items={
+                            row.is_sample
+                              ? [
+                                  {
+                                    key: "copy",
+                                    label: t("templates.documents.copy"),
+                                    onClick: () => {
+                                      setCopying(row);
+                                    },
+                                  },
+                                ]
+                              : [
+                                  {
+                                    key: "edit",
+                                    label: t("edit"),
+                                    onClick: () => {
+                                      setEditing(row);
+                                    },
+                                  },
+                                  {
+                                    key: "delete",
+                                    label: t("delete"),
+                                    danger: true,
+                                    onClick: () => {
+                                      remove.reset();
+                                      setRemoving(row);
+                                    },
+                                  },
+                                ]
+                          }
+                        />
                       ),
                   },
                 ]}

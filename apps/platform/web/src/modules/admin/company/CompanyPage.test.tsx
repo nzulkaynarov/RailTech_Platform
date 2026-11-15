@@ -1,6 +1,7 @@
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { pickRowAction, rowActionItems } from "../../../test/rowActions";
 
 import { usePanelsStore } from "../../../app/shell/panelsStore";
 import {
@@ -548,16 +549,14 @@ describe("Статьи расхода", () => {
     await openTab("charges");
     expect(await screen.findByText("Страхование груза")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Изменить: Фрахт · FCA" }));
+    await pickRowAction("Фрахт · FCA", "Изменить");
     const dialog = await screen.findByRole("region", { name: "Изменить статью расхода" });
     fireEvent.change(within(dialog).getByLabelText("Сумма"), { target: { value: "1800" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Сохранить" }));
     expect(await screen.findByText("Сохранено")).toBeInTheDocument();
     expect(readCompanyMock().charges[0]?.default_amount).toBe("1800");
 
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Удалить: Таможенное оформление · DAP" }),
-    );
+    await pickRowAction("Таможенное оформление · DAP", "Удалить");
     const confirm = await screen.findByRole("dialog", { name: /Удалить статью/ });
     fireEvent.click(within(confirm).getByRole("button", { name: "Удалить" }));
     await waitFor(() => {
@@ -579,9 +578,7 @@ describe("Шаблоны документов и писем", () => {
   it("образец платформы нельзя править — его копируют к себе", async () => {
     await openTab("templates");
     expect(await screen.findByText("Образец: договор поставки")).toBeInTheDocument();
-    fireEvent.click(
-      screen.getByRole("button", { name: "Скопировать к себе: Образец: договор поставки" }),
-    );
+    await pickRowAction("Образец: договор поставки", "Скопировать к себе");
     const dialog = await screen.findByRole("dialog", { name: /Скопировать/ });
     expect(within(dialog).getByLabelText("Название")).toHaveValue(
       "Образец: договор поставки (копия)",
@@ -591,7 +588,7 @@ describe("Шаблоны документов и писем", () => {
     expect(readCompanyMock().docTemplates.filter((t) => t.is_owned)).toHaveLength(3);
   });
 
-  it("у образца главная кнопка — «Просмотр» (только чтение, предпросмотр на каркасе вида), вторая — «Скопировать к себе»", async () => {
+  it("образец открывается по названию (только чтение, предпросмотр на каркасе вида), «Скопировать к себе» — в меню строки", async () => {
     const previews: { kind?: string }[] = [];
     server.use(
       http.post("*/admin/company/document-templates/preview", async ({ request }) => {
@@ -603,10 +600,8 @@ describe("Шаблоны документов и писем", () => {
     const view = await screen.findByRole("button", {
       name: "Просмотр: Образец: договор поставки",
     });
-    expect(view).toHaveClass("ant-btn-primary");
-    expect(
-      screen.getByRole("button", { name: "Скопировать к себе: Образец: договор поставки" }),
-    ).not.toHaveClass("ant-btn-primary");
+    expect(view).not.toHaveClass("ant-btn-primary");
+    expect(await rowActionItems("Образец: договор поставки")).toEqual(["Скопировать к себе"]);
 
     fireEvent.click(view);
     const dialog = await screen.findByRole("region", { name: "Образец платформы" });
@@ -656,7 +651,7 @@ describe("Шаблоны документов и писем", () => {
 
   it("редактор документа: подстановки, образец в рамке и предупреждение об неизвестной подстановке", async () => {
     await openTab("templates");
-    fireEvent.click(await screen.findByRole("button", { name: "Изменить: Акт приёмки" }));
+    await pickRowAction("Акт приёмки", "Изменить");
     const dialog = await screen.findByRole("region", { name: "Изменить шаблон документа" });
     const frame = await within(dialog).findByTitle("Образец документа по шаблону");
     await waitFor(() => {
@@ -678,7 +673,7 @@ describe("Шаблоны документов и писем", () => {
 
   it("неизвестная подстановка отмечена в списке «Подстановки» (C2A-G-5)", async () => {
     await openTab("templates");
-    fireEvent.click(await screen.findByRole("button", { name: "Изменить: Акт приёмки" }));
+    await pickRowAction("Акт приёмки", "Изменить");
     const dialog = await screen.findByRole("region", { name: "Изменить шаблон документа" });
 
     fireEvent.change(within(dialog).getByLabelText(/^Текст шаблона/), {
@@ -697,9 +692,7 @@ describe("Шаблоны документов и писем", () => {
 
   it("договор без обязательных блоков: окно называет недостающие, а не «проверьте поля» (C2A-G-5)", async () => {
     await openTab("templates");
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Изменить: Договор поставки (наш)" }),
-    );
+    await pickRowAction("Договор поставки (наш)", "Изменить");
     const dialog = await screen.findByRole("region", { name: "Изменить шаблон документа" });
 
     fireEvent.change(within(dialog).getByLabelText(/^Текст шаблона/), {
@@ -723,7 +716,7 @@ describe("Шаблоны документов и писем", () => {
 
   it("шаблон, по которому уже оформлены документы, удалить нельзя — слова, а не код", async () => {
     await openTab("templates");
-    fireEvent.click(await screen.findByRole("button", { name: "Удалить: Договор поставки (наш)" }));
+    await pickRowAction("Договор поставки (наш)", "Удалить");
     const dialog = await screen.findByRole("dialog", { name: /Удалить шаблон/ });
     fireEvent.click(within(dialog).getByRole("button", { name: "Удалить" }));
     expect(
@@ -738,7 +731,7 @@ describe("Шаблоны документов и писем", () => {
     await openTab("templates");
     fireEvent.click(await screen.findByRole("tab", { name: "Письма" }));
     expect(await screen.findByText("invoice_issued")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Изменить: quote_sent" }));
+    await pickRowAction("quote_sent", "Изменить");
     const dialog = await screen.findByRole("region", { name: "Изменить шаблон письма" });
     fireEvent.click(within(dialog).getByLabelText("Шаблон действует"));
     expect(
@@ -772,7 +765,7 @@ describe("Справочники «Расчёта» на общем ресурс
 
     fireEvent.click(screen.getByRole("link", { name: "Валюты" }));
     expect(await screen.findByText("Евро")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Скрыть: Евро" }));
+    await pickRowAction("Евро", "Скрыть");
     await waitFor(() => {
       expect(readCompanyMock().reference.currencies.find((c) => c.code === "EUR")?.is_active).toBe(
         false,
@@ -782,7 +775,7 @@ describe("Справочники «Расчёта» на общем ресурс
 
   it("строку, которую используют данные, удалить нельзя: сказано, что делать", async () => {
     await openTab("reference", "admin@demo.example");
-    fireEvent.click(await screen.findByRole("button", { name: "Удалить: Узбекистан" }));
+    await pickRowAction("Узбекистан", "Удалить");
     const dialog = await screen.findByRole("dialog", { name: /Удалить/ });
     fireEvent.click(within(dialog).getByRole("button", { name: "Удалить" }));
     expect(await screen.findByText(/можно только скрыть/)).toBeInTheDocument();
