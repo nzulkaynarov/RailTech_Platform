@@ -482,13 +482,17 @@ async def _link_outgoing(session: AsyncSession, outgoing: Document, letter: Lett
     )
 
 
-HANDOVER_LABELS = {HandoverKind.CLIENT_REQUEST: "заявка клиента", HandoverKind.MEMO: "служебная записка"}
+HANDOVER_LABELS = {
+    HandoverKind.CLIENT_REQUEST: "заявка клиента",
+    HandoverKind.PARTNER_APPLICATION: "подключение партнёра",
+    HandoverKind.MEMO: "служебная записка",
+}
 INTERNAL_KINDS = ("memo", "application", "report")
 
 
 async def _checked_handover(session: AsyncSession, handed_to: HandedTo, actor_id: int) -> HandedTo:
     """Объект «Передать в работу» (план 1.9). Служебную записку EDS проверяет сам: своя, внутренняя, номер из базы.
-    Заявку клиента проверяет BFF по CRM до вызова — у EDS нет данных CRM."""
+    Заявку клиента (CRM) и подключение партнёра (ERP) проверяет BFF до вызова — у EDS нет этих данных."""
     if handed_to.kind != HandoverKind.MEMO:
         return handed_to
     try:

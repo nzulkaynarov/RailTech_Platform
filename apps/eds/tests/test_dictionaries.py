@@ -215,3 +215,60 @@ async def test_tax_notice_still_urgent_from_the_seeded_dictionary(
 ) -> None:
     letter = await register(client, staff["registrar"], **{**TAX_NOTICE, "urgent": False})
     assert letter.json()["urgent"] is True
+
+
+async def test_file_import_is_one_transaction(
+    client: httpx.AsyncClient, staff: dict[str, Person], container: Container
+) -> None:
+    """План 2.9: строки файла применяются целиком или не применяются; ответ называет строки с ошибкой; в журнале — одна
+    запись с итогами."""
+    admin = staff["admin"].headers
+    url = f"{BASE}/receipt-methods/import"
+    bad = await client.post(
+        url,
+        json={
+            "rows": [
+                {"line": 2, "create": {"name": {"ru": "Фельдъегерь"}}},
+                {"line": 3, "code": "post", "patch": {"name": {"ru": "Почта России"}}},
+                {"line": 4, "create": {"name": {"ru": "фельдъегерь"}}},
+            ]
+        },
+        headers=admin,
+    )
+    assert bad.status_code == 200, bad.text
+    validate("DictionaryImportOut", bad.json())
+    assert bad.json()["applied"] is False
+    assert [(r["line"], r["reason"]) for r in bad.json()["rows"]] == [(2, None), (3, None), (4, "name_taken")]
+    names = {i["code"]: i["name"]["ru"] for i in await items(client, staff["registrar"], "receipt-methods")}
+    assert "Фельдъегерь" not in names.values(), "ошибка в одной строке — не записано ничего"
+    assert names["post"] != "Почта России"
+
+    good = await client.post(
+        url,
+        json={
+            "rows": [
+                {"line": 2, "create": {"name": {"ru": "Фельдъегерь", "en": "Courier service"}}},
+                {"line": 3, "code": "post", "patch": {"name": {"ru": "Почта России"}}},
+            ]
+        },
+        headers=admin,
+    )
+    assert good.status_code == 200, good.text
+    assert good.json()["applied"] is True
+    assert good.json()["rows"][0]["code"] == "courier_service"
+    names = {i["code"]: i["name"]["ru"] for i in await items(client, staff["registrar"], "receipt-methods")}
+    assert (names["courier_service"], names["post"]) == ("Фельдъегерь", "Почта России")
+    async with container.session_factory() as session:
+        actions = [
+            a for (a,) in (await session.execute(select(JournalEntry.action))).all() if a.startswith("dictionary.")
+        ]
+    assert actions == ["dictionary.imported"]
+
+    forbidden = await client.post(
+        url, json={"rows": [{"line": 2, "create": {"name": {"ru": "X"}}}]}, headers=staff["registrar"].headers
+    )
+    assert_error(forbidden, 403, "FORBIDDEN")
+    both = await client.post(
+        url, json={"rows": [{"line": 2, "code": "post", "create": {"name": {"ru": "Y"}}, "patch": {}}]}, headers=admin
+    )
+    assert both.status_code == 422

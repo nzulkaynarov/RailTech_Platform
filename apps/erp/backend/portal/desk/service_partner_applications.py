@@ -40,6 +40,7 @@ from portal.services.partner_contract import PartnerContractRenderError
 from portal.services.roles import PARTNER_DEFAULT_TOGGLEABLE
 
 from catalog.desk.audit import record
+from core.models import Country
 from core.models.notifications import EmailLog
 
 ROLE = RelationshipRole.PARTNER
@@ -178,6 +179,7 @@ def _app_dict(app: PartnerApplication, deliveries: dict[str, str]) -> dict:
         "id": app.pk,
         "source": app.source,
         "status": app.status,
+        "source_ref": app.source_ref,
         "kind": app.kind,
         "company_name": app.company_name,
         "country": app.country.code if app.country else None,
@@ -219,6 +221,41 @@ def list_applications(status_filter: str | None = None) -> dict:
         "items": [_app_dict(app, deliveries) for app in apps],
         "pending_count": pending_count,
     }
+
+
+@transaction.atomic
+def create_from_letter(data: dict, user) -> dict:
+    """«Передать в работу» по входящему письму (план 1.9): сотрудник заводит заявку кандидата сам.
+
+    Согласия кандидата на обработку данных ещё нет (`consent=False`): дальше — тот же договорный шлюз, кандидат
+    соглашается с проектом договора; одобрение без согласия — только с причиной в журнале (FX-1)."""
+    country_code = (data.get("country") or "UZ").strip().upper()
+    app = PartnerApplication.objects.create(
+        source=PartnerApplicationSource.LETTER,
+        source_ref=data["source_ref"].strip(),
+        country=Country.objects.filter(code__iexact=country_code).first(),
+        company_name=data["company_name"].strip(),
+        inn=(data.get("inn") or "").strip(),
+        kind=data.get("kind") or "supplier",
+        categories_description=data["categories_description"].strip(),
+        contact_name=data["contact_name"].strip(),
+        email=data["email"].strip().lower(),
+        phone=(data.get("phone") or "").strip(),
+        language=data.get("language") or "ru",
+        consent=False,
+        status=PartnerApplicationStatus.SUBMITTED,
+    )
+    record(
+        user,
+        entity="partner_application",
+        instance=app,
+        event="created_from_letter",
+        action=f"Заявка заведена по письму {app.source_ref}",
+        before=None,
+        after={"status": app.status, "source_ref": app.source_ref},
+        detail=app.company_name,
+    )
+    return get_application(app.pk)
 
 
 def get_application(pk: int) -> dict:

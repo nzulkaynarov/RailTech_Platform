@@ -17,7 +17,13 @@ from typing import Any, Final
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.domain.errors import ConflictError, NotFoundError, Reason, ValidationFailedError
+from app.domain.errors import (
+    ConflictError,
+    DomainError,
+    NotFoundError,
+    Reason,
+    ValidationFailedError,
+)
 from app.domain.mail_types import (
     ACTIONS,
     CODE_PATTERN,
@@ -219,6 +225,74 @@ def _taken() -> ConflictError:
     return ConflictError("name is taken", reason=Reason.MAIL_TYPE_NAME_TAKEN)
 
 
+class _RejectedError(Exception):
+    """Загрузка с ошибкой в строке: откатить транзакцию целиком."""
+
+
+async def _create(
+    session: AsyncSession, who: Principal, data: dto.DictionaryItemIn, *, audited: bool = True
+) -> dto.DictionaryItem:
+    attrs = _clean_attrs(data.attrs, {})
+    if await repo.name_taken(session, data.name.ru):
+        raise _taken()
+    code = await _free_code(session, slug(data.name.en or data.name.ru))
+    row = MailType(
+        code=code,
+        name_ru=data.name.ru,
+        name_uz=data.name.uz,
+        name_en=data.name.en,
+        color=str(attrs["color"]),
+        icon=str(attrs["icon"]),
+        default_action=str(attrs["default_action"]),
+        letter_kind=attrs["letter_kind"],
+        active=True,
+        position=await repo.last_position(session) + POSITION_STEP,
+    )
+    session.add(row)
+    await session.flush()
+    if audited:
+        await audit.record(
+            session, who.actor, "dictionary.created", "mail_type", code, after={"kind": KIND}
+        )
+    return present(row, used=False)
+
+
+async def _update(
+    session: AsyncSession,
+    who: Principal,
+    code: str,
+    patch: dto.DictionaryItemPatch,
+    *,
+    audited: bool = True,
+) -> dto.DictionaryItem:
+    row = await repo.get_type(session, code, for_update=True)
+    if row is None:
+        raise NotFoundError("value not found")
+    action = "dictionary.updated"
+    if patch.active is not None and patch.active != row.active:
+        row.active = patch.active
+        action = "dictionary.shown" if row.active else "dictionary.hidden"
+    if patch.name is not None:
+        if await repo.name_taken(session, patch.name.ru, except_code=code):
+            raise _taken()
+        row.name_ru, row.name_uz, row.name_en = patch.name.ru, patch.name.uz, patch.name.en
+    if patch.attrs is not None:
+        base: dict[str, str | None] = {
+            "default_action": row.default_action,
+            "color": row.color,
+            "icon": row.icon,
+            "letter_kind": row.letter_kind,
+        }
+        clean = _clean_attrs(patch.attrs, base)
+        row.default_action = str(clean["default_action"])
+        row.color, row.icon = str(clean["color"]), str(clean["icon"])
+        row.letter_kind = clean["letter_kind"]
+    await session.flush()
+    if audited:
+        await audit.record(session, who.actor, action, "mail_type", code, after={"kind": KIND})
+    return present(row, used=code in await repo.used_codes(session))
+
+
 class MailTypesService:
     def __init__(self, sessions: async_sessionmaker[AsyncSession]) -> None:
         self._sessions = sessions
@@ -236,60 +310,66 @@ class MailTypesService:
         self, who: Principal, kind: str, data: dto.DictionaryItemIn
     ) -> dto.DictionaryItem:
         _spec(kind)
-        attrs = _clean_attrs(data.attrs, {})
         async with self._sessions() as session, session.begin():
-            if await repo.name_taken(session, data.name.ru):
-                raise _taken()
-            code = await _free_code(session, slug(data.name.en or data.name.ru))
-            row = MailType(
-                code=code,
-                name_ru=data.name.ru,
-                name_uz=data.name.uz,
-                name_en=data.name.en,
-                color=str(attrs["color"]),
-                icon=str(attrs["icon"]),
-                default_action=str(attrs["default_action"]),
-                letter_kind=attrs["letter_kind"],
-                active=True,
-                position=await repo.last_position(session) + POSITION_STEP,
-            )
-            session.add(row)
-            await session.flush()
-            await audit.record(
-                session, who.actor, "dictionary.created", "mail_type", code, after={"kind": KIND}
-            )
-            return present(row, used=False)
+            return await _create(session, who, data)
 
     async def update(
         self, who: Principal, kind: str, code: str, patch: dto.DictionaryItemPatch
     ) -> dto.DictionaryItem:
         _spec(kind)
         async with self._sessions() as session, session.begin():
-            row = await repo.get_type(session, code, for_update=True)
-            if row is None:
-                raise NotFoundError("value not found")
-            action = "dictionary.updated"
-            if patch.active is not None and patch.active != row.active:
-                row.active = patch.active
-                action = "dictionary.shown" if row.active else "dictionary.hidden"
-            if patch.name is not None:
-                if await repo.name_taken(session, patch.name.ru, except_code=code):
-                    raise _taken()
-                row.name_ru, row.name_uz, row.name_en = patch.name.ru, patch.name.uz, patch.name.en
-            if patch.attrs is not None:
-                base: dict[str, str | None] = {
-                    "default_action": row.default_action,
-                    "color": row.color,
-                    "icon": row.icon,
-                    "letter_kind": row.letter_kind,
-                }
-                clean = _clean_attrs(patch.attrs, base)
-                row.default_action = str(clean["default_action"])
-                row.color, row.icon = str(clean["color"]), str(clean["icon"])
-                row.letter_kind = clean["letter_kind"]
-            await session.flush()
-            await audit.record(session, who.actor, action, "mail_type", code, after={"kind": KIND})
-            return present(row, used=code in await repo.used_codes(session))
+            return await _update(session, who, code, patch)
+
+    async def import_rows(
+        self, who: Principal, kind: str, rows: list[dto.DictionaryImportRow]
+    ) -> dto.DictionaryImportOut:
+        """Загрузка файла (план 2.9): строки — теми же правилами, что по одной, в одной транзакции,
+        каждая в своей точке сохранения ради ошибок всех строк. Есть ошибка — откат всего и
+        `applied = false`; иначе одна запись аудита `dictionary.imported` с итогами."""
+        _spec(kind)
+        results: list[dto.DictionaryImportRowResult] = []
+        added = updated = 0
+        try:
+            async with self._sessions() as session, session.begin():
+                for row in rows:
+                    try:
+                        async with session.begin_nested():
+                            if row.create is not None:
+                                created = await _create(session, who, row.create, audited=False)
+                                code: str | None = created.code
+                                added += 1
+                            elif row.patch is not None and row.code is not None:
+                                await _update(session, who, row.code, row.patch, audited=False)
+                                code = row.code
+                                updated += 1
+                            else:
+                                continue
+                        results.append(dto.DictionaryImportRowResult(line=row.line, code=code))
+                    except DomainError as exc:
+                        reason = exc.details.get("reason")
+                        fields = exc.details.get("fields")
+                        field = str(fields[0]) if isinstance(fields, list) and fields else "name"
+                        results.append(
+                            dto.DictionaryImportRowResult(
+                                line=row.line,
+                                code=row.code,
+                                field=field,
+                                reason=str(reason) if reason else exc.code,
+                            )
+                        )
+                if any(r.reason for r in results):
+                    raise _RejectedError
+                await audit.record(
+                    session,
+                    who.actor,
+                    "dictionary.imported",
+                    "mail_type",
+                    KIND,
+                    after={"kind": KIND, "added": added, "updated": updated},
+                )
+        except _RejectedError:
+            return dto.DictionaryImportOut(applied=False, rows=results)
+        return dto.DictionaryImportOut(applied=True, rows=results)
 
     async def delete(self, who: Principal, kind: str, code: str) -> None:
         _spec(kind)

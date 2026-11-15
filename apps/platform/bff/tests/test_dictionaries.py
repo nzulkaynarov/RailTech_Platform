@@ -398,21 +398,68 @@ async def test_dry_run_shows_the_difference_and_writes_nothing(
     assert eds.made("PATCH", "dictionaries/letter-kinds/bank") == []
 
 
-async def test_apply_goes_through_the_usual_domain_actions(web: Web, eds: EdsFake) -> None:
+async def test_apply_is_one_domain_transaction(web: Web, eds: EdsFake) -> None:
+    """План 2.9: EDS применяет проверенные строки одним запросом — всё или ничего."""
+    eds.answer(
+        "POST",
+        "dictionaries/letter-kinds/import",
+        httpx.Response(
+            200,
+            json={
+                "applied": True,
+                "rows": [{"line": 2, "code": "bank"}, {"line": 3, "code": "pretenziya"}],
+            },
+        ),
+    )
     assert (await web.login(["ADMIN"])).status_code == 200
     response = await _upload(web, CSV, dry_run=False)
     assert response.status_code == 200, response.text
     assert response.json()["applied"] is True
-    [created] = eds.made("POST", "dictionaries/letter-kinds")
-    assert json.loads(created.read()) == {
-        "name": {"ru": "Претензия", "uz": "", "en": ""},
-        "attrs": {"urgent": False, "due_days": 10},
+    assert [r["code"] for r in response.json()["rows"]] == ["bank", "pretenziya"]
+    [sent] = eds.made("POST", "dictionaries/letter-kinds/import")
+    assert json.loads(sent.read()) == {
+        "rows": [
+            {
+                "line": 2,
+                "code": "bank",
+                "patch": {
+                    "name": {"ru": "Письмо банка", "uz": "Bank xati", "en": "Bank notice"},
+                    "attrs": {"urgent": True},
+                },
+            },
+            {
+                "line": 3,
+                "code": None,
+                "create": {
+                    "name": {"ru": "Претензия", "uz": "", "en": ""},
+                    "attrs": {"urgent": False, "due_days": 10},
+                },
+            },
+        ]
     }
-    [patched] = eds.made("PATCH", "dictionaries/letter-kinds/bank")
-    assert json.loads(patched.read()) == {
-        "name": {"ru": "Письмо банка", "uz": "Bank xati", "en": "Bank notice"},
-        "attrs": {"urgent": True},
-    }
+    assert eds.made("POST", "dictionaries/letter-kinds") == []
+    assert eds.made("PATCH", "dictionaries/letter-kinds/bank") == []
+
+
+async def test_domain_refusal_marks_the_row_and_nothing_is_written(web: Web, eds: EdsFake) -> None:
+    eds.answer(
+        "POST",
+        "dictionaries/letter-kinds/import",
+        httpx.Response(
+            200,
+            json={
+                "applied": False,
+                "rows": [
+                    {"line": 2, "code": "bank"},
+                    {"line": 3, "code": None, "field": "name", "reason": "name_taken"},
+                ],
+            },
+        ),
+    )
+    assert (await web.login(["ADMIN"])).status_code == 200
+    body = (await _upload(web, CSV, dry_run=False)).json()
+    assert (body["applied"], body["failed"]) == (False, 1)
+    assert body["rows"][1]["errors"] == [{"field": "name", "reason": "name_taken"}]
 
 
 async def test_bad_file_names_the_problem_and_only_admin_uploads(web: Web, eds: EdsFake) -> None:
@@ -515,3 +562,42 @@ async def test_close_reasons_are_read_by_any_employee_and_listed_for_admin(
     assert "close-reasons" in kinds
     assert (await web.login(["SUPPLY"])).status_code == 200
     assert (await web.client.get(f"{BASE}/close-reasons")).status_code == 200
+
+
+async def test_crm_types_are_imported_in_one_crm_transaction(
+    web: Web, be: Backends, eds: EdsFake
+) -> None:
+    """План 2.9: типы писем CRM — тоже одним запросом; причина CRM — под именем справочника."""
+    mail_item = {
+        "code": "official",
+        "name": {"ru": "Госорганы", "uz": "", "en": ""},
+        "attrs": {"default_action": "create_lead"},
+        "active": True,
+        "position": 10,
+        "used": None,
+    }
+    be.router.get(f"{CRM_URL}/api/v1/dictionaries/mail-types").mock(
+        return_value=httpx.Response(200, json={"items": [mail_item]})
+    )
+    imported = be.router.post(f"{CRM_URL}/api/v1/dictionaries/mail-types/import").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "applied": False,
+                "rows": [
+                    {"line": 2, "code": None, "field": "name", "reason": "mail_type_name_taken"}
+                ],
+            },
+        )
+    )
+    assert (await web.login(["ADMIN"])).status_code == 200
+    response = await web.client.post(
+        f"{BASE}/mail-types/import",
+        params={"dry_run": "false"},
+        content="code;name_ru;name_uz;name_en;active;default_action\n;Жалоба;;;;create_lead\n".encode(),
+        headers={CSRF_HEADER: web.csrf, "Content-Type": "application/octet-stream"},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert (body["applied"], body["failed"], imported.call_count) == (False, 1, 1)
+    assert body["rows"][0]["errors"] == [{"field": "name", "reason": "name_taken"}]

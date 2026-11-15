@@ -8,7 +8,7 @@ import type { LeadRequestType } from "./leadRequestType";
 export interface HandoverIn {
   kind: HandoverKind;
   /**
-   * Сделка CRM (заявка клиента) или id документа EDS
+   * Сделка CRM (заявка клиента), заявка ERP (подключение партнёра) или id документа EDS
    * @minLength 1
    * @maxLength 64
    */

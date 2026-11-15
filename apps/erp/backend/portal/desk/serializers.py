@@ -147,7 +147,10 @@ class DeskSupplierAccessRelationshipPatch(serializers.Serializer):
 
 class DeskPartnerApplicationListItem(serializers.Serializer):
     id = serializers.IntegerField()
-    source = serializers.ChoiceField(choices=["public", "client_cabinet"])
+    source = serializers.ChoiceField(choices=["public", "client_cabinet", "letter"])
+    source_ref = serializers.CharField(
+        allow_blank=True, required=False, help_text="Номер ВХ, если заявку завёл сотрудник по письму (план 1.9)"
+    )
     status = serializers.ChoiceField(choices=["submitted", "contract_sent", "candidate_agreed", "approved", "rejected"])
     kind = serializers.CharField(allow_blank=True)
     company_name = serializers.CharField()
@@ -187,6 +190,23 @@ class DeskPartnerApplicationDetail(DeskPartnerApplicationListItem):
     company_id = serializers.IntegerField(allow_null=True)
     applicant_contact_id = serializers.IntegerField(allow_null=True)
     reviewed_by = DeskRef(allow_null=True)
+
+
+class DeskPartnerApplicationCreateIn(serializers.Serializer):
+    """Заявка кандидата по входящему письму (план 1.9, «Передать в работу»): заводит сотрудник снабжения."""
+
+    company_name = serializers.CharField(max_length=255)
+    inn = serializers.CharField(max_length=32, allow_blank=True, required=False, default="")
+    country = serializers.CharField(max_length=2, required=False, default="UZ")
+    kind = serializers.ChoiceField(
+        choices=["manufacturer", "supplier", "principal", "other"], required=False, default="supplier"
+    )
+    categories_description = serializers.CharField(max_length=4000)
+    contact_name = serializers.CharField(max_length=255)
+    email = serializers.EmailField(max_length=254)
+    phone = serializers.CharField(max_length=32, allow_blank=True, required=False, default="")
+    language = serializers.ChoiceField(choices=["ru", "uz", "en"], required=False, default="ru")
+    source_ref = serializers.CharField(max_length=32, help_text="Номер входящего письма (ВХ)")
 
 
 class DeskPartnerApplicationListResponse(serializers.Serializer):
