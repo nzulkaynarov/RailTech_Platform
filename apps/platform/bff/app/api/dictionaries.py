@@ -85,6 +85,10 @@ OWNERS: Final[dict[str, Owner]] = {
     "delivery-basis": _CALC,
     # План 2.9: банки (МФО) — подстановка в диалоге счёта компании; файл ЦБ загружает администратор
     "banks": _CALC,
+    # План 3.8: категории (дерево — на своём экране, файлом — здесь) и производители каталога;
+    # код строки выдаёт ERP
+    "categories": _CALC,
+    "manufacturers": _CALC,
     "signing-kinds": _SIGNING,
     "close-reasons": _CLOSE_REASONS,
     "letter-kinds": _DOCUMENTS,

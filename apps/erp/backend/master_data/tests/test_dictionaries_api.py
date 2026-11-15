@@ -28,7 +28,7 @@ def _api(user):
 def test_catalog_lists_the_kinds_with_fields(operator):  # noqa: F811
     body = _api(operator).get(BASE).json()
     kinds = {d["kind"]: d for d in body["items"]}
-    assert list(kinds) == ["countries", "currencies", "units", "banks", "delivery-basis"]
+    assert list(kinds) == ["countries", "currencies", "units", "banks", "delivery-basis", "categories", "manufacturers"]
     assert kinds["currencies"]["codes"] == "given"
     assert [a["key"] for a in kinds["countries"]["attrs"]] == ["alpha3", "iso_numeric", "vat_rate"]
     assert {a["type"] for a in kinds["delivery-basis"]["attrs"]} == {"text", "boolean"}
@@ -97,3 +97,58 @@ def test_banks_by_mfo_with_swift(operator):  # noqa: F811
     assert (created.json()["code"], created.json()["attrs"]) == ("00014", {"swift": "DEMOUZ22"})
     listed = api.get(f"{BASE}/banks").json()["items"]
     assert [(r["code"], r["name"]["uz"]) for r in listed] == [("00014", "«Demo Bank» ATB")]
+
+
+@pytest.mark.django_db
+def test_categories_tree_round_trips_by_generated_codes(operator):  # noqa: F811
+    """План 3.8: категории — справочником с кодом от ERP; родитель — код другой категории, своё поддерево нельзя."""
+    api = _api(operator)
+    kinds = {d["kind"]: d for d in api.get(BASE).json()["items"]}
+    assert kinds["categories"]["codes"] == "generated"
+    tracking = next(a for a in kinds["categories"]["attrs"] if a["key"] == "tracking")
+    assert [o["value"] for o in tracking["options"]] == ["serial", "lot", "none"]
+
+    root = api.post(f"{BASE}/categories", {"name": {"ru": "Запчасти", "en": "Spare parts"}}, format="json")
+    assert root.status_code == 201, root.content
+    child = api.post(
+        f"{BASE}/categories",
+        {"name": {"ru": "Подшипники"}, "attrs": {"parent": root.json()["code"], "tracking": "lot"}},
+        format="json",
+    )
+    assert child.status_code == 201, child.content
+    assert child.json()["attrs"] == {"parent": root.json()["code"], "tracking": "lot", "requires_conformity_doc": False}
+    listed = {i["code"]: i for i in api.get(f"{BASE}/categories").json()["items"]}
+    assert listed[root.json()["code"]]["name"]["en"] == "Spare parts"
+
+    cycle = api.patch(
+        f"{BASE}/categories/{root.json()['code']}", {"attrs": {"parent": child.json()["code"]}}, format="json"
+    )
+    assert cycle.status_code == 422 and cycle.json()["details"]["fields"] == {"attrs.parent": "cycle"}
+    unknown = api.patch(f"{BASE}/categories/{child.json()['code']}", {"attrs": {"parent": "999999"}}, format="json")
+    assert unknown.json()["details"]["fields"] == {"attrs.parent": "unknown"}
+    bad = api.patch(f"{BASE}/categories/{child.json()['code']}", {"attrs": {"tracking": "weekly"}}, format="json")
+    assert bad.json()["details"]["fields"] == {"attrs.tracking": "invalid_value"}
+    to_root = api.patch(f"{BASE}/categories/{child.json()['code']}", {"attrs": {"parent": ""}}, format="json")
+    assert to_root.status_code == 200 and to_root.json()["attrs"]["parent"] == ""
+    assert api.patch(f"{BASE}/categories/abc", {"active": False}, format="json").status_code == 404
+
+
+@pytest.mark.django_db
+def test_manufacturers_with_country_and_unique_name(operator):  # noqa: F811
+    from core.models import Country
+
+    Country.objects.get_or_create(code="DE", defaults={"name": "Германия", "alpha2": "DE"})
+    api = _api(operator)
+    made = api.post(
+        f"{BASE}/manufacturers",
+        {"name": {"ru": "Siemens"}, "attrs": {"country": "de", "website": "https://siemens.com"}},
+        format="json",
+    )
+    assert made.status_code == 201, made.content
+    assert made.json()["attrs"] == {"country": "DE", "website": "https://siemens.com"}
+    twin = api.post(f"{BASE}/manufacturers", {"name": {"ru": "Siemens"}}, format="json")
+    assert twin.status_code == 409 and twin.json()["details"]["reason"] == "name_taken"
+    wrong = api.patch(
+        f"{BASE}/manufacturers/{made.json()['code']}", {"attrs": {"country": "XX", "website": "siemens"}}, format="json"
+    )
+    assert wrong.json()["details"]["fields"] == {"attrs.country": "unknown", "attrs.website": "invalid_value"}

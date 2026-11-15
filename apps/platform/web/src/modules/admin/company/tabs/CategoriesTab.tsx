@@ -16,11 +16,15 @@ import {
   useCreateCatalogCategory,
   useDeleteCatalogCategory,
   useListCatalogCategories,
+  useListDictionaries,
   useListCategoryRequests,
   useRejectCategoryRequest,
   useUpdateCatalogCategory,
 } from "../../../../shared/api/generated/platform-bff";
+import { canEdit, canSee } from "../../../../app/access";
+import { useAuth } from "../../../../app/auth/useAuth";
 import { StatusTag } from "../../../../shared/ui/StatusTag";
+import { DictionaryFile } from "../../docflow/DictionaryFile";
 import { useFormat } from "../../../../shared/lib/useFormat";
 import { ConfirmModal, FormModal, ListTable, QueryGate, TabHeader, ReadOnlyFence } from "../common";
 import { errorFields } from "../errors";
@@ -90,6 +94,13 @@ function CategoryTree() {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
   const query = useListCatalogCategories(CATEGORY_QUERY);
+  // Файл категорий (план 3.8) — общий механизм справочников: загружает администратор, как остальные списки.
+  const { me } = useAuth();
+  const readOnly = !canEdit(me, "admin");
+  const dictionaries = useListDictionaries({
+    query: { staleTime: 5 * 60_000, enabled: canSee(me, { resource: "admin" }) },
+  });
+  const fileOf = dictionaries.data?.items.find((d) => d.kind === "categories");
   const [editing, setEditing] = useState<{ node?: Node; parentId?: string | null } | null>(null);
   const [removing, setRemoving] = useState<Node | null>(null);
   const patchCache = (change: (items: CatalogCategory[]) => CatalogCategory[]) => {
@@ -124,7 +135,23 @@ function CategoryTree() {
           const roots = buildTree(items);
           return (
             <>
-              {items.length > 0 ? <div>{add}</div> : null}
+              {/* «Добавить» и файл категорий — одной строкой над деревом (план 3.8) */}
+              {items.length > 0 || fileOf ? (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {items.length > 0 ? add : null}
+                  {fileOf ? (
+                    <DictionaryFile
+                      dictionary={fileOf}
+                      readOnly={readOnly}
+                      onApplied={() => {
+                        void queryClient.invalidateQueries({
+                          queryKey: getListCatalogCategoriesQueryKey(),
+                        });
+                      }}
+                    />
+                  ) : null}
+                </div>
+              ) : null}
               {items.length === 0 ? (
                 <div className="pf-co-hint">
                   <h3 className="pf-co-title">{t("categories.empty.title")}</h3>

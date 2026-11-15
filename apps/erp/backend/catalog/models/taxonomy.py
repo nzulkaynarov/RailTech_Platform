@@ -2,6 +2,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from catalog.constants import TrackingClass
+from core.models.master_data import LocalizedNames
 from core.storage import category_icon_path, get_public_storage
 
 # ────────────────────────────────────────────
@@ -14,7 +15,7 @@ from core.storage import category_icon_path, get_public_storage
 # ────────────────────────────────────────────
 
 
-class Category(models.Model):
+class Category(LocalizedNames, models.Model):
     """
     Иерархическое дерево категорий товаров.
     Примеры: Запчасти → Подшипники → Роликовые подшипники
@@ -90,7 +91,7 @@ class Category(models.Model):
 # ────────────────────────────────────────────
 
 
-class Manufacturer(models.Model):
+class Manufacturer(LocalizedNames, models.Model):
     """
     Производитель/бренд товара (OEM).
 
@@ -134,6 +135,8 @@ class Manufacturer(models.Model):
         verbose_name=_("Активен"),
         help_text=_("Неактивные бренды скрыты в формах выбора"),
     )
+    # План 3.8: производители — справочником файлом, порядок как у остальных справочников.
+    sort_order = models.PositiveIntegerField(default=0, verbose_name=_("Порядок сортировки"))
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name=_("Дата создания"),
