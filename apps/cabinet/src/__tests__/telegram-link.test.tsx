@@ -63,7 +63,7 @@ describe('плашка «Подключите Telegram»', () => {
     window.localStorage.setItem(TELEGRAM_BANNER_SNOOZE_KEY, String(Date.now() + 60_000));
     signedIn();
     renderApp('/requests');
-    await screen.findByRole('heading', { level: 1, name: 'Запросы' });
+    await screen.findByRole('heading', { level: 1, name: 'Заявки' });
     expect(screen.queryByRole('region', { name: BANNER })).not.toBeInTheDocument();
   });
 
@@ -72,7 +72,7 @@ describe('плашка «Подключите Telegram»', () => {
     signedIn();
     const calls = recordTelegramCalls();
     renderApp('/requests');
-    await screen.findByRole('heading', { level: 1, name: 'Запросы' });
+    await screen.findByRole('heading', { level: 1, name: 'Заявки' });
     await vi.waitFor(() => expect(calls).toContain('GET /me/telegram'));
     expect(screen.queryByRole('region', { name: BANNER })).not.toBeInTheDocument();
   });
@@ -82,7 +82,7 @@ describe('плашка «Подключите Telegram»', () => {
     signedIn();
     const calls = recordTelegramCalls();
     renderApp('/requests');
-    await screen.findByRole('heading', { level: 1, name: 'Запросы' });
+    await screen.findByRole('heading', { level: 1, name: 'Заявки' });
     await vi.waitFor(() => expect(calls).toContain('GET /me/telegram'));
     expect(screen.queryByRole('region', { name: BANNER })).not.toBeInTheDocument();
   });
@@ -91,7 +91,7 @@ describe('плашка «Подключите Telegram»', () => {
     asMiniApp();
     const calls = recordTelegramCalls();
     renderApp('/requests');
-    await screen.findByRole('heading', { level: 1, name: 'Запросы' });
+    await screen.findByRole('heading', { level: 1, name: 'Заявки' });
     expect(screen.queryByRole('region', { name: BANNER })).not.toBeInTheDocument();
     expect(calls).toEqual([]);
   });
@@ -315,6 +315,6 @@ describe('ссылка из письма на Профиль → «Уведом�
     expect(router.state.location.hash).toBe('#notifications');
 
     await router.navigate('/');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Запросы' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Заявки' })).toBeInTheDocument();
   });
 });

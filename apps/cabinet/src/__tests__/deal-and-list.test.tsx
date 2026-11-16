@@ -30,7 +30,7 @@ describe('Сделка (deep-link бота)', () => {
     // Название сделки (deal.title) — под заголовком; внутренний id в тексте экрана не показывается.
     expect(await screen.findByText('Редукторы и муфты')).toBeInTheDocument();
     expect(screen.queryByText(/Проект 35/)).not.toBeInTheDocument();
-    for (const section of ['Запрос', 'Договор', 'Счета', 'Акты', 'Поставка', 'Документы']) {
+    for (const section of ['Заявка', 'Договор', 'Счета', 'Акты', 'Поставка', 'Документы']) {
       expect(await screen.findByRole('region', { name: section })).toBeInTheDocument();
     }
     expect(screen.queryByRole('region', { name: 'КП' })).not.toBeInTheDocument();

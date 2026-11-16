@@ -49,17 +49,17 @@ describe('⌘\\ / Ctrl+\\ — сайдбар (CAB-FIX-3, K12)', () => {
     renderApp('/catalog');
     await heading('Каталог');
     const side = screen.getByRole('navigation', { name: 'Разделы кабинета' });
-    expect(within(side).getByText('Запросы')).toBeInTheDocument();
+    expect(within(side).getByText('Заявки')).toBeInTheDocument();
 
     const search = screen.getByRole('searchbox');
     fireEvent.keyDown(search, { code: 'Backslash', key: '\\', ctrlKey: true });
-    expect(within(side).getByText('Запросы')).toBeInTheDocument();
+    expect(within(side).getByText('Заявки')).toBeInTheDocument();
 
     fireEvent.keyDown(document.body, { code: 'Backslash', key: 'ё', ctrlKey: true });
-    await waitFor(() => expect(within(side).queryByText('Запросы')).not.toBeInTheDocument());
-    expect(within(side).getByRole('link', { name: 'Запросы' })).toBeInTheDocument();
+    await waitFor(() => expect(within(side).queryByText('Заявки')).not.toBeInTheDocument());
+    expect(within(side).getByRole('link', { name: 'Заявки' })).toBeInTheDocument();
     fireEvent.keyDown(document.body, { code: 'Backslash', key: '\\', metaKey: true });
-    await waitFor(() => expect(within(side).getByText('Запросы')).toBeInTheDocument());
+    await waitFor(() => expect(within(side).getByText('Заявки')).toBeInTheDocument());
   });
 });
 
@@ -93,7 +93,7 @@ describe('«Копировать ссылку» (CAB-FIX-3, K15)', () => {
     const original = navigator.clipboard;
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
     renderApp('/requests');
-    await heading('Запросы');
+    await heading('Заявки');
     await user.click(screen.getByRole('button', { name: 'Копировать ссылку' }));
     expect(writeText).toHaveBeenCalledWith(`${window.location.origin}${window.location.pathname}`);
     expect(writeText.mock.calls[0][0]).not.toContain('#');
@@ -109,7 +109,7 @@ describe('«Копировать ссылку» (CAB-FIX-3, K15)', () => {
     asMiniApp({ initData: 'query_id=AAE&user=viewer&hash=signed' });
     window.localStorage.setItem('cabinet.language', 'ru');
     renderApp('/');
-    await heading('Запросы');
+    await heading('Заявки');
     expect(screen.getByText('Только просмотр: действия доступны контакту с правом подтверждать')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Копировать ссылку' })).not.toBeInTheDocument();
   });

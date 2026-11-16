@@ -251,7 +251,7 @@ test.describe('A. Вход и первое знакомство', () => {
     await snap(page, 'login');
     await page.getByRole('link', { name: 'Я новый клиент' }).click();
     await expect(page.getByRole('heading', { name: 'Я новый клиент' })).toBeVisible();
-    await page.getByRole('button', { name: 'Отправить запрос' }).click();
+    await page.getByRole('button', { name: 'Отправить заявку' }).click();
     await expect(page.getByText('Укажите, как к вам обращаться.')).toBeVisible();
     await snap(page, 'new-client-validation');
     await page.getByLabel('Как к вам обращаться').fill('FIX-51b Клиент');
@@ -261,13 +261,13 @@ test.describe('A. Вход и первое знакомство', () => {
     await page.getByLabel('Что нужно').fill(needText);
     await snap(page, 'new-client-form');
     // без галочки согласия запрос не уходит
-    await page.getByRole('button', { name: 'Отправить запрос' }).click();
+    await page.getByRole('button', { name: 'Отправить заявку' }).click();
     await expect(page.getByText(/Без согласия на обработку персональных данных/)).toBeVisible();
     await page.getByRole('checkbox').check();
     // защита формы CRM: быстрее min_fill_seconds после получения токена отправка отклоняется (form_too_fast)
     await page.waitForTimeout(4500);
-    await page.getByRole('button', { name: 'Отправить запрос' }).click();
-    await expect(page.getByRole('heading', { name: 'Спасибо! Запрос отправлен' })).toBeVisible();
+    await page.getByRole('button', { name: 'Отправить заявку' }).click();
+    await expect(page.getByRole('heading', { name: 'Спасибо! Заявка отправлена' })).toBeVisible();
     await snap(page, 'new-client-sent');
     await anon.close();
   });
@@ -619,13 +619,13 @@ test.describe('G. Новый запрос из каталога → отказ �
 
   step('G1. каталог → «В запрос» → запрос', async () => {
     await open('/catalog');
-    await expect(client.getByRole('button', { name: 'В запрос' }).first()).toBeVisible();
+    await expect(client.getByRole('button', { name: 'В заявку' }).first()).toBeVisible();
     // D-5 (FIX-51, исправлен в FIX-56): «В наличии» без «срок 0 дней»
     await expect(client.getByText('В наличии').first()).toBeVisible();
     expect(await client.locator('main').innerText(), 'у позиций «В наличии» нет «срок 0 дней»').not.toMatch(/срок\s*:?\s*0\s/i);
     await snap(client, 'catalog');
-    await client.getByRole('button', { name: 'В запрос' }).first().click();
-    await client.getByRole('button', { name: /^Оформить запрос/ }).click();
+    await client.getByRole('button', { name: 'В заявку' }).first().click();
+    await client.getByRole('button', { name: /^Оформить заявку/ }).click();
     await expect(client).toHaveURL(/\/requests\/new/);
     // C-9 (FIX-51, исправлен в FIX-56): черновик «Нового запроса» переживает уход со страницы (sessionStorage вкладки)
     const draftText = `FIX-51b [${state.tag}] запрос из каталога: 50 шт, доставка на станцию Навои`;
@@ -634,16 +634,16 @@ test.describe('G. Новый запрос из каталога → отказ �
     await client.getByLabel('Количество').first().fill('50');
     await client.waitForTimeout(500);
     await open('/requests');
-    await expect(client.getByRole('heading', { level: 1, name: 'Запросы' })).toBeVisible();
+    await expect(client.getByRole('heading', { level: 1, name: 'Заявки' })).toBeVisible();
     await open('/requests/new');
     await expect(client.getByLabel('Что нужно')).toHaveValue(draftText);
     await expect(client.getByLabel(/^Строка 1/)).toHaveValue('FIX-51b: болт М20 в черновике');
     await expect(client.getByLabel('Количество').first()).toHaveValue('50');
     await snap(client, 'request-new-draft-restored');
     await snap(client, 'request-new-from-catalog');
-    await client.getByRole('button', { name: 'Отправить запрос' }).click();
+    await client.getByRole('button', { name: 'Отправить заявку' }).click();
     await expect(client).toHaveURL(/\/requests\/\d+$/);
-    await expect(client.getByText(/Запрос Z-\d+ отправлен/)).toBeVisible();
+    await expect(client.getByText(/Заявка Z-\d+ отправлена/)).toBeVisible();
     // после отправки черновика нет
     expect(await client.evaluate(() => Object.keys(window.sessionStorage).filter((key) => key.includes('requestDraft'))), 'после отправки черновик стёрт').toEqual([]);
     await snap(client, 'request-detail-new');
@@ -726,9 +726,9 @@ test.describe('H. Компания, команда, профиль, языки',
 
   step('H2. профиль и переключение ru / uz / en на одном экране', async () => {
     for (const [code, label, heading] of [
-      ['uz', 'Oʻzbekcha', /So[ʻ'’]rovlar/],
+      ['uz', 'Oʻzbekcha', /Arizalar/],
       ['en', 'English', /^Requests$/],
-      ['ru', 'Русский', /^Запросы$/],
+      ['ru', 'Русский', /^Заявки$/],
     ] as const) {
       await open('/profile');
       await client.getByRole('button', { name: label }).click();
@@ -739,7 +739,7 @@ test.describe('H. Компания, команда, профиль, языки',
       await snap(client, `requests-${code}`);
       if (code === 'uz') {
         // D-4 (FIX-51, исправлен в FIX-56): даты в узбекском интерфейсе — «ДД.ММ.ГГГГ», а не «2026 M10 21»
-        await expectDatesLocalised(client, 'Soʻrovlar (uz)');
+        await expectDatesLocalised(client, 'Arizalar (uz)');
         await open('/invoices');
         await expect(client.getByRole('heading', { level: 1 })).toBeVisible();
         await expectDatesLocalised(client, 'Hisoblar (uz)');
@@ -763,7 +763,7 @@ test.describe('I. Права, изоляция, выход и повторный
     await viewer.goto(`${CABINET_URL}/auth/magic#token=${invite}`);
     if (await viewer.waitForURL(/\/requests/, { timeout: 8000 }).then(() => true, () => false)) await expectSignedInAs(viewer, colleague);
     else await signInByForm(viewer, colleague);
-    await expect(viewer.getByRole('link', { name: 'Новый запрос' })).toHaveCount(0);
+    await expect(viewer.getByRole('link', { name: 'Новая заявка' })).toHaveCount(0);
     await snap(viewer, 'requests-viewer-only');
     await viewer.goto(`${CABINET_URL}/profile`);
     await expect(viewer.getByText('Только просмотр', { exact: true })).toBeVisible();

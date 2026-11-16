@@ -25,7 +25,7 @@ test.describe('публичные экраны кабинета', () => {
     ).toBeVisible();
     await snap(page, '02-login-sent');
 
-    await page.getByRole('link', { name: 'Вы новый клиент? Оставьте запрос' }).click();
+    await page.getByRole('link', { name: 'Вы новый клиент? Оставьте заявку' }).click();
     await expect(page).toHaveURL(/\/new-client\?email=neznakomets%40example\.com$/);
     await expect(page.getByRole('heading', { level: 1, name: 'Я новый клиент' })).toBeVisible();
     await snap(page, '03-new-client');
@@ -33,7 +33,7 @@ test.describe('публичные экраны кабинета', () => {
 
   test('«Я новый клиент»: заявка отправлена — «Спасибо»', async ({ page }) => {
     await page.goto('/new-client');
-    await expect(page.getByRole('button', { name: 'Отправить запрос' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Отправить заявку' })).toBeEnabled();
     await page.getByLabel('Как к вам обращаться').fill('Алишер');
     await page.getByLabel('Компания (необязательно)').fill('ООО Рельс Демо');
     await page.getByLabel('Телефон').fill('+998 90 123 45 67');
@@ -42,8 +42,8 @@ test.describe('публичные экраны кабинета', () => {
     await page.getByRole('checkbox', { name: /Согласен/ }).check();
     await snap(page, '04-new-client-filled');
 
-    await page.getByRole('button', { name: 'Отправить запрос' }).click();
-    await expect(page.getByRole('heading', { level: 1, name: 'Спасибо! Запрос отправлен' })).toBeVisible();
+    await page.getByRole('button', { name: 'Отправить заявку' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Спасибо! Заявка отправлена' })).toBeVisible();
     await snap(page, '05-new-client-sent');
   });
 
@@ -51,7 +51,7 @@ test.describe('публичные экраны кабинета', () => {
     await page.addInitScript(() => window.localStorage.setItem('cabinet.language', 'uz'));
     await page.goto('/login/code');
     await expect(page.getByRole('heading', { level: 1, name: 'Kod bilan kirish' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Yangi mijozmisiz? Soʻrov qoldiring' })).toHaveAttribute('href', '/new-client');
+    await expect(page.getByRole('link', { name: 'Yangi mijozmisiz? Ariza qoldiring' })).toHaveAttribute('href', '/new-client');
     await snap(page, '06-login-sent-uz');
 
     await page.addInitScript(() => window.localStorage.setItem('cabinet.language', 'en'));
