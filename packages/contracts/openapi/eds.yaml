@@ -10,8 +10,9 @@ info:
     показа в маршруте одобрения. Интеграции с CRM и ERP — только шина `rt_bus` (`events/eds/*.v1.json`, `bus/subscriptions.yaml`).
 
     **Кто зовёт.** Только BFF Платформы во внутренней сети compose: у EDS нет внешнего маршрута в Caddy и своей формы входа
-    (решение архитектора 4 к волне 12). Машинный доступ — только приёмник шины `POST /bus/v1/events` (подпись HMAC,
-    `docs/architecture/CONTRACTS.md` §9.3; в этом файле не описан).
+    (решение архитектора 4 к волне 12). Машинный доступ — приёмник шины `POST /bus/v1/events` (подпись HMAC,
+    `docs/architecture/CONTRACTS.md` §9.3; в этом файле не описан) и чтение PDF отправленных писем для ERP
+    (`/api/v1/service/letters/{document_id}/pdf`, сервисный токен, ADR-0026).
 
     **Вход (решение лида L-C1-1, `docs/architecture/sso-token.md`, «Токен сотрудника для EDS»).** BFF берёт у CRM токен
     сотрудника `POST /api/v1/auth/sso/token {"aud": "eds"}` (JWT HS256, `PLATFORM_SSO_SECRET`, `iss=crm`, `aud=eds`,
@@ -2469,6 +2470,37 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
 
+  /api/v1/service/letters/{document_id}/pdf:
+    get:
+      tags: [documents]
+      operationId: downloadSentLetterPdfForErp
+      summary: PDF отправленного исходящего письма — для кабинета контрагента через ERP (ADR-0026)
+      description: |
+        Сервисный путь, не сотрудника: зовёт только ERP по `Authorization: Bearer <SERVICE_TOKEN_ERP_TO_EDS>` (до двух
+        действующих токенов для ротации). Отдаёт только итоговый PDF исходящего письма (`letter_out`) с номером ИСХ;
+        черновик, проект, другой вид документа или неготовый PDF — 404. Токен не задан или неверный — 401.
+      security:
+        - erpService: []
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '200':
+          description: PDF
+          headers:
+            ETag:
+              description: SHA-256 итогового PDF
+              schema:
+                type: string
+          content:
+            application/pdf:
+              schema:
+                type: string
+                contentMediaType: application/pdf
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/v1/documents/{document_id}/registration-request:
     post:
       tags: [documents]
@@ -3121,6 +3153,10 @@ paths:
 
 components:
   securitySchemes:
+    erpService:
+      type: http
+      scheme: bearer
+      description: Сервисный токен ERP → EDS (`SERVICE_TOKEN_ERP_TO_EDS`, до двух через запятую для ротации) — только чтение PDF отправленных писем (ADR-0026)
     edsAccess:
       type: http
       scheme: bearer

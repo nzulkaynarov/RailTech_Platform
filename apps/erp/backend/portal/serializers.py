@@ -762,6 +762,29 @@ class PortalDocumentSerializer(serializers.Serializer):
         return portal_documents.file_size(document)
 
 
+class PortalLetterSerializer(serializers.Serializer):
+    """`Letter` (ADR-0026): письмо компании — наше исходящее (ИСХ) или квитанция о её входящем (ВХ)."""
+
+    id = serializers.IntegerField(read_only=True)
+    direction = serializers.CharField(read_only=True)
+    state = serializers.CharField(read_only=True)
+    number = serializers.CharField(read_only=True)
+    subject = serializers.CharField(read_only=True)
+    date = serializers.DateField(read_only=True)
+    deal = serializers.SerializerMethodField()
+    reply_number = serializers.SerializerMethodField()
+    has_file = serializers.SerializerMethodField()
+
+    def get_deal(self, letter) -> Optional[dict]:
+        return DealRefSerializer(letter.deal).data if letter.deal is not None else None
+
+    def get_reply_number(self, letter) -> Optional[str]:
+        return letter.reply_number or None
+
+    def get_has_file(self, letter) -> bool:
+        return letter.direction == "out"
+
+
 class AttributeItemSerializer(serializers.Serializer):
     name = serializers.CharField()
     value = serializers.CharField()

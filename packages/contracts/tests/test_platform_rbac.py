@@ -43,6 +43,8 @@ VISA_FINANCE = "approvals.visa_finance"
 VISA_LEGAL = "approvals.visa_legal"
 #: Публичные операции EDS: без токена доступа и без права.
 PUBLIC = {("get", "/health"), ("post", "/api/v1/auth/sso/exchange")}
+#: Сервисные операции (не сотрудник): своя схема токена, без прав сотрудника (ADR-0026: ERP читает PDF писем).
+SERVICE = {("get", "/api/v1/service/letters/{document_id}/pdf"): "erpService"}
 # Любой активный сотрудник, сужение — внутри операции (P8b, SPEC-v3 §3.2a «Права»: исполнитель видит письмо своего
 # поручения без `letters.read`): карточка письма, ознакомление, действия исполнителя и автора резолюции, свои задачи.
 ANY_EMPLOYEE = {
@@ -257,6 +259,10 @@ def operations() -> list[tuple[str, str, dict[str, Any]]]:
 def test_every_eds_operation_declares_its_permissions(method: str, path: str, op: dict[str, Any]) -> None:
     if (method, path) in PUBLIC:
         assert op.get("security") == [], "публичная операция — без токена"
+        assert "x-rt-permissions" not in op
+        return
+    if (method, path) in SERVICE:
+        assert op.get("security") == [{SERVICE[(method, path)]: []}], "сервисная операция — только свой токен"
         assert "x-rt-permissions" not in op
         return
     assert "security" not in op, "защищённая операция — глобальный edsAccess"

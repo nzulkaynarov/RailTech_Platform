@@ -73,6 +73,7 @@ ERROR_CODES = (
     "FILE_TYPE_NOT_ALLOWED",
     "TECH_DOC_DATE_INVALID",
     "TECH_DOC_VALIDITY_RANGE_INVALID",
+    "LETTER_FILE_UNAVAILABLE",
 )
 
 #: Код по HTTP-статусу для ошибок, у которых своего кода нет (чужие исключения DRF и Django).

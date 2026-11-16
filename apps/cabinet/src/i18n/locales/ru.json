@@ -27,6 +27,7 @@
     "deliveries": "Поставки",
     "messages": "Сообщения",
     "documents": "Документы",
+    "letters": "Письма",
     "catalog": "Каталог",
     "company": "Компания",
     "team": "Команда",
@@ -781,6 +782,34 @@
         "size": "Размер",
         "deal": "Проект"
       }
+    },
+    "letters": {
+      "title": "Письма",
+      "filter": "Направление письма",
+      "direction": {
+        "out": "Наши",
+        "in": "Ваши"
+      },
+      "searchPlaceholder": "Номер или тема…",
+      "searchLabel": "Поиск писем",
+      "columns": {
+        "letter": "Письмо",
+        "direction": "Чьё",
+        "date": "Дата",
+        "state": "Статус",
+        "deal": "Проект"
+      },
+      "state": {
+        "registered": "Зарегистрировано",
+        "answered": "Отвечено",
+        "sent": "Отправлено"
+      },
+      "answeredBy": "Ответ: {{number}}",
+      "replyTo": "На ваше {{number}}",
+      "emptyTitle": "Писем пока нет",
+      "emptyText": "Здесь будут наши письма вам и номера, под которыми мы зарегистрировали ваши.",
+      "noMatchTitle": "Ничего не найдено",
+      "noMatchText": "Измените поиск или покажите все письма."
     },
     "catalog": {
       "title": "Каталог",

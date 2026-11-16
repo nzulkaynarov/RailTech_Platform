@@ -23,7 +23,8 @@ def operations() -> list[tuple[str, str, list[str]]]:
     for path, item in SPEC["paths"].items():
         for method in METHODS:
             operation = item.get(method)
-            if operation is not None and operation.get("security") != []:
+            # Публичные (`security: []`) и сервисные (своя схема токена, ADR-0026) операции — не про права сотрудника.
+            if operation is not None and "security" not in operation:
                 found.append((method, path, operation["x-rt-permissions"]))
     return found
 

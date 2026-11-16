@@ -792,6 +792,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/letters": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Письма компании — наши исходящие и квитанции о её письмах (модуль `letters`) */
+        get: operations["listLetters"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/letters/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Письмо компании */
+        get: operations["getLetter"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/letters/{id}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * PDF нашего исходящего письма (поток)
+         * @description Только исходящее (`direction = out`) с `has_file`. Файл входящего письма — у самой компании, здесь не отдаётся (404). Хранилище писем временно недоступно — 503 `LETTER_FILE_UNAVAILABLE`.
+         */
+        get: operations["getLetterFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/verify/{code}": {
         parameters: {
             query?: never;
@@ -2309,7 +2363,7 @@ export interface components {
          *     незнакомый пропускает.
          * @enum {string}
          */
-        ModuleCode: "catalog_requests" | "quotes" | "documents" | "contracts" | "invoices" | "acts" | "deliveries" | "company" | "team" | "profile" | "my_products" | "messages";
+        ModuleCode: "catalog_requests" | "quotes" | "documents" | "contracts" | "invoices" | "acts" | "deliveries" | "company" | "team" | "profile" | "my_products" | "messages" | "letters";
         /**
          * @description Вид уведомления (событие для контрагента): `quote_sent` — КП ждёт решения, `invoice_issued` — выставлен счёт,
          *     `payment_overdue` — срок оплаты счёта прошёл, `act_issued` — акт ждёт приёмки, `delivery_status_changed` — статус
@@ -2661,6 +2715,35 @@ export interface components {
             title: string;
             file_name?: string;
             size_bytes?: number;
+        };
+        /**
+         * @description `in` — письмо компании нам (квитанция о регистрации ВХ), `out` — наше письмо компании (ИСХ)
+         * @enum {string}
+         */
+        LetterDirection: "in" | "out";
+        /**
+         * @description `registered` — входящее зарегистрировано, `answered` — на него отправлен наш ответ, `sent` — исходящее отправлено
+         * @enum {string}
+         */
+        LetterState: "registered" | "answered" | "sent";
+        Letter: {
+            /** Format: int64 */
+            id: number;
+            direction: components["schemas"]["LetterDirection"];
+            state: components["schemas"]["LetterState"];
+            /** @description Номер ВХ (входящее) или ИСХ (исходящее) в нашем реестре */
+            number: string;
+            subject: string;
+            /**
+             * Format: date
+             * @description Дата получения (входящее) или отправки (исходящее)
+             */
+            date: string;
+            deal?: components["schemas"]["DealRef"] | null;
+            /** @description У входящего — номер нашего ответа (ИСХ); у исходящего — номер письма компании, на которое он отвечает (ВХ) */
+            reply_number?: string | null;
+            /** @description Есть PDF (`GET /letters/{id}/file`) — только у исходящего */
+            has_file: boolean;
         };
         /**
          * @description Вид официального документа для публичной проверки
@@ -4615,6 +4698,100 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             429: components["responses"]["TooManyRequests"];
+        };
+    };
+    listLetters: {
+        parameters: {
+            query?: {
+                direction?: components["schemas"]["LetterDirection"];
+                deal_id?: number;
+                /** @description Поиск по номеру и теме */
+                q?: string;
+                /** @description Начало периода (включительно) */
+                date_from?: string;
+                /** @description Конец периода (включительно) */
+                date_to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Письма компании сессии, новые сверху */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Letter"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    getLetter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Письмо */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Letter"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    getLetterFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PDF */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+            /** @description Файл временно недоступен — повторить позже */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     verifyDocument: {
