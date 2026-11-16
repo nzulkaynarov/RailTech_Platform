@@ -96,7 +96,15 @@ def _font_faces() -> str:
     return "\n".join(rules)
 
 
-def stylesheet(setup: PageSetup, letterhead: Letterhead, lang: Lang, *, page_numbers: bool, draft: bool = False) -> str:
+def stylesheet(
+    setup: PageSetup,
+    letterhead: Letterhead,
+    lang: Lang,
+    *,
+    page_numbers: bool,
+    draft: bool = False,
+    grid: bool = False,
+) -> str:
     top, right, bottom, left = setup.margins_mm
     size = "A4 landscape" if setup.orientation is Orientation.LANDSCAPE else "A4"
     family = FAMILY[letterhead.font]
@@ -118,6 +126,8 @@ def stylesheet(setup: PageSetup, letterhead: Letterhead, lang: Lang, *, page_num
         if draft
         else ""
     )
+    if grid:
+        return _grid_stylesheet(setup, letterhead, lang, page_numbers=page_numbers, draft_note=draft_note)
     return f"""
 {_font_faces()}
 @page {{
@@ -137,6 +147,76 @@ html {{ font-family: "{family}"; font-size: {setup.font_pt:g}pt; line-height: {s
 table.rt-grid th {{ border-bottom: 1.2pt solid {accent}; }}
 table.rt-totals tr.rt-em td {{ border-top: 1pt solid {accent}; color: {accent}; }}
 main.rt-body {{ padding-top: {setup.lead_mm}mm; }}
+"""
+
+
+def _grid_stylesheet(
+    setup: PageSetup, letterhead: Letterhead, lang: Lang, *, page_numbers: bool, draft_note: str
+) -> str:
+    """Сетка документа (стандарт документов §4): шапка со 2-й страницы и подвал из колонок — бегущие элементы."""
+    top, right, bottom, left = setup.margins_mm
+    size = "A4 landscape" if setup.orientation is Orientation.LANDSCAPE else "A4"
+    width = (297 if setup.orientation is Orientation.LANDSCAPE else 210) - left - right
+    family = FAMILY[letterhead.font]
+    before, middle, after = PAGE_OF[lang]
+    numbers = f'content: "{before}" counter(page) "{middle}" counter(pages) "{after}";' if page_numbers else ""
+    return f"""
+{_font_faces()}
+@page {{
+  size: {size};
+  margin: {top}mm {right}mm {bottom}mm {left}mm;
+  @top-center {{ content: element(rtrunhead); vertical-align: bottom; padding-bottom: 3mm; width: {width}mm; }}
+  @bottom-center {{ content: element(rtidfoot); vertical-align: top; padding-top: 1mm; width: {width}mm; }}
+{draft_note}}}
+@page :first {{ @top-center {{ content: none; }} }}
+{BASE_CSS}
+{GRID_CSS}
+html {{ font-family: "{family}"; font-size: {setup.font_pt:g}pt; line-height: {setup.line_height:g}; }}
+.rt-runhead, .rt-idfoot {{ width: {width}mm; font-family: "{family}"; }}
+.rt-pn::before {{ {numbers} }}
+.rt-accent, table.rt-grid th {{ color: {letterhead.accent}; }}
+table.rt-grid th {{ border-bottom: 1.2pt solid {letterhead.accent}; }}
+table.rt-totals tr.rt-em td {{ border-top: 1pt solid {letterhead.accent}; color: {letterhead.accent}; }}
+main.rt-body {{ padding-top: {setup.lead_mm}mm; }}
+"""
+
+
+#: Сетка документа (стандарт документов §4): зоны первой страницы, инфоблок, окно адресата, метки сгиба, подвал.
+GRID_CSS = """
+.rt-code { font-family: "RT Doc Mono", "RT Doc Sans"; font-size: 0.92em; }
+.rt-strong { font-weight: 700; color: #0f172a; }
+table.rt-id-top, table.rt-id-main { width: 100%; border-collapse: collapse; table-layout: fixed; }
+table.rt-id-top td, table.rt-id-main td { padding: 0; vertical-align: top; }
+td.rt-id-brand { height: 9mm; vertical-align: middle; }
+img.rt-id-logo { max-height: 12mm; max-width: 60mm; }
+td.rt-id-kind, td.rt-id-rhinfo, td.rt-id-right { width: 79mm; }
+td.rt-id-kind { font-size: 15pt; font-weight: 600; color: #475569; line-height: 1.1; vertical-align: bottom;
+                padding-bottom: 1.5mm; white-space: nowrap; letter-spacing: -0.1pt; }
+td.rt-id-left { padding-right: 11mm; }
+.rt-id-window { padding-top: 16mm; width: 85mm; }
+.rt-id-return { font-size: 6pt; color: #475569; border-bottom: 0.75pt solid #94a3b8; padding-bottom: 0.5mm;
+                margin-bottom: 1.5mm; white-space: nowrap; overflow: hidden; }
+.rt-id-addr { font-size: 9pt; line-height: 1.4; }
+table.rt-info { width: 100%; border-collapse: collapse; font-size: 8.25pt; line-height: 1.38; }
+table.rt-info-box { border-top: 1.5pt solid #475569; border-bottom: 0.75pt solid #cbd5e1; }
+table.rt-info-box tr:first-child > * { padding-top: 1.6mm; }
+table.rt-info-box tr:last-child > * { padding-bottom: 1.8mm; }
+table.rt-info th { text-align: left; font-weight: 600; width: 30mm; padding: 0 2mm 0 0; vertical-align: top; }
+table.rt-info td { padding: 0; vertical-align: top; }
+table.rt-id-contact { margin-top: 5mm; font-size: 8.6pt; }
+header.rt-id { margin-bottom: 7mm; }
+h1.rt-title { font-size: 13pt; font-weight: 600; color: #475569; margin: 0 0 3mm; }
+.rt-fold { position: fixed; left: -20mm; width: 4mm; height: 0; border-top: 0.75pt solid #94a3b8; }
+.rt-fold-1 { top: 85mm; }
+.rt-hole { top: 128.5mm; width: 2.5mm; }
+.rt-fold-2 { top: 190mm; }
+.rt-runhead { position: running(rtrunhead); }
+.rt-idfoot { position: running(rtidfoot); color: #475569; font-size: 6.5pt; line-height: 1.3; }
+.rt-pn { text-align: right; height: 3mm; font-size: 7pt; }
+table.rt-fcols { width: 100%; border-collapse: collapse; table-layout: fixed; border-top: 0.75pt solid #cbd5e1; }
+table.rt-fcols td { vertical-align: top; padding: 1.2mm 2.5mm 0 0; overflow-wrap: break-word; }
+table.rt-fcols td:nth-child(4) { width: 23%; }
+.rt-id-executor { margin-top: 8mm; font-size: 7.5pt; color: #475569; }
 """
 
 

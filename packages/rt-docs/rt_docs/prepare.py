@@ -17,7 +17,7 @@ from .errors import ContractsNotFoundError
 from .fonts import missing_glyphs
 from .html import HtmlOptions, build_html
 from .labels import NO_DATE, NO_NUMBER
-from .model import Density, DocumentMeta, Lang, Layout, Letterhead, Orientation, Tuning, Value
+from .model import Density, DocumentMeta, InfoRow, Lang, Layout, Letterhead, Orientation, Tuning, Value
 from .resolve import Node, plain_text, resolve
 
 
@@ -69,6 +69,15 @@ def checked_input(
     return clean_body, clean_blocks, catalog
 
 
+def _draft_row(row: InfoRow, lang: Lang) -> InfoRow:
+    """Проект: номер и дата инфоблока не печатаются (ADR-0024 п. 4)."""
+    if row.role == "number":
+        return replace(row, value=NO_NUMBER[lang], code=False)
+    if row.role == "date":
+        return replace(row, value=NO_DATE)
+    return row
+
+
 def prepare(
     body: Any,
     *,
@@ -95,6 +104,7 @@ def prepare(
             verification_code=None,
             verification_url=None,
             qr_caption=None,
+            info=tuple(_draft_row(row, lang) for row in (meta or DocumentMeta()).info),
         )
     resolved = resolve(clean_body, values=given, blocks=clean_blocks, catalog=catalog)
     page: Mapping[str, Any] = clean_body.get("page") or {}
@@ -114,6 +124,10 @@ def prepare(
             meta.verification_code or "",
             meta.verification_url or "",
             meta.qr_caption or "",
+            meta.kind_label or "",
+            letterhead.return_address or "",
+            *(part for row in (*meta.info, *meta.contact) for part in (row.label, row.value)),
+            *(part for col in letterhead.footer_columns for part in (col.title or "", *col.lines)),
         ]
     )
     warnings = resolved.warnings()

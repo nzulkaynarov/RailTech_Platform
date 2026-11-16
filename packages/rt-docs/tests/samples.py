@@ -8,7 +8,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Any
 
-from rt_docs.model import DocumentMeta, Letterhead, Logo, Money, Value
+from rt_docs.model import DocumentMeta, FooterColumn, InfoRow, Letterhead, Logo, Money, Value
 
 Node = dict[str, Any]
 
@@ -317,3 +317,33 @@ def specification() -> dict[str, Any]:
         ],
         orientation="landscape",
     )
+
+
+#: Сетка документа (стандарт §4, ДОК-2): бланк с подвалом из пяти колонок и обратным адресом, КП с инфоблоком.
+GRID_LETTERHEAD = Letterhead(
+    company_name="ООО «Тест»",
+    return_address="ООО «Тест» · ул. Садыка Азимова, 47/33 · 100000 Ташкент",
+    accent="#1e3a8a",
+    footer_columns=(
+        FooterColumn(title="ООО «Тест»", lines=("ул. Садыка Азимова, 47/33", "100000 Ташкент", "Узбекистан")),
+        FooterColumn(title="Руководство", lines=("Директор: А. Каримов", "Рег. № 1234567")),
+        FooterColumn(lines=("Тел.: +998 71 200-00-00", "info@test.uz", "test.uz")),
+        FooterColumn(title="АКБ «Банк-образец»", lines=("МФО 00000", "р/с 2020 8000 0000 0000 0001")),
+        FooterColumn(lines=("ИНН 300 000 001", "ОКЭД 46.90", "Код НДС 3260 1000 0001")),
+    ),
+)
+GRID_META = DocumentMeta(
+    title="КП № QT-2026-104",
+    kind_label="Коммерческое предложение",
+    number="QT-2026-104",
+    date=date(2026, 11, 17),
+    addressee=("АО «Пример Логистик»", "ул. Амира Темура, 108", "100084 Ташкент"),
+    addressee_strong=0,
+    info=(
+        InfoRow("КП №", "QT-2026-104", code=True, role="number"),
+        InfoRow("Дата", "17.11.2026", role="date"),
+        InfoRow("Действует до", "17.12.2026"),
+        InfoRow("Менеджер", "Д. Сафаров"),
+    ),
+    contact=(InfoRow("Контактное лицо", "Р. Ахмедов"),),
+)
