@@ -1,7 +1,9 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 
-import { botLink } from '@/app/links';
+import { botUrl } from '@/app/links';
+import { portalServer } from '@/mocks/server';
 import { CLIENT_ACCESS, deals } from '@/mocks/fixtures';
 import { chatLink, contextFromSearch } from '@/lib/messages';
 import { renderApp, signedIn } from '@/test/render';
@@ -46,10 +48,9 @@ describe('ссылки', () => {
   });
 
   it('бот — второй канал: имя с @ принимается, пустое — ссылок нет', () => {
-    vi.stubEnv('VITE_BOT_USERNAME', '@railtech_test_bot');
-    expect(botLink('web')).toBe(`${BOT}?start=web`);
-    vi.stubEnv('VITE_BOT_USERNAME', '');
-    expect(botLink('web')).toBeNull();
+    expect(botUrl('@railtech_test_bot', 'web')).toBe(`${BOT}?start=web`);
+    expect(botUrl('', 'web')).toBeNull();
+    expect(botUrl(null)).toBeNull();
   });
 });
 
@@ -126,7 +127,8 @@ describe('«Написать менеджеру» на экранах', () => {
     expect(within(page()).getByRole('link', { name: 'Написать в Telegram' })).toHaveAttribute('href', BOT);
     first.unmount();
 
-    vi.stubEnv('VITE_BOT_USERNAME', '');
+    // Имя бота приходит из CRM через ERP (`/operator`): пока бот не запускался — ссылки на бота нет.
+    portalServer.use(http.get('*/api/portal/v1/operator', () => HttpResponse.json({ name: 'RailTech', bot_username: null })));
     renderApp('/messages');
     await heading('Сообщения');
     expect(within(page()).queryByRole('link', { name: 'Написать в Telegram' })).not.toBeInTheDocument();

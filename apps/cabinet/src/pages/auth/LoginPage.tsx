@@ -6,7 +6,7 @@ import { Eye, Handshake, Mail, Send, Sparkles, UserCheck, UserPlus } from 'lucid
 
 import { loginErrorText } from '@/api/errors';
 import { requestMagicLink } from '@/api/portal';
-import { botLink, isPortalMock } from '@/app/links';
+import { useBotLink, isPortalMock } from '@/app/links';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,7 +27,7 @@ export function LoginPage() {
   const telegramHintId = useId();
   const [email, setEmail] = useState('');
   const me = useMe().data;
-  const telegramLink = botLink();
+  const telegramLink = useBotLink();
 
   const magicLink = useMutation({
     mutationFn: (address: string) => requestMagicLink(address),

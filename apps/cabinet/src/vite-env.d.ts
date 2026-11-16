@@ -6,7 +6,6 @@ interface ImportMetaEnv {
   /** `1` — MSW-мок портального API (только dev). */
   readonly VITE_PORTAL_MOCK?: string;
   /** Имя клиентского бота CRM без @. */
-  readonly VITE_BOT_USERNAME?: string;
   /** База CRM для формы «Я новый клиент» (`POST /api/v1/leads/web`); пусто вне dev — формы нет. */
   readonly VITE_CRM_URL?: string;
 }

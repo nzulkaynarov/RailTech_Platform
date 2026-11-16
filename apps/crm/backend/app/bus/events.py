@@ -50,6 +50,7 @@ MAIL_SENT = "uz.railtech.crm.mail.sent.v1"
 MAIL_FAILED = "uz.railtech.crm.mail.failed.v1"
 AI_POLICY_CHANGED = "uz.railtech.crm.ai_policy.changed.v1"
 COMPANY_PROFILE_CHANGED = "uz.railtech.crm.company_profile.changed.v1"
+BOT_CHANGED = "uz.railtech.crm.bot.changed.v1"
 PARTNER_CLIENT_RESOLVED = "uz.railtech.crm.partner.client_resolved.v1"
 CABINET_MESSAGE_SENT = "uz.railtech.crm.cabinet.message_sent.v1"
 
@@ -409,6 +410,19 @@ async def company_profile_changed(
         "actor": snapshots.actor_of(actor),
     }
     await _publish(session, COMPANY_PROFILE_CHANGED, data, "company_profile")
+
+
+async def bot_changed(session: AsyncSession, username: str, changed_at: datetime) -> None:
+    """Процесс бота узнал своё имя в Telegram (`getMe`): CRM — единственный источник имени
+    бота ансамбля; ERP держит проекцию для ссылки привязки и кабинета. В той же транзакции,
+    что запись состояния бота."""
+    _require_transaction(session)
+    data = {
+        "username": username.lstrip("@")[:32],
+        "changed_at": snapshots.utc(changed_at),
+        "actor": snapshots.actor_of(Actor.system()),
+    }
+    await _publish(session, BOT_CHANGED, data, "bot")
 
 
 _ADDRESS = re.compile(r"[^\s,:;<>]+@[^\s,:;<>]+")

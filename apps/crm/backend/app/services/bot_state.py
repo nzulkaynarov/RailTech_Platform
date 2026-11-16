@@ -22,6 +22,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bot.profile import ProfilePublish
+from app.bus.snapshots import db_now as snapshots_now
 from app.models.system import BotRuntimeState
 
 _ROW = 1
@@ -194,7 +195,22 @@ class BotStateService:
         stmt = insert(BotRuntimeState).values(id=_ROW, **values)
         stmt = stmt.on_conflict_do_update(index_elements=[BotRuntimeState.id], set_=values)
         async with self._sessions() as session, session.begin():
+            previous = (
+                await session.execute(
+                    select(BotRuntimeState.username)
+                    .where(BotRuntimeState.id == _ROW)
+                    .with_for_update()
+                )
+            ).scalar_one_or_none()
             await session.execute(stmt)
+            if username and username != previous:
+                # Имя бота — один источник для ансамбля: ERP (ссылка привязки, кабинет) узнаёт его
+                # отсюда, не из
+                # своей настройки. Пустое имя (бот не запущен, сбой) не публикуется — проекция
+                # хранит последнее.
+                from app.bus import events as bus_events
+
+                await bus_events.bot_changed(session, username, await snapshots_now(session))
 
     async def mark_stopped(self) -> None:
         """Штатная остановка: пульса больше не будет, API сразу видит «не отвечает»."""

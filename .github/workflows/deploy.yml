@@ -20,7 +20,7 @@
 # Секреты environment `production` (значений здесь нет): DEPLOY_SSH_KEY (приватный ключ деплоя),
 # DEPLOY_KNOWN_HOSTS (строка(и) known_hosts VPS 1: `ssh-keyscan -t ed25519 <host>`, сверенные владельцем).
 # Variables environment `production`: DEPLOY_HOST (публичный IP/имя VPS 1), DEPLOY_USER, CRM_DOMAIN, ERP_DOMAIN,
-# CABINET_DOMAIN, TELEGRAM_BOT_USERNAME (необязательно), PLATFORM_DOMAIN (необязательно: по умолчанию platform.railtech.uz; домен для
+# CABINET_DOMAIN, PLATFORM_DOMAIN (необязательно: по умолчанию platform.railtech.uz; домен для
 # smoke с раннера — сам домен читают Caddy и deploy.sh из /opt/rt/.env.prod на сервере). Секреты приложений лежат на сервере (/opt/rt/.env.prod), не здесь.
 #
 # workflow_run берёт этот файл из ветки по умолчанию (main): автозапуск начинает работать после слияния изменения.
@@ -307,14 +307,13 @@ jobs:
 
       - name: Образ rt-cabinet
         if: steps.already.outputs.skip != 'true'
-        # VITE_BOT_USERNAME и VITE_CRM_URL зашиваются в образ и берутся из variables environment production, поэтому образ
-        # собирается здесь, а не в job build (без environment этих значений нет).
+        # VITE_CRM_URL зашивается в образ и берутся из variables environment production, поэтому образ
+        # собирается здесь, а не в job build (без environment этого значения нет).
         uses: docker/build-push-action@v6
         with:
           context: apps/cabinet
           build-args: |
             VITE_API_URL=
-            VITE_BOT_USERNAME=${{ vars.TELEGRAM_BOT_USERNAME }}
             VITE_CRM_URL=https://${{ vars.CRM_DOMAIN }}
           push: true
           tags: ghcr.io/${{ needs.prepare.outputs.owner }}/rt-cabinet:${{ needs.prepare.outputs.sha }}

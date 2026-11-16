@@ -311,7 +311,7 @@ describe('вход с веба', () => {
     renderApp('/new-client');
     expect(await screen.findByRole('heading', { level: 1, name: 'Я новый клиент' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Отправить заявку' })).toBeInTheDocument();
-    const link = screen.getByRole('link', { name: 'Написать в Telegram' });
+    const link = await screen.findByRole('link', { name: 'Написать в Telegram' });
     expect(link.getAttribute('href')).toMatch(/^https:\/\/t\.me\/[^/?]+\?start=web$/);
   });
 

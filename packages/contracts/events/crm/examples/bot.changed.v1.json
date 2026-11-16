@@ -1,0 +1,19 @@
+{
+  "specversion": "1.0",
+  "id": "5b7d2c1e-9f3a-4e61-8c2d-1a4b6e8f0c93",
+  "source": "rt://crm",
+  "type": "uz.railtech.crm.bot.changed.v1",
+  "time": "2026-11-16T09:00:00Z",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/crm/bot.changed/v1",
+  "tenant": "railtech",
+  "correlationid": "7e2a9c4b-1d3f-4a5e-8b6c-2f0d4e6a8c1b",
+  "subject": "bot",
+  "data": {
+    "username": "railtech_demo_bot",
+    "changed_at": "2026-11-16T09:00:00Z",
+    "actor": {
+      "type": "system"
+    }
+  }
+}
