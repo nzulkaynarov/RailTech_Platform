@@ -434,6 +434,30 @@ def contract_world(db, client_company, other_company, client_contact, other_cont
     )
     world["verification"] = verification
 
+    # ── Письма компании в кабинете (ЛИД-8, ADR-0026): все направления и состояния, одно — с проектом ──────────────
+    from portal.models import LetterDirection, LetterState, PortalLetter
+
+    letter_rows = [
+        (LetterDirection.IN, LetterState.REGISTERED, "IN-201/26", None, ""),
+        (LetterDirection.IN, LetterState.ANSWERED, "IN-202/26", world["main"], "OUT-301/26"),
+        (LetterDirection.OUT, LetterState.SENT, "OUT-301/26", world["main"], "IN-202/26"),
+    ]
+    world["letters"] = [
+        PortalLetter.objects.create(
+            company=client_company,
+            deal=deal,
+            direction=direction,
+            state=state,
+            eds_id=uuid.uuid4(),
+            number=number,
+            subject=f"Письмо {number}",
+            date=TODAY,
+            registered_at=timezone.now(),
+            reply_number=reply,
+        )
+        for direction, state, number, deal, reply in letter_rows
+    ]
+
     # ── Журнал безопасности компании (J2-audit / J7) ──────────────────────────────────────────
     from portal.models import PortalSecurityEvent, record_portal_security_event
 

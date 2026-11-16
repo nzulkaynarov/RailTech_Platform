@@ -70,6 +70,9 @@ GET_CASES = {
     "/deliveries": lambda w: ["/deliveries"],
     "/documents": lambda w: ["/documents"],
     "/documents/{id}/file": lambda w: [f"/documents/{pk}/file" for pk in w["documents"].values()],
+    "/letters": lambda w: ["/letters", "/letters?direction=out", "/letters?q=IN-201"],
+    "/letters/{id}": lambda w: [f"/letters/{letter.pk}" for letter in w["letters"]],
+    "/letters/{id}/file": lambda w: [f"/letters/{w['letters'][-1].pk}/file"],
     "/catalog/categories": lambda w: ["/catalog/categories"],
     "/catalog": lambda w: ["/catalog"],
     "/catalog/{id}": lambda w: [f"/catalog/{w['product'].pk}"],
@@ -114,6 +117,7 @@ STATUS_FIELDS = {
     "/acts": ("status", "ActStatus"),
     "/deliveries": ("status", "DeliveryStatus"),
     "/documents": ("kind", "DocumentKind"),
+    "/letters": ("state", "LetterState"),
 }
 
 
@@ -221,6 +225,7 @@ JSON_GET_PATHS = sorted(
     set(GET_CASES)
     - {
         "/documents/{id}/file",
+        "/letters/{id}/file",
         "/catalog/{id}/documents/{doc_id}/file",
         "/company/partner-application/contract-pdf",
     }
@@ -329,6 +334,23 @@ def test_documents_file_endpoint(contract_world, portal_client, monkeypatch):
     assert response.status_code == 202
     assert response["Retry-After"].isdigit()
     assert response.json()["detail"] in error_codes()
+
+
+def test_letter_file_endpoint(contract_world, portal_client, monkeypatch):
+    """PDF исходящего — поток от EDS через ERP (ADR-0026); EDS недоступен — 503 с кодом из контракта."""
+    from portal.services import letters
+
+    sent = contract_world["letters"][-1]
+    monkeypatch.setattr(letters, "letter_pdf", lambda letter: b"%PDF-1.7 letter")
+    response = portal_client.get(api(f"/letters/{sent.pk}/file"))
+    assert response.status_code == 200 and response["Content-Type"] == "application/pdf"
+
+    def down(letter):
+        raise letters.LetterFileUnavailable("eds down")
+
+    monkeypatch.setattr(letters, "letter_pdf", down)
+    response = portal_client.get(api(f"/letters/{sent.pk}/file"))
+    assert response.status_code == 503 and response.json()["detail"] in error_codes()
 
 
 def test_catalog_document_file_endpoint(contract_world, portal_client):

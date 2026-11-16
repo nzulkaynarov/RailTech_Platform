@@ -110,6 +110,8 @@ x-eds-backend: &eds-backend
     # Секрет токена доступа EDS (обмен SSO-токена CRM выдаёт, каждый запрос проверяет) и общий секрет SSO-токена сотрудника.
     EDS_ACCESS_SECRET: ${EDS_ACCESS_SECRET:?set in .env}
     PLATFORM_SSO_SECRET: ${PLATFORM_SSO_SECRET:?set in .env}
+    # ERP читает PDF отправленных писем для кабинета (ADR-0026); пусто — сервисный путь закрыт (401), файла в кабинете нет.
+    SERVICE_TOKEN_ERP_TO_EDS: ${SERVICE_TOKEN_ERP_TO_EDS:-}
     # Свой ключ EDS (S0-9): чтение и запись только в бакет eds-private.
     S3_ENDPOINT: http://rustfs:9000
     S3_ACCESS_KEY: ${S3_EDS_ACCESS_KEY:?set in .env}
@@ -542,6 +544,9 @@ services:
       # Шина rt_bus (B5): секрет пары «ERP → platform-bff» (BFF Платформы — подписчик, подсказки SSE); доставку ведёт erp-worker
       RT_BUS_SECRET_ERP_PLATFORM_BFF: ${RT_BUS_SECRET_ERP_PLATFORM_BFF:-}
       PLATFORM_SSO_SECRET: ${PLATFORM_SSO_SECRET:?set in .env}
+      # Письма в кабинете (ADR-0026): PDF исходящего ERP читает у EDS по сервисному токену; пусто — файл письма 503.
+      SERVICE_TOKEN_ERP_TO_EDS: ${SERVICE_TOKEN_ERP_TO_EDS:-}
+      EDS_INTERNAL_URL: ${EDS_INTERNAL_URL:-http://eds-api:8000}
       # Переход CRM ↔ ERP по SSO; по умолчанию выключен (FIX-03), включает владелец после FIX-10/FIX-11.
       PLATFORM_SSO_ENABLED: ${PLATFORM_SSO_ENABLED:-false}
       # Шина rt_bus (B3, ADR-0014): подписчики и типы — packages/contracts/bus/subscriptions.yaml (в образе, RT_BUS_SUBSCRIPTIONS);

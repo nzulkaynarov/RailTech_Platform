@@ -163,6 +163,7 @@ class TestEntryPaths:
         assert me.json()["roles"] == ["partner"] and me.json()["modules"] == [
             "my_products",
             "catalog_requests",
+            "letters",
             "messages",
             "profile",
         ]
@@ -232,17 +233,18 @@ class TestMe:
         assert body["roles"] == ["partner"] and body["modules"] == [
             "my_products",
             "catalog_requests",
+            "letters",
             "messages",
             "profile",
         ]
 
     def test_partner_me_follows_enabled_modules_at_once(self, partner_client, supplier_company):
         CompanyRelationship.objects.filter(company=supplier_company).update(modules=["my_products"])
-        assert partner_client.get(ME).json()["modules"] == ["my_products", "messages", "profile"]
+        assert partner_client.get(ME).json()["modules"] == ["my_products", "letters", "messages", "profile"]
         CompanyRelationship.objects.filter(company=supplier_company).update(modules=[])
         body = partner_client.get(ME).json()
         # доступ открыт, разделы не настроены: остаются «Сообщения» и «Профиль» — они есть у любой сессии (CHAT-1)
-        assert body["roles"] == ["partner"] and body["modules"] == ["messages", "profile"]
+        assert body["roles"] == ["partner"] and body["modules"] == ["letters", "messages", "profile"]
 
     def test_client_and_partner_roles_and_modules_add_up(self, client_company, portal_client):
         relate(client_company, modules=["my_products"])
@@ -256,7 +258,7 @@ class TestMe:
         CompanyRelationship.objects.filter(company=supplier_company).update(
             modules=["quotes", "invoices", "my_products", "my_products"]
         )
-        assert partner_client.get(ME).json()["modules"] == ["my_products", "messages", "profile"]
+        assert partner_client.get(ME).json()["modules"] == ["my_products", "letters", "messages", "profile"]
         assert partner_client.get(PREFIX + "/quotes").status_code == 403
         assert partner_client.get(PREFIX + "/invoices").status_code == 403
 
@@ -297,6 +299,8 @@ ANY_ROLE_PATHS |= {"/verify/{code}"}
 ANY_ROLE_PATHS |= {"/auth/sessions", "/auth/sessions/revoke-others"}
 #: Публичная подача заявки «Стать партнёром» (ADR-0022, DECISIONS 2026-11-05, PART-ONBOARD).
 ANY_ROLE_PATHS |= {"/auth/partner-application"}
+#: Письма компании (ADR-0026, ЛИД-8): модуль `letters` есть у любой роли и не выключается (`ALWAYS_ON`).
+ANY_ROLE_PATHS |= {"/letters", "/letters/{id}", "/letters/{id}/file"}
 #: Справочник стран для онбординга и профиля (COUNTRY-MASK-1): доступен публично.
 ANY_ROLE_PATHS |= {"/countries"}
 #: Название оператора до входа (задача «Н3a2»): публично, без данных клиента.
