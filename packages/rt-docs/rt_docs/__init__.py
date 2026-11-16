@@ -23,6 +23,8 @@ from .markdown import body_to_markdown, markdown_to_body
 from .model import (
     Density,
     DocumentMeta,
+    FooterColumn,
+    InfoRow,
     Layout,
     Letterhead,
     Logo,
@@ -40,7 +42,9 @@ __all__ = [
     "Density",
     "DocumentMeta",
     "DocxResult",
+    "FooterColumn",
     "ImportResult",
+    "InfoRow",
     "Layout",
     "Letterhead",
     "LetterheadError",

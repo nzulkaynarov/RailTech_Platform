@@ -75,6 +75,24 @@ class Logo:
 
 
 @dataclass(frozen=True)
+class FooterColumn:
+    """Колонка подвала сетки документа (стандарт документов §4): заголовок полужирным и строки."""
+
+    lines: Sequence[str]
+    title: str | None = None
+
+
+@dataclass(frozen=True)
+class InfoRow:
+    """Пара «метка — значение» инфоблока. `code` — значение моноширинным; `role` — номер и дата заменяются в проекте."""
+
+    label: str
+    value: str
+    code: bool = False
+    role: Literal["", "number", "date"] = ""
+
+
+@dataclass(frozen=True)
 class Letterhead:
     """Бланк компании: имя, строки реквизитов, подвал, логотип, акцентный цвет и семейство шрифта.
 
@@ -87,6 +105,9 @@ class Letterhead:
     logo: Logo | None = None
     accent: str = "#15294d"
     font: Literal["sans", "serif"] = "sans"
+    # Сетка документа (стандарт §4): подвал из колонок на каждой странице и строка обратного адреса над адресатом.
+    footer_columns: Sequence[FooterColumn] = ()
+    return_address: str | None = None
 
     def __post_init__(self) -> None:
         if not _HEX.match(self.accent):
@@ -111,6 +132,12 @@ class DocumentMeta:
     # Подпись QR вместо «Проверка подлинности документа» — для QR, ведущего не на проверку, а на онлайн-версию
     # документа (КП): ссылка с токеном тогда не печатается, её заменяет QR (план 2.6).
     qr_caption: str | None = None
+    # Сетка документа (стандарт документов §4): включается видом документа. Без него — прежняя шапка бланка.
+    kind_label: str | None = None  # «Коммерческое предложение», «Счёт на оплату» — крупно справа
+    info: Sequence[InfoRow] = ()  # инфоблок справа; первые две строки — мини-инфоблок со 2-й страницы
+    contact: Sequence[InfoRow] = ()  # «Контактное лицо», «Почта» — под адресатом
+    addressee_strong: int | None = None  # строка адресата полужирным (обычно организация)
+    window: bool = True  # адресат в окне конверта; договор и спецификация — без окна
 
 
 @dataclass(frozen=True)

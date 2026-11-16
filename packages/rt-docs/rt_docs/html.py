@@ -31,7 +31,7 @@ from .labels import (
     VERIFY_QR_NOTE,
     number_line,
 )
-from .model import DocumentMeta, Lang, Layout, Letterhead
+from .model import DocumentMeta, FooterColumn, InfoRow, Lang, Layout, Letterhead, Orientation
 from .resolve import Node
 
 LOGO_URL = "rtdocs:logo"
@@ -315,6 +315,73 @@ def _letter_meta(w: _Writer, meta: DocumentMeta, layout: Layout) -> None:
     w.w("</td></tr></table>")
 
 
+def identity_grid(meta: DocumentMeta, layout: Layout) -> bool:
+    """Сетка документа (стандарт документов §4) — у письма и коммерческих документов, когда задан вид документа."""
+    return bool(meta.kind_label) and layout is not Layout.INTERNAL
+
+
+def _info_rows(w: _Writer, rows: Sequence[InfoRow], css_class: str = "rt-info") -> None:
+    w.w(f'<table class="{css_class}">')
+    for row in rows:
+        value = f'<span class="rt-code">{e(row.value)}</span>' if row.code else e(row.value)
+        w.w(f'<tr><th scope="row">{e(row.label)}</th><td>{value}</td></tr>')
+    w.w("</table>")
+
+
+def _brand(w: _Writer, letterhead: Letterhead) -> None:
+    if letterhead.logo is not None:
+        w.w(f'<img class="rt-id-logo" src="{LOGO_URL}" alt="">')
+    else:
+        w.w(f'<div class="rt-company">{e(letterhead.company_name)}</div>')
+
+
+def _identity_head(w: _Writer, letterhead: Letterhead, meta: DocumentMeta) -> None:
+    """Первая страница: знак слева и вид документа справа; ниже — окно адресата слева, инфоблок справа."""
+    w.w('<header class="rt-id"><table class="rt-id-top"><tr><td class="rt-id-brand">')
+    _brand(w, letterhead)
+    w.w(f'</td><td class="rt-id-kind">{e(meta.kind_label or "")}</td></tr></table>')
+    w.w('<table class="rt-id-main"><tr><td class="rt-id-left">')
+    if meta.window and (meta.addressee or letterhead.return_address):
+        w.w('<div class="rt-id-window">')
+        if letterhead.return_address:
+            w.w(f'<div class="rt-id-return">{e(letterhead.return_address)}</div>')
+        for index, line in enumerate(meta.addressee):
+            strong = " rt-strong" if index == meta.addressee_strong else ""
+            w.w(f'<div class="rt-id-addr{strong}">{e(line)}</div>')
+        w.w("</div>")
+    if meta.contact:
+        _info_rows(w, meta.contact, "rt-info rt-id-contact")
+    w.w('</td><td class="rt-id-right">')
+    if meta.info:
+        _info_rows(w, meta.info, "rt-info rt-info-box")
+    w.w("</td></tr></table></header>")
+
+
+def _identity_running(w: _Writer, letterhead: Letterhead, meta: DocumentMeta) -> None:
+    """Бегущие элементы сетки: шапка со 2-й страницы (знак и первые две строки инфоблока) и подвал из колонок."""
+    w.w('<div class="rt-runhead"><table class="rt-id-top"><tr><td class="rt-id-brand">')
+    _brand(w, letterhead)
+    w.w('</td><td class="rt-id-rhinfo">')
+    _info_rows(w, meta.info[:2], "rt-info rt-info-box")
+    w.w("</td></tr></table></div>")
+    columns = list(letterhead.footer_columns)
+    if not columns and letterhead.footer:
+        columns = [FooterColumn(lines=tuple(letterhead.footer))]
+    w.w('<div class="rt-idfoot">')
+    if w.options.page_numbers:
+        w.w('<div class="rt-pn"></div>')
+    if columns:
+        w.w('<table class="rt-fcols"><tr>')
+        for column in columns[:5]:
+            w.w("<td>")
+            if column.title:
+                w.w(f'<div class="rt-strong">{e(column.title)}</div>')
+            w.w("".join(f"<div>{e(line)}</div>" for line in column.lines))
+            w.w("</td>")
+        w.w("</tr></table>")
+    w.w("</div>")
+
+
 def _render_verification_block(w: _Writer, meta: DocumentMeta) -> None:
     """Блок проверки подлинности с QR-кодом на последней странице (ADR-0024 п. 5)."""
     lang = w.lang
@@ -349,25 +416,46 @@ def build_html(
     layout = setup.layout
     title = meta.title or letterhead.company_name
     w.w(f'<!DOCTYPE html><html lang="{_LANG_ATTR[lang]}"><head><meta charset="utf-8"><title>{e(title)}</title>')
-    w.w(f"<style>{stylesheet(setup, letterhead, lang, page_numbers=options.page_numbers, draft=options.draft)}")
+    css = stylesheet(
+        setup,
+        letterhead,
+        lang,
+        page_numbers=options.page_numbers,
+        draft=options.draft,
+        grid=identity_grid(meta, layout),
+    )
+    w.w(f"<style>{css}")
     w.w(".rt-docno-inline { string-set: rtdocref content(); }</style></head>")
     w.w(f'<body class="{_LAYOUT_CLASS[layout]}">')
     if options.draft:
         # position: fixed — WeasyPrint повторяет знак на каждой странице.
         w.w(f'<div class="rt-draft-mark">{e(DRAFT_MARK[lang])}</div>')
-    if layout is Layout.COMMERCIAL and letterhead.footer:
-        # Бегущий подвал — в начале потока: значение действует с первой страницы до последней.
-        w.w(f'<div class="rt-footer">{"<br>".join(e(line) for line in letterhead.footer)}</div>')
-    _letterhead(w, letterhead, meta, layout)
-    _letter_meta(w, meta, layout)
+    grid = identity_grid(meta, layout)
+    if grid:
+        # Бегущие элементы — в начале потока: действуют с первой страницы (шапка — со второй, правило @page :first).
+        _identity_running(w, letterhead, meta)
+        if setup.orientation is Orientation.PORTRAIT:
+            # Метки сгиба 105 и 210 мм и дырокола 148,5 мм на левом краю каждой страницы (position: fixed).
+            w.w('<div class="rt-fold rt-fold-1"></div><div class="rt-fold rt-hole"></div>')
+            w.w('<div class="rt-fold rt-fold-2"></div>')
+        _identity_head(w, letterhead, meta)
+    else:
+        if layout is Layout.COMMERCIAL and letterhead.footer:
+            # Бегущий подвал — в начале потока: значение действует с первой страницы до последней.
+            w.w(f'<div class="rt-footer">{"<br>".join(e(line) for line in letterhead.footer)}</div>')
+        _letterhead(w, letterhead, meta, layout)
+        _letter_meta(w, meta, layout)
     if meta.title:
         w.w(f'<h1 class="rt-title">{e(meta.title)}</h1>')
     w.w('<main class="rt-body">')
     w.blocks(content)
     if not options.draft and (meta.verification_code or meta.verification_url):
         _render_verification_block(w, meta)
+    if grid and meta.executor:
+        # В сетке подвал занят колонками: «Исполнитель» — последней строкой потока, над подвалом последней страницы.
+        w.w(f'<div class="rt-id-executor">{e(EXECUTOR[lang] + meta.executor)}</div>')
     w.w("</main>")
-    if meta.executor and layout is not Layout.COMMERCIAL:
+    if meta.executor and layout is not Layout.COMMERCIAL and not grid:
         # Бегущий элемент в конце потока: появляется только на последней странице (внизу слева).
         w.w(f'<div class="rt-executor">{e(EXECUTOR[lang] + meta.executor)}</div>')
     w.w("</body></html>")
