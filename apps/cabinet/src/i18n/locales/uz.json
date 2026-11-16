@@ -27,6 +27,7 @@
     "deliveries": "Yetkazib berish",
     "messages": "Xabarlar",
     "documents": "Hujjatlar",
+    "letters": "Xatlar",
     "catalog": "Katalog",
     "company": "Kompaniya",
     "team": "Jamoa",
@@ -769,6 +770,34 @@
         "size": "Hajmi",
         "deal": "Loyiha"
       }
+    },
+    "letters": {
+      "title": "Xatlar",
+      "filter": "Xat yoʻnalishi",
+      "direction": {
+        "out": "Bizniki",
+        "in": "Sizniki"
+      },
+      "searchPlaceholder": "Raqam yoki mavzu…",
+      "searchLabel": "Xatlarni qidirish",
+      "columns": {
+        "letter": "Xat",
+        "direction": "Kimdan",
+        "date": "Sana",
+        "state": "Holat",
+        "deal": "Loyiha"
+      },
+      "state": {
+        "registered": "Roʻyxatga olingan",
+        "answered": "Javob berilgan",
+        "sent": "Yuborilgan"
+      },
+      "answeredBy": "Javob: {{number}}",
+      "replyTo": "Sizning {{number}} xatingizga",
+      "emptyTitle": "Hozircha xatlar yoʻq",
+      "emptyText": "Bu yerda bizning xatlarimiz va sizning xatlaringiz roʻyxatga olingan raqamlar koʻrinadi.",
+      "noMatchTitle": "Hech narsa topilmadi",
+      "noMatchText": "Qidiruvni oʻzgartiring yoki barcha xatlarni koʻrsating."
     },
     "catalog": {
       "title": "Katalog",

@@ -1366,6 +1366,28 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/service/letters/{document_id}/pdf": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * PDF отправленного исходящего письма — для кабинета контрагента через ERP (ADR-0026)
+     * @description Сервисный путь, не сотрудника: зовёт только ERP по `Authorization: Bearer <SERVICE_TOKEN_ERP_TO_EDS>` (до двух
+     *     действующих токенов для ротации). Отдаёт только итоговый PDF исходящего письма (`letter_out`) с номером ИСХ;
+     *     черновик, проект, другой вид документа или неготовый PDF — 404. Токен не задан или неверный — 401.
+     */
+    get: operations["downloadSentLetterPdfForErp"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/documents/{document_id}/registration-request": {
     parameters: {
       query?: never;
@@ -5678,6 +5700,32 @@ export interface operations {
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
       409: components["responses"]["Conflict"];
+    };
+  };
+  downloadSentLetterPdfForErp: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_id: components["parameters"]["DocumentId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description PDF */
+      200: {
+        headers: {
+          /** @description SHA-256 итогового PDF */
+          ETag?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/pdf": string;
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      404: components["responses"]["NotFound"];
     };
   };
   requestDocumentRegistration: {

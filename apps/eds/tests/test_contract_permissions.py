@@ -51,6 +51,9 @@ def test_routes_match_contract() -> None:
             actual = route_permissions(route)
             if operation.get("security") == []:
                 assert actual is None, f"{method} {path}: в контракте открытый маршрут, в сервисе проверяются права"
+            elif operation.get("security") is not None:
+                # Сервисный маршрут (свой токен системы, ADR-0026): прав сотрудника нет.
+                assert actual is None and declared is None, f"{method} {path}: сервисный маршрут без прав сотрудника"
             else:
                 assert declared is not None, f"{method} {path}: в eds.yaml нет x-rt-permissions"
                 assert actual is not None, f"{method} {path}: в сервисе нет require_permission"

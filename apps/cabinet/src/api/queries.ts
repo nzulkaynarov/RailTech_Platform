@@ -19,6 +19,7 @@ export const keys = {
   acts: ['acts'] as const,
   deliveries: ['deliveries'] as const,
   documents: (params: portal.DocumentsQuery = {}) => ['documents', params] as const,
+  letters: (params: portal.LettersQuery = {}) => ['letters', params] as const,
   catalog: (params: portal.CatalogQuery) => ['catalog', params] as const,
   catalogCategories: ['catalog', 'categories'] as const,
   catalogItem: (id: number) => ['catalog', 'item', id] as const,
@@ -88,6 +89,8 @@ export const useDeliveries = ({ enabled = true }: ListOptions = {}) =>
   useQuery({ queryKey: keys.deliveries, queryFn: portal.listDeliveries, enabled });
 export const useDocuments = (params: portal.DocumentsQuery = {}) =>
   useQuery({ queryKey: keys.documents(params), queryFn: () => portal.listDocuments(params) });
+export const useLetters = (params: portal.LettersQuery = {}) =>
+  useQuery({ queryKey: keys.letters(params), queryFn: () => portal.listLetters(params) });
 export const useCatalogCategories = () =>
   useQuery({ queryKey: keys.catalogCategories, queryFn: portal.listCatalogCategories });
 export const useCatalog = (params: portal.CatalogQuery, enabled = true) =>

@@ -251,6 +251,10 @@ def _secret_list(name: str) -> list[str]:
 
 # Сервисный токен направления CRM → ERP (OpenAPI erp-integration.yaml).
 SERVICE_TOKEN_CRM_TO_ERP = _secret_list("SERVICE_TOKEN_CRM_TO_ERP")
+# ERP → EDS (ADR-0026): PDF отправленных исходящих писем для кабинета. Необязательный: пусто — список писем работает,
+# файл письма отвечает 503 `LETTER_FILE_UNAVAILABLE`. Первое значение — текущее (EDS принимает оба при ротации).
+SERVICE_TOKEN_ERP_TO_EDS = (_secret_list("SERVICE_TOKEN_ERP_TO_EDS") or [""])[0]
+EDS_INTERNAL_URL = os.environ.get("EDS_INTERNAL_URL", "http://eds-api:8000").strip().rstrip("/")
 ERP_VERSION = os.environ.get("ERP_VERSION", "0.1.0")
 # Документы ERP на общем генераторе rt_docs (план 2.6): виды, которые уже рендерит rt_docs, через запятую; остальные —
 # прежними шаблонами Django. Откат вида — убрать его из списка (`RT_DOCS_DOCUMENTS=`), без выпуска кода.

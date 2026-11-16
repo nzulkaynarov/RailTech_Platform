@@ -696,6 +696,43 @@ export const deliveries: Schemas["DeliveryLine"][] = [
   },
 ];
 
+/** Письма компании (ADR-0026): наше исходящее с ответом, входящее с ответом, входящее без ответа. */
+export const letters: Schemas["Letter"][] = [
+  {
+    id: 3,
+    direction: "out",
+    state: "sent",
+    number: "OUT-031/26",
+    subject: "Ответ на письмо о графике поставки",
+    date: "2026-11-12",
+    ...dealOf(48),
+    reply_number: "IN-104/26",
+    has_file: true,
+  },
+  {
+    id: 2,
+    direction: "in",
+    state: "answered",
+    number: "IN-104/26",
+    subject: "О переносе графика поставки",
+    date: "2026-11-10",
+    ...dealOf(48),
+    reply_number: "OUT-031/26",
+    has_file: false,
+  },
+  {
+    id: 1,
+    direction: "in",
+    state: "registered",
+    number: "IN-117/26",
+    subject: "Запрос акта сверки за III квартал",
+    date: "2026-11-14",
+    deal: null,
+    reply_number: null,
+    has_file: false,
+  },
+];
+
 export const documents: Schemas["Document"][] = [
   {
     id: 905,
@@ -1091,6 +1128,7 @@ export const CLIENT_ACCESS: {
     "catalog_requests",
     "quotes",
     "documents",
+    "letters",
     "contracts",
     "invoices",
     "acts",

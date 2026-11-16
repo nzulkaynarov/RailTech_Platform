@@ -55,6 +55,7 @@ from portal.views import (
     TelegramAuthView,
     UploadView,
 )
+from portal.views_letters import LetterDetailView, LetterFileView, LetterListView
 from portal.views_notifications import NotificationListView, NotificationReadView, NotificationSettingsView
 from portal.views_partner import (
     PartnerConfirmView,
@@ -185,6 +186,12 @@ urlpatterns = [
     path("documents/", DocumentListView.as_view(), name="portal-documents-slash"),
     path("documents/<int:pk>/file", DocumentFileView.as_view(), name="portal-document-file"),
     path("documents/<int:pk>/file/", DocumentFileView.as_view(), name="portal-document-file-slash"),
+    path("letters", LetterListView.as_view(), name="portal-letters"),
+    path("letters/", LetterListView.as_view(), name="portal-letters-slash"),
+    path("letters/<int:pk>", LetterDetailView.as_view(), name="portal-letter"),
+    path("letters/<int:pk>/", LetterDetailView.as_view(), name="portal-letter-slash"),
+    path("letters/<int:pk>/file", LetterFileView.as_view(), name="portal-letter-file"),
+    path("letters/<int:pk>/file/", LetterFileView.as_view(), name="portal-letter-file-slash"),
     # Verify (Проверка официального документа по коду, ADR-0024 §6, SIGN-VERIFY-1)
     path("verify/<str:code>", DocumentVerificationView.as_view(), name="portal-verify"),
     path("verify/<str:code>/", DocumentVerificationView.as_view(), name="portal-verify-slash"),

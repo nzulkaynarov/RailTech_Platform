@@ -38,6 +38,8 @@ SSO_PREVIOUS = _fake_secret("test-sso-previous")
 BUS_SECRET_CRM_EDS = _fake_secret("test-bus-crm-eds")
 BUS_SECRET_ERP_EDS = _fake_secret("test-bus-erp-eds")
 BUS_SECRET_UNRELATED = _fake_secret("unrelated-pair")
+ERP_SERVICE_TOKEN = _fake_secret("test-erp-service")
+ERP_SERVICE_TOKEN_PREVIOUS = _fake_secret("test-erp-service-previous")
 
 os.environ["APP_ENV"] = "test"
 os.environ["LOG_LEVEL"] = "WARNING"
@@ -45,6 +47,7 @@ os.environ["EDS_ACCESS_SECRET"] = ACCESS_SECRET
 os.environ["PLATFORM_SSO_SECRET"] = f"{SSO_CURRENT},{SSO_PREVIOUS}"
 os.environ["RT_BUS_SECRET_CRM_EDS"] = BUS_SECRET_CRM_EDS
 os.environ["RT_BUS_SECRET_ERP_EDS"] = BUS_SECRET_ERP_EDS
+os.environ["SERVICE_TOKEN_ERP_TO_EDS"] = f"{ERP_SERVICE_TOKEN},{ERP_SERVICE_TOKEN_PREVIOUS}"
 if _ADMIN_URL:
     _head = _ADMIN_URL.rpartition("/")[0]
     os.environ["EDS_DATABASE_URL"] = f"{_head}/{_DB_NAME}".replace("postgresql://", "postgresql+psycopg://", 1)

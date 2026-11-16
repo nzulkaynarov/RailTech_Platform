@@ -17,6 +17,7 @@ from app.api.v1 import (
     numbering,
     registry,
     resolution_templates,
+    service,
     signing,
 )
 
@@ -38,4 +39,5 @@ ROUTERS: tuple[APIRouter, ...] = (
     signing.router,
     signing.upload_router,
     ai.router,
+    service.router,
 )

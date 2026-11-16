@@ -1,0 +1,50 @@
+[
+  {
+    "screen": "letters",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 44,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "letters",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 40,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "letters-yours",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 43,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "letters-yours",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "letters-empty",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "letters-empty",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  }
+]

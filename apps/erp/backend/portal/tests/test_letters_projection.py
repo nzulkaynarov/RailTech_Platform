@@ -28,14 +28,20 @@ pytestmark = pytest.mark.django_db
 EVENTS_DIR = Path(os.environ.get("RT_BUS_CONTRACTS_DIR", "/opt/rt/contracts/events"))
 
 
-def incoming(*, deal=None, inn=None, letter_id=None, number="IN-104/26") -> dict:
+def incoming(*, deal=None, inn=None, letter_id=None, number="IN-104/26", company=None) -> dict:
     data = copy.deepcopy(
         json.loads((EVENTS_DIR / "eds" / "examples" / "letter.registered.v2.json").read_text(encoding="utf-8"))["data"]
     )
     data["letter"]["eds_letter_id"] = letter_id or str(uuid.uuid4())
     data["letter"]["number"] = number
     data["letter"]["sender"]["inn"] = inn
-    data["links"].update({"erp_deal_id": deal.pk if deal else None, "erp_request_id": deal.pk if deal else None})
+    data["links"].update(
+        {
+            "erp_deal_id": deal.pk if deal else None,
+            "erp_request_id": deal.pk if deal else None,
+            "erp_company_id": company.pk if company else None,
+        }
+    )
     return data
 
 
@@ -85,6 +91,13 @@ def test_incoming_without_deal_matches_exact_inn_only():
     assert letters.apply_letter_registered(incoming(inn=None)).reason == "no_company"
     assert letters.apply_letter_registered(incoming(inn="300000999")).reason == "no_company"
     assert PortalLetter.objects.count() == 1
+
+
+def test_incoming_linked_by_the_registrar_to_an_erp_company():
+    """Аудит сущностей С-7: регистратор EDS связал письмо с компанией ERP — квитанция у неё, даже без ИНН в письме."""
+    company = make_company(inn="300000555")
+    assert letters.apply_letter_registered(incoming(company=company, inn=None)).applied
+    assert PortalLetter.objects.get().company == company
 
 
 def test_outgoing_answer_closes_the_incoming_of_the_same_company():

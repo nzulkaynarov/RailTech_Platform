@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     access_secret: SecretStr = Field(validation_alias="EDS_ACCESS_SECRET", min_length=32)
     # Общий секрет SSO-токена сотрудника CRM; ротация — два значения через запятую (docs/architecture/sso-token.md).
     platform_sso_secret: SecretStr = Field(validation_alias="PLATFORM_SSO_SECRET")
+    # Сервисный токен ERP → EDS (ADR-0026: PDF отправленных писем для кабинета); ротация — два значения через запятую.
+    # Не задан — сервисный путь отвечает 401 любому.
+    service_token_erp: SecretStr = Field(default=SecretStr(""), validation_alias="SERVICE_TOKEN_ERP_TO_EDS")
 
     # Хранилище файлов (RustFS): отдельный ключ сервиса с доступом только к бакету eds-private (S0-9).
     # Файлы документов (домен, E3): ключ `files/<id>/v<версия>`, чтение потоком (`app/services/storage.py`).
@@ -64,6 +67,11 @@ class Settings(BaseSettings):
     def sso_secrets(self) -> list[str]:
         """Действующие секреты SSO-токена: оба значения при ротации принимаются."""
         return [p.strip() for p in self.platform_sso_secret.get_secret_value().split(",") if p.strip()]
+
+    @property
+    def erp_service_tokens(self) -> list[str]:
+        """Действующие сервисные токены ERP → EDS (оба при ротации); пусто — сервисный путь закрыт."""
+        return [p.strip() for p in self.service_token_erp.get_secret_value().split(",") if p.strip()]
 
     @property
     def sqlalchemy_url(self) -> str:
