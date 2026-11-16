@@ -36,6 +36,19 @@
 4. **Меню** — блоки «Покупаю · Продаю · Документы · Компания» для любой роли (сделано в ЛИД-1). Телефон: четыре главных
    раздела роли и «Ещё».
 
+## Письма в кабинете (ЛИД-8)
+
+Вопрос владельца 2026-11-16: где контрагент видит официальную переписку — наши исходящие и свои входящие.
+
+| Кто | Что берём |
+|---|---|
+| Корпоративные интернет-банки (iBank, «Переписка с банком») | Раздел «Письма» в кабинете клиента; ответ связан с исходным письмом цепочкой |
+| Операторы ЭДО (Диадок) | Письмо — такой же документ, как договор и счёт, лежит рядом с ними |
+| Архивы отправленной корреспонденции (Payreq, DHL) | Поиск по номеру, дате, каналу; статус доставки по каждому письму; подтверждение доставки |
+
+Решение — [ADR-0026](../adr/0026-company-letters-in-cabinet.md): «Письма» в блоке «Документы», наши ИСХ с файлом и квитанции о
+регистрации писем компании (ВХ); только письма, где адресат или отправитель — сама компания.
+
 ## Открыто для владельца
 
 - Срок ответа менеджера на посадочной ([СРОК]) и есть ли что сказать о количестве товаров или партнёров — только
@@ -48,5 +61,8 @@
 - [Coupa Supplier Portal: create an account without an invitation](https://docs.coupa.com/en/supplier-documentation/for-suppliers/getting-started-with-the-coupa-supplier-portal/get-started-with-the-csp/registration-and-login/createyour-account/create-your-account-in-the-coupa-supplier-portal-without-receiving-an-invitation/coupa-supplier-portal-onboarding)
 - [SAP Ariba: supplier registration](https://support.ariba.com/item/view/195815_en)
 - [Supademo: interactive demo on a SaaS homepage](https://supademo.com/blog/saas-website-product-demo), [Walnut: interactive demo best practices](https://www.walnut.io/blog/sales-tips/how-to-create-interactive-demos-best-practices-and-examples)
+- [Контур.Диадок: создание и отправка документов](https://kontur.ru/diadoc/features/sozdanie-i-otpravka)
+- [Интернет-Банк iBank для корпоративных клиентов: раздел «Письма»](https://united.ru:443/documents/dbo/Интернет-Банк%20для%20корпоративных%20клиентов%20iBank%20(Бифит).pdf), [Сбер API: цепочка писем](https://developers.sber.ru/docs/ru/sber-api/specifications/generic-letters/get-letter)
+- [Payreq: архив отправленной корреспонденции](https://delivery.payreq.com/en/support/solutions/articles/11000137429-understanding-the-mail-archive), [DHL: портал бизнес-клиента](https://www.dhl.de/dam/jcr:16cd1594-1254-425a-95dc-44bd0a2afb90/dhl-factsheet-business-customer-portal-042026.pdf)
 - [OWASP Authentication Cheat Sheet: account enumeration](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html)
 - [Customer portal authentication: magic links and invite-only access](https://www.supportbench.com/customer-portal-authentication-sso-magic-links-invite-only-access/), [Email OTP](https://ssojet.com/docs/en/authentication/one-time-email-otp.md)
