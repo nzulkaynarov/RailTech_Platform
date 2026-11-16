@@ -93,9 +93,9 @@ export function OnboardingChecklist() {
       to: '/company',
     });
 
-    // 2. Уведомления Telegram
+    // 2. Уведомления Telegram — только если подключить можно (как плашка): иначе шаг вёл бы в тупик «Профиля».
     const isTelegramLinked = inMiniApp || Boolean(telegramStatus.data?.linked);
-    list.push({
+    if (isTelegramLinked || telegramStep.state !== 'hidden') list.push({
       id: 'telegram',
       titleKey: 'onboarding.telegramNotif',
       descKey: 'onboarding.telegramNotifDesc',
@@ -160,6 +160,7 @@ export function OnboardingChecklist() {
     companyQuery.data,
     telegramStatus.data?.linked,
     telegramStep.connect,
+    telegramStep.state,
     isPartner,
     hasMyProducts,
     partnerProductsQuery.data,
