@@ -6,7 +6,7 @@
 документ владельца «B2B Enterprise UI/UX Constitution» (эталоны: Linear, Stripe Dashboard, Atlassian, Polaris, Carbon);
 что из него принято как есть, что изменено и почему — [разбор](../research/2026-11-15-ui-standard-assessment.md).
 Каркас и зоны экрана Платформы остаются в [platform-frontend](platform-frontend.md) §4; при расхождении по цвету, шрифту,
-окнам и компонентам главный — этот документ. Порядок внедрения — [план](../runbooks/plan-2026-11-12.md) §3b.
+окнам и компонентам главный — этот документ. Внедрение (UI-0…UI-9) — [архив плана](../history/runbooks/plan-2026-11-12-archive.md) §3b; общая проверка UI-10 — [план](../runbooks/plan-2026-11-12.md) §4.5.
 
 ## 1. Пять законов
 
