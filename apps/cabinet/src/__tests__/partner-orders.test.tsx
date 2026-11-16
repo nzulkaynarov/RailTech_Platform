@@ -7,7 +7,7 @@ import { renderApp, signedIn } from '@/test/render';
 
 const PARTNER_ACCESS = {
   roles: ['partner' as const],
-  modules: ['my_products', 'catalog_requests', 'messages', 'profile'],
+  modules: ['my_products', 'catalog_requests', 'letters', 'messages', 'profile'],
 };
 
 describe('Заказы на поставку (PO, ASN) и запросы цен (RFQ) партнёра (K2-orders)', () => {

@@ -21,6 +21,7 @@ const CLIENT_LINKS = [
   'Договоры',
   'Счета',
   'Акты',
+  'Письма',
   'Все документы',
   'Сообщения',
   'Компания',
@@ -30,7 +31,7 @@ const CLIENT_LINKS = [
 
 const PARTNER_DEFAULT = {
   roles: ['partner' as const],
-  modules: ['my_products', 'catalog_requests', 'messages', 'profile'],
+  modules: ['my_products', 'catalog_requests', 'letters', 'messages', 'profile'],
 };
 const PARTNER_PRODUCTS_ONLY = { roles: ['partner' as const], modules: ['my_products', 'profile'] };
 /** Партнёр, у которого сотрудник выключил оба раздела: остался только «Профиль». */
@@ -51,7 +52,7 @@ describe('меню по блокам «Покупаю · Продаю · Док�
     expect(groups.map((group) => within(group).getAllByRole('link').map((link) => link.textContent?.replace(/\d+/g, '').trim()))).toEqual([
       ['Запросы', 'КП', 'Каталог', 'Поставки'],
       ['Мои товары', 'Заказы на поставку'],
-      ['Договоры', 'Счета', 'Акты', 'Все документы'],
+      ['Договоры', 'Счета', 'Акты', 'Письма', 'Все документы'],
       // «Сообщения» (CHAT-1) — в «Компании»: беседа компании с нами одна и о покупках, и о поставках
       ['Сообщения', 'Компания', 'Команда', 'Профиль'],
     ]);
@@ -184,9 +185,9 @@ describe('меню из /me.modules', () => {
       within(side)
         .getAllByRole('link')
         .map((link) => link.textContent?.replace(/\d+/g, '').trim()),
-    ).toEqual(['Мои товары', 'Заказы на поставку', 'Запросы', 'Каталог', 'Сообщения', 'Профиль']);
-    // партнёр: первым «Продаю», «Документов» пока нет (план §3d ЛИД-6)
-    expect(within(side).getAllByRole('heading').map((h) => h.textContent)).toEqual(['Продаю', 'Покупаю', 'Компания']);
+    ).toEqual(['Мои товары', 'Заказы на поставку', 'Запросы', 'Каталог', 'Письма', 'Сообщения', 'Профиль']);
+    // партнёр: первым «Продаю»; в «Документах» пока только «Письма» (ADR-0026), договор и оплаты — план §3d ЛИД-6
+    expect(within(side).getAllByRole('heading').map((h) => h.textContent)).toEqual(['Продаю', 'Покупаю', 'Документы', 'Компания']);
     const bottom = screen.getByRole('navigation', { name: 'Основные разделы' });
     expect(within(bottom).getByRole('button', { name: 'Ещё' })).toBeInTheDocument(); // в «Ещё» — «Сообщения», «Профиль»
   });
