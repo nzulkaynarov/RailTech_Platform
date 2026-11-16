@@ -525,12 +525,25 @@ def act_pdf(act, totals: dict[str, Any], brand: dict[str, Any], *, draft: bool, 
     ccy = totals.get("ccy") or "UZS"
     invoice = act.invoice
     closing = resolve_wording_selected(getattr(act, "wording_selections", None), profile, "act_closing_text")
+    grid = grid_enabled()
+    act_items = list(invoice.items.select_related("source_quote_item__product")) if invoice is not None else []
+    if grid:
+        from rt_docs.commercial import grid_totals_block, stacked_items_table
+
+        act_lines = [
+            replace(line, article=_article_of(item), unit=_unit_of(item))
+            for line, item in zip(_item_lines(act_items), act_items, strict=True)
+        ]
+        items_block = stacked_items_table(act_lines, ccy, lang)
+        totals_nodes = grid_totals_block(_sums(totals), ccy, lang, total_label=_("Всего"))
+    else:
+        items_block = items_table(_item_lines(act_items), ccy, lang, with_unit=False)
+        totals_nodes = totals_block(_sums(totals), ccy, lang)
     blocks: dict[str, Any] = {
-        "doc.refs": _act_refs(act, invoice),
-        "doc.items_table": items_table(
-            _item_lines(invoice.items.all() if invoice is not None else []), ccy, lang, with_unit=False
-        ),
-        "doc.totals": totals_block(_sums(totals), ccy, lang),
+        # В сетке сделка, договор и счёт — в инфоблоке: строка ссылок не печатается.
+        "doc.refs": [_para()] if grid else _act_refs(act, invoice),
+        "doc.items_table": items_block,
+        "doc.totals": totals_nodes,
         "doc.act_closing": [_para(line) for line in _lines(closing)] or [_para()],
         "doc.signatures": _act_signatures(act, seller, profile),
     }
@@ -544,25 +557,64 @@ def act_pdf(act, totals: dict[str, Any], brand: dict[str, Any], *, draft: bool, 
     )
     body = _template_body(body_html, scalars=scalars, blocks=blocks, lang=lang)
     company, contact = act.deal.company, getattr(act.deal, "contact", None)
-    body["doc"]["content"] = [_parties(seller, profile, company or contact, _("Покупатель"))] + body["doc"]["content"]
     code = "" if draft else (act.verification_code or "")
     cabinet = (getattr(django_settings, "CABINET_URL", "") or "").rstrip("/")
+    verification = {
+        "verification_code": code or None,
+        "verification_url": f"{cabinet}/v/{code}" if code and cabinet else None,
+    }
+    if grid:
+        meta = _act_grid_meta(act, invoice, draft=draft, **verification)
+    else:
+        body["doc"]["content"] = [_parties(seller, profile, company or contact, _("Покупатель"))] + body["doc"][
+            "content"
+        ]
+        meta = DocumentMeta(
+            title=_("Акт приёма-передачи"),
+            number=act.number,
+            date=_local_date(act.issued_at or act.created_at),
+            **verification,
+        )
     result = render_pdf(
         body,
         letterhead=letterhead_of(seller, profile),
         layout=Layout.COMMERCIAL,
-        meta=DocumentMeta(
-            title=_("Акт приёма-передачи"),
-            number=act.number,
-            date=_local_date(act.issued_at or act.created_at),
-            verification_code=code or None,
-            verification_url=f"{cabinet}/v/{code}" if code and cabinet else None,
-        ),
+        meta=meta,
         blocks=blocks,
         draft=draft,
         highlight_missing=False,
     )
     return result.pdf
+
+
+def _act_grid_meta(act, invoice, *, draft: bool, verification_code, verification_url):
+    """Акт в сетке: инфоблок (номер, дата, договор, счёт, проект), покупатель в окне конверта."""
+    from rt_docs import DocumentMeta, InfoRow
+
+    deal = act.deal
+    issued = act.issued_at or act.created_at
+    info = [
+        InfoRow(_("Акт №"), act.number or "—", code=True, role="number"),
+        InfoRow(_("Дата"), _date_text(issued), role="date"),
+    ]
+    if act.contract_id:
+        info.append(InfoRow(_("Договор"), f"№ {act.contract.number}" + _dated(act.contract.created_at)))
+    if invoice is not None:
+        info.append(InfoRow(_("Счёт"), invoice.number or "—", code=True))
+    if getattr(deal, "number", ""):
+        info.append(InfoRow(_("Проект"), deal.number, code=True))
+    addressee, strong = window_of(deal.company, getattr(deal, "contact", None))
+    return DocumentMeta(
+        title=_("Акт № %(number)s") % {"number": _("без номера") if draft else (act.number or "—")},
+        kind_label=_("Акт приёма-передачи"),
+        number=act.number,
+        date=_local_date(issued),
+        addressee=addressee,
+        addressee_strong=strong,
+        info=tuple(info),
+        verification_code=verification_code,
+        verification_url=verification_url,
+    )
 
 
 def _two_columns(left: list[dict[str, Any]], right: list[dict[str, Any]]) -> dict[str, Any]:
@@ -668,7 +720,7 @@ def contract_pdf(
     блоки — спецификация (Приложение № 1), итоги, формулировки приёмки и ответственности, особые условия, примечание,
     реквизиты и подписи сторон. Подписанный — с кодом и QR проверки, проект — знаком «ПРОЕКТ»."""
     from django.conf import settings as django_settings
-    from rt_docs import DocumentMeta, Layout, Money, format_money
+    from rt_docs import Layout, Money, format_money
     from rt_docs.commercial import Line, items_table, totals_block
     from rt_docs.pdf import render_pdf
 
@@ -695,12 +747,22 @@ def contract_pdf(
         )
         for it in items
     ]
+    grid = grid_enabled()
+    if grid:
+        from rt_docs.commercial import grid_totals_block, stacked_items_table
+
+        lines = [
+            replace(line, article=(getattr(it.product, "sku", "") or "") if it.product_id else "")
+            for line, it in zip(lines, items, strict=True)
+        ]
+        spec = stacked_items_table(lines, ccy, lang)
+        totals_nodes = grid_totals_block(_sums(totals), ccy, lang, total_label=_("Всего"))
+    else:
+        spec = items_table(lines, ccy, lang, with_unit=True)
+        totals_nodes = totals_block(_sums(totals), ccy, lang)
     blocks: dict[str, Any] = {
-        "doc.spec_table": [
-            _para(_text(_("Приложение № 1. Спецификация"), bold=True)),
-            *items_table(lines, ccy, lang, with_unit=True),
-        ],
-        "doc.totals": totals_block(_sums(totals), ccy, lang),
+        "doc.spec_table": [_para(_text(_("Приложение № 1. Спецификация"), bold=True)), *spec],
+        "doc.totals": totals_nodes,
         "doc.contract_acceptance": wording("contract_acceptance_text"),
         "doc.contract_liability": wording("contract_liability_text"),
         "doc.extra_terms_article": (
@@ -753,18 +815,43 @@ def contract_pdf(
         body,
         letterhead=letterhead_of(seller, profile),
         layout=Layout.COMMERCIAL,
-        meta=DocumentMeta(
-            title=_("Договор поставки"),
-            number=contract.number,
-            date=_local_date(contract.created_at),
-            verification_code=code or None,
-            verification_url=f"{cabinet}/v/{code}" if code and cabinet else None,
-        ),
+        meta=_contract_meta(contract, quote, draft=draft, grid=grid, code=code, cabinet=cabinet),
         blocks=blocks,
         draft=draft,
         highlight_missing=False,
     )
     return result.pdf
+
+
+def _contract_meta(contract, quote, *, draft: bool, grid: bool, code: str, cabinet: str):
+    """Договор: в сетке — вид и инфоблок (номер, дата, место, основание, проект) без окна конверта; стороны — в теле."""
+    from rt_docs import DocumentMeta, InfoRow
+
+    verification = {
+        "verification_code": code or None,
+        "verification_url": f"{cabinet}/v/{code}" if code and cabinet else None,
+    }
+    if not grid:
+        return DocumentMeta(
+            title=_("Договор поставки"), number=contract.number, date=_local_date(contract.created_at), **verification
+        )
+    info = [
+        InfoRow(_("Договор №"), contract.number or "—", code=True, role="number"),
+        InfoRow(_("Дата"), _date_text(contract.created_at), role="date"),
+        InfoRow(_("Место"), _("г. Ташкент")),
+    ]
+    if quote is not None and quote.number:
+        info.append(InfoRow(_("Основание"), _("КП № %(number)s") % {"number": quote.number}))
+    if getattr(contract.deal, "number", ""):
+        info.append(InfoRow(_("Проект"), contract.deal.number, code=True))
+    return DocumentMeta(
+        kind_label=_("Договор поставки"),
+        number=contract.number,
+        date=_local_date(contract.created_at),
+        info=tuple(info),
+        window=False,
+        **verification,
+    )
 
 
 def _cell(

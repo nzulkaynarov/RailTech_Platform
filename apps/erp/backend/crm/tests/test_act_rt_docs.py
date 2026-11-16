@@ -56,18 +56,19 @@ def test_issued_act_has_refs_items_totals_closing_and_signatures(world):  # noqa
     assert seen["pdf"].startswith(b"%PDF")
     text = seen["text"]
     for expected in (
-        f"Сделка: #{act.deal_id}",
-        "Счёт: INV-SIGN1-0001",
         "Настоящий Акт составлен",
         "Комплект скрепления КБ-65",
-        "Итого к оплате:",
+        "Всего, сум",
         "От Поставщика:",
         "От Покупателя:",
         "Подпись / дата",
     ):
         assert expected in text, expected
     meta = seen["kwargs"]["meta"]
-    assert (meta.title, meta.number, meta.verification_code) == ("Акт приёма-передачи", "ACT-SIGN1-0001", None)
+    # Сетка документа (план ДОК-4): сделка, договор и счёт — в инфоблоке, покупатель — в окне конверта.
+    assert (meta.kind_label, meta.number, meta.verification_code) == ("Акт приёма-передачи", "ACT-SIGN1-0001", None)
+    assert {row.label: row.value for row in meta.info}["Счёт"] == "INV-SIGN1-0001"
+    assert meta.addressee[0] == act.deal.company.name
     assert seen["kwargs"]["draft"] is False
 
 
