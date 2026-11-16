@@ -1,18 +1,8 @@
-/* Admin · Оргструктура (PLT-15): фильтры, строки списка, инициалы. Значения — макет v3 и docs/architecture/platform-frontend.md. */
+/* Admin · Оргструктура (PLT-15): фильтры, строки списка. Значения — макет v3 и docs/architecture/platform-frontend.md. */
 .pf-org-tags {
   display: inline-flex;
   flex-wrap: wrap;
   gap: 4px;
-}
-.pf-org-avatar {
-  flex: none;
-  display: inline-grid;
-  place-items: center;
-  border-radius: 50%;
-  border: 2px solid var(--rt-color-primary-border);
-  background: var(--rt-color-surface-background);
-  color: var(--rt-color-primary-text);
-  font-weight: 600;
 }
 .pf-org-person {
   display: flex;
