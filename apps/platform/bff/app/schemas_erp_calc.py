@@ -104,10 +104,10 @@ class CalcQuote(BaseModel):
 
 
 class CalcStock(BaseModel):
-    on_hand: int | None
-    free: int | None = None
+    on_hand: float | None
+    free: float | None = None
     cell: str | None
-    reserved: int | None
+    reserved: float | None
 
 
 class CalcSupplier(BaseModel):
@@ -225,7 +225,7 @@ class CalcCatalogItem(BaseModel):
     name: str
     article: str
     kind: Literal["goods", "service"]
-    on_hand: int
+    on_hand: float
     supplier_name: str | None
     lead_days: int | None
 

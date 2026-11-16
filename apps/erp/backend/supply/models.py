@@ -98,8 +98,8 @@ class SupplierOrderLine(models.Model):
     name = models.CharField(max_length=500)
     article = models.CharField(max_length=120, blank=True, default="")
     unit = models.CharField(max_length=32, blank=True, default="")
-    quantity = models.PositiveIntegerField()
-    received_quantity = models.PositiveIntegerField(default=0)
+    quantity = models.DecimalField(max_digits=14, decimal_places=3)
+    received_quantity = models.DecimalField(max_digits=14, decimal_places=3, default=0)
     unit_price = models.DecimalField(
         max_digits=14, decimal_places=2, null=True, blank=True, verbose_name=_("Цена поставщика за единицу")
     )
@@ -160,7 +160,7 @@ class GoodsReceipt(models.Model):
 class GoodsReceiptLine(models.Model):
     receipt = models.ForeignKey(GoodsReceipt, on_delete=models.CASCADE, related_name="lines")
     order_line = models.ForeignKey(SupplierOrderLine, on_delete=models.PROTECT, related_name="receipt_lines")
-    quantity = models.PositiveIntegerField()
+    quantity = models.DecimalField(max_digits=14, decimal_places=3)
     warehouse = models.ForeignKey(
         "inventory.Warehouse", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
     )
@@ -270,7 +270,7 @@ class PriceRequestLine(models.Model):
     )
     name = models.CharField(max_length=500)
     article = models.CharField(max_length=120, blank=True, default="")
-    quantity = models.PositiveIntegerField()
+    quantity = models.DecimalField(max_digits=14, decimal_places=3)
     unit = models.CharField(max_length=32, blank=True, default="")
     answer_price = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
 

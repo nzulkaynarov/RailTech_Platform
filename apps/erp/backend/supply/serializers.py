@@ -2,8 +2,12 @@
 Ответы собирают `supply.services` и `inventory.services.overview` словарями; сериализаторы — их явная схема для OpenAPI
 (`/api/v1/stock/*`) и проверка тел запросов."""
 
+from decimal import Decimal
+
 from inventory.serializers import TRACKING_CLASSES, StockDealRefSerializer, StockRightsSerializer
 from rest_framework import serializers
+
+from core.quantity import QuantityField
 
 ORDER_STATUSES = ("draft", "sent", "confirmed", "received", "cancelled")
 RECEIPT_STATES = ("none", "partial", "full")
@@ -40,8 +44,8 @@ class OrderRowSerializer(serializers.Serializer):
     days_overdue = serializers.IntegerField(allow_null=True)
     currency = serializers.CharField(allow_null=True)
     lines_count = serializers.IntegerField()
-    quantity = serializers.IntegerField()
-    received_quantity = serializers.IntegerField()
+    quantity = QuantityField()
+    received_quantity = QuantityField()
     receipt_state = serializers.ChoiceField(choices=RECEIPT_STATES)
     total = serializers.DecimalField(
         max_digits=16,
@@ -74,8 +78,8 @@ class OrderLineSerializer(serializers.Serializer):
     name = serializers.CharField()
     article = serializers.CharField(allow_blank=True)
     unit = serializers.CharField(allow_blank=True)
-    quantity = serializers.IntegerField()
-    received_quantity = serializers.IntegerField()
+    quantity = QuantityField()
+    received_quantity = QuantityField()
     unit_price = serializers.DecimalField(max_digits=14, decimal_places=2, allow_null=True)
     line_total = serializers.DecimalField(max_digits=16, decimal_places=2, allow_null=True)
     deal = StockDealRefSerializer(allow_null=True)
@@ -87,7 +91,7 @@ class OrderLineSerializer(serializers.Serializer):
 
 class DoneReceiptLineSerializer(serializers.Serializer):
     name = serializers.CharField()
-    quantity = serializers.IntegerField()
+    quantity = QuantityField()
     cell = serializers.CharField(allow_null=True)
     units = serializers.ListField(child=serializers.CharField(), help_text="Принятые серийные или номер партии")
     expiry_date = serializers.DateField(allow_null=True)
@@ -149,8 +153,8 @@ class PendingReceiptLineSerializer(serializers.Serializer):
     name = serializers.CharField()
     article = serializers.CharField(allow_blank=True)
     unit = serializers.CharField(allow_blank=True)
-    quantity = serializers.IntegerField()
-    received_quantity = serializers.IntegerField()
+    quantity = QuantityField()
+    received_quantity = QuantityField()
     deal = StockDealRefSerializer(allow_null=True)
     tracking = serializers.ChoiceField(choices=TRACKING_CLASSES)
     requires_doc = serializers.BooleanField()
@@ -164,7 +168,7 @@ class DoneReceiptSerializer(serializers.Serializer):
     received_at = serializers.DateTimeField()
     received_by_name = serializers.CharField(allow_null=True)
     supplier_doc = serializers.CharField(allow_null=True)
-    quantity = serializers.IntegerField()
+    quantity = QuantityField()
     lines = DoneReceiptLineSerializer(many=True)
 
 
@@ -178,7 +182,7 @@ class PriceRequestLineSerializer(serializers.Serializer):
     quote_item_id = serializers.IntegerField(allow_null=True)
     name = serializers.CharField()
     article = serializers.CharField(allow_blank=True)
-    quantity = serializers.IntegerField()
+    quantity = QuantityField()
     unit = serializers.CharField(allow_blank=True)
 
 
@@ -247,7 +251,7 @@ class OrderLineInSerializer(serializers.Serializer):
     name = serializers.CharField(required=False, allow_blank=True, max_length=500, default="")
     article = serializers.CharField(required=False, allow_blank=True, max_length=120, default="")
     unit = serializers.CharField(required=False, allow_blank=True, max_length=32, default="")
-    quantity = serializers.IntegerField(min_value=1, max_value=10_000_000)
+    quantity = QuantityField(min_value=Decimal("0.001"), max_value=Decimal("10000000"))
     unit_price = serializers.DecimalField(
         max_digits=14,
         decimal_places=2,
@@ -295,7 +299,7 @@ class OrderCancelInSerializer(serializers.Serializer):
 
 class ReceiptLineInSerializer(serializers.Serializer):
     order_line_id = serializers.IntegerField(min_value=1)
-    quantity = serializers.IntegerField(min_value=1)
+    quantity = QuantityField(min_value=Decimal("0.001"))
     cell = serializers.CharField(required=False, allow_blank=True, max_length=32, default="")
     # ADR-0021: по классу категории; для N не передаются.
     serials = serializers.ListField(

@@ -276,8 +276,7 @@ export function OrderCreatePage() {
                                       ]}
                                     >
                                       <InputNumber
-                                        min={1}
-                                        precision={0}
+                                        min={0.001}
                                         aria-label={t("create.quantityLabel", { n: index + 1 })}
                                       />
                                     </Form.Item>

@@ -7,6 +7,7 @@
 
 from rest_framework import serializers
 
+from core.quantity import QuantityField
 from crm.serializers.billing import ActSerializer, ContractSerializer
 
 CONTRACT_WORDS = ["project", "client_agreed", "issued_at_operator", "signed", "rejected", "cancelled"]
@@ -191,7 +192,7 @@ class DeliveryMarkInSerializer(serializers.Serializer):
 class DeliveryLineCardSerializer(serializers.Serializer):
     line_no = serializers.IntegerField()
     title = serializers.CharField(allow_blank=True)
-    quantity = serializers.IntegerField(allow_null=True)
+    quantity = QuantityField(allow_null=True)
     unit = serializers.CharField(allow_blank=True)
     status = serializers.CharField()
     eta = serializers.DateField(allow_null=True)

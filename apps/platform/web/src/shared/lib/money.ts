@@ -88,6 +88,12 @@ export function formatNumber(value: NumberInput, options: NumberFormatOptions = 
   return `${sign}${grouped}${fraction ? (english ? "." : ",") + fraction : ""}`;
 }
 
+/** Количество (ADR-0027 п. 9): до трёх знаков после запятой, без хвостовых нулей — «12,5», «150», «0,125». */
+export function formatQuantity(value: NumberInput, options: { language?: string } = {}): string {
+  const text = formatNumber(value, { ...options, fractionDigits: 3 });
+  return text.includes(",") || text.includes(".") ? text.replace(/[.,]?0+$/, "") : text;
+}
+
 export interface MoneyFormatOptions extends NumberFormatOptions {
   /**
    * Код валюты ISO 4217 из ответа (`"UZS"`, `"USD"`); без кода и для `UZS` — слово языка («сум», «so‘m», «UZS» в en),

@@ -82,7 +82,7 @@ export function AdjustModal({ row, onClose }: { row: StockRow; onClose: () => vo
             },
           ]}
         >
-          <InputNumber precision={0} />
+          <InputNumber step={1} />
         </Form.Item>
         <Form.Item name="cell" label={t("adjust.cell")}>
           <Input maxLength={32} />

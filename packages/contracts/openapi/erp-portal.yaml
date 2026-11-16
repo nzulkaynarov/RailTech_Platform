@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Portal API (Cabinet → ERP)
-  version: 0.17.0
+  version: 0.18.0
   summary: Пространство `/api/portal/v1/` — вызывает Cabinet SPA от имени клиента.
   description: |
     Контракт по `docs/architecture/CONTRACTS.md` §4 и ADR-0004 (Cabinet без бэкенда). Версия 0 (M0-INF-02):
@@ -4259,10 +4259,10 @@ components:
         unit:
           type: string
         quantity:
-          type: integer
+          type: number
           minimum: 0
         received_quantity:
-          type: integer
+          type: number
           minimum: 0
         unit_price:
           type: string
@@ -4297,7 +4297,7 @@ components:
         article:
           type: string
         quantity:
-          type: integer
+          type: number
           minimum: 0
         unit:
           type: string
@@ -4534,7 +4534,7 @@ components:
         article:
           type: string
         quantity:
-          type: integer
+          type: number
           minimum: 0
         unit:
           type: string

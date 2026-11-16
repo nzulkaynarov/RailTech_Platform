@@ -32,6 +32,8 @@ from inventory.services import stock
 from supply.models import OrderLogKind, OrderStatus, SupplierOrder, SupplierOrderLine
 from supply.services import orders
 
+from core.quantity import jsonable
+
 logger = logging.getLogger(__name__)
 
 LIVE_STATUSES = (OrderStatus.DRAFT, OrderStatus.SENT, OrderStatus.CONFIRMED)
@@ -118,7 +120,7 @@ def _notify_supply(deal, title: str, message: str, event_code: str, params: dict
             message=message,
             link=f"#deal/{deal.pk}",
             event_code=event_code,
-            event_params=params,
+            event_params=jsonable(params),
         )
         transaction.on_commit(lambda n=notification: push_notification_ws(n))
 

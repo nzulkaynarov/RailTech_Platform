@@ -210,7 +210,7 @@ class RawFulfillment(BaseModel):
 class ProjectDeliveryLine(BaseModel):
     line_no: int
     title: str
-    quantity: int | None
+    quantity: float | None
     unit: str
     status: str
     eta: dt.date | None

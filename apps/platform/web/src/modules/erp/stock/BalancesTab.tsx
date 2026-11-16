@@ -25,11 +25,11 @@ const COLS = {
 
 function Incoming({ row }: { row: StockRow }) {
   const { t } = useTranslation("stock");
-  const { date } = useFormat();
+  const { date, qty } = useFormat();
   if (row.incoming === 0) return <span className="pf-hint">—</span>;
   return (
     <span>
-      <span className="pf-num">+{row.incoming}</span>
+      <span className="pf-num">+{qty(row.incoming)}</span>
       {row.next_expected ? (
         <span className="pf-hint"> · {t("balances.until", { date: date(row.next_expected) })}</span>
       ) : null}
@@ -39,16 +39,24 @@ function Incoming({ row }: { row: StockRow }) {
 
 function Cells({ row }: { row: StockRow }) {
   const { t } = useTranslation("stock");
+  const { qty } = useFormat();
   if (row.cells.length === 0) return <span className="pf-hint">—</span>;
   return (
     <span>
       {row.cells
         .map((c) =>
-          c.cell ? t("balances.cellLine", { cell: c.cell, count: c.on_hand }) : String(c.on_hand),
+          c.cell
+            ? t("balances.cellLine", { cell: c.cell, count: c.on_hand, qty: qty(c.on_hand) })
+            : qty(c.on_hand),
         )
         .join(" · ")}
     </span>
   );
+}
+
+function OnHand({ value }: { value: number }) {
+  const { qty } = useFormat();
+  return <>{qty(value)}</>;
 }
 
 function Free({ row }: { row: StockRow }) {
@@ -124,7 +132,7 @@ function Rows({ items, onOpen }: { items: readonly StockRow[]; onOpen: (row: Sto
       numeric: true,
       cell: (row) => (
         <>
-          {row.on_hand} <span className="pf-hint">{row.unit}</span>
+          <OnHand value={row.on_hand} /> <span className="pf-hint">{row.unit}</span>
         </>
       ),
     },

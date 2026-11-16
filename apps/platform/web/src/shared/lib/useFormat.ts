@@ -10,6 +10,7 @@ import {
   formatMoney,
   formatNumber,
   formatPercent,
+  formatQuantity,
 } from "./money";
 
 /** Форматирование чисел, сумм и дат с языком интерфейса (ru, uz, en) и часовым поясом компании. */
@@ -21,6 +22,8 @@ export function useFormat() {
       language,
       number: (value: NumberInput, options?: NumberFormatOptions) =>
         formatNumber(value, { language, ...options }),
+      /** Количество: до трёх знаков, без хвостовых нулей («12,5 т»). */
+      qty: (value: NumberInput) => formatQuantity(value, { language }),
       money: (value: NumberInput, options?: MoneyFormatOptions) =>
         formatMoney(value, { language, ...options }),
       /** Подпись валюты для поля и заголовка: `UZS` → «сум» / «so‘m», другая — код. */

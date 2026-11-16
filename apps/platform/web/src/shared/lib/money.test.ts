@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { MINUS, NBSP, currencyLabel, formatMoney, formatNumber, formatPercent } from "./money";
+import {
+  MINUS,
+  NBSP,
+  currencyLabel,
+  formatMoney,
+  formatNumber,
+  formatPercent,
+  formatQuantity,
+} from "./money";
 
 describe("formatMoney", () => {
   it("«1 234 567 сум» с неразрывными пробелами", () => {
@@ -88,5 +96,15 @@ describe("formatNumber и formatPercent", () => {
     expect(formatPercent("23.44")).toBe(`23,4${NBSP}%`);
     expect(formatPercent(22, { fractionDigits: 0, language: "en" })).toBe(`22${NBSP}%`);
     expect(formatPercent(null)).toBe("—");
+  });
+});
+
+describe("formatQuantity (ADR-0027 п. 9)", () => {
+  it("до трёх знаков, без хвостовых нулей, запятая в ru и uz", () => {
+    expect(formatQuantity(12.5, { language: "ru" })).toBe("12,5");
+    expect(formatQuantity(150, { language: "ru" })).toBe("150");
+    expect(formatQuantity(0.125, { language: "uz" })).toBe("0,125");
+    expect(formatQuantity(1234.5, { language: "en" })).toBe("1,234.5");
+    expect(formatQuantity(1000, { language: "ru" })).toBe("1 000");
   });
 });

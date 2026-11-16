@@ -11,6 +11,7 @@ from portal.services.partner_products import MAX_BATCH
 from rest_framework import serializers
 
 from catalog.models.reviews import ISSUE_FIELDS
+from core.quantity import QuantityField
 
 
 class PartnerOfferSerializer(serializers.Serializer):
@@ -234,8 +235,8 @@ class PartnerOrderLineItemSerializer(serializers.Serializer):
     name = serializers.CharField()
     article = serializers.CharField(allow_blank=True)
     unit = serializers.CharField(allow_blank=True)
-    quantity = serializers.IntegerField()
-    received_quantity = serializers.IntegerField()
+    quantity = QuantityField()
+    received_quantity = QuantityField()
     unit_price = serializers.CharField()
     total_price = serializers.CharField()
 
@@ -251,7 +252,7 @@ class PartnerOrderReceiptLineItemSerializer(serializers.Serializer):
     order_line_id = serializers.IntegerField()
     name = serializers.CharField()
     article = serializers.CharField(allow_blank=True)
-    quantity = serializers.IntegerField()
+    quantity = QuantityField()
     unit = serializers.CharField(allow_blank=True)
     warehouse_name = serializers.CharField(allow_blank=True, default="")
     conformity_doc_number = serializers.CharField(allow_blank=True)
@@ -343,7 +344,7 @@ class PartnerPriceRequestLineItemSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
     article = serializers.CharField(allow_blank=True)
-    quantity = serializers.IntegerField()
+    quantity = QuantityField()
     unit = serializers.CharField(allow_blank=True)
     answer_price = serializers.CharField(allow_null=True)
 

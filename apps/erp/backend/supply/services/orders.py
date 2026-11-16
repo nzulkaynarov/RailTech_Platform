@@ -188,7 +188,7 @@ def _resolve_lines(lines: list[LineInput]) -> list[dict]:
             raise StockError("PRODUCT_NOT_FOUND", 400)
         if product.is_service:
             raise StockError("SERVICE_NOT_STOCKED", 400)
-        if line.quantity < 1:
+        if line.quantity <= 0:
             raise StockError("QUANTITY_OUT_OF_RANGE", 400)
         deal_id, item_id = line.deal_id, line.quote_item_id
         if item_id:
@@ -606,7 +606,7 @@ def receive(user, order_id: int, lines: list[ReceiptInput], *, supplier_doc: str
     total = 0
     for item in lines:
         line = order_lines[item.order_line_id]
-        if item.quantity < 1 or item.quantity > line.left:
+        if item.quantity <= 0 or item.quantity > line.left:
             raise StockError("QUANTITY_OUT_OF_RANGE", 400, max=line.left)
         cell = (item.cell or "").strip()
         stock.add_stock(
