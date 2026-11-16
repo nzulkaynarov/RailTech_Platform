@@ -93,7 +93,12 @@
     "date": {
       "placeholder": "KK.OO.YYYY"
     },
-    "requestNumber": "Ariza {{number}}"
+    "requestNumber": "Ariza {{number}}",
+    "timeLeft": {
+      "today": "bugun oxirgi kun",
+      "days_one": "{{count}} kun qoldi",
+      "days_other": "{{count}} kun qoldi"
+    }
   },
   "access": {
     "noSections": {

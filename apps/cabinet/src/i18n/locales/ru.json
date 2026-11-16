@@ -93,7 +93,14 @@
     "date": {
       "placeholder": "ДД.ММ.ГГГГ"
     },
-    "requestNumber": "Заявка {{number}}"
+    "requestNumber": "Заявка {{number}}",
+    "timeLeft": {
+      "today": "сегодня последний день",
+      "days_one": "остался {{count}} день",
+      "days_few": "осталось {{count}} дня",
+      "days_many": "осталось {{count}} дней",
+      "days_other": "осталось {{count}} дня"
+    }
   },
   "access": {
     "noSections": {

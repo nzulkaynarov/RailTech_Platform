@@ -55,6 +55,7 @@ import {
 import { ReasonDialog } from "@/components/ReasonDialog";
 import { ResponsiveList } from "@/components/ResponsiveList";
 import { QuoteStatusBadge, ToneBadge } from "@/components/StatusBadge";
+import { TimeLeft } from "@/components/TimeLeft";
 import { ManagerButton } from "@/components/TelegramLinkButton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -146,7 +147,12 @@ export function QuotesPage() {
               {
                 id: "valid",
                 header: t("pages.quotes.columns.validUntil"),
-                cell: (row) => formatDate(row.valid_until),
+                cell: (row) => (
+                  <span className="inline-flex flex-col">
+                    {formatDate(row.valid_until)}
+                    {quoteAwaitsDecision(row, now) ? <TimeLeft date={row.valid_until} now={now} /> : null}
+                  </span>
+                ),
               },
               {
                 id: "sent",
@@ -271,7 +277,12 @@ function QuoteCard({ quote }: { quote: Quote }) {
                 },
                 {
                   label: t("pages.quoteDetail.validUntil"),
-                  value: formatDate(quote.valid_until),
+                  value: (
+                    <span className="inline-flex flex-wrap items-baseline gap-2">
+                      {formatDate(quote.valid_until)}
+                      {awaiting ? <TimeLeft date={quote.valid_until} now={now} /> : null}
+                    </span>
+                  ),
                 },
                 quote.payment_terms
                   ? {

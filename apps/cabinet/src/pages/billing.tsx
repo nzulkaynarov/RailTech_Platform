@@ -18,6 +18,7 @@ import { ErrorState, ListSkeleton } from '@/components/QueryStates';
 import { ReasonDialog } from '@/components/ReasonDialog';
 import { ResponsiveList } from '@/components/ResponsiveList';
 import { StatusBadge, ToneBadge } from '@/components/StatusBadge';
+import { TimeLeft } from '@/components/TimeLeft';
 import { ManagerButton } from '@/components/TelegramLinkButton';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -234,6 +235,7 @@ export function InvoicesPage() {
                     <span className="inline-flex flex-wrap items-center justify-end gap-1">
                       {formatDate(row.due_date)}
                       {days ? <ToneBadge tone="danger">{t('pages.invoices.overdueDays', { count: days })}</ToneBadge> : null}
+                      {!days && invoiceOpen(row) ? <TimeLeft date={row.due_date} now={now} /> : null}
                     </span>
                   );
                 },
