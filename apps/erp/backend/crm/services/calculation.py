@@ -360,6 +360,8 @@ def line_payload(item: QuoteItem, ctx: _Context, *, show_cost: bool, rights: dic
         or (product.sku if product else ""),
         "product_id": item.product_id,
         "product_name": product.name if product else None,
+        # Черновик карточки (ADR-0027): строку ещё можно сопоставить с опубликованной позицией каталога.
+        "product_draft": bool(product is not None and getattr(product.status, "code", None) == "DRAFT"),
         "kind": kind,
         "zone": zone,
         "quantity": item.quantity,
@@ -499,7 +501,9 @@ def _billable(quote: Optional[Quote]) -> list[QuoteItem]:
         return []
     return list(
         quote.items.billable()
-        .select_related("product__domain_type", "frozen_currency", "offer__supplier", "offer__currency", "calc")
+        .select_related(
+            "product__domain_type", "product__status", "frozen_currency", "offer__supplier", "offer__currency", "calc"
+        )
         .select_related("calc__visa_by")
         .order_by("position", "id")
     )
@@ -769,6 +773,7 @@ def start(deal_id: int, user) -> dict:
                     event_code="calc.started",
                     event_params={"letter_number": task.letter_number},
                 )
+                _link_catalog(calc_quote(deal))
     return _sheet(deal, task, user)
 
 
@@ -886,6 +891,14 @@ def _recalc(quote: Quote) -> list[int]:
     return list(getattr(result, "amount_overflow_ids", []) or [])
 
 
+def _link_catalog(quote: Optional[Quote]) -> None:
+    """Каждая строка расчёта — со своей карточкой каталога: найденной или черновиком (ADR-0027)."""
+    from catalog.candidates import link_quote_lines
+
+    if quote is not None:
+        link_quote_lines(quote)
+
+
 @transaction.atomic
 def add_lines(deal_id: int, user, rows: list[LineInput]) -> dict:
     """Новые строки в черновик расчёта (вручную или подтверждённое предложение ИИ-разбора). Строка услуги — право
@@ -936,6 +949,7 @@ def add_lines(deal_id: int, user, rows: list[LineInput]) -> dict:
             item=item, kind=CalcLineKind.SERVICE if row.kind == CalcLineKind.SERVICE else CalcLineKind.GOODS
         )
         created.append(item.id)
+    _link_catalog(quote)
     _recalc(quote)
     _log(
         deal,
@@ -1084,7 +1098,11 @@ def update_line(deal_id: int, item_id: int, user, data: dict) -> dict:
     zone = zone_of(item)
     _require_zone(user, zone)
 
+    replaced_draft = None
     if "product_id" in changes:
+        from catalog.candidates import is_own_draft
+
+        replaced_draft = item.product_id if item.product_id and is_own_draft(item) else None
         product = _product(changes["product_id"])
         new_zone = (Zone.SERVICES if product.is_service else Zone.GOODS) if product is not None else zone
         _require_zone(user, new_zone)
@@ -1097,8 +1115,12 @@ def update_line(deal_id: int, item_id: int, user, data: dict) -> dict:
         if product is not None:
             _prefill_from_offer(item, product)
         zone = new_zone
+    own_draft = False
     if "kind" in changes:
-        if item.product_id:
+        from catalog.candidates import is_own_draft
+
+        own_draft = bool(item.product_id) and is_own_draft(item)
+        if item.product_id and not own_draft:
             raise CalcError("KIND_FROM_CATALOG", 400)
         kind = CalcLineKind.SERVICE if changes["kind"] == CalcLineKind.SERVICE else CalcLineKind.GOODS
         new_zone = Zone.SERVICES if kind == CalcLineKind.SERVICE else Zone.GOODS
@@ -1110,6 +1132,11 @@ def update_line(deal_id: int, item_id: int, user, data: dict) -> dict:
             calc.crew_days = None
         calc.kind = kind
         zone = new_zone
+        if own_draft:
+            from catalog.candidates import set_draft_kind
+
+            set_draft_kind(item, kind)  # свой черновик меняет тип вместе со строкой
+    old_name = item.imported_raw_name
     if "name" in changes:
         name = (changes["name"] or "").strip()
         if not name:
@@ -1152,6 +1179,16 @@ def update_line(deal_id: int, item_id: int, user, data: dict) -> dict:
     calc.save()
     item.version = (item.version or 0) + 1
     item.save()  # пересчёт КП с курсами строк — в QuoteItem.save
+    if "name" in changes:
+        from catalog.candidates import relink_renamed_line
+
+        relink_renamed_line(item, old_name)
+    _link_catalog(quote)
+    item.refresh_from_db(fields=["product"])
+    if replaced_draft and replaced_draft != item.product_id:
+        from catalog.candidates import drop_unused_draft
+
+        drop_unused_draft(replaced_draft)  # строку сопоставили с каталогом — свой черновик больше не нужен
     if "product_id" in changes or "quantity" in changes:
         from inventory.services import stock
 
@@ -1403,6 +1440,7 @@ def mark_ready(deal_id: int, user) -> dict:
         raise CalcError(err, 403 if err == "ROLE_NOT_PERMITTED" else 409)
     # Пересчёт перед отправкой всегда: строка, чья сумма по сегодняшнему курсу не влезает в поле (обычно сумма в сумах у
     # строки в USD), — отказ с числом таких строк, а не КП с неверной ценой и не 500.
+    _link_catalog(quote)
     overflow = _recalc(quote)
     quote.refresh_from_db()
     if overflow:

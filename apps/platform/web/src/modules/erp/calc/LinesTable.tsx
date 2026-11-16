@@ -136,8 +136,13 @@ function Position({ line, onMatch }: { line: CalcLine; onMatch: () => void }) {
         <StatusTag kind="itemKind" status={line.kind}>
           {t(`lines.kind.${line.kind}`)}
         </StatusTag>
+        {line.product_draft ? (
+          <StatusTag kind="catalogItem" status="draft">
+            {t("lines.draft")}
+          </StatusTag>
+        ) : null}
       </span>
-      {line.product_id === null && line.can_edit ? (
+      {(line.product_id === null || line.product_draft) && line.can_edit ? (
         <Button
           type="link"
           size="small"
