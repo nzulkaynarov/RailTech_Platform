@@ -167,7 +167,7 @@ test('CHAT-1: «Сообщения» — бейдж в меню, лента, п�
   await snap(page, 'cabinet-messages');
 });
 
-test('CHAT-1: клиент и партнёр — «Сообщения» в разделе «Компания» меню «Покупаю / Поставляю»', async ({ page }) => {
+test('CHAT-1: клиент и партнёр — «Сообщения» в разделе «Компания» меню «Покупаю / Продаю»', async ({ page }) => {
   await page.route('https://telegram.org/**', (route) => route.fulfill({ contentType: 'text/javascript', body: '' }));
   const modules = ['catalog_requests', 'quotes', 'documents', 'contracts', 'invoices', 'acts', 'deliveries', 'messages', 'company', 'team', 'profile', 'my_products'];
   await page.addInitScript((session) => {

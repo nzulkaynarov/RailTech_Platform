@@ -1,7 +1,7 @@
 /**
  * PART-2 · «Мои товары» партнёра на dev-сборке с моком портального API: список, карточка с подсветкой замечаний, мастер
  * загрузки прайса (проверка с ошибками по строкам, готово), пустой раздел с тремя шагами, меню клиента-партнёра
- * «Покупаю / Поставляю». На каждом экране — 1440 и 390 px, снимок, axe (serious/critical = 0) и отсутствие горизонтальной
+ * «Покупаю / Продаю». На каждом экране — 1440 и 390 px, снимок, axe (serious/critical = 0) и отсутствие горизонтальной
  * прокрутки (`snap`). «Сегодня» — день фикстур мока (2026-10-14).
  */
 import { expect, test, type Page } from '@playwright/test';
@@ -85,10 +85,10 @@ test('пустой раздел: три шага с кнопками', async ({ 
   await snap(page, 'my-products-empty');
 });
 
-test('меню клиента-партнёра: «Покупаю», «Поставляю», «Компания»', async ({ page }) => {
+test('меню клиента-партнёра: «Покупаю», «Продаю», «Документы», «Компания»', async ({ page }) => {
   await signIn(page, DUAL);
   await page.goto('/my-products');
   await h1(page, 'Мои товары');
-  await expect(page.getByRole('navigation', { name: 'Разделы кабинета' }).getByRole('heading', { name: 'Поставляю' })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Разделы кабинета' }).getByRole('heading', { name: 'Продаю' })).toBeVisible();
   await snap(page, 'menu-client-and-partner');
 });

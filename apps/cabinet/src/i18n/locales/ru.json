@@ -33,20 +33,20 @@
     "profile": "Профиль",
     "more": "Ещё",
     "moreTitle": "Ещё разделы",
-    "moreDescription": "Договоры, счета, акты, поставки, сообщения, компания и профиль",
+    "moreDescription": "Поставки, договоры, счета, акты, сообщения, компания и профиль",
     "billingTabs": "Финансовые разделы",
     "expandSidebar": "Развернуть меню",
     "collapseSidebar": "Свернуть меню",
-    "sectionMain": "Основное",
-    "sectionDocumentsAndTeam": "Документы и компания",
     "unread": "Непрочитанных сообщений: {{count}}",
     "myProducts": "Мои товары",
     "partnerOrders": "Заказы на поставку",
     "groups": {
       "buy": "Покупаю",
-      "supply": "Поставляю",
-      "account": "Компания"
-    }
+      "sell": "Продаю",
+      "documents": "Документы",
+      "company": "Компания"
+    },
+    "allDocuments": "Все документы"
   },
   "crumbs": {
     "request": "Запрос",

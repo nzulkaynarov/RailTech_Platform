@@ -118,7 +118,7 @@ describe('Каталог', () => {
     expect(within(warranty).getByText('18 месяцев')).toBeInTheDocument();
     expect(within(warranty).getByText(/при соблюдении условий хранения/)).toBeInTheDocument();
 
-    const documents = screen.getByRole('heading', { name: 'Документы' }).closest('section') as HTMLElement;
+    const documents = within(screen.getByRole('main')).getByRole('heading', { name: 'Документы' }).closest('section') as HTMLElement;
     expect(within(documents).getAllByRole('listitem')).toHaveLength(2);
     expect(within(documents).getByText('Сертификат соответствия')).toBeInTheDocument();
     expect(within(documents).getByText(/№ ТС RU C-DE\.АБ12\.В\.00345/)).toBeInTheDocument();
@@ -147,7 +147,7 @@ describe('Каталог', () => {
     expect(within(manufacturer).queryByText('Страна происхождения')).not.toBeInTheDocument();
     expect(within(manufacturer).queryByText('Артикул изготовителя')).not.toBeInTheDocument();
     expect(screen.getByText('6 месяцев')).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Документы' })).not.toBeInTheDocument();
+    expect(within(screen.getByRole('main')).queryByRole('heading', { name: 'Документы' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Следующее фото' }), 'одно фото — без листания').not.toBeInTheDocument();
   });
 
@@ -156,7 +156,7 @@ describe('Каталог', () => {
     renderApp('/catalog/1003');
     await heading('Пусконаладка насосного оборудования');
     for (const name of ['Изготовитель', 'Гарантия', 'Документы', 'Фотографии']) {
-      expect(screen.queryByRole('heading', { name })).not.toBeInTheDocument();
+      expect(within(screen.getByRole('main')).queryByRole('heading', { name })).not.toBeInTheDocument();
     }
     expect(screen.queryByRole('region', { name: 'Фотографии' })).not.toBeInTheDocument();
   });

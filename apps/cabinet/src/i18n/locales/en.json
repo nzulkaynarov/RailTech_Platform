@@ -33,20 +33,20 @@
     "profile": "Profile",
     "more": "More",
     "moreTitle": "More sections",
-    "moreDescription": "Contracts, invoices, acts, deliveries, messages, company and profile",
+    "moreDescription": "Deliveries, contracts, invoices, acts, messages, company and profile",
     "billingTabs": "Financial sections",
     "expandSidebar": "Expand menu",
     "collapseSidebar": "Collapse menu",
-    "sectionMain": "Main",
-    "sectionDocumentsAndTeam": "Documents and company",
     "unread": "Unread messages: {{count}}",
     "myProducts": "My products",
     "partnerOrders": "Purchase orders",
     "groups": {
       "buy": "I buy",
-      "supply": "I supply",
-      "account": "Company"
-    }
+      "sell": "I sell",
+      "documents": "Documents",
+      "company": "Company"
+    },
+    "allDocuments": "All documents"
   },
   "crumbs": {
     "request": "Request",

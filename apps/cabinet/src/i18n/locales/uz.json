@@ -33,20 +33,20 @@
     "profile": "Profil",
     "more": "Yana",
     "moreTitle": "Boshqa boʻlimlar",
-    "moreDescription": "Shartnomalar, hisob-fakturalar, dalolatnomalar, yetkazib berish, xabarlar, kompaniya va profil",
+    "moreDescription": "Yetkazib berish, shartnomalar, hisob-fakturalar, dalolatnomalar, xabarlar, kompaniya va profil",
     "billingTabs": "Moliyaviy boʻlimlar",
     "expandSidebar": "Menyuni ochish",
     "collapseSidebar": "Menyuni yigʻish",
-    "sectionMain": "Asosiy",
-    "sectionDocumentsAndTeam": "Hujjatlar va kompaniya",
     "unread": "O‘qilmagan xabarlar: {{count}}",
     "myProducts": "Mening tovarlarim",
     "partnerOrders": "Yetkazib berish buyurtmalari",
     "groups": {
       "buy": "Xarid qilaman",
-      "supply": "Yetkazib beraman",
-      "account": "Kompaniya"
-    }
+      "sell": "Sotaman",
+      "documents": "Hujjatlar",
+      "company": "Kompaniya"
+    },
+    "allDocuments": "Barcha hujjatlar"
   },
   "crumbs": {
     "request": "Soʻrov",
