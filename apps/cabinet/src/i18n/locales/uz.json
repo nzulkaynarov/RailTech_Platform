@@ -57,6 +57,7 @@
   "common": {
     "retry": "Qayta urinish",
     "home": "Bosh sahifaga",
+    "inn": "STIR",
     "loading": "Yuklanmoqda…",
     "error": "Xatolik yuz berdi",
     "notFoundTitle": "Sahifa topilmadi",
@@ -67,6 +68,7 @@
     "save": "Saqlash",
     "reset": "Qayta oʻrnatish",
     "all": "Hammasi",
+    "article": "Artikul",
     "actions": "Amallar",
     "loadFailed": "Yuklab boʻlmadi",
     "reasonRequired": "Sababini koʻrsating — usiz ijrochi nimani tuzatishni tushunmaydi.",
