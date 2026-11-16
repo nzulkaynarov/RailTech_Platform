@@ -103,7 +103,8 @@ const ROUTE_OF: Record<string, string> = {
   "eds.payments": "/eds/payments",
   "erp.calc": "/erp/calc",
   "erp.stock": "/erp/stock",
-  "chats.external": "/chats?scope=external",
+  // «Внешние чаты» — фильтр «Ждут ответа» в «Лидах», своего экрана нет: старый адрес `/chats?scope=external` только
+  // перенаправляет, и ленивый модуль делал это уже после следующего перехода теста (флейк app-shell «Администратор»).
   admin: "/admin/roles",
 };
 
