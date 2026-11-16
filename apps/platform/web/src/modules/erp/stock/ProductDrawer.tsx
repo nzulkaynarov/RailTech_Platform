@@ -179,7 +179,7 @@ export function ProductDrawer({ row, onClose }: { row: StockRow; onClose: () => 
                       </span>
                       <span>
                         <span className="pf-num">
-                          {m.quantity > 0 ? `+${String(m.quantity)}` : String(m.quantity)}
+                          {m.quantity > 0 ? `+${qty(m.quantity)}` : qty(m.quantity)}
                         </span>
                         <span className="pf-hint"> · {activity(m.at)}</span>
                       </span>

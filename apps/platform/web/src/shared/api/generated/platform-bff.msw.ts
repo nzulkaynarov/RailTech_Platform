@@ -7700,7 +7700,7 @@ export const getGetQuoteApprovalResponseMock = (
     Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
       position: faker.number.int({ min: 1 }),
       name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-      quantity: faker.number.int({ min: 0 }),
+      quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
       unit: faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         null,
@@ -8017,7 +8017,7 @@ export const getDecideQuoteApprovalResponseMock = (
     Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
       position: faker.number.int({ min: 1 }),
       name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-      quantity: faker.number.int({ min: 0 }),
+      quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
       unit: faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         null,
@@ -8337,7 +8337,7 @@ export const getSendQuoteByChannelResponseMock = (
     Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
       position: faker.number.int({ min: 1 }),
       name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-      quantity: faker.number.int({ min: 0 }),
+      quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
       unit: faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         null,
@@ -8654,7 +8654,7 @@ export const getRecordQuoteClientDecisionResponseMock = (
     Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
       position: faker.number.int({ min: 1 }),
       name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-      quantity: faker.number.int({ min: 0 }),
+      quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
       unit: faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         null,
@@ -9488,7 +9488,7 @@ export const getGetPaymentResponseMock = (
   has_pdf: faker.datatype.boolean(),
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     description: faker.string.alpha({ length: { min: 10, max: 20 } }),
-    quantity: faker.number.int({ min: 0 }),
+    quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
     unit_price: faker.string.alpha({ length: { min: 10, max: 20 } }),
     total: faker.string.alpha({ length: { min: 10, max: 20 } }),
   })),
@@ -9586,7 +9586,7 @@ export const getConfirmPaymentResponseMock = (
   has_pdf: faker.datatype.boolean(),
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     description: faker.string.alpha({ length: { min: 10, max: 20 } }),
-    quantity: faker.number.int({ min: 0 }),
+    quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
     unit_price: faker.string.alpha({ length: { min: 10, max: 20 } }),
     total: faker.string.alpha({ length: { min: 10, max: 20 } }),
   })),
@@ -9684,7 +9684,7 @@ export const getAttachPaymentProofResponseMock = (
   has_pdf: faker.datatype.boolean(),
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     description: faker.string.alpha({ length: { min: 10, max: 20 } }),
-    quantity: faker.number.int({ min: 0 }),
+    quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
     unit_price: faker.string.alpha({ length: { min: 10, max: 20 } }),
     total: faker.string.alpha({ length: { min: 10, max: 20 } }),
   })),
@@ -9785,7 +9785,7 @@ export const getRequestPaymentDocResponseMock = (
   has_pdf: faker.datatype.boolean(),
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     description: faker.string.alpha({ length: { min: 10, max: 20 } }),
-    quantity: faker.number.int({ min: 0 }),
+    quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
     unit_price: faker.string.alpha({ length: { min: 10, max: 20 } }),
     total: faker.string.alpha({ length: { min: 10, max: 20 } }),
   })),
@@ -9883,7 +9883,7 @@ export const getIssuePaymentResponseMock = (
   has_pdf: faker.datatype.boolean(),
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     description: faker.string.alpha({ length: { min: 10, max: 20 } }),
-    quantity: faker.number.int({ min: 0 }),
+    quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
     unit_price: faker.string.alpha({ length: { min: 10, max: 20 } }),
     total: faker.string.alpha({ length: { min: 10, max: 20 } }),
   })),
@@ -22878,7 +22878,7 @@ export const getGetCalcParseResponseMock = (
   status: faker.helpers.arrayElement(["pending", "done", "failed"] as const),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-    quantity: faker.number.int({ min: 1 }),
+    quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
     unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
     article: faker.string.alpha({ length: { min: 10, max: 20 } }),
     note: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -23022,8 +23022,12 @@ export const getGetCalcSheetResponseMock = (
     kind: faker.helpers.arrayElement(Object.values(CalcLineKind)),
     zone: faker.helpers.arrayElement(Object.values(CalcZone)),
     group: faker.helpers.arrayElement(["stock", "supply", "engineer"] as const),
-    quantity: faker.number.int({ min: 1 }),
+    quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
     unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit_code: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 16 } }),
+      null,
+    ]),
     stock: {
       on_hand: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
       free: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
@@ -23252,8 +23256,12 @@ export const getStartCalcResponseMock = (
     kind: faker.helpers.arrayElement(Object.values(CalcLineKind)),
     zone: faker.helpers.arrayElement(Object.values(CalcZone)),
     group: faker.helpers.arrayElement(["stock", "supply", "engineer"] as const),
-    quantity: faker.number.int({ min: 1 }),
+    quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
     unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit_code: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 16 } }),
+      null,
+    ]),
     stock: {
       on_hand: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
       free: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
@@ -23482,8 +23490,12 @@ export const getAddCalcLinesResponseMock = (
     kind: faker.helpers.arrayElement(Object.values(CalcLineKind)),
     zone: faker.helpers.arrayElement(Object.values(CalcZone)),
     group: faker.helpers.arrayElement(["stock", "supply", "engineer"] as const),
-    quantity: faker.number.int({ min: 1 }),
+    quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
     unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit_code: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 16 } }),
+      null,
+    ]),
     stock: {
       on_hand: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
       free: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
@@ -23712,8 +23724,12 @@ export const getUpdateCalcLineResponseMock = (
     kind: faker.helpers.arrayElement(Object.values(CalcLineKind)),
     zone: faker.helpers.arrayElement(Object.values(CalcZone)),
     group: faker.helpers.arrayElement(["stock", "supply", "engineer"] as const),
-    quantity: faker.number.int({ min: 1 }),
+    quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
     unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit_code: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 16 } }),
+      null,
+    ]),
     stock: {
       on_hand: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
       free: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
@@ -23945,8 +23961,12 @@ export const getDeleteCalcLineResponseMock = (
     kind: faker.helpers.arrayElement(Object.values(CalcLineKind)),
     zone: faker.helpers.arrayElement(Object.values(CalcZone)),
     group: faker.helpers.arrayElement(["stock", "supply", "engineer"] as const),
-    quantity: faker.number.int({ min: 1 }),
+    quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
     unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit_code: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 16 } }),
+      null,
+    ]),
     stock: {
       on_hand: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
       free: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
@@ -24178,8 +24198,12 @@ export const getSignCalcLineResponseMock = (
     kind: faker.helpers.arrayElement(Object.values(CalcLineKind)),
     zone: faker.helpers.arrayElement(Object.values(CalcZone)),
     group: faker.helpers.arrayElement(["stock", "supply", "engineer"] as const),
-    quantity: faker.number.int({ min: 1 }),
+    quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
     unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit_code: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 16 } }),
+      null,
+    ]),
     stock: {
       on_hand: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
       free: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
@@ -24408,8 +24432,12 @@ export const getUpdateCalcTermsResponseMock = (
     kind: faker.helpers.arrayElement(Object.values(CalcLineKind)),
     zone: faker.helpers.arrayElement(Object.values(CalcZone)),
     group: faker.helpers.arrayElement(["stock", "supply", "engineer"] as const),
-    quantity: faker.number.int({ min: 1 }),
+    quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
     unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit_code: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 16 } }),
+      null,
+    ]),
     stock: {
       on_hand: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
       free: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
@@ -24641,8 +24669,12 @@ export const getMarkCalcReadyResponseMock = (
     kind: faker.helpers.arrayElement(Object.values(CalcLineKind)),
     zone: faker.helpers.arrayElement(Object.values(CalcZone)),
     group: faker.helpers.arrayElement(["stock", "supply", "engineer"] as const),
-    quantity: faker.number.int({ min: 1 }),
+    quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
     unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit_code: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 16 } }),
+      null,
+    ]),
     stock: {
       on_hand: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
       free: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
@@ -24871,8 +24903,12 @@ export const getNewCalcQuoteVersionResponseMock = (
     kind: faker.helpers.arrayElement(Object.values(CalcLineKind)),
     zone: faker.helpers.arrayElement(Object.values(CalcZone)),
     group: faker.helpers.arrayElement(["stock", "supply", "engineer"] as const),
-    quantity: faker.number.int({ min: 1 }),
+    quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
     unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit_code: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 16 } }),
+      null,
+    ]),
     stock: {
       on_hand: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
       free: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
@@ -25107,8 +25143,12 @@ export const getLoseCalcRequestResponseMock = (
     kind: faker.helpers.arrayElement(Object.values(CalcLineKind)),
     zone: faker.helpers.arrayElement(Object.values(CalcZone)),
     group: faker.helpers.arrayElement(["stock", "supply", "engineer"] as const),
-    quantity: faker.number.int({ min: 1 }),
+    quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
     unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit_code: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 16 } }),
+      null,
+    ]),
     stock: {
       on_hand: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
       free: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
@@ -25374,8 +25414,12 @@ export const getCopyCalcLinesResponseMock = (
         kind: faker.helpers.arrayElement(Object.values(CalcLineKind)),
         zone: faker.helpers.arrayElement(Object.values(CalcZone)),
         group: faker.helpers.arrayElement(["stock", "supply", "engineer"] as const),
-        quantity: faker.number.int({ min: 1 }),
+        quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
         unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        unit_code: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 16 } }),
+          null,
+        ]),
         stock: {
           on_hand: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
           free: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
@@ -25887,8 +25931,12 @@ export const getReserveCalcLineResponseMock = (
     kind: faker.helpers.arrayElement(Object.values(CalcLineKind)),
     zone: faker.helpers.arrayElement(Object.values(CalcZone)),
     group: faker.helpers.arrayElement(["stock", "supply", "engineer"] as const),
-    quantity: faker.number.int({ min: 1 }),
+    quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
     unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit_code: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 16 } }),
+      null,
+    ]),
     stock: {
       on_hand: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
       free: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
@@ -26123,8 +26171,12 @@ export const getReleaseCalcLineReservationResponseMock = (
     kind: faker.helpers.arrayElement(Object.values(CalcLineKind)),
     zone: faker.helpers.arrayElement(Object.values(CalcZone)),
     group: faker.helpers.arrayElement(["stock", "supply", "engineer"] as const),
-    quantity: faker.number.int({ min: 1 }),
+    quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
     unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit_code: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 16 } }),
+      null,
+    ]),
     stock: {
       on_hand: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
       free: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),

@@ -13,6 +13,8 @@ export interface MockLine {
   kind: MockKind;
   quantity: number;
   unit: string;
+  /** ADR-0027 п. 10: код единицы справочника; нет — единица текстом */
+  unitCode?: string;
   onHand: number | null;
   supplier: {
     name: string;

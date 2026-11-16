@@ -115,6 +115,8 @@
     "purchaseLabel": "«{{name}}» uchun birlik xarid narxi",
     "clientLabel": "«{{name}}» uchun QQSsiz mijoz narxi (birlik)",
     "quantityLabel": "«{{name}}» uchun soni",
+    "unitLabel": "Oʻlchov birligi: {{name}}",
+    "unitPick": "Birl.",
     "hidden": "—",
     "costHidden": "Xarid narxini tannarxga ruxsati bor xodim ko‘radi",
     "draft": "Qoralama",

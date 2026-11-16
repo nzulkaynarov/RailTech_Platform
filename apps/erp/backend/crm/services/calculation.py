@@ -40,6 +40,7 @@ from sales.services import deal_numbers
 from accounts.constants import Permission
 from accounts.services.permissions import is_seller, member_has_permission
 from core.currency import BASE_CURRENCY
+from core.quantity import as_qty, to_qty
 
 from ..constants import DealStageCode, QuoteStatusCode
 from ..models import ActivityLog, CalcLine, CalcLineKind, CalcPriceBasis, CalcTask
@@ -366,6 +367,7 @@ def line_payload(item: QuoteItem, ctx: _Context, *, show_cost: bool, rights: dic
         "zone": zone,
         "quantity": item.quantity,
         "unit": item.unit,
+        "unit_code": item.unit_code or None,
         "stock": _stock_payload(item, zone, ctx, on_hand),
         "supplier": supplier,
         "lead_days": item.lead_time_days or None,
@@ -805,12 +807,29 @@ def _empty_draft(deal: Deal, user) -> Quote:
 @dataclass
 class LineInput:
     name: str
-    quantity: int = 1
+    quantity: Decimal = Decimal("1")
     unit: str = ""
+    unit_code: str = ""
     kind: str = CalcLineKind.GOODS
     product_id: Optional[int] = None
     article: str = ""
     note: str = ""
+
+
+def _quantity(value) -> Decimal:
+    """Количество строки (ADR-0027 п. 9): до трёх знаков после запятой, не меньше 0,001; пустое — 1."""
+    amount = to_qty(value if value not in (None, "") else 1)
+    return amount if amount > 0 else Decimal("1")
+
+
+def _unit(code: str) -> tuple[str, str]:
+    """Единица из справочника (ADR-0027 п. 10): код и русское название; неизвестный код — отказ."""
+    from master_data.models import UnitOfMeasure
+
+    unit = UnitOfMeasure.objects.filter(code__iexact=(code or "").strip()).first()
+    if unit is None:
+        raise CalcError("UNIT_NOT_FOUND", 400)
+    return unit.code, unit.name[:32]
 
 
 def _product(product_id: Optional[int]):
@@ -818,7 +837,7 @@ def _product(product_id: Optional[int]):
 
     if not product_id:
         return None
-    product = Product.objects.select_related("domain_type").filter(pk=product_id).first()
+    product = Product.objects.select_related("domain_type", "uom").filter(pk=product_id).first()
     if product is None:
         raise CalcError("PRODUCT_NOT_FOUND", 400)
     return product
@@ -936,11 +955,16 @@ def add_lines(deal_id: int, user, rows: list[LineInput]) -> dict:
             position=position + offset,
             product=product,
             imported_raw_name=name[:max_name],
-            quantity=max(1, int(row.quantity or 1)),
+            quantity=_quantity(row.quantity),
             unit=(row.unit or "").strip()[:32],
             mpn=(row.article or "").strip()[:120],
             note=(row.note or "").strip(),
         )
+        # ADR-0027 п. 10: единица — из справочника; без кода — единица карточки каталога, если в строке её не написали.
+        if row.unit_code:
+            item.unit_code, item.unit = _unit(row.unit_code)
+        elif product is not None and product.uom_id and not item.unit:
+            item.unit_code, item.unit = product.uom.code, product.uom.name[:32]
         if quote.cost_currency_default_id:
             item.frozen_currency_id = quote.cost_currency_default_id
         _prefill_from_offer(item, product)
@@ -1032,8 +1056,9 @@ def copy_lines(deal_id: int, user, from_deal_id: int) -> dict:
     rows = [
         LineInput(
             name=item.imported_raw_name or (item.product.name if item.product else ""),
-            quantity=int(item.quantity or 1),
+            quantity=item.quantity or Decimal("1"),
             unit=item.unit or "",
+            unit_code=item.unit_code or "",
             kind=(calc_of(item).kind if calc_of(item) is not None else CalcLineKind.GOODS),
             product_id=item.product_id,
             article=item.mpn or "",
@@ -1070,6 +1095,7 @@ _EDITABLE = (
     "name",
     "quantity",
     "unit",
+    "unit_code",
     "lead_days",
     "purchase_price",
     "purchase_currency",
@@ -1143,9 +1169,11 @@ def update_line(deal_id: int, item_id: int, user, data: dict) -> dict:
             raise CalcError("NAME_REQUIRED", 400)
         item.imported_raw_name = name[: QuoteItem._meta.get_field("imported_raw_name").max_length]
     if "quantity" in changes:
-        item.quantity = int(changes["quantity"])
+        item.quantity = _quantity(changes["quantity"])
     if "unit" in changes:
         item.unit = (changes["unit"] or "").strip()[:32]
+    if "unit_code" in changes:
+        item.unit_code, item.unit = _unit(changes["unit_code"])
     if "lead_days" in changes:
         item.lead_time_days = int(changes["lead_days"] or 0)
     if "purchase_price" in changes or "purchase_currency" in changes:
@@ -1702,7 +1730,7 @@ def parse_proposal(text: str, *, content: Optional[bytes] = None, filename: str 
         if not name:
             continue
         try:
-            quantity = max(1, int(Decimal(str(row.get("quantity") or 1)).to_integral_value(rounding="ROUND_CEILING")))
+            quantity = as_qty(_quantity(row.get("quantity") or 1))
         except (ArithmeticError, ValueError):
             quantity = 1
         proposal.append(

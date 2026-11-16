@@ -160,7 +160,7 @@ function Pending({
 /** Вкладка «Приёмка»: строки подтверждённых заказов, которые ждут товара, и последние приёмки. */
 export function ReceiptsTab() {
   const { t } = useTranslation("stock");
-  const { activity } = useFormat();
+  const { activity, qty } = useFormat();
   const labels = useStateLabels();
   const query = useListStockReceipts();
   const [receiving, setReceiving] = useState<StockPendingReceiptLine | null>(null);
@@ -207,8 +207,7 @@ export function ReceiptsTab() {
                           · {r.supplier} ·{" "}
                           {r.lines
                             .map(
-                              (l) =>
-                                `${l.name} ${String(l.quantity)}${l.cell ? ` (${l.cell})` : ""}`,
+                              (l) => `${l.name} ${qty(l.quantity)}${l.cell ? ` (${l.cell})` : ""}`,
                             )
                             .join("; ")}
                           {r.supplier_doc ? ` · ${t("receipts.doc", { doc: r.supplier_doc })}` : ""}

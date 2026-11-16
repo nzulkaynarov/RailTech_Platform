@@ -264,7 +264,7 @@ function Documents({ card, objectId }: { card: ProjectCard; objectId: string }) 
 
 function Execution({ card, objectId }: { card: ProjectCard; objectId: string }) {
   const { t } = useTranslation("projects");
-  const { date } = useFormat();
+  const { date, qty } = useFormat();
   const f = card.fulfillment;
   return (
     <Card size="small" title={<h2 className="pf-dec-title">{t("card.execution.title")}</h2>}>
@@ -321,7 +321,7 @@ function Execution({ card, objectId }: { card: ProjectCard; objectId: string }) 
                 <li key={line.line_no}>
                   <span>
                     {line.title}
-                    {line.quantity !== null ? ` · ${String(line.quantity)} ${line.unit}` : ""}
+                    {line.quantity !== null ? ` · ${qty(line.quantity)} ${line.unit}` : ""}
                   </span>
                   <span className="pf-hint">
                     {t(`card.execution.lineStatus.${line.status}`, { defaultValue: line.status })}

@@ -1,6 +1,8 @@
 """Схемы запросов и ответов «Расчёта по заявке» (D2-1, `crm.views.calc`). Ответы собирает `crm.services.calculation`
 словарями; сериализаторы ниже — их явная схема для OpenAPI (`/api/v1/calc/*`) и проверка тел запросов."""
 
+from decimal import Decimal
+
 from rest_framework import serializers
 
 from core.quantity import QuantityField
@@ -164,6 +166,9 @@ class CalcLineSerializer(serializers.Serializer):
     zone = serializers.ChoiceField(choices=LINE_ZONES)
     quantity = QuantityField()
     unit = serializers.CharField(allow_blank=True)
+    unit_code = serializers.CharField(
+        allow_null=True, help_text="Код единицы справочника; null — единица текстом (строка до ADR-0027)"
+    )
     stock = CalcStockSerializer()
     supplier = CalcSupplierSerializer(allow_null=True)
     lead_days = serializers.IntegerField(allow_null=True)
@@ -234,8 +239,9 @@ class CalcLinesCreatedSerializer(CalcSheetSerializer):
 
 class CalcLineInSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=500, allow_blank=True, required=False, default="")
-    quantity = serializers.IntegerField(min_value=1, max_value=1_000_000, required=False, default=1)
+    quantity = QuantityField(min_value=Decimal("0.001"), max_value=Decimal("1000000"), required=False, default=1)
     unit = serializers.CharField(max_length=32, allow_blank=True, required=False, default="")
+    unit_code = serializers.CharField(max_length=16, allow_blank=True, required=False, default="")
     kind = serializers.ChoiceField(choices=ITEM_KINDS, required=False, default="goods")
     product_id = serializers.IntegerField(required=False, allow_null=True, default=None)
     article = serializers.CharField(max_length=120, allow_blank=True, required=False, default="")
@@ -248,8 +254,11 @@ class CalcLinesInSerializer(serializers.Serializer):
 
 class CalcLinePatchSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=500, required=False)
-    quantity = serializers.IntegerField(min_value=1, max_value=1_000_000, required=False)
+    quantity = QuantityField(min_value=Decimal("0.001"), max_value=Decimal("1000000"), required=False)
     unit = serializers.CharField(max_length=32, allow_blank=True, required=False)
+    unit_code = serializers.CharField(
+        max_length=16, required=False, help_text="Единица из справочника (ADR-0027 п. 10): код UN/ECE Rec 20"
+    )
     lead_days = serializers.IntegerField(min_value=0, max_value=3650, required=False, allow_null=True)
     purchase_price = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=0, required=False)
     purchase_currency = serializers.CharField(max_length=3, min_length=3, required=False)

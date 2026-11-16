@@ -29,9 +29,15 @@ export interface CalcLine {
   zone: CalcZone;
   /** Индикатор виз, к которому относится строка */
   group: CalcLineGroup;
-  /** @minimum 1 */
+  /** @exclusiveMinimum 0 */
   quantity: number;
   unit: string;
+  /**
+   * Код единицы справочника (UN/ECE Rec 20, ADR-0027 п. 10); null — единица текстом у строки до перехода
+   * @maxLength 16
+   * @nullable
+   */
+  unit_code: string | null;
   stock: CalcStock;
   supplier: CalcSupplier | null;
   /**

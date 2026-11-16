@@ -134,8 +134,9 @@ class CalcLine(BaseModel):
     kind: LineKind
     zone: LineZone
     group: Group
-    quantity: int
+    quantity: float
     unit: str
+    unit_code: str | None = None
     stock: CalcStock
     supplier: CalcSupplier | None
     lead_days: int | None
@@ -202,7 +203,7 @@ class CalcSheet(BaseModel):
 
 class CalcProposalLine(BaseModel):
     name: str
-    quantity: int
+    quantity: float
     unit: str
     article: str
     note: str
@@ -243,8 +244,9 @@ class CalcLineIn(BaseModel):
     model_config = _STRICT
 
     name: str | None = Field(default=None, max_length=500)
-    quantity: int | None = Field(default=None, ge=1, le=1_000_000)
+    quantity: float | None = Field(default=None, gt=0, le=1_000_000, allow_inf_nan=False)
     unit: str | None = Field(default=None, max_length=32)
+    unit_code: str | None = Field(default=None, max_length=16)
     kind: Literal["goods", "service"] | None = None
     product_id: str | None = Field(default=None, pattern=DIGITS, max_length=12)
     article: str | None = Field(default=None, max_length=120)
@@ -261,8 +263,9 @@ class CalcLinePatch(BaseModel):
     model_config = _STRICT
 
     name: str | None = Field(default=None, min_length=1, max_length=500)
-    quantity: int | None = Field(default=None, ge=1, le=1_000_000)
+    quantity: float | None = Field(default=None, gt=0, le=1_000_000, allow_inf_nan=False)
     unit: str | None = Field(default=None, max_length=32)
+    unit_code: str | None = Field(default=None, min_length=1, max_length=16)
     lead_days: int | None = Field(default=None, ge=0, le=3650)
     purchase_price: str | None = Field(default=None, pattern=DECIMAL, max_length=20)
     purchase_currency: str | None = Field(default=None, pattern=r"^[A-Z]{3}$")
@@ -359,6 +362,7 @@ def _line(raw: dict[str, Any], *, cost: bool, zones: Collection[str], offers: bo
         group=raw["group"],
         quantity=raw["quantity"],
         unit=raw.get("unit") or "",
+        unit_code=raw.get("unit_code") or None,
         stock=CalcStock(**raw["stock"]),
         supplier=supplier_model,
         lead_days=raw.get("lead_days"),

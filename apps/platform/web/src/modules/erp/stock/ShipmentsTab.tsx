@@ -223,7 +223,7 @@ function Rows({ items }: { items: readonly StockShipment[] }) {
             </div>
             <p className="pf-hint">
               {s.lines
-                .map((l) => `${l.name} · ${String(l.quantity)}${unitsText(l.units)}`)
+                .map((l) => `${l.name} · ${qty(l.quantity)}${unitsText(l.units)}`)
                 .join("; ")}
             </p>
             <p className="pf-hint">

@@ -14,7 +14,7 @@ import { calcRef } from "./api";
 
 function Entry({ item, canAnswer }: { item: PriceRequest; canAnswer: boolean }) {
   const { t } = useTranslation("stock");
-  const { activity } = useFormat();
+  const { activity, qty } = useFormat();
   const { message } = App.useApp();
   const refresh = useRefreshStock();
   const errorText = useErrorText();
@@ -53,7 +53,7 @@ function Entry({ item, canAnswer }: { item: PriceRequest; canAnswer: boolean }) 
           email: item.to_email,
         })}
       </p>
-      <p>{item.lines.map((l) => `${l.name} · ${String(l.quantity)}`).join("; ")}</p>
+      <p>{item.lines.map((l) => `${l.name} · ${qty(l.quantity)}`).join("; ")}</p>
       {item.error ? <p className="pf-hint">{item.error}</p> : null}
       {item.answer_note ? (
         <p className="pf-hint">{t("priceRequest.answerNote", { note: item.answer_note })}</p>

@@ -75,7 +75,7 @@ export function TraceTab() {
 
 function UnitCard({ unit }: { unit: StockTraceUnit }) {
   const { t } = useTranslation("stock");
-  const { date, activity } = useFormat();
+  const { date, activity, qty } = useFormat();
   const o = unit.origin;
   return (
     <Card
@@ -164,7 +164,7 @@ function UnitCard({ unit }: { unit: StockTraceUnit }) {
                   </span>
                   <span className="pf-hint">
                     {activity(d.shipped_at)}
-                    {unit.kind === "lot" ? ` · ${String(d.quantity)}` : ""}
+                    {unit.kind === "lot" ? ` · ${qty(d.quantity)}` : ""}
                   </span>
                 </li>
               ))}

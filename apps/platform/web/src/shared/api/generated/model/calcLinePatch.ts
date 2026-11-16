@@ -12,12 +12,18 @@ export interface CalcLinePatch {
    */
   name?: string;
   /**
-   * @minimum 1
    * @maximum 1000000
+   * @exclusiveMinimum 0
    */
   quantity?: number;
   /** @maxLength 32 */
   unit?: string;
+  /**
+   * Единица из справочника — код (ADR-0027 п. 10)
+   * @minLength 1
+   * @maxLength 16
+   */
+  unit_code?: string;
   /**
    * @minimum 0
    * @maximum 3650
