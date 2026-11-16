@@ -167,7 +167,7 @@ class InvoiceItem(models.Model):
         verbose_name=_("Инвойс"),
     )
     description = models.CharField(max_length=500)
-    quantity = models.PositiveIntegerField(default=1)
+    quantity = models.DecimalField(max_digits=14, decimal_places=3, default=Decimal("1"))  # ADR-0027 п. 9
     unit_price_excl_vat = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     line_total_excl_vat = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     source_quote_item = models.ForeignKey(
