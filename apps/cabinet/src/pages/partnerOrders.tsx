@@ -1167,7 +1167,7 @@ function SearchForm({ initial, onSearch }: { initial: string; onSearch: (val: st
           className="w-full pl-9 text-sm sm:w-64"
         />
       </div>
-      <Button type="submit" size="sm" variant="outline">
+      <Button type="submit" variant="outline">
         {t('partner.searchLabel')}
       </Button>
     </form>
