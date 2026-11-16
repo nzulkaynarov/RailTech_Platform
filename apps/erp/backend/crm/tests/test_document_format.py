@@ -111,7 +111,7 @@ def test_qty_integer_has_no_decimals():
 
 
 def test_qty_fractional_keeps_decimals():
-    assert qty(Decimal("2.5"), "т") == f"2.5{NBSP}т"
+    assert qty(Decimal("2.5"), "т") == f"2,5{NBSP}т"
 
 
 def test_qty_without_unit():
