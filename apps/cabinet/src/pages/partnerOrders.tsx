@@ -47,14 +47,14 @@ import { ToneBadge } from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useUrlParams } from '@/hooks/useUrlParams';
@@ -1167,7 +1167,7 @@ function SearchForm({ initial, onSearch }: { initial: string; onSearch: (val: st
           className="w-full pl-9 text-sm sm:w-64"
         />
       </div>
-      <Button type="submit" size="sm" variant="outline">
+      <Button type="submit" variant="outline">
         {t('partner.searchLabel')}
       </Button>
     </form>
@@ -1198,23 +1198,24 @@ function OrderDetailDialog({
   const { t } = useTranslation();
 
   return (
-    <Dialog open={orderId !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
-        <DialogHeader>
+    <Sheet open={orderId !== null} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
+        <SheetHeader>
           <div className="flex items-center justify-between pr-6">
-            <DialogTitle className="text-xl font-bold">
+            <SheetTitle className="text-xl font-bold">
               {order
                 ? `${t('pages.partnerOrders.orderPrefix')} ${order.number}`
                 : error
                   ? t('pages.partnerOrders.loadErrorTitle')
                   : t('app.loading')}
-            </DialogTitle>
+            </SheetTitle>
             {order ? <OrderStatusBadge status={order.status} /> : null}
           </div>
-          <DialogDescription>
+          <SheetDescription>
             {order ? `${t('pages.partnerOrders.createdAt')}: ${formatDateTime(order.created_at)}` : ''}
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
+        <div className="px-4">
 
         {error ? (
           <ErrorState error={error} onRetry={onRetry} />
@@ -1426,7 +1427,8 @@ function OrderDetailDialog({
           </div>
         )}
 
-        <DialogFooter className="gap-2 sm:justify-between">
+        </div>
+        <SheetFooter className="gap-2 sm:justify-between">
           <div className="flex gap-2">
             <CanAct>
               {order && order.status === 'sent' ? (
@@ -1468,14 +1470,14 @@ function OrderDetailDialog({
               ) : null}
             </CanAct>
           </div>
-          <DialogClose asChild>
+          <SheetClose asChild>
             <Button size="sm" variant="ghost">
               {t('common.close')}
             </Button>
-          </DialogClose>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </SheetClose>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -1499,19 +1501,20 @@ function RfqDetailDialog({
   const { t } = useTranslation();
 
   return (
-    <Dialog open={rfqId !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-        <DialogHeader>
+    <Sheet open={rfqId !== null} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent className="w-full overflow-y-auto sm:max-w-2xl">
+        <SheetHeader>
           <div className="flex items-center justify-between pr-6">
-            <DialogTitle className="text-xl font-bold">
+            <SheetTitle className="text-xl font-bold">
               {rfq ? rfq.subject : error ? t('pages.partnerOrders.loadErrorTitle') : t('app.loading')}
-            </DialogTitle>
+            </SheetTitle>
             {rfq ? <RfqStatusBadge status={rfq.status} /> : null}
           </div>
-          <DialogDescription>
+          <SheetDescription>
             {rfq ? `${t('pages.partnerOrders.requestedAt')}: ${formatDateTime(rfq.requested_at)}` : ''}
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
+        <div className="px-4">
 
         {error ? (
           <ErrorState error={error} onRetry={onRetry} />
@@ -1576,7 +1579,8 @@ function RfqDetailDialog({
           </div>
         )}
 
-        <DialogFooter className="gap-2 sm:justify-between">
+        </div>
+        <SheetFooter className="gap-2 sm:justify-between">
           <CanAct>
             {rfq && rfq.status === 'sent' ? (
               <Button
@@ -1590,13 +1594,13 @@ function RfqDetailDialog({
               </Button>
             ) : null}
           </CanAct>
-          <DialogClose asChild>
+          <SheetClose asChild>
             <Button size="sm" variant="ghost">
               {t('common.close')}
             </Button>
-          </DialogClose>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </SheetClose>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }
