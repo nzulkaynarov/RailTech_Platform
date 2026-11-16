@@ -32,7 +32,7 @@ from dataclasses import dataclass, field
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Iterable, Optional
 
-from django.db import transaction
+from django.db import DataError, transaction
 from django.db.models import Max, Q
 from django.utils import timezone
 from sales.services import deal_numbers
@@ -872,10 +872,18 @@ def _log(deal: Deal, user, action: str, detail: str, event_code: str, params: di
     )
 
 
-def _recalc(quote: Quote) -> None:
+def _recalc(quote: Quote) -> list[int]:
+    """Пересчёт КП; возвращает строки, чья сумма после пересчёта по курсу не влезла в поле (их значения не тронуты).
+
+    Итог КП, не влезающий в поле, — понятный отказ 409, а не 500 (прод, ЗВ-2026-002, 2026-11-16: закупка в сумах стояла у
+    строки с валютой USD)."""
     from .quotes import QuoteCalculationService
 
-    QuoteCalculationService.recalculate_quote(quote.id)
+    try:
+        result = QuoteCalculationService.recalculate_quote(quote.id)
+    except DataError:
+        raise CalcError("AMOUNT_TOO_LARGE", 409) from None
+    return list(getattr(result, "amount_overflow_ids", []) or [])
 
 
 @transaction.atomic
@@ -1367,7 +1375,7 @@ def mark_ready(deal_id: int, user) -> dict:
 
     Проверки — как у отправки КП на согласование (`submit_for_review`): клиент заявки, ненулевая сумма, курсы строк,
     не в убыток. Визы строк заменяют визы КП: цепочка шагов ERP не строится."""
-    from sales.services.quote_fx import fix_quote_rates, live_rates_outdated
+    from sales.services.quote_fx import fix_quote_rates
 
     from .eds_quote_approval import request_director_approval
     from .quotes._shared import _set_quote_status
@@ -1393,9 +1401,12 @@ def mark_ready(deal_id: int, user) -> dict:
     company_id, err = resolve_submit_company(quote, user)
     if err:
         raise CalcError(err, 403 if err == "ROLE_NOT_PERMITTED" else 409)
-    if live_rates_outdated(quote):
-        _recalc(quote)
-        quote.refresh_from_db()
+    # Пересчёт перед отправкой всегда: строка, чья сумма по сегодняшнему курсу не влезает в поле (обычно сумма в сумах у
+    # строки в USD), — отказ с числом таких строк, а не КП с неверной ценой и не 500.
+    overflow = _recalc(quote)
+    quote.refresh_from_db()
+    if overflow:
+        raise CalcError("AMOUNT_TOO_LARGE", 409, lines=len(overflow))
     err = assert_submittable(quote, compute_quote_economics(quote))
     if err:
         raise CalcError(err, 409)

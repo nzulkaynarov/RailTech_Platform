@@ -1,4 +1,4 @@
-import { App, Button, InputNumber, Popconfirm } from "antd";
+import { App, Button, InputNumber, Popconfirm, Select } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -19,6 +19,8 @@ import { calcRef, useApplySheet, useErrorText } from "./api";
 import { useErrorText as useStockErrorText } from "../stock/api";
 import { MatchModal } from "./MatchModal";
 import { MoneyText } from "../../../shared/ui/MoneyText";
+import { useGetCatalogLookups } from "../../../shared/api/generated/platform-bff";
+import { HOME_CURRENCY, currencyLabel } from "../../../shared/lib/money";
 
 const GROUP_OF = { stock: "stock", supply: "supply", engineer: "engineer" } as const;
 
@@ -28,6 +30,12 @@ const groupDigits = (value: string | number | undefined) =>
 const ungroup = (value: string | undefined) => (value ?? "").replace(/\s/g, "");
 
 /** Поле суммы или количества: сохраняется по Enter и при уходе из поля, если значение изменилось. */
+/** Коды валют справочника ERP для выбора валюты закупки; нет доступа к справочнику — только текущая валюта строки. */
+function useCurrencyCodes(): string[] {
+  const lookups = useGetCatalogLookups({ query: { staleTime: 10 * 60_000, retry: false } });
+  return (lookups.data?.currencies ?? []).map((c) => c.code);
+}
+
 function NumberCell({
   value,
   label,
@@ -252,7 +260,8 @@ function Supplier({ line }: { line: CalcLine }) {
 }
 
 function Purchase({ line, actions }: { line: CalcLine; actions: Actions }) {
-  const { t } = useTranslation("calc");
+  const { t, i18n } = useTranslation("calc");
+  const currencies = useCurrencyCodes();
   if (line.zone === "services") {
     // Ставку и дни бригады видит `cost_margin` или держатель зоны услуг; остальным — прочерк, а не пустые поля.
     if (
@@ -299,15 +308,39 @@ function Purchase({ line, actions }: { line: CalcLine; actions: Actions }) {
   if (line.purchase_price === undefined || line.purchase_price === null) {
     return <span className="pf-hint">{t("lines.hidden")}</span>;
   }
+  const currency = line.purchase_currency ?? HOME_CURRENCY;
   return (
-    <NumberCell
-      value={line.purchase_price}
-      label={t("lines.purchaseLabel", { name: line.name })}
-      disabled={!line.can_edit || actions.pending}
-      onCommit={(next) => {
-        actions.patch(line, { purchase_price: next });
-      }}
-    />
+    <div className="pf-calc-purchase">
+      <NumberCell
+        value={line.purchase_price}
+        label={t("lines.purchaseLabel", { name: line.name })}
+        disabled={!line.can_edit || actions.pending}
+        onCommit={(next) => {
+          actions.patch(line, { purchase_price: next });
+        }}
+      />
+      {/* Валюта закупки строки: новые строки берут валюту по умолчанию из настроек компании (часто USD), поэтому
+          она видна и меняется здесь же — иначе сумма в сумах считалась в долларах (прод, ЗВ-2026-002). */}
+      {line.can_edit ? (
+        <Select
+          size="small"
+          aria-label={t("lines.currencyLabel", { name: line.name })}
+          value={currency}
+          disabled={actions.pending}
+          popupMatchSelectWidth={false}
+          options={(currencies.length ? currencies : [currency]).map((code) => ({
+            value: code,
+            label: currencyLabel(code, i18n.language),
+          }))}
+          onChange={(code: string) => {
+            if (code !== currency) actions.patch(line, { purchase_currency: code });
+          }}
+          className="pf-calc-currency"
+        />
+      ) : (
+        <span className="pf-hint">{currencyLabel(currency, i18n.language)}</span>
+      )}
+    </div>
   );
 }
 

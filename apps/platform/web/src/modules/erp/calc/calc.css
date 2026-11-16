@@ -371,3 +371,14 @@
   flex-direction: column;
   gap: 12px;
 }
+
+/* Закупка и её валюта в одной ячейке (валюта строки видна и меняется) */
+.pf-calc-purchase {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+.pf-calc-currency {
+  width: 72px;
+}
