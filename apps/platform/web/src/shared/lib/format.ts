@@ -72,7 +72,10 @@ export function companyDate(now: number = Date.now()): string {
 /** Дней от сегодня (по календарю компании) до даты `YYYY-MM-DD…`; прошедшая — отрицательное число. */
 export function daysUntil(date: string, now: number = Date.now()): number {
   const utc = (value: string) => {
-    const [y = Number.NaN, m = Number.NaN, d = Number.NaN] = value.slice(0, 10).split("-").map(Number);
+    const [y = Number.NaN, m = Number.NaN, d = Number.NaN] = value
+      .slice(0, 10)
+      .split("-")
+      .map(Number);
     return Date.UTC(y, m - 1, d);
   };
   return Math.round((utc(date) - utc(companyDate(now))) / 86_400_000);
