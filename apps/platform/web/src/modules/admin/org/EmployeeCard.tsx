@@ -8,13 +8,7 @@ import { ResendInvite } from "../../../features/invite-employee/ResendInvite";
 import { erpAttention } from "../../../entities/employee/status";
 import type { Employee } from "../../../shared/api/generated/model";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
-import {
-  CrmTag,
-  EmployeeStatusTag,
-  ErpTag,
-  RoleTags,
-  TelegramText,
-} from "./EmployeeCells";
+import { CrmTag, EmployeeStatusTag, ErpTag, RoleTags, TelegramText } from "./EmployeeCells";
 import { PersonAvatar } from "../../../shared/ui/EntityCell";
 
 export interface EmployeeCardProps {
