@@ -21,8 +21,8 @@ __pycache__/
 coverage.xml
 htmlcov/
 
-# Node
-node_modules/
+# Node. Без «/» на конце — чтобы и симлинк node_modules (общие зависимости worktree) не попадал в репозиторий.
+node_modules
 dist/
 coverage/
 *.local
