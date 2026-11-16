@@ -187,6 +187,19 @@ describe('Профиль → «Уведомления»', () => {
     const card = await notificationsCard();
     expect(await within(card).findByText(/после того, как менеджер добавит вас в систему/)).toBeInTheDocument();
     expect(within(card).queryByRole('button', { name: 'Подключить Telegram' })).not.toBeInTheDocument();
+    // Не тупик: ручка — написать менеджеру; ниже не зовут «подключить бот выше».
+    expect(within(card).getByRole('link', { name: 'Написать менеджеру' })).toHaveAttribute('href', expect.stringContaining('/messages'));
+    expect(await screen.findByText(/Telegram подключится, когда менеджер добавит вас в систему/)).toBeInTheDocument();
+    expect(screen.queryByText(/Подключите бот выше/)).not.toBeInTheDocument();
+  });
+
+  it('«Первые шаги» без шага Telegram, если подключить нельзя', async () => {
+    setMockTelegram({ available: false });
+    signedIn();
+    renderApp('/requests');
+    await screen.findByRole('heading', { level: 1, name: 'Заявки' });
+    expect(await screen.findByText('Пригласить коллег')).toBeInTheDocument();
+    expect(screen.queryByText('Уведомления в Telegram')).not.toBeInTheDocument();
   });
 
   it('ошибка выпуска ссылки — текст по коду контракта', async () => {

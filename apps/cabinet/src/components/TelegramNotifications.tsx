@@ -16,6 +16,7 @@ import { useNow } from '@/hooks/useNow';
 import { formatTime } from '@/lib/format';
 import { toast } from '@/lib/toast';
 import { useAppMode } from '@/session/mode';
+import { ManagerButton } from '@/components/TelegramLinkButton';
 
 /** Срок ссылки проверяется раз в секунду: «ссылка истекла» появляется вовремя, без перезагрузки. */
 const EXPIRY_TICK_MS = 1000;
@@ -135,7 +136,10 @@ export function TelegramNotifications({ autoStart = false }: { autoStart?: boole
                 />
               )
             ) : !status.data?.available ? (
-              <p className="text-sm text-muted-foreground">{t('profile.notifications.unavailable')}</p>
+              <div className="flex flex-col items-start gap-2">
+                <p className="text-sm text-muted-foreground">{t('profile.notifications.unavailable')}</p>
+                <ManagerButton context={null} />
+              </div>
             ) : waitingLink && link ? (
               <LinkPanel link={link} showQr={mode === 'web'} />
             ) : (
