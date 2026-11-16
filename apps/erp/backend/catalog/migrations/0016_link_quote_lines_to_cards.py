@@ -10,6 +10,7 @@ import uuid
 from django.conf import settings
 from django.db import migrations
 
+
 def _title(item) -> str:
     for value in (item.name_canonical, item.imported_raw_name, item.mpn, item.gost_drawing):
         value = (value or "").strip()
@@ -73,14 +74,20 @@ def forwards(apps, schema_editor):
 def backwards(apps, schema_editor):
     Product = apps.get_model("catalog", "Product")
     QuoteItem = apps.get_model("sales", "QuoteItem")
-    drafts = Product.objects.filter(status__code="DRAFT", demand_count__lte=1, source_deal__isnull=False)
-    ids = []
-    for item in QuoteItem.objects.filter(product__in=drafts).select_related("quote", "product"):
-        if item.product.source_deal_id == item.quote.deal_id:
-            ids.append(item.product_id)
-            item.product = None
+    # Сравнение по id: модели двух приложений в историческом состоянии — разные классы, `product__in=QuerySet` не проходит.
+    drafts = dict(
+        Product.objects.filter(status__code="DRAFT", demand_count__lte=1, source_deal__isnull=False).values_list(
+            "pk", "source_deal_id"
+        )
+    )
+    ids = set()
+    for item in QuoteItem.objects.filter(product_id__in=list(drafts)).select_related("quote"):
+        if drafts[item.product_id] == item.quote.deal_id:
+            ids.add(item.product_id)
+            item.product_id = None
             item.save(update_fields=["product"])
-    Product.objects.filter(pk__in=ids, quote_items__isnull=True).delete()
+    used = set(QuoteItem.objects.filter(product_id__in=ids).values_list("product_id", flat=True))
+    Product.objects.filter(pk__in=ids - used).delete()
 
 
 class Migration(migrations.Migration):
