@@ -159,6 +159,7 @@ class CalcLineSerializer(serializers.Serializer):
     article = serializers.CharField(allow_blank=True)
     product_id = serializers.IntegerField(allow_null=True)
     product_name = serializers.CharField(allow_null=True)
+    product_draft = serializers.BooleanField(help_text="Карточка строки — черновик каталога (ADR-0027)")
     kind = serializers.ChoiceField(choices=LINE_KINDS)
     zone = serializers.ChoiceField(choices=LINE_ZONES)
     quantity = serializers.IntegerField()

@@ -52,6 +52,10 @@ exports[`карты статусов > снимок карты: изменени
     "none": "default",
     "suspended": "red",
   },
+  "catalogItem": {
+    "draft": "default",
+    "published": "green",
+  },
   "categoryRequest": {
     "approved": "green",
     "pending": "gold",

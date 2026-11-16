@@ -14143,6 +14143,8 @@ export interface components {
       /** @description Карточка каталога (сопоставление) */
       product_id: string | null;
       product_name: string | null;
+      /** @description Карточка строки — черновик каталога (ADR-0027): строку можно сопоставить с опубликованной позицией */
+      product_draft: boolean;
       kind: components["schemas"]["CalcLineKind"];
       zone: components["schemas"]["CalcZone"];
       /**

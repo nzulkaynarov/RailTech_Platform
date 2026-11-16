@@ -349,7 +349,8 @@ def test_free_line_kind_decides_the_zone(world):
     )
     assert response.status_code == 201
     (line,) = response.json()["lines"]
-    assert line["zone"] == "services" and line["product_id"] is None and response.json()["created"] == [line["id"]]
+    assert line["zone"] == "services" and response.json()["created"] == [line["id"]]
+    assert line["product_id"] is not None, "строка без карточки получает черновик (ADR-0027)"
     switch = _api(world["engineer"]).patch(_url(world, f"lines/{line['id']}/"), {"kind": "goods"}, format="json")
     assert switch.status_code == 403, "сделать строку товаром — зона снабженца"
 
@@ -597,7 +598,8 @@ def test_unbinding_a_service_card_keeps_the_service_zone(world):
     response = _api(world["engineer"]).patch(_url(world, f"lines/{service_id}/"), {"product_id": None}, format="json")
     assert response.status_code == 200
     line = next(line for line in response.json()["lines"] if line["id"] == service_id)
-    assert line["zone"] == "services" and line["product_id"] is None
+    # Снятая карточка заменяется черновиком той же зоны (ADR-0027): строка без карточки не остаётся.
+    assert line["zone"] == "services" and line["product_id"] not in (None, world["mounting"].pk)
     # Привязать к строке-услуге карточку товара гл. инженер не может: зона после правки — товары.
     rebind = _api(world["engineer"]).patch(
         _url(world, f"lines/{service_id}/"), {"product_id": world["rail"].pk}, format="json"
