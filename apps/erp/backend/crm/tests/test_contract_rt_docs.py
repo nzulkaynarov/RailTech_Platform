@@ -55,7 +55,7 @@ def test_contract_has_articles_specification_requisites_and_signatures(world):  
         "Предмет договора",
         "Приложение № 1. Спецификация",
         "Колодка тормозная",
-        "Итого к оплате:",
+        "Всего, сум",
         "НДС по ставке 12%",
         "Реквизиты и подписи Сторон",
         "ИНН: 7700000001",
@@ -66,7 +66,8 @@ def test_contract_has_articles_specification_requisites_and_signatures(world):  
     ):
         assert expected in text, expected
     meta = seen["kwargs"]["meta"]
-    assert (meta.title, meta.number, seen["kwargs"]["draft"]) == ("Договор поставки", "CT-SIGN1-0001", False)
+    assert (meta.kind_label, meta.number, seen["kwargs"]["draft"]) == ("Договор поставки", "CT-SIGN1-0001", False)
+    assert meta.window is False and [row.role for row in meta.info[:2]] == ["number", "date"]
 
 
 @pytest.mark.django_db

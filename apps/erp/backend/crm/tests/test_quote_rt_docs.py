@@ -62,12 +62,11 @@ def test_quote_is_a_letter_with_sections_notes_and_optional_lines(world):  # noq
     assert seen["pdf"].startswith(b"%PDF")
     text = seen["text"]
     for expected in (
-        "Buyer LLC",
         "Тормозная система",
         "Колодка тормозная",
-        "Арт.: KT-100",
+        "Арт. изготовителя KT-100",
         "Поставка партиями",
-        "Итого к оплате:",
+        "Итого к оплате, сум",
         "Опционально (не входит в итог)",
         "Набор креплений",
     ):
@@ -75,7 +74,10 @@ def test_quote_is_a_letter_with_sections_notes_and_optional_lines(world):  # noq
     for secret in ("frozen_base_price", "Себестоимость", "Наценка"):
         assert secret not in text
     meta = seen["kwargs"]["meta"]
-    assert meta.title == "Коммерческое предложение"
+    # Сетка документа (план ДОК-4): вид — крупно, клиент — в окне конверта, номер и заявка — в инфоблоке.
+    assert meta.kind_label == "Коммерческое предложение"
+    assert meta.addressee[0] == "Buyer LLC" and meta.addressee_strong == 0
+    assert [row.role for row in meta.info[:2]] == ["number", "date"]
     assert seen["kwargs"]["draft"] is True, "КП до отправки — проект, не оферта"
 
 
@@ -91,7 +93,7 @@ def test_signed_quote_prints_the_stamp_and_verification(world):  # noqa: F811
     )
     _lines(quote)
     seen = _render(quote)
-    assert "ДОКУМЕНТ ОФИЦИАЛЬНО ПОДПИСАН" in seen["text"]
+    assert "Директор Иванов И. И." in seen["text"] and "Подписано электронной подписью" in seen["text"]
     meta = seen["kwargs"]["meta"]
     assert (meta.verification_code, meta.verification_url) == ("QT12CD34", "https://cabinet.example.test/v/QT12CD34")
 

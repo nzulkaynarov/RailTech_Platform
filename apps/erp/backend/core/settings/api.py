@@ -263,6 +263,9 @@ RT_DOCS_DOCUMENTS = tuple(
     for kind in os.environ.get("RT_DOCS_DOCUMENTS", "invoice,act,contract,quote").split(",")
     if kind.strip()
 )
+# Сетка документа (стандарт документов §4, план ДОК-4): вид и инфоблок справа, адресат в окне конверта, подвал из
+# колонок. Откат к прежней шапке бланка без выпуска кода — `RT_DOCS_GRID=0`.
+RT_DOCS_GRID = os.environ.get("RT_DOCS_GRID", "1").strip().lower() not in ("0", "false", "no", "off")
 
 # Сопряжение с CRM (M3-ERP-05): срок жизни кода (сек) и переходный период ротации — сколько ещё действует прежний
 # токен CRM→ERP после «Обновить ключи» (сек).

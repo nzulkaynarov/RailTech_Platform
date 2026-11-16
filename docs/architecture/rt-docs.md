@@ -212,7 +212,9 @@ WeasyPrint и по PDF через pypdf с допуском 0,03; точное �
 - **ERP**: пакет копией в `site-packages` (как `rt_bus`); в образе ERP WeasyPrint 69.0 (`requirements.txt`) — та же мажорная версия,
   которую требует пакет (`weasyprint>=69,<70` в зависимостях, проверка при импорте `rt_docs.pdf`; lock пакета — 69.0).
   **Подключено (план 2.6, 2026-11-15)**: контекст сборки `rtdocs` и `COPY --from=contracts documents` в образе ERP,
-  `RT_DOCS_CONTRACTS_DIR=/opt/rt/contracts/documents`; модуль `crm/services/documents/rt_documents.py`: бланк — те же реквизиты
+  `RT_DOCS_CONTRACTS_DIR=/opt/rt/contracts/documents`; **сетка документа** (ДОК-4, 2026-11-17) у КП и счёта:
+  `footer_columns` и `return_address` бланка — из «Компании и бланков» и основного счёта в сумах, клиент — в окне конверта,
+  номер, дата, срок, договор и заявка — в инфоблоке; откат — `RT_DOCS_GRID=0`; модуль `crm/services/documents/rt_documents.py`: бланк — те же реквизиты
   профиля, что уходят в EDS; тело — шаблон ERP (`body_html`: свой, замороженный при выпуске или образец платформы) через
   `html_to_body`, скаляры `{{doc.number}}` и т. п. подставляются текстом, `{{doc.*}}` блоков — данными
   `rt_docs.commercial` (`items_table`, `totals_block`, `payment_requisites`); рамка документа (стороны, ссылки) — узлами

@@ -49,6 +49,7 @@ def _render(invoice: Invoice) -> dict:
 
 @pytest.mark.django_db
 def test_issued_invoice_has_parties_items_totals_and_payment_purpose(world):  # noqa: F811
+    """Сетка документа (план ДОК-4): плательщик — в окне конверта, номер и договор — в инфоблоке, позиции стопкой."""
     invoice = _invoice(world, "ISSUED", notes="Отгрузка после оплаты")
     InvoiceItem.objects.create(
         invoice=invoice,
@@ -61,10 +62,8 @@ def test_issued_invoice_has_parties_items_totals_and_payment_purpose(world):  # 
     assert seen["pdf"].startswith(b"%PDF")
     text = seen["text"]
     for expected in (
-        "Поставщик",
-        "Плательщик",
         "Комплект скрепления КБ-65",
-        "Итого к оплате:",
+        "Итого к оплате, сум",
         "Платёжные реквизиты",
         "Оплата по счёту № INV-SIGN1-0001",
         "Отгрузка после оплаты",
@@ -72,8 +71,21 @@ def test_issued_invoice_has_parties_items_totals_and_payment_purpose(world):  # 
     ):
         assert expected in text, expected
     meta = seen["kwargs"]["meta"]
-    assert (meta.title, meta.number, seen["kwargs"]["draft"]) == ("Счёт на оплату", "INV-SIGN1-0001", False)
+    assert (meta.kind_label, meta.number, seen["kwargs"]["draft"]) == ("Счёт на оплату", "INV-SIGN1-0001", False)
+    assert meta.addressee[0] == invoice.deal.company.name and meta.addressee_strong == 0
+    info = {row.label: row.value for row in meta.info}
+    assert info["Счёт №"] == "INV-SIGN1-0001" and info["Договор"].startswith("№ CT-SIGN1-0001")
+    assert seen["kwargs"]["letterhead"].footer_columns, "подвал из колонок настроек компании"
     assert seen["kwargs"]["layout"].value == "commercial"
+
+
+@pytest.mark.django_db
+def test_grid_can_be_rolled_back_to_the_old_frame(world, settings):  # noqa: F811
+    settings.RT_DOCS_GRID = False
+    invoice = _invoice(world, "ISSUED")
+    seen = _render(invoice)
+    assert "Поставщик" in seen["text"] and "Плательщик" in seen["text"]
+    assert seen["kwargs"]["meta"].kind_label is None
 
 
 @pytest.mark.django_db
