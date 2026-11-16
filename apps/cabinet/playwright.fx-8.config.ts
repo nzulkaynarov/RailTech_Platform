@@ -24,7 +24,7 @@ export default defineConfig({
     screenshot: 'off',
   },
   webServer: {
-    command: `VITE_PORTAL_MOCK=1 VITE_BOT_USERNAME=railtech_bot npx vite --port ${PORT} --strictPort`,
+    command: `VITE_PORTAL_MOCK=1 npx vite --port ${PORT} --strictPort`,
     url: `http://localhost:${PORT}/login`,
     reuseExistingServer: false,
     timeout: 60_000,

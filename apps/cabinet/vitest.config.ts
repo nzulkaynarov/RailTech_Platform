@@ -13,9 +13,8 @@ export default defineConfig({
     css: { include: [/tokens\.generated\.css/] },
     // Сценарии экранов (ввод, диалоги, несколько запросов к моку) под параллельной нагрузкой дольше 5 с.
     testTimeout: 30_000,
-    // Имя бота для ссылок t.me в тестах (в сборке — VITE_BOT_USERNAME из окружения).
     // Адрес CRM формы «Я новый клиент» — мок MSW отвечает на любой origin.
-    env: { VITE_BOT_USERNAME: 'railtech_test_bot', VITE_CRM_URL: 'http://crm.test' },
+    env: { VITE_CRM_URL: 'http://crm.test' },
   },
   resolve: {
     alias: {

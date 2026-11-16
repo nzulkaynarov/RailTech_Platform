@@ -6,7 +6,7 @@ import { KeyRound, MailCheck, RotateCw, Send } from 'lucide-react';
 
 import { loginErrorText } from '@/api/errors';
 import { exchangeLoginCode, requestMagicLink, type Me } from '@/api/portal';
-import { botLink, isPortalMock } from '@/app/links';
+import { useBotLink, isPortalMock } from '@/app/links';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,7 +41,7 @@ export function LoginSentPage({ mode = 'sent' }: { mode?: 'sent' | 'code' }) {
   const [resent, setResent] = useState(false);
   const now = useNow(1000);
   const wait = sentAt === null ? 0 : secondsLeft(sentAt, now);
-  const telegramLink = botLink();
+  const telegramLink = useBotLink();
   const emailQuery = state?.email ? `?email=${encodeURIComponent(state.email)}` : '';
 
   const signIn = useMutation({

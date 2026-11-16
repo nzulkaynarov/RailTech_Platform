@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, Loader2, Send, UserPlus } from 'lucide-react';
 
 import { crmBaseUrl, fetchFormToken, isCrmFormError, submitWebLead } from '@/api/crm';
-import { botLink } from '@/app/links';
+import { useBotLink } from '@/app/links';
 import { EmptyState } from '@/components/EmptyState';
 import { TelegramLinkButton } from '@/components/TelegramLinkButton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -51,7 +51,7 @@ export function NewClientPage() {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const initialEmail = searchParams.get('email') ?? '';
-  const telegramLink = botLink('web');
+  const telegramLink = useBotLink('web');
   const [sent, setSent] = useState(false);
   const formAvailable = crmBaseUrl() !== null;
 

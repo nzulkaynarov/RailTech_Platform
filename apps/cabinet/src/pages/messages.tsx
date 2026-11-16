@@ -4,7 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Eye, MessagesSquare, Paperclip, Send, Tag, UserRound, X } from 'lucide-react';
 
 import type { MessageContext, PortalMessage } from '@/api/portal';
-import { botLink } from '@/app/links';
+import { useBotLink } from '@/app/links';
 import { EmptyState } from '@/components/EmptyState';
 import { PageHeader } from '@/components/PageHeader';
 import { ErrorState, ListSkeleton } from '@/components/QueryStates';
@@ -42,7 +42,7 @@ export function MessagesPage() {
   const { t } = useTranslation();
   const me = useMe().data;
   const { feed, messages, pending, submit, retry } = useMessagesFeed({ initialUnread: me?.unread ?? 0 });
-  const bot = botLink();
+  const bot = useBotLink();
 
   return (
     <>

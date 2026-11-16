@@ -426,7 +426,7 @@ paths:
       description: >-
         Название компании-оператора для кабинета до входа: заголовок вкладки, экран входа, тексты. Ведётся в CRM
         («Настройки · Компания»), в ERP — проекция из события `crm.company_profile.changed`. `null` — ещё не задано,
-        кабинет пишет нейтральные слова. Других данных нет.
+        кабинет пишет нейтральные слова. Здесь же имя Telegram-бота (`crm.bot.changed`). Других данных нет.
       security: []
       responses:
         '200':
@@ -4801,11 +4801,18 @@ components:
     PortalOperator:
       type: object
       additionalProperties: false
-      required: [name]
+      required: [name, bot_username]
       properties:
         name:
           type: [string, 'null']
           description: Название компании-оператора; `null` — не задано
+        bot_username:
+          type: [string, 'null']
+          pattern: '^[A-Za-z][A-Za-z0-9_]{3,31}$'
+          description: >-
+            Имя Telegram-бота без @ — для входа через Telegram, «Я новый клиент» и ссылок на бота в кабинете. Владелец —
+            CRM (процесс бота узнаёт имя у Telegram), в ERP — проекция из `crm.bot.changed`. `null` — бот ещё не
+            запускался: кабинет не показывает ссылки на бота
 
     DealStage:
       type: string

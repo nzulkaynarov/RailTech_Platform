@@ -60,7 +60,7 @@ describe('«Я новый клиент»: форма запроса → лид C
 
     expect(await heading('Спасибо! Заявка отправлена')).toBeInTheDocument();
     expect(screen.getByText(/Менеджер свяжется с вами/)).toBeInTheDocument();
-    const telegram = screen.getByRole('link', { name: 'Написать в Telegram' });
+    const telegram = await screen.findByRole('link', { name: 'Написать в Telegram' });
     expect(telegram).toHaveAttribute('href', 'https://t.me/railtech_test_bot?start=web');
 
     expect(mockCrmForm().tokenRequests).toBe(1);
@@ -229,7 +229,7 @@ describe('«Я новый клиент»: форма запроса → лид C
     await heading('Я новый клиент');
     expect(screen.getByText('Форма заявки недоступна')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Отправить заявку' })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Написать в Telegram' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: 'Написать в Telegram' })).toHaveAttribute(
       'href',
       'https://t.me/railtech_test_bot?start=web',
     );

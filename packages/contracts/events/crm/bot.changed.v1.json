@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/crm/bot.changed.v1.json",
+  "title": "Бот CRM: имя в Telegram",
+  "description": "Тип uz.railtech.crm.bot.changed.v1, источник rt://crm. Поле data конверта (envelope.v1.json). Единственный источник имени бота ансамбля — CRM: процесс бота узнаёт его у Telegram (`getMe`) при запуске с токеном из «Подключений». ERP держит проекцию: ссылка привязки Telegram в кабинете (`t.me/<бот>?start=…`), вход и «Я новый клиент» в кабинете (`GET /api/portal/v1/operator`). Публикуется, когда процесс бота узнал новое имя, и повторно при каждом старте воркера CRM. Снимок целиком: снимок с `changed_at` старше применённого не применяется. Данных людей нет.",
+  "type": "object",
+  "required": ["username", "changed_at", "actor"],
+  "properties": {
+    "username": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_]{3,31}$",
+      "description": "Имя бота в Telegram без @"
+    },
+    "changed_at": {"type": "string", "format": "date-time", "description": "Когда процесс бота узнал это имя (время базы CRM)"},
+    "actor": {"$ref": "_defs.v1.json#/$defs/Actor"}
+  },
+  "additionalProperties": false
+}

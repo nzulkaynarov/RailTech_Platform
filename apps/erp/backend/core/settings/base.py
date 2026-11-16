@@ -47,7 +47,6 @@ ALLOWED_HOSTS = [
 
 # Client Portal (Cabinet -> ERP, M2-ERP-01, M2-ERP-02)
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN") or os.environ.get("ERP_TELEGRAM_BOT_TOKEN", "")
-TELEGRAM_BOT_USERNAME = os.environ.get("TELEGRAM_BOT_USERNAME", "")
 CABINET_URL = os.environ.get("CABINET_URL", "http://cabinet.localhost")
 
 

@@ -40,7 +40,6 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Optional
 
-from django.conf import settings
 from django.core.cache import cache
 from django.db import transaction
 from django.utils import timezone
@@ -108,7 +107,10 @@ def _pair_secret() -> Optional[str]:
 
 
 def _bot_username() -> str:
-    return (getattr(settings, "TELEGRAM_BOT_USERNAME", "") or "").strip().lstrip("@")
+    """Имя бота — проекция из CRM (`crm.bot.changed`), своей настройки у ERP нет."""
+    from integration.services.telegram_bot import bot_username
+
+    return bot_username()
 
 
 def _crm_contact_id(contact: Contact) -> Optional[int]:

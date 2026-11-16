@@ -6,7 +6,7 @@ import { apiErrorKey, loginErrorText } from '@/api/errors';
 import { isPortalApiError } from '@/api/portal';
 import { useCompanyPartnerApplication } from '@/api/queries';
 import { PartnerApplicationCard } from '@/pages/company';
-import { botLink } from './links';
+import { useBotLink } from './links';
 import { StatusScreen } from '@/components/StatusScreen';
 import { Button } from '@/components/ui/button';
 import { useAppMode } from '@/session/mode';
@@ -51,7 +51,7 @@ export function RequireSession() {
 
 function TelegramSignInFailed({ error, onRetry }: { error: unknown; onRetry: () => void }) {
   const { t } = useTranslation();
-  const bot = botLink();
+  const bot = useBotLink();
   const openBot = () => {
     const webApp = getTelegramWebApp();
     if (bot && webApp?.openTelegramLink) webApp.openTelegramLink(bot);
