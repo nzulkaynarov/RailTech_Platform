@@ -11,10 +11,10 @@ import importlib
 import pytest
 from django.apps import apps
 from django.test import override_settings
+from sales.models import CalcLine, CalcLineKind
 
 from catalog.models import DomainType, Product
 from catalog.tests.test_candidates import _line, world  # noqa: F401  # мир продавца и КП
-from sales.models import CalcLine, CalcLineKind
 
 pytestmark = pytest.mark.django_db
 

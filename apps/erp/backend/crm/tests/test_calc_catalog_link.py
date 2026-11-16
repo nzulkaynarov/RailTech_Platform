@@ -7,10 +7,10 @@
 from __future__ import annotations
 
 import pytest
+from sales.models import QuoteItem
 
 from catalog.models import DomainType, Product, ProductStatus
 from crm.tests.test_calc import ENGINEER, SUPPLY, _api, _staff, _url, world  # noqa: F401  # фикстура мира расчёта
-from sales.models import QuoteItem
 
 pytestmark = pytest.mark.django_db
 
