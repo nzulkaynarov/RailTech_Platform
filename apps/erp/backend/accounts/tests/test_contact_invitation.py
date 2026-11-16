@@ -114,7 +114,6 @@ def client_contact(db, client_company, seller_user):
 def configure_email_and_portal_settings(settings, seller_company):
     settings.EMAIL_BACKEND = LOCMEM_BACKEND
     settings.CABINET_URL = "http://cabinet.localhost"
-    settings.TELEGRAM_BOT_USERNAME = "railtech_test_bot"
     settings.OWN_COMPANY_ID = seller_company.id
 
 

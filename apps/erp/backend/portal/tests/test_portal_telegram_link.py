@@ -38,12 +38,21 @@ def _decode(token: str) -> tuple[int, int, int, int]:
     return version, language, int.from_bytes(contact, "big"), expires
 
 
+def _set_bot(username: str) -> None:
+    """Имя бота — проекция из CRM (`crm.bot.changed`), не настройка ERP."""
+    from core.models.settings import SystemSetting
+
+    setting = SystemSetting.load()
+    setting.telegram_bot_username = username
+    setting.save(update_fields=["telegram_bot_username"])
+
+
 @pytest.fixture
 def linkable(settings, monkeypatch, client_company, client_contact, other_company, other_contact):
     """Бот задан, сопряжение с CRM есть, компании и контакты сопоставлены с CRM (A — 42/58, B — 43/59)."""
     import integration.bus
 
-    settings.TELEGRAM_BOT_USERNAME = "example_bot"
+    _set_bot("example_bot")
     monkeypatch.setattr(integration.bus, "pair_secrets", lambda publisher, subscriber: [PAIR_SECRET])
     CrmClientMapping.objects.create(company=client_company, crm_client_id=42)
     CrmClientMapping.objects.create(company=other_company, crm_client_id=43)
@@ -136,7 +145,7 @@ def test_without_bot_or_crm_pairing_the_link_is_unavailable(
     import integration.bus
 
     if missing == "bot":
-        settings.TELEGRAM_BOT_USERNAME = ""
+        _set_bot("")
     else:
         monkeypatch.setattr(integration.bus, "pair_secrets", lambda publisher, subscriber: [])
 

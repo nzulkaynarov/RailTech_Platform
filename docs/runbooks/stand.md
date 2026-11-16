@@ -44,7 +44,7 @@ make smoke        # /health доменов CRM, ERP, Cabinet и /api/v1/health +
 | `docling` | распознавание документов клиентов CRM (база знаний его не использует — только Markdown) |
 | `crm-migrate`, `crm-api`, `crm-bot`, `crm-worker`, `crm-mcp-*` | CRM из `apps/crm` (код монтируется; hot reload только у `crm-api`, остальные — `docker compose restart <сервис>`). `crm-bot` — Telegram-бот отдельным процессом (S0-4): polling или `/telegram/webhook` через Caddy; токен меняется в «Подключениях» без перезапуска; без токена и Telegram на стенде — `docs/runbooks/crm-bot.md` (заглушка Bot API) |
 | `erp-backend`, `erp-mcp`, `erp-worker`, `erp-worker-ai`, `erp-beat` | ERP из `apps/erp` (копия B2B, M1-ERP-01): Daphne мигрирует при старте (`AUTO_MIGRATE`), `erp-mcp` — инструменты ERP для агента CRM на SDK `mcp` (отдельный процесс, порт 8104 внутри сети, FIX-36; контракт `packages/contracts/mcp-tools.json` монтируется в контейнер), Celery-воркеры, Beat; код бэкенда монтируется, перезапуск руками |
-| `cabinet-web` | Cabinet из `apps/cabinet` (M2-CAB-01): nginx со сборкой Vite, своей логики нет; пересборка — `make up`. Имя бота для ссылок — `TELEGRAM_BOT_USERNAME` в `.env`. Разработка экранов — `make -C apps/cabinet dev` (мок, без стенда) |
+| `cabinet-web` | Cabinet из `apps/cabinet` (M2-CAB-01): nginx со сборкой Vite, своей логики нет; пересборка — `make up`. Имя бота для ссылок — из CRM (`crm.bot.changed` → ERP → `GET /operator`), когда бот запущен. Разработка экранов — `make -C apps/cabinet dev` (мок, без стенда) |
 | `platform-bff`, `platform-web` | Платформа из `apps/platform` (INF-P0-4): BFF на FastAPI (сессии — `redis-cache` БД 3; CRM и ERP берёт по `http://crm-api:8000`, `http://erp-backend:8000`) и статика SPA (file-server Caddy, :8080). Нужен только `redis-cache`: без CRM/ERP `/api/v1/health` отвечает 200 со `status: degraded`. Определены в `dev.yml`; пересборка — `make up`. Срок жизни сессии — `PLATFORM_SESSION_TTL_HOURS` в `.env` |
 | `caddy` | четыре домена ансамбля |
 | `clickhouse`, `langfuse-worker`, `langfuse-web` | профиль `observability` |
@@ -127,7 +127,7 @@ EDS (помощник «Заполнить из файла», EDS-REG) ходи�
    `cloudflared tunnel --url http://localhost:8088 --http-host-header cabinet.localhost` (порт — `HTTP_PORT` из `.env`;
    у ngrok: `ngrok http 8088 --host-header=cabinet.localhost`). Туннель даст адрес вида `https://<имя>.trycloudflare.com`.
 2. В `.env`: `PORTAL_COOKIE_SAMESITE=None`, `CABINET_URL=https://<имя>.trycloudflare.com`, `TELEGRAM_BOT_TOKEN` тестового бота
-   и `TELEGRAM_BOT_USERNAME`; затем `make up` (перезапуск `erp-backend`). Django видит `Host: cabinet.localhost` — ALLOWED_HOSTS менять не нужно.
+   (имя бота ERP и кабинет получат от CRM сами); затем `make up` (перезапуск `erp-backend`). Django видит `Host: cabinet.localhost` — ALLOWED_HOSTS менять не нужно.
 3. BotFather → тестовый бот → Menu Button / Mini App → `https://<имя>.trycloudflare.com`.
 4. Откройте бота на телефоне (приложение Telegram), нажмите кнопку: в ответе `POST /api/portal/v1/auth/telegram` — `Set-Cookie:
    portal_session=…; HttpOnly; Secure; SameSite=None; Path=/api/portal`, экран «Запросы» открывается. Веб Telegram и настольные

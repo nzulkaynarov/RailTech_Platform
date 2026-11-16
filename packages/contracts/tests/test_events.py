@@ -426,6 +426,7 @@ def test_initial_subscriptions_v1() -> None:
     assert subs["crm"]["endpoint"] == "http://crm-api:8000/bus/v1/events"
     assert subs["erp"]["endpoint"] == "http://erp-backend:8000/bus/v1/events"
     assert sorted(_gets(subs["erp"])) == [
+        "uz.railtech.crm.bot.changed.v1",
         "uz.railtech.crm.cabinet.message_sent.v1",
         "uz.railtech.crm.client.updated.v1",
         "uz.railtech.crm.company_profile.changed.v1",

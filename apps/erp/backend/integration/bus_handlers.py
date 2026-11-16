@@ -15,7 +15,13 @@ from uuid import UUID
 
 from rt_bus import Event, subscribe
 
-from .services import company_profile, crm_projections, eds_inbound, partner_client
+from .services import company_profile, crm_projections, eds_inbound, partner_client, telegram_bot
+
+
+@subscribe("uz.railtech.crm.bot.changed.v1")
+def on_bot_changed(event: Event) -> None:
+    """Имя Telegram-бота из CRM — проекция для ссылки привязки и кабинета (один источник, без настройки ERP)."""
+    telegram_bot.apply_bot_changed(event.data)
 
 
 @subscribe("uz.railtech.crm.company_profile.changed.v1")

@@ -27,10 +27,11 @@ def test_snapshot_renames_and_an_older_one_does_not_overwrite():
 def test_operator_name_is_public_and_hidden_until_crm_sends_the_profile():
     client = APIClient()
     assert client.get("/api/portal/v1/operator").json() == {
-        "name": None
+        "name": None,
+        "bot_username": None,
     }, "до профиля из CRM — не показываем значение окружения"
     apply_company_profile(_snapshot("RailTech", "2026-11-13T09:00:00Z"))
-    assert client.get("/api/portal/v1/operator").json() == {"name": "RailTech"}
+    assert client.get("/api/portal/v1/operator").json() == {"name": "RailTech", "bot_username": None}
 
 
 def test_the_bus_handler_is_registered():

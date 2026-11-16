@@ -179,7 +179,7 @@ SDK запоминает параметры в `sessionStorage` — для во�
 
 `make up` из корня: сервис `cabinet-web` (этот Dockerfile: Vite → nginx, `/health`), Caddy
 `http://cabinet.localhost` — `/api/portal/*` → `erp-backend:8000` (до M2-ERP-01 — 404), остальное → `cabinet-web`.
-Имя бота для сборки — `TELEGRAM_BOT_USERNAME` из корневого `.env`. Форма «Я новый клиент» ходит в CRM напрямую:
+Имя бота — из `GET /api/portal/v1/operator` (`bot_username`; владелец — CRM, событие `crm.bot.changed`). Форма «Я новый клиент» ходит в CRM напрямую:
 адрес — build-arg `VITE_CRM_URL` = `CABINET_CRM_URL` корневого `.env` (по умолчанию `http://crm.localhost:${HTTP_PORT}`),
 CRM разрешает CORS на `/api/v1/leads/web*` только origin из `CABINET_ORIGIN` (`crm-api` в `infra/compose/base.yml`;
 по умолчанию `http://cabinet.localhost`, `http://cabinet.localhost:${HTTP_PORT}`, `https://${CABINET_DOMAIN}`).

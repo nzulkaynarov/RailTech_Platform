@@ -519,7 +519,8 @@ class OperatorView(APIView):
         setting = SystemSetting.load()
         # Пока CRM не прислала профиль, `platform_name` — значение окружения: не показываем его клиенту.
         name = setting.platform_name.strip() if setting.company_profile_changed_at else ""
-        return Response({"name": name or None}, status=status.HTTP_200_OK)
+        bot = setting.telegram_bot_username.strip()
+        return Response({"name": name or None, "bot_username": bot or None}, status=status.HTTP_200_OK)
 
 
 # ── 2. Me ───────────────────────────────────────────────────────────────────

@@ -570,7 +570,6 @@ services:
       PORTAL_COOKIE_SAMESITE: ${PORTAL_COOKIE_SAMESITE:-Lax}
       # Тот же бот, что у CRM: ERP проверяет им подпись initData Mini App (пусто — вход через Mini App закрыт).
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
-      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
       # Файлы ERP (PDF КП, договоров, счетов, актов, сканы, загрузки портала, картинки каталога, импорт) — RustFS внутри сети
       # compose; наружу адрес не публикуется, файлы клиенту отдаёт сам ERP. Свой ключ ERP (S0-9): только бакеты erp-*.
       MINIO_ENDPOINT: http://rustfs:9000
@@ -687,7 +686,6 @@ services:
       context: ../../apps/cabinet
       args:
         VITE_API_URL: ""
-        VITE_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
         # Форма «Я новый клиент» → CRM POST /api/v1/leads/web (CORS — CABINET_ORIGIN у crm-api).
         VITE_CRM_URL: ${CABINET_CRM_URL:-http://crm.localhost:${HTTP_PORT:-80}}
     healthcheck:
