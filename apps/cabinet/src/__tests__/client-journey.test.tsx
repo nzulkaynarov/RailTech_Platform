@@ -36,10 +36,10 @@ describe('Путь клиента M2-CAB-04', () => {
 
     const list = await screen.findByRole('list', { name: 'Позиции каталога' });
     const bearing = within(list).getByRole('link', { name: 'Подшипник 6205-2RS' }).closest('article') as HTMLElement;
-    const addBearing = within(bearing).getByRole('button', { name: 'В запрос: Подшипник 6205-2RS' });
+    const addBearing = within(bearing).getByRole('button', { name: 'В заявку: Подшипник 6205-2RS' });
 
     await user.click(addBearing);
-    expect(within(bearing).getByRole('button', { name: 'Убрать из запроса: Подшипник 6205-2RS' })).toBeInTheDocument();
+    expect(within(bearing).getByRole('button', { name: 'Убрать из заявки: Подшипник 6205-2RS' })).toBeInTheDocument();
 
     const bar = await screen.findByRole('region', { name: 'Выбрано: 1' });
     expect(within(bar).getByText('Выбрано: 1')).toBeInTheDocument();

@@ -66,7 +66,7 @@ describe('Wave J6 & B-CABFIX-2: Поиск, фильтры, повтор зап�
       await user.type(searchInput, 'несуществующий артикул 99999');
 
       expect(await screen.findByText('Ничего не нашлось')).toBeInTheDocument();
-      expect(screen.getByText('По запросу «несуществующий артикул 99999» запросов не найдено')).toBeInTheDocument();
+      expect(screen.getByText('По запросу «несуществующий артикул 99999» заявок не найдено')).toBeInTheDocument();
 
       const clearBtn = screen.getByRole('button', { name: 'Сбросить поиск' });
       await user.click(clearBtn);
@@ -87,7 +87,7 @@ describe('Wave J6 & B-CABFIX-2: Поиск, фильтры, повтор зап�
       await screen.findByRole('list', { name: 'Заявки' });
 
       // Находим кнопку повтора у первого запроса
-      const reorderBtns = await screen.findAllByRole('link', { name: /Повторить запрос/ });
+      const reorderBtns = await screen.findAllByRole('link', { name: /Повторить заявку/ });
       expect(reorderBtns.length).toBeGreaterThan(0);
       await user.click(reorderBtns[0]);
 
