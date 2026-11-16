@@ -30,10 +30,11 @@ MARGINS: dict[Orientation, tuple[int, int, int, int]] = {
 }
 FONT_FILES: dict[str, tuple[tuple[str, int, str], ...]] = {
     "sans": (
-        ("NotoSans-Regular.ttf", 400, "normal"),
-        ("NotoSans-Bold.ttf", 700, "normal"),
-        ("NotoSans-Italic.ttf", 400, "italic"),
-        ("NotoSans-BoldItalic.ttf", 700, "italic"),
+        ("Inter-Regular.ttf", 400, "normal"),
+        ("Inter-SemiBold.ttf", 600, "normal"),
+        ("Inter-Bold.ttf", 700, "normal"),
+        ("Inter-Italic.ttf", 400, "italic"),
+        ("Inter-BoldItalic.ttf", 700, "italic"),
     ),
     "serif": (
         ("NotoSerif-Regular.ttf", 400, "normal"),
@@ -41,8 +42,16 @@ FONT_FILES: dict[str, tuple[tuple[str, int, str], ...]] = {
         ("NotoSerif-Italic.ttf", 400, "italic"),
         ("NotoSerif-BoldItalic.ttf", 700, "italic"),
     ),
+    # Коды: номер документа, код проверки, ИНН, МФО, счёт, артикул (стандарт документов §3). В JetBrains Mono нет `ʻ` и
+    # `Ҳҳ` — в CSS за ним стоит основной шрифт, поэтому «тофу» не бывает.
+    "mono": (
+        ("JetBrainsMono-Regular.ttf", 400, "normal"),
+        ("JetBrainsMono-SemiBold.ttf", 600, "normal"),
+    ),
 }
-FAMILY = {"sans": "RT Doc Sans", "serif": "RT Doc Serif"}
+FAMILY = {"sans": "RT Doc Sans", "serif": "RT Doc Serif", "mono": "RT Doc Mono"}
+#: Стек шрифта кодов: моноширинный, недостающие знаки — из основного.
+MONO_STACK = '"RT Doc Mono", "RT Doc Sans"'
 #: Цвет знака «ПРОЕКТ» и надписи в колонтитуле проекта (не из бланка: знак должен читаться на любом бланке).
 DRAFT_COLOR = "#b42318"
 
@@ -219,7 +228,8 @@ td.rt-addressee { padding-left: 18pt; }
 .rt-sign-basis { font-size: 0.8em; color: #5a6270; margin-top: 2pt; margin-bottom: 4pt; font-style: italic;
                  line-height: 1.25; }
 .rt-verify-code-inline { font-size: 0.8em; color: #5a6270; margin-top: 3pt; }
-.rt-verify-code-inline strong { font-family: monospace; font-size: 0.95em; color: #20242b; letter-spacing: 0.5pt; }
+.rt-verify-code-inline strong { font-family: "RT Doc Mono", "RT Doc Sans"; font-size: 0.95em; color: #20242b;
+                                letter-spacing: 0.5pt; }
 .rt-running-docref { position: absolute; left: -9999px; font-size: 0; string-set: rtdocref content(); }
 .rt-verify-block { display: flex; align-items: center; gap: 12pt; margin-top: 18pt; padding-top: 8pt;
                    border-top: 0.5pt solid #e1e5ec; break-inside: avoid; }
@@ -227,6 +237,7 @@ td.rt-addressee { padding-left: 18pt; }
 .rt-verify-info { font-size: 7.5pt; color: #5a6270; line-height: 1.4; }
 .rt-verify-title { font-weight: 700; color: #20242b; margin-bottom: 2pt; }
 .rt-verify-code { margin-bottom: 2pt; }
-.rt-verify-code strong { font-family: monospace; font-size: 8.5pt; color: #15294d; letter-spacing: 0.5pt; }
+.rt-verify-code strong { font-family: "RT Doc Mono", "RT Doc Sans"; font-size: 8.5pt; color: #15294d;
+                         letter-spacing: 0.5pt; }
 .rt-verify-url { color: #7a828f; font-size: 7pt; word-break: break-all; }
 """

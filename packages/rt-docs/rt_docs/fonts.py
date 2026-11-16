@@ -1,6 +1,6 @@
-"""Вшитые шрифты документа: Noto Sans и Noto Serif 2.015 (SIL OFL 1.1, rt_docs/fonts/OFL.txt), подмножество
-scripts/subset_fonts.py. Рендер видит только их (rt_docs.pdf — изолированный fontconfig), поэтому символ вне шрифта
-печатается «тофу», а не молча другим шрифтом: `missing_glyphs` предупреждает об этом заранее.
+"""Вшитые шрифты документа: Inter 4.1, JetBrains Mono 2.304 и Noto Serif 2.015 (SIL OFL 1.1, лицензии — в
+rt_docs/fonts), подмножество scripts/subset_fonts.py. Рендер видит только их (rt_docs.pdf — изолированный fontconfig),
+поэтому символ вне шрифта печатается «тофу», а не молча другим шрифтом: `missing_glyphs` предупреждает об этом заранее.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ def _cmap(name: str) -> frozenset[int]:
 
 
 def coverage(font: str) -> frozenset[int]:
-    """Кодовые точки, которые есть во всех четырёх начертаниях семейства (`sans` или `serif`)."""
+    """Кодовые точки, которые есть во всех начертаниях семейства (`sans`, `serif` или `mono`)."""
     sets = [_cmap(name) for name, _, _ in FONT_FILES[font]]
     common = sets[0]
     for other in sets[1:]:

@@ -38,7 +38,7 @@ _ALIGN = {
     "right": WD_ALIGN_PARAGRAPH.RIGHT,
     "justify": WD_ALIGN_PARAGRAPH.JUSTIFY,
 }
-_FONT = {"sans": "Noto Sans", "serif": "Noto Serif"}
+_FONT = {"sans": "Inter", "serif": "Noto Serif"}
 _MUTED = RGBColor(0x5A, 0x62, 0x70)
 
 
