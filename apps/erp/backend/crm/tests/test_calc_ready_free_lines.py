@@ -12,9 +12,9 @@ from decimal import Decimal
 
 import pytest
 from django.utils import timezone
-from master_data.models import Currency, ExchangeRate
 
 from crm.tests.test_calc import _api, _url, world  # noqa: F401  # фикстура мира расчёта
+from master_data.models import Currency, ExchangeRate
 
 pytestmark = pytest.mark.django_db
 
@@ -75,7 +75,9 @@ def test_sums_entered_on_usd_lines_are_a_clear_refusal_not_a_500(world):  # noqa
 
     # Валюту строки поправили на сумы — КП уходит директору.
     for line_id in goods:
-        fixed = _api(world["supply"]).patch(_url(world, f"lines/{line_id}/"), {"purchase_currency": "UZS"}, format="json")
+        fixed = _api(world["supply"]).patch(
+            _url(world, f"lines/{line_id}/"), {"purchase_currency": "UZS"}, format="json"
+        )
         assert fixed.status_code == 200, fixed.json()
         assert _api(world["supply"]).post(_url(world, f"lines/{line_id}/visa/")).status_code == 200
     done = _api(world["supply"]).post(_url(world, "ready/"))
