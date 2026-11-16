@@ -25,11 +25,11 @@ fit: рендер → почти пустая последняя страниц�
 | `variables.yaml` + `variables.schema.json` | Каталог: виды документов (подпись, макет бланка, домен-владелец), переменные (код, тип `text/date/money/number`, подписи ru/uz/en, виды), блоки с замком (подписи, `required_for`, `keep_with_previous`) |
 | `examples/*.json` | Тела-примеры: письмо (ru, uz), договор, счёт с таблицей позиций и `kitchen-sink.json` — каждый узел, атрибут и значение перечисления (тест сверяет со схемой); они же — корпус проверки совместимости |
 
-Узлы тела: `paragraph` (`textAlign`), `heading` (1–3), `bulletList`/`orderedList` (`start`)/`listItem`, `table` (`columnWidths` в %,
+Узлы тела: `paragraph` (`textAlign`; с 1.1.0 — `variant: note`, примечание мелким вторичным цветом), `heading` (1–3), `bulletList`/`orderedList` (`start`)/`listItem`, `table` (`columnWidths` в %,
 `variant`: `grid` — позиции, `plain` — реквизиты, `totals` — итоги справа) с `tableRow` (`emphasis`) и `tableCell`/`tableHeader`
 (`colspan`, `rowspan`, `align`, `numeric`), `pageBreak`, `signature` (одна или две стороны: `role`, `position`, `name` — текст или
 `{"var": код}`; `stamp` — «М. П.»), `block` (`code` `doc.*`, `locked`, `required`; `content` — закреплённый текст, если вызывающий
-не дал данных). Инлайн: `text` с метками `bold`, `italic`, `underline`, `link` (`https://`, `http://`, `mailto:`, `tel:`), `variable`
+не дал данных). Инлайн: `text` с метками `bold`, `italic`, `underline`, `code` (моноширинный, с 1.1.0), `link` (`https://`, `http://`, `mailto:`, `tel:`), `variable`
 (`code` из каталога), `hardBreak`. Цвета, шрифтов, стилей, классов и сырого HTML в схеме нет.
 
 **Лимиты** (решение архитектора по ревью #295 — до появления тел в базах): вложенность узлов ≤ 20, таблица ≤ 500 строк
@@ -63,6 +63,11 @@ fit: рендер → почти пустая последняя страниц�
 - **Данные блоков** — `blocks: {"doc.items_table": [узлы тела], …}`: домен собирает таблицу позиций, итоги, реквизиты теми же
   узлами контракта (рендер один для всего); код — `doc.<код>`, узлы проверяются по `#/$defs/block` (`validate_blocks`),
   служебные узлы рендера во входе отклоняются. Нет данных и нет `content` — пунктирная рамка «Блок «…»: данные подставит система».
+- **Блоки сетки документа** (ДОК-3, стандарт документов §6) — `rt_docs.commercial`: `stacked_items_table` (позиция стопкой:
+  артикул `code` примечанием, название, характеристики, примечание к цене курсивом; срок — колонкой, если задан хоть у одной
+  строки; количество с единицей; цена с «/ 1 ед.» под ней; суммы без нулевых тийинов), `grid_totals_block` (итоги 75 мм справа,
+  строка «К оплате» выделена, сумма прописью — примечанием в последней строке), `conditions_block` (условия парами, пустые не
+  печатаются). Прежние `items_table` и `totals_block` остаются для документов без сетки.
 - **Сумма прописью** — `amount_in_words(value, currency, lang)`: ru (как ERP `money_words`), uz-латиница («Bir million ikki yuz
   ming soʻm 00 tiyin», сотни — «bir yuz»), en; неизвестная валюта словом не называется (`CNY 50/100`).
 

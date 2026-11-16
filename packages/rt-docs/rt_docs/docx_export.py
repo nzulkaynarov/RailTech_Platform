@@ -101,6 +101,8 @@ class _DocxWriter:
             run.bold = "bold" in marks or None
             run.italic = "italic" in marks or None
             run.underline = "underline" in marks or None
+            if "code" in marks:
+                run.font.name = "JetBrains Mono"
             if node.get("_missing"):
                 run.font.highlight_color = WD_COLOR_INDEX.YELLOW
 
@@ -141,6 +143,11 @@ class _DocxWriter:
             if attrs.get("textAlign") in _ALIGN:
                 paragraph.alignment = _ALIGN[attrs["textAlign"]]
             self.inline(paragraph, node.get("content", ()))
+            if attrs.get("variant") == "note":
+                # Примечание: мельче основного текста, вторичным цветом (контракт 1.1.0).
+                for run in paragraph.runs:
+                    run.font.size = Pt(round(self.setup.font_pt * 0.85, 1))
+                    run.font.color.rgb = _MUTED
         elif kind == "heading":
             paragraph = container.add_paragraph()
             paragraph.paragraph_format.keep_with_next = True
