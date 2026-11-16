@@ -4,29 +4,29 @@ import userEvent from '@testing-library/user-event';
 import { renderApp, signedIn } from '@/test/render';
 import { captureBody, expectNoAxeViolations, failWith, heading, requestLog } from '@/test/screens';
 
-describe('Запросы', () => {
+describe('Заявки', () => {
   it('список: номер, суть, статус, сделка; строка открывается с клавиатуры', async () => {
     signedIn();
     const user = userEvent.setup();
     const { router } = renderApp('/requests');
-    await heading('Запросы');
-    const list = await screen.findByRole('list', { name: 'Запросы' });
+    await heading('Заявки');
+    const list = await screen.findByRole('list', { name: 'Заявки' });
     expect(within(list).getAllByRole('listitem')).toHaveLength(5);
-    expect(within(list).getByText('Новый')).toBeInTheDocument();
+    expect(within(list).getByText('Новая')).toBeInTheDocument();
     expect(within(list).getAllByText('Есть КП')).toHaveLength(2);
     expect(within(list).getByText('Ещё без проекта')).toBeInTheDocument();
 
     const link = within(list).getByRole('link', { name: /^ЗВ-2026-042/ });
     link.focus();
     await user.keyboard('{Enter}');
-    expect(await heading('Запрос ЗВ-2026-042')).toBeInTheDocument();
+    expect(await heading('Заявка ЗВ-2026-042')).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/requests/501');
   });
 
   it('карточка: что дальше и КП по запросу', async () => {
     signedIn();
     renderApp('/requests/501');
-    await heading('Запрос ЗВ-2026-042');
+    await heading('Заявка ЗВ-2026-042');
     expect(screen.getByText('КП готово — откройте его ниже.')).toBeInTheDocument();
     expect(screen.getByText('Через менеджера')).toBeInTheDocument();
     const quotes = await screen.findByRole('link', { name: /KP-2026-0042 · версия 2/ });
@@ -45,18 +45,18 @@ describe('Запросы', () => {
     const user = userEvent.setup();
     const body = captureBody('/requests');
     const { router } = renderApp('/requests');
-    await heading('Запросы');
-    await user.click(screen.getByRole('link', { name: 'Новый запрос' }));
-    await heading('Новый запрос');
+    await heading('Заявки');
+    await user.click(screen.getByRole('link', { name: 'Новая заявка' }));
+    await heading('Новая заявка');
 
-    await user.click(screen.getByRole('button', { name: 'Отправить запрос' }));
+    await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
     expect(screen.getByText('Опишите, что нужно, — хотя бы одной фразой.')).toBeInTheDocument();
     expect(screen.getByLabelText('Что нужно')).toHaveAttribute('aria-invalid', 'true');
 
     await user.type(screen.getByLabelText('Что нужно'), 'Кабель для цеха');
     await user.type(screen.getByLabelText('Строка 1'), 'Кабель ВВГнг 3×2,5');
     await user.type(screen.getByLabelText('Количество'), 'много');
-    await user.click(screen.getByRole('button', { name: 'Отправить запрос' }));
+    await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
     expect(screen.getByText(/Количество — положительное число/)).toBeInTheDocument();
 
     await user.clear(screen.getByLabelText('Количество'));
@@ -66,9 +66,9 @@ describe('Запросы', () => {
     await user.type(screen.getByLabelText('Строка 2'), 'Монтаж');
     await user.click(screen.getByRole('button', { name: 'Добавить строку' }));
     await user.click(screen.getByRole('button', { name: 'Удалить строку 3' }));
-    await user.click(screen.getByRole('button', { name: 'Отправить запрос' }));
+    await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
 
-    expect(await heading('Запрос ЗВ-2026-106')).toBeInTheDocument();
+    expect(await heading('Заявка ЗВ-2026-106')).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/requests/506');
     expect(body.current).toEqual({
       summary: 'Кабель для цеха',
@@ -77,7 +77,7 @@ describe('Запросы', () => {
         { text: 'Монтаж', quantity: null, unit: null },
       ],
     });
-    expect(await screen.findByText('Запрос ЗВ-2026-106 отправлен')).toBeInTheDocument();
+    expect(await screen.findByText('Заявка ЗВ-2026-106 отправлена')).toBeInTheDocument();
   });
 
   it('Ctrl+S / ⌘S не отправляет запрос и не перехватывается: отправка — только кнопкой рядом с «Что произойдёт»', async () => {
@@ -86,7 +86,7 @@ describe('Запросы', () => {
     const log = requestLog();
     const body = captureBody('/requests');
     const { router } = renderApp('/requests/new');
-    await heading('Новый запрос');
+    await heading('Новая заявка');
     await user.type(screen.getByLabelText('Что нужно'), 'Кабель для цеха');
 
     for (const modifier of ['ctrlKey', 'metaKey'] as const) {
@@ -103,13 +103,13 @@ describe('Запросы', () => {
     // «Что произойдёт» — только настоящий процесс: номер, менеджер, КП в разделе «КП», без сроков.
     const note = screen.getByRole('note');
     expect(note).toHaveTextContent('Что произойдёт');
-    expect(note).toHaveTextContent('Запрос получит номер и уйдёт менеджеру RailTech');
+    expect(note).toHaveTextContent('Заявка получит номер и уйдёт менеджеру RailTech');
     expect(note).not.toHaveTextContent(/\d|час|рабоч/i);
     // Выбора «Направление обращения» нет: в контракте такого поля нет.
     expect(screen.queryByText(/Направление обращения/)).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Отправить запрос' }));
-    await heading(/^Запрос ЗВ-/);
+    await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
+    await heading(/^Заявка ЗВ-/);
     // Тело POST — ровно поля ClientRequestCreate, ничего лишнего.
     expect(body.current).toEqual({ summary: 'Кабель для цеха', lines: [] });
   });
@@ -117,8 +117,8 @@ describe('Запросы', () => {
   it('старая ссылка ?view=… ведёт на список запросов, а не в 404', async () => {
     signedIn();
     const { router } = renderApp('/requests?view=kanban');
-    await heading('Запросы');
-    expect(await screen.findByRole('list', { name: 'Запросы' })).toBeInTheDocument();
+    await heading('Заявки');
+    expect(await screen.findByRole('list', { name: 'Заявки' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/requests');
     expect(router.state.location.search).toBe('');
   });
@@ -126,7 +126,7 @@ describe('Запросы', () => {
   it('подсказки по контракту: суть до 5000 символов, файл до 10 МБ', async () => {
     signedIn();
     renderApp('/requests/new');
-    await heading('Новый запрос');
+    await heading('Новая заявка');
     expect(screen.getByText(/До 5000 символов/)).toBeInTheDocument();
     expect(screen.getByLabelText('Что нужно')).toHaveAttribute('maxlength', '5000');
     expect(screen.getByText('PDF, DOCX, XLSX или изображения до 10 МБ')).toBeInTheDocument();
@@ -138,7 +138,7 @@ describe('Запросы', () => {
     const user = userEvent.setup();
     const body = captureBody('/requests');
     renderApp('/requests/new');
-    await heading('Новый запрос');
+    await heading('Новая заявка');
     await user.type(screen.getByLabelText('Что нужно'), 'Нужны подшипники по спецификации');
     await user.upload(
       screen.getByLabelText('Прикрепить файлы (спецификация, опросные листы, чертежи)'),
@@ -146,8 +146,8 @@ describe('Запросы', () => {
     );
     expect(await screen.findByText('spec.pdf')).toBeInTheDocument();
     expect(screen.getByText(/^\(2 (КБ|кБ|KB)\)$/)).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Отправить запрос' }));
-    await heading(/^Запрос ЗВ-/);
+    await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
+    await heading(/^Заявка ЗВ-/);
     expect(body.current).toEqual({
       summary: 'Нужны подшипники по спецификации',
       lines: [],
@@ -160,7 +160,7 @@ describe('Запросы', () => {
     const user = userEvent.setup();
     const log = requestLog();
     renderApp('/requests/new');
-    await heading('Новый запрос');
+    await heading('Новая заявка');
     await user.upload(
       screen.getByLabelText('Прикрепить файлы (спецификация, опросные листы, чертежи)'),
       new File([new Uint8Array(10 * 1024 * 1024 + 1)], 'huge.pdf', { type: 'application/pdf' }),
@@ -175,9 +175,9 @@ describe('Запросы', () => {
     failWith('post', '/requests', 422, 'VALIDATION_ERROR');
     const user = userEvent.setup();
     renderApp('/requests/new');
-    await heading('Новый запрос');
+    await heading('Новая заявка');
     await user.type(screen.getByLabelText('Что нужно'), 'Нужно что-то');
-    await user.click(screen.getByRole('button', { name: 'Отправить запрос' }));
+    await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
     expect(await screen.findByText('Проверьте заполненные поля.')).toBeInTheDocument();
     expect(screen.getByLabelText('Что нужно')).toHaveValue('Нужно что-то');
   });
@@ -186,27 +186,27 @@ describe('Запросы', () => {
     signedIn('viewer');
     window.localStorage.setItem('cabinet.language', 'ru');
     const { router } = renderApp('/requests');
-    await heading('Запросы');
-    await screen.findByRole('list', { name: 'Запросы' });
-    expect(screen.queryByRole('link', { name: 'Новый запрос' })).not.toBeInTheDocument();
+    await heading('Заявки');
+    await screen.findByRole('list', { name: 'Заявки' });
+    expect(screen.queryByRole('link', { name: 'Новая заявка' })).not.toBeInTheDocument();
     await router.navigate('/requests/new');
-    expect(await screen.findByText('Создавать запросы может контакт с правом подтверждать')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Отправить запрос' })).not.toBeInTheDocument();
+    expect(await screen.findByText('Создавать заявки может контакт с правом подтверждать')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Отправить заявку' })).not.toBeInTheDocument();
   });
 
   it('пустой список — пустое состояние', async () => {
     signedIn('actor', 'empty');
     renderApp('/requests');
-    expect(await screen.findByText('Запросов пока нет')).toBeInTheDocument();
+    expect(await screen.findByText('Заявок пока нет')).toBeInTheDocument();
   });
 
   it('axe: список и форма', async () => {
     signedIn();
     const { router } = renderApp('/requests');
-    await screen.findByRole('list', { name: 'Запросы' });
+    await screen.findByRole('list', { name: 'Заявки' });
     await expectNoAxeViolations();
     await router.navigate('/requests/new');
-    await heading('Новый запрос');
+    await heading('Новая заявка');
     await expectNoAxeViolations();
   });
 });

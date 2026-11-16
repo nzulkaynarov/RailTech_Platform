@@ -52,7 +52,7 @@ describe('вход с веба', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Если адрес зарегистрирован, мы отправим письмо' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/login/sent');
     expect(screen.queryByText(/не зарегистрирован/)).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Вы новый клиент? Оставьте запрос' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Вы новый клиент? Оставьте заявку' })).toHaveAttribute(
       'href',
       '/new-client?email=unknown%40example.com',
     );
@@ -99,7 +99,7 @@ describe('вход с веба', () => {
     const log = requestLog();
     const body = captureBody('/auth/magic');
     const { router } = renderApp('/auth/magic#token=demo-token-test-link-xx');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Запросы' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Заявки' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/requests');
     expect(body.current).toEqual({ token: 'demo-token-test-link-xx' });
     // Токен не в пути и не в GET: `GET /auth/magic/{token}` снят из контракта 0.3.0.
@@ -120,7 +120,7 @@ describe('вход с веба', () => {
       }
     });
     renderApp('/auth/magic#token=demo-token-test-link-xx');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Запросы' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Заявки' })).toBeInTheDocument();
     expect(seen).toEqual({
       key: expect.stringMatching(/^[\w-]{8,}$/),
       type: 'application/json',
@@ -164,7 +164,7 @@ describe('вход с веба', () => {
     it('после успешного входа токена нет ни в sessionStorage, ни в window.Telegram; прочие параметры SDK целы', async () => {
       seed();
       renderApp('/auth/magic#token=demo-token-test-link-xx');
-      expect(await screen.findByRole('heading', { level: 1, name: 'Запросы' })).toBeInTheDocument();
+      expect(await screen.findByRole('heading', { level: 1, name: 'Заявки' })).toBeInTheDocument();
       expect(leaks().found).toBe(false);
       expect(JSON.parse(window.sessionStorage.getItem(STORE_KEY) ?? '{}')).toEqual({ tgWebAppPlatform: 'web' });
       expect((window as unknown as { Telegram: { WebView: { initParams: object } } }).Telegram.WebView.initParams).toEqual({ tgWebAppPlatform: 'web' });
@@ -187,7 +187,7 @@ describe('вход с веба', () => {
       (window as unknown as { __cabinetMagicToken?: string }).__cabinetMagicToken = 'demo-token-test-link-xx';
       const body = captureBody('/auth/magic');
       renderApp('/auth/magic');
-      expect(await screen.findByRole('heading', { level: 1, name: 'Запросы' })).toBeInTheDocument();
+      expect(await screen.findByRole('heading', { level: 1, name: 'Заявки' })).toBeInTheDocument();
       expect(body.current).toEqual({ token: 'demo-token-test-link-xx' });
       expect((window as unknown as { __cabinetMagicToken?: string }).__cabinetMagicToken).toBeUndefined();
     });
@@ -256,7 +256,7 @@ describe('вход с веба', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Вы уже вошли' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Запросить новую ссылку' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('link', { name: 'В кабинет' }));
-    expect(await screen.findByRole('heading', { level: 1, name: 'Запросы' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Заявки' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/requests');
   });
 
@@ -283,7 +283,7 @@ describe('вход с веба', () => {
     expect(await screen.findByText('Нет связи с сервером. Проверьте подключение.')).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/auth/magic');
     await user.click(screen.getByRole('button', { name: 'Повторить' }));
-    expect(await screen.findByRole('heading', { level: 1, name: 'Запросы' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Заявки' })).toBeInTheDocument();
     expect(sent).toEqual([{ token: 'retry-test-link-xx' }, { token: 'retry-test-link-xx' }]);
   });
 
@@ -310,7 +310,7 @@ describe('вход с веба', () => {
   it('«Я новый клиент»: форма запроса и рядом «Написать в Telegram» с меткой web (форма — new-client.test)', async () => {
     renderApp('/new-client');
     expect(await screen.findByRole('heading', { level: 1, name: 'Я новый клиент' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Отправить запрос' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Отправить заявку' })).toBeInTheDocument();
     const link = screen.getByRole('link', { name: 'Написать в Telegram' });
     expect(link.getAttribute('href')).toMatch(/^https:\/\/t\.me\/[^/?]+\?start=web$/);
   });
@@ -335,7 +335,7 @@ describe('вход с веба', () => {
       ).toBeInTheDocument();
       expect(screen.queryByText(/есть в кабинете/)).not.toBeInTheDocument();
       expect(screen.getByText('Письмо может идти несколько минут. Проверьте папку «Спам». Не пришло за 10 минут — свяжитесь с вашим менеджером: возможно, почта компании временно не работает.')).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: 'Вы новый клиент? Оставьте запрос' })).toHaveAttribute(
+      expect(screen.getByRole('link', { name: 'Вы новый клиент? Оставьте заявку' })).toHaveAttribute(
         'href',
         '/new-client?email=neznakomets%40example.com',
       );
@@ -344,7 +344,7 @@ describe('вход с веба', () => {
     it('ссылка «Вы новый клиент?» открывает форму запроса', async () => {
       const user = userEvent.setup();
       const { router } = renderApp('/login/code');
-      await user.click(await screen.findByRole('link', { name: 'Вы новый клиент? Оставьте запрос' }));
+      await user.click(await screen.findByRole('link', { name: 'Вы новый клиент? Оставьте заявку' }));
       expect(router.state.location.pathname).toBe('/new-client');
       expect(await screen.findByRole('heading', { level: 1, name: 'Я новый клиент' })).toBeInTheDocument();
     });
@@ -358,7 +358,7 @@ describe('вход с веба', () => {
     });
 
     it.each([
-      ['uz', 'Kod bilan kirish', 'Yangi mijozmisiz? Soʻrov qoldiring', 'Bot ochiladi, kirish taklifnoma orqali.'],
+      ['uz', 'Kod bilan kirish', 'Yangi mijozmisiz? Ariza qoldiring', 'Bot ochiladi, kirish taklifnoma orqali.'],
       ['en', 'Log in with a code', 'New client? Leave a request', 'The bot will open; sign-in is by invitation.'],
     ])('uz и en: заголовок, ссылка нового клиента и подпись Telegram (%s)', async (lang, title, link, hint) => {
       window.localStorage.setItem('cabinet.language', lang);

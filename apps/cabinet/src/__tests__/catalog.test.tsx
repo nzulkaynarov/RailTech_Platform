@@ -79,7 +79,7 @@ describe('Каталог', () => {
     const user = userEvent.setup();
     renderApp('/catalog?q=луноход');
     expect(await screen.findByText('Ничего не нашлось')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Описать в запросе' })).toHaveAttribute('href', '/requests/new');
+    expect(screen.getByRole('link', { name: 'Описать в заявке' })).toHaveAttribute('href', '/requests/new');
     await user.click(screen.getByRole('button', { name: 'Сбросить фильтры' }));
     expect(await screen.findByText('Найдено 24 позиции')).toBeInTheDocument();
   });
@@ -94,7 +94,7 @@ describe('Каталог', () => {
     expect(screen.getByText('165 000 сум')).toBeInTheDocument();
     await expectNoAxeViolations();
     await user.click(screen.getByRole('button', { name: 'Запросить' }));
-    await heading('Новый запрос');
+    await heading('Новая заявка');
     expect(router.state.location.pathname).toBe('/requests/new');
     expect(screen.getByLabelText('Строка 1')).toHaveValue('Подшипник 6205-2RS');
     expect(screen.getByLabelText('Единица')).toHaveValue('шт');

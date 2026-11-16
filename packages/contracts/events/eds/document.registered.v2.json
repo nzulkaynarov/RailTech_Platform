@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://railtech.uz/contracts/events/eds/document.registered.v2.json",
   "title": "Документ зарегистрирован",
-  "description": "Тип uz.railtech.eds.document.registered.v2, источник rt://eds. v2 (задача «Н», 2026-11-13): номер с обозначением из настроек нумерации, иначе как v1. Поле data конверта (envelope.v1.json). Документ получил номер реестра: служебная записка (СЗ), заявление (ЗЯ), отчёт (ОТ) — при создании; исходящее письмо (ИСХ) — при отправке. Входящие письма — letter.registered.",
+  "description": "Тип uz.railtech.eds.document.registered.v2, источник rt://eds. v2 (задача «Н», 2026-11-13): номер с обозначением из настроек нумерации, иначе как v1. Поле data конверта (envelope.v1.json). Документ получил номер реестра: служебная записка (СЗ), заявление (ЗЯ), отчёт (ОТ) — при создании; исходящее письмо (ИСХ) — при отправке. Входящие письма — letter.registered. Исходящее письмо с 2026-11-16 несёт необязательный блок `document.letter` (получатель, «в ответ на») — ADR-0026.",
   "type": "object",
   "required": [
     "document",
@@ -74,6 +74,74 @@
             "null"
           ],
           "maxLength": 64
+        },
+        "letter": {
+          "type": "object",
+          "description": "Только у исходящего письма (`kind = letter_out`), необязательное (ЛИД-8, ADR-0026, 2026-11-16): кому письмо и на какое входящее отвечает. ERP по нему ведёт «Письма» в кабинете компании-получателя — по сделке (`erp_deal_id`) или точному ИНН получателя.",
+          "required": [
+            "recipient",
+            "in_reply_to"
+          ],
+          "properties": {
+            "recipient": {
+              "type": "object",
+              "required": [
+                "name",
+                "inn",
+                "email"
+              ],
+              "properties": {
+                "name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 255
+                },
+                "inn": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "pattern": "^\\d{9,14}$",
+                  "description": "ИНН получателя; нет — письмо в кабинет попадает только по сделке"
+                },
+                "email": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 254
+                }
+              },
+              "additionalProperties": false
+            },
+            "in_reply_to": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "eds_letter_id",
+                    "number"
+                  ],
+                  "properties": {
+                    "eds_letter_id": {
+                      "$ref": "_defs.v2.json#/$defs/Uuid"
+                    },
+                    "number": {
+                      "$ref": "_defs.v2.json#/$defs/LetterNumber"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              ],
+              "description": "Входящее, на которое отвечает письмо (`documents.in_reply_to`); null — не ответ"
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false

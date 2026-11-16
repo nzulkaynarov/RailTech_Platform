@@ -168,6 +168,8 @@ async def _publish_registered(
     }
     if document.addressee_crm_user_id is not None:
         body["addressee"] = directory.person(document.addressee_crm_user_id).model_dump()
+    if document.kind == DocumentKind.LETTER_OUT.value:
+        body["letter"] = await _letter_block(session, document)
     await events.publish(
         bus,
         session,
@@ -175,6 +177,20 @@ async def _publish_registered(
         {"document": body, "actor": events.actor(actor_id)},
         subject=str(document.number),
     )
+
+
+async def _letter_block(session: AsyncSession, document: Document) -> dict[str, Any]:
+    """Блок `document.letter` исходящего письма (ЛИД-8, ADR-0026): кому и в ответ на какое входящее. По нему ERP кладёт
+    письмо в кабинет компании-получателя — только по сделке или точному ИНН."""
+    reply_to = await session.get(Letter, document.in_reply_to) if document.in_reply_to else None
+    return {
+        "recipient": {
+            "name": document.recipient_name,
+            "inn": document.recipient_inn or None,
+            "email": document.recipient_email,
+        },
+        "in_reply_to": None if reply_to is None else {"eds_letter_id": str(reply_to.id), "number": reply_to.number},
+    }
 
 
 def generate_verification_code(length: int = 10) -> str:

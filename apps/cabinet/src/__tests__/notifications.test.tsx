@@ -25,7 +25,7 @@ describe('колокольчик кабинета', () => {
   it('бейдж — число непрочитанных из /me, для диктора — пояснение', async () => {
     signedIn();
     renderApp('/requests');
-    await screen.findByRole('heading', { level: 1, name: 'Запросы' });
+    await screen.findByRole('heading', { level: 1, name: 'Заявки' });
     await waitFor(() => expect(within(bell()).getByText('3')).toBeInTheDocument());
     expect(bell()).toHaveAccessibleDescription('3 непрочитанных уведомления');
   });
@@ -34,7 +34,7 @@ describe('колокольчик кабинета', () => {
     signedIn();
     const user = userEvent.setup();
     const { router } = renderApp('/requests');
-    await screen.findByRole('heading', { level: 1, name: 'Запросы' });
+    await screen.findByRole('heading', { level: 1, name: 'Заявки' });
     const panel = await openPanel(user);
     const list = await within(panel).findByRole('list', { name: 'Список уведомлений' });
     const rows = within(list).getAllByRole('button');
@@ -53,7 +53,7 @@ describe('колокольчик кабинета', () => {
     signedIn();
     const user = userEvent.setup();
     renderApp('/requests');
-    await screen.findByRole('heading', { level: 1, name: 'Запросы' });
+    await screen.findByRole('heading', { level: 1, name: 'Заявки' });
     const panel = await openPanel(user);
     await within(panel).findByRole('list', { name: 'Список уведомлений' });
     await user.click(within(panel).getByRole('button', { name: 'Прочитать все' }));
@@ -66,7 +66,7 @@ describe('колокольчик кабинета', () => {
     signedIn();
     const user = userEvent.setup();
     const { router } = renderApp('/requests');
-    await screen.findByRole('heading', { level: 1, name: 'Запросы' });
+    await screen.findByRole('heading', { level: 1, name: 'Заявки' });
     const panel = await openPanel(user);
     const list = await within(panel).findByRole('list', { name: 'Список уведомлений' });
     await user.click(within(list).getAllByRole('button')[1]);
@@ -86,7 +86,7 @@ describe('колокольчик кабинета', () => {
     signedIn('actor', 'empty');
     const user = userEvent.setup();
     renderApp('/requests');
-    await screen.findByRole('heading', { level: 1, name: 'Запросы' });
+    await screen.findByRole('heading', { level: 1, name: 'Заявки' });
     expect(bell()).not.toHaveAccessibleDescription(/непрочитанн/);
     const panel = await openPanel(user);
     expect(await within(panel).findByText('Новых уведомлений нет')).toBeInTheDocument();
@@ -97,7 +97,7 @@ describe('колокольчик кабинета', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     signedIn();
     renderApp('/requests');
-    await screen.findByRole('heading', { level: 1, name: 'Запросы' });
+    await screen.findByRole('heading', { level: 1, name: 'Заявки' });
     const seen: string[] = [];
     const listener = ({ request }: { request: Request }) => seen.push(new URL(request.url).pathname);
     portalServer.events.on('request:start', listener);
