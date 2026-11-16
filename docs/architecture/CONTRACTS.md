@@ -740,11 +740,11 @@ ADR-0015 (EDS — отдельный сервис, владелец реестр
 
 | Тип | Когда | Подписчики v1 |
 |---|---|---|
-| `uz.railtech.eds.letter.registered.v1` | письмо получило ВХ-номер: вручную или по `erp.request.created`; `source.crm_inbound_mail_id` — ВХ из очереди «Входящая почта» (W18A-P2) | platform-bff, crm (письма с `source`) |
+| `uz.railtech.eds.letter.registered.v1` | письмо получило ВХ-номер: вручную или по `erp.request.created`; `source.crm_inbound_mail_id` — ВХ из очереди «Входящая почта» (W18A-P2) | platform-bff, crm (письма с `source`); erp — v2, квитанция о регистрации письма компании в кабинете (ЛИД-8, ADR-0026) |
 | `uz.railtech.eds.letter.resolved.v1` | резолюция: исполнители (`crm_user_id`, `zone`: `goods`, `services`, `payment_terms`), срок, `min_margin_pct`, `links` (`erp_request_id`, `erp_deal_id`, `deal_number`) | erp (задание расчёта, стадия `CALCULATION` — FSM ERP `CALCULATING`; §10.6), platform-bff |
 | `uz.railtech.eds.letter.returned.v1` | возврат регистратору с комментарием (повторная подача — `POST …/submit`, без события) | platform-bff |
 | `uz.railtech.eds.letter.rejected.v1` | отказ с причиной | erp (сделка → `LOST` с причиной), platform-bff |
-| `uz.railtech.eds.document.registered.v1` | номер документа (СЗ, ЗЯ, ОТ — при создании; ИСХ — при отправке письма) | platform-bff |
+| `uz.railtech.eds.document.registered.v1` | номер документа (СЗ, ЗЯ, ОТ — при создании; ИСХ — при отправке письма); у ИСХ с 2026-11-16 — необязательный `document.letter`: получатель (название, ИНН, почта) и «в ответ на» (ВХ) | platform-bff; erp — v2, «Письма» в кабинете компании-получателя (ЛИД-8, ADR-0026) |
 | `uz.railtech.eds.document.archived.v1` | автоматически: маршрут документа завершён окончательно (одобрен на последнем шаге или отклонён), исходящее письмо отправлено | platform-bff |
 | `uz.railtech.eds.approval.requested.v1` | шаг стал текущим: маршрут (круг) открыт — первый шаг; решение передало маршрут дальше — следующий шаг (`step.index`); кто решает | platform-bff |
 | `uz.railtech.eds.approval.decided.v1` | решение на шаге: `decision`, `comment`, `route_status`, для одобренного КП — `outgoing_number` (ИСХ), `channels` и `approved_late` (одобрено с опозданием; необязательное, с 2026-10-26) | erp (EDS-03 для `object.kind = quote` и закрытого маршрута), platform-bff |

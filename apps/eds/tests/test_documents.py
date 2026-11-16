@@ -348,12 +348,22 @@ async def test_outgoing_letter_is_numbered_on_send_and_archived(
         registered["data"]["document"]["number"] == "OUT-001/26"
         and registered["data"]["document"]["kind"] == "letter_out"
     )
+    # ЛИД-8 (ADR-0026): кому письмо и на какое входящее отвечает — по ним ERP кладёт письмо в кабинет получателя
+    assert registered["data"]["document"]["letter"] == {
+        "recipient": {"name": "ООО «Пример»", "inn": "123456789", "email": None},
+        "in_reply_to": {"eds_letter_id": letter.json()["id"], "number": letter.json()["number"]},
+    }
     [archived] = await outbox(container, "document.archived")
     assert archived["data"]["reason"] == "sent"
     assert await outbox(container, "approval.requested") == []
     assert_error(await submit(client, staff["registrar"], draft["id"]), 409, "CONFLICT", reason="invalid_state")
     second = await create(client, staff["registrar"], kind="letter_out", recipient={"name": "Другой"})
     assert (await submit(client, staff["registrar"], second["id"])).json()["number"] == "OUT-002/26"
+    second_registered = (await outbox(container, "document.registered"))[-1]["data"]["document"]
+    assert second_registered["letter"] == {
+        "recipient": {"name": "Другой", "inn": None, "email": None},
+        "in_reply_to": None,
+    }
 
 
 async def test_document_visibility_author_participant_registry(

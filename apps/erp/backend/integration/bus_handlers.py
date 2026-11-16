@@ -101,6 +101,22 @@ def on_document_signed(event: Event) -> None:
     eds_inbound.apply_document_signed(event.data, event_id=_event_uuid(event))
 
 
+@subscribe("uz.railtech.eds.letter.registered.v2")
+def on_letter_registered(event: Event) -> None:
+    """ЛИД-8 (ADR-0026): письмо компании зарегистрировано — квитанция в «Письмах» её кабинета."""
+    from portal.services import letters
+
+    letters.apply_letter_registered(event.data)
+
+
+@subscribe("uz.railtech.eds.document.registered.v2")
+def on_document_registered(event: Event) -> None:
+    """ЛИД-8 (ADR-0026): наше исходящее письмо отправлено — в «Письма» кабинета компании-получателя."""
+    from portal.services import letters
+
+    letters.apply_document_registered(event.data)
+
+
 @subscribe("uz.railtech.eds.signing.decided.v1")
 def on_signing_decided(event: Event) -> None:
     eds_inbound.apply_signing_decided(event.data, event_id=_event_uuid(event))
