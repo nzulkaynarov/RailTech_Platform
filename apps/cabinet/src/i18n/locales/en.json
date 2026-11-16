@@ -93,7 +93,12 @@
     "date": {
       "placeholder": "DD.MM.YYYY"
     },
-    "requestNumber": "Request {{number}}"
+    "requestNumber": "Request {{number}}",
+    "timeLeft": {
+      "today": "last day today",
+      "days_one": "{{count}} day left",
+      "days_other": "{{count}} days left"
+    }
   },
   "access": {
     "noSections": {
