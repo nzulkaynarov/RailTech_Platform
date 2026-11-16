@@ -109,6 +109,8 @@ class _Writer:
             return f"<em>{content}</em>"
         if kind == "underline":
             return f"<u>{content}</u>"
+        if kind == "code":
+            return f'<code class="rt-code">{content}</code>'
         if kind == "link":
             href = str(mark.get("attrs", {}).get("href", ""))
             return f'<a href="{e(href)}">{content}</a>' if _SAFE_HREF.match(href) else content
@@ -124,7 +126,12 @@ class _Writer:
         kind = node["type"]
         attrs = node.get("attrs") or {}
         if kind == "paragraph":
-            self.w(f"<p{_align(attrs)}>")
+            note = ' class="rt-note"' if attrs.get("variant") == "note" else ""
+            align = _align(attrs)
+            if note and align:
+                align = align.replace('class="', 'class="rt-note ', 1)
+                note = ""
+            self.w(f"<p{note}{align}>")
             self.inline(node.get("content", ()))
             self.w("</p>")
         elif kind == "heading":

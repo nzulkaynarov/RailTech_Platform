@@ -18,6 +18,12 @@ from .model import Lang, Money
 
 Node = dict[str, Any]
 
+#: Шапка таблицы позиций в сетке документа (стандарт документов §6 п. 2): позиция стопкой — артикул над названием.
+STACKED: dict[Lang, dict[str, str]] = {
+    "ru": {"item": "Артикул · Позиция", "lead": "Срок", "per": "/ 1"},
+    "uz": {"item": "Artikul · Pozitsiya", "lead": "Muddat", "per": "/ 1"},
+    "en": {"item": "Item No. · Description", "lead": "Lead time", "per": "/ 1"},
+}
 COLUMNS: dict[Lang, dict[str, str]] = {
     "ru": {"no": "№", "name": "Наименование", "unit": "Ед.", "qty": "Кол-во", "price": "Цена", "amount": "Сумма"},
     "uz": {"no": "№", "name": "Nomi", "unit": "Oʻlch.", "qty": "Miqdori", "price": "Narxi", "amount": "Summasi"},
@@ -65,6 +71,11 @@ class Line:
     price: Decimal
     amount: Decimal
     unit: str = ""
+    # Сетка документа (стандарт §6 п. 2): позиция стопкой — артикул (моно), характеристики, примечание курсивом, срок.
+    article: str = ""
+    details: Sequence[str] = ()
+    note: str = ""
+    lead: str = ""
 
 
 @dataclass(frozen=True)
@@ -87,6 +98,16 @@ def _text(value: str, *, bold: bool = False) -> Node:
 def _para(*parts: Node | str) -> Node:
     content = [_text(p) if isinstance(p, str) else p for p in parts if p != ""]
     return {"type": "paragraph", "content": content} if content else {"type": "paragraph"}
+
+
+def _note(*parts: Node | str) -> Node:
+    node = _para(*parts)
+    node["attrs"] = {"variant": "note"}
+    return node
+
+
+def _code(value: str) -> Node:
+    return {"type": "text", "text": value, "marks": [{"type": "code"}]}
 
 
 def _cell(value: str, *, header: bool = False, numeric: bool = False, bold: bool = False) -> Node:
@@ -127,6 +148,97 @@ def items_table(lines: Sequence[Line], currency: str, lang: Lang, *, with_unit: 
         rows.append({"type": "tableRow", "content": cells})
     widths = [6, 46, 8, 10, 15, 15] if with_unit else [6, 48, 10, 18, 18]
     return [{"type": "table", "attrs": {"columnWidths": widths, "variant": "grid"}, "content": rows}]
+
+
+def _amount(value: Decimal, lang: Lang) -> str:
+    """Сумма сетки документа: без дробной части, если её нет («147 000 000»), иначе с двумя знаками."""
+    return format_number(value, lang, decimals=0 if value == value.to_integral_value() else 2)
+
+
+def _stacked_cell(line: Line) -> Node:
+    content: list[Node] = []
+    if line.article:
+        content.append(_note(_code(line.article)))
+    content.append(_para(line.name))
+    content += [_note(detail) for detail in line.details if detail.strip()]
+    if line.note:
+        content.append(_note(_text(line.note, bold=False) | {"marks": [{"type": "italic"}]}))
+    return {"type": "tableCell", "content": content}
+
+
+def _numeric(*paragraphs: Node) -> Node:
+    return {"type": "tableCell", "attrs": {"numeric": True}, "content": list(paragraphs)}
+
+
+def stacked_items_table(lines: Sequence[Line], currency: str, lang: Lang) -> list[Node]:
+    """Таблица позиций сетки документа: №, позиция стопкой, срок (если есть), количество с единицей, цена «/ 1 ед.» и
+    сумма — без НДС (стандарт документов §6 п. 2)."""
+    label = COLUMNS[lang]
+    stacked = STACKED[lang]
+    ccy = currency_label(currency, lang)
+    with_lead = any(line.lead for line in lines)
+    header = [
+        _cell(label["no"], header=True),
+        _cell(stacked["item"], header=True),
+        *([_cell(stacked["lead"], header=True, numeric=True)] if with_lead else []),
+        _cell(label["qty"], header=True, numeric=True),
+        _cell(f"{label['price']}, {ccy}", header=True, numeric=True),
+        _cell(f"{label['amount']}, {ccy}", header=True, numeric=True),
+    ]
+    rows = [{"type": "tableRow", "content": header}]
+    for number, line in enumerate(lines, start=1):
+        unit = f" {line.unit}" if line.unit else ""
+        price = [_para(_amount(line.price, lang))]
+        if line.unit:
+            price.append(_note(f"{stacked['per']} {line.unit}"))
+        cells = [
+            _cell(str(number)),
+            _stacked_cell(line),
+            *([_cell(line.lead or "—", numeric=True)] if with_lead else []),
+            _cell(_qty(line.quantity, lang) + unit, numeric=True),
+            _numeric(*price),
+            _cell(_amount(line.amount, lang), numeric=True),
+        ]
+        rows.append({"type": "tableRow", "content": cells})
+    widths = [5, 43, 9, 12, 16, 15] if with_lead else [5, 50, 13, 16, 16]
+    return [{"type": "table", "attrs": {"columnWidths": widths, "variant": "grid"}, "content": rows}]
+
+
+def grid_totals_block(totals: Totals, currency: str, lang: Lang, *, total_label: str | None = None) -> list[Node]:
+    """Итоги сетки документа: справа 75 мм; строка «К оплате» выделена; сумма прописью — примечанием под ней."""
+    label = TOTALS[lang]
+    ccy = currency_label(currency, lang)
+
+    def row(name: str, value: Decimal, *, emphasis: bool = False) -> Node:
+        node: Node = {
+            "type": "tableRow",
+            "content": [_cell(name, bold=emphasis), _cell(_amount(value, lang), numeric=True, bold=emphasis)],
+        }
+        if emphasis:
+            node["attrs"] = {"emphasis": True}
+        return node
+
+    vat = label["vat"] + (f" {format_number(totals.vat_rate, lang, decimals=0)} %" if totals.vat_rate else "")
+    rows = [row(label["subtotal"], totals.subtotal), row(vat, totals.vat_amount)]
+    if totals.paid:
+        rows.append(row(label["paid"], totals.paid))
+    due = totals.balance if totals.paid and totals.balance is not None else totals.total
+    rows.append(row(f"{total_label or label['total']}, {ccy}", due, emphasis=True))
+    words = {"type": "tableCell", "attrs": {"colspan": 2}, "content": [_note(amount_in_words(due, currency, lang))]}
+    rows.append({"type": "tableRow", "content": [words]})
+    return [{"type": "table", "attrs": {"columnWidths": [58, 42], "variant": "totals"}, "content": rows}]
+
+
+def conditions_block(pairs: Sequence[tuple[str, str]]) -> list[Node]:
+    """Условия парами под итогами (стандарт §6 п. 4): метка полужирным, значение; пустое условие не печатается."""
+    rows = [
+        {"type": "tableRow", "content": [_cell(name, bold=True), _cell(value)]}
+        for name, value in pairs
+        if value and value.strip()
+    ]
+    if not rows:
+        return []
+    return [{"type": "table", "attrs": {"columnWidths": [24, 76], "variant": "plain"}, "content": rows}]
 
 
 def totals_block(totals: Totals, currency: str, lang: Lang) -> list[Node]:

@@ -27,6 +27,27 @@
         ]
       },
       {
+        "type": "paragraph",
+        "attrs": {
+          "variant": "note"
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "RT-00387",
+            "marks": [
+              {
+                "type": "code"
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "text": " · note paragraph with a code mark"
+          }
+        ]
+      },
+      {
         "type": "heading",
         "attrs": {
           "level": 2,

@@ -44,6 +44,8 @@ def _text(node: Node) -> str:
     else:
         value = str(node.get("text", "")).translate(_ESCAPE)
     kinds = [mark["type"] for mark in node.get("marks", [])]
+    if "code" in kinds:
+        value = f"`{node.get('text', '')}`"
     if "italic" in kinds:
         value = f"*{value}*"
     if "bold" in kinds:

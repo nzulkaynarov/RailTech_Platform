@@ -174,9 +174,8 @@ def _grid_stylesheet(
 html {{ font-family: "{family}"; font-size: {setup.font_pt:g}pt; line-height: {setup.line_height:g}; }}
 .rt-runhead, .rt-idfoot {{ width: {width}mm; font-family: "{family}"; }}
 .rt-pn::before {{ {numbers} }}
-.rt-accent, table.rt-grid th {{ color: {letterhead.accent}; }}
-table.rt-grid th {{ border-bottom: 1.2pt solid {letterhead.accent}; }}
-table.rt-totals tr.rt-em td {{ border-top: 1pt solid {letterhead.accent}; color: {letterhead.accent}; }}
+.rt-accent {{ color: {letterhead.accent}; }}
+table.rt-totals tr.rt-em td {{ border-top: 1.5pt solid {letterhead.accent}; }}
 main.rt-body {{ padding-top: {setup.lead_mm}mm; }}
 """
 
@@ -217,6 +216,24 @@ table.rt-fcols { width: 100%; border-collapse: collapse; table-layout: fixed; bo
 table.rt-fcols td { vertical-align: top; padding: 1.2mm 2.5mm 0 0; overflow-wrap: break-word; }
 table.rt-fcols td:nth-child(4) { width: 23%; }
 .rt-id-executor { margin-top: 8mm; font-size: 7.5pt; color: #475569; }
+
+/* Таблицы и итоги сетки (стандарт документов §6): без вертикальных линий, шапка — прописные на подложке. */
+p.rt-note { font-size: 0.85em; color: #475569; margin: 0.15em 0 0; line-height: 1.35; }
+code.rt-code { font-family: "RT Doc Mono", "RT Doc Sans"; font-size: 0.92em; }
+table.rt-grid th { font-size: 7.5pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4pt; color: #475569;
+                   background: #f8fafc; border-top: 0.75pt solid #cbd5e1; border-bottom: 0.75pt solid #cbd5e1;
+                   padding: 4pt 5pt; vertical-align: bottom; }
+table.rt-grid td { padding: 5pt 5pt; border-bottom: 0.75pt solid #e2e8f0; }
+table.rt-totals { width: 75mm; margin: 0.4em 0 0.8em auto; table-layout: fixed; }
+table.rt-totals td { padding: 2.5pt 6pt; }
+table.rt-totals td:first-child { color: #475569; }
+table.rt-totals tr.rt-em td { background: #f8fafc; font-size: 10.5pt; font-weight: 700; color: #0f172a;
+                              padding: 5pt 6pt; }
+table.rt-totals tr:last-child td { color: #475569; }
+table.rt-plain { margin-top: 0.6em; }
+table.rt-plain td { padding: 1pt 10pt 1.5pt 0; }
+.rt-verify-block { border: 0.75pt solid #cbd5e1; border-radius: 2pt; padding: 8pt 10pt; flex-direction: row-reverse;
+                   justify-content: space-between; }
 """
 
 

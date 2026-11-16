@@ -110,6 +110,12 @@ def tree(schema: dict[str, Any] | None = None, **files: Any) -> dict[str, str]:
     return out
 
 
+def next_minor(schema: dict[str, Any]) -> str:
+    """Следующий минор от версии схемы в рабочем дереве: тесты не зависят от текущего номера."""
+    major, minor, _patch = semver(schema) or (1, 0, 0)
+    return f"{major}.{minor + 1}.0"
+
+
 def bumped(schema: dict[str, Any], version: str) -> dict[str, Any]:
     new = copy.deepcopy(schema)
     new["$comment"] = re.sub(r"semver \d+\.\d+\.\d+", f"semver {version}", new["$comment"])
@@ -121,7 +127,7 @@ def test_unchanged_contract_is_compatible() -> None:
 
 
 def test_new_node_type_with_minor_bump_is_compatible() -> None:
-    new = bumped(SCHEMA, "1.1.0")
+    new = bumped(SCHEMA, next_minor(SCHEMA))
     new["$defs"]["block"]["oneOf"].append({"$ref": "#/$defs/hardBreak"})
     assert check(working_tree(), tree(new)) == []
 
@@ -133,14 +139,14 @@ def test_change_without_version_bump_is_breaking() -> None:
 
 
 def test_narrowing_that_breaks_a_stored_example_is_breaking() -> None:
-    new = bumped(SCHEMA, "1.1.0")
+    new = bumped(SCHEMA, next_minor(SCHEMA))
     new["$defs"]["block"]["oneOf"] = [r for r in new["$defs"]["block"]["oneOf"] if r["$ref"] != "#/$defs/signature"]
     problems = check(working_tree(), tree(new))
     assert any("(база) не проходит новую схему" in p for p in problems)
 
 
 def test_major_change_and_removed_codes_are_breaking() -> None:
-    new = bumped(SCHEMA, "1.1.0")
+    new = bumped(SCHEMA, next_minor(SCHEMA))
     new["properties"]["version"] = {"const": 2}
     catalog = copy.deepcopy(CATALOG_DATA)
     catalog["variables"] = [v for v in catalog["variables"] if v["code"] != "company.inn"]
