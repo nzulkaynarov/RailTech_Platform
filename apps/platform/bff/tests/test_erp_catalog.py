@@ -284,15 +284,25 @@ async def test_requests_queue_carries_demand_requests_and_duplicate(
         "duplicate": {"id": 102, "name": "Подшипник 6205-2RS", "sku": "RT-00102", "by": "name"},
         "completeness": 40,
     }
-    route = mock(be).get(f"{API}/catalog/items/").mock(return_value=httpx.Response(200, json=page([row])))
+    route = (
+        mock(be)
+        .get(f"{API}/catalog/items/")
+        .mock(return_value=httpx.Response(200, json=page([row])))
+    )
 
     response = await web.client.get("/api/v1/erp/catalog/items", params={"review": "requests"})
 
     assert response.status_code == 200
     check(response, "/erp/catalog/items", "get")
     item = response.json()["items"][0]
-    assert item["demand"] == 3 and item["asked_total"] == 3
-    assert item["duplicate"] == {"id": "102", "name": "Подшипник 6205-2RS", "sku": "RT-00102", "by": "name"}
+    assert item["demand"] == 3
+    assert item["asked_total"] == 3
+    assert item["duplicate"] == {
+        "id": "102",
+        "name": "Подшипник 6205-2RS",
+        "sku": "RT-00102",
+        "by": "name",
+    }
     assert dict(route.calls.last.request.url.params)["review"] == "requests"
 
 
