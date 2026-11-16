@@ -87,6 +87,7 @@ function createDb(dataset: Dataset = 'demo') {
     acts: empty ? [] : structuredClone(fixtures.acts),
     deliveries: empty ? [] : structuredClone(fixtures.deliveries),
     documents: empty ? [] : structuredClone(fixtures.documents),
+    letters: empty ? [] : structuredClone(fixtures.letters),
     catalog: empty ? [] : structuredClone(fixtures.catalog),
     company: structuredClone(fixtures.company),
     team: empty ? [structuredClone(fixtures.contactActor)] : structuredClone(fixtures.team),
@@ -237,9 +238,9 @@ function sessionFromToken(token: string, authMethod: MockSession['auth_method'])
     access: token.includes('dual')
       ? { roles: ['client', 'partner'], modules: [...fixtures.CLIENT_ACCESS.modules, 'my_products'] }
       : token.includes('partner-min')
-        ? { roles: ['partner'], modules: ['my_products', 'messages', 'profile'] }
+        ? { roles: ['partner'], modules: ['my_products', 'letters', 'messages', 'profile'] }
         : token.includes('partner')
-          ? { roles: ['partner'], modules: ['my_products', 'catalog_requests', 'messages', 'profile'] }
+          ? { roles: ['partner'], modules: ['my_products', 'catalog_requests', 'letters', 'messages', 'profile'] }
           : undefined,
   };
 }
@@ -871,6 +872,33 @@ export const handlers = [
           'Content-Type': 'application/pdf',
           'Content-Disposition': `attachment; filename="${fileName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`,
         },
+      });
+    }),
+  ),
+
+  // --- письма компании (ADR-0026) -----------------------------------------------------------------
+  http.get(
+    `${API}/letters`,
+    withSession(({ db, request }) => {
+      const url = new URL(request.url);
+      const direction = url.searchParams.get('direction');
+      const q = (url.searchParams.get('q') || '').trim().toLowerCase();
+      const list = db.letters.filter(
+        (letter) =>
+          (!direction || letter.direction === direction) &&
+          (!q || letter.number.toLowerCase().includes(q) || letter.subject.toLowerCase().includes(q)),
+      );
+      return json(list);
+    }),
+  ),
+  http.get<IdParams>(
+    `${API}/letters/:id/file`,
+    withSession<IdParams>(({ db, params }) => {
+      const letter = byId(db.letters, params.id);
+      if (!letter || !letter.has_file) return error(404, 'NOT_FOUND');
+      const fileName = `${letter.number.replace('/', '-')}.pdf`;
+      return new HttpResponse('%PDF-1.4\n% mock letter\n', {
+        headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': `inline; filename*=UTF-8''${fileName}` },
       });
     }),
   ),

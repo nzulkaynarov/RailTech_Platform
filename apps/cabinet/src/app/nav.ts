@@ -6,6 +6,7 @@ import {
   FileText,
   FolderOpen,
   Inbox,
+  Mail,
   MessagesSquare,
   Package,
   PackageOpen,
@@ -87,6 +88,7 @@ export const NAV_ITEMS: NavItem[] = [
     group: 'documents',
   },
   { to: '/acts', labelKey: 'nav.acts', icon: ClipboardCheck, module: 'acts', group: 'documents' },
+  { to: '/letters', labelKey: 'nav.letters', icon: Mail, module: 'letters', group: 'documents' },
   {
     to: '/documents',
     labelKey: 'nav.allDocuments',

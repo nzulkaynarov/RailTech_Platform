@@ -27,6 +27,7 @@
     "deliveries": "Deliveries",
     "messages": "Messages",
     "documents": "Documents",
+    "letters": "Letters",
     "catalog": "Catalog",
     "company": "Company",
     "team": "Team",
@@ -767,6 +768,34 @@
         "size": "Size",
         "deal": "Project"
       }
+    },
+    "letters": {
+      "title": "Letters",
+      "filter": "Letter direction",
+      "direction": {
+        "out": "Ours",
+        "in": "Yours"
+      },
+      "searchPlaceholder": "Number or subject…",
+      "searchLabel": "Search letters",
+      "columns": {
+        "letter": "Letter",
+        "direction": "From",
+        "date": "Date",
+        "state": "Status",
+        "deal": "Project"
+      },
+      "state": {
+        "registered": "Registered",
+        "answered": "Answered",
+        "sent": "Sent"
+      },
+      "answeredBy": "Reply: {{number}}",
+      "replyTo": "To your {{number}}",
+      "emptyTitle": "No letters yet",
+      "emptyText": "Our letters to you and the numbers we registered yours under will appear here.",
+      "noMatchTitle": "Nothing found",
+      "noMatchText": "Change the search or show all letters."
     },
     "catalog": {
       "title": "Catalog",

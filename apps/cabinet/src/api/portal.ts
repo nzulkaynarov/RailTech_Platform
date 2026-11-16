@@ -235,6 +235,9 @@ export type CatalogItemDocument = Schemas['CatalogItemDocument'];
 export type CatalogPage = Schemas['CatalogPage'];
 export type CatalogQuery = QueryOf<paths['/catalog']['get']>;
 export type DocumentsQuery = QueryOf<paths['/documents']['get']>;
+export type PortalLetter = Schemas['Letter'];
+export type LetterDirection = Schemas['LetterDirection'];
+export type LettersQuery = QueryOf<paths['/letters']['get']>;
 export type Company = Schemas['Company'];
 export type CompanyUpdate = Schemas['CompanyUpdate'];
 export type CompanySecurityLogResponse = Schemas['CompanySecurityLogResponse'];
@@ -309,6 +312,15 @@ export function disputeDelivery(id: number, reason: string): Promise<DeliveryLin
 
 export const listDocuments = (params: DocumentsQuery = {}) =>
   portalRequest<PortalDocument[]>(`/documents${toQuery(params)}`);
+
+/** Письма компании (ADR-0026): наши исходящие и квитанции о письмах компании, новые сверху. */
+export const listLetters = (params: LettersQuery = {}) => portalRequest<PortalLetter[]>(`/letters${toQuery(params)}`);
+
+/** PDF нашего исходящего письма — сразу, без рендера (ERP берёт файл у EDS). */
+export async function getLetterFile(id: number): Promise<{ blob: Blob; fileName: string | null }> {
+  const response = await send(`/letters/${id}/file`, { accept: 'application/pdf' });
+  return { blob: await response.blob(), fileName: fileNameFrom(response.headers.get('Content-Disposition')) };
+}
 
 /**
  * Файл документа: 200 — содержимое; 202 — PDF ещё рендерится, повторить через `Retry-After`
