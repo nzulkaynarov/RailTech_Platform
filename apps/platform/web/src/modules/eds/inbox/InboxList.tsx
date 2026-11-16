@@ -29,6 +29,7 @@ import { ResolutionSlot } from "./ResolutionPanel";
 import { RowOpenLink } from "../../../shared/ui/RowOpenLink";
 import { NameCode } from "../../../shared/ui/NameCode";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
+import { TimeLeft } from "../../../shared/ui/TimeLeft";
 
 const PAGE = 25;
 /**
@@ -88,7 +89,10 @@ function Due({ row }: { row: LetterRow }) {
   return row.overdue ? (
     <span className="pf-letters-due--overdue">{t("list.dueOverdue", { date: date(row.due) })}</span>
   ) : (
-    <>{date(row.due)}</>
+    <>
+      {date(row.due)}
+      <TimeLeft date={row.due} />
+    </>
   );
 }
 

@@ -17,6 +17,7 @@ import { StatusTag } from "../../../shared/ui/StatusTag";
 import { useResolutionKindName } from "../dictionaries";
 import { reasonOf, useRefreshLetters } from "./api";
 import { Attachments } from "./Parts";
+import { TimeLeft } from "../../../shared/ui/TimeLeft";
 
 /** Резолюция пути делопроизводства (P8b): тип, ответственный, соисполнители, «ознакомить», срок, текст, кто и когда. */
 export function OfficeDecision({ letter }: { letter: LetterCard }) {
@@ -219,6 +220,7 @@ function InstructionItem({
         {executed && instruction.executed_at
           ? t("instr.executedAt", { date: date(instruction.executed_at, "datetime") })
           : t("instr.due", { date: date(instruction.due) })}
+        {!executed && !instruction.overdue ? <TimeLeft date={instruction.due} /> : null}
       </p>
       {instruction.report ? (
         <DefinitionList items={[{ label: t("instr.report"), value: instruction.report }]} />

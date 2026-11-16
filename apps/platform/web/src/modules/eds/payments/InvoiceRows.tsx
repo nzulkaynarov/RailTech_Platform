@@ -11,6 +11,7 @@ import { MoneyText } from "../../../shared/ui/MoneyText";
 import { withParams } from "../inbox/api";
 import { InvoiceStatus } from "./InvoiceStatus";
 import { invoicePath, moneyProps, rowAction } from "./model";
+import { TimeLeft } from "../../../shared/ui/TimeLeft";
 
 /** Ширины колонок: номер и проект, клиент (гибкая), сумма, выставлен, срок, статус, действие (UX-1c, S9) */
 const COLS = {
@@ -47,6 +48,8 @@ function Due({ row }: { row: PaymentRow }) {
         <div className="pf-hint pf-pay-overdue">
           {t("list.overdueDays", { count: row.days_overdue })}
         </div>
+      ) : row.status !== "paid" ? (
+        <TimeLeft date={row.due_date} />
       ) : null}
     </>
   );

@@ -58,3 +58,25 @@ export function todayLabel(language: string, now: Date = new Date()): string {
     .format(now)
     .replace(/\s*г\.$/, "");
 }
+
+/** Сегодня по календарю компании, `YYYY-MM-DD`. */
+export function companyDate(now: number = Date.now()): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: COMPANY_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(now));
+}
+
+/** Дней от сегодня (по календарю компании) до даты `YYYY-MM-DD…`; прошедшая — отрицательное число. */
+export function daysUntil(date: string, now: number = Date.now()): number {
+  const utc = (value: string) => {
+    const [y = Number.NaN, m = Number.NaN, d = Number.NaN] = value
+      .slice(0, 10)
+      .split("-")
+      .map(Number);
+    return Date.UTC(y, m - 1, d);
+  };
+  return Math.round((utc(date) - utc(companyDate(now))) / 86_400_000);
+}

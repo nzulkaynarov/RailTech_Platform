@@ -20,6 +20,7 @@ import { VisaIndicators } from "./VisaIndicators";
 
 import "./calc.css";
 import { RowOpenLink } from "../../../shared/ui/RowOpenLink";
+import { TimeLeft } from "../../../shared/ui/TimeLeft";
 
 /**
  * Ширины колонок: номер, клиент и тема (гибкая), этап, срок, визы, ответственный, действие (UX-1c, S9). Ширина — по типу колонки (platform-frontend.md §4.2), на 1440 с открытым подменю — без прокрутки вбок (T1).
@@ -50,7 +51,9 @@ function Due({ due }: { due: string }) {
       <span className="pf-num">{date(due)}</span>
       {isOverdue(due, companyToday()) ? (
         <StatusTag tone="red">{t("list.overdue")}</StatusTag>
-      ) : null}
+      ) : (
+        <TimeLeft date={due} />
+      )}
     </span>
   );
 }
