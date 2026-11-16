@@ -171,3 +171,16 @@ export function ItemCell({
     </Shell>
   );
 }
+
+/** Только картинка человека (круг: фото или инициалы) — для шапки карточки и списков, где имя стоит своим заголовком. */
+export function PersonAvatar({
+  name,
+  photoUrl,
+  size = 40,
+}: {
+  name: string;
+  photoUrl?: string | null;
+  size?: Size;
+}) {
+  return <Picture src={photoUrl} fallback={entityInitials(name)} size={size} shape="round" />;
+}

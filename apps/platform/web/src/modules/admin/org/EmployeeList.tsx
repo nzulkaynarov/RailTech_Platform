@@ -2,7 +2,8 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import type { Employee } from "../../../shared/api/generated/model";
-import { AccessTags, EmployeeStatusTag, Initials, RoleTags } from "./EmployeeCells";
+import { PersonAvatar, PersonCell } from "../../../shared/ui/EntityCell";
+import { AccessTags, EmployeeStatusTag, RoleTags } from "./EmployeeCells";
 import { DataTable } from "../../../shared/ui/DataTable/DataTable";
 
 export interface EmployeeListProps {
@@ -49,7 +50,7 @@ export function EmployeeList({ items, selectedId, hrefOf, compact }: EmployeeLis
             key={employee.id}
             className={`pf-org-row${employee.id === selectedId ? " pf-org-row-selected" : ""}`}
           >
-            <Initials value={employee.initials} />
+            <PersonAvatar name={employee.name} size={32} />
             <div className="pf-org-row-body">
               <div className="pf-org-row-head">
                 <NameLink
@@ -85,14 +86,18 @@ export function EmployeeList({ items, selectedId, hrefOf, compact }: EmployeeLis
           header: t("admin.org.columns.employee"),
           width: 286,
           cell: (employee) => (
-            <div>
-              <NameLink
-                employee={employee}
-                selected={employee.id === selectedId}
-                href={hrefOf(employee.id)}
-              />
-              <div className="pf-hint pf-org-email">{employee.email}</div>
-            </div>
+            <PersonCell
+              name={employee.name}
+              caption={employee.email}
+              size={32}
+              title={
+                <NameLink
+                  employee={employee}
+                  selected={employee.id === selectedId}
+                  href={hrefOf(employee.id)}
+                />
+              }
+            />
           ),
         },
         {

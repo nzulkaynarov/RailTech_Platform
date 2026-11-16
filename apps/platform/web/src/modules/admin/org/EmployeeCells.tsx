@@ -81,16 +81,3 @@ export function EmployeeStatusTag({ status }: { status: Employee["status"] }) {
     </StatusTag>
   );
 }
-
-/** Инициалы в круге 36 px (как аватар рейла): декоративные, имя рядом словами. */
-export function Initials({ value, size = 36 }: { value: string; size?: number }) {
-  return (
-    <span
-      aria-hidden="true"
-      className="pf-org-avatar"
-      style={{ width: size, height: size, fontSize: size > 36 ? 14 : 12 }}
-    >
-      {value}
-    </span>
-  );
-}

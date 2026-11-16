@@ -8,14 +8,8 @@ import { ResendInvite } from "../../../features/invite-employee/ResendInvite";
 import { erpAttention } from "../../../entities/employee/status";
 import type { Employee } from "../../../shared/api/generated/model";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
-import {
-  CrmTag,
-  EmployeeStatusTag,
-  ErpTag,
-  Initials,
-  RoleTags,
-  TelegramText,
-} from "./EmployeeCells";
+import { CrmTag, EmployeeStatusTag, ErpTag, RoleTags, TelegramText } from "./EmployeeCells";
+import { PersonAvatar } from "../../../shared/ui/EntityCell";
 
 export interface EmployeeCardProps {
   employee: Employee;
@@ -35,7 +29,7 @@ export function EmployeeCard({ employee, selfId, canEdit, otherActiveAdmins }: E
   return (
     <div className="pf-panel-stack">
       <div className="pf-org-person">
-        <Initials value={employee.initials} size={44} />
+        <PersonAvatar name={employee.name} size={40} />
         <div style={{ minWidth: 0 }}>
           <h3 style={{ margin: 0, fontSize: 16, lineHeight: "24px", fontWeight: 600 }}>
             {employee.name}
