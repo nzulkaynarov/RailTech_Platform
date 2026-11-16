@@ -18,7 +18,7 @@ PNG = samples.png(4, 4)
 
 def test_allows_only_embedded_fonts_logo_and_raster_data() -> None:
     policy = ResourcePolicy(logo=Logo(PNG, "image/png"))
-    font = policy.resolve("rtdocs:fonts/NotoSans-Regular.ttf")
+    font = policy.resolve("rtdocs:fonts/Inter-Regular.ttf")
     assert font is not None and font.mime == "font/ttf" and font.data[:4] == b"\x00\x01\x00\x00"
     logo = policy.resolve("rtdocs:logo")
     assert logo is not None and logo.data == PNG

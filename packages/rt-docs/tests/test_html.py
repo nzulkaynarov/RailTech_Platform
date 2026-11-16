@@ -122,5 +122,5 @@ def test_layouts_differ_in_header_and_footer() -> None:
 def test_resources_are_only_rtdocs_urls() -> None:
     html = html_of(samples.invoice(), layout=Layout.COMMERCIAL)
     assert 'src="rtdocs:logo"' in html
-    assert 'url("rtdocs:fonts/NotoSans-Regular.ttf")' in html
+    assert 'url("rtdocs:fonts/Inter-Regular.ttf")' in html
     assert "http://" not in html and "file:" not in html
