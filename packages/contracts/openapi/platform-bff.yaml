@@ -24364,6 +24364,7 @@ components:
         - article
         - product_id
         - product_name
+        - product_draft
         - kind
         - zone
         - group
@@ -24383,6 +24384,7 @@ components:
         article: {type: string}
         product_id: {type: [string, 'null'], pattern: '^[0-9]+$', description: Карточка каталога (сопоставление)}
         product_name: {type: [string, 'null']}
+        product_draft: {type: boolean, description: 'Карточка строки — черновик каталога (ADR-0027): строку можно сопоставить с опубликованной позицией'}
         kind: {$ref: '#/components/schemas/CalcLineKind'}
         zone: {$ref: '#/components/schemas/CalcZone'}
         group:

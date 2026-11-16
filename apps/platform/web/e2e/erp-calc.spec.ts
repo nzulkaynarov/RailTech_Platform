@@ -245,6 +245,18 @@ test.describe("План 1.1: расчёт из окна «Создать» — �
     await expect(dialog.getByText("Строки из таблицы: отметьте, что добавить")).toBeVisible();
     await expect(dialog.getByText("Клемма КБ-65 · 12 компл.")).toBeVisible();
     await settledScreenshot(page, "calc-parse-excel");
+
+    // ADR-0027: позиция не из каталога получает карточку-черновик — строка помечена, её можно сопоставить с каталогом.
+    await dialog.getByRole("button", { name: /^Добавить выбранные/ }).click();
+    await expect(dialog).toBeHidden();
+    const row = page.getByRole("row", { name: /Клемма КБ-65/ });
+    await expect(row.getByText("Черновик", { exact: true })).toBeVisible();
+    await expect(
+      row.getByRole("button", { name: "Сопоставить с каталогом: «Клемма КБ-65»" }),
+    ).toBeVisible();
+    await row.scrollIntoViewIfNeeded();
+    await settledScreenshot(page, "calc-draft-lines");
+    await expectNoViolations(page, "строки-черновики в расчёте");
   });
 });
 

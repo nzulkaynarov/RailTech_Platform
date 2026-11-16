@@ -36734,6 +36734,10 @@
                         "type": "string",
                         "nullable": true
                     },
+                    "product_draft": {
+                        "type": "boolean",
+                        "description": "Карточка строки — черновик каталога (ADR-0027)"
+                    },
                     "kind": {
                         "$ref": "#/components/schemas/CalcLineKindEnum"
                     },
@@ -36829,6 +36833,7 @@
                     "markup_pct",
                     "name",
                     "position",
+                    "product_draft",
                     "product_id",
                     "product_name",
                     "purchase_currency",

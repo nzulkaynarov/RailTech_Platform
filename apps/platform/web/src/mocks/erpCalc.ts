@@ -157,6 +157,8 @@ function presentLine(line: MockLine, user: Me, editable: boolean): CalcLine {
     article: line.article,
     product_id: line.productId === null ? null : String(line.productId),
     product_name: line.productId === null ? null : line.name,
+    // ERP заводит строке без позиции каталога карточку-черновик (ADR-0027); мок показывает такую строку черновиком.
+    product_draft: line.productId === null,
     kind,
     zone,
     group: GROUP[kind],
@@ -166,7 +168,8 @@ function presentLine(line: MockLine, user: Me, editable: boolean): CalcLine {
       line.kind === "service"
         ? { on_hand: null, free: null, cell: null, reserved: null }
         : line.productId === null
-          ? { on_hand: line.onHand, free: null, cell: null, reserved: null }
+          ? // Черновик карточки (ADR-0027): на складе его нет, остаток — ноль.
+            { on_hand: line.onHand ?? 0, free: null, cell: null, reserved: null }
           : (() => {
               const info = stockInfo(line);
               return {

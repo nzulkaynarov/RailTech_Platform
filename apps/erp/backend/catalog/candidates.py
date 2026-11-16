@@ -120,8 +120,16 @@ def capture_line_knowledge(item, product) -> list[str]:
     return updated
 
 
+def _domain_type_for(kind: str | None):
+    """Тип карточки по типу строки расчёта (ADR-0027 п. 2): услуга — `SERVICES`, иначе товар."""
+    from catalog.models import DomainType
+
+    code = DomainType.SERVICES if kind == "service" else DomainType.GENERAL_GOODS
+    return DomainType.objects.filter(code=code).first()
+
+
 @transaction.atomic
-def ensure_candidate_for_line(item, owner_company, *, deal=None):
+def ensure_candidate_for_line(item, owner_company, *, deal=None, kind: str | None = None):
     """Найти или создать карточку-кандидата для строки КП без товара.
 
     Возвращает `(product, created)`. `None, False` — если из строки нечего описывать
@@ -154,7 +162,8 @@ def ensure_candidate_for_line(item, owner_company, *, deal=None):
         name=title[:255],
         owner_company=owner_company,
         status=draft_status,
-        source_deal=deal or getattr(item.quote, "deal", None),
+        source_deal=deal if deal is not None else getattr(getattr(item, "quote", None), "deal", None),
+        domain_type=_domain_type_for(kind),
         demand_count=1,
         last_requested_at=timezone.now(),
     )
@@ -166,31 +175,127 @@ def ensure_candidate_for_line(item, owner_company, *, deal=None):
     return product, True
 
 
-def capture_quote_lines(quote) -> dict:
-    """Пропустить все строки отправленного КП через очередь кандидатов.
+def _line_kind(item) -> str | None:
+    # Нет `CalcLine` (строка КП вне расчёта) — `RelatedObjectDoesNotExist`, наследник `AttributeError`.
+    return getattr(getattr(item, "calc", None), "kind", None)
 
-    Момент выбран не случайно: отправка — это когда знание ФИНАЛЬНО (цены заморожены, номер
-    выдан). Черновик, который продавец ещё крутит, мусорил бы каталог. Тот же выбор у Ariba:
-    в enablement уходит отправленный документ, а не заготовка.
+
+def _owner_for(quote):
+    """Владелец карточек — наша компания (ADR-0027 п. 6); без неё — продавец КП."""
+    from django.core.exceptions import ImproperlyConfigured
+
+    from accounts.models import Company
+    from core.tenant import own_company_id
+
+    try:
+        company_id = own_company_id()
+    except ImproperlyConfigured:
+        company_id = None
+    if company_id:
+        return Company.objects.filter(pk=company_id).first()
+    from crm.services.quotes import _quote_seller_company
+
+    return _quote_seller_company(quote)
+
+
+@transaction.atomic
+def link_line(item, owner_company, *, deal=None) -> bool:
+    """Связать одну строку без карточки с найденной или новой карточкой-черновиком. True — строка связана."""
+    product, _created = ensure_candidate_for_line(item, owner_company, deal=deal, kind=_line_kind(item))
+    if product is None:
+        return False
+    item.product = product
+    item.save(update_fields=["product"], skip_recalculate=True)
+    return True
+
+
+def link_quote_lines(quote) -> dict:
+    """Каждая строка КП без карточки получает карточку (ADR-0027 п. 1). Идемпотентна: связанные строки не трогает.
+
+    Разделы и примечания не связываются; строка без названия — тоже (её нечем описать).
+    """
+    from sales.models import QuoteItem
+
+    result = {"linked": 0, "skipped": 0}
+    items = list(
+        quote.items.filter(display_type=QuoteItem.DisplayType.ITEM, product__isnull=True).select_related("quote__deal")
+    )
+    if not items:
+        return result
+    owner = _owner_for(quote)
+    if owner is None:
+        result["skipped"] = len(items)
+        return result
+    deal = getattr(quote, "deal", None)
+    for item in items:
+        if link_line(item, owner, deal=deal):
+            result["linked"] += 1
+        else:
+            result["skipped"] += 1
+    return result
+
+
+def is_own_draft(item) -> bool:
+    """Карточка строки — черновик, который эта строка сама создала: спрос 1, та же сделка (ADR-0027 п. 5)."""
+    product = item.product if item.product_id else None
+    if product is None or getattr(product.status, "code", None) != "DRAFT":
+        return False
+    return (product.demand_count or 0) <= 1 and product.source_deal_id == getattr(item.quote, "deal_id", None)
+
+
+def drop_unused_draft(product_id: int | None) -> bool:
+    """Черновик, на который больше не ссылается ни одна строка КП, удаляется: строку сопоставили с каталогом."""
+    from catalog.models import Product
+
+    if not product_id:
+        return False
+    draft = Product.objects.filter(pk=product_id, status__code="DRAFT", quote_items__isnull=True).first()
+    if draft is None:
+        return False
+    draft.delete()
+    return True
+
+
+def set_draft_kind(item, kind: str) -> None:
+    """Тип своего черновика меняется вместе со строкой: товар ↔ услуга."""
+    product = item.product
+    product.domain_type = _domain_type_for(kind)
+    product.save(update_fields=["domain_type"])
+
+
+def relink_renamed_line(item, old_name: str) -> None:
+    """Строку переименовали в расчёте (ADR-0027 п. 5).
+
+    Черновик, который эта строка сама создала (спрос 1, та же сделка), переименовывается вместе с ней; иначе строка
+    отвязывается и заново проходит поиск или создание карточки.
+    """
+    product = item.product if item.product_id else None
+    if product is None or _clean(old_name) == _clean(item.imported_raw_name):
+        return
+    if getattr(product.status, "code", None) != "DRAFT":
+        return
+    title = _line_title(item)
+    if not title:
+        return
+    if is_own_draft(item):
+        product.name = title[:255]
+        product.save(update_fields=["name"])
+        return
+    product.demand_count = max(0, (product.demand_count or 0) - 1)
+    product.save(update_fields=["demand_count"])
+    item.product = None
+    owner = _owner_for(item.quote)
+    if owner is not None:
+        link_line(item, owner, deal=item.quote.deal)
+
+
+def capture_quote_lines(quote) -> dict:
+    """Отправка КП: последняя точка, где строка без карточки получает карточку (ADR-0027 п. 1).
 
     Никогда не бросает наружу: наполнение каталога не должно ломать отправку КП клиенту.
     """
-    from crm.services.quotes import _quote_seller_company
-
-    result = {"created": 0, "matched": 0, "skipped": 0}
     try:
-        owner = _quote_seller_company(quote)
-        if owner is None:
-            return result
-        deal = getattr(quote, "deal", None)
-        for item in quote.items.billable().filter(product__isnull=True):
-            product, created = ensure_candidate_for_line(item, owner, deal=deal)
-            if product is None:
-                result["skipped"] += 1
-            elif created:
-                result["created"] += 1
-            else:
-                result["matched"] += 1
+        return link_quote_lines(quote)
     except Exception:  # noqa: BLE001 — наполнение каталога не должно ронять отправку КП
-        logger.exception("catalog: не удалось собрать кандидатов по КП %s", getattr(quote, "pk", None))
-    return result
+        logger.exception("catalog: не удалось связать строки КП %s с каталогом", getattr(quote, "pk", None))
+        return {"linked": 0, "skipped": 0}

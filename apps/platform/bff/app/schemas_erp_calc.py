@@ -130,6 +130,7 @@ class CalcLine(BaseModel):
     article: str
     product_id: str | None
     product_name: str | None
+    product_draft: bool = False
     kind: LineKind
     zone: LineZone
     group: Group
@@ -352,6 +353,7 @@ def _line(raw: dict[str, Any], *, cost: bool, zones: Collection[str], offers: bo
         article=raw.get("article") or "",
         product_id=_id(raw.get("product_id")),
         product_name=raw.get("product_name"),
+        product_draft=bool(raw.get("product_draft")),
         kind=raw["kind"],
         zone=raw["zone"],
         group=raw["group"],

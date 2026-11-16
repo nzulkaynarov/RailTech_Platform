@@ -23,6 +23,8 @@ export interface CalcLine {
   product_id: string | null;
   /** @nullable */
   product_name: string | null;
+  /** Карточка строки — черновик каталога (ADR-0027): строку можно сопоставить с опубликованной позицией */
+  product_draft: boolean;
   kind: CalcLineKind;
   zone: CalcZone;
   /** Индикатор виз, к которому относится строка */

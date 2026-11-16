@@ -148,9 +148,10 @@ def test_capture_over_the_whole_quote_is_idempotent(world):
     first = capture_quote_lines(world["quote"])
     second = capture_quote_lines(world["quote"])
 
-    assert first == {"created": 2, "matched": 0, "skipped": 0}
-    assert second == {"created": 0, "matched": 2, "skipped": 0}
+    assert first == {"linked": 2, "skipped": 0}
+    assert second == {"linked": 0, "skipped": 0}
     assert Product.objects.filter(owner_company=world["seller"]).count() == 2
+    assert not world["quote"].items.filter(product__isnull=True).exists()
 
 
 def test_capture_never_breaks_the_send(world, monkeypatch):
@@ -161,4 +162,4 @@ def test_capture_never_breaks_the_send(world, monkeypatch):
         lambda *a, **kw: (_ for _ in ()).throw(RuntimeError("боль")),
     )
 
-    assert capture_quote_lines(world["quote"]) == {"created": 0, "matched": 0, "skipped": 0}
+    assert capture_quote_lines(world["quote"]) == {"linked": 0, "skipped": 0}
