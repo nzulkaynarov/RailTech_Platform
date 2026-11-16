@@ -438,8 +438,10 @@ def test_initial_subscriptions_v1() -> None:
         "uz.railtech.crm.partner.client_resolved.v1",
         "uz.railtech.eds.approval.decided.v1",
         "uz.railtech.eds.approval.decided.v2",
+        "uz.railtech.eds.document.registered.v2",  # ЛИД-8 (ADR-0026): ИСХ компании — «Письма» в кабинете
         "uz.railtech.eds.document.signed.v1",
         "uz.railtech.eds.document.signed.v2",
+        "uz.railtech.eds.letter.registered.v2",  # ЛИД-8 (ADR-0026): квитанция о регистрации письма компании
         "uz.railtech.eds.letter.rejected.v1",
         "uz.railtech.eds.letter.rejected.v2",
         "uz.railtech.eds.letter.resolved.v1",

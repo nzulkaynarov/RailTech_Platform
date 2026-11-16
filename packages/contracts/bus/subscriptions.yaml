@@ -70,6 +70,9 @@ subscribers:
       - uz.railtech.eds.letter.rejected.v2  # задача «Н»: номер с обозначением из настроек
       - uz.railtech.eds.approval.decided.v1
       - uz.railtech.eds.approval.decided.v2  # задача «Н»: номер с обозначением из настроек
+      # ЛИД-8 (ADR-0026): письма компании в кабинете — входящее зарегистрировано (квитанция ВХ) и исходящее отправлено (ИСХ).
+      - uz.railtech.eds.letter.registered.v2
+      - uz.railtech.eds.document.registered.v2
       # SIGN-3 (ADR-0024 п. 6): документ подписан — проекция в ERP для проверки в кабинете (/v/<код>).
       - uz.railtech.eds.document.signed.v1
       - uz.railtech.eds.document.signed.v2  # задача «Н»: номер с обозначением из настроек

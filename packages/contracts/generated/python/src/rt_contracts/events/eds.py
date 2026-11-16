@@ -406,6 +406,10 @@ class Document1(BaseModel):
     Связь с проектом (заявкой) ERP
     """
     deal_number: Annotated[str | None, Field(max_length=64)] = None
+    letter: Letter | None = None
+    """
+    Только у исходящего письма (`kind = letter_out`), необязательное (ЛИД-8, ADR-0026, 2026-11-16): кому письмо и на какое входящее отвечает. ERP по нему ведёт «Письма» в кабинете компании-получателя — по сделке (`erp_deal_id`) или точному ИНН получателя.
+    """
 
 
 class Document2(BaseModel):
@@ -540,7 +544,7 @@ class DocumentRegisteredV1(BaseModel):
 
 class DocumentRegisteredV2(BaseModel):
     """
-    Тип uz.railtech.eds.document.registered.v2, источник rt://eds. v2 (задача «Н», 2026-11-13): номер с обозначением из настроек нумерации, иначе как v1. Поле data конверта (envelope.v1.json). Документ получил номер реестра: служебная записка (СЗ), заявление (ЗЯ), отчёт (ОТ) — при создании; исходящее письмо (ИСХ) — при отправке. Входящие письма — letter.registered.
+    Тип uz.railtech.eds.document.registered.v2, источник rt://eds. v2 (задача «Н», 2026-11-13): номер с обозначением из настроек нумерации, иначе как v1. Поле data конверта (envelope.v1.json). Документ получил номер реестра: служебная записка (СЗ), заявление (ЗЯ), отчёт (ОТ) — при создании; исходящее письмо (ИСХ) — при отправке. Входящие письма — letter.registered. Исходящее письмо с 2026-11-16 несёт необязательный блок `document.letter` (получатель, «в ответ на») — ADR-0026.
     """
 
     model_config = ConfigDict(
@@ -644,6 +648,18 @@ class Holder(BaseModel):
     full_name: Annotated[str, Field(max_length=255, min_length=1)]
 
 
+class InReplyTo(BaseModel):
+    """
+    Входящее, на которое отвечает письмо (`documents.in_reply_to`); null — не ответ
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    eds_letter_id: UuidV2
+    number: LetterNumberV2
+
+
 class Kind(StrEnum):
     """
     Что случилось: выдано поручение; напоминание о сроке; срок прошёл; исполнитель просит перенос; автор решил перенос; надо ознакомиться; все поручения письма исполнены
@@ -666,6 +682,21 @@ class Kind2(StrEnum):
 
 
 class Letter(BaseModel):
+    """
+    Только у исходящего письма (`kind = letter_out`), необязательное (ЛИД-8, ADR-0026, 2026-11-16): кому письмо и на какое входящее отвечает. ERP по нему ведёт «Письма» в кабинете компании-получателя — по сделке (`erp_deal_id`) или точному ИНН получателя.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    recipient: Recipient
+    in_reply_to: InReplyTo | None
+    """
+    Входящее, на которое отвечает письмо (`documents.in_reply_to`); null — не ответ
+    """
+
+
+class Letter1(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
     )
@@ -688,7 +719,7 @@ class Letter(BaseModel):
     urgent: bool | None = None
 
 
-class Letter1(BaseModel):
+class Letter2(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
     )
@@ -751,7 +782,7 @@ class LetterRegisteredV1(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
     )
-    letter: Letter
+    letter: Letter1
     links: ErpLinks
     actor: Actor
     source: Source | None = None
@@ -768,7 +799,7 @@ class LetterRegisteredV2(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
     )
-    letter: Letter1
+    letter: Letter2
     links: ErpLinksV2
     actor: ActorV2
     source: Source | None = None
@@ -1102,6 +1133,18 @@ class PersonRefV2(BaseModel):
     )
     crm_user_id: int
     full_name: Annotated[str, Field(max_length=255, min_length=1)]
+
+
+class Recipient(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    name: Annotated[str | None, Field(max_length=255)]
+    inn: Annotated[str | None, Field(pattern="^\\d{9,14}$")]
+    """
+    ИНН получателя; нет — письмо в кабинет попадает только по сделке
+    """
+    email: Annotated[str | None, Field(max_length=254)]
 
 
 class Ref(BaseModel):
