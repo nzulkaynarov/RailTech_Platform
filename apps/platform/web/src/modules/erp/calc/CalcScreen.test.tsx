@@ -88,7 +88,7 @@ describe("Расчёт по заявке", () => {
         name: "Валюта закупки для «Перевод стрелочный Р65 марки 1/11»",
       }),
     ).toBeEnabled();
-    expect(within(rail).getByText("UZS")).toBeVisible();
+    expect(within(rail).getByText("сум")).toBeVisible();
     expect(
       within(rail).getByLabelText<HTMLInputElement>("Наценка, %: Перевод стрелочный Р65 марки 1/11")
         .value,
