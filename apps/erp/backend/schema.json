@@ -1435,6 +1435,130 @@
                 }
             }
         },
+        "/api/portal/v1/letters": {
+            "get": {
+                "operationId": "api_portal_v1_letters_retrieve",
+                "description": "GET /letters — письма компании: `direction`, `deal_id`, `q`, `date_from`, `date_to`.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/letters/": {
+            "get": {
+                "operationId": "api_portal_v1_letters_retrieve_2",
+                "description": "GET /letters — письма компании: `direction`, `deal_id`, `q`, `date_from`, `date_to`.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/letters/{id}": {
+            "get": {
+                "operationId": "api_portal_v1_letters_retrieve_3",
+                "description": "GET /letters/{id} — письмо своей компании.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/letters/{id}/": {
+            "get": {
+                "operationId": "api_portal_v1_letters_retrieve_4",
+                "description": "GET /letters/{id} — письмо своей компании.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/letters/{id}/file": {
+            "get": {
+                "operationId": "api_portal_v1_letters_file_retrieve",
+                "description": "GET /letters/{id}/file — PDF нашего исходящего письма (поток от EDS через ERP).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/letters/{id}/file/": {
+            "get": {
+                "operationId": "api_portal_v1_letters_file_retrieve_2",
+                "description": "GET /letters/{id}/file — PDF нашего исходящего письма (поток от EDS через ERP).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/portal/v1/me": {
             "get": {
                 "operationId": "api_portal_v1_me_retrieve",
