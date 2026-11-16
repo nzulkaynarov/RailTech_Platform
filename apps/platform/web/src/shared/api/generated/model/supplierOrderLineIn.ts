@@ -19,8 +19,8 @@ export interface SupplierOrderLineIn {
   /** @maxLength 32 */
   unit?: string;
   /**
-   * @minimum 1
    * @maximum 10000000
+   * @exclusiveMinimum 0
    */
   quantity: number;
   /** Цена поставщика; ставит тот, кто видит цены поставщиков (иначе 403 `prices_forbidden`) */

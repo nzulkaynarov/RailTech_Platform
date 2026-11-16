@@ -8,7 +8,7 @@ export interface StockShipmentLine {
   /** @pattern ^[0-9]+$ */
   product_id: string;
   name: string;
-  /** @minimum 1 */
+  /** @exclusiveMinimum 0 */
   quantity: number;
   /** @nullable */
   cell: string | null;

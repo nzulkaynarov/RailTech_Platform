@@ -6,7 +6,7 @@
 export type SupplierOrderReceiptInLinesItem = {
   /** @pattern ^[0-9]+$ */
   order_line_id: string;
-  /** @minimum 1 */
+  /** @exclusiveMinimum 0 */
   quantity: number;
   /** @maxLength 32 */
   cell?: string;

@@ -10,7 +10,7 @@ export interface StockIncomingOrder {
   supplier: string;
   /** @nullable */
   expected_date: string | null;
-  /** @minimum 1 */
+  /** @exclusiveMinimum 0 */
   quantity_left: number;
   path: string;
 }

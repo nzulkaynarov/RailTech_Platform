@@ -8,7 +8,7 @@ export type StockShipInLinesItemUnitsItem = {
   unit_id: string;
   /**
    * Сколько из партии; серийный — 1
-   * @minimum 1
+   * @exclusiveMinimum 0
    */
   quantity?: number;
 };

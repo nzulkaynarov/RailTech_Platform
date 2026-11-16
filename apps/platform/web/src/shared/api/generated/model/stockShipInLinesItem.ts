@@ -7,7 +7,7 @@ import type { StockShipInLinesItemUnitsItem } from "./stockShipInLinesItemUnitsI
 export type StockShipInLinesItem = {
   /** @pattern ^[0-9]+$ */
   reservation_id: string;
-  /** @minimum 1 */
+  /** @exclusiveMinimum 0 */
   quantity: number;
   /**
    * Серийные или партии строки (`tracking` резерва `serial`/`lot` — обязательно; сумма = количеству; только свободные единицы этого товара из `units` резерва). Без них — 422 `units_required`

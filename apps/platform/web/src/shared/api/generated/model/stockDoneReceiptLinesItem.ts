@@ -5,7 +5,7 @@
 
 export type StockDoneReceiptLinesItem = {
   name: string;
-  /** @minimum 1 */
+  /** @exclusiveMinimum 0 */
   quantity: number;
   /** @nullable */
   cell: string | null;

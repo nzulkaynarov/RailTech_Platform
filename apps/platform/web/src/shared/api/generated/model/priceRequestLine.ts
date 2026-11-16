@@ -11,7 +11,7 @@ export interface PriceRequestLine {
   line_id: string | null;
   name: string;
   article: string;
-  /** @minimum 1 */
+  /** @exclusiveMinimum 0 */
   quantity: number;
   unit: string;
 }

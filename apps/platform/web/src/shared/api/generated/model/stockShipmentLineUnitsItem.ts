@@ -5,6 +5,6 @@
 
 export type StockShipmentLineUnitsItem = {
   number: string;
-  /** @minimum 1 */
+  /** @exclusiveMinimum 0 */
   quantity: number;
 };
