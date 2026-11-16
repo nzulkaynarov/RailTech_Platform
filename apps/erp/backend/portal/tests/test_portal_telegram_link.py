@@ -38,7 +38,6 @@ def _decode(token: str) -> tuple[int, int, int, int]:
     return version, language, int.from_bytes(contact, "big"), expires
 
 
-
 def _set_bot(username: str) -> None:
     """Имя бота — проекция из CRM (`crm.bot.changed`), не настройка ERP."""
     from core.models.settings import SystemSetting
@@ -46,6 +45,7 @@ def _set_bot(username: str) -> None:
     setting = SystemSetting.load()
     setting.telegram_bot_username = username
     setting.save(update_fields=["telegram_bot_username"])
+
 
 @pytest.fixture
 def linkable(settings, monkeypatch, client_company, client_contact, other_company, other_contact):
