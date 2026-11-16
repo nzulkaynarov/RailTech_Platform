@@ -30,7 +30,7 @@ const LEGAL_FORMS = new Set([
 export function entityInitials(name: string, company = false): string {
   const words = name
     .replace(/[«»"'“”„()]/g, " ")
-    .split(/\s+/)
+    .split(/[\s-]+/)
     .filter(Boolean)
     .filter((word) => !company || !LEGAL_FORMS.has(word.toLowerCase()));
   const letters = words.slice(0, 2).map((word) => Array.from(word)[0] ?? "");

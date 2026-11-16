@@ -15,6 +15,7 @@ describe("initialsOf", () => {
 
   it("drops the legal form and quotes for a company", () => {
     expect(initialsOf("ООО «Рельс Сервис»", true)).toBe("РС");
+    expect(initialsOf("ООО Демо-Вагон", true)).toBe("ДВ");
     expect(initialsOf('"Temir Yo\'l" MCHJ', true)).toBe("TY");
   });
 });
@@ -70,5 +71,12 @@ describe("ItemCell", () => {
   it("shows the thumbnail when there is a photo", () => {
     const { container } = render(<ItemCell name="Рельс Р65" photoUrl="/r65.jpg" />);
     expect(container.querySelector("img")).toHaveAttribute("src", "/r65.jpg");
+  });
+});
+
+describe("title override", () => {
+  it("renders the module's own link instead of the plain name", () => {
+    render(<CompanyCell name="ООО «Рельс»" title={<a href="#card">ООО «Рельс»</a>} />);
+    expect(screen.getByRole("link", { name: "ООО «Рельс»" })).toHaveAttribute("href", "#card");
   });
 });
