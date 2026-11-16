@@ -30,7 +30,7 @@ const bell = (page: Page) => page.getByRole('banner').getByRole('button', { name
 test('шапка: колокольчик с числом непрочитанных', async ({ page }) => {
   await signIn(page);
   await page.goto('/requests');
-  await h1(page, 'Запросы');
+  await h1(page, 'Заявки');
   await expect(bell(page)).toContainText('3');
   await snap(page, 'bell-badge');
 });
@@ -38,7 +38,7 @@ test('шапка: колокольчик с числом непрочитанн�
 test('лента в шторке: объект, действие, время; непрочитанные выделены', async ({ page }) => {
   await signIn(page);
   await page.goto('/requests');
-  await h1(page, 'Запросы');
+  await h1(page, 'Заявки');
   await bell(page).click();
   const panel = page.getByRole('dialog', { name: 'Уведомления' });
   await expect(panel.getByText('Новое КП KP-2026-0042 ждёт вашего решения')).toBeVisible();
@@ -51,7 +51,7 @@ test('лента в шторке: объект, действие, время; н
 test('переход из уведомления в объект: строка счёта выделена', async ({ page }) => {
   await signIn(page);
   await page.goto('/requests');
-  await h1(page, 'Запросы');
+  await h1(page, 'Заявки');
   await bell(page).click();
   await page.getByRole('dialog', { name: 'Уведомления' }).getByText(/Выставлен счёт S-2026-0124/).click();
   await expect(page).toHaveURL(/\/invoices\?focus=603$/);
@@ -63,7 +63,7 @@ test('переход из уведомления в объект: строка �
 test('пустая лента — понятное пустое состояние', async ({ page }) => {
   await signIn(page, 'empty');
   await page.goto('/requests');
-  await h1(page, 'Запросы');
+  await h1(page, 'Заявки');
   await bell(page).click();
   await expect(page.getByRole('dialog', { name: 'Уведомления' }).getByText('Новых уведомлений нет')).toBeVisible();
   await snap(page, 'bell-empty');

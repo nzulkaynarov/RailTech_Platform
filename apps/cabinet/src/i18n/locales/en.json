@@ -1097,7 +1097,7 @@
     },
     "partnerOrders": {
       "title": "Purchase orders",
-      "description": "Confirm purchase orders, submit advance shipping notices (ASN), and respond to price requests (RFQ)",
+      "description": "Confirm purchase orders, submit advance shipping notices (ASN), and respond to price requests",
       "posShort": "items",
       "tabsLabel": "Order and RFQ statuses",
       "ordersListLabel": "Purchase orders list",
@@ -1123,7 +1123,7 @@
       "respondSuccess": "Price request response submitted",
       "views": {
         "orders": "Purchase Orders (PO)",
-        "rfq": "Price Requests (RFQ)",
+        "rfq": "Price Requests",
         "finance": "Turnover & Scorecard"
       },
       "finance": {
@@ -1136,7 +1136,7 @@
         "receiptsCount": "Receipts",
         "scorecardTitle": "Supplier Performance Scorecard",
         "otifRate": "OTIF (On-Time In-Full)",
-        "rfqRate": "RFQ Response Rate",
+        "rfqRate": "Price request response rate",
         "freshnessRate": "Price Freshness in Catalog",
         "otifOrdersCount": "Orders measured: {{count}}",
         "avgResponse": "Average reply: {{hours}} h",
@@ -1217,7 +1217,7 @@
         "trackingNumberPlaceholder": "e.g. 01 A 777 AA or tracking code",
         "noteLabel": "Shipping note",
         "notePlaceholder": "Number of pallets, unloading instructions…",
-        "respondTitle": "Respond to price request (RFQ)",
+        "respondTitle": "Respond to price request",
         "respondDescription": "Provide your offered prices, lead times, and payment terms for the requested items.",
         "responseNoteLabel": "Commercial terms & prices",
         "responseNotePlaceholder": "Specify unit prices, stock availability, and delivery lead time…",

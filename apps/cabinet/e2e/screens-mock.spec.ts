@@ -6,7 +6,7 @@
  * и отсутствие горизонтальной прокрутки (`snap`, как в гейте M2); сводка — `axe-summary.json` в E2E_SCREENS_DIR.
  * Снимки — ключевых экранов (запросы, проект, КП, счета на 1440/1280/390, компания с баром, сайдбар развёрнут и
  * свёрнут), uz и en, тема Mini App (стандартные светлая и тёмная themeParams Telegram — SDK подменён заглушкой, вход
- * через `POST /auth/telegram` мока). Скачки (CAB-FIX-3): CLS загрузки «Запросов» (10 прогонов на 1440 и 390), ввода
+ * через `POST /auth/telegram` мока). Скачки (CAB-FIX-3): CLS загрузки «Заявок» (10 прогонов на 1440 и 390), ввода
  * в «Компанию» и ⌘\ — `layout-shift` браузера. «Сегодня» — день фикстур мока (2026-10-14), как в vitest.
  */
 import fs from 'node:fs';
@@ -93,9 +93,9 @@ const heading = (page: Page, name: string | RegExp) => expect(page.getByRole('he
 
 /** Экраны оболочки: адрес и заголовок h1 (ru), по которому видно, что экран дорисован. */
 const SCREENS: Array<{ id: string; path: string; h1: string | RegExp; actorOnly?: boolean }> = [
-  { id: 'requests', path: '/requests', h1: 'Запросы' },
-  { id: 'request-new', path: '/requests/new', h1: 'Новый запрос', actorOnly: true },
-  { id: 'request-detail', path: '/requests/501', h1: 'Запрос Z-2026-0042' },
+  { id: 'requests', path: '/requests', h1: 'Заявки' },
+  { id: 'request-new', path: '/requests/new', h1: 'Новая заявка', actorOnly: true },
+  { id: 'request-detail', path: '/requests/501', h1: 'Заявка Z-2026-0042' },
   { id: 'quotes', path: '/quotes', h1: 'Коммерческие предложения' },
   { id: 'quote-detail', path: '/quotes/301', h1: 'КП KP-2026-0042' },
   { id: 'contracts', path: '/contracts', h1: 'Договоры' },
@@ -155,7 +155,7 @@ for (const role of ['actor', 'viewer'] as const) {
 test('CHAT-1: «Сообщения» — бейдж в меню, лента, плашка документа', async ({ page }) => {
   await signIn(page, 'actor');
   await page.goto('/requests');
-  await heading(page, 'Запросы');
+  await heading(page, 'Заявки');
   await snap(page, 'cabinet-badge-requests');
   await page.goto('/quotes/301');
   await heading(page, 'КП KP-2026-0042');
@@ -185,7 +185,7 @@ test('сайдбар свёрнут: пункты с именем, марка Ra
   await page.goto('/deals/48');
   await heading(page, 'Проект D-48');
   const side = page.getByRole('navigation', { name: 'Разделы кабинета' });
-  await expect(side.getByRole('link', { name: 'Запросы' })).toBeVisible();
+  await expect(side.getByRole('link', { name: 'Заявки' })).toBeVisible();
   await expect(page.getByRole('img', { name: /RailTech Cabinet/ })).toBeVisible();
   await snap(page, 'actor-sidebar-collapsed-deal');
 });
@@ -201,7 +201,7 @@ test('хлебные крошки: номер документа, «Проект
   await expect(crumbs).toContainText('D-48');
   await expect(crumbs.getByRole('link', { name: 'Проект' })).toHaveCount(0);
   await page.goto('/requests/501');
-  await heading(page, 'Запрос Z-2026-0042');
+  await heading(page, 'Заявка Z-2026-0042');
   await expect(crumbs).toContainText('Z-2026-0042');
 });
 
@@ -246,7 +246,7 @@ for (const [scheme, params] of [
     expect(await page.evaluate(() => document.documentElement.classList.contains('dark'))).toBe(scheme === 'dark');
     await snap(page, `${prefix}-deal`);
     await page.goto('/requests');
-    await heading(page, 'Запросы');
+    await heading(page, 'Заявки');
     await snap(page, `${prefix}-requests`);
   });
 }
@@ -257,19 +257,19 @@ for (const size of [
   { width: 1440, height: 900 },
   { width: 390, height: 844 },
 ] as const) {
-  test(`загрузка «Запросов» без скачка: CLS ≤ 0,01 в 10 прогонах подряд, ${size.width}`, async ({ page }) => {
+  test(`загрузка «Заявок» без скачка: CLS ≤ 0,01 в 10 прогонах подряд, ${size.width}`, async ({ page }) => {
     await signIn(page, 'actor');
     await page.setViewportSize(size);
     const runs: number[] = [];
     for (let run = 0; run < 10; run += 1) {
       await page.goto('/requests');
-      await heading(page, 'Запросы');
+      await heading(page, 'Заявки');
       await expect(page.getByRole('region', { name: 'Требует вашего решения' })).toBeVisible();
       await expect(page.getByText('Z-2026-0042').first()).toBeVisible();
       await page.waitForTimeout(400);
       runs.push((await shiftsSince(page)).cls);
     }
-    writeCls({ action: 'Загрузка «Запросов»', width: size.width, runs });
+    writeCls({ action: 'Загрузка «Заявок»', width: size.width, runs });
     expect(Math.max(...runs), `CLS загрузки по прогонам: ${runs.join(', ')}`).toBeLessThanOrEqual(0.01);
   });
 
@@ -321,7 +321,7 @@ test('«Компания»: уход по ссылке меню с правка�
   await page.goto('/company');
   await page.getByRole('button', { name: 'Изменить' }).click();
   await page.getByLabel('ИНН').fill('3051234567');
-  await page.getByRole('navigation', { name: 'Разделы кабинета' }).getByRole('link', { name: 'Запросы' }).click();
+  await page.getByRole('navigation', { name: 'Разделы кабинета' }).getByRole('link', { name: 'Заявки' }).click();
   const dialog = page.getByRole('dialog', { name: 'Выйти без сохранения?' });
   await expect(dialog).toBeVisible();
   await dialog.getByRole('button', { name: 'Остаться' }).click();
@@ -332,7 +332,7 @@ test('«Компания»: уход по ссылке меню с правка�
 test('⌘\\ / Ctrl+\\: сайдбар без анимации — один шаг, не в поле ввода', async ({ page }) => {
   await signIn(page, 'actor');
   await page.goto('/requests');
-  await heading(page, 'Запросы');
+  await heading(page, 'Заявки');
   await expect(page.getByText('Z-2026-0042').first()).toBeVisible();
   const aside = page.locator('aside').filter({ has: page.getByRole('navigation', { name: 'Разделы кабинета' }) });
   expect(await aside.evaluate((node) => getComputedStyle(node).transitionDuration)).toBe('0s');

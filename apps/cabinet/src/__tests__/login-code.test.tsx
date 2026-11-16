@@ -41,7 +41,7 @@ describe('вход по коду из письма', () => {
     expect(field).toHaveValue('429173');
     await user.click(within(codeForm()).getByRole('button', { name: 'Войти' }));
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Запросы' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Заявки' })).toBeInTheDocument();
     expect(body.current).toEqual({ email: 'a.karimov@toshlog.example', code: '429173' });
   });
 
@@ -125,7 +125,7 @@ describe('вход по коду из письма', () => {
     expect(screen.getByRole('button', { name: 'Отправить ещё раз' })).toBeEnabled();
     await user.type(within(codeForm()).getByLabelText('Код из письма'), '734002');
     await user.click(within(codeForm()).getByRole('button', { name: 'Войти' }));
-    expect(await screen.findByRole('heading', { level: 1, name: 'Запросы' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Заявки' })).toBeInTheDocument();
     expect(letters).toBe(0);
   });
 

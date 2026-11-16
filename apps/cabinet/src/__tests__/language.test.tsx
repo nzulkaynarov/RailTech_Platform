@@ -33,6 +33,6 @@ describe('смена языка', () => {
   it('язык контакта из /me применяется, если человек не выбирал язык сам', async () => {
     signedIn('viewer'); // у контакта-наблюдателя в фикстурах язык uz
     renderApp('/requests');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Soʻrovlar' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Arizalar' })).toBeInTheDocument();
   });
 });

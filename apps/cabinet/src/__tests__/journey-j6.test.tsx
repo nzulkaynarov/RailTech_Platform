@@ -13,13 +13,13 @@ describe('Wave J6 & B-CABFIX-2: Поиск, фильтры, повтор зап�
       signedIn();
       const user = userEvent.setup();
       const { router } = renderApp('/requests');
-      await heading('Запросы');
+      await heading('Заявки');
 
-      const list = await screen.findByRole('list', { name: 'Запросы' });
+      const list = await screen.findByRole('list', { name: 'Заявки' });
       expect(within(list).getAllByRole('listitem')).toHaveLength(5);
 
       // Кликаем по фильтру «Закрыт»
-      const closedFilter = screen.getByRole('button', { name: 'Закрыт' });
+      const closedFilter = screen.getByRole('button', { name: 'Закрыта' });
       await user.click(closedFilter);
 
       expect(router.state.location.search).toBe('?status=closed');
@@ -42,12 +42,12 @@ describe('Wave J6 & B-CABFIX-2: Поиск, фильтры, повтор зап�
       signedIn();
       const user = userEvent.setup();
       renderApp('/requests');
-      await heading('Запросы');
+      await heading('Заявки');
 
       const searchInput = screen.getByRole('searchbox', { name: 'Поиск по номеру, описанию или позиции...' });
       await user.type(searchInput, 'Перчатки');
 
-      const list = await screen.findByRole('list', { name: 'Запросы' });
+      const list = await screen.findByRole('list', { name: 'Заявки' });
       await waitFor(() => {
         const items = within(list).getAllByRole('listitem');
         expect(items).toHaveLength(1);
@@ -60,7 +60,7 @@ describe('Wave J6 & B-CABFIX-2: Поиск, фильтры, повтор зап�
       signedIn();
       const user = userEvent.setup();
       renderApp('/requests');
-      await heading('Запросы');
+      await heading('Заявки');
 
       const searchInput = screen.getByRole('searchbox', { name: 'Поиск по номеру, описанию или позиции...' });
       await user.type(searchInput, 'несуществующий артикул 99999');
@@ -71,45 +71,45 @@ describe('Wave J6 & B-CABFIX-2: Поиск, фильтры, повтор зап�
       const clearBtn = screen.getByRole('button', { name: 'Сбросить поиск' });
       await user.click(clearBtn);
 
-      const list = await screen.findByRole('list', { name: 'Запросы' });
+      const list = await screen.findByRole('list', { name: 'Заявки' });
       await waitFor(() => {
         expect(within(list).getAllByRole('listitem')).toHaveLength(5);
       });
     });
   });
 
-  describe('Повтор запроса в 1 клик (J6)', () => {
+  describe('Повтор заявки в 1 клик (J6)', () => {
     it('кнопка повтора в списке запросов открывает форму нового запроса с предзаполнением', async () => {
       signedIn();
       const user = userEvent.setup();
       const { router } = renderApp('/requests');
-      await heading('Запросы');
-      await screen.findByRole('list', { name: 'Запросы' });
+      await heading('Заявки');
+      await screen.findByRole('list', { name: 'Заявки' });
 
       // Находим кнопку повтора у первого запроса
       const reorderBtns = await screen.findAllByRole('link', { name: /Повторить запрос/ });
       expect(reorderBtns.length).toBeGreaterThan(0);
       await user.click(reorderBtns[0]);
 
-      expect(await heading('Новый запрос')).toBeInTheDocument();
+      expect(await heading('Новая заявка')).toBeInTheDocument();
       expect(router.state.location.pathname).toBe('/requests/new');
 
       const summaryInput = screen.getByLabelText('Что нужно') as HTMLTextAreaElement;
-      expect(summaryInput.value).toContain('Повтор запроса');
+      expect(summaryInput.value).toContain('Повтор заявки');
     }, 60_000);
 
     it('кнопка повтора на детальной странице запроса предзаполняет форму', async () => {
       signedIn();
       const user = userEvent.setup();
       const { router } = renderApp('/requests/501');
-      await heading('Запрос ЗВ-2026-042');
+      await heading('Заявка ЗВ-2026-042');
 
-      const reorderBtn = screen.getByRole('link', { name: 'Повторить запрос' });
+      const reorderBtn = screen.getByRole('link', { name: 'Повторить заявку' });
       await user.click(reorderBtn);
 
-      expect(await heading('Новый запрос')).toBeInTheDocument();
+      expect(await heading('Новая заявка')).toBeInTheDocument();
       expect(router.state.location.pathname).toBe('/requests/new');
-      expect(screen.getByLabelText('Что нужно')).toHaveValue('Повтор запроса ЗВ-2026-042: Подшипники 6205-2RS — 200 шт., ремни приводные SPZ 1250 — 40 шт.');
+      expect(screen.getByLabelText('Что нужно')).toHaveValue('Повтор заявки ЗВ-2026-042: Подшипники 6205-2RS — 200 шт., ремни приводные SPZ 1250 — 40 шт.');
     }, 60_000);
 
     it('кнопка «Повторить проект» на странице сделки предзаполняет позиции из поставки', async () => {
@@ -121,9 +121,9 @@ describe('Wave J6 & B-CABFIX-2: Поиск, фильтры, повтор зап�
       const reorderDealBtn = screen.getByRole('link', { name: 'Повторить проект' });
       await user.click(reorderDealBtn);
 
-      expect(await heading('Новый запрос')).toBeInTheDocument();
+      expect(await heading('Новая заявка')).toBeInTheDocument();
       expect(router.state.location.pathname).toBe('/requests/new');
-      expect(screen.getByLabelText('Что нужно')).toHaveValue('Повтор запроса ПР-2026-035: Редукторы и муфты');
+      expect(screen.getByLabelText('Что нужно')).toHaveValue('Повтор заявки ПР-2026-035: Редукторы и муфты');
     }, 60_000);
   });
 
@@ -131,17 +131,17 @@ describe('Wave J6 & B-CABFIX-2: Поиск, фильтры, повтор зап�
     it('закрытый запрос с outcome=won отображает статус «Исполнен» в списке и в карточке', async () => {
       signedIn();
       const { router } = renderApp('/requests');
-      await heading('Запросы');
+      await heading('Заявки');
 
-      const list = await screen.findByRole('list', { name: 'Запросы' });
+      const list = await screen.findByRole('list', { name: 'Заявки' });
       // Запрос 504 закрыт с outcome: 'won'
       const item504 = within(list).getByText('ПР-2026-035').closest('li')!;
-      expect(within(item504).getByText('Исполнен')).toBeInTheDocument();
+      expect(within(item504).getByText('Исполнена')).toBeInTheDocument();
 
       // Открываем детальную страницу
       await router.navigate('/requests/504');
-      await heading('Запрос ПР-2026-035');
-      expect(screen.getByText('Исполнен')).toBeInTheDocument();
+      await heading('Заявка ПР-2026-035');
+      expect(screen.getByText('Исполнена')).toBeInTheDocument();
     });
 
     it('закрытый запрос с outcome=cancelled отображает статус «Отменён»', async () => {
@@ -158,8 +158,8 @@ describe('Wave J6 & B-CABFIX-2: Поиск, фильтры, повтор зап�
       );
 
       renderApp('/requests/599');
-      await heading('Запрос ЗВ-2026-099');
-      expect(screen.getByText('Отменён')).toBeInTheDocument();
+      await heading('Заявка ЗВ-2026-099');
+      expect(screen.getByText('Отменена')).toBeInTheDocument();
     });
   });
 });

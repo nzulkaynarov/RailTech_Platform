@@ -11,17 +11,17 @@ describe('оболочка кабинета', () => {
     signedIn();
     const { router } = renderApp('/');
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Запросы' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Заявки' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/requests');
-    await waitFor(() => expect(document.title).toBe('Запросы · Кабинет RailTech'));
+    await waitFor(() => expect(document.title).toBe('Заявки · Кабинет RailTech'));
 
     const bottom = screen.getByRole('navigation', { name: 'Основные разделы' });
-    for (const name of ['Запросы', 'КП', 'Каталог', 'Все документы', 'Ещё']) {
+    for (const name of ['Заявки', 'КП', 'Каталог', 'Все документы', 'Ещё']) {
       expect(within(bottom).getByText(name)).toBeInTheDocument();
     }
     const side = screen.getByRole('navigation', { name: 'Разделы кабинета' });
     expect(within(side).getAllByRole('link')).toHaveLength(NAV_ITEMS.filter((item) => item.group !== 'sell').length); // «Мои товары» — только у партнёра
-    expect(within(side).getByRole('link', { name: 'Запросы' })).toHaveAttribute('aria-current', 'page');
+    expect(within(side).getByRole('link', { name: 'Заявки' })).toHaveAttribute('aria-current', 'page');
     // Веб: компания в шапке, ссылка на профиль с подписью.
     expect(within(screen.getByRole('banner')).getByRole('link', { name: 'Профиль' })).toHaveAttribute('href', '/profile');
   });
@@ -38,7 +38,7 @@ describe('оболочка кабинета', () => {
     signedIn();
     const user = userEvent.setup();
     const { router } = renderApp('/requests');
-    await screen.findByRole('heading', { level: 1, name: 'Запросы' });
+    await screen.findByRole('heading', { level: 1, name: 'Заявки' });
 
     await user.click(screen.getByRole('button', { name: 'Ещё' }));
     const sheet = await screen.findByRole('dialog', { name: 'Ещё разделы' });
@@ -51,7 +51,7 @@ describe('оболочка кабинета', () => {
   it('у каждого раздела есть экран с заголовком', async () => {
     signedIn();
     const { router } = renderApp('/requests');
-    await screen.findByRole('heading', { level: 1, name: 'Запросы' });
+    await screen.findByRole('heading', { level: 1, name: 'Заявки' });
     const titles: Record<string, string> = {
       '/quotes': 'Коммерческие предложения',
       '/contracts': 'Договоры',
@@ -62,7 +62,7 @@ describe('оболочка кабинета', () => {
       '/catalog': 'Каталог',
       '/company': 'Компания',
       '/team': 'Команда',
-      '/requests/new': 'Новый запрос',
+      '/requests/new': 'Новая заявка',
       '/quotes/301': 'КП KP-2026-0042',
       '/catalog/1001': 'Подшипник 6205-2RS',
       '/deals/42': 'Заявка ЗВ-2026-042',
@@ -78,7 +78,7 @@ describe('оболочка кабинета', () => {
   it('axe: оболочка без нарушений', async () => {
     signedIn();
     const { container } = renderApp('/requests');
-    await screen.findByRole('heading', { level: 1, name: 'Запросы' });
+    await screen.findByRole('heading', { level: 1, name: 'Заявки' });
     const results = await axe(container);
     expect(results.violations).toEqual([]);
   });
