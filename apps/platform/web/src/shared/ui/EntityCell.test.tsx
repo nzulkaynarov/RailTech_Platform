@@ -15,6 +15,7 @@ describe("initialsOf", () => {
 
   it("drops the legal form and quotes for a company", () => {
     expect(initialsOf("ООО «Рельс Сервис»", true)).toBe("РС");
+    expect(initialsOf("ООО Демо-Вагон", true)).toBe("ДВ");
     expect(initialsOf('"Temir Yo\'l" MCHJ', true)).toBe("TY");
   });
 });
