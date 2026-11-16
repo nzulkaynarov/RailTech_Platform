@@ -100,24 +100,18 @@ export function BottomNav() {
                     <X className="size-4" aria-hidden="true" />
                   </SheetClose>
                 </SheetHeader>
-                {groups ? (
-                  // Обе роли: «Ещё» тоже по разделам «Покупаю / Поставляю / Компания»
-                  groups
-                    .map((group) => ({ ...group, items: group.items.filter((item) => secondary.includes(item)) }))
-                    .filter((group) => group.items.length > 0)
-                    .map((group) => (
-                      <section key={group.key} aria-labelledby={`more-group-${group.key}`} className="px-4 pb-3">
-                        <h3 id={`more-group-${group.key}`} className="pb-1.5 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                          {t(group.labelKey)}
-                        </h3>
-                        <MoreLinks items={group.items} badgeOf={badgeOf} unreadText={unreadText} noteId={sheetNoteId} onNavigate={() => setMoreOpen(false)} />
-                      </section>
-                    ))
-                ) : (
-                  <div className="px-4 pb-4">
-                    <MoreLinks items={secondary} badgeOf={badgeOf} unreadText={unreadText} noteId={sheetNoteId} onNavigate={() => setMoreOpen(false)} />
-                  </div>
-                )}
+                {groups
+                  // «Ещё» — по тем же блокам, что боковое меню
+                  .map((group) => ({ ...group, items: group.items.filter((item) => secondary.includes(item)) }))
+                  .filter((group) => group.items.length > 0)
+                  .map((group) => (
+                    <div role="group" key={group.key} aria-labelledby={`more-group-${group.key}`} className="px-4 pb-3">
+                      <h3 id={`more-group-${group.key}`} className="pb-1.5 text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                        {t(group.labelKey)}
+                      </h3>
+                      <MoreLinks items={group.items} badgeOf={badgeOf} unreadText={unreadText} noteId={sheetNoteId} onNavigate={() => setMoreOpen(false)} />
+                    </div>
+                  ))}
               </SheetContent>
             </Sheet>
           </li>

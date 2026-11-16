@@ -16,11 +16,11 @@ describe('оболочка кабинета', () => {
     await waitFor(() => expect(document.title).toBe('Запросы · Кабинет RailTech'));
 
     const bottom = screen.getByRole('navigation', { name: 'Основные разделы' });
-    for (const name of ['Запросы', 'КП', 'Каталог', 'Документы', 'Ещё']) {
+    for (const name of ['Запросы', 'КП', 'Каталог', 'Все документы', 'Ещё']) {
       expect(within(bottom).getByText(name)).toBeInTheDocument();
     }
     const side = screen.getByRole('navigation', { name: 'Разделы кабинета' });
-    expect(within(side).getAllByRole('link')).toHaveLength(NAV_ITEMS.filter((item) => item.group !== 'supply').length); // «Мои товары» — только у партнёра
+    expect(within(side).getAllByRole('link')).toHaveLength(NAV_ITEMS.filter((item) => item.group !== 'sell').length); // «Мои товары» — только у партнёра
     expect(within(side).getByRole('link', { name: 'Запросы' })).toHaveAttribute('aria-current', 'page');
     // Веб: компания в шапке, ссылка на профиль с подписью.
     expect(within(screen.getByRole('banner')).getByRole('link', { name: 'Профиль' })).toHaveAttribute('href', '/profile');

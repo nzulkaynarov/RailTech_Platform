@@ -17,24 +17,23 @@ import {
 } from 'lucide-react';
 
 /**
- * Разделы кабинета (ARCHITECTURE §5). `primary` — четыре раздела нижней навигации телефона;
- * остальные — в «Ещё». На десктопе боковая навигация показывает всё.
+ * Разделы кабинета (ARCHITECTURE §5). Нижняя навигация телефона — четыре главных раздела роли (`navFor`), остальные —
+ * в «Ещё». На десктопе боковая навигация показывает всё, по блокам.
  * `labelKey` — ключ i18n `nav.*`; полнота ключей проверяется тестом оболочки.
  * `module` — код модуля из `GET /me` (`modules`, ADR-0022): пункт рисуется, только если модуль есть у сессии;
  * «Запросы» и «Каталог» — один модуль `catalog_requests`. Модуль, которого нет в этом списке, меню не рисует.
- * `group` — раздел меню при двух ролях сразу (клиент и партнёр): «Покупаю» / «Поставляю» / «Компания» (PART-2);
- * с одной ролью меню плоское и прежнее.
+ * `group` — блок меню (владелец 2026-11-16, план §3d ЛИД-1): «Покупаю» (клиент), «Продаю» (партнёр), «Документы» и
+ * «Компания» — у любой роли одни и те же; блок без доступных пунктов не показывается.
  */
 export interface NavItem {
   to: string;
   labelKey: string;
   icon: LucideIcon;
   module: string;
-  primary?: boolean;
   group: NavGroupKey;
 }
 
-export type NavGroupKey = 'buy' | 'supply' | 'account';
+export type NavGroupKey = 'buy' | 'sell' | 'documents' | 'company';
 
 export const NAV_ITEMS: NavItem[] = [
   {
@@ -43,16 +42,14 @@ export const NAV_ITEMS: NavItem[] = [
     labelKey: 'nav.myProducts',
     icon: PackageOpen,
     module: 'my_products',
-    group: 'supply',
-    primary: true,
+    group: 'sell',
   },
   {
     to: '/partner/orders',
     labelKey: 'nav.partnerOrders',
     icon: ClipboardList,
     module: 'my_products',
-    group: 'supply',
-    primary: true,
+    group: 'sell',
   },
   {
     to: '/requests',
@@ -60,7 +57,6 @@ export const NAV_ITEMS: NavItem[] = [
     icon: Inbox,
     module: 'catalog_requests',
     group: 'buy',
-    primary: true,
   },
   {
     to: '/quotes',
@@ -68,7 +64,6 @@ export const NAV_ITEMS: NavItem[] = [
     icon: FileText,
     module: 'quotes',
     group: 'buy',
-    primary: true,
   },
   {
     to: '/catalog',
@@ -76,31 +71,29 @@ export const NAV_ITEMS: NavItem[] = [
     icon: Package,
     module: 'catalog_requests',
     group: 'buy',
-    primary: true,
-  },
-  {
-    to: '/documents',
-    labelKey: 'nav.documents',
-    icon: FolderOpen,
-    module: 'documents',
-    group: 'buy',
-    primary: true,
   },
   {
     to: '/contracts',
     labelKey: 'nav.contracts',
     icon: FileSignature,
     module: 'contracts',
-    group: 'buy',
+    group: 'documents',
   },
   {
     to: '/invoices',
     labelKey: 'nav.invoices',
     icon: Receipt,
     module: 'invoices',
-    group: 'buy',
+    group: 'documents',
   },
-  { to: '/acts', labelKey: 'nav.acts', icon: ClipboardCheck, module: 'acts', group: 'buy' },
+  { to: '/acts', labelKey: 'nav.acts', icon: ClipboardCheck, module: 'acts', group: 'documents' },
+  {
+    to: '/documents',
+    labelKey: 'nav.allDocuments',
+    icon: FolderOpen,
+    module: 'documents',
+    group: 'documents',
+  },
   {
     to: '/deliveries',
     labelKey: 'nav.deliveries',
@@ -115,22 +108,22 @@ export const NAV_ITEMS: NavItem[] = [
     icon: MessagesSquare,
     module: 'messages',
     // при двух ролях — в «Компании»: беседа компании с нами одна и о покупках, и о поставках (карта пути контрагента)
-    group: 'account',
+    group: 'company',
   },
   {
     to: '/company',
     labelKey: 'nav.company',
     icon: Building2,
     module: 'company',
-    group: 'account',
+    group: 'company',
   },
-  { to: '/team', labelKey: 'nav.team', icon: Users, module: 'team', group: 'account' },
+  { to: '/team', labelKey: 'nav.team', icon: Users, module: 'team', group: 'company' },
   {
     to: '/profile',
     labelKey: 'nav.profile',
     icon: UserRound,
     module: 'profile',
-    group: 'account',
+    group: 'company',
   },
 ];
 
@@ -139,57 +132,61 @@ export const PROFILE_MODULE = 'profile';
 /** Чат кабинета (CHAT-1): пункт меню с бейджем непрочитанного, «Написать менеджеру» ведёт сюда. */
 export const MESSAGES_MODULE = 'messages';
 
-/** Раздел меню при двух ролях: «Покупаю» (клиентские разделы), «Поставляю» («Мои товары»), «Компания» (компания, команда, профиль). */
+/** Блок меню: «Покупаю», «Продаю», «Документы», «Компания» (план §3d ЛИД-1). */
 export interface NavGroup {
   key: NavGroupKey;
-  /** Ключ i18n заголовка раздела (`nav.groups.*`). */
+  /** Ключ i18n заголовка блока (`nav.groups.*`). */
   labelKey: string;
   items: NavItem[];
 }
 
 export interface Nav {
-  /** Пункты, доступные сессии, в порядке меню. */
+  /** Пункты, доступные сессии, в порядке меню (по блокам). */
   items: NavItem[];
   /** Рабочие разделы — без «Профиля»: нет ни одного, значит разделы компании ещё настраиваются. */
   work: NavItem[];
+  /** Нижняя навигация телефона: до четырёх главных разделов роли. */
   primary: NavItem[];
   secondary: NavItem[];
-  /**
-   * Разделы «Покупаю / Поставляю / Компания» — только у компании с обеими ролями (клиент и партнёр) и разделами в обеих
-   * группах; иначе `null`, и меню плоское, как у клиента без партнёрской роли (у него ничего не изменилось).
-   */
-  groups: NavGroup[] | null;
+  /** Блоки меню, только непустые; у любой роли одна структура, роль добавляет свой рабочий блок. */
+  groups: NavGroup[];
 }
 
-const GROUP_ORDER: ReadonlyArray<{ key: NavGroupKey; labelKey: string }> = [
-  { key: 'buy', labelKey: 'nav.groups.buy' },
-  { key: 'supply', labelKey: 'nav.groups.supply' },
-  { key: 'account', labelKey: 'nav.groups.account' },
-];
+const GROUP_LABELS: Record<NavGroupKey, string> = {
+  buy: 'nav.groups.buy',
+  sell: 'nav.groups.sell',
+  documents: 'nav.groups.documents',
+  company: 'nav.groups.company',
+};
 
-/** Нижняя навигация телефона при двух ролях: по одному главному разделу «Покупаю» и «Поставляю» плюс запросы и КП. */
-const GROUPED_PRIMARY = new Set(['/requests', '/quotes', '/catalog', '/my-products']);
+/** Нижняя навигация телефона: главные разделы роли, первые четыре доступных. */
+const PRIMARY_CLIENT = ['/requests', '/quotes', '/catalog', '/documents'];
+const PRIMARY_DUAL = ['/requests', '/quotes', '/catalog', '/my-products'];
+const PRIMARY_PARTNER = ['/my-products', '/partner/orders', '/requests', '/catalog'];
+const PRIMARY_LIMIT = 4;
 
 /**
- * Меню сессии из `/me.modules`: известные Cabinet модули в порядке `NAV_ITEMS`, незнакомые пропускаются.
- * `roles` (`/me.roles`) нужны для одного: при обеих ролях меню делится на «Покупаю» и «Поставляю».
+ * Меню сессии из `/me.modules`: известные Cabinet модули по блокам, незнакомые пропускаются. `roles` (`/me.roles`) задают
+ * порядок: у клиента первым «Покупаю», у партнёра без клиентской роли — «Продаю»; «Документы» и «Компания» — следом.
  */
 export function navFor(modules: readonly string[] | undefined, roles: readonly string[] | undefined = []): Nav {
   const allowed = new Set(modules ?? []);
-  const items = NAV_ITEMS.filter((item) => allowed.has(item.module));
-  const dual = roles.includes('client') && roles.includes('partner');
-  const groups = dual
-    ? GROUP_ORDER.map(({ key, labelKey }) => ({ key, labelKey, items: items.filter((item) => item.group === key) }))
-    : null;
-  const grouped = groups !== null && ['buy', 'supply'].every((key) => groups.some((group) => group.key === key && group.items.length > 0));
-  const ordered = grouped ? groups.flatMap((group) => group.items) : items;
-  const primary = (item: NavItem) => (grouped ? GROUPED_PRIMARY.has(item.to) : Boolean(item.primary));
+  const available = NAV_ITEMS.filter((item) => allowed.has(item.module));
+  const client = roles.includes('client') || !roles.includes('partner');
+  const order: NavGroupKey[] = client ? ['buy', 'sell', 'documents', 'company'] : ['sell', 'buy', 'documents', 'company'];
+  const groups = order
+    .map((key) => ({ key, labelKey: GROUP_LABELS[key], items: available.filter((item) => item.group === key) }))
+    .filter((group) => group.items.length > 0);
+  const items = groups.flatMap((group) => group.items);
+  const dual = roles.includes('client') && roles.includes('partner') && items.some((item) => item.group === 'sell');
+  const wanted = dual ? PRIMARY_DUAL : client ? PRIMARY_CLIENT : PRIMARY_PARTNER;
+  const primaryTo = new Set(wanted.filter((to) => items.some((item) => item.to === to)).slice(0, PRIMARY_LIMIT));
   return {
-    items: ordered,
-    work: ordered.filter((item) => item.module !== PROFILE_MODULE),
-    primary: ordered.filter(primary),
-    secondary: ordered.filter((item) => !primary(item)),
-    groups: grouped ? groups.filter((group) => group.items.length > 0) : null,
+    items,
+    work: items.filter((item) => item.module !== PROFILE_MODULE),
+    primary: items.filter((item) => primaryTo.has(item.to)),
+    secondary: items.filter((item) => !primaryTo.has(item.to)),
+    groups,
   };
 }
 
