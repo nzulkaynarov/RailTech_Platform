@@ -14,6 +14,7 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
+import { CompanyCell } from "../../../shared/ui/EntityCell";
 import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTable";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { QueryState } from "../../../shared/ui/FormParts";
@@ -35,7 +36,6 @@ import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 
 /** Ширины колонок: название, ИНН, заявки, ERP, последняя активность (UX-1c, S9; по типу — platform-frontend.md §4.2) */
 const COLS = {
-  inn: 140,
   kind: 150,
   requests: 160,
   erp: 170,
@@ -274,17 +274,13 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
       width: null,
       cellClassName: "pf-crm-wrap",
       cell: (row) => (
-        <>
-          <NameLink row={row} params={params} selected={isOpen(row)} />
-        </>
+        <CompanyCell
+          name={row.name}
+          inn={row.inn}
+          innLabel={t("clients:columns.inn")}
+          title={<NameLink row={row} params={params} selected={isOpen(row)} />}
+        />
       ),
-    },
-    {
-      id: "inn",
-      header: t("clients:columns.inn"),
-      width: COLS.inn,
-      cellClassName: "pf-num",
-      cell: (row) => row.inn ?? <span aria-hidden="true">—</span>,
     },
     {
       id: "kind",
@@ -388,13 +384,13 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
                         <RelationTag kind={relationOf(row)} />
                         <StateTag row={row} terms={termsOf.get(String(-row.id))} />
                       </div>
-                      <NameLink row={row} params={params} selected={isOpen(row)} />
+                      <CompanyCell
+                        name={row.name}
+                        inn={row.inn}
+                        innLabel={t("clients:columns.inn")}
+                        title={<NameLink row={row} params={params} selected={isOpen(row)} />}
+                      />
                       <div className="pf-crm-item-meta">
-                        {row.inn ? (
-                          <span>
-                            {t("clients:columns.inn")} {row.inn}
-                          </span>
-                        ) : null}
                         <span>
                           {t("clients:columns.requests")}: {row.open_requests}
                         </span>

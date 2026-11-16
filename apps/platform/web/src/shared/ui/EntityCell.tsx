@@ -80,19 +80,22 @@ export function PersonCell({
   caption,
   photoUrl,
   to,
+  title,
   size = 24,
 }: {
   name: string;
   caption?: string | null;
   photoUrl?: string | null;
   to?: string | null;
+  /** Своя ссылка на название (например, окно карточки модуля) вместо `to`; инициалы — из `name`. */
+  title?: ReactNode;
   size?: Size;
 }) {
   return (
     <Shell
       picture={<Picture src={photoUrl} fallback={entityInitials(name)} size={size} shape="round" />}
     >
-      <Title name={name} to={to} />
+      {title ?? <Title name={name} to={to} />}
       {caption ? <span className="pf-entity__caption">{caption}</span> : null}
     </Shell>
   );
@@ -105,6 +108,7 @@ export function CompanyCell({
   innLabel = "ИНН",
   logoUrl,
   to,
+  title,
   size = 24,
 }: {
   name: string;
@@ -112,6 +116,8 @@ export function CompanyCell({
   innLabel?: string;
   logoUrl?: string | null;
   to?: string | null;
+  /** Своя ссылка на название (например, окно карточки модуля) вместо `to`; инициалы — из `name`. */
+  title?: ReactNode;
   size?: Size;
 }) {
   return (
@@ -120,7 +126,7 @@ export function CompanyCell({
         <Picture src={logoUrl} fallback={entityInitials(name, true)} size={size} shape="square" />
       }
     >
-      <Title name={name} to={to} />
+      {title ?? <Title name={name} to={to} />}
       {inn ? (
         <span className="pf-entity__caption">
           <span className="pf-sr-only">{innLabel}: </span>
@@ -139,6 +145,7 @@ export function ItemCell({
   photoUrl,
   kind = "goods",
   to,
+  title,
   size = 32,
 }: {
   name: string;
@@ -147,12 +154,14 @@ export function ItemCell({
   photoUrl?: string | null;
   kind?: "goods" | "service";
   to?: string | null;
+  /** Своя ссылка на название (например, окно карточки модуля) вместо `to`; инициалы — из `name`. */
+  title?: ReactNode;
   size?: Size;
 }) {
   const icon = kind === "service" ? <WrenchIcon /> : <PackageIcon />;
   return (
     <Shell picture={<Picture src={photoUrl} fallback={icon} size={size} shape="square" />}>
-      <Title name={name} to={to} />
+      {title ?? <Title name={name} to={to} />}
       {sku ? (
         <span className="pf-entity__caption">
           <span className="pf-sr-only">{skuLabel}: </span>

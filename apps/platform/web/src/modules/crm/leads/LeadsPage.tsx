@@ -20,6 +20,7 @@ import { EmptyState } from "../../../shared/ui/EmptyState";
 import { ErrorNote, QueryState } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { PageHeader } from "../../../shared/ui/PageHeader";
+import { PersonCell } from "../../../shared/ui/EntityCell";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { TabsBar } from "../../../shared/ui/TabsBar";
 import { actionError, channelLabel } from "../messages/labels";
@@ -212,12 +213,11 @@ function LeadsTable({
       header: t("leads:columns.name"),
       width: null,
       cell: (row) => (
-        <>
-          <NameCell row={row} params={params} selected={selected === row.lead} />
-          <div className="pf-hint">
-            {row.lead} · {channelLabel(t, row.channel)}
-          </div>
-        </>
+        <PersonCell
+          name={row.name}
+          caption={`${row.lead} · ${channelLabel(t, row.channel)}`}
+          title={<NameCell row={row} params={params} selected={selected === row.lead} />}
+        />
       ),
     },
     {
@@ -243,7 +243,7 @@ function LeadsTable({
       width: COLS.assigned,
       cellClassName: "pf-ell",
       cellTitle: (row) => row.assigned?.name ?? t("leads:nobody"),
-      cell: (row) => row.assigned?.name ?? t("leads:nobody"),
+      cell: (row) => (row.assigned ? <PersonCell name={row.assigned.name} /> : t("leads:nobody")),
     },
     {
       id: "last",

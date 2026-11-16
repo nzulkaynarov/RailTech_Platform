@@ -72,3 +72,10 @@ describe("ItemCell", () => {
     expect(container.querySelector("img")).toHaveAttribute("src", "/r65.jpg");
   });
 });
+
+describe("title override", () => {
+  it("renders the module's own link instead of the plain name", () => {
+    render(<CompanyCell name="ООО «Рельс»" title={<a href="#card">ООО «Рельс»</a>} />);
+    expect(screen.getByRole("link", { name: "ООО «Рельс»" })).toHaveAttribute("href", "#card");
+  });
+});
