@@ -17,6 +17,7 @@ from catalog.desk.serializers import (
     DeskItemDetail,
     DeskItemIn,
     DeskItemRow,
+    DeskMergeIn,
     DeskOffer,
     DeskOfferCreateIn,
     DeskOfferHistoryRow,
@@ -34,10 +35,12 @@ _CATEGORY = OpenApiParameter("category", int, description="Id категории
 _REVIEW = OpenApiParameter(
     "review",
     str,
-    enum=["waiting"],
+    enum=["waiting", "requests"],
     description=(
-        "Очередь проверки партнёров (PART-3): карточки на проверке и с открытыми предложениями партнёров, старые сверху; "
-        "в строке — `review` (срок) и `completeness`."
+        "`waiting` — очередь проверки партнёров (PART-3): карточки на проверке и с открытыми предложениями партнёров, старые "
+        "сверху; в строке — `review` (срок) и `completeness`. `requests` — «Новые из заявок» (ADR-0027): черновики из "
+        "строк расчёта и КП, самые спрашиваемые сверху; в строке — `demand`, `asked_in`, `asked_total`, `duplicate`, "
+        "`completeness`."
     ),
 )
 _PROPOSALS = OpenApiParameter(
@@ -54,6 +57,7 @@ class ItemDeskViewSet(DeskViewSet):
         "publish": "catalog.publish",
         "unpublish": "catalog.publish",
         "return_to_partner": "catalog.publish",
+        "merge": "catalog.manage",
         "add_image": "catalog.manage",
         "image": "catalog.manage",
     }
@@ -95,10 +99,14 @@ class ItemDeskViewSet(DeskViewSet):
     def list(self, request):
         queryset = items.list_queryset(request.query_params)
         vat_default = items.company_vat_default()
-        waiting = request.query_params.get("review") == "waiting"
+        review = request.query_params.get("review")
 
         def build(rows):
-            extra = items.queue_rows(rows) if waiting else {}
+            extra = (
+                items.queue_rows(rows)
+                if review == "waiting"
+                else items.request_rows(rows) if review == "requests" else {}
+            )
             return [{**items.item_row(p, vat_default), **extra.get(p.pk, {})} for p in rows]
 
         return self.page_of(queryset, build)
@@ -283,6 +291,32 @@ class ItemDeskViewSet(DeskViewSet):
         except items.ItemError as error:
             return refuse(error)
         return Response(items.item_detail(self._product(product.pk), request.user))
+
+    @extend_schema(
+        operation_id="catalog_items_merge",
+        summary="Merge this card into another one",
+        description=(
+            "Needs `catalog.manage` (ADR-0027). Эта карточка — дубль: строки КП, заказов поставщику и предложения переезжают "
+            "в `into`, пустые поля `into` дозаполняются, спрос суммируется, дубль уходит в архив. Ответ — карточка `into`. "
+            "Та же карточка — 400 `MERGE_SAME_PRODUCT`; чужая компания — 403 `MERGE_CROSS_COMPANY_FORBIDDEN`."
+        ),
+        request=DeskMergeIn,
+        responses={200: DeskItemDetail, 400: REFUSED, 403: FORBIDDEN, 404: NOT_FOUND},
+        tags=["Catalog"],
+    )
+    @action(detail=True, methods=["post"], url_path="merge")
+    def merge(self, request, pk=None):
+        from catalog.merging import merge_products
+
+        duplicate = self._product(pk)
+        body = DeskMergeIn(data=request.data)
+        body.is_valid(raise_exception=True)
+        survivor = self._product(body.validated_data["into"])
+        merged, error = merge_products(survivor, duplicate, request.user)
+        if error:
+            code = status.HTTP_403_FORBIDDEN if error in ("PRODUCT_NOT_YOURS", "MERGE_CROSS_COMPANY_FORBIDDEN") else 400
+            return Response({"detail": error}, status=code)
+        return Response(items.item_detail(self._product(merged.pk), request.user))
 
 
 class ProposalDeskViewSet(DeskViewSet):

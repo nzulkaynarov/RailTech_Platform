@@ -42,6 +42,19 @@ class DeskReviewInfo(serializers.Serializer):
     overdue = serializers.BooleanField(help_text="Срок прошёл.")
 
 
+class DeskDuplicate(serializers.Serializer):
+    """Подсказка слияния (ADR-0027): карточка того же владельца с тем же артикулом, ГОСТом или названием."""
+
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    sku = serializers.CharField()
+    by = serializers.ChoiceField(choices=["manufacturer_part_number", "gost_drawing", "name"])
+
+
+class DeskMergeIn(serializers.Serializer):
+    into = serializers.IntegerField(min_value=1, help_text="Карточка, в которую сливается эта.")
+
+
 class DeskItemRow(serializers.Serializer):
     id = serializers.IntegerField()
     sku = serializers.CharField()
@@ -68,7 +81,21 @@ class DeskItemRow(serializers.Serializer):
         help_text="Ожидание решения: в списке `review=waiting` и в карточке; null — карточка не ждёт проверки (PART-3).",
     )
     completeness = serializers.IntegerField(
-        required=False, help_text="Полнота карточки, % — в списке `review=waiting` и в карточке."
+        required=False, help_text="Полнота карточки, % — в списках `review=waiting`, `review=requests` и в карточке."
+    )
+    demand = serializers.IntegerField(required=False, help_text="Сколько раз позицию спрашивали — в `review=requests`.")
+    asked_in = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+        help_text="Номера заявок (до трёх, новые первыми) — в `review=requests`.",
+    )
+    asked_total = serializers.IntegerField(
+        required=False, help_text="Во скольких заявках спрашивали — в `review=requests`."
+    )
+    duplicate = DeskDuplicate(
+        required=False,
+        allow_null=True,
+        help_text="Похожая карточка для слияния — в `review=requests`; null — дубля нет.",
     )
 
 

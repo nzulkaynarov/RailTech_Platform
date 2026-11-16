@@ -104,6 +104,9 @@ export interface MockItem {
   warranty_months: number | null;
   warranty_terms: string;
   images: MockImage[];
+  /** ADR-0027: черновик из строк расчёта — сколько раз спрашивали и в каких заявках (новые первыми) */
+  demand?: number;
+  askedIn?: string[];
 }
 
 export interface MockSupplier {
@@ -451,6 +454,33 @@ function seedItems(): MockItem[] {
           partner: true,
         },
       ],
+    },
+    // ADR-0027: «Новые из заявок» — черновики, рождённые строками расчёта
+    {
+      ...base,
+      id: "20",
+      sku: "ТВ-0020",
+      name: "реле защиты рз-1",
+      kind: "on_order",
+      unitId: "1",
+      vat_rate: null,
+      categoryId: null,
+      status: "DRAFT",
+      demand: 3,
+      askedIn: ["ЗВ-2026-014", "ЗВ-2026-009", "ЗВ-2026-002", "ЗВ-2026-001"],
+    },
+    {
+      ...base,
+      id: "21",
+      sku: "ТВ-0021",
+      name: "Шпала железобетонная",
+      kind: "on_order",
+      unitId: "1",
+      vat_rate: null,
+      categoryId: null,
+      status: "DRAFT",
+      demand: 1,
+      askedIn: ["ЗВ-2026-002"],
     },
   ];
 }

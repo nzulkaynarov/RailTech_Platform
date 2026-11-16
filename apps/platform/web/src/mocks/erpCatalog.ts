@@ -189,6 +189,20 @@ function rowOf(item: MockItem): CatalogItem {
   };
 }
 
+/** Поля строки «Новые из заявок» (ADR-0027): спрос, заявки, похожая карточка по названию. */
+function requestFieldsOf(item: MockItem): Partial<CatalogItem> {
+  const asked = item.askedIn ?? [];
+  const twin = readErpCatalog().items.find(
+    (other) => other.id !== item.id && other.name.toLowerCase() === item.name.toLowerCase(),
+  );
+  return {
+    demand: item.demand ?? 0,
+    asked_in: asked.slice(0, 3),
+    asked_total: asked.length,
+    duplicate: twin ? { id: twin.id, name: twin.name, sku: twin.sku, by: "name" } : null,
+  };
+}
+
 function offerOf(offer: MockOffer, prices: boolean): CatalogOffer {
   const state = readErpCatalog();
   const supplier = state.suppliers.find((s) => s.id === offer.supplierId);
@@ -699,22 +713,42 @@ export const erpCatalogHandlers = [
     const category = params.get("category_id");
     const pending = params.get("proposals") === "pending";
     const waiting = params.get("review") === "waiting";
-    if (params.get("review") !== null && !waiting) return invalid("review", "review_invalid");
+    const requests = params.get("review") === "requests";
+    if (params.get("review") !== null && !waiting && !requests)
+      return invalid("review", "review_invalid");
     const found = readErpCatalog().items.filter(
       (i) =>
         (contains(i.name, q) || contains(i.sku, q) || contains(i.gost_drawing, q)) &&
         (!kind || i.kind === kind) &&
         (!category || i.categoryId === category) &&
         (!pending || i.proposals.length > 0) &&
-        (!waiting || reviewOf(i) !== null),
+        (!waiting || reviewOf(i) !== null) &&
+        (!requests || (i.status === "DRAFT" && (i.demand ?? 0) > 0)),
     );
+    // ADR-0027: «Новые из заявок» — самые спрашиваемые сверху
+    if (requests) found.sort((a, b) => (b.demand ?? 0) - (a.demand ?? 0));
     // Очередь проверки: старые отправки сверху
     if (waiting)
       found.sort((a, b) =>
         (reviewOf(a)?.submitted_at ?? "").localeCompare(reviewOf(b)?.submitted_at ?? ""),
       );
-    const rows = found.map(rowOf);
+    const rows = found.map((i) => (requests ? { ...rowOf(i), ...requestFieldsOf(i) } : rowOf(i)));
     return HttpResponse.json(pageOf(rows, params));
+  }),
+  http.post("*/erp/catalog/items/:id/merge", async ({ request, params }) => {
+    const who = guard("full");
+    if (isResponse(who)) return who;
+    const body = (await request.json()) as { into?: string };
+    const state = readErpCatalog();
+    const duplicate = state.items.find((i) => i.id === params["id"]);
+    const into = state.items.find((i) => i.id === body.into);
+    if (!duplicate || !into) return notFound();
+    if (duplicate.id === into.id)
+      return conflict("merge_same_product", "Выберите другую карточку для слияния.");
+    // Дубль уходит в архив: из списков он пропадает, спрос переходит к выжившей карточке
+    into.demand = (into.demand ?? 0) + (duplicate.demand ?? 0);
+    state.items = state.items.filter((i) => i.id !== duplicate.id);
+    return HttpResponse.json(detailOf(into, who));
   }),
   http.get("*/erp/catalog/items/:id", ({ params }) => {
     const who = guard("read");

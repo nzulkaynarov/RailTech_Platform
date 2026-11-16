@@ -65,6 +65,7 @@
     "NOT_FOUND": "Yozuv endi yo'q. Ro'yxatni yangilang.",
     "BACKEND_UNAVAILABLE": "ERP javob bermadi. Bir daqiqadan so'ng qayta urinib ko'ring.",
     "reason": {
+      "merge_same_product": "Birlashtirish uchun boshqa kartochkani tanlang.",
       "item_name_required": "Pozitsiya nomini kiriting.",
       "item_kind_invalid": "Pozitsiya turini tanlang.",
       "vat_rate_invalid": "QQS — 0 dan 100 gacha son yoki bo'sh.",
@@ -975,7 +976,10 @@
       "partner": "Hamkor",
       "sent": "Yuborilgan",
       "due": "Javob muddati",
-      "completeness": "To'liqlik"
+      "completeness": "To'liqlik",
+      "demand": "Talab",
+      "askedIn": "Qayerda so‘ralgan",
+      "action": "Amal"
     },
     "kind": {
       "card": "Yangi kartochka",
@@ -987,6 +991,26 @@
     "empty": {
       "title": "Navbat bo'sh",
       "text": "Hamkorlarning kartochkalari va tuzatishlari tekshiruvga yuborilganda shu yerda paydo bo'ladi."
+    },
+    "requests": "Arizalardan yangilari",
+    "requestsCount": "Arizalardan yangilari · {{count}}",
+    "requestsTable": "Arizalardan yangi pozitsiyalar",
+    "askedMore": "va yana {{count}}",
+    "duplicate": "«{{name}}» {{sku}} ga o‘xshaydi",
+    "duplicateBy": {
+      "manufacturer_part_number": "artikul mos",
+      "gost_drawing": "GOST mos",
+      "name": "nomi mos"
+    },
+    "merge": "{{sku}} bilan birlashtirish",
+    "mergeLabel": "{{sku}} bilan birlashtirish: «{{name}}»",
+    "mergeAction": "Birlashtirish",
+    "mergeSummary": "Ariza, TK va buyurtma qatorlari «{{name}}» ga o‘tadi, qoralama arxivga ketadi.",
+    "merged": "Kartochkalar birlashtirildi",
+    "draft": "Qoralama",
+    "emptyRequests": {
+      "title": "Yangi pozitsiyalar yo‘q",
+      "text": "Katalogda yo‘q pozitsiyalar hisob-kitobga qo‘shilganda shu yerda paydo bo‘ladi."
     }
   },
   "review": {

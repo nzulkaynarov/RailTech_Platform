@@ -52,7 +52,15 @@ import { localName } from "../../eds/dictionaries";
 import { ItemDocs } from "./ItemDocs";
 import { ItemPhotos } from "./ItemPhotos";
 import { queryLabels } from "./labels";
-import { CatalogPriceValue, DueCell, QueueSwitch, ReturnButton, ReviewBlock } from "./ReviewQueue";
+import {
+  CatalogPriceValue,
+  DueCell,
+  QueueSwitch,
+  type QueueView,
+  ReturnButton,
+  ReviewBlock,
+} from "./ReviewQueue";
+import { DuplicateHint, useRequestsColumns } from "./RequestsQueue";
 import { NameCode } from "../../../shared/ui/NameCode";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 import { UnitLabel } from "../../../shared/ui/UnitLabel";
@@ -83,13 +91,18 @@ export function ItemsPanel() {
   // CAT-1: «На одобрении» — позиции с изменениями от поставщиков; фильтр в адресе (на него ведёт отчёт загрузки).
   const pending = params.get("proposals") === "pending";
   // PART-3: очередь проверки партнёров — «Ждут проверки» (старые отправки сверху, срок и полнота в строке)
-  const waiting = params.get("review") === "waiting";
+  const review = params.get("review");
+  const view: QueueView = review === "waiting" || review === "requests" ? review : "all";
+  const waiting = view === "waiting";
+  // ADR-0027: «Новые из заявок» — черновики из строк расчёта и КП, самые спрашиваемые сверху
+  const requests = view === "requests";
+  const requestsColumns = useRequestsColumns();
   const query = useListCatalogItems({
     ...(q ? { q } : {}),
     ...(kind ? { kind } : {}),
     ...(category ? { category_id: category } : {}),
     ...(pending ? { proposals: "pending" as const } : {}),
-    ...(waiting ? { review: "waiting" as const } : {}),
+    ...(view !== "all" ? { review: view } : {}),
     page,
     page_size: PAGE_SIZE,
   } satisfies ListCatalogItemsParams);
@@ -134,6 +147,8 @@ export function ItemsPanel() {
           <StatusTag kind="validity" status="expiring">
             {t(`queue.kind.${row.review.kind}`)}
           </StatusTag>
+        ) : requests ? (
+          <DuplicateHint row={row} />
         ) : row.proposals_count > 0 ? (
           <StatusTag kind="validity" status="expiring">
             {t("proposals.count", { count: row.proposals_count })}
@@ -217,19 +232,32 @@ export function ItemsPanel() {
       render: (row) => (row.completeness === null ? "—" : `${String(row.completeness)} %`),
     },
   ];
-  const shownColumns = waiting ? [nameColumn, ...queueColumns] : columns;
-  const setWaiting = (on: boolean) => {
+  const shownColumns = waiting
+    ? [nameColumn, ...queueColumns]
+    : requests
+      ? [
+          nameColumn,
+          {
+            key: "kind",
+            title: t("items.columns.kind"),
+            render: (row: CatalogItem) => <KindTag kind={row.kind} />,
+          },
+          ...requestsColumns,
+        ]
+      : columns;
+  const setView = (next: QueueView) => {
     setParams(
       (prev) => {
-        const next = new URLSearchParams(prev);
-        if (on) next.set("review", "waiting");
-        else next.delete("review");
-        return next;
+        const params = new URLSearchParams(prev);
+        if (next === "all") params.delete("review");
+        else params.set("review", next);
+        return params;
       },
       { replace: true },
     );
     setPage(1);
   };
+
   return (
     <div className="pf-cat">
       <FilterBar
@@ -252,7 +280,7 @@ export function ItemsPanel() {
           </>
         }
       >
-        <QueueSwitch waiting={waiting} onChange={setWaiting} />
+        <QueueSwitch view={view} onChange={setView} />
         <FilterField id={searchId} label={t("items.search")} grow>
           <Input
             id={searchId}
@@ -266,7 +294,7 @@ export function ItemsPanel() {
             }}
           />
         </FilterField>
-        {waiting ? null : (
+        {view !== "all" ? null : (
           <>
             <FilterField id={kindId} label={t("items.filterKind")} width={200}>
               <Select
@@ -324,12 +352,18 @@ export function ItemsPanel() {
         {(data) =>
           data.items.length === 0 ? (
             <EmptyState
-              title={waiting ? t("queue.empty.title") : t("items.empty.title")}
-              text={
+              title={
                 waiting
+                  ? t("queue.empty.title")
+                  : requests
+                    ? t("queue.emptyRequests.title")
+                    : t("items.empty.title")
+              }
+              text={
+                view !== "all"
                   ? q
                     ? t("items.empty.filtered")
-                    : t("queue.empty.text")
+                    : t(waiting ? "queue.empty.text" : "queue.emptyRequests.text")
                   : q || kind || category || pending
                     ? t("items.empty.filtered")
                     : t("items.empty.text")
@@ -339,7 +373,13 @@ export function ItemsPanel() {
             <>
               <DataList
                 tableId="erp.catalog.items"
-                label={waiting ? t("queue.table") : t("items.table")}
+                label={
+                  waiting
+                    ? t("queue.table")
+                    : requests
+                      ? t("queue.requestsTable")
+                      : t("items.table")
+                }
                 rows={data.items}
                 columns={shownColumns}
                 rowKey={(row) => row.id}

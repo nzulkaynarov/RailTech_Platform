@@ -65,6 +65,7 @@
     "NOT_FOUND": "The record is gone. Refresh the list.",
     "BACKEND_UNAVAILABLE": "ERP did not answer. Retry in a minute.",
     "reason": {
+      "merge_same_product": "Choose another card to merge with.",
       "item_name_required": "Enter the item name.",
       "item_kind_invalid": "Choose the item type.",
       "vat_rate_invalid": "VAT is a number from 0 to 100, or empty.",
@@ -975,7 +976,10 @@
       "partner": "Partner",
       "sent": "Sent",
       "due": "Reply by",
-      "completeness": "Completeness"
+      "completeness": "Completeness",
+      "demand": "Demand",
+      "askedIn": "Requested in",
+      "action": "Action"
     },
     "kind": {
       "card": "New card",
@@ -987,6 +991,26 @@
     "empty": {
       "title": "The queue is empty",
       "text": "Partner cards and changes appear here once they are sent for review."
+    },
+    "requests": "New from requests",
+    "requestsCount": "New from requests · {{count}}",
+    "requestsTable": "New items from requests",
+    "askedMore": "and {{count}} more",
+    "duplicate": "Looks like “{{name}}” {{sku}}",
+    "duplicateBy": {
+      "manufacturer_part_number": "part number matches",
+      "gost_drawing": "standard matches",
+      "name": "name matches"
+    },
+    "merge": "Merge with {{sku}}",
+    "mergeLabel": "Merge with {{sku}}: “{{name}}”",
+    "mergeAction": "Merge",
+    "mergeSummary": "Request, quote and order lines move to “{{name}}”; the draft is archived.",
+    "merged": "Cards merged",
+    "draft": "Draft",
+    "emptyRequests": {
+      "title": "No new items",
+      "text": "Items missing from the catalogue appear here once they are added to a calculation."
     }
   },
   "review": {

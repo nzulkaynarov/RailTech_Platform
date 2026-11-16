@@ -46,6 +46,7 @@ from app.schemas_erp_catalog import (
     HsCodeUpdate,
     ItemCreate,
     ItemDetail,
+    ItemMerge,
     ItemPage,
     ItemReturn,
     ItemUpdate,
@@ -193,7 +194,7 @@ async def list_items(
     kind: ItemKindQuery = None,
     category_id: Annotated[str | None, Query(pattern=r"^[0-9]+$")] = None,
     proposals: Annotated[str | None, Query(pattern=r"^pending$")] = None,
-    review: Annotated[str | None, Query(pattern=r"^waiting$")] = None,
+    review: Annotated[str | None, Query(pattern=r"^(waiting|requests)$")] = None,
     page: Page = 1,
     page_size: PageSize = 25,
 ) -> ItemPage:
@@ -265,6 +266,16 @@ async def unpublish_item(id: ItemId, authed: Writer) -> ItemDetail:
 )
 async def return_item(id: ItemId, body: ItemReturn, authed: Writer) -> ItemDetail:
     raw = await _erp(authed).data("POST", f"catalog/items/{id}/return/", json=body.sent())
+    return to_item_detail(raw, show_prices=show_prices(authed))
+
+
+@router.post(
+    "/erp/catalog/items/{id}/merge",
+    response_model=ItemDetail,
+    operation_id="mergeCatalogItem",
+)
+async def merge_item(id: ItemId, body: ItemMerge, authed: Writer) -> ItemDetail:
+    raw = await _erp(authed).data("POST", f"catalog/items/{id}/merge/", json=body.sent())
     return to_item_detail(raw, show_prices=show_prices(authed))
 
 

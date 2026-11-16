@@ -404,3 +404,18 @@
   gap: 8px;
   margin-top: 16px;
 }
+
+/* ADR-0027: «Новые из заявок» — номер заявки на строку, подсказка похожей карточки */
+.pf-cat-asked {
+  display: block;
+}
+
+.pf-cat-duplicate {
+  color: var(--rt-color-warning-text);
+}
+
+/* Переключатель вида списка из трёх положений на телефоне прокручивается в своей ширине, а не уходит за край */
+.pf-cat .ant-segmented {
+  max-width: 100%;
+  overflow-x: auto;
+}

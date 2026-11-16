@@ -182,6 +182,7 @@ WRITES = (
     ("POST", "/erp/catalog/items/4/images"),
     ("PATCH", "/erp/catalog/items/4/images/8"),
     ("DELETE", "/erp/catalog/items/4/images/8"),
+    ("POST", "/erp/catalog/items/4/merge"),
 )
 
 
@@ -267,6 +268,63 @@ async def test_items_list_forwards_filters_and_builds_the_page(
     sent = dict(route.calls.last.request.url.params)
     assert sent == {"q": "кабель", "kind": "stock", "category": "2", "page": "2", "page_size": "10"}
     assert route.calls.last.request.headers["authorization"].startswith("Bearer ")
+
+
+async def test_requests_queue_carries_demand_requests_and_duplicate(
+    web: Web, be: Any, check: ContractChecker
+) -> None:
+    """ADR-0027: «Новые из заявок» — спрос, номера заявок и подсказка слияния в строке."""
+    await web.login(["MANAGER"])
+    row = {
+        **ITEM,
+        "status": "DRAFT",
+        "demand": 3,
+        "asked_in": ["ЗВ-2026-014", "ЗВ-2026-009", "ЗВ-2026-002"],
+        "asked_total": 3,
+        "duplicate": {"id": 102, "name": "Подшипник 6205-2RS", "sku": "RT-00102", "by": "name"},
+        "completeness": 40,
+    }
+    route = (
+        mock(be)
+        .get(f"{API}/catalog/items/")
+        .mock(return_value=httpx.Response(200, json=page([row])))
+    )
+
+    response = await web.client.get("/api/v1/erp/catalog/items", params={"review": "requests"})
+
+    assert response.status_code == 200
+    check(response, "/erp/catalog/items", "get")
+    item = response.json()["items"][0]
+    assert item["demand"] == 3
+    assert item["asked_total"] == 3
+    assert item["duplicate"] == {
+        "id": "102",
+        "name": "Подшипник 6205-2RS",
+        "sku": "RT-00102",
+        "by": "name",
+    }
+    assert dict(route.calls.last.request.url.params)["review"] == "requests"
+
+
+async def test_merge_sends_the_target_and_reports_refusals(
+    web: Web, be: Any, check: ContractChecker
+) -> None:
+    await web.login(["ENGINEER"])
+    router = mock(be)
+    post = router.post(f"{API}/catalog/items/4/merge/").mock(
+        return_value=httpx.Response(200, json=ITEM_DETAIL)
+    )
+    merged = await call(web, "POST", "/erp/catalog/items/4/merge", {"into": "102"})
+    assert merged.status_code == 200
+    check(merged, "/erp/catalog/items/{id}/merge", "post")
+    assert body_of(post) == {"into": 102}
+
+    router.post(f"{API}/catalog/items/4/merge/").mock(
+        return_value=httpx.Response(400, json={"detail": "MERGE_SAME_PRODUCT"})
+    )
+    same = await call(web, "POST", "/erp/catalog/items/4/merge", {"into": "4"})
+    assert same.status_code == 409
+    assert same.json()["details"]["reason"] == "merge_same_product"
 
 
 async def test_items_list_rejects_unknown_kind_before_erp(web: Web, be: Any) -> None:

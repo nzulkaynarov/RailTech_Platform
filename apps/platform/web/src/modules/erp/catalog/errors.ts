@@ -86,6 +86,8 @@ const REASONS = new Set([
   "partner_suspended",
   "inn_too_long",
   "contract_render_failed",
+  // ADR-0027: слияние карточек
+  "merge_same_product",
 ]);
 
 /**

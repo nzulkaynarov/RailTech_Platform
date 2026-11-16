@@ -78,6 +78,9 @@ def merge_products(survivor, duplicate, actor) -> tuple[object | None, str | Non
     # Ссылки переезжают: иначе оффер и строка КП остались бы висеть на архивной карточке.
     SupplierOffer.objects.filter(product=duplicate).update(product=survivor)
     QuoteItem.objects.filter(product=duplicate).update(product=survivor)
+    from supply.models import SupplierOrderLine
+
+    SupplierOrderLine.objects.filter(product=duplicate).update(product=survivor)  # ADR-0027: и заказы поставщику
 
     archived = ProductStatus.objects.filter(code="ARCHIVED").first()
     if archived is None:
