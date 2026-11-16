@@ -145,7 +145,7 @@ describe('Этапы на странице проекта', () => {
     const stages = await screen.findByRole('region', { name: 'Этапы проекта' });
     const items = within(stages).getAllByRole('listitem');
     expect(items.map((item) => item.textContent)).toEqual([
-      'Запрос, выполнено',
+      'Заявка, выполнено',
       'КП, выполнено',
       '3.Договор, текущий этап',
       '4.Оплата, начато',

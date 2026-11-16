@@ -23,16 +23,16 @@ describe('«Новый запрос»: черновик переживает у�
     signedIn();
     const user = userEvent.setup();
     const { router } = renderApp('/requests/new');
-    await heading('Новый запрос');
+    await heading('Новая заявка');
     await user.type(screen.getByLabelText('Что нужно'), 'Кабель для цеха');
     await user.type(screen.getByLabelText('Строка 1'), 'Кабель ВВГнг 3×2,5');
     await user.type(screen.getByLabelText('Количество'), '2,5');
     await user.type(screen.getByLabelText('Единица'), 'км');
 
     await router.navigate('/requests');
-    await heading('Запросы');
+    await heading('Заявки');
     await router.navigate('/requests/new');
-    await heading('Новый запрос');
+    await heading('Новая заявка');
 
     expect(screen.getByLabelText('Что нужно')).toHaveValue('Кабель для цеха');
     expect(screen.getByLabelText('Строка 1')).toHaveValue('Кабель ВВГнг 3×2,5');
@@ -44,16 +44,16 @@ describe('«Новый запрос»: черновик переживает у�
     signedIn();
     const user = userEvent.setup();
     const { router } = renderApp('/requests/new');
-    await heading('Новый запрос');
+    await heading('Новая заявка');
     await user.type(screen.getByLabelText('Что нужно'), 'Нужно что-то');
     expect(loadRequestDraft(KEY)).not.toBeNull();
-    await user.click(screen.getByRole('button', { name: 'Отправить запрос' }));
-    await heading(/^Запрос ЗВ-/);
+    await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
+    await heading(/^Заявка ЗВ-/);
     expect(loadRequestDraft(KEY)).toBeNull();
     expect(window.sessionStorage.getItem(KEY)).toBeNull();
 
     await router.navigate('/requests/new');
-    await heading('Новый запрос');
+    await heading('Новая заявка');
     expect(screen.getByLabelText('Что нужно')).toHaveValue('');
   });
 
@@ -61,10 +61,10 @@ describe('«Новый запрос»: черновик переживает у�
     signedIn();
     const user = userEvent.setup();
     renderApp('/requests/new');
-    await heading('Новый запрос');
+    await heading('Новая заявка');
     await user.type(screen.getByLabelText('Что нужно'), 'Передумал');
     await user.click(screen.getByRole('link', { name: 'Отмена' }));
-    await heading('Запросы');
+    await heading('Заявки');
     expect(window.sessionStorage.getItem(KEY)).toBeNull();
   });
 
@@ -75,7 +75,7 @@ describe('«Новый запрос»: черновик переживает у�
     renderApp('/catalog/1001');
     await heading('Подшипник 6205-2RS');
     await user.click(screen.getByRole('button', { name: 'Запросить' }));
-    await heading('Новый запрос');
+    await heading('Новая заявка');
     expect(screen.getByLabelText('Что нужно')).toHaveValue('Нужна позиция из каталога: Подшипник 6205-2RS');
   });
 
@@ -83,7 +83,7 @@ describe('«Новый запрос»: черновик переживает у�
     signedIn();
     window.sessionStorage.setItem(KEY, '{не json');
     renderApp('/requests/new');
-    await heading('Новый запрос');
+    await heading('Новая заявка');
     expect(screen.getByLabelText('Что нужно')).toHaveValue('');
   });
 
@@ -100,10 +100,10 @@ describe('«Новый запрос»: черновик переживает у�
     });
     const user = userEvent.setup();
     renderApp('/requests/new');
-    await heading('Новый запрос');
+    await heading('Новая заявка');
     await user.type(screen.getByLabelText('Что нужно'), 'Без хранилища');
-    await user.click(screen.getByRole('button', { name: 'Отправить запрос' }));
-    expect(await heading(/^Запрос ЗВ-/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
+    expect(await heading(/^Заявка ЗВ-/)).toBeInTheDocument();
     vi.restoreAllMocks();
   });
 });

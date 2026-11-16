@@ -73,15 +73,15 @@ describe('бар несохранённых изменений «Компани�
     const { user, router } = await openForm();
     await user.type(screen.getByLabelText('ИНН'), '7');
     const side = screen.getByRole('navigation', { name: 'Разделы кабинета' });
-    await user.click(within(side).getByRole('link', { name: 'Запросы' }));
+    await user.click(within(side).getByRole('link', { name: 'Заявки' }));
     const dialog = await screen.findByRole('dialog', { name: 'Выйти без сохранения?' });
     await user.click(within(dialog).getByRole('button', { name: 'Остаться' }));
     expect(router.state.location.pathname).toBe('/company');
     expect(screen.getByLabelText('ИНН')).toHaveValue('3051234567');
 
-    await user.click(within(side).getByRole('link', { name: 'Запросы' }));
+    await user.click(within(side).getByRole('link', { name: 'Заявки' }));
     await user.click(within(await screen.findByRole('dialog', { name: 'Выйти без сохранения?' })).getByRole('button', { name: 'Выйти без сохранения' }));
-    await heading('Запросы');
+    await heading('Заявки');
   });
 
   it('без правок уход — без вопроса; закрытие вкладки с правками — предупреждение браузера', async () => {
@@ -98,8 +98,8 @@ describe('бар несохранённых изменений «Компани�
     await user.click(screen.getByRole('button', { name: 'Сбросить' }));
     await user.click(within(await screen.findByRole('dialog', { name: 'Сбросить изменения?' })).getByRole('button', { name: 'Сбросить' }));
     const side = screen.getByRole('navigation', { name: 'Разделы кабинета' });
-    await user.click(within(side).getByRole('link', { name: 'Запросы' }));
-    await heading('Запросы');
+    await user.click(within(side).getByRole('link', { name: 'Заявки' }));
+    await heading('Заявки');
   });
 
   it('«Закрыть» с правками спрашивает; без правок — сразу к просмотру', async () => {

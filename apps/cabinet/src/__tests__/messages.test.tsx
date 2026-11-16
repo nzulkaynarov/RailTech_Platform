@@ -47,7 +47,7 @@ describe('«Сообщения»', () => {
   it('бейдж непрочитанного в меню — из /me.unread', async () => {
     signedIn();
     renderApp('/requests');
-    await heading('Запросы');
+    await heading('Заявки');
     const side = screen.getByRole('navigation', { name: 'Разделы кабинета' });
     const link = within(side).getByRole('link', { name: 'Сообщения' });
     expect(link).toHaveAttribute('href', '/messages');
@@ -103,7 +103,7 @@ describe('«Сообщения»', () => {
     expect(polls).toEqual(['504', '504']);
 
     await act(() => router.navigate('/requests'));
-    await heading('Запросы');
+    await heading('Заявки');
     await act(() => vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS * 3));
     expect(polls).toHaveLength(2);
   });
@@ -207,7 +207,7 @@ describe('«Сообщения»', () => {
     expect(info).toHaveTextContent('Переписку видят все сотрудники вашей компании в кабинете');
     expect(info).not.toHaveTextContent(/в течение|до \d|час/); // срок ответа не обещаем
     expect(within(page()).getByText(/Файлы в чат пока не прикладываются/)).toBeInTheDocument();
-    expect(within(page()).getByRole('link', { name: 'Перейти к запросам' })).toHaveAttribute('href', '/requests');
+    expect(within(page()).getByRole('link', { name: 'Перейти к заявкам' })).toHaveAttribute('href', '/requests');
     await expectNoAxeViolations();
   });
 
@@ -263,7 +263,7 @@ describe('«Сообщения»', () => {
     const info = await within(page()).findByRole('region', { name: 'О переписке' });
     expect(info).toHaveTextContent('Отвечает команда RailTech');
     expect(within(page()).getByText(/Файлы в чат пока не прикладываются/)).toBeInTheDocument();
-    expect(within(page()).queryByRole('link', { name: 'Перейти к запросам' })).toBeNull();
+    expect(within(page()).queryByRole('link', { name: 'Перейти к заявкам' })).toBeNull();
   });
 
   it('метка документа открывает документ, только если его раздел открыт сессии', async () => {

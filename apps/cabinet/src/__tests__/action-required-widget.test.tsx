@@ -11,7 +11,7 @@ describe('виджет «Требует вашего решения»', () => {
   async function widget() {
     signedIn();
     renderApp('/requests');
-    await heading('Запросы');
+    await heading('Заявки');
     return screen.findByRole('region', { name: 'Требует вашего решения' });
   }
 
@@ -61,7 +61,7 @@ describe('виджет «Требует вашего решения»', () => {
     const user = userEvent.setup();
     portalServer.use(http.get('*/api/portal/v1/invoices', () => HttpResponse.json({ detail: 'INTERNAL' }, { status: 500 }), { once: true }));
     renderApp('/requests');
-    await heading('Запросы');
+    await heading('Заявки');
     const error = await screen.findByTestId('action-required-error');
     expect(within(error).getByText('Не удалось загрузить')).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Требует вашего решения' })).not.toBeInTheDocument();
@@ -89,12 +89,12 @@ describe('виджет «Требует вашего решения»', () => {
       }),
     );
     renderApp('/requests');
-    await heading('Запросы');
+    await heading('Заявки');
     expect(await screen.findByTestId('action-required-loading')).toBeInTheDocument();
     // запросы уже пришли, но список ждёт виджет: иначе виджет вставился бы над готовым списком
     await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(screen.queryByRole('table', { name: 'Запросы' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('list', { name: 'Запросы' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: 'Заявки' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Заявки' })).not.toBeInTheDocument();
     release();
     expect(await screen.findByRole('region', { name: 'Требует вашего решения' })).toBeInTheDocument();
     expect(screen.queryByTestId('action-required-loading')).not.toBeInTheDocument();

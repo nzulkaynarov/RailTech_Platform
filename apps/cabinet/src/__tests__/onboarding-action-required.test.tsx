@@ -25,12 +25,12 @@ describe('чек-лист «Первые шаги» и расширенный в
     it('отображает шаги онбординга для клиента и рассчитывает прогресс по данным портала', async () => {
       signedIn('actor', 'demo');
       renderApp('/requests');
-      await heading('Запросы');
+      await heading('Заявки');
 
       expect(screen.getByText('Первые шаги в кабинете')).toBeInTheDocument();
       expect(screen.getByText('Реквизиты компании')).toBeInTheDocument();
       expect(screen.getByText('Уведомления в Telegram')).toBeInTheDocument();
-      expect(screen.getByText('Создать первый запрос')).toBeInTheDocument();
+      expect(screen.getByText('Создать первую заявку')).toBeInTheDocument();
       expect(screen.getByText('Пригласить коллег')).toBeInTheDocument();
 
       await expectNoAxeViolations();
@@ -40,7 +40,7 @@ describe('чек-лист «Первые шаги» и расширенный в
       signedIn('actor', 'demo');
       const user = userEvent.setup();
       renderApp('/requests');
-      await heading('Запросы');
+      await heading('Заявки');
 
       const dismissBtn = screen.getByRole('button', { name: 'Скрыть' });
       await user.click(dismissBtn);
@@ -75,7 +75,7 @@ describe('чек-лист «Первые шаги» и расширенный в
       );
 
       renderApp('/requests');
-      await heading('Запросы');
+      await heading('Заявки');
 
       expect(await screen.findByText('Проект договора')).toBeInTheDocument();
     });
@@ -85,7 +85,7 @@ describe('чек-лист «Первые шаги» и расширенный в
     it('включает поставку со статусом delivered, ожидающую приёмки', async () => {
       signedIn('actor', 'demo');
       renderApp('/requests');
-      await heading('Запросы');
+      await heading('Заявки');
 
       const region = await screen.findByRole('region', { name: 'Требует вашего решения' });
       expect(within(region).getByRole('link', { name: 'Редуктор червячный NMRV 063' })).toHaveAttribute(
@@ -121,7 +121,7 @@ describe('чек-лист «Первые шаги» и расширенный в
       );
 
       renderApp('/requests');
-      await heading('Запросы');
+      await heading('Заявки');
 
       const region = await screen.findByRole('region', { name: 'Требует вашего решения' });
       expect(within(region).getByRole('link', { name: 'Проект партнёрского договора' })).toHaveAttribute(

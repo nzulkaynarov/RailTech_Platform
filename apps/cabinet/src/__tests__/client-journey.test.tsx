@@ -8,7 +8,7 @@ describe('Путь клиента M2-CAB-04', () => {
   it('виджет «Требует вашего решения» на /requests отображает ожидающие документы', async () => {
     signedIn();
     renderApp('/requests');
-    await heading('Запросы');
+    await heading('Заявки');
 
     const widget = await screen.findByRole('region', { name: 'Требует вашего решения' });
     expect(widget).toBeInTheDocument();
@@ -36,16 +36,16 @@ describe('Путь клиента M2-CAB-04', () => {
 
     const list = await screen.findByRole('list', { name: 'Позиции каталога' });
     const bearing = within(list).getByRole('link', { name: 'Подшипник 6205-2RS' }).closest('article') as HTMLElement;
-    const addBearing = within(bearing).getByRole('button', { name: 'В запрос: Подшипник 6205-2RS' });
+    const addBearing = within(bearing).getByRole('button', { name: 'В заявку: Подшипник 6205-2RS' });
 
     await user.click(addBearing);
-    expect(within(bearing).getByRole('button', { name: 'Убрать из запроса: Подшипник 6205-2RS' })).toBeInTheDocument();
+    expect(within(bearing).getByRole('button', { name: 'Убрать из заявки: Подшипник 6205-2RS' })).toBeInTheDocument();
 
     const bar = await screen.findByRole('region', { name: 'Выбрано: 1' });
     expect(within(bar).getByText('Выбрано: 1')).toBeInTheDocument();
 
-    await user.click(within(bar).getByRole('button', { name: 'Оформить запрос (1)' }));
-    await heading('Новый запрос');
+    await user.click(within(bar).getByRole('button', { name: 'Оформить заявку (1)' }));
+    await heading('Новая заявка');
     expect(router.state.location.pathname).toBe('/requests/new');
     expect(screen.getByLabelText('Строка 1')).toHaveValue('Подшипник 6205-2RS');
   });

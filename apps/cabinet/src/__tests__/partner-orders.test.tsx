@@ -75,7 +75,7 @@ describe('Заказы на поставку (PO, ASN) и запросы цен 
     await screen.findByRole('heading', { level: 1, name: 'Заказы на поставку' });
 
     // Переключаемся на вкладку «Запросы цен (RFQ)»
-    await user.click(screen.getByRole('button', { name: /Запросы цен \(RFQ\)/ }));
+    await user.click(screen.getByRole('button', { name: /Запросы цены/ }));
 
     expect(
       await screen.findByText('Запрос цен на тормозные колодки и втулки (Q4)'),
@@ -84,7 +84,7 @@ describe('Заказы на поставку (PO, ASN) и запросы цен 
     await user.click(screen.getByRole('button', { name: 'Ответить' }));
 
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText('Ответ на запрос цен (RFQ)')).toBeInTheDocument();
+    expect(within(dialog).getByText('Ответ на запрос цены')).toBeInTheDocument();
 
     const noteTextarea = within(dialog).getByLabelText(/Коммерческие условия и цены/);
     await user.type(noteTextarea, 'Колодки по 145 000 сум, в наличии на складе Ташкент.');

@@ -19,7 +19,7 @@ async function openForm() {
   const view = renderApp('/new-client');
   await heading('Я новый клиент');
   // Кнопка активна, когда токен формы получен.
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Отправить запрос' })).toBeEnabled());
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Отправить заявку' })).toBeEnabled());
   return { user, ...view };
 }
 
@@ -56,9 +56,9 @@ describe('«Я новый клиент»: форма запроса → лид C
     const { user } = await openForm();
     await user.type(screen.getByLabelText('Компания (необязательно)'), 'ООО Рельс');
     await fill(user, { email: 'a@rail.uz' });
-    await user.click(screen.getByRole('button', { name: 'Отправить запрос' }));
+    await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
 
-    expect(await heading('Спасибо! Запрос отправлен')).toBeInTheDocument();
+    expect(await heading('Спасибо! Заявка отправлена')).toBeInTheDocument();
     expect(screen.getByText(/Менеджер свяжется с вами/)).toBeInTheDocument();
     const telegram = screen.getByRole('link', { name: 'Написать в Telegram' });
     expect(telegram).toHaveAttribute('href', 'https://t.me/railtech_test_bot?start=web');
@@ -83,10 +83,10 @@ describe('«Я новый клиент»: форма запроса → лид C
   it('согласие обязательно: без галочки запрос не уходит, поле помечено', async () => {
     const { user } = await openForm();
     await fill(user, { consent: false });
-    await user.click(screen.getByRole('button', { name: 'Отправить запрос' }));
+    await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
 
     expect(
-      await screen.findByText('Без согласия на обработку персональных данных мы не сможем ответить на запрос.'),
+      await screen.findByText('Без согласия на обработку персональных данных мы не сможем ответить на заявку.'),
     ).toBeInTheDocument();
     const checkbox = screen.getByRole('checkbox', { name: /Согласен/ });
     expect(checkbox).toHaveAttribute('aria-invalid', 'true');
@@ -97,14 +97,14 @@ describe('«Я новый клиент»: форма запроса → лид C
     // Галочка снимает ошибку, и запрос уходит.
     await user.click(checkbox);
     expect(screen.queryByText(/Без согласия/)).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Отправить запрос' }));
-    expect(await heading('Спасибо! Запрос отправлен')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
+    expect(await heading('Спасибо! Заявка отправлена')).toBeInTheDocument();
   });
 
   it('телефон или e-mail — хотя бы одно (проверка до отправки)', async () => {
     const { user } = await openForm();
     await fill(user, { phone: '' });
-    await user.click(screen.getByRole('button', { name: 'Отправить запрос' }));
+    await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
     expect(await screen.findByText('Укажите телефон или e-mail — хотя бы одно.')).toBeInTheDocument();
     expect(screen.getByLabelText('Телефон')).toHaveAttribute('aria-invalid', 'true');
     expect(screen.getByLabelText('E-mail')).toHaveAttribute('aria-invalid', 'true');
@@ -118,9 +118,9 @@ describe('«Я новый клиент»: форма запроса → лид C
     expect(trap.closest('[aria-hidden="true"]')).not.toBeNull();
     await fill(user);
     await user.type(trap, 'http://spam.example');
-    await user.click(screen.getByRole('button', { name: 'Отправить запрос' }));
+    await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
 
-    expect(await heading('Спасибо! Запрос отправлен')).toBeInTheDocument();
+    expect(await heading('Спасибо! Заявка отправлена')).toBeInTheDocument();
     expect(mockCrmForm().submissions[0].website).toBe('http://spam.example');
   });
 
@@ -134,7 +134,7 @@ describe('«Я новый клиент»: форма запроса → лид C
   ])('ошибка CRM %s → текст из словаря, форма остаётся', async (_code, text, message) => {
     const { user } = await openForm();
     await fill(user, { text });
-    await user.click(screen.getByRole('button', { name: 'Отправить запрос' }));
+    await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
     expect(await screen.findByText(message)).toBeInTheDocument();
     expect(screen.getByLabelText('Как к вам обращаться')).toHaveValue('Алишер');
   });
@@ -142,7 +142,7 @@ describe('«Я новый клиент»: форма запроса → лид C
   it('invalid_phone от CRM помечает поле телефона', async () => {
     const { user } = await openForm();
     await fill(user, { phone: '12345' });
-    await user.click(screen.getByRole('button', { name: 'Отправить запрос' }));
+    await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
     expect(
       await screen.findByText('Номер не распознан — укажите его с кодом страны, например +998 90 123 45 67.'),
     ).toBeInTheDocument();
@@ -154,13 +154,13 @@ describe('«Я новый клиент»: форма запроса → лид C
     crmFails('contact_required', 422, 'phone');
     const { user } = await openForm();
     await fill(user);
-    await user.click(screen.getByRole('button', { name: 'Отправить запрос' }));
+    await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
     expect(await screen.findByText('Укажите телефон или e-mail — хотя бы одно.')).toBeInTheDocument();
 
     crmFails('consent_required', 422, 'consent');
-    await user.click(screen.getByRole('button', { name: 'Отправить запрос' }));
+    await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
     expect(
-      await screen.findByText('Без согласия на обработку персональных данных мы не сможем ответить на запрос.'),
+      await screen.findByText('Без согласия на обработку персональных данных мы не сможем ответить на заявку.'),
     ).toBeInTheDocument();
   });
 
@@ -168,18 +168,18 @@ describe('«Я новый клиент»: форма запроса → лид C
     crmFails('something_new', 422);
     const { user } = await openForm();
     await fill(user);
-    await user.click(screen.getByRole('button', { name: 'Отправить запрос' }));
+    await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
     expect(await screen.findByText('Проверьте поля формы.')).toBeInTheDocument();
   });
 
   it('form_token_expired: тихо берёт новый токен и повторяет один раз', async () => {
     const { user } = await openForm();
     await fill(user, { text: 'Форма открыта давно #expired' });
-    await user.click(screen.getByRole('button', { name: 'Отправить запрос' }));
+    await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
 
     // Повтор ждёт `min_fill_seconds` нового токена (в моке — 1 с).
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'Спасибо! Запрос отправлен' }, { timeout: RETRY_TIMEOUT }),
+      await screen.findByRole('heading', { level: 1, name: 'Спасибо! Заявка отправлена' }, { timeout: RETRY_TIMEOUT }),
     ).toBeInTheDocument();
     expect(screen.queryByText(/Форма устарела/)).not.toBeInTheDocument();
     expect(mockCrmForm().tokenRequests).toBe(2);
@@ -190,9 +190,9 @@ describe('«Я новый клиент»: форма запроса → лид C
     crmFails('form_token_expired', 422, 'form_token');
     const { user } = await openForm();
     await fill(user);
-    await user.click(screen.getByRole('button', { name: 'Отправить запрос' }));
+    await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
     expect(
-      await screen.findByText('Форма устарела — обновите страницу и отправьте запрос ещё раз.', {}, { timeout: RETRY_TIMEOUT }),
+      await screen.findByText('Форма устарела — обновите страницу и отправьте заявку ещё раз.', {}, { timeout: RETRY_TIMEOUT }),
     ).toBeInTheDocument();
     expect(mockCrmForm().tokenRequests).toBe(2);
   });
@@ -204,9 +204,9 @@ describe('«Я новый клиент»: форма запроса → лид C
     expect(
       await screen.findByText('Форма сейчас недоступна. Повторите попытку или напишите нам в Telegram.'),
     ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Отправить запрос' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Отправить заявку' })).toBeDisabled();
     await user.click(screen.getByRole('button', { name: 'Повторить' }));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Отправить запрос' })).toBeEnabled());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Отправить заявку' })).toBeEnabled());
   });
 
   it('язык запроса — текущий язык интерфейса', async () => {
@@ -227,8 +227,8 @@ describe('«Я новый клиент»: форма запроса → лид C
     vi.stubEnv('DEV', false);
     renderApp('/new-client');
     await heading('Я новый клиент');
-    expect(screen.getByText('Форма запроса недоступна')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Отправить запрос' })).not.toBeInTheDocument();
+    expect(screen.getByText('Форма заявки недоступна')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Отправить заявку' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Написать в Telegram' })).toHaveAttribute(
       'href',
       'https://t.me/railtech_test_bot?start=web',

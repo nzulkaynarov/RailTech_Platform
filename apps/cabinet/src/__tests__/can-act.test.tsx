@@ -6,8 +6,8 @@ describe('can_act', () => {
   it('с правом действовать — «Новый запрос» есть, плашки «только просмотр» нет', async () => {
     signedIn('actor');
     renderApp('/requests');
-    await screen.findByRole('heading', { level: 1, name: 'Запросы' });
-    expect(screen.getByRole('link', { name: 'Новый запрос' })).toHaveAttribute('href', '/requests/new');
+    await screen.findByRole('heading', { level: 1, name: 'Заявки' });
+    expect(screen.getByRole('link', { name: 'Новая заявка' })).toHaveAttribute('href', '/requests/new');
     expect(screen.queryByText(/Только просмотр/)).not.toBeInTheDocument();
   });
 
@@ -15,8 +15,8 @@ describe('can_act', () => {
     signedIn('viewer');
     window.localStorage.setItem('cabinet.language', 'ru'); // явный выбор перекрывает язык контакта
     renderApp('/requests');
-    await screen.findByRole('heading', { level: 1, name: 'Запросы' });
-    expect(screen.queryByRole('link', { name: 'Новый запрос' })).not.toBeInTheDocument();
+    await screen.findByRole('heading', { level: 1, name: 'Заявки' });
+    expect(screen.queryByRole('link', { name: 'Новая заявка' })).not.toBeInTheDocument();
     const banner = await screen.findByText(/Только просмотр: действия доступны/);
     expect(banner.closest('[role="status"]')).not.toBeNull();
   });

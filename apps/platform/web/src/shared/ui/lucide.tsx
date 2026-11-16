@@ -16,6 +16,7 @@ import {
   Link,
   List,
   ListOrdered,
+  Package,
   Mail,
   Maximize2,
   Megaphone,
@@ -31,6 +32,7 @@ import {
   Table,
   Type,
   Underline,
+  Wrench,
   Users,
   Wallet,
   type LucideIcon,
@@ -97,3 +99,5 @@ export const CheckMarkIcon = make(Check);
 export const MoreIcon = make(Ellipsis);
 export const CalendarIcon = make(Calendar);
 export const BankIcon = make(Landmark);
+export const PackageIcon = make(Package);
+export const WrenchIcon = make(Wrench);

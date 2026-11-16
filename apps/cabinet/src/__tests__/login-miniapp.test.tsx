@@ -14,7 +14,7 @@ describe('Mini App', () => {
     });
     const { router } = renderApp('/');
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Запросы' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Заявки' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/requests');
     expect(bodies).toEqual([{ init_data: webApp.initData }]);
     expect(screen.queryByRole('banner')).not.toBeInTheDocument();
@@ -25,7 +25,7 @@ describe('Mini App', () => {
   it('страницы входа в Mini App нет: /login ведёт в кабинет', async () => {
     asMiniApp();
     const { router } = renderApp('/login');
-    await screen.findByRole('heading', { level: 1, name: 'Запросы' });
+    await screen.findByRole('heading', { level: 1, name: 'Заявки' });
     expect(router.state.location.pathname).toBe('/requests');
   });
 
@@ -71,7 +71,7 @@ describe('Mini App', () => {
   it('axe: оболочка Mini App без нарушений', async () => {
     asMiniApp();
     const { container } = renderApp('/');
-    await screen.findByRole('heading', { level: 1, name: 'Запросы' });
+    await screen.findByRole('heading', { level: 1, name: 'Заявки' });
     expect((await axe(container)).violations).toEqual([]);
   });
 });
