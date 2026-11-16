@@ -57,6 +57,7 @@
   "common": {
     "retry": "Retry",
     "home": "Home",
+    "inn": "Tax ID",
     "loading": "Loading…",
     "error": "Something went wrong",
     "notFoundTitle": "Page not found",
@@ -67,6 +68,7 @@
     "save": "Save",
     "reset": "Reset",
     "all": "All",
+    "article": "Part number",
     "actions": "Actions",
     "loadFailed": "Could not load",
     "reasonRequired": "Give a reason — without it the provider will not know what to fix.",
