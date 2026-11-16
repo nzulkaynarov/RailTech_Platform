@@ -23,6 +23,8 @@ export interface MockLine {
   } | null;
   leadDays: number | null;
   purchase: number;
+  /** Валюта закупки строки; нет — сумы. */
+  currency?: string;
   crewRate: number | null;
   crewDays: number | null;
   client: number;

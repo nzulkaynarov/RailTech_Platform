@@ -42,6 +42,7 @@ export function useApplySheet(): (sheet: CalcSheet) => void {
 }
 
 const KNOWN = new Set([
+  "amount_too_large",
   "visas_missing",
   "quote_not_draft",
   "line_incomplete",

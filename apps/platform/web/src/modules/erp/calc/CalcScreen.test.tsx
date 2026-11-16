@@ -82,6 +82,13 @@ describe("Расчёт по заявке", () => {
     expect(
       within(rail).getByLabelText("Закупка за единицу для «Перевод стрелочный Р65 марки 1/11»"),
     ).toBeEnabled();
+    // Валюта закупки строки видна рядом с суммой (прод, ЗВ-2026-002: сумма в сумах у строки в USD).
+    expect(
+      within(rail).getByRole("combobox", {
+        name: "Валюта закупки для «Перевод стрелочный Р65 марки 1/11»",
+      }),
+    ).toBeEnabled();
+    expect(within(rail).getByText("UZS")).toBeVisible();
     expect(
       within(rail).getByLabelText<HTMLInputElement>("Наценка, %: Перевод стрелочный Р65 марки 1/11")
         .value,

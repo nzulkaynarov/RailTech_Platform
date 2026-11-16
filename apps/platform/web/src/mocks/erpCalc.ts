@@ -192,7 +192,7 @@ function presentLine(line: MockLine, user: Me, editable: boolean): CalcLine {
     ...(zoneCost
       ? {
           purchase_price: zone === "goods" ? money(line.purchase) : null,
-          purchase_currency: "UZS",
+          purchase_currency: line.currency ?? "UZS",
           cost: money(unit),
         }
       : {}),
@@ -603,6 +603,7 @@ export const erpCalcHandlers = [
     }
     if (patch.quantity !== undefined) line.quantity = patch.quantity;
     if (patch.purchase_price !== undefined) line.purchase = Number(patch.purchase_price);
+    if (patch.purchase_currency) line.currency = patch.purchase_currency;
     if (patch.crew_rate !== undefined)
       line.crewRate = patch.crew_rate === null ? null : Number(patch.crew_rate);
     if (patch.crew_days !== undefined)

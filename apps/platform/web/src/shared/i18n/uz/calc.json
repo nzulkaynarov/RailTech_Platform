@@ -87,7 +87,7 @@
       "quantity": "Soni",
       "stock": "Ombor",
       "supplier": "Hamkor · muddat",
-      "purchase": "Xarid, so‘m",
+      "purchase": "Xarid",
       "client": "Mijozga, so‘m",
       "markup": "Ustama, %",
       "visa": "Viza",
@@ -140,7 +140,8 @@
     "reserveLabel": "«{{name}}» uchun {{count}} zaxiralash",
     "release": "Zaxirani olib tashlash",
     "releaseLabel": "«{{name}}» qatori zaxirasini olib tashlash",
-    "markupLabel": "Ustama, %: {{name}}"
+    "markupLabel": "Ustama, %: {{name}}",
+    "currencyLabel": "«{{name}}» uchun xarid valyutasi"
   },
   "add": {
     "button": "Qator qo‘shish",
@@ -270,7 +271,8 @@
     "other": "Saqlanmadi: {{message}}",
     "deal_not_in_calculation": "Ariza yopilgan yoki hisob-kitobdan keyingi bosqichda.",
     "quote_not_rejected_by_client": "Yangi versiya va voz kechish mijoz TTni rad etgandan keyin mavjud.",
-    "reason_required": "Sababni kiriting."
+    "reason_required": "Sababni kiriting.",
+    "amount_too_large": "Kurs bo‘yicha qator summasi juda katta. Xarid valyutasini tekshiring: so‘mdagi summa boshqa valyutadagi qatorda turibdi."
   },
   "load": {
     "retry": "Qayta urinish",

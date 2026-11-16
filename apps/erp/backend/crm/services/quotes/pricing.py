@@ -15,6 +15,13 @@ from crm.models import Quote, QuoteItem, QuoteItemHistory
 
 from ._shared import _quote_owner_company_id
 
+#: Предел сумм строки КП: поля `max_digits=14, decimal_places=2` вмещают значения меньше 10¹².
+AMOUNT_LIMIT = Decimal(10) ** 12
+
+
+def _fits(value) -> bool:
+    return value is None or abs(value) < AMOUNT_LIMIT
+
 
 def effective_quote_lead_time(quote, items=None) -> int:
     """Effective КП delivery lead time (days): the manual override on the КП if set,
@@ -171,8 +178,10 @@ class QuoteCalculationService:
         # 1. Recalculate each item price (without saving each time to DB yet). Pass the basis
         #    and per-currency rate once so the Incoterm flag-gating + FX conversion run
         #    without an N+1 on item.quote / rate lookup (M1/M2).
+        overflow: list[int] = []
         for item in items:
             line_code = (item.frozen_currency.code if item.frozen_currency_id else BASE_CURRENCY).upper()
+            before = (item.landed_cost, item.final_price_excl_vat, item.logistics_cost, item.customs_duty)
             cls.calculate_item_prices(
                 item,
                 commit=False,
@@ -180,6 +189,12 @@ class QuoteCalculationService:
                 margin_percent=quote.margin_percent,
                 rate=rate_map.get(line_code, Decimal("1")),
             )
+            if not (_fits(item.landed_cost) and _fits(item.final_price_excl_vat)):
+                # Сумма строки после пересчёта по курсу не влезает в поле (≥ 10¹²): строку не пишем — иначе падает
+                # пересчёт всего КП и с ним любая правка, даже исправление валюты (прод, ЗВ-2026-002). Кто
+                # отправляет КП дальше, видит строку в `amount_overflow_ids` и отказывает понятно.
+                item.landed_cost, item.final_price_excl_vat, item.logistics_cost, item.customs_duty = before
+                overflow.append(item.pk)
 
         # 1b. Effective КП lead time = override or max(line lead times). Computed here off
         #     the already-fetched items (no extra query); the override on the КП is NEVER
@@ -274,6 +289,7 @@ class QuoteCalculationService:
             quote.pdf_file = None
             update_fields.append("pdf_file")
         quote.save(update_fields=update_fields)
+        quote.amount_overflow_ids = overflow
         return quote
 
 

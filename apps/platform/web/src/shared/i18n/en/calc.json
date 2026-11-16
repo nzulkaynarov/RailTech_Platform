@@ -87,7 +87,7 @@
       "quantity": "Qty",
       "stock": "Stock",
       "supplier": "Partner · lead time",
-      "purchase": "Purchase, UZS",
+      "purchase": "Purchase",
       "client": "Client price, UZS",
       "markup": "Markup, %",
       "visa": "Sign-off",
@@ -140,7 +140,8 @@
     "reserveLabel": "Reserve {{count}} for “{{name}}”",
     "release": "Release reservation",
     "releaseLabel": "Release the reservation of line “{{name}}”",
-    "markupLabel": "Markup, %: {{name}}"
+    "markupLabel": "Markup, %: {{name}}",
+    "currencyLabel": "Purchase currency for “{{name}}”"
   },
   "add": {
     "button": "Add line",
@@ -270,7 +271,8 @@
     "other": "Not saved: {{message}}",
     "deal_not_in_calculation": "The request is closed or past costing.",
     "quote_not_rejected_by_client": "A new version and a lost request are available once the client rejects the quote.",
-    "reason_required": "Give the reason."
+    "reason_required": "Give the reason.",
+    "amount_too_large": "A line amount converted at today’s rate is too large. Check the purchase currency: an amount in UZS sits on a line in another currency."
   },
   "load": {
     "retry": "Retry",
