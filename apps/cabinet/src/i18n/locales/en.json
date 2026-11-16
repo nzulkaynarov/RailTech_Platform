@@ -431,7 +431,8 @@
           "title": "Security",
           "desc": "New device logins, session revocations, and banking detail changes"
         }
-      }
+      },
+      "telegramUnavailable": "Notifications arrive by email. Telegram becomes available once your manager adds you to the system — message them."
     }
   },
   "pages": {

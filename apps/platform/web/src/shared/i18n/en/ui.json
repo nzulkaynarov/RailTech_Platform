@@ -151,5 +151,9 @@
   "selection": {
     "count": "Selected: {{count}}",
     "clear": "Clear selection"
+  },
+  "timeLeft": {
+    "today": "last day today",
+    "days": "{{count}} d left"
   }
 }

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Bell, Check, Shield, AlertCircle } from 'lucide-react';
 import { toast } from '@/lib/toast';
 
-import { useNotificationSettings, useUpdateNotificationSettings } from '@/api/queries';
+import { useNotificationSettings, useTelegramStatus, useUpdateNotificationSettings } from '@/api/queries';
 import type { NotificationGroupSettingsMap, NotificationChannelSettings } from '@/api/portal';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -19,6 +19,8 @@ export function NotificationSettingsCard() {
   const isPartner = me?.roles?.includes('partner') ?? false;
 
   const { data, isPending, isError, error } = useNotificationSettings();
+  // Подсказка «подключите бот выше» — только когда выше есть чем подключить (`available`), иначе — что делать.
+  const telegramAvailable = useTelegramStatus().data?.available === true;
   const updateSettings = useUpdateNotificationSettings();
 
   const [overrides, setOverrides] = useState<Partial<Record<GroupKey, Partial<NotificationChannelSettings>>>>({});
@@ -102,10 +104,9 @@ export function NotificationSettingsCard() {
               <div className="flex items-start gap-2.5 p-3 rounded-lg bg-muted/60 border border-border/60 text-xs text-muted-foreground">
                 <AlertCircle className="size-4 text-muted-foreground shrink-0 mt-0.5" aria-hidden="true" />
                 <span>
-                  {t(
-                    'profile.notifications.telegramNotConnected',
-                    'Telegram не подключён. Подключите бот выше, чтобы включить мгновенные уведомления в мессенджер.',
-                  )}
+                  {telegramAvailable
+                    ? t('profile.notifications.telegramNotConnected')
+                    : t('profile.notifications.telegramUnavailable')}
                 </span>
               </div>
             )}

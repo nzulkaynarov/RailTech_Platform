@@ -431,7 +431,8 @@
           "title": "Xavfsizlik",
           "desc": "Yangi qurilmadan kirish, seanslarni yakunlash, bank rekvizitlarining o‘zgarishi"
         }
-      }
+      },
+      "telegramUnavailable": "Bildirishnomalar xat orqali keladi. Menejer sizni tizimga qo‘shgach, Telegram ulanadi — unga yozing."
     }
   },
   "pages": {
