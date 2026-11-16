@@ -222,7 +222,7 @@ def _render_invoice_pdf(invoice) -> None:
         amount_paid=invoice.amount_paid,
         balance_due=invoice.balance_due,
     )
-    items = invoice.items.select_related("source_quote_item").all()
+    items = invoice.items.select_related("source_quote_item__product").all()
 
     # E1b: шаблон компании (или платформенный образец) — тем же механизмом, что акт. Компания
     # правит ТЕКСТ, структурные блоки собирает сервер. Шаблона нет → прежний путь из кода.
