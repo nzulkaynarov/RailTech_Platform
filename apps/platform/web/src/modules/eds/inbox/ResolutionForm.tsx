@@ -351,7 +351,7 @@ export function ResolutionForm({ letter, variant = "panel", onDone }: Resolution
           hint={errors.margin ? undefined : t("form.margin.hint")}
         >
           <Input
- suffix={unitOf(t("form.margin.label"))}
+            suffix={unitOf(t("form.margin.label"))}
             id={id("margin")}
             inputMode="decimal"
             value={state.margin}

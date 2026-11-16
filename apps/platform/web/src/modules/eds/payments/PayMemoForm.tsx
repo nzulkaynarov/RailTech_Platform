@@ -158,11 +158,13 @@ export function PayMemoForm({ memo, variant = "panel", onDone }: PayMemoFormProp
       </FormField>
       <FormField
         id={id("amount")}
-        label={<UnitLabel label={t("memo.form.amount.label", { currency: currencyText(currency) })} />}
+        label={
+          <UnitLabel label={t("memo.form.amount.label", { currency: currencyText(currency) })} />
+        }
         hint={t("memo.form.amount.hint", { approved: fmt(approved) })}
       >
         <Input
- suffix={unitOf(t("memo.form.amount.label", { currency: currencyText(currency) }))}
+          suffix={unitOf(t("memo.form.amount.label", { currency: currencyText(currency) }))}
           id={id("amount")}
           value={amount}
           inputMode="decimal"

@@ -692,7 +692,7 @@ function DocumentForm({
                   error={errors.amount ? fieldText(t, "amount") : undefined}
                 >
                   <Input
- suffix={unitOf(t("documents:form.amount.label"))}
+                    suffix={unitOf(t("documents:form.amount.label"))}
                     id={ids.amount}
                     value={values.amount}
                     inputMode="decimal"
