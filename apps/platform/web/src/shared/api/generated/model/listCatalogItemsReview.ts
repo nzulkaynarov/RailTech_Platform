@@ -8,4 +8,5 @@ export type ListCatalogItemsReview =
 
 export const ListCatalogItemsReview = {
   waiting: "waiting",
+  requests: "requests",
 } as const;

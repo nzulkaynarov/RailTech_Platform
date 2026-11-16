@@ -92,6 +92,13 @@ def list_queryset(params):
     if params.get("proposals") == "pending":
         # CAT-1: позиции с изменениями от поставщиков, ждущими одобрения.
         queryset = queryset.filter(proposals_count__gt=0)
+    if params.get("review") == "requests":
+        # ADR-0027: «Новые из заявок» — черновики, рождённые строками расчёта и КП; самые спрашиваемые сверху.
+        return (
+            queryset.filter(status__code="DRAFT")
+            .filter(Q(source_deal__isnull=False) | Q(demand_count__gt=0))
+            .order_by("-demand_count", "-last_requested_at", "name", "id")
+        )
     if params.get("review") == "waiting":
         # PART-3: очередь проверки партнёров — старые отправки сверху (`catalog.review_queue`).
         from catalog.review_queue import waiting_queryset
@@ -112,6 +119,68 @@ def queue_rows(products) -> dict[int, dict]:
         product.pk: {"review": info[product.pk], "completeness": completeness(product, ctx)["percent"]}
         for product in products
     }
+
+
+#: Сколько номеров заявок показать в строке очереди «Новые из заявок».
+ASKED_IN_SHOWN = 3
+
+
+def _duplicate_of(product, pool):
+    """Другая карточка того же владельца с тем же артикулом изготовителя, ГОСТом или названием — подсказка слияния."""
+    keys = (
+        ("manufacturer_part_number", (product.manufacturer_part_number or "").strip().lower()),
+        ("gost_drawing", (product.gost_drawing or "").strip().lower()),
+        ("name", (product.name or "").strip().lower()),
+    )
+    for field, value in keys:
+        if not value:
+            continue
+        for other in pool:
+            if other["pk"] != product.pk and (other[field] or "").strip().lower() == value:
+                return {"id": other["pk"], "name": other["name"], "sku": other["sku"], "by": field}
+    return None
+
+
+def request_rows(products) -> dict[int, dict]:
+    """Поля строки очереди «Новые из заявок» на странице: спрос, номера заявок, подсказка дубля и полнота."""
+    from sales.models import QuoteItem
+
+    from catalog.completeness import CompletenessContext, completeness
+
+    products = list(products)
+    if not products:
+        return {}
+    ids = [p.pk for p in products]
+    asked: dict[int, list[str]] = {pk: [] for pk in ids}
+    rows = (
+        QuoteItem.objects.filter(product_id__in=ids)
+        .exclude(quote__deal__number="")
+        .values_list("product_id", "quote__deal__number")
+        .order_by("product_id", "-quote__deal__created_at")
+        .distinct()
+    )
+    for product_id, number in rows:
+        if number and number not in asked[product_id]:
+            asked[product_id].append(number)
+    owners = {p.owner_company_id for p in products if p.owner_company_id}
+    pool = list(
+        Product.objects.filter(owner_company_id__in=owners)
+        .exclude(status__code="ARCHIVED")
+        .values("pk", "name", "sku", "manufacturer_part_number", "gost_drawing", "owner_company_id")
+    )
+    ctx = CompletenessContext(products)
+    result = {}
+    for product in products:
+        mine = [row for row in pool if row["owner_company_id"] == product.owner_company_id]
+        numbers = asked[product.pk]
+        result[product.pk] = {
+            "demand": product.demand_count or 0,
+            "asked_in": numbers[:ASKED_IN_SHOWN],
+            "asked_total": len(numbers),
+            "duplicate": _duplicate_of(product, mine),
+            "completeness": completeness(product, ctx)["percent"],
+        }
+    return result
 
 
 def item_kind(product, has_stock: bool) -> str:

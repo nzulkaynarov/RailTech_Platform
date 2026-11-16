@@ -21,6 +21,7 @@ import { MoneyText } from "../../../shared/ui/MoneyText";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { FormModal } from "./common";
 import { errorFields } from "./errors";
+import { useRequestsCount } from "./RequestsQueue";
 
 /** Поля замечаний при возврате карточки: перечень ERP (`catalog.models.reviews.ISSUE_FIELDS`), подписи — `catalog:review.issueFields`. */
 const ISSUE_FIELDS: readonly CatalogIssueField[] = [
@@ -43,28 +44,39 @@ function useWaitingCount(): number | undefined {
   return query.data?.total;
 }
 
-/** Переключатель «Все позиции / Ждут проверки · N»: адрес хранит только `?review=waiting`. */
+/** Вид списка позиций: все, очередь проверки партнёров, новые из заявок (ADR-0027). */
+export type QueueView = "all" | "waiting" | "requests";
+
+/** Переключатель «Все позиции / Ждут проверки · N / Новые из заявок · N»: адрес хранит только `?review=…`. */
 export function QueueSwitch({
-  waiting,
+  view,
   onChange,
 }: {
-  waiting: boolean;
-  onChange: (waiting: boolean) => void;
+  view: QueueView;
+  onChange: (view: QueueView) => void;
 }) {
   const { t } = useTranslation("catalog");
   const count = useWaitingCount();
+  const requests = useRequestsCount();
   return (
     <Segmented
       aria-label={t("queue.view")}
-      value={waiting ? "waiting" : "all"}
+      value={view}
       onChange={(value) => {
-        onChange(value === "waiting");
+        onChange(value as QueueView);
       }}
       options={[
         { value: "all", label: t("queue.all") },
         {
           value: "waiting",
           label: count === undefined ? t("queue.waiting") : t("queue.waitingCount", { count }),
+        },
+        {
+          value: "requests",
+          label:
+            requests === undefined
+              ? t("queue.requests")
+              : t("queue.requestsCount", { count: requests }),
         },
       ]}
     />

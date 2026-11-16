@@ -5087,9 +5087,11 @@ paths:
         schema:
           type: string
           enum:
+          - requests
           - waiting
-        description: 'Очередь проверки партнёров (PART-3): карточки на проверке и с открытыми предложениями партнёров, старые
-          сверху; в строке — `review` (срок) и `completeness`.'
+        description: '`waiting` — очередь проверки партнёров (PART-3): карточки на проверке и с открытыми предложениями партнёров,
+          старые сверху; в строке — `review` (срок) и `completeness`. `requests` — «Новые из заявок» (ADR-0027): черновики
+          из строк расчёта и КП, самые спрашиваемые сверху; в строке — `demand`, `asked_in`, `asked_total`, `duplicate`, `completeness`.'
       tags:
       - Catalog
       security:
@@ -5360,6 +5362,63 @@ paths:
       responses:
         '204':
           description: No response body
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/catalog/items/{id}/merge/:
+    post:
+      operationId: catalog_items_merge
+      description: 'Needs `catalog.manage` (ADR-0027). Эта карточка — дубль: строки КП, заказов поставщику и предложения переезжают
+        в `into`, пустые поля `into` дозаполняются, спрос суммируется, дубль уходит в архив. Ответ — карточка `into`. Та же
+        карточка — 400 `MERGE_SAME_PRODUCT`; чужая компания — 403 `MERGE_CROSS_COMPANY_FORBIDDEN`.'
+      summary: Merge this card into another one
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeskMergeInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeskMergeInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeskMergeInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskItemDetail'
+          description: ''
+        '400':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
         '403':
           description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
           content:
@@ -21305,6 +21364,16 @@ components:
       - oldest_undelivered_age_seconds
       - paused_until
       - pending
+    ByEnum:
+      enum:
+      - manufacturer_part_number
+      - gost_drawing
+      - name
+      type: string
+      description: |-
+        * `manufacturer_part_number` - manufacturer_part_number
+        * `gost_drawing` - gost_drawing
+        * `name` - name
     CalcAssignee:
       type: object
       properties:
@@ -25211,6 +25280,23 @@ components:
       - id
       - name
       - sort_order
+    DeskDuplicate:
+      type: object
+      description: 'Подсказка слияния (ADR-0027): карточка того же владельца с тем же артикулом, ГОСТом или названием.'
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        sku:
+          type: string
+        by:
+          $ref: '#/components/schemas/ByEnum'
+      required:
+      - by
+      - id
+      - name
+      - sku
     DeskExchangeRate:
       type: object
       properties:
@@ -25390,7 +25476,23 @@ components:
           description: 'Ожидание решения: в списке `review=waiting` и в карточке; null — карточка не ждёт проверки (PART-3).'
         completeness:
           type: integer
-          description: Полнота карточки, % — в списке `review=waiting` и в карточке.
+          description: Полнота карточки, % — в списках `review=waiting`, `review=requests` и в карточке.
+        demand:
+          type: integer
+          description: Сколько раз позицию спрашивали — в `review=requests`.
+        asked_in:
+          type: array
+          items:
+            type: string
+          description: Номера заявок (до трёх, новые первыми) — в `review=requests`.
+        asked_total:
+          type: integer
+          description: Во скольких заявках спрашивали — в `review=requests`.
+        duplicate:
+          allOf:
+          - $ref: '#/components/schemas/DeskDuplicate'
+          nullable: true
+          description: Похожая карточка для слияния — в `review=requests`; null — дубля нет.
         description:
           type: string
         gost_drawing:
@@ -25609,7 +25711,23 @@ components:
           description: 'Ожидание решения: в списке `review=waiting` и в карточке; null — карточка не ждёт проверки (PART-3).'
         completeness:
           type: integer
-          description: Полнота карточки, % — в списке `review=waiting` и в карточке.
+          description: Полнота карточки, % — в списках `review=waiting`, `review=requests` и в карточке.
+        demand:
+          type: integer
+          description: Сколько раз позицию спрашивали — в `review=requests`.
+        asked_in:
+          type: array
+          items:
+            type: string
+          description: Номера заявок (до трёх, новые первыми) — в `review=requests`.
+        asked_total:
+          type: integer
+          description: Во скольких заявках спрашивали — в `review=requests`.
+        duplicate:
+          allOf:
+          - $ref: '#/components/schemas/DeskDuplicate'
+          nullable: true
+          description: Похожая карточка для слияния — в `review=requests`; null — дубля нет.
       required:
       - category
       - docs_count
@@ -25625,6 +25743,15 @@ components:
       - unit
       - vat_effective
       - vat_rate
+    DeskMergeInRequest:
+      type: object
+      properties:
+        into:
+          type: integer
+          minimum: 1
+          description: Карточка, в которую сливается эта.
+      required:
+      - into
     DeskMoneyInRequest:
       type: object
       properties:

@@ -214,6 +214,15 @@ class CatalogPrice(Out):
     price: Money | None
 
 
+class DuplicateRef(Out):
+    """Подсказка слияния (ADR-0027): карточка с тем же артикулом, ГОСТом или названием."""
+
+    id: str
+    name: str
+    sku: str
+    by: Literal["manufacturer_part_number", "gost_drawing", "name"]
+
+
 class Item(Out):
     id: str
     sku: str
@@ -230,6 +239,15 @@ class Item(Out):
     proposals_count: int
     review: ReviewInfo | None = None
     completeness: int | None = None
+
+
+class ItemRow(Item):
+    """Строка списка: в очереди «Новые из заявок» (ADR-0027) — спрос, заявки и подсказка слияния."""
+
+    demand: int | None = None
+    asked_in: list[str] | None = None
+    asked_total: int | None = None
+    duplicate: DuplicateRef | None = None
 
 
 class TechDocFields(Out):
@@ -344,7 +362,7 @@ def to_proposal(raw: Mapping[str, Any]) -> Proposal | None:
 
 
 class ItemPage(PageOut):
-    items: list[Item]
+    items: list[ItemRow]
 
 
 def _kind(value: Any) -> ItemKind:
@@ -401,6 +419,30 @@ def to_item(raw: Mapping[str, Any]) -> dict[str, Any]:
         "proposals_count": int(raw.get("proposals_count") or 0),
         "review": _review(raw.get("review")),
         "completeness": _completeness(raw.get("completeness")),
+    }
+
+
+def _request_fields(raw: Mapping[str, Any]) -> dict[str, Any]:
+    """Поля очереди «Новые из заявок» (ADR-0027) — только когда ERP их прислала."""
+    if "demand" not in raw:
+        return {}
+    duplicate = raw.get("duplicate")
+    by = duplicate.get("by") if isinstance(duplicate, Mapping) else None
+    return {
+        "demand": int(raw.get("demand") or 0),
+        "asked_in": [text(n) for n in raw.get("asked_in") or []][:3],
+        "asked_total": int(raw.get("asked_total") or 0),
+        "duplicate": (
+            DuplicateRef(
+                id=ident(duplicate.get("id")),
+                name=text(duplicate.get("name")),
+                sku=text(duplicate.get("sku")),
+                by=by,
+            )
+            if isinstance(duplicate, Mapping)
+            and by in ("manufacturer_part_number", "gost_drawing", "name")
+            else None
+        ),
     }
 
 
@@ -479,7 +521,8 @@ def _months(value: Any) -> int | None:
 
 def to_item_page(data: Any, page: int, page_size: int) -> ItemPage:
     return ItemPage(
-        items=[Item(**to_item(r)) for r in _rows(data)], **page_meta(data, page, page_size)
+        items=[ItemRow(**to_item(r), **_request_fields(r)) for r in _rows(data)],
+        **page_meta(data, page, page_size),
     )
 
 
@@ -530,6 +573,15 @@ class ItemUpdate(Patch):
 class ReturnIssue(Body):
     field: IssueField
     comment: str = Field(min_length=1, max_length=500)
+
+
+class ItemMerge(Body):
+    """Слить карточку-дубль в другую (ADR-0027)."""
+
+    into: str = Field(pattern=r"^[0-9]+$", max_length=12)
+
+    def sent(self) -> dict[str, Any]:
+        return {"into": int(self.into)}
 
 
 class ItemReturn(Body):

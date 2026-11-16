@@ -65,6 +65,8 @@ _CONFLICTS: dict[str, tuple[str, str]] = {
     "PROPOSAL_DECIDED": ("proposal_decided", "Изменение уже решено. Обновите карточку."),
     "PROPOSAL_STALE": ("proposal_stale", "Значения больше нет в справочнике. Отклоните изменение."),
     "PRODUCT_INCOMPLETE": ("product_incomplete", "Заполните недостающие поля, затем опубликуйте."),
+    # ADR-0027: слияние карточек
+    "MERGE_SAME_PRODUCT": ("merge_same_product", "Выберите другую карточку для слияния."),
     # PART-3: очередь проверки партнёров
     "PRODUCT_NOT_ON_REVIEW": (
         "product_not_on_review",

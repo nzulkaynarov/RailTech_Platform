@@ -6996,6 +6996,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/erp/catalog/items/{id}/merge": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Каталог · Новые из заявок: слить карточку-дубль в другую
+     * @description ERP `POST catalog/items/{id}/merge/` — право `catalog.manage` (ADR-0027). Эта карточка — дубль: строки КП, заказов поставщику и предложения переезжают в `into`, пустые поля `into` дозаполняются, спрос суммируется, дубль уходит в архив. Ответ — карточка `into`. Та же карточка — 409 `CONFLICT` с `details.reason = merge_same_product`. Раздел `erp.stock` — полный.
+     */
+    post: operations["mergeCatalogItem"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/erp/catalog/items/{id}/unpublish": {
     parameters: {
       query?: never;
@@ -15327,8 +15347,28 @@ export interface components {
       proposals_count: number;
       /** @description Ожидание решения: в списке `review=waiting` и в карточке; `null` — карточка не ждёт проверки */
       review?: components["schemas"]["CatalogReviewInfo"] | null;
-      /** @description Полнота карточки, % — в списке `review=waiting` и в карточке */
+      /** @description Полнота карточки, % — в списках `review=waiting`, `review=requests` и в карточке */
       completeness?: number | null;
+      /** @description Сколько раз позицию спрашивали — в списке `review=requests` */
+      demand?: number | null;
+      /** @description Номера заявок, где спрашивали (до трёх, новые первыми) — в списке `review=requests` */
+      asked_in?: string[] | null;
+      /** @description Во скольких заявках спрашивали — в списке `review=requests` */
+      asked_total?: number | null;
+      /** @description Похожая карточка для слияния — в списке `review=requests`; `null` — дубля нет */
+      duplicate?: components["schemas"]["CatalogDuplicateRef"] | null;
+    };
+    /** @description Подсказка слияния (ADR-0027): карточка того же владельца с тем же артикулом изготовителя, ГОСТом или названием */
+    CatalogDuplicateRef: {
+      id: components["schemas"]["CompanyItemRef"];
+      name: string;
+      sku: string;
+      /** @enum {string} */
+      by: "manufacturer_part_number" | "gost_drawing" | "name";
+    };
+    CatalogItemMerge: {
+      /** @description Карточка, в которую сливается эта */
+      into: string;
     };
     CatalogItemPage: {
       items: components["schemas"]["CatalogItem"][];
@@ -29086,8 +29126,8 @@ export interface operations {
         category_id?: components["schemas"]["CompanyItemRef"];
         /** @description `pending` — только позиции с изменениями от поставщиков на одобрении (CAT-1) */
         proposals?: "pending";
-        /** @description `waiting` — очередь проверки партнёров (PART-3): карточки на проверке и с открытыми предложениями партнёров, старые отправки сверху; в строке — `review` (срок) и `completeness` */
-        review?: "waiting";
+        /** @description `waiting` — очередь проверки партнёров (PART-3): карточки на проверке и с открытыми предложениями партнёров, старые отправки сверху; в строке — `review` (срок) и `completeness`. `requests` — «Новые из заявок» (ADR-0027): черновики из строк расчёта и КП, самые спрашиваемые сверху; в строке — `demand`, `asked_in`, `asked_total`, `duplicate`, `completeness` */
+        review?: "waiting" | "requests";
       };
       header?: never;
       path?: never;
@@ -29372,6 +29412,42 @@ export interface operations {
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
       409: components["responses"]["CatalogConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  mergeCatalogItem: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CatalogItemMerge"];
+      };
+    };
+    responses: {
+      /** @description Слита; ответ — карточка, в которую слили */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CatalogItemDetail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["CatalogConflict"];
+      422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

@@ -130,6 +130,7 @@ import type {
   CalcSupplier,
   CatalogCategory,
   CatalogCategoryList,
+  CatalogDuplicateRef,
   CatalogImage,
   CatalogItemDetail,
   CatalogItemPage,
@@ -28930,6 +28931,18 @@ export const getListCatalogItemsResponseCatalogReviewInfoMock = (
   ...overrideResponse,
 });
 
+export const getListCatalogItemsResponseCatalogDuplicateRefMock = (
+  overrideResponse: Partial<CatalogDuplicateRef> = {},
+): CatalogDuplicateRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    by: faker.helpers.arrayElement(["manufacturer_part_number", "gost_drawing", "name"] as const),
+  },
+  ...overrideResponse,
+});
+
 export const getListCatalogItemsResponseMock = (
   overrideResponse: Partial<Extract<CatalogItemPage, object>> = {},
 ): CatalogItemPage => ({
@@ -28967,6 +28980,18 @@ export const getListCatalogItemsResponseMock = (
       null,
     ]),
     completeness: faker.helpers.arrayElement([faker.number.int({ min: 0, max: 100 }), null]),
+    demand: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+    asked_in: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 3 }) }, (_, i) => i + 1).map(() =>
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      null,
+    ]),
+    asked_total: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+    duplicate: faker.helpers.arrayElement([
+      { ...getListCatalogItemsResponseCatalogDuplicateRefMock() },
+      null,
+    ]),
   })),
   total: faker.number.int({ min: 0 }),
   page: faker.number.int({ min: 1 }),
@@ -29880,6 +29905,227 @@ export const getPublishCatalogItemResponseMock = (
       { ...getPublishCatalogItemResponseCatalogMoneyMock() },
       null,
     ]),
+  },
+  ...overrideResponse,
+});
+
+export const getMergeCatalogItemResponseCatalogUnitMock = (
+  overrideResponse: Partial<CatalogUnit> = {},
+): CatalogUnit => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getMergeCatalogItemResponseCatalogNamedRefMock = (
+  overrideResponse: Partial<CatalogNamedRef> = {},
+): CatalogNamedRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getMergeCatalogItemResponseCatalogMxikMock = (
+  overrideResponse: Partial<CatalogMxik> = {},
+): CatalogMxik => ({
+  ...{
+    code: faker.helpers.fromRegExp("^[0-9]{17}$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    package: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getMergeCatalogItemResponseCatalogMoneyMock = (
+  overrideResponse: Partial<CatalogMoney> = {},
+): CatalogMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    currency: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getMergeCatalogItemResponseCatalogReviewInfoMock = (
+  overrideResponse: Partial<CatalogReviewInfo> = {},
+): CatalogReviewInfo => ({
+  ...{
+    kind: faker.helpers.arrayElement(["card", "changes"] as const),
+    partner: faker.helpers.arrayElement([
+      { ...getMergeCatalogItemResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    submitted_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    due_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    overdue: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getMergeCatalogItemResponseMock = (
+  overrideResponse: Partial<Extract<CatalogItemDetail, object>> = {},
+): CatalogItemDetail => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  kind: faker.helpers.arrayElement(Object.values(CatalogItemKind)),
+  unit: faker.helpers.arrayElement([{ ...getMergeCatalogItemResponseCatalogUnitMock() }, null]),
+  vat_rate: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
+  vat_effective: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    null,
+  ]),
+  category: faker.helpers.arrayElement([
+    { ...getMergeCatalogItemResponseCatalogNamedRefMock() },
+    null,
+  ]),
+  status: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  offers_count: faker.number.int({ min: 0 }),
+  nearest_valid_until: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 10),
+    null,
+  ]),
+  docs_count: faker.number.int({ min: 0 }),
+  description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  gost_drawing: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  hs_code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  mxik: faker.helpers.arrayElement([{ ...getMergeCatalogItemResponseCatalogMxikMock() }, null]),
+  manufacturer_part_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  brand: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  brand_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  source_supplier: faker.helpers.arrayElement([
+    { ...getMergeCatalogItemResponseCatalogNamedRefMock() },
+    null,
+  ]),
+  proposals_count: faker.number.int({ min: 0 }),
+  offers: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      supplier: {
+        id: faker.helpers.fromRegExp("^[0-9]+$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      product: {
+        id: faker.helpers.fromRegExp("^[0-9]+$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      supplier_sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      price: faker.helpers.arrayElement([
+        { ...getMergeCatalogItemResponseCatalogMoneyMock() },
+        null,
+      ]),
+      quota_qty: faker.number.int({ min: 0 }),
+      min_order_qty: faker.number.int({ min: 1 }),
+      in_stock_lead_days: faker.number.int({ min: 0 }),
+      order_lead_days: faker.number.int({ min: 0 }),
+      stock_status: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      delivery_basis: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      lead_time: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      source: faker.helpers.arrayElement(Object.values(CatalogOfferSource)),
+      updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      valid_from: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      is_active: faker.datatype.boolean(),
+      validity: faker.helpers.arrayElement(["ok", "expiring", "expired"] as const),
+    }),
+  ),
+  prices_visible: faker.datatype.boolean(),
+  tech_docs: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      kind: faker.helpers.fromRegExp("^[a-z0-9_-]{1,32}$"),
+      kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      issued_by: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      issued_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      is_expired: faker.datatype.boolean(),
+      client_visible: faker.datatype.boolean(),
+      review_state: faker.helpers.arrayElement(Object.values(TechDocReviewState)),
+      partner: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      original_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      size_bytes: faker.number.int({ min: 0 }),
+      previewable: faker.datatype.boolean(),
+    }),
+  ),
+  images: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      is_main: faker.datatype.boolean(),
+      sort_order: faker.number.int({ min: 0 }),
+      alt: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  origin: {
+    brand: faker.helpers.arrayElement([
+      { ...getMergeCatalogItemResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    own: faker.helpers.arrayElement([
+      { ...getMergeCatalogItemResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    effective: faker.helpers.arrayElement([
+      { ...getMergeCatalogItemResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    source: faker.helpers.arrayElement(["item", "brand", "none"] as const),
+  },
+  warranty: {
+    company_months: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+    months: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+    terms: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    effective_months: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+    source: faker.helpers.arrayElement(["item", "company", "none"] as const),
+  },
+  proposals: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      field: faker.helpers.arrayElement(Object.values(CatalogProposalField)),
+      current: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      proposed: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      supplier: faker.helpers.arrayElement([
+        { ...getMergeCatalogItemResponseCatalogNamedRefMock() },
+        null,
+      ]),
+      created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    }),
+  ),
+  publish: {
+    publishable: faker.datatype.boolean(),
+    missing: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+  },
+  review: faker.helpers.arrayElement([
+    { ...getMergeCatalogItemResponseCatalogReviewInfoMock() },
+    null,
+  ]),
+  completeness: faker.helpers.arrayElement([faker.number.int({ min: 0, max: 100 }), null]),
+  catalog_price: {
+    visibility: faker.helpers.arrayElement(["cabinet", "on_request"] as const),
+    source: faker.helpers.arrayElement(["item", "partner", "company"] as const),
+    price: faker.helpers.arrayElement([{ ...getMergeCatalogItemResponseCatalogMoneyMock() }, null]),
   },
   ...overrideResponse,
 });
@@ -42127,6 +42373,30 @@ export const getPublishCatalogItemMockHandler = (
   );
 };
 
+export const getMergeCatalogItemMockHandler = (
+  overrideResponse?:
+    | CatalogItemDetail
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<CatalogItemDetail> | CatalogItemDetail),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/catalog/items/:id/merge",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getMergeCatalogItemResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getUnpublishCatalogItemMockHandler = (
   overrideResponse?:
     | CatalogItemDetail
@@ -43728,6 +43998,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getDeleteCatalogItemImageMockHandler(),
   getGetCatalogItemImageContentMockHandler(),
   getPublishCatalogItemMockHandler(),
+  getMergeCatalogItemMockHandler(),
   getUnpublishCatalogItemMockHandler(),
   getReturnCatalogItemMockHandler(),
   getAcceptCatalogProposalMockHandler(),

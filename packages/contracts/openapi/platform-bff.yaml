@@ -12610,8 +12610,8 @@ paths:
         - name: review
           in: query
           required: false
-          description: '`waiting` — очередь проверки партнёров (PART-3): карточки на проверке и с открытыми предложениями партнёров, старые отправки сверху; в строке — `review` (срок) и `completeness`'
-          schema: {type: string, enum: [waiting]}
+          description: '`waiting` — очередь проверки партнёров (PART-3): карточки на проверке и с открытыми предложениями партнёров, старые отправки сверху; в строке — `review` (срок) и `completeness`. `requests` — «Новые из заявок» (ADR-0027): черновики из строк расчёта и КП, самые спрашиваемые сверху; в строке — `demand`, `asked_in`, `asked_total`, `duplicate`, `completeness`'
+          schema: {type: string, enum: [waiting, requests]}
       responses:
         '200':
           description: Готово
@@ -12857,6 +12857,40 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/CatalogConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/items/{id}/merge:
+    post:
+      tags: [erp-catalog]
+      operationId: mergeCatalogItem
+      summary: 'Каталог · Новые из заявок: слить карточку-дубль в другую'
+      description: >-
+        ERP `POST catalog/items/{id}/merge/` — право `catalog.manage` (ADR-0027). Эта карточка — дубль: строки КП, заказов поставщику и предложения переезжают в `into`, пустые поля `into` дозаполняются, спрос суммируется, дубль уходит в архив. Ответ — карточка `into`. Та же карточка — 409 `CONFLICT` с `details.reason = merge_same_product`. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CatalogItemMerge'}
+      responses:
+        '200':
+          description: Слита; ответ — карточка, в которую слили
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogItemDetail'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
   /erp/catalog/items/{id}/unpublish:
@@ -25924,7 +25958,33 @@ components:
         review:
           oneOf: [{$ref: '#/components/schemas/CatalogReviewInfo'}, {type: 'null'}]
           description: 'Ожидание решения: в списке `review=waiting` и в карточке; `null` — карточка не ждёт проверки'
-        completeness: {type: [integer, 'null'], minimum: 0, maximum: 100, description: 'Полнота карточки, % — в списке `review=waiting` и в карточке'}
+        completeness: {type: [integer, 'null'], minimum: 0, maximum: 100, description: 'Полнота карточки, % — в списках `review=waiting`, `review=requests` и в карточке'}
+        demand: {type: [integer, 'null'], minimum: 0, description: 'Сколько раз позицию спрашивали — в списке `review=requests`'}
+        asked_in:
+          type: [array, 'null']
+          maxItems: 3
+          items: {type: string}
+          description: 'Номера заявок, где спрашивали (до трёх, новые первыми) — в списке `review=requests`'
+        asked_total: {type: [integer, 'null'], minimum: 0, description: 'Во скольких заявках спрашивали — в списке `review=requests`'}
+        duplicate:
+          oneOf: [{$ref: '#/components/schemas/CatalogDuplicateRef'}, {type: 'null'}]
+          description: 'Похожая карточка для слияния — в списке `review=requests`; `null` — дубля нет'
+    CatalogDuplicateRef:
+      type: object
+      additionalProperties: false
+      description: 'Подсказка слияния (ADR-0027): карточка того же владельца с тем же артикулом изготовителя, ГОСТом или названием'
+      required: [id, name, sku, by]
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        name: {type: string}
+        sku: {type: string}
+        by: {type: string, enum: [manufacturer_part_number, gost_drawing, name]}
+    CatalogItemMerge:
+      type: object
+      additionalProperties: false
+      required: [into]
+      properties:
+        into: {type: string, pattern: '^[0-9]+$', maxLength: 12, description: 'Карточка, в которую сливается эта'}
     CatalogItemPage:
       type: object
       additionalProperties: false
