@@ -1,0 +1,60 @@
+/* Человек, компания, позиция — стандарт интерфейса §12. */
+.pf-entity {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+.pf-entity__pic {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-sizing: border-box;
+  background: var(--rt-color-primary-bg);
+  color: var(--rt-color-primary-text);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.pf-entity__pic--round {
+  border-radius: 50%;
+}
+
+.pf-entity__pic--square {
+  border-radius: 4px;
+  border: 1px solid var(--rt-color-surface-border);
+}
+
+.pf-entity__pic[data-photo="true"] {
+  background: var(--rt-color-surface-background);
+}
+
+.pf-entity__pic img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.pf-entity__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pf-entity__name,
+.pf-entity__caption {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pf-entity__caption {
+  font-size: 12px;
+  color: var(--rt-color-text-secondary);
+}
