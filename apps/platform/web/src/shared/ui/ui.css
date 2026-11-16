@@ -783,3 +783,15 @@ tr > td.pf-col-num {
   overflow-x: auto;
   scrollbar-width: thin;
 }
+
+/* «Осталось N дн.» рядом со сроком (план §3f РЕФ-3) */
+.pf-time-left {
+  display: block;
+  font-size: 12px;
+  color: var(--rt-color-text-secondary);
+  white-space: nowrap;
+}
+.pf-time-left--soon {
+  color: var(--rt-color-warning-text);
+  font-weight: 500;
+}

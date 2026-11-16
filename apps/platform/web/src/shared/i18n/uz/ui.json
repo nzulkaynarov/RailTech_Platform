@@ -151,5 +151,9 @@
   "selection": {
     "count": "Tanlandi: {{count}}",
     "clear": "Tanlovni bekor qilish"
+  },
+  "timeLeft": {
+    "today": "bugun oxirgi kun",
+    "days": "{{count}} kun qoldi"
   }
 }
