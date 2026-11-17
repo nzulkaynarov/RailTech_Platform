@@ -17,6 +17,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Company, CompanyMember, CompanyRole, CustomUser, WorkspaceRole
+from accounts.services.bank_accounts import set_uzs_account
 from core.tests.openapi_fixtures import conforms
 from crm.models import ActivityLog, Invoice, InvoiceStatus, Payment
 from crm.tests.test_record_payment_back_office import world as base_world  # noqa: F401
@@ -429,8 +430,7 @@ def test_missing_bank_details_are_visible_before_the_issue_click(world):
     """«Выставить счёт» без р/с и МФО откажет (`SELLER_BANK_DETAILS_REQUIRED`): доска и карточка черновика говорят об этом
     заранее — тот же расчёт, что гейт выпуска. У выставленного счёта реквизиты уже не важны (`true`)."""
     own = Company.objects.get(name="Own Co")
-    own.bank_account, own.mfo = "", ""
-    own.save(update_fields=["bank_account", "mfo"])
+    own.bank_accounts.all().delete()
     draft = _invoice(world, "SCH-DRAFT", "DRAFT")
 
     board = _get(world["viewer"], BASE, tab="to_issue")
@@ -440,7 +440,6 @@ def test_missing_bank_details_are_visible_before_the_issue_click(world):
     assert card.json()["seller_bank_details_ready"] is False
     assert _get(world["viewer"], f"{BASE}{world['invoice'].pk}/").json()["seller_bank_details_ready"] is True
 
-    own.bank_account, own.mfo = "20208000900001234567", "00443"
-    own.save(update_fields=["bank_account", "mfo"])
+    set_uzs_account(own, "20208000900001234567", "00443")
     assert _get(world["viewer"], BASE, tab="to_issue").json()["seller_bank_details_ready"] is True
     assert _get(world["viewer"], f"{BASE}{draft.pk}/").json()["seller_bank_details_ready"] is True

@@ -18,6 +18,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import CompanyMember, CompanyRole, CustomUser, WorkspaceRole
+from accounts.services.bank_accounts import set_uzs_account
 from accounts.testing import make_own_company
 
 pytestmark = pytest.mark.django_db
@@ -25,9 +26,25 @@ pytestmark = pytest.mark.django_db
 COMPANY = "/api/portal/v1/company"
 LOG = "/api/portal/v1/company/security-log"
 DESK = "/api/v1/finance/bank-changes/"
-OLD = "р/с 20208000123456789001 в АКИБ Ипотека Банк"
-NEW = "р/с 20208000555566667777 в Банке Пример"
-NEWER = "р/с 20208000111122223333 в Другом Банке Пример"
+# Счета полями ADR-0029 и их строки (`CompanyBankAccount.as_text`): счёт Узбекистана — номер группами, банк, МФО.
+OLD_ACC = {
+    "bank_country": "UZ",
+    "currency": "UZS",
+    "account": "20208000123456789001",
+    "mfo": "00440",
+    "bank_name": "АКИБ Ипотека Банк",
+}
+NEW_ACC = {
+    "bank_country": "UZ",
+    "currency": "UZS",
+    "account": "20208000555566667777",
+    "mfo": "00440",
+    "bank_name": "Банк Пример",
+}
+NEWER_ACC = {**NEW_ACC, "account": "20208000111122223333", "bank_name": "Другой Банк Пример"}
+OLD = "Расчётный счёт: 2020 8000 1234 5678 9001, Банк: АКИБ Ипотека Банк, МФО: 00440"
+NEW = "Расчётный счёт: 2020 8000 5555 6666 7777, Банк: Банк Пример, МФО: 00440"
+NEWER = "Расчётный счёт: 2020 8000 1111 2222 3333, Банк: Другой Банк Пример, МФО: 00440"
 PAIR_SECRET = "s" * 32
 
 
@@ -93,8 +110,8 @@ def accountant(db):
     return _staff("accountant@own.example", ["finance.payment"])
 
 
-def _submit(portal_client, value=NEW, **kwargs):
-    return portal_client.put(COMPANY, {"bank_details": value}, format="json", **kwargs)
+def _submit(portal_client, value=NEW_ACC, **kwargs):
+    return portal_client.put(COMPANY, {"bank_account": value}, format="json", **kwargs)
 
 
 def _pending_id(portal_client):
@@ -111,7 +128,7 @@ def test_change_is_not_applied_until_staff_confirms(portal_client, client_compan
     body = res.json()
     assert body["bank_details"] == OLD, "старые реквизиты действуют до подтверждения"
     client_company.refresh_from_db()
-    assert client_company.bank_details == OLD
+    assert client_company.formatted_bank_details == OLD
     change = body["bank_change_request"]
     assert change["status"] == "pending"
     assert change["new_bank_details"] == NEW
@@ -124,7 +141,7 @@ def test_non_admin_cannot_submit_a_change(client_company, people):
     assert res.status_code == 409
     assert res.json() == {"detail": "ADMIN_REQUIRED"}
     client_company.refresh_from_db()
-    assert client_company.bank_details == OLD
+    assert client_company.formatted_bank_details == OLD
 
 
 def test_colleague_sees_status_but_not_the_new_account(portal_client, people):
@@ -137,7 +154,7 @@ def test_colleague_sees_status_but_not_the_new_account(portal_client, people):
 
 
 def test_same_value_creates_no_request(portal_client):
-    res = _submit(portal_client, value=OLD)
+    res = _submit(portal_client, value=OLD_ACC)
 
     assert res.status_code == 200
     assert res.json()["bank_change_request"] is None
@@ -147,7 +164,7 @@ def test_same_value_creates_no_request(portal_client):
 def test_one_active_request_second_is_refused_and_nothing_is_saved(portal_client, client_company):
     assert _submit(portal_client).status_code == 200
 
-    res = portal_client.put(COMPANY, {"bank_details": NEWER, "legal_address": "Новый адрес"}, format="json")
+    res = portal_client.put(COMPANY, {"bank_account": NEWER_ACC, "legal_address": "Новый адрес"}, format="json")
 
     assert res.status_code == 409
     assert res.json() == {"detail": "BANK_CHANGE_ALREADY_PENDING"}
@@ -157,12 +174,12 @@ def test_one_active_request_second_is_refused_and_nothing_is_saved(portal_client
 
 
 def test_other_fields_of_the_same_put_are_saved_at_once(portal_client, client_company):
-    res = portal_client.put(COMPANY, {"bank_details": NEW, "legal_address": "Новый адрес"}, format="json")
+    res = portal_client.put(COMPANY, {"bank_account": NEW_ACC, "legal_address": "Новый адрес"}, format="json")
 
     assert res.status_code == 200
     client_company.refresh_from_db()
     assert client_company.legal_address == "Новый адрес"
-    assert client_company.bank_details == OLD
+    assert client_company.formatted_bank_details == OLD
 
 
 def test_profile_save_does_not_overwrite_requisites_changed_meanwhile(portal_client, client_company, monkeypatch):
@@ -170,7 +187,7 @@ def test_profile_save_does_not_overwrite_requisites_changed_meanwhile(portal_cli
     import portal.views as views
 
     def employee_approves_meanwhile(company, data):
-        Company.objects.filter(pk=company.pk).update(bank_details=NEW)
+        set_uzs_account(company, NEW_ACC["account"], "00440", bank_name="Банк Пример")
         return []
 
     monkeypatch.setattr(views, "changed_crm_owned_fields", employee_approves_meanwhile)
@@ -178,7 +195,7 @@ def test_profile_save_does_not_overwrite_requisites_changed_meanwhile(portal_cli
     assert portal_client.put(COMPANY, {"legal_address": "Адрес"}, format="json").status_code == 200
 
     client_company.refresh_from_db()
-    assert client_company.bank_details == NEW
+    assert client_company.formatted_bank_details == NEW
     assert client_company.legal_address == "Адрес"
 
 
@@ -189,13 +206,13 @@ def test_contact_cannot_target_another_company(other_contact, client_company, ot
     client = _portal(other_contact)
 
     res = client.put(
-        COMPANY, {"bank_details": NEW, "company_id": client_company.pk, "company": client_company.pk}, format="json"
+        COMPANY, {"bank_account": NEW_ACC, "company_id": client_company.pk, "company": client_company.pk}, format="json"
     )
 
     assert res.status_code == 200
     client_company.refresh_from_db()
     other_company.refresh_from_db()
-    assert client_company.bank_details == OLD
+    assert client_company.formatted_bank_details == OLD
     assert PortalSecurityEvent.objects.filter(company=client_company).count() == 0
     assert PortalSecurityEvent.objects.filter(company=other_company).count() == 1
 
@@ -207,18 +224,18 @@ def test_second_change_in_a_row_is_not_a_server_error(portal_client, people):
     """Уведомление без `dedup_key` падало на `portal_notice_contact_dedup_uniq` со второй смены (500)."""
     portal_client.raise_request_exception = False
 
-    first = _submit(portal_client, NEW)
-    second = _submit(portal_client, NEWER)
+    first = _submit(portal_client, NEW_ACC)
+    second = _submit(portal_client, NEWER_ACC)
 
     assert first.status_code == 200
     assert second.status_code < 500, second.status_code
 
 
 def test_repeated_changes_do_not_fail_and_each_is_notified(portal_client, people, accountant):
-    assert _submit(portal_client, NEW).status_code == 200
+    assert _submit(portal_client, NEW_ACC).status_code == 200
     accountant.post(f"{DESK}{_pending_id(portal_client)}/reject/", {"reason": "Счёт не подтверждён"}, format="json")
 
-    second = _submit(portal_client, NEWER)
+    second = _submit(portal_client, NEWER_ACC)
 
     assert second.status_code == 200, second.content
     keys = list(
@@ -275,7 +292,7 @@ def test_rolled_back_submission_leaves_no_event_or_notice(client_company, client
     from portal.services import bank_details_change
 
     with pytest.raises(RuntimeError), transaction.atomic():
-        bank_details_change.submit(client_company, client_contact, NEW, ip="203.0.113.7", user_agent="")
+        bank_details_change.submit(client_company, client_contact, NEW_ACC, ip="203.0.113.7", user_agent="")
         raise RuntimeError("откат")
 
     assert not bus_support.published("contact.security_notice_requested")
@@ -456,10 +473,51 @@ def test_approve_applies_new_requisites_once(portal_client, client_company, acco
     assert res.status_code == 200, res.content
     assert res.json()["status"] == "approved"
     client_company.refresh_from_db()
-    assert client_company.bank_details == NEW
+    assert client_company.formatted_bank_details == NEW
     body = portal_client.get(COMPANY).json()
     assert body["bank_details"] == NEW
     assert body["bank_change_request"]["status"] == "approved"
+
+
+@pytest.mark.parametrize(
+    ("change", "code"),
+    [
+        ({"account": "2020800090000123"}, "BANK_ACCOUNT_INVALID"),
+        ({"account": "20208840555566667777"}, "BANK_ACCOUNT_INVALID"),  # код валюты в номере — доллар, счёт в сумах
+        ({"mfo": "440"}, "BANK_CODE_INVALID"),
+        ({"swift": "NOTABIC"}, "BANK_SWIFT_INVALID"),
+        ({"bank_country": "ZZ"}, "BANK_COUNTRY_INVALID"),
+    ],
+)
+def test_invalid_account_is_refused_with_the_field_code(portal_client, client_company, change, code):
+    res = _submit(portal_client, value={**NEW_ACC, **change})
+
+    assert res.status_code == 422, res.content
+    assert res.json() == {"detail": code}
+    assert client_company.bank_change_requests.count() == 0
+
+
+def test_foreign_iban_account_becomes_default_for_its_currency(portal_client, client_company, accountant):
+    from core.models import Country, Currency
+
+    Country.objects.get_or_create(code="DE", defaults={"name": "Германия"})
+    Currency.objects.get_or_create(code="EUR", defaults={"name": "Евро"})
+    iban = {
+        "bank_country": "DE",
+        "currency": "EUR",
+        "account": "DE89 3704 0044 0532 0130 00",
+        "holder_name_latin": "Test Client LLC",
+    }
+    assert _submit(portal_client, value=iban).status_code == 200
+    change = portal_client.get(COMPANY).json()["bank_change_request"]
+    assert change["new_bank_account"]["swift"] == "COBADEFF"  # подставлен из IBAN
+
+    assert accountant.post(f"{DESK}{change['id']}/approve/", format="json").status_code == 200
+
+    accounts = {row["currency"]: row for row in portal_client.get(COMPANY).json()["bank_accounts"]}
+    assert accounts["EUR"]["account"] == "DE89370400440532013000" and accounts["EUR"]["is_default"]
+    assert accounts["UZS"]["account"] == "20208000123456789001"  # счёт в сумах не тронут
+    assert client_company.formatted_bank_details == OLD
 
 
 def test_approve_is_idempotent(portal_client, people, accountant):
@@ -484,7 +542,7 @@ def test_reject_keeps_requisites_and_shows_reason(portal_client, client_company,
 
     assert res.status_code == 200, res.content
     client_company.refresh_from_db()
-    assert client_company.bank_details == OLD
+    assert client_company.formatted_bank_details == OLD
     change = portal_client.get(COMPANY).json()["bank_change_request"]
     assert change["status"] == "rejected" and change["reject_reason"] == "Счёт не подтверждён банком"
 
@@ -516,7 +574,7 @@ def test_after_rejection_a_new_change_can_be_submitted(portal_client, accountant
     _submit(portal_client)
     accountant.post(f"{DESK}{_pending_id(portal_client)}/reject/", {"reason": "Нет"}, format="json")
 
-    assert _submit(portal_client, NEWER).status_code == 200
+    assert _submit(portal_client, NEWER_ACC).status_code == 200
 
 
 def test_archived_company_cannot_be_approved_but_can_be_rejected(portal_client, client_company, accountant):
@@ -532,14 +590,14 @@ def test_archived_company_cannot_be_approved_but_can_be_rejected(portal_client, 
     assert listed["company_archived"] is True
     assert reject.status_code == 200
     client_company.refresh_from_db()
-    assert client_company.bank_details == OLD
+    assert client_company.formatted_bank_details == OLD
 
 
 def test_requisites_changed_after_submission_block_approval(portal_client, client_company, accountant):
     """Реквизиты поменял сотрудник после подачи: подтверждение не затирает их молча."""
     _submit(portal_client)
     change_id = _pending_id(portal_client)
-    Company.objects.filter(pk=client_company.pk).update(bank_details="Правка сотрудника 20208000999900001111")
+    set_uzs_account(client_company, "20208000999900001111", "00440", bank_name="Правка сотрудника")
 
     listed = accountant.get(DESK).json()["items"][0]
     res = accountant.post(f"{DESK}{change_id}/approve/", format="json")
@@ -547,7 +605,9 @@ def test_requisites_changed_after_submission_block_approval(portal_client, clien
     assert listed["stale"] is True
     assert res.status_code == 409 and res.json() == {"detail": "BANK_CHANGE_STALE"}
     client_company.refresh_from_db()
-    assert client_company.bank_details == "Правка сотрудника 20208000999900001111"
+    assert client_company.formatted_bank_details == (
+        "Расчётный счёт: 2020 8000 9999 0000 1111, Банк: Правка сотрудника, МФО: 00440"
+    )
 
 
 def test_unknown_request_is_404(accountant):

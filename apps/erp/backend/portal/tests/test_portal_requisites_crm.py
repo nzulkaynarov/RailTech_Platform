@@ -22,12 +22,23 @@ def test_portal_still_updates_the_rest_of_the_profile_of_a_crm_company(portal_cl
     CrmClientMapping.objects.create(company=client_company, crm_client_id=4242)
     response = portal_client.put(
         "/api/portal/v1/company",
-        {"name": client_company.name, "bank_details": "р/с 2020", "language": "uz"},
+        {
+            "name": client_company.name,
+            "bank_account": {
+                "bank_country": "UZ",
+                "currency": "UZS",
+                "account": "20208000202020202020",
+                "mfo": "00440",
+            },
+            "language": "uz",
+        },
         format="json",
     )
     assert response.status_code == 200
     assert response.json()["language"] == "uz"
-    assert response.json()["bank_change_request"]["new_bank_details"] == "р/с 2020"  # смена — на проверке (FX-4)
+    assert (
+        response.json()["bank_change_request"]["new_bank_account"]["account"] == "20208000202020202020"
+    )  # смена — на проверке (FX-4)
 
 
 def test_portal_edits_the_name_of_a_company_without_crm(portal_client, client_company):

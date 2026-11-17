@@ -38,8 +38,6 @@ class CompanyResource(resources.ModelResource):
             "phone",
             "email",
             "website",
-            "bank_account",
-            "mfo",
         )
         export_order = fields
         skip_unchanged = True

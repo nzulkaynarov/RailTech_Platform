@@ -1284,6 +1284,25 @@ def _company_fields_to_save(data) -> list[str]:
     return [field for key, fields in _COMPANY_SAVE_FIELDS.items() if key in data for field in fields]
 
 
+_BANK_ERROR_CODES = {
+    "bank_country": "BANK_COUNTRY_INVALID",
+    "currency": "BANK_CURRENCY_INVALID",
+    "account": "BANK_ACCOUNT_INVALID",
+    "mfo": "BANK_CODE_INVALID",
+    "swift": "BANK_SWIFT_INVALID",
+    "holder_name_latin": "BANK_HOLDER_LATIN_INVALID",
+    "intermediary_swift": "BANK_INTERMEDIARY_INVALID",
+}
+
+
+def _bank_error_code(errors: dict) -> str:
+    """Первая ошибка счёта — код контракта (ADR-0029): кабинет подсвечивает поле, причину — в тексте поля."""
+    for field, code in _BANK_ERROR_CODES.items():
+        if field in errors:
+            return code
+    return "VALIDATION_ERROR"
+
+
 def _bank_change_data(contact, company):
     """Последний запрос на смену реквизитов: новый счёт — только администратору (FX-4)."""
     last = company.bank_change_requests.order_by("-pk").first()
@@ -1294,6 +1313,7 @@ def _bank_change_data(contact, company):
         "status": last.status,
         "requested_by_name": last.requested_by_name,
         "new_bank_details": last.new_bank_details if getattr(contact, "is_admin", False) else None,
+        "new_bank_account": (last.new_account or None) if getattr(contact, "is_admin", False) else None,
         "created_at": last.created_at,
         "decided_at": last.decided_at,
         "reject_reason": last.reject_reason or None,
@@ -1348,8 +1368,14 @@ class CompanyView(BasePortalView):
             company.inn = inn or None
         if "legal_address" in data:
             company.legal_address = data["legal_address"].strip()
-        new_bank = data["bank_details"].strip() if "bank_details" in data else None
-        change_bank = new_bank is not None and new_bank != (company.formatted_bank_details or "").strip()
+        new_bank = None
+        if "bank_account" in data:
+            from accounts.services.bank_accounts import same_as_default, validate_account
+
+            new_bank, errors = validate_account(data["bank_account"])
+            if errors:
+                raise PortalValidationError(_bank_error_code(errors))
+        change_bank = new_bank is not None and not same_as_default(company, new_bank)
         if change_bank and not getattr(request.portal_contact, "is_admin", False):
             # Смена банковских реквизитов — только администратор компании (J2-bank, OWASP / ISO 27001)
             raise PortalConflict("ADMIN_REQUIRED")

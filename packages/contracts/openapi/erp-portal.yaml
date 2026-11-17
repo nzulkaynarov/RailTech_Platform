@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Portal API (Cabinet → ERP)
-  version: 0.18.0
+  version: 0.19.0
   summary: Пространство `/api/portal/v1/` — вызывает Cabinet SPA от имени клиента.
   description: |
     Контракт по `docs/architecture/CONTRACTS.md` §4 и ADR-0004 (Cabinet без бэкенда). Версия 0 (M0-INF-02):
@@ -2657,11 +2657,12 @@ paths:
         Название и ИНН компании, связанной с клиентом CRM, ведёт CRM (ORCHESTRATOR §3 п. 16): их правка — 422
         `REQUISITES_MANAGED_BY_CRM`. Остальные поля правятся здесь.
 
-        `bank_details` не применяется сразу (решение владельца 2026-11-08, FX-4): изменённое значение создаёт запрос на смену, в
-        ответе `bank_details` прежнее, а в `bank_change_request` — запрос в статусе `pending`; реквизиты меняются только после
-        подтверждения сотрудником. Менять может только администратор компании (иначе 409 `ADMIN_REQUIRED`). Один активный запрос
+        `bank_account` не применяется сразу (решение владельца 2026-11-08, FX-4): новый счёт создаёт запрос на смену, в
+        ответе `bank_accounts` прежние, а в `bank_change_request` — запрос в статусе `pending`; подтверждённый счёт становится
+        основным в своей валюте. Счёт проверяется по ADR-0029 (IBAN ISO 13616, SWIFT/BIC ISO 9362, счёт Узбекистана — 20 цифр
+        с кодом валюты, МФО — 5 цифр); ошибка — 422 с кодом поля (`BANK_ACCOUNT_INVALID`, `BANK_SWIFT_INVALID`, …). Менять может только администратор компании (иначе 409 `ADMIN_REQUIRED`). Один активный запрос
         на компанию: пока он на проверке, новая смена — 409 `BANK_CHANGE_ALREADY_PENDING`, остальные поля запроса при этом не
-        сохраняются. Значение, совпадающее с текущим, запроса не создаёт.
+        сохраняются. Счёт, совпадающий с основным в его валюте, запроса не создаёт.
       requestBody:
         required: true
         content:
@@ -3292,6 +3293,13 @@ components:
         - TECH_DOC_DATE_INVALID
         - TECH_DOC_VALIDITY_RANGE_INVALID
         - LETTER_FILE_UNAVAILABLE
+        - BANK_COUNTRY_INVALID
+        - BANK_CURRENCY_INVALID
+        - BANK_ACCOUNT_INVALID
+        - BANK_CODE_INVALID
+        - BANK_SWIFT_INVALID
+        - BANK_HOLDER_LATIN_INVALID
+        - BANK_INTERMEDIARY_INVALID
 
     PartnerKind:
       type: string
@@ -5893,7 +5901,12 @@ components:
           type: [string, 'null']
         bank_details:
           type: [string, 'null']
-          description: Действующие реквизиты; смена на проверке их не меняет (см. `bank_change_request`)
+          description: Основной счёт в сумах одной строкой; смена на проверке его не меняет (см. `bank_change_request`)
+        bank_accounts:
+          type: array
+          description: Действующие счета компании, основные первыми (ADR-0029)
+          items:
+            $ref: '#/components/schemas/BankAccount'
         bank_change_request:
           description: Последний запрос на смену реквизитов; только в `GET` и `PUT /company`, `null` — запросов не было (FX-4)
           oneOf:
@@ -5926,7 +5939,12 @@ components:
           description: Кто подал
         new_bank_details:
           type: [string, 'null']
-          description: Новые реквизиты — только администратору компании, остальным `null`
+          description: Новые реквизиты строкой — только администратору компании, остальным `null`
+        new_bank_account:
+          description: Новый счёт полями — только администратору компании; `null` — не администратор или запрос до ADR-0029
+          oneOf:
+            - $ref: '#/components/schemas/BankAccountInput'
+            - type: 'null'
         created_at:
           type: string
           format: date-time
@@ -6027,11 +6045,51 @@ components:
         legal_address:
           type: string
           maxLength: 500
-        bank_details:
-          type: string
-          maxLength: 1000
+        bank_account:
+          $ref: '#/components/schemas/BankAccountInput'
         language:
           $ref: '#/components/schemas/Language'
+      additionalProperties: false
+
+    BankAccountInput:
+      type: object
+      description: |
+        Банковский счёт по ISO 20022 (ADR-0029). Номер — по стране банка: IBAN (страна из реестра IBAN), 20 цифр с кодом
+        валюты в цифрах 6–8 (Узбекистан; 000 — сум), иначе до 34 латинских букв и цифр. Пустые код банка, SWIFT и название
+        подставляются из IBAN или справочника банков.
+      required: [bank_country, currency, account]
+      properties:
+        bank_country: {type: string, minLength: 2, maxLength: 2, description: 'Страна банка, ISO 3166-1 alpha-2', example: UZ}
+        currency: {type: string, minLength: 3, maxLength: 3, description: 'Валюта счёта, ISO 4217', example: UZS}
+        holder_name: {type: string, maxLength: 255, description: Владелец счёта; пусто — название компании}
+        holder_name_latin: {type: string, maxLength: 140, description: 'Владелец латиницей, набор символов SWIFT'}
+        account: {type: string, maxLength: 50, description: IBAN или номер счёта; пробелы не важны}
+        mfo: {type: string, maxLength: 15, description: 'Код банка в стране: МФО (5 цифр) для Узбекистана'}
+        swift: {type: string, maxLength: 11, description: 'SWIFT/BIC, ISO 9362; обязателен вне Узбекистана'}
+        bank_name: {type: string, maxLength: 255}
+        bank_address: {type: string, maxLength: 255}
+        intermediary_swift: {type: string, maxLength: 11, description: SWIFT/BIC банка-посредника}
+        intermediary_account: {type: string, maxLength: 50, description: Счёт банка получателя у посредника}
+      additionalProperties: false
+
+    BankAccount:
+      type: object
+      description: Действующий счёт компании (ADR-0029)
+      required: [id, bank_country, currency, holder_name, holder_name_latin, account, mfo, swift, bank_name, bank_address, intermediary_swift, intermediary_account, is_default]
+      properties:
+        id: {type: integer, format: int64}
+        bank_country: {type: string, description: 'ISO 3166-1 alpha-2; пусто — страна не задана'}
+        currency: {type: string, description: ISO 4217}
+        holder_name: {type: string}
+        holder_name_latin: {type: string}
+        account: {type: string, description: Номер без пробелов}
+        mfo: {type: string}
+        swift: {type: string}
+        bank_name: {type: string}
+        bank_address: {type: string}
+        intermediary_swift: {type: string}
+        intermediary_account: {type: string}
+        is_default: {type: boolean, description: Основной для своей валюты}
       additionalProperties: false
 
     TeamMember:

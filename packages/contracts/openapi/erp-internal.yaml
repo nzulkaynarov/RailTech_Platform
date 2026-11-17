@@ -377,7 +377,8 @@ paths:
                 $ref: '#/components/schemas/CompanyBankAccount'
           description: ''
         '400':
-          description: 'Ошибки полей в виде DRF: {поле: [required|unknown|too_long|taken|inactive]}'
+          description: 'Ошибки полей в виде DRF: {поле: [причина]} — required, unknown, too_long, taken, inactive и проверки
+            ADR-0029: uz_format, currency_mismatch, iban_invalid, iban_country, format, invalid, country_mismatch, latin_charset'
           content:
             application/json:
               schema:
@@ -455,7 +456,8 @@ paths:
                 $ref: '#/components/schemas/CompanyBankAccount'
           description: ''
         '400':
-          description: 'Ошибки полей в виде DRF: {поле: [required|unknown|too_long|taken|inactive]}'
+          description: 'Ошибки полей в виде DRF: {поле: [причина]} — required, unknown, too_long, taken, inactive и проверки
+            ADR-0029: uz_format, currency_mismatch, iban_invalid, iban_country, format, invalid, country_mismatch, latin_charset'
           content:
             application/json:
               schema:
@@ -509,7 +511,8 @@ paths:
         '204':
           description: No response body
         '400':
-          description: 'Ошибки полей в виде DRF: {поле: [required|unknown|too_long|taken|inactive]}'
+          description: 'Ошибки полей в виде DRF: {поле: [причина]} — required, unknown, too_long, taken, inactive и проверки
+            ADR-0029: uz_format, currency_mismatch, iban_invalid, iban_country, format, invalid, country_mismatch, latin_charset'
           content:
             application/json:
               schema:
@@ -555,7 +558,8 @@ paths:
         '204':
           description: No response body
         '400':
-          description: 'Ошибки полей в виде DRF: {поле: [required|unknown|too_long|taken|inactive]}'
+          description: 'Ошибки полей в виде DRF: {поле: [причина]} — required, unknown, too_long, taken, inactive и проверки
+            ADR-0029: uz_format, currency_mismatch, iban_invalid, iban_country, format, invalid, country_mismatch, latin_charset'
           content:
             application/json:
               schema:
@@ -22817,14 +22821,12 @@ components:
           description: Рейтинг доверия поставщика (0-100)
         bank_account:
           type: string
-          title: Расчётный счёт
-          description: Номер расчётного счёта в банке
+          description: Основной счёт в сумах — номер
           maxLength: 50
         mfo:
           type: string
-          title: МФО
-          description: Межфилиальный оборот (код банка)
-          maxLength: 10
+          description: Основной счёт в сумах — МФО
+          maxLength: 15
         legal_address:
           type: string
           title: Юридический адрес
@@ -22925,18 +22927,40 @@ components:
         id:
           type: integer
           readOnly: true
+        bank_country:
+          type: string
+          title: Код
+          description: Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')
+          readOnly: true
+          nullable: true
+        holder_name:
+          type: string
+          readOnly: true
+          title: Владелец счёта
+          description: Пусто — название компании
+        holder_name_latin:
+          type: string
+          readOnly: true
+          title: Владелец счёта латиницей
+          description: Для SWIFT
         bank_name:
           type: string
           readOnly: true
           title: Банк
+        bank_address:
+          type: string
+          readOnly: true
+          title: Адрес банка
         mfo:
           type: string
           readOnly: true
-          title: МФО
+          title: Код банка в стране
+          description: МФО для Узбекистана; Bankleitzahl, sort code, ABA — для других стран
         account:
           type: string
           readOnly: true
-          title: Расчётный счёт
+          title: Номер счёта
+          description: IBAN или номер счёта
         currency:
           type: string
           title: Код
@@ -22945,10 +22969,18 @@ components:
         swift:
           type: string
           readOnly: true
+        intermediary_swift:
+          type: string
+          readOnly: true
+          title: SWIFT банка-посредника
+        intermediary_account:
+          type: string
+          readOnly: true
+          title: Счёт банка получателя у посредника
         correspondent_bank:
           type: string
           readOnly: true
-          title: Банк-корреспондент
+          title: Банк-корреспондент (текст)
         is_default:
           type: boolean
           readOnly: true
@@ -22963,10 +22995,16 @@ components:
           title: Порядок
       required:
       - account
+      - bank_address
+      - bank_country
       - bank_name
       - correspondent_bank
       - currency
+      - holder_name
+      - holder_name_latin
       - id
+      - intermediary_account
+      - intermediary_swift
       - is_active
       - is_default
       - mfo
@@ -22975,10 +23013,20 @@ components:
     CompanyBankAccountWriteRequest:
       type: object
       properties:
+        bank_country:
+          type: string
+          description: Страна банка, ISO 3166-1 alpha-2; без неё при создании — UZ
+        holder_name:
+          type: string
+        holder_name_latin:
+          type: string
         bank_name:
+          type: string
+        bank_address:
           type: string
         mfo:
           type: string
+          description: Код банка в стране (МФО)
         account:
           type: string
           minLength: 1
@@ -22987,6 +23035,10 @@ components:
           minLength: 1
           description: Код валюты справочника (UZS, USD, …)
         swift:
+          type: string
+        intermediary_swift:
+          type: string
+        intermediary_account:
           type: string
         correspondent_bank:
           type: string
@@ -23310,14 +23362,12 @@ components:
           description: Имеется сертификат качества ISO 9001
         bank_account:
           type: string
-          title: Расчётный счёт
-          description: Номер расчётного счёта в банке
+          description: Основной счёт в сумах — номер
           maxLength: 50
         mfo:
           type: string
-          title: МФО
-          description: Межфилиальный оборот (код банка)
-          maxLength: 10
+          description: Основной счёт в сумах — МФО
+          maxLength: 15
         legal_address:
           type: string
           title: Юридический адрес
@@ -31068,10 +31118,20 @@ components:
     PatchedCompanyBankAccountWriteRequest:
       type: object
       properties:
+        bank_country:
+          type: string
+          description: Страна банка, ISO 3166-1 alpha-2; без неё при создании — UZ
+        holder_name:
+          type: string
+        holder_name_latin:
+          type: string
         bank_name:
+          type: string
+        bank_address:
           type: string
         mfo:
           type: string
+          description: Код банка в стране (МФО)
         account:
           type: string
           minLength: 1
@@ -31080,6 +31140,10 @@ components:
           minLength: 1
           description: Код валюты справочника (UZS, USD, …)
         swift:
+          type: string
+        intermediary_swift:
+          type: string
+        intermediary_account:
           type: string
         correspondent_bank:
           type: string
@@ -31236,14 +31300,12 @@ components:
           description: Имеется сертификат качества ISO 9001
         bank_account:
           type: string
-          title: Расчётный счёт
-          description: Номер расчётного счёта в банке
+          description: Основной счёт в сумах — номер
           maxLength: 50
         mfo:
           type: string
-          title: МФО
-          description: Межфилиальный оборот (код банка)
-          maxLength: 10
+          description: Основной счёт в сумах — МФО
+          maxLength: 15
         legal_address:
           type: string
           title: Юридический адрес

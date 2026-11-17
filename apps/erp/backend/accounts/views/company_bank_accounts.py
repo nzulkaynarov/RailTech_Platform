@@ -14,18 +14,31 @@ from accounts.services import bank_accounts
 _BODY = inline_serializer(
     "CompanyBankAccountWrite",
     fields={
+        "bank_country": serializers.CharField(
+            required=False, allow_blank=True, help_text="Страна банка, ISO 3166-1 alpha-2; без неё при создании — UZ"
+        ),
+        "holder_name": serializers.CharField(required=False, allow_blank=True),
+        "holder_name_latin": serializers.CharField(required=False, allow_blank=True),
         "bank_name": serializers.CharField(required=False, allow_blank=True),
-        "mfo": serializers.CharField(required=False, allow_blank=True),
+        "bank_address": serializers.CharField(required=False, allow_blank=True),
+        "mfo": serializers.CharField(required=False, allow_blank=True, help_text="Код банка в стране (МФО)"),
         "account": serializers.CharField(required=False),
         "currency": serializers.CharField(required=False, help_text="Код валюты справочника (UZS, USD, …)"),
         "swift": serializers.CharField(required=False, allow_blank=True),
+        "intermediary_swift": serializers.CharField(required=False, allow_blank=True),
+        "intermediary_account": serializers.CharField(required=False, allow_blank=True),
         "correspondent_bank": serializers.CharField(required=False, allow_blank=True),
         "is_default": serializers.BooleanField(required=False),
         "is_active": serializers.BooleanField(required=False),
         "order": serializers.IntegerField(required=False),
     },
 )
-_INVALID = OpenApiResponse(description="Ошибки полей в виде DRF: {поле: [required|unknown|too_long|taken|inactive]}")
+_INVALID = OpenApiResponse(
+    description=(
+        "Ошибки полей в виде DRF: {поле: [причина]} — required, unknown, too_long, taken, inactive и проверки ADR-0029: "
+        "uz_format, currency_mismatch, iban_invalid, iban_country, format, invalid, country_mismatch, latin_charset"
+    )
+)
 
 
 def _invalid(errors):

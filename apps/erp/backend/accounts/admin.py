@@ -246,11 +246,4 @@ class CompanyAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelAdmin):
                 ),
             },
         ),
-        (
-            _("Банк"),
-            {
-                "classes": ["tab"],
-                "fields": (("bank_account", "mfo"),),
-            },
-        ),
     )

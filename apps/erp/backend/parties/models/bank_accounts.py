@@ -17,12 +17,45 @@ class CompanyBankAccount(models.Model):
         related_name="bank_accounts",
         verbose_name=_("Компания"),
     )
+    # ISO 20022 (ADR-0029): страна банка решает формат номера (IBAN, 20 цифр Узбекистана, иной) и код банка в стране.
+    bank_country = models.ForeignKey(
+        "core.Country",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="+",
+        verbose_name=_("Страна банка"),
+    )
+    holder_name = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        verbose_name=_("Владелец счёта"),
+        help_text=_("Пусто — название компании"),
+    )
+    holder_name_latin = models.CharField(
+        max_length=140, blank=True, default="", verbose_name=_("Владелец счёта латиницей"), help_text=_("Для SWIFT")
+    )
     bank_name = models.CharField(max_length=255, blank=True, default="", verbose_name=_("Банк"))
-    mfo = models.CharField(max_length=10, blank=True, default="", verbose_name=_("МФО"))
-    account = models.CharField(max_length=50, verbose_name=_("Расчётный счёт"))
+    bank_address = models.CharField(max_length=255, blank=True, default="", verbose_name=_("Адрес банка"))
+    mfo = models.CharField(
+        max_length=15,
+        blank=True,
+        default="",
+        verbose_name=_("Код банка в стране"),
+        help_text=_("МФО для Узбекистана; Bankleitzahl, sort code, ABA — для других стран"),
+    )
+    account = models.CharField(max_length=50, verbose_name=_("Номер счёта"), help_text=_("IBAN или номер счёта"))
     currency = models.ForeignKey("core.Currency", on_delete=models.PROTECT, related_name="+", verbose_name=_("Валюта"))
     swift = models.CharField(max_length=11, blank=True, default="", verbose_name=_("SWIFT"))
-    correspondent_bank = models.TextField(blank=True, default="", verbose_name=_("Банк-корреспондент"))
+    intermediary_swift = models.CharField(
+        max_length=11, blank=True, default="", verbose_name=_("SWIFT банка-посредника")
+    )
+    intermediary_account = models.CharField(
+        max_length=50, blank=True, default="", verbose_name=_("Счёт банка получателя у посредника")
+    )
+    # Прежний свободный текст; в форму не входит (ADR-0029 п. 1), остаётся для чтения старых записей.
+    correspondent_bank = models.TextField(blank=True, default="", verbose_name=_("Банк-корреспондент (текст)"))
     is_default = models.BooleanField(default=False, verbose_name=_("Основной для валюты"))
     is_active = models.BooleanField(default=True, verbose_name=_("Действует"))
     order = models.PositiveIntegerField(default=0, verbose_name=_("Порядок"))
@@ -47,12 +80,7 @@ class CompanyBankAccount(models.Model):
         return f"{self.account} ({self.currency_id})"
 
     def as_text(self) -> str:
-        """Строка реквизитов для печати: «р/с: …, МФО: …» (+ банк и SWIFT, если заданы)."""
-        parts = [f"р/с: {self.account}"]
-        if self.mfo:
-            parts.append(f"МФО: {self.mfo}")
-        if self.bank_name:
-            parts.append(self.bank_name)
-        if self.swift:
-            parts.append(f"SWIFT: {self.swift}")
-        return ", ".join(parts)
+        """Реквизиты одной строкой — снимок в выпущенном счёте: набор полей по стране банка (ADR-0029 п. 5)."""
+        from parties.banking import print_rows
+
+        return ", ".join(f"{label}: {value}" for label, value in print_rows(self, with_party=False))

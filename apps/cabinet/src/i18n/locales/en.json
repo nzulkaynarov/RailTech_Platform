@@ -957,6 +957,39 @@
         "alreadyPending": "A request is already under review: a new change can be submitted after the staff decision.",
         "adminNotice": "The new details apply only after a staff check. All admins and the primary contact will be notified.",
         "submitted": "The request was sent for review"
+      },
+      "bank": {
+        "place": "Bank location",
+        "places": {
+          "uz": "In Uzbekistan",
+          "abroad": "Abroad"
+        },
+        "currency": "Account currency",
+        "mfo": "MFO (bank code)",
+        "swift": "SWIFT/BIC",
+        "swiftOptional": "SWIFT/BIC — for foreign currency payments",
+        "swiftHint": "8 or 11 characters; it determines the bank country",
+        "holderLatin": "Account holder (Latin)",
+        "holderLatinHint": "As in a SWIFT payment order",
+        "account": "Settlement account",
+        "accountHint": "20 digits; digits 6–8 are the currency code (000 — sum)",
+        "iban": "IBAN or account number",
+        "ibanHint": "IBAN is checked for the country length and check digits",
+        "bankName": "Bank",
+        "bankAddress": "Bank address",
+        "autoHint": "Optional — filled in from the bank code",
+        "intermediarySwift": "Intermediary bank SWIFT",
+        "intermediaryAccount": "Beneficiary bank account with the intermediary",
+        "errors": {
+          "required": "Fill in this field",
+          "uzFormat": "Wrong format: account — 20 digits, MFO — 5 digits",
+          "currencyMismatch": "The currency code in the number (digits 6–8) does not match the account currency",
+          "iban": "IBAN fails the check: length or check digits",
+          "format": "Latin letters and digits only, up to 34 characters",
+          "invalid": "Invalid SWIFT/BIC",
+          "latin": "Latin letters, digits and / - ? : ( ) . , ' + only",
+          "server": "The value was not accepted — check the field"
+        }
       }
     },
     "becomePartner": {
@@ -1344,7 +1377,14 @@
     "SHIPMENT_NOTICE_DUPLICATE": "This waybill has already been declared for the order.",
     "REQUEST_NOT_SENT": "This request was not delivered and cannot be answered.",
     "ALREADY_ANSWERED": "This request has already been answered.",
-    "FILE_CONTENT_MISMATCH": "The file content does not match its extension."
+    "FILE_CONTENT_MISMATCH": "The file content does not match its extension.",
+    "BANK_COUNTRY_INVALID": "Bank country is unknown: check the SWIFT/BIC.",
+    "BANK_CURRENCY_INVALID": "Unknown account currency.",
+    "BANK_ACCOUNT_INVALID": "The account number fails the check.",
+    "BANK_CODE_INVALID": "Invalid bank code (MFO).",
+    "BANK_SWIFT_INVALID": "Invalid SWIFT/BIC or it belongs to another country.",
+    "BANK_HOLDER_LATIN_INVALID": "The Latin holder name has characters SWIFT does not allow.",
+    "BANK_INTERMEDIARY_INVALID": "Invalid intermediary bank SWIFT."
   },
   "widgets": {
     "actionRequired": {

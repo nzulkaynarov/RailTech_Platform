@@ -12,6 +12,7 @@
 
 import pytest
 
+from accounts.services.bank_accounts import set_uzs_account
 from crm.services.invoice_lifecycle import issue_invoice
 from crm.tests.test_act_two_sided import act_world, lookups  # noqa: F401
 
@@ -43,9 +44,7 @@ def _seller_company(world):
 def test_issue_blocked_without_bank_details(draft_invoice):
     world, invoice = draft_invoice
     seller = _seller_company(world)
-    seller.bank_account = ""
-    seller.mfo = ""
-    seller.save(update_fields=["bank_account", "mfo"])
+    seller.bank_accounts.all().delete()
 
     result, err = issue_invoice(invoice, world["seller_user"])
 
@@ -59,19 +58,16 @@ def test_issue_blocked_without_bank_details(draft_invoice):
 def test_issue_freezes_bank_details_snapshot(draft_invoice):
     world, invoice = draft_invoice
     seller = _seller_company(world)
-    seller.bank_account = "20208000900001234567"
-    seller.mfo = "00443"
-    seller.save(update_fields=["bank_account", "mfo"])
+    set_uzs_account(seller, "20208000900001234567", "00443")
 
     result, err = issue_invoice(invoice, world["seller_user"])
     assert err is None, err
 
     result.refresh_from_db()
-    assert "20208000900001234567" in result.frozen_bank_details
+    assert "2020 8000 9000 0123 4567" in result.frozen_bank_details
     assert "00443" in result.frozen_bank_details
 
     # Смена банка ПОСЛЕ выставления не переписывает уже выпущенный документ.
-    seller.bank_account = "99999999999999999999"
-    seller.save(update_fields=["bank_account"])
+    set_uzs_account(seller, "20208000999999999999", "00443")
     result.refresh_from_db()
-    assert "20208000900001234567" in result.frozen_bank_details
+    assert "2020 8000 9000 0123 4567" in result.frozen_bank_details

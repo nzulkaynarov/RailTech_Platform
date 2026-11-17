@@ -13,6 +13,7 @@ from decimal import Decimal
 import pytest
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
+from accounts.services.bank_accounts import set_uzs_account
 from crm.models import (
     ActStatus,
     Contract,
@@ -59,17 +60,15 @@ def world(lookups):
         name="Buyer Co",
         inn="B901",
         # O3: продавец с платёжными реквизитами — иначе `issue_invoice` не выпустит счёт (он неоплатен).
-        bank_account="20208000900001234567",
-        mfo="00443",
     )
+    set_uzs_account(buyer_co, "20208000900001234567", "00443")
     buyer_co.types.add(CompanyType.objects.get(code="CLIENT"))
     seller_co = Company.objects.create(
         name="Seller Co",
         inn="S901",
         # O3: продавец с платёжными реквизитами — иначе `issue_invoice` не выпустит счёт (он неоплатен).
-        bank_account="20208000900001234567",
-        mfo="00443",
     )
+    set_uzs_account(seller_co, "20208000900001234567", "00443")
     seller_co.types.add(CompanyType.objects.get(code="SUPPLIER"))
     seller_user = CustomUser.objects.create_user(email="s@snap.test", username="s@snap.test", password="x")
     CompanyMember.objects.create(

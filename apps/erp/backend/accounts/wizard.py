@@ -211,14 +211,16 @@ class CompanyWizardView(SessionWizardView):
             phone=data.get("phone", ""),
             email=data.get("email", ""),
             website=data.get("website", ""),
-            bank_account=data.get("bank_account", ""),
-            mfo=data.get("mfo", ""),
         )
 
         # Set company types
         types = data.get("types")
         if types:
             company.types.set(types)
+        if data.get("bank_account"):
+            from accounts.services.bank_accounts import set_uzs_account
+
+            set_uzs_account(company, data["bank_account"], data.get("mfo", ""))
         if data.get("contact_person"):
             from parties.people import set_contact_name
 

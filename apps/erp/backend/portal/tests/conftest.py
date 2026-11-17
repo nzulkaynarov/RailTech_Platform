@@ -24,6 +24,7 @@ from portal.tests.contract_world import contract_world  # noqa: E402,F401
 from portal.tests.partner_world import broker, partner_world  # noqa: E402,F401
 from rest_framework.test import APIClient
 
+from accounts.services.bank_accounts import set_uzs_account
 from core.tenant import own_company
 
 # Почта в память: письма портала видны в `mail.outbox`, а в `EmailLog` пишутся как обычно. Боевой бэкенд ERP —
@@ -169,9 +170,9 @@ def client_company(db, client_type):
     comp = Company.objects.create(
         name="OOO Test Client Company",
         inn="987654321",
-        bank_details="р/с 20208000123456789001 в АКИБ Ипотека Банк",
         language="ru",
     )
+    set_uzs_account(comp, "20208000123456789001", "00440", bank_name="АКИБ Ипотека Банк")
     comp.types.add(client_type)
     return comp
 
@@ -181,9 +182,9 @@ def other_company(db, client_type):
     comp = Company.objects.create(
         name="OOO Other Client Company",
         inn="555666777",
-        bank_details="р/с 20208000987654321002 в Капитал Банк",
         language="ru",
     )
+    set_uzs_account(comp, "20208000987654321002", "00440", bank_name="Капитал Банк")
     comp.types.add(client_type)
     return comp
 

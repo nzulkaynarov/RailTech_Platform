@@ -957,6 +957,39 @@
         "alreadyPending": "Soʻrov allaqachon tekshiruvda: yangi oʻzgartirishni xodim qaroridan keyin yuborish mumkin.",
         "adminNotice": "Yangi rekvizitlar faqat xodim tekshiruvidan soʻng qoʻllanadi. Barcha administratorlar va asosiy kontakt bildirishnoma oladi.",
         "submitted": "Soʻrov tekshiruvga yuborildi"
+      },
+      "bank": {
+        "place": "Bank qayerda",
+        "places": {
+          "uz": "Özbekistonda",
+          "abroad": "Chet elda"
+        },
+        "currency": "Hisob valyutasi",
+        "mfo": "MFO",
+        "swift": "SWIFT/BIC",
+        "swiftOptional": "SWIFT/BIC — valyuta tölovlari uçun",
+        "swiftHint": "8 yoki 11 belgi; bank mamlakati şunga köra aniqlanadi",
+        "holderLatin": "Hisob egasi lotinça",
+        "holderLatinHint": "SWIFT tölov topşiriğidagidek",
+        "account": "Hisob raqami",
+        "accountHint": "20 ta raqam; 6–8-raqamlar — valyuta kodi (000 — söm)",
+        "iban": "IBAN yoki hisob raqami",
+        "ibanHint": "IBAN mamlakat uzunligi va nazorat raqamlari böyiça tekşiriladi",
+        "bankName": "Bank",
+        "bankAddress": "Bank manzili",
+        "autoHint": "Töldirmasa ham böladi — bank kodi böyiça qöyamiz",
+        "intermediarySwift": "Vositaçi bank SWIFT",
+        "intermediaryAccount": "Oluvçi bankning vositaçidagi hisobi",
+        "errors": {
+          "required": "Maydonni töldiring",
+          "uzFormat": "Format notoğri: hisob raqami — 20 ta raqam, MFO — 5 ta raqam",
+          "currencyMismatch": "Raqamdagi valyuta kodi (6–8-raqamlar) hisob valyutasiga mos emas",
+          "iban": "IBAN tekşiruvdan ötmadi: uzunlik yoki nazorat raqamlari",
+          "format": "Faqat lotin harflari va raqamlar, 34 belgigaça",
+          "invalid": "SWIFT/BIC notoğri",
+          "latin": "Faqat lotin harflari, raqamlar va / - ? : ( ) . , ' +",
+          "server": "Qiymat qabul qilinmadi — maydonni tekşiring"
+        }
       }
     },
     "becomePartner": {
@@ -1344,7 +1377,14 @@
     "SHIPMENT_NOTICE_DUPLICATE": "Bu yuk xati buyurtma bo‘yicha allaqachon ko‘rsatilgan.",
     "REQUEST_NOT_SENT": "So‘rov yetkazilmagan — unga javob berib bo‘lmaydi.",
     "ALREADY_ANSWERED": "Bu so‘rovga allaqachon javob berilgan.",
-    "FILE_CONTENT_MISMATCH": "Fayl tarkibi uning kengaytmasiga mos kelmaydi."
+    "FILE_CONTENT_MISMATCH": "Fayl tarkibi uning kengaytmasiga mos kelmaydi.",
+    "BANK_COUNTRY_INVALID": "Bank mamlakati aniqlanmadi: SWIFT/BIC ni tekşiring.",
+    "BANK_CURRENCY_INVALID": "Hisob valyutasi nomaʼlum.",
+    "BANK_ACCOUNT_INVALID": "Hisob raqami tekşiruvdan ötmadi.",
+    "BANK_CODE_INVALID": "Bank kodi (MFO) notoğri.",
+    "BANK_SWIFT_INVALID": "SWIFT/BIC notoğri yoki boşqa mamlakatniki.",
+    "BANK_HOLDER_LATIN_INVALID": "Lotinça ismda ruxsat etilmagan belgilar bor.",
+    "BANK_INTERMEDIARY_INVALID": "Vositaçi bank SWIFT notoğri."
   },
   "widgets": {
     "actionRequired": {

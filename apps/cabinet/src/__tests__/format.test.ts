@@ -1,5 +1,6 @@
 import type { Invoice } from '@/api/portal';
 import { validateInvite, companyChanges } from '@/lib/company';
+import { bankDraft, defaultAccount, validateBank } from '@/lib/bankAccount';
 import {
   amountToCents,
   businessToday,
@@ -259,10 +260,34 @@ describe('компания и приглашение', () => {
         name: fixtures.company.name,
         inn: fixtures.company.inn ?? '',
         legal_address: ' Новый адрес ',
-        bank_details: fixtures.company.bank_details ?? '',
+        bank: bankDraft(defaultAccount(fixtures.company)),
         language: 'uz',
       }),
     ).toEqual({ legal_address: 'Новый адрес', language: 'uz' });
+  });
+
+  it.each([
+    ['UZ: 20 цифр и МФО', { account: '20208000900123456001', mfo: '00440' }, {}],
+    ['UZ: короткий номер', { account: '2020800090', mfo: '00440' }, { account: 'uzFormat' }],
+    ['UZ: код валюты в номере', { account: '20208840900123456001', mfo: '00440' }, { account: 'currencyMismatch' }],
+    ['UZ: без МФО', { account: '20208000900123456001', mfo: '' }, { mfo: 'required' }],
+    [
+      'за рубежом: IBAN и SWIFT',
+      { place: 'abroad' as const, account: 'DE89370400440532013000', swift: 'COBADEFF' },
+      {},
+    ],
+    [
+      'за рубежом: битый IBAN, без SWIFT',
+      { place: 'abroad' as const, account: 'DE89370400440532013001', swift: '' },
+      { account: 'iban', swift: 'required' },
+    ],
+    [
+      'за рубежом: кириллица в имени латиницей',
+      { place: 'abroad' as const, account: '000123456789', swift: 'CHASUS33', holder_name_latin: 'ООО' },
+      { holder_name_latin: 'latin' },
+    ],
+  ])('validateBank: %s', (_name, patch, errors) => {
+    expect(validateBank({ ...bankDraft(), ...patch })).toEqual(errors);
   });
 
   const draft = { name: 'Тест', email: '', phone: '', language: 'ru' as const, can_act: false, channels: { email: true, telegram: false } };

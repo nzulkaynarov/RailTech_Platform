@@ -1353,11 +1353,12 @@ export interface paths {
          * @description Название и ИНН компании, связанной с клиентом CRM, ведёт CRM (ORCHESTRATOR §3 п. 16): их правка — 422
          *     `REQUISITES_MANAGED_BY_CRM`. Остальные поля правятся здесь.
          *
-         *     `bank_details` не применяется сразу (решение владельца 2026-11-08, FX-4): изменённое значение создаёт запрос на смену, в
-         *     ответе `bank_details` прежнее, а в `bank_change_request` — запрос в статусе `pending`; реквизиты меняются только после
-         *     подтверждения сотрудником. Менять может только администратор компании (иначе 409 `ADMIN_REQUIRED`). Один активный запрос
+         *     `bank_account` не применяется сразу (решение владельца 2026-11-08, FX-4): новый счёт создаёт запрос на смену, в
+         *     ответе `bank_accounts` прежние, а в `bank_change_request` — запрос в статусе `pending`; подтверждённый счёт становится
+         *     основным в своей валюте. Счёт проверяется по ADR-0029 (IBAN ISO 13616, SWIFT/BIC ISO 9362, счёт Узбекистана — 20 цифр
+         *     с кодом валюты, МФО — 5 цифр); ошибка — 422 с кодом поля (`BANK_ACCOUNT_INVALID`, `BANK_SWIFT_INVALID`, …). Менять может только администратор компании (иначе 409 `ADMIN_REQUIRED`). Один активный запрос
          *     на компанию: пока он на проверке, новая смена — 409 `BANK_CHANGE_ALREADY_PENDING`, остальные поля запроса при этом не
-         *     сохраняются. Значение, совпадающее с текущим, запроса не создаёт.
+         *     сохраняются. Счёт, совпадающий с основным в его валюте, запроса не создаёт.
          */
         put: operations["updateCompany"];
         post?: never;
@@ -2882,8 +2883,10 @@ export interface components {
                 name?: string;
             } | null;
             legal_address?: string | null;
-            /** @description Действующие реквизиты; смена на проверке их не меняет (см. `bank_change_request`) */
+            /** @description Основной счёт в сумах одной строкой; смена на проверке его не меняет (см. `bank_change_request`) */
             bank_details?: string | null;
+            /** @description Действующие счета компании, основные первыми (ADR-0029) */
+            bank_accounts?: components["schemas"]["BankAccount"][];
             /** @description Последний запрос на смену реквизитов; только в `GET` и `PUT /company`, `null` — запросов не было (FX-4) */
             bank_change_request?: components["schemas"]["BankChangeRequest"] | null;
             language: components["schemas"]["Language"];
@@ -2902,8 +2905,10 @@ export interface components {
             status: "pending" | "approved" | "rejected";
             /** @description Кто подал */
             requested_by_name: string;
-            /** @description Новые реквизиты — только администратору компании, остальным `null` */
+            /** @description Новые реквизиты строкой — только администратору компании, остальным `null` */
             new_bank_details: string | null;
+            /** @description Новый счёт полями — только администратору компании; `null` — не администратор или запрос до ADR-0029 */
+            new_bank_account?: components["schemas"]["BankAccountInput"] | null;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -2959,8 +2964,62 @@ export interface components {
             /** @description Двухбуквенный ISO-код страны */
             country_code?: string;
             legal_address?: string;
-            bank_details?: string;
+            bank_account?: components["schemas"]["BankAccountInput"];
             language?: components["schemas"]["Language"];
+        };
+        /**
+         * @description Банковский счёт по ISO 20022 (ADR-0029). Номер — по стране банка: IBAN (страна из реестра IBAN), 20 цифр с кодом
+         *     валюты в цифрах 6–8 (Узбекистан; 000 — сум), иначе до 34 латинских букв и цифр. Пустые код банка, SWIFT и название
+         *     подставляются из IBAN или справочника банков.
+         */
+        BankAccountInput: {
+            /**
+             * @description Страна банка, ISO 3166-1 alpha-2
+             * @example UZ
+             */
+            bank_country: string;
+            /**
+             * @description Валюта счёта, ISO 4217
+             * @example UZS
+             */
+            currency: string;
+            /** @description Владелец счёта; пусто — название компании */
+            holder_name?: string;
+            /** @description Владелец латиницей, набор символов SWIFT */
+            holder_name_latin?: string;
+            /** @description IBAN или номер счёта; пробелы не важны */
+            account: string;
+            /** @description Код банка в стране: МФО (5 цифр) для Узбекистана */
+            mfo?: string;
+            /** @description SWIFT/BIC, ISO 9362; обязателен вне Узбекистана */
+            swift?: string;
+            bank_name?: string;
+            bank_address?: string;
+            /** @description SWIFT/BIC банка-посредника */
+            intermediary_swift?: string;
+            /** @description Счёт банка получателя у посредника */
+            intermediary_account?: string;
+        };
+        /** @description Действующий счёт компании (ADR-0029) */
+        BankAccount: {
+            /** Format: int64 */
+            id: number;
+            /** @description ISO 3166-1 alpha-2; пусто — страна не задана */
+            bank_country: string;
+            /** @description ISO 4217 */
+            currency: string;
+            holder_name: string;
+            holder_name_latin: string;
+            /** @description Номер без пробелов */
+            account: string;
+            mfo: string;
+            swift: string;
+            bank_name: string;
+            bank_address: string;
+            intermediary_swift: string;
+            intermediary_account: string;
+            /** @description Основной для своей валюты */
+            is_default: boolean;
         };
         TeamMember: {
             /** Format: int64 */

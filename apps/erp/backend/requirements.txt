@@ -1472,6 +1472,10 @@ psycopg2==2.9.12 \
     --hash=sha256:a73d5513bfe929c56555006c7a9cc7ae6e4276aa99dd2b1e2544eb8bb54f8b23 \
     --hash=sha256:d5fbe092315fb007c03544704e6d1e678a6c0378139d01cea433dc59edf041b4
     # via -r requirements.in
+pycountry==26.2.16 \
+    --hash=sha256:115c4baf7cceaa30f59a4694d79483c9167dbce7a9de4d3d571c5f3ea77c305a \
+    --hash=sha256:5b6027d453fcd6060112b951dd010f01f168b51b4bf8a1f1fc8c95c8d94a0801
+    # via schwifty
 pycparser==3.0 \
     --hash=sha256:600f49d217304a5902ac3c37e1281c9fe94e4d0489de643a9504c5cdfdfc6b29 \
     --hash=sha256:b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992
@@ -1910,10 +1914,18 @@ rpds-py==2026.6.3 \
     # via
     #   jsonschema
     #   referencing
+rstr==3.2.2 \
+    --hash=sha256:c4a564d4dfb4472d931d145c43d1cf1ad78c24592142e7755b8866179eeac012 \
+    --hash=sha256:f39195d38da1748331eeec52f1276e71eb6295e7949beea91a5e9af2340d7b3b
+    # via schwifty
 s3transfer==0.19.2 \
     --hash=sha256:ba0309fd86be3c27dbf78cdd813c13c5e1df16e5874b99d2535ebbdfb9892993 \
     --hash=sha256:d8168eccca828cbb2cd573675333f3bddd254313a9c42494b84c76b539e8ba25
     # via boto3
+schwifty==2026.11.2 \
+    --hash=sha256:25a7171739b2bf2e3c8beb3d83230ef9f314d4a90f285330eba8d371cdaf1da0 \
+    --hash=sha256:76f9bf7715252fdfd9419696d8b07200f34c5cdae7b8010bf1a7d2dd73738c8c
+    # via -r requirements.in
 sentry-sdk[django]==2.68.0 \
     --hash=sha256:538e56c2d03679d42f7c0cb5f1af73a7a510b00abc7e296c13ac49b107b713a4 \
     --hash=sha256:648c58e9887311a03470a41539e24bdbbf64a30ca4f5336f7e3dcc87276400b3

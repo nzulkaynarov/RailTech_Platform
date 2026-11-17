@@ -295,12 +295,7 @@ class Company(models.Model):
 
     @property
     def formatted_bank_details(self) -> str:
-        """Formatted bank details for portal and documents."""
-        if self.bank_details:
-            return self.bank_details
-        parts = []
-        if self.bank_account:
-            parts.append(f"р/с {self.bank_account}")
-        if self.mfo:
-            parts.append(f"МФО {self.mfo}")
-        return ", ".join(parts)
+        """Реквизиты основного счёта в сумах одной строкой (кабинет); счета — один источник (ADR-0028 п. 3)."""
+        from accounts.services.bank_accounts import bank_details_text
+
+        return bank_details_text(self)
