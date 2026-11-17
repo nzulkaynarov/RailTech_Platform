@@ -139,6 +139,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/setup/logo": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Логотип своей компании до входа (ДВ-3)
+     * @description Без сессии: экран входа и рейл. BFF берёт адрес из публичного `GET /operator` портала ERP и отдаёт только файл логотипа своей компании (`/media/companies/<id>/logo/…`, PNG, JPEG, WebP, GIF или SVG до 5 МБ) с защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа или ERP недоступна — 404 `NOT_FOUND`: Платформа показывает буквы названия.
+     */
+    get: operations["getOperatorLogo"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/setup/admin": {
     parameters: {
       query?: never;
@@ -17066,6 +17086,27 @@ export interface operations {
         };
       };
       503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getOperatorLogo: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Изображение */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "image/*": string;
+        };
+      };
+      404: components["responses"]["NotFound"];
     };
   };
   createFirstAdmin: {

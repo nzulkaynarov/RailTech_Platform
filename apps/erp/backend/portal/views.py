@@ -506,7 +506,8 @@ class CountriesView(APIView):
 
 class OperatorView(APIView):
     """GET /operator — название оператора платформы для кабинета до входа (задача «Н3a2»): ведётся в CRM
-    («Настройки · Компания»), проекция в ERP — `SystemSetting.platform_name`. Ничего, кроме названия, не отдаёт."""
+    («Настройки · Компания»), проекция в ERP — `SystemSetting.platform_name`. Ещё — адрес логотипа своей компании
+    (ДВ-3): публичный путь `/media/companies/<id>/logo/…`, тот же, что кабинет уже отдаёт на своём домене."""
 
     authentication_classes = []
     permission_classes = []
@@ -521,7 +522,19 @@ class OperatorView(APIView):
         # Пока CRM не прислала профиль, `platform_name` — значение окружения: не показываем его клиенту.
         name = setting.platform_name.strip() if setting.company_profile_changed_at else ""
         bot = setting.telegram_bot_username.strip()
-        return Response({"name": name or None, "bot_username": bot or None}, status=status.HTTP_200_OK)
+        return Response(
+            {"name": name or None, "bot_username": bot or None, "logo_url": _operator_logo_url()},
+            status=status.HTTP_200_OK,
+        )
+
+
+def _operator_logo_url():
+    """Логотип своей компании — относительный адрес публичного media (allowlist `core/urls.py`) или None."""
+    from core.tenant import own_company
+
+    company = own_company()
+    logo = getattr(company, "logo", None)
+    return f"/media/{logo.name}" if logo and logo.name else None
 
 
 # ── 2. Me ───────────────────────────────────────────────────────────────────

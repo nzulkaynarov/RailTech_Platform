@@ -6966,3 +6966,6 @@ msgstr "A staff member confirmed the bank details change; the new details are no
 
 msgid "Запрос на смену банковских реквизитов компании отклонён, прежние реквизиты действуют."
 msgstr "The request to change the company bank details was rejected; the previous details remain in effect."
+
+msgid "Мы не просим пароль и код в письме или по телефону. Не пересылайте этот код."
+msgstr "We never ask for your password or code by email or phone. Do not forward this code."

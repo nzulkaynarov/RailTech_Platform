@@ -104,6 +104,7 @@
     "en": "English"
   },
   "login": {
+    "antiPhishing": "Biz parol va kodni xatda yoki telefonda söramaymiz.",
     "title": "Platformaga kirish",
     "lead": "Xodimlarning yagona interfeysi. Administrator bergan pochta va parol bilan kiring.",
     "email": "Elektron pochta",

@@ -1261,6 +1261,118 @@ export function useGetSetupState<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export const getGetOperatorLogoUrl = () => {
+  return `/api/v1/setup/logo`;
+};
+
+/**
+ * Без сессии: экран входа и рейл. BFF берёт адрес из публичного `GET /operator` портала ERP и отдаёт только файл логотипа своей компании (`/media/companies/<id>/logo/…`, PNG, JPEG, WebP, GIF или SVG до 5 МБ) с защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа или ERP недоступна — 404 `NOT_FOUND`: Платформа показывает буквы названия.
+ * @summary Логотип своей компании до входа (ДВ-3)
+ */
+export const getOperatorLogo = async (options?: Parameters<typeof http>[1]): Promise<Blob> => {
+  return http<Blob>(getGetOperatorLogoUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetOperatorLogoQueryKey = () => {
+  return [`/api/v1/setup/logo`] as const;
+};
+
+export const getGetOperatorLogoQueryOptions = <
+  TData = Awaited<ReturnType<typeof getOperatorLogo>>,
+  TError = ErrorType<NotFoundResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperatorLogo>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetOperatorLogoQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getOperatorLogo>>> = ({ signal }) =>
+    getOperatorLogo({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getOperatorLogo>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetOperatorLogoQueryResult = NonNullable<Awaited<ReturnType<typeof getOperatorLogo>>>;
+export type GetOperatorLogoQueryError = ErrorType<NotFoundResponse>;
+
+export function useGetOperatorLogo<
+  TData = Awaited<ReturnType<typeof getOperatorLogo>>,
+  TError = ErrorType<NotFoundResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperatorLogo>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getOperatorLogo>>,
+          TError,
+          Awaited<ReturnType<typeof getOperatorLogo>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetOperatorLogo<
+  TData = Awaited<ReturnType<typeof getOperatorLogo>>,
+  TError = ErrorType<NotFoundResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperatorLogo>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getOperatorLogo>>,
+          TError,
+          Awaited<ReturnType<typeof getOperatorLogo>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetOperatorLogo<
+  TData = Awaited<ReturnType<typeof getOperatorLogo>>,
+  TError = ErrorType<NotFoundResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperatorLogo>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Логотип своей компании до входа (ДВ-3)
+ */
+
+export function useGetOperatorLogo<
+  TData = Awaited<ReturnType<typeof getOperatorLogo>>,
+  TError = ErrorType<NotFoundResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperatorLogo>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetOperatorLogoQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export const getCreateFirstAdminUrl = () => {
   return `/api/v1/setup/admin`;
 };

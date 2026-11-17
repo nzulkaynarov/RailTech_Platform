@@ -204,6 +204,7 @@
     "en": "English"
   },
   "auth": {
+    "antiPhishing": "Biz parol va kodni xatda yoki telefonda söramaymiz.",
     "login": {
       "title": "Kabinetga kirish",
       "subtitle": "Kabinet taklifnoma orqali ochiladi. Taklifnoma kelgan e-mailni kiriting — kirish havolasini yuboramiz.",

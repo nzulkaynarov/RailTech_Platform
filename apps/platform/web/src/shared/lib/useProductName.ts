@@ -1,6 +1,11 @@
+import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
-import { useGetSetupState } from "../api/generated/platform-bff";
+import {
+  getGetOperatorLogoQueryKey,
+  getGetOperatorLogoUrl,
+  useGetSetupState,
+} from "../api/generated/platform-bff";
 
 /**
  * Название продукта в заголовке вкладки, у логотипа и на экране входа — из «Настройки · Компания» (CRM `company.name`,
@@ -9,7 +14,11 @@ import { useGetSetupState } from "../api/generated/platform-bff";
  */
 export function useProductName(): { name: string; initials: string } {
   const { t } = useTranslation("common");
-  const state = useGetSetupState({ query: { retry: false, staleTime: 5 * 60_000 } });
+  // `retryOnMount: false`: марка в рамке экрана ошибки состояния (AuthLayout) не перезапрашивает упавший запрос —
+  // иначе экран ошибки сбрасывается в загрузку и мигает по кругу
+  const state = useGetSetupState({
+    query: { retry: false, retryOnMount: false, staleTime: 5 * 60_000 },
+  });
   const name = state.data?.company_name?.trim() || t("app.title");
   return { name, initials: initialsOf(name) };
 }
@@ -21,4 +30,25 @@ export function initialsOf(name: string): string {
   if (c1 && c2 && /\p{Ll}/u.test(first)) return `${c1}${c2}`;
   if (second === "") return first.slice(0, 2).toUpperCase();
   return `${first.slice(0, 1)}${second.slice(0, 1)}`.toUpperCase();
+}
+
+/**
+ * Логотип своей компании (ДВ-3) — адрес `blob:` для `<img>` или `null`: нет логотипа, ERP недоступна, ответ не картинка.
+ * Без сессии (`GET /setup/logo`), поэтому годится и для экрана входа. Сгенерированный клиент читает картинку как текст —
+ * здесь свой `fetch`.
+ */
+export function useOperatorLogo(): string | null {
+  const logo = useQuery({
+    queryKey: getGetOperatorLogoQueryKey(),
+    queryFn: async () => {
+      const response = await fetch(getGetOperatorLogoUrl(), { credentials: "same-origin" });
+      if (!response.ok || !(response.headers.get("content-type") ?? "").startsWith("image/"))
+        return null;
+      return URL.createObjectURL(await response.blob());
+    },
+    retry: false,
+    staleTime: Infinity,
+    gcTime: Infinity,
+  });
+  return logo.data ?? null;
 }

@@ -633,6 +633,28 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /setup/logo:
+    get:
+      tags: [setup]
+      operationId: getOperatorLogo
+      summary: Логотип своей компании до входа (ДВ-3)
+      description: >-
+        Без сессии: экран входа и рейл. BFF берёт адрес из публичного `GET /operator` портала ERP и отдаёт только файл логотипа
+        своей компании (`/media/companies/<id>/logo/…`, PNG, JPEG, WebP, GIF или SVG до 5 МБ) с защитными заголовками
+        (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа или ERP недоступна — 404 `NOT_FOUND`:
+        Платформа показывает буквы названия.
+      security: []
+      responses:
+        '200':
+          description: Изображение
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /setup/admin:
     post:
       tags: [setup]

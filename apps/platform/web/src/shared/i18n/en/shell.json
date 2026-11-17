@@ -104,6 +104,7 @@
     "en": "English"
   },
   "login": {
+    "antiPhishing": "We never ask for your password or code by email or phone.",
     "title": "Sign in to the Platform",
     "lead": "The unified staff interface. Sign in with the email and password your administrator gave you.",
     "email": "Email",
