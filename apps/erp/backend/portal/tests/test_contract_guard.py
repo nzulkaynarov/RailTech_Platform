@@ -81,6 +81,7 @@ GET_CASES = {
     ],
     "/company": lambda w: ["/company"],
     "/company/security-log": lambda w: ["/company/security-log"],
+    "/company/bank-directory/{mfo}": lambda w: ["/company/bank-directory/00440"],
     "/company/partner-application": lambda w: ["/company/partner-application"],
     "/company/partner-application/contract-pdf": lambda w: ["/company/partner-application/contract-pdf"],
     "/countries": lambda w: ["/countries"],
@@ -205,6 +206,7 @@ def _portal_get_routes() -> set[str]:
             .replace("<str:token>", "{token}")
             .replace("<str:task_id>", "{task_id}")
             .replace("<str:code>", "{code}")
+            .replace("<str:mfo>", "{mfo}")
             .replace("<int:delivery>", "{delivery}")
             .rstrip("/")
             or "/"

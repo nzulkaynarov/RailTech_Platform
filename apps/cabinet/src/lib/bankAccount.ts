@@ -104,6 +104,7 @@ export function validateBank(draft: BankDraft): BankErrors {
       errors.account = 'currencyMismatch';
     const mfo = compact(draft.mfo);
     if (!/^\d{5}$/.test(mfo)) errors.mfo = mfo ? 'uzFormat' : 'required';
+    else if (!draft.bank_name.trim()) errors.bank_name = 'required'; // МФО из справочника подставит банк сам
   } else {
     if (!swift) errors.swift = 'required';
     else if (!isValidBIC(swift)) errors.swift = 'invalid';

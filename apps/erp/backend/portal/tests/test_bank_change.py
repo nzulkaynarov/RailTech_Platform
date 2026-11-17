@@ -686,3 +686,15 @@ def test_notify_is_scoped_to_given_recipients(client_company, client_contact, pe
     )
 
     assert [row.contact_id for row in rows] == [people["primary"].pk]
+
+
+def test_bank_directory_lookup_by_mfo(portal_client):
+    """ADR-0029: МФО из справочника ЦБ — название и SWIFT для формы; нет в справочнике — `bank: null`, не ошибка."""
+    from core.models import Bank
+
+    Bank.objects.create(code="00873", name="АКБ Образец", name_uz="Namuna ATB", swift="ABCDUZ22")
+    res = portal_client.get(f"{COMPANY}/bank-directory/00873")
+    assert res.status_code == 200
+    assert res.json() == {"bank": {"mfo": "00873", "name": "АКБ Образец", "swift": "ABCDUZ22"}}
+    assert portal_client.get(f"{COMPANY}/bank-directory/01999").json() == {"bank": None}
+    assert portal_client.get(f"{COMPANY}/bank-directory/abc").json() == {"bank": None}

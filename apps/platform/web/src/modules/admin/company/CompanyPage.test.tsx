@@ -107,7 +107,10 @@ describe("Admin · Компания: реквизиты для счетов (D26
     fireEvent.change(within(dialog).getByLabelText("Расчётный счёт"), {
       target: { value: "20208000900000000001" },
     });
-    fireEvent.change(within(dialog).getByLabelText("МФО"), { target: { value: "00001" } });
+    fireEvent.change(within(dialog).getByLabelText("МФО"), { target: { value: "00014" } });
+    await waitFor(() => {
+      expect(within(dialog).getByLabelText("Банк")).toHaveValue("АКБ «Демо Банк»");
+    });
     fireEvent.click(within(dialog).getByRole("button", { name: "Сохранить" }));
 
     expect(
@@ -122,8 +125,8 @@ describe("Admin · Компания: реквизиты для счетов (D26
   });
 });
 
-describe("Admin · Компания: банк из справочника (план 2.9)", () => {
-  it("название банка подсказывает справочник; выбор подставляет МФО", async () => {
+describe("Admin · Компания: банк по МФО из справочника (план 2.9, ADR-0029)", () => {
+  it("МФО ищется по названию; банк из справочника не правится; МФО не из справочника — предупреждение и банк вручную", async () => {
     updateCompanyMock((state) => {
       state.bankAccounts = [];
     });
@@ -135,14 +138,23 @@ describe("Admin · Компания: банк из справочника (пл�
       (await screen.findAllByRole("button", { name: "Добавить счёт" }))[0] as HTMLElement,
     );
     const dialog = await screen.findByRole("region", { name: "Новый банковский счёт" });
+    const mfo = within(dialog).getByLabelText("МФО");
     const bank = within(dialog).getByLabelText("Банк");
-    fireEvent.focus(bank);
-    fireEvent.change(bank, { target: { value: "демо" } });
-    fireEvent.click(await screen.findByText("АКБ «Демо Банк» · 00014"));
+    fireEvent.focus(mfo);
+    fireEvent.change(mfo, { target: { value: "демо" } });
+    fireEvent.click(await screen.findByText("00014 · АКБ «Демо Банк»"));
     await waitFor(() => {
-      expect(within(dialog).getByLabelText("МФО")).toHaveValue("00014");
+      expect(mfo).toHaveValue("00014");
     });
     expect(bank).toHaveValue("АКБ «Демо Банк»");
+    expect(bank).toHaveAttribute("readonly");
+
+    fireEvent.change(mfo, { target: { value: "01999" } });
+    expect(
+      await within(dialog).findByText("Нет в справочнике ЦБ — проверьте МФО и впишите банк"),
+    ).toBeInTheDocument();
+    expect(bank).toHaveValue("");
+    expect(bank).not.toHaveAttribute("readonly");
   });
 });
 

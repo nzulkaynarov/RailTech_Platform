@@ -80,6 +80,20 @@ def test_save_fills_codes_from_iban_and_directory(world):
     assert (row.bank_name, row.swift) == ("АКБ Образец", "ABCDUZ22")
 
 
+def test_known_mfo_overrides_typed_bank_name_unknown_keeps_it(world):
+    Bank.objects.create(code="00873", name="АКБ Образец")
+    row, errors = save_account(
+        world, {"account": "20208000900001234567", "mfo": "00873", "currency": "UZS", "bank_name": "Банк-фантом"}
+    )
+    assert errors == {} and row.bank_name == "АКБ Образец"
+    row, errors = save_account(
+        world, {"account": "20208000900007654321", "mfo": "01999", "currency": "UZS", "bank_name": "Новый филиал"}
+    )
+    assert errors == {} and (row.mfo, row.bank_name) == ("01999", "Новый филиал")
+    row, errors = save_account(world, {"mfo": "00873"}, row)
+    assert errors == {} and (row.mfo, row.bank_name) == ("00873", "АКБ Образец")
+
+
 def test_validate_account_returns_codes_payload(world):
     payload, errors = validate_account({"bank_country": "uz", "currency": "UZS", "account": "2020 8000 9000 0123 4567"})
     assert payload == {} and errors == {"mfo": "required"}

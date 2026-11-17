@@ -8,6 +8,7 @@
 
 import datetime
 import logging
+import re
 
 from django.conf import settings
 from django.db import transaction
@@ -1318,6 +1319,24 @@ def _bank_change_data(contact, company):
         "decided_at": last.decided_at,
         "reject_reason": last.reject_reason or None,
     }
+
+
+class BankDirectoryView(BasePortalView):
+    """GET /company/bank-directory/{mfo} — банк Узбекистана по МФО из справочника ЦБ (ADR-0029): подсказка формы смены
+    реквизитов. `bank: null` — МФО в справочнике нет, клиент вписывает банк сам; ERP при сохранении берёт название
+    известного МФО из справочника в любом случае."""
+
+    required_module = "company"
+
+    def get(self, request, mfo):
+        from core.models import Bank
+
+        bank = Bank.objects.filter(code=mfo, is_active=True).first() if re.fullmatch(r"\d{5}", mfo) else None
+        if bank is None:
+            return Response({"bank": None})
+        language = _contact_language(request)
+        name = getattr(bank, f"name_{language}", "") if language != "ru" else ""
+        return Response({"bank": {"mfo": bank.code, "name": name or bank.name, "swift": bank.swift}})
 
 
 class CompanyView(BasePortalView):

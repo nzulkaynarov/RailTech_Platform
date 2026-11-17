@@ -416,7 +416,9 @@ test.describe("Первый запуск: банковские реквизит�
       await page.getByRole("button", { name: "Добавить счёт" }).first().click();
       const dialog = page.getByRole("region", { name: "Новый банковский счёт" });
       await dialog.getByLabel("Расчётный счёт").fill("20208000900000000001");
-      await dialog.getByLabel("МФО").fill("00001");
+      await dialog.getByLabel("МФО").fill("00014");
+      await page.getByText("00014 · АКБ «Демо Банк»").click();
+      await expect(dialog.getByLabel("Банк", { exact: true })).toHaveValue("АКБ «Демо Банк»");
       await screenShot(page, "company-bank-add");
       await dialog.getByRole("button", { name: "Сохранить" }).click();
       await expect(
