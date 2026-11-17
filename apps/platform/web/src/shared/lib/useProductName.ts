@@ -14,7 +14,11 @@ import {
  */
 export function useProductName(): { name: string; initials: string } {
   const { t } = useTranslation("common");
-  const state = useGetSetupState({ query: { retry: false, staleTime: 5 * 60_000 } });
+  // `retryOnMount: false`: марка в рамке экрана ошибки состояния (AuthLayout) не перезапрашивает упавший запрос —
+  // иначе экран ошибки сбрасывается в загрузку и мигает по кругу
+  const state = useGetSetupState({
+    query: { retry: false, retryOnMount: false, staleTime: 5 * 60_000 },
+  });
   const name = state.data?.company_name?.trim() || t("app.title");
   return { name, initials: initialsOf(name) };
 }

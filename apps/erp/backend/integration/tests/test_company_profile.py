@@ -29,9 +29,14 @@ def test_operator_name_is_public_and_hidden_until_crm_sends_the_profile():
     assert client.get("/api/portal/v1/operator").json() == {
         "name": None,
         "bot_username": None,
+        "logo_url": None,
     }, "до профиля из CRM — не показываем значение окружения"
     apply_company_profile(_snapshot("RailTech", "2026-11-13T09:00:00Z"))
-    assert client.get("/api/portal/v1/operator").json() == {"name": "RailTech", "bot_username": None}
+    assert client.get("/api/portal/v1/operator").json() == {
+        "name": "RailTech",
+        "bot_username": None,
+        "logo_url": None,
+    }
 
 
 def test_the_bus_handler_is_registered():
