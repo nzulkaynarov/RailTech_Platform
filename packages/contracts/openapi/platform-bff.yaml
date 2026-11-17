@@ -7290,7 +7290,10 @@ paths:
       description: >-
         Раздел `company.settings` — полный (решение владельца 2026-11-11: счета — список). Первый счёт валюты становится
         основным; «Основной для валюты» снимает флаг с прежнего счёта той же валюты. Номер счёта у компании уникален
-        (`details.fields = [account]`); неизвестная валюта — `details.fields = [currency]`.
+        (`details.fields = [account]`); неизвестная валюта — `details.fields = [currency]`. Проверки ADR-0029 (IBAN, SWIFT/BIC,
+        счёт Узбекистана, МФО) — 422 с `details.fields` и `details.field_reasons` (`{поле: причина}`: `uz_format`,
+        `currency_mismatch`, `iban_invalid`, `iban_country`, `format`, `invalid`, `country_mismatch`, `required`,
+        `latin_charset`, `taken`).
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
       requestBody:
@@ -20453,16 +20456,24 @@ components:
     CompanyBankAccount:
       type: object
       additionalProperties: false
-      description: Банковский счёт своей компании (решение владельца 2026-11-11); печать берёт основной счёт валюты документа
-      required: [id, bank_name, mfo, account, currency, swift, correspondent_bank, is_default, is_active, order]
+      description: >-
+        Банковский счёт своей компании (решение владельца 2026-11-11); печать берёт основной счёт валюты документа. Поля —
+        ISO 20022 (ADR-0029): страна банка решает формат номера (IBAN, 20 цифр Узбекистана, иной) и код банка в стране.
+      required: [id, bank_country, holder_name, holder_name_latin, bank_name, bank_address, mfo, account, currency, swift, intermediary_swift, intermediary_account, correspondent_bank, is_default, is_active, order]
       properties:
         id: {type: string}
+        bank_country: {type: string, description: 'Страна банка, ISO 3166-1 alpha-2; пусто — не задана'}
+        holder_name: {type: string, description: Владелец счёта; пусто — название компании}
+        holder_name_latin: {type: string, description: Владелец латиницей (набор символов SWIFT)}
         bank_name: {type: string}
-        mfo: {type: string}
-        account: {type: string}
+        bank_address: {type: string}
+        mfo: {type: string, description: 'Код банка в стране: МФО для Узбекистана'}
+        account: {type: string, description: IBAN или номер счёта без пробелов}
         currency: {type: string, description: 'Код валюты справочника: UZS, USD и т. д.'}
-        swift: {type: string}
-        correspondent_bank: {type: string}
+        swift: {type: string, description: 'SWIFT/BIC, ISO 9362'}
+        intermediary_swift: {type: string, description: SWIFT/BIC банка-посредника}
+        intermediary_account: {type: string, description: Счёт банка получателя у посредника}
+        correspondent_bank: {type: string, description: Прежний свободный текст; в форму не входит}
         is_default: {type: boolean, description: 'Основной для своей валюты, один на валюту'}
         is_active: {type: boolean}
         order: {type: integer}
@@ -20480,11 +20491,17 @@ components:
       additionalProperties: false
       required: [account, currency]
       properties:
+        bank_country: {type: [string, 'null'], maxLength: 2, description: 'Страна банка, ISO 3166-1 alpha-2; нет — UZ'}
+        holder_name: {type: [string, 'null'], maxLength: 255}
+        holder_name_latin: {type: [string, 'null'], maxLength: 140}
         bank_name: {type: [string, 'null'], maxLength: 255}
-        mfo: {type: [string, 'null'], maxLength: 10}
+        bank_address: {type: [string, 'null'], maxLength: 255}
+        mfo: {type: [string, 'null'], maxLength: 15}
         account: {type: string, minLength: 1, maxLength: 50}
         currency: {type: string, pattern: '^[A-Z]{3}$'}
         swift: {type: [string, 'null'], maxLength: 11}
+        intermediary_swift: {type: [string, 'null'], maxLength: 11}
+        intermediary_account: {type: [string, 'null'], maxLength: 50}
         correspondent_bank: {type: [string, 'null'], maxLength: 2000}
         is_default: {type: [boolean, 'null']}
         is_active: {type: [boolean, 'null']}
@@ -20494,11 +20511,17 @@ components:
       additionalProperties: false
       minProperties: 1
       properties:
+        bank_country: {type: string, maxLength: 2}
+        holder_name: {type: string, maxLength: 255}
+        holder_name_latin: {type: string, maxLength: 140}
         bank_name: {type: string, maxLength: 255}
-        mfo: {type: string, maxLength: 10}
+        bank_address: {type: string, maxLength: 255}
+        mfo: {type: string, maxLength: 15}
         account: {type: string, minLength: 1, maxLength: 50}
         currency: {type: string, pattern: '^[A-Z]{3}$'}
         swift: {type: string, maxLength: 11}
+        intermediary_swift: {type: string, maxLength: 11}
+        intermediary_account: {type: string, maxLength: 50}
         correspondent_bank: {type: string, maxLength: 2000}
         is_default: {type: boolean}
         is_active: {type: boolean}

@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Alert, App, AutoComplete, Button, Checkbox, Form, Input, Select } from "antd";
+import { Alert, App, AutoComplete, Button, Checkbox, Form, Input, Radio, Select } from "antd";
 import { RowActions, ROW_ACTIONS_WIDTH } from "../../../../shared/ui/RowActions";
 import type { FormInstance, SelectProps } from "antd";
 import { useId, useState } from "react";
@@ -18,45 +18,84 @@ import {
   useListReferenceItems,
   useUpdateCompanyBankAccount,
 } from "../../../../shared/api/generated/platform-bff";
+import {
+  accountProblem,
+  compact,
+  countryOf,
+  grouped,
+  latinProblem,
+  mfoProblem,
+  placeOf,
+  swiftProblem,
+  type BankPlace,
+} from "../../../../shared/lib/bankAccount";
 import { HOME_CURRENCY } from "../../../../shared/lib/money";
 import { StatusTag } from "../../../../shared/ui/StatusTag";
 import { useSheetPanel } from "../../../../shared/ui/useSheetPanel";
 import { ConfirmModal, FormSheet, ListTable, QueryGate } from "../common";
 import { changedFields, codeLabel } from "../diff";
-import { errorFields } from "../errors";
+import { errorFields, fieldReasons } from "../errors";
 
 interface Values {
+  place: BankPlace;
   account: string;
   currency: string;
+  holder_name_latin: string;
   bank_name: string;
+  bank_address: string;
   mfo: string;
   swift: string;
-  correspondent_bank: string;
+  intermediary_swift: string;
+  intermediary_account: string;
   is_default: boolean;
   is_active: boolean;
 }
 
 const EMPTY: Values = {
+  place: "uz",
   account: "",
   currency: HOME_CURRENCY,
+  holder_name_latin: "",
   bank_name: "",
+  bank_address: "",
   mfo: "",
   swift: "",
-  correspondent_bank: "",
+  intermediary_swift: "",
+  intermediary_account: "",
   is_default: false,
   is_active: true,
 };
 
 const valuesOf = (row: CompanyBankAccount): Values => ({
+  place: placeOf(row.bank_country),
   account: row.account,
   currency: row.currency,
+  holder_name_latin: row.holder_name_latin,
   bank_name: row.bank_name,
+  bank_address: row.bank_address,
   mfo: row.mfo,
   swift: row.swift,
-  correspondent_bank: row.correspondent_bank,
+  intermediary_swift: row.intermediary_swift,
+  intermediary_account: row.intermediary_account,
   is_default: row.is_default,
   is_active: row.is_active,
 });
+
+const CODES = ["account", "mfo", "swift", "intermediary_swift", "intermediary_account"] as const;
+
+/** Значения формы — тело запроса: коды без пробелов, страна банка — UZ или из SWIFT (ADR-0029). */
+function payloadOf(values: Values) {
+  const { place, ...rest } = values;
+  const body = { ...rest, bank_country: countryOf(place, values.swift) };
+  for (const key of CODES) body[key] = compact(body[key]);
+  if (place === "uz") {
+    body.holder_name_latin = "";
+    body.bank_address = "";
+    body.intermediary_swift = "";
+    body.intermediary_account = "";
+  }
+  return body;
+}
 
 /**
  * Банковские счета своей компании (решение владельца 2026-11-11): основной, дополнительные, валютные; один основной на
@@ -129,13 +168,20 @@ export function BankAccounts() {
                   {
                     id: "account",
                     header: t("bank.account"),
-                    width: null,
-                    cell: (row) => <span className="pf-num">{row.account}</span>,
+                    width: 280,
+                    cell: (row) => (
+                      <span className="pf-num">
+                        {grouped(row.account)}
+                        {row.bank_country && row.bank_country !== "UZ"
+                          ? ` · ${row.bank_country}`
+                          : ""}
+                      </span>
+                    ),
                   },
                   {
                     id: "currency",
                     header: t("bank.currency"),
-                    width: null,
+                    width: 90,
                     cell: (row) => row.currency,
                   },
                   {
@@ -267,20 +313,35 @@ function BankAccountForm({
   const create = useCreateCompanyBankAccount({ mutation: { onSuccess: onSaved } });
   const update = useUpdateCompanyBankAccount({ mutation: { onSuccess: onSaved } });
   const mutation = row ? update : create;
-  const foreign = Form.useWatch("currency", form) !== HOME_CURRENCY;
+  // До первого рендера формы useWatch отдаёт undefined, хотя тип его не допускает.
+  const placeOr = (value: BankPlace | undefined): BankPlace => value ?? initial.place;
+  const place = placeOr(Form.useWatch("place", form));
+  const abroad = place === "abroad";
+  const reasonText = (reason: string) =>
+    t(`bank.errors.${reason}`, { defaultValue: t("bank.invalidField") });
+  const check =
+    (problem: (value: string) => string | null) => (_rule: unknown, value: string | undefined) => {
+      const reason = problem(value ?? "");
+      return reason ? Promise.reject(new Error(reasonText(reason))) : Promise.resolve();
+    };
 
   const submit = (values: Values) => {
     const onError = (error: unknown) => {
+      const reasons = fieldReasons(error);
       form.setFields(
         errorFields(error)
           .filter((name) => name in EMPTY)
-          .map((name) => ({ name: name as keyof Values, errors: [t("bank.invalidField")] })),
+          .map((name) => ({
+            name: name as keyof Values,
+            errors: [reasons[name] ? reasonText(reasons[name]) : t("bank.invalidField")],
+          })),
       );
     };
+    const body = payloadOf(values);
     if (row) {
-      update.mutate({ id: row.id, data: changedFields(initial, values) }, { onError });
+      update.mutate({ id: row.id, data: changedFields(payloadOf(initial), body) }, { onError });
     } else {
-      create.mutate({ data: values satisfies CompanyBankAccountIn }, { onError });
+      create.mutate({ data: body satisfies CompanyBankAccountIn }, { onError });
     }
   };
 
@@ -302,33 +363,85 @@ function BankAccountForm({
         initialValues={initial}
         onFinish={submit}
       >
-        <Form.Item
-          name="currency"
-          label={t("bank.currency")}
-          rules={[{ required: true, message: t("required") }]}
-        >
-          <SearchSelect
-            showSearch
-            optionFilterProp="label"
-            loading={currencies.isPending}
-            options={(currencies.data?.items ?? []).map((c) => ({
-              value: c.code,
-              label: codeLabel(c.code, c.name),
-            }))}
+        <Form.Item name="place" label={t("bank.place")}>
+          <Radio.Group
+            optionType="button"
+            options={[
+              { value: "uz", label: t("bank.places.uz") },
+              { value: "abroad", label: t("bank.places.abroad") },
+            ]}
           />
         </Form.Item>
+        <div className="pf-co-grid">
+          <Form.Item
+            name="currency"
+            label={t("bank.currency")}
+            rules={[{ required: true, message: t("required") }]}
+          >
+            <SearchSelect
+              showSearch
+              optionFilterProp="label"
+              loading={currencies.isPending}
+              options={(currencies.data?.items ?? []).map((c) => ({
+                value: c.code,
+                label: codeLabel(c.code, c.name),
+              }))}
+            />
+          </Form.Item>
+          {abroad ? (
+            <Form.Item
+              name="swift"
+              label={t("bank.swift")}
+              extra={t("bank.swiftHint")}
+              rules={[{ validator: check((v) => swiftProblem(v, true)) }]}
+            >
+              <Input maxLength={11} autoComplete="off" className="pf-num" />
+            </Form.Item>
+          ) : (
+            <Form.Item
+              name="mfo"
+              label={t("bank.mfo")}
+              rules={[{ validator: check((v) => mfoProblem("uz", v)) }]}
+            >
+              <Input maxLength={5} autoComplete="off" inputMode="numeric" className="pf-num" />
+            </Form.Item>
+          )}
+        </div>
+        {abroad ? (
+          <Form.Item
+            name="holder_name_latin"
+            label={t("bank.holderLatin")}
+            extra={t("bank.holderLatinHint")}
+            rules={[{ validator: check(latinProblem) }]}
+          >
+            <Input maxLength={140} autoComplete="off" />
+          </Form.Item>
+        ) : null}
         <Form.Item
           name="account"
-          label={t("bank.account")}
-          rules={[{ required: true, message: t("required") }]}
+          label={abroad ? t("bank.iban") : t("bank.account")}
+          extra={abroad ? t("bank.ibanHint") : t("bank.accountHint")}
+          dependencies={["currency", "place"]}
+          rules={[
+            {
+              validator: check((v) =>
+                accountProblem(place, v, String(form.getFieldValue("currency") ?? "")),
+              ),
+            },
+          ]}
         >
-          <Input maxLength={50} autoComplete="off" inputMode="numeric" />
+          <Input
+            maxLength={42}
+            autoComplete="off"
+            inputMode={abroad ? "text" : "numeric"}
+            className="pf-num"
+          />
         </Form.Item>
         <div className="pf-co-grid">
-          <Form.Item name="bank_name" label={t("bank.bankName")}>
+          <Form.Item name="bank_name" label={t("bank.bankName")} extra={t("bank.autoHint")}>
             <AutoComplete
               maxLength={255}
-              options={bankOptions}
+              options={abroad ? [] : bankOptions}
               filterOption={(input, option) =>
                 (option?.label ?? "").toLowerCase().includes(input.trim().toLowerCase())
               }
@@ -340,19 +453,43 @@ function BankAccountForm({
               }}
             />
           </Form.Item>
-          <Form.Item name="mfo" label={t("bank.mfo")}>
-            <Input maxLength={10} autoComplete="off" inputMode="numeric" />
-          </Form.Item>
+          {abroad ? (
+            <Form.Item name="bank_address" label={t("bank.bankAddress")}>
+              <Input maxLength={255} autoComplete="off" />
+            </Form.Item>
+          ) : (
+            <Form.Item
+              name="swift"
+              label={t("bank.swiftOptional")}
+              rules={[{ validator: check((v) => swiftProblem(v, false)) }]}
+            >
+              <Input maxLength={11} autoComplete="off" className="pf-num" />
+            </Form.Item>
+          )}
         </div>
-        {foreign ? (
-          <>
-            <Form.Item name="swift" label={t("bank.swift")}>
-              <Input maxLength={11} autoComplete="off" />
+        {abroad ? (
+          <div className="pf-co-grid">
+            <Form.Item
+              name="intermediary_swift"
+              label={t("bank.intermediarySwift")}
+              dependencies={["intermediary_account"]}
+              rules={[
+                {
+                  validator: check((v) =>
+                    swiftProblem(
+                      v,
+                      Boolean(compact(String(form.getFieldValue("intermediary_account") ?? ""))),
+                    ),
+                  ),
+                },
+              ]}
+            >
+              <Input maxLength={11} autoComplete="off" className="pf-num" />
             </Form.Item>
-            <Form.Item name="correspondent_bank" label={t("bank.correspondent")}>
-              <Input.TextArea rows={2} maxLength={2000} />
+            <Form.Item name="intermediary_account" label={t("bank.intermediaryAccount")}>
+              <Input maxLength={50} autoComplete="off" className="pf-num" />
             </Form.Item>
-          </>
+          </div>
         ) : null}
         <Form.Item name="is_default" valuePropName="checked" style={{ marginBottom: 4 }}>
           <Checkbox>{t("bank.isDefaultLabel")}</Checkbox>

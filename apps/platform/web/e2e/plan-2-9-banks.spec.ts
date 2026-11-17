@@ -12,7 +12,7 @@ test("банк из справочника в диалоге счёта", async 
   await page.getByRole("button", { name: /Банковские счета/ }).click();
   await page.getByRole("button", { name: "Добавить счёт" }).first().click();
   const dialog = page.getByRole("region", { name: "Новый банковский счёт" });
-  await dialog.getByLabel("Банк").fill("демо");
+  await dialog.getByLabel("Банк", { exact: true }).fill("демо");
   await page.getByText("АКБ «Демо Банк» · 00014").click();
   await expect(dialog.getByLabel("МФО")).toHaveValue("00014");
   await waitForMotionEnd(page);

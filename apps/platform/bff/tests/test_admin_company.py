@@ -2152,11 +2152,17 @@ async def test_fx_rate_bad_body_is_422_and_erp_is_not_called(
 def bank_account_json(**extra: Any) -> dict[str, Any]:
     return {
         "id": 7,
+        "bank_country": "UZ",
+        "holder_name": "",
+        "holder_name_latin": "",
         "bank_name": "Банк Демо",
+        "bank_address": "",
         "mfo": "00873",
         "account": "20208000900001234567",
         "currency": "UZS",
         "swift": "",
+        "intermediary_swift": "",
+        "intermediary_account": "",
         "correspondent_bank": "",
         "is_default": True,
         "is_active": True,
@@ -2220,6 +2226,26 @@ async def test_bank_account_field_errors_and_read_only_role(
     )
     assert taken.status_code == 422
     assert taken.json()["details"]["fields"] == ["account"]
+    assert taken.json()["details"]["field_reasons"] == {"account": "taken"}
+    erp.post(f"{COMPANY}/bank-accounts/").mock(
+        return_value=httpx.Response(
+            400, json={"account": ["iban_invalid"], "swift": ["country_mismatch"]}
+        )
+    )
+    iban = await web.send(
+        "POST",
+        "/api/v1/admin/company/bank-accounts",
+        json={
+            "bank_country": "DE",
+            "account": "DE89370400440532013001",
+            "currency": "EUR",
+            "swift": "NBFAUZ2X",
+        },
+    )
+    assert iban.json()["details"]["field_reasons"] == {
+        "account": "iban_invalid",
+        "swift": "country_mismatch",
+    }
     bad = await web.send(
         "POST", "/api/v1/admin/company/bank-accounts", json={"account": "1", "currency": "usd"}
     )

@@ -5,12 +5,33 @@
 
 export interface CompanyBankAccountIn {
   /**
+   * Страна банка, ISO 3166-1 alpha-2; нет — UZ
+   * @maxLength 2
+   * @nullable
+   */
+  bank_country?: string | null;
+  /**
+   * @maxLength 255
+   * @nullable
+   */
+  holder_name?: string | null;
+  /**
+   * @maxLength 140
+   * @nullable
+   */
+  holder_name_latin?: string | null;
+  /**
    * @maxLength 255
    * @nullable
    */
   bank_name?: string | null;
   /**
-   * @maxLength 10
+   * @maxLength 255
+   * @nullable
+   */
+  bank_address?: string | null;
+  /**
+   * @maxLength 15
    * @nullable
    */
   mfo?: string | null;
@@ -26,6 +47,16 @@ export interface CompanyBankAccountIn {
    * @nullable
    */
   swift?: string | null;
+  /**
+   * @maxLength 11
+   * @nullable
+   */
+  intermediary_swift?: string | null;
+  /**
+   * @maxLength 50
+   * @nullable
+   */
+  intermediary_account?: string | null;
   /**
    * @maxLength 2000
    * @nullable

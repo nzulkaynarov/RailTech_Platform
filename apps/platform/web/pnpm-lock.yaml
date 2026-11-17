@@ -68,6 +68,9 @@ importers:
       i18next:
         specifier: ^26.5.4
         version: 26.5.4(typescript@5.9.3)
+      ibantools:
+        specifier: 4.5.4
+        version: 4.5.4
       lucide-react:
         specifier: ^1.73.0
         version: 1.73.0(@types/react@18.3.31)(react@18.3.1)
@@ -2284,6 +2287,9 @@ packages:
     peerDependenciesMeta:
       typescript:
         optional: true
+
+  ibantools@4.5.4:
+    resolution: {integrity: sha512-6jX1gh4aH6XH+o0ey+wtkMTzkcvsEta7DakIOZSng9voZYpMw3U+gK1+tZChk3aRcPcloEt0NOzksjaRZiqXbw==}
 
   iconv-lite@0.6.3:
     resolution: {integrity: sha512-4fCk79wshMdzMp2rH06qWrJE4iolqLhCUH+OiuIgU++RB0+94NlDL81atO7GX55uUKueo0txHNtvEyI6D7WdMw==}
@@ -5837,6 +5843,8 @@ snapshots:
   i18next@26.5.4(typescript@5.9.3):
     optionalDependencies:
       typescript: 5.9.3
+
+  ibantools@4.5.4: {}
 
   iconv-lite@0.6.3:
     dependencies:

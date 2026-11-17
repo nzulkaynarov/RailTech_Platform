@@ -4,16 +4,31 @@
  */
 
 /**
- * Банковский счёт своей компании (решение владельца 2026-11-11); печать берёт основной счёт валюты документа
+ * Банковский счёт своей компании (решение владельца 2026-11-11); печать берёт основной счёт валюты документа. Поля — ISO 20022 (ADR-0029): страна банка решает формат номера (IBAN, 20 цифр Узбекистана, иной) и код банка в стране.
  */
 export interface CompanyBankAccount {
   id: string;
+  /** Страна банка, ISO 3166-1 alpha-2; пусто — не задана */
+  bank_country: string;
+  /** Владелец счёта; пусто — название компании */
+  holder_name: string;
+  /** Владелец латиницей (набор символов SWIFT) */
+  holder_name_latin: string;
   bank_name: string;
+  bank_address: string;
+  /** Код банка в стране: МФО для Узбекистана */
   mfo: string;
+  /** IBAN или номер счёта без пробелов */
   account: string;
   /** Код валюты справочника: UZS, USD и т. д. */
   currency: string;
+  /** SWIFT/BIC, ISO 9362 */
   swift: string;
+  /** SWIFT/BIC банка-посредника */
+  intermediary_swift: string;
+  /** Счёт банка получателя у посредника */
+  intermediary_account: string;
+  /** Прежний свободный текст; в форму не входит */
   correspondent_bank: string;
   /** Основной для своей валюты, один на валюту */
   is_default: boolean;

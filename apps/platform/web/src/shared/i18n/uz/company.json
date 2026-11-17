@@ -526,7 +526,7 @@
     "currency": "Valyuta",
     "bankName": "Bank",
     "mfo": "MFO",
-    "swift": "SWIFT",
+    "swift": "SWIFT/BIC",
     "correspondent": "Korrespondent bank",
     "isDefault": "Asosiy",
     "isDefaultLabel": "Bu valyuta uchun asosiy",
@@ -535,6 +535,35 @@
     "empty": {
       "title": "Hozircha hisoblar yo‘q",
       "text": "So‘mdagi asosiy hisobni qo‘shing: usiz mijozga hisob-faktura chiqarib bo‘lmaydi."
+    },
+    "place": "Bank qayerda",
+    "places": {
+      "uz": "Özbekistonda",
+      "abroad": "Chet elda"
+    },
+    "swiftHint": "8 yoki 11 belgi; bank mamlakati şunga köra aniqlanadi",
+    "swiftOptional": "SWIFT/BIC — valyuta tölovlari uçun",
+    "holderLatin": "Hisob egasi lotinça",
+    "holderLatinHint": "SWIFT tölov topşiriğidagidek; böş — kompaniya nomi",
+    "accountHint": "20 ta raqam; 6–8-raqamlar — valyuta kodi (000 — söm)",
+    "iban": "IBAN yoki hisob raqami",
+    "ibanHint": "IBAN mamlakat uzunligi va nazorat raqamlari böyiça tekşiriladi",
+    "bankAddress": "Bank manzili",
+    "autoHint": "Töldirmasa ham böladi — bank kodi böyiça qöyamiz",
+    "intermediarySwift": "Vositaçi bank SWIFT",
+    "intermediaryAccount": "Oluvçi bankning vositaçidagi hisobi",
+    "errors": {
+      "required": "Maydonni töldiring",
+      "uz_format": "Format notoğri: hisob raqami — 20 ta raqam, MFO — 5 ta raqam",
+      "currency_mismatch": "Raqamdagi valyuta kodi (6–8-raqamlar) hisob valyutasiga mos emas",
+      "iban_invalid": "IBAN tekşiruvdan ötmadi: uzunlik yoki nazorat raqamlari",
+      "iban_country": "IBAN mamlakati bank mamlakatiga mos emas",
+      "format": "Faqat lotin harflari va raqamlar, 34 belgigaça",
+      "invalid": "SWIFT/BIC notoğri",
+      "country_mismatch": "Boşqa mamlakat SWIFT/BIC",
+      "latin_charset": "Faqat lotin harflari, raqamlar va / - ? : ( ) . , ' +",
+      "taken": "Bunday hisob allaqaçon bor",
+      "unknown": "Nomaʼlum qiymat"
     }
   },
   "letterTemplates": {

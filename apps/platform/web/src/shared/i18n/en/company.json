@@ -526,7 +526,7 @@
     "currency": "Currency",
     "bankName": "Bank",
     "mfo": "Bank code (MFO)",
-    "swift": "SWIFT",
+    "swift": "SWIFT/BIC",
     "correspondent": "Correspondent bank",
     "isDefault": "Default",
     "isDefaultLabel": "Default for this currency",
@@ -535,6 +535,35 @@
     "empty": {
       "title": "No accounts yet",
       "text": "Add the default account in sums: without it an invoice cannot be issued."
+    },
+    "place": "Bank location",
+    "places": {
+      "uz": "In Uzbekistan",
+      "abroad": "Abroad"
+    },
+    "swiftHint": "8 or 11 characters; it determines the bank country",
+    "swiftOptional": "SWIFT/BIC — for foreign currency payments",
+    "holderLatin": "Account holder (Latin)",
+    "holderLatinHint": "As in a SWIFT payment order; empty — the company name",
+    "accountHint": "20 digits; digits 6–8 are the currency code (000 — sum)",
+    "iban": "IBAN or account number",
+    "ibanHint": "IBAN is checked for the country length and check digits",
+    "bankAddress": "Bank address",
+    "autoHint": "Optional — filled in from the bank code",
+    "intermediarySwift": "Intermediary bank SWIFT",
+    "intermediaryAccount": "Beneficiary bank account with the intermediary",
+    "errors": {
+      "required": "Fill in this field",
+      "uz_format": "Wrong format: account — 20 digits, MFO — 5 digits",
+      "currency_mismatch": "The currency code in the number (digits 6–8) does not match the account currency",
+      "iban_invalid": "IBAN fails the check: length or check digits",
+      "iban_country": "IBAN country differs from the bank country",
+      "format": "Latin letters and digits only, up to 34 characters",
+      "invalid": "Invalid SWIFT/BIC",
+      "country_mismatch": "SWIFT/BIC of another country",
+      "latin_charset": "Latin letters, digits and / - ? : ( ) . , ' + only",
+      "taken": "This account already exists",
+      "unknown": "Unknown value"
     }
   },
   "letterTemplates": {
