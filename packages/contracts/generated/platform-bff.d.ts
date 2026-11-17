@@ -3872,7 +3872,7 @@ export interface paths {
     put?: never;
     /**
      * Добавить банковский счёт
-     * @description Раздел `company.settings` — полный (решение владельца 2026-11-11: счета — список). Первый счёт валюты становится основным; «Основной для валюты» снимает флаг с прежнего счёта той же валюты. Номер счёта у компании уникален (`details.fields = [account]`); неизвестная валюта — `details.fields = [currency]`.
+     * @description Раздел `company.settings` — полный (решение владельца 2026-11-11: счета — список). Первый счёт валюты становится основным; «Основной для валюты» снимает флаг с прежнего счёта той же валюты. Номер счёта у компании уникален (`details.fields = [account]`); неизвестная валюта — `details.fields = [currency]`. Проверки ADR-0029 (IBAN, SWIFT/BIC, счёт Узбекистана, МФО) — 422 с `details.fields` и `details.field_reasons` (`{поле: причина}`: `uz_format`, `currency_mismatch`, `iban_invalid`, `iban_country`, `format`, `invalid`, `country_mismatch`, `required`, `latin_charset`, `taken`).
      */
     post: operations["createCompanyBankAccount"];
     delete?: never;
@@ -11559,15 +11559,30 @@ export interface components {
     ChargeTypeList: {
       items: components["schemas"]["ChargeType"][];
     };
-    /** @description Банковский счёт своей компании (решение владельца 2026-11-11); печать берёт основной счёт валюты документа */
+    /** @description Банковский счёт своей компании (решение владельца 2026-11-11); печать берёт основной счёт валюты документа. Поля — ISO 20022 (ADR-0029): страна банка решает формат номера (IBAN, 20 цифр Узбекистана, иной) и код банка в стране. */
     CompanyBankAccount: {
       id: string;
+      /** @description Страна банка, ISO 3166-1 alpha-2; пусто — не задана */
+      bank_country: string;
+      /** @description Владелец счёта; пусто — название компании */
+      holder_name: string;
+      /** @description Владелец латиницей (набор символов SWIFT) */
+      holder_name_latin: string;
       bank_name: string;
+      bank_address: string;
+      /** @description Код банка в стране: МФО для Узбекистана */
       mfo: string;
+      /** @description IBAN или номер счёта без пробелов */
       account: string;
       /** @description Код валюты справочника: UZS, USD и т. д. */
       currency: string;
+      /** @description SWIFT/BIC, ISO 9362 */
       swift: string;
+      /** @description SWIFT/BIC банка-посредника */
+      intermediary_swift: string;
+      /** @description Счёт банка получателя у посредника */
+      intermediary_account: string;
+      /** @description Прежний свободный текст; в форму не входит */
       correspondent_bank: string;
       /** @description Основной для своей валюты, один на валюту */
       is_default: boolean;
@@ -11578,22 +11593,35 @@ export interface components {
       items: components["schemas"]["CompanyBankAccount"][];
     };
     CompanyBankAccountIn: {
+      /** @description Страна банка, ISO 3166-1 alpha-2; нет — UZ */
+      bank_country?: string | null;
+      holder_name?: string | null;
+      holder_name_latin?: string | null;
       bank_name?: string | null;
+      bank_address?: string | null;
       mfo?: string | null;
       account: string;
       currency: string;
       swift?: string | null;
+      intermediary_swift?: string | null;
+      intermediary_account?: string | null;
       correspondent_bank?: string | null;
       is_default?: boolean | null;
       is_active?: boolean | null;
       order?: number | null;
     };
     CompanyBankAccountUpdate: {
+      bank_country?: string;
+      holder_name?: string;
+      holder_name_latin?: string;
       bank_name?: string;
+      bank_address?: string;
       mfo?: string;
       account?: string;
       currency?: string;
       swift?: string;
+      intermediary_swift?: string;
+      intermediary_account?: string;
       correspondent_bank?: string;
       is_default?: boolean;
       is_active?: boolean;

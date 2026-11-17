@@ -64,5 +64,17 @@ export function errorFields(error: unknown): string[] {
   return Array.isArray(fields) ? fields.filter((f): f is string => typeof f === "string") : [];
 }
 
+/** Причины по полям из 422 ERP (`details.field_reasons`, ADR-0029): `{поле: код}`. */
+export function fieldReasons(error: unknown): Record<string, string> {
+  if (!(error instanceof ApiError)) return {};
+  const raw = error.details["field_reasons"];
+  if (typeof raw !== "object" || raw === null) return {};
+  return Object.fromEntries(
+    Object.entries(raw as Record<string, unknown>).filter(
+      (entry): entry is [string, string] => typeof entry[1] === "string",
+    ),
+  );
+}
+
 export const isCompanyNotSet = (error: unknown) =>
   error instanceof ApiError && error.code === "COMPANY_NOT_SET";

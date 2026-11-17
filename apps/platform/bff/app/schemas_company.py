@@ -618,11 +618,17 @@ _CURRENCY = r"^[A-Z]{3}$"
 
 class CompanyBankAccount(BaseModel):
     id: str
+    bank_country: str
+    holder_name: str
+    holder_name_latin: str
     bank_name: str
+    bank_address: str
     mfo: str
     account: str
     currency: str
     swift: str
+    intermediary_swift: str
+    intermediary_account: str
     correspondent_bank: str
     is_default: bool
     is_active: bool
@@ -634,11 +640,17 @@ class CompanyBankAccountList(BaseModel):
 
 
 class CompanyBankAccountIn(Body):
+    bank_country: str | None = Field(default=None, max_length=2)
+    holder_name: str | None = Field(default=None, max_length=255)
+    holder_name_latin: str | None = Field(default=None, max_length=140)
     bank_name: str | None = Field(default=None, max_length=255)
-    mfo: str | None = Field(default=None, max_length=10)
+    bank_address: str | None = Field(default=None, max_length=255)
+    mfo: str | None = Field(default=None, max_length=15)
     account: str = Field(min_length=1, max_length=50)
     currency: str = Field(pattern=_CURRENCY)
     swift: str | None = Field(default=None, max_length=11)
+    intermediary_swift: str | None = Field(default=None, max_length=11)
+    intermediary_account: str | None = Field(default=None, max_length=50)
     correspondent_bank: str | None = Field(default=None, max_length=2000)
     is_default: bool | None = None
     is_active: bool | None = None
@@ -646,11 +658,17 @@ class CompanyBankAccountIn(Body):
 
 
 class CompanyBankAccountUpdate(Patch):
+    bank_country: str | None = Field(default=None, max_length=2)
+    holder_name: str | None = Field(default=None, max_length=255)
+    holder_name_latin: str | None = Field(default=None, max_length=140)
     bank_name: str | None = Field(default=None, max_length=255)
-    mfo: str | None = Field(default=None, max_length=10)
+    bank_address: str | None = Field(default=None, max_length=255)
+    mfo: str | None = Field(default=None, max_length=15)
     account: str | None = Field(default=None, min_length=1, max_length=50)
     currency: str | None = Field(default=None, pattern=_CURRENCY)
     swift: str | None = Field(default=None, max_length=11)
+    intermediary_swift: str | None = Field(default=None, max_length=11)
+    intermediary_account: str | None = Field(default=None, max_length=50)
     correspondent_bank: str | None = Field(default=None, max_length=2000)
     is_default: bool | None = None
     is_active: bool | None = None
@@ -660,11 +678,17 @@ class CompanyBankAccountUpdate(Patch):
 def to_bank_account(raw: Mapping[str, Any]) -> CompanyBankAccount:
     return CompanyBankAccount(
         id=ident(raw.get("id")),
+        bank_country=text(raw.get("bank_country")),
+        holder_name=text(raw.get("holder_name")),
+        holder_name_latin=text(raw.get("holder_name_latin")),
         bank_name=text(raw.get("bank_name")),
+        bank_address=text(raw.get("bank_address")),
         mfo=text(raw.get("mfo")),
         account=text(raw.get("account")),
         currency=text(raw.get("currency")),
         swift=text(raw.get("swift")),
+        intermediary_swift=text(raw.get("intermediary_swift")),
+        intermediary_account=text(raw.get("intermediary_account")),
         correspondent_bank=text(raw.get("correspondent_bank")),
         is_default=flag(raw.get("is_default")),
         is_active=flag(raw.get("is_active", True)),

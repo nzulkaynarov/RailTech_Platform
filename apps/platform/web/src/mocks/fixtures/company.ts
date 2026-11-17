@@ -183,11 +183,17 @@ function seed(): CompanyMock {
     bankAccounts: [
       {
         id: "901",
+        bank_country: "UZ",
+        holder_name: "",
+        holder_name_latin: "",
         bank_name: "АКБ «Демо Банк»",
+        bank_address: "",
         mfo: "00001",
         account: "20208000900000000001",
         currency: "UZS",
         swift: "",
+        intermediary_swift: "",
+        intermediary_account: "",
         correspondent_bank: "",
         is_default: true,
         is_active: true,

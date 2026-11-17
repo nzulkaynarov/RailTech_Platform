@@ -4,9 +4,17 @@
  */
 
 export interface CompanyBankAccountUpdate {
+  /** @maxLength 2 */
+  bank_country?: string;
+  /** @maxLength 255 */
+  holder_name?: string;
+  /** @maxLength 140 */
+  holder_name_latin?: string;
   /** @maxLength 255 */
   bank_name?: string;
-  /** @maxLength 10 */
+  /** @maxLength 255 */
+  bank_address?: string;
+  /** @maxLength 15 */
   mfo?: string;
   /**
    * @minLength 1
@@ -17,6 +25,10 @@ export interface CompanyBankAccountUpdate {
   currency?: string;
   /** @maxLength 11 */
   swift?: string;
+  /** @maxLength 11 */
+  intermediary_swift?: string;
+  /** @maxLength 50 */
+  intermediary_account?: string;
   /** @maxLength 2000 */
   correspondent_bank?: string;
   is_default?: boolean;

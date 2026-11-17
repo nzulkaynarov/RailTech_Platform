@@ -27187,7 +27187,7 @@ export const getCreateCompanyBankAccountUrl = () => {
 };
 
 /**
- * Раздел `company.settings` — полный (решение владельца 2026-11-11: счета — список). Первый счёт валюты становится основным; «Основной для валюты» снимает флаг с прежнего счёта той же валюты. Номер счёта у компании уникален (`details.fields = [account]`); неизвестная валюта — `details.fields = [currency]`.
+ * Раздел `company.settings` — полный (решение владельца 2026-11-11: счета — список). Первый счёт валюты становится основным; «Основной для валюты» снимает флаг с прежнего счёта той же валюты. Номер счёта у компании уникален (`details.fields = [account]`); неизвестная валюта — `details.fields = [currency]`. Проверки ADR-0029 (IBAN, SWIFT/BIC, счёт Узбекистана, МФО) — 422 с `details.fields` и `details.field_reasons` (`{поле: причина}`: `uz_format`, `currency_mismatch`, `iban_invalid`, `iban_country`, `format`, `invalid`, `country_mismatch`, `required`, `latin_charset`, `taken`).
  * @summary Добавить банковский счёт
  */
 export const createCompanyBankAccount = async (
