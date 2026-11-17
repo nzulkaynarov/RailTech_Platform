@@ -249,7 +249,7 @@
       <div class="addressee">
         {% if company %}
           <div class="addr-org">{{ company.name }}</div>
-          {% if company.contact_person %}<div>{{ company.contact_person }}</div>{% endif %}
+          {% with person=company|contact_person %}{% if person %}<div>{{ person }}</div>{% endif %}{% endwith %}
         {% else %}
           {% if contact.position %}<div>{{ contact.position }}</div>{% endif %}
           <div class="addr-org">{{ contact.name }}</div>

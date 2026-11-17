@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-{% load i18n %}
+{% load i18n %}{% load document_format %}
 {% comment %}
   Shared document base for ALL seller-issued PDFs (КП / договор / инвойс / акт).
 
@@ -332,7 +332,7 @@
             {% if company.inn %}<p>{% translate "ИНН" %}: {{ company.inn }}</p>
             {% elif company.registration_number %}<p>{% translate "Рег. номер" %}: {{ company.registration_number }}{% if company.country %} ({{ company.country.name }}){% endif %}</p>{% endif %}
             {% if company.legal_address %}<p>{{ company.legal_address }}</p>{% endif %}
-            {% if company.contact_person %}<p>{% translate "Контакт" %}: {{ company.contact_person }}</p>{% endif %}
+            {% with person=company|contact_person %}{% if person %}<p>{% translate "Контакт" %}: {{ person }}</p>{% endif %}{% endwith %}
           {% else %}
             {% translate "Покупатель" as buyer_fallback_name %}
             <div class="pname">{% firstof contact.name buyer_fallback_name %}</div>

@@ -206,10 +206,13 @@ class Command(BaseCommand):
                 defaults={
                     "name": company_data["name"],
                     "legal_address": company_data.get("legal_address", ""),
-                    "contact_person": company_data.get("contact_person", ""),
                     "email": company_data.get("email", ""),
                 },
             )
+            if company_data.get("contact_person"):
+                from parties.people import set_contact_name
+
+                set_contact_name(company_obj, company_data["contact_person"])
             # Assign CompanyType(s) — WITHOUT this a seeded company has empty types
             # and the frontend has no buyer/seller context (loadFromAuth → activeStatus).
             # Accepts a single `company_type` or a `company_types` list; codes from the DB.

@@ -80,7 +80,7 @@ def build_world() -> dict:
     cable = product("Кабель силовой ВВГнг 3×2,5", category=category, owner_company=own)
     relay = product("Реле защиты РЗ-1", owner_company=own)
     commissioning = product("Пусконаладочные работы", domain_type=services, fulfillment_policy="time")
-    supplier = Company.objects.create(name="ООО Поставщик Север", inn="300000777", contact_person="Менеджер Север")
+    supplier = Company.objects.create(name="ООО Поставщик Север", inn="300000777")
     today = timezone.localdate()
 
     def offer(prod, price, **extra):

@@ -100,3 +100,16 @@ def verification_qr(code):
     buffer = io.BytesIO()
     qrcode.make(url, image_factory=qrsvg.SvgPathImage, box_size=6, border=1).save(buffer)
     return f"data:image/svg+xml;base64,{base64.b64encode(buffer.getvalue()).decode('ascii')}"
+
+
+@register.filter
+def contact_person(company) -> str:
+    """Главный контакт компании из списка людей (ADR-0028 п. 2); у образца предпросмотра — его строка «кому»."""
+    if isinstance(company, dict):
+        return company.get("contact_person") or ""
+    from parties.models import Company
+    from parties.people import contact_name
+
+    if isinstance(company, Company):
+        return contact_name(company)
+    return getattr(company, "contact_person", "") or ""  # образец-объект предпросмотра и тестов

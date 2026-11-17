@@ -208,7 +208,6 @@ class CompanyWizardView(SessionWizardView):
             country=data.get("country"),
             logo=data.get("logo"),
             legal_address=data.get("legal_address", ""),
-            contact_person=data.get("contact_person", ""),
             phone=data.get("phone", ""),
             email=data.get("email", ""),
             website=data.get("website", ""),
@@ -220,6 +219,10 @@ class CompanyWizardView(SessionWizardView):
         types = data.get("types")
         if types:
             company.types.set(types)
+        if data.get("contact_person"):
+            from parties.people import set_contact_name
+
+            set_contact_name(company, data["contact_person"])
 
         # Create or get owner
         owner_email = data["owner_email"]

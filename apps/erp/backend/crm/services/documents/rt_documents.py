@@ -206,9 +206,14 @@ def window_of(company, contact=None) -> tuple[tuple[str, ...], int | None]:
 
 def contact_rows(company, contact=None) -> tuple:
     """«Контактное лицо» и «Почта» под адресатом."""
+    from parties.models import Company
+    from parties.people import contact_name
     from rt_docs import InfoRow
 
-    person = (getattr(company, "contact_person", "") or "").strip() if company is not None else ""
+    if isinstance(company, Company):
+        person = contact_name(company).strip()
+    else:  # образец предпросмотра
+        person = (getattr(company, "contact_person", "") or "").strip() if company is not None else ""
     email = ""
     if contact is not None:
         person = person or (getattr(contact, "name", "") or "").strip()
@@ -1064,8 +1069,12 @@ def quote_pdf(quote, *, items, optional_items, extras: dict[str, Any], brand: di
     addressee: list[dict[str, Any]] = []
     if company is not None:
         addressee = [_para(_text(company.name, bold=True))]
-        if getattr(company, "contact_person", ""):
-            addressee.append(_para(company.contact_person))
+        from parties.models import Company
+        from parties.people import contact_name
+
+        person = contact_name(company) if isinstance(company, Company) else getattr(company, "contact_person", "")
+        if person:
+            addressee.append(_para(person))
     elif contact is not None:
         addressee = ([_para(contact.position)] if getattr(contact, "position", "") else []) + [
             _para(_text(contact.name or "—", bold=True))

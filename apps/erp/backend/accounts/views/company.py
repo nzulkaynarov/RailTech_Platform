@@ -10,6 +10,7 @@ methods (they override nothing), so MRO does not affect behaviour.
 from django.db.models import ProtectedError
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view, inline_serializer
+from parties.people import contact_name
 from rest_framework import exceptions, filters, permissions
 from rest_framework import serializers as drf_serializers
 from rest_framework import status, viewsets
@@ -94,6 +95,7 @@ class CompanyViewSet(
         .prefetch_related(
             "types",
             "members",
+            "contacts",
         )
         .order_by("-created_at")
     )
@@ -108,7 +110,7 @@ class CompanyViewSet(
         # `?is_active=false` — вкладка «Архивные» (Odoo держит архив за фильтром, а не прячет).
         "is_active": ["exact"],
     }
-    search_fields = ["name", "inn", "mfo", "contact_person", "email"]
+    search_fields = ["name", "inn", "mfo", "contacts__name", "email"]
 
     # Actions that a company member may perform on their own company
     # (logo upload, partial update of profile fields).
@@ -284,7 +286,7 @@ class CompanyViewSet(
                 ("types", "Types", _types),
                 ("email", "Email", lambda c: c.email or ""),
                 ("phone", "Phone", lambda c: c.phone or ""),
-                ("contact_person", "Contact", lambda c: c.contact_person or ""),
+                ("contact_person", "Contact", contact_name),
                 ("created_at", "Created", lambda c: c.created_at.isoformat() if c.created_at else ""),
             ],
         )
