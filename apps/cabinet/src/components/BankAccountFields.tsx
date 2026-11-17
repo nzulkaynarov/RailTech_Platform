@@ -1,14 +1,26 @@
-import { useId, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CURRENCIES, bankDraft, type BankDraft, type BankErrors, type BankField, type BankPlace } from '@/lib/bankAccount';
+import { getBankByMfo } from '@/api/portal';
+import {
+  CURRENCIES,
+  bankDraft,
+  compact,
+  type BankDraft,
+  type BankErrors,
+  type BankField,
+  type BankPlace,
+} from '@/lib/bankAccount';
 
 /**
  * Поля банковского счёта (ADR-0029): место банка решает набор — в Узбекистане расчётный счёт и МФО, за рубежом IBAN или
- * номер, SWIFT/BIC, банк и посредник. Название банка и SWIFT для Узбекистана ERP подставит по МФО, за рубежом — по IBAN.
+ * номер, SWIFT/BIC, банк и посредник. Банк Узбекистана по МФО из справочника ЦБ подставляется и не правится (ERP при
+ * сохранении всё равно берёт его из справочника); МФО, которого там нет, не тупик — предупреждение и банк вручную.
  */
 export function BankAccountFields({
   value,
@@ -25,12 +37,44 @@ export function BankAccountFields({
   const id = useId();
   const set = (field: BankField, next: string) => onChange({ ...value, [field]: next });
   const abroad = value.place === 'abroad';
+  const mfo = compact(value.mfo);
+  const lookup = useQuery({
+    queryKey: ['bank-directory', mfo],
+    queryFn: () => getBankByMfo(mfo),
+    enabled: !abroad && /^\d{5}$/.test(mfo),
+    staleTime: 10 * 60 * 1000,
+    retry: false,
+  });
+  const known = !abroad && lookup.data?.bank?.mfo === mfo ? lookup.data.bank : null;
+  const unknown = !abroad && /^\d{5}$/.test(mfo) && lookup.isSuccess && lookup.data.bank === null;
+  // Что подставлено из справочника: при смене МФО на другой это уже не тот банк — убираем вместе с его SWIFT
+  const filled = useRef<{ name: string; swift: string } | null>(null);
+  useEffect(() => {
+    if (!known || value.bank_name === known.name) return;
+    filled.current = { name: known.name, swift: known.swift };
+    onChange({ ...value, bank_name: known.name, swift: value.swift || known.swift });
+  }, [known, value, onChange]);
+  const setMfo = (next: string) => {
+    const auto = filled.current;
+    filled.current = null;
+    onChange({
+      ...value,
+      mfo: next,
+      ...(auto && value.bank_name === auto.name ? { bank_name: '' } : {}),
+      ...(auto?.swift && value.swift === auto.swift ? { swift: '' } : {}),
+    });
+  };
 
-  const field = (name: BankField, label: string, extra: { hint?: string; mono?: boolean; maxLength: number }) => (
+  const field = (
+    name: BankField,
+    label: string,
+    extra: { hint?: string; warning?: string; mono?: boolean; maxLength: number; readOnly?: boolean },
+  ) => (
     <Field
       id={`${id}-${name}`}
       label={label}
       hint={extra.hint}
+      warning={extra.warning}
       error={errors[name] ? t(`pages.company.bank.errors.${errors[name]}`) : undefined}
     >
       <Input
@@ -38,12 +82,17 @@ export function BankAccountFields({
         value={value[name]}
         maxLength={extra.maxLength}
         disabled={disabled}
+        readOnly={extra.readOnly}
         autoComplete="off"
         spellCheck={false}
-        className={extra.mono ? 'font-mono' : undefined}
+        className={cn(extra.mono && 'font-mono', extra.readOnly && 'bg-muted')}
         aria-invalid={errors[name] ? true : undefined}
-        aria-describedby={errors[name] ? `${id}-${name}-error` : extra.hint ? `${id}-${name}-hint` : undefined}
-        onChange={(event) => set(name, event.target.value)}
+        aria-describedby={
+          errors[name] || extra.warning || extra.hint
+            ? `${id}-${name}-${errors[name] ? 'error' : extra.warning ? 'warning' : 'hint'}`
+            : undefined
+        }
+        onChange={(event) => (name === 'mfo' ? setMfo(event.target.value) : set(name, event.target.value))}
       />
     </Field>
   );
@@ -82,7 +131,11 @@ export function BankAccountFields({
         </Field>
         {abroad
           ? field('swift', t('pages.company.bank.swift'), { mono: true, maxLength: 11, hint: t('pages.company.bank.swiftHint') })
-          : field('mfo', t('pages.company.bank.mfo'), { mono: true, maxLength: 5 })}
+          : field('mfo', t('pages.company.bank.mfo'), {
+              mono: true,
+              maxLength: 5,
+              warning: unknown ? t('pages.company.bank.mfoNotInDirectory') : undefined,
+            })}
       </div>
       {abroad
         ? field('holder_name_latin', t('pages.company.bank.holderLatin'), {
@@ -96,7 +149,17 @@ export function BankAccountFields({
         hint: t(abroad ? 'pages.company.bank.ibanHint' : 'pages.company.bank.accountHint'),
       })}
       <div className="grid gap-3 sm:grid-cols-2">
-        {field('bank_name', t('pages.company.bank.bankName'), { maxLength: 255, hint: t('pages.company.bank.autoHint') })}
+        {field('bank_name', t('pages.company.bank.bankName'), {
+          maxLength: 255,
+          readOnly: Boolean(known),
+          hint: abroad
+            ? t('pages.company.bank.autoHint')
+            : known
+              ? t('pages.company.bank.fromDirectory')
+              : unknown
+                ? undefined
+                : t('pages.company.bank.mfoFirst'),
+        })}
         {abroad
           ? field('bank_address', t('pages.company.bank.bankAddress'), { maxLength: 255 })
           : field('swift', t('pages.company.bank.swiftOptional'), { mono: true, maxLength: 11 })}
@@ -115,12 +178,14 @@ function Field({
   id,
   label,
   hint,
+  warning,
   error,
   children,
 }: {
   id: string;
   label: string;
   hint?: string;
+  warning?: string;
   error?: string;
   children: ReactNode;
 }) {
@@ -131,6 +196,10 @@ function Field({
       {error ? (
         <p id={`${id}-error`} className="text-sm text-destructive">
           {error}
+        </p>
+      ) : warning ? (
+        <p id={`${id}-warning`} className="text-sm text-warning">
+          {warning}
         </p>
       ) : hint ? (
         <p id={`${id}-hint`} className="text-xs text-muted-foreground">

@@ -153,6 +153,11 @@ export function getPortalCountries(): Promise<PortalCountry[]> {
   return portalRequest<PortalCountry[]>('/countries');
 }
 
+/** Банк Узбекистана по МФО из справочника ЦБ (ADR-0029); `bank: null` — МФО в справочнике нет. */
+export function getBankByMfo(mfo: string): Promise<Schemas['BankDirectoryLookup']> {
+  return portalRequest<Schemas['BankDirectoryLookup']>(`/company/bank-directory/${mfo}`);
+}
+
 /** Название оператора платформы до входа (задача «Н3a2»); `null` — не задано. */
 export function getOperator(): Promise<Schemas['PortalOperator']> {
   return portalRequest<Schemas['PortalOperator']>('/operator');
