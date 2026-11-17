@@ -285,7 +285,7 @@ class CompanySerializer(serializers.ModelSerializer):
         required=False, allow_blank=True, max_length=50, help_text="Основной счёт в сумах — номер"
     )
     mfo = serializers.CharField(
-        required=False, allow_blank=True, max_length=15, help_text="Основной счёт в сумах — МФО"
+        required=False, allow_blank=True, max_length=10, help_text="Основной счёт в сумах — МФО"
     )
 
     class Meta:

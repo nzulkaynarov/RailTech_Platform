@@ -22826,7 +22826,7 @@ components:
         mfo:
           type: string
           description: Основной счёт в сумах — МФО
-          maxLength: 15
+          maxLength: 10
         legal_address:
           type: string
           title: Юридический адрес
@@ -23367,7 +23367,7 @@ components:
         mfo:
           type: string
           description: Основной счёт в сумах — МФО
-          maxLength: 15
+          maxLength: 10
         legal_address:
           type: string
           title: Юридический адрес
@@ -31305,7 +31305,7 @@ components:
         mfo:
           type: string
           description: Основной счёт в сумах — МФО
-          maxLength: 15
+          maxLength: 10
         legal_address:
           type: string
           title: Юридический адрес
