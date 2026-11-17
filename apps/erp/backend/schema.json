@@ -919,6 +919,54 @@
                 }
             }
         },
+        "/api/portal/v1/company/bank-directory/{mfo}": {
+            "get": {
+                "operationId": "api_portal_v1_company_bank_directory_retrieve",
+                "description": "GET /company/bank-directory/{mfo} — банк Узбекистана по МФО из справочника ЦБ (ADR-0029): подсказка формы смены\nреквизитов. `bank: null` — МФО в справочнике нет, клиент вписывает банк сам; ERP при сохранении берёт название\nизвестного МФО из справочника в любом случае.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "mfo",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/company/bank-directory/{mfo}/": {
+            "get": {
+                "operationId": "api_portal_v1_company_bank_directory_retrieve_2",
+                "description": "GET /company/bank-directory/{mfo} — банк Узбекистана по МФО из справочника ЦБ (ADR-0029): подсказка формы смены\nреквизитов. `bank: null` — МФО в справочнике нет, клиент вписывает банк сам; ERP при сохранении берёт название\nизвестного МФО из справочника в любом случае.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "mfo",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/portal/v1/company/partner-application": {
             "get": {
                 "operationId": "api_portal_v1_company_partner_application_retrieve",

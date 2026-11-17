@@ -9,6 +9,7 @@ from portal.views import (
     ActAcceptView,
     ActListView,
     ActReturnView,
+    BankDirectoryView,
     CatalogCategoriesView,
     CatalogDetailView,
     CatalogDocumentFileView,
@@ -310,6 +311,8 @@ urlpatterns = [
     # Company (Профиль компании)
     path("company", CompanyView.as_view(), name="portal-company"),
     path("company/", CompanyView.as_view(), name="portal-company-slash"),
+    path("company/bank-directory/<str:mfo>", BankDirectoryView.as_view(), name="portal-bank-directory"),
+    path("company/bank-directory/<str:mfo>/", BankDirectoryView.as_view(), name="portal-bank-directory-slash"),
     path("company/security-log", CompanySecurityLogView.as_view(), name="portal-company-security-log"),
     path("company/security-log/", CompanySecurityLogView.as_view(), name="portal-company-security-log-slash"),
     path(

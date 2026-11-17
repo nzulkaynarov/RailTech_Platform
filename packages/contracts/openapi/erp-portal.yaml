@@ -2691,6 +2691,34 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
+  /company/bank-directory/{mfo}:
+    get:
+      tags: [company]
+      operationId: getBankByMfo
+      summary: Банк Узбекистана по МФО из справочника ЦБ
+      description: >-
+        Подсказка формы смены реквизитов (ADR-0029): МФО из справочника «Банки» задаёт название банка — поле в кабинете
+        только для чтения, ERP при сохранении всё равно берёт название из справочника. `bank: null` — МФО в справочнике нет
+        (новый филиал, справочник старый): это не ошибка, клиент вписывает банк сам.
+      parameters:
+        - name: mfo
+          in: path
+          required: true
+          schema: {type: string, pattern: '^\d{5}$'}
+      responses:
+        '200':
+          description: Банк или `null`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BankDirectoryLookup'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
   /company/security-log:
     get:
       tags: [company]
@@ -6072,6 +6100,22 @@ components:
         intermediary_account: {type: string, maxLength: 50, description: Счёт банка получателя у посредника}
       additionalProperties: false
 
+    BankDirectoryLookup:
+      type: object
+      description: Ответ поиска банка по МФО (ADR-0029)
+      required: [bank]
+      properties:
+        bank:
+          oneOf:
+            - $ref: '#/components/schemas/BankDirectoryEntry'
+            - type: 'null'
+    BankDirectoryEntry:
+      type: object
+      required: [mfo, name, swift]
+      properties:
+        mfo: {type: string}
+        name: {type: string, description: 'Название на языке контакта, иначе русское'}
+        swift: {type: string, description: Пусто — в справочнике нет}
     BankAccount:
       type: object
       description: Действующий счёт компании (ADR-0029)

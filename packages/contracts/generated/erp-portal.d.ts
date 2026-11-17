@@ -1368,6 +1368,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/company/bank-directory/{mfo}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Банк Узбекистана по МФО из справочника ЦБ
+     * @description Подсказка формы смены реквизитов (ADR-0029): МФО из справочника «Банки» задаёт название банка — поле в кабинете только для чтения, ERP при сохранении всё равно берёт название из справочника. `bank: null` — МФО в справочнике нет (новый филиал, справочник старый): это не ошибка, клиент вписывает банк сам.
+     */
+    get: operations["getBankByMfo"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/company/security-log": {
     parameters: {
       query?: never;
@@ -3115,6 +3135,17 @@ export interface components {
       intermediary_swift?: string;
       /** @description Счёт банка получателя у посредника */
       intermediary_account?: string;
+    };
+    /** @description Ответ поиска банка по МФО (ADR-0029) */
+    BankDirectoryLookup: {
+      bank: components["schemas"]["BankDirectoryEntry"] | null;
+    };
+    BankDirectoryEntry: {
+      mfo: string;
+      /** @description Название на языке контакта, иначе русское */
+      name: string;
+      /** @description Пусто — в справочнике нет */
+      swift: string;
     };
     /** @description Действующий счёт компании (ADR-0029) */
     BankAccount: {
@@ -5914,6 +5945,31 @@ export interface operations {
         };
       };
       422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  getBankByMfo: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        mfo: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Банк или `null` */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BankDirectoryLookup"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
       429: components["responses"]["TooManyRequests"];
     };
   };

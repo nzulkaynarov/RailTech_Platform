@@ -80,6 +80,38 @@ describe('FX-4: смена банковских реквизитов', () => {
     });
   });
 
+  it('банк по МФО из справочника ЦБ не правится; МФО не из справочника — предупреждение и банк вручную', async () => {
+    signedIn('actor');
+    const user = userEvent.setup();
+    const body = captureBody('/company');
+    renderApp('/company');
+
+    await user.click(await screen.findByRole('button', { name: 'Изменить' }));
+    const mfo = screen.getByLabelText('МФО');
+    const bank = screen.getByLabelText('Банк');
+    await user.clear(mfo);
+    await user.type(mfo, '00014');
+    expect(await screen.findByDisplayValue('АКБ «Демо Банк»')).toHaveAttribute('readonly');
+    expect(screen.getByText('По справочнику банков ЦБ')).toBeInTheDocument();
+
+    await user.clear(mfo);
+    await user.type(mfo, '01999');
+    expect(await screen.findByText('Нет в справочнике ЦБ — проверьте МФО и впишите банк')).toBeInTheDocument();
+    expect(bank).toHaveValue('');
+    expect(bank).not.toHaveAttribute('readonly');
+    const field = screen.getByLabelText('Расчётный счёт');
+    await user.clear(field);
+    await user.type(field, '2020 8000 5555 6666 7777');
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }));
+    expect(await screen.findByText('Заполните поле')).toBeInTheDocument();
+    expect(body.current).toBeUndefined();
+
+    await user.type(bank, 'АКБ «Новый филиал»');
+    await user.click(screen.getByRole('button', { name: 'Сохранить' }));
+    await screen.findByRole('status', { name: /Запрос на смену банковских реквизитов/ });
+    expect(body.current).toMatchObject({ bank_account: { mfo: '01999', bank_name: 'АКБ «Новый филиал»' } });
+  });
+
   it('счёт за рубежом: IBAN и SWIFT проверяются, страна банка — из SWIFT', async () => {
     signedIn('actor');
     const user = userEvent.setup();

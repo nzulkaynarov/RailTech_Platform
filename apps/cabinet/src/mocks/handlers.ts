@@ -314,6 +314,11 @@ function validRequestBody(body: Partial<Schemas['ClientRequestCreate']>): body i
   );
 }
 
+const MOCK_BANKS: Record<string, { name: string; swift: string }> = {
+  '00014': { name: 'АКБ «Демо Банк»', swift: 'DEMOUZ22' },
+  '00440': { name: 'АКБ «Узпромстройбанк»', swift: '' },
+};
+
 export const handlers = [
   // --- auth -----------------------------------------------------------------------------
   http.post(`${API}/auth/telegram`, async ({ request }) => {
@@ -993,6 +998,14 @@ export const handlers = [
   ),
 
   // --- компания и команда -----------------------------------------------------------------------
+  // Справочник банков ЦБ (ADR-0029): вымышленные МФО; остальные — «нет в справочнике»
+  http.get<{ mfo: string }>(
+    `${API}/company/bank-directory/:mfo`,
+    withSession<{ mfo: string }>(({ params }) => {
+      const bank = MOCK_BANKS[params.mfo];
+      return json({ bank: bank ? { mfo: params.mfo, ...bank } : null });
+    }),
+  ),
   http.get(
     `${API}/company`,
     withSession(({ db, session }) => json(companyView(db.company, contactFor(session.role).is_admin))),
