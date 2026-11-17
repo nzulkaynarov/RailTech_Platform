@@ -152,7 +152,7 @@ function Lines({ order }: { order: SupplierOrderDetail }) {
 
 function Receipts({ order }: { order: SupplierOrderDetail }) {
   const { t } = useTranslation("stock");
-  const { activity } = useFormat();
+  const { activity, qty } = useFormat();
   if (order.receipts.length === 0)
     return <p className="pf-hint pf-calc-empty">{t("order.receipts.empty")}</p>;
   return (
@@ -161,7 +161,7 @@ function Receipts({ order }: { order: SupplierOrderDetail }) {
         <li key={r.id}>
           <span>
             {r.lines
-              .map((l) => `${l.name} · ${String(l.quantity)}${l.cell ? ` (${l.cell})` : ""}`)
+              .map((l) => `${l.name} · ${qty(l.quantity)}${l.cell ? ` (${l.cell})` : ""}`)
               .join("; ")}
             {r.supplier_doc ? (
               <span className="pf-hint"> · {t("order.receipts.doc", { doc: r.supplier_doc })}</span>

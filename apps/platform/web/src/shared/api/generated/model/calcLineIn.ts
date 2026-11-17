@@ -8,12 +8,17 @@ export interface CalcLineIn {
   /** @maxLength 500 */
   name?: string;
   /**
-   * @minimum 1
    * @maximum 1000000
+   * @exclusiveMinimum 0
    */
   quantity?: number;
   /** @maxLength 32 */
   unit?: string;
+  /**
+   * Единица из справочника — код; важнее текста `unit`
+   * @maxLength 16
+   */
+  unit_code?: string;
   /** Тип строки без карточки каталога (у карточки тип задаёт каталог) */
   kind?: CalcLineInKind;
   /**

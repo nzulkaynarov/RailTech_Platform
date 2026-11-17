@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.114.0
+  version: 0.115.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -18995,7 +18995,7 @@ components:
       properties:
         position: {type: integer, minimum: 1, description: Номер строки по порядку}
         name: {type: string}
-        quantity: {type: integer, minimum: 0}
+        quantity: {type: number, minimum: 0}
         unit: {type: [string, 'null']}
         unit_price: {type: string, pattern: '^-?\d+(\.\d+)?$', description: Цена без НДС}
         amount: {type: string, pattern: '^-?\d+(\.\d+)?$', description: Сумма строки без НДС}
@@ -19371,7 +19371,7 @@ components:
       required: [description, quantity, unit_price, total]
       properties:
         description: {type: string}
-        quantity: {type: integer, minimum: 0}
+        quantity: {type: number, minimum: 0}
         unit_price: {type: string}
         total: {type: string}
     PaymentRecord:
@@ -24370,6 +24370,7 @@ components:
         - group
         - quantity
         - unit
+        - unit_code
         - stock
         - supplier
         - lead_days
@@ -24391,8 +24392,9 @@ components:
           type: string
           enum: [stock, supply, engineer]
           description: Индикатор виз, к которому относится строка
-        quantity: {type: integer, minimum: 1}
+        quantity: {type: number, exclusiveMinimum: 0}
         unit: {type: string}
+        unit_code: {type: [string, 'null'], maxLength: 16, description: 'Код единицы справочника (UN/ECE Rec 20, ADR-0027 п. 10); null — единица текстом у строки до перехода'}
         stock: {$ref: '#/components/schemas/CalcStock'}
         supplier:
           oneOf:
@@ -24528,8 +24530,9 @@ components:
       additionalProperties: false
       properties:
         name: {type: string, maxLength: 500}
-        quantity: {type: integer, minimum: 1, maximum: 1000000}
+        quantity: {type: number, exclusiveMinimum: 0, maximum: 1000000}
         unit: {type: string, maxLength: 32}
+        unit_code: {type: string, maxLength: 16, description: 'Единица из справочника — код; важнее текста `unit`'}
         kind:
           type: string
           enum: [goods, service]
@@ -24555,8 +24558,9 @@ components:
       minProperties: 1
       properties:
         name: {type: string, minLength: 1, maxLength: 500}
-        quantity: {type: integer, minimum: 1, maximum: 1000000}
+        quantity: {type: number, exclusiveMinimum: 0, maximum: 1000000}
         unit: {type: string, maxLength: 32}
+        unit_code: {type: string, minLength: 1, maxLength: 16, description: 'Единица из справочника — код (ADR-0027 п. 10)'}
         lead_days: {type: [integer, 'null'], minimum: 0, maximum: 3650}
         purchase_price: {$ref: '#/components/schemas/DecimalString'}
         purchase_currency: {type: string, pattern: '^[A-Z]{3}$'}
@@ -24649,7 +24653,7 @@ components:
       required: [name, quantity, unit, article, note]
       properties:
         name: {type: string}
-        quantity: {type: integer, minimum: 1}
+        quantity: {type: number, exclusiveMinimum: 0}
         unit: {type: string}
         article: {type: string}
         note: {type: string}

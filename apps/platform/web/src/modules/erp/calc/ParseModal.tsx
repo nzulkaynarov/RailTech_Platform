@@ -13,6 +13,7 @@ import {
 import { FormSheet } from "../../../shared/ui/FormSheet";
 import { calcRef, useApplySheet, useErrorText } from "./api";
 import { pastedRows } from "./pasteRows";
+import { useFormat } from "../../../shared/lib/useFormat";
 
 const REASONS = new Set([
   "ai_disabled",
@@ -33,6 +34,7 @@ type Kind = "goods" | "service";
  * не нажмёт «Добавить выбранные» (инвариант «код решает, модель предлагает»).
  */
 export function ParseModal({ sheet, onClose }: { sheet: CalcSheet; onClose: () => void }) {
+  const { qty } = useFormat();
   const { t } = useTranslation("calc");
   const { message } = App.useApp();
   const apply = useApplySheet();
@@ -206,7 +208,7 @@ export function ParseModal({ sheet, onClose }: { sheet: CalcSheet; onClose: () =
                     setPicked((prev) => ({ ...prev, [index]: event.target.checked }));
                   }}
                 >
-                  {line.name} · {line.quantity} {line.unit}
+                  {line.name} · {qty(line.quantity)} {line.unit}
                   {line.article ? <span className="pf-hint"> · {line.article}</span> : null}
                 </Checkbox>
                 <Select<Kind>

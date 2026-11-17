@@ -10,6 +10,7 @@ import {
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { clean, useErrorText, useRefreshStock } from "../stock/api";
 import { calcRef } from "./api";
+import { useFormat } from "../../../shared/lib/useFormat";
 
 /**
  * «Запросить цену у поставщика» (SPEC-v3 §7.4): письмо поставщику по выбранным строкам-товарам расчёта (почта ERP) и запись
@@ -17,6 +18,7 @@ import { calcRef } from "./api";
  * Короткая форма о выбранном расчёте — в боковом окне (platform-frontend.md §4.1a), кнопки в конце.
  */
 export function PriceRequestForm({ sheet, onClose }: { sheet: CalcSheet; onClose: () => void }) {
+  const { qty } = useFormat();
   const { t } = useTranslation("stock");
   const titleId = useId();
   const { message } = App.useApp();
@@ -102,7 +104,7 @@ export function PriceRequestForm({ sheet, onClose }: { sheet: CalcSheet; onClose
               className="pf-stock-checks"
               options={goods.map((l) => ({
                 value: l.id,
-                label: `${l.name} · ${String(l.quantity)} ${l.unit}`.trim(),
+                label: `${l.name} · ${qty(l.quantity)} ${l.unit}`.trim(),
               }))}
             />
           )}

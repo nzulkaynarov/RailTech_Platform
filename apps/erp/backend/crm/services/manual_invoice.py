@@ -19,6 +19,8 @@ from typing import Optional, Tuple
 
 from django.db import transaction
 
+from core.quantity import to_qty
+
 from ..constants import DEFAULT_INVOICE_DUE_DAYS, InvoiceStatusCode
 from ..models import ActivityLog
 
@@ -45,7 +47,7 @@ def _clean_manual_lines(lines) -> Tuple[Optional[list], Optional[str]]:
         if not description:
             return None, "INVOICE_LINE_DESCRIPTION_REQUIRED"
         try:
-            quantity = int(raw.get("quantity") or 0)
+            quantity = to_qty(raw.get("quantity") or 0)
             unit_price = Decimal(str(raw.get("unit_price_excl_vat") or "0"))
         except (ValueError, ArithmeticError, TypeError):
             return None, "INVOICE_LINE_INVALID"

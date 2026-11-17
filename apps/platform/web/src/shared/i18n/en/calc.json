@@ -115,6 +115,8 @@
     "purchaseLabel": "Unit purchase price for “{{name}}”",
     "clientLabel": "Unit client price excl. VAT for “{{name}}”",
     "quantityLabel": "Quantity for “{{name}}”",
+    "unitLabel": "Unit: {{name}}",
+    "unitPick": "Unit",
     "hidden": "—",
     "costHidden": "Purchase prices are visible to employees with access to cost",
     "draft": "Draft",

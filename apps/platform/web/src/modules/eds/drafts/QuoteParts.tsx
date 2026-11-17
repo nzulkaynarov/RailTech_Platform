@@ -12,6 +12,7 @@ type QuoteLine = NonNullable<QuoteApprovalCard["lines"]>[number];
 
 /** Состав КП из ERP: № · наименование · кол-во · цена · сумма · срок; итоги без НДС / НДС / с НДС (SPEC-v3 §7.3). */
 export function QuoteLines({ quote }: { quote: QuoteApprovalCard }) {
+  const { qty } = useFormat();
   const { t } = useTranslation("quotes");
   const currency = quote.totals?.currency;
   const money = (value: string) => <MoneyText value={value} currency={currency} />;
@@ -60,7 +61,7 @@ export function QuoteLines({ quote }: { quote: QuoteApprovalCard }) {
             header: t("card.columns.quantity"),
             width: 110,
             numeric: true,
-            cell: (line) => `${String(line.quantity)}${line.unit ? ` ${line.unit}` : ""}`,
+            cell: (line) => `${qty(line.quantity)}${line.unit ? ` ${line.unit}` : ""}`,
           },
           {
             id: "price",

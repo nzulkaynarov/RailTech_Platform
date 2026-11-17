@@ -36752,6 +36752,11 @@
                     "unit": {
                         "type": "string"
                     },
+                    "unit_code": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Код единицы справочника; null — единица текстом (строка до ADR-0027)"
+                    },
                     "stock": {
                         "$ref": "#/components/schemas/CalcStock"
                     },
@@ -36844,6 +36849,7 @@
                     "stock",
                     "supplier",
                     "unit",
+                    "unit_code",
                     "visa",
                     "zone"
                 ]
@@ -36857,15 +36863,21 @@
                         "maxLength": 500
                     },
                     "quantity": {
-                        "type": "integer",
-                        "maximum": 1000000,
-                        "minimum": 1,
-                        "default": 1
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)",
+                        "default": 1,
+                        "maximum": 1000000.0,
+                        "minimum": 0.001
                     },
                     "unit": {
                         "type": "string",
                         "default": "",
                         "maxLength": 32
+                    },
+                    "unit_code": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 16
                     },
                     "kind": {
                         "allOf": [
@@ -45869,9 +45881,8 @@
                         "maxLength": 500
                     },
                     "quantity": {
-                        "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 0
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
                     },
                     "unit_price_excl_vat": {
                         "type": "string",
@@ -45902,9 +45913,8 @@
                         "maxLength": 500
                     },
                     "quantity": {
-                        "type": "integer",
-                        "maximum": 2147483647,
-                        "minimum": 0
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
                     },
                     "unit_price_excl_vat": {
                         "type": "string",
@@ -48825,13 +48835,20 @@
                         "maxLength": 500
                     },
                     "quantity": {
-                        "type": "integer",
-                        "maximum": 1000000,
-                        "minimum": 1
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)",
+                        "maximum": 1000000.0,
+                        "minimum": 0.001
                     },
                     "unit": {
                         "type": "string",
                         "maxLength": 32
+                    },
+                    "unit_code": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Единица из справочника (ADR-0027 п. 10): код UN/ECE Rec 20",
+                        "maxLength": 16
                     },
                     "lead_days": {
                         "type": "integer",
@@ -50697,7 +50714,8 @@
                         "maxLength": 500
                     },
                     "quantity": {
-                        "type": "integer"
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
                     },
                     "unit": {
                         "type": "string",
@@ -54207,7 +54225,8 @@
                         "maxLength": 500
                     },
                     "quantity": {
-                        "type": "integer"
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
                     },
                     "unit": {
                         "type": "string",
@@ -54378,7 +54397,8 @@
                         "maxLength": 500
                     },
                     "quantity": {
-                        "type": "integer"
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
                     },
                     "unit": {
                         "type": "string",

@@ -438,12 +438,19 @@ class QuoteListItemSerializer(DealLinkedSerializer):
         return iso(projections.quote_sent_at(quote))
 
 
+class QuantityTextField(serializers.CharField):
+    """Количество портального контракта (`string`): без хвостовых нулей хранилища — «150», «12.5» (ADR-0027 п. 9)."""
+
+    def to_representation(self, value):
+        return format_quantity(value) if value not in (None, "") else None
+
+
 class QuoteLineSerializer(serializers.Serializer):
     line_no = serializers.IntegerField()
     kind = serializers.ChoiceField(choices=["item", "section", "note", "stage"])
     title = serializers.CharField(allow_blank=True)
     description = serializers.CharField(allow_blank=True)
-    quantity = serializers.CharField(allow_null=True)
+    quantity = QuantityTextField(allow_null=True)
     unit = serializers.CharField(allow_null=True)
     unit_price = serializers.DictField(allow_null=True)
     total = serializers.DictField(allow_null=True)

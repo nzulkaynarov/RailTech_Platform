@@ -8,6 +8,7 @@ caps the bulk endpoints echo verbatim.
 from django.conf import settings
 from rest_framework import serializers
 
+from core.quantity import QuantityField
 from crm.models import QuoteItem
 from master_data.models import Currency
 
@@ -74,7 +75,7 @@ class QuoteItemSerializer(serializers.ModelSerializer):
     # value (Rule 2/7). Explicit field declarations bypass the auto-mapped model
     # validators (whose messages are DRF prose); validate_<field> re-enforces the
     # same model bounds (KP-04 MinValue / MaxValue) with codes. Caps: settings.QUOTE_ITEM_MAX_*.
-    quantity = serializers.IntegerField(required=False)
+    quantity = QuantityField(required=False)
     frozen_base_price = serializers.DecimalField(max_digits=14, decimal_places=2, required=False)
     logistics_cost = serializers.DecimalField(max_digits=14, decimal_places=2, required=False)
     customs_duty = serializers.DecimalField(max_digits=14, decimal_places=2, required=False)

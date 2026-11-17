@@ -59,7 +59,7 @@ class QuoteApprovalPage(BaseModel):
 class QuoteLine(BaseModel):
     position: int
     name: str
-    quantity: int
+    quantity: float
     unit: str | None
     unit_price: str
     amount: str

@@ -6,6 +6,7 @@ unchanged.
 
 from rest_framework import serializers
 
+from core.quantity import QuantityField
 from crm.constants import ActStatusCode, FulfillmentStatusCode, InvoiceStatusCode
 from crm.models import Act, Contract, Fulfillment, Invoice, InvoiceItem, Payment
 
@@ -123,6 +124,8 @@ class ContractSerializer(serializers.ModelSerializer):
 
 
 class InvoiceItemSerializer(serializers.ModelSerializer):
+    quantity = QuantityField(required=False)  # ADR-0027 п. 9: число, а не строка «12.500»
+
     class Meta:
         model = InvoiceItem
         fields = [

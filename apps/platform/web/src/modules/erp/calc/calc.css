@@ -145,7 +145,11 @@
   gap: 2px;
 }
 .pf-calc-qty .pf-calc-input {
-  width: 56px;
+  width: 72px;
+}
+/* ADR-0027 п. 10: единица из справочника под количеством */
+.pf-calc-unit {
+  width: 72px;
 }
 .pf-calc-crew {
   display: flex;

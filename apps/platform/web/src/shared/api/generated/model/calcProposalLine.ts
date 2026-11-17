@@ -5,7 +5,7 @@
 
 export interface CalcProposalLine {
   name: string;
-  /** @minimum 1 */
+  /** @exclusiveMinimum 0 */
   quantity: number;
   unit: string;
   article: string;

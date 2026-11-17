@@ -222,9 +222,7 @@ function Rows({ items }: { items: readonly StockShipment[] }) {
               </Link>
             </div>
             <p className="pf-hint">
-              {s.lines
-                .map((l) => `${l.name} · ${String(l.quantity)}${unitsText(l.units)}`)
-                .join("; ")}
+              {s.lines.map((l) => `${l.name} · ${qty(l.quantity)}${unitsText(l.units)}`).join("; ")}
             </p>
             <p className="pf-hint">
               {[s.tracking, s.carrier, activity(s.shipped_at)].filter(Boolean).join(" · ")}

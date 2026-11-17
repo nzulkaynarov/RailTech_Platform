@@ -19,6 +19,7 @@ import type {
 } from "../shared/api/generated/model";
 import { CATALOG, type MockCalc, type MockLine, PARSE_PROPOSAL, seedCalcs } from "./fixtures/calc";
 import { stockOfLine } from "./erpStock";
+import { UNITS } from "./fixtures/erpCatalog";
 import { buildMe, readSession } from "./mockSession";
 
 /**
@@ -29,6 +30,8 @@ import { buildMe, readSession } from "./mockSession";
  * мока): сценарий «снабженец → гл. инженер» переживает выход и вход другого сотрудника.
  */
 const KEY = "rt-pf-mock-calc-v1";
+/** Справочник единиц мока — тот же, что у каталога: код → русское название. */
+const UNIT_NAMES: Record<string, string> = Object.fromEntries(UNITS.map((u) => [u.code, u.name]));
 let memory: MockCalc[] | null = null;
 
 function read(): MockCalc[] {
@@ -164,6 +167,7 @@ function presentLine(line: MockLine, user: Me, editable: boolean): CalcLine {
     group: GROUP[kind],
     quantity: line.quantity,
     unit: line.unit,
+    unit_code: line.unitCode ?? null,
     stock:
       line.kind === "service"
         ? { on_hand: null, free: null, cell: null, reserved: null }
@@ -605,6 +609,13 @@ export const erpCalcHandlers = [
       });
     }
     if (patch.quantity !== undefined) line.quantity = patch.quantity;
+    if (patch.unit_code) {
+      // Единица из справочника (ADR-0027 п. 10): код и русское название, как у ERP
+      const unit = UNIT_NAMES[patch.unit_code];
+      if (!unit) return failure(400, "VALIDATION_FAILED", "Нет такой единицы.", { source: "erp" });
+      line.unitCode = patch.unit_code;
+      line.unit = unit;
+    }
     if (patch.purchase_price !== undefined) line.purchase = Number(patch.purchase_price);
     if (patch.purchase_currency) line.currency = patch.purchase_currency;
     if (patch.crew_rate !== undefined)

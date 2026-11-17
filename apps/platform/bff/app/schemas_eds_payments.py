@@ -85,7 +85,7 @@ class PaymentBoard(BaseModel):
 
 class PaymentItem(BaseModel):
     description: str
-    quantity: int
+    quantity: float
     unit_price: str
     total: str
 

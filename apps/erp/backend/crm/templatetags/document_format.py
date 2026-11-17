@@ -77,7 +77,8 @@ def qty(value, unit=None):
     elif amount == amount.to_integral_value():
         number = f"{int(amount)}"
     else:
-        number = format(amount.normalize(), "f")
+        # Дробное количество (ADR-0027 п. 9) — с запятой, как в документах на русском: «12,5 т».
+        number = format(amount.normalize(), "f").replace(".", ",")
     if unit:
         return f"{number}{NBSP}{unit}"
     return number

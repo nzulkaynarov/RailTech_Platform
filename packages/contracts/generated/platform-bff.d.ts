@@ -14174,6 +14174,8 @@ export interface components {
       group: "stock" | "supply" | "engineer";
       quantity: number;
       unit: string;
+      /** @description Код единицы справочника (UN/ECE Rec 20, ADR-0027 п. 10); null — единица текстом у строки до перехода */
+      unit_code: string | null;
       stock: components["schemas"]["CalcStock"];
       supplier: components["schemas"]["CalcSupplier"] | null;
       /** @description Срок поставки строки, дней */
@@ -14267,6 +14269,8 @@ export interface components {
       name?: string;
       quantity?: number;
       unit?: string;
+      /** @description Единица из справочника — код; важнее текста `unit` */
+      unit_code?: string;
       /**
        * @description Тип строки без карточки каталога (у карточки тип задаёт каталог)
        * @enum {string}
@@ -14283,6 +14287,8 @@ export interface components {
       name?: string;
       quantity?: number;
       unit?: string;
+      /** @description Единица из справочника — код (ADR-0027 п. 10) */
+      unit_code?: string;
       lead_days?: number | null;
       purchase_price?: components["schemas"]["DecimalString"];
       purchase_currency?: string;

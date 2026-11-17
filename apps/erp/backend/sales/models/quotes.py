@@ -536,11 +536,14 @@ class QuoteItem(models.Model):
         verbose_name=_("Каноническое наименование (RU)"),
         help_text=_("Нормализованное русское наименование из AI-импорта (для поиска по каталогу)"),
     )
-    quantity = models.PositiveIntegerField(
-        default=1,
-        validators=[MinValueValidator(1)],
+    # ADR-0027 п. 9: количество дробное (12,5 т), три знака после запятой.
+    quantity = models.DecimalField(
+        max_digits=14,
+        decimal_places=3,
+        default=Decimal("1"),
+        validators=[MinValueValidator(Decimal("0.001"))],
         verbose_name=_("Количество"),
-        help_text=_("Количество единиц товара"),
+        help_text=_("Количество в единицах строки, до трёх знаков после запятой"),
     )
     unit = models.CharField(
         max_length=32,
@@ -772,7 +775,9 @@ class QuoteItemHistory(models.Model):
         decimal_places=2,
         verbose_name=_("Цена без НДС"),
     )
-    quantity = models.PositiveIntegerField(
+    quantity = models.DecimalField(
+        max_digits=14,
+        decimal_places=3,
         verbose_name=_("Количество"),
     )
 

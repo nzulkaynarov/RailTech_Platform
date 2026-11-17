@@ -65,6 +65,7 @@ _FIELD_OF = {
     "GOODS_HAVE_NO_CREW": "crew_rate",
     "NAME_REQUIRED": "name",
     "PRODUCT_NOT_FOUND": "product_id",
+    "UNIT_NOT_FOUND": "unit_code",
     "BAD_CURRENCY": "purchase_currency",
     "KIND_FROM_CATALOG": "kind",
     "VALID_UNTIL_IN_PAST": "valid_until",

@@ -442,21 +442,47 @@ function Markup({ line, actions }: { line: CalcLine; actions: Actions }) {
   );
 }
 
+/** Единицы справочника (ADR-0027 п. 10): код и название; нет доступа к справочнику — пусто, единица видна текстом. */
+function useUnits(): { code: string; name: string }[] {
+  const lookups = useGetCatalogLookups({ query: { staleTime: 10 * 60_000, retry: false } });
+  return (lookups.data?.units ?? []).map((u) => ({ code: u.code, name: u.name }));
+}
+
 function Quantity({ line, actions }: { line: CalcLine; actions: Actions }) {
   const { t } = useTranslation("calc");
+  const units = useUnits();
   return (
     <span className="pf-calc-qty">
+      {/* ADR-0027 п. 9: количество дробное — до трёх знаков после запятой (12,5 т). */}
       <NumberCell
         value={line.quantity}
         label={t("lines.quantityLabel", { name: line.name })}
         disabled={!line.can_edit || actions.pending}
-        decimals={0}
-        min={1}
+        decimals={3}
+        min={0.001}
         onCommit={(next) => {
           actions.patch(line, { quantity: Number(next) });
         }}
       />
-      {line.unit ? <span className="pf-hint">{line.unit}</span> : null}
+      {line.can_edit && units.length ? (
+        <Select
+          size="small"
+          showSearch
+          optionFilterProp="label"
+          aria-label={t("lines.unitLabel", { name: line.name })}
+          value={line.unit_code ?? undefined}
+          placeholder={line.unit || t("lines.unitPick")}
+          disabled={actions.pending}
+          popupMatchSelectWidth={false}
+          options={units.map((u) => ({ value: u.code, label: u.name }))}
+          onChange={(code: string) => {
+            if (code !== line.unit_code) actions.patch(line, { unit_code: code });
+          }}
+          className="pf-calc-unit"
+        />
+      ) : line.unit ? (
+        <span className="pf-hint">{line.unit}</span>
+      ) : null}
     </span>
   );
 }
