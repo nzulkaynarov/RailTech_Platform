@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Alert, App, AutoComplete, Button, Checkbox, Form, Input, Radio, Select } from "antd";
 import { RowActions, ROW_ACTIONS_WIDTH } from "../../../../shared/ui/RowActions";
 import type { FormInstance, SelectProps } from "antd";
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type {
@@ -297,19 +297,39 @@ function BankAccountForm({
   const formId = useId();
   const initial = row ? valuesOf(row) : EMPTY;
   const currencies = useListReferenceItems("currencies");
-  // План 2.9: банки из справочника (файл ЦБ) — выбор подставляет МФО и SWIFT; банк не из списка вводится руками
+  // Банки из справочника ЦБ: МФО из справочника задаёт название банка без вариантов; МФО, которого там нет
+  // (новый филиал, справочник старый), не тупик — банк вписывают руками, форма предупреждает
   const { i18n } = useTranslation();
   const banks = useListDictionaryItems("banks", undefined, { query: { staleTime: 5 * 60_000 } });
   const lang = (["ru", "uz", "en"] as const).find((l) => i18n.language.startsWith(l)) ?? "ru";
   const bankOptions = (banks.data?.items ?? []).map((bank) => {
     const name = bank.name[lang] || bank.name.ru;
     return {
-      value: name,
-      label: `${name} · ${bank.code}`,
-      code: bank.code,
+      value: bank.code,
+      label: `${bank.code} · ${name}`,
+      name,
       swift: String(bank.attrs["swift"] ?? ""),
     };
   });
+  const bankByCode = new Map(bankOptions.map((option) => [option.value, option]));
+  const directoryReady = bankOptions.length > 0;
+  const onMfoChange = (value: string) => {
+    const known = bankByCode.get(compact(value));
+    const previous = bankOptions.find((option) => option.name === form.getFieldValue("bank_name"));
+    if (known) {
+      const swift = String(form.getFieldValue("swift") ?? "");
+      form.setFieldsValue({
+        bank_name: known.name,
+        ...(known.swift && (!swift || swift === previous?.swift) ? { swift: known.swift } : {}),
+      });
+    } else if (previous) {
+      // Банк прежнего МФО из справочника к новому не подходит — вместе с его SWIFT
+      form.setFieldsValue({
+        bank_name: "",
+        ...(previous.swift && form.getFieldValue("swift") === previous.swift ? { swift: "" } : {}),
+      });
+    }
+  };
   const create = useCreateCompanyBankAccount({ mutation: { onSuccess: onSaved } });
   const update = useUpdateCompanyBankAccount({ mutation: { onSuccess: onSaved } });
   const mutation = row ? update : create;
@@ -317,6 +337,16 @@ function BankAccountForm({
   const placeOr = (value: BankPlace | undefined): BankPlace => value ?? initial.place;
   const place = placeOr(Form.useWatch("place", form));
   const abroad = place === "abroad";
+  const mfo = compact(Form.useWatch("mfo", form));
+  const knownBank = abroad ? undefined : bankByCode.get(mfo);
+  const unknownMfo = !abroad && directoryReady && !knownBank && mfoProblem("uz", mfo) === null;
+  // МФО ввели раньше, чем пришёл справочник, или открыли счёт с устаревшим названием — банк всё равно из справочника
+  const knownName = knownBank?.name;
+  useEffect(() => {
+    if (knownName !== undefined && form.getFieldValue("bank_name") !== knownName) {
+      form.setFieldsValue({ bank_name: knownName });
+    }
+  }, [form, knownName]);
   const reasonText = (reason: string) =>
     t(`bank.errors.${reason}`, { defaultValue: t("bank.invalidField") });
   const check =
@@ -401,9 +431,22 @@ function BankAccountForm({
             <Form.Item
               name="mfo"
               label={t("bank.mfo")}
+              validateTrigger="onBlur"
               rules={[{ validator: check((v) => mfoProblem("uz", v)) }]}
+              {...(unknownMfo
+                ? { validateStatus: "warning" as const, help: t("bank.mfoNotInDirectory") }
+                : {})}
             >
-              <Input maxLength={5} autoComplete="off" inputMode="numeric" className="pf-num" />
+              <AutoComplete
+                options={bankOptions}
+                onChange={onMfoChange}
+                filterOption={(input, option) =>
+                  (option?.label ?? "").toLowerCase().includes(input.trim().toLowerCase())
+                }
+                popupMatchSelectWidth={320}
+              >
+                <Input autoComplete="off" className="pf-num" />
+              </AutoComplete>
             </Form.Item>
           )}
         </div>
@@ -438,19 +481,25 @@ function BankAccountForm({
           />
         </Form.Item>
         <div className="pf-co-grid">
-          <Form.Item name="bank_name" label={t("bank.bankName")} extra={t("bank.autoHint")}>
-            <AutoComplete
+          <Form.Item
+            name="bank_name"
+            label={t("bank.bankName")}
+            extra={
+              abroad
+                ? t("bank.autoHint")
+                : knownBank
+                  ? t("bank.fromDirectory")
+                  : unknownMfo
+                    ? undefined
+                    : t("bank.mfoFirst")
+            }
+            rules={unknownMfo ? [{ required: true, whitespace: true, message: t("required") }] : []}
+          >
+            <Input
               maxLength={255}
-              options={abroad ? [] : bankOptions}
-              filterOption={(input, option) =>
-                (option?.label ?? "").toLowerCase().includes(input.trim().toLowerCase())
-              }
-              onSelect={(_value: string, option: (typeof bankOptions)[number]) => {
-                form.setFieldsValue({
-                  mfo: option.code,
-                  ...(option.swift && !form.getFieldValue("swift") ? { swift: option.swift } : {}),
-                });
-              }}
+              autoComplete="off"
+              readOnly={!abroad && !unknownMfo}
+              variant={!abroad && !unknownMfo ? "filled" : "outlined"}
             />
           </Form.Item>
           {abroad ? (

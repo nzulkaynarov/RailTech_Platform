@@ -16,11 +16,16 @@ from portal.models import BankDetailsChangeRequest, BankDetailsChangeStatus, Por
 from portal.services import bank_details_change as service
 
 from accounts.services.bank_accounts import set_uzs_account
+from core.models import Country, Currency
 
 TAG = "race-fx4"
 
 
 def _world() -> dict:
+    # Данные коммитятся по-настоящему: справочники из миграций мог стереть соседний транзакционный тест (flush) на том же
+    # исполнителе — без валюты счёт не проходит проверку, и подтверждение уходит в BANK_CHANGE_STALE.
+    Country.objects.get_or_create(code="UZ", defaults={"name": "Узбекистан"})
+    Currency.objects.get_or_create(code="UZS", defaults={"name": "Узбекский сум", "iso_numeric": "860"})
     client_type, _ = CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Клиент"})
     company = Company.objects.create(name=f"{TAG} company", inn="400500600")
     set_uzs_account(company, "20208000000000001111", "00440")

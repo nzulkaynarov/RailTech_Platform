@@ -119,7 +119,10 @@ def save_account(
     merged["currency"] = getattr(row, "currency", None) if row.currency_id else None
     merged.update(values)
     if any(name in values for name in _CHECKED):
+        before = dict(merged)
         banking.fill_codes(merged)
+        # Подставленное из IBAN или справочника записывается и поверх сохранённого (банк известного МФО — только из справочника)
+        values.update({name: value for name, value in merged.items() if value != before.get(name)})
         errors = banking.check(merged)
         if errors:
             return None, errors

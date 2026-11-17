@@ -550,6 +550,9 @@
     "ibanHint": "IBAN mamlakat uzunligi va nazorat raqamlari böyiça tekşiriladi",
     "bankAddress": "Bank manzili",
     "autoHint": "Töldirmasa ham böladi — bank kodi böyiça qöyamiz",
+    "fromDirectory": "MB banklar maʼlumotnomasidan",
+    "mfoFirst": "MFO böyiça qöyiladi",
+    "mfoNotInDirectory": "MB maʼlumotnomasida yöq — MFOni tekşiring va bankni yozing",
     "intermediarySwift": "Vositaçi bank SWIFT",
     "intermediaryAccount": "Oluvçi bankning vositaçidagi hisobi",
     "errors": {

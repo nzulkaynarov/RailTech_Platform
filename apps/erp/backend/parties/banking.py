@@ -107,7 +107,9 @@ def check(values: dict[str, Any]) -> dict[str, str]:
 
 
 def fill_codes(values: dict[str, Any]) -> None:
-    """Подставить пустые код банка, SWIFT и название: из IBAN, а для Узбекистана — из справочника «Банки» по МФО."""
+    """Подставить пустые код банка, SWIFT и название из IBAN. Для Узбекистана название банка всегда берётся из
+    справочника «Банки» по МФО: ввести своё название к известному МФО нельзя. МФО, которого в справочнике нет
+    (новый филиал, справочник старый), не тупик — название остаётся введённым руками."""
     country = getattr(values.get("bank_country"), "code", "") or ""
     account = values.get("account") or ""
     if country and uses_iban(country):
@@ -129,8 +131,7 @@ def fill_codes(values: dict[str, Any]) -> None:
         bank = Bank.objects.filter(code=values["mfo"], is_active=True).first()
         if bank is None:
             return
-        if not values.get("bank_name"):
-            values["bank_name"] = str(bank.name)[:255]
+        values["bank_name"] = str(bank.name)[:255]
         if not values.get("swift") and bank.swift:
             values["swift"] = bank.swift
 

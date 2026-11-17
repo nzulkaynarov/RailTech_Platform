@@ -550,6 +550,9 @@
     "ibanHint": "IBAN is checked for the country length and check digits",
     "bankAddress": "Bank address",
     "autoHint": "Optional — filled in from the bank code",
+    "fromDirectory": "From the central bank directory",
+    "mfoFirst": "Filled in from the bank code",
+    "mfoNotInDirectory": "Not in the central bank directory — check the code and enter the bank",
     "intermediarySwift": "Intermediary bank SWIFT",
     "intermediaryAccount": "Beneficiary bank account with the intermediary",
     "errors": {
