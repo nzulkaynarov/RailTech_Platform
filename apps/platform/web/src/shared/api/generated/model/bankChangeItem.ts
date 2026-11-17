@@ -9,6 +9,8 @@ export interface BankChangeItem {
   company_id: string;
   company_name: string;
   company_inn: string;
+  /** Телефон из карточки компании (не из запроса) — для проверки звонком перед подтверждением; пусто — не заполнен */
+  company_phone: string;
   /** Компания в архиве — подтвердить нельзя */
   company_archived: boolean;
   status: BankChangeStatus;

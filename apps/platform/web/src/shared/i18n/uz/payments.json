@@ -481,6 +481,8 @@
     },
     "approveModal": {
       "title": "«{{name}}» rekvizitlarini oʻzgartirish tasdiqlansinmi?",
+      "callback": "Tasdiqlashdan oldin kompaniya kartasidagi raqamga qönğiroq qiling: {{phone}} — xat yoki sörovdagi raqamga emas",
+      "noPhone": "Kompaniya kartasida telefon yöq: özgarişni şartnomadagi raqamga qönğiroq qilib tekşiring",
       "apply": "Yangi rekvizitlar kompaniyaga qoʻllanadi.",
       "notify": "Administratorlar va asosiy kontakt bildirishnoma oladi."
     },
