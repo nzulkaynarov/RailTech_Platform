@@ -204,6 +204,7 @@
     "en": "English"
   },
   "auth": {
+    "antiPhishing": "We never ask for your password or code by email or phone.",
     "login": {
       "title": "Sign in to the cabinet",
       "subtitle": "The cabinet opens by invitation. Enter the e-mail the invitation was sent to and we will send a sign-in link.",

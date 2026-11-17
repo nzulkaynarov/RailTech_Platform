@@ -9,5 +9,6 @@
 
 {% blocktranslate with minutes=expires_minutes|default:60 %}Код и ссылка действуют {{ minutes }} минут и срабатывают один раз.{% endblocktranslate %}
 {% translate "Если вы не запрашивали вход, просто проигнорируйте письмо." %}
+{% translate "Мы не просим пароль и код в письме или по телефону. Не пересылайте этот код." %}
 
 — {% blocktranslate with platform=platform_name|default:'ERP' %}Команда {{ platform }}{% endblocktranslate %}

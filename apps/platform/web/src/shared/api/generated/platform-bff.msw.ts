@@ -512,6 +512,9 @@ export const getGetSetupStateResponseMock = (
   ...overrideResponse,
 });
 
+export const getGetOperatorLogoResponseMock = (): Blob =>
+  new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
+
 export const getCreateFirstAdminResponseMock = (
   overrideResponse: Partial<Extract<Session, object>> = {},
 ): Session => ({
@@ -33318,6 +33321,26 @@ export const getGetSetupStateMockHandler = (
   );
 };
 
+export const getGetOperatorLogoMockHandler = (
+  overrideResponse?:
+    Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/setup/logo",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      const binaryBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetOperatorLogoResponseMock();
+      return new HttpResponse(binaryBody, { status: 200, headers: { "Content-Type": "image/*" } });
+    },
+    options,
+  );
+};
+
 export const getCreateFirstAdminMockHandler = (
   overrideResponse?:
     | Session
@@ -43681,6 +43704,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getChangePasswordMockHandler(),
   getGetSessionMockHandler(),
   getGetSetupStateMockHandler(),
+  getGetOperatorLogoMockHandler(),
   getCreateFirstAdminMockHandler(),
   getGetSetupChecklistMockHandler(),
   getGetSetupCabinetMockHandler(),

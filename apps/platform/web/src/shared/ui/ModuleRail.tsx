@@ -35,6 +35,8 @@ export interface ModuleRailProps {
   logoLabel: string;
   /** Буквы в квадрате логотипа — из названия в настройках компании (`useProductName`). */
   logoText: string;
+  /** Логотип своей компании (ДВ-3, `useOperatorLogo`); нет — буквы `logoText` */
+  logoSrc?: string | null;
   logoTo: string;
   /** Единая кнопка «Создать» под логотипом */
   create?: ReactNode;
@@ -179,6 +181,7 @@ export function ModuleRail({
   label,
   logoLabel,
   logoText,
+  logoSrc,
   logoTo,
   create,
   profile,
@@ -222,7 +225,7 @@ export function ModuleRail({
             width: 36,
             height: 36,
             borderRadius: 8,
-            background: "var(--rt-color-primary-default)",
+            background: logoSrc ? "#fff" : "var(--rt-color-primary-default)",
             color: "#fff",
             display: "flex",
             alignItems: "center",
@@ -231,9 +234,24 @@ export function ModuleRail({
             fontSize: 14,
             marginBottom: 12,
             textDecoration: "none",
+            overflow: "hidden",
           }}
         >
-          {logoText}
+          {logoSrc ? (
+            <img
+              src={logoSrc}
+              alt=""
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                padding: 2,
+                boxSizing: "border-box",
+              }}
+            />
+          ) : (
+            logoText
+          )}
         </Link>
         {create ? <div style={{ marginBottom: 12 }}>{create}</div> : null}
         {modules.map((m) => (

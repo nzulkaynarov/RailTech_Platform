@@ -4837,11 +4837,16 @@ components:
     PortalOperator:
       type: object
       additionalProperties: false
-      required: [name, bot_username]
+      required: [name, bot_username, logo_url]
       properties:
         name:
           type: [string, 'null']
           description: Название компании-оператора; `null` — не задано
+        logo_url:
+          type: [string, 'null']
+          description: >-
+            Логотип компании-оператора (ДВ-3): относительный адрес публичного файла `/media/companies/<id>/logo/…` на
+            домене кабинета; `null` — не загружен, кабинет показывает буквы названия
         bot_username:
           type: [string, 'null']
           pattern: '^[A-Za-z][A-Za-z0-9_]{3,31}$'

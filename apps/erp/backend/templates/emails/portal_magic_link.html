@@ -31,4 +31,7 @@
     {% blocktranslate with minutes=expires_minutes|default:60 %}Код и ссылка действуют {{ minutes }} минут и срабатывают один раз.{% endblocktranslate %}
     {% translate "Если вы не запрашивали вход, просто проигнорируйте письмо." %}
   </p>
+  <p style="margin:12px 0 0 0; padding:10px 12px; font-size:13px; color:#334155; background:#f1f5f9; border-radius:6px;">
+    {% translate "Мы не просим пароль и код в письме или по телефону. Не пересылайте этот код." %}
+  </p>
 {% endblock %}

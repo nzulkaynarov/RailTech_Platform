@@ -2346,6 +2346,8 @@ export interface components {
     PortalOperator: {
       /** @description Название компании-оператора; `null` — не задано */
       name: string | null;
+      /** @description Логотип компании-оператора (ДВ-3): относительный адрес публичного файла `/media/companies/<id>/logo/…` на домене кабинета; `null` — не загружен, кабинет показывает буквы названия */
+      logo_url: string | null;
       /** @description Имя Telegram-бота без @ — для входа через Telegram, «Я новый клиент» и ссылок на бота в кабинете. Владелец — CRM (процесс бота узнаёт имя у Telegram), в ERP — проекция из `crm.bot.changed`. `null` — бот ещё не запускался: кабинет не показывает ссылки на бота */
       bot_username: string | null;
     };

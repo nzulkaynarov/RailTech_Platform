@@ -325,3 +325,6 @@ msgstr "Xodim kompaniya bank rekvizitlarini oʻzgartirishni tasdiqladi, yangi re
 
 msgid "Запрос на смену банковских реквизитов компании отклонён, прежние реквизиты действуют."
 msgstr "Kompaniya bank rekvizitlarini oʻzgartirish soʻrovi rad etildi, avvalgi rekvizitlar amalda."
+
+msgid "Мы не просим пароль и код в письме или по телефону. Не пересылайте этот код."
+msgstr "Biz parol va kodni xatda yoki telefonda söramaymiz. Bu kodni hech kimga yubormang."

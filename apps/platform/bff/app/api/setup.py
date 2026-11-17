@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, Request, Response, status
 
 from app.client_ip import UNKNOWN
 from app.clients import crm_setup
+from app.clients.operator_brand import fetch_operator_logo
 from app.cookies import set_session_cookies
 from app.deps import Authed, AuthServiceDep, LoginLimiterDep, SettingsDep, require
 from app.errors import PlatformError
@@ -44,6 +45,27 @@ async def get_setup_state(request: Request, response: Response) -> SetupState:
     response.headers["Cache-Control"] = "no-store"
     return SetupState(
         needs_admin=state.needs_setup, company_name=(state.company_name or "").strip() or None
+    )
+
+
+@router.get("/setup/logo", response_class=Response, operation_id="getOperatorLogo")
+async def get_operator_logo(settings: SettingsDep) -> Response:
+    """Логотип своей компании для экрана входа и рейла (ДВ-3), без сессии.
+
+    Нет логотипа — 404, Платформа рисует буквы названия.
+    """
+    file = await fetch_operator_logo(settings.erp_url)
+    if file is None:
+        raise PlatformError("NOT_FOUND", "Логотипа нет.", status_code=404)
+    return Response(
+        content=file.content,
+        media_type=file.headers["content-type"].split(";")[0].strip(),
+        headers={
+            "Cache-Control": "public, max-age=600",
+            "Content-Disposition": "inline",
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+        },
     )
 
 

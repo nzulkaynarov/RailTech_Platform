@@ -43,7 +43,7 @@ import { PanelContent } from "./PanelContent";
 import { usePanelForced, usePanelSlotHost } from "./panelSlotContext";
 import { usePanels } from "./usePanels";
 import { useDockFits, useViewport } from "./useViewport";
-import { useProductName } from "../../shared/lib/useProductName";
+import { useOperatorLogo, useProductName } from "../../shared/lib/useProductName";
 
 const PANEL_ID = "pf-context-panel";
 const MOBILE_BAR_HEIGHT = 60;
@@ -63,6 +63,7 @@ export function AppShell() {
   const { me } = useAuth();
   const { t } = useTranslation(["shell", "modules"]);
   const product = useProductName();
+  const operatorLogo = useOperatorLogo();
   const location = useLocation();
   const viewport = useViewport();
   const [menuDrawer, setMenuDrawer] = useState(false);
@@ -351,6 +352,7 @@ export function AppShell() {
             label={t("rail.label")}
             logoLabel={t("rail.logo", { name: product.name, initials: product.initials })}
             logoText={product.initials}
+            logoSrc={operatorLogo}
             logoTo="/"
             create={<CreateMenu />}
             profile={profile}
@@ -501,6 +503,7 @@ export function AppShell() {
             label={t("rail.label")}
             logoLabel={t("rail.logo", { name: product.name, initials: product.initials })}
             logoText={product.initials}
+            logoSrc={operatorLogo}
             logoTo="/"
             profile={profile}
           />

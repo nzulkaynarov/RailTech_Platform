@@ -338,7 +338,7 @@ export const handlers = [
     return json({ status: 'ok', sent: true, email: body.email });
   }),
   // Название оператора до входа (задача «Н3a2»): в CRM — «Настройки · Компания».
-  http.get(`${API}/operator`, () => HttpResponse.json({ name: 'RailTech', bot_username: 'railtech_test_bot' })),
+  http.get(`${API}/operator`, () => HttpResponse.json({ name: 'RailTech', bot_username: 'railtech_test_bot', logo_url: null })),
   http.get(`${API}/countries`, () => {
     return json([
       { code: 'UZ', name: 'Узбекистан', phone_code: '+998', phone_mask: '+998 (99) 999-99-99', phone_placeholder: '+998 90 123-45-67', tax_label: 'ИНН (STIR)', tax_placeholder: '123456789', is_uzbekistan: true },

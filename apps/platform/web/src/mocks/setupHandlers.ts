@@ -10,6 +10,7 @@ import type {
   SetupCompanyIn,
   SetupStepKey,
 } from "../shared/api/generated/model";
+import { readCompanyMock } from "./fixtures/company";
 import { failure, guard } from "./adminUsers";
 import { companyBankReady } from "./fixtures/company";
 import { ROLE_ID } from "./fixtures/roles";
@@ -63,6 +64,20 @@ export const setupHandlers = [
     return HttpResponse.json({
       needs_admin: readSetup().needsAdmin,
       company_name: company?.name?.trim() || null,
+    });
+  }),
+
+  // ДВ-3: логотип своей компании без сессии — тот же файл, что загружен в «Настройки · Компания»; нет — 404
+  http.get("*/setup/logo", () => {
+    const logo = readCompanyMock().company.logo_url;
+    if (!logo?.startsWith("data:image/svg+xml;utf8,")) {
+      return HttpResponse.json(
+        { code: "NOT_FOUND", message: "Логотипа нет.", source: "bff" },
+        { status: 404 },
+      );
+    }
+    return new HttpResponse(decodeURIComponent(logo.slice("data:image/svg+xml;utf8,".length)), {
+      headers: { "Content-Type": "image/svg+xml" },
     });
   }),
 

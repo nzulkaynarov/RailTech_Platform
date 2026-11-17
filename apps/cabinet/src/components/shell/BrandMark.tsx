@@ -1,23 +1,55 @@
-import { useTranslation } from 'react-i18next';
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
-import { initialsOf } from '@/lib/initials';
-import { cn } from '@/lib/utils';
+import { useOperator } from "@/i18n/operator";
+
+import { initialsOf } from "@/lib/initials";
+import { cn } from "@/lib/utils";
 
 /**
- * Марка оператора в оболочке кабинета (CAB-FIX-2, K14): плитка основного цвета с буквами названия оператора — из
- * настроек компании (`{{operator}}`, задача «Н3a2»), не из кода. Имя для чтения экраном — у подписи рядом; без подписи
+ * Марка оператора в оболочке кабинета (CAB-FIX-2, K14): логотип своей компании оператора (ДВ-3, `GET /operator`
+ * → `logo_url`), а без него или если файл не открылся — плитка основного цвета с буквами названия оператора из настроек
+ * компании (`{{operator}}`, задача «Н3a2»), не из кода. Имя для чтения экраном — у подписи рядом; без подписи
  * (свёрнутый сайдбар, шапка телефона) — `label`.
  */
-export function BrandMark({ label, className }: { label?: string; className?: string }) {
+export function BrandMark({
+  label,
+  className,
+}: {
+  label?: string;
+  className?: string;
+}) {
   const { i18n } = useTranslation();
-  const operator = String(i18n.options.interpolation?.defaultVariables?.operator ?? '');
+  const operator = String(
+    i18n.options.interpolation?.defaultVariables?.operator ?? "",
+  );
+  const logo = useOperator().data?.logo_url;
+  const [broken, setBroken] = useState<string | null>(null);
+  const a11y = label
+    ? { alt: label, title: label }
+    : { alt: "", "aria-hidden": true as const };
+  if (logo && broken !== logo) {
+    return (
+      <img
+        src={logo}
+        {...a11y}
+        onError={() => setBroken(logo)}
+        className={cn(
+          "size-9 shrink-0 rounded-lg bg-white object-contain p-0.5 shadow-xs",
+          className,
+        )}
+      />
+    );
+  }
   return (
     <span
       className={cn(
-        'flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-xs font-bold tracking-tight text-primary-foreground shadow-xs',
+        "flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-xs font-bold tracking-tight text-primary-foreground shadow-xs",
         className,
       )}
-      {...(label ? { role: 'img', 'aria-label': label, title: label } : { 'aria-hidden': true })}
+      {...(label
+        ? { role: "img", "aria-label": label, title: label }
+        : { "aria-hidden": true })}
     >
       {initialsOf(operator)}
     </span>
