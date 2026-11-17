@@ -9,6 +9,7 @@ const SEED: BankChangeItem[] = [
     company_id: "42",
     company_name: "ООО «Северный Путь»",
     company_inn: "305123456",
+    company_phone: "+998 71 200 00 01",
     company_archived: false,
     status: "pending",
     stale: false,

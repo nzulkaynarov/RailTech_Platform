@@ -16119,6 +16119,8 @@ export interface components {
       company_id: string;
       company_name: string;
       company_inn: string;
+      /** @description Телефон из карточки компании (не из запроса) — для проверки звонком перед подтверждением; пусто — не заполнен */
+      company_phone: string;
       /** @description Компания в архиве — подтвердить нельзя */
       company_archived: boolean;
       status: components["schemas"]["BankChangeStatus"];

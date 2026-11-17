@@ -35,6 +35,10 @@ describe("Счета и оплаты · смена реквизитов", () => 
 
     fireEvent.click(within(row).getByRole("button", { name: "Подтвердить" }));
     const dialog = await screen.findByRole("dialog");
+    // реестр рисков М1: номер для проверки звонком — из карточки компании
+    expect(
+      within(dialog).getByText(/позвоните по номеру из карточки компании: \+998 71 200 00 01/),
+    ).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole("button", { name: "Подтвердить" }));
 
     expect(await screen.findByText("Запросов на проверке нет")).toBeVisible();

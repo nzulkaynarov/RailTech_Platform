@@ -262,6 +262,7 @@ class DeskBankChange(serializers.Serializer):
     company_id = serializers.IntegerField()
     company_name = serializers.CharField()
     company_inn = serializers.CharField(allow_blank=True)
+    company_phone = serializers.CharField(allow_blank=True)
     company_archived = serializers.BooleanField()
     status = serializers.CharField(help_text="pending, approved или rejected.")
     stale = serializers.BooleanField(help_text="Реквизиты изменились после подачи: подтвердить нельзя.")

@@ -649,6 +649,17 @@ def test_decider_sees_full_requisites_and_pending_count(portal_client, accountan
     assert row["company_name"] == client_company.name and row["requested_ip"]
 
 
+def test_desk_row_carries_phone_from_company_card(portal_client, accountant, client_company):
+    """Реестр рисков М1: телефон для проверки звонком — из карточки компании, а не из запроса."""
+    client_company.phone = "+998 71 200 00 01"
+    client_company.save(update_fields=["phone"])
+    _submit(portal_client)
+
+    row = accountant.get(DESK, {"status": "pending"}).json()["items"][0]
+
+    assert row["company_phone"] == "+998 71 200 00 01"
+
+
 def test_portal_contact_cannot_call_the_desk(portal_client):
     assert portal_client.post(f"{DESK}1/approve/", format="json").status_code == 401
 
