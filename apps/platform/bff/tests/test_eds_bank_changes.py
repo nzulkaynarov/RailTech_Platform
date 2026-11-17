@@ -17,6 +17,7 @@ RAW = {
     "company_id": 42,
     "company_name": "ООО Пример",
     "company_inn": "123456789",
+    "company_phone": "+998 71 200 00 01",
     "company_archived": False,
     "status": "pending",
     "stale": False,

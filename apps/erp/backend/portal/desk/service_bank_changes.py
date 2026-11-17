@@ -36,6 +36,8 @@ def row(item: BankDetailsChangeRequest, *, full: bool) -> dict:
         "company_id": company.pk,
         "company_name": company.name,
         "company_inn": company.inn or "",
+        # Телефон из карточки компании (ведёт сотрудник, клиент из кабинета его не меняет) — для проверки звонком
+        "company_phone": company.phone or "",
         "company_archived": not company.is_active,
         "status": item.status,
         "stale": item.status == BankDetailsChangeStatus.PENDING and is_stale(item, company),

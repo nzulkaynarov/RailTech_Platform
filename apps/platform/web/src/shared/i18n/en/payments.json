@@ -481,6 +481,8 @@
     },
     "approveModal": {
       "title": "Approve the bank details change for «{{name}}»?",
+      "callback": "Before approving, call the number from the company card: {{phone}} — not the number from the email or request",
+      "noPhone": "The company card has no phone: verify the change by calling the number from the contract",
       "apply": "The new details will apply to the company.",
       "notify": "Admins and the primary contact will be notified."
     },

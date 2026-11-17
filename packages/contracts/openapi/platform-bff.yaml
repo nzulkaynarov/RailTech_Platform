@@ -26699,12 +26699,13 @@ components:
     BankChangeItem:
       type: object
       additionalProperties: false
-      required: [id, company_id, company_name, company_inn, company_archived, status, stale, old_bank_details, new_bank_details, requested_by_name, requested_by_email, requested_ip, created_at, decided_at, decided_by_name, reject_reason]
+      required: [id, company_id, company_name, company_inn, company_phone, company_archived, status, stale, old_bank_details, new_bank_details, requested_by_name, requested_by_email, requested_ip, created_at, decided_at, decided_by_name, reject_reason]
       properties:
         id: {type: string}
         company_id: {type: string}
         company_name: {type: string}
         company_inn: {type: string}
+        company_phone: {type: string, description: 'Телефон из карточки компании (не из запроса) — для проверки звонком перед подтверждением; пусто — не заполнен'}
         company_archived: {type: boolean, description: Компания в архиве — подтвердить нельзя}
         status: {$ref: '#/components/schemas/BankChangeStatus'}
         stale: {type: boolean, description: 'Реквизиты изменились после подачи: подтвердить нельзя, только отклонить'}

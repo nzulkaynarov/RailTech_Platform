@@ -25133,6 +25133,8 @@ components:
           type: string
         company_inn:
           type: string
+        company_phone:
+          type: string
         company_archived:
           type: boolean
         status:
@@ -25172,6 +25174,7 @@ components:
       - company_id
       - company_inn
       - company_name
+      - company_phone
       - created_at
       - decided_at
       - decided_by_name

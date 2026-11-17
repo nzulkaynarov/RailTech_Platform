@@ -39,7 +39,10 @@ for (const width of WIDTHS) {
 
       await list.getByRole("button", { name: "Подтвердить" }).click();
       const approve = page.getByRole("dialog");
+      // реестр рисков М1 (ДВ-2): номер для проверки звонком — из карточки компании
+      await expect(approve.getByText(/позвоните по номеру из карточки компании/)).toBeVisible();
       await shot(page, `approve-dialog-${String(width)}`);
+      await expectNoViolations(page, "подтверждение");
       await approve.getByRole("button", { name: "Подтвердить" }).click();
 
       await expect(page.getByText("Запросов на проверке нет")).toBeVisible();

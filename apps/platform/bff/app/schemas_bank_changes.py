@@ -15,6 +15,7 @@ class BankChangeItem(BaseModel):
     company_id: str
     company_name: str
     company_inn: str
+    company_phone: str = ""
     company_archived: bool
     status: BankChangeStatus
     stale: bool

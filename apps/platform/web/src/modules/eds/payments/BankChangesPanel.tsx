@@ -213,6 +213,16 @@ function ApproveModal({ item, onClose }: { item: BankChangeItem; onClose: () => 
       <p>
         <strong>{item.new_bank_details}</strong>
       </p>
+      {/* Реестр рисков М1: подмену реквизитов ловит звонок по номеру из своей карточки, а не из запроса */}
+      <Alert
+        type={item.company_phone ? "info" : "warning"}
+        showIcon
+        message={
+          item.company_phone
+            ? t("bankChanges.approveModal.callback", { phone: item.company_phone })
+            : t("bankChanges.approveModal.noPhone")
+        }
+      />
       {approve.isError ? (
         <Alert type="error" showIcon role="alert" message={conflictMessage(approve.error, t)} />
       ) : null}
