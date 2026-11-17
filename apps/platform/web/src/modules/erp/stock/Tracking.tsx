@@ -165,7 +165,6 @@ export function ShipUnits({
                 <InputNumber
                   min={0}
                   max={u.available}
-                  precision={0}
                   value={picked[u.id] ?? 0}
                   aria-label={t("trace.lotQuantity", { number: u.number })}
                   onChange={(value) => {

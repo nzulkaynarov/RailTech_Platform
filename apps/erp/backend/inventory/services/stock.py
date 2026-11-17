@@ -49,6 +49,7 @@ from inventory.models import (
 )
 
 from catalog.models import Product
+from core.quantity import jsonable
 
 from . import trace
 
@@ -273,7 +274,7 @@ def reserve(user, deal_id: int, item_id: int, quantity: int) -> Reservation:
     product = item.product
     if product.is_service:
         raise StockError("SERVICE_NOT_STOCKED", 409)
-    if quantity < 1 or quantity > item.quantity:
+    if quantity <= 0 or quantity > item.quantity:
         raise StockError("QUANTITY_OUT_OF_RANGE", 400, max=item.quantity)
     lock_products([product.pk])
     current = Reservation.objects.select_for_update().filter(quote_item=item, status=ReservationStatus.ACTIVE).first()
@@ -556,7 +557,7 @@ def ship(
         reservation = Reservation.objects.select_for_update().get(pk=line.reservation_id)  # перечитано под блокировкой
         if reservation.status != ReservationStatus.ACTIVE:
             raise StockError("RESERVATION_NOT_ACTIVE", 409)
-        if line.quantity < 1 or line.quantity > reservation.remaining:
+        if line.quantity <= 0 or line.quantity > reservation.remaining:
             raise StockError("QUANTITY_OUT_OF_RANGE", 400, max=reservation.remaining)
         # S/L: без серийных или партий строка не отгружается; только свободные единицы этого товара (ADR-0021).
         chosen = trace.validate_picks(reservations[line.reservation_id].product, line.quantity, line.units)
@@ -651,7 +652,7 @@ def _log_deal(deal, user, action: str, detail: str, event_code: str, params: dic
         deal=deal,
         company_id=deal.company_id,
         event_code=event_code,
-        event_params=params,
+        event_params=jsonable(params),
     )
 
 

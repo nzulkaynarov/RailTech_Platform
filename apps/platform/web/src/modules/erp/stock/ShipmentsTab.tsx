@@ -113,7 +113,6 @@ function NewShipment({ manage }: { manage: boolean }) {
                         <InputNumber
                           min={0}
                           max={r.remaining}
-                          precision={0}
                           value={qtyOf(r)}
                           disabled={!manage}
                           aria-label={t("shipments.quantityLabel", { name: r.product_name })}
@@ -209,7 +208,7 @@ function NewShipment({ manage }: { manage: boolean }) {
 
 function Rows({ items }: { items: readonly StockShipment[] }) {
   const { t } = useTranslation("stock");
-  const { activity } = useFormat();
+  const { activity, qty } = useFormat();
   const { mobile } = useViewport();
   if (mobile) {
     return (
@@ -265,7 +264,7 @@ function Rows({ items }: { items: readonly StockShipment[] }) {
         <>
           {s.lines.map((l, index) => (
             <div key={index}>
-              {l.name} · <span className="pf-num">{l.quantity}</span>
+              {l.name} · <span className="pf-num">{qty(l.quantity)}</span>
               {l.cell ? <span className="pf-hint"> ({l.cell})</span> : null}
               {l.units.length > 0 ? (
                 <div className="pf-hint pf-num">{unitsText(l.units).slice(3)}</div>

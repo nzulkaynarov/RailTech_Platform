@@ -15,7 +15,7 @@ export interface StockDoneReceipt {
   received_by: string | null;
   /** @nullable */
   supplier_doc: string | null;
-  /** @minimum 1 */
+  /** @exclusiveMinimum 0 */
   quantity: number;
   lines: StockDoneReceiptLinesItem[];
 }

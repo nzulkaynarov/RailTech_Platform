@@ -3,6 +3,8 @@
 
 from rest_framework import serializers
 
+from core.quantity import QuantityField
+
 ZONES = ("goods", "services", "payment_terms")
 LINE_ZONES = ("goods", "services")
 LINE_KINDS = ("goods", "goods_to_order", "service")
@@ -130,12 +132,10 @@ class CalcQuoteSerializer(serializers.Serializer):
 
 
 class CalcStockSerializer(serializers.Serializer):
-    on_hand = serializers.IntegerField(
-        allow_null=True, help_text="На складе всего; null — у строки нет карточки каталога"
-    )
-    free = serializers.IntegerField(allow_null=True, help_text="Свободно: остаток минус резервы всех проектов (D2-2)")
+    on_hand = QuantityField(allow_null=True, help_text="На складе всего; null — у строки нет карточки каталога")
+    free = QuantityField(allow_null=True, help_text="Свободно: остаток минус резервы всех проектов (D2-2)")
     cell = serializers.CharField(allow_null=True, help_text="Ячейка с наибольшим остатком (D2-2)")
-    reserved = serializers.IntegerField(allow_null=True, help_text="Зарезервировано за этой строкой (D2-2)")
+    reserved = QuantityField(allow_null=True, help_text="Зарезервировано за этой строкой (D2-2)")
 
 
 class CalcSupplierSerializer(serializers.Serializer):
@@ -162,7 +162,7 @@ class CalcLineSerializer(serializers.Serializer):
     product_draft = serializers.BooleanField(help_text="Карточка строки — черновик каталога (ADR-0027)")
     kind = serializers.ChoiceField(choices=LINE_KINDS)
     zone = serializers.ChoiceField(choices=LINE_ZONES)
-    quantity = serializers.IntegerField()
+    quantity = QuantityField()
     unit = serializers.CharField(allow_blank=True)
     stock = CalcStockSerializer()
     supplier = CalcSupplierSerializer(allow_null=True)
@@ -304,7 +304,7 @@ class CalcCatalogItemSerializer(serializers.Serializer):
     name = serializers.CharField()
     article = serializers.CharField(allow_blank=True)
     kind = serializers.ChoiceField(choices=ITEM_KINDS)
-    on_hand = serializers.IntegerField()
+    on_hand = QuantityField()
     supplier_name = serializers.CharField(allow_null=True)
     lead_days = serializers.IntegerField(allow_null=True)
 

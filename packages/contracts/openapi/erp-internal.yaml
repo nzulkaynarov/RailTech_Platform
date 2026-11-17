@@ -21419,7 +21419,8 @@ components:
         kind:
           $ref: '#/components/schemas/CalcItemKindEnum'
         on_hand:
-          type: integer
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
         supplier_name:
           type: string
           nullable: true
@@ -21598,7 +21599,8 @@ components:
         zone:
           $ref: '#/components/schemas/CalcLineZoneEnum'
         quantity:
-          type: integer
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
         unit:
           type: string
         stock:
@@ -21983,21 +21985,21 @@ components:
       type: object
       properties:
         on_hand:
-          type: integer
-          nullable: true
+          type: number
           description: На складе всего; null — у строки нет карточки каталога
-        free:
-          type: integer
           nullable: true
+        free:
+          type: number
           description: 'Свободно: остаток минус резервы всех проектов (D2-2)'
+          nullable: true
         cell:
           type: string
           nullable: true
           description: Ячейка с наибольшим остатком (D2-2)
         reserved:
-          type: integer
-          nullable: true
+          type: number
           description: Зарезервировано за этой строкой (D2-2)
+          nullable: true
       required:
       - cell
       - free
@@ -25002,7 +25004,8 @@ components:
         title:
           type: string
         quantity:
-          type: integer
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
           nullable: true
         unit:
           type: string
@@ -27821,7 +27824,8 @@ components:
           type: string
           nullable: true
         quantity:
-          type: integer
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
         lines:
           type: array
           items:
@@ -27842,7 +27846,8 @@ components:
         name:
           type: string
         quantity:
-          type: integer
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
         cell:
           type: string
           nullable: true
@@ -29514,9 +29519,11 @@ components:
         lines_count:
           type: integer
         quantity:
-          type: integer
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
         received_quantity:
-          type: integer
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
         receipt_state:
           $ref: '#/components/schemas/SupplierOrderReceiptStateEnum'
         total:
@@ -29638,9 +29645,11 @@ components:
         unit:
           type: string
         quantity:
-          type: integer
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
         received_quantity:
-          type: integer
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
         unit_price:
           type: string
           format: decimal
@@ -29714,9 +29723,10 @@ components:
           default: ''
           maxLength: 32
         quantity:
-          type: integer
-          maximum: 10000000
-          minimum: 1
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
+          maximum: 10000000.0
+          minimum: 0.001
         unit_price:
           type: string
           format: decimal
@@ -29892,9 +29902,11 @@ components:
         lines_count:
           type: integer
         quantity:
-          type: integer
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
         received_quantity:
-          type: integer
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
         receipt_state:
           $ref: '#/components/schemas/SupplierOrderReceiptStateEnum'
         total:
@@ -32842,9 +32854,11 @@ components:
         unit:
           type: string
         quantity:
-          type: integer
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
         received_quantity:
-          type: integer
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
         deal:
           allOf:
           - $ref: '#/components/schemas/StockDealRef'
@@ -33019,7 +33033,8 @@ components:
         article:
           type: string
         quantity:
-          type: integer
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
         unit:
           type: string
       required:
@@ -35463,7 +35478,8 @@ components:
         name:
           type: string
         quantity:
-          type: integer
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
         cell:
           type: string
           nullable: true
@@ -35501,8 +35517,9 @@ components:
           type: integer
           minimum: 1
         quantity:
-          type: integer
-          minimum: 1
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
+          minimum: 0.001
         cell:
           type: string
           default: ''
@@ -36356,7 +36373,7 @@ components:
           type: integer
           minimum: 1
         quantity:
-          type: integer
+          type: number
           description: Плюс — оприходовать, минус — списать; не ноль
         cell:
           type: string
@@ -36389,7 +36406,8 @@ components:
           nullable: true
           description: Пусто — товар лежит без ячейки
         on_hand:
-          type: integer
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
       required:
       - cell
       - on_hand
@@ -36420,16 +36438,17 @@ components:
           additionalProperties: {}
           description: '`VALIDATION_FAILED`: ошибки полей тела запроса — поле → список кодов или вложенные ошибки'
         free:
-          type: integer
+          type: number
           description: '`NOT_ENOUGH_STOCK`: сколько можно взять'
         max:
           type: integer
           description: '`QUANTITY_OUT_OF_RANGE`: наибольшее допустимое количество'
         reserved:
-          type: integer
+          type: number
           description: '`BELOW_RESERVED`: сколько в резервах'
         on_hand:
-          type: integer
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
         shipped:
           type: integer
           description: '`BELOW_SHIPPED`: уже отгружено'
@@ -36466,7 +36485,8 @@ components:
           format: date
           nullable: true
         quantity_left:
-          type: integer
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
       required:
       - expected_date
       - number
@@ -36480,7 +36500,7 @@ components:
         kind:
           $ref: '#/components/schemas/StockMovementKindEnum'
         quantity:
-          type: integer
+          type: number
           description: Плюс — приход, минус — расход
         cell:
           type: string
@@ -36523,12 +36543,13 @@ components:
         unit:
           type: string
         on_hand:
-          type: integer
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
         reserved:
-          type: integer
+          type: number
           description: Остаток резервов действующих проектов
         free:
-          type: integer
+          type: number
           description: 'Свободный остаток: остаток − резервы'
         incoming:
           type: integer
@@ -36585,9 +36606,11 @@ components:
           type: integer
           nullable: true
         quantity:
-          type: integer
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
         shipped_quantity:
-          type: integer
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
         remaining:
           type: integer
         status:
@@ -36655,8 +36678,9 @@ components:
           type: integer
           minimum: 1
         quantity:
-          type: integer
-          minimum: 1
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
+          minimum: 0.001
       required:
       - deal_id
       - quantity
@@ -36685,12 +36709,13 @@ components:
         unit:
           type: string
         on_hand:
-          type: integer
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
         reserved:
-          type: integer
+          type: number
           description: Остаток резервов действующих проектов
         free:
-          type: integer
+          type: number
           description: 'Свободный остаток: остаток − резервы'
         incoming:
           type: integer
@@ -36746,8 +36771,9 @@ components:
           type: integer
           minimum: 1
         quantity:
-          type: integer
-          minimum: 1
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
+          minimum: 0.001
         units:
           type: array
           items:
@@ -36763,10 +36789,10 @@ components:
           type: integer
           minimum: 1
         quantity:
-          type: integer
-          minimum: 1
-          default: 1
+          type: number
           description: Серийный — 1
+          default: 1
+          minimum: 0.001
       required:
       - unit_id
     StockShipment:
@@ -36816,7 +36842,8 @@ components:
         name:
           type: string
         quantity:
-          type: integer
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
         cell:
           type: string
           nullable: true
@@ -36849,7 +36876,8 @@ components:
         number:
           type: string
         quantity:
-          type: integer
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
       required:
       - number
       - quantity
@@ -36912,7 +36940,8 @@ components:
           type: string
           format: date-time
         quantity:
-          type: integer
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
         deal:
           $ref: '#/components/schemas/StockDealRef'
       required:
@@ -37006,9 +37035,11 @@ components:
           type: integer
           description: 'Сколько ещё на складе: серийный — 1, партия — остаток партии'
         quantity:
-          type: integer
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
         shipped_quantity:
-          type: integer
+          type: number
+          description: Количество, до трёх знаков после запятой (ADR-0027 п. 9)
         status:
           $ref: '#/components/schemas/TraceStatusEnum'
         product:

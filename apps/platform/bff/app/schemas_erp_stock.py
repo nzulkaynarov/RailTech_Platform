@@ -51,7 +51,7 @@ class StockRequestRef(BaseModel):
 
 class StockCell(BaseModel):
     cell: str | None
-    on_hand: int
+    on_hand: float
 
 
 class StockRow(BaseModel):
@@ -59,10 +59,10 @@ class StockRow(BaseModel):
     name: str
     article: str
     unit: str
-    on_hand: int
-    reserved: int
-    free: int
-    incoming: int
+    on_hand: float
+    reserved: float
+    free: float
+    incoming: float
     next_expected: dt.date | None
     cells: list[StockCell]
 
@@ -77,7 +77,7 @@ class StockTraceUnitRef(BaseModel):
     kind: TraceKind
     number: str
     expiry_date: dt.date | None
-    available: int
+    available: float
 
 
 class StockReservation(BaseModel):
@@ -86,8 +86,8 @@ class StockReservation(BaseModel):
     product_name: str
     request: StockRequestRef
     line_id: str | None
-    quantity: int
-    shipped_quantity: int
+    quantity: float
+    shipped_quantity: float
     remaining: int
     status: ReservationStatus
     created_at: dt.datetime
@@ -105,13 +105,13 @@ class StockIncomingOrder(BaseModel):
     status: OrderStatus
     supplier: str
     expected_date: dt.date | None
-    quantity_left: int
+    quantity_left: float
     path: str
 
 
 class StockMovement(BaseModel):
     kind: Literal["receipt", "shipment", "adjustment"]
-    quantity: int
+    quantity: float
     cell: str | None
     at: dt.datetime
     by: str | None
@@ -159,8 +159,8 @@ class SupplierOrderRow(BaseModel):
     days_overdue: int | None
     currency: str | None
     lines_count: int
-    quantity: int
-    received_quantity: int
+    quantity: float
+    received_quantity: float
     receipt_state: Literal["none", "partial", "full"]
     total: str | None
     requests: list[StockRequestRef]
@@ -188,8 +188,8 @@ class SupplierOrderLine(BaseModel):
     name: str
     article: str
     unit: str
-    quantity: int
-    received_quantity: int
+    quantity: float
+    received_quantity: float
     unit_price: str | None
     line_total: str | None
     request: StockRequestRef | None
@@ -201,7 +201,7 @@ class SupplierOrderLine(BaseModel):
 
 class StockDoneReceiptLine(BaseModel):
     name: str
-    quantity: int
+    quantity: float
     cell: str | None
     units: list[str]
     expiry_date: dt.date | None
@@ -264,8 +264,8 @@ class StockPendingReceiptLine(BaseModel):
     name: str
     article: str
     unit: str
-    quantity: int
-    received_quantity: int
+    quantity: float
+    received_quantity: float
     request: StockRequestRef | None
     tracking: TrackingClass
     requires_doc: bool
@@ -279,7 +279,7 @@ class StockDoneReceipt(BaseModel):
     received_at: dt.datetime
     received_by: str | None
     supplier_doc: str | None
-    quantity: int
+    quantity: float
     lines: list[StockDoneReceiptLine]
 
 
@@ -291,13 +291,13 @@ class StockReceipts(BaseModel):
 
 class StockShipmentUnit(BaseModel):
     number: str
-    quantity: int
+    quantity: float
 
 
 class StockShipmentLine(BaseModel):
     product_id: str
     name: str
-    quantity: int
+    quantity: float
     cell: str | None
     units: list[StockShipmentUnit]
 
@@ -340,7 +340,7 @@ class StockTraceOrigin(BaseModel):
 class StockTraceDestination(BaseModel):
     shipment_number: str
     shipped_at: dt.datetime
-    quantity: int
+    quantity: float
     request: StockRequestRef
 
 
@@ -349,8 +349,8 @@ class StockTraceUnit(BaseModel):
     kind: TraceKind
     number: str
     expiry_date: dt.date | None
-    quantity: int
-    shipped_quantity: int
+    quantity: float
+    shipped_quantity: float
     status: Literal["in_stock", "shipped"]
     product: StockTraceProduct
     origin: StockTraceOrigin
@@ -365,7 +365,7 @@ class PriceRequestLine(BaseModel):
     line_id: str | None
     name: str
     article: str
-    quantity: int
+    quantity: float
     unit: str
 
 
@@ -399,7 +399,7 @@ class StockAdjustIn(BaseModel):
     model_config = _STRICT
 
     product_id: str = Field(pattern=DIGITS, max_length=12)
-    quantity: int = Field(ge=-10_000_000, le=10_000_000)
+    quantity: float = Field(ge=-10_000_000, le=10_000_000, allow_inf_nan=False)
     cell: str | None = Field(default=None, max_length=32)
     note: str | None = Field(default=None, max_length=500)
 
@@ -407,7 +407,7 @@ class StockAdjustIn(BaseModel):
 class StockReserveIn(BaseModel):
     model_config = _STRICT
 
-    quantity: int = Field(ge=1, le=10_000_000)
+    quantity: float = Field(gt=0, le=10_000_000, allow_inf_nan=False)
 
 
 class SupplierOrderLineIn(BaseModel):
@@ -418,7 +418,7 @@ class SupplierOrderLineIn(BaseModel):
     name: str | None = Field(default=None, max_length=500)
     article: str | None = Field(default=None, max_length=120)
     unit: str | None = Field(default=None, max_length=32)
-    quantity: int = Field(ge=1, le=10_000_000)
+    quantity: float = Field(gt=0, le=10_000_000, allow_inf_nan=False)
     unit_price: str | None = Field(default=None, pattern=DECIMAL, max_length=20)
     request: str | None = Field(default=None, min_length=1, max_length=40)
     line_id: str | None = Field(default=None, pattern=DIGITS, max_length=12)
@@ -473,7 +473,7 @@ class ReceiptLineIn(BaseModel):
     model_config = _STRICT
 
     order_line_id: str = Field(pattern=DIGITS, max_length=12)
-    quantity: int = Field(ge=1, le=10_000_000)
+    quantity: float = Field(gt=0, le=10_000_000, allow_inf_nan=False)
     cell: str | None = Field(default=None, max_length=32)
     # ADR-0021: по классу категории; обязательность и число серийных проверяет ERP.
     serials: list[Serial] | None = Field(default=None, max_length=1000)
@@ -495,14 +495,14 @@ class ShipUnitIn(BaseModel):
     model_config = _STRICT
 
     unit_id: str = Field(pattern=DIGITS, max_length=12)
-    quantity: int = Field(default=1, ge=1, le=10_000_000)
+    quantity: float = Field(default=1, gt=0, le=10_000_000, allow_inf_nan=False)
 
 
 class ShipLineIn(BaseModel):
     model_config = _STRICT
 
     reservation_id: str = Field(pattern=DIGITS, max_length=12)
-    quantity: int = Field(ge=1, le=10_000_000)
+    quantity: float = Field(gt=0, le=10_000_000, allow_inf_nan=False)
     units: list[ShipUnitIn] | None = Field(default=None, max_length=1000)
 
 

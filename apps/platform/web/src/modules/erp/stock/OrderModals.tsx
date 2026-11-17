@@ -301,7 +301,6 @@ export function ReceiveModal({
                   <InputNumber
                     min={0}
                     max={left}
-                    precision={0}
                     value={draft.quantity}
                     aria-label={t("order.receive.quantityLabel", { name: l.name })}
                     onChange={(value) => {
@@ -418,8 +417,7 @@ export function EditModal({ order, onClose }: { order: SupplierOrderDetail; onCl
             <li key={l.id}>
               <strong>{l.name}</strong>
               <InputNumber
-                min={1}
-                precision={0}
+                min={0.001}
                 value={quantities[l.id] ?? l.quantity}
                 aria-label={t("order.edit.quantityLabel", { name: l.name })}
                 onChange={(value) => {

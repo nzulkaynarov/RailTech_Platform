@@ -40,7 +40,7 @@ class DeliveryLine(models.Model):
     )
     line_no = models.PositiveIntegerField(verbose_name=_("№ строки"), help_text=_("Сквозной номер в заказе, с 1"))
     title = models.CharField(max_length=500, blank=True, default="", verbose_name=_("Название"))
-    quantity = models.PositiveIntegerField(null=True, blank=True, verbose_name=_("Количество"))
+    quantity = models.DecimalField(max_digits=14, decimal_places=3, null=True, blank=True, verbose_name=_("Количество"))
     unit = models.CharField(max_length=32, blank=True, default="", verbose_name=_("Единица"))
     status = models.CharField(
         max_length=16,

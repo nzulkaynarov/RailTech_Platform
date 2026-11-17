@@ -23,6 +23,7 @@ from portal.services.documents import PortalDocument
 from sales.models import DeliveryLine, DeliveryLineStatus, Fulfillment
 from sales.services.delivery_lines import sync_delivery_lines
 
+from core.quantity import qty_text
 from crm.constants import InvoiceStatusCode, QuoteStatusCode
 from crm.models import Deal, Invoice
 
@@ -86,7 +87,7 @@ def _delivery_line_item(line: DeliveryLine) -> Dict[str, Any]:
         "erp_deal_id": line.deal_id,
         "line_no": line.line_no,
         "title": line.title,
-        "quantity": str(line.quantity) if line.quantity is not None else None,
+        "quantity": qty_text(line.quantity) if line.quantity is not None else None,
         "unit": projections.blank_to_none(line.unit),
         "status": line.status,
         "eta": line.eta.isoformat() if line.eta else None,

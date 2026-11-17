@@ -47,7 +47,7 @@ class StockBalance(models.Model):
     cell = models.CharField(
         max_length=32, blank=True, default="", verbose_name=_("Ячейка"), help_text=_("Пусто — без ячейки")
     )
-    on_hand = models.PositiveIntegerField(default=0, verbose_name=_("Остаток"))
+    on_hand = models.DecimalField(max_digits=14, decimal_places=3, default=0, verbose_name=_("Остаток"))
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -77,7 +77,9 @@ class StockMovement(models.Model):
     )
     warehouse = models.ForeignKey(Warehouse, on_delete=models.PROTECT, related_name="movements")
     cell = models.CharField(max_length=32, blank=True, default="")
-    quantity = models.IntegerField(verbose_name=_("Количество"), help_text=_("Плюс — приход, минус — расход"))
+    quantity = models.DecimalField(
+        max_digits=14, decimal_places=3, verbose_name=_("Количество"), help_text=_("Плюс — приход, минус — расход")
+    )
     kind = models.CharField(max_length=12, choices=MovementKind.choices, db_index=True)
     source_id = models.PositiveBigIntegerField(
         null=True, blank=True, verbose_name=_("Документ"), help_text=_("Приёмка или отгрузка, породившая движение")
@@ -119,8 +121,8 @@ class Reservation(models.Model):
         related_name="stock_reservations",
         verbose_name=_("Строка расчёта"),
     )
-    quantity = models.PositiveIntegerField(verbose_name=_("Зарезервировано"))
-    shipped_quantity = models.PositiveIntegerField(default=0, verbose_name=_("Отгружено"))
+    quantity = models.DecimalField(max_digits=14, decimal_places=3, verbose_name=_("Зарезервировано"))
+    shipped_quantity = models.DecimalField(max_digits=14, decimal_places=3, default=0, verbose_name=_("Отгружено"))
     status = models.CharField(
         max_length=10, choices=ReservationStatus.choices, default=ReservationStatus.ACTIVE, db_index=True
     )
@@ -207,7 +209,7 @@ class ShipmentLine(models.Model):
     quote_item = models.ForeignKey(
         "sales.QuoteItem", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )
-    quantity = models.PositiveIntegerField()
+    quantity = models.DecimalField(max_digits=14, decimal_places=3)
     warehouse = models.ForeignKey(Warehouse, on_delete=models.PROTECT, related_name="+")
     cell = models.CharField(max_length=32, blank=True, default="")
 
@@ -239,8 +241,10 @@ class TraceUnit(models.Model):
     product = models.ForeignKey("catalog.Product", on_delete=models.PROTECT, related_name="trace_units")
     number = models.CharField(max_length=100, db_index=True, verbose_name=_("Номер изготовителя"))
     expiry_date = models.DateField(null=True, blank=True, verbose_name=_("Годен до"))
-    quantity = models.PositiveIntegerField(verbose_name=_("Количество"), help_text=_("Серийный — 1, партия — принятое"))
-    shipped_quantity = models.PositiveIntegerField(default=0, verbose_name=_("Отгружено"))
+    quantity = models.DecimalField(
+        max_digits=14, decimal_places=3, verbose_name=_("Количество"), help_text=_("Серийный — 1, партия — принятое")
+    )
+    shipped_quantity = models.DecimalField(max_digits=14, decimal_places=3, default=0, verbose_name=_("Отгружено"))
     status = models.CharField(
         max_length=10,
         choices=TraceStatus.choices,
@@ -280,7 +284,7 @@ class TraceAllocation(models.Model):
 
     unit = models.ForeignKey(TraceUnit, on_delete=models.PROTECT, related_name="allocations")
     shipment_line = models.ForeignKey(ShipmentLine, on_delete=models.CASCADE, related_name="trace_allocations")
-    quantity = models.PositiveIntegerField()
+    quantity = models.DecimalField(max_digits=14, decimal_places=3)
 
     class Meta:
         verbose_name = _("Единица в отгрузке")

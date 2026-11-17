@@ -36495,7 +36495,8 @@
                         "$ref": "#/components/schemas/CalcItemKindEnum"
                     },
                     "on_hand": {
-                        "type": "integer"
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
                     },
                     "supplier_name": {
                         "type": "string",
@@ -36745,7 +36746,8 @@
                         "$ref": "#/components/schemas/CalcLineZoneEnum"
                     },
                     "quantity": {
-                        "type": "integer"
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
                     },
                     "unit": {
                         "type": "string"
@@ -37260,14 +37262,14 @@
                 "type": "object",
                 "properties": {
                     "on_hand": {
-                        "type": "integer",
-                        "nullable": true,
-                        "description": "На складе всего; null — у строки нет карточки каталога"
+                        "type": "number",
+                        "description": "На складе всего; null — у строки нет карточки каталога",
+                        "nullable": true
                     },
                     "free": {
-                        "type": "integer",
-                        "nullable": true,
-                        "description": "Свободно: остаток минус резервы всех проектов (D2-2)"
+                        "type": "number",
+                        "description": "Свободно: остаток минус резервы всех проектов (D2-2)",
+                        "nullable": true
                     },
                     "cell": {
                         "type": "string",
@@ -37275,9 +37277,9 @@
                         "description": "Ячейка с наибольшим остатком (D2-2)"
                     },
                     "reserved": {
-                        "type": "integer",
-                        "nullable": true,
-                        "description": "Зарезервировано за этой строкой (D2-2)"
+                        "type": "number",
+                        "description": "Зарезервировано за этой строкой (D2-2)",
+                        "nullable": true
                     }
                 },
                 "required": [
@@ -41173,7 +41175,8 @@
                         "type": "string"
                     },
                     "quantity": {
-                        "type": "integer",
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)",
                         "nullable": true
                     },
                     "unit": {
@@ -44847,7 +44850,8 @@
                         "nullable": true
                     },
                     "quantity": {
-                        "type": "integer"
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
                     },
                     "lines": {
                         "type": "array",
@@ -44875,7 +44879,8 @@
                         "type": "string"
                     },
                     "quantity": {
-                        "type": "integer"
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
                     },
                     "cell": {
                         "type": "string",
@@ -46976,10 +46981,12 @@
                         "type": "integer"
                     },
                     "quantity": {
-                        "type": "integer"
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
                     },
                     "received_quantity": {
-                        "type": "integer"
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
                     },
                     "receipt_state": {
                         "$ref": "#/components/schemas/SupplierOrderReceiptStateEnum"
@@ -47141,10 +47148,12 @@
                         "type": "string"
                     },
                     "quantity": {
-                        "type": "integer"
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
                     },
                     "received_quantity": {
-                        "type": "integer"
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
                     },
                     "unit_price": {
                         "type": "string",
@@ -47238,9 +47247,10 @@
                         "maxLength": 32
                     },
                     "quantity": {
-                        "type": "integer",
-                        "maximum": 10000000,
-                        "minimum": 1
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)",
+                        "maximum": 10000000.0,
+                        "minimum": 0.001
                     },
                     "unit_price": {
                         "type": "string",
@@ -47466,10 +47476,12 @@
                         "type": "integer"
                     },
                     "quantity": {
-                        "type": "integer"
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
                     },
                     "received_quantity": {
-                        "type": "integer"
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
                     },
                     "receipt_state": {
                         "$ref": "#/components/schemas/SupplierOrderReceiptStateEnum"
@@ -51267,10 +51279,12 @@
                         "type": "string"
                     },
                     "quantity": {
-                        "type": "integer"
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
                     },
                     "received_quantity": {
-                        "type": "integer"
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
                     },
                     "deal": {
                         "allOf": [
@@ -51502,7 +51516,8 @@
                         "type": "string"
                     },
                     "quantity": {
-                        "type": "integer"
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
                     },
                     "unit": {
                         "type": "string"
@@ -54648,7 +54663,8 @@
                         "type": "string"
                     },
                     "quantity": {
-                        "type": "integer"
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
                     },
                     "cell": {
                         "type": "string",
@@ -54698,8 +54714,9 @@
                         "minimum": 1
                     },
                     "quantity": {
-                        "type": "integer",
-                        "minimum": 1
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)",
+                        "minimum": 0.001
                     },
                     "cell": {
                         "type": "string",
@@ -55819,7 +55836,7 @@
                         "minimum": 1
                     },
                     "quantity": {
-                        "type": "integer",
+                        "type": "number",
                         "description": "Плюс — оприходовать, минус — списать; не ноль"
                     },
                     "cell": {
@@ -55865,7 +55882,8 @@
                         "description": "Пусто — товар лежит без ячейки"
                     },
                     "on_hand": {
-                        "type": "integer"
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
                     }
                 },
                 "required": [
@@ -55908,7 +55926,7 @@
                         "description": "`VALIDATION_FAILED`: ошибки полей тела запроса — поле → список кодов или вложенные ошибки"
                     },
                     "free": {
-                        "type": "integer",
+                        "type": "number",
                         "description": "`NOT_ENOUGH_STOCK`: сколько можно взять"
                     },
                     "max": {
@@ -55916,11 +55934,12 @@
                         "description": "`QUANTITY_OUT_OF_RANGE`: наибольшее допустимое количество"
                     },
                     "reserved": {
-                        "type": "integer",
+                        "type": "number",
                         "description": "`BELOW_RESERVED`: сколько в резервах"
                     },
                     "on_hand": {
-                        "type": "integer"
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
                     },
                     "shipped": {
                         "type": "integer",
@@ -55972,7 +55991,8 @@
                         "nullable": true
                     },
                     "quantity_left": {
-                        "type": "integer"
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
                     }
                 },
                 "required": [
@@ -55991,7 +56011,7 @@
                         "$ref": "#/components/schemas/StockMovementKindEnum"
                     },
                     "quantity": {
-                        "type": "integer",
+                        "type": "number",
                         "description": "Плюс — приход, минус — расход"
                     },
                     "cell": {
@@ -56045,14 +56065,15 @@
                         "type": "string"
                     },
                     "on_hand": {
-                        "type": "integer"
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
                     },
                     "reserved": {
-                        "type": "integer",
+                        "type": "number",
                         "description": "Остаток резервов действующих проектов"
                     },
                     "free": {
-                        "type": "integer",
+                        "type": "number",
                         "description": "Свободный остаток: остаток − резервы"
                     },
                     "incoming": {
@@ -56129,10 +56150,12 @@
                         "nullable": true
                     },
                     "quantity": {
-                        "type": "integer"
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
                     },
                     "shipped_quantity": {
-                        "type": "integer"
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
                     },
                     "remaining": {
                         "type": "integer"
@@ -56215,8 +56238,9 @@
                         "minimum": 1
                     },
                     "quantity": {
-                        "type": "integer",
-                        "minimum": 1
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)",
+                        "minimum": 0.001
                     }
                 },
                 "required": [
@@ -56258,14 +56282,15 @@
                         "type": "string"
                     },
                     "on_hand": {
-                        "type": "integer"
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
                     },
                     "reserved": {
-                        "type": "integer",
+                        "type": "number",
                         "description": "Остаток резервов действующих проектов"
                     },
                     "free": {
-                        "type": "integer",
+                        "type": "number",
                         "description": "Свободный остаток: остаток − резервы"
                     },
                     "incoming": {
@@ -56339,8 +56364,9 @@
                         "minimum": 1
                     },
                     "quantity": {
-                        "type": "integer",
-                        "minimum": 1
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)",
+                        "minimum": 0.001
                     },
                     "units": {
                         "type": "array",
@@ -56363,10 +56389,10 @@
                         "minimum": 1
                     },
                     "quantity": {
-                        "type": "integer",
-                        "minimum": 1,
+                        "type": "number",
+                        "description": "Серийный — 1",
                         "default": 1,
-                        "description": "Серийный — 1"
+                        "minimum": 0.001
                     }
                 },
                 "required": [
@@ -56435,7 +56461,8 @@
                         "type": "string"
                     },
                     "quantity": {
-                        "type": "integer"
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
                     },
                     "cell": {
                         "type": "string",
@@ -56482,7 +56509,8 @@
                         "type": "string"
                     },
                     "quantity": {
-                        "type": "integer"
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
                     }
                 },
                 "required": [
@@ -56570,7 +56598,8 @@
                         "format": "date-time"
                     },
                     "quantity": {
-                        "type": "integer"
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
                     },
                     "deal": {
                         "$ref": "#/components/schemas/StockDealRef"
@@ -56701,10 +56730,12 @@
                         "description": "Сколько ещё на складе: серийный — 1, партия — остаток партии"
                     },
                     "quantity": {
-                        "type": "integer"
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
                     },
                     "shipped_quantity": {
-                        "type": "integer"
+                        "type": "number",
+                        "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
                     },
                     "status": {
                         "$ref": "#/components/schemas/TraceStatusEnum"

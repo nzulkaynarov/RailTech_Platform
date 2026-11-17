@@ -173,7 +173,7 @@ def validate_picks(product, quantity: int, picks: list[UnitPick]) -> list[tuple[
         if unit is None or unit.product_id != product.pk or unit.kind != wanted_kind:
             raise StockError("UNIT_NOT_FOUND", 404)
         size = 1 if unit.kind == TraceKind.SERIAL else pick.quantity
-        if size < 1 or size > unit.available:
+        if size <= 0 or size > unit.available:
             raise StockError("UNIT_NOT_AVAILABLE", 409, number=unit.number, max=unit.available)
         chosen.append((unit, size))
     if sum(size for _unit, size in chosen) != quantity:

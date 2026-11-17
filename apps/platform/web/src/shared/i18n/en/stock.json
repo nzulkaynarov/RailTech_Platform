@@ -81,7 +81,7 @@
     "free": "Free · {{count}}",
     "noFree": "None free",
     "until": "by {{date}}",
-    "cellLine": "{{cell}}: {{count}}",
+    "cellLine": "{{cell}}: {{qty}}",
     "card": "In stock {{onHand}} · reserved {{reserved}}",
     "empty": {
       "title": "The warehouse is empty for now",

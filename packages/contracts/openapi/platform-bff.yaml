@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.113.0
+  version: 0.114.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -18354,7 +18354,7 @@ components:
         title:
           type: string
         quantity:
-          type: [integer, 'null']
+          type: [number, 'null']
         unit:
           type: string
         status:
@@ -24324,10 +24324,10 @@ components:
       required: [on_hand, cell, reserved]
       description: Склад строки-товара (D2-2) — остаток, свободный остаток, ячейка и резерв за этой строкой
       properties:
-        on_hand: {type: [integer, 'null'], description: На складе всего; пусто — строка без карточки каталога}
-        free: {type: [integer, 'null'], description: Свободно — остаток минус резервы всех проектов}
+        on_hand: {type: [number, 'null'], description: На складе всего; пусто — строка без карточки каталога}
+        free: {type: [number, 'null'], description: Свободно — остаток минус резервы всех проектов}
         cell: {type: [string, 'null'], description: Ячейка с наибольшим остатком}
-        reserved: {type: [integer, 'null'], description: Зарезервировано за этой строкой}
+        reserved: {type: [number, 'null'], description: Зарезервировано за этой строкой}
 
     CalcSupplier:
       type: object
@@ -24676,7 +24676,7 @@ components:
         name: {type: string}
         article: {type: string}
         kind: {type: string, enum: [goods, service]}
-        on_hand: {type: integer, minimum: 0}
+        on_hand: {type: number, minimum: 0}
         supplier_name: {type: [string, 'null']}
         lead_days: {type: [integer, 'null']}
 
@@ -24725,7 +24725,7 @@ components:
       required: [cell, on_hand]
       properties:
         cell: {type: [string, 'null'], description: 'Пусто — товар лежит без ячейки'}
-        on_hand: {type: integer, minimum: 0}
+        on_hand: {type: number, minimum: 0}
 
     StockRow:
       type: object
@@ -24736,10 +24736,10 @@ components:
         name: {type: string}
         article: {type: string}
         unit: {type: string}
-        on_hand: {type: integer, minimum: 0, description: 'На складе'}
-        reserved: {type: integer, minimum: 0, description: 'Остаток резервов действующих проектов'}
-        free: {type: integer, minimum: 0, description: 'Свободный остаток — остаток минус резервы'}
-        incoming: {type: integer, minimum: 0, description: 'Ожидается по отправленным и подтверждённым заказам поставщикам'}
+        on_hand: {type: number, minimum: 0, description: 'На складе'}
+        reserved: {type: number, minimum: 0, description: 'Остаток резервов действующих проектов'}
+        free: {type: number, minimum: 0, description: 'Свободный остаток — остаток минус резервы'}
+        incoming: {type: number, minimum: 0, description: 'Ожидается по отправленным и подтверждённым заказам поставщикам'}
         next_expected: {type: [string, 'null'], format: date}
         cells:
           type: array
@@ -24765,8 +24765,8 @@ components:
         product_name: {type: string}
         request: {$ref: '#/components/schemas/StockRequestRef'}
         line_id: {type: [string, 'null'], pattern: '^[0-9]+$', description: 'Строка расчёта'}
-        quantity: {type: integer, minimum: 1}
-        shipped_quantity: {type: integer, minimum: 0}
+        quantity: {type: number, exclusiveMinimum: 0}
+        shipped_quantity: {type: number, minimum: 0}
         remaining: {type: integer, minimum: 0, description: 'Ещё удерживается за проектом'}
         status: {type: string, enum: [active, released, fulfilled]}
         created_at: {type: string, format: date-time}
@@ -24786,7 +24786,7 @@ components:
         kind: {type: string, enum: [serial, lot]}
         number: {type: string, description: 'Серийный номер или номер партии изготовителя'}
         expiry_date: {type: [string, 'null'], format: date, description: 'Годен до (партия)'}
-        available: {type: integer, minimum: 0, description: 'Ещё на складе: серийный — 1, партия — остаток партии'}
+        available: {type: number, minimum: 0, description: 'Ещё на складе: серийный — 1, партия — остаток партии'}
 
     StockReservationList:
       type: object
@@ -24806,7 +24806,7 @@ components:
         status: {$ref: '#/components/schemas/SupplierOrderStatus'}
         supplier: {type: string}
         expected_date: {type: [string, 'null'], format: date}
-        quantity_left: {type: integer, minimum: 1}
+        quantity_left: {type: number, exclusiveMinimum: 0}
         path: {type: string}
 
     StockMovement:
@@ -24815,7 +24815,7 @@ components:
       required: [kind, quantity, cell, at, by, note]
       properties:
         kind: {type: string, enum: [receipt, shipment, adjustment]}
-        quantity: {type: integer, description: 'Плюс — приход, минус — расход'}
+        quantity: {type: number, description: 'Плюс — приход, минус — расход'}
         cell: {type: [string, 'null']}
         at: {type: string, format: date-time}
         by: {type: [string, 'null']}
@@ -24831,10 +24831,10 @@ components:
         name: {type: string}
         article: {type: string}
         unit: {type: string}
-        on_hand: {type: integer, minimum: 0, description: 'На складе'}
-        reserved: {type: integer, minimum: 0, description: 'Остаток резервов действующих проектов'}
-        free: {type: integer, minimum: 0, description: 'Свободный остаток — остаток минус резервы'}
-        incoming: {type: integer, minimum: 0, description: 'Ожидается по отправленным и подтверждённым заказам поставщикам'}
+        on_hand: {type: number, minimum: 0, description: 'На складе'}
+        reserved: {type: number, minimum: 0, description: 'Остаток резервов действующих проектов'}
+        free: {type: number, minimum: 0, description: 'Свободный остаток — остаток минус резервы'}
+        incoming: {type: number, minimum: 0, description: 'Ожидается по отправленным и подтверждённым заказам поставщикам'}
         next_expected: {type: [string, 'null'], format: date}
         cells:
           type: array
@@ -24856,7 +24856,7 @@ components:
       required: [product_id, quantity]
       properties:
         product_id: {type: string, pattern: '^[0-9]+$'}
-        quantity: {type: integer, description: 'Плюс — оприходовать, минус — списать; не ноль'}
+        quantity: {type: number, description: 'Плюс — оприходовать, минус — списать; не ноль'}
         cell: {type: string, maxLength: 32}
         note: {type: string, maxLength: 500}
 
@@ -24865,7 +24865,7 @@ components:
       additionalProperties: false
       required: [quantity]
       properties:
-        quantity: {type: integer, minimum: 1, maximum: 10000000, description: 'Сколько удерживать за строкой (не больше количества строки и свободного остатка)'}
+        quantity: {type: number, exclusiveMinimum: 0, maximum: 10000000, description: 'Сколько удерживать за строкой (не больше количества строки и свободного остатка)'}
 
     StockSupplierRef:
       type: object
@@ -24923,8 +24923,8 @@ components:
         days_overdue: {type: [integer, 'null'], minimum: 1}
         currency: {type: [string, 'null'], pattern: '^[A-Z]{3}$'}
         lines_count: {type: integer, minimum: 0}
-        quantity: {type: integer, minimum: 0}
-        received_quantity: {type: integer, minimum: 0}
+        quantity: {type: number, minimum: 0}
+        received_quantity: {type: number, minimum: 0}
         receipt_state: {type: string, enum: [none, partial, full]}
         total:
           description: Сумма заказа — цены поставщиков видит группа `supplier_prices`, `cost_margin` или держатель `erp.calc.goods`
@@ -24961,8 +24961,8 @@ components:
         name: {type: string}
         article: {type: string}
         unit: {type: string}
-        quantity: {type: integer, minimum: 1}
-        received_quantity: {type: integer, minimum: 0}
+        quantity: {type: number, exclusiveMinimum: 0}
+        received_quantity: {type: number, minimum: 0}
         unit_price:
           description: Цена поставщика за единицу — только тому, кто видит цены поставщиков
           oneOf:
@@ -25001,7 +25001,7 @@ components:
       properties:
         order_line_id: {type: string, pattern: '^[0-9]+$'}
         name: {type: string}
-        quantity: {type: integer, minimum: 1}
+        quantity: {type: number, exclusiveMinimum: 0}
         cell: {type: [string, 'null']}
         units: {type: array, items: {type: string}, description: 'Серийные номера или номер партии'}
         expiry_date: {type: [string, 'null'], format: date}
@@ -25057,8 +25057,8 @@ components:
         days_overdue: {type: [integer, 'null'], minimum: 1}
         currency: {type: [string, 'null'], pattern: '^[A-Z]{3}$'}
         lines_count: {type: integer, minimum: 0}
-        quantity: {type: integer, minimum: 0}
-        received_quantity: {type: integer, minimum: 0}
+        quantity: {type: number, minimum: 0}
+        received_quantity: {type: number, minimum: 0}
         receipt_state: {type: string, enum: [none, partial, full]}
         total:
           description: Сумма заказа — цены поставщиков видит группа `supplier_prices`, `cost_margin` или держатель `erp.calc.goods`
@@ -25106,7 +25106,7 @@ components:
         name: {type: string, maxLength: 500}
         article: {type: string, maxLength: 120}
         unit: {type: string, maxLength: 32}
-        quantity: {type: integer, minimum: 1, maximum: 10000000}
+        quantity: {type: number, exclusiveMinimum: 0, maximum: 10000000}
         unit_price:
           description: Цена поставщика; ставит тот, кто видит цены поставщиков (иначе 403 `prices_forbidden`)
           oneOf:
@@ -25187,7 +25187,7 @@ components:
             required: [order_line_id, quantity]
             properties:
               order_line_id: {type: string, pattern: '^[0-9]+$'}
-              quantity: {type: integer, minimum: 1}
+              quantity: {type: number, exclusiveMinimum: 0}
               cell: {type: string, maxLength: 32}
               serials:
                 type: array
@@ -25215,8 +25215,8 @@ components:
         name: {type: string}
         article: {type: string}
         unit: {type: string}
-        quantity: {type: integer, minimum: 1}
-        received_quantity: {type: integer, minimum: 0}
+        quantity: {type: number, exclusiveMinimum: 0}
+        received_quantity: {type: number, minimum: 0}
         request:
           oneOf:
             - {$ref: '#/components/schemas/StockRequestRef'}
@@ -25236,7 +25236,7 @@ components:
         received_at: {type: string, format: date-time}
         received_by: {type: [string, 'null']}
         supplier_doc: {type: [string, 'null']}
-        quantity: {type: integer, minimum: 1}
+        quantity: {type: number, exclusiveMinimum: 0}
         lines:
           type: array
           items:
@@ -25245,7 +25245,7 @@ components:
             required: [name, quantity, cell, units, expiry_date, doc_number, doc_valid_until]
             properties:
               name: {type: string}
-              quantity: {type: integer, minimum: 1}
+              quantity: {type: number, exclusiveMinimum: 0}
               cell: {type: [string, 'null']}
               units: {type: array, items: {type: string}, description: 'Серийные номера или номер партии'}
               expiry_date: {type: [string, 'null'], format: date}
@@ -25273,7 +25273,7 @@ components:
       properties:
         product_id: {type: string, pattern: '^[0-9]+$'}
         name: {type: string}
-        quantity: {type: integer, minimum: 1}
+        quantity: {type: number, exclusiveMinimum: 0}
         cell: {type: [string, 'null']}
         units:
           type: array
@@ -25284,7 +25284,7 @@ components:
             required: [number, quantity]
             properties:
               number: {type: string}
-              quantity: {type: integer, minimum: 1}
+              quantity: {type: number, exclusiveMinimum: 0}
 
     StockShipment:
       type: object
@@ -25329,7 +25329,7 @@ components:
             required: [reservation_id, quantity]
             properties:
               reservation_id: {type: string, pattern: '^[0-9]+$'}
-              quantity: {type: integer, minimum: 1}
+              quantity: {type: number, exclusiveMinimum: 0}
               units:
                 type: array
                 maxItems: 1000
@@ -25342,7 +25342,7 @@ components:
                   required: [unit_id]
                   properties:
                     unit_id: {type: string, pattern: '^[0-9]+$'}
-                    quantity: {type: integer, minimum: 1, default: 1, description: 'Сколько из партии; серийный — 1'}
+                    quantity: {type: number, exclusiveMinimum: 0, default: 1, description: 'Сколько из партии; серийный — 1'}
         tracking: {type: string, maxLength: 128}
         carrier: {type: string, maxLength: 128}
         note: {type: string, maxLength: 500}
@@ -25365,8 +25365,8 @@ components:
         kind: {type: string, enum: [serial, lot]}
         number: {type: string}
         expiry_date: {type: [string, 'null'], format: date}
-        quantity: {type: integer, minimum: 1}
-        shipped_quantity: {type: integer, minimum: 0}
+        quantity: {type: number, exclusiveMinimum: 0}
+        shipped_quantity: {type: number, minimum: 0}
         status: {type: string, enum: [in_stock, shipped]}
         product:
           type: object
@@ -25404,7 +25404,7 @@ components:
             properties:
               shipment_number: {type: string}
               shipped_at: {type: string, format: date-time}
-              quantity: {type: integer, minimum: 1}
+              quantity: {type: number, exclusiveMinimum: 0}
               request: {$ref: '#/components/schemas/StockRequestRef'}
 
     PriceRequestLine:
@@ -25415,7 +25415,7 @@ components:
         line_id: {type: [string, 'null'], pattern: '^[0-9]+$'}
         name: {type: string}
         article: {type: string}
-        quantity: {type: integer, minimum: 1}
+        quantity: {type: number, exclusiveMinimum: 0}
         unit: {type: string}
 
     PriceRequest:

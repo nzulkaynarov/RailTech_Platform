@@ -2,9 +2,12 @@
 Ответы собирают `inventory.services.overview` и `inventory.services.stock` словарями; сериализаторы — их явная схема для
 OpenAPI (`/api/v1/stock/*`) и проверка тел запросов."""
 
+from decimal import Decimal
+
 from rest_framework import serializers
 
 from catalog.constants import TrackingClass
+from core.quantity import QuantityField
 
 RESERVATION_STATUSES = ("active", "released", "fulfilled")
 #: Учёт единиц категории (ADR-0021): серийный, партия, только количество.
@@ -27,7 +30,7 @@ class StockRightsSerializer(serializers.Serializer):
 
 class StockCellSerializer(serializers.Serializer):
     cell = serializers.CharField(allow_null=True, help_text="Пусто — товар лежит без ячейки")
-    on_hand = serializers.IntegerField()
+    on_hand = QuantityField()
 
 
 class StockRowSerializer(serializers.Serializer):
@@ -35,9 +38,9 @@ class StockRowSerializer(serializers.Serializer):
     name = serializers.CharField()
     article = serializers.CharField(allow_blank=True)
     unit = serializers.CharField(allow_blank=True)
-    on_hand = serializers.IntegerField()
-    reserved = serializers.IntegerField(help_text="Остаток резервов действующих проектов")
-    free = serializers.IntegerField(help_text="Свободный остаток: остаток − резервы")
+    on_hand = QuantityField()
+    reserved = QuantityField(help_text="Остаток резервов действующих проектов")
+    free = QuantityField(help_text="Свободный остаток: остаток − резервы")
     incoming = serializers.IntegerField(help_text="Ожидается по отправленным и подтверждённым заказам поставщикам")
     next_expected = serializers.DateField(allow_null=True)
     cells = StockCellSerializer(many=True)
@@ -62,8 +65,8 @@ class StockReservationSerializer(serializers.Serializer):
     product_name = serializers.CharField()
     deal = StockDealRefSerializer()
     quote_item_id = serializers.IntegerField(allow_null=True)
-    quantity = serializers.IntegerField()
-    shipped_quantity = serializers.IntegerField()
+    quantity = QuantityField()
+    shipped_quantity = QuantityField()
     remaining = serializers.IntegerField()
     status = serializers.ChoiceField(choices=RESERVATION_STATUSES)
     created_at = serializers.DateTimeField()
@@ -84,12 +87,12 @@ class StockIncomingOrderSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=ORDER_STATUSES)
     supplier_name = serializers.CharField()
     expected_date = serializers.DateField(allow_null=True)
-    quantity_left = serializers.IntegerField()
+    quantity_left = QuantityField()
 
 
 class StockMovementSerializer(serializers.Serializer):
     kind = serializers.ChoiceField(choices=("receipt", "shipment", "adjustment"))
-    quantity = serializers.IntegerField(help_text="Плюс — приход, минус — расход")
+    quantity = QuantityField(help_text="Плюс — приход, минус — расход")
     cell = serializers.CharField(allow_null=True)
     at = serializers.DateTimeField()
     by_name = serializers.CharField(allow_null=True)
@@ -105,13 +108,13 @@ class StockProductSerializer(StockRowSerializer):
 
 class StockShipmentUnitSerializer(serializers.Serializer):
     number = serializers.CharField()
-    quantity = serializers.IntegerField()
+    quantity = QuantityField()
 
 
 class StockShipmentLineSerializer(serializers.Serializer):
     product_id = serializers.IntegerField()
     name = serializers.CharField()
-    quantity = serializers.IntegerField()
+    quantity = QuantityField()
     cell = serializers.CharField(allow_null=True)
     units = StockShipmentUnitSerializer(many=True, help_text="Серийные или партии, ушедшие этой строкой")
 
@@ -150,12 +153,12 @@ class StockErrorSerializer(serializers.Serializer):
         required=False,
         help_text="`VALIDATION_FAILED`: ошибки полей тела запроса — поле → список кодов или вложенные ошибки",
     )
-    free = serializers.IntegerField(required=False, help_text="`NOT_ENOUGH_STOCK`: сколько можно взять")
+    free = QuantityField(required=False, help_text="`NOT_ENOUGH_STOCK`: сколько можно взять")
     max = serializers.IntegerField(
         required=False, help_text="`QUANTITY_OUT_OF_RANGE`: наибольшее допустимое количество"
     )
-    reserved = serializers.IntegerField(required=False, help_text="`BELOW_RESERVED`: сколько в резервах")
-    on_hand = serializers.IntegerField(required=False)
+    reserved = QuantityField(required=False, help_text="`BELOW_RESERVED`: сколько в резервах")
+    on_hand = QuantityField(required=False)
     shipped = serializers.IntegerField(required=False, help_text="`BELOW_SHIPPED`: уже отгружено")
     current = serializers.CharField(
         required=False, help_text="`TRANSITION_NOT_ALLOWED`, `ORDER_NOT_CONFIRMED`: текущий статус"
@@ -175,7 +178,7 @@ class StockErrorSerializer(serializers.Serializer):
 
 class StockAdjustInSerializer(serializers.Serializer):
     product_id = serializers.IntegerField(min_value=1)
-    quantity = serializers.IntegerField(help_text="Плюс — оприходовать, минус — списать; не ноль")
+    quantity = QuantityField(help_text="Плюс — оприходовать, минус — списать; не ноль")
     cell = serializers.CharField(required=False, allow_blank=True, max_length=32, default="")
     note = serializers.CharField(required=False, allow_blank=True, max_length=500, default="")
 
@@ -188,17 +191,17 @@ class StockAdjustInSerializer(serializers.Serializer):
 class StockReserveInSerializer(serializers.Serializer):
     deal_id = serializers.IntegerField(min_value=1)
     quote_item_id = serializers.IntegerField(min_value=1)
-    quantity = serializers.IntegerField(min_value=1)
+    quantity = QuantityField(min_value=Decimal("0.001"))
 
 
 class StockShipUnitInSerializer(serializers.Serializer):
     unit_id = serializers.IntegerField(min_value=1)
-    quantity = serializers.IntegerField(min_value=1, required=False, default=1, help_text="Серийный — 1")
+    quantity = QuantityField(min_value=Decimal("0.001"), required=False, default=1, help_text="Серийный — 1")
 
 
 class StockShipLineInSerializer(serializers.Serializer):
     reservation_id = serializers.IntegerField(min_value=1)
-    quantity = serializers.IntegerField(min_value=1)
+    quantity = QuantityField(min_value=Decimal("0.001"))
     units = StockShipUnitInSerializer(
         many=True, required=False, default=list, max_length=1000, help_text="Обязательно для товаров S/L (ADR-0021)"
     )
@@ -238,13 +241,13 @@ class StockTraceDestinationSerializer(serializers.Serializer):
     shipment_id = serializers.IntegerField()
     shipment_number = serializers.CharField()
     shipped_at = serializers.DateTimeField()
-    quantity = serializers.IntegerField()
+    quantity = QuantityField()
     deal = StockDealRefSerializer()
 
 
 class StockTraceUnitSerializer(StockTraceUnitShortSerializer):
-    quantity = serializers.IntegerField()
-    shipped_quantity = serializers.IntegerField()
+    quantity = QuantityField()
+    shipped_quantity = QuantityField()
     status = serializers.ChoiceField(choices=TRACE_STATUSES)
     product = StockTraceProductSerializer()
     origin = StockTraceOriginSerializer(help_text="Откуда: приёмка, заказ, поставщик, изготовитель, документ")

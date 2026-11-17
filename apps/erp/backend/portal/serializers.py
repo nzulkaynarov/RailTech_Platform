@@ -731,7 +731,7 @@ class DeliveryLineSerializer(DealLinkedSerializer):
     remark = serializers.SerializerMethodField()
 
     def get_quantity(self, line) -> Optional[str]:
-        return str(line.quantity) if line.quantity is not None else None
+        return format_quantity(line.quantity)
 
     def get_unit(self, line) -> Optional[str]:
         return projections.blank_to_none(line.unit)

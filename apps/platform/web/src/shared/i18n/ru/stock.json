@@ -81,7 +81,7 @@
     "free": "Свободно · {{count}}",
     "noFree": "Свободных нет",
     "until": "до {{date}}",
-    "cellLine": "{{cell}}: {{count}}",
+    "cellLine": "{{cell}}: {{qty}}",
     "card": "На складе {{onHand}} · в резерве {{reserved}}",
     "empty": {
       "title": "На складе пока пусто",

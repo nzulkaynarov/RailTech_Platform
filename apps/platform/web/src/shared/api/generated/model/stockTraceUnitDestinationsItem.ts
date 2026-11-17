@@ -7,7 +7,7 @@ import type { StockRequestRef } from "./stockRequestRef";
 export type StockTraceUnitDestinationsItem = {
   shipment_number: string;
   shipped_at: string;
-  /** @minimum 1 */
+  /** @exclusiveMinimum 0 */
   quantity: number;
   request: StockRequestRef;
 };

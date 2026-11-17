@@ -15,7 +15,7 @@ export interface StockTraceUnit {
   number: string;
   /** @nullable */
   expiry_date: string | null;
-  /** @minimum 1 */
+  /** @exclusiveMinimum 0 */
   quantity: number;
   /** @minimum 0 */
   shipped_quantity: number;

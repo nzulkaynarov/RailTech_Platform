@@ -17,7 +17,7 @@ import { useState } from "react";
 /** Товар на складе: ячейки, резервы по проектам, ожидаемый приход, последние движения; «Оприходовать / списать». */
 export function ProductDrawer({ row, onClose }: { row: StockRow; onClose: () => void }) {
   const { t } = useTranslation("stock");
-  const { date, activity } = useFormat();
+  const { date, activity, qty } = useFormat();
   const { message } = App.useApp();
   const refresh = useRefreshStock();
   const errorText = useErrorText();
@@ -44,19 +44,19 @@ export function ProductDrawer({ row, onClose }: { row: StockRow; onClose: () => 
             <dl className="pf-stock-numbers">
               <div>
                 <dt>{t("balances.columns.onHand")}</dt>
-                <dd className="pf-num">{product.on_hand}</dd>
+                <dd className="pf-num">{qty(product.on_hand)}</dd>
               </div>
               <div>
                 <dt>{t("balances.columns.reserved")}</dt>
-                <dd className="pf-num">{product.reserved}</dd>
+                <dd className="pf-num">{qty(product.reserved)}</dd>
               </div>
               <div>
                 <dt>{t("balances.columns.free")}</dt>
-                <dd className="pf-num">{product.free}</dd>
+                <dd className="pf-num">{qty(product.free)}</dd>
               </div>
               <div>
                 <dt>{t("balances.columns.incoming")}</dt>
-                <dd className="pf-num">{product.incoming}</dd>
+                <dd className="pf-num">{qty(product.incoming)}</dd>
               </div>
             </dl>
             {product.rights.manage ? (
@@ -104,7 +104,7 @@ export function ProductDrawer({ row, onClose }: { row: StockRow; onClose: () => 
                         <span className="pf-hint"> · {r.request.client ?? "—"}</span>
                       </span>
                       <span className="pf-calc-row">
-                        <span className="pf-num">{r.remaining}</span>
+                        <span className="pf-num">{qty(r.remaining)}</span>
                         {product.rights.manage ? (
                           <Popconfirm
                             title={t("product.releaseConfirm", { number: r.request.number })}

@@ -20,7 +20,7 @@ export interface StockReservation {
    * @pattern ^[0-9]+$
    */
   line_id: string | null;
-  /** @minimum 1 */
+  /** @exclusiveMinimum 0 */
   quantity: number;
   /** @minimum 0 */
   shipped_quantity: number;

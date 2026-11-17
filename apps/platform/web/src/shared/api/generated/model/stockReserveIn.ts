@@ -6,8 +6,8 @@
 export interface StockReserveIn {
   /**
    * Сколько удерживать за строкой (не больше количества строки и свободного остатка)
-   * @minimum 1
    * @maximum 10000000
+   * @exclusiveMinimum 0
    */
   quantity: number;
 }

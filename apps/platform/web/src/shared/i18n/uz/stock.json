@@ -81,7 +81,7 @@
     "free": "Bo‘sh · {{count}}",
     "noFree": "Bo‘sh yo‘q",
     "until": "{{date}} gacha",
-    "cellLine": "{{cell}}: {{count}}",
+    "cellLine": "{{cell}}: {{qty}}",
     "card": "Omborda {{onHand}} · zaxirada {{reserved}}",
     "empty": {
       "title": "Ombor hozircha bo‘sh",

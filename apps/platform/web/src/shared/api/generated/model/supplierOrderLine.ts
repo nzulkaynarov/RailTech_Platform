@@ -20,7 +20,7 @@ export interface SupplierOrderLine {
   name: string;
   article: string;
   unit: string;
-  /** @minimum 1 */
+  /** @exclusiveMinimum 0 */
   quantity: number;
   /** @minimum 0 */
   received_quantity: number;
