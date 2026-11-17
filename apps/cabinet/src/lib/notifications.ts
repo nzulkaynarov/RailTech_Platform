@@ -21,6 +21,7 @@ const KNOWN_TEXTS = new Set([
   'partner_order_sent',
   'partner_rfq_sent',
   'partner_goods_received',
+  'new_device_login',
 ]);
 
 /** Статусы поставки в параметре `status` (`DeliveryEvent.status` ERP) — подписи из `status.delivery.*`. */
@@ -35,6 +36,7 @@ export function notificationText(item: PortalNotification, t: TFunction): string
     due: p.due_date ? formatDate(p.due_date) : '',
     eta: p.eta ? formatDate(p.eta) : '',
     status: p.status && DELIVERY_STATUSES.has(p.status) ? t(`status.delivery.${p.status}`) : (p.status ?? ''),
+    name: p.name ?? '',
   };
   if (!KNOWN_TEXTS.has(item.text_key)) return t('notifications.text.fallback', values);
   const key = item.text_key === 'act_issued' && p.reminder ? 'act_issued_reminder' : item.text_key;

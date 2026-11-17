@@ -319,6 +319,14 @@ const MOCK_BANKS: Record<string, { name: string; swift: string }> = {
   '00440': { name: 'АКБ «Узпромстройбанк»', swift: '' },
 };
 
+const NEW_DEVICE_EVENT_ID = 2;
+const ENDED_SESSIONS = new WeakMap<Db, Set<number>>();
+const endedSessions = (db: Db): Set<number> => {
+  let ended = ENDED_SESSIONS.get(db);
+  if (!ended) ENDED_SESSIONS.set(db, (ended = new Set()));
+  return ended;
+};
+
 export const handlers = [
   // --- auth -----------------------------------------------------------------------------
   http.post(`${API}/auth/telegram`, async ({ request }) => {
@@ -1012,7 +1020,7 @@ export const handlers = [
   ),
   http.get(
     `${API}/company/security-log`,
-    withSession(({ session }) => {
+    withSession(({ db, session }) => {
       const currentContact = contactFor(session.role);
       if (!currentContact.is_admin) return error(403, 'ADMIN_REQUIRED');
       return json({
@@ -1027,9 +1035,34 @@ export const handlers = [
             user_agent: 'Mozilla/5.0 Chrome/120',
             target_name: null,
             details: 'Вход в систему',
+            can_end_session: false,
+          },
+          // ДВ-6: вход коллеги с нового устройства — администратор может завершить сеанс
+          {
+            id: NEW_DEVICE_EVENT_ID,
+            event_type: 'login_new_device',
+            created_at: new Date(Date.now() - 600_000).toISOString(),
+            actor_name: 'Алишер Юсупов',
+            actor_email: 'a.yusupov@example.uz',
+            ip_address: '84.54.10.20',
+            user_agent: 'Mozilla/5.0 (Windows NT 10.0) Chrome/131.0',
+            target_name: null,
+            details: 'Chrome · Windows',
+            can_end_session: !endedSessions(db).has(NEW_DEVICE_EVENT_ID),
           },
         ],
       });
+    }),
+  ),
+  http.post<{ id: string }>(
+    `${API}/company/security-log/:id/end-session`,
+    withSession<{ id: string }>(({ db, session, params }) => {
+      if (!contactFor(session.role).is_admin) return error(403, 'ADMIN_REQUIRED');
+      const id = Number(params.id);
+      if (id !== NEW_DEVICE_EVENT_ID) return error(404, 'NOT_FOUND');
+      if (endedSessions(db).has(id)) return error(409, 'SESSION_ALREADY_ENDED');
+      endedSessions(db).add(id);
+      return new HttpResponse(null, { status: 204 });
     }),
   ),
   http.put(

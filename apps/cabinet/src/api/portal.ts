@@ -183,6 +183,11 @@ export function listSessions(): Promise<PortalSessionItem[]> {
   return portalRequest<PortalSessionItem[]>('/auth/sessions');
 }
 
+/** ДВ-6: «Это не мы» — администратор завершает сеанс входа с нового устройства из журнала безопасности. */
+export function endSecurityEventSession(eventId: number): Promise<void> {
+  return portalRequest<void>(`/company/security-log/${eventId}/end-session`, { method: 'POST' });
+}
+
 export function revokeOtherSessions(): Promise<{ revoked_count: number }> {
   return portalRequest<{ revoked_count: number }>('/auth/sessions/revoke-others', { method: 'POST' });
 }

@@ -1409,6 +1409,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/company/security-log/{id}/end-session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Завершить сеанс входа с нового устройства (ДВ-6)
+         * @description «Это не мы»: администратор компании завершает сеанс из события `login_new_device` своего журнала безопасности. Событие пишется в журнал (`revoke_sessions`). Не администратор — 403 `ADMIN_REQUIRED`; чужое или другое событие — 404; сеанс уже завершён или истёк — 409 `SESSION_ALREADY_ENDED`.
+         */
+        post: operations["endSecurityEventSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/company/partner-application": {
         parameters: {
             query?: never;
@@ -2397,18 +2417,20 @@ export interface components {
          *     `partner_order_sent` — направлен заказ на поставку, `partner_rfq_sent` — направлен запрос цен,
          *     `partner_goods_received` — склад принял товары по заказу, `bank_requisites_change_requested` — подан запрос на смену
          *     банковских реквизитов, `bank_requisites_changed` — смену подтвердил сотрудник, `bank_requisites_change_rejected` —
-         *     сотрудник отклонил смену (FX-4; группа `security`, отключить нельзя).
+         *     сотрудник отклонил смену (FX-4; группа `security`, отключить нельзя), `new_device_login` — контакт компании вошёл
+         *     с нового устройства (ДВ-6; группа `security`, администраторам и основному контакту; `object.id` — событие журнала
+         *     безопасности, `params`: `name`, `device`, `ip`).
          *     Незнакомый вид Cabinet показывает общим текстом.
          * @enum {string}
          */
-        NotificationKind: "quote_sent" | "invoice_issued" | "payment_overdue" | "act_issued" | "delivery_status_changed" | "delivery_eta_changed" | "manager_replied" | "partner_card_returned" | "partner_card_published" | "bank_requisites_changed" | "partner_order_sent" | "partner_rfq_sent" | "partner_goods_received" | "bank_requisites_change_requested" | "bank_requisites_change_rejected";
+        NotificationKind: "quote_sent" | "invoice_issued" | "payment_overdue" | "act_issued" | "delivery_status_changed" | "delivery_eta_changed" | "manager_replied" | "partner_card_returned" | "partner_card_published" | "bank_requisites_changed" | "partner_order_sent" | "partner_rfq_sent" | "partner_goods_received" | "bank_requisites_change_requested" | "bank_requisites_change_rejected" | "new_device_login";
         /**
          * @description Группа событий — основа настройки «группа × канал» в профиле контакта (J3)
          * @enum {string}
          */
         NotificationGroup: "documents" | "money" | "deliveries" | "messages" | "partner_products" | "security";
         /** @enum {string} */
-        NotificationObjectType: "quote" | "invoice" | "act" | "delivery" | "chat" | "partner_product" | "partner_order" | "partner_rfq" | "bank_change";
+        NotificationObjectType: "quote" | "invoice" | "act" | "delivery" | "chat" | "partner_product" | "partner_order" | "partner_rfq" | "bank_change" | "security_event";
         /**
          * @description Что произошло с объектом или чего ждут от контакта
          * @enum {string}
@@ -2965,7 +2987,7 @@ export interface components {
         CompanySecurityLogItem: {
             id: number;
             /** @enum {string} */
-            event_type: "login" | "logout" | "revoke_sessions" | "role_change" | "member_deactivated" | "member_invited" | "bank_details_changed" | "bank_details_change_requested" | "bank_details_change_rejected";
+            event_type: "login" | "logout" | "revoke_sessions" | "role_change" | "member_deactivated" | "member_invited" | "bank_details_changed" | "bank_details_change_requested" | "bank_details_change_rejected" | "login_new_device";
             /** Format: date-time */
             created_at: string;
             /** @description Имя сотрудника, выполнившего действие */
@@ -2975,8 +2997,10 @@ export interface components {
             user_agent?: string | null;
             /** @description Имя целевого сотрудника при операциях с командой */
             target_name?: string | null;
-            /** @description Дополнительные детали события */
+            /** @description Дополнительные детали события (у `login_new_device` — браузер и система, «Chrome · Windows») */
             details?: string | null;
+            /** @description ДВ-6: событие `login_new_device`, и его сеанс ещё действует — администратор может завершить его (`POST /company/security-log/{id}/end-session`) */
+            can_end_session: boolean;
         };
         CompanyUpdate: {
             name?: string;
@@ -5879,6 +5903,39 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    endSecurityEventSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Сеанс завершён */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description `SESSION_ALREADY_ENDED` — сеанс уже завершён или истёк */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             429: components["responses"]["TooManyRequests"];
         };
     };

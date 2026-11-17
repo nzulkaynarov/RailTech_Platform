@@ -498,6 +498,7 @@ class PortalSecurityEvent(models.Model):
         BANK_DETAILS_CHANGED = "bank_details_changed", _("Изменение банковских реквизитов")
         BANK_DETAILS_CHANGE_REQUESTED = "bank_details_change_requested", _("Запрос на смену банковских реквизитов")
         BANK_DETAILS_CHANGE_REJECTED = "bank_details_change_rejected", _("Смена банковских реквизитов отклонена")
+        LOGIN_NEW_DEVICE = "login_new_device", _("Вход с нового устройства")
 
     company = models.ForeignKey(
         "parties.Company",
@@ -528,6 +529,15 @@ class PortalSecurityEvent(models.Model):
     ip_address = models.GenericIPAddressField(null=True, blank=True, verbose_name=_("IP адрес"))
     user_agent = models.TextField(blank=True, default="", verbose_name=_("User Agent"))
     details = models.TextField(blank=True, default="", verbose_name=_("Детали события"))
+    #: Сеанс входа с нового устройства (ДВ-6): администратор может его завершить; завершён или истёк — пусто.
+    session = models.ForeignKey(
+        "portal.PortalSession",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("Сеанс"),
+    )
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:
@@ -567,3 +577,28 @@ def record_portal_security_event(
         user_agent=user_agent or "",
         details=details or "",
     )
+
+
+class PortalKnownDevice(models.Model):
+    """Устройство, с которого контакт уже входил в кабинет (ДВ-6): в базе — хеш метки из cookie, не сама метка.
+
+    Вход по письму с устройства не из списка — событие безопасности и уведомление администраторам компании; первый вход
+    контакта только запоминает устройство (сравнивать не с чем).
+    """
+
+    contact = models.ForeignKey(
+        "parties.Contact", on_delete=models.CASCADE, related_name="portal_devices", verbose_name=_("Контакт")
+    )
+    device_hash = models.CharField(max_length=64, verbose_name=_("Хеш метки устройства"))
+    first_seen_at = models.DateTimeField(auto_now_add=True)
+    last_seen_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("Устройство контакта")
+        verbose_name_plural = _("Устройства контактов")
+        constraints = [
+            models.UniqueConstraint(fields=["contact", "device_hash"], name="uniq_portal_device_contact_hash")
+        ]
+
+    def __str__(self):
+        return f"PortalKnownDevice({self.contact_id}, {self.device_hash[:6]})"

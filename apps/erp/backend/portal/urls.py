@@ -17,6 +17,7 @@ from portal.views import (
     CompanyPartnerApplicationAgreeView,
     CompanyPartnerApplicationView,
     CompanyPartnerContractPdfView,
+    CompanySecurityEventEndSessionView,
     CompanySecurityLogView,
     CompanyView,
     ContractListView,
@@ -313,6 +314,16 @@ urlpatterns = [
     path("company/", CompanyView.as_view(), name="portal-company-slash"),
     path("company/bank-directory/<str:mfo>", BankDirectoryView.as_view(), name="portal-bank-directory"),
     path("company/bank-directory/<str:mfo>/", BankDirectoryView.as_view(), name="portal-bank-directory-slash"),
+    path(
+        "company/security-log/<int:pk>/end-session",
+        CompanySecurityEventEndSessionView.as_view(),
+        name="portal-security-event-end-session",
+    ),
+    path(
+        "company/security-log/<int:pk>/end-session/",
+        CompanySecurityEventEndSessionView.as_view(),
+        name="portal-security-event-end-session-slash",
+    ),
     path("company/security-log", CompanySecurityLogView.as_view(), name="portal-company-security-log"),
     path("company/security-log/", CompanySecurityLogView.as_view(), name="portal-company-security-log-slash"),
     path(

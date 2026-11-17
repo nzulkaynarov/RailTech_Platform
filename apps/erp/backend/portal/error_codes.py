@@ -81,6 +81,7 @@ ERROR_CODES = (
     "BANK_SWIFT_INVALID",
     "BANK_HOLDER_LATIN_INVALID",
     "BANK_INTERMEDIARY_INVALID",
+    "SESSION_ALREADY_ENDED",
 )
 
 #: Код по HTTP-статусу для ошибок, у которых своего кода нет (чужие исключения DRF и Django).

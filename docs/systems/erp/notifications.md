@@ -53,6 +53,7 @@
 | запрос на смену реквизитов (FX-4) — подан | `bank_requisites_change_requested` · security | запрос → `/company` | да | нет | всем каналам: письмо и Telegram (`contact.security_notice_requested`), только администраторам и основному контакту |
 | запрос на смену реквизитов — подтверждён | `bank_requisites_changed` · security | запрос → `/company` | да | нет | так же |
 | запрос на смену реквизитов — отклонён | `bank_requisites_change_rejected` · security | запрос → `/company` | да | нет | так же; причина — в ленте и письме, в Telegram нет |
+| вход контакта с нового устройства (ДВ-6) | `new_device_login` · security | событие журнала безопасности → `/company` | да | нет | администраторам и основному контакту, письмом и в Telegram; первый вход контакта и вход через Telegram не уведомляют |
 | `request.created` (заявка принята) | — | — | — | да (без Telegram — письмо CRM) | колокольчика нет: клиент сам создал заявку или её завёл менеджер |
 | `invoice.paid`, `quote.accepted`, `act.accepted`, `act.returned`, `delivery.line_*` | — | — | — | `invoice.paid` — да; остальные — сотруднику | нет: решение самого клиента или факт оплаты, о котором он знает |
 

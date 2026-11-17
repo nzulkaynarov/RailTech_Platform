@@ -60,6 +60,23 @@ describe('Wave J7 & J2-audit: Статус отношений, архив док
       await expectNoAxeViolations();
     });
 
+    it('ДВ-6: вход с нового устройства — «Завершить сеанс» в журнале, после — кнопки нет', async () => {
+      signedIn();
+      const user = userEvent.setup();
+      renderApp('/company');
+
+      const secList = await screen.findByRole('list', { name: 'Журнал безопасности компании' });
+      expect(await within(secList).findByText('Новое устройство')).toBeInTheDocument();
+      expect(within(secList).getByText('Это не ваш сотрудник?')).toBeInTheDocument();
+      await expectNoAxeViolations();
+
+      await user.click(within(secList).getByRole('button', { name: 'Завершить сеанс' }));
+      expect(await screen.findByText('Сеанс завершён')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(within(secList).queryByRole('button', { name: 'Завершить сеанс' })).toBeNull();
+      });
+    });
+
     it('показывает баннер приостановки отношений при статусе suspended', async () => {
       portalServer.use(
         http.get('*/api/portal/v1/company', () => {

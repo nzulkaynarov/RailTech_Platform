@@ -92,7 +92,7 @@ from portal.serializers import (
 )
 from portal.services import bank_details_change, catalog_documents
 from portal.services import documents as portal_documents
-from portal.services import notices
+from portal.services import new_device, notices
 from portal.services.acceptance import ContactChannelRequired, request_acceptance_code
 from portal.services.access import company_access
 from portal.services.act_scan import annotate_scan_documents, attach_scan_document, load_scan
@@ -283,11 +283,12 @@ def _exchange_magic_token(request, token: str) -> Response:
         ip_address=_client_ip(request),
         user_agent=request.META.get("HTTP_USER_AGENT", ""),
     )
-    return _session_response(session, session_token)
+    return _session_response(request, session, session_token)
 
 
-def _session_response(session, session_token: str) -> Response:
-    """Ответ входа по письму (ссылка или код): `Me` и cookie сессии."""
+def _session_response(request, session, session_token: str) -> Response:
+    """Ответ входа по письму (ссылка или код): `Me`, cookie сессии и метка устройства (ДВ-6: вход с нового устройства —
+    событие и уведомление администраторам компании)."""
     record_portal_security_event(
         session.company,
         PortalSecurityEvent.EventType.LOGIN,
@@ -296,7 +297,18 @@ def _session_response(session, session_token: str) -> Response:
         user_agent=session.user_agent,
         details="Вход по электронной почте",
     )
+    mark, fresh = new_device.device_mark(request)
+    new_device.check(session, mark)
     res = Response(MeSerializer(_me_data(session, "magic_link")).data, status=status.HTTP_200_OK)
+    if fresh:
+        res.set_cookie(
+            key=new_device.cookie_name(),
+            value=mark,
+            max_age=new_device.DEVICE_COOKIE_MAX_AGE,
+            httponly=True,
+            path="/api/portal",
+            **_portal_cookie_attrs(),
+        )
     return _set_portal_cookie(res, session_token)
 
 
@@ -344,7 +356,7 @@ class LoginCodeExchangeView(APIView):
             ip_address=_client_ip(request),
             user_agent=request.META.get("HTTP_USER_AGENT", ""),
         )
-        return _session_response(session, session_token)
+        return _session_response(request, session, session_token)
 
 
 class LogoutView(APIView):
@@ -1441,6 +1453,37 @@ class CompanySecurityLogView(BasePortalView):
         events = PortalSecurityEvent.objects.filter(company=request.portal_company).order_by("-created_at")[:100]
 
         return Response({"items": PortalSecurityEventSerializer(events, many=True).data})
+
+
+class CompanySecurityEventEndSessionView(BasePortalView):
+    """POST /company/security-log/{id}/end-session — «Это не мы»: администратор компании завершает сеанс входа с нового
+    устройства (ДВ-6). Уже завершён или истёк — 409 `SESSION_ALREADY_ENDED`."""
+
+    required_module = "company"
+
+    def post(self, request, pk):
+        if not getattr(request.portal_contact, "is_admin", False):
+            raise exceptions.PermissionDenied("ADMIN_REQUIRED")
+        event = PortalSecurityEvent.objects.filter(
+            pk=pk,
+            company=request.portal_company,
+            event_type=PortalSecurityEvent.EventType.LOGIN_NEW_DEVICE,
+        ).first()
+        if event is None:
+            raise exceptions.NotFound("NOT_FOUND")
+        target = event.actor_contact
+        if not new_device.end_session(event):
+            raise PortalConflict("SESSION_ALREADY_ENDED")
+        record_portal_security_event(
+            request.portal_company,
+            PortalSecurityEvent.EventType.REVOKE_SESSIONS,
+            actor_contact=request.portal_contact,
+            target_contact=target,
+            ip_address=_client_ip(request),
+            user_agent=request.META.get("HTTP_USER_AGENT", ""),
+            details="Сеанс с нового устройства завершён администратором",
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class CompanyPartnerApplicationView(BasePortalView):

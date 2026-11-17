@@ -274,6 +274,9 @@ class PortalSessionItemSerializer(serializers.ModelSerializer):
 
 
 class PortalSecurityEventSerializer(serializers.ModelSerializer):
+    #: ДВ-6: сеанс входа с нового устройства ещё действует — администратор может его завершить
+    can_end_session = serializers.SerializerMethodField()
+
     class Meta:
         model = PortalSecurityEvent
         fields = [
@@ -286,7 +289,11 @@ class PortalSecurityEventSerializer(serializers.ModelSerializer):
             "user_agent",
             "target_name",
             "details",
+            "can_end_session",
         ]
+
+    def get_can_end_session(self, event) -> bool:
+        return event.event_type == PortalSecurityEvent.EventType.LOGIN_NEW_DEVICE and event.session_id is not None
 
 
 class MagicLinkTokenSerializer(serializers.Serializer):
