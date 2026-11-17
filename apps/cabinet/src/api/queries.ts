@@ -270,6 +270,7 @@ export const useUpdateTeamMember = () =>
 export const useDeactivateTeamMember = () =>
   useInvalidatingMutation((id: number) => portal.deactivateTeamMember(id), [keys.team]);
 export const useRevokeOtherSessions = () => useInvalidatingMutation(portal.revokeOtherSessions, [keys.sessions]);
+export const useEndSecurityEventSession = () => useInvalidatingMutation(portal.endSecurityEventSession, [keys.securityLog]);
 
 // --- «Мои товары» партнёра (PART-2) -------------------------------------------------------------
 

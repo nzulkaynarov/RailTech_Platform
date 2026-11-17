@@ -6969,3 +6969,13 @@ msgstr "The request to change the company bank details was rejected; the previou
 
 msgid "Мы не просим пароль и код в письме или по телефону. Не пересылайте этот код."
 msgstr "We never ask for your password or code by email or phone. Do not forward this code."
+
+#, python-format
+msgid "%(name)s вошёл в личный кабинет с нового устройства."
+msgstr "%(name)s signed in to the cabinet from a new device."
+
+msgid "Если это не ваш сотрудник, завершите сеанс: «Компания» → «Журнал безопасности»."
+msgstr "If this is not your colleague, end the session: Company → Security log."
+
+msgid "Вход в кабинет с нового устройства"
+msgstr "Sign-in to the cabinet from a new device"

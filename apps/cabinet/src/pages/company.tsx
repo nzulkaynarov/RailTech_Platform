@@ -12,6 +12,7 @@ import {
   useCompany,
   useCompanyPartnerApplication,
   useCompanySecurityLog,
+  useEndSecurityEventSession,
   useDeactivateTeamMember,
   useInviteTeamMember,
   useSubmitCompanyPartnerApplication,
@@ -485,6 +486,7 @@ function BankChangeNotice({ change }: { change: Schemas['BankChangeRequest'] | n
 function SecurityLogCard() {
   const { t } = useTranslation();
   const securityLog = useCompanySecurityLog();
+  const endSession = useEndSecurityEventSession();
 
   return (
     <Card>
@@ -524,7 +526,9 @@ function SecurityLogCard() {
                       tone={
                         event.event_type === 'login'
                           ? 'info'
-                          : event.event_type === 'bank_details_changed' || event.event_type === 'member_deactivated'
+                          : event.event_type === 'bank_details_changed' ||
+                              event.event_type === 'member_deactivated' ||
+                              event.event_type === 'login_new_device'
                           ? 'warning'
                           : 'neutral'
                       }
@@ -547,6 +551,25 @@ function SecurityLogCard() {
                     {[event.ip_address, event.user_agent].filter(Boolean).join(' · ')}
                   </p>
                 )}
+                {event.can_end_session ? (
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <span className="text-xs text-muted-foreground">{t('pages.company.securityLog.notUs')}</span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={endSession.isPending}
+                      onClick={() =>
+                        endSession.mutate(event.id, {
+                          onSuccess: () => toast.success(t('pages.company.securityLog.ended')),
+                          onError: () => toast.error(t('pages.company.securityLog.endFailed')),
+                        })
+                      }
+                    >
+                      {t('pages.company.securityLog.endSession')}
+                    </Button>
+                  </div>
+                ) : null}
               </li>
             ))}
           </ul>

@@ -1,6 +1,6 @@
-import type { Invoice } from "@/api/portal";
-import { validateInvite, companyChanges } from "@/lib/company";
-import { bankDraft, defaultAccount, validateBank } from "@/lib/bankAccount";
+import type { Invoice } from '@/api/portal';
+import { validateInvite, companyChanges } from '@/lib/company';
+import { bankDraft, defaultAccount, validateBank } from '@/lib/bankAccount';
 import {
   amountToCents,
   businessToday,
@@ -14,487 +14,327 @@ import {
   formatQuantity,
   subtractMoney,
   sumByCurrency,
-} from "@/lib/format";
-import { invoiceView } from "@/lib/invoice";
-import {
-  normalizeAcceptCode,
-  quoteAwaitsDecision,
-  quoteExpired,
-} from "@/lib/quotes";
-import { normalizeQuantity } from "@/lib/requests";
-import { statusCodes, STATUS_ENTITIES, statusLabelKey } from "@/lib/status";
-import i18n from "@/i18n";
-import * as fixtures from "@/mocks/fixtures";
+} from '@/lib/format';
+import { invoiceView } from '@/lib/invoice';
+import { normalizeAcceptCode, quoteAwaitsDecision, quoteExpired } from '@/lib/quotes';
+import { normalizeQuantity } from '@/lib/requests';
+import { statusCodes, STATUS_ENTITIES, statusLabelKey } from '@/lib/status';
+import i18n from '@/i18n';
+import * as fixtures from '@/mocks/fixtures';
 
 /** Пробелы-разделители `Intl` (U+00A0, U+202F) → обычный пробел: кейсы читаются глазами. */
 const plain = (text: string) => text.replace(/[\u00a0\u202f]/g, " ");
-const NOW = Date.parse("2026-10-14T12:00:00+05:00");
+const NOW = Date.parse('2026-10-14T12:00:00+05:00');
 
-describe("formatMoney — одна функция сумм кабинета, правило Платформы (CAB-FIX-3)", () => {
+describe('formatMoney — одна функция сумм кабинета, правило Платформы (CAB-FIX-3)', () => {
   it.each([
-    ["ru", { amount: "48600000.00", currency: "UZS" }, "48 600 000 сум"],
-    ["ru", { amount: "18750000.50", currency: "UZS" }, "18 750 000,50 сум"],
-    ["ru", { amount: "21000000.56", currency: "UZS" }, "21 000 000,56 сум"],
-    ["ru", { amount: "1234.05", currency: "USD" }, "1 234,05 USD"],
-    ["ru", { amount: "-500.00", currency: "UZS" }, "−500 сум"],
-    ["ru", { amount: "0.00", currency: "UZS" }, "0 сум"],
-    ["ru", { amount: "-0.00", currency: "UZS" }, "0 сум"],
-    ["uz", { amount: "48600000.00", currency: "UZS" }, "48 600 000 so‘m"],
-    ["uz", { amount: "12500.00", currency: "USD" }, "12 500 USD"],
-    ["en", { amount: "48600000.00", currency: "UZS" }, "48,600,000 UZS"],
-    ["en", { amount: "1234.50", currency: "USD" }, "1,234.50 USD"],
+    ['ru', { amount: '48600000.00', currency: 'UZS' }, '48 600 000 сум'],
+    ['ru', { amount: '18750000.50', currency: 'UZS' }, '18 750 000,50 сум'],
+    ['ru', { amount: '21000000.56', currency: 'UZS' }, '21 000 000,56 сум'],
+    ['ru', { amount: '1234.05', currency: 'USD' }, '1 234,05 USD'],
+    ['ru', { amount: '-500.00', currency: 'UZS' }, '−500 сум'],
+    ['ru', { amount: '0.00', currency: 'UZS' }, '0 сум'],
+    ['ru', { amount: '-0.00', currency: 'UZS' }, '0 сум'],
+    ['uz', { amount: '48600000.00', currency: 'UZS' }, '48 600 000 so‘m'],
+    ['uz', { amount: '12500.00', currency: 'USD' }, '12 500 USD'],
+    ['en', { amount: '48600000.00', currency: 'UZS' }, '48,600,000 UZS'],
+    ['en', { amount: '1234.50', currency: 'USD' }, '1,234.50 USD'],
     // Точность больших сумм: строка не проходит через number.
-    [
-      "ru",
-      { amount: "90071992547409.99", currency: "UZS" },
-      "90 071 992 547 409,99 сум",
-    ],
-  ] as const)("%s %j → %s", (language, money, expected) => {
+    ['ru', { amount: '90071992547409.99', currency: 'UZS' }, '90 071 992 547 409,99 сум'],
+  ] as const)('%s %j → %s', (language, money, expected) => {
     expect(plain(formatMoney(money, language))).toBe(expected);
   });
 
-  it("разряды и валюта — неразрывным пробелом: сумма не рвётся по строкам", () => {
-    expect(formatMoney({ amount: "1234567.00", currency: "UZS" }, "ru")).toBe(
-      "1\u00a0234\u00a0567\u00a0сум",
-    );
+  it('разряды и валюта — неразрывным пробелом: сумма не рвётся по строкам', () => {
+    expect(formatMoney({ amount: '1234567.00', currency: 'UZS' }, 'ru')).toBe('1\u00a0234\u00a0567\u00a0сум');
   });
 
   it.each([
-    [null, "—"],
-    [undefined, "—"],
-    [{ amount: "12", currency: "UZS" }, "—"],
-    [{ amount: "12.5", currency: "UZS" }, "—"],
-  ])("не сумма %j → прочерк", (money, expected) => {
-    expect(formatMoney(money, "ru")).toBe(expected);
+    [null, '—'],
+    [undefined, '—'],
+    [{ amount: '12', currency: 'UZS' }, '—'],
+    [{ amount: '12.5', currency: 'UZS' }, '—'],
+  ])('не сумма %j → прочерк', (money, expected) => {
+    expect(formatMoney(money, 'ru')).toBe(expected);
   });
 
-  it("другая валюта — её код как есть", () => {
-    expect(plain(formatMoney({ amount: "10.00", currency: "zz1" }, "ru"))).toBe(
-      "10 ZZ1",
-    );
+  it('другая валюта — её код как есть', () => {
+    expect(plain(formatMoney({ amount: '10.00', currency: 'zz1' }, 'ru'))).toBe('10 ZZ1');
   });
 
-  it("без явного языка — язык интерфейса", async () => {
-    await i18n.changeLanguage("en");
-    expect(formatMoney({ amount: "1000.00", currency: "USD" })).toBe(
-      "1,000\u00a0USD",
-    );
-    await i18n.changeLanguage("ru");
+  it('без явного языка — язык интерфейса', async () => {
+    await i18n.changeLanguage('en');
+    expect(formatMoney({ amount: '1000.00', currency: 'USD' })).toBe('1,000\u00a0USD');
+    await i18n.changeLanguage('ru');
   });
 
-  it("суммы на экранах — только через formatMoney, без моноширинного шрифта", () => {
-    const sources = import.meta.glob("../{components,pages}/**/*.tsx", {
-      query: "?raw",
-      import: "default",
-      eager: true,
-    }) as Record<string, string>;
+  it('суммы на экранах — только через formatMoney, без моноширинного шрифта', () => {
+    const sources = import.meta.glob('../{components,pages}/**/*.tsx', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
     for (const [file, text] of Object.entries(sources)) {
-      expect(text, `${file}: Intl.NumberFormat вне lib/format`).not.toMatch(
-        /Intl\.NumberFormat/,
-      );
-      for (const line of text
-        .split("\n")
-        .filter((row) => row.includes("formatMoney("))) {
-        expect(line, `${file}: сумма моноширинным шрифтом`).not.toMatch(
-          /font-mono/,
-        );
+      expect(text, `${file}: Intl.NumberFormat вне lib/format`).not.toMatch(/Intl\.NumberFormat/);
+      for (const line of text.split('\n').filter((row) => row.includes('formatMoney('))) {
+        expect(line, `${file}: сумма моноширинным шрифтом`).not.toMatch(/font-mono/);
       }
     }
   });
 });
 
-describe("даты — ISO → Asia/Tashkent, локаль интерфейса", () => {
+describe('даты — ISO → Asia/Tashkent, локаль интерфейса', () => {
   it.each([
     // date-time: момент переводится в Ташкент (UTC+5) — 23:30 UTC 8-го это 9-е.
-    ["ru", "2026-10-08T23:30:00Z", "9 окт. 2026 г., 04:30"],
-    ["ru", "2026-10-08T14:00:00+05:00", "8 окт. 2026 г., 14:00"],
-    ["en", "2026-10-08T14:00:00+05:00", "Oct 8, 2026, 14:00"],
-    ["uz", "2026-10-08T14:00:00+05:00", "08.10.2026, 14:00"],
-  ] as const)("formatDateTime %s %s → %s", (language, value, expected) => {
+    ['ru', '2026-10-08T23:30:00Z', '9 окт. 2026 г., 04:30'],
+    ['ru', '2026-10-08T14:00:00+05:00', '8 окт. 2026 г., 14:00'],
+    ['en', '2026-10-08T14:00:00+05:00', 'Oct 8, 2026, 14:00'],
+    ['uz', '2026-10-08T14:00:00+05:00', '08.10.2026, 14:00'],
+  ] as const)('formatDateTime %s %s → %s', (language, value, expected) => {
     expect(plain(formatDateTime(value, language))).toBe(expected);
   });
 
   it.each([
     // date (календарный день): без сдвига по поясу браузера и Ташкента.
-    ["ru", "2026-10-25", "25 окт. 2026 г."],
-    ["ru", "2026-01-01", "1 янв. 2026 г."],
-    ["en", "2026-10-25", "Oct 25, 2026"],
-    ["uz", "2026-10-25", "25.10.2026"],
-    ["ru", "2026-10-08T23:30:00Z", "9 окт. 2026 г."],
-  ] as const)("formatDate %s %s → %s", (language, value, expected) => {
+    ['ru', '2026-10-25', '25 окт. 2026 г.'],
+    ['ru', '2026-01-01', '1 янв. 2026 г.'],
+    ['en', '2026-10-25', 'Oct 25, 2026'],
+    ['uz', '2026-10-25', '25.10.2026'],
+    ['ru', '2026-10-08T23:30:00Z', '9 окт. 2026 г.'],
+  ] as const)('formatDate %s %s → %s', (language, value, expected) => {
     expect(plain(formatDate(value, language))).toBe(expected);
   });
 
   // D-4 (FIX-51): в Chrome узбекский короткий месяц печатался «2026 M10 21» — словарь месяцев CLDR для uz
   // зависит от версии ICU, поэтому узбекская дата числовая и собирается из частей, а не из `month: 'short'`.
   it.each([
-    ["ru", "21 окт. 2026 г."],
-    ["en", "Oct 21, 2026"],
-    ["uz", "21.10.2026"],
-  ] as const)(
-    "одна дата 2026-10-21 на трёх языках: %s → %s",
-    (language, expected) => {
-      expect(plain(formatDate("2026-10-21", language))).toBe(expected);
-      expect(plain(formatDate("2026-10-21T09:00:00+05:00", language))).toBe(
-        expected,
-      );
-      expect(formatDate("2026-10-21", language)).not.toMatch(/M10/);
-    },
-  );
-
-  it("uz: момент переводится в Ташкент, день и время с нулями", () => {
-    expect(formatDateTime("2026-10-20T20:05:00Z", "uz")).toBe(
-      "21.10.2026, 01:05",
-    );
+    ['ru', '21 окт. 2026 г.'],
+    ['en', 'Oct 21, 2026'],
+    ['uz', '21.10.2026'],
+  ] as const)('одна дата 2026-10-21 на трёх языках: %s → %s', (language, expected) => {
+    expect(plain(formatDate('2026-10-21', language))).toBe(expected);
+    expect(plain(formatDate('2026-10-21T09:00:00+05:00', language))).toBe(expected);
+    expect(formatDate('2026-10-21', language)).not.toMatch(/M10/);
   });
 
-  it.each([null, undefined, "", "не дата"])(
-    "пустое или битое %j → прочерк",
-    (value) => {
-      expect(formatDate(value, "ru")).toBe("—");
-      expect(formatDateTime(value, "ru")).toBe("—");
-    },
-  );
+  it('uz: момент переводится в Ташкент, день и время с нулями', () => {
+    expect(formatDateTime('2026-10-20T20:05:00Z', 'uz')).toBe('21.10.2026, 01:05');
+  });
+
+  it.each([null, undefined, '', 'не дата'])('пустое или битое %j → прочерк', (value) => {
+    expect(formatDate(value, 'ru')).toBe('—');
+    expect(formatDateTime(value, 'ru')).toBe('—');
+  });
 
   it.each([
-    ["2026-10-14T12:00:00+05:00", "2026-10-14"],
+    ['2026-10-14T12:00:00+05:00', '2026-10-14'],
     // 20:00 UTC 13-го — в Ташкенте уже 14-е (01:00).
-    ["2026-10-13T20:00:00Z", "2026-10-14"],
-    ["2026-10-13T18:59:00Z", "2026-10-13"],
-  ])("businessToday(%s) = %s", (now, expected) => {
+    ['2026-10-13T20:00:00Z', '2026-10-14'],
+    ['2026-10-13T18:59:00Z', '2026-10-13'],
+  ])('businessToday(%s) = %s', (now, expected) => {
     expect(businessToday(Date.parse(now))).toBe(expected);
   });
 
   it.each([
-    ["2026-10-07", "2026-10-14", 7],
-    ["2026-10-14", "2026-10-14", 0],
-    ["2026-10-30", "2026-10-14", -16],
-    ["2026-02-28", "2026-03-01", 1],
-  ])("daysBetween(%s, %s) = %d", (from, to, expected) => {
+    ['2026-10-07', '2026-10-14', 7],
+    ['2026-10-14', '2026-10-14', 0],
+    ['2026-10-30', '2026-10-14', -16],
+    ['2026-02-28', '2026-03-01', 1],
+  ])('daysBetween(%s, %s) = %d', (from, to, expected) => {
     expect(daysBetween(from, to)).toBe(expected);
   });
 });
 
-describe("числа, количества, размеры", () => {
+describe('числа, количества, размеры', () => {
   it.each([
-    ["200", "шт", "ru", "200 шт"],
-    ["2.5", "м", "ru", "2,5 м"],
-    ["1500", null, "en", "1,500"],
-    [null, "шт", "ru", "—"],
-  ] as const)(
-    "formatQuantity(%s, %s) %s → %s",
-    (quantity, unit, language, expected) => {
-      expect(plain(formatQuantity(quantity, unit, language))).toBe(expected);
-    },
-  );
+    ['200', 'шт', 'ru', '200 шт'],
+    ['2.5', 'м', 'ru', '2,5 м'],
+    ['1500', null, 'en', '1,500'],
+    [null, 'шт', 'ru', '—'],
+  ] as const)('formatQuantity(%s, %s) %s → %s', (quantity, unit, language, expected) => {
+    expect(plain(formatQuantity(quantity, unit, language))).toBe(expected);
+  });
 
-  it("formatDecimal: не число — как есть", () => {
-    expect(formatDecimal("около 10", "ru")).toBe("около 10");
+  it('formatDecimal: не число — как есть', () => {
+    expect(formatDecimal('около 10', 'ru')).toBe('около 10');
   });
 
   it.each([
-    [512, "ru", "512 Б"],
-    [184320, "ru", "180 кБ"],
-    [1572864, "ru", "1,5 МБ"],
-    [184320, "en", "180 kB"],
-    [null, "ru", "—"],
-  ] as const)("formatFileSize(%s) %s → %s", (bytes, language, expected) => {
+    [512, 'ru', '512 Б'],
+    [184320, 'ru', '180 кБ'],
+    [1572864, 'ru', '1,5 МБ'],
+    [184320, 'en', '180 kB'],
+    [null, 'ru', '—'],
+  ] as const)('formatFileSize(%s) %s → %s', (bytes, language, expected) => {
     expect(plain(formatFileSize(bytes, language))).toBe(expected);
   });
 });
 
-describe("суммы без плавающей точки", () => {
+describe('суммы без плавающей точки', () => {
   it.each([
-    ["13750000.50", 1375000050n],
-    ["-0.01", -1n],
-    ["0.00", 0n],
-  ])("amountToCents(%s) = %s", (amount, cents) => {
+    ['13750000.50', 1375000050n],
+    ['-0.01', -1n],
+    ['0.00', 0n],
+  ])('amountToCents(%s) = %s', (amount, cents) => {
     expect(amountToCents(amount)).toBe(cents);
     expect(centsToAmount(cents)).toBe(amount);
   });
 
-  it("разность и суммы по валютам", () => {
-    expect(
-      subtractMoney(
-        { amount: "27500000.00", currency: "UZS" },
-        { amount: "13750000.10", currency: "UZS" },
-      ),
-    ).toEqual({
-      amount: "13749999.90",
-      currency: "UZS",
+  it('разность и суммы по валютам', () => {
+    expect(subtractMoney({ amount: '27500000.00', currency: 'UZS' }, { amount: '13750000.10', currency: 'UZS' })).toEqual({
+      amount: '13749999.90',
+      currency: 'UZS',
     });
-    expect(
-      subtractMoney(
-        { amount: "1.00", currency: "UZS" },
-        { amount: "1.00", currency: "USD" },
-      ),
-    ).toBeNull();
+    expect(subtractMoney({ amount: '1.00', currency: 'UZS' }, { amount: '1.00', currency: 'USD' })).toBeNull();
     expect(
       sumByCurrency([
-        { amount: "10.50", currency: "UZS" },
-        { amount: "5.00", currency: "USD" },
-        { amount: "2.55", currency: "UZS" },
+        { amount: '10.50', currency: 'UZS' },
+        { amount: '5.00', currency: 'USD' },
+        { amount: '2.55', currency: 'UZS' },
       ]),
     ).toEqual([
-      { amount: "13.05", currency: "UZS" },
-      { amount: "5.00", currency: "USD" },
+      { amount: '13.05', currency: 'UZS' },
+      { amount: '5.00', currency: 'USD' },
     ]);
   });
 });
 
-describe("просрочка счёта вычисляется из due_date", () => {
+describe('просрочка счёта вычисляется из due_date', () => {
   const base: Invoice = {
     id: 1,
-    deal: { id: 1, number: "D-1", stage: "project", title: null },
-    number: "S-1",
-    status: "issued",
-    total: { amount: "100.00", currency: "UZS" },
-    paid: { amount: "0.00", currency: "UZS" },
-    due_date: "2026-10-14",
+    deal: { id: 1, number: 'D-1', stage: 'project', title: null },
+    number: 'S-1',
+    status: 'issued',
+    total: { amount: '100.00', currency: 'UZS' },
+    paid: { amount: '0.00', currency: 'UZS' },
+    due_date: '2026-10-14',
     proofs: [],
   };
   it.each([
-    ["срок сегодня — не просрочен", {}, null, "issued"],
-    ["срок вчера — 1 день", { due_date: "2026-10-13" }, 1, "overdue"],
-    [
-      "частично оплачен, срок прошёл",
-      {
-        status: "partially_paid",
-        due_date: "2026-10-07",
-        paid: { amount: "40.00", currency: "UZS" },
-      },
-      7,
-      "overdue",
-    ],
-    [
-      "оплачен — не просрочен",
-      {
-        status: "paid",
-        due_date: "2026-09-01",
-        paid: { amount: "100.00", currency: "UZS" },
-      },
-      null,
-      "paid",
-    ],
-    [
-      "отменён — не просрочен",
-      { status: "cancelled", due_date: "2026-09-01" },
-      null,
-      "cancelled",
-    ],
-    [
-      "остаток 0 при статусе issued — не просрочен",
-      { due_date: "2026-09-01", paid: { amount: "100.00", currency: "UZS" } },
-      null,
-      "issued",
-    ],
-    [
-      "ERP уже поставил overdue",
-      { status: "overdue", due_date: "2026-10-14" },
-      1,
-      "overdue",
-    ],
-  ] as const)("%s", (_name, patch, days, status) => {
+    ['срок сегодня — не просрочен', {}, null, 'issued'],
+    ['срок вчера — 1 день', { due_date: '2026-10-13' }, 1, 'overdue'],
+    ['частично оплачен, срок прошёл', { status: 'partially_paid', due_date: '2026-10-07', paid: { amount: '40.00', currency: 'UZS' } }, 7, 'overdue'],
+    ['оплачен — не просрочен', { status: 'paid', due_date: '2026-09-01', paid: { amount: '100.00', currency: 'UZS' } }, null, 'paid'],
+    ['отменён — не просрочен', { status: 'cancelled', due_date: '2026-09-01' }, null, 'cancelled'],
+    ['остаток 0 при статусе issued — не просрочен', { due_date: '2026-09-01', paid: { amount: '100.00', currency: 'UZS' } }, null, 'issued'],
+    ['ERP уже поставил overdue', { status: 'overdue', due_date: '2026-10-14' }, 1, 'overdue'],
+  ] as const)('%s', (_name, patch, days, status) => {
     const view = invoiceView({ ...base, ...patch } as Invoice, NOW);
     expect(view.overdueDays).toBe(days);
     expect(view.displayStatus).toBe(status);
   });
 });
 
-describe("КП: срок действия и код акцепта", () => {
+describe('КП: срок действия и код акцепта', () => {
   it.each([
-    [{ status: "sent", valid_until: "2026-10-25" }, false, true],
-    [{ status: "viewed", valid_until: "2026-10-14" }, false, true],
-    [{ status: "sent", valid_until: "2026-10-13" }, true, false],
-    [{ status: "expired", valid_until: "2026-10-25" }, true, false],
-    [{ status: "accepted", valid_until: "2026-10-01" }, false, false],
-    [{ status: "sent", valid_until: null }, false, true],
-  ] as const)(
-    "%j → истекло %s, ждёт решения %s",
-    (quote, expired, awaiting) => {
-      expect(quoteExpired(quote, NOW)).toBe(expired);
-      expect(quoteAwaitsDecision(quote, NOW)).toBe(awaiting);
-    },
-  );
+    [{ status: 'sent', valid_until: '2026-10-25' }, false, true],
+    [{ status: 'viewed', valid_until: '2026-10-14' }, false, true],
+    [{ status: 'sent', valid_until: '2026-10-13' }, true, false],
+    [{ status: 'expired', valid_until: '2026-10-25' }, true, false],
+    [{ status: 'accepted', valid_until: '2026-10-01' }, false, false],
+    [{ status: 'sent', valid_until: null }, false, true],
+  ] as const)('%j → истекло %s, ждёт решения %s', (quote, expired, awaiting) => {
+    expect(quoteExpired(quote, NOW)).toBe(expired);
+    expect(quoteAwaitsDecision(quote, NOW)).toBe(awaiting);
+  });
 
-  it("код акцепта из сообщения — без пробелов", () => {
-    expect(normalizeAcceptCode(" 24 68 ")).toBe("2468");
+  it('код акцепта из сообщения — без пробелов', () => {
+    expect(normalizeAcceptCode(' 24 68 ')).toBe('2468');
   });
 });
 
-describe("строки запроса: количество", () => {
+describe('строки запроса: количество', () => {
   it.each([
-    ["12", "12"],
-    ["2,5", "2.5"],
-    [" 1 000 ", "1000"],
-    ["0", null],
-    ["-1", null],
-    ["abc", null],
-    ["1.2.3", null],
-  ])("normalizeQuantity(%j) = %j", (value, expected) => {
+    ['12', '12'],
+    ['2,5', '2.5'],
+    [' 1 000 ', '1000'],
+    ['0', null],
+    ['-1', null],
+    ['abc', null],
+    ['1.2.3', null],
+  ])('normalizeQuantity(%j) = %j', (value, expected) => {
     expect(normalizeQuantity(value)).toBe(expected);
   });
 });
 
-describe("компания и приглашение", () => {
-  it("в PUT уходят только изменённые поля", () => {
+describe('компания и приглашение', () => {
+  it('в PUT уходят только изменённые поля', () => {
     expect(
       companyChanges(fixtures.company, {
         name: fixtures.company.name,
-        inn: fixtures.company.inn ?? "",
-        legal_address: " Новый адрес ",
+        inn: fixtures.company.inn ?? '',
+        legal_address: ' Новый адрес ',
         bank: bankDraft(defaultAccount(fixtures.company)),
-        language: "uz",
+        language: 'uz',
       }),
-    ).toEqual({ legal_address: "Новый адрес", language: "uz" });
+    ).toEqual({ legal_address: 'Новый адрес', language: 'uz' });
   });
 
   it.each([
+    ['UZ: 20 цифр и МФО', { account: '20208000900123456001', mfo: '00440', bank_name: 'АКБ «Узпромстройбанк»' }, {}],
+    ['UZ: короткий номер', { account: '2020800090', mfo: '00440', bank_name: 'АКБ «Узпромстройбанк»' }, { account: 'uzFormat' }],
+    ['UZ: код валюты в номере', { account: '20208840900123456001', mfo: '00440', bank_name: 'АКБ «Узпромстройбанк»' }, { account: 'currencyMismatch' }],
+    ['UZ: без МФО', { account: '20208000900123456001', mfo: '' }, { mfo: 'required' }],
+    ['UZ: МФО без банка', { account: '20208000900123456001', mfo: '01999' }, { bank_name: 'required' }],
     [
-      "UZ: 20 цифр и МФО",
-      {
-        account: "20208000900123456001",
-        mfo: "00440",
-        bank_name: "АКБ «Узпромстройбанк»",
-      },
+      'за рубежом: IBAN и SWIFT',
+      { place: 'abroad' as const, account: 'DE89370400440532013000', swift: 'COBADEFF' },
       {},
     ],
     [
-      "UZ: короткий номер",
-      {
-        account: "2020800090",
-        mfo: "00440",
-        bank_name: "АКБ «Узпромстройбанк»",
-      },
-      { account: "uzFormat" },
+      'за рубежом: битый IBAN, без SWIFT',
+      { place: 'abroad' as const, account: 'DE89370400440532013001', swift: '' },
+      { account: 'iban', swift: 'required' },
     ],
     [
-      "UZ: код валюты в номере",
-      {
-        account: "20208840900123456001",
-        mfo: "00440",
-        bank_name: "АКБ «Узпромстройбанк»",
-      },
-      { account: "currencyMismatch" },
+      'за рубежом: кириллица в имени латиницей',
+      { place: 'abroad' as const, account: '000123456789', swift: 'CHASUS33', holder_name_latin: 'ООО' },
+      { holder_name_latin: 'latin' },
     ],
-    [
-      "UZ: без МФО",
-      { account: "20208000900123456001", mfo: "" },
-      { mfo: "required" },
-    ],
-    [
-      "UZ: МФО без банка",
-      { account: "20208000900123456001", mfo: "01999" },
-      { bank_name: "required" },
-    ],
-    [
-      "за рубежом: IBAN и SWIFT",
-      {
-        place: "abroad" as const,
-        account: "DE89370400440532013000",
-        swift: "COBADEFF",
-      },
-      {},
-    ],
-    [
-      "за рубежом: битый IBAN, без SWIFT",
-      {
-        place: "abroad" as const,
-        account: "DE89370400440532013001",
-        swift: "",
-      },
-      { account: "iban", swift: "required" },
-    ],
-    [
-      "за рубежом: кириллица в имени латиницей",
-      {
-        place: "abroad" as const,
-        account: "000123456789",
-        swift: "CHASUS33",
-        holder_name_latin: "ООО",
-      },
-      { holder_name_latin: "latin" },
-    ],
-  ])("validateBank: %s", (_name, patch, errors) => {
+  ])('validateBank: %s', (_name, patch, errors) => {
     expect(validateBank({ ...bankDraft(), ...patch })).toEqual(errors);
   });
 
-  const draft = {
-    name: "Тест",
-    email: "",
-    phone: "",
-    language: "ru" as const,
-    can_act: false,
-    channels: { email: true, telegram: false },
-  };
+  const draft = { name: 'Тест', email: '', phone: '', language: 'ru' as const, can_act: false, channels: { email: true, telegram: false } };
   it.each([
-    ["без имени и e-mail", { name: " " }, ["name", "email"]],
-    [
-      "без каналов",
-      { email: "a@b.uz", channels: { email: false, telegram: false } },
-      ["channels"],
-    ],
-    [
-      "Telegram без телефона",
-      { email: "a@b.uz", channels: { email: true, telegram: true } },
-      ["phone"],
-    ],
-    ["битый e-mail", { email: "a@b" }, ["email"]],
-  ] as const)("%s → %j", (_name, patch, problems) => {
+    ['без имени и e-mail', { name: ' ' }, ['name', 'email']],
+    ['без каналов', { email: 'a@b.uz', channels: { email: false, telegram: false } }, ['channels']],
+    ['Telegram без телефона', { email: 'a@b.uz', channels: { email: true, telegram: true } }, ['phone']],
+    ['битый e-mail', { email: 'a@b' }, ['email']],
+  ] as const)('%s → %j', (_name, patch, problems) => {
     const result = validateInvite({ ...draft, ...patch });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.problems).toEqual(problems);
   });
 
-  it("корректное приглашение — тело по контракту TeamInvite", () => {
-    expect(
-      validateInvite({
-        ...draft,
-        email: " a@b.uz ",
-        phone: "+998 90 123 45 67",
-        channels: { email: true, telegram: true },
-      }),
-    ).toEqual({
+  it('корректное приглашение — тело по контракту TeamInvite', () => {
+    expect(validateInvite({ ...draft, email: ' a@b.uz ', phone: '+998 90 123 45 67', channels: { email: true, telegram: true } })).toEqual({
       ok: true,
-      body: {
-        name: "Тест",
-        email: "a@b.uz",
-        phone: "+998 90 123 45 67",
-        language: "ru",
-        can_act: false,
-        channels: ["email", "telegram"],
-      },
+      body: { name: 'Тест', email: 'a@b.uz', phone: '+998 90 123 45 67', language: 'ru', can_act: false, channels: ['email', 'telegram'] },
     });
   });
 });
 
-describe("статусы: подпись есть для каждого кода во всех словарях", () => {
-  for (const language of ["ru", "uz", "en"]) {
+describe('статусы: подпись есть для каждого кода во всех словарях', () => {
+  for (const language of ['ru', 'uz', 'en']) {
     it(language, () => {
       for (const entity of STATUS_ENTITIES) {
         for (const code of statusCodes(entity)) {
           const key = statusLabelKey(entity, code as never);
-          expect(
-            i18n.exists(key, { lng: language }),
-            `${language}: ${key}`,
-          ).toBe(true);
+          expect(i18n.exists(key, { lng: language }), `${language}: ${key}`).toBe(true);
         }
       }
     });
   }
 });
 
-describe("ввод даты ДД.ММ.ГГГГ (components/DateField)", () => {
-  it("маска ставит точки, наружу — ключ YYYY-MM-DD; неполная и несуществующая дата — null", async () => {
-    const { maskDate, textToIso, isoToText } = await import("@/lib/dateInput");
-    expect(maskDate("14102026")).toBe("14.10.2026");
-    expect(maskDate("14.1")).toBe("14.1");
-    expect(maskDate("1a4b10202699")).toBe("14.10.2026");
-    expect(textToIso("14.10.2026")).toBe("2026-10-14");
-    expect(textToIso("")).toBe("");
-    expect(textToIso("14.10")).toBeNull();
-    expect(textToIso("31.02.2026")).toBeNull();
-    expect(isoToText("2026-10-14")).toBe("14.10.2026");
-    expect(isoToText(null)).toBe("");
+describe('ввод даты ДД.ММ.ГГГГ (components/DateField)', () => {
+  it('маска ставит точки, наружу — ключ YYYY-MM-DD; неполная и несуществующая дата — null', async () => {
+    const { maskDate, textToIso, isoToText } = await import('@/lib/dateInput');
+    expect(maskDate('14102026')).toBe('14.10.2026');
+    expect(maskDate('14.1')).toBe('14.1');
+    expect(maskDate('1a4b10202699')).toBe('14.10.2026');
+    expect(textToIso('14.10.2026')).toBe('2026-10-14');
+    expect(textToIso('')).toBe('');
+    expect(textToIso('14.10')).toBeNull();
+    expect(textToIso('31.02.2026')).toBeNull();
+    expect(isoToText('2026-10-14')).toBe('14.10.2026');
+    expect(isoToText(null)).toBe('');
   });
 });

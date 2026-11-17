@@ -328,3 +328,13 @@ msgstr "Kompaniya bank rekvizitlarini oʻzgartirish soʻrovi rad etildi, avvalgi
 
 msgid "Мы не просим пароль и код в письме или по телефону. Не пересылайте этот код."
 msgstr "Biz parol va kodni xatda yoki telefonda söramaymiz. Bu kodni hech kimga yubormang."
+
+#, python-format
+msgid "%(name)s вошёл в личный кабинет с нового устройства."
+msgstr "%(name)s shaxsiy kabinetga yangi qurilmadan kirdi."
+
+msgid "Если это не ваш сотрудник, завершите сеанс: «Компания» → «Журнал безопасности»."
+msgstr "Agar bu sizning xodimingiz bölmasa, seansni yakunlang: «Kompaniya» → «Xavfsizlik jurnali»."
+
+msgid "Вход в кабинет с нового устройства"
+msgstr "Kabinetga yangi qurilmadan kirish"

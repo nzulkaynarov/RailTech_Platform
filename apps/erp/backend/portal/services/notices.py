@@ -108,6 +108,10 @@ KINDS: dict[str, NoticeKind] = {
         NoticeKind(
             "bank_requisites_change_rejected", "security", "bank_change", "returned", "profile", True, False, None, True
         ),
+        # ДВ-6: вход контакта с нового устройства — администраторам и основному контакту, письмом и в Telegram
+        NoticeKind(
+            "new_device_login", "security", "security_event", "status_changed", "profile", True, False, None, True
+        ),
     )
 }
 
@@ -549,6 +553,8 @@ def email_context(notice: PortalNotice) -> dict:
         "previous_eta": _email_date(params.get("previous_eta")),
         "reason": params.get("reason", ""),
         "reminder": bool(params.get("reminder")),
+        "name": params.get("name", ""),
+        "device": params.get("device", ""),
         "open_url": f"{base}{notice.link}",
         "settings_url": f"{base}{NOTIFICATION_SETTINGS_PATH}",
         **email_brand(seller),

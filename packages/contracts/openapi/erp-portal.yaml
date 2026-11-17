@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Portal API (Cabinet → ERP)
-  version: 0.19.0
+  version: 0.20.0
   summary: Пространство `/api/portal/v1/` — вызывает Cabinet SPA от имени клиента.
   description: |
     Контракт по `docs/architecture/CONTRACTS.md` §4 и ADR-0004 (Cabinet без бэкенда). Версия 0 (M0-INF-02):
@@ -2741,6 +2741,38 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
+  /company/security-log/{id}/end-session:
+    post:
+      tags: [company]
+      operationId: endSecurityEventSession
+      summary: Завершить сеанс входа с нового устройства (ДВ-6)
+      description: >-
+        «Это не мы»: администратор компании завершает сеанс из события `login_new_device` своего журнала безопасности.
+        Событие пишется в журнал (`revoke_sessions`). Не администратор — 403 `ADMIN_REQUIRED`; чужое или другое событие —
+        404; сеанс уже завершён или истёк — 409 `SESSION_ALREADY_ENDED`.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: integer}
+      responses:
+        '204':
+          description: Сеанс завершён
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '`SESSION_ALREADY_ENDED` — сеанс уже завершён или истёк'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
   /company/partner-application:
     get:
       tags: [company]
@@ -3328,6 +3360,7 @@ components:
         - BANK_SWIFT_INVALID
         - BANK_HOLDER_LATIN_INVALID
         - BANK_INTERMEDIARY_INVALID
+        - SESSION_ALREADY_ENDED
 
     PartnerKind:
       type: string
@@ -5006,7 +5039,9 @@ components:
         `partner_order_sent` — направлен заказ на поставку, `partner_rfq_sent` — направлен запрос цен,
         `partner_goods_received` — склад принял товары по заказу, `bank_requisites_change_requested` — подан запрос на смену
         банковских реквизитов, `bank_requisites_changed` — смену подтвердил сотрудник, `bank_requisites_change_rejected` —
-        сотрудник отклонил смену (FX-4; группа `security`, отключить нельзя).
+        сотрудник отклонил смену (FX-4; группа `security`, отключить нельзя), `new_device_login` — контакт компании вошёл
+        с нового устройства (ДВ-6; группа `security`, администраторам и основному контакту; `object.id` — событие журнала
+        безопасности, `params`: `name`, `device`, `ip`).
         Незнакомый вид Cabinet показывает общим текстом.
       enum:
         - quote_sent
@@ -5024,6 +5059,7 @@ components:
         - partner_goods_received
         - bank_requisites_change_requested
         - bank_requisites_change_rejected
+        - new_device_login
 
     NotificationGroup:
       type: string
@@ -5032,7 +5068,7 @@ components:
 
     NotificationObjectType:
       type: string
-      enum: [quote, invoice, act, delivery, chat, partner_product, partner_order, partner_rfq, bank_change]
+      enum: [quote, invoice, act, delivery, chat, partner_product, partner_order, partner_rfq, bank_change, security_event]
 
     NotificationAction:
       type: string
@@ -6032,13 +6068,13 @@ components:
 
     CompanySecurityLogItem:
       type: object
-      required: [id, event_type, created_at, actor_name]
+      required: [id, event_type, created_at, actor_name, can_end_session]
       properties:
         id:
           type: integer
         event_type:
           type: string
-          enum: [login, logout, revoke_sessions, role_change, member_deactivated, member_invited, bank_details_changed, bank_details_change_requested, bank_details_change_rejected]
+          enum: [login, logout, revoke_sessions, role_change, member_deactivated, member_invited, bank_details_changed, bank_details_change_requested, bank_details_change_rejected, login_new_device]
         created_at:
           type: string
           format: date-time
@@ -6056,7 +6092,12 @@ components:
           description: Имя целевого сотрудника при операциях с командой
         details:
           type: [string, 'null']
-          description: Дополнительные детали события
+          description: Дополнительные детали события (у `login_new_device` — браузер и система, «Chrome · Windows»)
+        can_end_session:
+          type: boolean
+          description: >-
+            ДВ-6: событие `login_new_device`, и его сеанс ещё действует — администратор может завершить его
+            (`POST /company/security-log/{id}/end-session`)
 
     CompanyUpdate:
       type: object

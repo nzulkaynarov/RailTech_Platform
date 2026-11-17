@@ -1103,6 +1103,54 @@
                 }
             }
         },
+        "/api/portal/v1/company/security-log/{id}/end-session": {
+            "post": {
+                "operationId": "api_portal_v1_company_security_log_end_session_create",
+                "description": "POST /company/security-log/{id}/end-session — «Это не мы»: администратор компании завершает сеанс входа с нового\nустройства (ДВ-6). Уже завершён или истёк — 409 `SESSION_ALREADY_ENDED`.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/company/security-log/{id}/end-session/": {
+            "post": {
+                "operationId": "api_portal_v1_company_security_log_end_session_create_2",
+                "description": "POST /company/security-log/{id}/end-session — «Это не мы»: администратор компании завершает сеанс входа с нового\nустройства (ДВ-6). Уже завершён или истёк — 409 `SESSION_ALREADY_ENDED`.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/portal/v1/contracts": {
             "get": {
                 "operationId": "api_portal_v1_contracts_retrieve",

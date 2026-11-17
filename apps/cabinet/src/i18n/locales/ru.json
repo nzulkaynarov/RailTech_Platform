@@ -917,6 +917,10 @@
         "description": "История входов, изменений прав сотрудников и настроек безопасности",
         "empty": "Событий безопасности пока не зафиксировано",
         "error": "Не удалось загрузить журнал безопасности",
+        "notUs": "Это не ваш сотрудник?",
+        "endSession": "Завершить сеанс",
+        "ended": "Сеанс завершён",
+        "endFailed": "Сеанс уже завершён или истёк",
         "events": {
           "login": "Вход",
           "logout": "Выход",
@@ -926,7 +930,8 @@
           "member_invited": "Приглашение",
           "bank_details_changed": "Смена реквизитов",
           "bank_details_change_requested": "Запрошена смена реквизитов",
-          "bank_details_change_rejected": "Смена реквизитов отклонена"
+          "bank_details_change_rejected": "Смена реквизитов отклонена",
+          "login_new_device": "Новое устройство"
         }
       },
       "closeEdit": "Закрыть",
@@ -1779,7 +1784,8 @@
       "security_bank_requisites_changed": "Сотрудник {{actor}} изменил банковские реквизиты компании",
       "bank_requisites_change_requested": "{{actor}} запросил смену банковских реквизитов компании",
       "bank_requisites_changed": "Банковские реквизиты компании изменены",
-      "bank_requisites_change_rejected": "Запрос на смену банковских реквизитов отклонён: {{reason}}"
+      "bank_requisites_change_rejected": "Запрос на смену банковских реквизитов отклонён: {{reason}}",
+      "new_device_login": "{{name}} вошёл в кабинет с нового устройства"
     }
   },
   "verify": {

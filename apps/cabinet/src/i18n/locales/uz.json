@@ -898,6 +898,10 @@
         "description": "Kirishlar, xodimlar huquqlari o'zgarishi va xavfsizlik sozlamalari tarixi",
         "empty": "Hozircha xavfsizlik hodisalari qayd etilmagan",
         "error": "Xavfsizlik jurnalini yuklab bo'lmadi",
+        "notUs": "Bu sizning xodimingiz emasmi?",
+        "endSession": "Seansni yakunlash",
+        "ended": "Seans yakunlandi",
+        "endFailed": "Seans allaqachon yakunlangan yoki muddati tugagan",
         "events": {
           "login": "Kirish",
           "logout": "Chiqish",
@@ -907,7 +911,8 @@
           "member_invited": "Taklif etish",
           "bank_details_changed": "Rekvizitlar o'zgarishi",
           "bank_details_change_requested": "Rekvizitlarni oʻzgartirish soʻraldi",
-          "bank_details_change_rejected": "Rekvizitlarni oʻzgartirish rad etildi"
+          "bank_details_change_rejected": "Rekvizitlarni oʻzgartirish rad etildi",
+          "login_new_device": "Yangi qurilma"
         }
       },
       "closeEdit": "Yopish",
@@ -1744,7 +1749,8 @@
       "security_bank_requisites_changed": "Xodim {{actor}} kompaniyaning bank rekvizitlarini o‘zgartirdi",
       "bank_requisites_change_requested": "{{actor}} kompaniya bank rekvizitlarini oʻzgartirishni soʻradi",
       "bank_requisites_changed": "Kompaniya bank rekvizitlari oʻzgartirildi",
-      "bank_requisites_change_rejected": "Bank rekvizitlarini oʻzgartirish soʻrovi rad etildi: {{reason}}"
+      "bank_requisites_change_rejected": "Bank rekvizitlarini oʻzgartirish soʻrovi rad etildi: {{reason}}",
+      "new_device_login": "{{name}} kabinetga yangi qurilmadan kirdi"
     }
   },
   "verify": {

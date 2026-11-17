@@ -898,6 +898,10 @@
         "description": "History of logins, employee permission changes, and security settings",
         "empty": "No security events recorded yet",
         "error": "Failed to load security log",
+        "notUs": "Not your colleague?",
+        "endSession": "End session",
+        "ended": "Session ended",
+        "endFailed": "The session has already ended or expired",
         "events": {
           "login": "Login",
           "logout": "Logout",
@@ -907,7 +911,8 @@
           "member_invited": "Invite",
           "bank_details_changed": "Bank details changed",
           "bank_details_change_requested": "Bank details change requested",
-          "bank_details_change_rejected": "Bank details change rejected"
+          "bank_details_change_rejected": "Bank details change rejected",
+          "login_new_device": "New device"
         }
       },
       "closeEdit": "Close",
@@ -1744,7 +1749,8 @@
       "security_bank_requisites_changed": "User {{actor}} changed company bank details",
       "bank_requisites_change_requested": "{{actor}} requested a change to the company bank details",
       "bank_requisites_changed": "Company bank details have been changed",
-      "bank_requisites_change_rejected": "Bank details change request rejected: {{reason}}"
+      "bank_requisites_change_rejected": "Bank details change request rejected: {{reason}}",
+      "new_device_login": "{{name}} signed in from a new device"
     }
   },
   "verify": {
