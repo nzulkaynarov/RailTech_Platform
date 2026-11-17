@@ -43,7 +43,11 @@ def _default_bank(seller):
     accounts = getattr(seller, "bank_accounts", None)
     if accounts is None:
         return None
-    active = accounts.filter(is_active=True).select_related("currency").order_by("-is_default", "order", "id")
+    active = (
+        accounts.filter(is_active=True)
+        .select_related("currency", "bank_country")
+        .order_by("-is_default", "order", "id")
+    )
     return active.filter(currency__code="UZS").first() or active.first()
 
 
@@ -82,10 +86,15 @@ def footer_columns(seller, profile) -> tuple:
         columns.append(FooterColumn(lines=tuple(line for line in contacts if line)))
     bank = _default_bank(seller)
     if bank is not None:
-        bank_lines = [f"{_('МФО')} {bank.mfo}" if bank.mfo else "", f"{_('р/с')} {bank.account}"]
+        from parties.banking import UZ, grouped, uses_iban
+
+        country = getattr(bank.bank_country, "code", "") or UZ
+        if country == UZ:
+            bank_lines = [f"{_('МФО')} {bank.mfo}" if bank.mfo else "", f"{_('р/с')} {grouped(bank.account)}"]
+        else:
+            number = "IBAN" if uses_iban(country) else _("Счёт")
+            bank_lines = [f"{number} {grouped(bank.account)}", f"SWIFT {bank.swift}" if bank.swift else ""]
         columns.append(FooterColumn(title=bank.bank_name or None, lines=tuple(line for line in bank_lines if line)))
-    elif _bank_lines(seller, profile):
-        columns.append(FooterColumn(lines=tuple(_bank_lines(seller, profile))))
     inn = (getattr(profile, "inn", "") or getattr(seller, "inn", "") or "").strip()
     if inn:
         columns.append(FooterColumn(lines=(f"{_('ИНН')} {inn}",)))
@@ -129,15 +138,35 @@ def letterhead_of(seller, profile):
     )
 
 
-def _bank_lines(seller, profile) -> list[str]:
-    details = _lines(getattr(profile, "bank_details", ""))
-    if details:
-        return details
-    account = (getattr(seller, "bank_account", "") or "").strip()
-    if not account:
+def _bank_lines(seller, profile, currency: str | None = None, *, english: bool = False) -> list[str]:
+    """Реквизиты основного счёта валюты документа (без него — в сумах), строками «подпись: значение» (ADR-0029 п. 5).
+
+    Текст реквизитов из карточки компании и профиля документов не печатается: счета — один источник (ADR-0028 п. 3).
+    """
+    from parties.banking import print_rows
+    from parties.models import Company
+
+    from accounts.services.bank_accounts import default_account
+
+    account = default_account(seller, currency) if isinstance(seller, Company) else None
+    if account is None:
         return []
-    mfo = (getattr(seller, "mfo", "") or "").strip()
-    return [f"{_('Р/с:')} {account}" + (f" · {_('МФО:')} {mfo}" if mfo else "")]
+    rows = print_rows(account, english=english, with_party=False)
+    return [f"{label}: {value}" if english else f"{_(label)}: {value}" for label, value in rows]
+
+
+def _recipient_of(seller, currency: str, fallback: str) -> str:
+    """Получатель платежа — владелец основного счёта валюты (латиницей для счёта за рубежом), иначе название продавца."""
+    from parties.banking import UZ
+    from parties.models import Company
+
+    from accounts.services.bank_accounts import default_account
+
+    account = default_account(seller, currency) if isinstance(seller, Company) else None
+    if account is None:
+        return fallback
+    foreign = (getattr(account.bank_country, "code", "") or UZ) != UZ
+    return (account.holder_name_latin if foreign else "") or account.holder_name or fallback
 
 
 def _text(value: str, *, bold: bool = False) -> dict[str, Any]:
@@ -353,7 +382,11 @@ def invoice_pdf(invoice, items, totals: dict[str, Any], brand: dict[str, Any], *
         ),
         "doc.totals": (grid_totals_block(sums, ccy, lang) if grid else totals_block(sums, ccy, lang)),
         "doc.payment_requisites": payment_requisites(
-            lang, recipient=recipient, inn=inn, bank_lines=_bank_lines(seller, profile), purpose=purpose
+            lang,
+            recipient=_recipient_of(seller, ccy, recipient),
+            inn=inn,
+            bank_lines=_bank_lines(seller, profile, ccy, english=lang == "en"),
+            purpose=purpose,
         ),
         "doc.notes": (
             [_para(_text(_("Примечание:"), bold=True)), *[_para(line) for line in _lines(invoice.notes)]]

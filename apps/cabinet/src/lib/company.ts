@@ -1,4 +1,5 @@
 import type { Company, CompanyUpdate, Schemas, TeamInvite } from '@/api/portal';
+import { bankChanged, bankDraft, bankInput, defaultAccount, type BankDraft } from '@/lib/bankAccount';
 
 export interface CompanyFormDraft {
   name: string;
@@ -6,7 +7,7 @@ export interface CompanyFormDraft {
   registration_number?: string;
   country_code?: string;
   legal_address?: string;
-  bank_details?: string;
+  bank?: BankDraft;
   language: Schemas['Language'];
 }
 
@@ -22,8 +23,8 @@ export function companyChanges(company: Company, draft: CompanyFormDraft): Compa
     changes.country_code = draft.country_code;
   if ((draft.legal_address ?? '').trim() !== (company.legal_address ?? ''))
     changes.legal_address = draft.legal_address?.trim();
-  if ((draft.bank_details ?? '').trim() !== (company.bank_details ?? ''))
-    changes.bank_details = draft.bank_details?.trim();
+  if (draft.bank && bankChanged(bankDraft(defaultAccount(company)), draft.bank))
+    changes.bank_account = bankInput(draft.bank);
   if (draft.language !== company.language) changes.language = draft.language;
   return changes;
 }

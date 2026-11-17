@@ -6,6 +6,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Company, CompanyMember, CustomUser
+from accounts.services.bank_accounts import set_uzs_account
 from core.tenant import own_company, own_company_id
 
 STATUS = "/api/v1/setup/status/"
@@ -218,13 +219,11 @@ def test_bank_details_ready_follows_the_own_company_requisites(admin, company_fa
     from accounts.testing import make_own_company
 
     company = make_own_company(company_factory(inn="987654322"))
-    company.bank_account, company.mfo = "", ""
-    company.save(update_fields=["bank_account", "mfo"])
+    company.bank_accounts.all().delete()
     staff = user_factory(email="m@erp.test", username="m")
     add_company_member(staff, company, WorkspaceRoleCode.OWNER, is_primary=True)
 
     # Любой вошедший сотрудник (менеджер, не только администратор) видит признак заранее.
     assert _client(staff).get(STATUS).json()["bank_details_ready"] is False
-    company.bank_account, company.mfo = "20208000900001234567", "00443"
-    company.save(update_fields=["bank_account", "mfo"])
+    set_uzs_account(company, "20208000900001234567", "00443")
     assert _client(staff).get(STATUS).json()["bank_details_ready"] is True

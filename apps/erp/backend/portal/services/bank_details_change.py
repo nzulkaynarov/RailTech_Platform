@@ -77,8 +77,14 @@ def notify_change(company: Company, *, kind: str, request_id: int, params: Optio
     )
 
 
-def submit(company: Company, contact: Contact, new_value: str, *, ip: str, user_agent: str) -> BankDetailsChangeRequest:
-    """Подать запрос: старые реквизиты действуют до решения сотрудника."""
+def submit(
+    company: Company, contact: Contact, new_account: dict, *, ip: str, user_agent: str
+) -> BankDetailsChangeRequest:
+    """Подать запрос: старые реквизиты действуют до решения сотрудника. `new_account` — проверенный счёт полями ADR-0029
+    (`accounts.services.bank_accounts.validate_account`)."""
+    from accounts.services.bank_accounts import account_text
+
+    new_value = account_text(new_account)
     with transaction.atomic():
         locked = _lock_company(company.pk)
         if BankDetailsChangeRequest.objects.filter(
@@ -89,6 +95,7 @@ def submit(company: Company, contact: Contact, new_value: str, *, ip: str, user_
             company=locked,
             old_bank_details=locked.formatted_bank_details or "",
             new_bank_details=new_value,
+            new_account=new_account,
             requested_by_contact=contact,
             requested_by_name=contact.name or contact.email,
             requested_by_email=contact.email or "",
@@ -160,8 +167,13 @@ def approve(request_id: int, *, actor) -> BankDetailsChangeRequest:
             raise PortalConflict(ARCHIVED)
         if is_stale(request, company):
             raise PortalConflict(STALE)
-        company.bank_details = request.new_bank_details
-        company.save(update_fields=["bank_details", "updated_at"])
+        from accounts.services.bank_accounts import make_default
+
+        if not request.new_account:
+            raise PortalConflict(STALE)  # запрос до ADR-0029 — свободный текст без полей счёта: клиент подаёт заново
+        _account, errors = make_default(company, request.new_account)
+        if errors:
+            raise PortalConflict(STALE)  # номер занят иначе или счёт не проходит проверку — сверить заново
         request.status = BankDetailsChangeStatus.APPROVED
         _decided(request, actor)
         request.save(update_fields=["status", "decided_by", "decided_at"])

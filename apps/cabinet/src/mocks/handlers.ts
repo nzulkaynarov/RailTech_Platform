@@ -148,7 +148,7 @@ export function setMockPartnerApplication(app: Schemas['PartnerApplication'] | n
 function companyView(company: Schemas['Company'], isAdmin: boolean | undefined): Schemas['Company'] {
   const change = company.bank_change_request;
   if (!change || isAdmin) return company;
-  return { ...company, bank_change_request: { ...change, new_bank_details: null } };
+  return { ...company, bank_change_request: { ...change, new_bank_details: null, new_bank_account: null } };
 }
 
 function contactFor(role: Role): Schemas['TeamMember'] {
@@ -1026,8 +1026,8 @@ export const handlers = [
         const body = await readJson<Schemas['CompanyUpdate']>(request);
         if (body.name !== undefined && !body.name.trim()) return error(422, 'VALIDATION_ERROR');
         if (body.inn !== undefined && body.inn !== '' && !/^\d{9,14}$/.test(body.inn)) return error(422, 'INN_INVALID');
-        const { bank_details: requested, ...profile } = body;
-        if (requested !== undefined && requested !== (db.company.bank_details ?? '')) {
+        const { bank_account: requested, ...profile } = body;
+        if (requested !== undefined) {
           const currentContact = contactFor(session.role);
           if (!currentContact.is_admin) return error(409, 'ADMIN_REQUIRED');
           if (db.company.bank_change_request?.status === 'pending') return error(409, 'BANK_CHANGE_ALREADY_PENDING');
@@ -1036,7 +1036,8 @@ export const handlers = [
             id: noticeId,
             status: 'pending',
             requested_by_name: currentContact.name || currentContact.email || 'Admin',
-            new_bank_details: requested,
+            new_bank_details: `Расчётный счёт: ${requested.account.replace(/(.{4})(?=.)/g, '$1 ')}`,
+            new_bank_account: requested,
             created_at: new Date().toISOString(),
             decided_at: null,
             reject_reason: null,

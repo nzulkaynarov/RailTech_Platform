@@ -145,7 +145,8 @@ def _apply_company_defaults(seller_company, row) -> None:
         row.logo = seller_company.logo
     from accounts.services.bank_accounts import bank_details_text
 
-    # Основной счёт в сумах из списка счетов компании (решение владельца 2026-11-11); счёт документа — REQ-2b.
+    # Основной счёт в сумах из списка счетов компании (ADR-0028 п. 3, ADR-0029). Генератор документов (`rt_documents`)
+    # текст профиля не читает; здесь он остаётся только для предпросмотра несохранённого бланка в старом шаблоне.
     bank = bank_details_text(seller_company)
     if bank:
         row.bank_details = bank

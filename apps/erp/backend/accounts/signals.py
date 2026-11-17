@@ -67,7 +67,7 @@ def ensure_company_has_at_least_one_type(sender, instance: Company, action: str,
 
 
 # Поля карточки компании, которые печатаются в бланке EDS (решение владельца 2026-11-11: одни реквизиты).
-LETTERHEAD_FIELDS = frozenset({"name", "inn", "legal_address", "bank_account", "mfo", "logo"})
+LETTERHEAD_FIELDS = frozenset({"name", "inn", "legal_address", "logo"})  # банк — сигналы счетов ниже
 
 
 @receiver(post_save, sender=Company)

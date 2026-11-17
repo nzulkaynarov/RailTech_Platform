@@ -36,6 +36,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { findCountry } from '@/lib/countries';
 import { LOCALES } from '@/i18n/locales';
 import { companyChanges, validateInvite, type CompanyFormDraft, type InviteDraft, type InviteProblem } from '@/lib/company';
+import {
+  BANK_ERROR_FIELD,
+  bankChanged,
+  bankDraft,
+  defaultAccount,
+  grouped,
+  validateBank,
+  type BankErrors,
+} from '@/lib/bankAccount';
+import { BankAccountFields } from '@/components/BankAccountFields';
+import { isPortalApiError } from '@/api/portal';
 import { formatDateTime } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { CanAct } from '@/session/CanAct';
@@ -160,7 +171,21 @@ export function CompanyPage() {
                     label: t('pages.company.fields.bankDetails'),
                     value: (
                       <div className="flex flex-col gap-1">
-                        <span className="whitespace-pre-line">{company.data.bank_details || t('pages.company.notSet')}</span>
+                        {(company.data.bank_accounts ?? []).length ? (
+                          <ul className="flex flex-col gap-0.5">
+                            {(company.data.bank_accounts ?? []).map((account) => (
+                              <li key={account.id}>
+                                <span className="font-medium">{account.currency}</span>{' '}
+                                <span className="font-mono">{grouped(account.account)}</span>
+                                {account.bank_name ? ` · ${account.bank_name}` : ''}
+                                {account.mfo ? ` · ${account.mfo}` : ''}
+                                {account.swift ? ` · ${account.swift}` : ''}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <span>{t('pages.company.notSet')}</span>
+                        )}
                         <BankChangeNotice change={company.data.bank_change_request ?? null} />
                         {!isAdmin && (
                           <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -226,10 +251,11 @@ function CompanyForm({
     registration_number: company.registration_number ?? '',
     country_code: company.country?.code ?? 'UZ',
     legal_address: company.legal_address ?? '',
-    bank_details: company.bank_details ?? '',
+    bank: bankDraft(defaultAccount(company)),
     language: company.language,
   });
   const [nameMissing, setNameMissing] = useState(false);
+  const [bankErrors, setBankErrors] = useState<BankErrors>({});
   const bankChangePending = company.bank_change_request?.status === 'pending';
 
   const set = <K extends keyof CompanyFormDraft>(key: K, value: CompanyFormDraft[K]) =>
@@ -241,6 +267,11 @@ function CompanyForm({
       setNameMissing(true);
       return;
     }
+    if (draft.bank && bankChanged(bankDraft(defaultAccount(company)), draft.bank)) {
+      const problems = validateBank(draft.bank);
+      setBankErrors(problems);
+      if (Object.keys(problems).length) return;
+    }
     const changes = companyChanges(company, draft);
     if (Object.keys(changes).length === 0) {
       onDone();
@@ -248,8 +279,12 @@ function CompanyForm({
     }
     update.mutate(changes, {
       onSuccess: () => {
-        toast.success(t(changes.bank_details !== undefined ? 'pages.company.bankChange.submitted' : 'pages.company.saved'));
+        toast.success(t(changes.bank_account !== undefined ? 'pages.company.bankChange.submitted' : 'pages.company.saved'));
         onDone();
+      },
+      onError: (error) => {
+        const field = isPortalApiError(error) ? BANK_ERROR_FIELD[error.code] : undefined;
+        if (field) setBankErrors({ [field]: 'server' });
       },
     });
   };
@@ -264,10 +299,11 @@ function CompanyForm({
       registration_number: company.registration_number ?? '',
       country_code: company.country?.code ?? 'UZ',
       legal_address: company.legal_address ?? '',
-      bank_details: company.bank_details ?? '',
+      bank: bankDraft(defaultAccount(company)),
       language: company.language,
     });
     setNameMissing(false);
+    setBankErrors({});
   };
 
   return (
@@ -328,7 +364,7 @@ function CompanyForm({
           </div>
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between gap-2">
-              <Label htmlFor={`${id}-bank`}>{t('pages.company.fields.bankDetails')}</Label>
+              <span className="text-sm font-medium">{t('pages.company.fields.bankDetails')}</span>
               {!isAdmin && (
                 <ToneBadge tone="warning" className="text-xs py-0 px-1.5">
                   <Shield className="size-3 mr-1 inline" aria-hidden="true" />
@@ -336,14 +372,14 @@ function CompanyForm({
                 </ToneBadge>
               )}
             </div>
-            <Textarea
-              id={`${id}-bank`}
-              rows={3}
-              value={draft.bank_details}
-              maxLength={1000}
+            <BankAccountFields
+              value={draft.bank ?? bankDraft()}
+              errors={bankErrors}
               disabled={!isAdmin || bankChangePending}
-              onChange={(event) => set('bank_details', event.target.value)}
-              className={!isAdmin || bankChangePending ? 'bg-muted/50 cursor-not-allowed opacity-80' : undefined}
+              onChange={(bank) => {
+                set('bank', bank);
+                setBankErrors({});
+              }}
             />
             {bankChangePending ? (
               <p className="text-xs text-muted-foreground">

@@ -95,7 +95,7 @@ def test_company_profile_round_trip(admin, company):
     body = {
         "name": "ООО «Контракт»",
         "inn": "300000099",
-        "bank_account": "20208000",
+        "bank_account": "20208000900001234567",
         "mfo": "00014",
         "legal_address": "Ташкент",
         "phone": "+998900000000",

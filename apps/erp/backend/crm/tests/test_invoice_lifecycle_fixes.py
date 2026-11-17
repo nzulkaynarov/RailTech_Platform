@@ -20,6 +20,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
+from accounts.services.bank_accounts import set_uzs_account
 from accounts.testing import make_cashier
 from crm.models import (
     ActStatus,
@@ -63,9 +64,8 @@ def _company(name, inn, type_code):
         name=name,
         inn=inn,
         # O3: продавец с платёжными реквизитами — иначе `issue_invoice` не выпустит счёт (он неоплатен).
-        bank_account="20208000900001234567",
-        mfo="00443",
     )
+    set_uzs_account(company, "20208000900001234567", "00443")
     company.types.add(CompanyType.objects.get(code=type_code))
     return company
 

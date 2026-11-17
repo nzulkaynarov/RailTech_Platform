@@ -15,12 +15,15 @@ from parties.models import Company, CompanyType, Contact
 from portal.models import BankDetailsChangeRequest, BankDetailsChangeStatus, PortalNotice, PortalSecurityEvent
 from portal.services import bank_details_change as service
 
+from accounts.services.bank_accounts import set_uzs_account
+
 TAG = "race-fx4"
 
 
 def _world() -> dict:
     client_type, _ = CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Клиент"})
-    company = Company.objects.create(name=f"{TAG} company", inn="400500600", bank_details="р/с 20208000000000001111")
+    company = Company.objects.create(name=f"{TAG} company", inn="400500600")
+    set_uzs_account(company, "20208000000000001111", "00440")
     company.types.add(client_type)
     admin = Contact.objects.create(
         company=company, name=f"{TAG} admin", email=f"{TAG}@example.uz", is_admin=True, can_act=True
@@ -50,7 +53,10 @@ def _in_thread(fn):
     return worker, results
 
 
-def _submit(world, value="р/с 20208000000000002222"):
+NEW = {"bank_country": "UZ", "currency": "UZS", "account": "20208000000000002222", "mfo": "00440"}
+
+
+def _submit(world, value=NEW):
     return service.submit(world["company"], world["admin"], value, ip="203.0.113.7", user_agent="ua")
 
 
@@ -71,7 +77,7 @@ def test_two_approvals_apply_once(django_db_setup, django_db_blocker):
             assert first.status == BankDetailsChangeStatus.APPROVED
             assert results[0].status == BankDetailsChangeStatus.APPROVED
             world["company"].refresh_from_db()
-            assert world["company"].bank_details == "р/с 20208000000000002222"
+            assert world["company"].formatted_bank_details == "Расчётный счёт: 2020 8000 0000 0000 2222, МФО: 00440"
             assert (
                 PortalSecurityEvent.objects.filter(company=world["company"], event_type="bank_details_changed").count()
                 == 1
@@ -86,7 +92,7 @@ def test_two_submissions_give_one_pending_request(django_db_setup, django_db_blo
     with django_db_blocker.unblock():
         world = _world()
         try:
-            worker, results = _in_thread(lambda: _outcome(world, "р/с 20208000000000003333"))
+            worker, results = _in_thread(lambda: _outcome(world, {**NEW, "account": "20208000000000003333"}))
             with transaction.atomic():
                 _submit(world)
                 worker.start()

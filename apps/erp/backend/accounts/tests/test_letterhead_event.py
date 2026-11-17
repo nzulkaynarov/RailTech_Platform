@@ -16,6 +16,7 @@ from rt_bus.django.models import Outbox
 
 from accounts.models import Company, CompanyMember, CustomUser, WorkspaceRole
 from accounts.services import update_document_profile, upload_document_profile_logo
+from accounts.services.bank_accounts import set_uzs_account
 from accounts.services.letterhead_event import LETTERHEAD_UPDATED, LOGO_MAX_BYTES, letterhead_data
 from accounts.testing import grant_head, make_own_company
 
@@ -117,18 +118,17 @@ def test_logo_goes_as_bytes_and_large_one_is_downscaled(own, settings, tmp_path)
 def test_company_requisites_reach_eds_without_saving_the_letterhead(own):
     """Правка реквизитов в карточке компании сама обновляет бланк EDS — с ИНН, адресом и банком из карточки."""
     company, _head = own
+    set_uzs_account(company, "20208000900001234567", "00873")  # банк — основной счёт в сумах (ADR-0028 п. 3)
     before = len(_letterheads())
     company.inn = "305999888"
     company.legal_address = "Ташкент, ул. Демо, 1"
-    company.bank_account = "20208000900001234567"
-    company.mfo = "00873"
     company.save()
     envelopes = _letterheads()
     assert len(envelopes) == before + 1
     assert_matches_contract(envelopes[-1])
     head_data = envelopes[-1]["data"]["letterhead"]
     assert (head_data["inn"], head_data["legal_address"]) == ("305999888", "Ташкент, ул. Демо, 1")
-    assert head_data["bank_details"] == "р/с: 20208000900001234567, МФО: 00873"
+    assert head_data["bank_details"] == "Расчётный счёт: 2020 8000 9000 0123 4567, МФО: 00873"
 
 
 @pytest.mark.django_db

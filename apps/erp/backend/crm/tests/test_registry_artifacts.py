@@ -11,6 +11,7 @@ import pytest
 from django.utils import timezone
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
+from accounts.services.bank_accounts import set_uzs_account
 from accounts.testing import make_cashier
 from crm.models import (
     Contract,
@@ -56,17 +57,15 @@ def world(lookups):
         name="Buyer R",
         inn="B907",
         # O3: продавец с платёжными реквизитами — иначе `issue_invoice` не выпустит счёт (он неоплатен).
-        bank_account="20208000900001234567",
-        mfo="00443",
     )
+    set_uzs_account(buyer_co, "20208000900001234567", "00443")
     buyer_co.types.add(CompanyType.objects.get(code="CLIENT"))
     seller_co = Company.objects.create(
         name="Seller R",
         inn="S907",
         # O3: продавец с платёжными реквизитами — иначе `issue_invoice` не выпустит счёт (он неоплатен).
-        bank_account="20208000900001234567",
-        mfo="00443",
     )
+    set_uzs_account(seller_co, "20208000900001234567", "00443")
     seller_co.types.add(CompanyType.objects.get(code="SUPPLIER"))
     seller_user = CustomUser.objects.create_user(email="s@reg.test", username="s@reg.test", password="x")
     CompanyMember.objects.create(

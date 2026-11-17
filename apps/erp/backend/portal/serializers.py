@@ -63,8 +63,46 @@ class TeamMemberSerializer(serializers.ModelSerializer):
         return data
 
 
+class BankAccountInputSerializer(serializers.Serializer):
+    """Счёт по ISO 20022 (ADR-0029): формат номера и кодов проверяет `parties.banking` после этой формы."""
+
+    bank_country = serializers.CharField(max_length=2, help_text="Страна банка, ISO 3166-1 alpha-2")
+    currency = serializers.CharField(max_length=3, help_text="Валюта счёта, ISO 4217")
+    holder_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    holder_name_latin = serializers.CharField(max_length=140, required=False, allow_blank=True)
+    account = serializers.CharField(max_length=50, help_text="IBAN или номер счёта")
+    mfo = serializers.CharField(max_length=15, required=False, allow_blank=True, help_text="Код банка в стране (МФО)")
+    swift = serializers.CharField(max_length=11, required=False, allow_blank=True)
+    bank_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    bank_address = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    intermediary_swift = serializers.CharField(max_length=11, required=False, allow_blank=True)
+    intermediary_account = serializers.CharField(max_length=50, required=False, allow_blank=True)
+
+
+class BankAccountSerializer(serializers.Serializer):
+    """Действующий счёт компании для кабинета: номер полностью — это реквизиты самой компании."""
+
+    id = serializers.IntegerField()
+    bank_country = serializers.SerializerMethodField()
+    currency = serializers.CharField(source="currency.code")
+    holder_name = serializers.CharField()
+    holder_name_latin = serializers.CharField()
+    account = serializers.CharField()
+    mfo = serializers.CharField()
+    swift = serializers.CharField()
+    bank_name = serializers.CharField()
+    bank_address = serializers.CharField()
+    intermediary_swift = serializers.CharField()
+    intermediary_account = serializers.CharField()
+    is_default = serializers.BooleanField()
+
+    def get_bank_country(self, row) -> str:
+        return getattr(row.bank_country, "code", "") or ""
+
+
 class CompanySerializer(serializers.ModelSerializer):
     bank_details = serializers.CharField(source="formatted_bank_details", read_only=True)
+    bank_accounts = serializers.SerializerMethodField()
     country = serializers.SerializerMethodField()
     registration_number = serializers.CharField(read_only=True)
     relationship_status = serializers.SerializerMethodField()
@@ -80,10 +118,18 @@ class CompanySerializer(serializers.ModelSerializer):
             "country",
             "legal_address",
             "bank_details",
+            "bank_accounts",
             "language",
             "relationship_status",
             "relationships",
         ]
+
+    @extend_schema_field(BankAccountSerializer(many=True))
+    def get_bank_accounts(self, company):
+        if isinstance(company, dict):
+            return []
+        rows = company.bank_accounts.filter(is_active=True).select_related("currency", "bank_country")
+        return BankAccountSerializer(rows.order_by("-is_default", "order", "id"), many=True).data
 
     def get_country(self, company):
         if isinstance(company, dict):
@@ -171,7 +217,7 @@ class CompanyUpdateSerializer(serializers.Serializer):
     registration_number = serializers.CharField(max_length=50, required=False, allow_blank=True)
     country_code = serializers.CharField(max_length=2, required=False, allow_blank=True)
     legal_address = serializers.CharField(max_length=500, required=False, allow_blank=True)
-    bank_details = serializers.CharField(max_length=1000, required=False, allow_blank=True)
+    bank_account = BankAccountInputSerializer(required=False)
     language = serializers.ChoiceField(choices=["ru", "uz", "en"], required=False)
 
 

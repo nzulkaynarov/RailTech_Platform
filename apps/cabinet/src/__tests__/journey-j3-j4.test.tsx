@@ -124,8 +124,8 @@ describe('Wave J3, J4 & J2-bank Journey Tests', () => {
       await user.click(editBtn);
 
       // В форме редактирования реквизиты активны и видна подсказка о безопасности
-      const bankTextarea = screen.getByLabelText('Банковские реквизиты');
-      expect(bankTextarea).not.toBeDisabled();
+      const account = screen.getByLabelText('Расчётный счёт');
+      expect(account).not.toBeDisabled();
       expect(
         screen.getByText(/применятся только после проверки сотрудником/),
       ).toBeInTheDocument();

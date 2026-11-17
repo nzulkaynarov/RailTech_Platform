@@ -29,6 +29,8 @@ class BankDetailsChangeRequest(models.Model):
     )
     old_bank_details = models.TextField(blank=True, default="", verbose_name=_("Реквизиты на момент подачи"))
     new_bank_details = models.TextField(blank=True, default="", verbose_name=_("Запрошенные реквизиты"))
+    # Запрошенный счёт полями ADR-0029 (коды страны и валюты, номер, банк, посредник); текст выше — его строка для показа.
+    new_account = models.JSONField(default=dict, blank=True, verbose_name=_("Запрошенный счёт"))
     requested_by_contact = models.ForeignKey(
         "parties.Contact",
         on_delete=models.SET_NULL,

@@ -19,6 +19,7 @@ import pytest
 from django.utils import timezone
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
+from accounts.services.bank_accounts import set_uzs_account
 from accounts.testing import make_cashier
 from crm.constants import DEFAULT_INVOICE_DUE_DAYS
 from crm.models import (
@@ -62,9 +63,8 @@ def _company(name, inn, type_code):
         name=name,
         inn=inn,
         # O3: продавец с платёжными реквизитами — иначе `issue_invoice` не выпустит счёт (он неоплатен).
-        bank_account="20208000900001234567",
-        mfo="00443",
     )
+    set_uzs_account(company, "20208000900001234567", "00443")
     company.types.add(CompanyType.objects.get(code=type_code))
     return company
 

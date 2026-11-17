@@ -8,6 +8,8 @@ from portal.services import notices
 from portal.tests.conftest import PortalAPIClient, make_portal_session
 from portal.views_notifications import get_contact_notification_settings
 
+from accounts.services.bank_accounts import set_uzs_account
+
 pytestmark = pytest.mark.django_db
 
 PREFIX = "/api/portal/v1"
@@ -20,8 +22,8 @@ def test_setup():
         name="J3 Tech LLC",
         inn="123456789",
         legal_address="Tashkent, Chilanzar",
-        bank_details="Old Bank Account 202080001000",
     )
+    set_uzs_account(company, "20208000100000001000", "00440")
     company.types.add(client_type)
     admin_contact = Contact.objects.create(
         company=company,
@@ -139,7 +141,7 @@ def test_bank_details_change_requires_admin(test_setup):
     # Обычный сотрудник пытается изменить банковские реквизиты -> 409 ADMIN_REQUIRED
     resp = regular_client.put(
         f"{PREFIX}/company",
-        {"bank_details": "Hacked Account 9999999999"},
+        {"bank_account": {"bank_country": "UZ", "currency": "UZS", "account": "20208000999999999999", "mfo": "00440"}},
         format="json",
     )
     assert resp.status_code == 409
@@ -148,10 +150,10 @@ def test_bank_details_change_requires_admin(test_setup):
     # Админ подаёт смену -> 200, запрос на проверке, старые реквизиты действуют (FX-4); применение — test_bank_change.py
     resp = admin_client.put(
         f"{PREFIX}/company",
-        {"bank_details": "New Official Account 202080009999"},
+        {"bank_account": {"bank_country": "UZ", "currency": "UZS", "account": "20208000900000009999", "mfo": "00440"}},
         format="json",
     )
     assert resp.status_code == 200
     assert resp.json()["bank_change_request"]["status"] == "pending"
     company.refresh_from_db()
-    assert company.bank_details == "Old Bank Account 202080001000"
+    assert company.formatted_bank_details == "Расчётный счёт: 2020 8000 1000 0000 1000, МФО: 00440"

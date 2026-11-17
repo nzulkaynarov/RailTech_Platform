@@ -280,6 +280,13 @@ class CompanySerializer(serializers.ModelSerializer):
     contact_person = serializers.CharField(
         required=False, allow_blank=True, max_length=255, help_text="Главный контакт — имя из списка людей компании"
     )
+    # Основной счёт в сумах из списка счетов (ADR-0028 п. 3, ADR-0029); запись — тот же номер обновляется, иначе заводится.
+    bank_account = serializers.CharField(
+        required=False, allow_blank=True, max_length=50, help_text="Основной счёт в сумах — номер"
+    )
+    mfo = serializers.CharField(
+        required=False, allow_blank=True, max_length=10, help_text="Основной счёт в сумах — МФО"
+    )
 
     class Meta:
         model = Company
@@ -349,21 +356,44 @@ class CompanySerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         from parties.people import contact_name
 
+        from accounts.services.bank_accounts import default_account
+
         data = super().to_representation(instance)
         data["contact_person"] = contact_name(instance)
+        account = default_account(instance)
+        data["bank_account"] = account.account if account is not None else ""
+        data["mfo"] = account.mfo if account is not None else ""
         return data
 
     def create(self, validated_data):
         name = validated_data.pop("contact_person", None)
+        bank = (validated_data.pop("bank_account", None), validated_data.pop("mfo", None))
         company = super().create(validated_data)
         self._set_contact(company, name)
+        self._set_bank(company, *bank)
         return company
 
     def update(self, instance, validated_data):
         name = validated_data.pop("contact_person", None)
+        bank = (validated_data.pop("bank_account", None), validated_data.pop("mfo", None))
+        self._set_bank(instance, *bank)  # сначала счёт: его ошибка не оставляет полусохранённую карточку
         company = super().update(instance, validated_data)
         self._set_contact(company, name)
         return company
+
+    @staticmethod
+    def _set_bank(company, account, mfo) -> None:
+        from accounts.services.bank_accounts import default_account, set_uzs_account
+
+        if account is None and mfo is None:
+            return
+        current = default_account(company)
+        number = account if account is not None else (current.account if current is not None else "")
+        errors = set_uzs_account(company, number, mfo if mfo is not None else (current.mfo if current else ""))
+        if errors:
+            raise serializers.ValidationError(
+                {("bank_account" if k == "account" else k): [v] for k, v in errors.items()}
+            )
 
     def _set_contact(self, company, name) -> None:
         from parties.people import set_contact_name
@@ -701,16 +731,23 @@ class CompanyBankAccountSerializer(serializers.ModelSerializer):
     """Банковский счёт компании (решение владельца 2026-11-11): валюта — кодом справочника."""
 
     currency = serializers.SlugRelatedField(slug_field="code", read_only=True)
+    bank_country = serializers.SlugRelatedField(slug_field="code", read_only=True, allow_null=True)
 
     class Meta:
         model = CompanyBankAccount
         fields = [
             "id",
+            "bank_country",
+            "holder_name",
+            "holder_name_latin",
             "bank_name",
+            "bank_address",
             "mfo",
             "account",
             "currency",
             "swift",
+            "intermediary_swift",
+            "intermediary_account",
             "correspondent_bank",
             "is_default",
             "is_active",

@@ -74,6 +74,13 @@ ERROR_CODES = (
     "TECH_DOC_DATE_INVALID",
     "TECH_DOC_VALIDITY_RANGE_INVALID",
     "LETTER_FILE_UNAVAILABLE",
+    "BANK_COUNTRY_INVALID",
+    "BANK_CURRENCY_INVALID",
+    "BANK_ACCOUNT_INVALID",
+    "BANK_CODE_INVALID",
+    "BANK_SWIFT_INVALID",
+    "BANK_HOLDER_LATIN_INVALID",
+    "BANK_INTERMEDIARY_INVALID",
 )
 
 #: Код по HTTP-статусу для ошибок, у которых своего кода нет (чужие исключения DRF и Django).

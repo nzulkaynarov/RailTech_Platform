@@ -37,14 +37,19 @@ def test_first_account_of_a_currency_is_default_and_switching_default_keeps_one(
     company, _ = own
     first, errors = save_account(company, {"account": "20208000900001234567", "mfo": "00873", "currency": "UZS"})
     assert errors == {} and first.is_default
-    second, _ = save_account(company, {"account": "20208000900007654321", "currency": "UZS", "is_default": True})
+    second, _ = save_account(
+        company, {"account": "20208000900007654321", "mfo": "00873", "currency": "UZS", "is_default": True}
+    )
     first.refresh_from_db()
     assert second.is_default and not first.is_default
-    usd, _ = save_account(company, {"account": "20208840900001111111", "currency": "USD", "swift": "NBFAUZ2X"})
+    usd, _ = save_account(
+        company, {"account": "2020 8840 9000 0111 1111", "mfo": "00873", "currency": "USD", "swift": "nbfauz2x"}
+    )
     assert usd.is_default  # первый в долларах — основной для долларов
     assert default_account(company, "USD") == usd
     assert default_account(company, "EUR") == second  # нет счёта в валюте — основной в сумах
-    assert bank_details_text(company, "USD") == "р/с: 20208840900001111111, SWIFT: NBFAUZ2X"
+    assert usd.account == "20208840900001111111" and usd.swift == "NBFAUZ2X"  # хранится без пробелов, заглавными
+    assert bank_details_text(company, "USD") == "Расчётный счёт: 2020 8840 9000 0111 1111, МФО: 00873, SWIFT: NBFAUZ2X"
 
 
 @pytest.mark.django_db
@@ -52,9 +57,11 @@ def test_validation_errors_name_fields(own):
     company, _ = own
     _, errors = save_account(company, {"currency": "XXX"})
     assert errors == {"account": "required", "currency": "unknown"}
-    save_account(company, {"account": "1", "currency": "UZS"})
-    _, errors = save_account(company, {"account": "1", "currency": "UZS"})
+    save_account(company, {"account": "20208000900001234567", "mfo": "00873", "currency": "UZS"})
+    _, errors = save_account(company, {"account": "2020 8000 9000 0123 4567", "mfo": "00873", "currency": "UZS"})
     assert errors == {"account": "taken"}
+    _, errors = save_account(company, {"account": "1", "currency": "UZS"})
+    assert errors == {"account": "uz_format", "mfo": "required"}
 
 
 @pytest.mark.django_db
@@ -86,10 +93,13 @@ def test_default_account_reaches_documents_and_the_eds_letterhead(own):
     save_account(company, {"account": "20208000900001234567", "mfo": "00873", "currency": "UZS"})
     envelopes = list(Outbox.objects.filter(type=LETTERHEAD_UPDATED).order_by("created_at", "id"))
     assert len(envelopes) == before + 1
-    assert envelopes[-1].envelope["data"]["letterhead"]["bank_details"] == "р/с: 20208000900001234567, МФО: 00873"
+    assert envelopes[-1].envelope["data"]["letterhead"]["bank_details"] == (
+        "Расчётный счёт: 2020 8000 9000 0123 4567, МФО: 00873"
+    )
 
 
 @pytest.mark.django_db
-def test_company_without_accounts_list_keeps_card_fields(db):
+def test_card_text_fields_are_not_requisites(db):
+    """Реквизиты — только список счетов (ADR-0028 п. 3): текст карточки компании не печатается."""
     client_company = Company.objects.create(name="Клиент", bank_account="20208000000000000001", mfo="00440")
-    assert bank_details_text(client_company) == "р/с: 20208000000000000001, МФО: 00440"
+    assert bank_details_text(client_company) == ""

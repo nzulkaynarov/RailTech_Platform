@@ -153,7 +153,7 @@ def test_company_security_log_permissions_and_records(j7_setup):
     # 5. Проверяем событие смены банковских реквизитов
     bank_res = admin_client.put(
         f"{PREFIX}/company",
-        {"bank_details": "IBAN: UZ12345678901234567890\nBank: NBU"},
+        {"bank_account": {"bank_country": "UZ", "currency": "UZS", "account": "20208000123412341234", "mfo": "00440"}},
         format="json",
     )
     assert bank_res.status_code == 200
