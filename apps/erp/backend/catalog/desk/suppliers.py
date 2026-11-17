@@ -15,6 +15,7 @@ from django.conf import settings
 from django.db.models import Count, Min, Q
 from django.utils import timezone
 from parties.models import Company
+from parties.people import contact_name, set_contact_name
 
 from catalog.desk.access import can_view_supplier_prices
 from catalog.desk.audit import record, snapshot
@@ -100,7 +101,7 @@ def supplier_detail(company, user) -> dict:
     row = supplier_row(company)
     row.update(
         {
-            "contact_person": company.contact_person or "",
+            "contact_person": contact_name(company),
             "phone": company.phone or "",
             "email": company.email or "",
             "website": company.website or "",
@@ -116,7 +117,7 @@ def supplier_detail(company, user) -> dict:
 
 # --- поставщик: создание и правка (CAT-1) -------------------------------------------------------------------------
 
-SUPPLIER_TEXT_FIELDS = ("contact_person", "phone", "email", "website", "legal_address")
+SUPPLIER_TEXT_FIELDS = ("phone", "email", "website", "legal_address")
 
 
 def _country(country_id):
@@ -189,6 +190,8 @@ def save_supplier(company: Company, data: dict, user) -> Company:
     if created:
         company.is_registered = False  # заведена сотрудником, входа нет
     company.save()
+    if "contact_person" in data:
+        set_contact_name(company, data["contact_person"] or "", actor=user)
     wanted = {"SUPPLIER"} | ({"MANUFACTURER"} if data.get("is_manufacturer") else set())
     if created or "is_manufacturer" in data:
         for code in ("SUPPLIER", "MANUFACTURER"):

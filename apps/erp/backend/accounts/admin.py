@@ -239,8 +239,8 @@ class CompanyAdmin(ReadOnlyInspectionMixin, ImportExportModelAdmin, ModelAdmin):
             {
                 "classes": ["tab"],
                 "fields": (
-                    ("contact_person", "phone"),
-                    ("email", "website"),
+                    ("phone", "email"),
+                    "website",
                     "legal_address",
                     "logo",
                 ),

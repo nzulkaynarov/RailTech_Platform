@@ -174,6 +174,9 @@ def test_suppliers_list_summarises_offers_and_excludes_own_company(world):
 
 
 def test_supplier_card_shows_terms_to_all_and_prices_only_with_the_right(world):
+    from parties.people import set_contact_name
+
+    set_contact_name(world["supplier"], "Менеджер Север")
     path = f"catalog/suppliers/{world['supplier'].pk}/"
     for who in ("engineer", "manager", "accountant"):
         body = get(world, who, path).json()

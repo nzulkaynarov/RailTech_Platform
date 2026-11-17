@@ -35,7 +35,6 @@ class CompanyResource(resources.ModelResource):
             "country",
             "types",
             "legal_address",
-            "contact_person",
             "phone",
             "email",
             "website",

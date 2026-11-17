@@ -22836,8 +22836,7 @@ components:
           maxLength: 50
         contact_person:
           type: string
-          title: Контактное лицо
-          description: ФИО ответственного представителя компании
+          description: Главный контакт — имя из списка людей компании
           maxLength: 255
         country:
           type: integer
@@ -23330,8 +23329,7 @@ components:
           maxLength: 50
         contact_person:
           type: string
-          title: Контактное лицо
-          description: ФИО ответственного представителя компании
+          description: Главный контакт — имя из списка людей компании
           maxLength: 255
         country:
           type: integer
@@ -31257,8 +31255,7 @@ components:
           maxLength: 50
         contact_person:
           type: string
-          title: Контактное лицо
-          description: ФИО ответственного представителя компании
+          description: Главный контакт — имя из списка людей компании
           maxLength: 255
         country:
           type: integer

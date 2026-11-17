@@ -11,6 +11,7 @@ from django.db.models import Q
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from parties.models import Company, Contact
 from parties.models.relationships import RelationshipRole
+from parties.people import contact_names
 from portal.desk.serializers import DeskOrganizationPage, DeskPeoplePage, DeskPersonContacts
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
@@ -99,15 +100,20 @@ class PeopleDeskViewSet(DeskViewSet):
         )
 
 
-def organization_row(company: Company, client_ids: set) -> dict:
+def organization_row(company: Company, client_ids: set, names: dict) -> dict:
     return {
         "id": company.pk,
         "name": company.name,
         "inn": company.inn or None,
         "email": company.email or None,
-        "contact_person": company.contact_person or None,
+        "contact_person": names.get(company.pk) or None,
         "kind": "client" if company.pk in client_ids else "partner",
     }
+
+
+def _organization_rows(rows, client_ids: set) -> list:
+    names = contact_names(rows)
+    return [organization_row(r, client_ids, names) for r in rows]
 
 
 class OrganizationsDeskViewSet(DeskViewSet):
@@ -142,6 +148,4 @@ class OrganizationsDeskViewSet(DeskViewSet):
         q = (request.query_params.get("q") or "").strip()[:100]
         if q:
             queryset = queryset.filter(Q(name__icontains=q) | Q(inn__icontains=q))
-        return self.page_of(
-            queryset.order_by("name", "pk"), lambda rows: [organization_row(r, client_ids) for r in rows]
-        )
+        return self.page_of(queryset.order_by("name", "pk"), lambda rows: _organization_rows(rows, client_ids))

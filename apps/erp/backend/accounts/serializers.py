@@ -276,6 +276,10 @@ class CompanySerializer(serializers.ModelSerializer):
     # гарантированно упрётся в отказ, — тупик. `delete_blocker` несёт причину с держателями.
     delete_blocker = serializers.SerializerMethodField()
     can_delete = serializers.SerializerMethodField()
+    # Главный контакт из списка людей (ADR-0028 п. 2): запись «X» делает X главным, нет такого — заводит.
+    contact_person = serializers.CharField(
+        required=False, allow_blank=True, max_length=255, help_text="Главный контакт — имя из списка людей компании"
+    )
 
     class Meta:
         model = Company
@@ -341,6 +345,32 @@ class CompanySerializer(serializers.ModelSerializer):
     def get_company_types(self, obj) -> list:
         # Use Python list comprehension to leverage prefetched types cache
         return [t.code for t in obj.types.all()]
+
+    def to_representation(self, instance):
+        from parties.people import contact_name
+
+        data = super().to_representation(instance)
+        data["contact_person"] = contact_name(instance)
+        return data
+
+    def create(self, validated_data):
+        name = validated_data.pop("contact_person", None)
+        company = super().create(validated_data)
+        self._set_contact(company, name)
+        return company
+
+    def update(self, instance, validated_data):
+        name = validated_data.pop("contact_person", None)
+        company = super().update(instance, validated_data)
+        self._set_contact(company, name)
+        return company
+
+    def _set_contact(self, company, name) -> None:
+        from parties.people import set_contact_name
+
+        if name:
+            request = self.context.get("request")
+            set_contact_name(company, name, actor=getattr(request, "user", None))
 
 
 class PrimaryCompanyLightSerializer(serializers.ModelSerializer):

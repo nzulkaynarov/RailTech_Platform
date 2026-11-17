@@ -6,6 +6,7 @@
 
 import pytest
 from parties.models import Company, CompanyRelationship, Contact
+from parties.people import set_contact_name
 
 from catalog.tests.desk_world import build_world
 
@@ -101,8 +102,8 @@ ORGS = "/api/v1/parties/organizations/"
 def test_organizations_in_the_same_bounds_with_letter_details(world):
     client = world["clients"]["supply"]
     world["client_company"].email = "office@yug.example.uz"
-    world["client_company"].contact_person = "Анвар Клиентов"
-    world["client_company"].save(update_fields=["email", "contact_person"])
+    world["client_company"].save(update_fields=["email"])
+    set_contact_name(world["client_company"], "Анвар Клиентов")
     response = client.get(ORGS)
     assert response.status_code == 200, response.content
     rows = {row["name"]: row for row in response.json()["results"]}
