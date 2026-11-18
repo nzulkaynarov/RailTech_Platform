@@ -358,7 +358,17 @@ function Partial({ card }: { card: ClientCard }) {
   );
 }
 
-function Body({ card, sheet, onClose }: { card: ClientCard; sheet: boolean; onClose: () => void }) {
+function Body({
+  card,
+  sheet,
+  onClose,
+  embedded,
+}: {
+  card: ClientCard;
+  sheet: boolean;
+  onClose: () => void;
+  embedded: boolean;
+}) {
   const { t } = useTranslation(["clients", "dictionary"]);
   const fmt = useFormat();
   const { me } = useAuth();
@@ -366,12 +376,15 @@ function Body({ card, sheet, onClose }: { card: ClientCard; sheet: boolean; onCl
   const handoff = card.handoff.status;
   return (
     <div className="pf-fp-stack">
-      <div className="pf-fp-stack" style={{ gap: 4 }}>
-        <h3 className="pf-fp-title">{card.name}</h3>
-        <span className="pf-hint">
-          {card.inn ? `${t("clients:card.inn")} ${card.inn}` : t("clients:card.noInn")}
-        </span>
-      </div>
+      {/* Вкладкой карточки контрагента — без своей шапки: название и ИНН уже над вкладками */}
+      {embedded ? null : (
+        <div className="pf-fp-stack" style={{ gap: 4 }}>
+          <h3 className="pf-fp-title">{card.name}</h3>
+          <span className="pf-hint">
+            {card.inn ? `${t("clients:card.inn")} ${card.inn}` : t("clients:card.noInn")}
+          </span>
+        </div>
+      )}
       <Partial card={card} />
       <PartnerRequests card={card} canWrite={canWrite} />
       <DefinitionList
@@ -498,7 +511,15 @@ function Body({ card, sheet, onClose }: { card: ClientCard; sheet: boolean; onCl
  * 7 шагов и тем, что видит клиент, документы, приглашение в кабинет. Ошибка передачи заявки в бэк-офис — словами и
  * «Повторить отправку в ERP» (B-082). Удалённый контакт CRM не отдаёт вовсе — в карточке только живые (B-030).
  */
-export function ClientPanel({ id, onClose }: { id: number; onClose: () => void }) {
+export function ClientPanel({
+  id,
+  onClose,
+  embedded = false,
+}: {
+  id: number;
+  onClose: () => void;
+  embedded?: boolean;
+}) {
   const { t } = useTranslation("clients");
   const { mobile } = useViewport();
   const query = useGetCrmClient(id);
@@ -525,5 +546,5 @@ export function ClientPanel({ id, onClose }: { id: number; onClose: () => void }
       />
     );
   }
-  return <Body card={query.data} sheet={mobile} onClose={onClose} />;
+  return <Body card={query.data} sheet={mobile} onClose={onClose} embedded={embedded} />;
 }

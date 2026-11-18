@@ -1,0 +1,30 @@
+/* Карточка контрагента (ADR-0028, СУЩ-2.5): шапка, роли-отметки, списки людей и счетов. */
+.pf-cp {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pf-cp-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pf-cp-roles,
+.pf-cp-tags,
+.pf-cp-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.pf-cp-roles,
+.pf-cp-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.pf-cp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}

@@ -12,13 +12,22 @@ from drf_spectacular.utils import OpenApiParameter, extend_schema
 from parties.models import Company, Contact
 from parties.models.relationships import RelationshipRole
 from parties.people import contact_names
-from portal.desk.serializers import DeskOrganizationPage, DeskPeoplePage, DeskPersonContacts
+from portal.desk import service_counterparty as counterparty
+from portal.desk.serializers import (
+    DeskCounterparty,
+    DeskCounterpartyRoleIn,
+    DeskOrganizationPage,
+    DeskPeoplePage,
+    DeskPersonContacts,
+)
+from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
 
 from accounts.services.clients import seller_clients
 from catalog.desk import suppliers
-from catalog.desk.views_base import NOT_FOUND, DeskViewSet
+from catalog.desk.items import ItemError
+from catalog.desk.views_base import FORBIDDEN, NOT_FOUND, REFUSED, DeskViewSet, refuse
 
 KINDS = ("client", "partner")
 
@@ -149,3 +158,72 @@ class OrganizationsDeskViewSet(DeskViewSet):
         if q:
             queryset = queryset.filter(Q(name__icontains=q) | Q(inn__icontains=q))
         return self.page_of(queryset.order_by("name", "pk"), lambda rows: _organization_rows(rows, client_ids))
+
+    # --- карточка контрагента: одна компания во всех ролях (ADR-0028, СУЩ-2.5) ---------------------
+
+    lookup_value_regex = r"\d+"
+    required_permissions = {"roles": "supply.manage"}
+
+    def _company(self, request, pk) -> tuple[Company, set]:
+        client_ids, partner_ids = counterparty_ids(request.user)
+        company = Company.objects.filter(pk=pk, pk__in=client_ids | partner_ids).first()
+        if company is None:
+            raise NotFound()
+        return company, client_ids
+
+    @extend_schema(
+        operation_id="parties_organizations_retrieve",
+        summary="Counterparty card",
+        description=(
+            "Одна компания во всех ролях: роли-отметки, люди (без телефонов и почты), действующие банковские счета "
+            "(номер полностью — держателю `finance.view` или `finance.payment`), бренды, которые она выпускает, и "
+            "клиент CRM, если компания с ним связана. Те же границы, что у списка."
+        ),
+        responses={200: DeskCounterparty, 404: NOT_FOUND},
+        tags=["Parties"],
+    )
+    def retrieve(self, request, pk=None):
+        company, client_ids = self._company(request, pk)
+        return Response(counterparty.card(company, client_ids, request.user))
+
+    @extend_schema(
+        operation_id="parties_organizations_by_crm_client",
+        summary="Counterparty card by the CRM client id",
+        description="Карточка компании, связанной с клиентом CRM; клиент ещё не передан в ERP — 404.",
+        responses={200: DeskCounterparty, 404: NOT_FOUND},
+        tags=["Parties"],
+    )
+    def by_crm_client(self, request, crm_client_id=None):
+        # Свой адрес `parties/crm-clients/{id}/organization/` (core/urls.py): под `organizations/` он был бы
+        # неотличим от `organizations/{id}/roles/`.
+        from integration.models import CrmClientMapping
+
+        company_id = (
+            CrmClientMapping.objects.filter(crm_client_id=crm_client_id).values_list("company_id", flat=True).first()
+        )
+        company, client_ids = self._company(request, company_id)
+        return Response(counterparty.card(company, client_ids, request.user))
+
+    @extend_schema(
+        operation_id="parties_organizations_roles",
+        summary="Mark or unmark a counterparty role",
+        description=(
+            "Роль «поставщик» или «изготовитель» — отметкой, новая карточка не нужна (право `supply.manage`). Снять "
+            "роль с предложениями или брендами нельзя — 409 `ROLE_IN_USE`; «клиент» и «партнёр с кабинетом» "
+            "отметкой не меняются — 400 `ROLE_NOT_EDITABLE`."
+        ),
+        request=DeskCounterpartyRoleIn,
+        responses={200: DeskCounterparty, 400: REFUSED, 403: FORBIDDEN, 404: NOT_FOUND, 409: REFUSED},
+        tags=["Parties"],
+    )
+    @action(detail=True, methods=["post"])
+    def roles(self, request, pk=None):
+        company, client_ids = self._company(request, pk)
+        body = DeskCounterpartyRoleIn(data=request.data)
+        body.is_valid(raise_exception=True)
+        try:
+            counterparty.set_role(company, body.validated_data["role"], body.validated_data["on"], actor=request.user)
+        except ItemError as error:
+            return refuse(error)
+        # снятая роль может вывести компанию из списка контрагентов — карточка отдаётся по прежним границам
+        return Response(counterparty.card(company, client_ids, request.user))

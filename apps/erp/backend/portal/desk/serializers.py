@@ -324,6 +324,56 @@ class DeskOrganizationPage(serializers.Serializer):
     results = DeskOrganization(many=True)
 
 
+class DeskCounterpartyRoles(serializers.Serializer):
+    client = serializers.BooleanField(help_text="Клиент — книга продавца (заводит CRM)")
+    supplier = serializers.BooleanField(help_text="Поставщик — отметка или действующие предложения")
+    manufacturer = serializers.BooleanField(help_text="Изготовитель — отметка; у брендов ссылка на компанию")
+    partner = serializers.BooleanField(help_text="Партнёр с кабинетом — отношение `partner` приглашено или активно")
+
+
+class DeskCounterpartyPerson(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    position = serializers.CharField(allow_null=True)
+    is_primary = serializers.BooleanField(help_text="Главный контакт — отдельного поля «контактное лицо» нет")
+    has_cabinet = serializers.BooleanField(help_text="Входит в кабинет")
+    has_phone = serializers.BooleanField()
+    has_email = serializers.BooleanField()
+
+
+class DeskCounterpartyAccount(serializers.Serializer):
+    id = serializers.IntegerField()
+    currency = serializers.CharField(allow_null=True)
+    bank_name = serializers.CharField(allow_blank=True)
+    bank_country = serializers.CharField(allow_null=True, help_text="Код страны банка ISO 3166-1")
+    account = serializers.CharField(help_text="Номер группами по 4 знака или последние 4 знака (`accounts_masked`)")
+    mfo = serializers.CharField(allow_blank=True)
+    swift = serializers.CharField(allow_blank=True)
+    is_default = serializers.BooleanField(help_text="Основной в своей валюте")
+
+
+class DeskCounterparty(serializers.Serializer):
+    """Карточка контрагента — одна компания во всех ролях (ADR-0028, СУЩ-2.5)."""
+
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    inn = serializers.CharField(allow_null=True)
+    registration_number = serializers.CharField(allow_null=True)
+    country = serializers.CharField(allow_null=True)
+    legal_address = serializers.CharField(allow_null=True)
+    crm_client_id = serializers.IntegerField(allow_null=True, help_text="Клиент CRM, с которым связана компания")
+    roles = DeskCounterpartyRoles()
+    people = DeskCounterpartyPerson(many=True)
+    bank_accounts = DeskCounterpartyAccount(many=True)
+    accounts_masked = serializers.BooleanField(help_text="Номера счетов скрыты: нет `finance.view`")
+    brands = DeskRef(many=True, help_text="Бренды, которые выпускает компания (справочник «Бренды»)")
+
+
+class DeskCounterpartyRoleIn(serializers.Serializer):
+    role = serializers.ChoiceField(choices=["supplier", "manufacturer"])
+    on = serializers.BooleanField()
+
+
 class DeskPersonContacts(serializers.Serializer):
     """Телефон и почта одного человека контрагента (FR-11): Платформа открывает по нажатию и пишет показ в журнал."""
 

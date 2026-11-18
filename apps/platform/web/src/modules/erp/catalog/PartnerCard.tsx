@@ -38,7 +38,7 @@ import { unitOf } from "../../../shared/lib/unit";
  * Карточка партнёра: реквизиты, доступ в кабинет, цены и сроки. Живёт в «Контакты · Контрагенты» (`?partner=<id>`), в том же
  * боковом окне, что и карточка клиента; цены показываются только с правом на цены поставщиков.
  */
-export function PartnerCard({ id }: { id: string }) {
+export function PartnerCard({ id, embedded = false }: { id: string; embedded?: boolean }) {
   const { t } = useTranslation("catalog");
   const { date } = useFormat();
   const { me } = useAuth();
@@ -65,7 +65,8 @@ export function PartnerCard({ id }: { id: string }) {
           />
         ) : (
           <div className="pf-cat">
-            <h3 className="pf-fp-title">{card.name}</h3>
+            {/* Вкладкой карточки контрагента — без своей шапки: название уже над вкладками */}
+            {embedded ? null : <h3 className="pf-fp-title">{card.name}</h3>}
             <DefinitionList
               items={[
                 { label: t("suppliers.fields.tin"), value: card.tin },

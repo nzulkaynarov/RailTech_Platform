@@ -13,6 +13,7 @@ FORBIDDEN_CODES = frozenset({"SUPPLIER_PRICES_REQUIRED", "CREW_RATES_REQUIRED", 
 CONFLICT_CODES = frozenset(
     {
         "HS_CODE_EXISTS",
+        "ROLE_IN_USE",
         "SUPPLIER_EXISTS",
         "OFFER_EXISTS",
         "PROPOSAL_DECIDED",

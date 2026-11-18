@@ -373,6 +373,11 @@ urlpatterns = (
         path("api/v1/stock/shipments/", StockShipmentListView.as_view(), name="stock-shipments"),
         path("api/v1/stock/trace/", StockTraceView.as_view(), name="stock-trace"),
         path("api/v1/stock/suppliers/", StockSupplierListView.as_view(), name="stock-suppliers"),
+        path(
+            "api/v1/parties/crm-clients/<int:crm_client_id>/organization/",
+            OrganizationsDeskViewSet.as_view({"get": "by_crm_client"}),
+            name="desk-organization-by-crm-client",
+        ),
         path("api/v1/stock/orders/", OrderListView.as_view(), name="stock-orders"),
         path("api/v1/stock/orders/from-deal/", OrderFromDealView.as_view(), name="stock-order-from-deal"),
         path("api/v1/stock/orders/<int:order_id>/", OrderView.as_view(), name="stock-order"),

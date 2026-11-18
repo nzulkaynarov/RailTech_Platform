@@ -46,7 +46,6 @@
       "decline": "No — create a new client",
       "readOnly": "A colleague who can manage clients decides."
     },
-    "label": "Client card",
     "close": "Close",
     "inn": "TIN",
     "noInn": "TIN not provided",
@@ -104,9 +103,7 @@
       "contacts": "contacts",
       "requests": "requests",
       "documents": "documents"
-    },
-    "partnerLabel": "Partner card",
-    "openPartner": "Open the partner card"
+    }
   },
   "clientSees": {
     "in_work": "Accepted, we are calculating",
@@ -142,5 +139,41 @@
     "applications": "Join requests",
     "bank_changes": "Bank details change"
   },
-  "addPartner": "Add partner"
+  "addPartner": "Add partner",
+  "counterparty": {
+    "label": "Counterparty card",
+    "tabs": {
+      "overview": "Overview",
+      "client": "Requests and projects",
+      "supplier": "Supplier products"
+    },
+    "roles": {
+      "label": "Roles",
+      "client": "Client",
+      "supplier": "Supplier",
+      "manufacturer": "Manufacturer",
+      "partner": "Partner with a cabinet",
+      "inUse": "The role is in use: the company has offers or brands.",
+      "failed": "Could not change the role. Try again."
+    },
+    "people": {
+      "title": "People",
+      "primary": "primary contact",
+      "cabinet": "cabinet",
+      "empty": "No people yet.",
+      "contacts": "Phones and email are in People"
+    },
+    "accounts": {
+      "title": "Bank accounts",
+      "default": "default · {{currency}}",
+      "mfo": "Bank code",
+      "noBank": "Bank not specified",
+      "empty": "No accounts yet.",
+      "masked": "Account numbers are visible to accounting."
+    },
+    "brands": {
+      "title": "As a manufacturer",
+      "empty": "No brands yet: add them in Catalog · Directories · Brands."
+    }
+  }
 }
