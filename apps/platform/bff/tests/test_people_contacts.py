@@ -259,7 +259,8 @@ async def test_counterparty_card_by_company_and_by_client(
 async def test_counterparty_roles_are_marks(web: Web, be: Any, check: ContractChecker) -> None:
     await web.login(["SUPPLY"])
     router: respx.MockRouter = be.router
-    marked = {**CARD, "roles": {**CARD["roles"], "manufacturer": True}}
+    roles = {"client": True, "supplier": True, "manufacturer": True, "partner": False}
+    marked = {**CARD, "roles": roles}
     route = router.post(f"{API}/parties/organizations/9/roles/").mock(
         side_effect=lambda request: (
             httpx.Response(200, json=marked)
