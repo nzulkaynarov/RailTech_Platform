@@ -156,7 +156,7 @@ def _catalog_specs() -> tuple["Spec", ...]:
         Spec(
             "manufacturers",
             Manufacturer,
-            ("Производители", "Ishlab chiqaruvchilar", "Manufacturers"),
+            ("Бренды", "Brendlar", "Brands"),
             attrs=(
                 Attr(
                     "country",

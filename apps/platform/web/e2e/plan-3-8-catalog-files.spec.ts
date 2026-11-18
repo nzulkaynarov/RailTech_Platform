@@ -20,10 +20,10 @@ test("категории и производители файлом", async ({ p
   if (dir) await page.screenshot({ path: `${dir}/categories-file-1440.png` });
   await expectNoViolations(page, "категории: файл");
 
-  await page.getByRole("link", { name: "Производители" }).click();
+  await page.getByRole("link", { name: "Бренды" }).click();
   await expect(page.getByRole("cell", { name: "Демо-Завод", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Скачать" })).toBeVisible();
   await waitForMotionEnd(page);
   if (dir) await page.screenshot({ path: `${dir}/manufacturers-1440.png` });
-  await expectNoViolations(page, "производители");
+  await expectNoViolations(page, "бренды");
 });

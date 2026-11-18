@@ -266,8 +266,11 @@ class DeskItemDetail(DeskItemRow):
     hs_code = serializers.CharField()
     mxik = DeskMxik(allow_null=True, help_text="МХИК (ИКПУ); нет кода — null")
     manufacturer_part_number = serializers.CharField()
-    brand = serializers.CharField(allow_null=True)
-    brand_id = serializers.IntegerField(allow_null=True, help_text="Изготовитель (бренд) — id справочника.")
+    brand = serializers.CharField(allow_null=True, help_text="Бренд (справочник «Бренды»).")
+    brand_id = serializers.IntegerField(allow_null=True, help_text="Бренд — id справочника.")
+    brand_company = DeskRef(
+        allow_null=True, help_text="Изготовитель — компания бренда (ADR-0028 п. 4); у бренда без завода — null."
+    )
     source_supplier = DeskRef(allow_null=True, help_text="Карточка заведена по прайсу этого поставщика.")
     offers = DeskOffer(many=True)
     prices_visible = serializers.BooleanField(help_text="Видит ли сотрудник цены поставщиков (иначе price = null).")
@@ -291,7 +294,7 @@ class DeskItemIn(serializers.Serializer):
     vat_rate = serializers.CharField(
         required=False, allow_null=True, allow_blank=True, help_text="Процент 0..100; пусто — по умолчанию компании."
     )
-    brand_id = serializers.IntegerField(required=False, allow_null=True, help_text="Изготовитель (бренд).")
+    brand_id = serializers.IntegerField(required=False, allow_null=True, help_text="Бренд (справочник «Бренды»).")
     manufacturer_part_number = serializers.CharField(required=False, allow_blank=True, max_length=120)
     hs_code = serializers.CharField(required=False, allow_blank=True, max_length=20, help_text="2–10 цифр.")
     mxik_code = serializers.CharField(

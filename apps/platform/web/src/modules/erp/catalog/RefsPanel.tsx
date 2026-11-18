@@ -1,6 +1,7 @@
 import { Button, Input, Segmented, Select } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "../../../app/auth/useAuth";
@@ -19,6 +20,7 @@ import {
   useListCatalogExchangeRates,
   useListDictionaryItems,
   useListHsCodes,
+  useListCatalogSuppliers,
   useListManufacturers,
   useUpdateHsCode,
   useUpdateManufacturer,
@@ -493,6 +495,12 @@ function BrandsView() {
     page,
     page_size: PAGE_SIZE,
   });
+  // ADR-0028 п. 4: бренд — марка; изготовитель — компания с ролью «Изготовитель», на неё ссылка
+  const roleNames = (codes: readonly string[]) =>
+    codes
+      .map((code) => t(`refs.brands.roles.${code}`, { defaultValue: "" }))
+      .filter(Boolean)
+      .join(", ");
   const columns: Column<Manufacturer>[] = [
     {
       key: "name",
@@ -514,20 +522,46 @@ function BrandsView() {
         ),
     },
     {
+      key: "company",
+      title: t("refs.brands.columns.company"),
+      render: (row) =>
+        row.company_id && row.company_name ? (
+          <span>
+            <Link to={`/crm/clients?partner=${row.company_id}&panel=open&tab=card`}>
+              {row.company_name}
+            </Link>
+            {row.company_roles.length ? (
+              <span className="pf-hint"> · {roleNames(row.company_roles)}</span>
+            ) : null}
+          </span>
+        ) : (
+          <span className="pf-hint">{t("refs.brands.noCompany")}</span>
+        ),
+    },
+    {
       key: "country",
       title: t("refs.brands.columns.country"),
       render: (row) => row.country_name ?? "—",
     },
-    { key: "site", title: t("refs.brands.columns.website"), render: (row) => row.website || "—" },
     {
-      key: "state",
-      title: t("refs.brands.columns.state"),
-      render: (row) => (
-        <StatusTag kind="activity" status={row.is_active ? "active" : "inactive"}>
-          {row.is_active ? t("refs.brands.active") : t("refs.brands.inactive")}
-        </StatusTag>
-      ),
+      key: "products",
+      title: t("refs.brands.columns.products"),
+      num: true,
+      render: (row) => (row.products_count ?? "—").toString(),
     },
+    ...(inactive
+      ? [
+          {
+            key: "state",
+            title: t("refs.brands.columns.state"),
+            render: (row: Manufacturer) => (
+              <StatusTag kind="activity" status={row.is_active ? "active" : "inactive"}>
+                {row.is_active ? t("refs.brands.active") : t("refs.brands.inactive")}
+              </StatusTag>
+            ),
+          },
+        ]
+      : []),
   ];
   return (
     <>
@@ -614,7 +648,30 @@ function BrandForm({ brand, onClose }: { brand?: Manufacturer | undefined; onClo
   const [country, setCountry] = useState<string | null>(brand?.country_id ?? null);
   const [site, setSite] = useState(brand?.website ?? "");
   const [active, setActive] = useState(brand?.is_active ?? true);
-  const ids = { name: useId(), country: useId(), site: useId(), active: useId() };
+  const [company, setCompany] = useState<string | null>(brand?.company_id ?? null);
+  const [companyQuery, setCompanyQuery] = useState("");
+  const companyQ = useDebounced(companyQuery.trim());
+  // Изготовитель — компания из контрагентов-поставщиков и изготовителей (ADR-0028 п. 4)
+  const companies = useListCatalogSuppliers({
+    ...(companyQ ? { q: companyQ } : {}),
+    page: 1,
+    page_size: 50,
+  });
+  const companyOptions = [
+    ...(brand?.company_id && brand.company_name
+      ? [{ value: brand.company_id, label: brand.company_name }]
+      : []),
+    ...(companies.data?.items ?? [])
+      .filter((item) => item.id !== brand?.company_id)
+      .map((item) => ({ value: item.id, label: item.name })),
+  ];
+  const ids = {
+    name: useId(),
+    country: useId(),
+    site: useId(),
+    active: useId(),
+    company: useId(),
+  };
   const done = () => {
     void queryClient.invalidateQueries({ queryKey: getListManufacturersQueryKey() });
     onClose();
@@ -635,6 +692,7 @@ function BrandForm({ brand, onClose }: { brand?: Manufacturer | undefined; onClo
           country_id: country,
           website: site.trim(),
           is_active: active,
+          company_id: company,
         };
         if (brand) update.mutate({ id: brand.id, data });
         else create.mutate({ data });
@@ -649,6 +707,25 @@ function BrandForm({ brand, onClose }: { brand?: Manufacturer | undefined; onClo
           onChange={(e) => {
             setName(e.target.value);
           }}
+        />
+      </FormField>
+      <FormField
+        id={ids.company}
+        label={t("refs.brands.form.company")}
+        hint={t("refs.brands.form.companyHint")}
+      >
+        <Select
+          id={ids.company}
+          allowClear
+          showSearch
+          filterOption={false}
+          onSearch={setCompanyQuery}
+          loading={companies.isFetching}
+          value={company}
+          onChange={(v: string | null | undefined) => {
+            setCompany(v ?? null);
+          }}
+          options={companyOptions}
         />
       </FormField>
       <FormField id={ids.country} label={t("refs.brands.form.country")}>

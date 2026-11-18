@@ -644,6 +644,9 @@ function seedManufacturers(): Manufacturer[] {
       website: "",
       is_active: true,
       company_id: null,
+      company_name: null,
+      company_roles: [],
+      products_count: null,
     },
     {
       id: "2",
@@ -652,7 +655,11 @@ function seedManufacturers(): Manufacturer[] {
       country_name: "Россия",
       website: "https://rail-steel.example",
       is_active: true,
-      company_id: null,
+      // ADR-0028 п. 4: завод, с которым работаем — компания с ролью «Изготовитель»
+      company_id: "2",
+      company_name: null,
+      company_roles: [],
+      products_count: null,
     },
     {
       id: "3",
@@ -662,6 +669,9 @@ function seedManufacturers(): Manufacturer[] {
       website: "",
       is_active: false,
       company_id: null,
+      company_name: null,
+      company_roles: [],
+      products_count: null,
     },
   ];
 }

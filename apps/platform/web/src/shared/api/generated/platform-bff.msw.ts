@@ -29275,6 +29275,10 @@ export const getCreateCatalogItemResponseMock = (
   manufacturer_part_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   brand: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   brand_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  brand_company: faker.helpers.arrayElement([
+    { ...getCreateCatalogItemResponseCatalogNamedRefMock() },
+    null,
+  ]),
   source_supplier: faker.helpers.arrayElement([
     { ...getCreateCatalogItemResponseCatalogNamedRefMock() },
     null,
@@ -29499,6 +29503,10 @@ export const getGetCatalogItemResponseMock = (
   manufacturer_part_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   brand: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   brand_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  brand_company: faker.helpers.arrayElement([
+    { ...getGetCatalogItemResponseCatalogNamedRefMock() },
+    null,
+  ]),
   source_supplier: faker.helpers.arrayElement([
     { ...getGetCatalogItemResponseCatalogNamedRefMock() },
     null,
@@ -29714,6 +29722,10 @@ export const getUpdateCatalogItemResponseMock = (
   manufacturer_part_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   brand: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   brand_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  brand_company: faker.helpers.arrayElement([
+    { ...getUpdateCatalogItemResponseCatalogNamedRefMock() },
+    null,
+  ]),
   source_supplier: faker.helpers.arrayElement([
     { ...getUpdateCatalogItemResponseCatalogNamedRefMock() },
     null,
@@ -29961,6 +29973,10 @@ export const getPublishCatalogItemResponseMock = (
   manufacturer_part_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   brand: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   brand_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  brand_company: faker.helpers.arrayElement([
+    { ...getPublishCatalogItemResponseCatalogNamedRefMock() },
+    null,
+  ]),
   source_supplier: faker.helpers.arrayElement([
     { ...getPublishCatalogItemResponseCatalogNamedRefMock() },
     null,
@@ -30185,6 +30201,10 @@ export const getMergeCatalogItemResponseMock = (
   manufacturer_part_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   brand: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   brand_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  brand_company: faker.helpers.arrayElement([
+    { ...getMergeCatalogItemResponseCatalogNamedRefMock() },
+    null,
+  ]),
   source_supplier: faker.helpers.arrayElement([
     { ...getMergeCatalogItemResponseCatalogNamedRefMock() },
     null,
@@ -30406,6 +30426,10 @@ export const getUnpublishCatalogItemResponseMock = (
   manufacturer_part_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   brand: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   brand_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  brand_company: faker.helpers.arrayElement([
+    { ...getUnpublishCatalogItemResponseCatalogNamedRefMock() },
+    null,
+  ]),
   source_supplier: faker.helpers.arrayElement([
     { ...getUnpublishCatalogItemResponseCatalogNamedRefMock() },
     null,
@@ -30630,6 +30654,10 @@ export const getReturnCatalogItemResponseMock = (
   manufacturer_part_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   brand: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   brand_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  brand_company: faker.helpers.arrayElement([
+    { ...getReturnCatalogItemResponseCatalogNamedRefMock() },
+    null,
+  ]),
   source_supplier: faker.helpers.arrayElement([
     { ...getReturnCatalogItemResponseCatalogNamedRefMock() },
     null,
@@ -30860,6 +30888,10 @@ export const getAcceptCatalogProposalResponseMock = (
   manufacturer_part_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   brand: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   brand_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  brand_company: faker.helpers.arrayElement([
+    { ...getAcceptCatalogProposalResponseCatalogNamedRefMock() },
+    null,
+  ]),
   source_supplier: faker.helpers.arrayElement([
     { ...getAcceptCatalogProposalResponseCatalogNamedRefMock() },
     null,
@@ -31090,6 +31122,10 @@ export const getRejectCatalogProposalResponseMock = (
   manufacturer_part_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   brand: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   brand_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  brand_company: faker.helpers.arrayElement([
+    { ...getRejectCatalogProposalResponseCatalogNamedRefMock() },
+    null,
+  ]),
   source_supplier: faker.helpers.arrayElement([
     { ...getRejectCatalogProposalResponseCatalogNamedRefMock() },
     null,
@@ -32982,6 +33018,15 @@ export const getListManufacturersResponseMock = (
     website: faker.string.alpha({ length: { min: 10, max: 20 } }),
     is_active: faker.datatype.boolean(),
     company_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    company_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    company_roles: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+    products_count: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
   })),
   total: faker.number.int({ min: 0 }),
   page: faker.number.int({ min: 1 }),
@@ -33002,6 +33047,14 @@ export const getCreateManufacturerResponseMock = (
   website: faker.string.alpha({ length: { min: 10, max: 20 } }),
   is_active: faker.datatype.boolean(),
   company_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  company_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  company_roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ),
+  products_count: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
   ...overrideResponse,
 });
 
@@ -33018,6 +33071,14 @@ export const getUpdateManufacturerResponseMock = (
   website: faker.string.alpha({ length: { min: 10, max: 20 } }),
   is_active: faker.datatype.boolean(),
   company_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  company_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  company_roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ),
+  products_count: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
   ...overrideResponse,
 });
 

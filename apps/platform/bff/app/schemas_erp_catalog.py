@@ -335,6 +335,7 @@ class ItemDetail(Item):
     manufacturer_part_number: str
     brand: str | None
     brand_id: str | None
+    brand_company: NamedRef | None
     source_supplier: NamedRef | None
     offers: list[Offer]
     prices_visible: bool
@@ -463,6 +464,7 @@ def to_item_detail(raw: Mapping[str, Any], *, show_prices: bool) -> ItemDetail:
         manufacturer_part_number=text(raw.get("manufacturer_part_number")),
         brand=raw.get("brand"),
         brand_id=opt_ident(raw.get("brand_id")),
+        brand_company=_named(raw.get("brand_company")),
         source_supplier=_named(raw.get("source_supplier")),
         offers=[
             to_offer(o, show_prices=show_prices)
@@ -1145,6 +1147,10 @@ class Manufacturer(Out):
     website: str
     is_active: bool
     company_id: str | None
+    # ADR-0028 п. 4: изготовитель — компания бренда; название, роли и число товаров — сотруднику
+    company_name: str | None
+    company_roles: list[str]
+    products_count: int | None
 
 
 class ManufacturerPage(PageOut):
@@ -1160,6 +1166,9 @@ def to_manufacturer(raw: Mapping[str, Any]) -> Manufacturer:
         website=text(raw.get("website")),
         is_active=bool(raw.get("is_active", True)),
         company_id=opt_ident(raw.get("company")),
+        company_name=raw.get("company_name") or None,
+        company_roles=[str(role) for role in raw.get("company_roles") or []],
+        products_count=raw.get("products_count"),
     )
 
 

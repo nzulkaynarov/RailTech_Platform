@@ -184,14 +184,15 @@
       "vat": "QQS",
       "category": "Kategoriya",
       "status": "Karta holati",
-      "brand": "Ishlab chiqaruvchi",
+      "brand": "Brend",
       "gost": "GOST / chizma",
       "hs": "TIF TN kodi",
       "mxik": "MXIK",
       "mpn": "Ishlab chiqaruvchi artikuli",
       "source": "Prays bo‘yicha yaratilgan",
       "origin": "Ishlab chiqarilgan mamlakat",
-      "warranty": "Kafolat"
+      "warranty": "Kafolat",
+      "maker": "Işlab çiqaruvçi"
     },
     "offers": "Hamkorlar takliflari",
     "offersTable": "Pozitsiya bo'yicha hamkorlar takliflari",
@@ -493,43 +494,54 @@
       }
     },
     "brands": {
-      "title": "Ishlab chiqaruvchilar",
-      "hint": "Pozitsiya kartasida tanlanadigan brendlar. Ishlab chiqaruvchi o'chirilmaydi — tanlovdan olib tashlanadi.",
+      "title": "Brendlar",
+      "hint": "Brend — tovardagi marka. Biz işlaydigan zavod — «Işlab çiqaruvçi» roliga ega kompaniya; brend unga boğlangan.",
       "search": "Nomi bo'yicha qidiruv",
       "showInactive": "Tanlovdan olinganlarni ko'rsatish",
-      "add": "Ishlab chiqaruvchi qo'shish",
-      "table": "Ishlab chiqaruvchilar",
+      "add": "Brend qöşish",
+      "table": "Brendlar",
       "editNamed": "O'zgartirish: {{name}}",
       "active": "Tanlovda",
       "inactive": "Tanlovdan olingan",
       "columns": {
-        "name": "Nomi",
+        "name": "Brend",
+        "company": "Işlab çiqaruvçi — kompaniya",
         "country": "Mamlakat",
+        "products": "Tovarlar",
         "website": "Sayt",
-        "state": "Holati"
+        "state": "Holat"
       },
       "empty": {
-        "title": "Ishlab chiqaruvchilar yo'q",
-        "text": "Ishlab chiqaruvchi pozitsiya kartasida tanlanadi. Birinchisini qo'shing."
+        "title": "Brendlar yöq",
+        "text": "Brend pozitsiya kartasida tanlanadi. Birinçisini qöşing."
       },
       "form": {
-        "addTitle": "Ishlab chiqaruvchi qo'shish",
-        "editTitle": "Ishlab chiqaruvchini o'zgartirish",
+        "addTitle": "Brend qöşish",
+        "editTitle": "Brendni özgartirish",
         "add": "Qo'shish",
         "name": "Nomi",
         "country": "Mamlakat",
         "website": "Sayt",
         "active": "Tanlovda ko'rsatish",
         "addSteps": [
-          "Ishlab chiqaruvchi ma'lumotnomada paydo bo'ladi.",
+          "Brend maʼlumotnomada paydo böladi.",
           "Uni pozitsiya kartasida tanlash mumkin.",
           "Nom takrorlanmasligi kerak."
         ],
         "editSteps": [
-          "O'zgarishlar ma'lumotnomada saqlanadi.",
-          "Bu ishlab chiqaruvchili pozitsiyalar o'zgarmaydi.",
-          "Tanlovdan olingani eski kartalarda qoladi."
-        ]
+          "Özgarişlar maʼlumotnomada saqlanadi.",
+          "Bu brend pozitsiyalari özgarmaydi.",
+          "Tanlovdan olingan brend eski kartalarda qoladi."
+        ],
+        "company": "Işlab çiqaruvçi — kompaniya",
+        "companyHint": "Biz işlaydigan zavod; kompaniyaga «Işlab çiqaruvçi» roli qöşiladi. Böş — zavod bilan şartnomasiz brend."
+      },
+      "noCompany": "boğlanmagan — zavod bilan şartnomasiz brend",
+      "roles": {
+        "CLIENT": "mijoz",
+        "SUPPLIER": "yetkazib beruvçi",
+        "MANUFACTURER": "işlab çiqaruvçi",
+        "LOGISTICS_PROVIDER": "logistika"
       }
     }
   },

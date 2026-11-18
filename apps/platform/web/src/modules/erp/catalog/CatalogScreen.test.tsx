@@ -82,6 +82,18 @@ describe("Номенклатура: позиции", () => {
     expect(within(drawer).queryByText(/Цены партнёров вам не показываются/)).toBeNull();
   });
 
+  it("карточка: бренд и изготовитель — компания бренда ссылкой (ADR-0028 п. 4)", async () => {
+    await open("supply@demo.example");
+    fireEvent.click(await screen.findByRole("button", { name: /Открыть позицию Рельс Р65/ }));
+
+    const drawer = await screen.findByRole("dialog", { name: "Рельс Р65, 25 м" });
+    expect(await within(drawer).findByText("Рельс-Сталь")).toBeVisible();
+    expect(within(drawer).getByRole("link", { name: "АО «Южный Металл»" })).toHaveAttribute(
+      "href",
+      "/crm/clients?partner=2&panel=open&tab=card",
+    );
+  });
+
   it("гл. инженер: цен партнёров нет, сказано словами; квота и срок видны", async () => {
     await open("engineer@demo.example");
     fireEvent.click(await screen.findByRole("button", { name: /Открыть позицию Кабель/ }));
@@ -259,18 +271,25 @@ describe("Номенклатура: справочники", () => {
     expect(await within(form).findByRole("alert")).toHaveTextContent("Такой код ТН ВЭД уже есть");
   });
 
-  it("производители: менеджер читает без кнопок; снабженец добавляет и убирает из выбора", async () => {
+  it("бренды: менеджер читает без кнопок; у бренда — компания-изготовитель с ролями (ADR-0028 п. 4)", async () => {
     await open("manager@demo.example", "?part=refs");
-    fireEvent.click(await screen.findByRole("radio", { name: "Производители" }));
+    fireEvent.click(await screen.findByRole("radio", { name: "Бренды" }));
     expect(await screen.findByText("Электрокабель-Тест")).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Добавить производителя" })).toBeNull();
+    expect(screen.getByRole("link", { name: "АО «Южный Металл»" })).toHaveAttribute(
+      "href",
+      "/crm/clients?partner=2&panel=open&tab=card",
+    );
+    expect(screen.getAllByText(/не связан — бренд без договора с заводом/).length).toBeGreaterThan(
+      0,
+    );
+    expect(screen.queryByRole("button", { name: "Добавить бренд" })).toBeNull();
   });
 
-  it("производитель: снабженец добавляет нового", async () => {
+  it("бренд: снабженец добавляет новый", async () => {
     await open("supply@demo.example", "?part=refs");
-    fireEvent.click(await screen.findByRole("radio", { name: "Производители" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Добавить производителя" }));
-    const form = await findModal("Добавить производителя");
+    fireEvent.click(await screen.findByRole("radio", { name: "Бренды" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Добавить бренд" }));
+    const form = await findModal("Добавить бренд");
     fireEvent.change(await within(form).findByLabelText("Название"), {
       target: { value: "Новый Бренд" },
     });

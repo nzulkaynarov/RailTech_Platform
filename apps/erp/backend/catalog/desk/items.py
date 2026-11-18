@@ -344,6 +344,12 @@ def item_detail(product, user) -> dict:
             "manufacturer_part_number": product.manufacturer_part_number,
             "brand": product.brand.name if product.brand_id else None,
             "brand_id": product.brand_id,
+            # Изготовитель — из бренда (ADR-0028 п. 4): компания, с заводом которой работаем
+            "brand_company": (
+                {"id": product.brand.company_id, "name": product.brand.company.name}
+                if product.brand_id and product.brand.company_id
+                else None
+            ),
             "source_supplier": (
                 {"id": product.source_supplier_id, "name": product.source_supplier.name}
                 if product.source_supplier_id

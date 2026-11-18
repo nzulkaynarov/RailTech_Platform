@@ -239,6 +239,18 @@ function missingOf(item: MockItem): string[] {
   ];
 }
 
+/** Бренд для ответа (ADR-0028 п. 4): название и роли компании-изготовителя, число товаров — из мока. */
+function brandOf(row: Manufacturer): Manufacturer {
+  const state = readErpCatalog();
+  const company = state.suppliers.find((s) => s.id === row.company_id);
+  return {
+    ...row,
+    company_name: company?.name ?? null,
+    company_roles: company ? ["MANUFACTURER", "SUPPLIER"] : [],
+    products_count: state.items.filter((item) => item.brandId === row.id).length,
+  };
+}
+
 function supplierName(id: string | null): { id: string; name: string } | null {
   const supplier = readErpCatalog().suppliers.find((s) => s.id === id);
   return supplier ? { id: supplier.id, name: supplier.name } : null;
@@ -269,6 +281,10 @@ function detailOf(item: MockItem, who: Caller): CatalogItemDetail {
     manufacturer_part_number: item.mpn,
     brand: item.brand,
     brand_id: item.brandId,
+    brand_company: (() => {
+      const brand = state.manufacturers.find((m) => m.id === item.brandId);
+      return brand?.company_id ? supplierName(brand.company_id) : null;
+    })(),
     source_supplier: supplierName(item.sourceSupplierId),
     offers: state.offers.filter((o) => o.itemId === item.id).map((o) => offerOf(o, who.prices)),
     prices_visible: who.prices,
@@ -1376,7 +1392,7 @@ export const erpCatalogHandlers = [
     const rows = readErpCatalog().manufacturers.filter(
       (m) => (inactive || m.is_active) && contains(m.name, params.get("q")),
     );
-    return HttpResponse.json(pageOf(rows, params));
+    return HttpResponse.json(pageOf(rows.map(brandOf), params));
   }),
   http.post("*/erp/catalog/manufacturers", async ({ request }) => {
     const who = guard("full");
@@ -1396,9 +1412,12 @@ export const erpCatalogHandlers = [
       website: data.website ?? "",
       is_active: data.is_active ?? true,
       company_id: data.company_id ?? null,
+      company_name: null,
+      company_roles: [],
+      products_count: null,
     };
     state.manufacturers.push(row);
-    return HttpResponse.json(row, { status: 201 });
+    return HttpResponse.json(brandOf(row), { status: 201 });
   }),
   http.patch("*/erp/catalog/manufacturers/:id", async ({ request, params }) => {
     const who = guard("full");
@@ -1418,7 +1437,7 @@ export const erpCatalogHandlers = [
     if (data.website !== undefined) row.website = data.website;
     if (data.is_active !== undefined) row.is_active = data.is_active;
     if (data.company_id !== undefined) row.company_id = data.company_id;
-    return HttpResponse.json(row);
+    return HttpResponse.json(brandOf(row));
   }),
 
   // --- техдокументация

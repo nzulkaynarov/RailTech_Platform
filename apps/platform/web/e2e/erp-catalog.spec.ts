@@ -211,9 +211,11 @@ test.describe("Товары", () => {
     await expectNoViolations(page, "справочники");
     await settledScreenshot(page, "catalog-refs");
     await expect(page.getByRole("cell", { name: "Провода и кабели изолированные" })).toBeVisible();
-    await pickPart(page, "Производители");
+    await pickPart(page, "Бренды");
     await expect(page.getByRole("cell", { name: "Электрокабель-Тест" })).toBeVisible();
-    await expectNoViolations(page, "справочники: производители");
+    await expect(page.getByRole("link", { name: "АО «Южный Металл»" })).toBeVisible();
+    await expectNoViolations(page, "справочники: бренды");
+    await settledScreenshot(page, "catalog-brands");
   });
 
   test("менеджер читает справочники и бригады без цен и ставок", async ({ page }) => {

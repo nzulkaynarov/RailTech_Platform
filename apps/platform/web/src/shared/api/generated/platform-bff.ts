@@ -57223,7 +57223,7 @@ export const getListManufacturersUrl = (params?: ListManufacturersParams) => {
 
 /**
  * ERP `catalog/manufacturers/`. Отключённые видит только держатель `catalog.manage` (`include_inactive`). Раздел `erp.stock` — чтение.
- * @summary Расчёт · Справочники: производители
+ * @summary Расчёт · Справочники: бренды
  */
 export const listManufacturers = async (
   params?: ListManufacturersParams,
@@ -57340,7 +57340,7 @@ export function useListManufacturers<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Расчёт · Справочники: производители
+ * @summary Расчёт · Справочники: бренды
  */
 
 export function useListManufacturers<
@@ -57374,7 +57374,7 @@ export const getCreateManufacturerUrl = () => {
 
 /**
  * ERP `POST catalog/manufacturers/` — право `catalog.manage`. Название уникально без учёта регистра — 409 `CONFLICT` (`details.reason = manufacturer_exists`). Раздел `erp.stock` — полный.
- * @summary Расчёт · Справочники: добавить производителя
+ * @summary Расчёт · Справочники: добавить бренд
  */
 export const createManufacturer = async (
   manufacturerCreate: ManufacturerCreate,
@@ -57465,7 +57465,7 @@ export type CreateManufacturerMutationError = ErrorType<
 export type CreateManufacturerMutationVariables = { data: ManufacturerCreate };
 
 /**
- * @summary Расчёт · Справочники: добавить производителя
+ * @summary Расчёт · Справочники: добавить бренд
  */
 export const useCreateManufacturer = <
   TError = ErrorType<
