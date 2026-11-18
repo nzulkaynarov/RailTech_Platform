@@ -152,7 +152,7 @@ test(
     await submit.click();
     await expect(sheet.getByText("Заявка создана")).toBeVisible();
     await sheet.getByRole("link", { name: "Открыть карточку клиента" }).click();
-    const card = page.getByRole("dialog", { name: "Карточка клиента" });
+    const card = page.getByRole("dialog", { name: "Карточка контрагента" });
     await expect(card.getByRole("heading", { name: "ООО Демо-Логистик" })).toBeVisible();
     await expect(card.getByText("ЗВ-2026-040")).toBeVisible();
     const overflow = await page.evaluate(

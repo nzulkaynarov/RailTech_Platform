@@ -28,7 +28,7 @@ test(
     await loginAndWait(page, "manager@demo.example");
     await spaGoto(page, "/crm/clients/6?panel=open&tab=card");
     const card = isMobile
-      ? page.getByRole("dialog", { name: "Карточка клиента" })
+      ? page.getByRole("dialog", { name: "Карточка контрагента" })
       : page.locator("#pf-context-panel");
     const invitation = card.getByRole("region", { name: "Приглашение в кабинет" });
     await invitation.scrollIntoViewIfNeeded();
