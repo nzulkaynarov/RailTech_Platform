@@ -153,6 +153,7 @@
       "supplier": "Supplier",
       "manufacturer": "Manufacturer",
       "partner": "Partner with a cabinet",
+      "organization": "Organization",
       "inUse": "The role is in use: the company has offers or brands.",
       "failed": "Could not change the role. Try again."
     },

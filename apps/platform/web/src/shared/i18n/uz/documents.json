@@ -248,7 +248,18 @@
       "inn": "Manzil STIRi",
       "innHint": "Majburiy emas.",
       "placeholder": "Nomi yoki STIR",
-      "innShort": "STIR {{inn}}"
+      "innShort": "STIR {{inn}}",
+      "create": {
+        "option": "+ «{{name}}» tashkilotini qöşiş",
+        "title": "Yangi tashkilot",
+        "name": "Nomi",
+        "inn": "STIR",
+        "innHint": "9 raqam. Xorijiy tashkilotda — böş.",
+        "address": "Manzil",
+        "submit": "Qöşiş",
+        "exists": "Bunday kompaniya allaqaçon bor — uni röyxatdan toping.",
+        "failed": "Tashkilotni qöşib bölmadi. Qayta urinib köring."
+      }
     },
     "text": {
       "label": "Matn",

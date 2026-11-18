@@ -248,7 +248,18 @@
       "inn": "Addressee tax ID",
       "innHint": "Optional.",
       "placeholder": "Name or tax ID",
-      "innShort": "Tax ID {{inn}}"
+      "innShort": "Tax ID {{inn}}",
+      "create": {
+        "option": "+ Add organization “{{name}}”",
+        "title": "New organization",
+        "name": "Name",
+        "inn": "Tax ID",
+        "innHint": "9 digits. Leave empty for a foreign organization.",
+        "address": "Address",
+        "submit": "Add",
+        "exists": "This company already exists — find it in the list.",
+        "failed": "Could not add the organization. Try again."
+      }
     },
     "text": {
       "label": "Text",

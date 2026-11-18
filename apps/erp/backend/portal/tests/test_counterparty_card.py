@@ -50,7 +50,13 @@ def test_one_company_in_all_roles(world):
     assert response.status_code == 200, response.content
     body = response.json()
     assert body["name"] == "ООО Поставщик Север" and body["crm_client_id"] == 42
-    assert body["roles"] == {"client": True, "supplier": True, "manufacturer": False, "partner": False}
+    assert body["roles"] == {
+        "client": True,
+        "supplier": True,
+        "manufacturer": False,
+        "partner": False,
+        "organization": False,
+    }
     assert [(p["name"], p["is_primary"], p["has_cabinet"]) for p in body["people"]] == [
         ("Рустам Ахмедов", True, False),
         ("Нилуфар Каримова", False, True),
@@ -105,3 +111,41 @@ def test_strangers_and_own_company_have_no_card(world):
     client = world["clients"]["supply"]
     assert client.get(f"{URL}{world['stranger'].pk}/").status_code == 404
     assert client.get(f"{URL}{world['own'].pk}/").status_code == 404
+
+
+# --- СУЩ-2.6: организация-адресат заводится из письма -------------------------------------------------------------
+
+
+def test_any_staff_creates_an_addressee_organization(world):
+    manager = world["clients"]["manager"]
+    uz = Country.objects.get(code="UZ")
+    response = manager.post(
+        URL,
+        {"name": "  Таможенный   комитет ", "tin": "200000123", "country_id": uz.pk, "legal_address": "Ташкент"},
+        format="json",
+    )
+    assert response.status_code == 201, response.content
+    body = response.json()
+    assert (body["name"], body["inn"], body["legal_address"]) == ("Таможенный комитет", "200000123", "Ташкент")
+    assert body["roles"] == {
+        "client": False,
+        "supplier": False,
+        "manufacturer": False,
+        "partner": False,
+        "organization": True,
+    }
+    # видна в поиске адресатов и открывается карточкой
+    found = manager.get(URL, {"q": "таможен"}).json()["results"]
+    assert [row["id"] for row in found] == [body["id"]]
+    assert manager.get(f"{URL}{body['id']}/").status_code == 200
+
+
+def test_duplicate_organization_is_refused(world):
+    manager = world["clients"]["manager"]
+    taken = manager.post(URL, {"name": "Другое имя", "tin": world["stranger"].inn}, format="json")
+    assert (taken.status_code, taken.json()["detail"]) == (409, "COMPANY_EXISTS")
+    assert manager.post(URL, {"name": "Банк Образец"}, format="json").status_code == 201
+    same_name = manager.post(URL, {"name": "банк образец"}, format="json")
+    assert (same_name.status_code, same_name.json()["detail"]) == (409, "COMPANY_EXISTS")
+    assert manager.post(URL, {"name": " "}, format="json").status_code == 400
+    assert manager.post(URL, {"name": "Банк", "tin": "12"}, format="json").status_code == 400

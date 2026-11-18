@@ -7234,7 +7234,11 @@ export interface paths {
      */
     get: operations["searchEdsAddressees"];
     put?: never;
-    post?: never;
+    /**
+     * Письмо: завести организацию-адресата
+     * @description ERP `POST parties/organizations/` (ADR-0028 п. 5, СУЩ-2.6): адресата нет среди контрагентов — сотрудник заводит его из письма: название, ИНН, адрес. Компания получает роль «Организация» (без сделок) и сразу находится в поиске. Такая компания уже есть (ИНН, без ИНН — название) — 409 (`details.reason = company_exists`): её выбирают из списка. Право `eds.memo.create` (полный доступ).
+     */
+    post: operations["createEdsAddressee"];
     delete?: never;
     options?: never;
     head?: never;
@@ -15999,6 +16003,13 @@ export interface components {
       /** @enum {string} */
       kind: "client" | "partner";
     };
+    /** @description Новая организация-адресат из письма (СУЩ-2.6) */
+    EdsAddresseeIn: {
+      name: string;
+      /** @description ИНН — 9 цифр; у иностранной организации — пусто */
+      inn?: string | null;
+      legal_address?: string | null;
+    };
     EdsAddresseeList: {
       items: components["schemas"]["EdsAddressee"][];
     };
@@ -16032,6 +16043,8 @@ export interface components {
       manufacturer: boolean;
       /** @description Партнёр с кабинетом — приглашён или активен */
       partner: boolean;
+      /** @description Организация — адресат писем без сделок (госорган, банк), заведена из письма */
+      organization: boolean;
     };
     CounterpartyCardPerson: {
       id: components["schemas"]["CompanyItemRef"];
@@ -30118,6 +30131,46 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       422: components["responses"]["ValidationFailed"];
+    };
+  };
+  createEdsAddressee: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EdsAddresseeIn"];
+      };
+    };
+    responses: {
+      /** @description Организация заведена */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsAddressee"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      /** @description `CONFLICT` (`details.reason = company_exists`) — такая компания уже есть */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
     };
   };
   listCounterpartyPeople: {

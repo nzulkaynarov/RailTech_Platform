@@ -13224,6 +13224,44 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationFailed'
+    post:
+      tags: [eds-documents]
+      operationId: createEdsAddressee
+      summary: 'Письмо: завести организацию-адресата'
+      description: >-
+        ERP `POST parties/organizations/` (ADR-0028 п. 5, СУЩ-2.6): адресата нет среди контрагентов — сотрудник заводит его
+        из письма: название, ИНН, адрес. Компания получает роль «Организация» (без сделок) и сразу находится в поиске.
+        Такая компания уже есть (ИНН, без ИНН — название) — 409 (`details.reason = company_exists`): её выбирают из
+        списка. Право `eds.memo.create` (полный доступ).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EdsAddresseeIn'
+      responses:
+        '201':
+          description: Организация заведена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdsAddressee'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: '`CONFLICT` (`details.reason = company_exists`) — такая компания уже есть'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /people/contacts:
     get:
       tags: [chats]
@@ -26676,6 +26714,15 @@ components:
         email: {type: [string, 'null']}
         attention: {type: [string, 'null']}
         kind: {type: string, enum: [client, partner]}
+    EdsAddresseeIn:
+      type: object
+      additionalProperties: false
+      required: [name]
+      description: Новая организация-адресат из письма (СУЩ-2.6)
+      properties:
+        name: {type: string, minLength: 1, maxLength: 255}
+        inn: {type: [string, 'null'], pattern: '^\d{9}$', description: 'ИНН — 9 цифр; у иностранной организации — пусто'}
+        legal_address: {type: [string, 'null'], maxLength: 500}
     EdsAddresseeList:
       type: object
       additionalProperties: false
@@ -26718,12 +26765,13 @@ components:
     CounterpartyRoles:
       type: object
       additionalProperties: false
-      required: [client, supplier, manufacturer, partner]
+      required: [client, supplier, manufacturer, partner, organization]
       properties:
         client: {type: boolean, description: 'Клиент — заводит CRM'}
         supplier: {type: boolean, description: 'Поставщик — отметка или действующие предложения'}
         manufacturer: {type: boolean, description: 'Изготовитель — отметка; у брендов ссылка на компанию'}
         partner: {type: boolean, description: 'Партнёр с кабинетом — приглашён или активен'}
+        organization: {type: boolean, description: 'Организация — адресат писем без сделок (госорган, банк), заведена из письма'}
     CounterpartyCardPerson:
       type: object
       additionalProperties: false

@@ -315,6 +315,7 @@ export * from "./downloadEdsProjectFileParams";
 export * from "./downloadEdsProjectFileVariant";
 export * from "./dueLabel";
 export * from "./edsAddressee";
+export * from "./edsAddresseeIn";
 export * from "./edsAddresseeKind";
 export * from "./edsAddresseeList";
 export * from "./edsConflictResponse";

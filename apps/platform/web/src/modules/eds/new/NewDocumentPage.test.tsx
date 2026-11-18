@@ -128,6 +128,23 @@ describe("EDS · Создать документ: форма", () => {
     expect(screen.getByLabelText("Адресат (организация)")).toHaveValue("ГНИ Мирабадского района");
   });
 
+  it("адресата нет среди контрагентов: «Завести организацию» из подсказок — и она становится адресатом (СУЩ-2.6)", async () => {
+    await openForm("director@demo.example", "?type=letter");
+    type("Адресат (организация)", "Таможенный комитет");
+    fireEvent.click(await screen.findByText("+ Завести организацию «Таможенный комитет»"));
+    const sheet = await screen.findByRole("dialog", { name: "Новая организация" });
+    expect(within(sheet).getByLabelText("Название")).toHaveValue("Таможенный комитет");
+    fireEvent.change(within(sheet).getByLabelText("ИНН"), { target: { value: "12" } });
+    expect(within(sheet).getByRole("button", { name: "Завести" })).toBeDisabled();
+    fireEvent.change(within(sheet).getByLabelText("ИНН"), { target: { value: "200000123" } });
+    fireEvent.click(within(sheet).getByRole("button", { name: "Завести" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "Новая организация" })).toBeNull();
+    });
+    expect(screen.getByLabelText("Адресат (организация)")).toHaveValue("Таможенный комитет");
+    expect(screen.getByLabelText("ИНН адресата")).toHaveValue("200000123");
+  });
+
   it("?type=letter у роли с доступом к входящим: письмо на бланке — адресат, почта, «кому», блоки, подписант; без суммы и срока", async () => {
     await openForm("director@demo.example", "?type=letter");
 

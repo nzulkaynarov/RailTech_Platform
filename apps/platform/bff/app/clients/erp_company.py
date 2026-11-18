@@ -33,6 +33,10 @@ _CONFLICTS: dict[str, tuple[str, str]] = {
         "lookup_in_use",
         "Строка используется в документах и данных. Отключите её вместо удаления.",
     ),
+    "COMPANY_EXISTS": (
+        "company_exists",
+        "Такая компания уже есть. Найдите её в списке.",
+    ),
     "ROLE_IN_USE": (
         "role_in_use",
         "Роль занята: у компании есть предложения или бренды. Сначала уберите их.",
@@ -117,6 +121,7 @@ _FIELD_OF: dict[str, str] = {
     "BRIGADE_NAME_REQUIRED": "name",
     # CAT-1
     "SUPPLIER_NAME_REQUIRED": "name",
+    "COMPANY_NAME_REQUIRED": "name",
     "SUPPLIER_ID_REQUIRED": "tin",
     "TIN_INVALID": "tin",
     "COUNTRY_NOT_FOUND": "country_id",

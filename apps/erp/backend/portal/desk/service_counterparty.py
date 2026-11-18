@@ -2,13 +2,17 @@
 
 Роли — не отдельные записи, а отметки одной компании: «клиент» (книга продавца, заводит CRM), «поставщик» и
 «изготовитель» (типы `SUPPLIER`, `MANUFACTURER` — отмечает сотрудник), «партнёр с кабинетом» (отношение `partner`,
-появляется по заявке или приглашению). Люди — контакты компании; счета — `CompanyBankAccount`; бренды — справочник
+появляется по заявке или приглашению), «организация» (тип `ORGANIZATION` — адресат письма без сделок: госорган, банк;
+заводит сотрудник прямо из письма, СУЩ-2.6). Люди — контакты компании; счета — `CompanyBankAccount`; бренды — справочник
 «Бренды» со ссылкой на компанию. Телефоны и почта людей здесь не отдаются: их открывают по одному (`parties/people`).
 Номер счёта полностью видит держатель `finance.view` или `finance.payment`, остальные — последние 4 знака.
 """
 
 from __future__ import annotations
 
+import re
+
+from django.conf import settings
 from django.db import transaction
 from integration.models import CrmClientMapping
 from parties.banking import grouped, masked
@@ -22,7 +26,7 @@ from catalog.models import Manufacturer, SupplierOffer
 
 #: Роли, которые сотрудник отмечает сам; остальные приходят из процессов (CRM, заявка в партнёры).
 EDITABLE_ROLES = {"supplier": "SUPPLIER", "manufacturer": "MANUFACTURER"}
-_TYPE_NAMES = {"SUPPLIER": "Поставщик", "MANUFACTURER": "Изготовитель"}
+_TYPE_NAMES = {"SUPPLIER": "Поставщик", "MANUFACTURER": "Изготовитель", "ORGANIZATION": "Организация"}
 _FULL_ACCOUNT = ("finance.view", "finance.payment")
 
 
@@ -37,6 +41,7 @@ def roles_of(company: Company, client_ids: set) -> dict:
             role=RelationshipRole.PARTNER,
             status__in=(RelationshipStatus.INVITED, RelationshipStatus.ACTIVE),
         ).exists(),
+        "organization": "ORGANIZATION" in codes,
     }
 
 
@@ -121,3 +126,52 @@ def set_role(company: Company, role: str, on: bool, *, actor) -> None:
         before={"role": role, "on": has},
         after={"role": role, "on": on},
     )
+
+
+@transaction.atomic
+def create_organization(data: dict, *, actor) -> Company:
+    """Завести организацию-адресата из письма (ADR-0028 п. 5, СУЩ-2.6): название, ИНН или рег. номер, страна, адрес.
+
+    Компания без сделок, роль «Организация»; людей и счета ей добавляют в карточке. Дубль по ИНН, по паре
+    «страна — рег. номер» или — без ИНН — по названию — 409 `COMPANY_EXISTS`: такую компанию выбирают из списка.
+    """
+    from catalog.desk.suppliers import _country
+
+    name = " ".join((data.get("name") or "").split())
+    if not name:
+        raise ItemError("COMPANY_NAME_REQUIRED", "name")
+    inn = (data.get("tin") or "").strip() or None
+    registration_number = (data.get("registration_number") or "").strip()
+    if inn and not re.match(settings.INN_VALIDATION_REGEX, inn):
+        raise ItemError("TIN_INVALID", "tin")
+    country = _country(data.get("country_id"))
+    if inn and Company.objects.filter(inn=inn).exists():
+        raise ItemError("COMPANY_EXISTS", "tin")
+    if (
+        registration_number
+        and Company.objects.filter(registration_number__iexact=registration_number, country=country).exists()
+    ):
+        raise ItemError("COMPANY_EXISTS", "registration_number")
+    if not inn and not registration_number and Company.objects.filter(name__iexact=name).exists():
+        raise ItemError("COMPANY_EXISTS", "name")
+    company = Company.objects.create(
+        name=name,
+        inn=inn,
+        registration_number=registration_number,
+        country=country,
+        legal_address=(data.get("legal_address") or "").strip(),
+        is_registered=False,  # заведена сотрудником, входа нет
+    )
+    kind, _ = CompanyType.objects.get_or_create(code="ORGANIZATION", defaults={"name": _TYPE_NAMES["ORGANIZATION"]})
+    company.types.add(kind)
+    record(
+        actor,
+        entity="company",
+        instance=company,
+        event="created",
+        action="Организация заведена из письма",
+        before=None,
+        after={"name": name, "inn": inn, "registration_number": registration_number or None},
+        detail=name,
+    )
+    return company

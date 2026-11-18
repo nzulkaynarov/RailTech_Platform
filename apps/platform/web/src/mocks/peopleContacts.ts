@@ -4,6 +4,7 @@ import type {
   CounterpartyContacts,
   CounterpartyPerson,
   EdsAddressee,
+  EdsAddresseeIn,
 } from "../shared/api/generated/model";
 
 /** Люди клиентов и партнёров (FR-11): контакты контрагентов демо-мира, как их отдаёт ERP `parties/people/`. */
@@ -63,6 +64,37 @@ export const peopleContactsHandlers = [
       (item) => item.name.toLocaleLowerCase("ru").includes(q) || (item.inn ?? "").includes(q),
     );
     return HttpResponse.json({ items });
+  }),
+  // СУЩ-2.6: организация-адресат из письма; дубль по ИНН или названию — 409, как у ERP
+  http.post("*/eds/addressees", async ({ request }) => {
+    const body = (await request.json()) as EdsAddresseeIn;
+    const name = body.name.trim();
+    const taken = ADDRESSEES.some(
+      (item) =>
+        (body.inn && item.inn === body.inn) ||
+        item.name.toLocaleLowerCase("ru") === name.toLocaleLowerCase("ru"),
+    );
+    if (taken) {
+      return HttpResponse.json(
+        {
+          code: "CONFLICT",
+          message: "Такая компания уже есть. Найдите её в списке.",
+          source: "erp",
+          details: { reason: "company_exists" },
+        },
+        { status: 409 },
+      );
+    }
+    const created: EdsAddressee = {
+      id: String(9000 + ADDRESSEES.length),
+      name,
+      inn: body.inn ?? null,
+      email: null,
+      attention: null,
+      kind: "partner",
+    };
+    ADDRESSEES.push(created);
+    return HttpResponse.json(created, { status: 201 });
   }),
   http.get("*/people/contacts", ({ request }) => {
     const url = new URL(request.url);

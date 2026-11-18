@@ -177,6 +177,7 @@ import type {
   DocumentPreview,
   DocumentTemplate,
   DocumentTemplateList,
+  EdsAddressee,
   EdsAddresseeList,
   EdsDealOptions,
   EdsDealRef,
@@ -31275,6 +31276,21 @@ export const getSearchEdsAddresseesResponseMock = (
   ...overrideResponse,
 });
 
+export const getCreateEdsAddresseeResponseMock = (
+  overrideResponse: Partial<Extract<EdsAddressee, object>> = {},
+): EdsAddressee => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  attention: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  kind: faker.helpers.arrayElement(["client", "partner"] as const),
+  ...overrideResponse,
+});
+
 export const getListCounterpartyPeopleResponseMock = (
   overrideResponse: Partial<Extract<CounterpartyPersonPage, object>> = {},
 ): CounterpartyPersonPage => ({
@@ -31330,6 +31346,7 @@ export const getGetCounterpartyResponseMock = (
     supplier: faker.datatype.boolean(),
     manufacturer: faker.datatype.boolean(),
     partner: faker.datatype.boolean(),
+    organization: faker.datatype.boolean(),
   },
   people: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
@@ -31394,6 +31411,7 @@ export const getGetCounterpartyByClientResponseMock = (
     supplier: faker.datatype.boolean(),
     manufacturer: faker.datatype.boolean(),
     partner: faker.datatype.boolean(),
+    organization: faker.datatype.boolean(),
   },
   people: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
@@ -31458,6 +31476,7 @@ export const getSetCounterpartyRoleResponseMock = (
     supplier: faker.datatype.boolean(),
     manufacturer: faker.datatype.boolean(),
     partner: faker.datatype.boolean(),
+    organization: faker.datatype.boolean(),
   },
   people: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
@@ -43089,6 +43108,30 @@ export const getSearchEdsAddresseesMockHandler = (
   );
 };
 
+export const getCreateEdsAddresseeMockHandler = (
+  overrideResponse?:
+    | EdsAddressee
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<EdsAddressee> | EdsAddressee),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/addressees",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateEdsAddresseeResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
 export const getListCounterpartyPeopleMockHandler = (
   overrideResponse?:
     | CounterpartyPersonPage
@@ -44654,6 +44697,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getAcceptCatalogProposalMockHandler(),
   getRejectCatalogProposalMockHandler(),
   getSearchEdsAddresseesMockHandler(),
+  getCreateEdsAddresseeMockHandler(),
   getListCounterpartyPeopleMockHandler(),
   getRevealCounterpartyContactsMockHandler(),
   getGetCounterpartyMockHandler(),

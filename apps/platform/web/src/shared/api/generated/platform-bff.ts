@@ -143,6 +143,8 @@ import type {
   DocumentTemplateUpdate,
   DownloadCsvExportParams,
   DownloadEdsProjectFileParams,
+  EdsAddressee,
+  EdsAddresseeIn,
   EdsAddresseeList,
   EdsConflictResponse,
   EdsDealOptions,
@@ -52244,6 +52246,134 @@ export function useSearchEdsAddressees<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getCreateEdsAddresseeUrl = () => {
+  return `/api/v1/eds/addressees`;
+};
+
+/**
+ * ERP `POST parties/organizations/` (ADR-0028 п. 5, СУЩ-2.6): адресата нет среди контрагентов — сотрудник заводит его из письма: название, ИНН, адрес. Компания получает роль «Организация» (без сделок) и сразу находится в поиске. Такая компания уже есть (ИНН, без ИНН — название) — 409 (`details.reason = company_exists`): её выбирают из списка. Право `eds.memo.create` (полный доступ).
+ * @summary Письмо: завести организацию-адресата
+ */
+export const createEdsAddressee = async (
+  edsAddresseeIn: EdsAddresseeIn,
+  options?: Parameters<typeof http>[1],
+): Promise<EdsAddressee> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<EdsAddressee>(getCreateEdsAddresseeUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(edsAddresseeIn),
+  });
+};
+
+export const getCreateEdsAddresseeMutationKey = () => ["createEdsAddressee"] as const;
+
+export const getCreateEdsAddresseeMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createEdsAddressee>>,
+    TError,
+    CreateEdsAddresseeMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createEdsAddressee>>,
+  TError,
+  CreateEdsAddresseeMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateEdsAddresseeMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createEdsAddressee>>,
+    CreateEdsAddresseeMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createEdsAddressee(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateEdsAddresseeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createEdsAddressee>>
+>;
+export type CreateEdsAddresseeMutationBody = EdsAddresseeIn;
+export type CreateEdsAddresseeMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | Error
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type CreateEdsAddresseeMutationVariables = { data: EdsAddresseeIn };
+
+/**
+ * @summary Письмо: завести организацию-адресата
+ */
+export const useCreateEdsAddressee = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createEdsAddressee>>,
+      TError,
+      CreateEdsAddresseeMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createEdsAddressee>>,
+  TError,
+  CreateEdsAddresseeMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateEdsAddresseeMutationOptions(options), queryClient);
+};
 
 export const getListCounterpartyPeopleUrl = (params?: ListCounterpartyPeopleParams) => {
   const normalizedParams = new URLSearchParams();

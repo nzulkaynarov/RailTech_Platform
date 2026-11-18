@@ -329,6 +329,7 @@ class DeskCounterpartyRoles(serializers.Serializer):
     supplier = serializers.BooleanField(help_text="Поставщик — отметка или действующие предложения")
     manufacturer = serializers.BooleanField(help_text="Изготовитель — отметка; у брендов ссылка на компанию")
     partner = serializers.BooleanField(help_text="Партнёр с кабинетом — отношение `partner` приглашено или активно")
+    organization = serializers.BooleanField(help_text="Организация — адресат писем без сделок (тип `ORGANIZATION`)")
 
 
 class DeskCounterpartyPerson(serializers.Serializer):
@@ -367,6 +368,16 @@ class DeskCounterparty(serializers.Serializer):
     bank_accounts = DeskCounterpartyAccount(many=True)
     accounts_masked = serializers.BooleanField(help_text="Номера счетов скрыты: нет `finance.view`")
     brands = DeskRef(many=True, help_text="Бренды, которые выпускает компания (справочник «Бренды»)")
+
+
+class DeskOrganizationIn(serializers.Serializer):
+    """Новая организация-адресат из письма (СУЩ-2.6)."""
+
+    name = serializers.CharField(max_length=255)
+    tin = serializers.CharField(max_length=14, required=False, allow_blank=True, allow_null=True)
+    registration_number = serializers.CharField(max_length=64, required=False, allow_blank=True)
+    country_id = serializers.IntegerField(required=False, allow_null=True)
+    legal_address = serializers.CharField(max_length=500, required=False, allow_blank=True)
 
 
 class DeskCounterpartyRoleIn(serializers.Serializer):
