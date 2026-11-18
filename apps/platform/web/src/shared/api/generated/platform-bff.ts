@@ -52631,7 +52631,7 @@ export const getGetCounterpartyByClientUrl = (id: CompanyItemRef) => {
 };
 
 /**
- * Та же карточка по id клиента CRM (ERP `parties/organizations/by-crm-client/{id}/`). Клиент ещё не передан в ERP — 404: компании в ERP нет, у карточки клиента только данные CRM. Раздел `crm.clients` или `erp.stock` — чтение.
+ * Та же карточка по id клиента CRM (ERP `parties/crm-clients/{id}/organization/`). Клиент ещё не передан в ERP — 404: компании в ERP нет, у карточки клиента только данные CRM. Раздел `crm.clients` или `erp.stock` — чтение.
  * @summary Контакты · Контрагенты: карточка компании клиента CRM
  */
 export const getCounterpartyByClient = async (
