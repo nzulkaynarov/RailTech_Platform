@@ -44,6 +44,8 @@ class Reason(StrEnum):
     SETUP_LOCKED = "setup_locked"
     INVALID_BOT_TOKEN = "invalid_bot_token"  # noqa: S105 — подкод ошибки, не секрет
     TELEGRAM_UNAVAILABLE = "telegram_unavailable"
+    # СУЩ-2.7: название и ИНН клиента, связанного с компанией ERP, ведёт ERP
+    REQUISITES_OWNED_BY_ERP = "requisites_owned_by_erp"
     SECRETS_KEY_MISSING = "secrets_key_missing"
     BOT_NOT_RUNNING = "bot_not_running"
     CHANNEL_NOT_CONFIGURED = "channel_not_configured"

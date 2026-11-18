@@ -1,7 +1,7 @@
 """Правки по ревью B3: реквизиты ведёт CRM (только чтение в ERP), ротация секрета сопряжения, напоминания об оплате.
 
-* название и ИНН компании, связанной с клиентом CRM, API ERP не правит: internal — 400, portal — 422
-  `REQUISITES_MANAGED_BY_CRM` (ORCHESTRATOR §3 п. 16); несвязанная компания правится как раньше;
+* название и ИНН компании, связанной с клиентом CRM, с СУЩ-2.7 ведёт ERP: internal правит их, portal (контакт клиента) —
+  нет, 422 `REQUISITES_MANAGED_BY_CRM`; несвязанная компания правится как раньше;
 * прежний секрет сопряжения принимается на переходный срок ротации, и вывод секрета пары шины (L12) не даёт 401;
 * `send_payment_reminders`: на каждый счёт свой atomic, письмо — после коммита, сбой одного счёта не останавливает остальные.
 """
@@ -26,7 +26,7 @@ from accounts.models import CustomUser
 pytestmark = pytest.mark.django_db
 
 
-# ── Реквизиты ведёт CRM ──────────────────────────────────────────────────────────────────────────
+# ── Реквизиты ведёт ERP ──────────────────────────────────────────────────────────────────────────
 
 
 @pytest.fixture
@@ -39,15 +39,15 @@ def admin_api():
     return client
 
 
-def test_internal_api_rejects_a_change_of_name_or_inn_of_a_crm_company(admin_api):
+def test_internal_api_changes_name_and_inn_of_a_crm_company_erp_owns_them(admin_api):
+    """СУЩ-2.7 (ADR-0028 п. 6): название и ИНН ведёт ERP — сотрудник правит их здесь, CRM получает событие."""
     company = make_company(name="ООО CRM", crm_client_id=42, inn="123456789")
-    for body in ({"inn": "987654321"}, {"name": "Другое имя"}, {"name": "Другое имя", "legal_address": "x"}):
-        response = admin_api.patch(f"/api/v1/accounts/companies/{company.pk}/", body, format="json")
-        assert response.status_code == 400, response.content
-        assert response.json()["detail"] == "REQUISITES_MANAGED_BY_CRM"
-        assert set(response.json()["fields"]) <= {"name", "inn"}
+    response = admin_api.patch(
+        f"/api/v1/accounts/companies/{company.pk}/", {"name": "Другое имя", "inn": "987654321"}, format="json"
+    )
+    assert response.status_code == 200, response.content
     company.refresh_from_db()
-    assert (company.name, company.inn, company.legal_address) == ("ООО CRM", "123456789", "")
+    assert (company.name, company.inn) == ("Другое имя", "987654321")
 
 
 def test_internal_api_allows_other_fields_and_unchanged_values(admin_api):

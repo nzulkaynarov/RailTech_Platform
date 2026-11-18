@@ -54,6 +54,10 @@ class Client(TimestampMixin, Base):
     is_active: Mapped[bool] = mapped_column(Boolean, server_default=sql("true"))
     notes: Mapped[str | None] = mapped_column(Text)
     erp_company_id: Mapped[int | None] = mapped_column(BigInteger, index=True)
+    # СУЩ-2.7 (ADR-0028 п. 6): название, ИНН, страна и рег. номер связанного клиента — проекция
+    # компании ERP; время последнего применённого снимка `erp.company.updated` (более старый не
+    # применяется).
+    erp_requisites_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Передача в бэк-офис идёт задачей после коммита клиента (FIX-31): состояние для карточки.
     # `NULL` — передачи не было (режим local или клиент создан вручную).
     erp_handoff_status: Mapped[str | None] = mapped_column(String(16))

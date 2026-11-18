@@ -13,6 +13,8 @@ subscribers:
     endpoint_env: RT_BUS_ENDPOINT_CRM
     types:
       - uz.railtech.erp.act.*.v1
+      # СУЩ-2.7 (ADR-0028 п. 6): название, ИНН и реквизиты клиента — проекция компании ERP, владелец ERP.
+      - uz.railtech.erp.company.updated.v1
       # NOTIFY-1 (ADR-0023 п. 3): контакт отключил Telegram в кабинете — привязка принадлежит CRM, ERP только просит.
       - uz.railtech.erp.contact.telegram_unlink_requested.v1
       # NOTIFY-1: «Отправить проверочное сообщение» из Профиля кабинета — бот CRM пишет контакту.

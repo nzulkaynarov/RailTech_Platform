@@ -179,6 +179,7 @@ def test_reason_values_are_a_stable_contract() -> None:
         "document_indexing",
         "invalid_bot_token",
         "telegram_unavailable",
+        "requisites_owned_by_erp",
         "secrets_key_missing",
         "bot_not_running",
         "channel_not_configured",

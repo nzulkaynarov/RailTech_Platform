@@ -1,0 +1,28 @@
+{
+  "specversion": "1.0",
+  "id": "7d2c4e1a-9b3f-4a6e-8c5d-1e2f3a4b5c6d",
+  "source": "rt://erp",
+  "type": "uz.railtech.erp.company.updated.v1",
+  "time": "2026-11-18T09:00:00Z",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/erp/company.updated/v1",
+  "tenant": "railtech",
+  "correlationid": "3a1b2c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+  "subject": "company/42",
+  "data": {
+    "erp_company_id": 42,
+    "actor": {
+      "type": "staff",
+      "name": "Менеджер Демо"
+    },
+    "company": {
+      "name": "АО «Пример Логистик»",
+      "inn": "301234567",
+      "registration_number": null,
+      "country": "UZ",
+      "legal_address": "Ташкент, ул. Примерная, 1",
+      "updated_at": "2026-11-18T09:00:00Z"
+    }
+  }
+}

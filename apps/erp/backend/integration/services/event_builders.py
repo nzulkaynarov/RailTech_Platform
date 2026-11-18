@@ -57,6 +57,8 @@ VALID_EVENT_TYPES = {
     "contact.telegram_unlink_requested",
     "contact.telegram_test_requested",
     "contact.security_notice_requested",
+    # СУЩ-2.7: реквизиты компании-контрагента — проекция CRM (parties.company_events)
+    "company.updated",
 }
 
 EVENT_TYPE_PREFIX = "uz.railtech.erp."

@@ -49,6 +49,9 @@ OWN_HANDLER: Final = frozenset(
         "uz.railtech.erp.contact.telegram_unlink_requested.v1",
         # CHAT-1: сообщение в чат кабинета — беседа `cabinet` (`app/services/cabinet_chat.py`).
         "uz.railtech.erp.cabinet.message_posted.v1",
+        # СУЩ-2.7: реквизиты компании ERP — проекция у клиента
+        # (`app/services/company_projection.py`).
+        "uz.railtech.erp.company.updated.v1",
     }
 )
 #: Партнёр приглашён в кабинет (PART-CRM): CRM заводит клиента — `app/services/partner_clients.py`.

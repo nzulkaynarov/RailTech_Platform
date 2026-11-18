@@ -72,48 +72,25 @@ def company():
 # ── client.updated ──────────────────────────────────────────────────────────────────────────────────
 
 
-def test_client_updated_applies_the_name_and_the_inn_the_crm_owns(company):
+def test_client_updated_no_longer_changes_the_name_and_the_inn_erp_owns_them(company):
+    """СУЩ-2.7 (ADR-0028 п. 6): название и ИНН ведёт ERP — снимок CRM их не меняет, только отмечается."""
     outcome = projections.apply_client_snapshot(client_data(name="ООО «Новое имя»", inn="999000111"))
 
     company.refresh_from_db()
-    assert outcome.applied and company.name == "ООО «Новое имя»"
-    assert company.inn == "999000111", "ИНН и реквизиты клиента ведёт CRM (ORCHESTRATOR §3 п. 16)"
+    assert outcome.applied and (company.name, company.inn) == ("ООО Клиент", "123456789")
     assert CrmProjectionState.objects.get(kind="client", crm_id=42).applied_at == T0
-
-
-def test_an_inn_held_by_another_company_is_not_applied_but_the_name_is(company, caplog):
-    make_company(name="Другая", crm_client_id=77, inn="999000111")
-    with caplog.at_level(logging.WARNING):
-        outcome = projections.apply_client_snapshot(client_data(name="Новое имя", inn="999000111"))
-    company.refresh_from_db()
-    assert outcome.applied and company.name == "Новое имя" and company.inn == "123456789"
-    assert "ИНН уже у другой компании" in caplog.text
-
-
-def test_a_snapshot_without_an_inn_does_not_erase_the_inn_of_the_erp(company):
-    projections.apply_client_snapshot(client_data(name="Имя", inn=None))
-    company.refresh_from_db()
-    assert company.inn == "123456789"
 
 
 def test_an_older_client_snapshot_is_not_applied(company):
     projections.apply_client_snapshot(client_data(name="Свежее", at=T0 + timedelta(minutes=5)))
     outcome = projections.apply_client_snapshot(client_data(name="Старое", at=T0))
-    company.refresh_from_db()
-    assert outcome.status == projections.SKIPPED_STALE and company.name == "Свежее"
+    assert outcome.status == projections.SKIPPED_STALE
 
 
 def test_the_same_client_snapshot_twice_is_a_noop(company):
     first = projections.apply_client_snapshot(client_data(name="Имя"))
     again = projections.apply_client_snapshot(client_data(name="Имя"))
     assert first.applied and again.status == projections.SKIPPED_NO_CHANGE
-
-
-def test_a_newer_client_snapshot_replaces_the_projection(company):
-    projections.apply_client_snapshot(client_data(name="Первое"))
-    outcome = projections.apply_client_snapshot(client_data(name="Второе", at=T0 + timedelta(seconds=1)))
-    company.refresh_from_db()
-    assert outcome.applied and company.name == "Второе"
 
 
 def test_unknown_client_is_skipped_with_a_record_not_an_error(caplog):

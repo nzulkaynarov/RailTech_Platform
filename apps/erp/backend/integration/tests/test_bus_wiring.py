@@ -24,7 +24,13 @@ from django.db import transaction
 from django.test import Client
 from django.utils import timezone
 from integration.bus import derive_pair_secret, get_bus, pair_secrets
-from integration.models import CredentialSlot, CrmClientMapping, CrmContactMapping, ServiceCredential
+from integration.models import (
+    CredentialSlot,
+    CrmClientMapping,
+    CrmContactMapping,
+    CrmProjectionState,
+    ServiceCredential,
+)
 from integration.services import credentials, events
 from integration.tests import bus_support
 from integration.tests.world import add_quote, make_company, make_deal
@@ -236,8 +242,10 @@ def test_receiver_accepts_a_signed_crm_event_and_the_handler_updates_the_project
 
     assert response.status_code == 200 and response.json()["status"] == "received"
     assert Inbox.objects.get(event_id=envelope["id"]).status == "processed"
+    # СУЩ-2.7: название ведёт ERP — снимок CRM отмечен применённым, название компании не меняет
+    assert CrmProjectionState.objects.filter(kind="client", crm_id=42).exists()
     company.refresh_from_db()
-    assert company.name == "Новое имя клиента"
+    assert company.name == "Старое имя"
 
 
 @pytest.mark.django_db

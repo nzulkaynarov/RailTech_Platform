@@ -9,6 +9,8 @@
   записывается в `client_notices` (D1-9);
 * `uz.railtech.{erp,eds}.mail.requested.v1` — в очереди, в транзакции inbox: письмо, которое ERP или
   EDS просят отправить, — строка журнала доставки; отправка — задачей после коммита (W18A-P1);
+* `uz.railtech.erp.company.updated.v1` — в очереди, в транзакции inbox: реквизиты компании ERP
+  (название, ИНН, страна, рег. номер) переписываются у клиентов с этой ссылкой (СУЩ-2.7);
 * `uz.railtech.erp.partner.client_requested.v1` — в очереди, в транзакции inbox: партнёр
   приглашён в кабинет — CRM находит или создаёт клиента и контакты и отвечает
   `crm.partner.client_resolved` (PART-CRM); `erp.partner.client_rejected` снимает привязку;
@@ -37,7 +39,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bus.erp_event import CODE_TYPE, INVITE_TYPE, SECURITY_NOTICE_TYPE, TEST_TYPE, erp_types
 from app.bus.runtime import current_container
+from app.services import company_projection
 from app.services.cabinet_chat import POSTED_TYPE
+from app.services.company_projection import COMPANY_UPDATED
 from app.services.contact_telegram import UNLINK_REQUESTED
 from app.services.eds_notices import NOTICE_TYPE, NOTICE_TYPE_V2, SIGNING_EXPIRING_TYPE
 from app.services.inbound_mail import LETTER_REGISTERED, LETTER_REGISTERED_V2
@@ -80,6 +84,11 @@ async def on_mail_requested(event: Event, session: AsyncSession) -> None:
 
 for _mail_type in MAIL_REQUEST_TYPES:
     subscribe(_mail_type)(on_mail_requested)
+
+
+@subscribe(COMPANY_UPDATED)
+async def on_company_updated(event: Event, session: AsyncSession) -> None:
+    await company_projection.apply(session, event)
 
 
 @subscribe(PARTNER_CLIENT_REQUESTED)
