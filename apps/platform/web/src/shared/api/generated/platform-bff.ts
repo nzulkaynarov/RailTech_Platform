@@ -146,6 +146,7 @@ import type {
   EdsAddressee,
   EdsAddresseeIn,
   EdsAddresseeList,
+  EdsAddresseePeople,
   EdsConflictResponse,
   EdsDealOptions,
   EdsDocument,
@@ -52374,6 +52375,155 @@ export const useCreateEdsAddressee = <
 > => {
   return useMutation(getCreateEdsAddresseeMutationOptions(options), queryClient);
 };
+
+export const getListEdsAddresseePeopleUrl = (id: string) => {
+  return `/api/v1/eds/addressees/${id}/people`;
+};
+
+/**
+ * Люди компании из карточки ERP (`parties/organizations/{id}/`) для поля «Кому — человек» (СУЩ-2.6): имя и должность, без телефонов и почты. Компании нет или она не видна — 404. Право `eds.memo.create` (полный доступ).
+ * @summary Письмо: люди организации-адресата
+ */
+export const listEdsAddresseePeople = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<EdsAddresseePeople> => {
+  return http<EdsAddresseePeople>(getListEdsAddresseePeopleUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListEdsAddresseePeopleQueryKey = (id: string) => {
+  return [`/api/v1/eds/addressees/${id}/people`] as const;
+};
+
+export const getListEdsAddresseePeopleQueryOptions = <
+  TData = Awaited<ReturnType<typeof listEdsAddresseePeople>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listEdsAddresseePeople>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListEdsAddresseePeopleQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listEdsAddresseePeople>>> = ({ signal }) =>
+    listEdsAddresseePeople(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof listEdsAddresseePeople>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type ListEdsAddresseePeopleQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listEdsAddresseePeople>>
+>;
+export type ListEdsAddresseePeopleQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useListEdsAddresseePeople<
+  TData = Awaited<ReturnType<typeof listEdsAddresseePeople>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listEdsAddresseePeople>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEdsAddresseePeople>>,
+          TError,
+          Awaited<ReturnType<typeof listEdsAddresseePeople>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListEdsAddresseePeople<
+  TData = Awaited<ReturnType<typeof listEdsAddresseePeople>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listEdsAddresseePeople>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEdsAddresseePeople>>,
+          TError,
+          Awaited<ReturnType<typeof listEdsAddresseePeople>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListEdsAddresseePeople<
+  TData = Awaited<ReturnType<typeof listEdsAddresseePeople>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listEdsAddresseePeople>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Письмо: люди организации-адресата
+ */
+
+export function useListEdsAddresseePeople<
+  TData = Awaited<ReturnType<typeof listEdsAddresseePeople>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listEdsAddresseePeople>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListEdsAddresseePeopleQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getListCounterpartyPeopleUrl = (params?: ListCounterpartyPeopleParams) => {
   const normalizedParams = new URLSearchParams();

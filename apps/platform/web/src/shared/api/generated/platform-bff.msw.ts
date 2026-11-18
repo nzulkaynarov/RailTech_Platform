@@ -179,6 +179,7 @@ import type {
   DocumentTemplateList,
   EdsAddressee,
   EdsAddresseeList,
+  EdsAddresseePeople,
   EdsDealOptions,
   EdsDealRef,
   EdsDocument,
@@ -2166,8 +2167,16 @@ export const getCreateEdsDocumentResponseEdsRecipientMock = (
   overrideResponse: Partial<EdsRecipient> = {},
 ): EdsRecipient => ({
   ...{
-    name: faker.string.alpha({ length: { min: 1, max: 255 } }),
+    name: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 255 } }), null]),
     inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 32 } }), null]),
+    company_id: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    contact_id: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -2449,8 +2458,16 @@ export const getGetEdsDocumentResponseEdsRecipientMock = (
   overrideResponse: Partial<EdsRecipient> = {},
 ): EdsRecipient => ({
   ...{
-    name: faker.string.alpha({ length: { min: 1, max: 255 } }),
+    name: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 255 } }), null]),
     inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 32 } }), null]),
+    company_id: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    contact_id: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -2714,8 +2731,16 @@ export const getUpdateEdsDocumentResponseEdsRecipientMock = (
   overrideResponse: Partial<EdsRecipient> = {},
 ): EdsRecipient => ({
   ...{
-    name: faker.string.alpha({ length: { min: 1, max: 255 } }),
+    name: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 255 } }), null]),
     inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 32 } }), null]),
+    company_id: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    contact_id: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -6695,8 +6720,16 @@ export const getRequestEdsDocumentRegistrationResponseEdsRecipientMock = (
   overrideResponse: Partial<EdsRecipient> = {},
 ): EdsRecipient => ({
   ...{
-    name: faker.string.alpha({ length: { min: 1, max: 255 } }),
+    name: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 255 } }), null]),
     inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 32 } }), null]),
+    company_id: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    contact_id: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -6993,8 +7026,16 @@ export const getSendEdsDocumentResponseEdsRecipientMock = (
   overrideResponse: Partial<EdsRecipient> = {},
 ): EdsRecipient => ({
   ...{
-    name: faker.string.alpha({ length: { min: 1, max: 255 } }),
+    name: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 255 } }), null]),
     inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 32 } }), null]),
+    company_id: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    contact_id: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -7270,8 +7311,16 @@ export const getSignEdsDocumentResponseEdsRecipientMock = (
   overrideResponse: Partial<EdsRecipient> = {},
 ): EdsRecipient => ({
   ...{
-    name: faker.string.alpha({ length: { min: 1, max: 255 } }),
+    name: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 255 } }), null]),
     inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 32 } }), null]),
+    company_id: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    contact_id: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -31291,6 +31340,20 @@ export const getCreateEdsAddresseeResponseMock = (
   ...overrideResponse,
 });
 
+export const getListEdsAddresseePeopleResponseMock = (
+  overrideResponse: Partial<Extract<EdsAddresseePeople, object>> = {},
+): EdsAddresseePeople => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    position: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  })),
+  ...overrideResponse,
+});
+
 export const getListCounterpartyPeopleResponseMock = (
   overrideResponse: Partial<Extract<CounterpartyPersonPage, object>> = {},
 ): CounterpartyPersonPage => ({
@@ -43132,6 +43195,30 @@ export const getCreateEdsAddresseeMockHandler = (
   );
 };
 
+export const getListEdsAddresseePeopleMockHandler = (
+  overrideResponse?:
+    | EdsAddresseePeople
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<EdsAddresseePeople> | EdsAddresseePeople),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/addressees/:id/people",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListEdsAddresseePeopleResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getListCounterpartyPeopleMockHandler = (
   overrideResponse?:
     | CounterpartyPersonPage
@@ -44698,6 +44785,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getRejectCatalogProposalMockHandler(),
   getSearchEdsAddresseesMockHandler(),
   getCreateEdsAddresseeMockHandler(),
+  getListEdsAddresseePeopleMockHandler(),
   getListCounterpartyPeopleMockHandler(),
   getRevealCounterpartyContactsMockHandler(),
   getGetCounterpartyMockHandler(),

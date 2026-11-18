@@ -58,8 +58,11 @@ export interface FormValues {
   text: string;
   amount: string;
   dueDate: string;
+  /** Адресат письма (СУЩ-2.6): название — текст поиска и снимок карточки, ИНН — из карточки; сама ссылка — id */
   recipientName: string;
   recipientInn: string;
+  recipientCompanyId: string;
+  recipientContactId: string;
   deal: DealChoice | null;
   attachments: Attachment[];
   /** Только письмо (P8b): «в ответ на» — номер входящего ВХ; регистрация закрывает поручение «Подготовить ответ» */
@@ -83,6 +86,8 @@ export const EMPTY_FORM: FormValues = {
   dueDate: "",
   recipientName: "",
   recipientInn: "",
+  recipientCompanyId: "",
+  recipientContactId: "",
   deal: null,
   attachments: [],
   inReplyTo: "",
@@ -164,7 +169,8 @@ export function validate(values: FormValues, today: string = todayInCompanyZone(
   if (values.subject.trim() === "") errors.subject = true;
   if (isLetter(values.kind)) {
     if (isBlank(values.body)) errors.text = true;
-    if (values.recipientName.trim() === "") errors.recipient = true;
+    // адресат — только компания из контрагентов (ADR-0028 п. 5): текст без выбора не сохраняется
+    if (values.recipientCompanyId === "") errors.recipient = true;
     if (values.recipientEmail.trim() !== "" && !isEmail(values.recipientEmail)) {
       errors.recipient_email = true;
     }
@@ -199,7 +205,7 @@ interface Payload {
   due_date: string | null;
   file_ids: string[];
   erp_deal_id: number | null;
-  recipient?: { name: string; inn: string | null };
+  recipient?: { company_id: string; contact_id: string | null };
   letter?: {
     body: Body;
     recipient_attention: string | null;
@@ -243,10 +249,15 @@ export function toPayload(
     erp_deal_id: values.deal?.erp_deal_id ?? null,
     ...(letter && body
       ? {
-          recipient: {
-            name: values.recipientName.trim(),
-            inn: values.recipientInn.trim() === "" ? null : values.recipientInn.trim(),
-          },
+          // письмо до СУЩ-2.6 без ссылки: адресат не передаётся, у EDS остаётся прежний
+          ...(values.recipientCompanyId
+            ? {
+                recipient: {
+                  company_id: values.recipientCompanyId,
+                  contact_id: values.recipientContactId || null,
+                },
+              }
+            : {}),
           letter: {
             body,
             recipient_attention: orNull(values.recipientAttention),
@@ -299,6 +310,8 @@ export function fromDocument(doc: EdsDocument): FormValues {
     dueDate: doc.due_date ?? "",
     recipientName: doc.recipient?.name ?? "",
     recipientInn: doc.recipient?.inn ?? "",
+    recipientCompanyId: doc.recipient?.company_id ?? "",
+    recipientContactId: doc.recipient?.contact_id ?? "",
     deal: dealChoice(doc.deal),
     attachments: doc.files.map((file) => ({
       key: file.id,

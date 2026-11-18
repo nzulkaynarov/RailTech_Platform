@@ -35,7 +35,7 @@ for (const width of [1440, 390] as const) {
       await sheet.getByRole("button", { name: "Завести" }).click();
       await expect(sheet).toBeHidden();
       await expect(field).toHaveValue("Таможенный комитет");
-      await expect(page.getByLabel("ИНН адресата")).toHaveValue("200000123");
+      await expect(page.getByText("ИНН 200000123")).toBeVisible();
     },
   );
 }

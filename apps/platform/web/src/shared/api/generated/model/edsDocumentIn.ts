@@ -5,7 +5,7 @@
 import type { EdsDocumentKind } from "./edsDocumentKind";
 import type { EdsLetterIn } from "./edsLetterIn";
 import type { EdsMoney } from "./edsMoney";
-import type { EdsRecipient } from "./edsRecipient";
+import type { EdsRecipientIn } from "./edsRecipientIn";
 
 export interface EdsDocumentIn {
   kind: EdsDocumentKind;
@@ -33,8 +33,8 @@ export interface EdsDocumentIn {
    * @nullable
    */
   erp_deal_id?: number | null;
-  /** Только `letter_out` */
-  recipient?: EdsRecipient | null;
+  /** Только `letter_out`; не передан — прежний */
+  recipient?: EdsRecipientIn | null;
   /**
    * Только `letter_out` (P8b): «В ответ на ВХ» — номер входящего письма. Регистрация такого ИСХ закрывает поручения «Подготовить ответ» этого письма (решает EDS). Номера нет — 422, `details.fields = [in_reply_to_number]`.
    * @minLength 1

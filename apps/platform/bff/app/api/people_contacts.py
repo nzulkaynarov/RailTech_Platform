@@ -358,3 +358,37 @@ async def create_addressee(authed: Writer, body: EdsAddresseeIn) -> EdsAddressee
         },
     )
     return to_addressee({**card, "kind": "client" if card["roles"]["client"] else "partner"})
+
+
+class EdsAddresseePerson(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    id: str
+    name: str
+    position: str | None
+
+
+class EdsAddresseePeople(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    items: list[EdsAddresseePerson]
+
+
+@router.get(
+    "/eds/addressees/{id}/people",
+    response_model=EdsAddresseePeople,
+    operation_id="listEdsAddresseePeople",
+    tags=["eds-documents"],
+)
+async def addressee_people(id: CompanyId, authed: Writer) -> EdsAddresseePeople:
+    """«Кому — человек» письма (СУЩ-2.6): люди компании из карточки ERP, без телефонов и почты."""
+    card = await ErpCompany(authed.call).data("GET", f"parties/organizations/{id}/")
+    return EdsAddresseePeople(
+        items=[
+            EdsAddresseePerson(
+                id=str(person["id"]),
+                name=str(person.get("name") or ""),
+                position=_text(person.get("position")),
+            )
+            for person in card.get("people") or []
+            if "id" in person
+        ]
+    )

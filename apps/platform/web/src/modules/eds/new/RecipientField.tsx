@@ -1,13 +1,17 @@
-import { AutoComplete, Input } from "antd";
+import { AutoComplete, Input, Select } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ApiError } from "../../../shared/api/errors";
 import {
   useCreateEdsAddressee,
+  useListEdsAddresseePeople,
   useSearchEdsAddressees,
 } from "../../../shared/api/generated/platform-bff";
-import type { EdsAddressee } from "../../../shared/api/generated/model";
+import type {
+  EdsAddressee,
+  EdsAddresseePeopleItemsItem,
+} from "../../../shared/api/generated/model";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { FormSheet } from "../../../shared/ui/FormSheet";
 
@@ -199,5 +203,46 @@ function NewOrganization({
         />
       </FormField>
     </FormSheet>
+  );
+}
+
+/**
+ * «Кому — человек» (СУЩ-2.6): люди выбранной организации из её карточки. Выбор подставляет «Кому» (должность и имя) —
+ * его можно поправить; пусто — письмо организации без конкретного человека.
+ */
+export function AddresseePerson({
+  id,
+  companyId,
+  value,
+  onPick,
+}: {
+  id: string;
+  companyId: string;
+  value: string;
+  onPick: (person: EdsAddresseePeopleItemsItem | null) => void;
+}) {
+  const { t } = useTranslation("documents");
+  const people = useListEdsAddresseePeople(companyId, {
+    query: { enabled: companyId !== "", staleTime: 30_000, retry: false },
+  });
+  const items = companyId ? (people.data?.items ?? []) : [];
+  return (
+    <Select
+      id={id}
+      value={value || undefined}
+      allowClear
+      disabled={companyId === ""}
+      loading={people.isFetching}
+      placeholder={t("form.person.placeholder")}
+      notFoundContent={t("form.person.empty")}
+      aria-describedby={`${id}-hint`}
+      options={items.map((person) => ({
+        value: person.id,
+        label: person.position ? `${person.name} · ${person.position}` : person.name,
+      }))}
+      onChange={(next: string | undefined) => {
+        onPick(items.find((person) => person.id === next) ?? null);
+      }}
+    />
   );
 }

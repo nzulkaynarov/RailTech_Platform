@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.115.0
+  version: 0.116.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -13262,6 +13262,31 @@ paths:
           $ref: '#/components/responses/ValidationFailed'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+  /eds/addressees/{id}/people:
+    get:
+      tags: [eds-documents]
+      operationId: listEdsAddresseePeople
+      summary: 'Письмо: люди организации-адресата'
+      description: >-
+        Люди компании из карточки ERP (`parties/organizations/{id}/`) для поля «Кому — человек» (СУЩ-2.6): имя и
+        должность, без телефонов и почты. Компании нет или она не видна — 404. Право `eds.memo.create` (полный доступ).
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, pattern: '^[0-9]+$'}}
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdsAddresseePeople'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /people/contacts:
     get:
       tags: [chats]
@@ -18885,11 +18910,26 @@ components:
     EdsRecipient:
       type: object
       additionalProperties: false
-      required: [name]
-      description: Адресат письма (организация) — только тип `letter_out`
+      required: [name, inn, company_id, contact_id]
+      description: |
+        Адресат письма — только тип `letter_out` (ADR-0028 п. 5, СУЩ-2.6): компания ERP и человек; название и ИНН —
+        снимок карточки ERP на момент сохранения. `company_id = null` — письмо до СУЩ-2.6, адресат текстом: экран
+        просит сопоставить его с контрагентом
       properties:
-        name: {type: string, minLength: 1, maxLength: 255}
+        name: {type: [string, 'null'], maxLength: 255}
         inn: {type: [string, 'null'], maxLength: 32}
+        company_id: {type: [string, 'null'], description: 'Компания ERP (`GET /eds/addressees`)'}
+        contact_id: {type: [string, 'null'], description: 'Человек компании — «Кому» (`GET /eds/addressees/{id}/people`)'}
+    EdsRecipientIn:
+      type: object
+      additionalProperties: false
+      required: [company_id]
+      description: |
+        Адресат письма ссылкой (СУЩ-2.6): BFF берёт название и ИНН из карточки компании ERP. Компании нет или она не
+        видна — 422 (`recipient`, `company_not_found`); человек не из этой компании — 422 (`contact_not_found`)
+      properties:
+        company_id: {type: string, pattern: '^[0-9]+$'}
+        contact_id: {type: [string, 'null'], pattern: '^[0-9]+$'}
     EdsDocumentRow:
       type: object
       additionalProperties: false
@@ -19247,7 +19287,7 @@ components:
           uniqueItems: true
           items: {type: string, format: uuid}
         erp_deal_id: {type: [integer, 'null'], description: 'Связь с проектом (`GET /eds/deal-options`)'}
-        recipient: {oneOf: [{$ref: '#/components/schemas/EdsRecipient'}, {type: 'null'}], description: 'Только `letter_out`'}
+        recipient: {oneOf: [{$ref: '#/components/schemas/EdsRecipientIn'}, {type: 'null'}], description: 'Только `letter_out`; не передан — прежний'}
         in_reply_to_number:
           type: [string, 'null']
           minLength: 1
@@ -19288,7 +19328,7 @@ components:
           uniqueItems: true
           items: {type: string, format: uuid}
         erp_deal_id: {type: [integer, 'null']}
-        recipient: {oneOf: [{$ref: '#/components/schemas/EdsRecipient'}, {type: 'null'}], description: 'Только `letter_out`'}
+        recipient: {oneOf: [{$ref: '#/components/schemas/EdsRecipientIn'}, {type: 'null'}], description: 'Только `letter_out`; не передан — прежний'}
         letter: {oneOf: [{$ref: '#/components/schemas/EdsLetterIn'}, {type: 'null'}], description: 'Только `letter_out` — письмо на бланке целиком (P4)'}
         approvers:
           type: array
@@ -26723,6 +26763,21 @@ components:
         name: {type: string, minLength: 1, maxLength: 255}
         inn: {type: [string, 'null'], pattern: '^\d{9}$', description: 'ИНН — 9 цифр; у иностранной организации — пусто'}
         legal_address: {type: [string, 'null'], maxLength: 500}
+    EdsAddresseePeople:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, name, position]
+            properties:
+              id: {type: string}
+              name: {type: string}
+              position: {type: [string, 'null']}
     EdsAddresseeList:
       type: object
       additionalProperties: false

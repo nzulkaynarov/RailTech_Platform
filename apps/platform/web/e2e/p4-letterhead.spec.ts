@@ -2,7 +2,14 @@ import AxeBuilder from "@axe-core/playwright";
 import { type Locator, type Page, expect, test } from "@playwright/test";
 
 import { loginAndWait, openAvatarMenu, reveal, spaGoto, waitForMotionEnd } from "./support/app";
-import { chooseOption, fillDate, openStep, pickFiles } from "./support/fields";
+import {
+  addAddressee,
+  chooseOption,
+  fillDate,
+  openStep,
+  pickAddressee,
+  pickFiles,
+} from "./support/fields";
 
 // P4 «Письмо на бланке» на MSW (SPEC-v3 §3.2a п. 3; план 2026-11-01 §6 п. 6): требование ГНК → поручение «Подготовить ответ»
 // исполнителю без права регистрировать → письмо на бланке блоками (абзац, список, таблица) → настоящий PDF (демо — рендер
@@ -192,7 +199,8 @@ test.describe("P4: письмо на бланке", () => {
     await (
       await reveal(page.getByLabel("Тема", { exact: true }))
     ).fill("Пояснения по требованию № 14-02/3381");
-    await (await reveal(page.getByLabel("Адресат (организация)"))).fill("ГНИ Мирабадского района");
+    await reveal(page.getByLabel("Адресат (организация)"));
+    await addAddressee(page, "ГНИ Мирабадского района");
     await (await reveal(page.getByLabel("Почта адресата"))).fill("gni-mirabad@example.uz");
     await (
       await reveal(page.getByLabel("Кому (должность и ФИО)"))
@@ -258,7 +266,8 @@ test.describe("P4: письмо на бланке", () => {
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, "/eds/new?type=letter");
     await (await reveal(page.getByLabel("Тема", { exact: true }))).fill("О сроках поставки");
-    await (await reveal(page.getByLabel("Адресат (организация)"))).fill("ООО «Демо-Путь»");
+    await reveal(page.getByLabel("Адресат (организация)"));
+    await pickAddressee(page, "Демо-Путь", "АО «Демо-Путь»");
     await (await reveal(page.getByLabel("Почта адресата"))).fill("office@nosmtp.example");
     await openStep(page, "Текст и вложения");
     await (

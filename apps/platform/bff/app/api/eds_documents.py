@@ -22,6 +22,7 @@ from fastapi.responses import StreamingResponse
 from starlette.types import Send
 
 from app.clients.eds import EdsLetters
+from app.clients.erp_company import ErpCompany
 from app.deps import Authed, Rule, require, require_any
 from app.eds_documents import (
     API,
@@ -53,6 +54,7 @@ from app.schemas_eds_documents import (
     EdsDocumentUpdateIn,
     EdsFile,
     EdsLetterhead,
+    EdsRecipientIn,
     RegistryKind,
     StatusFilter,
 )
@@ -181,10 +183,47 @@ def _edits(body: EdsDocumentIn | EdsDocumentUpdateIn) -> dict[str, Any]:
         "file_ids": body.file_ids,
         "erp_deal_id": body.erp_deal_id,
     }
-    if body.recipient is not None:
-        edits["recipient"] = body.recipient.model_dump()
     if body.letter is not None:
         edits["letter"] = body.letter.model_dump(exclude_none=True)
+    return edits
+
+
+def _bad_recipient(reason: str) -> PlatformError:
+    return PlatformError(
+        "VALIDATION_FAILED",
+        "Человек не из этой компании."
+        if reason == "contact_not_found"
+        else "Компания не найдена среди контрагентов.",
+        status_code=422,
+        details={"fields": ["recipient"], "reason": reason},
+    )
+
+
+async def _recipient(authed: Authed, recipient: EdsRecipientIn) -> dict[str, Any]:
+    """Адресат ссылкой (СУЩ-2.6): название и ИНН — снимок карточки ERP, не текст из формы."""
+    try:
+        card = await ErpCompany(authed.call).data(
+            "GET", f"parties/organizations/{recipient.company_id}/"
+        )
+    except PlatformError as exc:
+        if exc.status_code == 404:
+            raise _bad_recipient("company_not_found") from exc
+        raise
+    people = {str(person.get("id")) for person in card.get("people") or []}
+    if recipient.contact_id is not None and recipient.contact_id not in people:
+        raise _bad_recipient("contact_not_found")
+    return {
+        "name": str(card.get("name") or ""),
+        "inn": card.get("inn") or None,
+        "company_id": int(recipient.company_id),
+        "contact_id": int(recipient.contact_id) if recipient.contact_id else None,
+    }
+
+
+async def _payload(body: EdsDocumentIn | EdsDocumentUpdateIn, authed: Authed) -> dict[str, Any]:
+    edits = _edits(body)
+    if body.recipient is not None:
+        edits["recipient"] = await _recipient(authed, body.recipient)
     return edits
 
 
@@ -268,7 +307,7 @@ async def create_document(
     ] = None,
 ) -> EdsDocument:
     proxy = _proxy(authed)
-    payload = {"kind": body.kind, **_edits(body)}
+    payload = {"kind": body.kind, **await _payload(body, authed)}
     reply_to = (body.in_reply_to_number or "").strip()
     if reply_to:
         payload["in_reply_to"] = await _letter_id(authed, body.kind, reply_to)
@@ -292,7 +331,7 @@ async def create_document(
 @router.put("/eds/documents/{id}", response_model=EdsDocument, operation_id="updateEdsDocument")
 async def update_document(id: DocumentId, body: EdsDocumentUpdateIn, authed: Writer) -> EdsDocument:
     proxy = _proxy(authed)
-    saved = await proxy.request("PATCH", f"{API}/documents/{id}", json=_edits(body))
+    saved = await proxy.request("PATCH", f"{API}/documents/{id}", json=await _payload(body, authed))
     result = saved
     if body.submit:
         try:

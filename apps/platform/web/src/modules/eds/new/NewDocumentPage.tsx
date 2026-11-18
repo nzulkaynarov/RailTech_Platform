@@ -41,7 +41,7 @@ import { parseDocumentId, useRefreshDocuments } from "../documents/params";
 import { useRefreshLetters } from "../inbox/api";
 import { AttachmentsField } from "./AttachmentsField";
 import { DealField } from "./DealField";
-import { RecipientField } from "./RecipientField";
+import { AddresseePerson, RecipientField } from "./RecipientField";
 import {
   type Attachment,
   EMPTY_FORM,
@@ -458,7 +458,7 @@ function DocumentForm({
   ]
     .filter(Boolean)
     .join(" · ");
-  const aboutDone = values.subject.trim() !== "" && (!letter || values.recipientName.trim() !== "");
+  const aboutDone = values.subject.trim() !== "" && (!letter || values.recipientCompanyId !== "");
 
   const draftButton = (
     <Button
@@ -560,38 +560,61 @@ function DocumentForm({
               <Field
                 id={ids.recipient}
                 label={t("documents:form.recipient.label")}
+                hint={
+                  values.recipientCompanyId
+                    ? values.recipientInn
+                      ? t("documents:form.recipient.innShort", { inn: values.recipientInn })
+                      : undefined
+                    : t("documents:form.recipient.pickHint")
+                }
                 error={errors.recipient ? fieldText(t, "recipient") : undefined}
               >
                 <RecipientField
                   id={ids.recipient}
                   value={values.recipientName}
                   invalid={Boolean(errors.recipient)}
-                  describedBy={describedBy(ids.recipient, false, Boolean(errors.recipient))}
+                  describedBy={describedBy(ids.recipient, true, Boolean(errors.recipient))}
                   onChange={(name) => {
-                    set("recipientName", name);
+                    // адресат — только из контрагентов (СУЩ-2.6): правка текста снимает выбор
+                    setValues((prev) => ({
+                      ...prev,
+                      recipientName: name,
+                      recipientInn: "",
+                      recipientCompanyId: "",
+                      recipientContactId: "",
+                    }));
                   }}
                   onPick={(addressee) => {
-                    set("recipientName", addressee.name);
-                    if (addressee.inn) set("recipientInn", addressee.inn);
-                    if (addressee.email) set("recipientEmail", addressee.email);
-                    if (addressee.attention) set("recipientAttention", addressee.attention);
+                    setValues((prev) => ({
+                      ...prev,
+                      recipientName: addressee.name,
+                      recipientInn: addressee.inn ?? "",
+                      recipientCompanyId: addressee.id,
+                      recipientContactId: "",
+                      recipientEmail: addressee.email ?? prev.recipientEmail,
+                      recipientAttention: addressee.attention ?? prev.recipientAttention,
+                    }));
                   }}
                 />
               </Field>
               <div className="pf-newdoc-row">
                 <Field
-                  id="doc-recipient-inn"
-                  label={t("documents:form.recipient.inn")}
-                  hint={t("documents:form.recipient.innHint")}
+                  id="doc-recipient-person"
+                  label={t("documents:form.person.label")}
+                  hint={t("documents:form.person.hint")}
                 >
-                  <Input
-                    id="doc-recipient-inn"
-                    value={values.recipientInn}
-                    maxLength={32}
-                    autoComplete="off"
-                    aria-describedby="doc-recipient-inn-hint"
-                    onChange={(event) => {
-                      set("recipientInn", event.target.value);
+                  <AddresseePerson
+                    id="doc-recipient-person"
+                    companyId={values.recipientCompanyId}
+                    value={values.recipientContactId}
+                    onPick={(person) => {
+                      setValues((prev) => ({
+                        ...prev,
+                        recipientContactId: person?.id ?? "",
+                        recipientAttention: person
+                          ? [person.position, person.name].filter(Boolean).join(" ")
+                          : prev.recipientAttention,
+                      }));
                     }}
                   />
                 </Field>

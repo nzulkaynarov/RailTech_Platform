@@ -216,7 +216,8 @@
       "signatoryBasis": "Imzo asosi",
       "verificationCode": "Tekshirish kodi",
       "verificationUrl": "Haqiqiyligini tekshirish",
-      "actionFailed": "Bajarilmadi: {{reason}}"
+      "actionFailed": "Bajarilmadi: {{reason}}",
+      "unmatched": "Manzil matn bilan yozilgan. «Davom ettirish»ni bosing va tashkilotni kontragentlardan tanlang — ungaça xat röyxatdan ötkazilmaydi."
     },
     "replyTo": "Javob:",
     "mailFailed": "Yuborilmadi"
@@ -245,8 +246,6 @@
     },
     "recipient": {
       "label": "Manzil (tashkilot)",
-      "inn": "Manzil STIRi",
-      "innHint": "Majburiy emas.",
       "placeholder": "Nomi yoki STIR",
       "innShort": "STIR {{inn}}",
       "create": {
@@ -259,7 +258,8 @@
         "submit": "Qöşiş",
         "exists": "Bunday kompaniya allaqaçon bor — uni röyxatdan toping.",
         "failed": "Tashkilotni qöşib bölmadi. Qayta urinib köring."
-      }
+      },
+      "pickHint": "Kontragentlardan tanlang yoki taklifning oxirgi qatoridan tashkilot qöşing."
     },
     "text": {
       "label": "Matn",
@@ -352,7 +352,7 @@
       "text": "Hujjat matnini yozing.",
       "amount": "Summa noldan katta bo‘lishi kerak, masalan 1 500 000.",
       "due": "«Muddat» o‘tmishda bo‘lishi mumkin emas.",
-      "recipient": "Xat manzilini kiriting.",
+      "recipient": "Tashkilotni röyxatdan tanlang yoki yangisini qöşing.",
       "deal": "Loyiha topilmadi — boshqasini tanlang yoki bog‘lashni olib tashlang.",
       "replyTo": "Bunday raqamli kiruvchi xat yo‘q. ВХ raqamini tekshiring.",
       "recipientEmail": "Manzil e-pochtasini tekshiring, masalan office@example.uz."
@@ -468,6 +468,12 @@
       "pending": "Tarjima tayyorlanmoqda…",
       "inserted": "Matn qo‘yildi — tekshiring",
       "failed": "Yordamchi javob bermadi — matnni o‘zingiz yozing"
+    },
+    "person": {
+      "label": "Kimga — şaxs",
+      "hint": "Majburiy emas. Tanlov «Kimga»ni töldiradi.",
+      "placeholder": "Tashkilot kartoçkasidagi şaxs",
+      "empty": "Tashkilot kartoçkasida şaxslar yöq"
     }
   },
   "preview": {

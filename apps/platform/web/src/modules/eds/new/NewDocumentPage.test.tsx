@@ -73,6 +73,12 @@ function type(label: string | RegExp, value: string) {
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
 }
 
+/** Адресат письма — только из контрагентов (СУЩ-2.6): поиск и выбор подсказки. */
+async function pickAddressee(query = "демо", name = "АО «Демо-Путь»") {
+  type("Адресат (организация)", query);
+  fireEvent.click(await screen.findByText(name));
+}
+
 /** Открыть секцию формы (секции по шагам, platform-frontend.md §4.1a) щелчком по её заголовку. */
 function step(title: RegExp) {
   fireEvent.click(screen.getByRole("button", { name: title, expanded: false }));
@@ -115,17 +121,23 @@ describe("EDS · Создать документ: форма", () => {
     expect(screen.getByRole("button", { name: "Отправить на согласование" })).toBeVisible();
   });
 
-  it("адресат письма из контрагентов: подсказка по названию подставляет ИНН, почту и «Кому»; вручную — тоже можно", async () => {
+  it("адресат письма из контрагентов: подсказка подставляет ИНН, почту и «Кому»; человек — из карточки; текст без выбора — не адресат", async () => {
     await openForm("director@demo.example", "?type=letter");
-    type("Адресат (организация)", "демо");
-    fireEvent.click(await screen.findByText("АО «Демо-Путь»"));
+    await pickAddressee();
     expect(screen.getByLabelText("Адресат (организация)")).toHaveValue("АО «Демо-Путь»");
-    expect(screen.getByLabelText("ИНН адресата")).toHaveValue("300000777");
+    expect(screen.getByText("ИНН 300000777")).toBeVisible();
     expect(screen.getByLabelText("Почта адресата")).toHaveValue("office@demo-put.example");
     expect(screen.getByLabelText("Кому (должность и ФИО)")).toHaveValue("Демо Клиентов");
-    // адресата нет в книге — пишем вручную, подсказки не мешают
+    // «Кому — человек»: люди организации из её карточки; выбор подставляет должность и имя
+    fireEvent.mouseDown(screen.getByLabelText("Кому — человек"));
+    fireEvent.click(await screen.findByText("Демо Клиентов · Главный инженер"));
+    expect(screen.getByLabelText("Кому (должность и ФИО)")).toHaveValue(
+      "Главный инженер Демо Клиентов",
+    );
+    // правка текста снимает выбор: адресат — только компания из списка
     type("Адресат (организация)", "ГНИ Мирабадского района");
     expect(screen.getByLabelText("Адресат (организация)")).toHaveValue("ГНИ Мирабадского района");
+    expect(screen.getByText(/Выберите из контрагентов или заведите организацию/)).toBeVisible();
   });
 
   it("адресата нет среди контрагентов: «Завести организацию» из подсказок — и она становится адресатом (СУЩ-2.6)", async () => {
@@ -142,7 +154,7 @@ describe("EDS · Создать документ: форма", () => {
       expect(screen.queryByRole("dialog", { name: "Новая организация" })).toBeNull();
     });
     expect(screen.getByLabelText("Адресат (организация)")).toHaveValue("Таможенный комитет");
-    expect(screen.getByLabelText("ИНН адресата")).toHaveValue("200000123");
+    expect(screen.getByText("ИНН 200000123")).toBeVisible();
   });
 
   it("?type=letter у роли с доступом к входящим: письмо на бланке — адресат, почта, «кому», блоки, подписант; без суммы и срока", async () => {
@@ -208,7 +220,7 @@ describe("EDS · Создать документ: форма", () => {
     ).toBeVisible();
     expect(screen.getByLabelText("В ответ на входящее")).toHaveValue("ВХ-112/26");
     type("Тема", "Ответ на требование");
-    type("Адресат (организация)", "ГНИ Мирабадского района");
+    await pickAddressee();
     type("Текст", "Направляем пояснения.");
     await press("Передать на регистрацию");
 
@@ -244,7 +256,6 @@ describe("EDS · Создать документ: форма", () => {
     );
 
     expect(await screen.findByLabelText("Адресат (организация)")).toHaveValue("ГНИ Демо-района");
-    expect(screen.getByLabelText("ИНН адресата")).toHaveValue("300111222");
     expect(screen.getByLabelText("Почта адресата")).toHaveValue("gni@demo-inspection.example");
     expect(screen.getByLabelText("Тема")).toHaveValue(
       `На ВХ-108/26 от 29.10.2026: ${letter.subject}`,
@@ -256,12 +267,26 @@ describe("EDS · Создать документ: форма", () => {
 
     type("Тема", "Пояснения по требованию");
     type("Текст", "Направляем пояснения.");
+    // корреспондента ещё нет в контрагентах — заводится организацией из письма (СУЩ-2.6)
+    // поле уже заполнено из письма: правка открывает подсказки
+    type("Адресат (организация)", "ГНИ Демо-район");
+    type("Адресат (организация)", "ГНИ Демо-района");
+    fireEvent.click(await screen.findByText("+ Завести организацию «ГНИ Демо-района»"));
+    const sheet = await screen.findByRole("dialog", { name: "Новая организация" });
+    fireEvent.change(within(sheet).getByLabelText("ИНН"), { target: { value: "300111222" } });
+    fireEvent.click(within(sheet).getByRole("button", { name: "Завести" }));
+    expect(await screen.findByText("ИНН 300111222")).toBeVisible();
     await press("Передать на регистрацию");
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/eds/documents");
     });
     const saved = readEds().documents.find((d) => d.subject === "Пояснения по требованию");
-    expect(saved?.recipient).toEqual({ name: "ГНИ Демо-района", inn: "300111222" });
+    expect(saved?.recipient).toMatchObject({
+      name: "ГНИ Демо-района",
+      inn: "300111222",
+      contact_id: null,
+    });
+    expect(saved?.recipient?.company_id).toBeTruthy();
     expect(saved?.letter?.recipient_email).toBe("gni@demo-inspection.example");
     expect(saved?.replyTo).toBe("ВХ-108/26");
   });
@@ -288,7 +313,7 @@ describe("EDS · Создать документ: форма", () => {
     ).toBeVisible();
     expect(screen.queryByRole("button", { name: "Показать PDF" })).toBeNull();
     type("Тема", "Ответ на требование");
-    type("Адресат (организация)", "ГНИ Мирабадского района");
+    await pickAddressee();
     type("Текст", "Направляем пояснения.");
 
     expect(await screen.findByText("Готовится PDF…", {}, { timeout: 3000 })).toBeVisible();

@@ -8,7 +8,7 @@ from typing import Annotated, Any, Literal
 from pydantic import BaseModel, Field, PositiveInt, model_validator
 
 from app.schemas.approvals import Decision
-from app.schemas.common import FileRef, JournalEntry, LetterSender, Money, PersonRef, Strict
+from app.schemas.common import FileRef, JournalEntry, LetterRecipient, Money, PersonRef, Strict
 from app.schemas.letters import FileIds, ReplyToLetter, Subject
 
 DocText = Annotated[str, Field(min_length=1, max_length=20000)]
@@ -111,7 +111,7 @@ class DocumentCreate(Strict):
     file_ids: FileIds = Field(default_factory=list)
     source_message_id: Annotated[str | None, Field(max_length=128)] = None
     erp_deal_id: int | None = None
-    recipient: LetterSender | None = None
+    recipient: LetterRecipient | None = None
     in_reply_to: uuid.UUID | None = None
     letter: OutgoingLetterIn | None = None
 
@@ -149,7 +149,7 @@ class DocumentUpdate(DocumentSubmitIn):
     """Правка черновика (или возвращённого документа) без отправки: те же поля, что у `submit`, и связь с проектом."""
 
     erp_deal_id: int | None = None
-    recipient: LetterSender | None = None
+    recipient: LetterRecipient | None = None
     letter: OutgoingLetterIn | None = None
 
 
@@ -219,7 +219,7 @@ class Document(BaseModel):
     source_message_id: str | None
     erp_deal_id: int | None
     deal_number: str | None
-    recipient: LetterSender | None
+    recipient: LetterRecipient | None
     in_reply_to: uuid.UUID | None
     reply_to: ReplyToLetter | None = None
     letter: OutgoingLetter | None

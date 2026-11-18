@@ -244,7 +244,7 @@ describe("Рабочий экран поручения (P8b, SPEC-v3 §3.2a п. 
         due_date: null,
         file_ids: [],
         erp_deal_id: null,
-        recipient: { name: "ГНИ Демо-района", inn: null },
+        recipient: { name: "ГНИ Демо-района", inn: null, company_id: "7", contact_id: null },
         decisions: [],
         created_at: "2026-11-02T05:00:00Z",
         updated_at: "2026-11-02T05:00:00Z",

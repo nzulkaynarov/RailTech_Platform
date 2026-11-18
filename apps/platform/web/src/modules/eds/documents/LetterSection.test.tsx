@@ -34,7 +34,7 @@ function seed(overrides: Partial<MockDocument>): void {
     due_date: null,
     file_ids: [],
     erp_deal_id: null,
-    recipient: { name: "ГНИ Мирабадского района", inn: null },
+    recipient: { name: "ГНИ Мирабадского района", inn: null, company_id: "7", contact_id: null },
     decisions: [],
     created_at: AT,
     updated_at: AT,
@@ -94,6 +94,16 @@ describe("EDS · карточка письма на бланке (P4)", () => {
     const shown = await card.findAllByText(/gni@example\.uz/);
     expect(shown.length).toBeGreaterThan(0);
     expect(shown[0]).toBeVisible();
+  });
+
+  it("адресат текстом из писем до СУЩ-2.6: просьба сопоставить, регистрация закрыта", async () => {
+    seed({
+      recipient: { name: "ГНИ Мирабадского района", inn: null, company_id: null, contact_id: null },
+    });
+    const card = await openCard("registrar@demo.example");
+
+    expect(card.getByText(/Адресат вписан текстом/)).toBeVisible();
+    expect(card.getByRole("button", { name: "Зарегистрировать и отправить" })).toBeDisabled();
   });
 
   it("отправка не удалась — причина словами; «Отправить адресату ещё раз» добавляет строку журнала", async () => {

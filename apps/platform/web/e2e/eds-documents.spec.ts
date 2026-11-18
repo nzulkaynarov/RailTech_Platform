@@ -2,7 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { type Locator, type Page, expect, test } from "@playwright/test";
 
 import { loginAndWait, settledScreenshot, spaGoto, waitForMotionEnd } from "./support/app";
-import { fillDate, openStep, pickFiles } from "./support/fields";
+import { fillDate, openStep, pickAddressee, pickFiles } from "./support/fields";
 
 // EDS · Создать документ и «Мои документы» на MSW (D1-5): сотрудник создаёт служебную записку с суммой и вложением и отправляет
 // её на согласование — документ виден в «Мои» со статусом «На согласовании»; черновик → «Продолжить» → отправка; сбой сервера
@@ -290,7 +290,9 @@ test.describe("Создать документ: директор и реестр
 
     await expect(page.getByLabel("Адресат (организация)")).toBeVisible();
     await expect(page.getByLabel("Сумма, сум")).toHaveCount(0);
-    await page.getByLabel("Адресат (организация)").fill("ООО «Демо-Путь»");
+    await pickAddressee(page, "Демо-Путь", "АО «Демо-Путь»");
+    // выбор подставил общую почту организации — здесь письмо только регистрируется
+    await page.getByLabel("Почта адресата").fill("");
     await fillMemo(page, "Ответ на запрос цен", "Направляем коммерческие условия.");
     await openStep(page, CHECK);
     await settledScreenshot(page, "letter-form");
@@ -302,7 +304,7 @@ test.describe("Создать документ: директор и реестр
     ).toBeVisible();
     await expect(panel.getByText("Зарегистрировано")).toBeVisible();
     await expect(panel.getByText(/ИСХ-082\/26/)).toBeVisible();
-    await expect(panel.getByText("ООО «Демо-Путь»")).toBeVisible();
+    await expect(panel.getByText("АО «Демо-Путь»")).toBeVisible();
   });
 
   test("менеджер без права регистрировать готовит письмо и передаёт на регистрацию (P4, B-P8B-4)", async ({

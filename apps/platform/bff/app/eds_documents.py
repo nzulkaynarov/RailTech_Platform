@@ -205,6 +205,17 @@ class _RawDecision(BaseModel):
     at: Any
 
 
+class _RawRecipient(BaseModel):
+    name: str | None = None
+    inn: str | None = None
+    company_id: int | None = None
+    contact_id: int | None = None
+
+
+def _id_or_none(value: int | None) -> str | None:
+    return None if value is None else str(value)
+
+
 class _RawReplyTo(BaseModel):
     id: str
     number: str
@@ -228,7 +239,7 @@ class _RawDocument(BaseModel):
     files: list[EdsFile]
     erp_deal_id: int | None
     deal_number: str | None
-    recipient: EdsRecipient | None = None
+    recipient: _RawRecipient | None = None
     reply_to: _RawReplyTo | None = None
     letter: EdsLetter | None = None
     approval_id: str | None
@@ -342,7 +353,14 @@ async def present(
             "due_date": raw.due_date,
             "files": [EdsFile.model_validate(f.model_dump()) for f in raw.files],
             "deal": deal,
-            "recipient": raw.recipient,
+            "recipient": None
+            if raw.recipient is None
+            else EdsRecipient(
+                name=raw.recipient.name,
+                inn=raw.recipient.inn,
+                company_id=_id_or_none(raw.recipient.company_id),
+                contact_id=_id_or_none(raw.recipient.contact_id),
+            ),
             "route": steps,
             "decisions": [EdsDecision.model_validate(d.model_dump()) for d in raw.decisions],
             "can_edit": editable,

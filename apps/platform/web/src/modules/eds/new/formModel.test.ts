@@ -67,7 +67,10 @@ describe("formModel", () => {
       recipientName: "ООО «Пример»",
       body: { type: "doc", content: [paragraphOf("Сообщаем.")] },
     };
-    expect(validate(filled, "2026-10-27")).toEqual({});
+    // СУЩ-2.6: название без выбора из контрагентов — не адресат
+    expect(validate(filled, "2026-10-27")).toEqual({ recipient: true });
+    expect(validate({ ...filled, recipientCompanyId: "7" }, "2026-10-27")).toEqual({});
+    Object.assign(filled, { recipientCompanyId: "7" });
     expect(validate({ ...filled, recipientEmail: "не адрес" }, "2026-10-27")).toEqual({
       recipient_email: true,
     });
@@ -180,14 +183,17 @@ describe("formModel", () => {
         amount: "500",
         recipientName: " ООО «Пример» ",
         recipientInn: "",
+        recipientCompanyId: "7",
+        recipientContactId: "41",
       },
       true,
     );
+    // адресат — ссылкой (СУЩ-2.6): название и ИНН возьмёт BFF из карточки компании
     expect(letter).toMatchObject({
       kind: "letter_out",
       amount: null,
       due_date: null,
-      recipient: { name: "ООО «Пример»", inn: null },
+      recipient: { company_id: "7", contact_id: "41" },
     });
   });
 

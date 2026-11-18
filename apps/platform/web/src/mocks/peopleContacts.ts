@@ -57,7 +57,32 @@ const ADDRESSEES: EdsAddressee[] = [
   },
 ];
 
+/** Адресат письма по id (СУЩ-2.6): BFF берёт название и ИНН из карточки компании ERP. */
+export function addresseeById(id: string): EdsAddressee | undefined {
+  return ADDRESSEES.find((item) => item.id === id);
+}
+
+/** Люди компании-адресата — «Кому — человек». */
+export function addresseePeople(id: string): CounterpartyPerson[] {
+  return PEOPLE.filter((person) => person.company.id === id);
+}
+
 export const peopleContactsHandlers = [
+  http.get("*/eds/addressees/:id/people", ({ params }) => {
+    const id = String(params.id);
+    if (!addresseeById(id)) {
+      return HttpResponse.json(
+        { code: "NOT_FOUND", message: "Не найдено.", source: "erp" },
+        { status: 404 },
+      );
+    }
+    const items = addresseePeople(id).map(({ id: personId, name, position }) => ({
+      id: personId,
+      name,
+      position,
+    }));
+    return HttpResponse.json({ items });
+  }),
   http.get("*/eds/addressees", ({ request }) => {
     const q = (new URL(request.url).searchParams.get("q") ?? "").toLocaleLowerCase("ru");
     const items = ADDRESSEES.filter(

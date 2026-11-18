@@ -4,17 +4,29 @@
  */
 
 /**
- * Адресат письма (организация) — только тип `letter_out`
+ * Адресат письма — только тип `letter_out` (ADR-0028 п. 5, СУЩ-2.6): компания ERP и человек; название и ИНН —
+ * снимок карточки ERP на момент сохранения. `company_id = null` — письмо до СУЩ-2.6, адресат текстом: экран
+ * просит сопоставить его с контрагентом
  */
 export interface EdsRecipient {
   /**
-   * @minLength 1
    * @maxLength 255
+   * @nullable
    */
-  name: string;
+  name: string | null;
   /**
    * @maxLength 32
    * @nullable
    */
-  inn?: string | null;
+  inn: string | null;
+  /**
+   * Компания ERP (`GET /eds/addressees`)
+   * @nullable
+   */
+  company_id: string | null;
+  /**
+   * Человек компании — «Кому» (`GET /eds/addressees/{id}/people`)
+   * @nullable
+   */
+  contact_id: string | null;
 }

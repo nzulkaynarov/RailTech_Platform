@@ -216,7 +216,8 @@
       "signatoryBasis": "Signing basis",
       "verificationCode": "Verification code",
       "verificationUrl": "Verify authenticity",
-      "actionFailed": "Not done: {{reason}}"
+      "actionFailed": "Not done: {{reason}}",
+      "unmatched": "The addressee is typed as text. Click “Continue” and pick the organization from counterparties — until then the letter can’t be registered."
     },
     "replyTo": "In reply to",
     "mailFailed": "Not sent"
@@ -245,8 +246,6 @@
     },
     "recipient": {
       "label": "Addressee (organization)",
-      "inn": "Addressee tax ID",
-      "innHint": "Optional.",
       "placeholder": "Name or tax ID",
       "innShort": "Tax ID {{inn}}",
       "create": {
@@ -259,7 +258,8 @@
         "submit": "Add",
         "exists": "This company already exists — find it in the list.",
         "failed": "Could not add the organization. Try again."
-      }
+      },
+      "pickHint": "Pick a counterparty or add an organization from the last suggestion."
     },
     "text": {
       "label": "Text",
@@ -352,7 +352,7 @@
       "text": "Write the document text.",
       "amount": "The amount must be greater than zero, for example 1,500,000.",
       "due": "“Needed by” cannot be in the past.",
-      "recipient": "Enter the addressee of the letter.",
+      "recipient": "Pick the organization from the list or add a new one.",
       "deal": "Project not found — pick another or remove the link.",
       "replyTo": "No incoming letter with this number. Check the number.",
       "recipientEmail": "Check the addressee email, for example office@example.uz."
@@ -468,6 +468,12 @@
       "pending": "Preparing the translation…",
       "inserted": "Text inserted — check it",
       "failed": "The helper did not answer — write the text yourself"
+    },
+    "person": {
+      "label": "To — person",
+      "hint": "Optional. Picking fills in “To”.",
+      "placeholder": "Person from the organization card",
+      "empty": "No people in the organization card"
     }
   },
   "preview": {
