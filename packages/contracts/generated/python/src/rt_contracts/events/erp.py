@@ -210,6 +210,46 @@ class ClientActor(BaseModel):
     name: str | None = None
 
 
+class Company(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    name: Annotated[str, Field(max_length=255, min_length=1)]
+    inn: Annotated[str | None, Field(max_length=32)]
+    """
+    ИНН РУз; null — нет
+    """
+    registration_number: Annotated[str | None, Field(max_length=64)]
+    """
+    Рег. номер страны регистрации (нерезидент); null — нет
+    """
+    country: Annotated[str | None, Field(pattern="^[A-Z]{2}$")]
+    """
+    ISO 3166-1 alpha-2; null — не указана
+    """
+    legal_address: Annotated[str | None, Field(max_length=1000)]
+    updated_at: AwareDatetime
+    """
+    Когда ERP изменила реквизиты — порядок снимков
+    """
+
+
+class CompanyUpdatedV1(BaseModel):
+    """
+    Тип uz.railtech.erp.company.updated.v1, источник rt://erp. Поле data конверта (envelope.v1.json). ERP — владелец названия, ИНН и реквизитов компании-контрагента (ADR-0028 п. 6, СУЩ-2.7): при их изменении ERP публикует снимок целиком, CRM держит проекцию у клиента со ссылкой erp_company_id (название, ИНН, страна, рег. номер). Своя компания ERP не публикуется. Каждое событие — полный снимок: более старый (по company.updated_at) проекцию не перезаписывает. Подписчики: CRM.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_company_id: Annotated[int, Field(ge=1)]
+    """
+    Компания-контрагент в ERP
+    """
+    actor: Actor | None = None
+    company: Company
+
+
 class ContactSecurityNoticeRequested(BaseModel):
     """
     Кому и о чём прислать уведомление безопасности (FX-4)

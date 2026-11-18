@@ -329,6 +329,10 @@ def test_every_event_type_is_published_by_its_service(deal, buyer, manager, mapp
     document.company = company
     assert issue_document(document, manager)[1] is None
 
+    # company.updated (СУЩ-2.7) — сотрудник поправил название компании клиента CRM
+    company.name = "ООО «Покупатель» (новое имя)"
+    company.save()
+
     published = bus_support.published()
     seen = {e["type"] for e in published}
     # partner.client_requested (PART-CRM) — приглашение партнёра в кабинет, отдельный путь: test_partner_client.py
