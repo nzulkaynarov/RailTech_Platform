@@ -46,7 +46,6 @@
       "decline": "Yo'q — yangi mijoz yaratish",
       "readOnly": "Qaror qilish mijozlarni yurituvchi xodimning vazifasi."
     },
-    "label": "Mijoz kartasi",
     "close": "Yopish",
     "inn": "STIR",
     "noInn": "STIR ko‘rsatilmagan",
@@ -104,9 +103,7 @@
       "contacts": "kontaktlar",
       "requests": "arizalar",
       "documents": "hujjatlar"
-    },
-    "partnerLabel": "Hamkor kartasi",
-    "openPartner": "Hamkor kartasini ochish"
+    }
   },
   "clientSees": {
     "in_work": "Ishga qabul qilindi, hisoblayapmiz",
@@ -142,5 +139,41 @@
     "applications": "Ulanish arizalari",
     "bank_changes": "Rekvizitlarni oʻzgartirish"
   },
-  "addPartner": "Hamkor qo‘shish"
+  "addPartner": "Hamkor qo‘shish",
+  "counterparty": {
+    "label": "Kontragent kartasi",
+    "tabs": {
+      "overview": "Umumiy",
+      "client": "Sörovlar va loyihalar",
+      "supplier": "Yetkazib beruvçi tovarlari"
+    },
+    "roles": {
+      "label": "Rollar",
+      "client": "Mijoz",
+      "supplier": "Yetkazib beruvçi",
+      "manufacturer": "Işlab çiqaruvçi",
+      "partner": "Kabinetli hamkor",
+      "inUse": "Rol band: kompaniyada takliflar yoki brendlar bor.",
+      "failed": "Rolni özgartirib bölmadi. Qayta urinib köring."
+    },
+    "people": {
+      "title": "Odamlar",
+      "primary": "asosiy kontakt",
+      "cabinet": "kabinet",
+      "empty": "Hozirça odamlar yöq.",
+      "contacts": "Telefon va poçta — «Odamlar»da"
+    },
+    "accounts": {
+      "title": "Bank hisoblari",
+      "default": "asosiy · {{currency}}",
+      "mfo": "MFO",
+      "noBank": "Bank körsatilmagan",
+      "empty": "Hozirça hisoblar yöq.",
+      "masked": "Hisob raqamlarini buxgalteriya köradi."
+    },
+    "brands": {
+      "title": "Işlab çiqaruvçi sifatida",
+      "empty": "Hozirça brendlar yöq: «Katalog · Maʼlumotnomalar · Brendlar»da qöşing."
+    }
+  }
 }

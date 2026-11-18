@@ -116,8 +116,10 @@ import type {
   CompanyProfileUpdate,
   ConversationCard,
   ConversationThread,
+  CounterpartyCard,
   CounterpartyContacts,
   CounterpartyPersonPage,
+  CounterpartyRoleIn,
   CreatedId,
   CsrfFailedResponse,
   DeputyUpdate,
@@ -52485,6 +52487,425 @@ export const useRevealCounterpartyContacts = <
   TContext
 > => {
   return useMutation(getRevealCounterpartyContactsMutationOptions(options), queryClient);
+};
+
+export const getGetCounterpartyUrl = (id: CompanyItemRef) => {
+  return `/api/v1/people/counterparties/${id}`;
+};
+
+/**
+ * ADR-0028 (СУЩ-2.5): одна компания ERP — клиент, поставщик, изготовитель и партнёр с кабинетом; роли — отметки, а не отдельные карточки. Люди — без телефонов и почты (их открывает `revealCounterpartyContacts`); номер счёта полностью видит держатель финансовых прав ERP, остальные — последние 4 знака (`accounts_masked`). ERP `parties/organizations/{id}/` — клиенты своей компании и партнёры; чужая компания — 404. Раздел `crm.clients` или `erp.stock` — чтение.
+ * @summary Контакты · Контрагенты: карточка компании во всех ролях
+ */
+export const getCounterparty = async (
+  id: CompanyItemRef,
+  options?: Parameters<typeof http>[1],
+): Promise<CounterpartyCard> => {
+  return http<CounterpartyCard>(getGetCounterpartyUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCounterpartyQueryKey = (id: CompanyItemRef) => {
+  return [`/api/v1/people/counterparties/${id}`] as const;
+};
+
+export const getGetCounterpartyQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCounterparty>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCounterparty>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCounterpartyQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCounterparty>>> = ({ signal }) =>
+    getCounterparty(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getCounterparty>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetCounterpartyQueryResult = NonNullable<Awaited<ReturnType<typeof getCounterparty>>>;
+export type GetCounterpartyQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetCounterparty<
+  TData = Awaited<ReturnType<typeof getCounterparty>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCounterparty>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCounterparty>>,
+          TError,
+          Awaited<ReturnType<typeof getCounterparty>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCounterparty<
+  TData = Awaited<ReturnType<typeof getCounterparty>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCounterparty>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCounterparty>>,
+          TError,
+          Awaited<ReturnType<typeof getCounterparty>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCounterparty<
+  TData = Awaited<ReturnType<typeof getCounterparty>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCounterparty>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Контакты · Контрагенты: карточка компании во всех ролях
+ */
+
+export function useGetCounterparty<
+  TData = Awaited<ReturnType<typeof getCounterparty>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCounterparty>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetCounterpartyQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetCounterpartyByClientUrl = (id: CompanyItemRef) => {
+  return `/api/v1/people/clients/${id}/counterparty`;
+};
+
+/**
+ * Та же карточка по id клиента CRM (ERP `parties/crm-clients/{id}/organization/`). Клиент ещё не передан в ERP — 404: компании в ERP нет, у карточки клиента только данные CRM. Раздел `crm.clients` или `erp.stock` — чтение.
+ * @summary Контакты · Контрагенты: карточка компании клиента CRM
+ */
+export const getCounterpartyByClient = async (
+  id: CompanyItemRef,
+  options?: Parameters<typeof http>[1],
+): Promise<CounterpartyCard> => {
+  return http<CounterpartyCard>(getGetCounterpartyByClientUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCounterpartyByClientQueryKey = (id: CompanyItemRef) => {
+  return [`/api/v1/people/clients/${id}/counterparty`] as const;
+};
+
+export const getGetCounterpartyByClientQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCounterpartyByClient>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCounterpartyByClient>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCounterpartyByClientQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCounterpartyByClient>>> = ({
+    signal,
+  }) => getCounterpartyByClient(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getCounterpartyByClient>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetCounterpartyByClientQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCounterpartyByClient>>
+>;
+export type GetCounterpartyByClientQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetCounterpartyByClient<
+  TData = Awaited<ReturnType<typeof getCounterpartyByClient>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCounterpartyByClient>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCounterpartyByClient>>,
+          TError,
+          Awaited<ReturnType<typeof getCounterpartyByClient>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCounterpartyByClient<
+  TData = Awaited<ReturnType<typeof getCounterpartyByClient>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCounterpartyByClient>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCounterpartyByClient>>,
+          TError,
+          Awaited<ReturnType<typeof getCounterpartyByClient>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCounterpartyByClient<
+  TData = Awaited<ReturnType<typeof getCounterpartyByClient>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCounterpartyByClient>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Контакты · Контрагенты: карточка компании клиента CRM
+ */
+
+export function useGetCounterpartyByClient<
+  TData = Awaited<ReturnType<typeof getCounterpartyByClient>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCounterpartyByClient>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetCounterpartyByClientQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getSetCounterpartyRoleUrl = (id: CompanyItemRef) => {
+  return `/api/v1/people/counterparties/${id}/roles`;
+};
+
+/**
+ * Роль «поставщик» или «изготовитель» — отметкой, новая карточка не нужна (ERP `supply.manage`). Снять роль, пока у компании есть предложения или бренды, нельзя — 409 `CONFLICT` (`details.reason = role_in_use`). «Клиент» и «партнёр с кабинетом» приходят из процессов и отметкой не меняются. Раздел `erp.stock` — полный.
+ * @summary Контакты · Контрагенты: отметить или снять роль
+ */
+export const setCounterpartyRole = async (
+  id: CompanyItemRef,
+  counterpartyRoleIn: CounterpartyRoleIn,
+  options?: Parameters<typeof http>[1],
+): Promise<CounterpartyCard> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CounterpartyCard>(getSetCounterpartyRoleUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(counterpartyRoleIn),
+  });
+};
+
+export const getSetCounterpartyRoleMutationKey = () => ["setCounterpartyRole"] as const;
+
+export const getSetCounterpartyRoleMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setCounterpartyRole>>,
+    TError,
+    SetCounterpartyRoleMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof setCounterpartyRole>>,
+  TError,
+  SetCounterpartyRoleMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSetCounterpartyRoleMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof setCounterpartyRole>>,
+    SetCounterpartyRoleMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return setCounterpartyRole(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SetCounterpartyRoleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof setCounterpartyRole>>
+>;
+export type SetCounterpartyRoleMutationBody = CounterpartyRoleIn;
+export type SetCounterpartyRoleMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | Error
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type SetCounterpartyRoleMutationVariables = { id: CompanyItemRef; data: CounterpartyRoleIn };
+
+/**
+ * @summary Контакты · Контрагенты: отметить или снять роль
+ */
+export const useSetCounterpartyRole = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof setCounterpartyRole>>,
+      TError,
+      SetCounterpartyRoleMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof setCounterpartyRole>>,
+  TError,
+  SetCounterpartyRoleMutationVariables,
+  TContext
+> => {
+  return useMutation(getSetCounterpartyRoleMutationOptions(options), queryClient);
 };
 
 export const getListCatalogSuppliersUrl = (params?: ListCatalogSuppliersParams) => {

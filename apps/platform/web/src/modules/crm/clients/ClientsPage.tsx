@@ -22,12 +22,11 @@ import { PageHeader } from "../../../shared/ui/PageHeader";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { BankChangesPanel } from "../../eds/payments/BankChangesPanel";
 import { PartnerApplicationsPanel } from "../../erp/catalog/PartnerApplicationsPanel";
-import { PartnerCard } from "../../erp/catalog/PartnerCard";
 import { SupplierForm } from "../../erp/catalog/supplierForms";
 import { Sheet } from "../../../shared/ui/Sheet";
 import { parseClientId, useParamChanger, withParams } from "../common/params";
 import { CreateRequest } from "../request/CreateRequest";
-import { ClientPanel } from "./ClientPanel";
+import { CounterpartyCard } from "./CounterpartyCard";
 
 import "../../eds/payments/payments.css";
 import "../../erp/catalog/catalog.css";
@@ -235,10 +234,6 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
   // «Добавить партнёра» — форма секциями в боковом окне (§4.1a), по адресу `?partner=new`
   const addingPartner = params.get("partner") === "new";
   const partner = addingPartner ? null : params.get("partner");
-  const selectedInn = list.data?.items.find((row) => row.id === selected)?.inn;
-  const sameCompanyPartner = selectedInn
-    ? suppliers.data?.items.find((row) => row.tin === selectedInn)
-    : undefined;
   const creating = selected !== null && params.get("create") === "1";
   // «Создать · Заявка» из окна «Создать» (план 2026-11-12 п. 0.1): клиент выбирается в самой форме.
   const newRequest = selected === null && params.get("create") === "1";
@@ -419,8 +414,8 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
         </Card>
       )}
       {partner !== null ? (
-        <Sheet label={t("clients:card.partnerLabel")} onClose={close}>
-          <PartnerCard key={partner} id={partner} />
+        <Sheet label={t("clients:counterparty.label")} onClose={close}>
+          <CounterpartyCard key={`p-${partner}`} companyId={partner} onClose={close} />
         </Sheet>
       ) : null}
       {addingPartner ? (
@@ -443,7 +438,7 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
         </Sheet>
       ) : null}
       {selected !== null ? (
-        <Sheet label={t(creating ? "request:title" : "clients:card.label")} onClose={close}>
+        <Sheet label={t(creating ? "request:title" : "clients:counterparty.label")} onClose={close}>
           {creating ? (
             <CreateRequest
               key={`create-${String(selected)}`}
@@ -454,22 +449,7 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
               }}
             />
           ) : (
-            <>
-              {sameCompanyPartner ? (
-                <p>
-                  <Link
-                    className="pf-crm-link pf-focusable"
-                    to={`/crm/clients${withParams(params, {
-                      client: null,
-                      partner: sameCompanyPartner.id,
-                    })}`}
-                  >
-                    {t("clients:card.openPartner")}
-                  </Link>
-                </p>
-              ) : null}
-              <ClientPanel key={selected} id={selected} onClose={close} />
-            </>
+            <CounterpartyCard key={`c-${String(selected)}`} clientId={selected} onClose={close} />
           )}
         </Sheet>
       ) : null}

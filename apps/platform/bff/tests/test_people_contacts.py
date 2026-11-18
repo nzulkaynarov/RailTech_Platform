@@ -184,3 +184,114 @@ async def test_addressees_need_two_letters(web: Web, be: Any) -> None:
 async def test_addressees_need_a_session(web: Web) -> None:
     response = await web.client.get("/api/v1/eds/addressees", params={"q": "ооо"})
     assert response.status_code == 401
+
+
+# --- Карточка контрагента: одна компания во всех ролях (ADR-0028, СУЩ-2.5) -----------------------
+
+CARD = {
+    "id": 9,
+    "name": "ООО Поставщик Север",
+    "inn": "300000777",
+    "registration_number": None,
+    "country": "Узбекистан",
+    "legal_address": None,
+    "crm_client_id": 42,
+    "roles": {"client": True, "supplier": True, "manufacturer": False, "partner": False},
+    "people": [
+        {
+            "id": 31,
+            "name": "Рустам Ахмедов",
+            "position": "Снабжение",
+            "is_primary": True,
+            "has_cabinet": False,
+            "has_phone": True,
+            "has_email": False,
+        }
+    ],
+    "bank_accounts": [
+        {
+            "id": 5,
+            "currency": "UZS",
+            "bank_name": "АКБ Образец",
+            "bank_country": "UZ",
+            "account": "…4567",
+            "mfo": "00440",
+            "swift": "",
+            "is_default": True,
+        }
+    ],
+    "accounts_masked": True,
+    "brands": [{"id": 3, "name": "PL-Rail"}],
+}
+
+
+async def test_counterparty_card_by_company_and_by_client(
+    web: Web, be: Any, check: ContractChecker
+) -> None:
+    await web.login(["MANAGER"])
+    router: respx.MockRouter = be.router
+    router.get(f"{API}/parties/organizations/9/").mock(return_value=httpx.Response(200, json=CARD))
+    router.get(f"{API}/parties/crm-clients/42/organization/").mock(
+        return_value=httpx.Response(200, json=CARD)
+    )
+    router.get(f"{API}/parties/crm-clients/77/organization/").mock(
+        return_value=httpx.Response(404, json={"detail": "Not found."})
+    )
+
+    card = await web.client.get("/api/v1/people/counterparties/9")
+    assert card.status_code == 200, card.text
+    check(card, "/people/counterparties/{id}", "get")
+    body = card.json()
+    assert (body["id"], body["crm_client_id"], body["people"][0]["id"]) == ("9", 42, "31")
+    assert body["roles"] == {
+        "client": True,
+        "supplier": True,
+        "manufacturer": False,
+        "partner": False,
+    }
+    assert body["bank_accounts"][0]["account"] == "…4567"
+    by_client = await web.client.get("/api/v1/people/clients/42/counterparty")
+    check(by_client, "/people/clients/{id}/counterparty", "get")
+    assert by_client.json()["id"] == "9"
+    assert (await web.client.get("/api/v1/people/clients/77/counterparty")).status_code == 404
+
+
+async def test_counterparty_roles_are_marks(web: Web, be: Any, check: ContractChecker) -> None:
+    await web.login(["SUPPLY"])
+    router: respx.MockRouter = be.router
+    roles = {"client": True, "supplier": True, "manufacturer": True, "partner": False}
+    marked = {**CARD, "roles": roles}
+    route = router.post(f"{API}/parties/organizations/9/roles/").mock(
+        side_effect=lambda request: (
+            httpx.Response(200, json=marked)
+            if json.loads(request.content)["on"]
+            else httpx.Response(409, json={"detail": "ROLE_IN_USE"})
+        )
+    )
+    headers = {"X-CSRF-Token": web.csrf}
+    on = await web.client.post(
+        "/api/v1/people/counterparties/9/roles",
+        json={"role": "manufacturer", "on": True},
+        headers=headers,
+    )
+    assert on.status_code == 200, on.text
+    check(on, "/people/counterparties/{id}/roles", "post")
+    assert on.json()["roles"]["manufacturer"] is True
+    assert json.loads(route.calls.last.request.content) == {"role": "manufacturer", "on": True}
+    off = await web.client.post(
+        "/api/v1/people/counterparties/9/roles",
+        json={"role": "supplier", "on": False},
+        headers=headers,
+    )
+    assert off.status_code == 409
+    assert off.json()["details"]["reason"] == "role_in_use"
+
+
+async def test_manager_cannot_mark_roles(web: Web) -> None:
+    await web.login(["MANAGER"])
+    response = await web.client.post(
+        "/api/v1/people/counterparties/9/roles",
+        json={"role": "manufacturer", "on": True},
+        headers={"X-CSRF-Token": web.csrf},
+    )
+    assert response.status_code == 403

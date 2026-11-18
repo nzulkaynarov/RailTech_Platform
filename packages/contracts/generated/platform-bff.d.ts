@@ -7281,6 +7281,66 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/people/counterparties/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Контакты · Контрагенты: карточка компании во всех ролях
+     * @description ADR-0028 (СУЩ-2.5): одна компания ERP — клиент, поставщик, изготовитель и партнёр с кабинетом; роли — отметки, а не отдельные карточки. Люди — без телефонов и почты (их открывает `revealCounterpartyContacts`); номер счёта полностью видит держатель финансовых прав ERP, остальные — последние 4 знака (`accounts_masked`). ERP `parties/organizations/{id}/` — клиенты своей компании и партнёры; чужая компания — 404. Раздел `crm.clients` или `erp.stock` — чтение.
+     */
+    get: operations["getCounterparty"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/people/clients/{id}/counterparty": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Контакты · Контрагенты: карточка компании клиента CRM
+     * @description Та же карточка по id клиента CRM (ERP `parties/crm-clients/{id}/organization/`). Клиент ещё не передан в ERP — 404: компании в ERP нет, у карточки клиента только данные CRM. Раздел `crm.clients` или `erp.stock` — чтение.
+     */
+    get: operations["getCounterpartyByClient"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/people/counterparties/{id}/roles": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Контакты · Контрагенты: отметить или снять роль
+     * @description Роль «поставщик» или «изготовитель» — отметкой, новая карточка не нужна (ERP `supply.manage`). Снять роль, пока у компании есть предложения или бренды, нельзя — 409 `CONFLICT` (`details.reason = role_in_use`). «Клиент» и «партнёр с кабинетом» приходят из процессов и отметкой не меняются. Раздел `erp.stock` — полный.
+     */
+    post: operations["setCounterpartyRole"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/erp/catalog/suppliers": {
     parameters: {
       query?: never;
@@ -15962,6 +16022,63 @@ export interface components {
     CounterpartyRef: {
       id: components["schemas"]["CompanyItemRef"];
       name: string;
+    };
+    CounterpartyRoles: {
+      /** @description Клиент — заводит CRM */
+      client: boolean;
+      /** @description Поставщик — отметка или действующие предложения */
+      supplier: boolean;
+      /** @description Изготовитель — отметка; у брендов ссылка на компанию */
+      manufacturer: boolean;
+      /** @description Партнёр с кабинетом — приглашён или активен */
+      partner: boolean;
+    };
+    CounterpartyCardPerson: {
+      id: components["schemas"]["CompanyItemRef"];
+      name: string;
+      position: string | null;
+      /** @description Главный контакт */
+      is_primary: boolean;
+      /** @description Входит в кабинет */
+      has_cabinet: boolean;
+      has_phone: boolean;
+      has_email: boolean;
+    };
+    CounterpartyAccount: {
+      id: components["schemas"]["CompanyItemRef"];
+      currency: string | null;
+      bank_name: string;
+      /** @description Код страны банка ISO 3166-1 */
+      bank_country: string | null;
+      /** @description Номер группами по 4 знака или последние 4 знака (`accounts_masked`) */
+      account: string;
+      mfo: string;
+      swift: string;
+      /** @description Основной в своей валюте */
+      is_default: boolean;
+    };
+    /** @description Карточка контрагента — одна компания во всех ролях (ADR-0028) */
+    CounterpartyCard: {
+      id: components["schemas"]["CompanyItemRef"];
+      name: string;
+      inn: string | null;
+      registration_number: string | null;
+      country: string | null;
+      legal_address: string | null;
+      /** @description Клиент CRM, с которым связана компания */
+      crm_client_id: number | null;
+      roles: components["schemas"]["CounterpartyRoles"];
+      people: components["schemas"]["CounterpartyCardPerson"][];
+      bank_accounts: components["schemas"]["CounterpartyAccount"][];
+      /** @description Номера счетов скрыты: нет финансовых прав */
+      accounts_masked: boolean;
+      /** @description Бренды, которые выпускает компания */
+      brands: components["schemas"]["CounterpartyRef"][];
+    };
+    CounterpartyRoleIn: {
+      /** @enum {string} */
+      role: "supplier" | "manufacturer";
+      on: boolean;
     };
     CounterpartyPersonPage: {
       items: components["schemas"]["CounterpartyPerson"][];
@@ -30058,6 +30175,101 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getCounterparty: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Карточка */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CounterpartyCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getCounterpartyByClient: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Карточка */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CounterpartyCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  setCounterpartyRole: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CounterpartyRoleIn"];
+      };
+    };
+    responses: {
+      /** @description Карточка с новыми ролями */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CounterpartyCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `CONFLICT` (`details.reason = role_in_use`) — роль занята предложениями или брендами */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

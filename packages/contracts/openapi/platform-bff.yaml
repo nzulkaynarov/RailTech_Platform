@@ -13291,6 +13291,100 @@ paths:
           $ref: '#/components/responses/NotFound'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+  /people/counterparties/{id}:
+    get:
+      tags: [chats]
+      operationId: getCounterparty
+      summary: 'Контакты · Контрагенты: карточка компании во всех ролях'
+      description: >-
+        ADR-0028 (СУЩ-2.5): одна компания ERP — клиент, поставщик, изготовитель и партнёр с кабинетом; роли — отметки, а не
+        отдельные карточки. Люди — без телефонов и почты (их открывает `revealCounterpartyContacts`); номер счёта полностью
+        видит держатель финансовых прав ERP, остальные — последние 4 знака (`accounts_masked`). ERP
+        `parties/organizations/{id}/` — клиенты своей компании и партнёры; чужая компания — 404. Раздел `crm.clients` или
+        `erp.stock` — чтение.
+      parameters:
+        - {name: id, in: path, required: true, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      responses:
+        '200':
+          description: Карточка
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CounterpartyCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /people/clients/{id}/counterparty:
+    get:
+      tags: [chats]
+      operationId: getCounterpartyByClient
+      summary: 'Контакты · Контрагенты: карточка компании клиента CRM'
+      description: >-
+        Та же карточка по id клиента CRM (ERP `parties/crm-clients/{id}/organization/`). Клиент ещё не передан в ERP — 404:
+        компании в ERP нет, у карточки клиента только данные CRM. Раздел `crm.clients` или `erp.stock` — чтение.
+      parameters:
+        - {name: id, in: path, required: true, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      responses:
+        '200':
+          description: Карточка
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CounterpartyCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /people/counterparties/{id}/roles:
+    post:
+      tags: [chats]
+      operationId: setCounterpartyRole
+      summary: 'Контакты · Контрагенты: отметить или снять роль'
+      description: >-
+        Роль «поставщик» или «изготовитель» — отметкой, новая карточка не нужна (ERP `supply.manage`). Снять роль, пока у
+        компании есть предложения или бренды, нельзя — 409 `CONFLICT` (`details.reason = role_in_use`). «Клиент» и «партнёр с
+        кабинетом» приходят из процессов и отметкой не меняются. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CounterpartyRoleIn'
+      responses:
+        '200':
+          description: Карточка с новыми ролями
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CounterpartyCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '`CONFLICT` (`details.reason = role_in_use`) — роль занята предложениями или брендами'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /erp/catalog/suppliers:
     get:
       tags: [erp-catalog]
@@ -26621,6 +26715,68 @@ components:
       properties:
         id: {$ref: '#/components/schemas/CompanyItemRef'}
         name: {type: string}
+    CounterpartyRoles:
+      type: object
+      additionalProperties: false
+      required: [client, supplier, manufacturer, partner]
+      properties:
+        client: {type: boolean, description: 'Клиент — заводит CRM'}
+        supplier: {type: boolean, description: 'Поставщик — отметка или действующие предложения'}
+        manufacturer: {type: boolean, description: 'Изготовитель — отметка; у брендов ссылка на компанию'}
+        partner: {type: boolean, description: 'Партнёр с кабинетом — приглашён или активен'}
+    CounterpartyCardPerson:
+      type: object
+      additionalProperties: false
+      required: [id, name, position, is_primary, has_cabinet, has_phone, has_email]
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        name: {type: string}
+        position: {type: [string, 'null']}
+        is_primary: {type: boolean, description: 'Главный контакт'}
+        has_cabinet: {type: boolean, description: 'Входит в кабинет'}
+        has_phone: {type: boolean}
+        has_email: {type: boolean}
+    CounterpartyAccount:
+      type: object
+      additionalProperties: false
+      required: [id, currency, bank_name, bank_country, account, mfo, swift, is_default]
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        currency: {type: [string, 'null']}
+        bank_name: {type: string}
+        bank_country: {type: [string, 'null'], description: 'Код страны банка ISO 3166-1'}
+        account: {type: string, description: 'Номер группами по 4 знака или последние 4 знака (`accounts_masked`)'}
+        mfo: {type: string}
+        swift: {type: string}
+        is_default: {type: boolean, description: 'Основной в своей валюте'}
+    CounterpartyCard:
+      type: object
+      additionalProperties: false
+      description: Карточка контрагента — одна компания во всех ролях (ADR-0028)
+      required: [id, name, inn, registration_number, country, legal_address, crm_client_id, roles, people, bank_accounts, accounts_masked, brands]
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        name: {type: string}
+        inn: {type: [string, 'null']}
+        registration_number: {type: [string, 'null']}
+        country: {type: [string, 'null']}
+        legal_address: {type: [string, 'null']}
+        crm_client_id: {type: [integer, 'null'], description: 'Клиент CRM, с которым связана компания'}
+        roles: {$ref: '#/components/schemas/CounterpartyRoles'}
+        people: {type: array, items: {$ref: '#/components/schemas/CounterpartyCardPerson'}}
+        bank_accounts: {type: array, items: {$ref: '#/components/schemas/CounterpartyAccount'}}
+        accounts_masked: {type: boolean, description: 'Номера счетов скрыты: нет финансовых прав'}
+        brands:
+          type: array
+          items: {$ref: '#/components/schemas/CounterpartyRef'}
+          description: 'Бренды, которые выпускает компания'
+    CounterpartyRoleIn:
+      type: object
+      additionalProperties: false
+      required: [role, 'on']
+      properties:
+        role: {type: string, enum: [supplier, manufacturer]}
+        'on': {type: boolean}
     CounterpartyPersonPage:
       type: object
       additionalProperties: false

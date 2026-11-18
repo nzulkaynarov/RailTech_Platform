@@ -31015,6 +31015,59 @@
                 }
             }
         },
+        "/api/v1/parties/crm-clients/{crm_client_id}/organization/": {
+            "get": {
+                "operationId": "parties_organizations_by_crm_client",
+                "description": "Карточка компании, связанной с клиентом CRM; клиент ещё не передан в ERP — 404.",
+                "summary": "Counterparty card by the CRM client id",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "crm_client_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Parties"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskCounterparty"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/parties/organizations/": {
             "get": {
                 "operationId": "parties_organizations_list",
@@ -31068,6 +31121,161 @@
                     },
                     "403": {
                         "$ref": "#/components/responses/ForbiddenResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/parties/organizations/{id}/": {
+            "get": {
+                "operationId": "parties_organizations_retrieve",
+                "description": "Одна компания во всех ролях: роли-отметки, люди (без телефонов и почты), действующие банковские счета (номер полностью — держателю `finance.view` или `finance.payment`), бренды, которые она выпускает, и клиент CRM, если компания с ним связана. Те же границы, что у списка.",
+                "summary": "Counterparty card",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Parties"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskCounterparty"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/parties/organizations/{id}/roles/": {
+            "post": {
+                "operationId": "parties_organizations_roles",
+                "description": "Роль «поставщик» или «изготовитель» — отметкой, новая карточка не нужна (право `supply.manage`). Снять роль с предложениями или брендами нельзя — 409 `ROLE_IN_USE`; «клиент» и «партнёр с кабинетом» отметкой не меняются — 400 `ROLE_NOT_EDITABLE`.",
+                "summary": "Mark or unmark a counterparty role",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Parties"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskCounterpartyRoleInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskCounterpartyRoleInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskCounterpartyRoleInRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskCounterparty"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
                     }
                 }
             }
@@ -41652,6 +41860,203 @@
                     "price",
                     "source",
                     "visibility"
+                ]
+            },
+            "DeskCounterparty": {
+                "type": "object",
+                "description": "Карточка контрагента — одна компания во всех ролях (ADR-0028, СУЩ-2.5).",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "inn": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "registration_number": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "country": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "legal_address": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "crm_client_id": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "Клиент CRM, с которым связана компания"
+                    },
+                    "roles": {
+                        "$ref": "#/components/schemas/DeskCounterpartyRoles"
+                    },
+                    "people": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DeskCounterpartyPerson"
+                        }
+                    },
+                    "bank_accounts": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DeskCounterpartyAccount"
+                        }
+                    },
+                    "accounts_masked": {
+                        "type": "boolean",
+                        "description": "Номера счетов скрыты: нет `finance.view`"
+                    },
+                    "brands": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DeskRef"
+                        },
+                        "description": "Бренды, которые выпускает компания (справочник «Бренды»)"
+                    }
+                },
+                "required": [
+                    "accounts_masked",
+                    "bank_accounts",
+                    "brands",
+                    "country",
+                    "crm_client_id",
+                    "id",
+                    "inn",
+                    "legal_address",
+                    "name",
+                    "people",
+                    "registration_number",
+                    "roles"
+                ]
+            },
+            "DeskCounterpartyAccount": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "currency": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "bank_name": {
+                        "type": "string"
+                    },
+                    "bank_country": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Код страны банка ISO 3166-1"
+                    },
+                    "account": {
+                        "type": "string",
+                        "description": "Номер группами по 4 знака или последние 4 знака (`accounts_masked`)"
+                    },
+                    "mfo": {
+                        "type": "string"
+                    },
+                    "swift": {
+                        "type": "string"
+                    },
+                    "is_default": {
+                        "type": "boolean",
+                        "description": "Основной в своей валюте"
+                    }
+                },
+                "required": [
+                    "account",
+                    "bank_country",
+                    "bank_name",
+                    "currency",
+                    "id",
+                    "is_default",
+                    "mfo",
+                    "swift"
+                ]
+            },
+            "DeskCounterpartyPerson": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "position": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "is_primary": {
+                        "type": "boolean",
+                        "description": "Главный контакт — отдельного поля «контактное лицо» нет"
+                    },
+                    "has_cabinet": {
+                        "type": "boolean",
+                        "description": "Входит в кабинет"
+                    },
+                    "has_phone": {
+                        "type": "boolean"
+                    },
+                    "has_email": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "has_cabinet",
+                    "has_email",
+                    "has_phone",
+                    "id",
+                    "is_primary",
+                    "name",
+                    "position"
+                ]
+            },
+            "DeskCounterpartyRoleInRequest": {
+                "type": "object",
+                "properties": {
+                    "role": {
+                        "$ref": "#/components/schemas/RoleEnum"
+                    },
+                    "on": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "on",
+                    "role"
+                ]
+            },
+            "DeskCounterpartyRoles": {
+                "type": "object",
+                "properties": {
+                    "client": {
+                        "type": "boolean",
+                        "description": "Клиент — книга продавца (заводит CRM)"
+                    },
+                    "supplier": {
+                        "type": "boolean",
+                        "description": "Поставщик — отметка или действующие предложения"
+                    },
+                    "manufacturer": {
+                        "type": "boolean",
+                        "description": "Изготовитель — отметка; у брендов ссылка на компанию"
+                    },
+                    "partner": {
+                        "type": "boolean",
+                        "description": "Партнёр с кабинетом — отношение `partner` приглашено или активно"
+                    }
+                },
+                "required": [
+                    "client",
+                    "manufacturer",
+                    "partner",
+                    "supplier"
                 ]
             },
             "DeskCrewRate": {
@@ -55703,6 +56108,14 @@
                 ],
                 "type": "string",
                 "description": "* `approved` - approved\n* `pending` - pending\n* `rejected` - rejected"
+            },
+            "RoleEnum": {
+                "enum": [
+                    "supplier",
+                    "manufacturer"
+                ],
+                "type": "string",
+                "description": "* `supplier` - supplier\n* `manufacturer` - manufacturer"
             },
             "SearchDocument": {
                 "type": "object",
