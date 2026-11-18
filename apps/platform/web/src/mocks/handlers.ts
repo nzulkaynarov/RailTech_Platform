@@ -4,7 +4,18 @@ import {
   getGetHealthMockHandler,
   getRailTechPlatformBFFAPICRMERPMock,
 } from "../shared/api/generated/platform-bff.msw";
-import type { ChangePasswordIn, LoginIn, MeUpdate } from "../shared/api/generated/model";
+import type {
+  ChangePasswordIn,
+  LoginIn,
+  MeUpdate,
+  SecondFactorLoginIn,
+} from "../shared/api/generated/model";
+import {
+  acceptSecondFactor,
+  challengeOf,
+  needsSecondFactor,
+  secondFactorHandlers,
+} from "./secondFactor";
 import { aboutHandlers } from "./aboutHandlers";
 import { adminAuditHandlers } from "./adminAudit";
 import { adminBusHandlers } from "./adminBus";
@@ -115,9 +126,32 @@ export const handlers = [
     if (isEmployeeDisabled(user.id)) {
       return failure(401, "INVALID_CREDENTIALS", "Неверная почта или пароль", "crm");
     }
+    // ДВ-4: второй фактор включён и устройство не запомнено — 202 без сессии
+    if (needsSecondFactor(user.id)) {
+      return HttpResponse.json(
+        { second_factor_required: true, challenge: challengeOf(user.id) },
+        { status: 202 },
+      );
+    }
     const session = buildSession(startSession(user));
     return session ? HttpResponse.json(session) : failure(500, "INTERNAL_ERROR", "Нет сессии");
   }),
+
+  http.post("*/auth/login/second-factor", async ({ request }) => {
+    const result = acceptSecondFactor((await request.json()) as SecondFactorLoginIn);
+    if ("error" in result) {
+      return failure(
+        401,
+        result.error,
+        result.error === "SECOND_FACTOR_INVALID" ? "Неверный код." : "Время вышло.",
+        "crm",
+      );
+    }
+    const user = findUserById(result.userId);
+    const session = user ? buildSession(startSession(user)) : null;
+    return session ? HttpResponse.json(session) : failure(500, "INTERNAL_ERROR", "Нет сессии");
+  }),
+  ...secondFactorHandlers,
 
   http.post("*/auth/logout", () => {
     endSession();

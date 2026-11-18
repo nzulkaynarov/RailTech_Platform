@@ -1845,6 +1845,15 @@ crypto = [
 ]
 
 [[package]]
+name = "pyotp"
+version = "2.12.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/81/51/02d8f9400d6e86fa9358bc091d31d20d325ba833d209099a22fc7784e653/pyotp-2.12.0.tar.gz", hash = "sha256:638ea37341567ec01277af3a16b682590d938f54f8ed3fb31963513233fd05f2", size = 26858, upload-time = "2026-11-15T22:03:06.513Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/93/8e/a293e976f73fed42e19cd7921175c6aac66cedbf8bed91766d3506fdea33/pyotp-2.12.0-py3-none-any.whl", hash = "sha256:d66830ab614e857c1e1b810b80384bcf7d437972f1e96625686e128e2e17ff83", size = 16734, upload-time = "2026-11-15T22:03:05.143Z" },
+]
+
+[[package]]
 name = "pytest"
 version = "9.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1985,6 +1994,7 @@ dependencies = [
     { name = "pycasbin" },
     { name = "pydantic-settings" },
     { name = "pyjwt", extra = ["crypto"] },
+    { name = "pyotp" },
     { name = "pyyaml" },
     { name = "rt-bus", extra = ["fastapi", "sqlalchemy"] },
     { name = "rt-contracts" },
@@ -2030,6 +2040,7 @@ requires-dist = [
     { name = "pycasbin", specifier = ">=2.8.0" },
     { name = "pydantic-settings", specifier = ">=2.15.0" },
     { name = "pyjwt", extras = ["crypto"], specifier = ">=2.15.1" },
+    { name = "pyotp", specifier = ">=2.9,<3" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "rt-bus", extras = ["fastapi", "sqlalchemy"], editable = "../../../packages/rt-bus" },
     { name = "rt-contracts", editable = "../../../packages/contracts/generated/python" },

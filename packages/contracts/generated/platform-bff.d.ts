@@ -17,8 +17,33 @@ export interface paths {
      * Вход сотрудника
      * @description BFF входит в CRM теми же логином и паролем, читает профиль и роли Платформы, при доступе к ERP получает
      *     сессию ERP SSO-обменом. Ответ ставит `rt_pf_session` и `rt_pf_csrf`.
+     *
+     *     Второй фактор (ДВ-4): у сотрудника с включённым кодом из приложения-аутентификатора ответ — 202
+     *     `SecondFactorChallenge` без сессии; код — `POST /auth/login/second-factor`. С меткой `pf_device` (HttpOnly,
+     *     путь `/api/v1/auth`, 30 дней — ставит второй шаг с `remember_device`) код не спрашивается, пока не сменились
+     *     пароль и сам фактор.
      */
     post: operations["login"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/auth/login/second-factor": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Второй шаг входа — код приложения или резервный код (ДВ-4)
+     * @description Без сессии: `challenge` из ответа 202 на `/auth/login` (живёт 5 минут) и код — 6 цифр из приложения или резервный `XXXX-XXXX` (каждый на один вход). `remember_device` — метка `pf_device` на 30 дней. Неверный код — 401 `SECOND_FACTOR_INVALID` (неверные коды считает CRM: после десяти — 423 `ACCOUNT_LOCKED`); время вышло — 401 `SECOND_FACTOR_EXPIRED`, войти заново. Тот же лимит попыток по IP, что у входа.
+     */
+    post: operations["loginSecondFactor"];
     delete?: never;
     options?: never;
     head?: never;
@@ -279,6 +304,86 @@ export interface paths {
     head?: never;
     /** Язык интерфейса и активная роль */
     patch: operations["updateMe"];
+    trace?: never;
+  };
+  "/me/second-factor": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Второй фактор входа — состояние (ДВ-4)
+     * @description Свой фактор; доступно каждому вошедшему сотруднику (CRM `/me/second-factor`).
+     */
+    get: operations["getSecondFactor"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/me/second-factor/setup": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Начать настройку — секрет и адрес для QR (ДВ-4)
+     * @description Секрет для приложения-аутентификатора (Google Authenticator, Microsoft Authenticator и т. п.) и адрес `otpauth://` для QR-кода; запись в приложении подписана названием компании из настроек. Фактор ещё не включён — его включает `enable` с кодом. Уже включён — 422 `VALIDATION_FAILED` (`details.reason = second_factor_already_enabled`); не задан ключ шифрования секретов CRM — 422 (`secrets_key_missing`).
+     */
+    post: operations["setupSecondFactor"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/me/second-factor/enable": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Включить второй фактор кодом из приложения (ДВ-4)
+     * @description Код из приложения подтверждает настройку и включает фактор; ответ — восемь резервных кодов, показываются один раз. Неверный код — 422 `VALIDATION_FAILED` (`second_factor_code_invalid`); настройка не начата — `second_factor_not_started`.
+     */
+    post: operations["enableSecondFactor"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/me/second-factor/disable": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Выключить второй фактор (ДВ-4)
+     * @description Кодом из приложения или резервным. Неверный — 422 `VALIDATION_FAILED` (`second_factor_code_invalid`).
+     */
+    post: operations["disableSecondFactor"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
     trace?: never;
   };
   "/me/notification-settings": {
@@ -9157,6 +9262,40 @@ export interface components {
       name: string;
       initials: string;
     };
+    SecondFactorChallenge: {
+      /** @enum {boolean} */
+      second_factor_required: true;
+      /** @description Непрозрачная строка на 5 минут для `/auth/login/second-factor` */
+      challenge: string;
+    };
+    SecondFactorLoginIn: {
+      challenge: string;
+      /** @description 6 цифр из приложения или резервный код `XXXX-XXXX` */
+      code: string;
+      /**
+       * @description Не спрашивать код на этом устройстве 30 дней
+       * @default false
+       */
+      remember_device: boolean;
+    };
+    SecondFactorStatus: {
+      enabled: boolean;
+      /** Format: date-time */
+      enabled_at: string | null;
+      backup_codes_left: number;
+    };
+    SecondFactorSetup: {
+      /** @description Ключ для ручного ввода в приложение (base32) */
+      secret: string;
+      /** @description Адрес для QR-кода */
+      otpauth_uri: string;
+    };
+    SecondFactorCodeIn: {
+      code: string;
+    };
+    SecondFactorEnabled: {
+      backup_codes: string[];
+    };
     LoginIn: {
       /** Format: email */
       email: string;
@@ -16887,6 +17026,15 @@ export interface operations {
           "application/json": components["schemas"]["Session"];
         };
       };
+      /** @description Пароль верен, нужен код второго фактора; сессии нет */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SecondFactorChallenge"];
+        };
+      };
       /** @description `INVALID_CREDENTIALS` — неверный e-mail или пароль, в том числе у отключённого сотрудника */
       401: {
         headers: {
@@ -16924,6 +17072,62 @@ export interface operations {
           "application/json": components["schemas"]["Error"];
         };
       };
+    };
+  };
+  loginSecondFactor: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SecondFactorLoginIn"];
+      };
+    };
+    responses: {
+      /** @description Вошёл */
+      200: {
+        headers: {
+          /** @description `rt_pf_session`, `rt_pf_csrf` и при `remember_device` — `pf_device` */
+          "Set-Cookie"?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Session"];
+        };
+      };
+      /** @description `SECOND_FACTOR_INVALID` — неверный код; `SECOND_FACTOR_EXPIRED` — время на ввод вышло */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description `NO_PLATFORM_ROLE` — у сотрудника нет ни одной роли Платформы */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+      /** @description `ACCOUNT_LOCKED` — слишком много неверных кодов */
+      423: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      429: components["responses"]["TooManyRequests"];
+      503: components["responses"]["BackendUnavailable"];
     };
   };
   forgotPassword: {
@@ -17361,6 +17565,111 @@ export interface operations {
       };
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["CsrfFailed"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  getSecondFactor: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Состояние */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SecondFactorStatus"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+    };
+  };
+  setupSecondFactor: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Секрет */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SecondFactorSetup"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  enableSecondFactor: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SecondFactorCodeIn"];
+      };
+    };
+    responses: {
+      /** @description Включён */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SecondFactorEnabled"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  disableSecondFactor: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SecondFactorCodeIn"];
+      };
+    };
+    responses: {
+      /** @description Выключен */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
       422: components["responses"]["ValidationFailed"];
     };
   };

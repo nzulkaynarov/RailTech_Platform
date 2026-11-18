@@ -428,6 +428,12 @@ import type {
   SearchParams,
   SearchResult,
   SearchStockTraceParams,
+  SecondFactorChallenge,
+  SecondFactorCodeIn,
+  SecondFactorEnabled,
+  SecondFactorLoginIn,
+  SecondFactorSetup,
+  SecondFactorStatus,
   SentMail,
   SentMailBody,
   SentMailPage,
@@ -545,12 +551,17 @@ export const getLoginUrl = () => {
 /**
  * BFF входит в CRM теми же логином и паролем, читает профиль и роли Платформы, при доступе к ERP получает
  * сессию ERP SSO-обменом. Ответ ставит `rt_pf_session` и `rt_pf_csrf`.
+ *
+ * Второй фактор (ДВ-4): у сотрудника с включённым кодом из приложения-аутентификатора ответ — 202
+ * `SecondFactorChallenge` без сессии; код — `POST /auth/login/second-factor`. С меткой `pf_device` (HttpOnly,
+ * путь `/api/v1/auth`, 30 дней — ставит второй шаг с `remember_device`) код не спрашивается, пока не сменились
+ * пароль и сам фактор.
  * @summary Вход сотрудника
  */
 export const login = async (
   loginIn: LoginIn,
   options?: Parameters<typeof http>[1],
-): Promise<Session> => {
+): Promise<Session | SecondFactorChallenge> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -570,7 +581,7 @@ export const login = async (
     }
     return headers;
   };
-  return http<Session>(getLoginUrl(), {
+  return http<Session | SecondFactorChallenge>(getLoginUrl(), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
@@ -641,6 +652,122 @@ export const useLogin = <TError = ErrorType<Error | TooManyRequestsResponse>, TC
   TContext
 > => {
   return useMutation(getLoginMutationOptions(options), queryClient);
+};
+
+export const getLoginSecondFactorUrl = () => {
+  return `/api/v1/auth/login/second-factor`;
+};
+
+/**
+ * Без сессии: `challenge` из ответа 202 на `/auth/login` (живёт 5 минут) и код — 6 цифр из приложения или резервный `XXXX-XXXX` (каждый на один вход). `remember_device` — метка `pf_device` на 30 дней. Неверный код — 401 `SECOND_FACTOR_INVALID` (неверные коды считает CRM: после десяти — 423 `ACCOUNT_LOCKED`); время вышло — 401 `SECOND_FACTOR_EXPIRED`, войти заново. Тот же лимит попыток по IP, что у входа.
+ * @summary Второй шаг входа — код приложения или резервный код (ДВ-4)
+ */
+export const loginSecondFactor = async (
+  secondFactorLoginIn: SecondFactorLoginIn,
+  options?: Parameters<typeof http>[1],
+): Promise<Session> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<Session>(getLoginSecondFactorUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(secondFactorLoginIn),
+  });
+};
+
+export const getLoginSecondFactorMutationKey = () => ["loginSecondFactor"] as const;
+
+export const getLoginSecondFactorMutationOptions = <
+  TError = ErrorType<
+    Error | ValidationFailedResponse | TooManyRequestsResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof loginSecondFactor>>,
+    TError,
+    LoginSecondFactorMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof loginSecondFactor>>,
+  TError,
+  LoginSecondFactorMutationVariables,
+  TContext
+> => {
+  const mutationKey = getLoginSecondFactorMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof loginSecondFactor>>,
+    LoginSecondFactorMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return loginSecondFactor(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type LoginSecondFactorMutationResult = NonNullable<
+  Awaited<ReturnType<typeof loginSecondFactor>>
+>;
+export type LoginSecondFactorMutationBody = SecondFactorLoginIn;
+export type LoginSecondFactorMutationError = ErrorType<
+  Error | ValidationFailedResponse | TooManyRequestsResponse | BackendUnavailableResponse
+>;
+export type LoginSecondFactorMutationVariables = { data: SecondFactorLoginIn };
+
+/**
+ * @summary Второй шаг входа — код приложения или резервный код (ДВ-4)
+ */
+export const useLoginSecondFactor = <
+  TError = ErrorType<
+    Error | ValidationFailedResponse | TooManyRequestsResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof loginSecondFactor>>,
+      TError,
+      LoginSecondFactorMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof loginSecondFactor>>,
+  TError,
+  LoginSecondFactorMutationVariables,
+  TContext
+> => {
+  return useMutation(getLoginSecondFactorMutationOptions(options), queryClient);
 };
 
 export const getForgotPasswordUrl = () => {
@@ -2307,6 +2434,418 @@ export const useUpdateMe = <
   TContext
 > => {
   return useMutation(getUpdateMeMutationOptions(options), queryClient);
+};
+
+export const getGetSecondFactorUrl = () => {
+  return `/api/v1/me/second-factor`;
+};
+
+/**
+ * Свой фактор; доступно каждому вошедшему сотруднику (CRM `/me/second-factor`).
+ * @summary Второй фактор входа — состояние (ДВ-4)
+ */
+export const getSecondFactor = async (
+  options?: Parameters<typeof http>[1],
+): Promise<SecondFactorStatus> => {
+  return http<SecondFactorStatus>(getGetSecondFactorUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetSecondFactorQueryKey = () => {
+  return [`/api/v1/me/second-factor`] as const;
+};
+
+export const getGetSecondFactorQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSecondFactor>>,
+  TError = ErrorType<SessionExpiredResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSecondFactor>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetSecondFactorQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getSecondFactor>>> = ({ signal }) =>
+    getSecondFactor({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getSecondFactor>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetSecondFactorQueryResult = NonNullable<Awaited<ReturnType<typeof getSecondFactor>>>;
+export type GetSecondFactorQueryError = ErrorType<SessionExpiredResponse>;
+
+export function useGetSecondFactor<
+  TData = Awaited<ReturnType<typeof getSecondFactor>>,
+  TError = ErrorType<SessionExpiredResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSecondFactor>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSecondFactor>>,
+          TError,
+          Awaited<ReturnType<typeof getSecondFactor>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSecondFactor<
+  TData = Awaited<ReturnType<typeof getSecondFactor>>,
+  TError = ErrorType<SessionExpiredResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSecondFactor>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSecondFactor>>,
+          TError,
+          Awaited<ReturnType<typeof getSecondFactor>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSecondFactor<
+  TData = Awaited<ReturnType<typeof getSecondFactor>>,
+  TError = ErrorType<SessionExpiredResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSecondFactor>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Второй фактор входа — состояние (ДВ-4)
+ */
+
+export function useGetSecondFactor<
+  TData = Awaited<ReturnType<typeof getSecondFactor>>,
+  TError = ErrorType<SessionExpiredResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSecondFactor>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetSecondFactorQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getSetupSecondFactorUrl = () => {
+  return `/api/v1/me/second-factor/setup`;
+};
+
+/**
+ * Секрет для приложения-аутентификатора (Google Authenticator, Microsoft Authenticator и т. п.) и адрес `otpauth://` для QR-кода; запись в приложении подписана названием компании из настроек. Фактор ещё не включён — его включает `enable` с кодом. Уже включён — 422 `VALIDATION_FAILED` (`details.reason = second_factor_already_enabled`); не задан ключ шифрования секретов CRM — 422 (`secrets_key_missing`).
+ * @summary Начать настройку — секрет и адрес для QR (ДВ-4)
+ */
+export const setupSecondFactor = async (
+  options?: Parameters<typeof http>[1],
+): Promise<SecondFactorSetup> => {
+  return http<SecondFactorSetup>(getSetupSecondFactorUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getSetupSecondFactorMutationKey = () => ["setupSecondFactor"] as const;
+
+export const getSetupSecondFactorMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setupSecondFactor>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof setupSecondFactor>>, TError, void, TContext> => {
+  const mutationKey = getSetupSecondFactorMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof setupSecondFactor>>, void> = () => {
+    return setupSecondFactor(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SetupSecondFactorMutationResult = NonNullable<
+  Awaited<ReturnType<typeof setupSecondFactor>>
+>;
+
+export type SetupSecondFactorMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse
+>;
+
+/**
+ * @summary Начать настройку — секрет и адрес для QR (ДВ-4)
+ */
+export const useSetupSecondFactor = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof setupSecondFactor>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof setupSecondFactor>>, TError, void, TContext> => {
+  return useMutation(getSetupSecondFactorMutationOptions(options), queryClient);
+};
+
+export const getEnableSecondFactorUrl = () => {
+  return `/api/v1/me/second-factor/enable`;
+};
+
+/**
+ * Код из приложения подтверждает настройку и включает фактор; ответ — восемь резервных кодов, показываются один раз. Неверный код — 422 `VALIDATION_FAILED` (`second_factor_code_invalid`); настройка не начата — `second_factor_not_started`.
+ * @summary Включить второй фактор кодом из приложения (ДВ-4)
+ */
+export const enableSecondFactor = async (
+  secondFactorCodeIn: SecondFactorCodeIn,
+  options?: Parameters<typeof http>[1],
+): Promise<SecondFactorEnabled> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<SecondFactorEnabled>(getEnableSecondFactorUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(secondFactorCodeIn),
+  });
+};
+
+export const getEnableSecondFactorMutationKey = () => ["enableSecondFactor"] as const;
+
+export const getEnableSecondFactorMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof enableSecondFactor>>,
+    TError,
+    EnableSecondFactorMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof enableSecondFactor>>,
+  TError,
+  EnableSecondFactorMutationVariables,
+  TContext
+> => {
+  const mutationKey = getEnableSecondFactorMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof enableSecondFactor>>,
+    EnableSecondFactorMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return enableSecondFactor(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type EnableSecondFactorMutationResult = NonNullable<
+  Awaited<ReturnType<typeof enableSecondFactor>>
+>;
+export type EnableSecondFactorMutationBody = SecondFactorCodeIn;
+export type EnableSecondFactorMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse
+>;
+export type EnableSecondFactorMutationVariables = { data: SecondFactorCodeIn };
+
+/**
+ * @summary Включить второй фактор кодом из приложения (ДВ-4)
+ */
+export const useEnableSecondFactor = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof enableSecondFactor>>,
+      TError,
+      EnableSecondFactorMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof enableSecondFactor>>,
+  TError,
+  EnableSecondFactorMutationVariables,
+  TContext
+> => {
+  return useMutation(getEnableSecondFactorMutationOptions(options), queryClient);
+};
+
+export const getDisableSecondFactorUrl = () => {
+  return `/api/v1/me/second-factor/disable`;
+};
+
+/**
+ * Кодом из приложения или резервным. Неверный — 422 `VALIDATION_FAILED` (`second_factor_code_invalid`).
+ * @summary Выключить второй фактор (ДВ-4)
+ */
+export const disableSecondFactor = async (
+  secondFactorCodeIn: SecondFactorCodeIn,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<void>(getDisableSecondFactorUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(secondFactorCodeIn),
+  });
+};
+
+export const getDisableSecondFactorMutationKey = () => ["disableSecondFactor"] as const;
+
+export const getDisableSecondFactorMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof disableSecondFactor>>,
+    TError,
+    DisableSecondFactorMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof disableSecondFactor>>,
+  TError,
+  DisableSecondFactorMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDisableSecondFactorMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof disableSecondFactor>>,
+    DisableSecondFactorMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return disableSecondFactor(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DisableSecondFactorMutationResult = NonNullable<
+  Awaited<ReturnType<typeof disableSecondFactor>>
+>;
+export type DisableSecondFactorMutationBody = SecondFactorCodeIn;
+export type DisableSecondFactorMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse
+>;
+export type DisableSecondFactorMutationVariables = { data: SecondFactorCodeIn };
+
+/**
+ * @summary Выключить второй фактор (ДВ-4)
+ */
+export const useDisableSecondFactor = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof disableSecondFactor>>,
+      TError,
+      DisableSecondFactorMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof disableSecondFactor>>,
+  TError,
+  DisableSecondFactorMutationVariables,
+  TContext
+> => {
+  return useMutation(getDisableSecondFactorMutationOptions(options), queryClient);
 };
 
 export const getGetNotificationSettingsUrl = () => {

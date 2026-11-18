@@ -332,6 +332,10 @@ import type {
   RolePreview,
   SandboxTurn,
   SearchResult,
+  SecondFactorChallenge,
+  SecondFactorEnabled,
+  SecondFactorSetup,
+  SecondFactorStatus,
   SentMail,
   SentMailBody,
   SentMailPage,
@@ -389,6 +393,67 @@ import type {
 } from "./model";
 
 export const getLoginResponseMock = (
+  overrideResponse: Partial<Extract<Session | SecondFactorChallenge, object>> = {},
+): Session | SecondFactorChallenge =>
+  faker.helpers.arrayElement([
+    {
+      me: {
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        email: faker.internet.email(),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+        position: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          undefined,
+        ]),
+        avatar_url: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          undefined,
+        ]),
+        language: faker.helpers.arrayElement(Object.values(Language)),
+        roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+          () => ({
+            id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+            name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+            system: faker.datatype.boolean(),
+            code: faker.helpers.arrayElement([
+              faker.string.alpha({ length: { min: 10, max: 20 } }),
+              undefined,
+            ]),
+          }),
+        ),
+        active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
+        modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
+        resources: {
+          [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
+        },
+        restricted_fields: faker.helpers.arrayElement([
+          faker.helpers.arrayElements(Object.values(RestrictedField)),
+          undefined,
+        ]),
+        access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
+        onboarding_done: faker.datatype.boolean(),
+        whats_new_shown: faker.helpers.arrayElement([
+          faker.helpers.fromRegExp("^\\d{4}-\\d{2}-\\d{2}$"),
+          null,
+        ]),
+        whats_new_read: faker.helpers.arrayElement([
+          faker.helpers.fromRegExp("^\\d{4}-\\d{2}-\\d{2}$"),
+          null,
+        ]),
+      },
+      must_change_password: faker.datatype.boolean(),
+      expires_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      ...overrideResponse,
+    },
+    {
+      second_factor_required: faker.helpers.arrayElement([true] as const),
+      challenge: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ...overrideResponse,
+    },
+  ]);
+
+export const getLoginSecondFactorResponseMock = (
   overrideResponse: Partial<Extract<Session, object>> = {},
 ): Session => ({
   me: {
@@ -729,6 +794,35 @@ export const getUpdateMeResponseMock = (
     faker.helpers.fromRegExp("^\\d{4}-\\d{2}-\\d{2}$"),
     null,
   ]),
+  ...overrideResponse,
+});
+
+export const getGetSecondFactorResponseMock = (
+  overrideResponse: Partial<Extract<SecondFactorStatus, object>> = {},
+): SecondFactorStatus => ({
+  enabled: faker.datatype.boolean(),
+  enabled_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  backup_codes_left: faker.number.int({ min: 0 }),
+  ...overrideResponse,
+});
+
+export const getSetupSecondFactorResponseMock = (
+  overrideResponse: Partial<Extract<SecondFactorSetup, object>> = {},
+): SecondFactorSetup => ({
+  secret: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  otpauth_uri: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
+export const getEnableSecondFactorResponseMock = (
+  overrideResponse: Partial<Extract<SecondFactorEnabled, object>> = {},
+): SecondFactorEnabled => ({
+  backup_codes: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ),
   ...overrideResponse,
 });
 
@@ -33184,7 +33278,10 @@ export const getListTechDocDealOptionsResponseMock = (
 export const getLoginMockHandler = (
   overrideResponse?:
     | Session
-    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<Session> | Session),
+    | SecondFactorChallenge
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<Session | SecondFactorChallenge> | Session | SecondFactorChallenge),
   options?: RequestHandlerOptions,
 ) => {
   return http.post(
@@ -33196,6 +33293,28 @@ export const getLoginMockHandler = (
             ? await overrideResponse(info)
             : overrideResponse
           : getLoginResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getLoginSecondFactorMockHandler = (
+  overrideResponse?:
+    | Session
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<Session> | Session),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/auth/login/second-factor",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getLoginSecondFactorResponseMock(),
         { status: 200 },
       );
     },
@@ -33523,6 +33642,96 @@ export const getUpdateMeMockHandler = (
           : getUpdateMeResponseMock(),
         { status: 200 },
       );
+    },
+    options,
+  );
+};
+
+export const getGetSecondFactorMockHandler = (
+  overrideResponse?:
+    | SecondFactorStatus
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<SecondFactorStatus> | SecondFactorStatus),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/me/second-factor",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetSecondFactorResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getSetupSecondFactorMockHandler = (
+  overrideResponse?:
+    | SecondFactorSetup
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<SecondFactorSetup> | SecondFactorSetup),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/me/second-factor/setup",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSetupSecondFactorResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getEnableSecondFactorMockHandler = (
+  overrideResponse?:
+    | SecondFactorEnabled
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<SecondFactorEnabled> | SecondFactorEnabled),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/me/second-factor/enable",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getEnableSecondFactorResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDisableSecondFactorMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/me/second-factor/disable",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
     },
     options,
   );
@@ -43701,6 +43910,7 @@ export const getListTechDocDealOptionsMockHandler = (
 };
 export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getLoginMockHandler(),
+  getLoginSecondFactorMockHandler(),
   getForgotPasswordMockHandler(),
   getResetPasswordMockHandler(),
   getLogoutMockHandler(),
@@ -43716,6 +43926,10 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getCreateOwnCompanyMockHandler(),
   getGetMeMockHandler(),
   getUpdateMeMockHandler(),
+  getGetSecondFactorMockHandler(),
+  getSetupSecondFactorMockHandler(),
+  getEnableSecondFactorMockHandler(),
+  getDisableSecondFactorMockHandler(),
   getGetNotificationSettingsMockHandler(),
   getUpdateNotificationSettingsMockHandler(),
   getSendTestNotificationMockHandler(),

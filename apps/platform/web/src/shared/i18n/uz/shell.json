@@ -120,9 +120,24 @@
       "TOO_MANY_REQUESTS": "Kirish urinishlari juda ko‘p. Bir daqiqa kutib, qayta urinib ko‘ring.",
       "BACKEND_UNAVAILABLE": "CRM bilan aloqa o‘rnatib bo‘lmadi. Birozdan keyin qayta kiring.",
       "CSRF_FAILED": "Brauzer sessiyasi eskirgan. Sahifani yangilab, qayta kiring.",
-      "default": "Kirib bo‘lmadi. Qayta urinib ko‘ring."
+      "default": "Kirib bo‘lmadi. Qayta urinib ko‘ring.",
+      "SECOND_FACTOR_INVALID": "Kod notöğri. Telefondagi vaqtni tekşirib, qayta urinib köring.",
+      "SECOND_FACTOR_EXPIRED": "Kod kiritish vaqti tugadi. Qaytadan kiring.",
+      "ACCOUNT_LOCKED": "Notöğri urinişlar juda köp. Hisob vaqtincha bloklandi — keyinroq urinib köring."
     },
-    "expired": "Sessiya muddati tugadi. Qayta kiring."
+    "expired": "Sessiya muddati tugadi. Qayta kiring.",
+    "secondFactor": {
+      "title": "Ilovadagi kod",
+      "lead": "Autentifikator ilovasidagi 6 ta raqamni kiriting.",
+      "leadBackup": "Sozlashda saqlagan zaxira kodlaringizdan birini kiriting.",
+      "code": "Kod",
+      "backupCode": "Zaxira kod",
+      "codeRequired": "Kodni kiriting",
+      "remember": "Bu qurilmani 30 kunga eslab qolish",
+      "useBackup": "Telefon yöq — zaxira kod",
+      "useApp": "Ilovadagi kod",
+      "back": "Orqaga"
+    }
   },
   "changePassword": {
     "title": "Parolni almashtirish",

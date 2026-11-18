@@ -292,4 +292,8 @@ def test_reason_values_are_a_stable_contract() -> None:
         "mail_rule_exists",
         "mail_type_inactive",
         "mail_no_handover_target",
+        "second_factor_code_invalid",
+        "second_factor_not_started",
+        "second_factor_already_enabled",
+        "second_factor_not_enabled",
     }

@@ -23,6 +23,8 @@ def _crm_only() -> list[PlatformSystem]:
 class LoginRequest(BaseModel):
     email: str = Field(min_length=3, max_length=255)
     password: str = Field(min_length=1, max_length=256)
+    # Метка «запомнить устройство» после второго фактора (ДВ-4): с ней код не спрашивается
+    device_token: str | None = Field(default=None, max_length=2048)
 
 
 class TokenResponse(BaseModel):
@@ -30,6 +32,45 @@ class TokenResponse(BaseModel):
     token_type: Literal["bearer"] = "bearer"  # noqa: S105 — тип токена, не секрет
     expires_in: int
     must_change_password: bool
+    # После второго фактора с «запомнить устройство» — метка на 30 дней (ДВ-4)
+    device_token: str | None = None
+
+
+class SecondFactorChallengeResponse(BaseModel):
+    """202 на входе: пароль верен, нужен код второго фактора (ДВ-4); сессии ещё нет."""
+
+    second_factor_required: Literal[True] = True
+    challenge: str
+
+
+class SecondFactorLoginRequest(BaseModel):
+    challenge: str = Field(min_length=1, max_length=2048)
+    code: str = Field(min_length=6, max_length=16)
+    remember_device: bool = False
+
+
+class SecondFactorStatusResponse(BaseModel):
+    enabled: bool
+    enabled_at: datetime | None
+    backup_codes_left: int
+
+
+class SecondFactorSetupRequest(BaseModel):
+    # Название в приложении-аутентификаторе (компания из «Настройки · Компания»)
+    issuer: str = Field(default="", max_length=60)
+
+
+class SecondFactorSetupResponse(BaseModel):
+    secret: str
+    otpauth_uri: str
+
+
+class SecondFactorCodeRequest(BaseModel):
+    code: str = Field(min_length=6, max_length=16)
+
+
+class SecondFactorEnabledResponse(BaseModel):
+    backup_codes: list[str]
 
 
 class ChangePasswordRequest(BaseModel):

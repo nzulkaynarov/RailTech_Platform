@@ -157,6 +157,36 @@
   },
   "tabs": {
     "all": "All sections",
-    "general": "Personal details"
+    "general": "Personal details",
+    "security": "Security"
+  },
+  "secondFactor": {
+    "title": "Sign-in with an app code",
+    "lead": "After the password, the Platform asks for 6 digits from the authenticator app on your phone. On a remembered device — once in 30 days.",
+    "off": "Right now you sign in with a password only.",
+    "on": "On since {{date}}. Backup codes left: {{left}}.",
+    "enable": "Turn on",
+    "disable": "Turn off",
+    "disableTitle": "Turn off sign-in with a code?",
+    "codeOrBackup": "App code or backup code",
+    "scan": "Scan the QR code with an authenticator app (Google Authenticator, Microsoft Authenticator, etc.).",
+    "manual": "Cannot scan — enter the key manually:",
+    "code": "Code from the app",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "backupTitle": "Sign-in with a code is on. Save the backup codes",
+    "backupHint": "Each code works for one sign-in without your phone. We will not show them again.",
+    "download": "Download",
+    "copy": "Copy",
+    "copied": "Codes copied",
+    "saved": "I saved the codes",
+    "disabled": "Sign-in with a code is off",
+    "errors": {
+      "second_factor_code_invalid": "Wrong code. Check the time on your phone and try again.",
+      "second_factor_already_enabled": "Sign-in with a code is already on.",
+      "secrets_key_missing": "Cannot turn on: the administrator has not set the secrets encryption key.",
+      "default": "Something went wrong. Try again."
+    },
+    "qrLabel": "QR code for the authenticator app"
   }
 }
