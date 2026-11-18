@@ -26,7 +26,7 @@ import "./counterparty.css";
 
 type Part = "overview" | "client" | "supplier";
 const EDITABLE: readonly CounterpartyRoleInRole[] = ["supplier", "manufacturer"];
-const ROLE_ORDER = ["client", "supplier", "manufacturer", "partner"] as const;
+const ROLE_ORDER = ["client", "supplier", "manufacturer", "partner", "organization"] as const;
 
 /**
  * Карточка контрагента — одна компания во всех ролях (ADR-0028, СУЩ-2.5; макет «Контрагент», лист 2). Открывается и по

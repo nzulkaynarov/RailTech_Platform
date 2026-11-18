@@ -10,7 +10,7 @@ ERP проецирует контакты клиентов CRM) и партнё�
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Path, Query, status
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.clients.erp_company import ErpCompany
 from app.deps import Authed, require, require_any
@@ -142,6 +142,7 @@ class CounterpartyRoles(BaseModel):
     supplier: bool
     manufacturer: bool
     partner: bool
+    organization: bool
 
 
 class CounterpartyCardPerson(BaseModel):
@@ -210,6 +211,7 @@ def to_card(raw: Any) -> CounterpartyCard:
             supplier=bool(roles.get("supplier")),
             manufacturer=bool(roles.get("manufacturer")),
             partner=bool(roles.get("partner")),
+            organization=bool(roles.get("organization")),
         ),
         people=[
             CounterpartyCardPerson(
@@ -295,6 +297,13 @@ class EdsAddressee(BaseModel):
     kind: Kind
 
 
+class EdsAddresseeIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str = Field(min_length=1, max_length=255)
+    inn: str | None = Field(default=None, pattern=r"^\d{9}$")
+    legal_address: str | None = Field(default=None, max_length=500)
+
+
 class EdsAddresseeList(BaseModel):
     model_config = ConfigDict(extra="forbid")
     items: list[EdsAddressee]
@@ -327,4 +336,59 @@ async def search_addressees(
     )
     return EdsAddresseeList(
         items=[to_addressee(row) for row in rows_of(data) if "id" in row and row.get("name")]
+    )
+
+
+@router.post(
+    "/eds/addressees",
+    response_model=EdsAddressee,
+    status_code=status.HTTP_201_CREATED,
+    operation_id="createEdsAddressee",
+    tags=["eds-documents"],
+)
+async def create_addressee(authed: Writer, body: EdsAddresseeIn) -> EdsAddressee:
+    """Адресата нет в контрагентах — организация заводится из письма (ADR-0028 п. 5)."""
+    card = await ErpCompany(authed.call).data(
+        "POST",
+        "parties/organizations/",
+        json={
+            "name": body.name,
+            "tin": body.inn,
+            "legal_address": body.legal_address or "",
+        },
+    )
+    return to_addressee({**card, "kind": "client" if card["roles"]["client"] else "partner"})
+
+
+class EdsAddresseePerson(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    id: str
+    name: str
+    position: str | None
+
+
+class EdsAddresseePeople(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    items: list[EdsAddresseePerson]
+
+
+@router.get(
+    "/eds/addressees/{id}/people",
+    response_model=EdsAddresseePeople,
+    operation_id="listEdsAddresseePeople",
+    tags=["eds-documents"],
+)
+async def addressee_people(id: CompanyId, authed: Writer) -> EdsAddresseePeople:
+    """«Кому — человек» письма (СУЩ-2.6): люди компании из карточки ERP, без телефонов и почты."""
+    card = await ErpCompany(authed.call).data("GET", f"parties/organizations/{id}/")
+    return EdsAddresseePeople(
+        items=[
+            EdsAddresseePerson(
+                id=str(person["id"]),
+                name=str(person.get("name") or ""),
+                position=_text(person.get("position")),
+            )
+            for person in card.get("people") or []
+            if "id" in person
+        ]
     )

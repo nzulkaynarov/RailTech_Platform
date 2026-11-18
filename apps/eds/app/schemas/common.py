@@ -4,7 +4,7 @@ import datetime as dt
 import uuid
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, PositiveInt, StringConstraints
 
 AMOUNT_PATTERN = r"^-?\d+\.\d{2}$"
 MARGIN_PATTERN = r"^(100(\.0{1,2})?|\d{1,2}(\.\d{1,2})?)$"
@@ -53,6 +53,16 @@ class LetterSender(Strict):
 
     name: Annotated[str | None, Field(max_length=255)] = None
     inn: Inn | None = None
+
+
+class LetterRecipient(LetterSender):
+    """Адресат исходящего письма (eds.yaml `LetterRecipient`, СУЩ-2.6): ссылка на компанию ERP и человека.
+
+    Название и ИНН — снимок карточки ERP, его ставит BFF при сохранении; `company_id = None` — письмо до СУЩ-2.6.
+    """
+
+    company_id: PositiveInt | None = None
+    contact_id: PositiveInt | None = None
 
 
 class IncomingLetterSender(LetterSender):

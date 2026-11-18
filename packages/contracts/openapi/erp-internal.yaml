@@ -17644,6 +17644,51 @@ paths:
           $ref: '#/components/responses/UnauthorizedResponse'
         '403':
           $ref: '#/components/responses/ForbiddenResponse'
+    post:
+      operationId: parties_organizations_create
+      description: 'Организация-адресат из письма (ADR-0028 п. 5, СУЩ-2.6): название, ИНН или рег. номер, страна, адрес; роль
+        «Организация», без сделок. Такая компания уже есть (ИНН, пара «страна — рег. номер», без ИНН — название) — 409 `COMPANY_EXISTS`,
+        её выбирают из списка. Ответ — карточка контрагента.'
+      summary: Create an addressee organization
+      tags:
+      - Parties
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeskOrganizationInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeskOrganizationInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeskOrganizationInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskCounterparty'
+          description: ''
+        '400':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '409':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
   /api/v1/parties/organizations/{id}/:
     get:
       operationId: parties_organizations_retrieve
@@ -25569,9 +25614,13 @@ components:
         partner:
           type: boolean
           description: Партнёр с кабинетом — отношение `partner` приглашено или активно
+        organization:
+          type: boolean
+          description: Организация — адресат писем без сделок (тип `ORGANIZATION`)
       required:
       - client
       - manufacturer
+      - organization
       - partner
       - supplier
     DeskCrewRate:
@@ -26376,6 +26425,29 @@ components:
       - id
       - inn
       - kind
+      - name
+    DeskOrganizationInRequest:
+      type: object
+      description: Новая организация-адресат из письма (СУЩ-2.6).
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        tin:
+          type: string
+          nullable: true
+          maxLength: 14
+        registration_number:
+          type: string
+          maxLength: 64
+        country_id:
+          type: integer
+          nullable: true
+        legal_address:
+          type: string
+          maxLength: 500
+      required:
       - name
     DeskOrganizationPage:
       type: object

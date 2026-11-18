@@ -196,7 +196,13 @@ CARD = {
     "country": "Узбекистан",
     "legal_address": None,
     "crm_client_id": 42,
-    "roles": {"client": True, "supplier": True, "manufacturer": False, "partner": False},
+    "roles": {
+        "client": True,
+        "supplier": True,
+        "manufacturer": False,
+        "partner": False,
+        "organization": False,
+    },
     "people": [
         {
             "id": 31,
@@ -248,6 +254,7 @@ async def test_counterparty_card_by_company_and_by_client(
         "supplier": True,
         "manufacturer": False,
         "partner": False,
+        "organization": False,
     }
     assert body["bank_accounts"][0]["account"] == "…4567"
     by_client = await web.client.get("/api/v1/people/clients/42/counterparty")
@@ -259,7 +266,13 @@ async def test_counterparty_card_by_company_and_by_client(
 async def test_counterparty_roles_are_marks(web: Web, be: Any, check: ContractChecker) -> None:
     await web.login(["SUPPLY"])
     router: respx.MockRouter = be.router
-    roles = {"client": True, "supplier": True, "manufacturer": True, "partner": False}
+    roles = {
+        "client": True,
+        "supplier": True,
+        "manufacturer": True,
+        "partner": False,
+        "organization": False,
+    }
     marked = {**CARD, "roles": roles}
     route = router.post(f"{API}/parties/organizations/9/roles/").mock(
         side_effect=lambda request: (
@@ -295,3 +308,58 @@ async def test_manager_cannot_mark_roles(web: Web) -> None:
         headers={"X-CSRF-Token": web.csrf},
     )
     assert response.status_code == 403
+
+
+# --- СУЩ-2.6: организация-адресат из письма ---------------------------------------------
+
+
+async def test_addressee_organization_is_created_from_the_letter(
+    web: Web, be: Any, check: ContractChecker
+) -> None:
+    await web.login(["MANAGER"])
+    router: respx.MockRouter = be.router
+    roles = {
+        "client": False,
+        "supplier": False,
+        "manufacturer": False,
+        "partner": False,
+        "organization": True,
+    }
+    created = {**CARD, "id": 12, "name": "Таможенный комитет", "inn": "200000123", "roles": roles}
+    route = router.post(f"{API}/parties/organizations/").mock(
+        side_effect=lambda request: (
+            httpx.Response(409, json={"detail": "COMPANY_EXISTS"})
+            if json.loads(request.content)["tin"] == "300000777"
+            else httpx.Response(201, json=created)
+        )
+    )
+    headers = {"X-CSRF-Token": web.csrf}
+    response = await web.client.post(
+        "/api/v1/eds/addressees",
+        json={"name": "Таможенный комитет", "inn": "200000123", "legal_address": "Ташкент"},
+        headers=headers,
+    )
+    assert response.status_code == 201, response.text
+    check(response, "/eds/addressees", "post")
+    assert response.json() == {
+        "id": "12",
+        "name": "Таможенный комитет",
+        "inn": "200000123",
+        "email": None,
+        "attention": None,
+        "kind": "partner",
+    }
+    assert json.loads(route.calls.last.request.content) == {
+        "name": "Таможенный комитет",
+        "tin": "200000123",
+        "legal_address": "Ташкент",
+    }
+    taken = await web.client.post(
+        "/api/v1/eds/addressees", json={"name": "Север", "inn": "300000777"}, headers=headers
+    )
+    assert taken.status_code == 409
+    assert taken.json()["details"]["reason"] == "company_exists"
+    wrong = await web.client.post(
+        "/api/v1/eds/addressees", json={"name": "Север", "inn": "12"}, headers=headers
+    )
+    assert wrong.status_code == 422

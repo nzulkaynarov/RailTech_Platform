@@ -500,14 +500,64 @@ async def test_submit_passes_approvers_and_watchers(web: Web, eds: EdsFake) -> N
     }
 
 
-async def test_create_letter_sends_recipient(web: Web, eds: EdsFake) -> None:
+async def test_create_letter_sends_recipient(web: Web, eds: EdsFake, be: Backends) -> None:
+    """СУЩ-2.6: адресат — ссылка на компанию ERP и человека; название и ИНН — из карточки ERP."""
     await web.login(["MANAGER"])
-    form = {**FORM, "kind": "letter_out", "recipient": {"name": "ООО «Пример»", "inn": None}}
+    card = {
+        "id": 7,
+        "name": "ООО «Пример»",
+        "inn": "300000555",
+        "people": [{"id": 31, "name": "Анвар Клиентов", "position": "Директор"}],
+    }
+    be.router.get(f"{ERP_URL}/api/v1/parties/organizations/7/").mock(
+        return_value=httpx.Response(200, json=card)
+    )
+    be.router.get(f"{ERP_URL}/api/v1/parties/organizations/8/").mock(
+        return_value=httpx.Response(404, json={"detail": "Not found."})
+    )
+    form = {**FORM, "kind": "letter_out", "recipient": {"company_id": "7", "contact_id": "31"}}
     form.pop("amount")
 
     assert (await web.send("POST", f"{BASE}/documents", json=form)).status_code == 201
 
-    assert eds.body("POST", "documents")["recipient"] == {"name": "ООО «Пример»", "inn": None}
+    assert eds.body("POST", "documents")["recipient"] == {
+        "name": "ООО «Пример»",
+        "inn": "300000555",
+        "company_id": 7,
+        "contact_id": 31,
+    }
+    stranger = {**form, "recipient": {"company_id": "7", "contact_id": "99"}}
+    wrong_person = await web.send("POST", f"{BASE}/documents", json=stranger)
+    assert wrong_person.status_code == 422
+    assert wrong_person.json()["details"]["reason"] == "contact_not_found"
+    unseen = await web.send(
+        "POST", f"{BASE}/documents", json={**form, "recipient": {"company_id": "8"}}
+    )
+    assert unseen.status_code == 422
+    assert unseen.json()["details"]["reason"] == "company_not_found"
+    free_text = {**form, "recipient": {"name": "ООО «Пример»"}}
+    assert (await web.send("POST", f"{BASE}/documents", json=free_text)).status_code == 422
+    assert len(eds.requests("POST", "documents")) == 1
+
+
+async def test_addressee_people_for_the_to_field(
+    web: Web, be: Backends, check: ContractChecker
+) -> None:
+    await web.login(["MANAGER"])
+    be.router.get(f"{ERP_URL}/api/v1/parties/organizations/7/").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "id": 7,
+                "name": "ООО «Пример»",
+                "people": [{"id": 31, "name": "Анвар", "position": ""}],
+            },
+        )
+    )
+    response = await web.client.get(f"{BASE}/addressees/7/people")
+    assert response.status_code == 200, response.text
+    check(response, "/eds/addressees/{id}/people", "get")
+    assert response.json() == {"items": [{"id": "31", "name": "Анвар", "position": None}]}
 
 
 REPLY_TO_ID = "40000000-0000-4000-8000-000000000112"

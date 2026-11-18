@@ -16,6 +16,7 @@ import pytest
 
 from tests.backends import Backends
 from tests.conftest import ContractChecker, Web
+from tests.consts import ERP_URL
 from tests.eds_documents_support import DOC_ID, EARLIER, ME, NOW, EdsFake, document
 
 BASE = "/api/v1/eds"
@@ -31,7 +32,7 @@ LETTER_FORM: dict[str, Any] = {
     "kind": "letter_out",
     "subject": "Ответ на требование",
     "text": "Ответ.",
-    "recipient": {"name": "ГНИ Мирабадского района", "inn": None},
+    "recipient": {"company_id": "12"},
     "letter": {
         "body": BODY,
         "recipient_attention": "Начальнику Каримову А. А.",
@@ -67,7 +68,12 @@ def letter_doc(**over: Any) -> dict[str, Any]:
     fields: dict[str, Any] = {
         "kind": "letter_out",
         "number": None,
-        "recipient": {"name": "ГНИ Мирабадского района", "inn": None},
+        "recipient": {
+            "name": "ГНИ Мирабадского района",
+            "inn": None,
+            "company_id": 12,
+            "contact_id": None,
+        },
         "letter": letter(),
         **over,
     }
@@ -76,6 +82,12 @@ def letter_doc(**over: Any) -> dict[str, Any]:
 
 @pytest.fixture
 def eds(be: Backends) -> EdsFake:
+    # адресат письма — ссылкой на компанию ERP (СУЩ-2.6): BFF берёт название из её карточки
+    be.router.get(f"{ERP_URL}/api/v1/parties/organizations/12/").mock(
+        return_value=httpx.Response(
+            200, json={"id": 12, "name": "ГНИ Мирабадского района", "inn": None, "people": []}
+        )
+    )
     return EdsFake(be)
 
 

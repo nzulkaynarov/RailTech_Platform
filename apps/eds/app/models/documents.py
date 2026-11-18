@@ -68,6 +68,10 @@ class Document(Base):
     deal_number: Mapped[str | None] = mapped_column(String(64))
     recipient_name: Mapped[str | None] = mapped_column(String(255))
     recipient_inn: Mapped[str | None] = mapped_column(String(14))
+    # СУЩ-2.6 (ADR-0028 п. 5): адресат — ссылка на компанию ERP и человека; имя и ИНН выше — снимок карточки ERP.
+    # Пусто у писем до СУЩ-2.6 — адресат текстом («сопоставить»).
+    recipient_company_id: Mapped[int | None] = mapped_column(BigInteger, index=True)
+    recipient_contact_id: Mapped[int | None] = mapped_column(BigInteger)
     in_reply_to: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("letters.id"))
     # Письмо на бланке (P4): тело блоками (контракт documents/body.schema.json), «кому», почта, подписант; когда
     # зарегистрировано (дата итогового PDF); последний запрошенный PDF; передача на регистрацию исполнителем (B-P8B-4).

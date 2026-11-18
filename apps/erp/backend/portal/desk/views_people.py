@@ -16,10 +16,12 @@ from portal.desk import service_counterparty as counterparty
 from portal.desk.serializers import (
     DeskCounterparty,
     DeskCounterpartyRoleIn,
+    DeskOrganizationIn,
     DeskOrganizationPage,
     DeskPeoplePage,
     DeskPersonContacts,
 )
+from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
 from rest_framework.response import Response
@@ -28,15 +30,18 @@ from accounts.services.clients import seller_clients
 from catalog.desk import suppliers
 from catalog.desk.items import ItemError
 from catalog.desk.views_base import FORBIDDEN, NOT_FOUND, REFUSED, DeskViewSet, refuse
+from core.permissions import SELF_SERVICE
 
 KINDS = ("client", "partner")
 
 
 def counterparty_ids(user) -> tuple[set, set]:
-    """Клиенты своей компании и партнёры (компания и клиент, и поставщик — клиент)."""
+    """Клиенты своей компании и не клиенты — партнёры и организации-адресаты (компания и клиент, и поставщик — клиент)."""
     client_ids = set(seller_clients(user).values_list("pk", flat=True))
     partner_ids = set(suppliers.supplier_queryset({}).values_list("pk", flat=True)) | set(
-        Company.objects.filter(relationships__role=RelationshipRole.PARTNER).values_list("pk", flat=True)
+        Company.objects.filter(
+            Q(relationships__role=RelationshipRole.PARTNER) | Q(types__code="ORGANIZATION")
+        ).values_list("pk", flat=True)
     )
     return client_ids, partner_ids - client_ids
 
@@ -162,7 +167,8 @@ class OrganizationsDeskViewSet(DeskViewSet):
     # --- карточка контрагента: одна компания во всех ролях (ADR-0028, СУЩ-2.5) ---------------------
 
     lookup_value_regex = r"\d+"
-    required_permissions = {"roles": "supply.manage"}
+    # «Организацию» заводит любой сотрудник бэк-офиса — прямо из письма (ADR-0028 п. 5)
+    required_permissions = {"roles": "supply.manage", "create": SELF_SERVICE}
 
     def _company(self, request, pk) -> tuple[Company, set]:
         client_ids, partner_ids = counterparty_ids(request.user)
@@ -170,6 +176,28 @@ class OrganizationsDeskViewSet(DeskViewSet):
         if company is None:
             raise NotFound()
         return company, client_ids
+
+    @extend_schema(
+        operation_id="parties_organizations_create",
+        summary="Create an addressee organization",
+        description=(
+            "Организация-адресат из письма (ADR-0028 п. 5, СУЩ-2.6): название, ИНН или рег. номер, страна, адрес; роль "
+            "«Организация», без сделок. Такая компания уже есть (ИНН, пара «страна — рег. номер», без ИНН — название) — "
+            "409 `COMPANY_EXISTS`, её выбирают из списка. Ответ — карточка контрагента."
+        ),
+        request=DeskOrganizationIn,
+        responses={201: DeskCounterparty, 400: REFUSED, 409: REFUSED},
+        tags=["Parties"],
+    )
+    def create(self, request):
+        body = DeskOrganizationIn(data=request.data)
+        body.is_valid(raise_exception=True)
+        try:
+            company = counterparty.create_organization(body.validated_data, actor=request.user)
+        except ItemError as error:
+            return refuse(error)
+        client_ids, _ = counterparty_ids(request.user)
+        return Response(counterparty.card(company, client_ids, request.user), status=status.HTTP_201_CREATED)
 
     @extend_schema(
         operation_id="parties_organizations_retrieve",

@@ -2204,6 +2204,19 @@ export interface components {
       inn?: string | null;
     };
     /**
+     * @description Адресат исходящего письма (ADR-0028 п. 5, СУЩ-2.6): ссылка на компанию ERP и человека; название и ИНН — снимок
+     *     карточки ERP на момент сохранения, его ставит BFF. `company_id = null` — письмо до СУЩ-2.6, адресат текстом
+     *     («сопоставить»)
+     */
+    LetterRecipient: {
+      name: string | null;
+      inn?: string | null;
+      /** @description Компания ERP (`parties/organizations/{id}`) */
+      company_id?: number | null;
+      /** @description Человек этой компании — «Кому» */
+      contact_id?: number | null;
+    };
+    /**
      * @description Отправитель входящего письма (с 0.2.0): `LetterSender` и контактное лицо. Письмо по заявке ERP берёт название, ИНН и
      *     контакт из `erp.request.created` (`payload.company_name`, `company_inn`, `contact_name`; C1-G-7)
      */
@@ -3208,7 +3221,7 @@ export interface components {
       /** @description Связь с проектом (заявкой) ERP */
       erp_deal_id?: number | null;
       /** @description Только `letter_out` — адресат исходящего письма */
-      recipient?: components["schemas"]["LetterSender"] | null;
+      recipient?: components["schemas"]["LetterRecipient"] | null;
       /** @description Только `letter_out` — входящее письмо, на которое отвечаем */
       in_reply_to?: components["schemas"]["Uuid"] | null;
       /**
@@ -3298,7 +3311,7 @@ export interface components {
       /** @description Связь с проектом (заявкой) ERP; `null` снимает связь */
       erp_deal_id?: number | null;
       /** @description Только `letter_out` — адресат исходящего письма (другой тип — 422 `recipient`) */
-      recipient?: components["schemas"]["LetterSender"] | null;
+      recipient?: components["schemas"]["LetterRecipient"] | null;
       /** @description Только `letter_out` (P4) — письмо на бланке целиком (другой тип — 422 `letter`) */
       letter?: components["schemas"]["OutgoingLetterIn"] | null;
     };
@@ -3359,7 +3372,7 @@ export interface components {
       source_message_id: string | null;
       erp_deal_id: number | null;
       deal_number: string | null;
-      recipient?: components["schemas"]["LetterSender"] | null;
+      recipient?: components["schemas"]["LetterRecipient"] | null;
       in_reply_to?: components["schemas"]["Uuid"] | null;
       /**
        * @description Только `letter_out` «в ответ на ВХ» (EDS-REPLY-1): номер и тема входящего, на которое отвечаем (для ссылки «В ответ

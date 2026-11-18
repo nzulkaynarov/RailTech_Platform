@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — EDS API (электронный документооборот)
-  version: 0.27.0
+  version: 0.28.0
   summary: Пространство `/api/v1/` сервиса EDS — вызывает BFF Платформы от имени сотрудника.
   description: |
     Контракт сервиса EDS (`apps/eds`, ADR-0015; `docs/history/runbooks/wave12-eds-c1.md` §2). EDS — владелец реестра документов и
@@ -4138,6 +4138,29 @@ components:
         inn:
           type: [string, 'null']
           pattern: '^\d{9,14}$'
+    LetterRecipient:
+      type: object
+      additionalProperties: false
+      required: [name]
+      description: |
+        Адресат исходящего письма (ADR-0028 п. 5, СУЩ-2.6): ссылка на компанию ERP и человека; название и ИНН — снимок
+        карточки ERP на момент сохранения, его ставит BFF. `company_id = null` — письмо до СУЩ-2.6, адресат текстом
+        («сопоставить»)
+      properties:
+        name:
+          type: [string, 'null']
+          maxLength: 255
+        inn:
+          type: [string, 'null']
+          pattern: '^\d{9,14}$'
+        company_id:
+          type: [integer, 'null']
+          minimum: 1
+          description: Компания ERP (`parties/organizations/{id}`)
+        contact_id:
+          type: [integer, 'null']
+          minimum: 1
+          description: Человек этой компании — «Кому»
     IncomingLetterSender:
       type: object
       additionalProperties: false
@@ -5881,7 +5904,7 @@ components:
           description: Связь с проектом (заявкой) ERP
         recipient:
           oneOf:
-            - $ref: '#/components/schemas/LetterSender'
+            - $ref: '#/components/schemas/LetterRecipient'
             - type: 'null'
           description: Только `letter_out` — адресат исходящего письма
         in_reply_to:
@@ -6053,7 +6076,7 @@ components:
           description: Связь с проектом (заявкой) ERP; `null` снимает связь
         recipient:
           oneOf:
-            - $ref: '#/components/schemas/LetterSender'
+            - $ref: '#/components/schemas/LetterRecipient'
             - type: 'null'
           description: Только `letter_out` — адресат исходящего письма (другой тип — 422 `recipient`)
         letter:
@@ -6212,7 +6235,7 @@ components:
           type: [string, 'null']
         recipient:
           oneOf:
-            - $ref: '#/components/schemas/LetterSender'
+            - $ref: '#/components/schemas/LetterRecipient'
             - type: 'null'
         in_reply_to:
           oneOf:

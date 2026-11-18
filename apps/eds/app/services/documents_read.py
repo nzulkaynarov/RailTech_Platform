@@ -9,7 +9,7 @@ from app.config import get_settings
 from app.errors import not_found
 from app.models import ApprovalRoute, ApprovalStep, Document, DocumentPayment, DocumentRender, Employee, StoredFile
 from app.schemas.approvals import Decision
-from app.schemas.common import LetterSender, Money
+from app.schemas.common import LetterRecipient, Money
 from app.schemas.documents import Document as DocumentOut
 from app.schemas.documents import (
     DocumentDecision,
@@ -147,7 +147,12 @@ async def present(session: AsyncSession, document: Document) -> DocumentOut:
     decisions = await _decisions(session, document.id, directory)
     entries = await journal.entries(session, "document", document.id)
     recipient = (
-        LetterSender(name=document.recipient_name, inn=document.recipient_inn)
+        LetterRecipient(
+            name=document.recipient_name,
+            inn=document.recipient_inn,
+            company_id=document.recipient_company_id,
+            contact_id=document.recipient_contact_id,
+        )
         if document.kind == DocumentKind.LETTER_OUT.value
         else None
     )

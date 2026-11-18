@@ -12,4 +12,6 @@ export interface CounterpartyRoles {
   manufacturer: boolean;
   /** Партнёр с кабинетом — приглашён или активен */
   partner: boolean;
+  /** Организация — адресат писем без сделок (госорган, банк), заведена из письма */
+  organization: boolean;
 }

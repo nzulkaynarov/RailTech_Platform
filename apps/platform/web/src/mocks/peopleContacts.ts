@@ -4,6 +4,7 @@ import type {
   CounterpartyContacts,
   CounterpartyPerson,
   EdsAddressee,
+  EdsAddresseeIn,
 } from "../shared/api/generated/model";
 
 /** Люди клиентов и партнёров (FR-11): контакты контрагентов демо-мира, как их отдаёт ERP `parties/people/`. */
@@ -56,13 +57,69 @@ const ADDRESSEES: EdsAddressee[] = [
   },
 ];
 
+/** Адресат письма по id (СУЩ-2.6): BFF берёт название и ИНН из карточки компании ERP. */
+export function addresseeById(id: string): EdsAddressee | undefined {
+  return ADDRESSEES.find((item) => item.id === id);
+}
+
+/** Люди компании-адресата — «Кому — человек». */
+export function addresseePeople(id: string): CounterpartyPerson[] {
+  return PEOPLE.filter((person) => person.company.id === id);
+}
+
 export const peopleContactsHandlers = [
+  http.get("*/eds/addressees/:id/people", ({ params }) => {
+    const id = String(params.id);
+    if (!addresseeById(id)) {
+      return HttpResponse.json(
+        { code: "NOT_FOUND", message: "Не найдено.", source: "erp" },
+        { status: 404 },
+      );
+    }
+    const items = addresseePeople(id).map(({ id: personId, name, position }) => ({
+      id: personId,
+      name,
+      position,
+    }));
+    return HttpResponse.json({ items });
+  }),
   http.get("*/eds/addressees", ({ request }) => {
     const q = (new URL(request.url).searchParams.get("q") ?? "").toLocaleLowerCase("ru");
     const items = ADDRESSEES.filter(
       (item) => item.name.toLocaleLowerCase("ru").includes(q) || (item.inn ?? "").includes(q),
     );
     return HttpResponse.json({ items });
+  }),
+  // СУЩ-2.6: организация-адресат из письма; дубль по ИНН или названию — 409, как у ERP
+  http.post("*/eds/addressees", async ({ request }) => {
+    const body = (await request.json()) as EdsAddresseeIn;
+    const name = body.name.trim();
+    const taken = ADDRESSEES.some(
+      (item) =>
+        (body.inn && item.inn === body.inn) ||
+        item.name.toLocaleLowerCase("ru") === name.toLocaleLowerCase("ru"),
+    );
+    if (taken) {
+      return HttpResponse.json(
+        {
+          code: "CONFLICT",
+          message: "Такая компания уже есть. Найдите её в списке.",
+          source: "erp",
+          details: { reason: "company_exists" },
+        },
+        { status: 409 },
+      );
+    }
+    const created: EdsAddressee = {
+      id: String(9000 + ADDRESSEES.length),
+      name,
+      inn: body.inn ?? null,
+      email: null,
+      attention: null,
+      kind: "partner",
+    };
+    ADDRESSEES.push(created);
+    return HttpResponse.json(created, { status: 201 });
   }),
   http.get("*/people/contacts", ({ request }) => {
     const url = new URL(request.url);

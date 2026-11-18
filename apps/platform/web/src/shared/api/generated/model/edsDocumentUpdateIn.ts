@@ -4,7 +4,7 @@
  */
 import type { EdsLetterIn } from "./edsLetterIn";
 import type { EdsMoney } from "./edsMoney";
-import type { EdsRecipient } from "./edsRecipient";
+import type { EdsRecipientIn } from "./edsRecipientIn";
 
 /**
  * Форма черновика целиком; `amount`, `due_date`, `erp_deal_id` со значением `null` очищают поле
@@ -27,8 +27,8 @@ export interface EdsDocumentUpdateIn {
   file_ids?: string[];
   /** @nullable */
   erp_deal_id?: number | null;
-  /** Только `letter_out` */
-  recipient?: EdsRecipient | null;
+  /** Только `letter_out`; не передан — прежний */
+  recipient?: EdsRecipientIn | null;
   /** Только `letter_out` — письмо на бланке целиком (P4) */
   letter?: EdsLetterIn | null;
   /**

@@ -8,6 +8,7 @@ import type {
   EdsDocumentMailing,
   EdsLetterIn,
   EdsLetterhead,
+  EdsRecipientIn,
   EdsDocumentPage,
   EdsDocumentRow,
   EdsDocumentUpdateIn,
@@ -35,6 +36,7 @@ import {
   noticeReplyRegistered,
 } from "./edsInstructions";
 import letterSampleUrl from "./fixtures/letter-sample.pdf?url";
+import { addresseeById } from "./peopleContacts";
 import { readLetters } from "./fixtures/letters";
 import { buildMe, readSession } from "./mockSession";
 
@@ -396,19 +398,22 @@ interface FormBody {
   due_date?: string | null;
   file_ids?: string[];
   erp_deal_id?: number | null;
-  recipient?: { name: string; inn?: string | null } | null;
+  recipient?: EdsRecipientIn | null;
   letter?: EdsLetterIn | null;
   send?: boolean;
 }
 
 /** Проверка формы, как её делают BFF и EDS: тема и текст, сумма больше нуля, «нужно до» не в прошлом, адресат письма. */
-function validationError(body: FormBody, letter: boolean): Response | null {
+function validationError(body: FormBody, letter: boolean, created = false): Response | null {
   const fields: string[] = [];
   if (!body.subject?.trim()) fields.push("subject");
   if (!body.text?.trim()) fields.push("text");
   if (body.amount && Number(body.amount.amount) <= 0) fields.push("amount");
   if (body.due_date && body.due_date < today()) fields.push("due_date");
-  if (letter && !body.recipient?.name.trim()) fields.push("recipient");
+  // СУЩ-2.6: адресат — компания из контрагентов; новое письмо без неё не сохраняется
+  if (letter && (body.recipient ? !addresseeById(body.recipient.company_id) : created)) {
+    fields.push("recipient");
+  }
   if (body.erp_deal_id && !MOCK_DEALS.some((d) => d.erp_deal_id === body.erp_deal_id)) {
     fields.push("erp_deal_id");
   }
@@ -424,8 +429,14 @@ function applyForm(doc: MockDocument, body: FormBody): void {
   if ("due_date" in body) doc.due_date = body.due_date ?? null;
   if ("erp_deal_id" in body) doc.erp_deal_id = body.erp_deal_id ?? null;
   if (body.recipient !== undefined && doc.kind === "letter_out") {
-    doc.recipient = body.recipient
-      ? { name: body.recipient.name, inn: body.recipient.inn ?? null }
+    const company = body.recipient ? addresseeById(body.recipient.company_id) : undefined;
+    doc.recipient = company
+      ? {
+          name: company.name,
+          inn: company.inn,
+          company_id: company.id,
+          contact_id: body.recipient?.contact_id ?? null,
+        }
       : null;
   }
   if (body.file_ids) {
@@ -608,7 +619,7 @@ export const edsDocumentsHandlers = [
         permission: "letters.register",
       });
     }
-    const invalid = validationError(body, body.kind === "letter_out");
+    const invalid = validationError(body, body.kind === "letter_out", true);
     if (invalid) return invalid;
     const state = readEds();
     const key = request.headers.get("Idempotency-Key");

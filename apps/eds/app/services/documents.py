@@ -275,6 +275,8 @@ async def create(session: AsyncSession, bus: AsyncBus, *, employee: Employee, da
         deal_number=await deal_number_for(session, data.erp_deal_id),
         recipient_name=data.recipient.name if data.recipient else None,
         recipient_inn=data.recipient.inn if data.recipient else None,
+        recipient_company_id=data.recipient.company_id if data.recipient else None,
+        recipient_contact_id=data.recipient.contact_id if data.recipient else None,
         in_reply_to=data.in_reply_to,
         created_at=now,
         updated_at=now,
@@ -351,6 +353,8 @@ async def update(
         else:
             document.recipient_name = edits.recipient.name if edits.recipient else None
             document.recipient_inn = edits.recipient.inn if edits.recipient else None
+            document.recipient_company_id = edits.recipient.company_id if edits.recipient else None
+            document.recipient_contact_id = edits.recipient.contact_id if edits.recipient else None
     if "letter" in edits.model_fields_set:
         if kind is not DocumentKind.LETTER_OUT:
             if edits.letter is not None:

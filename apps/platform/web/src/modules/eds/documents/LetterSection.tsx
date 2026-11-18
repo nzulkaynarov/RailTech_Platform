@@ -59,7 +59,15 @@ function registerBody(doc: EdsDocument, letter: EdsLetter, send: boolean) {
     due_date: null,
     file_ids: [],
     erp_deal_id: doc.deal?.erp_deal_id ?? null,
-    recipient: doc.recipient,
+    // адресат ссылкой (СУЩ-2.6); письмо до него без ссылки адресата не передаёт — регистрация ждёт сопоставления
+    ...(doc.recipient?.company_id
+      ? {
+          recipient: {
+            company_id: doc.recipient.company_id,
+            contact_id: doc.recipient.contact_id,
+          },
+        }
+      : {}),
     ...(letter.body
       ? {
           letter: {
@@ -143,6 +151,8 @@ export function LetterSection({ doc }: { doc: EdsDocument }) {
     }
   };
 
+  // Адресат текстом из писем до СУЩ-2.6: пока его не выбрали из контрагентов, письмо не регистрируется
+  const unmatched = doc.status !== "sent" && Boolean(doc.recipient) && !doc.recipient?.company_id;
   const definitionItems: DefinitionItem[] = [
     { label: t("panel.letter.attention"), value: letter.recipient_attention },
     { label: t("panel.letter.email"), value: email },
@@ -204,6 +214,7 @@ export function LetterSection({ doc }: { doc: EdsDocument }) {
       <div className="pf-fp-block">
         <h4>{t("panel.letter.title")}</h4>
         <DefinitionList items={definitionItems} />
+        {unmatched ? <Alert type="warning" showIcon message={t("panel.letter.unmatched")} /> : null}
         {letter.registration_requested && doc.status === "draft" ? (
           <Alert
             type="info"
@@ -249,7 +260,7 @@ export function LetterSection({ doc }: { doc: EdsDocument }) {
           <Button
             type="primary"
             loading={busy === "register"}
-            disabled={busy !== null}
+            disabled={busy !== null || unmatched}
             onClick={() => {
               void act("register");
             }}

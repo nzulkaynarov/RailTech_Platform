@@ -42,6 +42,7 @@ function cardOf(id: string): CounterpartyCard | null {
         supplier: true,
         manufacturer: mark.manufacturer ?? (supplier.is_manufacturer || brands.length > 0),
         partner: false,
+        organization: false,
       },
       people: supplier.contact_person
         ? [
@@ -87,6 +88,7 @@ function cardOf(id: string): CounterpartyCard | null {
       supplier: mark.supplier ?? false,
       manufacturer: mark.manufacturer ?? false,
       partner: false,
+      organization: false,
     },
     people: client.contacts.map((contact, index) => ({
       id: String(contact.id),

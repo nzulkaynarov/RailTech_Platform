@@ -14,6 +14,7 @@ CONFLICT_CODES = frozenset(
     {
         "HS_CODE_EXISTS",
         "ROLE_IN_USE",
+        "COMPANY_EXISTS",
         "SUPPLIER_EXISTS",
         "OFFER_EXISTS",
         "PROPOSAL_DECIDED",

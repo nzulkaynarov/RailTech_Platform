@@ -65,10 +65,23 @@ class EdsMoney(BaseModel):
 
 
 class EdsRecipient(BaseModel):
+    """Адресат письма (СУЩ-2.6): компания ERP и человек; название и ИНН — снимок карточки ERP."""
+
     model_config = ConfigDict(extra="forbid")
 
-    name: str = Field(min_length=1, max_length=255)
-    inn: str | None = Field(default=None, max_length=32)
+    name: str | None
+    inn: str | None
+    company_id: str | None
+    contact_id: str | None
+
+
+class EdsRecipientIn(BaseModel):
+    """Адресат ссылкой: название и ИНН BFF берёт из карточки компании ERP."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    company_id: str = Field(pattern=r"^[0-9]+$")
+    contact_id: str | None = Field(default=None, pattern=r"^[0-9]+$")
 
 
 class EdsFile(BaseModel):
@@ -268,7 +281,7 @@ class _Form(BaseModel):
     due_date: date | None = None
     file_ids: list[str] = Field(default_factory=list, max_length=50)
     erp_deal_id: int | None = None
-    recipient: EdsRecipient | None = None
+    recipient: EdsRecipientIn | None = None
     letter: EdsLetterIn | None = None
     # Пункт 1.6 плана: согласующие перед шаблоном и получатели копии (`crm_user_id`) — при отправке.
     approvers: list[Annotated[str, Field(pattern=r"^[0-9]+$")]] | None = Field(

@@ -38,7 +38,7 @@ function seed(overrides: Partial<MockDocument>): void {
     due_date: null,
     file_ids: [],
     erp_deal_id: null,
-    recipient: { name: "ООО «Вымышленный завод»", inn: null },
+    recipient: { name: "ООО «Вымышленный завод»", inn: null, company_id: "7", contact_id: null },
     decisions: [],
     created_at: AT,
     updated_at: AT,

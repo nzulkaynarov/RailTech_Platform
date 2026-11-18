@@ -332,7 +332,7 @@ async def test_outgoing_letter_is_numbered_on_send_and_archived(
     )
     assert draft["number"] is None and draft["status"] == "draft"
     assert (
-        draft["recipient"] == {"name": "ООО «Пример»", "inn": "123456789"}
+        draft["recipient"] == {"name": "ООО «Пример»", "inn": "123456789", "company_id": None, "contact_id": None}
         and draft["in_reply_to"] == letter.json()["id"]
     )
     assert await outbox(container, "document.registered") == []  # номера ещё нет
@@ -528,10 +528,19 @@ async def test_update_changes_recipient_only_for_outgoing_letter(
 ) -> None:
     letter = await create(client, staff["registrar"], kind="letter_out", recipient={"name": "ООО «Пример»"})
     changed = await patch(
-        client, staff["registrar"], letter["id"], {"recipient": {"name": "АО «Другое»", "inn": "123456789"}}
+        client,
+        staff["registrar"],
+        letter["id"],
+        {"recipient": {"name": "АО «Другое»", "inn": "123456789", "company_id": 12, "contact_id": 31}},
     )
     assert changed.status_code == 200, changed.text
-    assert changed.json()["recipient"] == {"name": "АО «Другое»", "inn": "123456789"}
+    # СУЩ-2.6: адресат — ссылка на компанию ERP и человека, название и ИНН — снимок карточки
+    assert changed.json()["recipient"] == {
+        "name": "АО «Другое»",
+        "inn": "123456789",
+        "company_id": 12,
+        "contact_id": 31,
+    }
     memo = await create(client, staff["registrar"])
     assert_error(
         await patch(client, staff["registrar"], memo["id"], {"recipient": {"name": "Адресат"}}),
