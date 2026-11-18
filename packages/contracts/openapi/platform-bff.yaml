@@ -14371,7 +14371,7 @@ paths:
     get:
       tags: [erp-catalog]
       operationId: listManufacturers
-      summary: 'Расчёт · Справочники: производители'
+      summary: 'Расчёт · Справочники: бренды'
       description: >-
         ERP `catalog/manufacturers/`. Отключённые видит только держатель `catalog.manage` (`include_inactive`). Раздел `erp.stock` — чтение.
       parameters:
@@ -14410,7 +14410,7 @@ paths:
     post:
       tags: [erp-catalog]
       operationId: createManufacturer
-      summary: 'Расчёт · Справочники: добавить производителя'
+      summary: 'Расчёт · Справочники: добавить бренд'
       description: >-
         ERP `POST catalog/manufacturers/` — право `catalog.manage`. Название уникально без учёта регистра — 409 `CONFLICT` (`details.reason = manufacturer_exists`). Раздел `erp.stock` — полный.
       parameters:
@@ -26356,7 +26356,7 @@ components:
     CatalogItemDetail:
       type: object
       additionalProperties: false
-      required: [id, sku, name, kind, unit, vat_rate, vat_effective, category, status, offers_count, nearest_valid_until, docs_count, proposals_count, description, gost_drawing, hs_code, manufacturer_part_number, brand, brand_id, source_supplier, offers, prices_visible, tech_docs, images, origin, warranty, proposals, publish, catalog_price]
+      required: [id, sku, name, kind, unit, vat_rate, vat_effective, category, status, offers_count, nearest_valid_until, docs_count, proposals_count, description, gost_drawing, hs_code, manufacturer_part_number, brand, brand_id, source_supplier, offers, prices_visible, tech_docs, images, origin, warranty, proposals, publish, catalog_price, brand_company]
       properties:
         id: {$ref: '#/components/schemas/CompanyItemRef'}
         sku: {type: string}
@@ -26385,6 +26385,9 @@ components:
         manufacturer_part_number: {type: string}
         brand: {type: [string, 'null'], description: Изготовитель (бренд)}
         brand_id: {oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}]}
+        brand_company:
+          oneOf: [{$ref: '#/components/schemas/CatalogNamedRef'}, {type: 'null'}]
+          description: 'Изготовитель — компания бренда (ADR-0028 п. 4); у бренда без завода — null'
         source_supplier:
           oneOf: [{$ref: '#/components/schemas/CatalogNamedRef'}, {type: 'null'}]
           description: Карточка заведена по прайсу этого поставщика
@@ -27241,7 +27244,10 @@ components:
     Manufacturer:
       type: object
       additionalProperties: false
-      required: [id, name, country_id, country_name, website, is_active, company_id]
+      description: >-
+        Бренд — марка на товаре (справочник «Бренды», ADR-0028 п. 4). Завод, с которым работаем, — компания с ролью
+        «Изготовитель»; у бренда на неё ссылка. Без компании — бренд без договора с заводом.
+      required: [id, name, country_id, country_name, website, is_active, company_id, company_name, company_roles, products_count]
       properties:
         id: {$ref: '#/components/schemas/CompanyItemRef'}
         name: {type: string}
@@ -27251,7 +27257,13 @@ components:
         is_active: {type: boolean}
         company_id:
           oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}]
-          description: Компания-изготовитель (поставщик с типом «изготовитель»), если заведена
+          description: Компания-изготовитель; при связи бренда с компанией у неё появляется роль «Изготовитель» (`MANUFACTURER`)
+        company_name: {type: [string, 'null'], description: 'Название компании-изготовителя; без связи — null'}
+        company_roles:
+          type: array
+          items: {type: string}
+          description: 'Роли компании-изготовителя — коды типов ERP (`CLIENT`, `SUPPLIER`, `MANUFACTURER`, …); без связи — пусто'
+        products_count: {type: [integer, 'null'], minimum: 0, description: 'Товаров этого бренда в каталоге'}
     ManufacturerPage:
       type: object
       additionalProperties: false

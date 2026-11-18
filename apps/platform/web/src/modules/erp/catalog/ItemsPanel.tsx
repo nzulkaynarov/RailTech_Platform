@@ -455,6 +455,15 @@ function ItemDrawer({ id, onClose }: { id: string; onClose: () => void }) {
                   value: t(`itemStatus.${card.status ?? "DRAFT"}`),
                 },
                 { label: t("items.fields.brand"), value: card.brand },
+                // ADR-0028 п. 4: изготовитель — компания бренда, подставляется из справочника «Бренды»
+                {
+                  label: t("items.fields.maker"),
+                  value: card.brand_company ? (
+                    <Link to={`/crm/clients?partner=${card.brand_company.id}&panel=open&tab=card`}>
+                      {card.brand_company.name}
+                    </Link>
+                  ) : null,
+                },
                 { label: t("items.fields.mpn"), value: card.manufacturer_part_number },
                 { label: t("items.fields.gost"), value: card.gost_drawing },
                 { label: t("items.fields.hs"), value: card.hs_code },

@@ -1,4 +1,4 @@
-from django.db.models import ProtectedError
+from django.db.models import Count, ProtectedError
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django.views.decorators.vary import vary_on_headers
@@ -172,7 +172,12 @@ class ManufacturerViewSet(
     def get_queryset(self):
         from ..models import Manufacturer
 
-        queryset = Manufacturer.objects.select_related("country").order_by("name")
+        queryset = (
+            Manufacturer.objects.select_related("country", "company")
+            .prefetch_related("company__types")
+            .annotate(products_total=Count("products"))
+            .order_by("name")
+        )
         if not self._wants_inactive():
             queryset = queryset.filter(is_active=True)
         return queryset
@@ -191,6 +196,29 @@ class ManufacturerViewSet(
 
         return is_seller(user) and staff_has_permission(user, "catalog.manage")
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["staff"] = self._is_staff()
+        return context
+
+    def _is_staff(self) -> bool:
+        user = self.request.user
+        if not (user and user.is_authenticated):
+            return False
+        from accounts.services.permissions import is_seller
+
+        return bool(user.is_superuser or is_seller(user))
+
+    @staticmethod
+    def _mark_manufacturer(brand) -> None:
+        """Компания бренда — изготовитель (ADR-0028 п. 4): роль добавляется, ничего не снимается."""
+        if brand.company_id is None:
+            return
+        from parties.models import CompanyType
+
+        manufacturer, _ = CompanyType.objects.get_or_create(code="MANUFACTURER", defaults={"name": "Изготовитель"})
+        brand.company.types.add(manufacturer)
+
     def _duplicate(self, serializer) -> bool:
         from ..models import Manufacturer
 
@@ -200,18 +228,19 @@ class ManufacturerViewSet(
             existing = existing.exclude(pk=serializer.instance.pk)
         return bool(name) and existing.exists()
 
-    _AUDIT_FIELDS = ("name", "country", "website", "is_active")
+    _AUDIT_FIELDS = ("name", "country", "website", "company", "is_active")
 
     def perform_create(self, serializer):
         if self._duplicate(serializer):
             raise ManufacturerExists("MANUFACTURER_EXISTS")
         brand = serializer.save()
+        self._mark_manufacturer(brand)
         record(
             self.request.user,
             entity="manufacturer",
             instance=brand,
             event="created",
-            action="Производитель добавлен",
+            action="Бренд добавлен",
             before=None,
             after=snapshot(brand, self._AUDIT_FIELDS),
         )
@@ -221,12 +250,13 @@ class ManufacturerViewSet(
             raise ManufacturerExists("MANUFACTURER_EXISTS")
         before = snapshot(serializer.instance, self._AUDIT_FIELDS)
         brand = serializer.save()
+        self._mark_manufacturer(brand)
         record(
             self.request.user,
             entity="manufacturer",
             instance=brand,
             event="updated",
-            action="Производитель изменён",
+            action="Бренд изменён",
             before=before,
             after=snapshot(brand, self._AUDIT_FIELDS),
         )

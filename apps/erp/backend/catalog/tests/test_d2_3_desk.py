@@ -617,3 +617,28 @@ def test_item_card_reports_the_full_number_of_files(world):
     assert len(card["tech_docs"]) == 20 and card["docs_count"] == 22
     listed = {r["id"]: r for r in get(world, "manager", "catalog/items/", page_size=50).json()["results"]}
     assert listed[world["relay"].pk]["docs_count"] == 22
+
+
+def test_brand_links_the_manufacturer_company(world):
+    """ADR-0028 п. 4: «Бренды» — у бренда ссылка на компанию-изготовителя; компания получает роль «Изготовитель»;
+    название компании, роли и число товаров видит только сотрудник (выбор бренда открыт всем)."""
+    from rest_framework.test import APIClient
+
+    supplier = world["supplier"]
+    created = send(world, "supply", "post", "catalog/manufacturers/", {"name": "PL-Rail", "company": supplier.pk})
+    assert created.status_code == 201, created.content
+    assert supplier.types.filter(code="MANUFACTURER").exists()
+    brand = Manufacturer.objects.get(pk=created.json()["id"])
+    world["relay"].brand = brand
+    world["relay"].save(update_fields=["brand"])
+
+    row = next(r for r in _results(get(world, "manager", "catalog/manufacturers/").json()) if r["id"] == brand.pk)
+    assert row["company_name"] == supplier.name
+    assert "MANUFACTURER" in row["company_roles"]
+    assert row["products_count"] == 1
+    public = next(r for r in _results(APIClient().get("/api/v1/catalog/manufacturers/").json()) if r["id"] == brand.pk)
+    assert public["company_name"] is None and public["company_roles"] == [] and public["products_count"] is None
+
+    card = get(world, "manager", f"catalog/items/{world['relay'].pk}/").json()
+    assert card["brand"] == "PL-Rail"
+    assert card["brand_company"] == {"id": supplier.pk, "name": supplier.name}

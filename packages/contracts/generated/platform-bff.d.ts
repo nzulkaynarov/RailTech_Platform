@@ -7873,13 +7873,13 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * Расчёт · Справочники: производители
+     * Расчёт · Справочники: бренды
      * @description ERP `catalog/manufacturers/`. Отключённые видит только держатель `catalog.manage` (`include_inactive`). Раздел `erp.stock` — чтение.
      */
     get: operations["listManufacturers"];
     put?: never;
     /**
-     * Расчёт · Справочники: добавить производителя
+     * Расчёт · Справочники: добавить бренд
      * @description ERP `POST catalog/manufacturers/` — право `catalog.manage`. Название уникально без учёта регистра — 409 `CONFLICT` (`details.reason = manufacturer_exists`). Раздел `erp.stock` — полный.
      */
     post: operations["createManufacturer"];
@@ -15723,6 +15723,8 @@ export interface components {
       /** @description Изготовитель (бренд) */
       brand: string | null;
       brand_id: components["schemas"]["CompanyItemRef"] | null;
+      /** @description Изготовитель — компания бренда (ADR-0028 п. 4); у бренда без завода — null */
+      brand_company: components["schemas"]["CatalogNamedRef"] | null;
       /** @description Карточка заведена по прайсу этого поставщика */
       source_supplier: components["schemas"]["CatalogNamedRef"] | null;
       proposals_count: number;
@@ -16540,6 +16542,7 @@ export interface components {
       /** Format: date */
       valid_until?: string | null;
     };
+    /** @description Бренд — марка на товаре (справочник «Бренды», ADR-0028 п. 4). Завод, с которым работаем, — компания с ролью «Изготовитель»; у бренда на неё ссылка. Без компании — бренд без договора с заводом. */
     Manufacturer: {
       id: components["schemas"]["CompanyItemRef"];
       name: string;
@@ -16547,8 +16550,14 @@ export interface components {
       country_name: string | null;
       website: string;
       is_active: boolean;
-      /** @description Компания-изготовитель (поставщик с типом «изготовитель»), если заведена */
+      /** @description Компания-изготовитель; при связи бренда с компанией у неё появляется роль «Изготовитель» (`MANUFACTURER`) */
       company_id: components["schemas"]["CompanyItemRef"] | null;
+      /** @description Название компании-изготовителя; без связи — null */
+      company_name: string | null;
+      /** @description Роли компании-изготовителя — коды типов ERP (`CLIENT`, `SUPPLIER`, `MANUFACTURER`, …); без связи — пусто */
+      company_roles: string[];
+      /** @description Товаров этого бренда в каталоге */
+      products_count: number | null;
     };
     ManufacturerPage: {
       items: components["schemas"]["Manufacturer"][];

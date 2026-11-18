@@ -184,14 +184,15 @@
       "vat": "VAT",
       "category": "Category",
       "status": "Card status",
-      "brand": "Manufacturer",
+      "brand": "Brand",
       "gost": "Standard / drawing",
       "hs": "HS code",
       "mxik": "MXIK",
       "mpn": "Manufacturer part no.",
       "source": "Created from price list of",
       "origin": "Country of origin",
-      "warranty": "Warranty"
+      "warranty": "Warranty",
+      "maker": "Manufacturer"
     },
     "offers": "Partner offers",
     "offersTable": "Partner offers for the item",
@@ -493,43 +494,54 @@
       }
     },
     "brands": {
-      "title": "Manufacturers",
-      "hint": "Brands chosen in the item card. A manufacturer is not deleted — it is removed from the choice.",
+      "title": "Brands",
+      "hint": "A brand is the mark on a product. The factory we work with is a company with the Manufacturer role; the brand links to it.",
       "search": "Search by name",
       "showInactive": "Show those removed from the choice",
-      "add": "Add manufacturer",
-      "table": "Manufacturers",
+      "add": "Add brand",
+      "table": "Brands",
       "editNamed": "Edit: {{name}}",
       "active": "In the choice",
       "inactive": "Removed from the choice",
       "columns": {
-        "name": "Name",
+        "name": "Brand",
+        "company": "Manufacturer — company",
         "country": "Country",
+        "products": "Products",
         "website": "Website",
         "state": "State"
       },
       "empty": {
-        "title": "No manufacturers",
-        "text": "A manufacturer is chosen in the item card. Add the first one."
+        "title": "No brands",
+        "text": "A brand is chosen in the item card. Add the first one."
       },
       "form": {
-        "addTitle": "Add manufacturer",
-        "editTitle": "Edit manufacturer",
+        "addTitle": "Add brand",
+        "editTitle": "Edit brand",
         "add": "Add",
         "name": "Name",
         "country": "Country",
         "website": "Website",
         "active": "Show in the choice",
         "addSteps": [
-          "The manufacturer appears in the list.",
+          "The brand appears in the directory.",
           "It can be chosen in the item card.",
-          "The name must not repeat."
+          "The name must be unique."
         ],
         "editSteps": [
-          "Changes are saved in the list.",
-          "Items with this manufacturer do not change.",
-          "One removed from the choice stays in old cards."
-        ]
+          "Changes are saved in the directory.",
+          "Items of this brand do not change.",
+          "A brand removed from the choice stays in old cards."
+        ],
+        "company": "Manufacturer — company",
+        "companyHint": "The factory we work with; the company gets the Manufacturer role. Empty — a brand without a factory contract."
+      },
+      "noCompany": "not linked — a brand without a factory contract",
+      "roles": {
+        "CLIENT": "client",
+        "SUPPLIER": "supplier",
+        "MANUFACTURER": "manufacturer",
+        "LOGISTICS_PROVIDER": "logistics"
       }
     }
   },

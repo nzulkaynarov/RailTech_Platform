@@ -12482,7 +12482,7 @@
                         "schema": {
                             "type": "integer"
                         },
-                        "description": "A unique integer value identifying this Производитель.",
+                        "description": "A unique integer value identifying this Бренд.",
                         "required": true
                     }
                 ],
@@ -12522,7 +12522,7 @@
                         "schema": {
                             "type": "integer"
                         },
-                        "description": "A unique integer value identifying this Производитель.",
+                        "description": "A unique integer value identifying this Бренд.",
                         "required": true
                     }
                 ],
@@ -42039,12 +42039,22 @@
                     },
                     "brand": {
                         "type": "string",
-                        "nullable": true
+                        "nullable": true,
+                        "description": "Бренд (справочник «Бренды»)."
                     },
                     "brand_id": {
                         "type": "integer",
                         "nullable": true,
-                        "description": "Изготовитель (бренд) — id справочника."
+                        "description": "Бренд — id справочника."
+                    },
+                    "brand_company": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DeskRef"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Изготовитель — компания бренда (ADR-0028 п. 4); у бренда без завода — null."
                     },
                     "source_supplier": {
                         "allOf": [
@@ -42105,6 +42115,7 @@
                 },
                 "required": [
                     "brand",
+                    "brand_company",
                     "brand_id",
                     "catalog_price",
                     "category",
@@ -42167,7 +42178,7 @@
                     "brand_id": {
                         "type": "integer",
                         "nullable": true,
-                        "description": "Изготовитель (бренд)."
+                        "description": "Бренд (справочник «Бренды»)."
                     },
                     "manufacturer_part_number": {
                         "type": "string",
@@ -46354,7 +46365,7 @@
             },
             "Manufacturer": {
                 "type": "object",
-                "description": "OEM brand lookup (catalog.Manufacturer) — the canonical `Product.brand` source.\n\nNOT a platform participant (that's the seller/owner). A brand needn't have an\naccount; `company` optionally links it to one if the OEM is registered.",
+                "description": "OEM brand lookup (catalog.Manufacturer) — the canonical `Product.brand` source («Бренды», ADR-0028 п. 4).\n\nNOT a counterparty: a brand needn't have one; `company` links it to the manufacturer company we work with.\nThe list is public (brand selector), so the company's name, roles and the product count go only to staff\n(`context[\"staff\"]`): who makes what for us is a business relationship, not catalog data.",
                 "properties": {
                     "id": {
                         "type": "integer",
@@ -46363,14 +46374,14 @@
                     "name": {
                         "type": "string",
                         "title": "Название",
-                        "description": "Название бренда/производителя (OEM)",
+                        "description": "Название бренда (OEM)",
                         "maxLength": 255
                     },
                     "country": {
                         "type": "integer",
                         "nullable": true,
                         "title": "Страна",
-                        "description": "Страна происхождения производителя"
+                        "description": "Страна бренда"
                     },
                     "country_name": {
                         "type": "string",
@@ -46378,7 +46389,7 @@
                     },
                     "website": {
                         "title": "Сайт",
-                        "description": "Официальный сайт производителя",
+                        "description": "Официальный сайт бренда",
                         "oneOf": [
                             {
                                 "type": "string",
@@ -46394,8 +46405,25 @@
                     "company": {
                         "type": "integer",
                         "nullable": true,
-                        "title": "Связанная компания",
-                        "description": "Платформенная компания, если производитель зарегистрирован (местный)"
+                        "title": "Изготовитель",
+                        "description": "Компания-изготовитель, если с заводом работаем; у компании роль «Изготовитель»"
+                    },
+                    "company_name": {
+                        "type": "string",
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "company_roles": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "readOnly": true
+                    },
+                    "products_count": {
+                        "type": "integer",
+                        "nullable": true,
+                        "readOnly": true
                     },
                     "is_active": {
                         "type": "boolean",
@@ -46404,31 +46432,34 @@
                     }
                 },
                 "required": [
+                    "company_name",
+                    "company_roles",
                     "country_name",
                     "id",
-                    "name"
+                    "name",
+                    "products_count"
                 ]
             },
             "ManufacturerRequest": {
                 "type": "object",
-                "description": "OEM brand lookup (catalog.Manufacturer) — the canonical `Product.brand` source.\n\nNOT a platform participant (that's the seller/owner). A brand needn't have an\naccount; `company` optionally links it to one if the OEM is registered.",
+                "description": "OEM brand lookup (catalog.Manufacturer) — the canonical `Product.brand` source («Бренды», ADR-0028 п. 4).\n\nNOT a counterparty: a brand needn't have one; `company` links it to the manufacturer company we work with.\nThe list is public (brand selector), so the company's name, roles and the product count go only to staff\n(`context[\"staff\"]`): who makes what for us is a business relationship, not catalog data.",
                 "properties": {
                     "name": {
                         "type": "string",
                         "minLength": 1,
                         "title": "Название",
-                        "description": "Название бренда/производителя (OEM)",
+                        "description": "Название бренда (OEM)",
                         "maxLength": 255
                     },
                     "country": {
                         "type": "integer",
                         "nullable": true,
                         "title": "Страна",
-                        "description": "Страна происхождения производителя"
+                        "description": "Страна бренда"
                     },
                     "website": {
                         "title": "Сайт",
-                        "description": "Официальный сайт производителя",
+                        "description": "Официальный сайт бренда",
                         "oneOf": [
                             {
                                 "type": "string",
@@ -46444,8 +46475,8 @@
                     "company": {
                         "type": "integer",
                         "nullable": true,
-                        "title": "Связанная компания",
-                        "description": "Платформенная компания, если производитель зарегистрирован (местный)"
+                        "title": "Изготовитель",
+                        "description": "Компания-изготовитель, если с заводом работаем; у компании роль «Изготовитель»"
                     },
                     "is_active": {
                         "type": "boolean",
@@ -50122,7 +50153,7 @@
                     "brand_id": {
                         "type": "integer",
                         "nullable": true,
-                        "description": "Изготовитель (бренд)."
+                        "description": "Бренд (справочник «Бренды»)."
                     },
                     "manufacturer_part_number": {
                         "type": "string",
@@ -50511,24 +50542,24 @@
             },
             "PatchedManufacturerRequest": {
                 "type": "object",
-                "description": "OEM brand lookup (catalog.Manufacturer) — the canonical `Product.brand` source.\n\nNOT a platform participant (that's the seller/owner). A brand needn't have an\naccount; `company` optionally links it to one if the OEM is registered.",
+                "description": "OEM brand lookup (catalog.Manufacturer) — the canonical `Product.brand` source («Бренды», ADR-0028 п. 4).\n\nNOT a counterparty: a brand needn't have one; `company` links it to the manufacturer company we work with.\nThe list is public (brand selector), so the company's name, roles and the product count go only to staff\n(`context[\"staff\"]`): who makes what for us is a business relationship, not catalog data.",
                 "properties": {
                     "name": {
                         "type": "string",
                         "minLength": 1,
                         "title": "Название",
-                        "description": "Название бренда/производителя (OEM)",
+                        "description": "Название бренда (OEM)",
                         "maxLength": 255
                     },
                     "country": {
                         "type": "integer",
                         "nullable": true,
                         "title": "Страна",
-                        "description": "Страна происхождения производителя"
+                        "description": "Страна бренда"
                     },
                     "website": {
                         "title": "Сайт",
-                        "description": "Официальный сайт производителя",
+                        "description": "Официальный сайт бренда",
                         "oneOf": [
                             {
                                 "type": "string",
@@ -50544,8 +50575,8 @@
                     "company": {
                         "type": "integer",
                         "nullable": true,
-                        "title": "Связанная компания",
-                        "description": "Платформенная компания, если производитель зарегистрирован (местный)"
+                        "title": "Изготовитель",
+                        "description": "Компания-изготовитель, если с заводом работаем; у компании роль «Изготовитель»"
                     },
                     "is_active": {
                         "type": "boolean",

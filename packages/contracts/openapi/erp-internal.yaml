@@ -5675,7 +5675,7 @@ paths:
         name: id
         schema:
           type: integer
-        description: A unique integer value identifying this Производитель.
+        description: A unique integer value identifying this Бренд.
         required: true
       tags:
       - Catalog
@@ -5700,7 +5700,7 @@ paths:
         name: id
         schema:
           type: integer
-        description: A unique integer value identifying this Производитель.
+        description: A unique integer value identifying this Бренд.
         required: true
       tags:
       - Catalog
@@ -25577,10 +25577,16 @@ components:
         brand:
           type: string
           nullable: true
+          description: Бренд (справочник «Бренды»).
         brand_id:
           type: integer
           nullable: true
-          description: Изготовитель (бренд) — id справочника.
+          description: Бренд — id справочника.
+        brand_company:
+          allOf:
+          - $ref: '#/components/schemas/DeskRef'
+          nullable: true
+          description: Изготовитель — компания бренда (ADR-0028 п. 4); у бренда без завода — null.
         source_supplier:
           allOf:
           - $ref: '#/components/schemas/DeskRef'
@@ -25619,6 +25625,7 @@ components:
           description: Что покажет каталог клиенту.
       required:
       - brand
+      - brand_company
       - brand_id
       - catalog_price
       - category
@@ -25673,7 +25680,7 @@ components:
         brand_id:
           type: integer
           nullable: true
-          description: Изготовитель (бренд).
+          description: Бренд (справочник «Бренды»).
         manufacturer_part_number:
           type: string
           maxLength: 120
@@ -28976,10 +28983,11 @@ components:
     Manufacturer:
       type: object
       description: |-
-        OEM brand lookup (catalog.Manufacturer) — the canonical `Product.brand` source.
+        OEM brand lookup (catalog.Manufacturer) — the canonical `Product.brand` source («Бренды», ADR-0028 п. 4).
 
-        NOT a platform participant (that's the seller/owner). A brand needn't have an
-        account; `company` optionally links it to one if the OEM is registered.
+        NOT a counterparty: a brand needn't have one; `company` links it to the manufacturer company we work with.
+        The list is public (brand selector), so the company's name, roles and the product count go only to staff
+        (`context["staff"]`): who makes what for us is a business relationship, not catalog data.
       properties:
         id:
           type: integer
@@ -28987,19 +28995,19 @@ components:
         name:
           type: string
           title: Название
-          description: Название бренда/производителя (OEM)
+          description: Название бренда (OEM)
           maxLength: 255
         country:
           type: integer
           nullable: true
           title: Страна
-          description: Страна происхождения производителя
+          description: Страна бренда
         country_name:
           type: string
           readOnly: true
         website:
           title: Сайт
-          description: Официальный сайт производителя
+          description: Официальный сайт бренда
           oneOf:
           - type: string
             format: uri
@@ -29009,38 +29017,55 @@ components:
         company:
           type: integer
           nullable: true
-          title: Связанная компания
-          description: Платформенная компания, если производитель зарегистрирован (местный)
+          title: Изготовитель
+          description: Компания-изготовитель, если с заводом работаем; у компании роль «Изготовитель»
+        company_name:
+          type: string
+          nullable: true
+          readOnly: true
+        company_roles:
+          type: array
+          items:
+            type: string
+          readOnly: true
+        products_count:
+          type: integer
+          nullable: true
+          readOnly: true
         is_active:
           type: boolean
           title: Активен
           description: Неактивные бренды скрыты в формах выбора
       required:
+      - company_name
+      - company_roles
       - country_name
       - id
       - name
+      - products_count
     ManufacturerRequest:
       type: object
       description: |-
-        OEM brand lookup (catalog.Manufacturer) — the canonical `Product.brand` source.
+        OEM brand lookup (catalog.Manufacturer) — the canonical `Product.brand` source («Бренды», ADR-0028 п. 4).
 
-        NOT a platform participant (that's the seller/owner). A brand needn't have an
-        account; `company` optionally links it to one if the OEM is registered.
+        NOT a counterparty: a brand needn't have one; `company` links it to the manufacturer company we work with.
+        The list is public (brand selector), so the company's name, roles and the product count go only to staff
+        (`context["staff"]`): who makes what for us is a business relationship, not catalog data.
       properties:
         name:
           type: string
           minLength: 1
           title: Название
-          description: Название бренда/производителя (OEM)
+          description: Название бренда (OEM)
           maxLength: 255
         country:
           type: integer
           nullable: true
           title: Страна
-          description: Страна происхождения производителя
+          description: Страна бренда
         website:
           title: Сайт
-          description: Официальный сайт производителя
+          description: Официальный сайт бренда
           oneOf:
           - type: string
             format: uri
@@ -29050,8 +29075,8 @@ components:
         company:
           type: integer
           nullable: true
-          title: Связанная компания
-          description: Платформенная компания, если производитель зарегистрирован (местный)
+          title: Изготовитель
+          description: Компания-изготовитель, если с заводом работаем; у компании роль «Изготовитель»
         is_active:
           type: boolean
           title: Активен
@@ -31873,7 +31898,7 @@ components:
         brand_id:
           type: integer
           nullable: true
-          description: Изготовитель (бренд).
+          description: Бренд (справочник «Бренды»).
         manufacturer_part_number:
           type: string
           maxLength: 120
@@ -32177,25 +32202,26 @@ components:
     PatchedManufacturerRequest:
       type: object
       description: |-
-        OEM brand lookup (catalog.Manufacturer) — the canonical `Product.brand` source.
+        OEM brand lookup (catalog.Manufacturer) — the canonical `Product.brand` source («Бренды», ADR-0028 п. 4).
 
-        NOT a platform participant (that's the seller/owner). A brand needn't have an
-        account; `company` optionally links it to one if the OEM is registered.
+        NOT a counterparty: a brand needn't have one; `company` links it to the manufacturer company we work with.
+        The list is public (brand selector), so the company's name, roles and the product count go only to staff
+        (`context["staff"]`): who makes what for us is a business relationship, not catalog data.
       properties:
         name:
           type: string
           minLength: 1
           title: Название
-          description: Название бренда/производителя (OEM)
+          description: Название бренда (OEM)
           maxLength: 255
         country:
           type: integer
           nullable: true
           title: Страна
-          description: Страна происхождения производителя
+          description: Страна бренда
         website:
           title: Сайт
-          description: Официальный сайт производителя
+          description: Официальный сайт бренда
           oneOf:
           - type: string
             format: uri
@@ -32205,8 +32231,8 @@ components:
         company:
           type: integer
           nullable: true
-          title: Связанная компания
-          description: Платформенная компания, если производитель зарегистрирован (местный)
+          title: Изготовитель
+          description: Компания-изготовитель, если с заводом работаем; у компании роль «Изготовитель»
         is_active:
           type: boolean
           title: Активен

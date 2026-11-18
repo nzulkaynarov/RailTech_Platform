@@ -842,7 +842,10 @@ async def test_hs_codes_exchange_rates_and_manufacturers(
         "country": 3,
         "country_name": "Узбекистан",
         "website": "",
-        "company": None,
+        "company": 9,
+        "company_name": "АО «Пример Логистик»",
+        "company_roles": ["MANUFACTURER", "SUPPLIER"],
+        "products_count": 12,
         "is_active": True,
     }
     router.get(f"{API}/catalog/manufacturers/").mock(
@@ -883,6 +886,13 @@ async def test_hs_codes_exchange_rates_and_manufacturers(
     brands = await web.client.get("/api/v1/erp/catalog/manufacturers", params={"q": "br"})
     check(brands, "/erp/catalog/manufacturers", "get")
     assert dict(router.calls.last.request.url.params)["search"] == "br"
+    row = brands.json()["items"][0]
+    assert (row["company_id"], row["company_name"], row["products_count"]) == (
+        "9",
+        "АО «Пример Логистик»",
+        12,
+    )
+    assert row["company_roles"] == ["MANUFACTURER", "SUPPLIER"]
     made = await call(
         web, "POST", "/erp/catalog/manufacturers", {"name": "Brand", "country_id": "3"}
     )

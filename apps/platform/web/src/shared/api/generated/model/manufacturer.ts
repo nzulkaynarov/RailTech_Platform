@@ -4,6 +4,9 @@
  */
 import type { CompanyItemRef } from "./companyItemRef";
 
+/**
+ * Бренд — марка на товаре (справочник «Бренды», ADR-0028 п. 4). Завод, с которым работаем, — компания с ролью «Изготовитель»; у бренда на неё ссылка. Без компании — бренд без договора с заводом.
+ */
 export interface Manufacturer {
   id: CompanyItemRef;
   name: string;
@@ -12,6 +15,19 @@ export interface Manufacturer {
   country_name: string | null;
   website: string;
   is_active: boolean;
-  /** Компания-изготовитель (поставщик с типом «изготовитель»), если заведена */
+  /** Компания-изготовитель; при связи бренда с компанией у неё появляется роль «Изготовитель» (`MANUFACTURER`) */
   company_id: CompanyItemRef | null;
+  /**
+   * Название компании-изготовителя; без связи — null
+   * @nullable
+   */
+  company_name: string | null;
+  /** Роли компании-изготовителя — коды типов ERP (`CLIENT`, `SUPPLIER`, `MANUFACTURER`, …); без связи — пусто */
+  company_roles: string[];
+  /**
+   * Товаров этого бренда в каталоге
+   * @minimum 0
+   * @nullable
+   */
+  products_count: number | null;
 }

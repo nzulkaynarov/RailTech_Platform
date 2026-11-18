@@ -52,6 +52,8 @@ export interface CatalogItemDetail {
    */
   brand: string | null;
   brand_id: CompanyItemRef | null;
+  /** Изготовитель — компания бренда (ADR-0028 п. 4); у бренда без завода — null */
+  brand_company: CatalogNamedRef | null;
   /** Карточка заведена по прайсу этого поставщика */
   source_supplier: CatalogNamedRef | null;
   /** @minimum 0 */

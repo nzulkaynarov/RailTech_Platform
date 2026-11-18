@@ -87,25 +87,25 @@ class Category(LocalizedNames, models.Model):
 
 
 # ────────────────────────────────────────────
-# Производитель / Бренд (OEM) — справочник, НЕ аккаунт
+# Бренд (OEM) — справочник, НЕ аккаунт (ADR-0028 п. 4)
 # ────────────────────────────────────────────
 
 
 class Manufacturer(LocalizedNames, models.Model):
     """
-    Производитель/бренд товара (OEM).
+    Бренд — марка на товаре (OEM); в интерфейсе — справочник «Бренды» (ADR-0028 п. 4).
 
-    Это СПРАВОЧНИК, а не пользователь платформы: зарубежный бренд (напр. Siemens)
-    является производителем, но аккаунта не имеет. Локальный производитель может
-    быть связан с платформенной компанией через ``company``. Служит каноническим
-    якорем PIM: один эталонный товар одного бренда — много офферов от поставщиков.
+    Это СПРАВОЧНИК, а не контрагент: у бренда без договора с заводом (напр. SKF) компании нет.
+    Завод, с которым работаем, — компания ERP с ролью «Изготовитель» (тип MANUFACTURER); у бренда
+    на неё ссылка ``company``. Служит каноническим якорем PIM: один эталонный товар одного бренда —
+    много офферов от поставщиков. Имя модели прежнее: переименование таблицы ничего не даёт.
     """
 
     name = models.CharField(
         max_length=255,
         unique=True,
         verbose_name=_("Название"),
-        help_text=_("Название бренда/производителя (OEM)"),
+        help_text=_("Название бренда (OEM)"),
     )
     country = models.ForeignKey(
         "core.Country",
@@ -114,12 +114,12 @@ class Manufacturer(LocalizedNames, models.Model):
         blank=True,
         related_name="manufacturers",
         verbose_name=_("Страна"),
-        help_text=_("Страна происхождения производителя"),
+        help_text=_("Страна бренда"),
     )
     website = models.URLField(
         blank=True,
         verbose_name=_("Сайт"),
-        help_text=_("Официальный сайт производителя"),
+        help_text=_("Официальный сайт бренда"),
     )
     company = models.ForeignKey(
         "parties.Company",
@@ -127,15 +127,15 @@ class Manufacturer(LocalizedNames, models.Model):
         null=True,
         blank=True,
         related_name="manufacturer_brands",
-        verbose_name=_("Связанная компания"),
-        help_text=_("Платформенная компания, если производитель зарегистрирован (местный)"),
+        verbose_name=_("Изготовитель"),
+        help_text=_("Компания-изготовитель, если с заводом работаем; у компании роль «Изготовитель»"),
     )
     is_active = models.BooleanField(
         default=True,
         verbose_name=_("Активен"),
         help_text=_("Неактивные бренды скрыты в формах выбора"),
     )
-    # План 3.8: производители — справочником файлом, порядок как у остальных справочников.
+    # План 3.8: бренды — справочником файлом, порядок как у остальных справочников.
     sort_order = models.PositiveIntegerField(default=0, verbose_name=_("Порядок сортировки"))
     created_at = models.DateTimeField(
         auto_now_add=True,
@@ -147,8 +147,8 @@ class Manufacturer(LocalizedNames, models.Model):
     )
 
     class Meta:
-        verbose_name = _("Производитель")
-        verbose_name_plural = _("Справочник: Производители")
+        verbose_name = _("Бренд")
+        verbose_name_plural = _("Справочник: Бренды")
         ordering = ["name"]
 
     def __str__(self):

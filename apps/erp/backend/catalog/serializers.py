@@ -27,12 +27,36 @@ class CompanyLightSerializer(serializers.ModelSerializer):
 
 
 class ManufacturerSerializer(serializers.ModelSerializer):
-    """OEM brand lookup (catalog.Manufacturer) — the canonical `Product.brand` source.
+    """OEM brand lookup (catalog.Manufacturer) — the canonical `Product.brand` source («Бренды», ADR-0028 п. 4).
 
-    NOT a platform participant (that's the seller/owner). A brand needn't have an
-    account; `company` optionally links it to one if the OEM is registered."""
+    NOT a counterparty: a brand needn't have one; `company` links it to the manufacturer company we work with.
+    The list is public (brand selector), so the company's name, roles and the product count go only to staff
+    (`context["staff"]`): who makes what for us is a business relationship, not catalog data."""
 
     country_name = serializers.SerializerMethodField()
+    company_name = serializers.SerializerMethodField()
+    company_roles = serializers.SerializerMethodField()
+    products_count = serializers.SerializerMethodField()
+
+    def _staff(self) -> bool:
+        return bool(self.context.get("staff"))
+
+    @extend_schema_field({"type": "string", "nullable": True})
+    def get_company_name(self, obj) -> str | None:
+        return obj.company.name if self._staff() and obj.company_id else None
+
+    @extend_schema_field({"type": "array", "items": {"type": "string"}})
+    def get_company_roles(self, obj) -> list[str]:
+        if not (self._staff() and obj.company_id):
+            return []
+        return sorted(obj.company.types.values_list("code", flat=True))
+
+    @extend_schema_field({"type": "integer", "nullable": True})
+    def get_products_count(self, obj) -> int | None:
+        if not self._staff():
+            return None
+        counted = getattr(obj, "products_total", None)
+        return counted if counted is not None else obj.products.count()
 
     @extend_schema_field({"type": "string"})
     def get_country_name(self, obj) -> str:
@@ -42,7 +66,18 @@ class ManufacturerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Manufacturer
-        fields = ["id", "name", "country", "country_name", "website", "company", "is_active"]
+        fields = [
+            "id",
+            "name",
+            "country",
+            "country_name",
+            "website",
+            "company",
+            "company_name",
+            "company_roles",
+            "products_count",
+            "is_active",
+        ]
 
 
 # --- Simple Reference Serializers ---

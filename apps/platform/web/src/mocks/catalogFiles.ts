@@ -53,7 +53,7 @@ export const CATALOG_FILE_DICTIONARIES: Dictionary[] = [
     area: "calc",
     codes: "generated",
     closed: false,
-    name: names("Производители", "Ishlab chiqaruvchilar", "Manufacturers"),
+    name: names("Бренды", "Brendlar", "Brands"),
     attrs: [
       {
         key: "country",
