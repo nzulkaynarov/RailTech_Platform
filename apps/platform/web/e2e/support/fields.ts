@@ -117,3 +117,35 @@ export async function addAddressee(
   await expect(sheet).toBeHidden();
   await expect(field).toHaveValue(name);
 }
+
+/**
+ * Корреспондент или адресат из контрагентов (СУЩ-2.6): есть в подсказках — выбрать, нет — завести организацией. Для
+ * сценариев, которые проходят одну форму несколько раз подряд (обе ширины): во второй раз организация уже заведена.
+ */
+export async function chooseOrAddAddressee(
+  page: Page,
+  name: string,
+  label = "Адресат (организация)",
+): Promise<void> {
+  const field = page.getByLabel(label, { exact: true });
+  await field.scrollIntoViewIfNeeded();
+  await field.fill(name.slice(0, -1));
+  await field.fill(name);
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  // строка «+ Завести организацию …» — тоже подсказка; своя организация начинается с названия
+  const existing = page
+    .locator(".ant-select-item-option")
+    .filter({ hasText: new RegExp(`^${escaped}`) })
+    .first();
+  const create = page.getByText(`+ Завести организацию «${name}»`);
+  await expect(existing.or(create).first()).toBeVisible();
+  if (await create.isVisible()) {
+    await create.click();
+    const sheet = page.getByRole("dialog", { name: "Новая организация" });
+    await sheet.getByRole("button", { name: "Завести" }).click();
+    await expect(sheet).toBeHidden();
+  } else {
+    await existing.click();
+  }
+  await expect(field).toHaveValue(name);
+}
