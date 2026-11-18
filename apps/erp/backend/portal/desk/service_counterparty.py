@@ -175,3 +175,71 @@ def create_organization(data: dict, *, actor) -> Company:
         detail=name,
     )
     return company
+
+
+#: Реквизиты, которые сотрудник правит в карточке контрагента (СУЩ-2.7): их ведёт ERP, CRM получает снимок
+REQUISITE_FIELDS = ("name", "tin", "registration_number", "country_id", "legal_address")
+
+
+@transaction.atomic
+def update_requisites(company: Company, data: dict, *, actor) -> Company:
+    """Название, ИНН, рег. номер, страна и адрес компании-контрагента (ADR-0028 п. 6, СУЩ-2.7).
+
+    Владелец реквизитов — ERP: правка сохраняется здесь, CRM получает снимок `company.updated` (сигнал модели). Пустое
+    название — 400 `COMPANY_NAME_REQUIRED`; такой ИНН или пара «страна — рег. номер» у другой компании — 409 `COMPANY_EXISTS`.
+    """
+    from catalog.desk.suppliers import _country
+
+    before = {
+        "name": company.name,
+        "inn": company.inn,
+        "registration_number": company.registration_number or None,
+        "country": company.country.code if company.country_id else None,
+        "legal_address": company.legal_address or None,
+    }
+    if "name" in data:
+        name = " ".join((data.get("name") or "").split())
+        if not name:
+            raise ItemError("COMPANY_NAME_REQUIRED", "name")
+        company.name = name
+    if "tin" in data:
+        inn = (data.get("tin") or "").strip() or None
+        if inn and not re.match(settings.INN_VALIDATION_REGEX, inn):
+            raise ItemError("TIN_INVALID", "tin")
+        company.inn = inn
+    if "registration_number" in data:
+        company.registration_number = (data.get("registration_number") or "").strip()
+    if "country_id" in data:
+        company.country = _country(data.get("country_id"))
+    if "legal_address" in data:
+        company.legal_address = (data.get("legal_address") or "").strip()
+    others = Company.objects.exclude(pk=company.pk)
+    if company.inn and others.filter(inn=company.inn).exists():
+        raise ItemError("COMPANY_EXISTS", "tin")
+    if (
+        company.registration_number
+        and others.filter(
+            registration_number__iexact=company.registration_number, country_id=company.country_id
+        ).exists()
+    ):
+        raise ItemError("COMPANY_EXISTS", "registration_number")
+    company.save()
+    after = {
+        "name": company.name,
+        "inn": company.inn,
+        "registration_number": company.registration_number or None,
+        "country": company.country.code if company.country_id else None,
+        "legal_address": company.legal_address or None,
+    }
+    if after != before:
+        record(
+            actor,
+            entity="company",
+            instance=company,
+            event="updated",
+            action="Реквизиты контрагента изменены",
+            before=before,
+            after=after,
+            detail=company.name,
+        )
+    return company

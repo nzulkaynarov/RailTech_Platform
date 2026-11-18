@@ -9,6 +9,12 @@
   flex-direction: column;
   gap: 4px;
 }
+.pf-cp-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
 .pf-cp-roles,
 .pf-cp-tags,
 .pf-cp-list {

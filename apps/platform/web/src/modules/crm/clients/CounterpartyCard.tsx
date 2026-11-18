@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Alert, Button, Skeleton, Tabs, Tag } from "antd";
+import { Alert, App, Button, Input, Skeleton, Tabs, Tag } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
@@ -17,8 +17,11 @@ import {
   useGetCounterparty,
   useGetCounterpartyByClient,
   useSetCounterpartyRole,
+  useUpdateCounterpartyRequisites,
 } from "../../../shared/api/generated/platform-bff";
 import { PersonCell } from "../../../shared/ui/EntityCell";
+import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
+import { FormSheet } from "../../../shared/ui/FormSheet";
 import { PartnerCard } from "../../erp/catalog/PartnerCard";
 import { ClientPanel } from "./ClientPanel";
 
@@ -85,6 +88,9 @@ function Loaded({
   const seesClients = canSee(me, { resource: "crm.clients" });
   const seesStock = canSee(me, { resource: "erp.stock" });
   const editable = canEdit(me, "erp.stock");
+  // СУЩ-2.7: реквизиты ведёт ERP — правит менеджер клиентов или снабжение (в ERP — право роли)
+  const requisitesEditable = canEdit(me, "crm.clients") || editable;
+  const [editing, setEditing] = useState(false);
   const hasClient = seesClients && clientId !== null;
   const hasSupplier = seesStock && (card.roles.supplier || card.roles.manufacturer);
   const first: Part =
@@ -95,16 +101,13 @@ function Loaded({
         : "overview";
   const [part, setPart] = useState<Part>(first);
 
-  const setRole = useSetCounterpartyRole({
-    mutation: {
-      onSuccess: (next) => {
-        queryClient.setQueryData(getGetCounterpartyQueryKey(card.id), next);
-        if (clientId !== null) {
-          queryClient.setQueryData(getGetCounterpartyByClientQueryKey(String(clientId)), next);
-        }
-      },
-    },
-  });
+  const store = (next: Card) => {
+    queryClient.setQueryData(getGetCounterpartyQueryKey(card.id), next);
+    if (clientId !== null) {
+      queryClient.setQueryData(getGetCounterpartyByClientQueryKey(String(clientId)), next);
+    }
+  };
+  const setRole = useSetCounterpartyRole({ mutation: { onSuccess: store } });
   const conflict = setRole.error instanceof ApiError && setRole.error.status === 409;
 
   const items = [
@@ -132,13 +135,37 @@ function Loaded({
   return (
     <div className="pf-cp">
       <div className="pf-cp-head">
-        <h3 className="pf-fp-title">{card.name}</h3>
+        <div className="pf-cp-title">
+          <h3 className="pf-fp-title">{card.name}</h3>
+          {requisitesEditable ? (
+            <Button
+              size="small"
+              onClick={() => {
+                setEditing(true);
+              }}
+            >
+              {t("counterparty.requisites.edit")}
+            </Button>
+          ) : null}
+        </div>
         <span className="pf-hint">
           {[card.inn ? `${t("card.inn")} ${card.inn}` : null, card.legal_address]
             .filter(Boolean)
             .join(" · ") || t("card.noInn")}
         </span>
       </div>
+      {editing ? (
+        <RequisitesSheet
+          card={card}
+          onSaved={(next) => {
+            store(next);
+            setEditing(false);
+          }}
+          onCancel={() => {
+            setEditing(false);
+          }}
+        />
+      ) : null}
       <ul className="pf-cp-roles" aria-label={t("counterparty.roles.label")}>
         {ROLE_ORDER.map((role) => {
           const on = card.roles[role];
@@ -276,5 +303,120 @@ function Overview({ card }: { card: Card }) {
         </section>
       ) : null}
     </div>
+  );
+}
+
+/** Реквизиты контрагента (СУЩ-2.7): их ведёт ERP, клиент CRM получает снимок; форма — в выезжающей панели. */
+function RequisitesSheet({
+  card,
+  onSaved,
+  onCancel,
+}: {
+  card: Card;
+  onSaved: (next: Card) => void;
+  onCancel: () => void;
+}) {
+  const { t } = useTranslation("clients");
+  const { message } = App.useApp();
+  const [name, setName] = useState(card.name);
+  const [inn, setInn] = useState(card.inn ?? "");
+  const [registration, setRegistration] = useState(card.registration_number ?? "");
+  const [address, setAddress] = useState(card.legal_address ?? "");
+  const save = useUpdateCounterpartyRequisites({
+    mutation: {
+      onSuccess: (next) => {
+        void message.success(t("counterparty.requisites.saved"));
+        onSaved(next);
+      },
+    },
+  });
+  const innValid = inn.trim() === "" || /^\d{9}$/.test(inn.trim());
+  const dirty =
+    name !== card.name ||
+    inn !== (card.inn ?? "") ||
+    registration !== (card.registration_number ?? "") ||
+    address !== (card.legal_address ?? "");
+  const status = save.error instanceof ApiError ? save.error.status : null;
+  const error = save.error
+    ? t(
+        status === 409
+          ? "counterparty.requisites.exists"
+          : status === 403
+            ? "counterparty.requisites.forbidden"
+            : "counterparty.requisites.failed",
+      )
+    : null;
+  return (
+    <FormSheet
+      title={t("counterparty.requisites.title")}
+      submitLabel={t("counterparty.requisites.submit")}
+      saving={save.isPending}
+      submitDisabled={!dirty || name.trim() === "" || !innValid}
+      dirty={dirty}
+      layer="drawer"
+      error={<ErrorNote message={error} />}
+      onSubmit={() => {
+        save.mutate({
+          id: card.id,
+          data: {
+            name: name.trim(),
+            inn: inn.trim() || null,
+            registration_number: registration.trim() || null,
+            legal_address: address.trim() || null,
+          },
+        });
+      }}
+      onCancel={onCancel}
+    >
+      <FormField id="cp-req-name" label={t("counterparty.requisites.name")}>
+        <Input
+          id="cp-req-name"
+          value={name}
+          maxLength={255}
+          onChange={(event) => {
+            setName(event.target.value);
+          }}
+        />
+      </FormField>
+      <FormField
+        id="cp-req-inn"
+        label={t("counterparty.requisites.inn")}
+        hint={t("counterparty.requisites.innHint")}
+      >
+        <Input
+          id="cp-req-inn"
+          value={inn}
+          maxLength={9}
+          inputMode="numeric"
+          status={innValid ? undefined : "error"}
+          aria-invalid={!innValid || undefined}
+          aria-describedby="cp-req-inn-hint"
+          onChange={(event) => {
+            setInn(event.target.value);
+          }}
+        />
+      </FormField>
+      <FormField id="cp-req-registration" label={t("counterparty.requisites.registration")}>
+        <Input
+          id="cp-req-registration"
+          value={registration}
+          maxLength={64}
+          onChange={(event) => {
+            setRegistration(event.target.value);
+          }}
+        />
+      </FormField>
+      <FormField id="cp-req-address" label={t("counterparty.requisites.address")}>
+        <Input.TextArea
+          id="cp-req-address"
+          value={address}
+          maxLength={1000}
+          autoSize={{ minRows: 2, maxRows: 5 }}
+          onChange={(event) => {
+            setAddress(event.target.value);
+          }}
+        />
+      </FormField>
+    </FormSheet>
   );
 }

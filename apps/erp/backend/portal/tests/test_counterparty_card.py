@@ -149,3 +149,35 @@ def test_duplicate_organization_is_refused(world):
     assert (same_name.status_code, same_name.json()["detail"]) == (409, "COMPANY_EXISTS")
     assert manager.post(URL, {"name": " "}, format="json").status_code == 400
     assert manager.post(URL, {"name": "Банк", "tin": "12"}, format="json").status_code == 400
+
+
+# --- СУЩ-2.7: реквизиты контрагента ведёт ERP ------------------------------------------------------------------------
+
+
+def test_requisites_are_edited_in_the_card_and_go_to_crm(world):
+    from integration.tests.bus_support import published
+
+    supplier = world["supplier"]
+    response = world["clients"]["supply"].patch(
+        f"{URL}{supplier.pk}/",
+        {"name": "  ООО   Поставщик Север-2 ", "tin": "300000778", "legal_address": "Ташкент, ул. Новая, 5"},
+        format="json",
+    )
+    assert response.status_code == 200, response.content
+    body = response.json()
+    assert (body["name"], body["inn"], body["legal_address"]) == (
+        "ООО Поставщик Север-2",
+        "300000778",
+        "Ташкент, ул. Новая, 5",
+    )
+    # компания связана с клиентом CRM — снимок реквизитов ушёл в CRM
+    [event] = published("company.updated")[-1:]
+    assert event["data"]["company"]["name"] == "ООО Поставщик Север-2"
+
+
+def test_requisites_edit_needs_a_role_and_unique_identity(world):
+    supplier = world["supplier"]
+    taken = world["clients"]["supply"].patch(f"{URL}{supplier.pk}/", {"tin": world["stranger"].inn}, format="json")
+    assert (taken.status_code, taken.json()["detail"]) == (409, "COMPANY_EXISTS")
+    assert world["clients"]["supply"].patch(f"{URL}{supplier.pk}/", {"name": " "}, format="json").status_code == 400
+    assert world["clients"]["accountant"].patch(f"{URL}{supplier.pk}/", {"name": "X"}, format="json").status_code == 403

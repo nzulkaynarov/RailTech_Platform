@@ -17724,6 +17724,67 @@ paths:
           $ref: '#/components/responses/UnauthorizedResponse'
         '403':
           $ref: '#/components/responses/ForbiddenResponse'
+    patch:
+      operationId: parties_organizations_partial_update
+      description: 'Название, ИНН, рег. номер, страна и юридический адрес контрагента (ADR-0028 п. 6, СУЩ-2.7): их ведёт ERP,
+        CRM получает снимок `company.updated`. Право `deal.manage` или `supply.manage`. Пустое название — 400 `COMPANY_NAME_REQUIRED`;
+        ИНН или пара «страна — рег. номер» другой компании — 409 `COMPANY_EXISTS`.'
+      summary: Edit counterparty requisites
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Parties
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDeskCounterpartyRequisitesInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDeskCounterpartyRequisitesInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDeskCounterpartyRequisitesInRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskCounterparty'
+          description: ''
+        '400':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '409':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/parties/organizations/{id}/roles/:
     post:
       operationId: parties_organizations_roles
@@ -32186,6 +32247,29 @@ components:
           maxLength: 500
         is_active:
           type: boolean
+    PatchedDeskCounterpartyRequisitesInRequest:
+      type: object
+      description: 'Правка реквизитов контрагента (СУЩ-2.7): только переданные поля.'
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        tin:
+          type: string
+          nullable: true
+          maxLength: 14
+        registration_number:
+          type: string
+          nullable: true
+          maxLength: 64
+        country_id:
+          type: integer
+          nullable: true
+        legal_address:
+          type: string
+          nullable: true
+          maxLength: 1000
     PatchedDeskHsCodeInRequest:
       type: object
       properties:

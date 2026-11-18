@@ -363,3 +363,49 @@ async def test_addressee_organization_is_created_from_the_letter(
         "/api/v1/eds/addressees", json={"name": "Север", "inn": "12"}, headers=headers
     )
     assert wrong.status_code == 422
+
+
+# --- СУЩ-2.7: реквизиты контрагента ведёт ERP ---------------------------------------
+
+
+async def test_counterparty_requisites_go_to_erp(web: Web, be: Any, check: ContractChecker) -> None:
+    await web.login(["SUPPLY"])
+    router: respx.MockRouter = be.router
+    edited = {**CARD, "name": "ООО Поставщик Север-2", "inn": "300000778"}
+    route = router.patch(f"{API}/parties/organizations/9/").mock(
+        side_effect=lambda request: (
+            httpx.Response(409, json={"detail": "COMPANY_EXISTS"})
+            if json.loads(request.content).get("tin") == "300000999"
+            else httpx.Response(200, json=edited)
+        )
+    )
+    headers = {"X-CSRF-Token": web.csrf}
+    ok = await web.client.patch(
+        "/api/v1/people/counterparties/9",
+        json={"name": "ООО Поставщик Север-2", "inn": "300000778"},
+        headers=headers,
+    )
+    assert ok.status_code == 200, ok.text
+    check(ok, "/people/counterparties/{id}", "patch")
+    assert ok.json()["name"] == "ООО Поставщик Север-2"
+    assert json.loads(route.calls.last.request.content) == {
+        "name": "ООО Поставщик Север-2",
+        "tin": "300000778",
+    }
+    taken = await web.client.patch(
+        "/api/v1/people/counterparties/9", json={"inn": "300000999"}, headers=headers
+    )
+    assert taken.status_code == 409
+    assert taken.json()["details"]["reason"] == "company_exists"
+    bad = await web.client.patch(
+        "/api/v1/people/counterparties/9", json={"inn": "12"}, headers=headers
+    )
+    assert bad.status_code == 422
+
+
+async def test_accountant_cannot_edit_counterparty_requisites(web: Web) -> None:
+    await web.login(["ACCOUNTANT"])
+    response = await web.client.patch(
+        "/api/v1/people/counterparties/9", json={"name": "X"}, headers={"X-CSRF-Token": web.csrf}
+    )
+    assert response.status_code == 403

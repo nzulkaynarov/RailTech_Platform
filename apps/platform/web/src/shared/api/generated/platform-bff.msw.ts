@@ -31581,6 +31581,71 @@ export const getGetCounterpartyResponseMock = (
   ...overrideResponse,
 });
 
+export const getUpdateCounterpartyRequisitesResponseMock = (
+  overrideResponse: Partial<Extract<CounterpartyCard, object>> = {},
+): CounterpartyCard => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  registration_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  country: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  legal_address: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  crm_client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  roles: {
+    client: faker.datatype.boolean(),
+    supplier: faker.datatype.boolean(),
+    manufacturer: faker.datatype.boolean(),
+    partner: faker.datatype.boolean(),
+    organization: faker.datatype.boolean(),
+  },
+  people: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      is_primary: faker.datatype.boolean(),
+      has_cabinet: faker.datatype.boolean(),
+      has_phone: faker.datatype.boolean(),
+      has_email: faker.datatype.boolean(),
+    }),
+  ),
+  bank_accounts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      currency: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      bank_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      bank_country: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      account: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      mfo: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      swift: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      is_default: faker.datatype.boolean(),
+    }),
+  ),
+  accounts_masked: faker.datatype.boolean(),
+  brands: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  ...overrideResponse,
+});
+
 export const getGetCounterpartyByClientResponseMock = (
   overrideResponse: Partial<Extract<CounterpartyCard, object>> = {},
 ): CounterpartyCard => ({
@@ -43419,6 +43484,30 @@ export const getGetCounterpartyMockHandler = (
   );
 };
 
+export const getUpdateCounterpartyRequisitesMockHandler = (
+  overrideResponse?:
+    | CounterpartyCard
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<CounterpartyCard> | CounterpartyCard),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/people/counterparties/:id",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateCounterpartyRequisitesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getGetCounterpartyByClientMockHandler = (
   overrideResponse?:
     | CounterpartyCard
@@ -44917,6 +45006,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getListCounterpartyPeopleMockHandler(),
   getRevealCounterpartyContactsMockHandler(),
   getGetCounterpartyMockHandler(),
+  getUpdateCounterpartyRequisitesMockHandler(),
   getGetCounterpartyByClientMockHandler(),
   getSetCounterpartyRoleMockHandler(),
   getListCatalogSuppliersMockHandler(),
