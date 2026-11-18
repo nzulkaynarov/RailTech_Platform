@@ -297,7 +297,7 @@ def test_eds_api_global_security_is_the_eds_access_token() -> None:
     # 0.8.0 — статусы пути делопроизводства и поручения (P8b); 0.7.0 — договоры, счета, акты в реестре (D2-5);
     # 0.6.0 — код files.upload в перечне ответов EdsPermission (D1-2b);
     # 0.5.0 — зона исполнителя резолюции (D1-8); 0.4.0 — PATCH /documents/{id} (D1-5); 0.3.0 — журнал шины (W13-A2)
-    assert EDS_YAML["info"]["version"] == "0.27.0"
+    assert EDS_YAML["info"]["version"] == "0.28.0"
 
 
 # Коды справочников (EDS-REG) — слаги `^[a-z][a-z_-]…$` без «/», поэтому могут быть в пути.

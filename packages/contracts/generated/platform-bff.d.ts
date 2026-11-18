@@ -7245,6 +7245,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/eds/addressees/{id}/people": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Письмо: люди организации-адресата
+     * @description Люди компании из карточки ERP (`parties/organizations/{id}/`) для поля «Кому — человек» (СУЩ-2.6): имя и должность, без телефонов и почты. Компании нет или она не видна — 404. Право `eds.memo.create` (полный доступ).
+     */
+    get: operations["listEdsAddresseePeople"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/people/contacts": {
     parameters: {
       query?: never;
@@ -10347,10 +10367,26 @@ export interface components {
       /** @example UZS */
       currency: string;
     };
-    /** @description Адресат письма (организация) — только тип `letter_out` */
+    /**
+     * @description Адресат письма — только тип `letter_out` (ADR-0028 п. 5, СУЩ-2.6): компания ERP и человек; название и ИНН —
+     *     снимок карточки ERP на момент сохранения. `company_id = null` — письмо до СУЩ-2.6, адресат текстом: экран
+     *     просит сопоставить его с контрагентом
+     */
     EdsRecipient: {
-      name: string;
-      inn?: string | null;
+      name: string | null;
+      inn: string | null;
+      /** @description Компания ERP (`GET /eds/addressees`) */
+      company_id: string | null;
+      /** @description Человек компании — «Кому» (`GET /eds/addressees/{id}/people`) */
+      contact_id: string | null;
+    };
+    /**
+     * @description Адресат письма ссылкой (СУЩ-2.6): BFF берёт название и ИНН из карточки компании ERP. Компании нет или она не
+     *     видна — 422 (`recipient`, `company_not_found`); человек не из этой компании — 422 (`contact_not_found`)
+     */
+    EdsRecipientIn: {
+      company_id: string;
+      contact_id?: string | null;
     };
     EdsDocumentRow: {
       kind: components["schemas"]["EdsRegistryKind"];
@@ -10667,8 +10703,8 @@ export interface components {
       file_ids?: string[];
       /** @description Связь с проектом (`GET /eds/deal-options`) */
       erp_deal_id?: number | null;
-      /** @description Только `letter_out` */
-      recipient?: components["schemas"]["EdsRecipient"] | null;
+      /** @description Только `letter_out`; не передан — прежний */
+      recipient?: components["schemas"]["EdsRecipientIn"] | null;
       /**
        * @description Только `letter_out` (P8b): «В ответ на ВХ» — номер входящего письма. Регистрация такого ИСХ закрывает поручения «Подготовить ответ» этого письма (решает EDS). Номера нет — 422, `details.fields = [in_reply_to_number]`.
        * @example ВХ-112/26
@@ -10700,8 +10736,8 @@ export interface components {
       due_date?: string | null;
       file_ids?: string[];
       erp_deal_id?: number | null;
-      /** @description Только `letter_out` */
-      recipient?: components["schemas"]["EdsRecipient"] | null;
+      /** @description Только `letter_out`; не передан — прежний */
+      recipient?: components["schemas"]["EdsRecipientIn"] | null;
       /** @description Только `letter_out` — письмо на бланке целиком (P4) */
       letter?: components["schemas"]["EdsLetterIn"] | null;
       /** @description Пункт 1.6: `crm_user_id` (как `id` в `/eds/staff`) согласующих перед шагами шаблона, по порядку; уходят при отправке (`submit`); не передано — прежние */
@@ -16009,6 +16045,13 @@ export interface components {
       /** @description ИНН — 9 цифр; у иностранной организации — пусто */
       inn?: string | null;
       legal_address?: string | null;
+    };
+    EdsAddresseePeople: {
+      items: {
+        id: string;
+        name: string;
+        position: string | null;
+      }[];
     };
     EdsAddresseeList: {
       items: components["schemas"]["EdsAddressee"][];
@@ -30170,6 +30213,32 @@ export interface operations {
         };
       };
       422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listEdsAddresseePeople: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsAddresseePeople"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
       503: components["responses"]["BackendUnavailable"];
     };
   };
