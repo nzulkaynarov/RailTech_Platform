@@ -117,4 +117,47 @@ describe("Карточка контрагента", () => {
       expect(within(panel).queryByRole("tab", { name: "Обзор" })).toBeNull();
     });
   });
+
+  it("реквизиты правятся в карточке (СУЩ-2.7): название и адрес — новые в шапке; дубль ИНН — понятный отказ", async () => {
+    const panel = await open("supply@demo.example", "/crm/clients?partner=1&panel=open&tab=card");
+    expect(
+      await within(panel).findByRole("heading", { name: "ООО «Поставщик Север»" }),
+    ).toBeVisible();
+    fireEvent.click(within(panel).getByRole("button", { name: "Реквизиты" }));
+    const sheet = await screen.findByRole("dialog", { name: "Реквизиты контрагента" });
+    expect(within(sheet).getByRole("button", { name: "Сохранить" })).toBeDisabled();
+    fireEvent.change(within(sheet).getByLabelText("Название"), {
+      target: { value: "ООО «Поставщик Север-2»" },
+    });
+    fireEvent.change(within(sheet).getByLabelText("Юридический адрес"), {
+      target: { value: "Ташкент, ул. Новая, 5" },
+    });
+    fireEvent.click(within(sheet).getByRole("button", { name: "Сохранить" }));
+    expect(
+      await within(panel).findByRole("heading", { name: "ООО «Поставщик Север-2»" }),
+    ).toBeVisible();
+    expect(within(panel).getByText(/Ташкент, ул\. Новая, 5/)).toBeVisible();
+
+    server.use(
+      http.patch("*/people/counterparties/:id", () =>
+        HttpResponse.json(
+          { code: "CONFLICT", message: "x", source: "erp", details: { reason: "company_exists" } },
+          { status: 409 },
+        ),
+      ),
+    );
+    fireEvent.click(within(panel).getByRole("button", { name: "Реквизиты" }));
+    const again = await screen.findByRole("dialog", { name: "Реквизиты контрагента" });
+    fireEvent.change(within(again).getByLabelText("ИНН"), { target: { value: "300000999" } });
+    fireEvent.click(within(again).getByRole("button", { name: "Сохранить" }));
+    expect(
+      await within(again).findByText("Такой ИНН или рег. номер уже у другой компании."),
+    ).toBeVisible();
+  });
+
+  it("бухгалтер реквизиты не правит: кнопки нет", async () => {
+    const panel = await open("accountant@demo.example", "/crm/clients/3?panel=open&tab=card");
+    await within(panel).findByRole("heading", { name: "ООО Рельс-Сервис Демо" });
+    expect(within(panel).queryByRole("button", { name: "Реквизиты" })).toBeNull();
+  });
 });

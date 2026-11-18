@@ -15,6 +15,7 @@ from parties.people import contact_names
 from portal.desk import service_counterparty as counterparty
 from portal.desk.serializers import (
     DeskCounterparty,
+    DeskCounterpartyRequisitesIn,
     DeskCounterpartyRoleIn,
     DeskOrganizationIn,
     DeskOrganizationPage,
@@ -168,7 +169,12 @@ class OrganizationsDeskViewSet(DeskViewSet):
 
     lookup_value_regex = r"\d+"
     # «Организацию» заводит любой сотрудник бэк-офиса — прямо из письма (ADR-0028 п. 5)
-    required_permissions = {"roles": "supply.manage", "create": SELF_SERVICE}
+    required_permissions = {
+        "roles": "supply.manage",
+        "create": SELF_SERVICE,
+        # СУЩ-2.7: реквизиты контрагента правит менеджер или снабжение — их ведёт ERP
+        "partial_update": ("deal.manage", "supply.manage"),
+    }
 
     def _company(self, request, pk) -> tuple[Company, set]:
         client_ids, partner_ids = counterparty_ids(request.user)
@@ -212,6 +218,28 @@ class OrganizationsDeskViewSet(DeskViewSet):
     )
     def retrieve(self, request, pk=None):
         company, client_ids = self._company(request, pk)
+        return Response(counterparty.card(company, client_ids, request.user))
+
+    @extend_schema(
+        operation_id="parties_organizations_partial_update",
+        summary="Edit counterparty requisites",
+        description=(
+            "Название, ИНН, рег. номер, страна и юридический адрес контрагента (ADR-0028 п. 6, СУЩ-2.7): их ведёт ERP, "
+            "CRM получает снимок `company.updated`. Право `deal.manage` или `supply.manage`. Пустое название — 400 "
+            "`COMPANY_NAME_REQUIRED`; ИНН или пара «страна — рег. номер» другой компании — 409 `COMPANY_EXISTS`."
+        ),
+        request=DeskCounterpartyRequisitesIn,
+        responses={200: DeskCounterparty, 400: REFUSED, 403: FORBIDDEN, 404: NOT_FOUND, 409: REFUSED},
+        tags=["Parties"],
+    )
+    def partial_update(self, request, pk=None):
+        company, client_ids = self._company(request, pk)
+        body = DeskCounterpartyRequisitesIn(data=request.data, partial=True)
+        body.is_valid(raise_exception=True)
+        try:
+            counterparty.update_requisites(company, body.validated_data, actor=request.user)
+        except ItemError as error:
+            return refuse(error)
         return Response(counterparty.card(company, client_ids, request.user))
 
     @extend_schema(

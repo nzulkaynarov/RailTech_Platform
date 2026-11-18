@@ -57,11 +57,13 @@ def test_the_contract_has_twenty_five_erp_types_for_the_crm_with_one_example_eac
 
 def test_mail_request_of_erp_goes_to_the_mail_service_not_to_the_deal_feed() -> None:
     """W18A-P1: `erp.mail.requested` — один обработчик (почтовый сервис), не `ErpEventsService`."""
-    from app.bus.handlers import on_contact_telegram_unlink, on_mail_requested
+    from app.bus.handlers import on_company_updated, on_contact_telegram_unlink, on_mail_requested
 
     own = {"uz.railtech.erp.mail.requested.v1": on_mail_requested}
     # NOTIFY-1: отключение Telegram контактом — свой обработчик в очереди, не лента сделки.
     own["uz.railtech.erp.contact.telegram_unlink_requested.v1"] = on_contact_telegram_unlink
+    # СУЩ-2.7: реквизиты компании ERP — проекция у клиента, не лента сделки.
+    own["uz.railtech.erp.company.updated.v1"] = on_company_updated
     assert set(own) == OWN_HANDLER - {POSTED_TYPE}
     for event_type, func in {**own, "uz.railtech.eds.mail.requested.v1": on_mail_requested}.items():
         (handler,) = default_registry.match(event_type)

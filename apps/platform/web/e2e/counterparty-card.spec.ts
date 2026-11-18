@@ -35,6 +35,17 @@ for (const width of [1440, 390] as const) {
     if (dir)
       await page.screenshot({ path: `${dir}/card-overview-${String(width)}.png`, fullPage: true });
     await expectNoViolations(page, "карточка: обзор");
+
+    // СУЩ-2.7: реквизиты ведёт ERP — правка в карточке контрагента
+    await page.getByRole("button", { name: "Реквизиты" }).click();
+    const sheet = page.getByRole("dialog", { name: "Реквизиты контрагента" });
+    await sheet.getByLabel("Юридический адрес").fill("Ташкент, ул. Новая, 5");
+    await waitForMotionEnd(page);
+    if (dir) await page.screenshot({ path: `${dir}/card-requisites-${String(width)}.png` });
+    await expectNoViolations(page, "карточка: реквизиты");
+    await sheet.getByRole("button", { name: "Сохранить" }).click();
+    await expect(sheet).toBeHidden();
+    await expect(page.getByText(/Ташкент, ул\. Новая, 5/).first()).toBeVisible();
   });
 
   test(

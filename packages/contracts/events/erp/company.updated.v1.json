@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/erp/company.updated.v1.json",
+  "title": "Реквизиты компании-контрагента изменены",
+  "description": "Тип uz.railtech.erp.company.updated.v1, источник rt://erp. Поле data конверта (envelope.v1.json). ERP — владелец названия, ИНН и реквизитов компании-контрагента (ADR-0028 п. 6, СУЩ-2.7): при их изменении ERP публикует снимок целиком, CRM держит проекцию у клиента со ссылкой erp_company_id (название, ИНН, страна, рег. номер). Своя компания ERP не публикуется. Каждое событие — полный снимок: более старый (по company.updated_at) проекцию не перезаписывает. Подписчики: CRM.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "erp_company_id",
+    "company"
+  ],
+  "properties": {
+    "erp_company_id": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Компания-контрагент в ERP"
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    },
+    "company": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "inn",
+        "registration_number",
+        "country",
+        "legal_address",
+        "updated_at"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "inn": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 32,
+          "description": "ИНН РУз; null — нет"
+        },
+        "registration_number": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64,
+          "description": "Рег. номер страны регистрации (нерезидент); null — нет"
+        },
+        "country": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[A-Z]{2}$",
+          "description": "ISO 3166-1 alpha-2; null — не указана"
+        },
+        "legal_address": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 1000
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Когда ERP изменила реквизиты — порядок снимков"
+        }
+      }
+    }
+  }
+}

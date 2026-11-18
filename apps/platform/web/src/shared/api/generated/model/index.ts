@@ -261,6 +261,7 @@ export * from "./counterpartyPerson";
 export * from "./counterpartyPersonKind";
 export * from "./counterpartyPersonPage";
 export * from "./counterpartyRef";
+export * from "./counterpartyRequisitesIn";
 export * from "./counterpartyRoleIn";
 export * from "./counterpartyRoleInRole";
 export * from "./counterpartyRoles";

@@ -1,18 +1,16 @@
-"""Реквизиты клиента ведёт CRM (ORCHESTRATOR §3 п. 16, решение архитектора 2026-10-23): в ERP они только для чтения.
+"""Название и ИНН клиента из Cabinet не правятся (портальный `PUT /company` — `REQUISITES_MANAGED_BY_CRM`).
 
-Название и ИНН компании, связанной с клиентом CRM (`CrmClientMapping`), приходят событием `client.updated` (проекция,
-`crm_projections.apply_client_snapshot`). API ERP — internal (`PATCH /accounts/companies/{id}/`) и portal
-(`PUT /company`) — отклоняет их правку кодом `REQUISITES_MANAGED_BY_CRM`: старый клиент не должен увидеть «сохранено»,
-пока при следующем снимке CRM значение вернётся. Компания без сопоставления с CRM (заведена сотрудником ERP, своя
-компания-продавец) правится как раньше — менять её реквизиты негде, кроме ERP. Остальные реквизиты (адрес, банк, МФО…) в
-схеме `client.*.v1` не переносятся и правятся в ERP; правка реквизитов из Cabinet через CRM — позже.
+С СУЩ-2.7 (ADR-0028 п. 6) названием и ИНН компании владеет ERP: сотрудник правит их в ERP, CRM получает проекцию событием
+`uz.railtech.erp.company.updated.v1` (`parties.company_events`). Контакт клиента в кабинете юридическое лицо своей
+компании не меняет: правка названия и ИНН компании, связанной с клиентом CRM (`CrmClientMapping`), по-прежнему
+отклоняется — через сотрудника. Код ответа портала прежний (контракт `erp-portal.yaml`).
 """
 
 from __future__ import annotations
 
 from typing import Any, List, Mapping
 
-#: Поля компании, которыми владеет CRM и которые переносит `uz.railtech.crm.client.updated.v1`.
+#: Поля компании, которые контакт клиента в кабинете не правит (юридическое лицо — через сотрудника).
 CRM_OWNED_COMPANY_FIELDS = ("name", "inn")
 
 REQUISITES_MANAGED_BY_CRM = "REQUISITES_MANAGED_BY_CRM"

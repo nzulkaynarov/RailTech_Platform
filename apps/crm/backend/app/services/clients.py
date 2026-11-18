@@ -10,7 +10,7 @@
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Final
 
 import structlog
 from sqlalchemy import select
@@ -58,6 +58,29 @@ EDITABLE = CLEARABLE | {"name", "is_active"}
 BackofficeModeProvider = Callable[[], Awaitable[BackofficeMode]]
 # Поставить передачу в очередь (`tasks.erp_handoff`): (client_id, lead_id, user_id).
 HandoffEnqueue = Callable[[int, int, int], Awaitable[object]]
+
+
+#: СУЩ-2.7 (ADR-0028 п. 6): у клиента, связанного с компанией ERP, эти поля — проекция ERP
+ERP_REQUISITES: Final = ("name", "inn")
+
+
+def _reject_erp_requisites(client: Client, changes: dict[str, Any]) -> None:
+    """Название и ИНН связанного клиента правятся в карточке контрагента (ERP), не в CRM: 409."""
+    if client.erp_company_id is None:
+        return
+    changed = [
+        field
+        for field in ERP_REQUISITES
+        if field in changes
+        and changes[field] is not None
+        and changes[field] != getattr(client, field)
+    ]
+    if changed:
+        raise ConflictError(
+            "requisites of a client linked to ERP are edited in the counterparty card",
+            reason=Reason.REQUISITES_OWNED_BY_ERP,
+            field=changed[0],
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -114,6 +137,7 @@ class ClientService:
             raise ValidationFailedError("unknown client fields", field=sorted(unknown)[0])
         async with self._sessions() as session, session.begin():
             client = await _client(session, client_id)
+            _reject_erp_requisites(client, changes)
             owner = changes.get("owner_user_id")
             if owner is not None:
                 user = await session.get(User, owner)

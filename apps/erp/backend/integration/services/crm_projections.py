@@ -5,8 +5,9 @@
 (`deleted_at` у удаления); порядок доставки не гарантирован, поэтому **более старый снимок уже применённого не применяется**
 (`CrmProjectionState`). Повтор того же снимка — без действий.
 
-Что обновляется. Только поля, которыми владеет CRM (ORCHESTRATOR §3 п. 16): у клиента — название компании (`Company.name`)
-и ИНН (`Company.inn`), в ERP они только для чтения (`requisites.py`); у контакта — ФИО, должность, телефон, e-mail, Telegram,
+Что обновляется. Только поля, которыми владеет CRM (ORCHESTRATOR §3 п. 16). Название и ИНН компании с СУЩ-2.7
+(ADR-0028 п. 6) принадлежат ERP: `client.updated` их больше не меняет — CRM получает их проекцией
+`uz.railtech.erp.company.updated.v1` (`parties.company_events`); снимок клиента только отмечается применённым. У контакта — ФИО, должность, телефон, e-mail, Telegram,
 язык, канал связи, признак основного. Прочие реквизиты (адрес, банк, МФО), финансы, права контакта в Cabinet (`can_act`),
 приглашения и входы принадлежат ERP; в схеме `client.*.v1` остальных реквизитов нет (сегмент, `is_active` и ответственный
 в проекцию компании не переносятся — полей в ERP нет). Контакт, созданный по событию, получает `can_act=False` (право действовать
@@ -93,7 +94,7 @@ def _log(outcome: Outcome, event_type: str, crm_id: int) -> Outcome:
 
 @transaction.atomic
 def apply_client_snapshot(data: Mapping[str, Any]) -> Outcome:
-    """`client.updated`: название компании по `crm_client_id` (через `CrmClientMapping`)."""
+    """`client.updated`: клиент известен ERP — снимок отмечается; название и ИНН — у ERP (СУЩ-2.7), не меняются."""
     snapshot = data["client"]
     crm_client_id = int(snapshot["crm_client_id"])
     updated_at = _moment(snapshot["updated_at"])
@@ -110,23 +111,6 @@ def apply_client_snapshot(data: Mapping[str, Any]) -> Outcome:
         )
 
     company: Company = mapping.company
-    name = str(snapshot["name"]).strip()
-    changed = []
-    if name and company.name != name:
-        company.name = name[: Company._meta.get_field("name").max_length]
-        changed.append("name")
-    inn = (snapshot.get("inn") or "").strip()
-    if inn and company.inn != inn:
-        if Company.objects.filter(inn=inn).exclude(pk=company.pk).exists():
-            # ИНН уникален в ERP: чужая компания уже держит его — не ломаем снимок, запись в журнал для сотрудника.
-            logger.warning(
-                "rt_bus_projection client.updated #%s: ИНН уже у другой компании ERP, поле не применено", crm_client_id
-            )
-        else:
-            company.inn = inn[: Company._meta.get_field("inn").max_length]
-            changed.append("inn")
-    if changed:
-        company.save(update_fields=[*changed, "updated_at"])
     _remember(CrmProjectionKind.CLIENT, crm_client_id, updated_at)
     return _log(Outcome(APPLIED, f"компания #{company.pk}"), "client.updated", crm_client_id)
 
