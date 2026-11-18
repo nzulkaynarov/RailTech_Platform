@@ -119,6 +119,7 @@ import type {
   CounterpartyCard,
   CounterpartyContacts,
   CounterpartyPersonPage,
+  CounterpartyRequisitesIn,
   CounterpartyRoleIn,
   CreatedId,
   CsrfFailedResponse,
@@ -52905,6 +52906,142 @@ export function useGetCounterparty<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getUpdateCounterpartyRequisitesUrl = (id: CompanyItemRef) => {
+  return `/api/v1/people/counterparties/${id}`;
+};
+
+/**
+ * ERP `PATCH parties/organizations/{id}/` (ADR-0028 п. 6, СУЩ-2.7): название, ИНН, рег. номер и юридический адрес контрагента ведёт ERP, клиент CRM получает их снимком. Только переданные поля. Раздел `crm.clients` или `erp.stock` — полный; в ERP — право `deal.manage` или `supply.manage`, иначе 403. Пустое название — 422; ИНН или рег. номер другой компании — 409 (`details.reason = company_exists`).
+ * @summary Карточка контрагента: реквизиты
+ */
+export const updateCounterpartyRequisites = async (
+  id: CompanyItemRef,
+  counterpartyRequisitesIn: CounterpartyRequisitesIn,
+  options?: Parameters<typeof http>[1],
+): Promise<CounterpartyCard> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CounterpartyCard>(getUpdateCounterpartyRequisitesUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(counterpartyRequisitesIn),
+  });
+};
+
+export const getUpdateCounterpartyRequisitesMutationKey = () =>
+  ["updateCounterpartyRequisites"] as const;
+
+export const getUpdateCounterpartyRequisitesMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateCounterpartyRequisites>>,
+    TError,
+    UpdateCounterpartyRequisitesMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateCounterpartyRequisites>>,
+  TError,
+  UpdateCounterpartyRequisitesMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateCounterpartyRequisitesMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateCounterpartyRequisites>>,
+    UpdateCounterpartyRequisitesMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateCounterpartyRequisites(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateCounterpartyRequisitesMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateCounterpartyRequisites>>
+>;
+export type UpdateCounterpartyRequisitesMutationBody = CounterpartyRequisitesIn;
+export type UpdateCounterpartyRequisitesMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | Error
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UpdateCounterpartyRequisitesMutationVariables = {
+  id: CompanyItemRef;
+  data: CounterpartyRequisitesIn;
+};
+
+/**
+ * @summary Карточка контрагента: реквизиты
+ */
+export const useUpdateCounterpartyRequisites = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateCounterpartyRequisites>>,
+      TError,
+      UpdateCounterpartyRequisitesMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateCounterpartyRequisites>>,
+  TError,
+  UpdateCounterpartyRequisitesMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateCounterpartyRequisitesMutationOptions(options), queryClient);
+};
 
 export const getGetCounterpartyByClientUrl = (id: CompanyItemRef) => {
   return `/api/v1/people/clients/${id}/counterparty`;

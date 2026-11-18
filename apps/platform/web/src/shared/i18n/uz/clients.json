@@ -175,6 +175,20 @@
     "brands": {
       "title": "Işlab çiqaruvçi sifatida",
       "empty": "Hozirça brendlar yöq: «Katalog · Maʼlumotnomalar · Brendlar»da qöşing."
+    },
+    "requisites": {
+      "edit": "Rekvizitlar",
+      "title": "Kontragent rekvizitlari",
+      "name": "Nomi",
+      "inn": "STIR",
+      "innHint": "9 raqam. Xorijiy kompaniyada — böş, röyxat raqamini kiriting.",
+      "registration": "Röyxat raqami (norezident)",
+      "address": "Yuridik manzil",
+      "submit": "Saqlaş",
+      "saved": "Rekvizitlar saqlandi",
+      "exists": "Bu STIR yoki röyxat raqami boşqa kompaniyada bor.",
+      "forbidden": "Rekvizitlarni menejer yoki taʼminot özgartiradi.",
+      "failed": "Rekvizitlarni saqlab bölmadi. Qayta urinib köring."
     }
   }
 }

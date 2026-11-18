@@ -13382,6 +13382,47 @@ paths:
           $ref: '#/components/responses/NotFound'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+    patch:
+      tags: [chats]
+      operationId: updateCounterpartyRequisites
+      summary: 'Карточка контрагента: реквизиты'
+      description: >-
+        ERP `PATCH parties/organizations/{id}/` (ADR-0028 п. 6, СУЩ-2.7): название, ИНН, рег. номер и юридический адрес
+        контрагента ведёт ERP, клиент CRM получает их снимком. Только переданные поля. Раздел `crm.clients` или
+        `erp.stock` — полный; в ERP — право `deal.manage` или `supply.manage`, иначе 403. Пустое название — 422; ИНН или
+        рег. номер другой компании — 409 (`details.reason = company_exists`).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CounterpartyRequisitesIn'
+      responses:
+        '200':
+          description: Карточка с новыми реквизитами
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CounterpartyCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '`CONFLICT` (`details.reason = company_exists`) — такой ИНН или рег. номер у другой компании'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /people/clients/{id}/counterparty:
     get:
       tags: [chats]
@@ -26873,6 +26914,15 @@ components:
           type: array
           items: {$ref: '#/components/schemas/CounterpartyRef'}
           description: 'Бренды, которые выпускает компания'
+    CounterpartyRequisitesIn:
+      type: object
+      additionalProperties: false
+      description: Реквизиты контрагента (СУЩ-2.7) — только переданные поля
+      properties:
+        name: {type: string, minLength: 1, maxLength: 255}
+        inn: {type: [string, 'null'], pattern: '^\d{9}$', description: 'ИНН — 9 цифр; null — убрать'}
+        registration_number: {type: [string, 'null'], maxLength: 64, description: Рег. номер нерезидента}
+        legal_address: {type: [string, 'null'], maxLength: 1000}
     CounterpartyRoleIn:
       type: object
       additionalProperties: false

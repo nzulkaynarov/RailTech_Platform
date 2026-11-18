@@ -280,6 +280,36 @@ async def set_counterparty_role(
     return to_card(data)
 
 
+class CounterpartyRequisitesIn(BaseModel):
+    """Реквизиты контрагента (СУЩ-2.7): только переданные поля; их ведёт ERP, CRM — снимок."""
+
+    model_config = ConfigDict(extra="forbid")
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    inn: str | None = Field(default=None, pattern=r"^\d{9}$")
+    registration_number: str | None = Field(default=None, max_length=64)
+    legal_address: str | None = Field(default=None, max_length=1000)
+
+
+RequisitesWriter = Annotated[
+    Authed, Depends(require_any(("crm.clients", "full"), ("erp.stock", "full")))
+]
+
+
+@router.patch(
+    "/people/counterparties/{id}",
+    response_model=CounterpartyCard,
+    operation_id="updateCounterpartyRequisites",
+)
+async def update_counterparty_requisites(
+    id: CompanyId, body: CounterpartyRequisitesIn, authed: RequisitesWriter
+) -> CounterpartyCard:
+    sent = body.model_dump(exclude_unset=True)
+    if "inn" in sent:
+        sent["tin"] = sent.pop("inn")
+    data = await ErpCompany(authed.call).data("PATCH", f"parties/organizations/{id}/", json=sent)
+    return to_card(data)
+
+
 # --- «Ш»: адресат письма из контрагентов ---------------------------------------------------------
 
 Writer = Annotated[Authed, Depends(require("eds.memo.create", "full"))]

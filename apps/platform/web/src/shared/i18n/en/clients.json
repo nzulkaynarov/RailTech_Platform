@@ -175,6 +175,20 @@
     "brands": {
       "title": "As a manufacturer",
       "empty": "No brands yet: add them in Catalog · Directories · Brands."
+    },
+    "requisites": {
+      "edit": "Requisites",
+      "title": "Counterparty requisites",
+      "name": "Name",
+      "inn": "Tax ID",
+      "innHint": "9 digits. Leave empty for a foreign company and enter its registration number.",
+      "registration": "Registration number (non-resident)",
+      "address": "Legal address",
+      "submit": "Save",
+      "saved": "Requisites saved",
+      "exists": "Another company already has this tax ID or registration number.",
+      "forbidden": "Requisites are edited by a manager or procurement.",
+      "failed": "Could not save the requisites. Try again."
     }
   }
 }

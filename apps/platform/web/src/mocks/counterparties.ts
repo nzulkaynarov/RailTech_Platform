@@ -1,6 +1,10 @@
 import { HttpResponse, http } from "msw";
 
-import type { CounterpartyCard, CounterpartyRoleIn } from "../shared/api/generated/model";
+import type {
+  CounterpartyCard,
+  CounterpartyRequisitesIn,
+  CounterpartyRoleIn,
+} from "../shared/api/generated/model";
 import { failure } from "./adminUsers";
 import { readErpCatalog } from "./fixtures/erpCatalog";
 import { readLeads } from "./fixtures/leads";
@@ -13,13 +17,15 @@ import { buildMe, readSession } from "./mockSession";
  */
 const CLIENT_BASE = 1000;
 const marks = new Map<string, { supplier?: boolean; manufacturer?: boolean }>();
+/** Реквизиты, поправленные в карточке (СУЩ-2.7): поверх данных каталога и клиентов */
+const requisites = new Map<string, Partial<CounterpartyCard>>();
 
 function level(resource: "crm.clients" | "erp.stock" | "eds.payments"): string | undefined {
   const session = readSession();
   return session ? buildMe({ ...session, activeRole: null })?.resources[resource] : undefined;
 }
 
-function cardOf(id: string): CounterpartyCard | null {
+function baseCardOf(id: string): CounterpartyCard | null {
   const masked = !level("eds.payments");
   const account = masked ? "…0001" : "2020 8000 9000 0000 0001";
   const mark = marks.get(id) ?? {};
@@ -117,7 +123,37 @@ function guard(write = false) {
     : failure(403, "FORBIDDEN", "Раздел или действие не положены вашей роли.", "bff");
 }
 
+function cardOf(id: string): CounterpartyCard | null {
+  const card = baseCardOf(id);
+  return card ? { ...card, ...requisites.get(id) } : null;
+}
+
 export const counterpartyHandlers = [
+  http.patch("*/people/counterparties/:id", async ({ params, request }) => {
+    const denied = guard();
+    if (denied) return denied;
+    if (level("crm.clients") !== "full" && level("erp.stock") !== "full") {
+      return failure(403, "FORBIDDEN", "Раздел или действие не положены вашей роли.", "bff");
+    }
+    const id = String(params["id"]);
+    if (!cardOf(id)) return notFound();
+    const body = (await request.json()) as CounterpartyRequisitesIn;
+    const taken =
+      body.inn && readErpCatalog().suppliers.some((row) => row.id !== id && row.tin === body.inn);
+    if (taken) {
+      return failure(409, "CONFLICT", "Такая компания уже есть.", "erp", {
+        reason: "company_exists",
+      });
+    }
+    const patch: Partial<CounterpartyCard> = {};
+    if (body.name !== undefined) patch.name = body.name.trim();
+    if (body.inn !== undefined) patch.inn = body.inn;
+    if (body.registration_number !== undefined)
+      patch.registration_number = body.registration_number;
+    if (body.legal_address !== undefined) patch.legal_address = body.legal_address;
+    requisites.set(id, { ...requisites.get(id), ...patch });
+    return HttpResponse.json(cardOf(id));
+  }),
   http.get("*/people/clients/:id/counterparty", ({ params }) => {
     const denied = guard();
     if (denied) return denied;

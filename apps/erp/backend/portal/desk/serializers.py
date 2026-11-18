@@ -380,6 +380,16 @@ class DeskOrganizationIn(serializers.Serializer):
     legal_address = serializers.CharField(max_length=500, required=False, allow_blank=True)
 
 
+class DeskCounterpartyRequisitesIn(serializers.Serializer):
+    """Правка реквизитов контрагента (СУЩ-2.7): только переданные поля."""
+
+    name = serializers.CharField(max_length=255, required=False)
+    tin = serializers.CharField(max_length=14, required=False, allow_blank=True, allow_null=True)
+    registration_number = serializers.CharField(max_length=64, required=False, allow_blank=True, allow_null=True)
+    country_id = serializers.IntegerField(required=False, allow_null=True)
+    legal_address = serializers.CharField(max_length=1000, required=False, allow_blank=True, allow_null=True)
+
+
 class DeskCounterpartyRoleIn(serializers.Serializer):
     role = serializers.ChoiceField(choices=["supplier", "manufacturer"])
     on = serializers.BooleanField()
