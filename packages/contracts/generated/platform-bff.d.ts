@@ -7322,7 +7322,11 @@ export interface paths {
     delete?: never;
     options?: never;
     head?: never;
-    patch?: never;
+    /**
+     * Карточка контрагента: реквизиты
+     * @description ERP `PATCH parties/organizations/{id}/` (ADR-0028 п. 6, СУЩ-2.7): название, ИНН, рег. номер и юридический адрес контрагента ведёт ERP, клиент CRM получает их снимком. Только переданные поля. Раздел `crm.clients` или `erp.stock` — полный; в ERP — право `deal.manage` или `supply.manage`, иначе 403. Пустое название — 422; ИНН или рег. номер другой компании — 409 (`details.reason = company_exists`).
+     */
+    patch: operations["updateCounterpartyRequisites"];
     trace?: never;
   };
   "/people/clients/{id}/counterparty": {
@@ -7342,11 +7346,7 @@ export interface paths {
     delete?: never;
     options?: never;
     head?: never;
-    /**
-     * Карточка контрагента: реквизиты
-     * @description ERP `PATCH parties/organizations/{id}/` (ADR-0028 п. 6, СУЩ-2.7): название, ИНН, рег. номер и юридический адрес контрагента ведёт ERP, клиент CRM получает их снимком. Только переданные поля. Раздел `crm.clients` или `erp.stock` — полный; в ERP — право `deal.manage` или `supply.manage`, иначе 403. Пустое название — 422; ИНН или рег. номер другой компании — 409 (`details.reason = company_exists`).
-     */
-    patch: operations["updateCounterpartyRequisites"];
+    patch?: never;
     trace?: never;
   };
   "/people/counterparties/{id}/roles": {
@@ -30339,32 +30339,6 @@ export interface operations {
       503: components["responses"]["BackendUnavailable"];
     };
   };
-  getCounterpartyByClient: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: components["schemas"]["CompanyItemRef"];
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Карточка */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["CounterpartyCard"];
-        };
-      };
-      401: components["responses"]["SessionExpired"];
-      403: components["responses"]["Forbidden"];
-      404: components["responses"]["NotFound"];
-      503: components["responses"]["BackendUnavailable"];
-    };
-  };
   updateCounterpartyRequisites: {
     parameters: {
       query?: never;
@@ -30405,6 +30379,32 @@ export interface operations {
         };
       };
       422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getCounterpartyByClient: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Карточка */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CounterpartyCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
       503: components["responses"]["BackendUnavailable"];
     };
   };
