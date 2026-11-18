@@ -887,7 +887,11 @@ async def test_hs_codes_exchange_rates_and_manufacturers(
     check(brands, "/erp/catalog/manufacturers", "get")
     assert dict(router.calls.last.request.url.params)["search"] == "br"
     row = brands.json()["items"][0]
-    assert (row["company_id"], row["company_name"], row["products_count"]) == ("9", "АО «Пример Логистик»", 12)
+    assert (row["company_id"], row["company_name"], row["products_count"]) == (
+        "9",
+        "АО «Пример Логистик»",
+        12,
+    )
     assert row["company_roles"] == ["MANUFACTURER", "SUPPLIER"]
     made = await call(
         web, "POST", "/erp/catalog/manufacturers", {"name": "Brand", "country_id": "3"}
