@@ -2226,6 +2226,8 @@ export interface components {
       inn?: string | null;
       /** @description Контактное лицо отправителя */
       contact?: string | null;
+      /** @description Человек компании ERP (СУЩ-2.6); компания — `links.erp_company_id` */
+      contact_id?: number | null;
     };
     /** @description Исходящий номер и дата письма у отправителя */
     SenderRef: {

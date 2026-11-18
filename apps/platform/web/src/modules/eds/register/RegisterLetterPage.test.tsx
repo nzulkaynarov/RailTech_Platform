@@ -27,6 +27,19 @@ function type(label: string | RegExp, value: string) {
   fireEvent.change(reveal(screen.getByLabelText(label)), { target: { value } });
 }
 
+const SENDER = "Корреспондент (организация)";
+
+/** Корреспондента нет в контрагентах — заводится организацией из подсказок (СУЩ-2.6). */
+async function addSender(name: string) {
+  type(SENDER, name);
+  fireEvent.click(await screen.findByText(`+ Завести организацию «${name.trim()}»`));
+  const sheet = await screen.findByRole("dialog", { name: "Новая организация" });
+  fireEvent.click(within(sheet).getByRole("button", { name: "Завести" }));
+  await waitFor(() => {
+    expect(screen.queryByRole("dialog", { name: "Новая организация" })).toBeNull();
+  });
+}
+
 /** «Зарегистрировать» — в последней секции «Проверка и регистрация». */
 function registerButton(name: string | RegExp): HTMLElement {
   openStep("Проверка и регистрация");
@@ -65,7 +78,9 @@ describe("EDS · Зарегистрировать входящее (P8)", () => 
 
     expect(await screen.findByText("Выберите вид документа.")).toBeVisible();
     expect(screen.getByText("Выберите, как получено письмо.")).toBeVisible();
-    expect(screen.getByText("Укажите корреспондента.")).toBeVisible();
+    expect(
+      screen.getByText("Выберите корреспондента из контрагентов или заведите организацию."),
+    ).toBeVisible();
     // открыта первая секция с ошибкой («Отправитель»); в остальных — текст у поля и отметка у заголовка
     expect(screen.getByText("Укажите тему.")).toBeInTheDocument();
     expect(screen.getByText("Приложите файл письма и дождитесь загрузки.")).toBeInTheDocument();
@@ -93,7 +108,7 @@ describe("EDS · Зарегистрировать входящее (P8)", () => 
     expect(selectedLabel(reveal(screen.getByLabelText("Способ получения")))).toBe(
       "Кабинет налогоплательщика my.soliq",
     );
-    type("Корреспондент", "ГНИ Мирабадского района");
+    await addSender("ГНИ Мирабадского района");
     type("Исходящий номер отправителя", "04-12/9999");
     type("Тема", "Требование о пояснениях");
     // P8b: адресат — выбор сотрудника; пусто — директор по умолчанию (назначает EDS)
@@ -114,8 +129,9 @@ describe("EDS · Зарегистрировать входящее (P8)", () => 
       sender_ref_number: "04-12/9999",
       subject: "Требование о пояснениях",
       urgent: true,
-      // ВХ: загрузка сама распознала файл — набранное человеком осталось, пустые поля заполнены из файла
-      sender_inn: "301234567",
+      // ВХ: загрузка сама распознала файл — набранное человеком осталось, пустые поля заполнены из файла;
+      // корреспондент выбран из контрагентов — его название и ИНН файл не трогает (СУЩ-2.6)
+      sender_company_id: expect.stringMatching(/^\d+$/) as unknown,
       summary: expect.stringContaining("Просят пояснить расхождение") as unknown,
     });
     expect(body?.file_ids).toHaveLength(1);
@@ -125,7 +141,7 @@ describe("EDS · Зарегистрировать входящее (P8)", () => 
   it("похожее (тот же корреспондент и исх. № без даты): ссылка на ВХ, регистрация не запрещена", async () => {
     await openForm();
 
-    type("Корреспондент", "гни  демо-района");
+    type(SENDER, "гни  демо-района");
     type("Исходящий номер отправителя", "№ 04-12/3456");
 
     expect(await screen.findByText("Похожие письма", {}, { timeout: 3000 })).toBeVisible();
@@ -172,7 +188,7 @@ describe("EDS · Зарегистрировать входящее (P8)", () => 
       reveal(screen.getByLabelText("Вид документа")),
       "Требование или уведомление ГНК",
     );
-    type("Корреспондент", "ГНИ Другого района");
+    await addSender("ГНИ Другого района");
     type("Исходящий номер отправителя", "77-01/1");
     type("Тема", "Требование о пояснениях");
     await attach();
@@ -206,7 +222,7 @@ describe("EDS · Зарегистрировать входящее (P8)", () => 
     await openForm();
     await chooseOption(reveal(screen.getByLabelText("Вид документа")), "Письмо банка");
     await chooseOption(reveal(screen.getByLabelText("Способ получения")), "Почта");
-    type("Корреспондент", "АКБ «Демо-Банк»");
+    await addSender("АКБ «Демо-Банк»");
     type("Тема", "Изменение тарифов");
     type("Связанный документ", "ВХ-999/26");
     await attach();
@@ -304,10 +320,11 @@ describe("registerModel", () => {
     expect(Object.keys(validateRegister(empty, "2026-11-01")).sort()).toEqual(
       ["file_ids", "kind", "receipt_method", "sender_name", "subject"].sort(),
     );
-    const future = { ...empty, receivedAt: "2026-11-02", senderInn: "12" };
+    const future = { ...empty, receivedAt: "2026-11-02", senderName: "Банк" };
+    // СУЩ-2.6: название без выбора из контрагентов — не корреспондент
     expect(validateRegister(future, "2026-11-01")).toMatchObject({
       received_at: true,
-      sender_inn: true,
+      sender_name: true,
     });
   });
 
@@ -317,6 +334,8 @@ describe("registerModel", () => {
       kind: "bank",
       receiptMethod: "post",
       senderName: "  Банк ",
+      senderCompanyId: "12",
+      senderContactId: "31",
       subject: " Тарифы ",
       deal: { erp_deal_id: 5, label: "ЗВ-2026-104 · Стрелочные приводы · ООО «Демо-Рейл»" },
       attachments: [
@@ -328,6 +347,8 @@ describe("registerModel", () => {
     expect(toRegisterBody(values)).toMatchObject({
       kind: "bank",
       receipt_method: "post",
+      sender_company_id: "12",
+      sender_contact_id: "31",
       sender_name: "Банк",
       subject: "Тарифы",
       summary: null,

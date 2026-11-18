@@ -256,6 +256,7 @@ async def register(session: AsyncSession, bus: AsyncBus, *, actor_id: int, data:
         "sender_name": data.sender.name,
         "sender_inn": data.sender.inn,
         "sender_contact": data.sender.contact,
+        "sender_contact_id": data.sender.contact_id,
         "sender_ref_number": ref.number if ref else None,
         "sender_ref_date": ref.date if ref else None,
         "received_at": data.received_at,

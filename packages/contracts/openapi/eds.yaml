@@ -4180,6 +4180,10 @@ components:
           type: [string, 'null']
           maxLength: 255
           description: Контактное лицо отправителя
+        contact_id:
+          type: [integer, 'null']
+          minimum: 1
+          description: 'Человек компании ERP (СУЩ-2.6); компания — `links.erp_company_id`'
     SenderRef:
       type: object
       additionalProperties: false

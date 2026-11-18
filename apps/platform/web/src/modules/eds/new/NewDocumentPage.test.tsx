@@ -245,6 +245,8 @@ describe("EDS · Создать документ: форма", () => {
                 name: "ГНИ Демо-района",
                 inn: "300111222",
                 contact: "gni@demo-inspection.example",
+                company_id: null,
+                contact_id: null,
               },
             }
           : l,

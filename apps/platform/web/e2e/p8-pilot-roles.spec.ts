@@ -2,7 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { type Page, expect, test } from "@playwright/test";
 
 import { loginAndWait, railLinks, reveal, spaGoto, waitForMotionEnd } from "./support/app";
-import { chooseOption, openStep, pickFiles } from "./support/fields";
+import { addAddressee, chooseOption, openStep, pickFiles } from "./support/fields";
 import { PILOT_ROLES, ROLE_NAMES, type Role, visibleModules } from "./support/rbac";
 
 // P8 «Роли пилота и регистрация входящих» на MSW (SPEC-v3 §3.2a п. 1, §4.1): меню четырёх ролей пилота; делопроизводитель
@@ -100,9 +100,8 @@ test.describe("P8: роли пилота и регистрация входящ�
         "Требование или уведомление ГНК",
       );
       await expect(await reveal(page.getByLabel("Срочно", { exact: true }))).toBeChecked();
-      await (
-        await reveal(page.getByLabel("Корреспондент", { exact: true }))
-      ).fill("ГНИ Демо-района");
+      await reveal(page.getByLabel("Корреспондент (организация)", { exact: true }));
+      await addAddressee(page, "ГНИ Демо-района", "", "Корреспондент (организация)");
       await (await reveal(page.getByLabel("Исходящий номер отправителя"))).fill("04-12/3456");
       // EDS-DUP: тот же корреспондент и исх. № (дата у отправителя не указана) — «Похожие письма» со ссылкой на ВХ-108/26;
       // подсказка, а не запрет. Другой номер — блок уходит, регистрация без «Это другое письмо».

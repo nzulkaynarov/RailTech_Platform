@@ -4,7 +4,8 @@
  */
 
 /**
- * Организация-отправитель; `null` — письмо по заявке ERP без этого поля
+ * Организация-отправитель; `null` — письмо по заявке ERP без этого поля. `company_id` — компания ERP (СУЩ-2.6);
+ * `null` — письмо до СУЩ-2.6 или из почты без сопоставления
  */
 export interface LetterSender {
   /** @nullable */
@@ -16,4 +17,14 @@ export interface LetterSender {
    * @nullable
    */
   contact: string | null;
+  /**
+   * Компания-отправитель ERP
+   * @nullable
+   */
+  company_id: string | null;
+  /**
+   * Человек компании-отправителя
+   * @nullable
+   */
+  contact_id: string | null;
 }

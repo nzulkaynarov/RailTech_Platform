@@ -299,6 +299,44 @@ def rows_of(data: Any) -> list[dict[str, Any]]:
     return [row for row in data if isinstance(row, dict)] if isinstance(data, list) else []
 
 
+async def counterparty_snapshot(
+    call: Call, company_id: str, contact_id: str | None, *, field: str
+) -> dict[str, Any]:
+    """Компания ERP и человек письма (ADR-0028 п. 5, СУЩ-2.6): снимок карточки, не текст формы.
+
+    Компании нет или она не видна — 422 (`field`, `company_not_found`); человек не из этой
+    компании — 422 (`contact_not_found`). В ответе — имя человека для строки «контактное лицо».
+    """
+    try:
+        card = await ErpCompany(call).data("GET", f"parties/organizations/{company_id}/")
+    except PlatformError as exc:
+        if exc.status_code == 404:
+            raise _bad_counterparty(field, "company_not_found") from exc
+        raise
+    people = {str(person.get("id")): person for person in card.get("people") or []}
+    person = people.get(contact_id) if contact_id is not None else None
+    if contact_id is not None and person is None:
+        raise _bad_counterparty(field, "contact_not_found")
+    return {
+        "name": str(card.get("name") or ""),
+        "inn": card.get("inn") or None,
+        "company_id": int(company_id),
+        "contact_id": int(contact_id) if contact_id else None,
+        "contact_name": str(person.get("name") or "") or None if person else None,
+    }
+
+
+def _bad_counterparty(field: str, reason: str) -> PlatformError:
+    return PlatformError(
+        "VALIDATION_FAILED",
+        "Человек не из этой компании."
+        if reason == "contact_not_found"
+        else "Компания не найдена среди контрагентов.",
+        status_code=422,
+        details={"fields": [field], "reason": reason},
+    )
+
+
 class ErpCompany:
     """Один запрос Admin · Компания: вызовы ERP от имени сотрудника и своя компания (лениво)."""
 

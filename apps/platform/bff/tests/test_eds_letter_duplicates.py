@@ -10,6 +10,7 @@ import pytest
 
 from tests.backends import Backends
 from tests.conftest import ContractChecker, Web
+from tests.consts import ERP_URL
 from tests.eds_letters_support import FILE_ID, LETTER_ID, EdsFake, eds_error_body, letter
 from tests.test_eds_letter_registration import BASE, FORM
 
@@ -27,6 +28,10 @@ PATH = "/eds/inbox/%D0%92%D0%A5-104%2F26"
 
 @pytest.fixture
 def eds(be: Backends) -> EdsFake:
+    # СУЩ-2.6: отправитель формы — компания ERP 12
+    be.router.get(f"{ERP_URL}/api/v1/parties/organizations/12/").mock(
+        return_value=httpx.Response(200, json={"id": 12, "name": "ГНИ", "inn": None, "people": []})
+    )
     return EdsFake(be)
 
 

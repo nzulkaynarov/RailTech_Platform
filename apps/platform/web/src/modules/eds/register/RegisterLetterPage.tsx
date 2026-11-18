@@ -32,6 +32,7 @@ import { useRefreshMail } from "../mail/mailModel";
 import { RESOLUTION_KINDS } from "../inbox/officeModel";
 import { AttachmentsField } from "../new/AttachmentsField";
 import { DealField } from "../new/DealField";
+import { AddresseePerson, RecipientField } from "../new/RecipientField";
 import type { Attachment } from "../new/formModel";
 import { todayInCompanyZone } from "../new/formModel";
 import { localName, useLetterDictionary, useResolutionKindName } from "../dictionaries";
@@ -448,7 +449,7 @@ export function RegisterLetterPage() {
                   summary: [values.senderName.trim(), values.refNumber.trim()]
                     .filter(Boolean)
                     .join(" · "),
-                  complete: values.senderName.trim() !== "" && values.kind !== "",
+                  complete: values.senderCompanyId !== "" && values.kind !== "",
                   invalid: sectionInvalid("sender"),
                   content: (
                     <div className="pf-fp-form">
@@ -522,46 +523,56 @@ export function RegisterLetterPage() {
                         <Field
                           id={id("sender_name")}
                           label={t("letters:register.sender.label")}
-                          hint={t("letters:register.sender.hint")}
+                          hint={
+                            values.senderCompanyId && values.senderInn
+                              ? t("documents:form.recipient.innShort", { inn: values.senderInn })
+                              : values.senderCompanyId
+                                ? undefined
+                                : t("letters:register.sender.hint")
+                          }
                           error={fieldError("sender_name")}
                         >
-                          <Input
+                          {/* СУЩ-2.6: корреспондент — только из контрагентов; правка текста снимает выбор */}
+                          <RecipientField
                             id={id("sender_name")}
                             value={values.senderName}
-                            maxLength={255}
-                            autoComplete="off"
-                            status={errors.sender_name ? "error" : undefined}
-                            aria-invalid={errors.sender_name || undefined}
-                            aria-describedby={describedBy(
+                            invalid={Boolean(errors.sender_name)}
+                            describedBy={describedBy(
                               id("sender_name"),
                               true,
                               Boolean(errors.sender_name),
                             )}
-                            onChange={(event) => {
-                              set("senderName", event.target.value);
+                            onChange={(name) => {
+                              setValues((prev) => ({
+                                ...prev,
+                                senderName: name,
+                                senderInn: "",
+                                senderCompanyId: "",
+                                senderContactId: "",
+                              }));
+                            }}
+                            onPick={(company) => {
+                              setValues((prev) => ({
+                                ...prev,
+                                senderName: company.name,
+                                senderInn: company.inn ?? "",
+                                senderCompanyId: company.id,
+                                senderContactId: "",
+                              }));
                             }}
                           />
                         </Field>
                         <Field
-                          id={id("sender_inn")}
-                          label={t("letters:register.inn.label")}
-                          error={fieldError("sender_inn")}
+                          id="reg-sender-person"
+                          label={t("letters:register.person.label")}
+                          hint={t("letters:register.person.hint")}
                         >
-                          <Input
-                            id={id("sender_inn")}
-                            value={values.senderInn}
-                            maxLength={14}
-                            inputMode="numeric"
-                            autoComplete="off"
-                            status={errors.sender_inn ? "error" : undefined}
-                            aria-invalid={errors.sender_inn || undefined}
-                            aria-describedby={describedBy(
-                              id("sender_inn"),
-                              false,
-                              Boolean(errors.sender_inn),
-                            )}
-                            onChange={(event) => {
-                              set("senderInn", event.target.value);
+                          <AddresseePerson
+                            id="reg-sender-person"
+                            companyId={values.senderCompanyId}
+                            value={values.senderContactId}
+                            onPick={(person) => {
+                              set("senderContactId", person?.id ?? "");
                             }}
                           />
                         </Field>

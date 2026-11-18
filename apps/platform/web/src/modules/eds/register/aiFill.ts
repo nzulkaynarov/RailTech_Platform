@@ -37,6 +37,8 @@ export function applySuggestion(
   for (const [key, source] of MAP) {
     const suggested = fields[source];
     if (!suggested || next[key] !== "") continue;
+    // корреспондент уже выбран из контрагентов (СУЩ-2.6): название и ИНН — из его карточки
+    if ((key === "senderName" || key === "senderInn") && next.senderCompanyId !== "") continue;
     if (key === "kind" && !kinds.some((kind) => kind.code === suggested)) continue;
     next[key] = suggested;
     filled.push(key);

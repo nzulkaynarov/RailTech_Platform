@@ -22,7 +22,7 @@ from fastapi.responses import StreamingResponse
 from starlette.types import Send
 
 from app.clients.eds import EdsLetters
-from app.clients.erp_company import ErpCompany
+from app.clients.erp_company import counterparty_snapshot
 from app.deps import Authed, Rule, require, require_any
 from app.eds_documents import (
     API,
@@ -188,36 +188,13 @@ def _edits(body: EdsDocumentIn | EdsDocumentUpdateIn) -> dict[str, Any]:
     return edits
 
 
-def _bad_recipient(reason: str) -> PlatformError:
-    return PlatformError(
-        "VALIDATION_FAILED",
-        "Человек не из этой компании."
-        if reason == "contact_not_found"
-        else "Компания не найдена среди контрагентов.",
-        status_code=422,
-        details={"fields": ["recipient"], "reason": reason},
-    )
-
-
 async def _recipient(authed: Authed, recipient: EdsRecipientIn) -> dict[str, Any]:
     """Адресат ссылкой (СУЩ-2.6): название и ИНН — снимок карточки ERP, не текст из формы."""
-    try:
-        card = await ErpCompany(authed.call).data(
-            "GET", f"parties/organizations/{recipient.company_id}/"
-        )
-    except PlatformError as exc:
-        if exc.status_code == 404:
-            raise _bad_recipient("company_not_found") from exc
-        raise
-    people = {str(person.get("id")) for person in card.get("people") or []}
-    if recipient.contact_id is not None and recipient.contact_id not in people:
-        raise _bad_recipient("contact_not_found")
-    return {
-        "name": str(card.get("name") or ""),
-        "inn": card.get("inn") or None,
-        "company_id": int(recipient.company_id),
-        "contact_id": int(recipient.contact_id) if recipient.contact_id else None,
-    }
+    snapshot = await counterparty_snapshot(
+        authed.call, recipient.company_id, recipient.contact_id, field="recipient"
+    )
+    snapshot.pop("contact_name")
+    return snapshot
 
 
 async def _payload(body: EdsDocumentIn | EdsDocumentUpdateIn, authed: Authed) -> dict[str, Any]:

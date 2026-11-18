@@ -86,10 +86,8 @@ async function incomingWithReplyInstruction(page: Page): Promise<void> {
     await reveal(page.getByLabel("Вид документа")),
     "Требование или уведомление ГНК",
   );
-  await (
-    await reveal(page.getByLabel("Корреспондент", { exact: true }))
-  ).fill("ГНИ Мирабадского района");
-  await (await reveal(page.getByLabel("ИНН корреспондента"))).fill("305123456");
+  await reveal(page.getByLabel("Корреспондент (организация)", { exact: true }));
+  await addAddressee(page, "ГНИ Мирабадского района", "305123456", "Корреспондент (организация)");
   await (await reveal(page.getByLabel("Исходящий номер отправителя"))).fill("14-02/3381");
   await (
     await reveal(page.getByLabel("Тема", { exact: true }))
@@ -138,8 +136,8 @@ async function executorHandsOver(page: Page, email: string, screens: boolean): P
   ).toBeVisible();
   if (screens) await both(page, "reply-form-prefilled");
 
-  // корреспондента нет в контрагентах — заводится организацией из письма (СУЩ-2.6)
-  await addAddressee(page, "ГНИ Мирабадского района", "305123456");
+  // корреспондент связан с компанией при регистрации — он сразу адресат ответа, ИНН из карточки (СУЩ-2.6)
+  await expect(page.getByText("ИНН 305123456", { exact: true })).toBeVisible();
   await (await reveal(page.getByLabel("Почта адресата"))).fill(email);
   await openStep(page, "Текст и вложения");
   await (
@@ -273,6 +271,9 @@ async function mailLetterInExecution(page: Page): Promise<string> {
   await spaGoto(page, "/eds/mail/17");
   await page.getByRole("link", { name: "Зарегистрировать как ВХ" }).click();
   await expect(page.getByText("акт-сверки-октябрь.pdf")).toBeVisible();
+  // корреспондент из письма — текст; его заводят организацией из контрагентов (СУЩ-2.6)
+  await reveal(page.getByLabel("Корреспондент (организация)", { exact: true }));
+  await addAddressee(page, "ООО «Демо-Поставка»", "", "Корреспондент (организация)");
   await openStep(page, "Срок, адресат и резолюция");
   await chooseOption(await reveal(page.getByLabel("Тип резолюции")), "К исполнению");
   await chooseOption(

@@ -326,11 +326,8 @@
       "unavailable": "The receipt methods did not load. Refresh the page."
     },
     "sender": {
-      "label": "Correspondent",
-      "hint": "The organisation or person the letter came from"
-    },
-    "inn": {
-      "label": "Correspondent TIN"
+      "label": "Correspondent (organization)",
+      "hint": "Pick a counterparty or add an organization from the last suggestion."
     },
     "refNumber": {
       "label": "Sender's outgoing number"
@@ -399,7 +396,7 @@
     "errors": {
       "kind": "Select the document type.",
       "receipt_method": "Select how the letter was received.",
-      "sender_name": "Enter the correspondent.",
+      "sender_name": "Pick the correspondent from counterparties or add an organization.",
       "sender_inn": "TIN is 9 to 14 digits.",
       "received_at": "Enter the date received — not later than today.",
       "subject": "Enter the subject.",
@@ -447,6 +444,10 @@
       "content": "Subject and content",
       "route": "Deadline, addressee and resolution",
       "review": "Review and register"
+    },
+    "person": {
+      "label": "Correspondent’s person",
+      "hint": "Optional: from the organization card."
     }
   },
   "office": {

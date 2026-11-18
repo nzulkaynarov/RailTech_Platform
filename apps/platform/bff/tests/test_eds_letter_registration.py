@@ -11,6 +11,7 @@ import pytest
 from app.cookies import CSRF_HEADER
 from tests.backends import Backends
 from tests.conftest import ContractChecker, Web
+from tests.consts import ERP_URL
 from tests.eds_letters_support import FILE_ID, LETTER_ID, EdsFake, eds_error_body, letter
 from tests.roles import Role
 
@@ -18,6 +19,7 @@ BASE = "/api/v1/eds"
 FORM: dict[str, Any] = {
     "kind": "tax_notice",
     "receipt_method": "taxpayer_cabinet",
+    "sender_company_id": "12",
     "sender_name": " ГНИ Мирабадского района ",
     "received_at": "2026-10-29",
     "subject": "Требование о пояснениях по НДС",
@@ -50,6 +52,18 @@ KINDS = {
 
 @pytest.fixture
 def eds(be: Backends) -> EdsFake:
+    # СУЩ-2.6: отправитель — компания ERP; название и ИНН BFF берёт из её карточки
+    be.router.get(f"{ERP_URL}/api/v1/parties/organizations/12/").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "id": 12,
+                "name": "ГНИ Мирабадского района",
+                "inn": None,
+                "people": [{"id": 31, "name": "А. Каримов", "position": "Начальник"}],
+            },
+        )
+    )
     fake = EdsFake(be)
     registered = letter(
         links={},
@@ -95,7 +109,12 @@ async def test_registrar_registers_and_gets_the_card(
         "kind": "tax_notice",
         "receipt_method": "taxpayer_cabinet",
         "subject": "Требование о пояснениях по НДС",
-        "sender": {"name": "ГНИ Мирабадского района", "inn": None},
+        "sender": {
+            "name": "ГНИ Мирабадского района",
+            "inn": None,
+            "contact": None,
+            "contact_id": None,
+        },
         "received_at": "2026-10-29",
         "urgent": False,
         "file_ids": [FILE_ID],
@@ -103,6 +122,7 @@ async def test_registrar_registers_and_gets_the_card(
         "document_due": "2026-11-05",
         "related_number": None,
         "sender_ref": {"number": "04-12/3456", "date": "2026-10-28"},
+        "links": {"erp_company_id": 12},
     }
 
 
@@ -116,7 +136,12 @@ async def test_links_to_a_request_and_a_client_go_to_eds_links(web: Web, eds: Ed
 
     [call] = eds.made("POST", "letters")
     sent = json.loads(call.content)
-    assert sent["links"] == {"erp_deal_id": 5, "deal_number": "ЗВ-2026-104", "crm_client_id": 42}
+    assert sent["links"] == {
+        "erp_deal_id": 5,
+        "deal_number": "ЗВ-2026-104",
+        "crm_client_id": 42,
+        "erp_company_id": 12,
+    }
     assert sent["summary"] == "Пояснить расхождение"
 
 
@@ -156,7 +181,7 @@ async def test_registrar_reads_the_inbox_but_cannot_resolve(web: Web, eds: EdsFa
         {"file_ids": []},
         {"kind": "Налоговая"},
         {"receipt_method": "Голубь"},
-        {"sender_name": "  "},
+        {"sender_company_id": "ГНИ"},
         {"subject": ""},
         {"received_at": None},
     ],
@@ -236,3 +261,22 @@ async def test_duplicates_pass_the_check_and_link_to_the_letter(
         "sender_name": "ГНИ",
         "crm_client_id": "42",
     }
+
+
+async def test_sender_is_a_link_to_the_erp_company_and_person(web: Web, eds: EdsFake) -> None:
+    """СУЩ-2.6: человек — из карточки компании; чужой человек — 422 до EDS."""
+    assert (await web.login(["REGISTRAR"])).status_code == 200
+
+    ok = await web.send("POST", f"{BASE}/letters", json={**FORM, "sender_contact_id": "31"})
+    assert ok.status_code == 201, ok.text
+    [call] = eds.made("POST", "letters")
+    assert json.loads(call.content)["sender"] == {
+        "name": "ГНИ Мирабадского района",
+        "inn": None,
+        "contact": "А. Каримов",
+        "contact_id": 31,
+    }
+    stranger = await web.send("POST", f"{BASE}/letters", json={**FORM, "sender_contact_id": "99"})
+    assert stranger.status_code == 422
+    assert stranger.json()["details"]["reason"] == "contact_not_found"
+    assert len(eds.made("POST", "letters")) == 1

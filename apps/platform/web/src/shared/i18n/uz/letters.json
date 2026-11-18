@@ -326,11 +326,8 @@
       "unavailable": "Usullar ma’lumotnomasi yuklanmadi. Sahifani yangilang."
     },
     "sender": {
-      "label": "Korrespondent",
-      "hint": "Xat kimdan kelgan: tashkilot yoki shaxs"
-    },
-    "inn": {
-      "label": "Korrespondent STIRi"
+      "label": "Korrespondent (tashkilot)",
+      "hint": "Kontragentlardan tanlang yoki taklifning oxirgi qatoridan tashkilot qöşing."
     },
     "refNumber": {
       "label": "Jo‘natuvchining chiquvchi raqami"
@@ -399,7 +396,7 @@
     "errors": {
       "kind": "Hujjat turini tanlang.",
       "receipt_method": "Xat qanday kelganini tanlang.",
-      "sender_name": "Korrespondentni kiriting.",
+      "sender_name": "Korrespondentni kontragentlardan tanlang yoki tashkilot qöşing.",
       "sender_inn": "STIR — 9 dan 14 gacha raqam.",
       "received_at": "Kelib tushgan sanani kiriting — bugundan kech emas.",
       "subject": "Mavzuni kiriting.",
@@ -447,6 +444,10 @@
       "content": "Mavzu va mazmun",
       "route": "Muddat, qabul qiluvchi va rezolyutsiya",
       "review": "Tekshirish va ro‘yxatga olish"
+    },
+    "person": {
+      "label": "Korrespondent şaxsi",
+      "hint": "Majburiy emas: tashkilot kartoçkasidan."
     }
   },
   "office": {

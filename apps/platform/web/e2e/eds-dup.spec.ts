@@ -57,7 +57,7 @@ test.describe("EDS-DUP: одно письмо — один входящий но
         page.getByRole("heading", { level: 1, name: "Регистрация входящего документа" }),
       ).toBeVisible();
       await (
-        await reveal(page.getByLabel("Корреспондент", { exact: true }))
+        await reveal(page.getByLabel("Корреспондент (организация)", { exact: true }))
       ).fill('акб "Демо-Банк"');
       await (await reveal(page.getByLabel("Исходящий номер отправителя"))).fill("№ 12-07/881");
       await fillDate(page.getByLabel("Дата у отправителя"), "2026-10-18");

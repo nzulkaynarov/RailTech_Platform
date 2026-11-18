@@ -50,7 +50,12 @@ def links_of(letter: Letter) -> ErpLinks:
 
 
 def sender_of(letter: Letter) -> IncomingLetterSender:
-    return IncomingLetterSender(name=letter.sender_name, inn=letter.sender_inn, contact=letter.sender_contact)
+    return IncomingLetterSender(
+        name=letter.sender_name,
+        inn=letter.sender_inn,
+        contact=letter.sender_contact,
+        contact_id=letter.sender_contact_id,
+    )
 
 
 def _resolution(letter: Letter, directory: Directory) -> Resolution | None:

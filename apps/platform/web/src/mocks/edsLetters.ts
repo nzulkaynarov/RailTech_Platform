@@ -29,6 +29,7 @@ import {
   writeLetters,
 } from "./fixtures/letters";
 import { buildMe, readSession, sessionRoles } from "./mockSession";
+import { addresseeById, addresseePeople } from "./peopleContacts";
 import {
   canReadLetter,
   draftFrom,
@@ -388,6 +389,17 @@ export const edsLettersHandlers = [
         "Сотрудник не найден или отключён.",
       );
     }
+    const company = addresseeById(body.sender_company_id);
+    const person = body.sender_contact_id
+      ? addresseePeople(body.sender_company_id).find((p) => p.id === body.sender_contact_id)
+      : undefined;
+    if (!company || (body.sender_contact_id && !person)) {
+      return invalid(
+        "sender",
+        company ? "contact_not_found" : "company_not_found",
+        "Компания не найдена среди контрагентов.",
+      );
+    }
     const letter: LetterCard = {
       id: crypto.randomUUID(),
       number,
@@ -400,7 +412,14 @@ export const edsLettersHandlers = [
       registered_by: registrar,
       addressee,
       manager: null,
-      sender: { name: body.sender_name, inn: body.sender_inn ?? null, contact: null },
+      // СУЩ-2.6: отправитель — компания из контрагентов; название и ИНН — из её карточки
+      sender: {
+        name: company.name,
+        inn: company.inn,
+        contact: person?.name ?? null,
+        company_id: company.id,
+        contact_id: person?.id ?? null,
+      },
       sender_ref: { number: body.sender_ref_number ?? null, date: body.sender_ref_date ?? null },
       client: null,
       request: body.deal_number

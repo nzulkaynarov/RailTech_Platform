@@ -158,9 +158,8 @@ test.describe("P4: письмо на бланке", () => {
       await reveal(page.getByLabel("Вид документа")),
       "Требование или уведомление ГНК",
     );
-    await (
-      await reveal(page.getByLabel("Корреспондент", { exact: true }))
-    ).fill("ГНИ Мирабадского района");
+    await reveal(page.getByLabel("Корреспондент (организация)", { exact: true }));
+    await addAddressee(page, "ГНИ Мирабадского района", "", "Корреспондент (организация)");
     await (await reveal(page.getByLabel("Исходящий номер отправителя"))).fill("14-02/3381");
     await (
       await reveal(page.getByLabel("Тема", { exact: true }))
@@ -199,8 +198,9 @@ test.describe("P4: письмо на бланке", () => {
     await (
       await reveal(page.getByLabel("Тема", { exact: true }))
     ).fill("Пояснения по требованию № 14-02/3381");
+    // корреспондент заведён организацией при регистрации ВХ — выбирается из контрагентов (СУЩ-2.6)
     await reveal(page.getByLabel("Адресат (организация)"));
-    await addAddressee(page, "ГНИ Мирабадского района");
+    await pickAddressee(page, "Мирабад", "ГНИ Мирабадского района");
     await (await reveal(page.getByLabel("Почта адресата"))).fill("gni-mirabad@example.uz");
     await (
       await reveal(page.getByLabel("Кому (должность и ФИО)"))

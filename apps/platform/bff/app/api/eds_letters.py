@@ -31,6 +31,7 @@ from starlette.types import Send
 from app.api.inbound_mail import mail_card, mail_registration
 from app.clients.crm_proxy import CrmProxy, crm_error
 from app.clients.eds import EdsLetters, eds_error
+from app.clients.erp_company import counterparty_snapshot
 from app.deps import Authed, require, require_any, require_any_section
 from app.errors import PlatformError, backend_unavailable
 from app.feeds.feed import Feed
@@ -197,11 +198,22 @@ async def register_letter(
     «Регистрируется» и берёт его для этого сотрудника — письмо уже разобрано или в работе у другого,
     409 до EDS, второго ВХ нет (W18A-P2-3); отказ EDS возвращает письмо «в работе». «Разобрано: ВХ»
     ставит событие `letter.registered`."""
+    # СУЩ-2.6: отправитель — компания ERP и человек; название и ИНН — снимок карточки (до CRM и EDS)
+    sender = await counterparty_snapshot(
+        authed.call, body.sender_company_id, body.sender_contact_id, field="sender"
+    )
     mail_id = body.source_mail_id
     if mail_id is not None:
         await mail_registration(authed, mail_id, "start")
     try:
         payload = body.for_eds()
+        payload["sender"] = {
+            "name": sender["name"],
+            "inn": sender["inn"],
+            "contact": sender["contact_name"],
+            "contact_id": sender["contact_id"],
+        }
+        payload["links"] = {**payload.get("links", {}), "erp_company_id": sender["company_id"]}
         if mail_id is not None:
             text = await _mail_text(authed, mail_id)
             if text:

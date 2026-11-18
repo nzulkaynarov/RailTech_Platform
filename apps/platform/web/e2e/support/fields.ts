@@ -85,8 +85,13 @@ export async function openStep(page: Page, title: string | RegExp): Promise<void
 }
 
 /** Адресат письма — только из контрагентов (СУЩ-2.6): поиск по названию и выбор подсказки `name`. */
-export async function pickAddressee(page: Page, query: string, name: string): Promise<void> {
-  const field = page.getByLabel("Адресат (организация)");
+export async function pickAddressee(
+  page: Page,
+  query: string,
+  name: string,
+  label = "Адресат (организация)",
+): Promise<void> {
+  const field = page.getByLabel(label, { exact: true });
   await field.scrollIntoViewIfNeeded();
   await field.fill(query);
   await page.locator(".ant-select-item-option").filter({ hasText: name }).first().click();
@@ -94,8 +99,13 @@ export async function pickAddressee(page: Page, query: string, name: string): Pr
 }
 
 /** Адресата нет в контрагентах — «Завести организацию» из подсказок (название, ИНН) и выбрать её. */
-export async function addAddressee(page: Page, name: string, inn = ""): Promise<void> {
-  const field = page.getByLabel("Адресат (организация)");
+export async function addAddressee(
+  page: Page,
+  name: string,
+  inn = "",
+  label = "Адресат (организация)",
+): Promise<void> {
+  const field = page.getByLabel(label, { exact: true });
   await field.scrollIntoViewIfNeeded();
   // правка открывает подсказки, даже если поле уже заполнено (ответ на входящее)
   await field.fill(name.slice(0, -1));
