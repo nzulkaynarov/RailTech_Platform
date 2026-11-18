@@ -46,14 +46,33 @@ class CrmClient(BackendClient):
         )
 
     async def login(
-        self, email: str, password: str, client_ip: str | None = None
+        self,
+        email: str,
+        password: str,
+        client_ip: str | None = None,
+        device_token: str | None = None,
     ) -> httpx.Response:
         """Вход. `client_ip` — адрес сотрудника: CRM видит только BFF, а аудит входа ведёт по
-        `X-Forwarded-For` (uvicorn `proxy_headers`, `FORWARDED_ALLOW_IPS` у crm-api)."""
+        `X-Forwarded-For` (uvicorn `proxy_headers`, `FORWARDED_ALLOW_IPS` у crm-api).
+        `device_token` — метка «запомнить устройство» после второго фактора (ДВ-4)."""
+        payload = {"email": email, "password": password}
+        if device_token:
+            payload["device_token"] = device_token
         return await self.send(
             "POST",
             "/api/v1/auth/login",
-            json={"email": email, "password": password},
+            json=payload,
+            headers={"X-Forwarded-For": client_ip} if client_ip else None,
+        )
+
+    async def login_second_factor(
+        self, challenge: str, code: str, remember: bool, client_ip: str | None = None
+    ) -> httpx.Response:
+        """Второй шаг входа (ДВ-4): код приложения-аутентификатора или резервный код."""
+        return await self.send(
+            "POST",
+            "/api/v1/auth/login/second-factor",
+            json={"challenge": challenge, "code": code, "remember_device": remember},
             headers={"X-Forwarded-For": client_ip} if client_ip else None,
         )
 

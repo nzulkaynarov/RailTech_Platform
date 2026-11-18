@@ -102,7 +102,9 @@ async def create_first_admin(
         # Администратор создан, ответ CRM опоздал: входим теми же данными; не подошли (создал
         # кто-то другой) — «первый запуск выполнен, войдите».
         try:
-            opened = await service.login(email, body.password.get_secret_value(), client_ip)
+            opened = await service.login_without_factor(
+                email, body.password.get_secret_value(), client_ip
+            )
         except PlatformError:
             # Неверный пароль после позднего ответа — обычная неудачная попытка: лимит расходуется.
             raise exc from None
@@ -115,7 +117,9 @@ async def create_first_admin(
         if refresh:
             await service.crm.logout(refresh)
         try:
-            opened = await service.login(email, body.password.get_secret_value(), client_ip)
+            opened = await service.login_without_factor(
+                email, body.password.get_secret_value(), client_ip
+            )
         except BaseException:
             await limiter.refund(attempt)
             raise

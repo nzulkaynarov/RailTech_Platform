@@ -11,7 +11,7 @@ from app.api.deps import ContainerDep, client_ip, require
 from app.api.health import get_readiness
 from app.api.v1.auth import respond_with_session
 from app.api.v1.system_status import collect_components
-from app.domain.errors import ValidationFailedError
+from app.domain.errors import AuthError, ValidationFailedError
 from app.schemas.auth import TokenResponse
 from app.schemas.setup import (
     CabinetCheckIn,
@@ -26,7 +26,7 @@ from app.schemas.setup import (
 )
 from app.security.principal import Principal
 from app.services import setup_checklist as checks
-from app.services.auth import ClientInfo
+from app.services.auth import ClientInfo, Session
 from app.services.readiness import ReadinessService
 
 router = APIRouter(prefix="/api/v1/setup", tags=["setup"])
@@ -71,6 +71,8 @@ async def create_first_admin(
     )
     client = ClientInfo(ip=ip, user_agent=request.headers.get("user-agent"))
     session = await container.auth_service.login(body.email, body.password, client)
+    if not isinstance(session, Session):  # у только что созданного администратора фактора нет
+        raise AuthError("second factor is not expected for a new admin")
     return respond_with_session(response, session, container.settings)
 
 

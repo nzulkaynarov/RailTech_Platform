@@ -11,6 +11,7 @@ import { PageHeader } from "../../shared/ui/PageHeader";
 import { NotificationSettings } from "../profile-notifications/NotificationSettings";
 import { DeputySection } from "./DeputySection";
 import { IdentitySection } from "./IdentitySection";
+import { SecondFactorSection } from "./SecondFactorSection";
 import { Section } from "./Section";
 import { TelegramSection } from "./TelegramSection";
 
@@ -19,15 +20,17 @@ import "./profile.css";
 /**
  * Профиль `/me` (W15-H6, UX-оценка P1-3): страница, а не окно. Фото, личные данные, «Telegram для уведомлений»,
  * подписки на уведомления бота и замещение. Данные принадлежат CRM (ADR-0015), сотрудник правит только свои; должность и
- * роли — только чтение. Вкладки «Все разделы · Личные данные · Уведомления · Замещение» — в адресе `?part=`.
+ * роли — только чтение. Вкладки «Все разделы · Личные данные · Уведомления · Замещение · Безопасность» — в адресе
+ * `?part=`; «Безопасность» — второй фактор входа (ДВ-4).
  */
-const PARTS = ["all", "general", "notifications", "deputy"] as const;
+const PARTS = ["all", "general", "notifications", "deputy", "security"] as const;
 type Part = (typeof PARTS)[number];
 const PART_LABEL: Record<Part, string> = {
   all: "profile:tabs.all",
   general: "profile:tabs.general",
   notifications: "audit:profile.notifications",
   deputy: "profile:deputy.title",
+  security: "profile:tabs.security",
 };
 
 export function ProfilePage() {
@@ -69,6 +72,7 @@ export function ProfilePage() {
         </Section>
       ) : null}
       {key === "all" || key === "deputy" ? <DeputySection profile={data} /> : null}
+      {key === "all" || key === "security" ? <SecondFactorSection /> : null}
     </div>
   );
 

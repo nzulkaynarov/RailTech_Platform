@@ -105,7 +105,14 @@ def jwt_expiry(token: str) -> float | None:
 
 # Коды отказа входа, которые считаются неудачной попыткой (подбор пароля, перебор пользователей).
 # Всё остальное — верные учётные данные или сбой бэкенда — лимит не расходует.
-FAILED_LOGIN_CODES = frozenset({"INVALID_CREDENTIALS", "ACCOUNT_LOCKED"})
+FAILED_LOGIN_CODES = frozenset({"INVALID_CREDENTIALS", "ACCOUNT_LOCKED", "SECOND_FACTOR_INVALID"})
+
+
+@dataclass(frozen=True)
+class SecondFactorChallenge:
+    """Пароль верен, нужен код второго фактора (ДВ-4): сессии ещё нет."""
+
+    challenge: str
 
 
 @dataclass(frozen=True)
@@ -199,10 +206,14 @@ class AuthService:
     # --- вход -------------------------------------------------------------------------------------
 
     async def login(
-        self, email: str, password: str, client_ip: str | None = None
-    ) -> tuple[str, SessionData]:
+        self,
+        email: str,
+        password: str,
+        client_ip: str | None = None,
+        device_token: str | None = None,
+    ) -> tuple[str, SessionData] | SecondFactorChallenge:
         try:
-            resp = await self.crm.login(email, password, client_ip)
+            resp = await self.crm.login(email, password, client_ip, device_token)
         except BackendUnavailableError as exc:
             raise backend_unavailable("crm", exc.reason) from exc
         if resp.status_code in (401, 403):
@@ -213,7 +224,47 @@ class AuthService:
                 source="crm",
                 details={"backend_code": backend_code(resp)} if backend_code(resp) else None,
             )
+        if resp.status_code == 202:
+            return SecondFactorChallenge(str(resp.json()["challenge"]))
         _expect(resp, "crm")
+        return await self._session_from_crm(resp)
+
+    async def login_without_factor(
+        self, email: str, password: str, client_ip: str | None = None
+    ) -> tuple[str, SessionData]:
+        """Вход, где второго фактора быть не может (первый администратор только что создан)."""
+        result = await self.login(email, password, client_ip)
+        if isinstance(result, SecondFactorChallenge):
+            raise PlatformError(
+                "INVALID_CREDENTIALS", "Войдите заново.", status_code=401, source="crm"
+            )
+        return result
+
+    async def second_factor(
+        self, challenge: str, code: str, remember: bool, client_ip: str | None = None
+    ) -> tuple[str, SessionData, str | None]:
+        """Второй шаг входа (ДВ-4): сессия и, если «запомнить», метка устройства CRM."""
+        try:
+            resp = await self.crm.login_second_factor(challenge, code, remember, client_ip)
+        except BackendUnavailableError as exc:
+            raise backend_unavailable("crm", exc.reason) from exc
+        if resp.status_code == 401:
+            if backend_code(resp) == "second_factor_invalid":
+                raise PlatformError(
+                    "SECOND_FACTOR_INVALID", "Неверный код.", status_code=401, source="crm"
+                )
+            raise PlatformError(
+                "SECOND_FACTOR_EXPIRED",
+                "Время на ввод кода вышло. Войдите заново.",
+                status_code=401,
+                source="crm",
+            )
+        _expect(resp, "crm")
+        device = resp.json().get("device_token")
+        sid, data = await self._session_from_crm(resp)
+        return sid, data, device if isinstance(device, str) and device else None
+
+    async def _session_from_crm(self, resp: httpx.Response) -> tuple[str, SessionData]:
         tokens = CrmClient.tokens(resp)
         if tokens.refresh is None:
             raise backend_unavailable("crm", "no_refresh_cookie")

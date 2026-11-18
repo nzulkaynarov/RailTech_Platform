@@ -205,6 +205,11 @@ class Reason(StrEnum):
     MAIL_RULE_EXISTS = "mail_rule_exists"
     MAIL_TYPE_INACTIVE = "mail_type_inactive"
     MAIL_NO_HANDOVER_TARGET = "mail_no_handover_target"
+    # Второй фактор (ДВ-4)
+    SECOND_FACTOR_CODE_INVALID = "second_factor_code_invalid"
+    SECOND_FACTOR_NOT_STARTED = "second_factor_not_started"
+    SECOND_FACTOR_ALREADY_ENABLED = "second_factor_already_enabled"
+    SECOND_FACTOR_NOT_ENABLED = "second_factor_not_enabled"
 
 
 class DomainError(Exception):
@@ -286,6 +291,19 @@ class AccountLockedError(AuthError):
 
 class PasswordChangeRequiredError(DomainError):
     code = "password_change_required"
+
+
+class SecondFactorCodeError(AuthError):
+    """Неверный код второго фактора на входе (ДВ-4): 401, неудача считается в блокировку."""
+
+    code = "second_factor_invalid"
+
+
+class SecondFactorSetupError(DomainError):
+    """Настройка второго фактора: неверный код подтверждения, нет начатой настройки, нет ключа
+    шифрования секретов (`SECRETS_KEY`) — 422 с `details.reason`."""
+
+    code = "second_factor_setup_failed"
 
 
 class ValidationFailedError(DomainError):

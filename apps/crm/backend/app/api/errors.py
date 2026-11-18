@@ -22,6 +22,7 @@ STATUS: dict[type[e.DomainError], int] = {
     e.AuthError: status.HTTP_401_UNAUTHORIZED,
     e.AccountLockedError: status.HTTP_423_LOCKED,
     e.ValidationFailedError: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    e.SecondFactorSetupError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     e.UpstreamUnavailableError: status.HTTP_502_BAD_GATEWAY,
     e.RateLimitedError: status.HTTP_429_TOO_MANY_REQUESTS,
     e.PayloadTooLargeError: status.HTTP_413_CONTENT_TOO_LARGE,

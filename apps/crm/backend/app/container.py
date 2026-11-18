@@ -86,6 +86,7 @@ if TYPE_CHECKING:
     from app.services.portal_invites import PortalInviteService
     from app.services.request_retry import RequestRetryService
     from app.services.sandbox import SandboxService
+    from app.services.second_factor import SecondFactorService
     from app.services.setup import SetupService
     from app.services.smtp_connector import SmtpConnectorService
     from app.services.sso import SsoService
@@ -249,6 +250,12 @@ class Container:
         from app.services.auth import AuthService
 
         return AuthService(self.session_factory, self.settings)
+
+    @cached_property
+    def second_factor_service(self) -> "SecondFactorService":
+        from app.services.second_factor import SecondFactorService
+
+        return SecondFactorService(self.session_factory, self.settings)
 
     @cached_property
     def sso_service(self) -> "SsoService":

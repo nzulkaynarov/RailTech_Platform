@@ -447,6 +447,11 @@ paths:
       description: |
         BFF входит в CRM теми же логином и паролем, читает профиль и роли Платформы, при доступе к ERP получает
         сессию ERP SSO-обменом. Ответ ставит `rt_pf_session` и `rt_pf_csrf`.
+
+        Второй фактор (ДВ-4): у сотрудника с включённым кодом из приложения-аутентификатора ответ — 202
+        `SecondFactorChallenge` без сессии; код — `POST /auth/login/second-factor`. С меткой `pf_device` (HttpOnly,
+        путь `/api/v1/auth`, 30 дней — ставит второй шаг с `remember_device`) код не спрашивается, пока не сменились
+        пароль и сам фактор.
       security: []
       requestBody:
         required: true
@@ -455,6 +460,12 @@ paths:
             schema:
               $ref: '#/components/schemas/LoginIn'
       responses:
+        '202':
+          description: Пароль верен, нужен код второго фактора; сессии нет
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecondFactorChallenge'
         '200':
           description: Вошёл
           headers:
@@ -492,6 +503,60 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+
+  /auth/login/second-factor:
+    post:
+      tags: [auth]
+      operationId: loginSecondFactor
+      summary: Второй шаг входа — код приложения или резервный код (ДВ-4)
+      description: >-
+        Без сессии: `challenge` из ответа 202 на `/auth/login` (живёт 5 минут) и код — 6 цифр из приложения или резервный
+        `XXXX-XXXX` (каждый на один вход). `remember_device` — метка `pf_device` на 30 дней. Неверный код — 401
+        `SECOND_FACTOR_INVALID` (неверные коды считает CRM: после десяти — 423 `ACCOUNT_LOCKED`); время вышло — 401
+        `SECOND_FACTOR_EXPIRED`, войти заново. Тот же лимит попыток по IP, что у входа.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SecondFactorLoginIn'
+      responses:
+        '200':
+          description: Вошёл
+          headers:
+            Set-Cookie:
+              description: '`rt_pf_session`, `rt_pf_csrf` и при `remember_device` — `pf_device`'
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '401':
+          description: '`SECOND_FACTOR_INVALID` — неверный код; `SECOND_FACTOR_EXPIRED` — время на ввод вышло'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: '`NO_PLATFORM_ROLE` — у сотрудника нет ни одной роли Платформы'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '423':
+          description: '`ACCOUNT_LOCKED` — слишком много неверных кодов'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
 
   /auth/forgot-password:
     post:
@@ -900,6 +965,103 @@ paths:
           $ref: '#/components/responses/SessionExpired'
         '403':
           $ref: '#/components/responses/CsrfFailed'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /me/second-factor:
+    get:
+      tags: [me]
+      operationId: getSecondFactor
+      summary: Второй фактор входа — состояние (ДВ-4)
+      description: Свой фактор; доступно каждому вошедшему сотруднику (CRM `/me/second-factor`).
+      responses:
+        '200':
+          description: Состояние
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecondFactorStatus'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+
+  /me/second-factor/setup:
+    post:
+      tags: [me]
+      operationId: setupSecondFactor
+      summary: Начать настройку — секрет и адрес для QR (ДВ-4)
+      description: >-
+        Секрет для приложения-аутентификатора (Google Authenticator, Microsoft Authenticator и т. п.) и адрес
+        `otpauth://` для QR-кода; запись в приложении подписана названием компании из настроек. Фактор ещё не включён — его
+        включает `enable` с кодом. Уже включён — 422 `VALIDATION_FAILED` (`details.reason = second_factor_already_enabled`);
+        не задан ключ шифрования секретов CRM — 422 (`secrets_key_missing`).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Секрет
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecondFactorSetup'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /me/second-factor/enable:
+    post:
+      tags: [me]
+      operationId: enableSecondFactor
+      summary: Включить второй фактор кодом из приложения (ДВ-4)
+      description: >-
+        Код из приложения подтверждает настройку и включает фактор; ответ — восемь резервных кодов, показываются один раз.
+        Неверный код — 422 `VALIDATION_FAILED` (`second_factor_code_invalid`); настройка не начата —
+        `second_factor_not_started`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SecondFactorCodeIn'
+      responses:
+        '200':
+          description: Включён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecondFactorEnabled'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /me/second-factor/disable:
+    post:
+      tags: [me]
+      operationId: disableSecondFactor
+      summary: Выключить второй фактор (ДВ-4)
+      description: Кодом из приложения или резервным. Неверный — 422 `VALIDATION_FAILED` (`second_factor_code_invalid`).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SecondFactorCodeIn'
+      responses:
+        '204':
+          description: Выключен
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationFailed'
 
@@ -16657,6 +16819,48 @@ components:
           type: string
           maxLength: 3
 
+    SecondFactorChallenge:
+      type: object
+      additionalProperties: false
+      required: [second_factor_required, challenge]
+      properties:
+        second_factor_required: {type: boolean, enum: [true]}
+        challenge: {type: string, description: 'Непрозрачная строка на 5 минут для `/auth/login/second-factor`'}
+    SecondFactorLoginIn:
+      type: object
+      additionalProperties: false
+      required: [challenge, code]
+      properties:
+        challenge: {type: string, minLength: 1, maxLength: 2048}
+        code: {type: string, minLength: 6, maxLength: 16, description: '6 цифр из приложения или резервный код `XXXX-XXXX`'}
+        remember_device: {type: boolean, default: false, description: 'Не спрашивать код на этом устройстве 30 дней'}
+    SecondFactorStatus:
+      type: object
+      additionalProperties: false
+      required: [enabled, enabled_at, backup_codes_left]
+      properties:
+        enabled: {type: boolean}
+        enabled_at: {type: [string, 'null'], format: date-time}
+        backup_codes_left: {type: integer, minimum: 0}
+    SecondFactorSetup:
+      type: object
+      additionalProperties: false
+      required: [secret, otpauth_uri]
+      properties:
+        secret: {type: string, description: 'Ключ для ручного ввода в приложение (base32)'}
+        otpauth_uri: {type: string, description: 'Адрес для QR-кода'}
+    SecondFactorCodeIn:
+      type: object
+      additionalProperties: false
+      required: [code]
+      properties:
+        code: {type: string, minLength: 6, maxLength: 16}
+    SecondFactorEnabled:
+      type: object
+      additionalProperties: false
+      required: [backup_codes]
+      properties:
+        backup_codes: {type: array, items: {type: string}, minItems: 1}
     LoginIn:
       type: object
       additionalProperties: false

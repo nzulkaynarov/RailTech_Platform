@@ -157,6 +157,36 @@
   },
   "tabs": {
     "all": "Barcha bo‘limlar",
-    "general": "Shaxsiy ma’lumotlar"
+    "general": "Shaxsiy ma’lumotlar",
+    "security": "Xavfsizlik"
+  },
+  "secondFactor": {
+    "title": "Ilovadagi kod bilan kirish",
+    "lead": "Paroldan keyin Platforma telefondagi autentifikator ilovasidan 6 ta raqam söraydi. Eslab qolingan qurilmada — 30 kunda bir marta.",
+    "off": "Hozir faqat parol bilan kirilmoqda.",
+    "on": "{{date}} dan yoqilgan. Qolgan zaxira kodlar: {{left}}.",
+    "enable": "Yoqish",
+    "disable": "Öçirish",
+    "disableTitle": "Kod bilan kirish öçirilsinmi?",
+    "codeOrBackup": "Ilovadagi kod yoki zaxira kod",
+    "scan": "QR-kodni autentifikator ilovasi bilan skanerlang (Google Authenticator, Microsoft Authenticator va b.).",
+    "manual": "Skanerlanmasa — kalitni qölda kiriting:",
+    "code": "Ilovadagi kod",
+    "confirm": "Tasdiqlash",
+    "cancel": "Bekor qilish",
+    "backupTitle": "Kod bilan kirish yoqildi. Zaxira kodlarni saqlang",
+    "backupHint": "Har bir kod telefonsiz bir marta kirish uçun. Ularni boşqa körsatmaymiz.",
+    "download": "Yuklab olish",
+    "copy": "Nusxalash",
+    "copied": "Kodlar nusxalandi",
+    "saved": "Kodlarni saqladim",
+    "disabled": "Kod bilan kirish öçirildi",
+    "errors": {
+      "second_factor_code_invalid": "Kod notöğri. Telefondagi vaqtni tekşirib, qayta urinib köring.",
+      "second_factor_already_enabled": "Kod bilan kirish allaqachon yoqilgan.",
+      "secrets_key_missing": "Yoqib bölmaydi: administrator maxfiy kalitlarni şifrlash kalitini körsatmagan.",
+      "default": "Bölmadi. Qayta urinib köring."
+    },
+    "qrLabel": "Autentifikator ilovasi uçun QR-kod"
   }
 }

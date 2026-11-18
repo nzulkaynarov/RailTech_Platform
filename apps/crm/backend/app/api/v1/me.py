@@ -17,6 +17,11 @@ from app.schemas.auth import (
     MePatch,
     PermissionsResponse,
     PlatformRoleGrantRef,
+    SecondFactorCodeRequest,
+    SecondFactorEnabledResponse,
+    SecondFactorSetupRequest,
+    SecondFactorSetupResponse,
+    SecondFactorStatusResponse,
     TelegramLinkOut,
 )
 from app.schemas.leads import ActionResult
@@ -199,3 +204,48 @@ async def permissions(
     if principal.must_change_password:
         matrix = {r: dict.fromkeys(actions, False) for r, actions in matrix.items()}
     return PermissionsResponse(roles=list(principal.roles), permissions=matrix)
+
+
+# --- второй фактор (ДВ-4) ---------------------------------------------------------------------
+
+
+@router.get("/second-factor", response_model=SecondFactorStatusResponse)
+async def second_factor_status(
+    principal: Settled, container: ContainerDep
+) -> SecondFactorStatusResponse:
+    found = await container.second_factor_service.status(principal.user_id)
+    return SecondFactorStatusResponse(
+        enabled=found.enabled,
+        enabled_at=found.enabled_at,
+        backup_codes_left=found.backup_codes_left,
+    )
+
+
+@router.post("/second-factor/setup", response_model=SecondFactorSetupResponse)
+async def second_factor_setup(
+    principal: Settled, container: ContainerDep, body: SecondFactorSetupRequest | None = None
+) -> SecondFactorSetupResponse:
+    """Секрет для приложения-аутентификатора (и адрес для QR); включает фактор `enable` с кодом."""
+    setup = await container.second_factor_service.setup(
+        principal.actor, principal.user_id, body.issuer if body else ""
+    )
+    return SecondFactorSetupResponse(secret=setup.secret, otpauth_uri=setup.otpauth_uri)
+
+
+@router.post("/second-factor/enable", response_model=SecondFactorEnabledResponse)
+async def second_factor_enable(
+    body: SecondFactorCodeRequest, principal: Settled, container: ContainerDep
+) -> SecondFactorEnabledResponse:
+    """Код из приложения включает фактор; резервные коды — в ответе, один раз."""
+    codes = await container.second_factor_service.enable(
+        principal.actor, principal.user_id, body.code
+    )
+    return SecondFactorEnabledResponse(backup_codes=codes)
+
+
+@router.post("/second-factor/disable", status_code=204)
+async def second_factor_disable(
+    body: SecondFactorCodeRequest, principal: Settled, container: ContainerDep
+) -> None:
+    """Выключить — кодом из приложения или резервным."""
+    await container.second_factor_service.disable(principal.actor, principal.user_id, body.code)

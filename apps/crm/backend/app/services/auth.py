@@ -13,14 +13,17 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
-from app.domain.errors import AccountLockedError, AuthError
+from app.domain.errors import AccountLockedError, AuthError, SecondFactorCodeError
 from app.models.auth import RefreshToken, User
 from app.repositories import users as repo
-from app.security import audit, reauth
+from app.security import audit, reauth, second_factor
 from app.security.audit import Actor
 from app.security.passwords import hash_password, needs_rehash, verify_password
+from app.security.second_factor import FactorClaims
+from app.security.secrets_store import SecretCipher, SecretsKeyError
 from app.security.tokens import (
     AccessClaims,
+    TokenError,
     closed_by_password_change,
     hash_refresh_token,
     issue_access,
@@ -45,6 +48,13 @@ class Session:
 
 
 @dataclass(frozen=True, slots=True)
+class SecondFactorRequired:
+    """Пароль верен, нужен код второго фактора (ДВ-4): сессии ещё нет, `challenge` — на 5 минут."""
+
+    challenge: str
+
+
+@dataclass(frozen=True, slots=True)
 class ClientInfo:
     ip: str | None = None
     user_agent: str | None = None
@@ -55,9 +65,32 @@ class AuthService:
         self._sessions = sessions
         self._settings = settings
 
-    async def login(self, email: str, password: str, client: ClientInfo) -> Session:
+    @property
+    def _key(self) -> bytes:
+        return self._settings.jwt_secret.get_secret_value().encode()
+
+    def _trusted_device(self, user: User, device_token: str | None) -> bool:
+        """Метка «запомнить устройство» этого сотрудника при тех же версиях пароля и фактора."""
+        if not device_token:
+            return False
+        try:
+            claims = second_factor.decode_device(self._key, device_token)
+        except TokenError:
+            return False
+        return (
+            claims.user_id == user.id
+            and claims.password_version == password_version(user.password_changed_at)
+            and claims.factor_version == second_factor.version_of(user.totp_enabled_at)
+        )
+
+    async def login(
+        self, email: str, password: str, client: ClientInfo, device_token: str | None = None
+    ) -> Session | SecondFactorRequired:
+        """Пароль; у сотрудника со вторым фактором — `SecondFactorRequired`, если устройство не
+        запомнено (ДВ-4). Сессию тогда выдаёт `second_factor`."""
         now = datetime.now(UTC)
         failure: AuthError | None = None
+        result: Session | SecondFactorRequired
         async with self._sessions() as session, session.begin():
             user = await repo.by_email(session, email, for_update=True)
             if user is None or not user.is_active:
@@ -74,14 +107,106 @@ class AuthService:
             else:
                 if needs_rehash(user.password_hash):
                     user.password_hash = hash_password(password)
+                user.failed_logins, user.locked_until = 0, None
+                if user.totp_enabled_at is not None and not self._trusted_device(
+                    user, device_token
+                ):
+                    claims = FactorClaims(user.id, password_version(user.password_changed_at))
+                    result = SecondFactorRequired(
+                        second_factor.issue_challenge(self._key, claims, now)
+                    )
+                else:
+                    user.last_login_at = now
+                    result = await self._issue(session, user, new_family(), client, now)
+                    await audit.record(
+                        session, Actor(user.id, ip=client.ip), "auth.login", "user", user.id
+                    )
+        if failure is not None:
+            raise failure
+        return result
+
+    async def second_factor(
+        self, challenge: str, code: str, remember: bool, client: ClientInfo
+    ) -> tuple[Session, str | None]:
+        """Код приложения или резервный код после пароля (ДВ-4). Неверный код — в счёт блокировки.
+        `remember` — метка устройства на 30 дней (второй элемент результата)."""
+        now = datetime.now(UTC)
+        try:
+            claims = second_factor.decode_challenge(self._key, challenge)
+        except TokenError as exc:
+            raise AuthError("second factor challenge expired") from exc
+        failure: AuthError | None = None
+        device: str | None = None
+        async with self._sessions() as session, session.begin():
+            user = await repo.get(session, claims.user_id, for_update=True)
+            if (
+                user is None
+                or not user.is_active
+                or user.totp_enabled_at is None
+                or user.totp_secret is None
+                or claims.password_version != password_version(user.password_changed_at)
+            ):
+                raise AuthError("second factor challenge expired")
+            if user.locked_until is not None and user.locked_until > now:
+                raise AccountLockedError("account locked", until=user.locked_until.isoformat())
+            step = second_factor.accept_code(
+                self._secret(user.totp_secret), code, user.totp_last_step, now
+            )
+            remaining = (
+                None
+                if step is not None
+                else second_factor.consume_backup_code(user.totp_backup_codes, code)
+            )
+            if step is None and remaining is None:
+                failure = self._register_failure(user, now)
+                if not isinstance(failure, AccountLockedError):
+                    failure = SecondFactorCodeError("invalid second factor code")
+                await audit.record(
+                    session,
+                    Actor(user.id, ip=client.ip),
+                    "auth.second_factor_failed",
+                    "user",
+                    user.id,
+                )
+            else:
+                if step is not None:
+                    user.totp_last_step = step
+                else:
+                    user.totp_backup_codes = remaining or []
+                    await audit.record(
+                        session,
+                        Actor(user.id, ip=client.ip),
+                        "auth.backup_code_used",
+                        "user",
+                        user.id,
+                    )
                 user.failed_logins, user.locked_until, user.last_login_at = 0, None, now
                 result = await self._issue(session, user, new_family(), client, now)
+                if remember:
+                    device = second_factor.issue_device(
+                        self._key,
+                        FactorClaims(
+                            user.id,
+                            password_version(user.password_changed_at),
+                            second_factor.version_of(user.totp_enabled_at),
+                        ),
+                        now,
+                    )
                 await audit.record(
                     session, Actor(user.id, ip=client.ip), "auth.login", "user", user.id
                 )
         if failure is not None:
             raise failure
-        return result
+        return result, device
+
+    def _secret(self, ciphertext: bytes) -> str:
+        cipher = SecretCipher.optional(self._settings.secrets_key.get_secret_value())
+        if cipher is None:
+            raise AuthError("second factor unavailable: no encryption key for secrets")
+        try:
+            return cipher.decrypt(ciphertext)
+        except SecretsKeyError as exc:
+            raise AuthError("second factor unavailable: secrets encryption key replaced") from exc
 
     async def refresh(self, token: str, client: ClientInfo) -> Session:
         now = datetime.now(UTC)

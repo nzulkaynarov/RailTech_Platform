@@ -13,6 +13,7 @@ from sqlalchemy import (
     Identity,
     Index,
     Integer,
+    LargeBinary,
     SmallInteger,
     String,
     Text,
@@ -106,6 +107,16 @@ class User(TimestampMixin, Base):
     # (версия адреса картинки). Файл отдаёт только API, публичных ссылок на S3 нет.
     avatar_key: Mapped[str | None] = mapped_column(String(255))
     avatar_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Второй фактор (ДВ-4, реестр рисков Д1): секрет приложения-аутентификатора (RFC 6238) — шифр
+    # Fernet ключом `SECRETS_KEY`; `pending` — выданный при настройке, ещё не подтверждённый кодом.
+    # `totp_enabled_at` — включён и с какого момента (версия: метки «запомнить устройство» до
+    # повторного включения не действуют); `totp_last_step` — последний принятый шаг 30 с (код не
+    # принимается дважды); резервные коды — sha256, каждый на один вход.
+    totp_secret: Mapped[bytes | None] = mapped_column(LargeBinary)
+    totp_pending_secret: Mapped[bytes | None] = mapped_column(LargeBinary)
+    totp_enabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    totp_last_step: Mapped[int | None] = mapped_column(BigInteger)
+    totp_backup_codes: Mapped[list[str]] = mapped_column(JSONB, server_default=sql("'[]'::jsonb"))
     # Замещение: на период включительно очередь сотрудника видит заместитель.
     deputy_user_id: Mapped[int | None] = mapped_column(
         BigInteger, ForeignKey("users.id", ondelete="SET NULL")

@@ -55,6 +55,7 @@ from app.api import (
     me,
     me_notifications,
     me_profile,
+    me_second_factor,
     notifications,
     people_contacts,
     search,
@@ -123,6 +124,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(auth.router, prefix=API_PREFIX)
     app.include_router(me.router, prefix=API_PREFIX)
     app.include_router(me_notifications.router, prefix=API_PREFIX)
+    app.include_router(me_second_factor.router, prefix=API_PREFIX)
     app.include_router(tickets.router, prefix=API_PREFIX)
     app.include_router(company_articles.router, prefix=API_PREFIX)
     app.include_router(me_profile.router, prefix=API_PREFIX)

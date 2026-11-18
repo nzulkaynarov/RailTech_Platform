@@ -3,6 +3,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Cookie, Request, Response, status
+from fastapi.responses import JSONResponse
 
 from app.api.deps import ContainerDep, PrincipalDep, client_ip
 from app.config import Settings
@@ -12,11 +13,13 @@ from app.schemas.auth import (
     ForgotPasswordRequest,
     LoginRequest,
     ResetPasswordRequest,
+    SecondFactorChallengeResponse,
+    SecondFactorLoginRequest,
     SsoTokenRequest,
     SsoTokenResponse,
     TokenResponse,
 )
-from app.services.auth import ClientInfo, Session
+from app.services.auth import ClientInfo, SecondFactorRequired, Session
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
@@ -45,12 +48,39 @@ def respond_with_session(response: Response, session: Session, settings: Setting
     )
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post(
+    "/login",
+    response_model=TokenResponse,
+    responses={202: {"model": SecondFactorChallengeResponse}},
+)
 async def login(
     body: LoginRequest, request: Request, response: Response, container: ContainerDep
+) -> TokenResponse | JSONResponse:
+    """Вход паролем. Со вторым фактором (ДВ-4) и без запомненного устройства — 202 с `challenge`:
+    сессии ещё нет, код — `POST /auth/login/second-factor`."""
+    result = await container.auth_service.login(
+        body.email, body.password, _client(request), body.device_token
+    )
+    if isinstance(result, SecondFactorRequired):
+        return JSONResponse(
+            SecondFactorChallengeResponse(challenge=result.challenge).model_dump(),
+            status_code=status.HTTP_202_ACCEPTED,
+        )
+    return respond_with_session(response, result, container.settings)
+
+
+@router.post("/login/second-factor", response_model=TokenResponse)
+async def login_second_factor(
+    body: SecondFactorLoginRequest, request: Request, response: Response, container: ContainerDep
 ) -> TokenResponse:
-    session = await container.auth_service.login(body.email, body.password, _client(request))
-    return respond_with_session(response, session, container.settings)
+    """Код приложения-аутентификатора или резервный код (ДВ-4). Неверный — 401
+    `second_factor_invalid` (в счёт блокировки), просрочен `challenge` — 401 `auth_failed`."""
+    session, device = await container.auth_service.second_factor(
+        body.challenge, body.code, body.remember_device, _client(request)
+    )
+    out = respond_with_session(response, session, container.settings)
+    out.device_token = device
+    return out
 
 
 @router.post("/refresh", response_model=TokenResponse)

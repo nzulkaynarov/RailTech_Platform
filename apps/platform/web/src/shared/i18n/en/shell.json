@@ -120,9 +120,24 @@
       "TOO_MANY_REQUESTS": "Too many sign-in attempts. Wait a minute and try again.",
       "BACKEND_UNAVAILABLE": "Cannot reach CRM. Try signing in again in a moment.",
       "CSRF_FAILED": "The browser session is out of date. Reload the page and sign in again.",
-      "default": "Could not sign in. Please try again."
+      "default": "Could not sign in. Please try again.",
+      "SECOND_FACTOR_INVALID": "Wrong code. Check the time on your phone and try again.",
+      "SECOND_FACTOR_EXPIRED": "Time to enter the code is over. Sign in again.",
+      "ACCOUNT_LOCKED": "Too many wrong attempts. The account is temporarily locked — try again later."
     },
-    "expired": "Your session has expired. Please sign in again."
+    "expired": "Your session has expired. Please sign in again.",
+    "secondFactor": {
+      "title": "Code from the app",
+      "lead": "Enter the 6 digits from your authenticator app.",
+      "leadBackup": "Enter one of the backup codes you saved during setup.",
+      "code": "Code",
+      "backupCode": "Backup code",
+      "codeRequired": "Enter the code",
+      "remember": "Remember this device for 30 days",
+      "useBackup": "No phone — use a backup code",
+      "useApp": "Code from the app",
+      "back": "Back"
+    }
   },
   "changePassword": {
     "title": "Change password",

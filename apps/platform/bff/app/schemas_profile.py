@@ -4,6 +4,7 @@
 Данные приносит CRM (`GET /api/v1/me`, ADR-0015); BFF переводит поля и прячет числовой id Telegram.
 """
 
+from datetime import datetime
 from typing import Annotated, Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -151,3 +152,30 @@ def to_profile(crm: dict[str, Any], covering: list[dict[str, Any]]) -> Profile:
             for c in covering
         ],
     )
+
+
+class SecondFactorStatus(BaseModel):
+    """Второй фактор сотрудника (ДВ-4): включён ли, с какого момента, сколько резервных кодов."""
+
+    enabled: bool
+    enabled_at: datetime | None
+    backup_codes_left: int
+
+
+class SecondFactorSetup(BaseModel):
+    """Секрет для приложения-аутентификатора и адрес `otpauth://` для QR-кода."""
+
+    secret: str
+    otpauth_uri: str
+
+
+class SecondFactorCodeIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    code: str = Field(min_length=6, max_length=16)
+
+
+class SecondFactorEnabled(BaseModel):
+    """Резервные коды — показываются один раз, каждый на один вход без телефона."""
+
+    backup_codes: list[str]

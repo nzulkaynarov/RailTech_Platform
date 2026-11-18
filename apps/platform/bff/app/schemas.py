@@ -23,6 +23,23 @@ class LoginIn(BaseModel):
     password: str = Field(min_length=1, max_length=256)
 
 
+class SecondFactorLoginIn(BaseModel):
+    """Второй шаг входа (ДВ-4): `challenge` из ответа 202 на `/auth/login` и код."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    challenge: str = Field(min_length=1, max_length=2048)
+    code: str = Field(min_length=6, max_length=16)
+    remember_device: bool = False
+
+
+class SecondFactorChallengeOut(BaseModel):
+    """202 на `/auth/login`: пароль верен, нужен код второго фактора; сессии ещё нет."""
+
+    second_factor_required: Literal[True] = True
+    challenge: str
+
+
 class ChangePasswordIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
