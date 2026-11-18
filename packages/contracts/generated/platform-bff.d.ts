@@ -12505,12 +12505,19 @@ export interface components {
      * @enum {string}
      */
     LetterZone: "goods" | "services" | "payment_terms";
-    /** @description Организация-отправитель; `null` — письмо по заявке ERP без этого поля */
+    /**
+     * @description Организация-отправитель; `null` — письмо по заявке ERP без этого поля. `company_id` — компания ERP (СУЩ-2.6);
+     *     `null` — письмо до СУЩ-2.6 или из почты без сопоставления
+     */
     LetterSender: {
       name: string | null;
       inn: string | null;
       /** @description Контактное лицо */
       contact: string | null;
+      /** @description Компания-отправитель ERP */
+      company_id: string | null;
+      /** @description Человек компании-отправителя */
+      contact_id: string | null;
     };
     /** @description Исходящий номер и дата письма у отправителя */
     LetterSenderRef: {
@@ -13969,13 +13976,23 @@ export interface components {
         assignee: components["schemas"]["InboundMailPerson"] | null;
       }[];
     };
-    /** @description Карточка «Зарегистрировать входящее» (P8, SPEC-v3 §3.2a п. 1); адресат — директор по умолчанию */
+    /**
+     * @description Карточка «Зарегистрировать входящее» (P8, SPEC-v3 §3.2a п. 1); адресат — директор по умолчанию. Отправитель — ссылка
+     *     на компанию ERP и человека (ADR-0028 п. 5, СУЩ-2.6): название и ИНН BFF берёт из карточки компании, `sender_name`
+     *     и `sender_inn` формы не хранятся. Компании нет или она не видна — 422 (`sender`, `company_not_found`); человек не
+     *     из этой компании — 422 (`contact_not_found`)
+     */
     LetterRegisterIn: {
       /** @description Код из `GET /eds/letter-kinds` */
       kind: string;
       receipt_method: components["schemas"]["LetterReceiptMethod"];
-      /** @description Корреспондент (организация или человек) */
-      sender_name: string;
+      /** @description Компания-отправитель ERP (`GET /eds/addressees`) */
+      sender_company_id: string;
+      /** @description Человек этой компании (`GET /eds/addressees/{id}/people`) */
+      sender_contact_id?: string | null;
+      /** @description Не хранится: название берётся из карточки компании */
+      sender_name?: string | null;
+      /** @description Не хранится: ИНН берётся из карточки компании */
       sender_inn?: string | null;
       /**
        * Format: date

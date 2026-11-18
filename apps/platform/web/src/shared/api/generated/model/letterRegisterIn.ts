@@ -6,7 +6,10 @@ import type { LetterReceiptMethod } from "./letterReceiptMethod";
 import type { ResolutionDraftIn } from "./resolutionDraftIn";
 
 /**
- * Карточка «Зарегистрировать входящее» (P8, SPEC-v3 §3.2a п. 1); адресат — директор по умолчанию
+ * Карточка «Зарегистрировать входящее» (P8, SPEC-v3 §3.2a п. 1); адресат — директор по умолчанию. Отправитель — ссылка
+ * на компанию ERP и человека (ADR-0028 п. 5, СУЩ-2.6): название и ИНН BFF берёт из карточки компании, `sender_name`
+ * и `sender_inn` формы не хранятся. Компании нет или она не видна — 422 (`sender`, `company_not_found`); человек не
+ * из этой компании — 422 (`contact_not_found`)
  */
 export interface LetterRegisterIn {
   /**
@@ -16,12 +19,24 @@ export interface LetterRegisterIn {
   kind: string;
   receipt_method: LetterReceiptMethod;
   /**
-   * Корреспондент (организация или человек)
-   * @minLength 1
-   * @maxLength 255
+   * Компания-отправитель ERP (`GET /eds/addressees`)
+   * @pattern ^[0-9]+$
    */
-  sender_name: string;
+  sender_company_id: string;
   /**
+   * Человек этой компании (`GET /eds/addressees/{id}/people`)
+   * @nullable
+   * @pattern ^[0-9]+$
+   */
+  sender_contact_id?: string | null;
+  /**
+   * Не хранится: название берётся из карточки компании
+   * @maxLength 255
+   * @nullable
+   */
+  sender_name?: string | null;
+  /**
+   * Не хранится: ИНН берётся из карточки компании
    * @nullable
    * @pattern ^\d{9,14}$
    */

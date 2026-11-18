@@ -88,6 +88,8 @@ class Letter(Base):
     sender_name: Mapped[str | None] = mapped_column(String(255))
     sender_inn: Mapped[str | None] = mapped_column(String(14))
     sender_contact: Mapped[str | None] = mapped_column(String(255))
+    # СУЩ-2.6 (ADR-0028 п. 5): человек компании-отправителя ERP; компания — `erp_company_id` (связь письма)
+    sender_contact_id: Mapped[int | None] = mapped_column(BigInteger)
     sender_ref_number: Mapped[str | None] = mapped_column(String(64))
     sender_ref_date: Mapped[date | None] = mapped_column(Date)
     received_at: Mapped[date] = mapped_column(Date)

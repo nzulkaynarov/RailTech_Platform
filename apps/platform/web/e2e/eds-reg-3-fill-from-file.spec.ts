@@ -71,14 +71,15 @@ test.describe("EDS-REG · «Заполнить из файла»", () => {
       // 1. PDF с текстом: поля предложены и помечены.
       await fillFromFile(page, "trebovanie-gni.pdf", "application/pdf");
       await expect(page.getByText(/Заполнено из файла: 8 полей/)).toBeVisible();
-      await expect(page.getByLabel("Корреспондент", { exact: true })).toHaveValue(
+      await expect(page.getByLabel("Корреспондент (организация)", { exact: true })).toHaveValue(
         "ГНИ Демо-района",
       );
-      await expect(page.getByText("Предложено ИИ", { exact: true })).toHaveCount(8);
+      // ИНН из файла под отметкой не показывается: у корреспондента ИНН — из карточки (СУЩ-2.6)
+      await expect(page.getByText("Предложено ИИ", { exact: true })).toHaveCount(7);
       await (
         await reveal(page.getByLabel("Тема", { exact: true }))
       ).fill("Пояснения по НДС за III квартал");
-      await expect(page.getByText("Предложено ИИ", { exact: true })).toHaveCount(7);
+      await expect(page.getByText("Предложено ИИ", { exact: true })).toHaveCount(6);
       await page.getByRole("heading", { level: 1 }).scrollIntoViewIfNeeded();
       await expectNoViolations(page, `register-filled ${String(width)}`);
       if (width === 390) await noHorizontalScroll(page);

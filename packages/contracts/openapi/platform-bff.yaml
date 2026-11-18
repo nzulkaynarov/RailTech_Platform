@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.116.0
+  version: 0.117.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -22113,12 +22113,16 @@ components:
     LetterSender:
       type: object
       additionalProperties: false
-      required: [name, inn, contact]
-      description: Организация-отправитель; `null` — письмо по заявке ERP без этого поля
+      required: [name, inn, contact, company_id, contact_id]
+      description: |
+        Организация-отправитель; `null` — письмо по заявке ERP без этого поля. `company_id` — компания ERP (СУЩ-2.6);
+        `null` — письмо до СУЩ-2.6 или из почты без сопоставления
       properties:
         name: {type: [string, 'null']}
         inn: {type: [string, 'null']}
         contact: {type: [string, 'null'], description: Контактное лицо}
+        company_id: {type: [string, 'null'], description: Компания-отправитель ERP}
+        contact_id: {type: [string, 'null'], description: Человек компании-отправителя}
 
     LetterSenderRef:
       type: object
@@ -24047,13 +24051,19 @@ components:
     LetterRegisterIn:
       type: object
       additionalProperties: false
-      required: [kind, receipt_method, sender_name, received_at, subject, file_ids]
-      description: Карточка «Зарегистрировать входящее» (P8, SPEC-v3 §3.2a п. 1); адресат — директор по умолчанию
+      required: [kind, receipt_method, sender_company_id, received_at, subject, file_ids]
+      description: |
+        Карточка «Зарегистрировать входящее» (P8, SPEC-v3 §3.2a п. 1); адресат — директор по умолчанию. Отправитель — ссылка
+        на компанию ERP и человека (ADR-0028 п. 5, СУЩ-2.6): название и ИНН BFF берёт из карточки компании, `sender_name`
+        и `sender_inn` формы не хранятся. Компании нет или она не видна — 422 (`sender`, `company_not_found`); человек не
+        из этой компании — 422 (`contact_not_found`)
       properties:
         kind: {type: string, pattern: '^[a-z][a-z_]{0,31}$', description: Код из `GET /eds/letter-kinds`}
         receipt_method: {$ref: '#/components/schemas/LetterReceiptMethod'}
-        sender_name: {type: string, minLength: 1, maxLength: 255, description: Корреспондент (организация или человек)}
-        sender_inn: {type: [string, 'null'], pattern: '^\d{9,14}$'}
+        sender_company_id: {type: string, pattern: '^[0-9]+$', description: 'Компания-отправитель ERP (`GET /eds/addressees`)'}
+        sender_contact_id: {type: [string, 'null'], pattern: '^[0-9]+$', description: 'Человек этой компании (`GET /eds/addressees/{id}/people`)'}
+        sender_name: {type: [string, 'null'], maxLength: 255, description: 'Не хранится: название берётся из карточки компании'}
+        sender_inn: {type: [string, 'null'], pattern: '^\d{9,14}$', description: 'Не хранится: ИНН берётся из карточки компании'}
         received_at: {type: string, format: date, description: Дата поступления}
         subject: {type: string, minLength: 1, maxLength: 300}
         summary: {type: [string, 'null'], maxLength: 10000, description: Краткое содержание; пусто — тема}

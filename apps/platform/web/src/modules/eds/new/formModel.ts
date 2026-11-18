@@ -138,12 +138,23 @@ export function emailIn(text: string | null | undefined): string {
 export function replyPrefill(
   letter: Pick<LetterCard, "subject" | "sender">,
   subjectPrefix: string,
-): Pick<FormValues, "subject" | "recipientName" | "recipientInn" | "recipientEmail"> {
+): Pick<
+  FormValues,
+  | "subject"
+  | "recipientName"
+  | "recipientInn"
+  | "recipientEmail"
+  | "recipientCompanyId"
+  | "recipientContactId"
+> {
   return {
     subject: `${subjectPrefix}: ${letter.subject}`.slice(0, 300),
     recipientName: letter.sender.name ?? "",
     recipientInn: letter.sender.inn ?? "",
     recipientEmail: emailIn(letter.sender.contact),
+    // СУЩ-2.6: отправитель, связанный с компанией при регистрации, сразу становится адресатом ответа
+    recipientCompanyId: letter.sender.company_id ?? "",
+    recipientContactId: letter.sender.contact_id ?? "",
   };
 }
 

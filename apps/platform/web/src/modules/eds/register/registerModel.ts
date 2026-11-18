@@ -9,8 +9,11 @@ export interface RegisterValues {
   kind: string;
   /** Способ получения — код справочника `receipt-methods` (EDS-REG); список и порядок задаёт администратор */
   receiptMethod: LetterReceiptMethod;
+  /** Корреспондент (СУЩ-2.6): название — текст поиска и снимок карточки, ИНН — из карточки; ссылка — id */
   senderName: string;
   senderInn: string;
+  senderCompanyId: string;
+  senderContactId: string;
   refNumber: string;
   refDate: string;
   signedBy: string;
@@ -65,6 +68,8 @@ export function emptyRegister(today: string): RegisterValues {
     receiptMethod: "",
     senderName: "",
     senderInn: "",
+    senderCompanyId: "",
+    senderContactId: "",
     refNumber: "",
     refDate: "",
     signedBy: "",
@@ -90,15 +95,13 @@ export function registerFieldId(field: RegisterField): string {
   return `reg-${field.replace(/_/g, "-")}`;
 }
 
-const INN = /^\d{9,14}$/;
-
 /** Обязательные поля SPEC-v3 §3.2a п. 1: вид, способ, корреспондент, дата поступления (не позже сегодня), тема, файл. */
 export function validateRegister(values: RegisterValues, today: string): RegisterErrors {
   const errors: RegisterErrors = {};
   if (!values.kind) errors.kind = true;
   if (!values.receiptMethod) errors.receipt_method = true;
-  if (!values.senderName.trim()) errors.sender_name = true;
-  if (values.senderInn.trim() && !INN.test(values.senderInn.trim())) errors.sender_inn = true;
+  // корреспондент — только компания из контрагентов (ADR-0028 п. 5): текст без выбора не регистрируется
+  if (!values.senderCompanyId) errors.sender_name = true;
   if (!values.receivedAt || values.receivedAt > today) errors.received_at = true;
   if (!values.subject.trim()) errors.subject = true;
   const hasFile = values.attachments.some((a) => a.status === "done" && a.id);
@@ -122,7 +125,9 @@ export function toRegisterBody(values: RegisterValues): LetterRegisterIn {
   return {
     kind: values.kind,
     receipt_method: values.receiptMethod,
-    sender_name: values.senderName.trim(),
+    sender_company_id: values.senderCompanyId,
+    sender_contact_id: values.senderContactId || null,
+    sender_name: text(values.senderName),
     sender_inn: text(values.senderInn),
     received_at: values.receivedAt,
     subject: values.subject.trim(),

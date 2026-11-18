@@ -105,8 +105,7 @@ describe("«Заполнить из файла» (EDS-REG)", () => {
     await attach();
 
     expect(await screen.findByText(/Заполнено из файла: 8 полей/)).toBeVisible();
-    expect(screen.getByLabelText("Корреспондент")).toHaveValue("ГНИ Демо-района");
-    expect(screen.getByLabelText("ИНН корреспондента")).toHaveValue("301234567");
+    expect(screen.getByLabelText("Корреспондент (организация)")).toHaveValue("ГНИ Демо-района");
     expect(screen.getByLabelText("Тема")).toHaveValue(
       "Требование о пояснениях по НДС за III квартал",
     );
@@ -114,14 +113,26 @@ describe("«Заполнить из файла» (EDS-REG)", () => {
       "Требование или уведомление ГНК",
     );
     expect(reveal(screen.getByLabelText("Срочно"))).toBeChecked();
-    expect(screen.getAllByText("Предложено ИИ")).toHaveLength(8);
+    // ИНН из файла под отметкой не показывается: у корреспондента ИНН — из карточки (СУЩ-2.6)
+    expect(screen.getAllByText("Предложено ИИ")).toHaveLength(7);
 
     fireEvent.change(screen.getByLabelText("Тема"), { target: { value: "Пояснения по НДС" } });
-    expect(screen.getAllByText("Предложено ИИ")).toHaveLength(7);
+    expect(screen.getAllByText("Предложено ИИ")).toHaveLength(6);
     openStep("Файл письма");
     expect(await screen.findByText(/Возможная связь: ЗВ-2026-905/)).toBeVisible();
     expect(searched).toContain("301234567");
     expect(searched).toContain("ГНИ Демо-района");
+
+    // СУЩ-2.6: корреспондент из файла — текст поиска; его заводят организацией или выбирают из списка
+    const sender = reveal(screen.getByLabelText("Корреспондент (организация)"));
+    fireEvent.change(sender, { target: { value: "ГНИ Демо-район" } });
+    fireEvent.change(sender, { target: { value: "ГНИ Демо-района" } });
+    fireEvent.click(await screen.findByText("+ Завести организацию «ГНИ Демо-района»"));
+    const sheet = await screen.findByRole("dialog", { name: "Новая организация" });
+    fireEvent.click(within(sheet).getByRole("button", { name: "Завести" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "Новая организация" })).toBeNull();
+    });
 
     // способ получения помощник не предлагает — его выбирает человек
     fireEvent.mouseDown(screen.getByLabelText("Способ получения"));
@@ -143,7 +154,7 @@ describe("«Заполнить из файла» (EDS-REG)", () => {
     await openForm();
     await attach("скан.png", "image/png");
     expect(await screen.findByText(/помощник их сейчас не читает/)).toBeVisible();
-    expect(screen.getByLabelText("Корреспондент")).toHaveValue("");
+    expect(screen.getByLabelText("Корреспондент (организация)")).toHaveValue("");
   });
 
   it("PD-BIZ: скан при «Деловой» политике читается сразу, при «Строгой» — отказ; подпись у загрузки", async () => {
@@ -173,7 +184,7 @@ describe("«Заполнить из файла» (EDS-REG)", () => {
     expect(await screen.findByText(/Заполнено из файла: 7 полей/)).toBeVisible();
     expect(screen.getByLabelText("Тема")).toHaveValue("Своя тема"); // набранное человеком не перетирается
     fireEvent.click(screen.getByRole("button", { name: "Убрать предложенное" }));
-    expect(screen.getByLabelText("Корреспондент")).toHaveValue("");
+    expect(screen.getByLabelText("Корреспондент (организация)")).toHaveValue("");
     expect(screen.getByLabelText("Тема")).toHaveValue("Своя тема");
     await waitFor(() => {
       expect(intakeDecisions).toEqual(["manual"]);

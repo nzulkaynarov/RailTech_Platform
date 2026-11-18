@@ -69,6 +69,8 @@ class IncomingLetterSender(LetterSender):
     """Отправитель входящего письма (eds.yaml `IncomingLetterSender`, 0.2.0): и контактное лицо (C1-G-7)."""
 
     contact: Annotated[str | None, Field(max_length=255)] = None
+    # СУЩ-2.6: человек компании ERP; сама компания — `links.erp_company_id`
+    contact_id: PositiveInt | None = None
 
 
 class SenderRef(Strict):

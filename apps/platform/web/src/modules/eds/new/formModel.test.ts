@@ -258,7 +258,13 @@ describe("ответ на входящее: заготовка формы (EDS-R
     const filled = replyPrefill(
       {
         subject: "Запрос коммерческого предложения",
-        sender: { name: "ООО «Демо-Рейл»", inn: "300123456", contact: "a@demo-rail.example" },
+        sender: {
+          name: "ООО «Демо-Рейл»",
+          inn: "300123456",
+          contact: "a@demo-rail.example",
+          company_id: "7",
+          contact_id: "41",
+        },
       },
       "На ВХ-104/26 от 24.10.2026",
     );
@@ -267,14 +273,21 @@ describe("ответ на входящее: заготовка формы (EDS-R
       recipientName: "ООО «Демо-Рейл»",
       recipientInn: "300123456",
       recipientEmail: "a@demo-rail.example",
+      // СУЩ-2.6: отправитель, связанный при регистрации, — сразу адресат ответа
+      recipientCompanyId: "7",
+      recipientContactId: "41",
     });
     const bare = replyPrefill(
-      { subject: "Т", sender: { name: null, inn: null, contact: null } },
+      {
+        subject: "Т",
+        sender: { name: null, inn: null, contact: null, company_id: null, contact_id: null },
+      },
       "На ВХ-1/26 от 01.01.2026",
     );
     expect(bare.recipientName).toBe("");
     expect(bare.recipientInn).toBe("");
     expect(bare.recipientEmail).toBe("");
+    expect(bare.recipientCompanyId).toBe("");
     expect(
       replyPrefill({ subject: "я".repeat(400), sender: bare as never }, "На ВХ").subject,
     ).toHaveLength(300);

@@ -464,7 +464,15 @@ async def test_journal_filters_and_columns(web: Web, eds: EdsFake, check: Contra
     assert (call.url.params["on_control"], call.url.params["overdue"]) == ("true", "true")
 
 
-async def test_registration_passes_the_addressee_and_the_draft(web: Web, eds: EdsFake) -> None:
+async def test_registration_passes_the_addressee_and_the_draft(
+    web: Web, eds: EdsFake, be: Backends
+) -> None:
+    # СУЩ-2.6: корреспондент — компания ERP из карточки
+    be.router.get(f"{ERP_URL}/api/v1/parties/organizations/12/").mock(
+        return_value=httpx.Response(
+            200, json={"id": 12, "name": "ГНК Мирабадского района", "inn": None, "people": []}
+        )
+    )
     eds.answer("POST", "letters", httpx.Response(201, json=letter(number=NUMBER)))
     assert (await web.login(["REGISTRAR"])).status_code == 200
 
@@ -474,6 +482,7 @@ async def test_registration_passes_the_addressee_and_the_draft(web: Web, eds: Ed
         json={
             "kind": "tax_notice",
             "receipt_method": "taxpayer_cabinet",
+            "sender_company_id": "12",
             "sender_name": "ГНК Мирабадского района",
             "received_at": "2026-11-01",
             "subject": "Требование о пояснениях",

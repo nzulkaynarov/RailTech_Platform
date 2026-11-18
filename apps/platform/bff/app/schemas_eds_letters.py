@@ -79,6 +79,8 @@ class LetterSender(BaseModel):
     name: str | None
     inn: str | None
     contact: str | None
+    company_id: str | None
+    contact_id: str | None
 
 
 class LetterSenderRef(BaseModel):
@@ -577,7 +579,10 @@ class LetterRegisterIn(BaseModel):
 
     kind: str = Field(pattern=_KIND_CODE)
     receipt_method: ReceiptMethod
-    sender_name: str = Field(min_length=1, max_length=255)
+    # СУЩ-2.6: отправитель — компания ERP и человек; название и ИНН BFF берёт из карточки
+    sender_company_id: str = Field(pattern=r"^[0-9]+$")
+    sender_contact_id: str | None = Field(default=None, pattern=r"^[0-9]+$")
+    sender_name: str | None = Field(default=None, max_length=255)
     sender_inn: str | None = Field(default=None, pattern=r"^\d{9,14}$")
     received_at: dt.date
     subject: str = Field(min_length=1, max_length=300)
@@ -600,8 +605,6 @@ class LetterRegisterIn(BaseModel):
     # EDS-DUP: «Это другое письмо — зарегистрировать» с причиной
     force: bool = False
     force_reason: str | None = Field(default=None, max_length=1000)
-
-    _sender = field_validator("sender_name")(_not_blank)
 
     @field_validator("file_ids")
     @classmethod
@@ -742,6 +745,11 @@ class _Sender(BaseModel):
     name: str | None = None
     inn: str | None = None
     contact: str | None = None
+    contact_id: int | None = None
+
+
+def _id_text(value: int | None) -> str | None:
+    return None if value is None else str(value)
 
 
 class _SenderRef(BaseModel):
@@ -1225,7 +1233,11 @@ def to_card(
         addressee=person(letter.addressee),
         manager=person(letter.manager) if letter.manager else None,
         sender=LetterSender(
-            name=letter.sender.name, inn=letter.sender.inn, contact=letter.sender.contact
+            name=letter.sender.name,
+            inn=letter.sender.inn,
+            contact=letter.sender.contact,
+            company_id=_id_text(letter.links.erp_company_id),
+            contact_id=_id_text(letter.sender.contact_id),
         ),
         sender_ref=LetterSenderRef(number=letter.sender_ref.number, date=letter.sender_ref.date),
         client=client,

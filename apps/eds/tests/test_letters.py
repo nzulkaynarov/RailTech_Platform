@@ -80,14 +80,24 @@ async def test_register_requires_sender_or_client(client: httpx.AsyncClient, sta
         headers=staff["registrar"].headers,
     )
     assert ok.status_code == 201
-    assert ok.json()["sender"] == {"name": None, "inn": None, "contact": None}
+    assert ok.json()["sender"] == {"name": None, "inn": None, "contact": None, "contact_id": None}
     with_contact = await client.post(
         "/api/v1/letters",
-        json={**NEW_LETTER, "sender": {"name": "ООО «Другое»", "contact": "Бахтиёр Каримов"}, "links": {}},
+        json={
+            **NEW_LETTER,
+            "sender": {"name": "ООО «Другое»", "contact": "Бахтиёр Каримов", "contact_id": 31},
+            "links": {"erp_company_id": 12},
+        },
         headers=staff["registrar"].headers,
     )
     assert with_contact.status_code == 201, with_contact.text
-    assert with_contact.json()["sender"] == {"name": "ООО «Другое»", "inn": None, "contact": "Бахтиёр Каримов"}
+    # СУЩ-2.6: человек компании ERP — ссылкой; компания — `links.erp_company_id`
+    assert with_contact.json()["sender"] == {
+        "name": "ООО «Другое»",
+        "inn": None,
+        "contact": "Бахтиёр Каримов",
+        "contact_id": 31,
+    }
 
 
 async def test_register_rejects_unknown_fields_and_inactive_manager(

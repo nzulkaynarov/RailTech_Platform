@@ -163,7 +163,13 @@ async def test_card_by_id_collects_details_links_and_the_step(
     assert card["status"] == "awaiting_resolution"
     assert card["stage"] == "RESOLUTION"
     assert card["lost_at_step"] is None
-    assert card["sender"] == {"name": "ООО «Демо-Рейл»", "inn": "300123456", "contact": "Алия Демо"}
+    assert card["sender"] == {
+        "name": "ООО «Демо-Рейл»",
+        "inn": "300123456",
+        "contact": "Алия Демо",
+        "company_id": "7",
+        "contact_id": None,
+    }
     assert card["sender_ref"] == {"number": "исх-27", "date": "2026-10-22"}
     assert card["addressee"] == {"id": "1", "name": "Директор Демо", "initials": "ДД"}
     assert card["manager"]["name"] == "Менеджер Демо"

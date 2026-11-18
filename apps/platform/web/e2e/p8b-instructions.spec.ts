@@ -2,7 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { type Page, expect, test } from "@playwright/test";
 
 import { loginAndWait, openAvatarMenu, reveal, spaGoto, waitForMotionEnd } from "./support/app";
-import { chooseOption, fillDate, openStep, pickFiles } from "./support/fields";
+import { addAddressee, chooseOption, fillDate, openStep, pickFiles } from "./support/fields";
 
 // P8b «Поручения по входящим» на MSW (SPEC-v3 §3.2a п. 1–6): делопроизводитель регистрирует письмо с проектом резолюции,
 // директор утверждает его одним нажатием, исполнитель видит поручение в «Моих задачах», просит перенос, директор
@@ -103,7 +103,8 @@ test.describe("P8b: поручения по входящим", () => {
       "Требование или уведомление ГНК",
     );
     await expect(await reveal(page.getByLabel("Срочно", { exact: true }))).toBeChecked();
-    await (await reveal(page.getByLabel("Корреспондент", { exact: true }))).fill("ГНИ Демо-района");
+    await reveal(page.getByLabel("Корреспондент (организация)", { exact: true }));
+    await addAddressee(page, "ГНИ Демо-района", "", "Корреспондент (организация)");
     await (await reveal(page.getByLabel("Исходящий номер отправителя"))).fill("04-12/5100");
     await (
       await reveal(page.getByLabel("Тема", { exact: true }))

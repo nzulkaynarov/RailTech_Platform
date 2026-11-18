@@ -11,7 +11,7 @@ import pytest
 from app.cookies import CSRF_HEADER
 from tests.backends import Backends
 from tests.conftest import ContractChecker, Web
-from tests.consts import CRM_URL
+from tests.consts import CRM_URL, ERP_URL
 from tests.eds_letters_support import FILE_ID, EdsFake, letter
 from tests.feeds_support import FeedBackends, Moments
 
@@ -320,6 +320,12 @@ async def test_reply_without_smtp_says_where_to_set_it_up(web: Web, be: Backends
 
 @pytest.fixture
 def eds(be: Backends) -> EdsFake:
+    # СУЩ-2.6: отправитель — компания ERP из карточки
+    be.router.get(f"{ERP_URL}/api/v1/parties/organizations/12/").mock(
+        return_value=httpx.Response(
+            200, json={"id": 12, "name": "ООО Пример Поставка", "inn": None, "people": []}
+        )
+    )
     fake = EdsFake(be)
     fake.answer(
         "POST",
@@ -376,6 +382,7 @@ IN_WORK_BY_OTHER = {
 FORM: dict[str, Any] = {
     "kind": "supplier",
     "receipt_method": "email",
+    "sender_company_id": "12",
     "sender_name": "ООО Пример Поставка",
     "received_at": "2026-11-02",
     "subject": "Акт сверки за октябрь",
