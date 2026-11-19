@@ -84,6 +84,10 @@ class Document(Base):
     pdf_hash: Mapped[str | None] = mapped_column(String(64), ForeignKey("document_renders.hash", use_alter=True))
     registration_requested_by: Mapped[int | None] = mapped_column(BigInteger)
     registration_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # СЦ-1: сотрудник снял отправку почтой — письмо вручено иначе (нарочным, через портал); без отметки письмо с
+    # почтой адресата считается недоставленным, пока попытка отправки не завершилась успехом.
+    mail_waived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    mail_waived_by: Mapped[int | None] = mapped_column(BigInteger)
     # Подписание уполномоченным лицом из реестра полномочий (SIGN-3, ADR-0024 п. 1–5):
     signed_by_crm_user_id: Mapped[int | None] = mapped_column(BigInteger)
     signed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

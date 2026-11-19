@@ -261,6 +261,12 @@ test.describe("EDS-REPLY-1: ответ на входящее", () => {
     await expect(
       side(page).getByRole("button", { name: "Отправить адресату ещё раз" }),
     ).toBeVisible();
+    // СЦ-1: исход — вверху карточки: письмо не ушло, причина и два действия; в списке строка с меткой «Не отправлено»
+    await expect(side(page).getByText("Письмо не ушло адресату")).toBeVisible();
+    await expect(side(page).getByRole("button", { name: "Вручено иначе" })).toBeVisible();
+    await both(page, "letter-undelivered");
+    await side(page).getByRole("button", { name: "Вручено иначе" }).click();
+    await expect(side(page).getByText("Письмо не ушло адресату")).toHaveCount(0);
   });
 });
 

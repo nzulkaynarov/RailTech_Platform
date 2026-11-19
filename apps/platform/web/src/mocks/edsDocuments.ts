@@ -124,8 +124,21 @@ function today(): string {
   }).format(new Date());
 }
 
+/** Как в EDS (СЦ-1): письмо с почтой адресата не ушло и отправку не сняли — оно не доставлено и остаётся открытым. */
+function undeliveredOf(doc: MockDocument): boolean {
+  const letter = doc.letter;
+  return (
+    doc.kind === "letter_out" &&
+    doc.status === "sent" &&
+    Boolean(letter?.recipient_email?.trim()) &&
+    !letter?.mailWaivedAt &&
+    !letter?.mailings.some((m) => m.status === "sent")
+  );
+}
+
 function rowOf(doc: MockDocument): EdsDocumentRow {
   return {
+    undelivered: undeliveredOf(doc),
     kind: doc.kind,
     id: doc.id,
     number: doc.number,
@@ -293,6 +306,8 @@ function letterFields(doc: MockDocument, me: string): Partial<EdsDocument> {
           signatory_position: letter.signatory_position,
           pdf: letter.pdf,
           mailings: letter.mailings,
+          undelivered: undeliveredOf(doc),
+          mail_waived_at: letter.mailWaivedAt ?? null,
           registration_requested: letter.registration_requested
             ? {
                 by: personOf(letter.registration_requested.ownerId),
@@ -388,6 +403,7 @@ export const MOCK_LETTERHEAD: EdsLetterhead = {
   signatory_name: "Каримов А. А.",
   signatory_position: "Директор",
   has_logo: false,
+  mail_connected: true,
   updated_at: "2026-11-01T06:00:00Z",
 };
 
@@ -549,7 +565,8 @@ const DONE_STATUSES: Record<string, readonly string[]> = {
 
 function inStage(row: EdsDocumentRow, stage: string | null): boolean {
   if (stage !== "open" && stage !== "done") return true;
-  const done = (DONE_STATUSES[row.kind] ?? []).includes(row.status);
+  // Конечный статус — ещё не исход: недоставленное письмо остаётся в «Исходящих» (СЦ-1).
+  const done = (DONE_STATUSES[row.kind] ?? []).includes(row.status) && !row.undelivered;
   return stage === "done" ? done : !done;
 }
 
@@ -572,6 +589,7 @@ export const edsDocumentsHandlers = [
       const rows: EdsDocumentRow[] = [
         ...state.documents.map((doc) => ({ ...rowOf(doc), due_date: null })),
         ...state.registry.map((entry): EdsDocumentRow => ({
+          undelivered: false,
           kind: entry.kind,
           id: entry.id,
           number: entry.number,
@@ -833,6 +851,21 @@ export const edsDocumentsHandlers = [
       });
     }
     queueMailing(doc.letter);
+    writeEds(state);
+    return HttpResponse.json(detail(doc, state, ownerId()));
+  }),
+
+  http.post("*/eds/documents/:id/mail-waive", ({ params }) => {
+    const held = resources();
+    if (!held) return sessionExpired();
+    if (!canRegister()) return forbidden("eds.inbox.register", "full");
+    const state = readEds();
+    const doc = state.documents.find((candidate) => candidate.id === params["id"]);
+    if (!doc?.letter) return fail(404, "NOT_FOUND", "Документ не найден.");
+    if (doc.status !== "sent") {
+      return fail(409, "CONFLICT", "Письмо ещё не зарегистрировано.", { reason: "invalid_state" });
+    }
+    doc.letter.mailWaivedAt ??= new Date().toISOString();
     writeEds(state);
     return HttpResponse.json(detail(doc, state, ownerId()));
   }),

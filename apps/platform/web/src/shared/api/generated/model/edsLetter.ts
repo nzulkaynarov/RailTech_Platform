@@ -11,6 +11,13 @@ import type { EdsLetterRegistrationRequested } from "./edsLetterRegistrationRequ
  * Письмо на бланке (P4)
  */
 export interface EdsLetter {
+  /** Письмо с почтой адресата не ушло и отправку не сняли (СЦ-1): причина и действие — вверху карточки */
+  undelivered: boolean;
+  /**
+   * «Вручено иначе» — когда сняли отправку почтой
+   * @nullable
+   */
+  mail_waived_at: string | null;
   /** `null` — письмо без бланка (только текст) */
   body: EdsDocumentBody | null;
   /** @nullable */

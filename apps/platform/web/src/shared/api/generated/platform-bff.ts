@@ -12057,6 +12057,113 @@ export const useRequestEdsDocumentRegistration = <
   return useMutation(getRequestEdsDocumentRegistrationMutationOptions(options), queryClient);
 };
 
+export const getWaiveEdsDocumentMailUrl = (id: string) => {
+  return `/api/v1/eds/documents/${id}/mail-waive`;
+};
+
+/**
+ * EDS `POST /documents/{id}/mail-waive` (СЦ-1): письмо передано адресату не почтой. Письмо с почтой адресата, которое не ушло (`letter.undelivered`), остаётся в «Исходящих», пока попытка отправки не завершится успехом или отправку не снимут этим вызовом. Раздел `eds.inbox.register` (полный).
+ * @summary EDS · Письмо: вручено иначе
+ */
+export const waiveEdsDocumentMail = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<EdsDocument> => {
+  return http<EdsDocument>(getWaiveEdsDocumentMailUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getWaiveEdsDocumentMailMutationKey = () => ["waiveEdsDocumentMail"] as const;
+
+export const getWaiveEdsDocumentMailMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof waiveEdsDocumentMail>>,
+    TError,
+    WaiveEdsDocumentMailMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof waiveEdsDocumentMail>>,
+  TError,
+  WaiveEdsDocumentMailMutationVariables,
+  TContext
+> => {
+  const mutationKey = getWaiveEdsDocumentMailMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof waiveEdsDocumentMail>>,
+    WaiveEdsDocumentMailMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return waiveEdsDocumentMail(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type WaiveEdsDocumentMailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof waiveEdsDocumentMail>>
+>;
+
+export type WaiveEdsDocumentMailMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | EdsConflictResponse
+  | BackendUnavailableResponse
+>;
+export type WaiveEdsDocumentMailMutationVariables = { id: string };
+
+/**
+ * @summary EDS · Письмо: вручено иначе
+ */
+export const useWaiveEdsDocumentMail = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof waiveEdsDocumentMail>>,
+      TError,
+      WaiveEdsDocumentMailMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof waiveEdsDocumentMail>>,
+  TError,
+  WaiveEdsDocumentMailMutationVariables,
+  TContext
+> => {
+  return useMutation(getWaiveEdsDocumentMailMutationOptions(options), queryClient);
+};
+
 export const getSendEdsDocumentUrl = (id: string) => {
   return `/api/v1/eds/documents/${id}/send`;
 };

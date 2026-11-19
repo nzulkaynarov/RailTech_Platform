@@ -186,7 +186,10 @@ function DocumentForm({
   const [bodyRevision, setBodyRevision] = useState(0);
   const lang = letterLang ?? bodyLang(i18n.language);
   const handover = letter && !canRegister;
-  const sendToRecipient = letter && values.recipientEmail.trim() !== "";
+  // Условие до действия (`ui-standard.md` §14 п. 2): почта не подключена — форма говорит это сразу, а кнопка не обещает
+  // отправку, которой не будет.
+  const mailConnected = letterhead.data?.mail_connected !== false;
+  const sendToRecipient = letter && values.recipientEmail.trim() !== "" && mailConnected;
 
   const set = <K extends keyof FormValues>(key: K, value: FormValues[K]) => {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -621,7 +624,11 @@ function DocumentForm({
                 <Field
                   id={ids.email}
                   label={t("documents:form.email.label")}
-                  hint={t("documents:form.email.hint")}
+                  hint={t(
+                    mailConnected
+                      ? "documents:form.email.hint"
+                      : "documents:form.email.notConnected",
+                  )}
                   error={errors.recipient_email ? fieldText(t, "recipient_email") : undefined}
                 >
                   <Input

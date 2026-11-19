@@ -158,7 +158,9 @@ async def test_mail_pair_secret_missing_is_reported(
     deferred: list[str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Почта не подключена к документообороту (нет секрета пары) — тоже «Не отправлено» с уведомлением."""
+    """Почта документооборота не подключена (нет секрета пары) — тоже «Не отправлено» с уведомлением.
+
+    Текст для сотрудника — без названий сервисов и переменных (СЦ-1, `ui-standard.md` §14 п. 4)."""
     monkeypatch.delenv("RT_BUS_SECRET_EDS_CRM", raising=False)
     registrar = staff["registrar"]
     await deliver_letterhead(client, container)
@@ -170,7 +172,9 @@ async def test_mail_pair_secret_missing_is_reported(
     assert registered.status_code == 200, registered.text
     assert await run(container, StubRenderer(), deferred[-1]) == "ready"
     [fail] = [n for n in await notices(container) if n["notice_key"].endswith(":failed")]
-    assert fail["recipients"] == [4, 3] and "нет секрета пары" in fail["subtitle"]
+    assert fail["recipients"] == [4, 3]
+    assert fail["subtitle"] == "Почта документооборота не подключена — сообщите администратору"
+    assert "секрет" not in fail["subtitle"] and "EDS" not in fail["subtitle"]
     [shown] = (await get(client, registrar, incoming["id"])).json()["replies"]
     assert shown["mail"] == "failed"
     # исполнитель и автор — один человек: регистрация сообщила только о закрытии поручения самому себе — никому

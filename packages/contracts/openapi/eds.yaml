@@ -2533,6 +2533,34 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
 
+  /api/v1/documents/{document_id}/mail-waive:
+    post:
+      tags: [documents]
+      operationId: waiveDocumentMail
+      summary: «Вручено иначе» — снять отправку письма почтой
+      description: |
+        Зарегистрированное письмо передано адресату не почтой (нарочным, через портал): отметка `letter.mail_waived_at`, строка
+        журнала `document.mail_waived`. Письмо с почтой адресата, которое не ушло, считается недоставленным
+        (`letter.undelivered`, `RegistryItem.undelivered`) и остаётся в «Исходящих» (`stage=open`), пока попытка отправки
+        не завершится `sent` или отправку не снимут этим вызовом. Повторный вызов ничего не меняет. Право `letters.register`.
+      x-rt-permissions: [letters.register]
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '200':
+          description: Отправка снята
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /api/v1/documents/{document_id}/send:
     post:
       tags: [documents]
@@ -5744,7 +5772,7 @@ components:
       type: object
       additionalProperties: false
       required:
-        [body, recipient_attention, recipient_email, signatory_name, signatory_position, pdf, mailings, registration_requested]
+        [body, recipient_attention, recipient_email, signatory_name, signatory_position, pdf, mailings, registration_requested, undelivered, mail_waived_at]
       description: Письмо на бланке (P4) — тело и реквизиты, последний PDF, журнал отправки, передача на регистрацию
       properties:
         body:
@@ -5775,6 +5803,13 @@ components:
             - $ref: '#/components/schemas/RegistrationRequest'
             - type: 'null'
           description: Автор без `letters.register` передал черновик делопроизводителю (B-P8B-4)
+        undelivered:
+          type: boolean
+          description: Письмо с почтой адресата зарегистрировано, но не ушло, и отправку не сняли (СЦ-1) — остаётся в «Исходящих»
+        mail_waived_at:
+          type: [string, 'null']
+          format: date-time
+          description: «Вручено иначе» — когда сотрудник снял отправку почтой (`POST …/mail-waive`)
     DocumentPdf:
       type: object
       additionalProperties: false
@@ -5844,9 +5879,12 @@ components:
     Letterhead:
       type: object
       additionalProperties: false
-      required: [configured, company_name, requisites, signatory_name, signatory_position, has_logo, updated_at]
+      required: [configured, company_name, requisites, signatory_name, signatory_position, has_logo, updated_at, mail_connected]
       description: Бланк компании — проекция события ERP `letterhead.updated` (P4)
       properties:
+        mail_connected:
+          type: boolean
+          description: Почта документооборота подключена (есть секрет пары `eds → crm`); `false` — письмо зарегистрируется, но адресату не уйдёт (СЦ-1)
         configured:
           type: boolean
           description: '`false` — бланк из ERP ещё не получен: PDF письма не строится (409 `letterhead_missing`), пока админ не сохранит «Компания и бланки»'
@@ -6112,8 +6150,11 @@ components:
     DocumentListItem:
       type: object
       additionalProperties: false
-      required: [id, kind, number, status, subject, author, files_count, paid_on, created_at]
+      required: [id, kind, number, status, subject, author, files_count, paid_on, created_at, undelivered]
       properties:
+        undelivered:
+          type: boolean
+          description: Исходящее письмо с почтой адресата не ушло и отправку не сняли (СЦ-1); в списке — `stage=open`
         id:
           $ref: '#/components/schemas/Uuid'
         kind:
@@ -6711,8 +6752,11 @@ components:
     RegistryItem:
       type: object
       additionalProperties: false
-      required: [kind, id, number, title, status, registered_at, responsible, client, links, amount]
+      required: [kind, id, number, title, status, registered_at, responsible, client, links, amount, undelivered]
       properties:
+        undelivered:
+          type: boolean
+          description: Исходящее письмо с почтой адресата не ушло и отправку не сняли (СЦ-1); такая строка — `stage=open`
         kind:
           $ref: '#/components/schemas/RegistryKind'
         id:

@@ -340,6 +340,17 @@ async def test_executor_hands_over_registrar_registers_closes_instruction_and_ma
     validate("Document", after)
     assert after["letter"]["mailings"][0]["status"] == "failed"
     assert after["letter"]["mailings"][0]["reason"] == "Почта не настроена — Настройки · Подключения · Почта"
+    # СЦ-1: письмо не ушло — оно не «Архив», а «Исходящие», и строка реестра это говорит
+    assert after["letter"]["undelivered"] is True
+
+    async def stage(name: str) -> dict[str, bool]:
+        # общий реестр читает бухгалтер (`registry.read`); у делопроизводителя в этом мире права нет
+        page = await client.get("/api/v1/registry", params={"stage": name}, headers=staff["accountant"].headers)
+        assert page.status_code == 200, page.text
+        return {i["id"]: i["undelivered"] for i in page.json()["items"] if i["kind"] == "letter_out"}
+
+    assert await stage("open") == {doc_id: True}
+    assert doc_id not in await stage("done")
 
     again = await client.post(f"/api/v1/documents/{doc_id}/send", headers=registrar.headers)
     assert again.status_code == 200, again.text
@@ -351,6 +362,8 @@ async def test_executor_hands_over_registrar_registers_closes_instruction_and_ma
     await deliver_crm(client, container, "mail.sent", key)
     done = (await client.get(f"/api/v1/documents/{doc_id}", headers=registrar.headers)).json()
     assert [m["status"] for m in done["letter"]["mailings"]] == ["failed", "sent"]
+    assert done["letter"]["undelivered"] is False
+    assert await stage("done") == {doc_id: False}  # адресат получил письмо — теперь это «Архив»
     actions = [entry["action"] for entry in done["journal"]]
     assert "document.registration_requested" in actions and "document.mail_sent" in actions
 
@@ -435,3 +448,61 @@ async def test_letter_in_uzbek_or_english_uses_the_letterhead_of_its_language(
 
         head = await letterhead.current(session)
         assert head is not None and set(head.translations) == {"uz", "en"}
+
+
+async def test_letter_without_pair_stays_in_outgoing_until_waived(
+    client: httpx.AsyncClient, staff: dict[str, Person], container: Container, deferred: list[str]
+) -> None:
+    """СЦ-1, случай прода 2026-11-19: почта документооборота не подключена — письмо зарегистрировано, не ушло,
+    остаётся в «Исходящих» с причиной без внутренних названий; «вручено иначе» снимает отправку — «Архив»."""
+    registrar = staff["registrar"]
+    await deliver_letterhead(client, container)
+    created = await client.post("/api/v1/documents", json=letter_json(), headers=registrar.headers)
+    assert created.status_code == 201, created.text
+    doc_id = created.json()["id"]
+    sent = await client.post(f"/api/v1/documents/{doc_id}/submit", json={"send": True}, headers=registrar.headers)
+    assert sent.status_code == 200, sent.text
+    assert await run(container, StubRenderer(), deferred[-1]) == "ready"
+
+    card = (await client.get(f"/api/v1/documents/{doc_id}", headers=registrar.headers)).json()
+    validate("Document", card)
+    [mailing] = card["letter"]["mailings"]
+    assert mailing["status"] == "failed"
+    assert mailing["reason"] == "Почта документооборота не подключена — сообщите администратору"
+    assert card["letter"]["undelivered"] is True
+
+    async def in_stage(name: str) -> bool:
+        page = await client.get("/api/v1/registry", params={"stage": name}, headers=staff["accountant"].headers)
+        assert page.status_code == 200, page.text
+        return doc_id in {i["id"] for i in page.json()["items"]}
+
+    assert await in_stage("open") and not await in_stage("done")
+    mine = await client.get("/api/v1/documents", params={"stage": "open"}, headers=registrar.headers)
+    assert doc_id in {i["id"] for i in mine.json()["items"]}
+
+    assert_error(
+        await client.post(f"/api/v1/documents/{doc_id}/mail-waive", headers=staff["manager"].headers),
+        403,
+        "FORBIDDEN",
+        permission="letters.register",
+    )
+    waived = await client.post(f"/api/v1/documents/{doc_id}/mail-waive", headers=registrar.headers)
+    assert waived.status_code == 200, waived.text
+    validate("Document", waived.json())
+    assert waived.json()["letter"]["undelivered"] is False and waived.json()["letter"]["mail_waived_at"]
+    assert "document.mail_waived" in [entry["action"] for entry in waived.json()["journal"]]
+    assert await in_stage("done") and not await in_stage("open")
+
+
+async def test_letterhead_tells_whether_mail_is_connected(
+    client: httpx.AsyncClient, staff: dict[str, Person], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """СЦ-1, условие до действия: без секрета пары письмо адресату не уйдёт — форма узнаёт это заранее."""
+    seen = await client.get("/api/v1/letterhead", headers=staff["manager"].headers)
+    assert seen.status_code == 200, seen.text
+    validate("Letterhead", seen.json())
+    assert seen.json()["mail_connected"] is False
+
+    monkeypatch.setenv("RT_BUS_SECRET_EDS_CRM", PAIR)
+    again = await client.get("/api/v1/letterhead", headers=staff["manager"].headers)
+    assert again.json()["mail_connected"] is True

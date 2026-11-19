@@ -28,6 +28,7 @@ import { TabsBar } from "../../../shared/ui/TabsBar";
 import { DocumentSheet } from "./DocumentSheet";
 import { parseDocumentId, withParams } from "./params";
 import { DocumentStatusTag } from "./status";
+import { StatusTag } from "../../../shared/ui/StatusTag";
 
 import "./documents.css";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
@@ -225,6 +226,17 @@ function SubjectCell({
   );
 }
 
+/** Статус строки; у письма, которое не ушло адресату, — метка исхода: поэтому оно в «Исходящих», а не в «Архиве» (СЦ-1). */
+function RowStatus({ row }: { row: EdsDocumentRow }) {
+  const { t } = useTranslation("documents");
+  return (
+    <>
+      <DocumentStatusTag kind={row.kind} status={row.status} />
+      {row.undelivered ? <StatusTag tone="red">{t("panel.mailFailed")}</StatusTag> : null}
+    </>
+  );
+}
+
 function Amount({ row }: { row: EdsDocumentRow }) {
   if (!row.amount) return <span aria-hidden="true">—</span>;
   return <MoneyText value={row.amount.amount} currency={row.amount.currency} />;
@@ -277,7 +289,7 @@ function DocumentsTable({
       id: "status",
       header: t("list.columns.status"),
       width: widths.status,
-      cell: (row) => <DocumentStatusTag kind={row.kind} status={row.status} />,
+      cell: (row) => <RowStatus row={row} />,
     },
     {
       id: "amount",
@@ -356,7 +368,7 @@ function DocumentsList({
           data-selected={selected === row.id}
         >
           <div className="pf-docs-item-head">
-            <DocumentStatusTag kind={row.kind} status={row.status} />
+            <RowStatus row={row} />
             {row.number ? <DocNumber number={row.number} /> : null}
           </div>
           <div className="pf-docs-subject">

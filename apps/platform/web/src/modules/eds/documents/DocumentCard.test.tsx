@@ -1,4 +1,4 @@
-import { within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -178,5 +178,52 @@ describe("EDS · карточка письма: текст блоками, бе�
     expect(panel.getByText("В ответ на")).toBeVisible();
     expect(panel.getByText("Не отправлено")).toBeVisible();
     expect(panel.getByRole("button", { name: "Отправить адресату ещё раз" })).toBeVisible();
+  });
+
+  it("СЦ-1: письмо не ушло — причина и действия плашкой вверху, письмо в «Исходящих»; «Вручено иначе» снимает отправку — «Архив»", async () => {
+    seed({ status: "sent", number: "ИСХ-046/26" });
+    const state = readEds();
+    const doc = state.documents.find((d) => d.id === ID);
+    if (doc?.letter) {
+      doc.letter.recipient_email = "office@nosmtp.example";
+      doc.letter.mailings = [
+        {
+          id: "m-2",
+          to: ["office@nosmtp.example"],
+          status: "failed",
+          reason: "Почта документооборота не подключена — сообщите администратору",
+          requested_by: null,
+          requested_at: "2026-11-01T09:05:00Z",
+          finished_at: "2026-11-01T09:06:00Z",
+        },
+      ];
+    }
+    writeEds(state);
+    signIn("registrar@demo.example");
+    renderAt(`/eds/documents?box=outgoing&scope=all&doc=${ID}&panel=open`);
+    const panel = within(await panelEl());
+
+    // исход виден сразу: плашка ошибки с причиной без внутренних названий и двумя действиями
+    const banner = within(await panel.findByRole("alert"));
+    expect(banner.getByText("Письмо не ушло адресату")).toBeVisible();
+    expect(
+      banner.getByText("Почта документооборота не подключена — сообщите администратору"),
+    ).toBeVisible();
+    expect(banner.getByRole("button", { name: "Отправить адресату ещё раз" })).toBeVisible();
+    // в журнале у неудачи — «Не удалось», а не «Сделано»
+    expect(panel.getByText(/Не удалось:/)).toBeInTheDocument();
+    // письмо — в «Исходящих» с меткой, пока адресат его не получил
+    const row = (await screen.findAllByText("ИСХ-046/26"))
+      .map((el) => el.closest("tr"))
+      .find((tr): tr is HTMLTableRowElement => tr !== null);
+    expect(row).toBeDefined();
+    if (!row) return;
+    expect(within(row).getByText("Не отправлено")).toBeVisible();
+
+    fireEvent.click(banner.getByRole("button", { name: "Вручено иначе" }));
+    await waitFor(() => {
+      expect(panel.queryByText("Письмо не ушло адресату")).toBeNull();
+    });
+    expect(readEds().documents.find((d) => d.id === ID)?.letter?.mailWaivedAt).toBeTruthy();
   });
 });

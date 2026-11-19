@@ -7,6 +7,8 @@ import type { EdsPerson } from "./edsPerson";
 import type { EdsRegistryKind } from "./edsRegistryKind";
 
 export interface EdsDocumentRow {
+  /** Исходящее письмо не ушло адресату (СЦ-1): строка остаётся в «Исходящих» с меткой «Не отправлено» */
+  undelivered: boolean;
   kind: EdsRegistryKind;
   id: string;
   /**

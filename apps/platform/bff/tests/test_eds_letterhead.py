@@ -251,6 +251,35 @@ async def test_registration_request_and_send_again(
     check(again, "/eds/documents/{id}/send", "post")
 
 
+async def test_undelivered_letter_is_flagged_and_can_be_waived(
+    web: Web, eds: EdsFake, check: ContractChecker
+) -> None:
+    """СЦ-1: письмо не ушло — карточка говорит это полем; «вручено иначе» снимает отправку."""
+    stuck = letter_doc(status="sent", number="ИСХ-012/26", letter=letter(undelivered=True))
+    eds.answer("GET", f"documents/{DOC_ID}", 200, stuck)
+    await web.login(["REGISTRAR"])
+    card = await web.client.get(f"{BASE}/documents/{DOC_ID}")
+    assert card.status_code == 200, card.text
+    check(card, "/eds/documents/{id}", "get")
+    assert card.json()["letter"]["undelivered"] is True
+
+    waived = letter_doc(
+        status="sent", number="ИСХ-012/26", letter=letter(undelivered=False, mail_waived_at=NOW)
+    )
+    eds.answer("POST", f"documents/{DOC_ID}/mail-waive", 200, waived)
+    done = await web.send("POST", f"{BASE}/documents/{DOC_ID}/mail-waive")
+    assert done.status_code == 200, done.text
+    check(done, "/eds/documents/{id}/mail-waive", "post")
+    assert done.json()["letter"]["undelivered"] is False
+    assert done.json()["letter"]["mail_waived_at"]
+
+    # снять отправку — раздел регистрации исходящих: менеджеру 403 до EDS
+    await web.login(["MANAGER"])
+    before = len(eds.requests("POST", f"documents/{DOC_ID}/mail-waive"))
+    assert (await web.send("POST", f"{BASE}/documents/{DOC_ID}/mail-waive")).status_code == 403
+    assert len(eds.requests("POST", f"documents/{DOC_ID}/mail-waive")) == before
+
+
 async def test_letterhead_and_body_validation(
     web: Web, eds: EdsFake, check: ContractChecker
 ) -> None:

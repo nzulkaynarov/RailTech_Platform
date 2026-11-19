@@ -24,6 +24,7 @@ from sqlalchemy import (
     String,
     and_,
     cast,
+    false,
     func,
     literal_column,
     not_,
@@ -39,7 +40,7 @@ from app.models import ApprovalRoute, ApprovalStep, Document, Employee, Letter, 
 from app.schemas.common import ErpLinks, LetterSender, Money
 from app.schemas.pagination import decode_cursor
 from app.schemas.registry import RegistryItem, RegistryKind, RegistryPage, RegistryStage
-from app.services import access, paging
+from app.services import access, delivery, paging
 from app.services.letters_read import escape_like
 from app.services.people import Directory, load_directory
 
@@ -107,6 +108,7 @@ def _union(employee: Employee) -> CompoundSelect[Any]:
         Letter.erp_company_id.label("erp_company_id"),
         cast(null(), Numeric).label("amount"),
         cast(null(), String).label("currency"),
+        false().label("undelivered"),
     )
     documents = select(
         cast(literal_column("documents.kind"), String).label("kind"),
@@ -125,6 +127,8 @@ def _union(employee: Employee) -> CompoundSelect[Any]:
         _big().label("erp_company_id"),
         cast(Document.amount, Numeric).label("amount"),
         Document.currency.label("currency"),
+        # СЦ-1: письмо с почтой адресата, которое не ушло, — не «Архив», а «Исходящие»
+        delivery.undelivered().label("undelivered"),
     ).where(access.document_visible(employee))  # письма и чужие черновики отсекает сам предикат видимости
     quotes = select(
         cast(literal_column("'quote'"), String).label("kind"),
@@ -143,6 +147,7 @@ def _union(employee: Employee) -> CompoundSelect[Any]:
         ApprovalRoute.erp_company_id,
         cast(ApprovalRoute.quote_snapshot["total"].astext, Numeric),
         ApprovalRoute.quote_snapshot["currency"].astext,
+        false(),
     ).where(ApprovalRoute.template == "quote", access.route_visible(employee))
     parts = [documents, quotes]
     # Входящие письма — метаданные отправителя (имя, ИНН) — только с `letters.read`, как `/letters`.
@@ -172,6 +177,7 @@ def _project_documents() -> Select[Any]:
         ProjectDocument.erp_company_id,
         cast(ProjectDocument.amount, Numeric),
         ProjectDocument.currency,
+        false(),
     )
 
 
@@ -188,7 +194,8 @@ def _filtered(employee: Employee, filters: Filters) -> Select[Any]:
     if filters.statuses:
         stmt = stmt.where(c.status.in_(filters.statuses))
     if filters.stage is not None:
-        done = _done(c.kind, c.status)
+        # Конечный статус — ещё не исход: недоставленное письмо остаётся открытым (`ui-standard.md` §14 п. 1)
+        done = and_(_done(c.kind, c.status), not_(c.undelivered))
         stmt = stmt.where(done if filters.stage == RegistryStage.DONE else not_(done))
     local_day = cast(func.timezone(COMPANY_TZ.key, c.registered_at), Date)
     if filters.date_from:
@@ -230,6 +237,7 @@ def _item(row: Any, directory: Directory) -> RegistryItem:
             if row.amount is not None and row.currency
             else None
         ),
+        undelivered=bool(row.undelivered),
     )
 
 

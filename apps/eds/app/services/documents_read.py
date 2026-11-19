@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
@@ -24,7 +24,7 @@ from app.schemas.documents import (
 from app.schemas.documents import DocumentPayment as PaymentOut
 from app.schemas.pagination import decode_cursor
 from app.schemas.registry import RegistryStage
-from app.services import access, files, journal, letter_mail, paging, registry, renders, reply
+from app.services import access, delivery, files, journal, letter_mail, paging, registry, renders, reply
 from app.services.people import Directory, load_directory
 
 _DECISION = {"approved": Decision.APPROVE, "returned": Decision.RETURN, "rejected": Decision.REJECT}
@@ -115,6 +115,8 @@ async def letter_of(session: AsyncSession, document: Document) -> OutgoingLetter
             for m in mailings
         ],
         registration_requested=requested,
+        undelivered=delivery.is_undelivered(document, [m.status for m in mailings]),
+        mail_waived_at=document.mail_waived_at,
     )
 
 
@@ -222,7 +224,8 @@ async def list_page(
         stmt = stmt.where(Document.author_crm_user_id == employee.crm_user_id)
     if stage is not None:
         # Тот же словарь конечных статусов, что у реестра (eds.yaml 0.15.0): у всех видов документа он один.
-        done = Document.status.in_(registry.DONE_STATUSES["memo"])
+        # Недоставленное письмо — не конец пути (СЦ-1): остаётся в «Исходящих».
+        done = and_(Document.status.in_(registry.DONE_STATUSES["memo"]), ~delivery.undelivered())
         stmt = stmt.where(done if stage == RegistryStage.DONE else ~done)
     stmt = paging.apply(stmt, Document.created_at, Document.id, decode_cursor(cursor), limit)
     rows = list((await session.execute(stmt)).scalars().all())
@@ -239,6 +242,9 @@ async def list_page(
         select(DocumentPayment.document_id, DocumentPayment.paid_on).where(DocumentPayment.document_id.in_(ids))
     )
     paid_on = dict(paid_rows.all())
+    stuck = set(
+        (await session.execute(select(Document.id).where(Document.id.in_(ids), delivery.undelivered()))).scalars()
+    )
     items = [
         DocumentListItem(
             id=r.id,
@@ -252,6 +258,7 @@ async def list_page(
             files_count=counts.get(r.id, 0),
             paid_on=paid_on.get(r.id),
             created_at=r.created_at,
+            undelivered=r.id in stuck,
         )
         for r in page
     ]

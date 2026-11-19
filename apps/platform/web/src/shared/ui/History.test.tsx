@@ -38,3 +38,14 @@ describe("History", () => {
     expect(screen.getAllByRole("listitem")[0]).toHaveTextContent("Done: Редакция согласована");
   });
 });
+
+describe("History: неудача", () => {
+  it("у записи «не удалось» — своё состояние и слово, а не «Сделано» (ui-standard §14 п. 4)", () => {
+    renderUi(
+      <History items={[{ state: "failed", title: "Не отправлено: почта не подключена" }]} />,
+    );
+    expect(screen.getByText("Не удалось:", { exact: false })).toBeInTheDocument();
+    expect(screen.queryByText("Сделано:", { exact: false })).toBeNull();
+    expect(document.querySelector(".pf-history-dot--failed")).not.toBeNull();
+  });
+});

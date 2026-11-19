@@ -1648,6 +1648,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/eds/documents/{id}/mail-waive": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Письмо: вручено иначе
+     * @description EDS `POST /documents/{id}/mail-waive` (СЦ-1): письмо передано адресату не почтой. Письмо с почтой адресата, которое не ушло (`letter.undelivered`), остаётся в «Исходящих», пока попытка отправки не завершится успехом или отправку не снимут этим вызовом. Раздел `eds.inbox.register` (полный).
+     */
+    post: operations["waiveEdsDocumentMail"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/eds/documents/{id}/send": {
     parameters: {
       query?: never;
@@ -10446,6 +10466,8 @@ export interface components {
       contact_id?: string | null;
     };
     EdsDocumentRow: {
+      /** @description Исходящее письмо не ушло адресату (СЦ-1): строка остаётся в «Исходящих» с меткой «Не отправлено» */
+      undelivered: boolean;
       kind: components["schemas"]["EdsRegistryKind"];
       /** Format: uuid */
       id: string;
@@ -10717,6 +10739,13 @@ export interface components {
     };
     /** @description Письмо на бланке (P4) */
     EdsLetter: {
+      /** @description Письмо с почтой адресата не ушло и отправку не сняли (СЦ-1): причина и действие — вверху карточки */
+      undelivered: boolean;
+      /**
+       * Format: date-time
+       * @description «Вручено иначе» — когда сняли отправку почтой
+       */
+      mail_waived_at: string | null;
       /** @description `null` — письмо без бланка (только текст) */
       body: components["schemas"]["EdsDocumentBody"] | null;
       recipient_attention: string | null;
@@ -10736,6 +10765,8 @@ export interface components {
     };
     /** @description Бланк компании (проекция ERP в EDS) */
     EdsLetterhead: {
+      /** @description `false` — почта документооборота не подключена: письмо зарегистрируется, но адресату не уйдёт; форма говорит это до отправки (СЦ-1) */
+      mail_connected: boolean;
       /** @description `false` — бланк ещё не получен: PDF письма не строится */
       configured: boolean;
       company_name: string | null;
@@ -20155,6 +20186,37 @@ export interface operations {
     requestBody?: never;
     responses: {
       /** @description Передано на регистрацию */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsDocument"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["EdsConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  waiveEdsDocumentMail: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id документа EDS (UUID); номер `СЗ-2026/031` содержит «/» и в адресе не используется */
+        id: components["parameters"]["EdsDocumentId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Отправка снята */
       200: {
         headers: {
           [name: string]: unknown;

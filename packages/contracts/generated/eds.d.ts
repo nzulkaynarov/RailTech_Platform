@@ -1414,6 +1414,29 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/documents/{document_id}/mail-waive": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * «Вручено иначе» — снять отправку письма почтой
+     * @description Зарегистрированное письмо передано адресату не почтой (нарочным, через портал): отметка `letter.mail_waived_at`, строка
+     *     журнала `document.mail_waived`. Письмо с почтой адресата, которое не ушло, считается недоставленным
+     *     (`letter.undelivered`, `RegistryItem.undelivered`) и остаётся в «Исходящих» (`stage=open`), пока попытка отправки
+     *     не завершится `sent` или отправку не снимут этим вызовом. Повторный вызов ничего не меняет. Право `letters.register`.
+     */
+    post: operations["waiveDocumentMail"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/documents/{document_id}/send": {
     parameters: {
       query?: never;
@@ -3151,6 +3174,13 @@ export interface components {
       mailings: components["schemas"]["DocumentMailing"][];
       /** @description Автор без `letters.register` передал черновик делопроизводителю (B-P8B-4) */
       registration_requested: components["schemas"]["RegistrationRequest"] | null;
+      /** @description Письмо с почтой адресата зарегистрировано, но не ушло, и отправку не сняли (СЦ-1) — остаётся в «Исходящих» */
+      undelivered: boolean;
+      /**
+       * Format: date-time
+       * @description «Вручено иначе» — когда сотрудник снял отправку почтой (`POST …/mail-waive`)
+       */
+      mail_waived_at: string | null;
     };
     /** @description PDF письма на бланке из фонового воркера (B-094) */
     DocumentPdf: {
@@ -3193,6 +3223,8 @@ export interface components {
     };
     /** @description Бланк компании — проекция события ERP `letterhead.updated` (P4) */
     Letterhead: {
+      /** @description Почта документооборота подключена (есть секрет пары `eds → crm`); `false` — письмо зарегистрируется, но адресату не уйдёт (СЦ-1) */
+      mail_connected: boolean;
       /** @description `false` — бланк из ERP ещё не получен: PDF письма не строится (409 `letterhead_missing`), пока админ не сохранит «Компания и бланки» */
       configured: boolean;
       company_name: string | null;
@@ -3328,6 +3360,8 @@ export interface components {
       at: string;
     };
     DocumentListItem: {
+      /** @description Исходящее письмо с почтой адресата не ушло и отправку не сняли (СЦ-1); в списке — `stage=open` */
+      undelivered: boolean;
       id: components["schemas"]["Uuid"];
       kind: components["schemas"]["DocumentKind"];
       /** @description `null` — исходящее письмо до отправки */
@@ -3601,6 +3635,8 @@ export interface components {
       | "invoice"
       | "act";
     RegistryItem: {
+      /** @description Исходящее письмо с почтой адресата не ушло и отправку не сняли (СЦ-1); такая строка — `stage=open` */
+      undelivered: boolean;
       kind: components["schemas"]["RegistryKind"];
       /** @description Письмо (`letter_in`), документ (`letter_out`, `memo`, `application`, `report`), маршрут (`quote`) или проекция документа проекта (`contract`, `invoice`, `act`) */
       id: components["schemas"]["Uuid"];
@@ -5755,6 +5791,32 @@ export interface operations {
     requestBody?: never;
     responses: {
       /** @description Передано на регистрацию */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Document"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+    };
+  };
+  waiveDocumentMail: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_id: components["parameters"]["DocumentId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Отправка снята */
       200: {
         headers: {
           [name: string]: unknown;

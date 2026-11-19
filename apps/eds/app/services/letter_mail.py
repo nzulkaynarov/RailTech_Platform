@@ -23,7 +23,7 @@ from app import clock
 from app.errors import conflict, invalid_fields
 from app.models import Document, DocumentMailing, DocumentRender
 from app.services import journal, letterhead, reply
-from app.services.mail_out import LinkedAttachment, MailRequestError, request_mail
+from app.services.mail_out import MAIL_SERVICE, REQUESTER, LinkedAttachment, MailRequestError, request_mail
 from app.services.storage import ObjectStorage
 
 log = structlog.get_logger(__name__)
@@ -39,10 +39,16 @@ _REASONS: Final = {
     "tls_failed": "Не удалось защищённое соединение с почтовым сервером — Настройки · Подключения · Почта",
     "invalid_host": "Неверный адрес почтового сервера — Настройки · Подключения · Почта",
     "attachment_unavailable": "PDF письма недоступен почтовому сервису — отправьте ещё раз",
-    "content_unreadable": "Почтовый сервис не прочитал письмо (ключ пары) — сообщите администратору",
+    "content_unreadable": "Почтовый сервис не прочитал письмо — сообщите администратору",
 }
-NO_PAIR: Final = "Почта не подключена к документообороту (нет секрета пары EDS → CRM) — сообщите администратору"
+# Текст для сотрудника — без названий сервисов и переменных (`ui-standard.md` §14 п. 4); подробность — в логе.
+NO_PAIR: Final = "Почта документооборота не подключена — сообщите администратору"
 NO_PDF: Final = "PDF письма не построен: "
+
+
+def connected(bus: AsyncBus) -> bool:
+    """Почта документооборота подключена: у пары «документооборот → почтовый сервис» есть секрет."""
+    return bool(bus.config.secrets(REQUESTER, MAIL_SERVICE))
 
 
 def reason_text(code: str) -> str:
@@ -165,7 +171,9 @@ async def _request(
             notify=True,
             attachments=[attachment],
         )
-    except MailRequestError:
+    except MailRequestError as error:
+        # Сотруднику — слова без внутренних названий; что именно не задано — в журнале для администратора.
+        log.error("letter_mail.not_connected", document_id=str(document.id), detail=str(error))
         await _fail(session, bus, mailing, document, NO_PAIR)
         return
     mailing.status = "requested"

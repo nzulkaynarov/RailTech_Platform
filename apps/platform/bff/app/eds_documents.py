@@ -279,6 +279,7 @@ class _RawListItem(BaseModel):
     amount: EdsMoney | None
     due_date: str | None
     created_at: Any
+    undelivered: bool = False
 
 
 class _RawRegistryItem(BaseModel):
@@ -291,6 +292,7 @@ class _RawRegistryItem(BaseModel):
     responsible: EdsPerson | None
     links: dict[str, Any] | None = None
     amount: dict[str, Any] | None = None
+    undelivered: bool = False
 
 
 def _parse[T: BaseModel](model: type[T], body: Any, path: str) -> T:
@@ -425,6 +427,7 @@ def documents_page(body: Any) -> EdsDocumentPage:
                     "due_date": item.due_date,
                     "created_at": item.created_at,
                     "openable": item.kind in DOCUMENT_KINDS,
+                    "undelivered": item.undelivered,
                 }
             )
         )
@@ -465,6 +468,7 @@ def registry_page(body: Any) -> EdsDocumentPage:
                     "created_at": item.registered_at,
                     "openable": item.kind in DOCUMENT_KINDS,
                     "project_ref": _project_ref(item),
+                    "undelivered": item.undelivered,
                 }
             )
         )
