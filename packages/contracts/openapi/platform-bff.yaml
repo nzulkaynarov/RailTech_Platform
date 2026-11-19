@@ -19810,10 +19810,11 @@ components:
     PaymentItem:
       type: object
       additionalProperties: false
-      required: [description, quantity, unit_price, total]
+      required: [description, quantity, unit, unit_price, total]
       properties:
         description: {type: string}
-        quantity: {type: number, minimum: 0}
+        quantity: {type: number, minimum: 0, description: "Дробное, до трёх знаков (ADR-0027 п. 9)"}
+        unit: {type: string, description: "Подпись единицы строки («т»); пусто — у строк до перехода (ADR-0027 п. 10)"}
         unit_price: {type: string}
         total: {type: string}
     PaymentRecord:

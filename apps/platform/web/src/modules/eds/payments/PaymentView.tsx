@@ -8,6 +8,7 @@ import { useViewport } from "../../../app/shell/useViewport";
 import { ApiError } from "../../../shared/api/errors";
 import type { PaymentCard } from "../../../shared/api/generated/model";
 import { listPayments, useGetPayment } from "../../../shared/api/generated/platform-bff";
+import { formatQuantity } from "../../../shared/lib/money";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { EmptyState } from "../../../shared/ui/EmptyState";
@@ -29,7 +30,12 @@ type Paid = PaymentCard["payments"][number];
 
 /** Строки счёта — общая таблица без «Столбцов» (стандарт §7), итоги — списком под ней, как в КП. */
 function Items({ card }: { card: PaymentCard }) {
-  const { t } = useTranslation("payments");
+  const { t, i18n } = useTranslation("payments");
+  // ADR-0027 п. 9, 10: дробное количество и единица строки — «12,5 т».
+  const quantity = (item: Line) =>
+    [formatQuantity(item.quantity, { language: i18n.language }), item.unit]
+      .filter(Boolean)
+      .join("\u00a0");
   const money = (amount: string) => (
     <MoneyText {...moneyProps({ amount, currency: card.amount.currency })} />
   );
@@ -55,7 +61,7 @@ function Items({ card }: { card: PaymentCard }) {
             header: t("items.columns.quantity"),
             width: 96,
             numeric: true,
-            cell: (item) => item.quantity,
+            cell: quantity,
           },
           {
             id: "price",
