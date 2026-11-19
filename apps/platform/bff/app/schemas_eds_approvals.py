@@ -22,6 +22,7 @@ from app.schemas_eds_documents import (
     EdsPerson,
     EdsRouteStep,
 )
+from app.schemas_item_ref import ItemRef
 
 RouteStatus = Literal["open", "approved", "returned", "rejected"]
 Decision = Literal["approve", "return", "reject"]
@@ -59,6 +60,8 @@ class QuoteApprovalPage(BaseModel):
 class QuoteLine(BaseModel):
     position: int
     name: str
+    #: Позиция каталога строки (ЕД-4)
+    item: ItemRef | None = None
     quantity: float
     unit: str | None
     unit_price: str

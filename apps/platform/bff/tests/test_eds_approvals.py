@@ -186,6 +186,13 @@ async def test_quote_card_collects_route_erp_lines_and_the_internal_block(
     assert card["lines"][0] == {
         "position": 1,
         "name": "Привод стрелочный СП-6",
+        "item": {
+            "id": "31",
+            "name": "СП-6",
+            "sku": "RT-00031",
+            "kind": "goods",
+            "thumbnail": "/api/v1/erp/catalog/items/31/thumbnail?v=5",
+        },
         "quantity": 12,
         "unit": "шт",
         "unit_price": "8500000.00",

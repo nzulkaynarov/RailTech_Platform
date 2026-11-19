@@ -13019,6 +13019,30 @@ paths:
           $ref: '#/components/responses/NotFound'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/items/{id}/thumbnail:
+    get:
+      tags: [erp-catalog]
+      operationId: getCatalogItemThumbnail
+      summary: 'Позиция каталога: миниатюра главного фото'
+      description: >-
+        ERP `GET catalog/items/{id}/thumbnail/` — 96×96 WebP (ЕД-4). Видят все, кто видит строки позиций: `erp.stock`, `erp.calc`, `eds.drafts`, `eds.projects` или `eds.payments` — чтение. Адрес в ответах — с `?v=<id фото>`, кэш браузера на сутки. Фото нет — 404 `NOT_FOUND`.
+      parameters:
+        - $ref: '#/components/parameters/CompanyItemId'
+        - {name: v, in: query, required: false, schema: {type: string}, description: Версия фото — только для кэша браузера}
+      responses:
+        '200':
+          description: Миниатюра
+          content:
+            image/webp:
+              schema: {type: string, format: binary}
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /erp/catalog/items/{id}/publish:
     post:
       tags: [erp-catalog]
@@ -19433,11 +19457,14 @@ components:
     QuoteLine:
       type: object
       additionalProperties: false
-      required: [position, name, quantity, unit, unit_price, amount, lead_time_days, optional]
+      required: [position, name, item, quantity, unit, unit_price, amount, lead_time_days, optional]
       properties:
         position: {type: integer, minimum: 1, description: Номер строки по порядку}
         name: {type: string}
-        quantity: {type: number, minimum: 0}
+        item:
+          oneOf: [{$ref: '#/components/schemas/ItemRef'}, {type: 'null'}]
+          description: Позиция каталога строки (ЕД-4); `null` — строка без карточки
+        quantity: {type: number, minimum: 0, description: 'Дробное, до трёх знаков (ADR-0027 п. 9)'}
         unit: {type: [string, 'null']}
         unit_price: {type: string, pattern: '^-?\d+(\.\d+)?$', description: Цена без НДС}
         amount: {type: string, pattern: '^-?\d+(\.\d+)?$', description: Сумма строки без НДС}
@@ -24838,6 +24865,7 @@ components:
         - product_id
         - product_name
         - product_draft
+        - item
         - kind
         - zone
         - group
@@ -24853,6 +24881,9 @@ components:
         - visa
         - can_edit
       properties:
+        item:
+          oneOf: [{$ref: '#/components/schemas/ItemRef'}, {type: 'null'}]
+          description: Позиция каталога строки (ЕД-4); `null` — строка без карточки
         id: {type: string, pattern: '^[0-9]+$'}
         name: {type: string}
         article: {type: string}
@@ -25207,9 +25238,10 @@ components:
     StockRow:
       type: object
       additionalProperties: false
-      required: [product_id, name, article, unit, on_hand, reserved, free, incoming, next_expected, cells]
+      required: [product_id, item, name, article, unit, on_hand, reserved, free, incoming, next_expected, cells]
       properties:
         product_id: {type: string, pattern: '^[0-9]+$'}
+        item: {$ref: '#/components/schemas/ItemRef'}
         name: {type: string}
         article: {type: string}
         unit: {type: string}
@@ -25301,10 +25333,11 @@ components:
     StockProduct:
       type: object
       additionalProperties: false
-      required: [product_id, name, article, unit, on_hand, reserved, free, incoming, next_expected, cells, reservations, incoming_orders, movements, rights]
+      required: [product_id, item, name, article, unit, on_hand, reserved, free, incoming, next_expected, cells, reservations, incoming_orders, movements, rights]
       description: Товар на складе — ячейки, резервы по проектам, ожидаемый приход и последние движения
       properties:
         product_id: {type: string, pattern: '^[0-9]+$'}
+        item: {$ref: '#/components/schemas/ItemRef'}
         name: {type: string}
         article: {type: string}
         unit: {type: string}
@@ -25430,11 +25463,14 @@ components:
     SupplierOrderLine:
       type: object
       additionalProperties: false
-      required: [id, position, product_id, name, article, unit, quantity, received_quantity, unit_price, line_total, request, line_id, offer, tracking, requires_doc]
+      required: [id, position, product_id, item, name, article, unit, quantity, received_quantity, unit_price, line_total, request, line_id, offer, tracking, requires_doc]
       properties:
         id: {type: string, pattern: '^[0-9]+$'}
         position: {type: integer, minimum: 1}
         product_id: {type: [string, 'null'], pattern: '^[0-9]+$'}
+        item:
+          oneOf: [{$ref: '#/components/schemas/ItemRef'}, {type: 'null'}]
+          description: Позиция каталога строки (ЕД-4); `null` — строка без карточки
         name: {type: string}
         article: {type: string}
         unit: {type: string}
@@ -26410,14 +26446,26 @@ components:
       properties:
         amount: {$ref: '#/components/schemas/DecimalString'}
         currency: {type: string, minLength: 3, maxLength: 8}
+    ItemRef:
+      type: object
+      additionalProperties: false
+      description: Позиция каталога в строке любого документа (план ЕД-4, `ui-standard.md` §12) — одна схема на все экраны
+      required: [id, name, sku, kind, thumbnail]
+      properties:
+        id: {type: string, pattern: '^[0-9]+$'}
+        name: {type: string, description: Название карточки каталога}
+        sku: {type: string, description: Наш артикул; пусто — его ещё нет}
+        kind: {type: string, enum: [goods, service]}
+        thumbnail: {type: [string, 'null'], description: 'Адрес миниатюры с версией фото (`…/thumbnail?v=<id фото>`); `null` — фото нет, значок типа'}
     CatalogItem:
       type: object
       additionalProperties: false
-      required: [id, sku, name, kind, unit, vat_rate, vat_effective, category, status, offers_count, nearest_valid_until, docs_count, proposals_count]
+      required: [id, sku, name, thumbnail, kind, unit, vat_rate, vat_effective, category, status, offers_count, nearest_valid_until, docs_count, proposals_count]
       properties:
         id: {$ref: '#/components/schemas/CompanyItemRef'}
         sku: {type: string}
         name: {type: string}
+        thumbnail: {type: [string, 'null'], description: 'Миниатюра главного фото (ЕД-4); `null` — фото нет, значок типа'}
         kind: {$ref: '#/components/schemas/CatalogItemKind'}
         unit:
           oneOf: [{$ref: '#/components/schemas/CatalogUnit'}, {type: 'null'}]
@@ -26580,11 +26628,12 @@ components:
     CatalogItemDetail:
       type: object
       additionalProperties: false
-      required: [id, sku, name, kind, unit, vat_rate, vat_effective, category, status, offers_count, nearest_valid_until, docs_count, proposals_count, description, gost_drawing, hs_code, manufacturer_part_number, brand, brand_id, source_supplier, offers, prices_visible, tech_docs, images, origin, warranty, proposals, publish, catalog_price, brand_company]
+      required: [id, sku, name, thumbnail, kind, unit, vat_rate, vat_effective, category, status, offers_count, nearest_valid_until, docs_count, proposals_count, description, gost_drawing, hs_code, manufacturer_part_number, brand, brand_id, source_supplier, offers, prices_visible, tech_docs, images, origin, warranty, proposals, publish, catalog_price, brand_company]
       properties:
         id: {$ref: '#/components/schemas/CompanyItemRef'}
         sku: {type: string}
         name: {type: string}
+        thumbnail: {type: [string, 'null'], description: 'Миниатюра главного фото (ЕД-4); `null` — фото нет'}
         kind: {$ref: '#/components/schemas/CatalogItemKind'}
         unit:
           oneOf: [{$ref: '#/components/schemas/CatalogUnit'}, {type: 'null'}]

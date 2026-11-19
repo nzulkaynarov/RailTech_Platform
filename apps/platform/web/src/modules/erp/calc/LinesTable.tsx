@@ -21,6 +21,7 @@ import { MatchModal } from "./MatchModal";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { useGetCatalogLookups } from "../../../shared/api/generated/platform-bff";
 import { HOME_CURRENCY, currencyLabel } from "../../../shared/lib/money";
+import { ItemRefCell } from "../../ItemRefCell";
 
 const GROUP_OF = { stock: "stock", supply: "supply", engineer: "engineer" } as const;
 
@@ -130,9 +131,18 @@ function Position({ line, onMatch }: { line: CalcLine; onMatch: () => void }) {
   const { t } = useTranslation("calc");
   return (
     <div className="pf-calc-position">
-      <span className="pf-calc-line-name">{line.name}</span>
+      <ItemRefCell
+        item={line.item}
+        name={line.name}
+        kind={line.kind === "service" ? "service" : "goods"}
+      />
       <span className="pf-calc-line-meta">
-        {line.article ? <span className="pf-hint pf-num">{line.article}</span> : null}
+        {/* Наш артикул — в позиции; артикул изготовителя — только с полной подписью (стандарт §12 п. 6) */}
+        {line.article && line.article !== line.item?.sku ? (
+          <span className="pf-hint">
+            {t("lines.mpn")} <span className="pf-num">{line.article}</span>
+          </span>
+        ) : null}
         <StatusTag kind="itemKind" status={line.kind}>
           {t(`lines.kind.${line.kind}`)}
         </StatusTag>

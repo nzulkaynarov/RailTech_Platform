@@ -14,6 +14,11 @@ export interface CatalogItem {
   id: CompanyItemRef;
   sku: string;
   name: string;
+  /**
+   * Миниатюра главного фото (ЕД-4); `null` — фото нет, значок типа
+   * @nullable
+   */
+  thumbnail: string | null;
   kind: CatalogItemKind;
   unit: CatalogUnit | null;
   /** НДС позиции, %; `null` — ставка компании по умолчанию */

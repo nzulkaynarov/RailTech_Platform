@@ -18,6 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.feeds.text import segment
 from app.schemas_erp_calc import zones_of
+from app.schemas_item_ref import ItemRef, item_ref
 
 DIGITS = r"^[0-9]+$"
 EMAIL = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
@@ -56,6 +57,7 @@ class StockCell(BaseModel):
 
 class StockRow(BaseModel):
     product_id: str
+    item: ItemRef
     name: str
     article: str
     unit: str
@@ -185,6 +187,7 @@ class SupplierOrderLine(BaseModel):
     id: str
     position: int
     product_id: str | None
+    item: ItemRef | None = None
     name: str
     article: str
     unit: str
@@ -578,6 +581,11 @@ def _require_ref(raw: Mapping[str, Any] | None) -> StockRequestRef:
 def to_row(raw: Mapping[str, Any]) -> StockRow:
     return StockRow(
         product_id=str(raw["product_id"]),
+        # ЕД-4: старая ERP без `item` — ссылка из полей строки, без фото
+        item=item_ref(raw.get("item"))
+        or ItemRef(
+            id=str(raw["product_id"]), name=raw["name"], sku="", kind="goods", thumbnail=None
+        ),
         name=raw["name"],
         article=raw.get("article") or "",
         unit=raw.get("unit") or "",
@@ -768,6 +776,7 @@ def to_order(raw: Mapping[str, Any], prices: bool) -> SupplierOrderDetail:
                 id=str(line["id"]),
                 position=line["position"],
                 product_id=_id(line.get("product_id")),
+                item=item_ref(line.get("item")),
                 name=line["name"],
                 article=line.get("article") or "",
                 unit=line.get("unit") or "",

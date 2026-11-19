@@ -9,8 +9,11 @@ import type { CalcStock } from "./calcStock";
 import type { CalcSupplier } from "./calcSupplier";
 import type { CalcZone } from "./calcZone";
 import type { DecimalString } from "./decimalString";
+import type { ItemRef } from "./itemRef";
 
 export interface CalcLine {
+  /** Позиция каталога строки (ЕД-4); `null` — строка без карточки */
+  item: ItemRef | null;
   /** @pattern ^[0-9]+$ */
   id: string;
   name: string;

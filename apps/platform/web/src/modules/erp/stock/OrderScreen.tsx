@@ -14,7 +14,6 @@ import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { QueryState } from "../../../shared/ui/FormParts";
 import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTable";
-import { NameCode } from "../../../shared/ui/NameCode";
 import { History, type HistoryItem } from "../../../shared/ui/History";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { PageHeader } from "../../../shared/ui/PageHeader";
@@ -22,6 +21,7 @@ import { useStateLabels } from "./api";
 import { OrderStatusTag } from "./OrdersTab";
 import { CancelModal, ConfirmModal, EditModal, ReceiveModal, SendModal } from "./OrderModals";
 import { MoneyText } from "../../../shared/ui/MoneyText";
+import { ItemRefCell } from "../../ItemRefCell";
 
 import "../calc/calc.css";
 import "./stock.css";
@@ -71,7 +71,7 @@ function Lines({ order }: { order: SupplierOrderDetail }) {
       width: null,
       cell: (l) => (
         <>
-          <NameCode name={l.name} code={l.article} />
+          <ItemRefCell item={l.item} name={l.name} />
           {l.offer ? <OfferNote offer={l.offer} /> : null}
         </>
       ),

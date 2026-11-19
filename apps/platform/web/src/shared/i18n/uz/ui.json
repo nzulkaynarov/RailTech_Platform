@@ -155,5 +155,8 @@
   "timeLeft": {
     "today": "bugun oxirgi kun",
     "days": "{{count}} kun qoldi"
+  },
+  "entity": {
+    "sku": "Artikul"
   }
 }

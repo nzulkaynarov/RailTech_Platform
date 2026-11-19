@@ -144,7 +144,8 @@
     "release": "Снять резерв",
     "releaseLabel": "Снять резерв строки «{{name}}»",
     "markupLabel": "Наценка, %: {{name}}",
-    "currencyLabel": "Валюта закупки для «{{name}}»"
+    "currencyLabel": "Валюта закупки для «{{name}}»",
+    "mpn": "Артикул изготовителя"
   },
   "add": {
     "button": "Добавить строку",

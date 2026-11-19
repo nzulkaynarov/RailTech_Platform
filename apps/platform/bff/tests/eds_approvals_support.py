@@ -226,6 +226,7 @@ def erp_quote(**over: Any) -> dict[str, Any]:
                 "display_type": "ITEM",
                 "name_canonical": "Привод стрелочный СП-6",
                 "product_name": "СП-6",
+                "item": {"id": 31, "name": "СП-6", "sku": "RT-00031", "kind": "goods", "photo": 5},
                 "unit": "шт",
                 "quantity": 12,
                 "final_price_excl_vat": "8500000.00",

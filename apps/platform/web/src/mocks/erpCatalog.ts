@@ -60,6 +60,7 @@ import {
 import { readCompanyMock, updateCompanyMock } from "./fixtures/company";
 import { partnerPriceVisibility } from "./erpSupplierAccess";
 import { buildMe, readSession } from "./mockSession";
+import { thumbnailOf } from "./fixtures/itemRef";
 
 /**
  * Моки «Расчёт · Номенклатура и партнёры» и «Техдокументация» (D2-3, BFF 0.26.0). Права — как в BFF: раздел `erp.stock`
@@ -174,6 +175,7 @@ function rowOf(item: MockItem): CatalogItem {
     id: item.id,
     sku: item.sku,
     name: item.name,
+    thumbnail: thumbnailOf(item.id),
     kind: item.kind,
     unit: unitOf(item.unitId),
     vat_rate: item.vat_rate,
@@ -926,6 +928,16 @@ export const erpCatalogHandlers = [
     if (!image) return notFound();
     return new HttpResponse(image.bytes, {
       headers: { "Content-Type": image.type, "X-Content-Type-Options": "nosniff" },
+    });
+  }),
+  // ЕД-4: миниатюра — главное фото как есть (BFF отдаёт 96×96 WebP; мок картинку не пережимает)
+  http.get("*/erp/catalog/items/:id/thumbnail", ({ params }) => {
+    const main = readErpCatalog()
+      .items.find((i) => i.id === params["id"])
+      ?.images.find((i) => i.is_main);
+    if (!main) return notFound();
+    return new HttpResponse(main.bytes, {
+      headers: { "Content-Type": main.type, "Cache-Control": "private, max-age=86400" },
     });
   }),
   http.post("*/erp/catalog/items/:id/return", async ({ params, request }) => {

@@ -47,6 +47,7 @@ import {
   SUPPLIERS,
   seedStock,
 } from "./fixtures/stock";
+import { itemRefOf } from "./fixtures/itemRef";
 import {
   calcLineIds,
   calcSheetByNumber,
@@ -203,6 +204,7 @@ function rowOf(state: MockStock, product: MockProduct): StockRow {
   const incoming = incomingOf(state, product.id);
   return {
     product_id: String(product.id),
+    item: itemRefOf(product.id, product.name, product.article),
     name: product.name,
     article: product.article,
     unit: product.unit,
@@ -489,6 +491,7 @@ function presentOrder(state: MockStock, order: MockOrder, user: Me): SupplierOrd
       id: String(l.id),
       position: index + 1,
       product_id: String(l.productId),
+      item: itemRefOf(l.productId, l.name, l.article),
       name: l.name,
       article: l.article,
       unit: l.unit,

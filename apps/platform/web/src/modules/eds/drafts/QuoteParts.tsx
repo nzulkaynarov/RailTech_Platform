@@ -7,6 +7,7 @@ import { DataTable } from "../../../shared/ui/DataTable/DataTable";
 import { LockIcon } from "../../../shared/ui/icons";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { Restricted } from "../decision/Restricted";
+import { ItemRefCell } from "../../ItemRefCell";
 
 type QuoteLine = NonNullable<QuoteApprovalCard["lines"]>[number];
 
@@ -49,7 +50,7 @@ export function QuoteLines({ quote }: { quote: QuoteApprovalCard }) {
             width: null,
             cell: (line) => (
               <>
-                {line.name}
+                <ItemRefCell item={line.item} name={line.name} />
                 {line.optional ? (
                   <span className="pf-dec-optional"> · {t("card.optional")}</span>
                 ) : null}
