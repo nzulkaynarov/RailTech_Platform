@@ -26145,6 +26145,17 @@ export const getListStockBalancesResponseMock = (
   ...overrideResponse,
 });
 
+export const getGetStockProductResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getGetStockProductResponseMock = (
   overrideResponse: Partial<Extract<StockProduct, object>> = {},
 ): StockProduct => ({
@@ -26191,7 +26202,7 @@ export const getGetStockProductResponseMock = (
       status: faker.helpers.arrayElement(["active", "released", "fulfilled"] as const),
       created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
       created_by: faker.helpers.arrayElement([
-        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        { ...getGetStockProductResponsePersonRefMock() },
         null,
       ]),
       tracking: faker.helpers.arrayElement(Object.values(TrackingClass)),
@@ -26229,7 +26240,7 @@ export const getGetStockProductResponseMock = (
         null,
       ]),
       at: faker.date.past().toISOString().slice(0, 19) + "Z",
-      by: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+      by: faker.helpers.arrayElement([{ ...getGetStockProductResponsePersonRefMock() }, null]),
       note: faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         null,
@@ -26237,6 +26248,17 @@ export const getGetStockProductResponseMock = (
     }),
   ),
   rights: { manage: faker.datatype.boolean(), ship: faker.datatype.boolean() },
+  ...overrideResponse,
+});
+
+export const getAdjustStockResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
   ...overrideResponse,
 });
 
@@ -26285,10 +26307,7 @@ export const getAdjustStockResponseMock = (
       remaining: faker.number.int({ min: 0 }),
       status: faker.helpers.arrayElement(["active", "released", "fulfilled"] as const),
       created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
-      created_by: faker.helpers.arrayElement([
-        faker.string.alpha({ length: { min: 10, max: 20 } }),
-        null,
-      ]),
+      created_by: faker.helpers.arrayElement([{ ...getAdjustStockResponsePersonRefMock() }, null]),
       tracking: faker.helpers.arrayElement(Object.values(TrackingClass)),
       units: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
         () => ({
@@ -26324,7 +26343,7 @@ export const getAdjustStockResponseMock = (
         null,
       ]),
       at: faker.date.past().toISOString().slice(0, 19) + "Z",
-      by: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+      by: faker.helpers.arrayElement([{ ...getAdjustStockResponsePersonRefMock() }, null]),
       note: faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         null,
@@ -26332,6 +26351,17 @@ export const getAdjustStockResponseMock = (
     }),
   ),
   rights: { manage: faker.datatype.boolean(), ship: faker.datatype.boolean() },
+  ...overrideResponse,
+});
+
+export const getListStockReservationsResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
   ...overrideResponse,
 });
 
@@ -26357,7 +26387,7 @@ export const getListStockReservationsResponseMock = (
     status: faker.helpers.arrayElement(["active", "released", "fulfilled"] as const),
     created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
     created_by: faker.helpers.arrayElement([
-      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      { ...getListStockReservationsResponsePersonRefMock() },
       null,
     ]),
     tracking: faker.helpers.arrayElement(Object.values(TrackingClass)),
@@ -26374,6 +26404,17 @@ export const getListStockReservationsResponseMock = (
       }),
     ),
   })),
+  ...overrideResponse,
+});
+
+export const getReleaseStockReservationResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
   ...overrideResponse,
 });
 
@@ -26398,7 +26439,7 @@ export const getReleaseStockReservationResponseMock = (
   status: faker.helpers.arrayElement(["active", "released", "fulfilled"] as const),
   created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   created_by: faker.helpers.arrayElement([
-    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    { ...getReleaseStockReservationResponsePersonRefMock() },
     null,
   ]),
   tracking: faker.helpers.arrayElement(Object.values(TrackingClass)),
@@ -26929,6 +26970,17 @@ export const getReleaseCalcLineReservationResponseMock = (
   ...overrideResponse,
 });
 
+export const getListCalcPriceRequestsResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getListCalcPriceRequestsResponseMock = (
   overrideResponse: Partial<Extract<PriceRequestList, object>> = {},
 ): PriceRequestList => ({
@@ -26948,7 +27000,7 @@ export const getListCalcPriceRequestsResponseMock = (
     ]),
     requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
     requested_by: faker.helpers.arrayElement([
-      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      { ...getListCalcPriceRequestsResponsePersonRefMock() },
       null,
     ]),
     to_email: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -26961,7 +27013,7 @@ export const getListCalcPriceRequestsResponseMock = (
       null,
     ]),
     answered_by: faker.helpers.arrayElement([
-      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      { ...getListCalcPriceRequestsResponsePersonRefMock() },
       null,
     ]),
     answer_note: faker.helpers.arrayElement([
@@ -26981,6 +27033,17 @@ export const getListCalcPriceRequestsResponseMock = (
   ...overrideResponse,
 });
 
+export const getCreateCalcPriceRequestResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getCreateCalcPriceRequestResponseMock = (
   overrideResponse: Partial<Extract<PriceRequest, object>> = {},
 ): PriceRequest => ({
@@ -26993,7 +27056,7 @@ export const getCreateCalcPriceRequestResponseMock = (
   request: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   requested_by: faker.helpers.arrayElement([
-    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    { ...getCreateCalcPriceRequestResponsePersonRefMock() },
     null,
   ]),
   to_email: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -27006,7 +27069,7 @@ export const getCreateCalcPriceRequestResponseMock = (
     null,
   ]),
   answered_by: faker.helpers.arrayElement([
-    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    { ...getCreateCalcPriceRequestResponsePersonRefMock() },
     null,
   ]),
   answer_note: faker.helpers.arrayElement([
@@ -27023,6 +27086,17 @@ export const getCreateCalcPriceRequestResponseMock = (
   ...overrideResponse,
 });
 
+export const getAnswerPriceRequestResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getAnswerPriceRequestResponseMock = (
   overrideResponse: Partial<Extract<PriceRequest, object>> = {},
 ): PriceRequest => ({
@@ -27035,7 +27109,7 @@ export const getAnswerPriceRequestResponseMock = (
   request: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   requested_by: faker.helpers.arrayElement([
-    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    { ...getAnswerPriceRequestResponsePersonRefMock() },
     null,
   ]),
   to_email: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -27048,7 +27122,7 @@ export const getAnswerPriceRequestResponseMock = (
     null,
   ]),
   answered_by: faker.helpers.arrayElement([
-    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    { ...getAnswerPriceRequestResponsePersonRefMock() },
     null,
   ]),
   answer_note: faker.helpers.arrayElement([
@@ -27074,6 +27148,17 @@ export const getListStockSuppliersResponseMock = (
     inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
     email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   })),
+  ...overrideResponse,
+});
+
+export const getListSupplierOrdersResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
   ...overrideResponse,
 });
 
@@ -27112,7 +27197,7 @@ export const getListSupplierOrdersResponseMock = (
     ),
     created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
     created_by: faker.helpers.arrayElement([
-      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      { ...getListSupplierOrdersResponsePersonRefMock() },
       null,
     ]),
     actions: {
@@ -27128,6 +27213,17 @@ export const getListSupplierOrdersResponseMock = (
     manage: faker.datatype.boolean(),
     ship: faker.datatype.boolean(),
     prices: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateSupplierOrderResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
   },
   ...overrideResponse,
 });
@@ -27217,7 +27313,7 @@ export const getCreateSupplierOrderResponseMock = (
   ),
   created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   created_by: faker.helpers.arrayElement([
-    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    { ...getCreateSupplierOrderResponsePersonRefMock() },
     null,
   ]),
   actions: {
@@ -27286,7 +27382,7 @@ export const getCreateSupplierOrderResponseMock = (
       id: faker.helpers.fromRegExp("^[0-9]+$"),
       received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
       received_by: faker.helpers.arrayElement([
-        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        { ...getCreateSupplierOrderResponsePersonRefMock() },
         null,
       ]),
       supplier_doc: faker.helpers.arrayElement([
@@ -27337,7 +27433,7 @@ export const getCreateSupplierOrderResponseMock = (
       "overdue",
     ] as const),
     at: faker.date.past().toISOString().slice(0, 19) + "Z",
-    by: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    by: faker.helpers.arrayElement([{ ...getCreateSupplierOrderResponsePersonRefMock() }, null]),
     detail: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
@@ -27347,6 +27443,17 @@ export const getCreateSupplierOrderResponseMock = (
     manage: faker.datatype.boolean(),
     ship: faker.datatype.boolean(),
     prices: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateSupplierOrderFromRequestResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
   },
   ...overrideResponse,
 });
@@ -27436,7 +27543,7 @@ export const getCreateSupplierOrderFromRequestResponseMock = (
   ),
   created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   created_by: faker.helpers.arrayElement([
-    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    { ...getCreateSupplierOrderFromRequestResponsePersonRefMock() },
     null,
   ]),
   actions: {
@@ -27508,7 +27615,7 @@ export const getCreateSupplierOrderFromRequestResponseMock = (
       id: faker.helpers.fromRegExp("^[0-9]+$"),
       received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
       received_by: faker.helpers.arrayElement([
-        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        { ...getCreateSupplierOrderFromRequestResponsePersonRefMock() },
         null,
       ]),
       supplier_doc: faker.helpers.arrayElement([
@@ -27559,7 +27666,10 @@ export const getCreateSupplierOrderFromRequestResponseMock = (
       "overdue",
     ] as const),
     at: faker.date.past().toISOString().slice(0, 19) + "Z",
-    by: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    by: faker.helpers.arrayElement([
+      { ...getCreateSupplierOrderFromRequestResponsePersonRefMock() },
+      null,
+    ]),
     detail: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
@@ -27569,6 +27679,17 @@ export const getCreateSupplierOrderFromRequestResponseMock = (
     manage: faker.datatype.boolean(),
     ship: faker.datatype.boolean(),
     prices: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getGetSupplierOrderResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
   },
   ...overrideResponse,
 });
@@ -27657,10 +27778,7 @@ export const getGetSupplierOrderResponseMock = (
     }),
   ),
   created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
-  created_by: faker.helpers.arrayElement([
-    faker.string.alpha({ length: { min: 10, max: 20 } }),
-    null,
-  ]),
+  created_by: faker.helpers.arrayElement([{ ...getGetSupplierOrderResponsePersonRefMock() }, null]),
   actions: {
     edit: faker.datatype.boolean(),
     send: faker.datatype.boolean(),
@@ -27727,7 +27845,7 @@ export const getGetSupplierOrderResponseMock = (
       id: faker.helpers.fromRegExp("^[0-9]+$"),
       received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
       received_by: faker.helpers.arrayElement([
-        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        { ...getGetSupplierOrderResponsePersonRefMock() },
         null,
       ]),
       supplier_doc: faker.helpers.arrayElement([
@@ -27778,7 +27896,7 @@ export const getGetSupplierOrderResponseMock = (
       "overdue",
     ] as const),
     at: faker.date.past().toISOString().slice(0, 19) + "Z",
-    by: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    by: faker.helpers.arrayElement([{ ...getGetSupplierOrderResponsePersonRefMock() }, null]),
     detail: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
@@ -27788,6 +27906,17 @@ export const getGetSupplierOrderResponseMock = (
     manage: faker.datatype.boolean(),
     ship: faker.datatype.boolean(),
     prices: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getUpdateSupplierOrderResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
   },
   ...overrideResponse,
 });
@@ -27877,7 +28006,7 @@ export const getUpdateSupplierOrderResponseMock = (
   ),
   created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   created_by: faker.helpers.arrayElement([
-    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    { ...getUpdateSupplierOrderResponsePersonRefMock() },
     null,
   ]),
   actions: {
@@ -27946,7 +28075,7 @@ export const getUpdateSupplierOrderResponseMock = (
       id: faker.helpers.fromRegExp("^[0-9]+$"),
       received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
       received_by: faker.helpers.arrayElement([
-        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        { ...getUpdateSupplierOrderResponsePersonRefMock() },
         null,
       ]),
       supplier_doc: faker.helpers.arrayElement([
@@ -27997,7 +28126,7 @@ export const getUpdateSupplierOrderResponseMock = (
       "overdue",
     ] as const),
     at: faker.date.past().toISOString().slice(0, 19) + "Z",
-    by: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    by: faker.helpers.arrayElement([{ ...getUpdateSupplierOrderResponsePersonRefMock() }, null]),
     detail: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
@@ -28007,6 +28136,17 @@ export const getUpdateSupplierOrderResponseMock = (
     manage: faker.datatype.boolean(),
     ship: faker.datatype.boolean(),
     prices: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getSendSupplierOrderResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
   },
   ...overrideResponse,
 });
@@ -28096,7 +28236,7 @@ export const getSendSupplierOrderResponseMock = (
   ),
   created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   created_by: faker.helpers.arrayElement([
-    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    { ...getSendSupplierOrderResponsePersonRefMock() },
     null,
   ]),
   actions: {
@@ -28165,7 +28305,7 @@ export const getSendSupplierOrderResponseMock = (
       id: faker.helpers.fromRegExp("^[0-9]+$"),
       received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
       received_by: faker.helpers.arrayElement([
-        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        { ...getSendSupplierOrderResponsePersonRefMock() },
         null,
       ]),
       supplier_doc: faker.helpers.arrayElement([
@@ -28216,7 +28356,7 @@ export const getSendSupplierOrderResponseMock = (
       "overdue",
     ] as const),
     at: faker.date.past().toISOString().slice(0, 19) + "Z",
-    by: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    by: faker.helpers.arrayElement([{ ...getSendSupplierOrderResponsePersonRefMock() }, null]),
     detail: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
@@ -28226,6 +28366,17 @@ export const getSendSupplierOrderResponseMock = (
     manage: faker.datatype.boolean(),
     ship: faker.datatype.boolean(),
     prices: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getConfirmSupplierOrderResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
   },
   ...overrideResponse,
 });
@@ -28315,7 +28466,7 @@ export const getConfirmSupplierOrderResponseMock = (
   ),
   created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   created_by: faker.helpers.arrayElement([
-    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    { ...getConfirmSupplierOrderResponsePersonRefMock() },
     null,
   ]),
   actions: {
@@ -28384,7 +28535,7 @@ export const getConfirmSupplierOrderResponseMock = (
       id: faker.helpers.fromRegExp("^[0-9]+$"),
       received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
       received_by: faker.helpers.arrayElement([
-        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        { ...getConfirmSupplierOrderResponsePersonRefMock() },
         null,
       ]),
       supplier_doc: faker.helpers.arrayElement([
@@ -28435,7 +28586,7 @@ export const getConfirmSupplierOrderResponseMock = (
       "overdue",
     ] as const),
     at: faker.date.past().toISOString().slice(0, 19) + "Z",
-    by: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    by: faker.helpers.arrayElement([{ ...getConfirmSupplierOrderResponsePersonRefMock() }, null]),
     detail: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
@@ -28445,6 +28596,17 @@ export const getConfirmSupplierOrderResponseMock = (
     manage: faker.datatype.boolean(),
     ship: faker.datatype.boolean(),
     prices: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getCancelSupplierOrderResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
   },
   ...overrideResponse,
 });
@@ -28534,7 +28696,7 @@ export const getCancelSupplierOrderResponseMock = (
   ),
   created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   created_by: faker.helpers.arrayElement([
-    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    { ...getCancelSupplierOrderResponsePersonRefMock() },
     null,
   ]),
   actions: {
@@ -28603,7 +28765,7 @@ export const getCancelSupplierOrderResponseMock = (
       id: faker.helpers.fromRegExp("^[0-9]+$"),
       received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
       received_by: faker.helpers.arrayElement([
-        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        { ...getCancelSupplierOrderResponsePersonRefMock() },
         null,
       ]),
       supplier_doc: faker.helpers.arrayElement([
@@ -28654,7 +28816,7 @@ export const getCancelSupplierOrderResponseMock = (
       "overdue",
     ] as const),
     at: faker.date.past().toISOString().slice(0, 19) + "Z",
-    by: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    by: faker.helpers.arrayElement([{ ...getCancelSupplierOrderResponsePersonRefMock() }, null]),
     detail: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
@@ -28664,6 +28826,17 @@ export const getCancelSupplierOrderResponseMock = (
     manage: faker.datatype.boolean(),
     ship: faker.datatype.boolean(),
     prices: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getReceiveSupplierOrderResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
   },
   ...overrideResponse,
 });
@@ -28753,7 +28926,7 @@ export const getReceiveSupplierOrderResponseMock = (
   ),
   created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   created_by: faker.helpers.arrayElement([
-    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    { ...getReceiveSupplierOrderResponsePersonRefMock() },
     null,
   ]),
   actions: {
@@ -28822,7 +28995,7 @@ export const getReceiveSupplierOrderResponseMock = (
       id: faker.helpers.fromRegExp("^[0-9]+$"),
       received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
       received_by: faker.helpers.arrayElement([
-        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        { ...getReceiveSupplierOrderResponsePersonRefMock() },
         null,
       ]),
       supplier_doc: faker.helpers.arrayElement([
@@ -28873,7 +29046,7 @@ export const getReceiveSupplierOrderResponseMock = (
       "overdue",
     ] as const),
     at: faker.date.past().toISOString().slice(0, 19) + "Z",
-    by: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    by: faker.helpers.arrayElement([{ ...getReceiveSupplierOrderResponsePersonRefMock() }, null]),
     detail: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
@@ -28897,6 +29070,17 @@ export const getListStockReceiptsResponseStockRequestRefMock = (
       null,
     ]),
     path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getListStockReceiptsResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
   },
   ...overrideResponse,
 });
@@ -28935,7 +29119,7 @@ export const getListStockReceiptsResponseMock = (
     supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
     received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
     received_by: faker.helpers.arrayElement([
-      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      { ...getListStockReceiptsResponsePersonRefMock() },
       null,
     ]),
     supplier_doc: faker.helpers.arrayElement([
@@ -28973,6 +29157,17 @@ export const getListStockReceiptsResponseMock = (
   ...overrideResponse,
 });
 
+export const getListStockShipmentsResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getListStockShipmentsResponseMock = (
   overrideResponse: Partial<Extract<StockShipmentList, object>> = {},
 ): StockShipmentList => ({
@@ -28998,7 +29193,7 @@ export const getListStockShipmentsResponseMock = (
     note: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
     shipped_at: faker.date.past().toISOString().slice(0, 19) + "Z",
     shipped_by: faker.helpers.arrayElement([
-      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      { ...getListStockShipmentsResponsePersonRefMock() },
       null,
     ]),
     lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
@@ -29023,6 +29218,17 @@ export const getListStockShipmentsResponseMock = (
   ...overrideResponse,
 });
 
+export const getShipFromStockResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getShipFromStockResponseMock = (
   overrideResponse: Partial<Extract<StockShipment, object>> = {},
 ): StockShipment => ({
@@ -29043,10 +29249,7 @@ export const getShipFromStockResponseMock = (
   carrier: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   note: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   shipped_at: faker.date.past().toISOString().slice(0, 19) + "Z",
-  shipped_by: faker.helpers.arrayElement([
-    faker.string.alpha({ length: { min: 10, max: 20 } }),
-    null,
-  ]),
+  shipped_by: faker.helpers.arrayElement([{ ...getShipFromStockResponsePersonRefMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     product_id: faker.helpers.fromRegExp("^[0-9]+$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -29138,6 +29341,17 @@ export const getSearchStockTraceResponseMock = (
   ...overrideResponse,
 });
 
+export const getListOverdueSupplierOrdersResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getListOverdueSupplierOrdersResponseMock = (
   overrideResponse: Partial<Extract<SupplierOrderList, object>> = {},
 ): SupplierOrderList => ({
@@ -29173,7 +29387,7 @@ export const getListOverdueSupplierOrdersResponseMock = (
     ),
     created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
     created_by: faker.helpers.arrayElement([
-      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      { ...getListOverdueSupplierOrdersResponsePersonRefMock() },
       null,
     ]),
     actions: {

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.117.0
+  version: 0.118.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -25316,7 +25316,9 @@ components:
         remaining: {type: integer, minimum: 0, description: 'Ещё удерживается за проектом'}
         status: {type: string, enum: [active, released, fulfilled]}
         created_at: {type: string, format: date-time}
-        created_by: {type: [string, 'null']}
+        created_by:
+          oneOf: [{$ref: '#/components/schemas/PersonRef'}, {type: 'null'}]
+          description: Сотрудник со ссылкой на справочник (СУЩ-3)
         tracking: {$ref: '#/components/schemas/TrackingClass'}
         units:
           type: array
@@ -25364,7 +25366,9 @@ components:
         quantity: {type: number, description: 'Плюс — приход, минус — расход'}
         cell: {type: [string, 'null']}
         at: {type: string, format: date-time}
-        by: {type: [string, 'null']}
+        by:
+          oneOf: [{$ref: '#/components/schemas/PersonRef'}, {type: 'null'}]
+          description: Сотрудник со ссылкой на справочник (СУЩ-3)
         note: {type: [string, 'null']}
 
     StockProduct:
@@ -25483,7 +25487,9 @@ components:
           description: Заявки и проекты, под которые заказаны строки
           items: {$ref: '#/components/schemas/StockRequestRef'}
         created_at: {type: string, format: date-time}
-        created_by: {type: [string, 'null']}
+        created_by:
+          oneOf: [{$ref: '#/components/schemas/PersonRef'}, {type: 'null'}]
+          description: Сотрудник со ссылкой на справочник (СУЩ-3)
         actions: {$ref: '#/components/schemas/SupplierOrderActions'}
         path: {type: string, examples: ['/erp/stock/ЗП-2026-031']}
 
@@ -25565,7 +25571,9 @@ components:
       properties:
         id: {type: string, pattern: '^[0-9]+$'}
         received_at: {type: string, format: date-time}
-        received_by: {type: [string, 'null']}
+        received_by:
+          oneOf: [{$ref: '#/components/schemas/PersonRef'}, {type: 'null'}]
+          description: Сотрудник со ссылкой на справочник (СУЩ-3)
         supplier_doc: {type: [string, 'null'], description: 'Накладная поставщика'}
         note: {type: [string, 'null']}
         lines:
@@ -25579,7 +25587,9 @@ components:
       properties:
         kind: {type: string, enum: [created, edited, sent, confirmed, receipt, received, cancelled, overdue]}
         at: {type: string, format: date-time}
-        by: {type: [string, 'null']}
+        by:
+          oneOf: [{$ref: '#/components/schemas/PersonRef'}, {type: 'null'}]
+          description: Сотрудник со ссылкой на справочник (СУЩ-3)
         detail: {type: [string, 'null']}
 
     SupplierOrderMail:
@@ -25620,7 +25630,9 @@ components:
           description: Заявки и проекты, под которые заказаны строки
           items: {$ref: '#/components/schemas/StockRequestRef'}
         created_at: {type: string, format: date-time}
-        created_by: {type: [string, 'null']}
+        created_by:
+          oneOf: [{$ref: '#/components/schemas/PersonRef'}, {type: 'null'}]
+          description: Сотрудник со ссылкой на справочник (СУЩ-3)
         actions: {$ref: '#/components/schemas/SupplierOrderActions'}
         path: {type: string, examples: ['/erp/stock/ЗП-2026-031']}
         note: {type: string}
@@ -25784,7 +25796,9 @@ components:
         order_path: {type: string}
         supplier: {type: string}
         received_at: {type: string, format: date-time}
-        received_by: {type: [string, 'null']}
+        received_by:
+          oneOf: [{$ref: '#/components/schemas/PersonRef'}, {type: 'null'}]
+          description: Сотрудник со ссылкой на справочник (СУЩ-3)
         supplier_doc: {type: [string, 'null']}
         quantity: {type: number, exclusiveMinimum: 0}
         lines:
@@ -25848,7 +25862,9 @@ components:
         carrier: {type: [string, 'null']}
         note: {type: [string, 'null']}
         shipped_at: {type: string, format: date-time}
-        shipped_by: {type: [string, 'null']}
+        shipped_by:
+          oneOf: [{$ref: '#/components/schemas/PersonRef'}, {type: 'null'}]
+          description: Сотрудник со ссылкой на справочник (СУЩ-3)
         lines:
           type: array
           items: {$ref: '#/components/schemas/StockShipmentLine'}
@@ -25978,14 +25994,18 @@ components:
         supplier: {$ref: '#/components/schemas/StockSupplierRef'}
         request: {type: [string, 'null'], description: 'Номер заявки'}
         requested_at: {type: string, format: date-time}
-        requested_by: {type: [string, 'null']}
+        requested_by:
+          oneOf: [{$ref: '#/components/schemas/PersonRef'}, {type: 'null'}]
+          description: Сотрудник со ссылкой на справочник (СУЩ-3)
         to_email: {type: string}
         subject: {type: string}
         note: {type: [string, 'null']}
         status: {type: string, enum: [sent, failed], description: 'failed — письмо не ушло (почта выключена или недоступна), запрос остаётся в журнале'}
         error: {type: [string, 'null']}
         answered_at: {type: [string, 'null'], format: date-time}
-        answered_by: {type: [string, 'null']}
+        answered_by:
+          oneOf: [{$ref: '#/components/schemas/PersonRef'}, {type: 'null'}]
+          description: Сотрудник со ссылкой на справочник (СУЩ-3)
         answer_note: {type: [string, 'null']}
         lines:
           type: array

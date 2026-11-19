@@ -8,6 +8,7 @@ from rest_framework import serializers
 
 from catalog.constants import TrackingClass
 from catalog.item_ref import ItemRefSerializer
+from core.person_ref import PersonRefSerializer
 from core.quantity import QuantityField
 
 RESERVATION_STATUSES = ("active", "released", "fulfilled")
@@ -73,6 +74,7 @@ class StockReservationSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=RESERVATION_STATUSES)
     created_at = serializers.DateTimeField()
     created_by_name = serializers.CharField(allow_null=True)
+    created_by = PersonRefSerializer(allow_null=True, help_text="Сотрудник со ссылкой на CRM (СУЩ-3)")
     tracking = serializers.ChoiceField(choices=TRACKING_CLASSES, help_text="Учёт единиц товара по его категории")
     units = StockTraceUnitShortSerializer(
         many=True, help_text="Свободные серийные или партии товара — выбор при отгрузке (S/L); у N пусто"
@@ -98,6 +100,7 @@ class StockMovementSerializer(serializers.Serializer):
     cell = serializers.CharField(allow_null=True)
     at = serializers.DateTimeField()
     by_name = serializers.CharField(allow_null=True)
+    by = PersonRefSerializer(allow_null=True, help_text="Сотрудник со ссылкой на CRM (СУЩ-3)")
     note = serializers.CharField(allow_null=True)
 
 
@@ -130,6 +133,7 @@ class StockShipmentSerializer(serializers.Serializer):
     note = serializers.CharField(allow_null=True)
     shipped_at = serializers.DateTimeField()
     shipped_by_name = serializers.CharField(allow_null=True)
+    shipped_by = PersonRefSerializer(allow_null=True, help_text="Сотрудник со ссылкой на CRM (СУЩ-3)")
     lines = StockShipmentLineSerializer(many=True)
 
 

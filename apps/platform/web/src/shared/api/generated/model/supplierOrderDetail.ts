@@ -3,6 +3,7 @@
  * RailTech Platform — BFF API (Платформа → CRM и ERP)
  */
 import type { DecimalString } from "./decimalString";
+import type { PersonRef } from "./personRef";
 import type { StockOrderRights } from "./stockOrderRights";
 import type { StockRequestRef } from "./stockRequestRef";
 import type { StockSupplierRef } from "./stockSupplierRef";
@@ -48,8 +49,8 @@ export interface SupplierOrderDetail {
   /** Заявки и проекты, под которые заказаны строки */
   requests: StockRequestRef[];
   created_at: string;
-  /** @nullable */
-  created_by: string | null;
+  /** Сотрудник со ссылкой на справочник (СУЩ-3) */
+  created_by: PersonRef | null;
   actions: SupplierOrderActions;
   path: string;
   note: string;

@@ -48,6 +48,7 @@ import {
   seedStock,
 } from "./fixtures/stock";
 import { itemRefOf } from "./fixtures/itemRef";
+import { staffRef } from "./fixtures/personRef";
 import {
   calcLineIds,
   calcSheetByNumber,
@@ -232,7 +233,7 @@ function presentReservation(state: MockStock, r: MockReservation): StockReservat
     remaining: remaining(r),
     status: r.status,
     created_at: r.createdAt,
-    created_by: r.createdBy,
+    created_by: staffRef(r.createdBy),
     tracking: product?.tracking ?? "none",
     units: freeUnits(state, r.productId).map(unitRef),
   };
@@ -410,7 +411,7 @@ function presentProduct(state: MockStock, product: MockProduct, user: Me): Stock
         quantity: m.quantity,
         cell: m.cell,
         at: m.at,
-        by: m.by,
+        by: staffRef(m.by),
         note: m.note,
       })),
     rights: rights(user),
@@ -466,7 +467,7 @@ function orderRow(order: MockOrder, user: Me): SupplierOrderRow {
         : null,
     requests,
     created_at: order.createdAt,
-    created_by: order.createdBy,
+    created_by: staffRef(order.createdBy),
     actions: actionsOf(order, user),
     path: `/erp/stock/${seg(order.number)}`,
   };
@@ -516,12 +517,12 @@ function presentOrder(state: MockStock, order: MockOrder, user: Me): SupplierOrd
       .map((r) => ({
         id: String(r.id),
         received_at: r.receivedAt,
-        received_by: r.receivedBy,
+        received_by: staffRef(r.receivedBy),
         supplier_doc: r.supplierDoc,
         note: r.note,
         lines: r.lines.map((l) => ({ order_line_id: String(l.orderLineId), ...receiptLine(l) })),
       })),
-    log: order.log.map((e) => ({ kind: e.kind, at: e.at, by: e.by, detail: e.detail })),
+    log: order.log.map((e) => ({ kind: e.kind, at: e.at, by: staffRef(e.by), detail: e.detail })),
     rights: { ...rights(user), prices },
   };
 }
@@ -1266,7 +1267,7 @@ export const erpStockHandlers = [
         order_path: `/erp/stock/${seg(r.orderNumber)}`,
         supplier: SUPPLIERS.find((s) => s.id === order?.supplierId)?.name ?? "—",
         received_at: r.receivedAt,
-        received_by: r.receivedBy,
+        received_by: staffRef(r.receivedBy),
         supplier_doc: r.supplierDoc,
         quantity: r.lines.reduce((sum, l) => sum + l.quantity, 0),
         lines: r.lines.map(receiptLine),
@@ -1468,14 +1469,14 @@ function presentPriceRequest(p: ReturnType<typeof read>["priceRequests"][number]
     supplier: { id: String(p.supplierId), name: supplier?.name ?? "Партнёр" },
     request: p.request,
     requested_at: p.requestedAt,
-    requested_by: p.requestedBy,
+    requested_by: staffRef(p.requestedBy),
     to_email: p.toEmail,
     subject: p.subject,
     note: p.note,
     status: p.status,
     error: null,
     answered_at: p.answeredAt,
-    answered_by: p.answeredBy,
+    answered_by: staffRef(p.answeredBy),
     answer_note: p.answerNote,
     lines: p.lines.map((l) => ({
       line_id: String(l.lineId),
@@ -1496,7 +1497,7 @@ function presentShipment(s: ReturnType<typeof read>["shipments"][number]): Stock
     carrier: s.carrier,
     note: s.note,
     shipped_at: s.shippedAt,
-    shipped_by: s.shippedBy,
+    shipped_by: staffRef(s.shippedBy),
     lines: s.lines.map((l) => ({
       product_id: String(l.productId),
       name: l.name,

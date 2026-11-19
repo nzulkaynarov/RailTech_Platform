@@ -16,6 +16,7 @@ from inventory.services import stock, trace
 
 from catalog.item_ref import item_ref, main_photos
 from catalog.models import Product
+from core.person_ref import person_ref
 
 MAX_ROWS = 300
 MAX_MOVEMENTS = 30
@@ -132,6 +133,7 @@ def present_reservation(r: Reservation, units: Optional[list] = None) -> dict:
         "status": r.status,
         "created_at": r.created_at.isoformat(),
         "created_by_name": person_name(r.created_by) if r.created_by_id else None,
+        "created_by": person_ref(r.created_by) if r.created_by_id else None,
         "tracking": trace.tracking_of(r.product),
         "units": [trace.present_unit_short(u) for u in units or []],
     }
@@ -141,9 +143,9 @@ def reservations(
     user, *, deal_id: Optional[int] = None, product_id: Optional[int] = None, status: str = "active"
 ) -> list[dict]:
     require_staff(user)
-    qs = Reservation.objects.select_related("product", "deal__company", "created_by")
+    qs = Reservation.objects.select_related("product", "deal__company", "created_by__crm_user_mapping")
     if status == "active":
-        qs = stock.active_reservations().select_related("product", "deal__company", "created_by")
+        qs = stock.active_reservations().select_related("product", "deal__company", "created_by__crm_user_mapping")
     elif status:
         qs = qs.filter(status=status)
     if deal_id:
@@ -170,7 +172,9 @@ def product_detail(user, product_id: int) -> dict:
         .select_related("order__supplier")
         .order_by("order__expected_date", "id")
     )
-    movements = StockMovement.objects.filter(product=product).select_related("created_by")[:MAX_MOVEMENTS]
+    movements = StockMovement.objects.filter(product=product).select_related("created_by__crm_user_mapping")[
+        :MAX_MOVEMENTS
+    ]
     return {
         **_row(product, state, incoming),
         "reservations": reservations(user, product_id=product.pk),
@@ -192,6 +196,7 @@ def product_detail(user, product_id: int) -> dict:
                 "cell": m.cell or None,
                 "at": m.created_at.isoformat(),
                 "by_name": person_name(m.created_by) if m.created_by_id else None,
+                "by": person_ref(m.created_by) if m.created_by_id else None,
                 "note": m.note or None,
             }
             for m in movements
@@ -210,6 +215,7 @@ def present_shipment(shipment: Shipment) -> dict:
         "note": shipment.note or None,
         "shipped_at": shipment.shipped_at.isoformat(),
         "shipped_by_name": person_name(shipment.shipped_by) if shipment.shipped_by_id else None,
+        "shipped_by": person_ref(shipment.shipped_by) if shipment.shipped_by_id else None,
         "lines": [
             {
                 "product_id": line.product_id,
@@ -225,7 +231,7 @@ def present_shipment(shipment: Shipment) -> dict:
 
 def shipments(user, *, deal_id: Optional[int] = None) -> dict:
     require_staff(user)
-    qs = Shipment.objects.select_related("deal__company", "shipped_by").prefetch_related(
+    qs = Shipment.objects.select_related("deal__company", "shipped_by__crm_user_mapping").prefetch_related(
         "lines__product", "lines__trace_allocations__unit"
     )
     if deal_id:
@@ -289,6 +295,7 @@ def pending_receipts(user) -> dict:
                 "supplier_name": receipt.order.supplier.name,
                 "received_at": receipt.received_at.isoformat(),
                 "received_by_name": person_name(receipt.received_by) if receipt.received_by_id else None,
+                "received_by": person_ref(receipt.received_by) if receipt.received_by_id else None,
                 "supplier_doc": receipt.supplier_doc or None,
                 "quantity": sum(rl.quantity for rl in receipt.lines.all()),
                 "lines": [present_receipt_line(rl) for rl in receipt.lines.all()],

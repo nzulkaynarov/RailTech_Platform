@@ -18,6 +18,8 @@ from inventory.access import StockError, person_name, require_staff, require_sup
 from supply.models import PriceRequest, PriceRequestLine, PriceRequestStatus
 from supply.services.orders import get_supplier, supplier_email
 
+from core.person_ref import person_ref
+
 logger = logging.getLogger(__name__)
 
 MAX_LINES = 100
@@ -180,6 +182,7 @@ def present(request: PriceRequest) -> dict:
         "deal_number": request.deal.number if request.deal_id and request.deal.number else None,
         "requested_at": request.requested_at.isoformat(),
         "requested_by_name": person_name(request.requested_by) if request.requested_by_id else None,
+        "requested_by": person_ref(request.requested_by) if request.requested_by_id else None,
         "to_email": request.to_email,
         "subject": request.subject,
         "note": request.note or None,
@@ -187,6 +190,7 @@ def present(request: PriceRequest) -> dict:
         "error": request.error or None,
         "answered_at": request.answered_at.isoformat() if request.answered_at else None,
         "answered_by_name": person_name(request.answered_by) if request.answered_by_id else None,
+        "answered_by": person_ref(request.answered_by) if request.answered_by_id else None,
         "answer_note": request.answer_note or None,
         "lines": [
             {
@@ -203,9 +207,9 @@ def present(request: PriceRequest) -> dict:
 
 def list_requests(user, *, deal_id: Optional[int] = None, supplier_id: Optional[int] = None) -> list[dict]:
     require_staff(user)
-    qs = PriceRequest.objects.select_related("supplier", "deal", "requested_by", "answered_by").prefetch_related(
-        "lines"
-    )
+    qs = PriceRequest.objects.select_related(
+        "supplier", "deal", "requested_by__crm_user_mapping", "answered_by__crm_user_mapping"
+    ).prefetch_related("lines")
     if deal_id:
         qs = qs.filter(deal_id=deal_id)
     if supplier_id:

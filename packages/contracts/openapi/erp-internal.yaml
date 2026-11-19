@@ -28349,6 +28349,11 @@ components:
         received_by_name:
           type: string
           nullable: true
+        received_by:
+          allOf:
+          - $ref: '#/components/schemas/PersonRef'
+          nullable: true
+          description: Сотрудник со ссылкой на CRM (СУЩ-3)
         supplier_doc:
           type: string
           nullable: true
@@ -28366,6 +28371,7 @@ components:
       - order_number
       - quantity
       - received_at
+      - received_by
       - received_by_name
       - supplier_doc
       - supplier_name
@@ -30126,6 +30132,11 @@ components:
         created_by_name:
           type: string
           nullable: true
+        created_by:
+          allOf:
+          - $ref: '#/components/schemas/PersonRef'
+          nullable: true
+          description: Сотрудник со ссылкой на CRM (СУЩ-3)
         actions:
           $ref: '#/components/schemas/OrderActions'
         note:
@@ -30176,6 +30187,7 @@ components:
       - cancelled_at
       - confirmed_at
       - created_at
+      - created_by
       - created_by_name
       - currency
       - days_overdue
@@ -30378,11 +30390,17 @@ components:
         by_name:
           type: string
           nullable: true
+        by:
+          allOf:
+          - $ref: '#/components/schemas/PersonRef'
+          nullable: true
+          description: Сотрудник со ссылкой на CRM (СУЩ-3)
         detail:
           type: string
           nullable: true
       required:
       - at
+      - by
       - by_name
       - detail
       - kind
@@ -30431,6 +30449,11 @@ components:
         received_by_name:
           type: string
           nullable: true
+        received_by:
+          allOf:
+          - $ref: '#/components/schemas/PersonRef'
+          nullable: true
+          description: Сотрудник со ссылкой на CRM (СУЩ-3)
         supplier_doc:
           type: string
           nullable: true
@@ -30446,6 +30469,7 @@ components:
       - lines
       - note
       - received_at
+      - received_by
       - received_by_name
       - supplier_doc
     OrderRights:
@@ -30515,11 +30539,17 @@ components:
         created_by_name:
           type: string
           nullable: true
+        created_by:
+          allOf:
+          - $ref: '#/components/schemas/PersonRef'
+          nullable: true
+          description: Сотрудник со ссылкой на CRM (СУЩ-3)
         actions:
           $ref: '#/components/schemas/OrderActions'
       required:
       - actions
       - created_at
+      - created_by
       - created_by_name
       - currency
       - days_overdue
@@ -33524,6 +33554,19 @@ components:
       required:
       - id
       - name
+    PersonRef:
+      type: object
+      description: Схема ссылки в выгрузке (`erp-internal.yaml`).
+      properties:
+        crm_user_id:
+          type: integer
+          nullable: true
+          description: Сотрудник в CRM; null — связи нет
+        name:
+          type: string
+      required:
+      - crm_user_id
+      - name
     PlatformUserCreateRequest:
       type: object
       description: |-
@@ -33574,6 +33617,11 @@ components:
         requested_by_name:
           type: string
           nullable: true
+        requested_by:
+          allOf:
+          - $ref: '#/components/schemas/PersonRef'
+          nullable: true
+          description: Сотрудник со ссылкой на CRM (СУЩ-3)
         to_email:
           type: string
         subject:
@@ -33593,6 +33641,11 @@ components:
         answered_by_name:
           type: string
           nullable: true
+        answered_by:
+          allOf:
+          - $ref: '#/components/schemas/PersonRef'
+          nullable: true
+          description: Сотрудник со ссылкой на CRM (СУЩ-3)
         answer_note:
           type: string
           nullable: true
@@ -33603,6 +33656,7 @@ components:
       required:
       - answer_note
       - answered_at
+      - answered_by
       - answered_by_name
       - deal_id
       - deal_number
@@ -33611,6 +33665,7 @@ components:
       - lines
       - note
       - requested_at
+      - requested_by
       - requested_by_name
       - status
       - subject
@@ -37159,11 +37214,17 @@ components:
         by_name:
           type: string
           nullable: true
+        by:
+          allOf:
+          - $ref: '#/components/schemas/PersonRef'
+          nullable: true
+          description: Сотрудник со ссылкой на CRM (СУЩ-3)
         note:
           type: string
           nullable: true
       required:
       - at
+      - by
       - by_name
       - cell
       - kind
@@ -37274,6 +37335,11 @@ components:
         created_by_name:
           type: string
           nullable: true
+        created_by:
+          allOf:
+          - $ref: '#/components/schemas/PersonRef'
+          nullable: true
+          description: Сотрудник со ссылкой на CRM (СУЩ-3)
         tracking:
           allOf:
           - $ref: '#/components/schemas/TrackingClassEnum'
@@ -37290,6 +37356,7 @@ components:
           description: Свободные серийные или партии товара — выбор при отгрузке (S/L); у N пусто
       required:
       - created_at
+      - created_by
       - created_by_name
       - deal
       - id
@@ -37478,6 +37545,11 @@ components:
         shipped_by_name:
           type: string
           nullable: true
+        shipped_by:
+          allOf:
+          - $ref: '#/components/schemas/PersonRef'
+          nullable: true
+          description: Сотрудник со ссылкой на CRM (СУЩ-3)
         lines:
           type: array
           items:
@@ -37490,6 +37562,7 @@ components:
       - note
       - number
       - shipped_at
+      - shipped_by
       - shipped_by_name
       - tracking
     StockShipmentLine:

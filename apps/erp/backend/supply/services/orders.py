@@ -51,6 +51,7 @@ from supply.models import (
 
 from catalog.item_ref import item_ref, main_photos
 from catalog.models import Product
+from core.person_ref import person_ref
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +109,7 @@ def get_supplier(supplier_id: int):
 
 
 def _order_or_404(order_id: int, *, lock: bool = False) -> SupplierOrder:
-    qs = SupplierOrder.objects.select_related("supplier", "currency", "created_by", "sent_mail")
+    qs = SupplierOrder.objects.select_related("supplier", "currency", "created_by__crm_user_mapping", "sent_mail")
     if lock:
         qs = qs.select_for_update(of=("self",))
     order = qs.filter(pk=order_id).first()
@@ -700,6 +701,7 @@ def present_order(order: SupplierOrder, user, *, detail: bool = False) -> dict:
         "projects": [_deal_ref(deal) for deal in deals.values()],
         "created_at": order.created_at.isoformat(),
         "created_by_name": person_name(order.created_by) if order.created_by_id else None,
+        "created_by": person_ref(order.created_by) if order.created_by_id else None,
         "actions": {
             "edit": manage and status == OrderStatus.DRAFT,
             "send": manage and status == OrderStatus.DRAFT,
@@ -756,13 +758,14 @@ def present_order(order: SupplierOrder, user, *, detail: bool = False) -> dict:
                     "id": receipt.pk,
                     "received_at": receipt.received_at.isoformat(),
                     "received_by_name": person_name(receipt.received_by) if receipt.received_by_id else None,
+                    "received_by": person_ref(receipt.received_by) if receipt.received_by_id else None,
                     "supplier_doc": receipt.supplier_doc or None,
                     "note": receipt.note or None,
                     "lines": [
                         {"order_line_id": rl.order_line_id, **present_receipt_line(rl)} for rl in receipt.lines.all()
                     ],
                 }
-                for receipt in order.receipts.select_related("received_by").prefetch_related(
+                for receipt in order.receipts.select_related("received_by__crm_user_mapping").prefetch_related(
                     "lines__order_line", "lines__trace_units"
                 )
             ],
@@ -771,9 +774,10 @@ def present_order(order: SupplierOrder, user, *, detail: bool = False) -> dict:
                     "kind": entry.kind,
                     "at": entry.created_at.isoformat(),
                     "by_name": person_name(entry.user) if entry.user_id else None,
+                    "by": person_ref(entry.user) if entry.user_id else None,
                     "detail": entry.detail or None,
                 }
-                for entry in order.log.select_related("user")
+                for entry in order.log.select_related("user__crm_user_mapping")
             ],
         }
     )
@@ -781,7 +785,9 @@ def present_order(order: SupplierOrder, user, *, detail: bool = False) -> dict:
 
 
 def _list_queryset():
-    return SupplierOrder.objects.select_related("supplier", "currency", "created_by").prefetch_related(
+    return SupplierOrder.objects.select_related(
+        "supplier", "currency", "created_by__crm_user_mapping"
+    ).prefetch_related(
         "lines__deal__company",
         "lines__product__category",
         "lines__product__domain_type",
