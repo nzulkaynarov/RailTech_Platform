@@ -1737,6 +1737,25 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /staff:
+    get:
+      tags: [me]
+      operationId: listStaffDirectory
+      summary: Справочник сотрудников
+      description: >-
+        CRM `GET /api/v1/staff` (СУЩ-3): все сотрудники — имя, должность, адрес фото с версией; отключённые — с `active: false`
+        и без фото, чтобы «кто сделал» в старом документе по-прежнему называл человека. Почты, телефона и ролей нет. Любой
+        сотрудник; общий компонент человека находит здесь фото и должность по `id` ссылки.
+      responses:
+        '200':
+          description: Сотрудники
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/StaffDirectory'}
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /staff/{id}/avatar:
     get:
       tags: [me]
@@ -17027,6 +17046,24 @@ components:
         step:
           $ref: '#/components/schemas/StepCode'
 
+    StaffCard:
+      type: object
+      additionalProperties: false
+      required: [id, name, position, avatar_url, active]
+      properties:
+        id: {type: string, pattern: '^[1-9][0-9]*$', description: '`crm_user_id` — тот же, что в `PersonRef.id`'}
+        name: {type: string}
+        position: {type: [string, 'null']}
+        avatar_url: {type: [string, 'null'], description: 'Фото с версией (`/api/v1/staff/{id}/avatar?v=`); `null` — инициалы'}
+        active: {type: boolean, description: '`false` — сотрудник отключён'}
+    StaffDirectory:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/StaffCard'}
     PersonRef:
       type: object
       additionalProperties: false

@@ -744,6 +744,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/staff": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Справочник сотрудников
+     * @description CRM `GET /api/v1/staff` (СУЩ-3): все сотрудники — имя, должность, адрес фото с версией; отключённые — с `active: false` и без фото, чтобы «кто сделал» в старом документе по-прежнему называл человека. Почты, телефона и ролей нет. Любой сотрудник; общий компонент человека находит здесь фото и должность по `id` ссылки.
+     */
+    get: operations["listStaffDirectory"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/staff/{id}/avatar": {
     parameters: {
       query?: never;
@@ -9363,6 +9383,19 @@ export interface components {
       /** @description Путь в SPA с вкладкой бокового окна, например `/eds/inbox/ВХ-104%2F26?panel=open&tab=resolution` */
       path: string;
       step?: components["schemas"]["StepCode"];
+    };
+    StaffCard: {
+      /** @description `crm_user_id` — тот же, что в `PersonRef.id` */
+      id: string;
+      name: string;
+      position: string | null;
+      /** @description Фото с версией (`/api/v1/staff/{id}/avatar?v=`); `null` — инициалы */
+      avatar_url: string | null;
+      /** @description `false` — сотрудник отключён */
+      active: boolean;
+    };
+    StaffDirectory: {
+      items: components["schemas"]["StaffCard"][];
     };
     PersonRef: {
       /** @description `crm_user_id` сотрудника */
@@ -18632,6 +18665,28 @@ export interface operations {
       };
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["CsrfFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listStaffDirectory: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Сотрудники */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StaffDirectory"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

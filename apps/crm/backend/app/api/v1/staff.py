@@ -1,14 +1,44 @@
-"""Справочные данные о коллегах, доступные любому сотруднику: фото профиля (W15-H6)."""
+"""Справочные данные о коллегах для любого сотрудника: фото (W15-H6) и справочник (план СУЩ-3)."""
 
 from typing import Annotated
 
 from fastapi import APIRouter, Path, Response
+from pydantic import BaseModel
 
 from app.api.deps import ContainerDep
 from app.api.v1.me import Settled
 from app.domain.errors import NotFoundError
 
 router = APIRouter(prefix="/api/v1/staff", tags=["staff"])
+
+
+class StaffCard(BaseModel):
+    """Сотрудник для ссылки «кто сделал» (СУЩ-3): то, что видит любой коллега.
+
+    Без почты, телефона и ролей.
+    """
+
+    id: int
+    full_name: str
+    position: str | None
+    #: Версия фото (секунды epoch замены); `None` — фото нет, рисуются инициалы
+    avatar_version: int | None
+    is_active: bool
+
+
+@router.get("", response_model=list[StaffCard])
+async def list_staff(_: Settled, container: ContainerDep) -> list[StaffCard]:
+    """Все сотрудники, включая отключённых: старый документ по-прежнему называет человека."""
+    return [
+        StaffCard(
+            id=view.id,
+            full_name=view.full_name,
+            position=view.position,
+            avatar_version=view.avatar_version,
+            is_active=view.is_active,
+        )
+        for view in await container.user_service.list_all()
+    ]
 
 
 @router.get(

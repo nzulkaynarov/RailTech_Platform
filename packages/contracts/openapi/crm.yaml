@@ -9573,6 +9573,39 @@ components:
       - token
       title: SsoTokenResponse
       type: object
+    StaffCard:
+      description: 'Сотрудник для ссылки «кто сделал» (СУЩ-3): то, что видит любой коллега.
+
+
+        Без почты, телефона и ролей.'
+      properties:
+        avatar_version:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Avatar Version
+        full_name:
+          title: Full Name
+          type: string
+        id:
+          title: Id
+          type: integer
+        is_active:
+          title: Is Active
+          type: boolean
+        position:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Position
+      required:
+      - id
+      - full_name
+      - position
+      - avatar_version
+      - is_active
+      title: StaffCard
+      type: object
     StaffNotificationOut:
       properties:
         created_at:
@@ -17805,6 +17838,31 @@ paths:
       summary: Get Spend
       tags:
       - spend
+  /api/v1/staff:
+    get:
+      description: 'Все сотрудники, включая отключённых: старый документ по-прежнему называет человека.'
+      operationId: list_staff
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/StaffCard'
+                title: Response List Staff
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: List Staff
+      tags:
+      - staff
   /api/v1/staff-tickets:
     get:
       operationId: list_tickets
