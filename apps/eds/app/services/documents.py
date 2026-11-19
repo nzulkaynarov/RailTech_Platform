@@ -620,6 +620,19 @@ async def send_again(
     return document
 
 
+async def waive_mail(session: AsyncSession, *, employee: Employee, document_id: uuid.UUID) -> Document:
+    """«Вручено иначе» (СЦ-1): письмо передано адресату не почтой — отправка снята, письмо уходит в «Архив»."""
+    document = await get_for_update(session, document_id)
+    if not await access.can_view_document(session, employee, document.id):
+        raise not_found("Документ не найден.")
+    if document.kind != DocumentKind.LETTER_OUT.value or document.status != DocumentStatus.SENT.value:
+        raise conflict("invalid_state", "Отметить можно зарегистрированное письмо.", status=document.status)
+    if document.mail_waived_at is None:
+        document.mail_waived_at, document.mail_waived_by = clock.now(), employee.crm_user_id
+        await journal.record(session, "document.mail_waived", by=employee.crm_user_id, document_id=document.id)
+    return document
+
+
 async def _send_letter(session: AsyncSession, bus: AsyncBus, document: Document, employee: Employee) -> None:
     now = clock.now()
     document.number = await numbering.allocate(session, numbering.NumberKind.OUTGOING, now)

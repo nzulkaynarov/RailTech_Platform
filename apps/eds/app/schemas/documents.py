@@ -89,6 +89,10 @@ class OutgoingLetter(BaseModel):
     pdf: DocumentPdf | None
     mailings: list[DocumentMailing]
     registration_requested: RegistrationRequest | None
+    #: Письмо с почтой адресата не ушло и отправку не сняли (СЦ-1): остаётся в «Исходящих»
+    undelivered: bool = False
+    #: «Вручено иначе»: когда сотрудник снял отправку почтой
+    mail_waived_at: dt.datetime | None = None
 
 
 class LetterheadOut(BaseModel):
@@ -194,6 +198,8 @@ class DocumentListItem(BaseModel):
     files_count: int
     paid_on: dt.date | None
     created_at: dt.datetime
+    #: Исходящее письмо с почтой адресата не ушло и отправку не сняли (СЦ-1)
+    undelivered: bool = False
 
 
 class DocumentPage(BaseModel):

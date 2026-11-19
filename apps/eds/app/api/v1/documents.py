@@ -225,6 +225,14 @@ async def send_document(
     return result
 
 
+@router.post("/documents/{document_id}/mail-waive", response_model=Document, operation_id="waiveDocumentMail")
+async def waive_document_mail(document_id: uuid.UUID, employee: Registrar, session: Session) -> Document:
+    """«Вручено иначе»: письмо передано адресату не почтой — недоставленным оно больше не считается (СЦ-1)."""
+    async with session.begin():
+        document = await documents.waive_mail(session, employee=employee, document_id=document_id)
+        return await documents_read.present(session, document)
+
+
 @router.get("/letterhead", response_model=LetterheadOut, operation_id="getLetterhead")
 async def get_letterhead(employee: AnyEmployee, session: Session) -> LetterheadOut:
     row = await letterhead.current(session)

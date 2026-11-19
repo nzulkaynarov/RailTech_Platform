@@ -39,6 +39,8 @@ class RegistryItem(BaseModel):
     client: LetterSender | None
     links: ErpLinks
     amount: Money | None
+    #: Исходящее письмо с почтой адресата не ушло и отправку не сняли (СЦ-1): строка остаётся в «Исходящих»
+    undelivered: bool = False
 
 
 class RegistryPage(BaseModel):
