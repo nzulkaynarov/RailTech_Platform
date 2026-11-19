@@ -41,10 +41,12 @@
                 — {% translate "подключается в личном кабинете: Профиль → «Уведомления»." %}
               </p>
               {% endif %}{% endblock %}
+              {% if support_email %}
               <p style="margin:0;">
                 {% translate "Возникли вопросы? Напишите на" %}
-                <a href="mailto:{{ support_email|default:'support@example.com' }}" style="color:#2563eb; text-decoration:none;">{{ support_email|default:'support@example.com' }}</a>.
+                <a href="mailto:{{ support_email }}" style="color:#2563eb; text-decoration:none;">{{ support_email }}</a>.
               </p>
+              {% endif %}
             </td>
           </tr>
         </table>

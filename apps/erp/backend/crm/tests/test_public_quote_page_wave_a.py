@@ -261,6 +261,11 @@ def test_full_accept_flow_materializes_contract(lookups):
     # Seller notified + next-step email to the contact.
     assert Notification.objects.filter(user=seller_user, title="КП одобрено клиентом").exists()
     assert any("buyer@acme.uz" in m.to for m in mail.outbox[1:])
+    # СЦ-4: код — в теле письма, не в теме; письмо «Принято» называет, у кого следующий шаг, и ведёт к предложению
+    assert not re.search(r"\d{6}", mail.outbox[0].subject)
+    accepted = next(m for m in mail.outbox[1:] if "buyer@acme.uz" in m.to)
+    assert "Ваш менеджер — Aziz" in accepted.body and seller_user.email in accepted.body
+    assert _url(quote) in accepted.body
 
     # Code is single-use → consumed.
     assert QuoteAcceptanceCode.objects.get(quote=quote).consumed_at is not None
