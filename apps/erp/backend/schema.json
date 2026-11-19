@@ -12281,6 +12281,61 @@
                 }
             }
         },
+        "/api/v1/catalog/items/{id}/thumbnail/": {
+            "get": {
+                "operationId": "catalog_items_thumbnail",
+                "description": "Квадратная миниатюра главного фото 96×96 в WebP (план ЕД-4): строка расчёта, КП, заказа и склада показывает позицию картинкой. Читает любой сотрудник; фото нет — 404, клиент показывает значок типа.",
+                "summary": "Product thumbnail for any document row",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "image/webp": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/catalog/items/{id}/unpublish/": {
             "post": {
                 "operationId": "catalog_items_unpublish",
@@ -37212,6 +37267,15 @@
                         "type": "boolean",
                         "description": "Карточка строки — черновик каталога (ADR-0027)"
                     },
+                    "item": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ItemRef"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Позиция каталога строки (ЕД-4); null — раздел или строка без карточки"
+                    },
                     "kind": {
                         "$ref": "#/components/schemas/CalcLineKindEnum"
                     },
@@ -37308,6 +37372,7 @@
                     "crew_rate",
                     "group",
                     "id",
+                    "item",
                     "kind",
                     "lead_days",
                     "markup_pct",
@@ -42501,6 +42566,11 @@
                     "name": {
                         "type": "string"
                     },
+                    "photo": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "Id главного фото; миниатюра — catalog/items/{id}/thumbnail/ (ЕД-4), null — значок типа"
+                    },
                     "kind": {
                         "allOf": [
                             {
@@ -42713,6 +42783,7 @@
                     "offers",
                     "offers_count",
                     "origin",
+                    "photo",
                     "prices_visible",
                     "proposals",
                     "proposals_count",
@@ -42824,6 +42895,11 @@
                     "name": {
                         "type": "string"
                     },
+                    "photo": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "Id главного фото; миниатюра — catalog/items/{id}/thumbnail/ (ЕД-4), null — значок типа"
+                    },
                     "kind": {
                         "allOf": [
                             {
@@ -42928,6 +43004,7 @@
                     "name",
                     "nearest_valid_until",
                     "offers_count",
+                    "photo",
                     "proposals_count",
                     "sku",
                     "status",
@@ -46819,6 +46896,37 @@
                     "deal"
                 ]
             },
+            "ItemRef": {
+                "type": "object",
+                "description": "Схема ссылки на позицию в выгрузке (`erp-internal.yaml`): одна на все строки.",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "sku": {
+                        "type": "string",
+                        "description": "Наш артикул"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/CalcItemKindEnum"
+                    },
+                    "photo": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "Id главного фото; миниатюра — catalog/items/{id}/thumbnail/, null — значок типа"
+                    }
+                },
+                "required": [
+                    "id",
+                    "kind",
+                    "name",
+                    "photo",
+                    "sku"
+                ]
+            },
             "JournalEntry": {
                 "type": "object",
                 "properties": {
@@ -47979,6 +48087,15 @@
                         "type": "integer",
                         "nullable": true
                     },
+                    "item": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ItemRef"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Позиция каталога (ЕД-4); null — строка без карточки"
+                    },
                     "name": {
                         "type": "string"
                     },
@@ -48046,6 +48163,7 @@
                     "article",
                     "deal",
                     "id",
+                    "item",
                     "line_total",
                     "name",
                     "offer",
@@ -55060,6 +55178,15 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "item": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ItemRef"
+                            }
+                        ],
+                        "nullable": true,
+                        "readOnly": true
+                    },
                     "product_domain": {
                         "type": "string",
                         "readOnly": true
@@ -55214,6 +55341,7 @@
                     "final_price_excl_vat",
                     "id",
                     "is_incomplete",
+                    "item",
                     "landed_cost",
                     "product_mpn",
                     "product_uom",
@@ -56961,6 +57089,14 @@
                     "product_id": {
                         "type": "integer"
                     },
+                    "item": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ItemRef"
+                            }
+                        ],
+                        "description": "Позиция каталога (ЕД-4)"
+                    },
                     "name": {
                         "type": "string"
                     },
@@ -57025,6 +57161,7 @@
                     "free",
                     "incoming",
                     "incoming_orders",
+                    "item",
                     "movements",
                     "name",
                     "next_expected",
@@ -57178,6 +57315,14 @@
                     "product_id": {
                         "type": "integer"
                     },
+                    "item": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ItemRef"
+                            }
+                        ],
+                        "description": "Позиция каталога (ЕД-4)"
+                    },
                     "name": {
                         "type": "string"
                     },
@@ -57220,6 +57365,7 @@
                     "cells",
                     "free",
                     "incoming",
+                    "item",
                     "name",
                     "next_expected",
                     "on_hand",

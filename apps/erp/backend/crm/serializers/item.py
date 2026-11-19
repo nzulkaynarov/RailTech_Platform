@@ -6,8 +6,10 @@ caps the bulk endpoints echo verbatim.
 """
 
 from django.conf import settings
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
+from catalog.item_ref import ItemRefSerializer, item_ref, main_photos
 from core.quantity import QuantityField
 from crm.models import QuoteItem
 from master_data.models import Currency
@@ -23,6 +25,18 @@ class QuoteItemSerializer(serializers.ModelSerializer):
     product_mpn = serializers.SerializerMethodField()
     product_uom = serializers.SerializerMethodField()
     offer_supplier_name = serializers.CharField(source="offer.supplier.name", read_only=True)
+    item = serializers.SerializerMethodField()
+
+    @extend_schema_field(ItemRefSerializer(allow_null=True))
+    def get_item(self, obj):
+        """Позиция каталога строки (ЕД-4). Фото — одной выборкой на КП: кэш в общем контексте вложенного сериализатора."""
+        if not obj.product_id:
+            return None
+        photos = self.context.setdefault("item_photos", {})
+        if obj.quote_id not in photos:
+            ids = QuoteItem.objects.filter(quote_id=obj.quote_id).values_list("product_id", flat=True)
+            photos[obj.quote_id] = main_photos(ids)
+        return item_ref(obj.product, photos[obj.quote_id])
 
     def get_product_mpn(self, obj) -> str:
         return obj.product.manufacturer_part_number if obj.product_id else ""
@@ -168,6 +182,7 @@ class QuoteItemSerializer(serializers.ModelSerializer):
             "position",
             "product",
             "product_name",
+            "item",
             "product_domain",
             "product_sku",
             "product_gost",

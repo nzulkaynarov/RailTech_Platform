@@ -135,6 +135,7 @@ def test_editing_a_line_keeps_its_project_link_unless_it_is_resent(world):
         format="json",
     )
     assert kept.status_code == 200 and kept.json()["lines"][0]["quote_item_id"] == item.pk
+    assert kept.json()["lines"][0]["item"]["id"] == world["rail"].pk  # ЕД-4: позиция строкой заказа
     unlinked = api(world["supply"]).patch(
         f"{STOCK}orders/{created['id']}/",
         {

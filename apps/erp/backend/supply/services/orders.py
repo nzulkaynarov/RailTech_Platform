@@ -49,6 +49,7 @@ from supply.models import (
     SupplierOrderLog,
 )
 
+from catalog.item_ref import item_ref, main_photos
 from catalog.models import Product
 
 logger = logging.getLogger(__name__)
@@ -711,6 +712,7 @@ def present_order(order: SupplierOrder, user, *, detail: bool = False) -> dict:
     }
     if not detail:
         return row
+    photos = main_photos(line.product_id for line in lines)
     row.update(
         {
             "supplier": {
@@ -731,6 +733,7 @@ def present_order(order: SupplierOrder, user, *, detail: bool = False) -> dict:
                     "id": line.pk,
                     "position": line.position,
                     "product_id": line.product_id,
+                    "item": item_ref(line.product, photos) if line.product_id else None,
                     "name": line.name,
                     "article": line.article,
                     "unit": line.unit,
@@ -779,7 +782,10 @@ def present_order(order: SupplierOrder, user, *, detail: bool = False) -> dict:
 
 def _list_queryset():
     return SupplierOrder.objects.select_related("supplier", "currency", "created_by").prefetch_related(
-        "lines__deal__company", "lines__product__category", "lines__supplier_offer__delivery_basis"
+        "lines__deal__company",
+        "lines__product__category",
+        "lines__product__domain_type",
+        "lines__supplier_offer__delivery_basis",
     )
 
 

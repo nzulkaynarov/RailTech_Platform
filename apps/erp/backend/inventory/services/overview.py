@@ -14,6 +14,7 @@ from inventory.access import can_manage_fulfillment, can_manage_supply, person_n
 from inventory.models import Reservation, Shipment, StockBalance, StockMovement
 from inventory.services import stock, trace
 
+from catalog.item_ref import item_ref, main_photos
 from catalog.models import Product
 
 MAX_ROWS = 300
@@ -57,9 +58,12 @@ def _unit(product: Product) -> str:
     return product.uom.name if product.uom_id else ""
 
 
-def _row(product: Product, state: stock.Availability, incoming: Optional[dict]) -> dict:
+def _row(
+    product: Product, state: stock.Availability, incoming: Optional[dict], photos: Optional[dict[int, int]] = None
+) -> dict:
     return {
         "product_id": product.pk,
+        "item": item_ref(product, photos),
         "name": product.name,
         "article": product.manufacturer_part_number or product.sku or "",
         "unit": _unit(product),
@@ -92,7 +96,7 @@ def balances(user, *, q: str = "", only: str = "") -> dict:
         ids = coming
     else:
         ids = live | stocked | coming
-    products = Product.objects.select_related("uom").exclude(domain_type__code="SERVICES")
+    products = Product.objects.select_related("uom", "domain_type").exclude(domain_type__code="SERVICES")
     if q:
         # Поиск идёт по всей номенклатуре: товар без остатка находится, чтобы его можно было оприходовать.
         for word in [w for w in q.split() if w][:6]:
@@ -107,8 +111,9 @@ def balances(user, *, q: str = "", only: str = "") -> dict:
     pids = [p.pk for p in products]
     states = stock.availability(pids)
     coming_info = _incoming(pids)
+    photos = main_photos(pids)
     return {
-        "results": [_row(p, states[p.pk], coming_info.get(p.pk)) for p in products],
+        "results": [_row(p, states[p.pk], coming_info.get(p.pk), photos) for p in products],
         "rights": rights(user),
     }
 

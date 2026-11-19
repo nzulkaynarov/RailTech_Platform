@@ -1,6 +1,8 @@
 """Позиции номенклатуры и поставщики (D2-3): `/api/v1/catalog/items/` и `/api/v1/catalog/suppliers/`."""
 
 from django.db import transaction
+from django.http import HttpResponse
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from parties.models import Company
 from rest_framework import status
@@ -28,6 +30,7 @@ from catalog.desk.serializers import (
     DeskSupplierRow,
 )
 from catalog.desk.views_base import FORBIDDEN, NOT_FOUND, PAGE, PAGE_SIZE, REFUSED, SEARCH, DeskViewSet, refuse
+from catalog.item_ref import main_photos
 from catalog.models import Product, ProductFieldProposal, SupplierOffer
 
 _KIND = OpenApiParameter("kind", str, enum=list(items.ALL_KINDS), description="Тип позиции.")
@@ -107,7 +110,8 @@ class ItemDeskViewSet(DeskViewSet):
                 if review == "waiting"
                 else items.request_rows(rows) if review == "requests" else {}
             )
-            return [{**items.item_row(p, vat_default), **extra.get(p.pk, {})} for p in rows]
+            photos = main_photos(p.pk for p in rows)
+            return [{**items.item_row(p, vat_default, photos), **extra.get(p.pk, {})} for p in rows]
 
         return self.page_of(queryset, build)
 
@@ -231,6 +235,28 @@ class ItemDeskViewSet(DeskViewSet):
                 raise NotFound() from None
             return refuse(error)
         return Response(images.image_row(changed))
+
+    @extend_schema(
+        operation_id="catalog_items_thumbnail",
+        summary="Product thumbnail for any document row",
+        description=(
+            "Квадратная миниатюра главного фото 96×96 в WebP (план ЕД-4): строка расчёта, КП, заказа и склада показывает "
+            "позицию картинкой. Читает любой сотрудник; фото нет — 404, клиент показывает значок типа."
+        ),
+        responses={(200, "image/webp"): OpenApiTypes.BINARY, 404: NOT_FOUND},
+        tags=["Catalog"],
+    )
+    @action(detail=True, methods=["get"], url_path="thumbnail", url_name="thumbnail")
+    def thumbnail(self, request, pk=None):
+        image = images.main_image(self._product(pk))
+        if image is None:
+            raise NotFound()
+        try:
+            data = images.thumbnail(image)
+        except (OSError, ValueError) as error:  # файла нет в хранилище или он не картинка
+            images.logger.warning("catalog thumbnail failed for image %s: %s", image.pk, error)
+            raise NotFound() from None
+        return HttpResponse(data, content_type="image/webp", headers={"Cache-Control": "private, max-age=300"})
 
     def _set_published(self, request, pk, publish: bool):
         product = self._product(pk)

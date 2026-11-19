@@ -7,6 +7,7 @@ from decimal import Decimal
 from rest_framework import serializers
 
 from catalog.constants import TrackingClass
+from catalog.item_ref import ItemRefSerializer
 from core.quantity import QuantityField
 
 RESERVATION_STATUSES = ("active", "released", "fulfilled")
@@ -35,6 +36,7 @@ class StockCellSerializer(serializers.Serializer):
 
 class StockRowSerializer(serializers.Serializer):
     product_id = serializers.IntegerField()
+    item = ItemRefSerializer(help_text="Позиция каталога (ЕД-4)")
     name = serializers.CharField()
     article = serializers.CharField(allow_blank=True)
     unit = serializers.CharField(allow_blank=True)
