@@ -49,6 +49,9 @@ class PartnerProductSerializer(serializers.Serializer):
     is_own = serializers.BooleanField()
     can_submit = serializers.BooleanField()
     updated_at = serializers.DateTimeField()
+    photo = serializers.IntegerField(
+        allow_null=True, required=False, help_text="Id главного фото (ЕД-4): миниатюра — items/{id}/thumbnail"
+    )
 
 
 class PartnerReviewEntrySerializer(serializers.Serializer):

@@ -5,6 +5,7 @@ import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Download, Packa
 
 import { apiErrorKey, rowErrorKey } from '@/api/errors';
 import {
+  itemThumbnailUrl,
   listPartnerProducts,
   type PartnerConfirmResult,
   type PartnerProduct,
@@ -15,6 +16,7 @@ import { ActionDialog } from '@/components/ActionDialog';
 import { ActionRequiredWidget } from '@/components/ActionRequiredWidget';
 import { ConsequenceCallout } from '@/components/ConsequenceCallout';
 import { EmptyState } from '@/components/EmptyState';
+import { ItemCell } from '@/components/EntityCell';
 import { OnboardingChecklist } from '@/components/onboarding/OnboardingChecklist';
 import { PageHeader } from '@/components/PageHeader';
 import { EmptySteps } from '@/components/partner/EmptySteps';
@@ -328,17 +330,23 @@ function ProductTitle({ item, checked, onToggle, onOpen }: { item: PartnerProduc
           <span className="w-4 shrink-0" aria-hidden="true" />
         )}
       </CanAct>
-      <div className="min-w-0">
-        <button
-          type="button"
-          onClick={onOpen}
-          aria-label={t('partner.openCard', { name: item.name })}
-          className="rounded-sm text-left font-medium underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          {item.name}
-        </button>
-        <p className="text-xs text-muted-foreground">{[item.brand, item.manufacturer_part_number].filter(Boolean).join(' · ') || '—'}</p>
-      </div>
+      <ItemCell
+        name={item.name}
+        photoUrl={itemThumbnailUrl(item.id, item.photo)}
+        title={
+          <span className="min-w-0">
+            <button
+              type="button"
+              onClick={onOpen}
+              aria-label={t('partner.openCard', { name: item.name })}
+              className="rounded-sm text-left font-medium underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {item.name}
+            </button>
+            <p className="text-xs text-muted-foreground">{[item.brand, item.manufacturer_part_number].filter(Boolean).join(' · ') || '—'}</p>
+          </span>
+        }
+      />
     </div>
   );
 }

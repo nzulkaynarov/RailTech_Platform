@@ -42,6 +42,11 @@ describe("КП", () => {
     const lines = screen.getByRole("list", { name: "Состав предложения" });
     expect(within(lines).getByText("Товары")).toBeInTheDocument();
     expect(within(lines).getByText("Подшипник 6205-2RS")).toBeInTheDocument();
+    // ЕД-4: позиция каталога — наш артикул и миниатюра с версией фото
+    expect(within(lines).getByText("RT-01001")).toBeInTheDocument();
+    expect(
+      lines.querySelector('img[src*="/api/portal/v1/items/1001/thumbnail?v=1"]'),
+    ).not.toBeNull();
     expect(within(lines).getByText("200 шт")).toBeInTheDocument();
     expect(within(lines).getByText("165 000 сум")).toBeInTheDocument();
     expect(within(lines).getByText("5 нояб. 2026 г.")).toBeInTheDocument();

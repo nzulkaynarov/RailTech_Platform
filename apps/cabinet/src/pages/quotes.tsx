@@ -19,6 +19,7 @@ import { toast } from "@/lib/toast";
 import { apiErrorKey } from "@/api/errors";
 import {
   isPortalApiError,
+  itemThumbnailUrl,
   type AcceptanceCodeSent,
   type CodeDelivery,
   type Quote,
@@ -46,6 +47,7 @@ import {
 } from "@/components/Details";
 import { DocumentButton } from "@/components/DocumentButton";
 import { EmptyState } from "@/components/EmptyState";
+import { ItemCell } from "@/components/EntityCell";
 import { PageHeader } from "@/components/PageHeader";
 import {
   DetailSkeleton,
@@ -579,7 +581,7 @@ function QuoteLines({
 
 function LineTitle({ line }: { line: QuoteLine }) {
   const { t } = useTranslation();
-  return (
+  const text = (
     <span className="flex min-w-0 flex-col gap-0.5">
       <span className="flex flex-wrap items-center gap-2 font-medium break-words">
         {line.title}
@@ -593,6 +595,19 @@ function LineTitle({ line }: { line: QuoteLine }) {
         </span>
       ) : null}
     </span>
+  );
+  const item = line.item;
+  // ЕД-4: позиция каталога — миниатюра и наш артикул рядом с названием строки
+  return item ? (
+    <ItemCell
+      name={line.title}
+      sku={item.sku || null}
+      photoUrl={itemThumbnailUrl(item.id, item.photo)}
+      kind={item.kind}
+      title={text}
+    />
+  ) : (
+    text
   );
 }
 

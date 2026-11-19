@@ -305,6 +305,9 @@ ANY_ROLE_PATHS |= {"/letters", "/letters/{id}", "/letters/{id}/file"}
 ANY_ROLE_PATHS |= {"/countries"}
 #: Название оператора до входа (задача «Н3a2»): публично, без данных клиента.
 ANY_ROLE_PATHS |= {"/operator"}
+#: Миниатюра позиции (ЕД-4): нужна строкам КП, поставок, витрины и «Моих товаров» — любой из четырёх модулей; кто что видит,
+#: решает видимость позиции, а не модуль (`test_portal_item_thumbnail.py`).
+ANY_ROLE_PATHS |= {"/items/{id}/thumbnail"}
 #: Своя заявка на партнёрство (FX-1): кандидат работает с ней до появления модулей; подача новой — по-прежнему модуль `company`.
 CANDIDATE_OPERATIONS = {
     ("GET", "/company/partner-application"),

@@ -163,7 +163,9 @@ class TestPortalEndToEndLifecycle:
             "unit_price",
             "total",
             "promised_date",
+            "item",  # ЕД-4: ссылка на карточку (id, название, артикул, тип, фото) — без цен и себестоимости
         }
+        assert set(item_data["item"] or {}) <= {"id", "name", "sku", "kind", "photo"}
         assert item_data["kind"] == "item" and item_data["title"] == "Труба 89х4 ст20 ГОСТ 8732"
         assert item_data["unit_price"] == {"amount": "500000.00", "currency": "UZS"}
         assert item_data["total"] == {"amount": "75000000.00", "currency": "UZS"}

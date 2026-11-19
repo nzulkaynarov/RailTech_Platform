@@ -28,6 +28,7 @@ from catalog.completeness import CompletenessContext, requirements_for
 from catalog.constants import DEFAULT_OFFER_CONFIRM_DAYS
 from catalog.desk.items import ItemError
 from catalog.desk.tech_docs import _check_range, _date, validate_upload
+from catalog.item_ref import main_photos
 from catalog.models import (
     DocumentKind,
     Product,
@@ -224,6 +225,8 @@ def project_cards(company, products: list, language: str | None = None) -> list[
     ).order_by("-decided_at", "-id"):
         returns.setdefault(review.product_id, review)
     ctx = CompletenessContext(products)
+    # ЕД-4: фото — только своей или опубликованной карточки; у сопоставленной чужой его нет (как и названия)
+    photos = main_photos(ids)
     items = []
     for product in products:
         own = product.source_supplier_id == company.pk
@@ -260,6 +263,7 @@ def project_cards(company, products: list, language: str | None = None) -> list[
                     "is_own": False,
                     "can_submit": False,
                     "updated_at": my_offer.updated_at,
+                    "photo": None,
                 }
             )
             continue
@@ -283,6 +287,7 @@ def project_cards(company, products: list, language: str | None = None) -> list[
                 "is_own": own,
                 "can_submit": own and status in (DRAFT, RETURNED),
                 "updated_at": product.updated_at,
+                "photo": photos.get(product.pk),
             }
         )
     return items
