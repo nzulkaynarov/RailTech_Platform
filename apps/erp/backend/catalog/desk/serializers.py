@@ -59,6 +59,10 @@ class DeskItemRow(serializers.Serializer):
     id = serializers.IntegerField()
     sku = serializers.CharField()
     name = serializers.CharField()
+    photo = serializers.IntegerField(
+        allow_null=True,
+        help_text="Id главного фото; миниатюра — catalog/items/{id}/thumbnail/ (ЕД-4), null — значок типа",
+    )
     kind = serializers.ChoiceField(
         choices=list(ALL_KINDS),
         help_text="Тип вычисляется: товар со склада или под заказ, услуга фикс / по этапам / по времени.",

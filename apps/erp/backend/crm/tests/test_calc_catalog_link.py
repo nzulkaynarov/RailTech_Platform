@@ -118,3 +118,5 @@ def test_matching_a_draft_line_to_the_catalog_drops_the_draft(world, catalog_loo
     line = next(line for line in response.json()["lines"] if line["id"] == line_id)
     assert line["product_id"] == world["rail"].pk and line["product_draft"] is False
     assert not Product.objects.filter(pk=draft_id).exists()
+    rail = world["rail"]
+    assert line["item"] == {"id": rail.pk, "name": rail.name, "sku": rail.sku, "kind": "goods", "photo": None}

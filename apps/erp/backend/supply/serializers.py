@@ -7,6 +7,7 @@ from decimal import Decimal
 from inventory.serializers import TRACKING_CLASSES, StockDealRefSerializer, StockRightsSerializer
 from rest_framework import serializers
 
+from catalog.item_ref import ItemRefSerializer
 from core.quantity import QuantityField
 
 ORDER_STATUSES = ("draft", "sent", "confirmed", "received", "cancelled")
@@ -75,6 +76,7 @@ class OrderLineSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     position = serializers.IntegerField()
     product_id = serializers.IntegerField(allow_null=True)
+    item = ItemRefSerializer(allow_null=True, help_text="Позиция каталога (ЕД-4); null — строка без карточки")
     name = serializers.CharField()
     article = serializers.CharField(allow_blank=True)
     unit = serializers.CharField(allow_blank=True)

@@ -50,6 +50,8 @@ def test_adjust_adds_stock_in_a_cell_and_writes_the_journal(world):
     assert [(m["kind"], m["quantity"], m["cell"]) for m in body["movements"]] == [("adjustment", 10, "A-03-2")]
     assert StockBalance.objects.get(product=world["rail"]).on_hand == 10
     assert StockMovement.objects.count() == 1
+    row = _row(world, world["rail"])
+    assert row["item"]["id"] == world["rail"].pk and row["item"]["kind"] == "goods"  # ЕД-4: позиция строкой склада
 
 
 def test_adjust_never_goes_below_zero_or_below_reservations(world):

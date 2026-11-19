@@ -39,6 +39,7 @@ from sales.services import deal_numbers
 
 from accounts.constants import Permission
 from accounts.services.permissions import is_seller, member_has_permission
+from catalog.item_ref import item_ref, main_photos
 from core.currency import BASE_CURRENCY
 from core.quantity import as_qty, to_qty
 
@@ -206,6 +207,8 @@ class _Context:
     #: Склад (D2-2): остаток, резервы проектов и ячейки по товарам; резерв по строкам расчёта.
     stock: dict[int, Any] = field(default_factory=dict)
     reserved: dict[int, int] = field(default_factory=dict)
+    #: Главное фото карточек строк (ЕД-4): одна выборка на расчёт.
+    photos: dict[int, int] = field(default_factory=dict)
 
 
 def _context(items: list[QuoteItem]) -> _Context:
@@ -217,6 +220,7 @@ def _context(items: list[QuoteItem]) -> _Context:
         suppliers=_supplier_offers(ids),
         stock=stock.availability(ids),
         reserved=stock.reserved_by_item(it.pk for it in items),
+        photos=main_photos(ids),
     )
 
 
@@ -363,6 +367,7 @@ def line_payload(item: QuoteItem, ctx: _Context, *, show_cost: bool, rights: dic
         "product_name": product.name if product else None,
         # Черновик карточки (ADR-0027): строку ещё можно сопоставить с опубликованной позицией каталога.
         "product_draft": bool(product is not None and getattr(product.status, "code", None) == "DRAFT"),
+        "item": item_ref(product, ctx.photos),
         "kind": kind,
         "zone": zone,
         "quantity": item.quantity,

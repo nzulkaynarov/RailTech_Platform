@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
+from catalog.item_ref import ItemRefSerializer
 from core.quantity import QuantityField
 
 ZONES = ("goods", "services", "payment_terms")
@@ -162,6 +163,9 @@ class CalcLineSerializer(serializers.Serializer):
     product_id = serializers.IntegerField(allow_null=True)
     product_name = serializers.CharField(allow_null=True)
     product_draft = serializers.BooleanField(help_text="Карточка строки — черновик каталога (ADR-0027)")
+    item = ItemRefSerializer(
+        allow_null=True, help_text="Позиция каталога строки (ЕД-4); null — раздел или строка без карточки"
+    )
     kind = serializers.ChoiceField(choices=LINE_KINDS)
     zone = serializers.ChoiceField(choices=LINE_ZONES)
     quantity = QuantityField()

@@ -149,3 +149,36 @@ def delete_image(product: Product, image_id) -> None:
             storage.delete(name)
         except Exception:  # noqa: BLE001 — запись уже удалена; осиротевший объект хранилища не должен давать 500
             logger.exception("фото товара %s: файл %s не удалён из хранилища", product.pk, name)
+
+
+#: Сторона миниатюры в пикселях: строка показывает 32 px, карточка — 40 px; 96 px остаётся чёткой на экране с плотностью 2×.
+THUMBNAIL_SIDE = 96
+THUMBNAIL_CACHE_SECONDS = 7 * 24 * 3600
+
+
+def main_image(product: Product) -> ProductImage | None:
+    return ProductImage.objects.filter(product=product, is_main=True).exclude(image="").first()
+
+
+def thumbnail(image: ProductImage) -> bytes:
+    """Квадратная миниатюра главного фото в WebP (план ЕД-4): строка документа не тянет фото в 5 МБ.
+
+    Ключ кэша — id фото и имя файла: новое фото — новый ключ, старый ключ просто истекает.
+    """
+    from io import BytesIO
+
+    from django.core.cache import cache
+    from PIL import Image, ImageOps
+
+    key = f"catalog:thumb:v1:{image.pk}:{image.image.name}"
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+    with image.image.open("rb") as handle, Image.open(handle) as source:
+        picture = ImageOps.exif_transpose(source).convert("RGB")
+        picture = ImageOps.fit(picture, (THUMBNAIL_SIDE, THUMBNAIL_SIDE), method=Image.Resampling.LANCZOS)
+    out = BytesIO()
+    picture.save(out, format="WEBP", quality=80, method=4)
+    data = out.getvalue()
+    cache.set(key, data, THUMBNAIL_CACHE_SECONDS)
+    return data

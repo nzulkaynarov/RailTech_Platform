@@ -249,11 +249,16 @@ def _rate(value):
     return None if value is None else f"{Decimal(value):.2f}"
 
 
-def item_row(product, vat_default) -> dict:
+def item_row(product, vat_default, photos: dict[int, int] | None = None) -> dict:
+    from catalog.item_ref import main_photos
+
+    if photos is None:
+        photos = main_photos([product.pk])
     return {
         "id": product.pk,
         "sku": product.sku,
         "name": product.name,
+        "photo": photos.get(product.pk),
         "kind": item_kind(product, bool(getattr(product, "has_stock", False))),
         "is_service": product.is_service,
         "unit": {"id": product.uom_id, "code": product.uom.code, "name": product.uom.name} if product.uom_id else None,
