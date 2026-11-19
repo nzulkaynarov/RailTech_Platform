@@ -155,5 +155,8 @@
   "timeLeft": {
     "today": "last day today",
     "days": "{{count}} d left"
+  },
+  "entity": {
+    "sku": "Article"
   }
 }

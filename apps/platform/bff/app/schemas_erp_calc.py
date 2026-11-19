@@ -17,6 +17,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.feeds.models import StepCode
 from app.feeds.numbers import deal_number, deal_step, deal_title
 from app.feeds.text import segment
+from app.schemas_item_ref import ItemRef, item_ref
 
 CalcState = Literal["not_started", "in_progress", "returned", "at_director", "rejected", "approved"]
 VisaState = Literal["none", "waiting", "done"]
@@ -131,6 +132,8 @@ class CalcLine(BaseModel):
     product_id: str | None
     product_name: str | None
     product_draft: bool = False
+    #: Позиция каталога строки (ЕД-4)
+    item: ItemRef | None = None
     kind: LineKind
     zone: LineZone
     group: Group
@@ -357,6 +360,7 @@ def _line(raw: dict[str, Any], *, cost: bool, zones: Collection[str], offers: bo
         product_id=_id(raw.get("product_id")),
         product_name=raw.get("product_name"),
         product_draft=bool(raw.get("product_draft")),
+        item=item_ref(raw.get("item")),
         kind=raw["kind"],
         zone=raw["zone"],
         group=raw["group"],

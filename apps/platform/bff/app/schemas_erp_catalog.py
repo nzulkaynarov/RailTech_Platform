@@ -20,6 +20,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from app.feeds.numbers import deal_number
 from app.schemas_company import Body, Patch, dec, ident, opt_ident, text
 from app.schemas_dictionaries import LocalizedName
+from app.schemas_item_ref import thumbnail_url
 
 ItemKind = Literal["stock", "on_order", "service_fixed", "service_milestones", "service_time"]
 BrigadeKindName = Literal["brigade", "person", "subcontractor"]
@@ -227,6 +228,8 @@ class Item(Out):
     id: str
     sku: str
     name: str
+    #: Миниатюра главного фото (ЕД-4); `None` — значок типа
+    thumbnail: str | None = None
     kind: ItemKind
     unit: Unit | None
     vat_rate: str | None
@@ -408,6 +411,7 @@ def to_item(raw: Mapping[str, Any]) -> dict[str, Any]:
         "id": ident(raw.get("id")),
         "sku": text(raw.get("sku")),
         "name": text(raw.get("name")),
+        "thumbnail": thumbnail_url(raw.get("id"), raw.get("photo")),
         "kind": _kind(raw.get("kind")),
         "unit": _unit(raw.get("unit")),
         "vat_rate": dec(raw.get("vat_rate")),

@@ -12,7 +12,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Path, Request, Response, status
 
 from app.api.erp_catalog import _erp
-from app.deps import Authed, require
+from app.deps import Authed, require, require_any
 from app.errors import PlatformError
 from app.schemas_erp_catalog import ItemImage, ItemImageUpdate, to_image
 
@@ -20,6 +20,20 @@ router = APIRouter(tags=["erp-catalog"])
 
 Reader = Annotated[Authed, Depends(require("erp.stock", "read"))]
 Writer = Annotated[Authed, Depends(require("erp.stock", "full"))]
+# Миниатюра (ЕД-4): позицию видят в строках расчёта, КП, проекта, оплаты и склада,
+# а не только в каталоге
+RowReader = Annotated[
+    Authed,
+    Depends(
+        require_any(
+            ("erp.stock", "read"),
+            ("erp.calc", "read"),
+            ("eds.drafts", "read"),
+            ("eds.projects", "read"),
+            ("eds.payments", "read"),
+        )
+    ),
+]
 Id = Annotated[str, Path(pattern=r"^[0-9]+$")]
 
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
@@ -128,6 +142,31 @@ async def image_content(id: Id, image_id: Id, authed: Reader) -> Response:
         headers={
             "Cache-Control": "private, max-age=300",
             "Content-Disposition": "inline",
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "default-src 'none'; sandbox",
+        },
+    )
+
+
+@router.get(
+    "/erp/catalog/items/{id}/thumbnail",
+    response_class=Response,
+    responses={200: {"content": {"image/webp": {}}}},
+    operation_id="getCatalogItemThumbnail",
+)
+async def thumbnail(id: Id, authed: RowReader, v: str | None = None) -> Response:
+    """Миниатюра главного фото 96×96 (ЕД-4).
+
+    Адрес с `?v=<id фото>` неизменен, пока фото то же: кэш браузера на сутки.
+    """
+    response = await _erp(authed).request("GET", f"catalog/items/{id}/thumbnail/")
+    if response.headers.get("content-type", "").split(";")[0].strip().lower() != "image/webp":
+        raise PlatformError("NOT_FOUND", "Фото нет.", status_code=404)
+    return Response(
+        content=response.content,
+        media_type="image/webp",
+        headers={
+            "Cache-Control": "private, max-age=86400",
             "X-Content-Type-Options": "nosniff",
             "Content-Security-Policy": "default-src 'none'; sandbox",
         },

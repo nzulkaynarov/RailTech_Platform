@@ -144,7 +144,8 @@
     "release": "Zaxirani olib tashlash",
     "releaseLabel": "«{{name}}» qatori zaxirasini olib tashlash",
     "markupLabel": "Ustama, %: {{name}}",
-    "currencyLabel": "«{{name}}» uchun xarid valyutasi"
+    "currencyLabel": "«{{name}}» uchun xarid valyutasi",
+    "mpn": "Ishlab chiqaruvchi artikuli"
   },
   "add": {
     "button": "Qator qo‘shish",

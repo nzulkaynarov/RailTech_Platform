@@ -21,6 +21,7 @@ import { CATALOG, type MockCalc, type MockLine, PARSE_PROPOSAL, seedCalcs } from
 import { stockOfLine } from "./erpStock";
 import { UNITS } from "./fixtures/erpCatalog";
 import { buildMe, readSession } from "./mockSession";
+import { itemRefOf } from "./fixtures/itemRef";
 
 /**
  * Моки «Расчёта по заявке» (D2-1, BFF 0.24.0) — поведение BFF и ERP вместе: доступ по разделам каталога (`erp.calc` —
@@ -162,6 +163,15 @@ function presentLine(line: MockLine, user: Me, editable: boolean): CalcLine {
     product_name: line.productId === null ? null : line.name,
     // ERP заводит строке без позиции каталога карточку-черновик (ADR-0027); мок показывает такую строку черновиком.
     product_draft: line.productId === null,
+    item:
+      line.productId === null
+        ? null
+        : itemRefOf(
+            line.productId,
+            line.name,
+            line.article,
+            kind === "service" ? "service" : "goods",
+          ),
     kind,
     zone,
     group: GROUP[kind],

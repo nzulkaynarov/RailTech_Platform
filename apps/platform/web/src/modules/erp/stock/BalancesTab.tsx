@@ -13,6 +13,7 @@ import { QueryState } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { useStateLabels } from "./api";
 import { ProductDrawer } from "./ProductDrawer";
+import { ItemRefCell } from "../../ItemRefCell";
 
 /** Ширины колонок: номенклатура (гибкая), на складе, резерв, свободно, в пути, ячейки (UX-1c, S9) */
 const COLS = {
@@ -110,19 +111,22 @@ function Rows({ items, onOpen }: { items: readonly StockRow[]; onOpen: (row: Sto
       header: t("balances.columns.product"),
       width: null,
       cell: (row) => (
-        <>
-          <Button
-            type="link"
-            className="pf-calc-link"
-            aria-label={t("balances.open", { name: row.name })}
-            onClick={() => {
-              onOpen(row);
-            }}
-          >
-            {row.name}
-          </Button>
-          <div className="pf-hint pf-num">{row.article}</div>
-        </>
+        <ItemRefCell
+          item={row.item}
+          name={row.name}
+          title={
+            <Button
+              type="link"
+              className="pf-calc-link"
+              aria-label={t("balances.open", { name: row.name })}
+              onClick={() => {
+                onOpen(row);
+              }}
+            >
+              {row.name}
+            </Button>
+          }
+        />
       ),
     },
     {
