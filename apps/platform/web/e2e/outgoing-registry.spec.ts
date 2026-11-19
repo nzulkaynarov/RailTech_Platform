@@ -23,5 +23,23 @@ test.describe("Реестр «Исходящие»", () => {
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
       await expect(page.getByText("КП · Колёсные пары, 10 шт.")).toHaveCount(0);
     });
+
+    test(`${String(width)}: «Архив» — закрытое входящее открывает само письмо (ДОК-8)`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+      await loginAndWait(page, "director@demo.example");
+      await spaGoto(page, "/eds/documents?box=archive&scope=all");
+      const subject = "Изменение тарифов на расчётно-кассовое обслуживание с 1 декабря";
+      const open = page.getByRole("link", { name: `Открыть документ: ${subject}` }).first();
+      await expect(open).toBeVisible();
+      await expect(page.getByText("Принято к сведению").first()).toBeVisible();
+      await expectNoViolations(page, `archive ${String(width)}`);
+      await settledScreenshot(page, "archive-letter-row");
+      await open.click();
+      await expect(page).toHaveURL(/\/eds\/inbox\//);
+      await expect(page.getByRole("heading", { level: 1, name: "Письмо ВХ-100/26" })).toBeVisible();
+      await settledScreenshot(page, "archive-letter-open");
+    });
   }
 });

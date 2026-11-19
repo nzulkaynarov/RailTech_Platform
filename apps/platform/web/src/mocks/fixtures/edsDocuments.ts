@@ -262,6 +262,16 @@ function initial(): EdsMock {
         responsible: { crm_user_id: 1, full_name: "Демо Менеджеров" },
       },
       {
+        // Закрытое входящее (id и номер — письма из `fixtures/letters.ts`): строка «Архива» открывает само письмо (ДОК-8)
+        kind: "letter_in",
+        id: "20000000-0000-4000-8000-000000000100",
+        number: "ВХ-100/26",
+        title: "Изменение тарифов на расчётно-кассовое обслуживание с 1 декабря",
+        status: "noted",
+        registered_at: "2026-10-20T09:10:00Z",
+        responsible: null,
+      },
+      {
         kind: "quote",
         id: documentId(801),
         number: "КП-2026/115",

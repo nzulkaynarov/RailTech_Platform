@@ -60,7 +60,7 @@ describe("EDS · Документы: список", () => {
     expect(screen.queryByText("Запрос цен на рельсы Р65")).toBeNull();
   });
 
-  it("менеджер с доступом к входящим: по умолчанию реестр «Все» — чужие документы, письма и КП; письма и КП открываются в своих разделах", async () => {
+  it("менеджер с доступом к входящим: по умолчанию реестр «Все» — чужие документы, письма и КП; письма и КП открываются своей карточкой", async () => {
     await openDocuments("manager@demo.example");
 
     expect(await screen.findByText("Запрос цен на рельсы Р65")).toBeVisible();
@@ -69,13 +69,14 @@ describe("EDS · Документы: список", () => {
     const letter = screen.getByText("Запрос цен на рельсы Р65").closest("tr") as HTMLElement;
     expect(within(letter).getByText("Ждёт резолюции")).toBeVisible();
     expect(within(letter).getByText("ВХ-104/26")).toBeVisible();
+    // письмо открывается само, а не раздел «Входящие» (ДОК-8): и темой, и ссылкой в строке
+    const href = `/eds/inbox/${encodeURIComponent("ВХ-104/26")}`;
     expect(
-      within(letter).getByRole("link", { name: /Открыть в разделе «Входящие»/ }),
-    ).toHaveAttribute("href", "/eds/inbox");
-    // письмо клиента не открывается как документ
+      within(letter).getByRole("link", { name: "Открыть письмо: Запрос цен на рельсы Р65" }),
+    ).toHaveAttribute("href", href);
     expect(
-      screen.queryByRole("link", { name: "Открыть документ: Запрос цен на рельсы Р65" }),
-    ).toBeNull();
+      within(letter).getByRole("link", { name: "Открыть документ: Запрос цен на рельсы Р65" }),
+    ).toHaveAttribute("href", href);
     expect(screen.getByRole("columnheader", { name: "Ответственный" })).toBeVisible();
   });
 
@@ -404,5 +405,24 @@ describe("«Исходящие» и «Архив» по стадии (план 2
     renderAt("/eds/documents?box=archive&scope=all");
     await listSettled();
     expect(screen.queryByText("КП · Колёсные пары, 10 шт.")).toBeNull();
+  });
+
+  it("архив: закрытое входящее письмо открывает само письмо — темой и ссылкой «Открыть письмо» (ДОК-8)", async () => {
+    signIn("director@demo.example");
+    renderAt("/eds/documents?box=archive&scope=all");
+    await listSettled();
+    const subject = "Изменение тарифов на расчётно-кассовое обслуживание с 1 декабря";
+    const row = (await screen.findByText(subject)).closest("tr") as HTMLElement;
+    const href = `/eds/inbox/${encodeURIComponent("ВХ-100/26")}`;
+    // статус закрытого письма — словами, а не кодом
+    expect(within(row).getByText("Принято к сведению")).toBeVisible();
+    expect(within(row).getByRole("link", { name: `Открыть документ: ${subject}` })).toHaveAttribute(
+      "href",
+      href,
+    );
+    expect(within(row).getByRole("link", { name: `Открыть письмо: ${subject}` })).toHaveAttribute(
+      "href",
+      href,
+    );
   });
 });
