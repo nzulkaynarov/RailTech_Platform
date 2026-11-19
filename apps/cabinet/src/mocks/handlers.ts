@@ -941,6 +941,17 @@ export const handlers = [
   ),
 
   // --- каталог ----------------------------------------------------------------------------------
+  // ЕД-4: миниатюра — первое фото позиции каталога мока (SVG как есть); нет позиции или фото — 404, как в ERP
+  http.get<IdParams>(
+    `${API}/items/:id/thumbnail`,
+    withSession<IdParams>(({ db, params }) => {
+      const src = db.catalog.find((item) => item.id === Number(params.id))?.images?.[0];
+      if (!src?.startsWith('data:image/svg+xml;utf8,')) return error(404, 'NOT_FOUND');
+      return new HttpResponse(decodeURIComponent(src.slice('data:image/svg+xml;utf8,'.length)), {
+        headers: { 'Content-Type': 'image/svg+xml' },
+      });
+    }),
+  ),
   http.get(
     `${API}/catalog/categories`,
     withSession(({ db }) => {

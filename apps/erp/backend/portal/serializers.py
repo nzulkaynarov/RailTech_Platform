@@ -12,6 +12,8 @@ from portal.services import act_scan
 from portal.services import documents as portal_documents
 from rest_framework import serializers
 
+from catalog.item_ref import ItemRefSerializer, item_ref
+
 #: Лимиты контракта (`erp-portal.yaml`): `ClientRequestCreate.summary` и `Reason.reason`.
 SUMMARY_MAX_LENGTH = 5000
 REASON_MAX_LENGTH = 2000
@@ -508,6 +510,7 @@ class QuoteLineSerializer(serializers.Serializer):
     unit_price = serializers.DictField(allow_null=True)
     total = serializers.DictField(allow_null=True)
     promised_date = serializers.DateField(allow_null=True)
+    item = ItemRefSerializer(allow_null=True, required=False, help_text="Позиция каталога строки (ЕД-4)")
 
 
 class QuoteSerializer(QuoteListItemSerializer):
@@ -789,6 +792,13 @@ class DeliveryLineSerializer(DealLinkedSerializer):
     shipped_at = serializers.DateTimeField(read_only=True, allow_null=True)
     accepted_at = serializers.DateTimeField(read_only=True, allow_null=True)
     remark = serializers.SerializerMethodField()
+    item = serializers.SerializerMethodField()
+
+    @extend_schema_field(ItemRefSerializer(allow_null=True))
+    def get_item(self, line):
+        """Позиция строки заказа (ЕД-4). Список передаёт фото всех строк в `context["item_photos"]` одной выборкой."""
+        product = line.quote_item.product if line.quote_item_id and line.quote_item.product_id else None
+        return item_ref(product, self.context.get("item_photos")) if product is not None else None
 
     def get_quantity(self, line) -> Optional[str]:
         return format_quantity(line.quantity)

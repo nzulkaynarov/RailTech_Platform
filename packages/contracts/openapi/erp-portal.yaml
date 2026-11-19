@@ -1744,6 +1744,34 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
+  /items/{id}/thumbnail:
+    get:
+      tags: [catalog]
+      operationId: getItemThumbnail
+      summary: Миниатюра позиции каталога (ЕД-4)
+      description: >-
+        Главное фото позиции 96×96 WebP — для строки КП, поставки, витрины и «Моих товаров». Видно, если позиция видна
+        сессии: опубликована (`catalog_requests`), стоит в КП или поставке клиента (`quotes`, `deliveries`), своя или
+        опубликованная карточка партнёра (`my_products`). Иначе, как и без фото, — 404. Адрес строит Cabinet из `item.photo`
+        (или `photo`) с `?v=<id фото>`: новое фото — новый адрес.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - {name: v, in: query, required: false, schema: {type: string}, description: Версия фото — только для кэша браузера}
+      responses:
+        '200':
+          description: Миниатюра
+          content:
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /catalog:
     get:
       tags: [catalog]
@@ -3713,6 +3741,9 @@ components:
         - can_submit
         - updated_at
       properties:
+        photo:
+          type: [integer, 'null']
+          description: Id главного фото своей или опубликованной карточки (ЕД-4); миниатюра — `/items/{id}/thumbnail?v=<photo>`
         id:
           type: integer
           format: int64
@@ -3868,6 +3899,9 @@ components:
         - history
         - documents
       properties:
+        photo:
+          type: [integer, 'null']
+          description: Id главного фото своей или опубликованной карточки (ЕД-4)
         id:
           type: integer
           format: int64
@@ -5358,11 +5392,36 @@ components:
           type: string
           format: date-time
 
+    ItemRef:
+      type: object
+      description: Позиция каталога в строке документа (ЕД-4, `ui-standard.md` §12) — одна форма во всех строках
+      required: [id, name, sku, kind, photo]
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+          description: Название карточки каталога
+        sku:
+          type: string
+          description: Артикул оператора; пусто — его ещё нет
+        kind:
+          type: string
+          enum: [goods, service]
+        photo:
+          type: [integer, 'null']
+          description: Id главного фото; миниатюра — `/items/{id}/thumbnail?v=<photo>`, `null` — значок типа
     QuoteLine:
       type: object
       description: Строка КП для клиента — цена продажи без себестоимости и наценки; `unit_price` и `total` без НДС (Q-FIX21-2)
       required: [line_no, kind, title]
       properties:
+        item:
+          description: Позиция каталога строки (ЕД-4); `null` — строка без карточки
+          oneOf:
+            - $ref: '#/components/schemas/ItemRef'
+            - type: 'null'
         line_no:
           type: integer
           minimum: 1
@@ -5626,6 +5685,11 @@ components:
       description: Строка поставки = строка подтверждённого заказа клиента; `id` — её идентификатор для приёмки
       required: [id, deal, line_no, title, status]
       properties:
+        item:
+          description: Позиция каталога строки (ЕД-4); `null` — строка без карточки
+          oneOf:
+            - $ref: '#/components/schemas/ItemRef'
+            - type: 'null'
         id:
           type: integer
           format: int64

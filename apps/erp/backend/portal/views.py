@@ -118,6 +118,7 @@ from rest_framework.views import APIView
 from sales.models import DeliveryLine
 from sales.services.delivery_lines import accept_delivery_line, dispute_delivery_line, sync_company_delivery_lines
 
+from catalog.item_ref import main_photos
 from catalog.published import project, project_many, published_products
 from core.i18n import supported_languages
 from core.models import Country
@@ -1014,7 +1015,7 @@ class ActReturnView(BasePortalView):
 
 
 def _client_delivery_lines(company):
-    return DeliveryLine.objects.filter(deal__company=company).select_related("deal")
+    return DeliveryLine.objects.filter(deal__company=company).select_related("deal", "quote_item__product__domain_type")
 
 
 class DeliveryListView(BasePortalView):
@@ -1024,8 +1025,9 @@ class DeliveryListView(BasePortalView):
 
     def get(self, request):
         sync_company_delivery_lines(request.portal_company)
-        lines = _client_delivery_lines(request.portal_company).order_by("-deal_id", "line_no")
-        return Response(DeliveryLineSerializer(lines, many=True).data)
+        lines = list(_client_delivery_lines(request.portal_company).order_by("-deal_id", "line_no"))
+        photos = main_photos(line.quote_item.product_id for line in lines if line.quote_item_id)
+        return Response(DeliveryLineSerializer(lines, many=True, context={"item_photos": photos}).data)
 
 
 def _delivery_line_or_404(request, pk):

@@ -57,6 +57,7 @@ from portal.views import (
     TelegramAuthView,
     UploadView,
 )
+from portal.views_items import ItemThumbnailView
 from portal.views_letters import LetterDetailView, LetterFileView, LetterListView
 from portal.views_notifications import NotificationListView, NotificationReadView, NotificationSettingsView
 from portal.views_partner import (
@@ -203,6 +204,8 @@ urlpatterns = [
     # Catalog (Каталог продукции и категории, Q-15)
     path("catalog/categories", CatalogCategoriesView.as_view(), name="portal-catalog-categories"),
     path("catalog/categories/", CatalogCategoriesView.as_view(), name="portal-catalog-categories-slash"),
+    path("items/<int:pk>/thumbnail", ItemThumbnailView.as_view(), name="portal-item-thumbnail"),
+    path("items/<int:pk>/thumbnail/", ItemThumbnailView.as_view(), name="portal-item-thumbnail-slash"),
     path("catalog", CatalogListView.as_view(), name="portal-catalog"),
     path("catalog/", CatalogListView.as_view(), name="portal-catalog-slash"),
     path("catalog/<int:pk>", CatalogDetailView.as_view(), name="portal-catalog-detail"),

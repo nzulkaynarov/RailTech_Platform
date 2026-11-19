@@ -5,11 +5,12 @@ import { AlertTriangle, CheckCircle2, Download, FolderOpen, Loader2, Search, Tru
 import { toast } from '@/lib/toast';
 
 import { apiErrorKey } from '@/api/errors';
-import type { DeliveryLine, DocumentKind, PortalDocument } from '@/api/portal';
+import { itemThumbnailUrl, type DeliveryLine, type DocumentKind, type PortalDocument } from '@/api/portal';
 import { useAcceptDelivery, useDeliveries, useDisputeDelivery, useDocuments } from '@/api/queries';
 import { DateField } from '@/components/DateField';
 import { DealLink } from '@/components/Details';
 import { DocumentButton } from '@/components/DocumentButton';
+import { ItemCell } from '@/components/EntityCell';
 import { EmptyState } from '@/components/EmptyState';
 import { PageHeader } from '@/components/PageHeader';
 import { ErrorState, ListSkeleton } from '@/components/QueryStates';
@@ -90,8 +91,26 @@ export function DeliveriesPage() {
                   {group.lines.map((line) => (
                     <li key={line.id} className="flex min-w-0 flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-start sm:justify-between">
                       <div className="flex min-w-0 flex-col gap-0.5">
-                        <span className="text-sm font-medium wrap-break-word">{line.title}</span>
-                        <span className="text-xs text-muted-foreground">{formatQuantity(line.quantity, line.unit)}</span>
+                        {line.item ? (
+                          // ЕД-4: позиция каталога — миниатюра и наш артикул; количество — под названием
+                          <ItemCell
+                            name={line.title}
+                            sku={line.item.sku || null}
+                            photoUrl={itemThumbnailUrl(line.item.id, line.item.photo)}
+                            kind={line.item.kind}
+                            title={
+                              <span className="flex min-w-0 flex-col gap-0.5">
+                                <span className="text-sm font-medium wrap-break-word">{line.title}</span>
+                                <span className="text-xs text-muted-foreground">{formatQuantity(line.quantity, line.unit)}</span>
+                              </span>
+                            }
+                          />
+                        ) : (
+                          <>
+                            <span className="text-sm font-medium wrap-break-word">{line.title}</span>
+                            <span className="text-xs text-muted-foreground">{formatQuantity(line.quantity, line.unit)}</span>
+                          </>
+                        )}
                       </div>
                       <div className="flex min-w-0 flex-col gap-1 text-sm sm:items-end sm:text-right">
                         <StatusBadge entity="delivery" code={line.status} />
