@@ -16,9 +16,11 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.feeds.models import PersonRef
 from app.feeds.text import segment
 from app.schemas_erp_calc import zones_of
 from app.schemas_item_ref import ItemRef, item_ref
+from app.schemas_person import person_of
 
 DIGITS = r"^[0-9]+$"
 EMAIL = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
@@ -93,7 +95,7 @@ class StockReservation(BaseModel):
     remaining: int
     status: ReservationStatus
     created_at: dt.datetime
-    created_by: str | None
+    created_by: PersonRef | None
     tracking: TrackingClass
     units: list[StockTraceUnitRef]
 
@@ -116,7 +118,7 @@ class StockMovement(BaseModel):
     quantity: float
     cell: str | None
     at: dt.datetime
-    by: str | None
+    by: PersonRef | None
     note: str | None
 
 
@@ -167,7 +169,7 @@ class SupplierOrderRow(BaseModel):
     total: str | None
     requests: list[StockRequestRef]
     created_at: dt.datetime
-    created_by: str | None
+    created_by: PersonRef | None
     actions: SupplierOrderActions
     path: str
 
@@ -219,7 +221,7 @@ class SupplierOrderReceiptLine(StockDoneReceiptLine):
 class SupplierOrderReceipt(BaseModel):
     id: str
     received_at: dt.datetime
-    received_by: str | None
+    received_by: PersonRef | None
     supplier_doc: str | None
     note: str | None
     lines: list[SupplierOrderReceiptLine]
@@ -230,7 +232,7 @@ class SupplierOrderLogEntry(BaseModel):
         "created", "edited", "sent", "confirmed", "receipt", "received", "cancelled", "overdue"
     ]
     at: dt.datetime
-    by: str | None
+    by: PersonRef | None
     detail: str | None
 
 
@@ -280,7 +282,7 @@ class StockDoneReceipt(BaseModel):
     order_path: str
     supplier: str
     received_at: dt.datetime
-    received_by: str | None
+    received_by: PersonRef | None
     supplier_doc: str | None
     quantity: float
     lines: list[StockDoneReceiptLine]
@@ -313,7 +315,7 @@ class StockShipment(BaseModel):
     carrier: str | None
     note: str | None
     shipped_at: dt.datetime
-    shipped_by: str | None
+    shipped_by: PersonRef | None
     lines: list[StockShipmentLine]
 
 
@@ -377,14 +379,14 @@ class PriceRequest(BaseModel):
     supplier: StockSupplierRef
     request: str | None
     requested_at: dt.datetime
-    requested_by: str | None
+    requested_by: PersonRef | None
     to_email: str
     subject: str
     note: str | None
     status: Literal["sent", "failed"]
     error: str | None
     answered_at: dt.datetime | None
-    answered_by: str | None
+    answered_by: PersonRef | None
     answer_note: str | None
     lines: list[PriceRequestLine]
 
@@ -621,7 +623,7 @@ def to_reservation(raw: Mapping[str, Any]) -> StockReservation:
         remaining=raw["remaining"],
         status=raw["status"],
         created_at=raw["created_at"],
-        created_by=raw.get("created_by_name"),
+        created_by=person_of(raw.get("created_by"), raw.get("created_by_name")),
         tracking=raw.get("tracking") or "none",
         units=[
             StockTraceUnitRef(
@@ -680,7 +682,7 @@ def to_product(raw: Mapping[str, Any]) -> StockProduct:
                 quantity=m["quantity"],
                 cell=m.get("cell"),
                 at=m["at"],
-                by=m.get("by_name"),
+                by=person_of(m.get("by"), m.get("by_name")),
                 note=m.get("note"),
             )
             for m in raw.get("movements") or []
@@ -730,7 +732,7 @@ def _row_data(raw: Mapping[str, Any], prices: bool) -> dict[str, Any]:
             r for r in (request_ref(p) for p in raw.get("projects") or []) if r is not None
         ],
         "created_at": raw["created_at"],
-        "created_by": raw.get("created_by_name"),
+        "created_by": person_of(raw.get("created_by"), raw.get("created_by_name")),
         "actions": SupplierOrderActions(**raw["actions"]),
         "path": stock_path(raw["number"]),
     }
@@ -796,7 +798,7 @@ def to_order(raw: Mapping[str, Any], prices: bool) -> SupplierOrderDetail:
             SupplierOrderReceipt(
                 id=str(r["id"]),
                 received_at=r["received_at"],
-                received_by=r.get("received_by_name"),
+                received_by=person_of(r.get("received_by"), r.get("received_by_name")),
                 supplier_doc=r.get("supplier_doc"),
                 note=r.get("note"),
                 lines=[
@@ -810,7 +812,10 @@ def to_order(raw: Mapping[str, Any], prices: bool) -> SupplierOrderDetail:
         ],
         log=[
             SupplierOrderLogEntry(
-                kind=e["kind"], at=e["at"], by=e.get("by_name"), detail=e.get("detail")
+                kind=e["kind"],
+                at=e["at"],
+                by=person_of(e.get("by"), e.get("by_name")),
+                detail=e.get("detail"),
             )
             for e in raw.get("log") or []
         ],
@@ -846,7 +851,7 @@ def to_receipts(raw: Mapping[str, Any]) -> StockReceipts:
                 order_path=stock_path(d["order_number"]),
                 supplier=d["supplier_name"],
                 received_at=d["received_at"],
-                received_by=d.get("received_by_name"),
+                received_by=person_of(d.get("received_by"), d.get("received_by_name")),
                 supplier_doc=d.get("supplier_doc"),
                 quantity=d["quantity"],
                 lines=[StockDoneReceiptLine(**_receipt_line(x)) for x in d.get("lines") or []],
@@ -866,7 +871,7 @@ def to_shipment(raw: Mapping[str, Any]) -> StockShipment:
         carrier=raw.get("carrier"),
         note=raw.get("note"),
         shipped_at=raw["shipped_at"],
-        shipped_by=raw.get("shipped_by_name"),
+        shipped_by=person_of(raw.get("shipped_by"), raw.get("shipped_by_name")),
         lines=[
             StockShipmentLine(
                 product_id=str(x["product_id"]),
@@ -941,14 +946,14 @@ def to_price_request(raw: Mapping[str, Any]) -> PriceRequest:
         supplier=StockSupplierRef(id=str(supplier["id"]), name=supplier["name"]),
         request=raw.get("deal_number"),
         requested_at=raw["requested_at"],
-        requested_by=raw.get("requested_by_name"),
+        requested_by=person_of(raw.get("requested_by"), raw.get("requested_by_name")),
         to_email=raw["to_email"],
         subject=raw["subject"],
         note=raw.get("note"),
         status=raw["status"],
         error=raw.get("error"),
         answered_at=raw.get("answered_at"),
-        answered_by=raw.get("answered_by_name"),
+        answered_by=person_of(raw.get("answered_by"), raw.get("answered_by_name")),
         answer_note=raw.get("answer_note"),
         lines=[
             PriceRequestLine(

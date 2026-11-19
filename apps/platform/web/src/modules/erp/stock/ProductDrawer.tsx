@@ -174,7 +174,7 @@ export function ProductDrawer({ row, onClose }: { row: StockRow; onClose: () => 
                         </StatusTag>
                         <span className="pf-hint">
                           {" "}
-                          {[m.cell, m.by, m.note].filter(Boolean).join(" · ")}
+                          {[m.cell, m.by?.name, m.note].filter(Boolean).join(" · ")}
                         </span>
                       </span>
                       <span>

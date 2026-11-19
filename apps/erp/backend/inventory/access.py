@@ -72,6 +72,6 @@ def can_see_supplier_prices(user) -> bool:
 
 
 def person_name(user) -> str:
-    if user is None:
-        return ""
-    return (user.get_full_name() or user.email or "").strip() or f"Сотрудник #{user.pk}"
+    from core.person_ref import person_name as name
+
+    return name(user)

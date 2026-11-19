@@ -321,7 +321,7 @@ async def test_balances_and_product(
         "path": f"/erp/calc/{ENCODED}",
     }
     assert body["incoming_orders"][0]["path"] == f"/erp/stock/{ORDER_ENCODED}"
-    assert body["movements"][0]["by"] == "Демо"
+    assert body["movements"][0]["by"] == {"id": "", "name": "Демо", "initials": "Д"}
 
 
 async def test_a_project_reservation_links_to_the_project_in_eds(

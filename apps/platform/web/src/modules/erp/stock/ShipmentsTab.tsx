@@ -16,6 +16,7 @@ import { EmptyState } from "../../../shared/ui/EmptyState";
 import { ErrorNote, QueryState } from "../../../shared/ui/FormParts";
 import { clean, useErrorText, useRefreshStock, useStateLabels } from "./api";
 import { ShipUnits } from "./Tracking";
+import { PersonRefCell } from "../../PersonRefCell";
 
 /** Серийные или партии строки отгрузки: « · SN-1, SN-2» или « · L-7 ×3». */
 function unitsText(units: readonly { number: string; quantity: number }[]): string {
@@ -290,7 +291,7 @@ function Rows({ items }: { items: readonly StockShipment[] }) {
       cell: (s) => (
         <>
           {activity(s.shipped_at)}
-          {s.shipped_by ? <div className="pf-hint">{s.shipped_by}</div> : null}
+          {s.shipped_by ? <PersonRefCell person={s.shipped_by} caption={null} /> : null}
         </>
       ),
     },

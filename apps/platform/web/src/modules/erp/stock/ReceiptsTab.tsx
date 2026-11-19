@@ -215,7 +215,7 @@ export function ReceiptsTab() {
                       </span>
                       <span className="pf-hint">
                         {activity(r.received_at)}
-                        {r.received_by ? ` · ${r.received_by}` : ""}
+                        {r.received_by ? ` · ${r.received_by.name}` : ""}
                       </span>
                     </li>
                   ))}
