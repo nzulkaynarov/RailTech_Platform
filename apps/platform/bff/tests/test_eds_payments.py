@@ -266,7 +266,8 @@ async def test_card_shows_proofs_payments_remainder_and_flags(
     ]
     assert body["items"][0] == {
         "description": "Привод стрелочный СП-6",
-        "quantity": 12,
+        "quantity": 12.5,
+        "unit": "т",
         "unit_price": "8333333.33",
         "total": "100000000.00",
     }

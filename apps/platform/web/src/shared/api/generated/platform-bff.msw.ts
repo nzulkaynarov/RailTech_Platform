@@ -9640,6 +9640,7 @@ export const getGetPaymentResponseMock = (
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     description: faker.string.alpha({ length: { min: 10, max: 20 } }),
     quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
     unit_price: faker.string.alpha({ length: { min: 10, max: 20 } }),
     total: faker.string.alpha({ length: { min: 10, max: 20 } }),
   })),
@@ -9738,6 +9739,7 @@ export const getConfirmPaymentResponseMock = (
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     description: faker.string.alpha({ length: { min: 10, max: 20 } }),
     quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
     unit_price: faker.string.alpha({ length: { min: 10, max: 20 } }),
     total: faker.string.alpha({ length: { min: 10, max: 20 } }),
   })),
@@ -9836,6 +9838,7 @@ export const getAttachPaymentProofResponseMock = (
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     description: faker.string.alpha({ length: { min: 10, max: 20 } }),
     quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
     unit_price: faker.string.alpha({ length: { min: 10, max: 20 } }),
     total: faker.string.alpha({ length: { min: 10, max: 20 } }),
   })),
@@ -9937,6 +9940,7 @@ export const getRequestPaymentDocResponseMock = (
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     description: faker.string.alpha({ length: { min: 10, max: 20 } }),
     quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
     unit_price: faker.string.alpha({ length: { min: 10, max: 20 } }),
     total: faker.string.alpha({ length: { min: 10, max: 20 } }),
   })),
@@ -10035,6 +10039,7 @@ export const getIssuePaymentResponseMock = (
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     description: faker.string.alpha({ length: { min: 10, max: 20 } }),
     quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
     unit_price: faker.string.alpha({ length: { min: 10, max: 20 } }),
     total: faker.string.alpha({ length: { min: 10, max: 20 } }),
   })),

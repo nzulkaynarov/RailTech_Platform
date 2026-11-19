@@ -11160,7 +11160,10 @@ export interface components {
     };
     PaymentItem: {
       description: string;
+      /** @description Дробное, до трёх знаков (ADR-0027 п. 9) */
       quantity: number;
+      /** @description Подпись единицы строки («т»); пусто — у строк до перехода (ADR-0027 п. 10) */
+      unit: string;
       unit_price: string;
       total: string;
     };

@@ -85,7 +85,8 @@ class PaymentBoard(BaseModel):
 
 class PaymentItem(BaseModel):
     description: str
-    quantity: float
+    quantity: float  # ADR-0027 п. 9: дробное (12.5)
+    unit: str  # подпись единицы строки («т»), пусто — у строк до перехода
     unit_price: str
     total: str
 

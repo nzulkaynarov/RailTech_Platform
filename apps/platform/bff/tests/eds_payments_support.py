@@ -57,7 +57,8 @@ def invoice(inv_id: int = 142, **over: Any) -> dict[str, Any]:
             {
                 "id": 1,
                 "description": "Привод стрелочный СП-6",
-                "quantity": 12,
+                "quantity": 12.5,
+                "unit": "т",
                 "unit_price_excl_vat": "8333333.33",
                 "line_total_excl_vat": "100000000.00",
             }

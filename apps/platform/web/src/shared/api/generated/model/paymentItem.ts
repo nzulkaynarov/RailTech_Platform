@@ -5,8 +5,13 @@
 
 export interface PaymentItem {
   description: string;
-  /** @minimum 0 */
+  /**
+   * Дробное, до трёх знаков (ADR-0027 п. 9)
+   * @minimum 0
+   */
   quantity: number;
+  /** Подпись единицы строки («т»); пусто — у строк до перехода (ADR-0027 п. 10) */
+  unit: string;
   unit_price: string;
   total: string;
 }

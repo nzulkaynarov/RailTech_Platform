@@ -49,7 +49,7 @@ interface Seed {
   due: string | null;
   draft?: boolean;
   proofs?: PaymentProof[];
-  items?: [string, number, string][];
+  items?: [string, number, string, string?][];
 }
 
 const CABINET_PROOF: PaymentProof = {
@@ -95,7 +95,7 @@ const SEEDS: readonly Seed[] = [
     total: "45600000.00",
     issued: "2026-10-05",
     due: "2026-10-20",
-    items: [["Комплект крепежа КБ-65", 400, "101785.71"]],
+    items: [["Рельс Р65", 12.5, "3257142.86", "т"]],
   },
   {
     id: 145,
@@ -203,11 +203,12 @@ function build(seed: Seed): PaymentCard {
     vat: fromCents(total - subtotal),
     notes: "",
     has_pdf: !seed.draft,
-    items: (seed.items ?? []).map(([description, quantity, unit]) => ({
+    items: (seed.items ?? []).map(([description, quantity, price, unit = "шт"]) => ({
       description,
       quantity,
-      unit_price: unit,
-      total: fromCents(dec(unit) * quantity),
+      unit,
+      unit_price: price,
+      total: fromCents(Math.round(dec(price) * quantity)),
     })),
     payments,
     proofs,

@@ -256,7 +256,8 @@ def _card(raw: dict[str, Any]) -> PaymentCard:
         items=[
             PaymentItem(
                 description=str(i.get("description") or ""),
-                quantity=int(i.get("quantity") or 0),
+                quantity=float(i.get("quantity") or 0),
+                unit=str(i.get("unit") or ""),
                 unit_price=_s(i.get("unit_price_excl_vat")),
                 total=_s(i.get("line_total_excl_vat")),
             )

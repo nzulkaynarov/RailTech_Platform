@@ -266,6 +266,20 @@ test.describe("Счета и оплаты: бухгалтер", () => {
 test.describe("Счета и оплаты: чтение и закрытые роли", () => {
   test.skip(({ isMobile }) => isMobile, "сценарии на десктопе");
 
+  test("строка счёта: дробное количество с единицей (ADR-0027)", async ({ page }) => {
+    await loginAndWait(page, "accountant@demo.example");
+    await spaGoto(page, "/eds/payments/144");
+    const lines = page.getByRole("table", { name: "Позиции счёта" });
+    await expect(
+      lines.getByRole("row", { name: /Рельс Р65/ }).getByText("12,5 т", { exact: true }),
+    ).toBeVisible();
+    await settledScreenshot(page, "invoice-lines");
+    await expectNoViolations(page, "карточка счёта: позиции");
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(lines.getByText("12,5\u00a0т", { exact: true })).toBeVisible();
+    await settledScreenshot(page, "invoice-lines");
+  });
+
   test("директор читает: список и карточка счёта без формы «Подтвердить оплату»", async ({
     page,
   }) => {
