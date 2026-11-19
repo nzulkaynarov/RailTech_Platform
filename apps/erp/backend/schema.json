@@ -45759,6 +45759,15 @@
                         "type": "string",
                         "nullable": true
                     },
+                    "received_by": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PersonRef"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Сотрудник со ссылкой на CRM (СУЩ-3)"
+                    },
                     "supplier_doc": {
                         "type": "string",
                         "nullable": true
@@ -45781,6 +45790,7 @@
                     "order_number",
                     "quantity",
                     "received_at",
+                    "received_by",
                     "received_by_name",
                     "supplier_doc",
                     "supplier_name"
@@ -48009,6 +48019,15 @@
                         "type": "string",
                         "nullable": true
                     },
+                    "created_by": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PersonRef"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Сотрудник со ссылкой на CRM (СУЩ-3)"
+                    },
                     "actions": {
                         "$ref": "#/components/schemas/OrderActions"
                     },
@@ -48079,6 +48098,7 @@
                     "cancelled_at",
                     "confirmed_at",
                     "created_at",
+                    "created_by",
                     "created_by_name",
                     "currency",
                     "days_overdue",
@@ -48342,6 +48362,15 @@
                         "type": "string",
                         "nullable": true
                     },
+                    "by": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PersonRef"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Сотрудник со ссылкой на CRM (СУЩ-3)"
+                    },
                     "detail": {
                         "type": "string",
                         "nullable": true
@@ -48349,6 +48378,7 @@
                 },
                 "required": [
                     "at",
+                    "by",
                     "by_name",
                     "detail",
                     "kind"
@@ -48400,6 +48430,15 @@
                         "type": "string",
                         "nullable": true
                     },
+                    "received_by": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PersonRef"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Сотрудник со ссылкой на CRM (СУЩ-3)"
+                    },
                     "supplier_doc": {
                         "type": "string",
                         "nullable": true
@@ -48420,6 +48459,7 @@
                     "lines",
                     "note",
                     "received_at",
+                    "received_by",
                     "received_by_name",
                     "supplier_doc"
                 ]
@@ -48514,6 +48554,15 @@
                         "type": "string",
                         "nullable": true
                     },
+                    "created_by": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PersonRef"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Сотрудник со ссылкой на CRM (СУЩ-3)"
+                    },
                     "actions": {
                         "$ref": "#/components/schemas/OrderActions"
                     }
@@ -48521,6 +48570,7 @@
                 "required": [
                     "actions",
                     "created_at",
+                    "created_by",
                     "created_by_name",
                     "currency",
                     "days_overdue",
@@ -52395,6 +52445,24 @@
                     "name"
                 ]
             },
+            "PersonRef": {
+                "type": "object",
+                "description": "Схема ссылки в выгрузке (`erp-internal.yaml`).",
+                "properties": {
+                    "crm_user_id": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "Сотрудник в CRM; null — связи нет"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "crm_user_id",
+                    "name"
+                ]
+            },
             "PlatformUserCreateRequest": {
                 "type": "object",
                 "description": "Вход формы «Новый пользователь» в операторской панели.\n\nОтдельный сериализатор, а не `UserSerializer`: у того `role` лежит в `read_only_fields`\n(правильно для правки — роль меняется отдельным действием с проверкой инвариантов), а\n`username` обязателен на уровне модели. Форма же спрашивает email и роль — и обе должны\nдействовать. Роль принимаем КОДОМ (Rule 2), как и весь остальной фронт.",
@@ -52454,6 +52522,15 @@
                         "type": "string",
                         "nullable": true
                     },
+                    "requested_by": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PersonRef"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Сотрудник со ссылкой на CRM (СУЩ-3)"
+                    },
                     "to_email": {
                         "type": "string"
                     },
@@ -52480,6 +52557,15 @@
                         "type": "string",
                         "nullable": true
                     },
+                    "answered_by": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PersonRef"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Сотрудник со ссылкой на CRM (СУЩ-3)"
+                    },
                     "answer_note": {
                         "type": "string",
                         "nullable": true
@@ -52494,6 +52580,7 @@
                 "required": [
                     "answer_note",
                     "answered_at",
+                    "answered_by",
                     "answered_by_name",
                     "deal_id",
                     "deal_number",
@@ -52502,6 +52589,7 @@
                     "lines",
                     "note",
                     "requested_at",
+                    "requested_by",
                     "requested_by_name",
                     "status",
                     "subject",
@@ -57108,6 +57196,15 @@
                         "type": "string",
                         "nullable": true
                     },
+                    "by": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PersonRef"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Сотрудник со ссылкой на CRM (СУЩ-3)"
+                    },
                     "note": {
                         "type": "string",
                         "nullable": true
@@ -57115,6 +57212,7 @@
                 },
                 "required": [
                     "at",
+                    "by",
                     "by_name",
                     "cell",
                     "kind",
@@ -57262,6 +57360,15 @@
                         "type": "string",
                         "nullable": true
                     },
+                    "created_by": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PersonRef"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Сотрудник со ссылкой на CRM (СУЩ-3)"
+                    },
                     "tracking": {
                         "allOf": [
                             {
@@ -57280,6 +57387,7 @@
                 },
                 "required": [
                     "created_at",
+                    "created_by",
                     "created_by_name",
                     "deal",
                     "id",
@@ -57532,6 +57640,15 @@
                         "type": "string",
                         "nullable": true
                     },
+                    "shipped_by": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PersonRef"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Сотрудник со ссылкой на CRM (СУЩ-3)"
+                    },
                     "lines": {
                         "type": "array",
                         "items": {
@@ -57547,6 +57664,7 @@
                     "note",
                     "number",
                     "shipped_at",
+                    "shipped_by",
                     "shipped_by_name",
                     "tracking"
                 ]

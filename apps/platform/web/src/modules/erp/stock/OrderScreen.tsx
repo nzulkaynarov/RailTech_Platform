@@ -25,6 +25,7 @@ import { ItemRefCell } from "../../ItemRefCell";
 
 import "../calc/calc.css";
 import "./stock.css";
+import { PersonRefCell } from "../../PersonRefCell";
 
 type Dialog = "send" | "confirm" | "receive" | "cancel" | "edit" | null;
 
@@ -34,7 +35,7 @@ function OrderLog({ order }: { order: SupplierOrderDetail }) {
   const items: HistoryItem[] = order.log.map((entry) => ({
     state: "done",
     title: t(`order.log.${entry.kind}`),
-    meta: [activity(entry.at), entry.by, entry.detail].filter(Boolean).join(" · "),
+    meta: [activity(entry.at), entry.by?.name, entry.detail].filter(Boolean).join(" · "),
   }));
   return <History items={items} label={t("order.log.label")} />;
 }
@@ -169,7 +170,7 @@ function Receipts({ order }: { order: SupplierOrderDetail }) {
           </span>
           <span className="pf-hint">
             {activity(r.received_at)}
-            {r.received_by ? ` · ${r.received_by}` : ""}
+            {r.received_by ? ` · ${r.received_by.name}` : ""}
           </span>
         </li>
       ))}
@@ -292,7 +293,10 @@ function Content({ order }: { order: SupplierOrderDetail }) {
               label: t("order.receivedAt"),
               value: order.received_at ? activity(order.received_at) : null,
             },
-            { label: t("order.createdBy"), value: order.created_by },
+            {
+              label: t("order.createdBy"),
+              value: order.created_by ? <PersonRefCell person={order.created_by} /> : null,
+            },
             { label: t("order.note"), value: order.note },
           ]}
         />

@@ -49,7 +49,7 @@ function Entry({ item, canAnswer }: { item: PriceRequest; canAnswer: boolean }) 
       <p className="pf-hint">
         {t("priceRequest.entryMeta", {
           when: activity(item.requested_at),
-          who: item.requested_by ?? "—",
+          who: item.requested_by?.name ?? "—",
           email: item.to_email,
         })}
       </p>

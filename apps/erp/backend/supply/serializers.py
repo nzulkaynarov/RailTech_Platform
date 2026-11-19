@@ -8,6 +8,7 @@ from inventory.serializers import TRACKING_CLASSES, StockDealRefSerializer, Stoc
 from rest_framework import serializers
 
 from catalog.item_ref import ItemRefSerializer
+from core.person_ref import PersonRefSerializer
 from core.quantity import QuantityField
 
 ORDER_STATUSES = ("draft", "sent", "confirmed", "received", "cancelled")
@@ -57,6 +58,7 @@ class OrderRowSerializer(serializers.Serializer):
     projects = StockDealRefSerializer(many=True)
     created_at = serializers.DateTimeField()
     created_by_name = serializers.CharField(allow_null=True)
+    created_by = PersonRefSerializer(allow_null=True, help_text="Сотрудник со ссылкой на CRM (СУЩ-3)")
     actions = OrderActionsSerializer()
 
 
@@ -109,6 +111,7 @@ class OrderReceiptSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     received_at = serializers.DateTimeField()
     received_by_name = serializers.CharField(allow_null=True)
+    received_by = PersonRefSerializer(allow_null=True, help_text="Сотрудник со ссылкой на CRM (СУЩ-3)")
     supplier_doc = serializers.CharField(allow_null=True)
     note = serializers.CharField(allow_null=True)
     lines = ReceiptLineSerializer(many=True)
@@ -118,6 +121,7 @@ class OrderLogSerializer(serializers.Serializer):
     kind = serializers.ChoiceField(choices=LOG_KINDS)
     at = serializers.DateTimeField()
     by_name = serializers.CharField(allow_null=True)
+    by = PersonRefSerializer(allow_null=True, help_text="Сотрудник со ссылкой на CRM (СУЩ-3)")
     detail = serializers.CharField(allow_null=True)
 
 
@@ -169,6 +173,7 @@ class DoneReceiptSerializer(serializers.Serializer):
     supplier_name = serializers.CharField()
     received_at = serializers.DateTimeField()
     received_by_name = serializers.CharField(allow_null=True)
+    received_by = PersonRefSerializer(allow_null=True, help_text="Сотрудник со ссылкой на CRM (СУЩ-3)")
     supplier_doc = serializers.CharField(allow_null=True)
     quantity = QuantityField()
     lines = DoneReceiptLineSerializer(many=True)
@@ -195,6 +200,7 @@ class PriceRequestSerializer(serializers.Serializer):
     deal_number = serializers.CharField(allow_null=True)
     requested_at = serializers.DateTimeField()
     requested_by_name = serializers.CharField(allow_null=True)
+    requested_by = PersonRefSerializer(allow_null=True, help_text="Сотрудник со ссылкой на CRM (СУЩ-3)")
     to_email = serializers.CharField()
     subject = serializers.CharField()
     note = serializers.CharField(allow_null=True)
@@ -202,6 +208,7 @@ class PriceRequestSerializer(serializers.Serializer):
     error = serializers.CharField(allow_null=True)
     answered_at = serializers.DateTimeField(allow_null=True)
     answered_by_name = serializers.CharField(allow_null=True)
+    answered_by = PersonRefSerializer(allow_null=True, help_text="Сотрудник со ссылкой на CRM (СУЩ-3)")
     answer_note = serializers.CharField(allow_null=True)
     lines = PriceRequestLineSerializer(many=True)
 
