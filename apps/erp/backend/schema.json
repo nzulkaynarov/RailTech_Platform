@@ -22931,7 +22931,7 @@
         "/api/v1/crm/invoices/create-manual/": {
             "post": {
                 "operationId": "crm_invoices_create_manual_create",
-                "description": "Raise a DRAFT invoice directly on a deal WITHOUT a signed contract (Odoo / МойСклад «invoice without contract»; СНГ «счёт = оферта»). Populate lines from an active КП on the deal (`source_quote` → same billable projection as the contract path) and/or a manual line list. Amounts follow the КП presentation currency (UZS), never a cost currency. The invoice is born DRAFT and rides the existing issue / cancel lifecycle.",
+                "description": "Raise a DRAFT invoice directly on a deal WITHOUT a signed contract (Odoo / МойСклад «invoice without contract»; СНГ «счёт = оферта»). Populate lines from an active КП on the deal (`source_quote` → same billable projection as the contract path) and/or a manual line list (a catalog card `product_id`, or a text that finds or creates a draft card, ADR-0027). Amounts follow the КП presentation currency (UZS), never a cost currency. The invoice is born DRAFT and rides the existing issue / cancel lifecycle.",
                 "summary": "Create a manual DRAFT invoice (no signed contract)",
                 "tags": [
                     "CRM"
@@ -46657,9 +46657,24 @@
                         "type": "string",
                         "maxLength": 500
                     },
+                    "product": {
+                        "type": "integer",
+                        "nullable": true,
+                        "title": "Карточка каталога"
+                    },
                     "quantity": {
                         "type": "number",
                         "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
+                    },
+                    "unit": {
+                        "type": "string",
+                        "title": "Единица измерения",
+                        "maxLength": 32
+                    },
+                    "unit_code": {
+                        "type": "string",
+                        "title": "Код ед. изм. (UN/ECE Rec 20)",
+                        "maxLength": 8
                     },
                     "unit_price_excl_vat": {
                         "type": "string",
@@ -46689,9 +46704,24 @@
                         "minLength": 1,
                         "maxLength": 500
                     },
+                    "product": {
+                        "type": "integer",
+                        "nullable": true,
+                        "title": "Карточка каталога"
+                    },
                     "quantity": {
                         "type": "number",
                         "description": "Количество, до трёх знаков после запятой (ADR-0027 п. 9)"
+                    },
+                    "unit": {
+                        "type": "string",
+                        "title": "Единица измерения",
+                        "maxLength": 32
+                    },
+                    "unit_code": {
+                        "type": "string",
+                        "title": "Код ед. изм. (UN/ECE Rec 20)",
+                        "maxLength": 8
                     },
                     "unit_price_excl_vat": {
                         "type": "string",
@@ -46937,8 +46967,13 @@
                         "type": "string",
                         "minLength": 1
                     },
+                    "product_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
                     "quantity": {
-                        "type": "integer"
+                        "type": "number",
+                        "format": "double"
                     },
                     "unit_price_excl_vat": {
                         "type": "string",
@@ -46947,7 +46982,6 @@
                     }
                 },
                 "required": [
-                    "description",
                     "quantity",
                     "unit_price_excl_vat"
                 ]

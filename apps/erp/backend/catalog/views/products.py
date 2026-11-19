@@ -1,5 +1,6 @@
 import mimetypes
 
+from django.db.models import ProtectedError
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema, extend_schema_view
@@ -94,6 +95,15 @@ class ProductViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
     reference-table probes behind `completeness` once per page via `CompletenessContext`,
     so the query count is flat in page_size (guarded by tests/test_r1_list_contract.py).
     """
+
+    def destroy(self, request, *args, **kwargs):
+        # Строка счёта держит карточку (PROTECT, ADR-0027 п. 1): карточку из документа не удалить, только в архив.
+        instance = self.get_object()
+        try:
+            instance.delete()
+        except ProtectedError:
+            return Response({"detail": "PRODUCT_IN_DOCUMENTS"}, status=400)
+        return Response(status=204)
 
     required_permissions = {
         "create": "catalog.manage",
