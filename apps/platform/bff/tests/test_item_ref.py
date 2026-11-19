@@ -1,7 +1,8 @@
-"""ЕД-4: позиция каталога в строке — одна схема `ItemRef` и миниатюра для всех, кто видит строки позиций.
+"""ЕД-4: позиция каталога в строке — одна схема `ItemRef` и миниатюра для всех, кто видит строки.
 
-ERP — на respx. Миниатюра доступна по разделам строк (`erp.stock`, `erp.calc`, `eds.drafts`, `eds.projects`,
-`eds.payments`), а не только каталога; адрес в ответах несёт версию фото — новое фото, новый адрес."""
+ERP — на respx. Миниатюра доступна по разделам строк (`erp.stock`, `erp.calc`, `eds.drafts`,
+`eds.projects`, `eds.payments`), а не только каталога; адрес в ответах несёт версию фото — новое
+фото, новый адрес."""
 
 import httpx
 import pytest
@@ -77,7 +78,7 @@ async def test_no_photo_or_not_webp_is_not_found(web: Web, be: Backends) -> None
 
 
 def test_quote_line_keeps_a_decimal_quantity_and_its_amount() -> None:
-    """ADR-0027 п. 9: строка КП «12,5 т» — не «0» и сумма не 0 (BFF раньше принимал только целое)."""
+    """ADR-0027 п. 9: строка КП «12,5 т» — не «0» и сумма не 0 (раньше BFF брал только целое)."""
     from app.eds_approvals import _lines
 
     [line] = _lines(
