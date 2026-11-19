@@ -1,7 +1,7 @@
 """`/api/v1/parties/people/` — люди контрагентов для «Органайзер · Люди» Платформы (FR-11, пункт 0.11 плана 2026-11-12).
 
-Контакты клиентов своей компании (книга продавца, `accounts.services.clients.seller_clients`; сюда же проецируются
-контакты клиентов CRM) и партнёров (поставщики и изготовители из списка поставщиков, компании с отношением «партнёр»).
+Контакты клиентов своей компании (книга продавца `accounts.services.clients.seller_clients`: тип CLIENT, связь с
+клиентом CRM или сделка) и партнёров (поставщики и изготовители из списка поставщиков, компании с отношением «партнёр»).
 Только чтение, любой сотрудник бэк-офиса; своя компания не входит. Компания и клиент, и поставщик — вид `client`.
 Список — имя, компания, должность (их видят все, NAVIGATION «Люди»); телефон и почта — по одному человеку
 (`retrieve`): Платформа открывает их по нажатию и пишет показ в журнал. Массовой выгрузки контактов нет.
@@ -162,7 +162,7 @@ class OrganizationsDeskViewSet(DeskViewSet):
         queryset = Company.objects.filter(pk__in=client_ids | partner_ids)
         q = (request.query_params.get("q") or "").strip()[:100]
         if q:
-            queryset = queryset.filter(Q(name__icontains=q) | Q(inn__icontains=q))
+            queryset = queryset.filter(Q(name__icontains=q) | Q(inn__icontains=q) | Q(stated_inn__icontains=q))
         return self.page_of(queryset.order_by("name", "pk"), lambda rows: _organization_rows(rows, client_ids))
 
     # --- карточка контрагента: одна компания во всех ролях (ADR-0028, СУЩ-2.5) ---------------------

@@ -207,3 +207,34 @@ def test_create_template_rejects_oversize_body(lookups):
 
     with pytest.raises(ValidationError):
         crm_services.create_template(company, user, name="Big", kind_code="LETTER", body_html="x" * 100_001)
+
+
+# ── СЦ-12: контакт документа — из книги клиентов по фактам ─────────────────────
+
+
+def test_contact_of_crm_client_is_reachable_without_deal(world):
+    from integration.tests.world import make_company
+
+    company, user = world
+    crm_client = make_company("CRM Co", crm_client_id=7201, inn="305000666")
+
+    doc, err = crm_services.generate_document(
+        company, user, template=_template(company, user), contact=crm_client.contacts.get()
+    )
+
+    assert err is None
+    assert doc is not None
+
+
+def test_contact_outside_the_book_is_refused(world):
+    from accounts.models import Contact
+
+    company, user = world
+    supplier = Company.objects.create(name="Supplier", inn="305000777")
+    supplier.types.add(CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier"})[0])
+    supplier_contact = Contact.objects.create(company=supplier, name="S", email="s@s.uz", created_by=user)
+    own_contact = Contact.objects.create(company=company, name="O", email="o@s.uz", created_by=user)
+
+    for contact in (supplier_contact, own_contact):
+        doc, err = crm_services.generate_document(company, user, template=_template(company, user), contact=contact)
+        assert (doc, err) == (None, "CONTACT_NOT_FOUND")

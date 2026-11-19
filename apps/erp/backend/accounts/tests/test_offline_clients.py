@@ -123,10 +123,70 @@ def test_contact_model_clean_requires_channel(seller):
 
 @pytest.mark.django_db
 def test_find_client_company_scoped_to_book(seller):
-    # A company only becomes findable once it's in the seller's book (has their contact).
+    # Findable by TIN and, within the book, by name.
     created, _ = create_offline_client(
         seller=seller, company_name="Findable LLC", contact_name="C", email="c@f.test", inn="305777888"
     )
     assert find_client_company(seller, inn="305777888").id == created["company"].id
     assert find_client_company(seller, name="findable llc").id == created["company"].id  # case-insensitive
     assert find_client_company(seller, name="nope") is None
+
+
+@pytest.mark.django_db
+def test_supplier_recorded_as_client_is_reused_and_marked_client(seller):
+    """СЦ-12: поставщик, которого записывают клиентом, — та же компания (ADR-0028), теперь и с типом CLIENT."""
+    supplier = Company.objects.create(name="Supplier North", inn="305000111")
+    supplier.types.add(CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier"})[0])
+    before = Company.objects.count()
+
+    result, err = create_offline_client(
+        seller=seller, company_name="Другое имя", contact_name="A", email="a@sn.test", inn="305000111"
+    )
+
+    assert err is None
+    assert result["company_created"] is False
+    assert result["company"].pk == supplier.pk
+    assert {"SUPPLIER", "CLIENT"} <= set(supplier.types.values_list("code", flat=True))
+    assert supplier in seller_clients(seller)
+    assert Company.objects.count() == before
+
+
+@pytest.mark.django_db
+def test_crm_client_with_tin_in_inn_field_is_reused(seller):
+    from integration.models import CrmClientMapping
+
+    company = Company.objects.create(name="CRM Client", inn="305000222")
+    CrmClientMapping.objects.create(crm_client_id=5222, company=company)
+
+    result, err = create_offline_client(
+        seller=seller, company_name="CRM Client", contact_name="B", email="b@crm.test", inn="305000222"
+    )
+
+    assert err is None
+    assert result["company"].pk == company.pk
+
+
+@pytest.mark.django_db
+def test_never_reuses_own_company_by_tin(seller):
+    own_id = CompanyMember.objects.get(user=seller).company_id
+
+    result, err = create_offline_client(
+        seller=seller, company_name="Same TIN Buyer", contact_name="C", email="c@own.test", inn="700000001"
+    )
+
+    assert err is None
+    assert result["company_created"] is True
+    assert result["company"].pk != own_id
+
+
+@pytest.mark.django_db
+def test_archived_company_with_the_same_tin_is_not_reused(seller):
+    archived = Company.objects.create(name="Old Buyer", inn="305000333", is_active=False)
+
+    result, err = create_offline_client(
+        seller=seller, company_name="Old Buyer", contact_name="D", email="d@old.test", inn="305000333"
+    )
+
+    assert err is None
+    assert result["company_created"] is True
+    assert result["company"].pk != archived.pk

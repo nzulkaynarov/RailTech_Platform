@@ -1,11 +1,11 @@
 """FR-11 (пункт 0.11): `/api/v1/parties/people/` — люди клиентов и партнёров для «Органайзер · Люди» Платформы.
 
-Клиенты — книга своей компании (контакт заведён сотрудником), партнёры — поставщики и компании с отношением «партнёр»;
+Клиенты — книга своей компании (тип CLIENT, связь с клиентом CRM или сделка), партнёры — поставщики и компании с отношением «партнёр»;
 своя компания и чужие клиенты не входят. Мир — `catalog.tests.desk_world`.
 """
 
 import pytest
-from parties.models import Company, CompanyRelationship, Contact
+from parties.models import Company, CompanyRelationship, CompanyType, Contact
 from parties.people import set_contact_name
 
 from catalog.tests.desk_world import build_world
@@ -18,9 +18,9 @@ URL = "/api/v1/parties/people/"
 @pytest.fixture
 def world():
     world = build_world()
-    staff = world["users"]["supply"]
     client = Company.objects.create(name="ООО Клиент Юг", inn="300000555")
-    Contact.objects.create(company=client, name="Анвар Клиентов", position="Главный инженер", created_by=staff)
+    client.types.add(CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Клиент"})[0])
+    Contact.objects.create(company=client, name="Анвар Клиентов", position="Главный инженер")
     Contact.objects.create(company=world["supplier"], name="Дильшод Поставщиков", email="d@north.example.uz")
     partner = Company.objects.create(name="ООО Изготовитель", inn="300000666")
     CompanyRelationship.objects.create(company=partner, role="partner")

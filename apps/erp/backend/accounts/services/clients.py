@@ -10,8 +10,11 @@ import logging
 from typing import Optional, Tuple
 
 from django.db import transaction
+from django.db.models import Exists, OuterRef, Q
 from parties.company_admin import ensure_company_admin
+from parties.models import active_company_q
 
+from ..constants import CompanyTypeCode
 from ..models import Company, CompanyType, Contact, CustomUser
 
 logger = logging.getLogger(__name__)
@@ -25,28 +28,53 @@ def _seller_company_ids(user: CustomUser) -> list:
     return [company_id] if company_id else []
 
 
-def seller_clients(user: CustomUser):
-    """The own company's client base (team-level): companies its staff created as offline
-    clients (via a Contact). Non-staff get an empty book.
+def client_book_q() -> Q:
+    """A company is a client of the own company by facts (СЦ-12): CLIENT type, a CRM client mapping
+    (verified or linked by TIN) or a deal with it.
+
+    Who created a contact is not a signal: a supplier's contact made by staff does not make a client,
+    and CRM clients arrive with contacts that have no author. Subqueries, not JOINs — rows are not
+    multiplied (as in `portal.services.access`).
     """
-    seller_ids = _seller_company_ids(user)
-    if not seller_ids:
-        return Company.objects.none()
+    from integration.models import CrmClientMapping
+    from sales.models import Deal
+
+    pk = OuterRef("pk")
     return (
-        Company.objects.filter(contacts__created_by__memberships__company_id__in=seller_ids).distinct().order_by("name")
+        Q(Exists(Company.types.through.objects.filter(company_id=pk, companytype__code=CompanyTypeCode.CLIENT)))
+        | Q(Exists(CrmClientMapping.objects.filter(company_id=pk)))
+        | Q(Exists(Deal.objects.filter(company_id=pk)))
     )
 
 
+def seller_clients(user: CustomUser):
+    """The own company's client book (team-level, `client_book_q`); the own company is never in it.
+    Non-staff get an empty book."""
+    seller_ids = _seller_company_ids(user)
+    if not seller_ids:
+        return Company.objects.none()
+    return Company.objects.filter(client_book_q()).exclude(pk__in=seller_ids).order_by("name")
+
+
 def find_client_company(user: CustomUser, *, inn: str = "", name: str = "") -> Optional[Company]:
-    """Search-before-create WITHIN the seller's own book (by INN then name) — a seller
-    never dedups against (or sees) another tenant's clients."""
-    book = seller_clients(user)
+    """Search-before-create (СЦ-12, ADR-0028 — one company in all roles).
+
+    TIN is a strong key: any active company except the own one, by `inn` or `stated_inn` (a supplier
+    recorded as a client is reused, not duplicated). Name is a weak key: within the client book only."""
+    seller_ids = _seller_company_ids(user)
+    if not seller_ids:
+        return None
     if inn:
-        match = book.filter(stated_inn=inn).first()
+        match = (
+            Company.objects.filter(active_company_q(), Q(inn=inn) | Q(stated_inn=inn))
+            .exclude(pk__in=seller_ids)
+            .order_by("pk")
+            .first()
+        )
         if match:
             return match
     if name:
-        return book.filter(name__iexact=name.strip()).first()
+        return seller_clients(user).filter(name__iexact=name.strip()).first()
     return None
 
 
@@ -85,20 +113,19 @@ def create_offline_client(
     if not (email or phone):
         return None, "CONTACT_NEEDS_EMAIL_OR_PHONE"
 
-    # Soft de-dup WITHIN the seller's own book only (convenience; not a hard gate).
-    # Cross-tenant duplicates are allowed (stated_inn is not unique).
+    # Search-before-create (СЦ-12): TIN across known companies, name within the book.
     company = find_client_company(seller, inn=inn, name=company_name)
-    company_created = False
-    if company is None:
+    company_created = company is None
+    if company_created:
         company = Company.objects.create(
             name=company_name,
             stated_inn=inn,  # NOT the unique `inn` — cross-tenant dups allowed
             is_registered=False,  # rep-created, no platform login yet
         )
-        client_type = CompanyType.objects.filter(code="CLIENT").first()
-        if client_type:
-            company.types.add(client_type)
-        company_created = True
+    # Staff records this company as a client: CLIENT for a new and for a reused company (a supplier turned
+    # client) — otherwise a reused company stays out of the book and its deal is refused.
+    client_type, _ = CompanyType.objects.get_or_create(code=CompanyTypeCode.CLIENT, defaults={"name": "Клиент"})
+    company.types.add(client_type)
 
     # Reuse a contact with the same email; else create. First contact becomes primary.
     contact = None
