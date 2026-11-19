@@ -472,6 +472,7 @@ import type {
   SmtpConnector,
   SmtpSettingsIn,
   SpendReport,
+  StaffDirectory,
   StartPriceImportParams,
   StockAdjustIn,
   StockBalanceList,
@@ -5475,6 +5476,126 @@ export const useDeleteAvatar = <
 ): UseMutationResult<Awaited<ReturnType<typeof deleteAvatar>>, TError, void, TContext> => {
   return useMutation(getDeleteAvatarMutationOptions(options), queryClient);
 };
+
+export const getListStaffDirectoryUrl = () => {
+  return `/api/v1/staff`;
+};
+
+/**
+ * CRM `GET /api/v1/staff` (СУЩ-3): все сотрудники — имя, должность, адрес фото с версией; отключённые — с `active: false` и без фото, чтобы «кто сделал» в старом документе по-прежнему называл человека. Почты, телефона и ролей нет. Любой сотрудник; общий компонент человека находит здесь фото и должность по `id` ссылки.
+ * @summary Справочник сотрудников
+ */
+export const listStaffDirectory = async (
+  options?: Parameters<typeof http>[1],
+): Promise<StaffDirectory> => {
+  return http<StaffDirectory>(getListStaffDirectoryUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListStaffDirectoryQueryKey = () => {
+  return [`/api/v1/staff`] as const;
+};
+
+export const getListStaffDirectoryQueryOptions = <
+  TData = Awaited<ReturnType<typeof listStaffDirectory>>,
+  TError = ErrorType<SessionExpiredResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listStaffDirectory>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListStaffDirectoryQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listStaffDirectory>>> = ({ signal }) =>
+    listStaffDirectory({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listStaffDirectory>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListStaffDirectoryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listStaffDirectory>>
+>;
+export type ListStaffDirectoryQueryError = ErrorType<
+  SessionExpiredResponse | BackendUnavailableResponse
+>;
+
+export function useListStaffDirectory<
+  TData = Awaited<ReturnType<typeof listStaffDirectory>>,
+  TError = ErrorType<SessionExpiredResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listStaffDirectory>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listStaffDirectory>>,
+          TError,
+          Awaited<ReturnType<typeof listStaffDirectory>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListStaffDirectory<
+  TData = Awaited<ReturnType<typeof listStaffDirectory>>,
+  TError = ErrorType<SessionExpiredResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listStaffDirectory>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listStaffDirectory>>,
+          TError,
+          Awaited<ReturnType<typeof listStaffDirectory>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListStaffDirectory<
+  TData = Awaited<ReturnType<typeof listStaffDirectory>>,
+  TError = ErrorType<SessionExpiredResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listStaffDirectory>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Справочник сотрудников
+ */
+
+export function useListStaffDirectory<
+  TData = Awaited<ReturnType<typeof listStaffDirectory>>,
+  TError = ErrorType<SessionExpiredResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listStaffDirectory>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListStaffDirectoryQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getGetStaffAvatarUrl = (id: string) => {
   return `/api/v1/staff/${id}/avatar`;

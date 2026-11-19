@@ -1062,6 +1062,8 @@ export * from "./sourceState";
 export * from "./spendDay";
 export * from "./spendReport";
 export * from "./spendSlice";
+export * from "./staffCard";
+export * from "./staffDirectory";
 export * from "./startPriceImportParams";
 export * from "./stepCode";
 export * from "./stockAdjustIn";

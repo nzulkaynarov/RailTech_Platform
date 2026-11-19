@@ -21,6 +21,7 @@ import { ErrorNote, QueryState } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { PersonCell } from "../../../shared/ui/EntityCell";
+import { PersonRefCell } from "../../PersonRefCell";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { TabsBar } from "../../../shared/ui/TabsBar";
 import { actionError, channelLabel } from "../messages/labels";
@@ -243,7 +244,8 @@ function LeadsTable({
       width: COLS.assigned,
       cellClassName: "pf-ell",
       cellTitle: (row) => row.assigned?.name ?? t("leads:nobody"),
-      cell: (row) => (row.assigned ? <PersonCell name={row.assigned.name} /> : t("leads:nobody")),
+      cell: (row) =>
+        row.assigned ? <PersonRefCell person={row.assigned} caption={null} /> : t("leads:nobody"),
     },
     {
       id: "last",

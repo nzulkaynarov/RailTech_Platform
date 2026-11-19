@@ -12,7 +12,7 @@ from fastapi import APIRouter, Path, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.deps import AuthedDep
-from app.errors import PlatformError, backend_reason, from_backend
+from app.errors import PlatformError, backend_reason, backend_unavailable, from_backend
 from app.schemas import Me, build_me
 from app.schemas_profile import (
     Colleague,
@@ -20,6 +20,7 @@ from app.schemas_profile import (
     Profile,
     ProfileUpdate,
     TelegramLink,
+    avatar_url,
     to_profile,
 )
 
@@ -192,6 +193,57 @@ async def upload_avatar(request: Request, authed: AuthedDep) -> Me:
 async def delete_avatar(authed: AuthedDep) -> Me:
     response = await authed.call("crm", "DELETE", f"{ME}/avatar")
     return build_me(await authed.service.apply_profile(authed.sid, _json(response)))
+
+
+class StaffCard(BaseModel):
+    """Сотрудник для ссылки «кто сделал» (СУЩ-3).
+
+    Общий компонент человека берёт отсюда фото и должность по id.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    name: str
+    position: str | None
+    avatar_url: str | None
+    active: bool
+
+
+class StaffDirectory(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    items: list[StaffCard]
+
+
+@router.get("/staff", response_model=StaffDirectory, operation_id="listStaffDirectory")
+async def list_staff_directory(authed: AuthedDep) -> StaffDirectory:
+    """Справочник для любого сотрудника: имя, должность, фото с версией; отключённые — с меткой."""
+    response = await authed.call("crm", "GET", "/api/v1/staff")
+    if response.status_code != status.HTTP_200_OK:
+        raise from_backend("crm", response)
+    rows = response.json()
+    if not isinstance(rows, list):
+        raise backend_unavailable("crm", "bad_response")
+    items = []
+    for row in rows:
+        if not isinstance(row, dict) or not isinstance(row.get("id"), int):
+            continue
+        version = row.get("avatar_version")
+        active = row.get("is_active") is not False
+        items.append(
+            StaffCard(
+                id=str(row["id"]),
+                name=str(row.get("full_name") or ""),
+                position=(str(row["position"]).strip() or None) if row.get("position") else None,
+                # Отключённому фото не отдаётся (`/staff/{id}/avatar` — 404): сразу инициалы
+                avatar_url=avatar_url(row["id"], version if isinstance(version, int) else None)
+                if active
+                else None,
+                active=active,
+            )
+        )
+    return StaffDirectory(items=items)
 
 
 @router.get(

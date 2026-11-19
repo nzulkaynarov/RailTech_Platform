@@ -362,6 +362,7 @@ import type {
   SmtpCheck,
   SmtpConnector,
   SpendReport,
+  StaffDirectory,
   StockBalanceList,
   StockProduct,
   StockReceipts,
@@ -1555,6 +1556,25 @@ export const getDeleteAvatarResponseMock = (
     faker.helpers.fromRegExp("^\\d{4}-\\d{2}-\\d{2}$"),
     null,
   ]),
+  ...overrideResponse,
+});
+
+export const getListStaffDirectoryResponseMock = (
+  overrideResponse: Partial<Extract<StaffDirectory, object>> = {},
+): StaffDirectory => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    position: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    avatar_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    active: faker.datatype.boolean(),
+  })),
   ...overrideResponse,
 });
 
@@ -35283,6 +35303,30 @@ export const getDeleteAvatarMockHandler = (
   );
 };
 
+export const getListStaffDirectoryMockHandler = (
+  overrideResponse?:
+    | StaffDirectory
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<StaffDirectory> | StaffDirectory),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/staff",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListStaffDirectoryResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getGetStaffAvatarMockHandler = (
   overrideResponse?:
     Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
@@ -45162,6 +45206,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getUpdateProfileMockHandler(),
   getUploadAvatarMockHandler(),
   getDeleteAvatarMockHandler(),
+  getListStaffDirectoryMockHandler(),
   getGetStaffAvatarMockHandler(),
   getCreateTelegramLinkMockHandler(),
   getDeleteTelegramLinkMockHandler(),
