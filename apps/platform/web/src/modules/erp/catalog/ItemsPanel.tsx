@@ -61,7 +61,7 @@ import {
   ReviewBlock,
 } from "./ReviewQueue";
 import { DuplicateHint, useRequestsColumns } from "./RequestsQueue";
-import { NameCode } from "../../../shared/ui/NameCode";
+import { ItemCell } from "../../../shared/ui/EntityCell";
 import { FilterBar, FilterField } from "../../../shared/ui/FilterBar";
 import { UnitLabel } from "../../../shared/ui/UnitLabel";
 import { unitOf } from "../../../shared/lib/unit";
@@ -125,11 +125,17 @@ export function ItemsPanel() {
   const nameColumn: Column<CatalogItem> = {
     key: "name",
     title: t("items.columns.name"),
+    // ЕД-4: миниатюра 32 px слева от названия — колонке позиции нужна своя ширина, иначе название ломается по буквам
+    width: 300,
     render: (row) => (
       <>
-        <NameCode
-          code={row.sku}
-          name={
+        <ItemCell
+          name={row.name}
+          sku={row.sku}
+          skuLabel={t("ui:entity.sku")}
+          photoUrl={row.thumbnail}
+          kind={row.kind.startsWith("service") ? "service" : "goods"}
+          title={
             <Button
               type="link"
               className="pf-cat-linkbtn"

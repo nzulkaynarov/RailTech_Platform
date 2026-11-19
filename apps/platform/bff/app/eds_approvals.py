@@ -63,6 +63,7 @@ from app.schemas_eds_approvals import (
     route_step,
 )
 from app.schemas_eds_documents import EdsDealRef, EdsDecision, EdsFile, EdsMoney, EdsPerson
+from app.schemas_item_ref import item_ref
 
 UUID_RE = re.compile(
     r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
@@ -350,15 +351,22 @@ def _lines(erp_quote: dict[str, Any]) -> list[QuoteLine]:
             ),
             "—",
         )
+        # ADR-0027 п. 9: количество дробное (12.5); целым его не считаем — иначе строка «0»
+        # и сумма 0
         qty_raw = raw.get("quantity")
-        qty = qty_raw if isinstance(qty_raw, int) and not isinstance(qty_raw, bool) else 0
+        qty = (
+            Decimal(str(qty_raw))
+            if isinstance(qty_raw, int | float) and not isinstance(qty_raw, bool)
+            else Decimal(0)
+        )
         price = _dec(raw.get("final_price_excl_vat")) or Decimal(0)
         lead = raw.get("lead_time_days")
         lines.append(
             QuoteLine(
                 position=len(lines) + 1,
                 name=name,
-                quantity=qty,
+                item=item_ref(raw.get("item")),
+                quantity=float(qty),
                 unit=_text(raw.get("unit")) or _text(raw.get("product_uom")),
                 unit_price=_plain(price),
                 amount=_plain(price * qty),

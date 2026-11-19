@@ -7101,6 +7101,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/erp/catalog/items/{id}/thumbnail": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Позиция каталога: миниатюра главного фото
+     * @description ERP `GET catalog/items/{id}/thumbnail/` — 96×96 WebP (ЕД-4). Видят все, кто видит строки позиций: `erp.stock`, `erp.calc`, `eds.drafts`, `eds.projects` или `eds.payments` — чтение. Адрес в ответах — с `?v=<id фото>`, кэш браузера на сутки. Фото нет — 404 `NOT_FOUND`.
+     */
+    get: operations["getCatalogItemThumbnail"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/erp/catalog/items/{id}/publish": {
     parameters: {
       query?: never;
@@ -10818,6 +10838,9 @@ export interface components {
       /** @description Номер строки по порядку */
       position: number;
       name: string;
+      /** @description Позиция каталога строки (ЕД-4); `null` — строка без карточки */
+      item: components["schemas"]["ItemRef"] | null;
+      /** @description Дробное, до трёх знаков (ADR-0027 п. 9) */
       quantity: number;
       unit: string | null;
       /** @description Цена без НДС */
@@ -14468,6 +14491,8 @@ export interface components {
       at: string;
     };
     CalcLine: {
+      /** @description Позиция каталога строки (ЕД-4); `null` — строка без карточки */
+      item: components["schemas"]["ItemRef"] | null;
       id: string;
       name: string;
       article: string;
@@ -14711,6 +14736,7 @@ export interface components {
     };
     StockRow: {
       product_id: string;
+      item: components["schemas"]["ItemRef"];
       name: string;
       article: string;
       unit: string;
@@ -14790,6 +14816,7 @@ export interface components {
     /** @description Товар на складе — ячейки, резервы по проектам, ожидаемый приход и последние движения */
     StockProduct: {
       product_id: string;
+      item: components["schemas"]["ItemRef"];
       name: string;
       article: string;
       unit: string;
@@ -14886,6 +14913,8 @@ export interface components {
       id: string;
       position: number;
       product_id: string | null;
+      /** @description Позиция каталога строки (ЕД-4); `null` — строка без карточки */
+      item: components["schemas"]["ItemRef"] | null;
       name: string;
       article: string;
       unit: string;
@@ -15645,10 +15674,24 @@ export interface components {
       amount: components["schemas"]["DecimalString"];
       currency: string;
     };
+    /** @description Позиция каталога в строке любого документа (план ЕД-4, `ui-standard.md` §12) — одна схема на все экраны */
+    ItemRef: {
+      id: string;
+      /** @description Название карточки каталога */
+      name: string;
+      /** @description Наш артикул; пусто — его ещё нет */
+      sku: string;
+      /** @enum {string} */
+      kind: "goods" | "service";
+      /** @description Адрес миниатюры с версией фото (`…/thumbnail?v=<id фото>`); `null` — фото нет, значок типа */
+      thumbnail: string | null;
+    };
     CatalogItem: {
       id: components["schemas"]["CompanyItemRef"];
       sku: string;
       name: string;
+      /** @description Миниатюра главного фото (ЕД-4); `null` — фото нет, значок типа */
+      thumbnail: string | null;
       kind: components["schemas"]["CatalogItemKind"];
       unit: components["schemas"]["CatalogUnit"] | null;
       /** @description НДС позиции, %; `null` — ставка компании по умолчанию */
@@ -15825,6 +15868,8 @@ export interface components {
       id: components["schemas"]["CompanyItemRef"];
       sku: string;
       name: string;
+      /** @description Миниатюра главного фото (ЕД-4); `null` — фото нет */
+      thumbnail: string | null;
       kind: components["schemas"]["CatalogItemKind"];
       unit: components["schemas"]["CatalogUnit"] | null;
       /** @description НДС позиции, %; `null` — ставка компании по умолчанию */
@@ -29979,6 +30024,36 @@ export interface operations {
         };
         content: {
           "image/*": string;
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getCatalogItemThumbnail: {
+    parameters: {
+      query?: {
+        /** @description Версия фото — только для кэша браузера */
+        v?: string;
+      };
+      header?: never;
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Миниатюра */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "image/webp": string;
         };
       };
       401: components["responses"]["SessionExpired"];

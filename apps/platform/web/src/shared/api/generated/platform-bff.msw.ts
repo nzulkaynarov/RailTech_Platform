@@ -236,6 +236,7 @@ import type {
   InboundMailResult,
   InboundMailType,
   IntegrationsOverview,
+  ItemRef,
   KbChunkList,
   KbDocument,
   KbDocumentList,
@@ -7673,6 +7674,22 @@ export const getGetQuoteApprovalResponseEdsMoneyMock = (
   ...overrideResponse,
 });
 
+export const getGetQuoteApprovalResponseItemRefMock = (
+  overrideResponse: Partial<ItemRef> = {},
+): ItemRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(["goods", "service"] as const),
+    thumbnail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getGetQuoteApprovalResponseQuoteTotalsMock = (
   overrideResponse: Partial<QuoteTotals> = {},
 ): QuoteTotals => ({
@@ -7848,6 +7865,7 @@ export const getGetQuoteApprovalResponseMock = (
     Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
       position: faker.number.int({ min: 1 }),
       name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      item: faker.helpers.arrayElement([{ ...getGetQuoteApprovalResponseItemRefMock() }, null]),
       quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
       unit: faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -7986,6 +8004,22 @@ export const getDecideQuoteApprovalResponseEdsMoneyMock = (
   ...{
     amount: faker.helpers.fromRegExp("^\\d+\\.\\d{2}$"),
     currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  ...overrideResponse,
+});
+
+export const getDecideQuoteApprovalResponseItemRefMock = (
+  overrideResponse: Partial<ItemRef> = {},
+): ItemRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(["goods", "service"] as const),
+    thumbnail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -8165,6 +8199,7 @@ export const getDecideQuoteApprovalResponseMock = (
     Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
       position: faker.number.int({ min: 1 }),
       name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      item: faker.helpers.arrayElement([{ ...getDecideQuoteApprovalResponseItemRefMock() }, null]),
       quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
       unit: faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -8306,6 +8341,22 @@ export const getSendQuoteByChannelResponseEdsMoneyMock = (
   ...{
     amount: faker.helpers.fromRegExp("^\\d+\\.\\d{2}$"),
     currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  ...overrideResponse,
+});
+
+export const getSendQuoteByChannelResponseItemRefMock = (
+  overrideResponse: Partial<ItemRef> = {},
+): ItemRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(["goods", "service"] as const),
+    thumbnail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -8485,6 +8536,7 @@ export const getSendQuoteByChannelResponseMock = (
     Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
       position: faker.number.int({ min: 1 }),
       name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      item: faker.helpers.arrayElement([{ ...getSendQuoteByChannelResponseItemRefMock() }, null]),
       quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
       unit: faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -8623,6 +8675,22 @@ export const getRecordQuoteClientDecisionResponseEdsMoneyMock = (
   ...{
     amount: faker.helpers.fromRegExp("^\\d+\\.\\d{2}$"),
     currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  ...overrideResponse,
+});
+
+export const getRecordQuoteClientDecisionResponseItemRefMock = (
+  overrideResponse: Partial<ItemRef> = {},
+): ItemRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(["goods", "service"] as const),
+    thumbnail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -8802,6 +8870,10 @@ export const getRecordQuoteClientDecisionResponseMock = (
     Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
       position: faker.number.int({ min: 1 }),
       name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      item: faker.helpers.arrayElement([
+        { ...getRecordQuoteClientDecisionResponseItemRefMock() },
+        null,
+      ]),
       quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
       unit: faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -23241,6 +23313,22 @@ export const getGetCalcSheetResponseCalcQuoteMock = (
   ...overrideResponse,
 });
 
+export const getGetCalcSheetResponseItemRefMock = (
+  overrideResponse: Partial<ItemRef> = {},
+): ItemRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(["goods", "service"] as const),
+    thumbnail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getGetCalcSheetResponseCalcSupplierMock = (
   overrideResponse: Partial<CalcSupplier> = {},
 ): CalcSupplier => ({
@@ -23312,6 +23400,7 @@ export const getGetCalcSheetResponseMock = (
   },
   quote: faker.helpers.arrayElement([{ ...getGetCalcSheetResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    item: faker.helpers.arrayElement([{ ...getGetCalcSheetResponseItemRefMock() }, null]),
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     article: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -23475,6 +23564,22 @@ export const getStartCalcResponseCalcQuoteMock = (
   ...overrideResponse,
 });
 
+export const getStartCalcResponseItemRefMock = (
+  overrideResponse: Partial<ItemRef> = {},
+): ItemRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(["goods", "service"] as const),
+    thumbnail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getStartCalcResponseCalcSupplierMock = (
   overrideResponse: Partial<CalcSupplier> = {},
 ): CalcSupplier => ({
@@ -23546,6 +23651,7 @@ export const getStartCalcResponseMock = (
   },
   quote: faker.helpers.arrayElement([{ ...getStartCalcResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    item: faker.helpers.arrayElement([{ ...getStartCalcResponseItemRefMock() }, null]),
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     article: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -23709,6 +23815,22 @@ export const getAddCalcLinesResponseCalcQuoteMock = (
   ...overrideResponse,
 });
 
+export const getAddCalcLinesResponseItemRefMock = (
+  overrideResponse: Partial<ItemRef> = {},
+): ItemRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(["goods", "service"] as const),
+    thumbnail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getAddCalcLinesResponseCalcSupplierMock = (
   overrideResponse: Partial<CalcSupplier> = {},
 ): CalcSupplier => ({
@@ -23780,6 +23902,7 @@ export const getAddCalcLinesResponseMock = (
   },
   quote: faker.helpers.arrayElement([{ ...getAddCalcLinesResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    item: faker.helpers.arrayElement([{ ...getAddCalcLinesResponseItemRefMock() }, null]),
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     article: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -23943,6 +24066,22 @@ export const getUpdateCalcLineResponseCalcQuoteMock = (
   ...overrideResponse,
 });
 
+export const getUpdateCalcLineResponseItemRefMock = (
+  overrideResponse: Partial<ItemRef> = {},
+): ItemRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(["goods", "service"] as const),
+    thumbnail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getUpdateCalcLineResponseCalcSupplierMock = (
   overrideResponse: Partial<CalcSupplier> = {},
 ): CalcSupplier => ({
@@ -24014,6 +24153,7 @@ export const getUpdateCalcLineResponseMock = (
   },
   quote: faker.helpers.arrayElement([{ ...getUpdateCalcLineResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    item: faker.helpers.arrayElement([{ ...getUpdateCalcLineResponseItemRefMock() }, null]),
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     article: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -24180,6 +24320,22 @@ export const getDeleteCalcLineResponseCalcQuoteMock = (
   ...overrideResponse,
 });
 
+export const getDeleteCalcLineResponseItemRefMock = (
+  overrideResponse: Partial<ItemRef> = {},
+): ItemRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(["goods", "service"] as const),
+    thumbnail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getDeleteCalcLineResponseCalcSupplierMock = (
   overrideResponse: Partial<CalcSupplier> = {},
 ): CalcSupplier => ({
@@ -24251,6 +24407,7 @@ export const getDeleteCalcLineResponseMock = (
   },
   quote: faker.helpers.arrayElement([{ ...getDeleteCalcLineResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    item: faker.helpers.arrayElement([{ ...getDeleteCalcLineResponseItemRefMock() }, null]),
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     article: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -24417,6 +24574,22 @@ export const getSignCalcLineResponseCalcQuoteMock = (
   ...overrideResponse,
 });
 
+export const getSignCalcLineResponseItemRefMock = (
+  overrideResponse: Partial<ItemRef> = {},
+): ItemRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(["goods", "service"] as const),
+    thumbnail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getSignCalcLineResponseCalcSupplierMock = (
   overrideResponse: Partial<CalcSupplier> = {},
 ): CalcSupplier => ({
@@ -24488,6 +24661,7 @@ export const getSignCalcLineResponseMock = (
   },
   quote: faker.helpers.arrayElement([{ ...getSignCalcLineResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    item: faker.helpers.arrayElement([{ ...getSignCalcLineResponseItemRefMock() }, null]),
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     article: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -24651,6 +24825,22 @@ export const getUpdateCalcTermsResponseCalcQuoteMock = (
   ...overrideResponse,
 });
 
+export const getUpdateCalcTermsResponseItemRefMock = (
+  overrideResponse: Partial<ItemRef> = {},
+): ItemRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(["goods", "service"] as const),
+    thumbnail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getUpdateCalcTermsResponseCalcSupplierMock = (
   overrideResponse: Partial<CalcSupplier> = {},
 ): CalcSupplier => ({
@@ -24722,6 +24912,7 @@ export const getUpdateCalcTermsResponseMock = (
   },
   quote: faker.helpers.arrayElement([{ ...getUpdateCalcTermsResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    item: faker.helpers.arrayElement([{ ...getUpdateCalcTermsResponseItemRefMock() }, null]),
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     article: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -24888,6 +25079,22 @@ export const getMarkCalcReadyResponseCalcQuoteMock = (
   ...overrideResponse,
 });
 
+export const getMarkCalcReadyResponseItemRefMock = (
+  overrideResponse: Partial<ItemRef> = {},
+): ItemRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(["goods", "service"] as const),
+    thumbnail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getMarkCalcReadyResponseCalcSupplierMock = (
   overrideResponse: Partial<CalcSupplier> = {},
 ): CalcSupplier => ({
@@ -24959,6 +25166,7 @@ export const getMarkCalcReadyResponseMock = (
   },
   quote: faker.helpers.arrayElement([{ ...getMarkCalcReadyResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    item: faker.helpers.arrayElement([{ ...getMarkCalcReadyResponseItemRefMock() }, null]),
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     article: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -25122,6 +25330,22 @@ export const getNewCalcQuoteVersionResponseCalcQuoteMock = (
   ...overrideResponse,
 });
 
+export const getNewCalcQuoteVersionResponseItemRefMock = (
+  overrideResponse: Partial<ItemRef> = {},
+): ItemRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(["goods", "service"] as const),
+    thumbnail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getNewCalcQuoteVersionResponseCalcSupplierMock = (
   overrideResponse: Partial<CalcSupplier> = {},
 ): CalcSupplier => ({
@@ -25193,6 +25417,7 @@ export const getNewCalcQuoteVersionResponseMock = (
   },
   quote: faker.helpers.arrayElement([{ ...getNewCalcQuoteVersionResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    item: faker.helpers.arrayElement([{ ...getNewCalcQuoteVersionResponseItemRefMock() }, null]),
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     article: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -25362,6 +25587,22 @@ export const getLoseCalcRequestResponseCalcQuoteMock = (
   ...overrideResponse,
 });
 
+export const getLoseCalcRequestResponseItemRefMock = (
+  overrideResponse: Partial<ItemRef> = {},
+): ItemRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(["goods", "service"] as const),
+    thumbnail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getLoseCalcRequestResponseCalcSupplierMock = (
   overrideResponse: Partial<CalcSupplier> = {},
 ): CalcSupplier => ({
@@ -25433,6 +25674,7 @@ export const getLoseCalcRequestResponseMock = (
   },
   quote: faker.helpers.arrayElement([{ ...getLoseCalcRequestResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    item: faker.helpers.arrayElement([{ ...getLoseCalcRequestResponseItemRefMock() }, null]),
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     article: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -25628,6 +25870,22 @@ export const getCopyCalcLinesResponseCalcQuoteMock = (
   ...overrideResponse,
 });
 
+export const getCopyCalcLinesResponseItemRefMock = (
+  overrideResponse: Partial<ItemRef> = {},
+): ItemRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(["goods", "service"] as const),
+    thumbnail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getCopyCalcLinesResponseCalcSupplierMock = (
   overrideResponse: Partial<CalcSupplier> = {},
 ): CalcSupplier => ({
@@ -25704,6 +25962,7 @@ export const getCopyCalcLinesResponseMock = (
     quote: faker.helpers.arrayElement([{ ...getCopyCalcLinesResponseCalcQuoteMock() }, null]),
     lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => ({
+        item: faker.helpers.arrayElement([{ ...getCopyCalcLinesResponseItemRefMock() }, null]),
         id: faker.helpers.fromRegExp("^[0-9]+$"),
         name: faker.string.alpha({ length: { min: 10, max: 20 } }),
         article: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -25834,6 +26093,16 @@ export const getListStockBalancesResponseMock = (
 ): StockBalanceList => ({
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     product_id: faker.helpers.fromRegExp("^[0-9]+$"),
+    item: {
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      kind: faker.helpers.arrayElement(["goods", "service"] as const),
+      thumbnail: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    },
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     article: faker.string.alpha({ length: { min: 10, max: 20 } }),
     unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -25860,6 +26129,16 @@ export const getGetStockProductResponseMock = (
   overrideResponse: Partial<Extract<StockProduct, object>> = {},
 ): StockProduct => ({
   product_id: faker.helpers.fromRegExp("^[0-9]+$"),
+  item: {
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(["goods", "service"] as const),
+    thumbnail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   article: faker.string.alpha({ length: { min: 10, max: 20 } }),
   unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -25945,6 +26224,16 @@ export const getAdjustStockResponseMock = (
   overrideResponse: Partial<Extract<StockProduct, object>> = {},
 ): StockProduct => ({
   product_id: faker.helpers.fromRegExp("^[0-9]+$"),
+  item: {
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(["goods", "service"] as const),
+    thumbnail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   article: faker.string.alpha({ length: { min: 10, max: 20 } }),
   unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -26150,6 +26439,22 @@ export const getReserveCalcLineResponseCalcQuoteMock = (
   ...overrideResponse,
 });
 
+export const getReserveCalcLineResponseItemRefMock = (
+  overrideResponse: Partial<ItemRef> = {},
+): ItemRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(["goods", "service"] as const),
+    thumbnail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getReserveCalcLineResponseCalcSupplierMock = (
   overrideResponse: Partial<CalcSupplier> = {},
 ): CalcSupplier => ({
@@ -26221,6 +26526,7 @@ export const getReserveCalcLineResponseMock = (
   },
   quote: faker.helpers.arrayElement([{ ...getReserveCalcLineResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    item: faker.helpers.arrayElement([{ ...getReserveCalcLineResponseItemRefMock() }, null]),
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     article: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -26387,6 +26693,22 @@ export const getReleaseCalcLineReservationResponseCalcQuoteMock = (
   ...overrideResponse,
 });
 
+export const getReleaseCalcLineReservationResponseItemRefMock = (
+  overrideResponse: Partial<ItemRef> = {},
+): ItemRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(["goods", "service"] as const),
+    thumbnail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getReleaseCalcLineReservationResponseCalcSupplierMock = (
   overrideResponse: Partial<CalcSupplier> = {},
 ): CalcSupplier => ({
@@ -26461,6 +26783,10 @@ export const getReleaseCalcLineReservationResponseMock = (
     null,
   ]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    item: faker.helpers.arrayElement([
+      { ...getReleaseCalcLineReservationResponseItemRefMock() },
+      null,
+    ]),
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     article: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -26796,6 +27122,22 @@ export const getCreateSupplierOrderResponseSupplierOrderMailMock = (
   ...overrideResponse,
 });
 
+export const getCreateSupplierOrderResponseItemRefMock = (
+  overrideResponse: Partial<ItemRef> = {},
+): ItemRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(["goods", "service"] as const),
+    thumbnail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getCreateSupplierOrderResponseStockRequestRefMock = (
   overrideResponse: Partial<StockRequestRef> = {},
 ): StockRequestRef => ({
@@ -26893,6 +27235,7 @@ export const getCreateSupplierOrderResponseMock = (
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     position: faker.number.int({ min: 1 }),
     product_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    item: faker.helpers.arrayElement([{ ...getCreateSupplierOrderResponseItemRefMock() }, null]),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     article: faker.string.alpha({ length: { min: 10, max: 20 } }),
     unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -26998,6 +27341,22 @@ export const getCreateSupplierOrderFromRequestResponseSupplierOrderMailMock = (
   ...overrideResponse,
 });
 
+export const getCreateSupplierOrderFromRequestResponseItemRefMock = (
+  overrideResponse: Partial<ItemRef> = {},
+): ItemRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(["goods", "service"] as const),
+    thumbnail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getCreateSupplierOrderFromRequestResponseStockRequestRefMock = (
   overrideResponse: Partial<StockRequestRef> = {},
 ): StockRequestRef => ({
@@ -27095,6 +27454,10 @@ export const getCreateSupplierOrderFromRequestResponseMock = (
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     position: faker.number.int({ min: 1 }),
     product_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    item: faker.helpers.arrayElement([
+      { ...getCreateSupplierOrderFromRequestResponseItemRefMock() },
+      null,
+    ]),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     article: faker.string.alpha({ length: { min: 10, max: 20 } }),
     unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -27200,6 +27563,22 @@ export const getGetSupplierOrderResponseSupplierOrderMailMock = (
   ...overrideResponse,
 });
 
+export const getGetSupplierOrderResponseItemRefMock = (
+  overrideResponse: Partial<ItemRef> = {},
+): ItemRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(["goods", "service"] as const),
+    thumbnail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getGetSupplierOrderResponseStockRequestRefMock = (
   overrideResponse: Partial<StockRequestRef> = {},
 ): StockRequestRef => ({
@@ -27297,6 +27676,7 @@ export const getGetSupplierOrderResponseMock = (
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     position: faker.number.int({ min: 1 }),
     product_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    item: faker.helpers.arrayElement([{ ...getGetSupplierOrderResponseItemRefMock() }, null]),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     article: faker.string.alpha({ length: { min: 10, max: 20 } }),
     unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -27402,6 +27782,22 @@ export const getUpdateSupplierOrderResponseSupplierOrderMailMock = (
   ...overrideResponse,
 });
 
+export const getUpdateSupplierOrderResponseItemRefMock = (
+  overrideResponse: Partial<ItemRef> = {},
+): ItemRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(["goods", "service"] as const),
+    thumbnail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getUpdateSupplierOrderResponseStockRequestRefMock = (
   overrideResponse: Partial<StockRequestRef> = {},
 ): StockRequestRef => ({
@@ -27499,6 +27895,7 @@ export const getUpdateSupplierOrderResponseMock = (
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     position: faker.number.int({ min: 1 }),
     product_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    item: faker.helpers.arrayElement([{ ...getUpdateSupplierOrderResponseItemRefMock() }, null]),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     article: faker.string.alpha({ length: { min: 10, max: 20 } }),
     unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -27604,6 +28001,22 @@ export const getSendSupplierOrderResponseSupplierOrderMailMock = (
   ...overrideResponse,
 });
 
+export const getSendSupplierOrderResponseItemRefMock = (
+  overrideResponse: Partial<ItemRef> = {},
+): ItemRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(["goods", "service"] as const),
+    thumbnail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getSendSupplierOrderResponseStockRequestRefMock = (
   overrideResponse: Partial<StockRequestRef> = {},
 ): StockRequestRef => ({
@@ -27701,6 +28114,7 @@ export const getSendSupplierOrderResponseMock = (
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     position: faker.number.int({ min: 1 }),
     product_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    item: faker.helpers.arrayElement([{ ...getSendSupplierOrderResponseItemRefMock() }, null]),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     article: faker.string.alpha({ length: { min: 10, max: 20 } }),
     unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -27806,6 +28220,22 @@ export const getConfirmSupplierOrderResponseSupplierOrderMailMock = (
   ...overrideResponse,
 });
 
+export const getConfirmSupplierOrderResponseItemRefMock = (
+  overrideResponse: Partial<ItemRef> = {},
+): ItemRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(["goods", "service"] as const),
+    thumbnail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getConfirmSupplierOrderResponseStockRequestRefMock = (
   overrideResponse: Partial<StockRequestRef> = {},
 ): StockRequestRef => ({
@@ -27903,6 +28333,7 @@ export const getConfirmSupplierOrderResponseMock = (
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     position: faker.number.int({ min: 1 }),
     product_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    item: faker.helpers.arrayElement([{ ...getConfirmSupplierOrderResponseItemRefMock() }, null]),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     article: faker.string.alpha({ length: { min: 10, max: 20 } }),
     unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -28008,6 +28439,22 @@ export const getCancelSupplierOrderResponseSupplierOrderMailMock = (
   ...overrideResponse,
 });
 
+export const getCancelSupplierOrderResponseItemRefMock = (
+  overrideResponse: Partial<ItemRef> = {},
+): ItemRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(["goods", "service"] as const),
+    thumbnail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getCancelSupplierOrderResponseStockRequestRefMock = (
   overrideResponse: Partial<StockRequestRef> = {},
 ): StockRequestRef => ({
@@ -28105,6 +28552,7 @@ export const getCancelSupplierOrderResponseMock = (
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     position: faker.number.int({ min: 1 }),
     product_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    item: faker.helpers.arrayElement([{ ...getCancelSupplierOrderResponseItemRefMock() }, null]),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     article: faker.string.alpha({ length: { min: 10, max: 20 } }),
     unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -28210,6 +28658,22 @@ export const getReceiveSupplierOrderResponseSupplierOrderMailMock = (
   ...overrideResponse,
 });
 
+export const getReceiveSupplierOrderResponseItemRefMock = (
+  overrideResponse: Partial<ItemRef> = {},
+): ItemRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(["goods", "service"] as const),
+    thumbnail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getReceiveSupplierOrderResponseStockRequestRefMock = (
   overrideResponse: Partial<StockRequestRef> = {},
 ): StockRequestRef => ({
@@ -28307,6 +28771,7 @@ export const getReceiveSupplierOrderResponseMock = (
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     position: faker.number.int({ min: 1 }),
     product_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    item: faker.helpers.arrayElement([{ ...getReceiveSupplierOrderResponseItemRefMock() }, null]),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     article: faker.string.alpha({ length: { min: 10, max: 20 } }),
     unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -29317,6 +29782,10 @@ export const getListCatalogItemsResponseMock = (
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    thumbnail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
     kind: faker.helpers.arrayElement(Object.values(CatalogItemKind)),
     unit: faker.helpers.arrayElement([{ ...getListCatalogItemsResponseCatalogUnitMock() }, null]),
     vat_rate: faker.helpers.arrayElement([
@@ -29434,6 +29903,10 @@ export const getCreateCatalogItemResponseMock = (
   id: faker.helpers.fromRegExp("^[0-9]+$"),
   sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  thumbnail: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   kind: faker.helpers.arrayElement(Object.values(CatalogItemKind)),
   unit: faker.helpers.arrayElement([{ ...getCreateCatalogItemResponseCatalogUnitMock() }, null]),
   vat_rate: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
@@ -29662,6 +30135,10 @@ export const getGetCatalogItemResponseMock = (
   id: faker.helpers.fromRegExp("^[0-9]+$"),
   sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  thumbnail: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   kind: faker.helpers.arrayElement(Object.values(CatalogItemKind)),
   unit: faker.helpers.arrayElement([{ ...getGetCatalogItemResponseCatalogUnitMock() }, null]),
   vat_rate: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
@@ -29881,6 +30358,10 @@ export const getUpdateCatalogItemResponseMock = (
   id: faker.helpers.fromRegExp("^[0-9]+$"),
   sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  thumbnail: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   kind: faker.helpers.arrayElement(Object.values(CatalogItemKind)),
   unit: faker.helpers.arrayElement([{ ...getUpdateCatalogItemResponseCatalogUnitMock() }, null]),
   vat_rate: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
@@ -30064,6 +30545,9 @@ export const getUpdateCatalogItemImageResponseMock = (
 export const getGetCatalogItemImageContentResponseMock = (): Blob =>
   new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
 
+export const getGetCatalogItemThumbnailResponseMock = (): Blob =>
+  new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
+
 export const getPublishCatalogItemResponseCatalogUnitMock = (
   overrideResponse: Partial<CatalogUnit> = {},
 ): CatalogUnit => ({
@@ -30132,6 +30616,10 @@ export const getPublishCatalogItemResponseMock = (
   id: faker.helpers.fromRegExp("^[0-9]+$"),
   sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  thumbnail: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   kind: faker.helpers.arrayElement(Object.values(CatalogItemKind)),
   unit: faker.helpers.arrayElement([{ ...getPublishCatalogItemResponseCatalogUnitMock() }, null]),
   vat_rate: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
@@ -30360,6 +30848,10 @@ export const getMergeCatalogItemResponseMock = (
   id: faker.helpers.fromRegExp("^[0-9]+$"),
   sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  thumbnail: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   kind: faker.helpers.arrayElement(Object.values(CatalogItemKind)),
   unit: faker.helpers.arrayElement([{ ...getMergeCatalogItemResponseCatalogUnitMock() }, null]),
   vat_rate: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
@@ -30585,6 +31077,10 @@ export const getUnpublishCatalogItemResponseMock = (
   id: faker.helpers.fromRegExp("^[0-9]+$"),
   sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  thumbnail: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   kind: faker.helpers.arrayElement(Object.values(CatalogItemKind)),
   unit: faker.helpers.arrayElement([{ ...getUnpublishCatalogItemResponseCatalogUnitMock() }, null]),
   vat_rate: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
@@ -30813,6 +31309,10 @@ export const getReturnCatalogItemResponseMock = (
   id: faker.helpers.fromRegExp("^[0-9]+$"),
   sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  thumbnail: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   kind: faker.helpers.arrayElement(Object.values(CatalogItemKind)),
   unit: faker.helpers.arrayElement([{ ...getReturnCatalogItemResponseCatalogUnitMock() }, null]),
   vat_rate: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
@@ -31041,6 +31541,10 @@ export const getAcceptCatalogProposalResponseMock = (
   id: faker.helpers.fromRegExp("^[0-9]+$"),
   sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  thumbnail: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   kind: faker.helpers.arrayElement(Object.values(CatalogItemKind)),
   unit: faker.helpers.arrayElement([
     { ...getAcceptCatalogProposalResponseCatalogUnitMock() },
@@ -31275,6 +31779,10 @@ export const getRejectCatalogProposalResponseMock = (
   id: faker.helpers.fromRegExp("^[0-9]+$"),
   sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  thumbnail: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
   kind: faker.helpers.arrayElement(Object.values(CatalogItemKind)),
   unit: faker.helpers.arrayElement([
     { ...getRejectCatalogProposalResponseCatalogUnitMock() },
@@ -43201,6 +43709,29 @@ export const getGetCatalogItemImageContentMockHandler = (
   );
 };
 
+export const getGetCatalogItemThumbnailMockHandler = (
+  overrideResponse?:
+    Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/catalog/items/:id/thumbnail",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      const binaryBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetCatalogItemThumbnailResponseMock();
+      return new HttpResponse(binaryBody, {
+        status: 200,
+        headers: { "Content-Type": "image/webp" },
+      });
+    },
+    options,
+  );
+};
+
 export const getPublishCatalogItemMockHandler = (
   overrideResponse?:
     | CatalogItemDetail
@@ -44999,6 +45530,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getUpdateCatalogItemImageMockHandler(),
   getDeleteCatalogItemImageMockHandler(),
   getGetCatalogItemImageContentMockHandler(),
+  getGetCatalogItemThumbnailMockHandler(),
   getPublishCatalogItemMockHandler(),
   getMergeCatalogItemMockHandler(),
   getUnpublishCatalogItemMockHandler(),

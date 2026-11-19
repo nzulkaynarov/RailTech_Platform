@@ -197,6 +197,7 @@ import type {
   FxRateIn,
   FxRateOverview,
   GetAiSpendReportParams,
+  GetCatalogItemThumbnailParams,
   GetCrmThreadParams,
   GetFxRateParams,
   GetPriceImportParams,
@@ -51401,6 +51402,180 @@ export function useGetCatalogItemImageContent<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getGetCatalogItemImageContentQueryOptions(id, imageId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetCatalogItemThumbnailUrl = (
+  id: string,
+  params?: GetCatalogItemThumbnailParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/erp/catalog/items/${id}/thumbnail?${stringifiedParams}`
+    : `/api/v1/erp/catalog/items/${id}/thumbnail`;
+};
+
+/**
+ * ERP `GET catalog/items/{id}/thumbnail/` — 96×96 WebP (ЕД-4). Видят все, кто видит строки позиций: `erp.stock`, `erp.calc`, `eds.drafts`, `eds.projects` или `eds.payments` — чтение. Адрес в ответах — с `?v=<id фото>`, кэш браузера на сутки. Фото нет — 404 `NOT_FOUND`.
+ * @summary Позиция каталога: миниатюра главного фото
+ */
+export const getCatalogItemThumbnail = async (
+  id: string,
+  params?: GetCatalogItemThumbnailParams,
+  options?: Parameters<typeof http>[1],
+): Promise<Blob> => {
+  return http<Blob>(getGetCatalogItemThumbnailUrl(id, params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCatalogItemThumbnailQueryKey = (
+  id: string,
+  params?: GetCatalogItemThumbnailParams,
+) => {
+  return [`/api/v1/erp/catalog/items/${id}/thumbnail`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetCatalogItemThumbnailQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCatalogItemThumbnail>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  params?: GetCatalogItemThumbnailParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCatalogItemThumbnail>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCatalogItemThumbnailQueryKey(id, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCatalogItemThumbnail>>> = ({
+    signal,
+  }) => getCatalogItemThumbnail(id, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getCatalogItemThumbnail>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetCatalogItemThumbnailQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCatalogItemThumbnail>>
+>;
+export type GetCatalogItemThumbnailQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetCatalogItemThumbnail<
+  TData = Awaited<ReturnType<typeof getCatalogItemThumbnail>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  params: undefined | GetCatalogItemThumbnailParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCatalogItemThumbnail>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCatalogItemThumbnail>>,
+          TError,
+          Awaited<ReturnType<typeof getCatalogItemThumbnail>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCatalogItemThumbnail<
+  TData = Awaited<ReturnType<typeof getCatalogItemThumbnail>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  params?: GetCatalogItemThumbnailParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCatalogItemThumbnail>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCatalogItemThumbnail>>,
+          TError,
+          Awaited<ReturnType<typeof getCatalogItemThumbnail>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCatalogItemThumbnail<
+  TData = Awaited<ReturnType<typeof getCatalogItemThumbnail>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  params?: GetCatalogItemThumbnailParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCatalogItemThumbnail>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Позиция каталога: миниатюра главного фото
+ */
+
+export function useGetCatalogItemThumbnail<
+  TData = Awaited<ReturnType<typeof getCatalogItemThumbnail>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  params?: GetCatalogItemThumbnailParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCatalogItemThumbnail>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetCatalogItemThumbnailQueryOptions(id, params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

@@ -11,6 +11,7 @@ import type {
 } from "../../shared/api/generated/model";
 
 import { companyDayIn } from "./dates";
+import { itemRefOf } from "./itemRef";
 
 /**
  * Вымышленные КП на одобрение и документы на согласовании для MSW (D1-4, BFF 0.24.0): те же формы, что вернёт BFF по
@@ -288,6 +289,8 @@ function quote(seed: QuoteSeed): QuoteApprovalCard {
       : seed.lines.map(([name, quantity, unit, price, lead], index) => ({
           position: index + 1,
           name,
+          // ЕД-4: строка КП мока — позиция каталога мока по порядку строки (у первой — фото)
+          item: itemRefOf(String(index + 1), name),
           quantity,
           unit,
           unit_price: price,

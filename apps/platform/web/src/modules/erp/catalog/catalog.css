@@ -46,7 +46,8 @@
   padding: 0;
   text-align: left;
   white-space: normal;
-  overflow-wrap: anywhere;
+  /* перенос по словам; посреди слова — только слово длиннее строки */
+  overflow-wrap: break-word;
 }
 .pf-cat-cards {
   margin: 0;

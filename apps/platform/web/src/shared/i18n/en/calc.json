@@ -144,7 +144,8 @@
     "release": "Release reservation",
     "releaseLabel": "Release the reservation of line “{{name}}”",
     "markupLabel": "Markup, %: {{name}}",
-    "currencyLabel": "Purchase currency for “{{name}}”"
+    "currencyLabel": "Purchase currency for “{{name}}”",
+    "mpn": "Manufacturer part number"
   },
   "add": {
     "button": "Add line",
