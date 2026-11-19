@@ -131,7 +131,10 @@ class InvoiceItemSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "description",
+            "product",
             "quantity",
+            "unit",
+            "unit_code",
             "unit_price_excl_vat",
             "line_total_excl_vat",
             "source_quote_item",

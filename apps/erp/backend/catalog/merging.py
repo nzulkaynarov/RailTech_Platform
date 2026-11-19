@@ -81,6 +81,9 @@ def merge_products(survivor, duplicate, actor) -> tuple[object | None, str | Non
     from supply.models import SupplierOrderLine
 
     SupplierOrderLine.objects.filter(product=duplicate).update(product=survivor)  # ADR-0027: и заказы поставщику
+    from finance.models import InvoiceItem
+
+    InvoiceItem.objects.filter(product=duplicate).update(product=survivor)  # и строки счетов (акт читает их же)
 
     archived = ProductStatus.objects.filter(code="ARCHIVED").first()
     if archived is None:

@@ -94,6 +94,10 @@ def generate_invoice_from_contract(
     # quoted OUTSIDE the КП totals. Billing every row (the old .items.all()) put optional/section/
     # note lines on the invoice so Σ(InvoiceItem.line_total) overshot Invoice.total (which mirrors
     # the header total that already excludes them) — the invoice stopped adding up.
+    # ADR-0027 п. 1: строка счёта — с карточкой; строки КП, заведённые до перехода, связываются здесь же (идемпотентно).
+    from catalog.candidates import link_quote_lines
+
+    link_quote_lines(quote)
     billable_items = list(quote.items.billable().select_related("product"))
     # Wave C: an invoice is BORN as a DRAFT (ERP canon — Odoo draft→posted). It carries no
     # issue date and no PDF yet; the seller reviews it (due_date / notes editable while DRAFT)
@@ -122,7 +126,10 @@ def generate_invoice_from_contract(
         InvoiceItem.objects.create(
             invoice=invoice,
             description=(qi.product.name if qi.product else qi.imported_raw_name) or "Позиция",
+            product=qi.product,
             quantity=qi.quantity,
+            unit=qi.unit,
+            unit_code=qi.unit_code,
             unit_price_excl_vat=qi.final_price_excl_vat,
             line_total_excl_vat=(qi.final_price_excl_vat * qi.quantity),
             source_quote_item=qi,

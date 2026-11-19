@@ -167,7 +167,20 @@ class InvoiceItem(models.Model):
         verbose_name=_("Инвойс"),
     )
     description = models.CharField(max_length=500)
+    # ADR-0027 п. 1: строка счёта ссылается на карточку каталога. PROTECT — выставленный счёт не теряет позицию;
+    # NULL остаётся только у строк, заведённых до перехода (перенос — миграция finance 0007).
+    product = models.ForeignKey(
+        "catalog.Product",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="invoice_items",
+        verbose_name=_("Карточка каталога"),
+    )
     quantity = models.DecimalField(max_digits=14, decimal_places=3, default=Decimal("1"))  # ADR-0027 п. 9
+    # ADR-0027 п. 10: код единицы по справочнику и подпись, как в строке КП.
+    unit = models.CharField(max_length=32, blank=True, default="", verbose_name=_("Единица измерения"))
+    unit_code = models.CharField(max_length=8, blank=True, default="", verbose_name=_("Код ед. изм. (UN/ECE Rec 20)"))
     unit_price_excl_vat = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     line_total_excl_vat = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     source_quote_item = models.ForeignKey(

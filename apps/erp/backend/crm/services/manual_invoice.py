@@ -39,22 +39,53 @@ def _seller_gate_for_deal(actor, deal_id) -> Optional[str]:
 
 
 def _clean_manual_lines(lines) -> Tuple[Optional[list], Optional[str]]:
-    """Validate the manual line list into ``[(description, quantity, unit_price_excl_vat), ...]``.
-    Amounts are read as the КП PRESENTATION currency (never a cost currency)."""
+    """Validate the manual line list into ``[(description, quantity, unit_price_excl_vat, product_id), ...]``.
+    Amounts are read as the КП PRESENTATION currency (never a cost currency). A line names a catalog card
+    (``product_id``) or a text; a text-only line gets its card later (``_resolve_cards``, ADR-0027 п. 1)."""
     cleaned = []
     for raw in lines or []:
         description = (str(raw.get("description") or "")).strip()
-        if not description:
-            return None, "INVOICE_LINE_DESCRIPTION_REQUIRED"
         try:
+            product_id = int(raw["product_id"]) if raw.get("product_id") not in (None, "") else None
             quantity = to_qty(raw.get("quantity") or 0)
             unit_price = Decimal(str(raw.get("unit_price_excl_vat") or "0"))
         except (ValueError, ArithmeticError, TypeError):
             return None, "INVOICE_LINE_INVALID"
+        if not description and product_id is None:
+            return None, "INVOICE_LINE_DESCRIPTION_REQUIRED"
         if quantity <= 0 or unit_price < 0:
             return None, "INVOICE_LINE_INVALID"
-        cleaned.append((description, quantity, unit_price))
+        cleaned.append((description, quantity, unit_price, product_id))
     return cleaned, None
+
+
+def _resolve_cards(manual_lines, deal) -> Tuple[Optional[list], Optional[str]]:
+    """Every manual line gets a catalog card (ADR-0027 п. 1): the named one, or a found/new draft by its text.
+
+    A named card must be a live card of our catalog (not archived). Returns
+    ``[(description, quantity, unit_price, product), ...]`` or an error code."""
+    from catalog.candidates import card_for_text
+    from catalog.models import Product
+
+    ids = {pid for *_rest, pid in manual_lines if pid is not None}
+    cards = {p.pk: p for p in Product.objects.filter(pk__in=ids).exclude(status__code="ARCHIVED").select_related("uom")}
+    resolved = []
+    for description, quantity, unit_price, product_id in manual_lines:
+        if product_id is not None:
+            product = cards.get(product_id)
+            if product is None:
+                return None, "INVOICE_LINE_PRODUCT_INVALID"
+        else:
+            product = card_for_text(description, deal=deal)
+        name = description or (product.name if product is not None else "")
+        resolved.append((name, quantity, unit_price, product))
+    return resolved, None
+
+
+def _unit_of(product) -> Tuple[str, str]:
+    """Единица строки — единица карточки по умолчанию (ADR-0027 п. 10)."""
+    uom = getattr(product, "uom", None) if product is not None else None
+    return (uom.name[:32], uom.code) if uom is not None else ("", "")
 
 
 @transaction.atomic
@@ -108,6 +139,10 @@ def create_manual_invoice(
     if source_quote is None and not manual_lines:
         return None, "INVOICE_NO_LINES"
 
+    manual_lines, card_err = _resolve_cards(manual_lines, deal)
+    if card_err:
+        return None, card_err
+
     # Presentation currency = the КП's quote_currency (UZS by rule); NULL for a pure-manual счёт
     # (PDF/serializer fall back to UZS). NEVER a line's frozen COST currency (the B1 bug).
     currency = source_quote.quote_currency if source_quote else None
@@ -122,7 +157,7 @@ def create_manual_invoice(
     subtotal = Decimal("0")
     vat_amount = Decimal("0")
     total = Decimal("0")
-    item_specs = []  # (description, quantity, unit_price, source_quote_item)
+    item_specs = []  # (description, quantity, unit_price, product, unit, unit_code, source_quote_item)
 
     if source_quote is not None:
         # Mirror the contract→invoice projection EXACTLY: the header totals come verbatim from the
@@ -132,23 +167,29 @@ def create_manual_invoice(
         subtotal += source_quote.subtotal_excl_vat or Decimal("0")
         vat_amount += source_quote.vat_amount or Decimal("0")
         total += source_quote.total_incl_vat or Decimal("0")
+        from catalog.candidates import link_quote_lines
+
+        link_quote_lines(source_quote)  # строки КП до перехода получают карточку (ADR-0027 п. 1), идемпотентно
         for qi in source_quote.items.billable().select_related("product"):
             item_specs.append(
                 (
                     (qi.product.name if qi.product else qi.imported_raw_name) or "Позиция",
                     qi.quantity,
                     qi.final_price_excl_vat,
+                    qi.product,
+                    qi.unit,
+                    qi.unit_code,
                     qi,
                 )
             )
 
-    for description, quantity, unit_price in manual_lines:
+    for description, quantity, unit_price, product in manual_lines:
         line_total = (unit_price * quantity).quantize(_PENNY, rounding=ROUND_HALF_UP)
         line_vat = (line_total * vat_rate).quantize(_PENNY, rounding=ROUND_HALF_UP)
         subtotal += line_total
         vat_amount += line_vat
         total += line_total + line_vat
-        item_specs.append((description, quantity, unit_price, None))
+        item_specs.append((description, quantity, unit_price, product, *_unit_of(product), None))
 
     invoice = Invoice.objects.create(
         deal=deal,
@@ -168,12 +209,15 @@ def create_manual_invoice(
             InvoiceItem(
                 invoice=invoice,
                 description=description,
+                product=product,
                 quantity=quantity,
+                unit=unit,
+                unit_code=unit_code,
                 unit_price_excl_vat=unit_price,
                 line_total_excl_vat=(unit_price * quantity).quantize(_PENNY, rounding=ROUND_HALF_UP),
                 source_quote_item=source_quote_item,
             )
-            for description, quantity, unit_price, source_quote_item in item_specs
+            for description, quantity, unit_price, product, unit, unit_code, source_quote_item in item_specs
         ]
     )
 

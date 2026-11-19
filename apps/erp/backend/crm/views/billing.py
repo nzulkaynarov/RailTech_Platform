@@ -506,7 +506,8 @@ class InvoiceViewSet(
             "Raise a DRAFT invoice directly on a deal WITHOUT a signed contract (Odoo / МойСклад "
             "«invoice without contract»; СНГ «счёт = оферта»). Populate lines from an active КП on "
             "the deal (`source_quote` → same billable projection as the contract path) and/or a "
-            "manual line list. Amounts follow the КП presentation currency (UZS), never a cost "
+            "manual line list (a catalog card `product_id`, or a text that finds or creates a draft card, "
+            "ADR-0027). Amounts follow the КП presentation currency (UZS), never a cost "
             "currency. The invoice is born DRAFT and rides the existing issue / cancel lifecycle."
         ),
         request=inline_serializer(
@@ -520,8 +521,9 @@ class InvoiceViewSet(
                     child=inline_serializer(
                         "ManualInvoiceLine",
                         fields={
-                            "description": drf_serializers.CharField(),
-                            "quantity": drf_serializers.IntegerField(),
+                            "description": drf_serializers.CharField(required=False),
+                            "product_id": drf_serializers.IntegerField(required=False, allow_null=True),
+                            "quantity": drf_serializers.FloatField(),
                             "unit_price_excl_vat": drf_serializers.DecimalField(max_digits=14, decimal_places=2),
                         },
                     ),

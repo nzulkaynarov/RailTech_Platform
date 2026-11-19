@@ -193,9 +193,24 @@ def _owner_for(quote):
         company_id = None
     if company_id:
         return Company.objects.filter(pk=company_id).first()
+    if quote is None:
+        return None
     from crm.services.quotes import _quote_seller_company
 
     return _quote_seller_company(quote)
+
+
+def card_for_text(title: str, *, deal=None, quote=None):
+    """Карточка для строки документа, у которой есть только название (ручной счёт): найденная или новый черновик.
+
+    Тот же поиск дубля и та же карточка-черновик, что у строки КП (ADR-0027 п. 1, 3). None — нечем описать.
+    """
+    from types import SimpleNamespace
+
+    owner = _owner_for(quote)
+    line = SimpleNamespace(imported_raw_name=_clean(title), product_id=None, quote=quote)
+    product, _created = ensure_candidate_for_line(line, owner, deal=deal)
+    return product
 
 
 @transaction.atomic
@@ -244,12 +259,14 @@ def is_own_draft(item) -> bool:
 
 
 def drop_unused_draft(product_id: int | None) -> bool:
-    """Черновик, на который больше не ссылается ни одна строка КП, удаляется: строку сопоставили с каталогом."""
+    """Черновик, на который больше не ссылается ни одна строка КП и счёта, удаляется: строку сопоставили с каталогом."""
     from catalog.models import Product
 
     if not product_id:
         return False
-    draft = Product.objects.filter(pk=product_id, status__code="DRAFT", quote_items__isnull=True).first()
+    draft = Product.objects.filter(
+        pk=product_id, status__code="DRAFT", quote_items__isnull=True, invoice_items__isnull=True
+    ).first()
     if draft is None:
         return False
     draft.delete()
