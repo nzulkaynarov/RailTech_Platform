@@ -41,6 +41,11 @@ function portalUrl(path: string): string {
   return new URL(`${base}${PORTAL_BASE_PATH}${path}`, window.location.origin).toString();
 }
 
+/** Миниатюра позиции каталога (ЕД-4): адрес с id фото — новое фото, новый адрес; фото нет — `null` (значок типа). */
+export function itemThumbnailUrl(id: number, photo: number | null | undefined): string | null {
+  return photo ? portalUrl(`/items/${id}/thumbnail?v=${photo}`) : null;
+}
+
 function newIdempotencyKey(): string {
   return typeof crypto !== 'undefined' && 'randomUUID' in crypto
     ? crypto.randomUUID()

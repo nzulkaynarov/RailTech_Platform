@@ -901,6 +901,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/items/{id}/thumbnail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Миниатюра позиции каталога (ЕД-4)
+         * @description Главное фото позиции 96×96 WebP — для строки КП, поставки, витрины и «Моих товаров». Видно, если позиция видна сессии: опубликована (`catalog_requests`), стоит в КП или поставке клиента (`quotes`, `deliveries`), своя или опубликованная карточка партнёра (`my_products`). Иначе, как и без фото, — 404. Адрес строит Cabinet из `item.photo` (или `photo`) с `?v=<id фото>`: новое фото — новый адрес.
+         */
+        get: operations["getItemThumbnail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/catalog": {
         parameters: {
             query?: never;
@@ -1822,6 +1842,8 @@ export interface components {
             label: string;
         };
         PartnerProduct: {
+            /** @description Id главного фото своей или опубликованной карточки (ЕД-4); миниатюра — `/items/{id}/thumbnail?v=<photo>` */
+            photo?: number | null;
             /** Format: int64 */
             id: number;
             name: string;
@@ -1883,6 +1905,8 @@ export interface components {
         };
         /** @description Карточка списка (`PartnerProduct`) и подробности; поля списка повторены, чтобы схема была закрытой */
         PartnerProductDetail: {
+            /** @description Id главного фото своей или опубликованной карточки (ЕД-4) */
+            photo?: number | null;
             /** Format: int64 */
             id: number;
             name: string;
@@ -2574,8 +2598,23 @@ export interface components {
             /** Format: date-time */
             sent_at: string;
         };
+        /** @description Позиция каталога в строке документа (ЕД-4, `ui-standard.md` §12) — одна форма во всех строках */
+        ItemRef: {
+            /** Format: int64 */
+            id: number;
+            /** @description Название карточки каталога */
+            name: string;
+            /** @description Артикул оператора; пусто — его ещё нет */
+            sku: string;
+            /** @enum {string} */
+            kind: "goods" | "service";
+            /** @description Id главного фото; миниатюра — `/items/{id}/thumbnail?v=<photo>`, `null` — значок типа */
+            photo: number | null;
+        };
         /** @description Строка КП для клиента — цена продажи без себестоимости и наценки; `unit_price` и `total` без НДС (Q-FIX21-2) */
         QuoteLine: {
+            /** @description Позиция каталога строки (ЕД-4); `null` — строка без карточки */
+            item?: components["schemas"]["ItemRef"] | null;
             line_no: number;
             /** @enum {string} */
             kind: "item" | "section" | "note" | "stage";
@@ -2728,6 +2767,8 @@ export interface components {
         DeliveryStatus: "assembling" | "in_transit" | "ready_to_ship" | "shipped" | "delivered" | "accepted" | "disputed";
         /** @description Строка поставки = строка подтверждённого заказа клиента; `id` — её идентификатор для приёмки */
         DeliveryLine: {
+            /** @description Позиция каталога строки (ЕД-4); `null` — строка без карточки */
+            item?: components["schemas"]["ItemRef"] | null;
             /** Format: int64 */
             id: number;
             deal: components["schemas"]["DealRef"];
@@ -5025,6 +5066,34 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             429: components["responses"]["TooManyRequests"];
+        };
+    };
+    getItemThumbnail: {
+        parameters: {
+            query?: {
+                /** @description Версия фото — только для кэша браузера */
+                v?: string;
+            };
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Миниатюра */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/webp": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     listCatalog: {

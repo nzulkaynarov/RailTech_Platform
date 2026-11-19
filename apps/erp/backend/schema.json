@@ -1531,6 +1531,54 @@
                 }
             }
         },
+        "/api/portal/v1/items/{id}/thumbnail": {
+            "get": {
+                "operationId": "api_portal_v1_items_thumbnail_retrieve",
+                "description": "GET /items/{id}/thumbnail — миниатюра главного фото позиции, видимой сессии; иначе 404.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/items/{id}/thumbnail/": {
+            "get": {
+                "operationId": "api_portal_v1_items_thumbnail_retrieve_2",
+                "description": "GET /items/{id}/thumbnail — миниатюра главного фото позиции, видимой сессии; иначе 404.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/portal/v1/letters": {
             "get": {
                 "operationId": "api_portal_v1_letters_retrieve",

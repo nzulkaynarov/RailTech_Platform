@@ -50,6 +50,23 @@ def _code_mail(world):
     )
 
 
+def _photographed(world) -> str:
+    """Миниатюра (ЕД-4): у позиции мира нет фото — сторож заводит его, чтобы опросить 200, а не 404."""
+    from io import BytesIO
+
+    from django.core.files.uploadedfile import SimpleUploadedFile
+    from PIL import Image
+
+    from catalog.desk import images
+
+    product = world["product"]
+    if images.main_image(product) is None:
+        out = BytesIO()
+        Image.new("RGB", (40, 40), (10, 20, 30)).save(out, format="PNG")
+        images.add_image(product, SimpleUploadedFile("p.png", out.getvalue(), content_type="image/png"))
+    return f"/items/{product.pk}/thumbnail"
+
+
 GET_CASES = {
     "/me": lambda w: ["/me"],
     "/notifications": lambda w: ["/notifications", "/notifications?limit=2"],
@@ -75,6 +92,7 @@ GET_CASES = {
     "/letters/{id}/file": lambda w: [f"/letters/{w['letters'][-1].pk}/file"],
     "/catalog/categories": lambda w: ["/catalog/categories"],
     "/catalog": lambda w: ["/catalog"],
+    "/items/{id}/thumbnail": lambda w: [_photographed(w)],
     "/catalog/{id}": lambda w: [f"/catalog/{w['product'].pk}"],
     "/catalog/{id}/documents/{doc_id}/file": lambda w: [
         f"/catalog/{w['product'].pk}/documents/{w['certificate'].pk}/file"
@@ -230,6 +248,7 @@ JSON_GET_PATHS = sorted(
         "/letters/{id}/file",
         "/catalog/{id}/documents/{doc_id}/file",
         "/company/partner-application/contract-pdf",
+        "/items/{id}/thumbnail",
     }
 )
 

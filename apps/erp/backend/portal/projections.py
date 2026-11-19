@@ -206,9 +206,14 @@ def quote_lines(quote) -> list[dict]:
     Статьи расходов уже разнесены по ценам позиций, себестоимости, наценки и НДС в строках нет; разделы и заметки
     не теряются. Суммы строк — без НДС (как в PDF), итог КП — с НДС (QUESTIONS Q-FIX21-2).
     """
+    from catalog.item_ref import item_ref, main_photos
+
     currency = currency_code(quote.quote_currency)
+    rows = list(client_projection_items(quote))
+    # ЕД-4: позиция строки — миниатюра и наш артикул; фото — одной выборкой на КП
+    photos = main_photos(row["product"].pk for row in rows if row.get("product") is not None)
     lines = []
-    for number, row in enumerate(client_projection_items(quote), start=1):
+    for number, row in enumerate(rows, start=1):
         kind = row["display_type"].lower()
         if kind not in ("section", "note"):
             kind = "item"
@@ -222,9 +227,11 @@ def quote_lines(quote) -> list[dict]:
             "unit_price": None,
             "total": None,
             "promised_date": None,
+            "item": None,
         }
         if kind == "item":
             product = row.get("product")
+            line["item"] = item_ref(product, photos)
             # Название — как в PDF КП: карточка каталога, иначе строка клиента.
             line["title"] = (product.name if product else "") or row.get("imported_raw_name") or ""
             line["description"] = " · ".join(part for part in (row.get("mpn"), row.get("gost_drawing")) if part)

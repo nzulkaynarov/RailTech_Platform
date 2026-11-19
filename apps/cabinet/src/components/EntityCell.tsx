@@ -46,18 +46,32 @@ function Picture({ src, fallback, size, shape }: { src?: string | null; fallback
   );
 }
 
-function Shell({ picture, name, to, caption }: { picture: ReactNode; name: string; to?: string | null; caption?: ReactNode }) {
+function Shell({
+  picture,
+  name,
+  to,
+  caption,
+  title,
+}: {
+  picture: ReactNode;
+  name: string;
+  to?: string | null;
+  caption?: ReactNode;
+  /** Своё название (кнопка окна, перенос длинной строки документа) вместо ссылки или текста в одну строку */
+  title?: ReactNode;
+}) {
   return (
-    <span className="inline-flex min-w-0 max-w-full items-center gap-2 align-middle">
+    <span className={cn('inline-flex min-w-0 max-w-full gap-2 align-middle', title ? 'items-start' : 'items-center')}>
       {picture}
       <span className="flex min-w-0 flex-col">
-        {to ? (
-          <Link to={to} className="truncate font-medium text-primary underline-offset-4 hover:underline">
-            {name}
-          </Link>
-        ) : (
-          <span className="truncate">{name}</span>
-        )}
+        {title ??
+          (to ? (
+            <Link to={to} className="truncate font-medium text-primary underline-offset-4 hover:underline">
+              {name}
+            </Link>
+          ) : (
+            <span className="truncate">{name}</span>
+          ))}
         {caption ? <span className="truncate text-xs text-muted-foreground">{caption}</span> : null}
       </span>
     </span>
@@ -131,6 +145,7 @@ export function ItemCell({
   photoUrl,
   kind = 'goods',
   to,
+  title,
   size = 32,
 }: {
   name: string;
@@ -138,6 +153,8 @@ export function ItemCell({
   photoUrl?: string | null;
   kind?: 'goods' | 'service';
   to?: string | null;
+  /** Своё название вместо ссылки или текста в одну строку (кнопка окна, длинная строка КП) */
+  title?: ReactNode;
   size?: Size;
 }) {
   const { t } = useTranslation();
@@ -147,6 +164,7 @@ export function ItemCell({
       picture={<Picture src={photoUrl} fallback={<Icon className="h-4 w-4" strokeWidth={1.75} />} size={size} shape="square" />}
       name={name}
       to={to}
+      title={title}
       caption={sku ? <CodeLine label={t('common.article')} value={sku} /> : null}
     />
   );
