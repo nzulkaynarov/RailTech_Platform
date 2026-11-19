@@ -171,7 +171,9 @@ async def _request(
             notify=True,
             attachments=[attachment],
         )
-    except MailRequestError:
+    except MailRequestError as error:
+        # Сотруднику — слова без внутренних названий; что именно не задано — в журнале для администратора.
+        log.error("letter_mail.not_connected", document_id=str(document.id), detail=str(error))
         await _fail(session, bus, mailing, document, NO_PAIR)
         return
     mailing.status = "requested"
