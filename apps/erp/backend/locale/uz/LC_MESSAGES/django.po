@@ -338,3 +338,8 @@ msgstr "Agar bu sizning xodimingiz bölmasa, seansni yakunlang: «Kompaniya» �
 
 msgid "Вход в кабинет с нового устройства"
 msgstr "Kabinetga yangi qurilmadan kirish"
+
+#: templates/emails/quote_accepted_contact.html templates/emails/quote_accepted_contact.txt
+#, python-format
+msgid "Ваш менеджер — %(manager_name)s"
+msgstr "Sizning menejeringiz — %(manager_name)s"

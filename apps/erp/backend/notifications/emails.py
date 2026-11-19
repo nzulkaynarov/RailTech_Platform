@@ -160,6 +160,29 @@ CLIENT_MAIL_TEMPLATES = frozenset(
 )
 
 
+def real_support_email(value: str | None) -> str:
+    """Адрес поддержки для письма или пусто: заглушка `…@example.com` клиенту не показывается (СЦ-4).
+
+    Значение по умолчанию у `SystemSetting.support_email` — заглушка; пока администратор не задал настоящий адрес, строки
+    «Возникли вопросы?» в письме нет — чужой адрес в теле письма вводит клиента в заблуждение и вредит доставке."""
+    email = (value or "").strip()
+    return "" if not email or email.lower().endswith(("@example.com", "@example.org")) else email
+
+
+def in_cabinet(emails: Iterable[str]) -> bool:
+    """Есть ли среди адресатов контакт, который уже в кабинете (приглашён или входил)."""
+    from django.db.models import Q
+    from parties.models import Contact
+
+    addresses = [e.strip() for e in emails if e and e.strip()]
+    if not addresses:
+        return False
+    known = Q()
+    for address in addresses:
+        known |= Q(email__iexact=address)
+    return Contact.objects.filter(known).filter(Q(invited_at__isnull=False) | Q(last_login_at__isnull=False)).exists()
+
+
 def telegram_notifications_url() -> str:
     """Профиль → «Уведомления» в Cabinet (`CABINET_URL`); без входа Cabinet вернёт сюда после входа."""
     return f"{getattr(settings, 'CABINET_URL', 'http://cabinet.localhost').rstrip('/')}/profile#notifications"
@@ -207,7 +230,7 @@ def send_templated_email(
     # Platform-wide defaults every email template may reference (footer support contact, links).
     # Merged UNDER the caller's context so an explicit value always wins.
     platform_name = getattr(settings, "PLATFORM_NAME", "ERP")
-    support_email = getattr(settings, "SUPPORT_EMAIL", "support@example.com")
+    support_email = getattr(settings, "SUPPORT_EMAIL", "")
     try:
         from core.models.settings import SystemSetting
 
@@ -222,11 +245,14 @@ def send_templated_email(
     context = {
         "platform_name": platform_name,
         "brand_name": platform_name,
-        "support_email": support_email,
+        "support_email": real_support_email(support_email),
         "frontend_url": getattr(settings, "FRONTEND_URL", ""),
+        # «Получать мгновенно в Telegram» ведёт в профиль кабинета: ссылка — только тому, кто в кабинет может войти
+        # (`ui-standard.md` §14 п. 2: действие, которое не может получиться, не предлагается).
         **(
             {"telegram_notifications_url": telegram_notifications_url()}
             if template_name in CLIENT_MAIL_TEMPLATES
+            and (template_name == "portal_invitation" or in_cabinet(recipients))  # приглашение само даёт вход
             else {}
         ),
         **context,

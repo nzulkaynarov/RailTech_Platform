@@ -6979,3 +6979,8 @@ msgstr "If this is not your colleague, end the session: Company → Security log
 
 msgid "Вход в кабинет с нового устройства"
 msgstr "Sign-in to the cabinet from a new device"
+
+#: templates/emails/quote_accepted_contact.html templates/emails/quote_accepted_contact.txt
+#, python-format
+msgid "Ваш менеджер — %(manager_name)s"
+msgstr "Your manager is %(manager_name)s"

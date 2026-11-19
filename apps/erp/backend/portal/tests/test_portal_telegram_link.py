@@ -278,10 +278,15 @@ def test_projection_from_the_bot_binding_lets_the_mini_app_in(
 # ── письма ───────────────────────────────────────────────────────────────────────────────────────────
 
 
-def test_client_mails_point_to_profile_notifications_and_carry_no_token(settings):
+def test_client_mails_point_to_profile_notifications_and_carry_no_token(settings, client_contact):
     from django.core import mail
+    from django.utils import timezone
 
     from notifications.emails import send_templated_email
+
+    # СЦ-4: строка «Получать в Telegram» ведёт в профиль кабинета — КП её несёт только контакту, который уже в кабинете
+    client_contact.email, client_contact.invited_at = "a@example.test", timezone.now()
+    client_contact.save(update_fields=["email", "invited_at"])
 
     settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
     settings.CABINET_URL = "https://cabinet.example.test"
@@ -310,6 +315,17 @@ def test_client_mails_point_to_profile_notifications_and_carry_no_token(settings
         assert "start=" not in message.body and "start=" not in html, "токен привязки в письмо не кладётся"
     assert invitation.alternatives[0][0].count(target) == 1, "в приглашении — в тексте письма, без повтора в подвале"
     assert target not in staff.body and target not in staff.alternatives[0][0], "письма сотрудникам — без строки"
+
+    # получателю КП без кабинета ссылка в профиль не открылась бы — строки нет
+    send_templated_email(
+        "quote_sent",
+        {"recipient_name": "B", "seller_name": "Acme", "quote_number": "2", "public_link": "https://x.example/q2"},
+        to=["stranger@example.test"],
+        language="ru",
+    )
+    stranger = mail.outbox[-1]
+    assert "Получать мгновенно в Telegram" not in stranger.body
+    assert target not in stranger.alternatives[0][0]
 
 
 # ── POST /me/telegram/test ───────────────────────────────────────────────────────────────────────────
