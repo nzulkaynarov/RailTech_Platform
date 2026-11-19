@@ -14804,7 +14804,8 @@ export interface components {
       status: "active" | "released" | "fulfilled";
       /** Format: date-time */
       created_at: string;
-      created_by: string | null;
+      /** @description Сотрудник со ссылкой на справочник (СУЩ-3) */
+      created_by: components["schemas"]["PersonRef"] | null;
       tracking: components["schemas"]["TrackingClass"];
       /** @description Свободные серийные или партии товара — выбор при отгрузке (S/L); у `none` пусто */
       units: components["schemas"]["StockTraceUnitRef"][];
@@ -14843,7 +14844,8 @@ export interface components {
       cell: string | null;
       /** Format: date-time */
       at: string;
-      by: string | null;
+      /** @description Сотрудник со ссылкой на справочник (СУЩ-3) */
+      by: components["schemas"]["PersonRef"] | null;
       note: string | null;
     };
     /** @description Товар на складе — ячейки, резервы по проектам, ожидаемый приход и последние движения */
@@ -14933,7 +14935,8 @@ export interface components {
       requests: components["schemas"]["StockRequestRef"][];
       /** Format: date-time */
       created_at: string;
-      created_by: string | null;
+      /** @description Сотрудник со ссылкой на справочник (СУЩ-3) */
+      created_by: components["schemas"]["PersonRef"] | null;
       actions: components["schemas"]["SupplierOrderActions"];
       /** @example /erp/stock/ЗП-2026-031 */
       path: string;
@@ -14996,7 +14999,8 @@ export interface components {
       id: string;
       /** Format: date-time */
       received_at: string;
-      received_by: string | null;
+      /** @description Сотрудник со ссылкой на справочник (СУЩ-3) */
+      received_by: components["schemas"]["PersonRef"] | null;
       /** @description Накладная поставщика */
       supplier_doc: string | null;
       note: string | null;
@@ -15015,7 +15019,8 @@ export interface components {
         | "overdue";
       /** Format: date-time */
       at: string;
-      by: string | null;
+      /** @description Сотрудник со ссылкой на справочник (СУЩ-3) */
+      by: components["schemas"]["PersonRef"] | null;
       detail: string | null;
     };
     /** @description Итог письма партнёру (0.10 плана 2026-11-12, FR-12): письмо уходит через почтовый сервис CRM, итог приходит событием — `queued` (в очереди почты), `sent` (отправлено), `failed` с кодом причины (`smtp_not_configured`, `rejected`, `auth_failed`, `unavailable`…; список открытый). Экран не пишет «отправлено» раньше `sent`. */
@@ -15050,7 +15055,8 @@ export interface components {
       requests: components["schemas"]["StockRequestRef"][];
       /** Format: date-time */
       created_at: string;
-      created_by: string | null;
+      /** @description Сотрудник со ссылкой на справочник (СУЩ-3) */
+      created_by: components["schemas"]["PersonRef"] | null;
       actions: components["schemas"]["SupplierOrderActions"];
       /** @example /erp/stock/ЗП-2026-031 */
       path: string;
@@ -15177,7 +15183,8 @@ export interface components {
       supplier: string;
       /** Format: date-time */
       received_at: string;
-      received_by: string | null;
+      /** @description Сотрудник со ссылкой на справочник (СУЩ-3) */
+      received_by: components["schemas"]["PersonRef"] | null;
       supplier_doc: string | null;
       quantity: number;
       lines: {
@@ -15223,7 +15230,8 @@ export interface components {
       note: string | null;
       /** Format: date-time */
       shipped_at: string;
-      shipped_by: string | null;
+      /** @description Сотрудник со ссылкой на справочник (СУЩ-3) */
+      shipped_by: components["schemas"]["PersonRef"] | null;
       lines: components["schemas"]["StockShipmentLine"][];
     };
     StockShipmentList: {
@@ -15308,7 +15316,8 @@ export interface components {
       request: string | null;
       /** Format: date-time */
       requested_at: string;
-      requested_by: string | null;
+      /** @description Сотрудник со ссылкой на справочник (СУЩ-3) */
+      requested_by: components["schemas"]["PersonRef"] | null;
       to_email: string;
       subject: string;
       note: string | null;
@@ -15320,7 +15329,8 @@ export interface components {
       error: string | null;
       /** Format: date-time */
       answered_at: string | null;
-      answered_by: string | null;
+      /** @description Сотрудник со ссылкой на справочник (СУЩ-3) */
+      answered_by: components["schemas"]["PersonRef"] | null;
       answer_note: string | null;
       lines: components["schemas"]["PriceRequestLine"][];
     };
