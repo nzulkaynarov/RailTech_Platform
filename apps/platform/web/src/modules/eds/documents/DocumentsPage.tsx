@@ -10,6 +10,7 @@ import type {
   EdsDocumentRow,
   EdsRegistryKind,
   ListEdsDocumentsParams,
+  Me,
 } from "../../../shared/api/generated/model";
 import { useListEdsDocuments } from "../../../shared/api/generated/platform-bff";
 import { quotePath } from "../drafts/api";
@@ -118,10 +119,23 @@ const BOX_NAV: Record<Box, string> = {
   archive: "archive",
 };
 
-/** Куда ведут строки реестра, которые не открываются в этом окне: пункт меню EDS и его ключ в `modules` */
-const SECTION_OF: Partial<Record<EdsRegistryKind, { key: string; path: string }>> = {
-  letter_in: { key: "inbox", path: "/eds/inbox" },
-};
+const INBOX_ACCESS = { anyOf: ["eds.inbox", "eds.inbox.register"] } as const;
+
+/**
+ * Куда ведёт строка, которая не открывается в этом окне (ДОК-8: строки без просмотра нет): входящее письмо — в само
+ * письмо, КП — в карточку одобрения, договор, счёт и акт проекта — в карточку проекта. `null` — раздел сотруднику закрыт.
+ */
+function pagePath(row: EdsDocumentRow, me: Me): string | null {
+  if (row.kind === "letter_in")
+    // Номер в адресе — как у ссылок между письмами: в цепочке навигации «ВХ-104/26», а не идентификатор.
+    return canSee(me, INBOX_ACCESS)
+      ? `/eds/inbox/${encodeURIComponent(row.number ?? row.id)}`
+      : null;
+  if (row.project_ref && canSee(me, { resource: "eds.projects" }))
+    return `/eds/projects/${encodeURIComponent(row.project_ref)}`;
+  if (row.kind === "quote") return quotePath(row.id);
+  return null;
+}
 
 type Scope = "mine" | "all";
 
@@ -155,40 +169,19 @@ function RowAction({ row, own }: { row: EdsDocumentRow; own: boolean }) {
       </LinkButton>
     );
   }
-  // Договор, счёт и акт проекта (проекция ERP): документ ведёт в карточку проекта, если есть доступ к разделу.
-  if (row.project_ref && canSee(me, { resource: "eds.projects" })) {
-    return (
-      <Link
-        className="pf-docs-link pf-focusable"
-        to={`/eds/projects/${encodeURIComponent(row.project_ref)}`}
-        aria-label={t("documents:list.inProjectLabel", { subject: row.subject })}
-      >
-        {t("documents:list.inProject")}
-      </Link>
-    );
-  }
-  // КП — своя карточка одобрения (`/eds/drafts/<id>`): раздела «КП на одобрение» в меню нет (FR-5).
-  if (row.kind === "quote") {
-    return (
-      <Link
-        className="pf-docs-link pf-focusable"
-        to={quotePath(row.id)}
-        aria-label={t("documents:list.openQuoteLabel", { subject: row.subject })}
-      >
-        {t("documents:list.openQuote")}
-      </Link>
-    );
-  }
-  const section = SECTION_OF[row.kind];
-  if (!section) return null;
-  const label = t(`modules:eds.sections.${section.key}`);
+  const to = pagePath(row, me);
+  if (to === null) return null;
+  // Договор, счёт и акт проекта (проекция ERP) ведут в карточку проекта; КП — в карточку одобрения (`/eds/drafts/<id>`,
+  // раздела «КП на одобрение» в меню нет, FR-5); входящее письмо — в само письмо, а не в раздел (ДОК-8).
+  const key =
+    row.kind === "letter_in" ? "openLetter" : row.kind === "quote" ? "openQuote" : "inProject";
   return (
     <Link
       className="pf-docs-link pf-focusable"
-      to={section.path}
-      aria-label={t("documents:list.inSectionLabel", { section: label, subject: row.subject })}
+      to={to}
+      aria-label={t(`documents:list.${key}Label`, { subject: row.subject })}
     >
-      {t("documents:list.inSection", { section: label })}
+      {t(`documents:list.${key}`)}
     </Link>
   );
 }
@@ -205,7 +198,21 @@ function SubjectCell({
   const { t } = useTranslation("documents");
   // На телефоне документ открывает собственный лист, окно каркаса (`panel=open`) не нужно.
   const { mobile } = useViewport();
-  if (!row.openable) return <span>{row.subject}</span>;
+  const { me } = useAuth();
+  if (!row.openable) {
+    // Тема — ссылка на сам документ у любого вида (ДОК-8); нет доступа к его разделу — текст.
+    const to = pagePath(row, me);
+    if (to === null) return <span>{row.subject}</span>;
+    return (
+      <Link
+        className="pf-docs-link pf-focusable"
+        to={to}
+        aria-label={t("list.open", { subject: row.subject })}
+      >
+        {row.subject}
+      </Link>
+    );
+  }
   return (
     <Link
       className="pf-docs-link pf-focusable"

@@ -73,8 +73,8 @@
     "open": "Hujjatni ochish: {{subject}}",
     "continue": "Davom ettirish",
     "continueLabel": "Hujjatni davom ettirish: {{subject}}",
-    "inSection": "«{{section}}» bo‘limida",
-    "inSectionLabel": "«{{section}}» bo‘limida ochish: {{subject}}",
+    "openLetter": "Xatni ochish",
+    "openLetterLabel": "Xatni ochish: {{subject}}",
     "empty": {
       "mineTitle": "O‘z hujjatlaringiz hozircha yo‘q",
       "mineText": "Xizmat xati, ariza, hisobot va xat «Hujjat yaratish» tugmasi bilan yaratiladi. Qoralamalar shu yerda saqlanadi.",

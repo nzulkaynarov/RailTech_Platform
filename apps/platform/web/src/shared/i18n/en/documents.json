@@ -73,8 +73,8 @@
     "open": "Open document: {{subject}}",
     "continue": "Continue",
     "continueLabel": "Continue document: {{subject}}",
-    "inSection": "In “{{section}}”",
-    "inSectionLabel": "Open in “{{section}}”: {{subject}}",
+    "openLetter": "Open letter",
+    "openLetterLabel": "Open letter: {{subject}}",
     "empty": {
       "mineTitle": "You have no documents yet",
       "mineText": "A memo, application, report or letter is created with the “Create document” button. Drafts are kept here.",

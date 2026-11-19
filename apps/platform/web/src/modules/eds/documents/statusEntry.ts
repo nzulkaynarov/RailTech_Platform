@@ -21,6 +21,11 @@ const LETTER_IN: Record<string, string> = {
   resolved: "dictionary:status.incoming.resolved",
   returned: "dictionary:status.incoming.returned",
   rejected: "dictionary:status.incoming.rejected",
+  in_execution: "dictionary:status.incoming.in_execution",
+  executed: "dictionary:status.incoming.executed",
+  noted: "dictionary:status.incoming.noted",
+  duplicate: "dictionary:status.incoming.duplicate",
+  closed: "dictionary:status.incoming.closed",
 };
 
 const QUOTE: Record<string, string> = {
