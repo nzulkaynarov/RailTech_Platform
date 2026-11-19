@@ -1371,6 +1371,37 @@ async def test_eds_down_is_503(web: Web, eds: ApprovalsFake, status: int) -> Non
     assert (await web.client.get("/api/v1/me")).status_code == 200
 
 
+@pytest.mark.parametrize("number", ["RFQ-1126-01", "ACME-RFQ-1126-02"])
+async def test_quote_card_by_a_latin_erp_number(web: Web, eds: ApprovalsFake, number: str) -> None:
+    """СЦ-2 (2026-11-19): номер КП ERP латиницей открывает карточку — префикс не разбирается."""
+    eds.registry.append(
+        {
+            "kind": "quote",
+            "id": QUOTE_ROUTE,
+            "number": number,
+            "status": "open",
+            "registered_at": "2026-11-19T08:00:00Z",
+        }
+    )
+    await _director(web)
+
+    response = await web.client.get(f"{BASE}/quotes/{quote(number, safe='')}")
+
+    assert response.status_code == 200
+    assert response.json()["id"] == QUOTE_ROUTE
+
+
+async def test_memo_card_by_a_latin_number(web: Web, eds: ApprovalsFake) -> None:
+    """СЦ-2: служебная записка `MEMO-2026/001` (обозначение по умолчанию) открывается по номеру."""
+    eds.registry[2]["number"] = "MEMO-2026/001"
+    await _director(web)
+
+    response = await web.client.get(f"{BASE}/memo-approvals/{quote('MEMO-2026/001', safe='')}")
+
+    assert response.status_code == 200
+    assert response.json()["id"] == MEMO_DOC
+
+
 async def test_quote_card_by_the_erp_number(web: Web, eds: ApprovalsFake) -> None:
     """Номер КП ERP (`КП-2026-00001`) — ссылка из уведомления «КП не отправлено» (D17G-2)."""
     eds.registry.append(

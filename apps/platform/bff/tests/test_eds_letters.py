@@ -240,6 +240,21 @@ async def test_card_by_number_goes_through_the_registry(
     assert len(eds.made("GET", f"letters/{LETTER_ID}")) == 1
 
 
+@pytest.mark.parametrize("number", ["IN-001/26", "INC-019/26", "ВХ-104/26"])
+async def test_card_by_any_numbering_label(web: Web, eds: EdsFake, number: str) -> None:
+    """СЦ-2 (2026-11-19): номер ищется как есть — латинское обозначение по умолчанию (`IN-…`), своё
+    обозначение владельца и выданный раньше `ВХ-…` открывают одно письмо; префикс не разбирается."""
+    eds.registry = [{"kind": "letter_in", "id": LETTER_ID, "number": number}]
+    await _director(web)
+
+    response = await web.client.get(f"{BASE}/letters/{quote(number, safe='')}")
+
+    assert response.status_code == 200
+    assert response.json()["id"] == LETTER_ID
+    [lookup] = eds.made("GET", "registry")
+    assert lookup.url.params["number"] == number
+
+
 @pytest.mark.parametrize("ref", ["ВХ-999/26", "ЗВ-2026-104", "abc", "ВХ-104/2026", "ВХ-104/26/1"])
 async def test_unknown_or_foreign_refs_are_404(web: Web, eds: EdsFake, ref: str) -> None:
     await _director(web)

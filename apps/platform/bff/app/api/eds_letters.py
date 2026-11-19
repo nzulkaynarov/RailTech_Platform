@@ -33,13 +33,13 @@ from app.clients.crm_proxy import CrmProxy, crm_error
 from app.clients.eds import EdsLetters, eds_error
 from app.clients.erp_company import counterparty_snapshot
 from app.deps import Authed, require, require_any, require_any_section
+from app.doc_numbers import DOC_NUMBER_RE as NUMBER_RE
 from app.errors import PlatformError, backend_unavailable
 from app.feeds.feed import Feed
 from app.rbac import strip_restricted
 from app.rbac_generated import RESOURCE_MODULE
 from app.schemas_eds_letters import (
     BODY_TEXT_MAX,
-    NUMBER_RE,
     UUID_RE,
     ZONES,
     CoExecutorIn,
