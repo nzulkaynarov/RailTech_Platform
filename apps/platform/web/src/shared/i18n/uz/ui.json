@@ -14,6 +14,7 @@
   },
   "history": {
     "done": "Bajarilgan",
+    "failed": "Bajarilmadi",
     "waiting": "Kutilmoqda",
     "todo": "Boshlanmagan"
   },

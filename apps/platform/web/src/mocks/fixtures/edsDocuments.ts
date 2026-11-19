@@ -71,6 +71,8 @@ export interface MockLetter {
   pdfPolls: number;
   mailings: EdsDocumentMailing[];
   registration_requested: { ownerId: string; at: string } | null;
+  /** «Вручено иначе» (СЦ-1): сотрудник снял отправку почтой */
+  mailWaivedAt?: string | null;
 }
 
 /** Строка реестра, которой нет среди документов сотрудников: входящее письмо или КП (откроются в своих разделах). */

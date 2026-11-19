@@ -3256,6 +3256,35 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /eds/documents/{id}/mail-waive:
+    post:
+      tags: [eds-documents]
+      operationId: waiveEdsDocumentMail
+      summary: 'EDS · Письмо: вручено иначе'
+      description: >-
+        EDS `POST /documents/{id}/mail-waive` (СЦ-1): письмо передано адресату не почтой. Письмо с почтой адресата, которое
+        не ушло (`letter.undelivered`), остаётся в «Исходящих», пока попытка отправки не завершится успехом или отправку не
+        снимут этим вызовом. Раздел `eds.inbox.register` (полный).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/EdsDocumentId'
+      responses:
+        '200':
+          description: Отправка снята
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdsDocument'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/EdsConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /eds/documents/{id}/send:
     post:
       tags: [eds-documents]
@@ -19035,8 +19064,9 @@ components:
     EdsDocumentRow:
       type: object
       additionalProperties: false
-      required: [kind, id, number, subject, status, author, amount, due_date, created_at, openable]
+      required: [kind, id, number, subject, status, author, amount, due_date, created_at, openable, undelivered]
       properties:
+        undelivered: {type: boolean, description: 'Исходящее письмо не ушло адресату (СЦ-1): строка остаётся в «Исходящих» с меткой «Не отправлено»'}
         kind: {$ref: '#/components/schemas/EdsRegistryKind'}
         id: {type: string, format: uuid}
         number: {type: [string, 'null'], description: 'Номер реестра EDS или КП ERP; `null` — письмо до отправки'}
@@ -19335,9 +19365,11 @@ components:
       type: object
       additionalProperties: false
       required:
-        [body, recipient_attention, recipient_email, signatory_name, signatory_position, pdf, mailings, registration_requested]
+        [body, recipient_attention, recipient_email, signatory_name, signatory_position, pdf, mailings, registration_requested, undelivered, mail_waived_at]
       description: Письмо на бланке (P4)
       properties:
+        undelivered: {type: boolean, description: 'Письмо с почтой адресата не ушло и отправку не сняли (СЦ-1): причина и действие — вверху карточки'}
+        mail_waived_at: {type: [string, 'null'], format: date-time, description: '«Вручено иначе» — когда сняли отправку почтой'}
         body: {oneOf: [{$ref: '#/components/schemas/EdsDocumentBody'}, {type: 'null'}], description: '`null` — письмо без бланка (только текст)'}
         recipient_attention: {type: [string, 'null']}
         recipient_email: {type: [string, 'null']}
@@ -19361,9 +19393,10 @@ components:
     EdsLetterhead:
       type: object
       additionalProperties: false
-      required: [configured, company_name, requisites, signatory_name, signatory_position, has_logo, updated_at]
+      required: [configured, company_name, requisites, signatory_name, signatory_position, has_logo, updated_at, mail_connected]
       description: Бланк компании (проекция ERP в EDS)
       properties:
+        mail_connected: {type: boolean, description: '`false` — почта документооборота не подключена: письмо зарегистрируется, но адресату не уйдёт; форма говорит это до отправки (СЦ-1)'}
         configured: {type: boolean, description: '`false` — бланк ещё не получен: PDF письма не строится'}
         company_name: {type: [string, 'null']}
         requisites:

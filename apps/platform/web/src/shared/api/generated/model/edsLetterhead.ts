@@ -7,6 +7,8 @@
  * Бланк компании (проекция ERP в EDS)
  */
 export interface EdsLetterhead {
+  /** `false` — почта документооборота не подключена: письмо зарегистрируется, но адресату не уйдёт; форма говорит это до отправки (СЦ-1) */
+  mail_connected: boolean;
   /** `false` — бланк ещё не получен: PDF письма не строится */
   configured: boolean;
   /** @nullable */

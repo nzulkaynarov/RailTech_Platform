@@ -23,6 +23,7 @@ import { StatusTag } from "../../../shared/ui/StatusTag";
 import { reasonText } from "./errors";
 import { LetterSection } from "./LetterSection";
 import { DocumentStatusTag } from "./status";
+import { UndeliveredBanner } from "./UndeliveredBanner";
 
 import "./documents.css";
 
@@ -221,8 +222,8 @@ function Text({ doc }: { doc: EdsDocument }) {
 function Body({ doc, sheet, onClose }: { doc: EdsDocument; sheet: boolean; onClose: () => void }) {
   const { t } = useTranslation("documents");
   const isLetter = doc.kind === "letter_out";
-  // EDS-REPLY-1: последняя отправка адресату не удалась — метка рядом со статусом («Отправить ещё раз» — в разделе письма)
-  const mailFailed = doc.status === "sent" && doc.letter?.mailings.at(-1)?.status === "failed";
+  // СЦ-1: письмо не ушло адресату — метка рядом со статусом, причина и действие — плашкой сразу под заголовком
+  const mailFailed = doc.letter?.undelivered === true;
   return (
     <div className="pf-fp-stack">
       <div className="pf-fp-stack" style={{ gap: 8 }}>
@@ -237,6 +238,7 @@ function Body({ doc, sheet, onClose }: { doc: EdsDocument; sheet: boolean; onClo
           {mailFailed ? <StatusTag tone="red">{t("panel.mailFailed")}</StatusTag> : null}
         </div>
       </div>
+      <UndeliveredBanner doc={doc} />
       <Details doc={doc} />
       <Text doc={doc} />
       {isLetter ? <LetterSection doc={doc} /> : null}

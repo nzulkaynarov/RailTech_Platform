@@ -29,7 +29,7 @@ from app.schemas.documents import (
 from app.schemas.pagination import Cursor, Limit
 from app.schemas.registry import RegistryStage
 from app.security.permissions import EdsPermission as P
-from app.services import documents, documents_read, idempotency, letterhead, payments, renders
+from app.services import documents, documents_read, idempotency, letter_mail, letterhead, payments, renders
 from app.services.storage import ObjectStorage
 
 router = APIRouter(prefix="/api/v1", tags=["documents"])
@@ -234,10 +234,13 @@ async def waive_document_mail(document_id: uuid.UUID, employee: Registrar, sessi
 
 
 @router.get("/letterhead", response_model=LetterheadOut, operation_id="getLetterhead")
-async def get_letterhead(employee: AnyEmployee, session: Session) -> LetterheadOut:
+async def get_letterhead(employee: AnyEmployee, session: Session, bus: Bus) -> LetterheadOut:
+    # Условие отправки известно до действия (`ui-standard.md` §14 п. 2): форма письма предупреждает заранее.
+    mail_connected = letter_mail.connected(bus)
     row = await letterhead.current(session)
     if row is None:
         return LetterheadOut(
+            mail_connected=mail_connected,
             configured=False,
             company_name=None,
             requisites=[],
@@ -254,6 +257,7 @@ async def get_letterhead(employee: AnyEmployee, session: Session) -> LetterheadO
         signatory_position=row.signatory_position or None,
         has_logo=row.logo_sha256 is not None,
         updated_at=row.updated_at,
+        mail_connected=mail_connected,
     )
 
 

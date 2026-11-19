@@ -25,7 +25,8 @@ import { LetterPdfPanel } from "./LetterPdfPanel";
 import { useRefreshDocuments } from "./params";
 
 function mailingState(status: EdsDocumentMailing["status"]): HistoryItem["state"] {
-  if (status === "sent" || status === "failed") return "done";
+  if (status === "sent") return "done";
+  if (status === "failed") return "failed"; // у неудачи — красный крестик, не зелёная галочка (СЦ-1)
   return "waiting";
 }
 
@@ -280,7 +281,8 @@ export function LetterSection({ doc }: { doc: EdsDocument }) {
             {t("panel.letter.handover")}
           </Button>
         ) : null}
-        {doc.status === "sent" && canRegisterRole && email && letter.body ? (
+        {/* Недоставленному письму «Отправить ещё раз» — в плашке вверху карточки (СЦ-1); здесь — повтор доставленного */}
+        {doc.status === "sent" && canRegisterRole && email && letter.body && !letter.undelivered ? (
           <Button
             loading={busy === "send"}
             disabled={busy !== null || mailBusy}

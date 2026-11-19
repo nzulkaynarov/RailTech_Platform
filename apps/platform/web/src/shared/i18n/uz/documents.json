@@ -220,7 +220,15 @@
       "unmatched": "Manzil matn bilan yozilgan. «Davom ettirish»ni bosing va tashkilotni kontragentlardan tanlang — ungaça xat röyxatdan ötkazilmaydi."
     },
     "replyTo": "Javob:",
-    "mailFailed": "Yuborilmadi"
+    "mailFailed": "Yuborilmadi",
+    "undelivered": {
+      "title": "Xat adresatga yetib bormadi",
+      "notTried": "Xat röyxatga olingan, lekin adresatga hali yuborilmagan.",
+      "inProgress": "Xat adresatga yuborilmoqda — natija şu yerda körinadi.",
+      "waive": "Boşqa yöl bilan topşirildi",
+      "waived": "Belgilandi: xat boşqa yöl bilan topşirildi",
+      "byRegistrar": "Qayta yuborişni iş yurituvçi bajaradi."
+    }
   },
   "form": {
     "subtitle": "Hujjat direktorga kelishish uchun yuboriladi. Qoralamani saqlab, keyinroq «Hujjatlar»da davom ettirish mumkin.",
@@ -409,7 +417,8 @@
     },
     "email": {
       "label": "Manzil e-pochtasi",
-      "hint": "Ixtiyoriy. E-pochta bo‘lsa, xat ro‘yxatga olingach blankdagi PDF bilan darhol yuboriladi."
+      "hint": "Ixtiyoriy. E-pochta bo‘lsa, xat ro‘yxatga olingach blankdagi PDF bilan darhol yuboriladi.",
+      "notConnected": "Hujjat aylanişi poçtasi ulanmagan: xat röyxatga olinadi, lekin adresatga yuborilmaydi. Administratorga xabar bering."
     },
     "body": {
       "label": "Matn",

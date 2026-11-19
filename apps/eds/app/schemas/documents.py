@@ -103,6 +103,8 @@ class LetterheadOut(BaseModel):
     signatory_position: str | None
     has_logo: bool
     updated_at: dt.datetime | None
+    #: Почта документооборота подключена: письмо можно отправить адресату (СЦ-1, условие до действия)
+    mail_connected: bool = False
 
 
 class DocumentCreate(Strict):

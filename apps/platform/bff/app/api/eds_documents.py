@@ -389,6 +389,18 @@ async def send_document(id: DocumentId, authed: Registrar) -> EdsDocument:
 
 
 @router.post(
+    "/eds/documents/{id}/mail-waive",
+    response_model=EdsDocument,
+    operation_id="waiveEdsDocumentMail",
+)
+async def waive_document_mail(id: DocumentId, authed: Registrar) -> EdsDocument:
+    """«Вручено иначе» (СЦ-1): письмо передано адресату не почтой — уходит в «Архив»."""
+    proxy = _proxy(authed)
+    body = await proxy.request("POST", f"{API}/documents/{id}/mail-waive")
+    return await _present(proxy, body, authed, registrar=True)
+
+
+@router.post(
     "/eds/documents/{id}/sign",
     response_model=EdsDocument,
     operation_id="signEdsDocument",

@@ -103,6 +103,8 @@ class EdsDocumentRow(BaseModel):
     created_at: datetime
     openable: bool
     project_ref: str | None = None
+    #: Исходящее письмо не ушло адресату и отправку не сняли (СЦ-1): остаётся в «Исходящих»
+    undelivered: bool = False
 
 
 class EdsDocumentPage(BaseModel):
@@ -192,6 +194,10 @@ class EdsLetter(BaseModel):
     pdf: EdsDocumentPdf | None
     mailings: list[EdsDocumentMailing]
     registration_requested: EdsRegistrationRequest | None
+    #: Письмо не ушло адресату (СЦ-1): плашка с причиной и действием вверху карточки
+    undelivered: bool = False
+    #: «Вручено иначе» — когда сотрудник снял отправку почтой
+    mail_waived_at: datetime | None = None
 
 
 class EdsLetterhead(BaseModel):
@@ -202,6 +208,8 @@ class EdsLetterhead(BaseModel):
     signatory_position: str | None
     has_logo: bool
     updated_at: datetime | None
+    #: Почта документооборота подключена (СЦ-1); старая EDS поля не знает — считаем подключённой
+    mail_connected: bool = True
 
 
 class EdsReplyTo(BaseModel):

@@ -2126,6 +2126,7 @@ export const getListEdsDocumentsResponseMock = (
   overrideResponse: Partial<Extract<EdsDocumentPage, object>> = {},
 ): EdsDocumentPage => ({
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    undelivered: faker.datatype.boolean(),
     kind: faker.helpers.arrayElement(Object.values(EdsRegistryKind)),
     id: faker.string.uuid(),
     number: faker.helpers.arrayElement([
@@ -2246,6 +2247,11 @@ export const getCreateEdsDocumentResponseEdsLetterMock = (
   overrideResponse: Partial<EdsLetter> = {},
 ): EdsLetter => ({
   ...{
+    undelivered: faker.datatype.boolean(),
+    mail_waived_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
     body: faker.helpers.arrayElement([
       { ...getCreateEdsDocumentResponseEdsDocumentBodyMock() },
       null,
@@ -2537,6 +2543,11 @@ export const getGetEdsDocumentResponseEdsLetterMock = (
   overrideResponse: Partial<EdsLetter> = {},
 ): EdsLetter => ({
   ...{
+    undelivered: faker.datatype.boolean(),
+    mail_waived_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
     body: faker.helpers.arrayElement([{ ...getGetEdsDocumentResponseEdsDocumentBodyMock() }, null]),
     recipient_attention: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -2810,6 +2821,11 @@ export const getUpdateEdsDocumentResponseEdsLetterMock = (
   overrideResponse: Partial<EdsLetter> = {},
 ): EdsLetter => ({
   ...{
+    undelivered: faker.datatype.boolean(),
+    mail_waived_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
     body: faker.helpers.arrayElement([
       { ...getUpdateEdsDocumentResponseEdsDocumentBodyMock() },
       null,
@@ -6799,6 +6815,11 @@ export const getRequestEdsDocumentRegistrationResponseEdsLetterMock = (
   overrideResponse: Partial<EdsLetter> = {},
 ): EdsLetter => ({
   ...{
+    undelivered: faker.datatype.boolean(),
+    mail_waived_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
     body: faker.helpers.arrayElement([
       { ...getRequestEdsDocumentRegistrationResponseEdsDocumentBodyMock() },
       null,
@@ -7010,6 +7031,308 @@ export const getRequestEdsDocumentRegistrationResponseMock = (
   ...overrideResponse,
 });
 
+export const getWaiveEdsDocumentMailResponseEdsPersonMock = (
+  overrideResponse: Partial<EdsPerson> = {},
+): EdsPerson => ({
+  ...{
+    crm_user_id: faker.number.int(),
+    full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getWaiveEdsDocumentMailResponseEdsMoneyMock = (
+  overrideResponse: Partial<EdsMoney> = {},
+): EdsMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^\\d+\\.\\d{2}$"),
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  ...overrideResponse,
+});
+
+export const getWaiveEdsDocumentMailResponseEdsDealRefMock = (
+  overrideResponse: Partial<EdsDealRef> = {},
+): EdsDealRef => ({
+  ...{
+    erp_deal_id: faker.number.int(),
+    number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getWaiveEdsDocumentMailResponseEdsRecipientMock = (
+  overrideResponse: Partial<EdsRecipient> = {},
+): EdsRecipient => ({
+  ...{
+    name: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 255 } }), null]),
+    inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 32 } }), null]),
+    company_id: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    contact_id: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getWaiveEdsDocumentMailResponseEdsReplyToMock = (
+  overrideResponse: Partial<EdsReplyTo> = {},
+): EdsReplyTo => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getWaiveEdsDocumentMailResponseEdsDocumentBodyMock = (
+  overrideResponse: Partial<EdsDocumentBody> = {},
+): EdsDocumentBody => ({
+  ...{
+    version: 1,
+    lang: faker.helpers.arrayElement(["ru", "uz", "en"] as const),
+    page: faker.helpers.arrayElement([{}, undefined]),
+    doc: {},
+  },
+  ...overrideResponse,
+});
+
+export const getWaiveEdsDocumentMailResponseEdsDocumentPdfMock = (
+  overrideResponse: Partial<EdsDocumentPdf> = {},
+): EdsDocumentPdf => ({
+  ...{
+    status: faker.helpers.arrayElement(["pending", "ready", "failed"] as const),
+    final: faker.datatype.boolean(),
+    error: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    pages: faker.helpers.arrayElement([faker.number.int({ min: 1 }), null]),
+    requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    ready_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getWaiveEdsDocumentMailResponseEdsLetterMock = (
+  overrideResponse: Partial<EdsLetter> = {},
+): EdsLetter => ({
+  ...{
+    undelivered: faker.datatype.boolean(),
+    mail_waived_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    body: faker.helpers.arrayElement([
+      { ...getWaiveEdsDocumentMailResponseEdsDocumentBodyMock() },
+      null,
+    ]),
+    recipient_attention: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    recipient_email: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    signatory_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    signatory_position: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    pdf: faker.helpers.arrayElement([
+      { ...getWaiveEdsDocumentMailResponseEdsDocumentPdfMock() },
+      null,
+    ]),
+    mailings: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.string.uuid(),
+        to: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+        ),
+        status: faker.helpers.arrayElement([
+          "awaiting_pdf",
+          "requested",
+          "sent",
+          "failed",
+        ] as const),
+        reason: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        requested_by: faker.helpers.arrayElement([
+          { ...getWaiveEdsDocumentMailResponseEdsPersonMock() },
+          null,
+        ]),
+        requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+        finished_at: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 19) + "Z",
+          null,
+        ]),
+      }),
+    ),
+    registration_requested: faker.helpers.arrayElement([
+      {
+        by: {
+          crm_user_id: faker.number.int(),
+          full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      },
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getWaiveEdsDocumentMailResponseMock = (
+  overrideResponse: Partial<Extract<EdsDocument, object>> = {},
+): EdsDocument => ({
+  id: faker.string.uuid(),
+  kind: faker.helpers.arrayElement(Object.values(EdsDocumentKind)),
+  number: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  status: faker.helpers.arrayElement([
+    "draft",
+    "on_approval",
+    "returned",
+    "rejected",
+    "approved",
+    "to_accountant",
+    "paid",
+    "sent",
+  ] as const),
+  version: faker.number.int({ min: 1 }),
+  subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  author: {
+    crm_user_id: faker.number.int(),
+    full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  addressee: faker.helpers.arrayElement([
+    { ...getWaiveEdsDocumentMailResponseEdsPersonMock() },
+    null,
+  ]),
+  approvers: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      crm_user_id: faker.number.int(),
+      full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    })),
+    undefined,
+  ]),
+  watchers: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      crm_user_id: faker.number.int(),
+      full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    })),
+    undefined,
+  ]),
+  amount: faker.helpers.arrayElement([{ ...getWaiveEdsDocumentMailResponseEdsMoneyMock() }, null]),
+  due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.uuid(),
+    name: faker.string.alpha({ length: { min: 10, max: 255 } }),
+    content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    size: faker.number.int({ min: 0 }),
+  })),
+  deal: faker.helpers.arrayElement([{ ...getWaiveEdsDocumentMailResponseEdsDealRefMock() }, null]),
+  recipient: faker.helpers.arrayElement([
+    { ...getWaiveEdsDocumentMailResponseEdsRecipientMock() },
+    null,
+  ]),
+  route: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    label: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "pending",
+      "current",
+      "approved",
+      "returned",
+      "rejected",
+      "skipped",
+    ] as const),
+    decided_by: faker.helpers.arrayElement([
+      { ...getWaiveEdsDocumentMailResponseEdsPersonMock() },
+      null,
+    ]),
+    decided_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    comment: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  })),
+  decisions: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      round: faker.number.int({ min: 1 }),
+      step: faker.number.int({ min: 1 }),
+      decision: faker.helpers.arrayElement(["approve", "return", "reject"] as const),
+      comment: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      by: {
+        crm_user_id: faker.number.int(),
+        full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    }),
+  ),
+  can_edit: faker.datatype.boolean(),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  in_reply_to: faker.helpers.arrayElement([
+    { ...getWaiveEdsDocumentMailResponseEdsReplyToMock() },
+    null,
+  ]),
+  letter: faker.helpers.arrayElement([{ ...getWaiveEdsDocumentMailResponseEdsLetterMock() }, null]),
+  can_register: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  can_request_registration: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  signed_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+  signed_by: faker.helpers.arrayElement([
+    { ...getWaiveEdsDocumentMailResponseEdsPersonMock() },
+    null,
+  ]),
+  signing_authority_id: faker.helpers.arrayElement([faker.string.uuid(), null]),
+  signatory_basis: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["charter", "order", "power_of_attorney"] as const),
+    null,
+  ]),
+  signatory_basis_text: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  acting_for: faker.helpers.arrayElement([
+    { ...getWaiveEdsDocumentMailResponseEdsPersonMock() },
+    null,
+  ]),
+  verification_code: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  verification_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  dispatch_method: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["email", "paper", "courier", "edo", "other"] as const),
+    null,
+  ]),
+  can_sign: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  ...overrideResponse,
+});
+
 export const getSendEdsDocumentResponseEdsPersonMock = (
   overrideResponse: Partial<EdsPerson> = {},
 ): EdsPerson => ({
@@ -7105,6 +7428,11 @@ export const getSendEdsDocumentResponseEdsLetterMock = (
   overrideResponse: Partial<EdsLetter> = {},
 ): EdsLetter => ({
   ...{
+    undelivered: faker.datatype.boolean(),
+    mail_waived_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
     body: faker.helpers.arrayElement([
       { ...getSendEdsDocumentResponseEdsDocumentBodyMock() },
       null,
@@ -7390,6 +7718,11 @@ export const getSignEdsDocumentResponseEdsLetterMock = (
   overrideResponse: Partial<EdsLetter> = {},
 ): EdsLetter => ({
   ...{
+    undelivered: faker.datatype.boolean(),
+    mail_waived_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
     body: faker.helpers.arrayElement([
       { ...getSignEdsDocumentResponseEdsDocumentBodyMock() },
       null,
@@ -7583,6 +7916,7 @@ export const getSignEdsDocumentResponseMock = (
 export const getGetEdsLetterheadResponseMock = (
   overrideResponse: Partial<Extract<EdsLetterhead, object>> = {},
 ): EdsLetterhead => ({
+  mail_connected: faker.datatype.boolean(),
   configured: faker.datatype.boolean(),
   company_name: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -36490,6 +36824,30 @@ export const getRequestEdsDocumentRegistrationMockHandler = (
   );
 };
 
+export const getWaiveEdsDocumentMailMockHandler = (
+  overrideResponse?:
+    | EdsDocument
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<EdsDocument> | EdsDocument),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/documents/:id/mail-waive",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getWaiveEdsDocumentMailResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getSendEdsDocumentMockHandler = (
   overrideResponse?:
     | EdsDocument
@@ -45258,6 +45616,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getDownloadEdsTemplatePreviewMockHandler(),
   getDownloadEdsDocumentPdfMockHandler(),
   getRequestEdsDocumentRegistrationMockHandler(),
+  getWaiveEdsDocumentMailMockHandler(),
   getSendEdsDocumentMockHandler(),
   getSignEdsDocumentMockHandler(),
   getGetEdsLetterheadMockHandler(),

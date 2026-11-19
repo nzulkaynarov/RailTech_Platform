@@ -181,6 +181,32 @@ describe("EDS · Создать документ: форма", () => {
     expect(screen.getByRole("region", { name: "PDF на бланке" })).toBeVisible();
   });
 
+  it("СЦ-1: почта документооборота не подключена — форма говорит это до отправки, кнопка не обещает отправку", async () => {
+    server.use(
+      http.get("*/eds/letterhead", () =>
+        HttpResponse.json({
+          configured: true,
+          company_name: "ООО «Демо»",
+          requisites: [],
+          signatory_name: null,
+          signatory_position: null,
+          has_logo: false,
+          updated_at: null,
+          mail_connected: false,
+        }),
+      ),
+    );
+    await openForm("director@demo.example", "?type=letter");
+
+    expect(
+      await screen.findByText(/Почта документооборота не подключена: письмо зарегистрируется/),
+    ).toBeVisible();
+    type("Почта адресата", "gni@example.uz");
+    step(/Проверка и отправка/);
+    expect(screen.getByRole("button", { name: "Зарегистрировать письмо" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Зарегистрировать и отправить" })).toBeNull();
+  });
+
   it("помощник письма (план 1.4): «Подготовить текст» вставляет черновик, «Перевести на английский» — с обратным переводом", async () => {
     await openForm("director@demo.example", "?type=letter");
     step(/Текст и вложения/);

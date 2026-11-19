@@ -311,6 +311,10 @@ tr > td.pf-col-num {
   border-color: var(--rt-color-success-text);
   background: var(--rt-color-success-text);
 }
+.pf-history-dot--failed {
+  border-color: var(--rt-color-error-text);
+  background: var(--rt-color-error-text);
+}
 .pf-history-dot--waiting {
   border-color: var(--rt-color-primary-default);
   background: var(--rt-color-primary-bg);

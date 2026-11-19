@@ -492,3 +492,17 @@ async def test_letter_without_pair_stays_in_outgoing_until_waived(
     assert waived.json()["letter"]["undelivered"] is False and waived.json()["letter"]["mail_waived_at"]
     assert "document.mail_waived" in [entry["action"] for entry in waived.json()["journal"]]
     assert await in_stage("done") and not await in_stage("open")
+
+
+async def test_letterhead_tells_whether_mail_is_connected(
+    client: httpx.AsyncClient, staff: dict[str, Person], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """СЦ-1, условие до действия: без секрета пары письмо адресату не уйдёт — форма узнаёт это заранее."""
+    seen = await client.get("/api/v1/letterhead", headers=staff["manager"].headers)
+    assert seen.status_code == 200, seen.text
+    validate("Letterhead", seen.json())
+    assert seen.json()["mail_connected"] is False
+
+    monkeypatch.setenv("RT_BUS_SECRET_EDS_CRM", PAIR)
+    again = await client.get("/api/v1/letterhead", headers=staff["manager"].headers)
+    assert again.json()["mail_connected"] is True

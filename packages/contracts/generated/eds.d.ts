@@ -3223,6 +3223,8 @@ export interface components {
     };
     /** @description Бланк компании — проекция события ERP `letterhead.updated` (P4) */
     Letterhead: {
+      /** @description Почта документооборота подключена (есть секрет пары `eds → crm`); `false` — письмо зарегистрируется, но адресату не уйдёт (СЦ-1) */
+      mail_connected: boolean;
       /** @description `false` — бланк из ERP ещё не получен: PDF письма не строится (409 `letterhead_missing`), пока админ не сохранит «Компания и бланки» */
       configured: boolean;
       company_name: string | null;

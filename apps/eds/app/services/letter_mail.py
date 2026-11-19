@@ -23,7 +23,7 @@ from app import clock
 from app.errors import conflict, invalid_fields
 from app.models import Document, DocumentMailing, DocumentRender
 from app.services import journal, letterhead, reply
-from app.services.mail_out import LinkedAttachment, MailRequestError, request_mail
+from app.services.mail_out import MAIL_SERVICE, REQUESTER, LinkedAttachment, MailRequestError, request_mail
 from app.services.storage import ObjectStorage
 
 log = structlog.get_logger(__name__)
@@ -44,6 +44,11 @@ _REASONS: Final = {
 # Текст для сотрудника — без названий сервисов и переменных (`ui-standard.md` §14 п. 4); подробность — в логе.
 NO_PAIR: Final = "Почта документооборота не подключена — сообщите администратору"
 NO_PDF: Final = "PDF письма не построен: "
+
+
+def connected(bus: AsyncBus) -> bool:
+    """Почта документооборота подключена: у пары «документооборот → почтовый сервис» есть секрет."""
+    return bool(bus.config.secrets(REQUESTER, MAIL_SERVICE))
 
 
 def reason_text(code: str) -> str:

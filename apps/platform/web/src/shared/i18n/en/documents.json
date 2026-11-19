@@ -220,7 +220,15 @@
       "unmatched": "The addressee is typed as text. Click “Continue” and pick the organization from counterparties — until then the letter can’t be registered."
     },
     "replyTo": "In reply to",
-    "mailFailed": "Not sent"
+    "mailFailed": "Not sent",
+    "undelivered": {
+      "title": "The letter did not reach the addressee",
+      "notTried": "The letter is registered but has not been sent to the addressee yet.",
+      "inProgress": "The letter is being sent — the result will appear here.",
+      "waive": "Delivered another way",
+      "waived": "Marked: delivered another way",
+      "byRegistrar": "The records clerk can send it again."
+    }
   },
   "form": {
     "subtitle": "The document goes to the director for approval. You can save a draft and continue later in “Documents”.",
@@ -409,7 +417,8 @@
     },
     "email": {
       "label": "Addressee email",
-      "hint": "Optional. With an email, the letter goes to the addressee with the letterhead PDF right after registration."
+      "hint": "Optional. With an email, the letter goes to the addressee with the letterhead PDF right after registration.",
+      "notConnected": "Document mail is not connected: the letter will be registered but will not reach the addressee. Tell the administrator."
     },
     "body": {
       "label": "Text",
