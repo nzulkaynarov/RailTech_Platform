@@ -293,3 +293,30 @@ async def test_patch_me_waits_for_the_temporary_password_to_be_changed(
     headers = login(client, employee.email, temporary)
     response = client.patch("/api/v1/me", headers=headers, json={"language": "uz"})
     assert response.status_code == 403
+
+
+async def test_staff_directory_names_everyone_with_photo_version_and_nothing_private(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    """СУЩ-3: справочник «кто сделал» — любому сотруднику; отключённый остаётся с пометкой."""
+    manager, password = await make_user(sessions, "dilshod@railtech.uz", ["manager"])
+    gone, _ = await make_user(sessions, "aziz@railtech.uz", ["manager"])
+    svc, _ = service(sessions)
+    view = await svc.set_avatar(Actor(manager.id), manager.id, PNG, "image/png")
+    async with sessions() as session, session.begin():
+        user = await session.get(User, gone.id)
+        assert user is not None
+        user.is_active = False
+
+    assert client.get("/api/v1/staff").status_code == 401
+    rows = {
+        row["id"]: row
+        for row in client.get(
+            "/api/v1/staff", headers=login(client, manager.email, password)
+        ).json()
+    }
+
+    assert rows[manager.id]["avatar_version"] == view.avatar_version
+    assert rows[gone.id]["is_active"] is False
+    assert rows[gone.id]["avatar_version"] is None
+    assert set(rows[manager.id]) == {"id", "full_name", "position", "avatar_version", "is_active"}

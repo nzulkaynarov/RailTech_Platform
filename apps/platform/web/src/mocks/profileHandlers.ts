@@ -9,7 +9,7 @@ import type {
   ResetPasswordIn,
 } from "../shared/api/generated/model";
 import { readEmployees, writeEmployees } from "./fixtures/employees";
-import { findUserById } from "./fixtures/users";
+import { allUsers, findUserById } from "./fixtures/users";
 import { buildMe, readSession, sessionRoles, updateSession } from "./mockSession";
 import {
   TELEGRAM_CONFIRM_KEY,
@@ -246,6 +246,20 @@ export const profileHandlers = [
     const session = readSession();
     const me = session ? buildMe(session) : undefined;
     return me ? HttpResponse.json(me) : expired();
+  }),
+
+  // СУЩ-3: справочник сотрудников — фото и должность для ссылки «кто сделал»
+  http.get("*/staff", () => {
+    if (!currentUserId()) return expired();
+    return HttpResponse.json({
+      items: allUsers().map((user) => ({
+        id: user.id,
+        name: nameOf(user.id),
+        position: user.position || null,
+        avatar_url: avatarUrlOf(user.id) ?? null,
+        active: true,
+      })),
+    });
   }),
 
   http.get("*/staff/:id/avatar", ({ params }) => {
