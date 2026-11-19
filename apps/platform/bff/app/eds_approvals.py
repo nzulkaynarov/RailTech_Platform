@@ -21,6 +21,7 @@ from urllib.parse import quote
 from pydantic import ValidationError
 
 from app.deps import Authed
+from app.doc_numbers import DOC_NUMBER_RE
 from app.eds_documents import API, EdsProxy, eds_error
 from app.errors import PlatformError, backend_code, from_backend
 from app.feeds.feed import Feed
@@ -68,9 +69,9 @@ from app.schemas_item_ref import item_ref
 UUID_RE = re.compile(
     r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
 )
-# Номер КП: ERP (`КП-2026-00001`, с префиксом продавца — `ACME-КП-2026-00001`) и вид `КП-2026/115`.
-QUOTE_NUMBER_RE = re.compile(r"^(?:[\w.]+-)?КП-\d{4}[-/]\d+$")
-MEMO_NUMBER_RE = re.compile(r"^(СЗ|ЗЯ|ОТ)-\d{4}/\d+$")
+# Номер КП и служебной записки — без разбора префикса (`app.doc_numbers`): вид решает реестр.
+QUOTE_NUMBER_RE = DOC_NUMBER_RE
+MEMO_NUMBER_RE = DOC_NUMBER_RE
 
 # Поля снимка КП и чек-листа с экономикой: без группы `cost_margin` вырезаются до разбора.
 MARGIN_RULES = {"cost_margin": ("cost", "margin_amount", "margin_pct", "min_margin_pct")}

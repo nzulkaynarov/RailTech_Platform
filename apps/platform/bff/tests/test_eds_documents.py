@@ -583,6 +583,24 @@ async def test_letter_in_reply_to_an_incoming_letter_sends_its_id(web: Web, eds:
     assert eds.last("GET", "registry").url.params["number"] == "ВХ-112/26"
 
 
+async def test_reply_to_a_latin_incoming_number(web: Web, eds: EdsFake) -> None:
+    """СЦ-2: «В ответ на» входящее `IN-019/26` — номер ищется как есть, префикс не разбирается."""
+    await web.login(["MANAGER"])
+    eds.answer(
+        "GET",
+        "registry",
+        body={
+            "items": [{"kind": "letter_in", "id": REPLY_TO_ID, "number": "IN-019/26"}],
+            "next_cursor": None,
+        },
+    )
+    form = {**FORM, "kind": "letter_out", "in_reply_to_number": "IN-019/26"}
+    form.pop("amount")
+
+    assert (await web.send("POST", f"{BASE}/documents", json=form)).status_code == 201
+    assert eds.body("POST", "documents")["in_reply_to"] == REPLY_TO_ID
+
+
 async def test_reply_to_an_unknown_number_or_not_a_letter_is_422(web: Web, eds: EdsFake) -> None:
     await web.login(["MANAGER"])
     eds.answer("GET", "registry", body={"items": [], "next_cursor": None})

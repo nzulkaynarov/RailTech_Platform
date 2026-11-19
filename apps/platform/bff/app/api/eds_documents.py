@@ -24,6 +24,7 @@ from starlette.types import Send
 from app.clients.eds import EdsLetters
 from app.clients.erp_company import counterparty_snapshot
 from app.deps import Authed, Rule, require, require_any
+from app.doc_numbers import DOC_NUMBER_RE as NUMBER_RE
 from app.eds_documents import (
     API,
     EdsProxy,
@@ -58,7 +59,6 @@ from app.schemas_eds_documents import (
     RegistryKind,
     StatusFilter,
 )
-from app.schemas_eds_letters import NUMBER_RE
 
 router = APIRouter(tags=["eds-documents"])
 
