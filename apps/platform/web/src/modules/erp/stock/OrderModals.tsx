@@ -1,5 +1,6 @@
 import { App, Button, Input, InputNumber, Skeleton } from "antd";
 import { Dialog } from "../../../shared/ui/Dialog";
+import { useFormat } from "../../../shared/lib/useFormat";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -15,7 +16,7 @@ import {
 import { DateField } from "../../../shared/ui/DateField";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { FormSheet } from "../../../shared/ui/FormSheet";
-import { clean, useErrorText, useRefreshStock } from "./api";
+import { clean, useErrorText, useRefreshStock, withUnit } from "./api";
 import { EMPTY_TRACE, type TraceDraft, needsTracking, traceFields, traceProblem } from "./trace";
 import { ReceiveTracking } from "./Tracking";
 
@@ -232,6 +233,7 @@ export function ReceiveModal({
   onClose: () => void;
 }) {
   const { t } = useTranslation("stock");
+  const { qty } = useFormat();
   const docId = useId();
   const action = useAction("order.notice.received");
   const query = useGetSupplierOrder(ref(number));
@@ -295,7 +297,10 @@ export function ReceiveModal({
                   <div>
                     <strong>{l.name}</strong>
                     <div className="pf-hint">
-                      {t("order.receive.left", { left, total: l.quantity })}
+                      {t("order.receive.left", {
+                        left: qty(left),
+                        total: withUnit(qty(l.quantity), l.unit),
+                      })}
                     </div>
                   </div>
                   <InputNumber

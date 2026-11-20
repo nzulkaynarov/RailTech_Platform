@@ -17,7 +17,7 @@ import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTab
 import { History, type HistoryItem } from "../../../shared/ui/History";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { PageHeader } from "../../../shared/ui/PageHeader";
-import { useStateLabels } from "./api";
+import { useStateLabels, withUnit } from "./api";
 import { OrderStatusTag } from "./OrdersTab";
 import { CancelModal, ConfirmModal, EditModal, ReceiveModal, SendModal } from "./OrderModals";
 import { MoneyText } from "../../../shared/ui/MoneyText";
@@ -62,7 +62,7 @@ function OfferNote({
 
 function Lines({ order }: { order: SupplierOrderDetail }) {
   const { t } = useTranslation("stock");
-  const { number } = useFormat();
+  const { qty } = useFormat();
   const priced = order.lines.some((l) => l.unit_price !== null);
   type Line = SupplierOrderDetail["lines"][number];
   const columns: DataColumn<Line>[] = [
@@ -95,14 +95,14 @@ function Lines({ order }: { order: SupplierOrderDetail }) {
       header: t("order.lines.quantity"),
       width: 120,
       numeric: true,
-      cell: (l) => `${number(l.quantity)} ${l.unit}`,
+      cell: (l) => withUnit(qty(l.quantity), l.unit),
     },
     {
       id: "received",
       header: t("order.lines.received"),
       width: 110,
       numeric: true,
-      cell: (l) => number(l.received_quantity),
+      cell: (l) => withUnit(qty(l.received_quantity), l.unit),
     },
     ...(priced
       ? [
@@ -162,7 +162,10 @@ function Receipts({ order }: { order: SupplierOrderDetail }) {
         <li key={r.id}>
           <span>
             {r.lines
-              .map((l) => `${l.name} · ${qty(l.quantity)}${l.cell ? ` (${l.cell})` : ""}`)
+              .map((l) => {
+                const unit = order.lines.find((x) => x.id === l.order_line_id)?.unit;
+                return `${l.name} · ${withUnit(qty(l.quantity), unit)}${l.cell ? ` (${l.cell})` : ""}`;
+              })
               .join("; ")}
             {r.supplier_doc ? (
               <span className="pf-hint"> · {t("order.receipts.doc", { doc: r.supplier_doc })}</span>
