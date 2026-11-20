@@ -580,6 +580,10 @@ export const handlers = [
       async ({ db, request }) => {
         const body = await readJson<Schemas['ClientRequestCreate']>(request);
         if (!validRequestBody(body)) return error(422, 'VALIDATION_ERROR');
+        // Как ERP (СЦ-10): только свои непривязанные загрузки; привязанная к заявке повторно не используется.
+        const refs = body.attachments ?? [];
+        if (refs.some((ref) => !db.uploads.has(ref.upload_id))) return error(422, 'UPLOAD_NOT_FOUND');
+        for (const ref of refs) db.uploads.delete(ref.upload_id);
         const nextId = Math.max(500, ...db.requests.map((item) => item.id)) + 1;
         const created: Schemas['ClientRequest'] = {
           id: nextId,
