@@ -7,11 +7,13 @@ viewer's side is «staff of the own company» vs «member of the client company�
 
 from datetime import datetime
 
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from crm.models import Deal
 
 from .quote import QuoteSerializer
+from .request_files import RequestFileSerializer
 
 
 def _authenticated_user(request):
@@ -171,6 +173,7 @@ class DealDetailSerializer(serializers.ModelSerializer):
     # FIX-67: сколько строк в заявке клиента и её текст — от них зависят кнопки карточки заявки.
     request_lines_count = serializers.SerializerMethodField()
     request_text = serializers.SerializerMethodField()
+    request_files = serializers.SerializerMethodField()
 
     def get_viewer_is_seller(self, obj) -> bool:
         return _viewer_is_seller(obj, self.context.get("request"))
@@ -198,6 +201,13 @@ class DealDetailSerializer(serializers.ModelSerializer):
         from crm.services.draft_quote import deal_request_text
 
         return deal_request_text(obj)
+
+    @extend_schema_field(RequestFileSerializer(many=True))
+    def get_request_files(self, obj) -> list:
+        """Файлы заявки клиента (СЦ-10): исходники заявки на сделке — имя и дата, скачивание отдельным адресом."""
+        from crm.services.draft_quote import deal_request_files
+
+        return RequestFileSerializer(deal_request_files(obj), many=True).data
 
     def get_execution_complete(self, obj) -> bool:
         """Исполнение закрыто целиком (оплата + поставка + акт) — НЕ то же, что «сделка выиграна».
@@ -238,6 +248,7 @@ class DealDetailSerializer(serializers.ModelSerializer):
             "execution_complete",
             "request_lines_count",
             "request_text",
+            "request_files",
             "created_at",
             "updated_at",
         ]

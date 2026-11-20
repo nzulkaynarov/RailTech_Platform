@@ -51,7 +51,12 @@ def test_request_goes_to_the_supplier_and_is_journaled(world):
         ("Болт путевой М22", 100),
     ]
     (message,) = mail.outbox
-    assert message.to == ["sales@vendor.example"] and deal.number in message.subject
+    assert message.to == ["sales@vendor.example"]
+    # СЦ-10: партнёр видит, что запрашиваем, а не номер нашего проекта
+    assert message.subject == "Запрос цены и срока поставки — Перевод стрелочный Р65 1/11 и ещё 1 позиция"
+    assert deal.number not in message.subject and deal.number not in message.body
+    assert deal.number not in message.alternatives[0][0]
+    assert PriceRequest.objects.get(pk=body["id"]).subject == message.subject, "та же тема — в кабинете партнёра"
     assert message.reply_to == ["supply@demo.test"]
     assert "Нужны сертификаты" in message.body and "Болт путевой М22" in message.body and "100" in message.body
     assert "1000" not in message.body, "наши цены поставщику не уходят"
@@ -120,3 +125,26 @@ def test_role_matrix_and_the_answer(world):
     again = api(world["supply"]).post(f"{URL}{request_id}/answer/", {}, format="json")
     assert again.status_code == 409 and again.json() == {"detail": "ALREADY_ANSWERED"}
     assert api(world["supply"]).post(f"{URL}999999/answer/", {}, format="json").status_code == 404
+
+
+@pytest.mark.parametrize(
+    ("rest", "tail"),
+    [
+        (0, ""),
+        (1, " и ещё 1 позиция"),
+        (2, " и ещё 2 позиции"),
+        (5, " и ещё 5 позиций"),
+        (11, " и ещё 11 позиций"),
+        (21, " и ещё 21 позиция"),
+    ],
+)
+def test_items_summary_counts_in_words(rest, tail):
+    from types import SimpleNamespace
+
+    from supply.services.price_requests import _items_summary
+
+    first = SimpleNamespace(imported_raw_name="Рельс Р65", product_id=None, product=None, position=1)
+    items = [first] + [
+        SimpleNamespace(imported_raw_name="x", product_id=None, product=None, position=i) for i in range(rest)
+    ]
+    assert _items_summary(items) == "Рельс Р65" + tail

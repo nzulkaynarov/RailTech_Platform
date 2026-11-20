@@ -61,6 +61,15 @@ def _visible_orders(company):
     return SupplierOrder.objects.filter(supplier=company).exclude(status=OrderStatus.DRAFT)
 
 
+def _answered_by_staff(req) -> bool:
+    """«Ответ получен» отметил сотрудник: его пометка — внутренняя, партнёру не показывается как его ответ (СЦ-10).
+
+    Ответ из кабинета пишется без автора-пользователя (контакт партнёра — не `CustomUser`, `_custom_user_or_none`), автор
+    есть только у отметки сотрудника (`supply.services.price_requests.mark_answered`) — в том числе у администратора без
+    членства в своей компании."""
+    return req.answered_by_id is not None
+
+
 def _custom_user_or_none(user):
     User = get_user_model()
     return user if isinstance(user, User) else None
@@ -547,7 +556,7 @@ def get_partner_price_request(company, request_id: int) -> Optional[dict]:
         "note": req.note or "",
         "status": "answered" if req.answered_at else req.status,
         "answered_at": req.answered_at,
-        "answer_note": req.answer_note or "",
+        "answer_note": "" if _answered_by_staff(req) else (req.answer_note or ""),
         "answer_currency": req.answer_currency.code if req.answer_currency else None,
         "lines": lines,
     }

@@ -295,6 +295,59 @@ def test_partial_shipment_with_another_document_is_allowed(partner_world):
 # ── Ответ на запрос цен ───────────────────────────────────────────────────────────────────────────────
 
 
+def test_staff_mark_is_not_shown_to_the_partner_as_its_answer(partner_world):
+    """СЦ-10: «ответ получен» отметил сотрудник — его пометка внутренняя; ответ самого партнёра виден ему как был."""
+    w = partner_world
+    by_staff = make_rfq(w["a"])
+    by_staff.answered_at = timezone.now()
+    by_staff.answered_by = w["staff"]
+    by_staff.answer_note = "Дорого, не берём"
+    by_staff.save(update_fields=["answered_at", "answered_by", "answer_note"])
+    by_partner = make_rfq(w["a"], answered=True)
+
+    staff_view = w["client_a"].get(f"{PREFIX}/price-requests/{by_staff.pk}")
+    partner_view = w["client_a"].get(f"{PREFIX}/price-requests/{by_partner.pk}")
+
+    assert staff_view.status_code == 200
+    assert staff_view.json()["answer_note"] == ""
+    assert "Дорого" not in staff_view.content.decode()
+    assert partner_view.json()["answer_note"] == "Первый ответ"
+
+
+def test_mark_by_an_admin_without_membership_is_hidden_too(partner_world):
+    """Отметку мог поставить администратор без членства в своей компании — его пометка тоже не уходит партнёру."""
+    from accounts.models import CustomUser
+
+    w = partner_world
+    admin = CustomUser.objects.create_superuser(email="root@staff.example", username="root", password="x")
+    rfq = make_rfq(w["a"])
+    rfq.answered_at = timezone.now()
+    rfq.answered_by = admin
+    rfq.answer_note = "Внутреннее: не заказывать"
+    rfq.save(update_fields=["answered_at", "answered_by", "answer_note"])
+
+    body = w["client_a"].get(f"{PREFIX}/price-requests/{rfq.pk}").json()
+
+    assert body["answer_note"] == ""
+
+
+def test_rfq_notice_names_the_items_and_is_cut_with_an_ellipsis(partner_world):
+    """Колокольчик партнёра: что запрашиваем (часть темы после «—»), без номера проекта; длинное — с «…»."""
+    from portal.models import PortalNotice
+    from portal.services.notice_sources import partner_rfq_sent
+
+    w = partner_world
+    rfq = make_rfq(w["a"])
+    rfq.subject = "Запрос цены и срока поставки — " + "Рельс Р65 длинное название " * 6 + "и ещё 2 позиции"
+    rfq.save(update_fields=["subject"])
+
+    assert partner_rfq_sent(rfq) > 0
+    notice = PortalNotice.objects.filter(kind="partner_rfq_sent", object_id=rfq.pk).first()
+    assert notice.object_number.startswith("Рельс Р65")
+    assert notice.object_number.endswith("…") and len(notice.object_number) <= 100
+    assert "Запрос цены" not in notice.object_number and notice.params["number"] == notice.object_number
+
+
 def test_second_answer_does_not_overwrite_the_first(partner_world):
     w = partner_world
     rfq = make_rfq(w["a"])

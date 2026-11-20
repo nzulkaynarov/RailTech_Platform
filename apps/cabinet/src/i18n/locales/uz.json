@@ -1742,7 +1742,7 @@
       "manager_replied": "Menejer sizga chatda javob berdi",
       "partner_card_returned": "«{{number}}» kartochkasi qayta ishlashga qaytarildi",
       "partner_order_sent": "{{number}}-sonli yangi yetkazib berish buyurtmasi yuborildi",
-      "partner_rfq_sent": "Loyiha bo'yicha narx so'rovi kelib tushdi: {{number}}",
+      "partner_rfq_sent": "Narx sörovi kelib tuşdi: {{number}}",
       "partner_goods_received": "Ombor {{number}}-sonli buyurtma bo'yicha mahsulotni qabul qildi",
       "fallback": "Yangi bildirishnoma {{number}}",
       "partner_card_published": "«{{number}}» kartochkasi katalogda eʼlon qilindi",

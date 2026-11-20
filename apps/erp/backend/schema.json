@@ -20932,6 +20932,70 @@
                 }
             }
         },
+        "/api/v1/crm/deals/{id}/request-files/{file_id}/": {
+            "get": {
+                "operationId": "crm_deals_request_file",
+                "description": "Исходник заявки этой сделки (`kind=SOURCE`) под именем, с которым его приложил клиент. Доступ — как к карточке сделки; подтверждения доставки и прочие документы сделки здесь не отдаются (404).",
+                "summary": "Скачать файл заявки клиента (СЦ-10)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "file_id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Сделка.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/octet-stream": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        },
+                        "description": "Файл (attachment)"
+                    },
+                    "404": {
+                        "description": "Нет такого файла заявки у этой сделки",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/crm/deals/{id}/take-and-prepare/": {
             "post": {
                 "operationId": "crm_deals_take_and_prepare_create",
@@ -37758,9 +37822,17 @@
                     },
                     "lines": {
                         "type": "integer"
+                    },
+                    "files": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/RequestFile"
+                        },
+                        "description": "Файлы заявки клиента (СЦ-10)"
                     }
                 },
                 "required": [
+                    "files",
                     "lines",
                     "text"
                 ]
@@ -41443,6 +41515,13 @@
                         "description": "Заявка словами: полный текст клиента, иначе комментарий сделки.",
                         "readOnly": true
                     },
+                    "request_files": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/RequestFile"
+                        },
+                        "readOnly": true
+                    },
                     "created_at": {
                         "type": "string",
                         "format": "date-time",
@@ -41469,6 +41548,7 @@
                     "number",
                     "process",
                     "quotes",
+                    "request_files",
                     "request_lines_count",
                     "request_text",
                     "updated_at",
@@ -56608,6 +56688,27 @@
                 },
                 "required": [
                     "member_id"
+                ]
+            },
+            "RequestFile": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "Имя файла, как его приложил клиент"
+                    },
+                    "uploaded_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "uploaded_at"
                 ]
             },
             "ResetPasswordRequest": {

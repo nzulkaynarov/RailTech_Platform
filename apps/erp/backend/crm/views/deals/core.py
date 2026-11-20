@@ -5,6 +5,7 @@ from django.db import transaction
 from django.db.models import Prefetch
 from django.utils.translation import gettext_lazy as _
 from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view, inline_serializer
 from rest_framework import serializers as drf_serializers
 from rest_framework import status, viewsets
@@ -252,3 +253,29 @@ class DealViewSet(RoleGatedViewMixin, DealAiActionsMixin, DealWorkflowActionsMix
         from crm.services.deal_documents import deal_document_hub
 
         return Response(deal_document_hub(self.get_object(), request.user, request))
+
+    @extend_schema(
+        operation_id="crm_deals_request_file",
+        summary="Скачать файл заявки клиента (СЦ-10)",
+        description=(
+            "Исходник заявки этой сделки (`kind=SOURCE`) под именем, с которым его приложил клиент. Доступ — как к "
+            "карточке сделки; подтверждения доставки и прочие документы сделки здесь не отдаются (404)."
+        ),
+        responses={
+            (200, "application/octet-stream"): OpenApiResponse(
+                response=OpenApiTypes.BINARY, description="Файл (attachment)"
+            ),
+            404: OpenApiResponse(description="Нет такого файла заявки у этой сделки"),
+        },
+        tags=["CRM"],
+    )
+    @action(detail=True, methods=["get"], url_path=r"request-files/(?P<file_id>\d+)")
+    def request_file(self, request, pk=None, file_id=None):
+        """Thin wrapper (Rule 8): права — `get_object()` сделки, правило «файл заявки» — в `deal_request_file`."""
+        from core.file_streaming import stream_file_field
+        from crm.services.draft_quote import deal_request_file
+
+        attachment = deal_request_file(self.get_object(), int(file_id))
+        return stream_file_field(
+            attachment.file, content_type="application/octet-stream", filename=attachment.original_filename or None
+        )

@@ -46,7 +46,7 @@ def storage_file_response(storage, name, *, content_type, as_attachment=False, f
     return response
 
 
-def stream_file_field(file_field, *, content_type="application/pdf"):
+def stream_file_field(file_field, *, content_type="application/pdf", filename: str | None = None):
     """Return a response streaming `file_field` (attachment), or raise Http404 if empty or gone from the storage.
 
     The calling view must have already authorized access (e.g. via get_object()
@@ -60,7 +60,8 @@ def stream_file_field(file_field, *, content_type="application/pdf"):
             file_field.name,
             content_type=content_type,
             as_attachment=True,
-            filename=file_field.name.split("/")[-1],
+            # The storage key is a random uuid; a human file name comes from the caller (СЦ-10, ДОК-12).
+            filename=filename or file_field.name.split("/")[-1],
         )
     except FileNotFoundError as exc:
         raise Http404("File is missing in the storage") from exc

@@ -676,7 +676,7 @@ def sheet(deal_id: int, user) -> dict:
 
 
 def _sheet(deal: Deal, task: CalcTask, user) -> dict:
-    from .draft_quote import deal_request_lines_count, deal_request_text
+    from .draft_quote import deal_request_files, deal_request_lines_count, deal_request_text
     from .quotes.editable import quote_edit_lock_code
 
     quote = calc_quote(deal)
@@ -708,7 +708,11 @@ def _sheet(deal: Deal, task: CalcTask, user) -> dict:
     return {
         "deal": _deal_brief(deal),
         "task": {**_task_brief(task, show_cost=show_cost), "assignees": _assignees(task)},
-        "request": {"text": deal_request_text(deal), "lines": deal_request_lines_count(deal)},
+        "request": {
+            "text": deal_request_text(deal),
+            "lines": deal_request_lines_count(deal),
+            "files": deal_request_files(deal),
+        },
         "quote": (
             None
             if quote is None
