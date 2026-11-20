@@ -112,7 +112,7 @@ def duplicate_suggestions(owner_company, limit: int = 20) -> list[dict]:
         .exclude(status__code="ARCHIVED")
         .select_related("status")
         .order_by("pk")
-        .values("pk", "name", "manufacturer_part_number", "gost_drawing", "brand_id", "status__code")
+        .values("pk", "name", "name_key", "manufacturer_part_number", "gost_drawing", "brand_id", "status__code")
     )
 
     groups: dict[tuple, list[dict]] = {}
@@ -124,7 +124,7 @@ def duplicate_suggestions(owner_company, limit: int = 20) -> list[dict]:
         elif gost:
             key = ("gost", gost)
         else:
-            key = ("name", (card["name"] or "").strip().lower())
+            key = ("name", card["name_key"] or (card["name"] or "").strip().lower())
         groups.setdefault(key, []).append(card)
 
     def _row(card):
