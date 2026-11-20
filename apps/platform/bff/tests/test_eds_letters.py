@@ -201,6 +201,26 @@ async def test_card_by_id_collects_details_links_and_the_step(
     assert erp_call.url.path == "/api/v1/crm/deals/5/"
 
 
+async def test_card_shows_the_live_deal_number_and_path_from_erp(web: Web, eds: EdsFake) -> None:
+    """EDS stores `ЗВ-2026-104`; ERP renamed the deal to `PRJ-2026-104` after the quote."""
+    await _director(web)
+    eds.deal = deal(number="PRJ-2026-104")
+
+    request = (await web.client.get(CARD)).json()["request"]
+
+    assert request["number"] == "PRJ-2026-104"
+    assert "PRJ-2026-104" in request["path"]
+
+
+async def test_card_keeps_the_stored_deal_number_when_erp_is_down(web: Web, eds: EdsFake) -> None:
+    await _director(web)
+    eds.deal = 503
+
+    request = (await web.client.get(CARD)).json()["request"]
+
+    assert request["number"] == "ЗВ-2026-104"
+
+
 async def test_card_carries_the_mail_text_for_the_executor(
     web: Web, eds: EdsFake, check: ContractChecker
 ) -> None:

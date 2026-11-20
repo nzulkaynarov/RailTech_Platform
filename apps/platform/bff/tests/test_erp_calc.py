@@ -364,6 +364,28 @@ async def test_unknown_number_is_404(web: Web, be: Backends, check: ContractChec
     assert response.json()["details"]["reason"] == "calc_task_not_found"
 
 
+@pytest.mark.parametrize("blank", ["%20", "%20%20"])
+async def test_a_blank_number_is_404_and_erp_is_not_asked(
+    web: Web, be: Backends, blank: str
+) -> None:
+    """ERP treats an empty `number` filter as no filter and would return the latest deal."""
+    await web.login(["SUPPLY"])
+    route = be.router.get(f"{CALC}/deals/").mock(
+        return_value=httpx.Response(200, json=refs(deal(id=7)))
+    )
+
+    for method, suffix in (("GET", ""), ("POST", "/start")):
+        response = await web.client.request(
+            method,
+            f"/api/v1/erp/calc/{blank}{suffix}",
+            headers={"x-csrf-token": web.csrf} if method == "POST" else None,
+        )
+
+        assert response.status_code == 404, (method, suffix)
+        assert response.json()["details"]["reason"] == "calc_task_not_found"
+    assert not route.called
+
+
 # --- строки, визы, «Расчёт готов» ---------------------------------------------------------------
 
 

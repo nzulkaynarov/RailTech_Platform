@@ -52,7 +52,10 @@ export function DealField({
       onSearch={setTyped}
       onChange={(choice: { value: number; label: string } | undefined) => {
         setTyped("");
-        const number = choice ? (numbers.get(choice.value) ?? value?.number) : undefined;
+        const number = choice
+          ? (numbers.get(choice.value) ??
+            (value?.erp_deal_id === choice.value ? value.number : undefined))
+          : undefined;
         onChange(
           choice
             ? { erp_deal_id: choice.value, label: choice.label, ...(number ? { number } : {}) }

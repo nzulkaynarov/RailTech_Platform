@@ -107,7 +107,10 @@ class ErpCalc(ErpCompany):
         стадия — без строк и виз). Номер уходит как набран, ERP сам находит сделку (год и порядковый
         номер, обозначение не важно): после принятия КП заявка — проект, и старая ссылка на номер
         заявки, и новая на номер проекта открывают одну сделку. BFF обозначение не разбирает."""
-        data = await self.data("GET", "calc/deals/", params={"number": number.strip()})
+        wanted = number.strip()
+        data = (
+            await self.data("GET", "calc/deals/", params={"number": wanted}) if wanted else None
+        )  # an empty filter would list every deal: never ask ERP with it
         for deal in data.get("results", []) if isinstance(data, dict) else []:
             if isinstance(deal, dict) and deal.get("id") is not None:
                 return int(deal["id"])

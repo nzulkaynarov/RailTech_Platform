@@ -75,8 +75,8 @@ test.describe("Лиды → «Создать заявку» → карточка
     await expect(page.getByRole("heading", { level: 1, name: "Контрагенты" })).toBeVisible();
     await expect(panel.getByRole("heading", { name: "ООО Демо-Логистик" })).toBeVisible();
     const requests = panel.getByRole("region", { name: "Заявки и проекты" });
-    await expect(requests.getByText("ЗВ-2026-040")).toBeVisible();
-    await expect(requests.getByRole("listitem").filter({ hasText: "ЗВ-" })).toHaveCount(1);
+    await expect(requests.getByText("RQ-2026-040")).toBeVisible();
+    await expect(requests.getByRole("listitem").filter({ hasText: "RQ-" })).toHaveCount(1);
     await expect(requests).toContainText("Клиент видит: «Принято в работу, считаем»");
     await expect(requests.getByText("Срочная")).toBeVisible();
     await settledScreenshot(page, "client-card-new-request");
@@ -115,7 +115,7 @@ test.describe("Лиды → «Создать заявку» → карточка
     const requests = panel.getByRole("region", { name: "Заявки и проекты" });
     await expect(requests).toContainText("Не передана в бэк-офис: бэк-офис не ответил");
     await requests.getByRole("button", { name: /^Повторить отправку в ERP/ }).click();
-    await expect(requests.getByText("ЗВ-2026-040")).toBeVisible();
+    await expect(requests.getByText("RQ-2026-040")).toBeVisible();
     await expect(requests.getByRole("button", { name: /^Повторить отправку в ERP/ })).toHaveCount(
       0,
     );
@@ -154,7 +154,7 @@ test(
     await sheet.getByRole("link", { name: "Открыть карточку клиента" }).click();
     const card = page.getByRole("dialog", { name: "Карточка контрагента" });
     await expect(card.getByRole("heading", { name: "ООО Демо-Логистик" })).toBeVisible();
-    await expect(card.getByText("ЗВ-2026-040")).toBeVisible();
+    await expect(card.getByText("RQ-2026-040")).toBeVisible();
     const overflow = await page.evaluate(
       "document.documentElement.scrollWidth - document.documentElement.clientWidth",
     );

@@ -303,7 +303,7 @@ test.describe("Создать документ: директор и реестр
       panel.getByRole("heading", { level: 3, name: "Ответ на запрос цен" }),
     ).toBeVisible();
     await expect(panel.getByText("Зарегистрировано")).toBeVisible();
-    await expect(panel.getByText(/ИСХ-082\/26/)).toBeVisible();
+    await expect(panel.getByText(/OUT-082\/26/)).toBeVisible();
     await expect(panel.getByText("АО «Демо-Путь»")).toBeVisible();
   });
 

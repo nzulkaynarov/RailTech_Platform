@@ -1386,3 +1386,23 @@ async def test_nothing_to_price_is_a_conflict(web: Web, erp: respx.MockRouter) -
     assert response.status_code == 409
     assert response.json()["details"]["reason"] == "nothing_to_price"
     assert response.json()["message"] == "У всех строк уже есть цена."
+
+
+@pytest.mark.parametrize("blank", ["  ", "\t "])
+async def test_a_blank_request_never_reaches_the_deal_lookup(
+    web: Web, erp: respx.MockRouter, blank: str
+) -> None:
+    """ERP treats an empty `number` filter as no filter: a blank request must stop in the BFF."""
+    await web.login(["SUPPLY"])
+    deals = erp.get(f"{CALC}/deals/")
+
+    response = await call(
+        web,
+        "POST",
+        "/erp/stock/shipments",
+        {"request": blank, "lines": [{"reservation_id": "41", "quantity": 1}]},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["details"]["reason"] == "calc_task_not_found"
+    assert not deals.called
