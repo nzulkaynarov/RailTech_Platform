@@ -158,6 +158,11 @@ class CalcVisaSerializer(serializers.Serializer):
     at = serializers.DateTimeField()
 
 
+class CalcCatalogHintSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+
+
 class CalcLineSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     position = serializers.IntegerField()
@@ -166,6 +171,9 @@ class CalcLineSerializer(serializers.Serializer):
     product_id = serializers.IntegerField(allow_null=True)
     product_name = serializers.CharField(allow_null=True)
     product_draft = serializers.BooleanField(help_text="Карточка строки — черновик каталога (ADR-0027)")
+    catalog_hint = CalcCatalogHintSerializer(
+        allow_null=True, help_text="СЦ-10: похожая карточка каталога — «Выбрать» или «Новая позиция»; иначе null"
+    )
     item = ItemRefSerializer(
         allow_null=True, help_text="Позиция каталога строки (ЕД-4); null — раздел или строка без карточки"
     )

@@ -367,6 +367,12 @@ def line_payload(item: QuoteItem, ctx: _Context, *, show_cost: bool, rights: dic
         "product_name": product.name if product else None,
         # Черновик карточки (ADR-0027): строку ещё можно сопоставить с опубликованной позицией каталога.
         "product_draft": bool(product is not None and getattr(product.status, "code", None) == "DRAFT"),
+        # СЦ-10: строка без карточки похожа на карточку каталога — «Выбрать» или «Новая позиция».
+        "catalog_hint": (
+            {"id": calc.catalog_hint_id, "name": calc.catalog_hint.name}
+            if calc is not None and calc.catalog_hint_id and not item.product_id
+            else None
+        ),
         "item": item_ref(product, ctx.photos),
         "kind": kind,
         "zone": zone,
@@ -511,7 +517,7 @@ def _billable(quote: Optional[Quote]) -> list[QuoteItem]:
         .select_related(
             "product__domain_type", "product__status", "frozen_currency", "offer__supplier", "offer__currency", "calc"
         )
-        .select_related("calc__visa_by")
+        .select_related("calc__visa_by", "calc__catalog_hint")
         .order_by("position", "id")
     )
 
@@ -920,11 +926,36 @@ def _recalc(quote: Quote) -> list[int]:
 
 
 def _link_catalog(quote: Optional[Quote]) -> None:
-    """Каждая строка расчёта — со своей карточкой каталога: найденной или черновиком (ADR-0027)."""
+    """Каждая строка расчёта — со своей карточкой каталога: найденной или черновиком (ADR-0027). Строка, похожая на
+    карточку каталога, черновика не получает и ждёт решения человека («Похоже: …», СЦ-10)."""
     from catalog.candidates import link_quote_lines
 
-    if quote is not None:
-        link_quote_lines(quote)
+    if quote is None:
+        return
+    _hint_catalog(quote)
+    link_quote_lines(quote, hold_hinted=True)
+
+
+def _hint_catalog(quote: Quote) -> None:
+    """Строкам без карточки и без решения человека — подсказка похожей карточки, если точного совпадения нет."""
+    from catalog.candidates import _owner_for, find_existing_card, suggest_card
+
+    items = [
+        item
+        for item in quote.items.filter(display_type=QuoteItem.DisplayType.ITEM, product__isnull=True).select_related(
+            "calc"
+        )
+        if not (getattr(item, "calc", None) and (item.calc.catalog_hint_id or item.calc.catalog_hint_dismissed))
+    ]
+    if not items:
+        return
+    owner = _owner_for(quote)
+    for item in items:
+        if owner is not None and find_existing_card(item, owner) is not None:
+            continue  # точное совпадение привяжет `link_quote_lines`, подсказка не нужна
+        card = suggest_card(item, owner)
+        if card is not None:
+            CalcLine.objects.update_or_create(item=item, defaults={"catalog_hint": card})
 
 
 @transaction.atomic
@@ -1143,7 +1174,14 @@ def update_line(deal_id: int, item_id: int, user, data: dict) -> dict:
     if "product_id" in changes:
         from catalog.candidates import is_own_draft
 
+        # Человек решил по подсказке (СЦ-10): выбрал карточку или «Новая позиция» (`product_id: null`).
+        calc.catalog_hint = None
+        calc.catalog_hint_dismissed = True
         replaced_draft = item.product_id if item.product_id and is_own_draft(item) else None
+        if changes["product_id"] is None and replaced_draft is not None:
+            # «Новая позиция» у строки, у которой уже свой черновик, — ничего не меняется (без второго спроса).
+            changes.pop("product_id")
+    if "product_id" in changes:
         product = _product(changes["product_id"])
         new_zone = (Zone.SERVICES if product.is_service else Zone.GOODS) if product is not None else zone
         _require_zone(user, new_zone)
@@ -1183,6 +1221,8 @@ def update_line(deal_id: int, item_id: int, user, data: dict) -> dict:
         if not name:
             raise CalcError("NAME_REQUIRED", 400)
         item.imported_raw_name = name[: QuoteItem._meta.get_field("imported_raw_name").max_length]
+        if not item.product_id:
+            calc.catalog_hint = None  # подсказка пересчитается по новому имени
     if "quantity" in changes:
         item.quantity = _quantity(changes["quantity"])
     if "unit" in changes:
@@ -1395,6 +1435,8 @@ def sign_line(deal_id: int, item_id: int, user) -> dict:
     calc, _ = CalcLine.objects.get_or_create(item=item)
     if is_signed(item, calc):
         return _sheet(deal, task, user)
+    if calc.catalog_hint_id and not item.product_id:
+        raise CalcError("CATALOG_MATCH_PENDING", 409)  # СЦ-10: сначала «Выбрать» или «Новая позиция»
     if (item.landed_cost or 0) <= 0 or (item.final_price_excl_vat or 0) <= 0:
         raise CalcError("LINE_INCOMPLETE", 409)
     calc.visa_by = user
