@@ -120,3 +120,22 @@ def test_matching_a_draft_line_to_the_catalog_drops_the_draft(world, catalog_loo
     assert not Product.objects.filter(pk=draft_id).exists()
     rail = world["rail"]
     assert line["item"] == {"id": rail.pk, "name": rail.name, "sku": rail.sku, "kind": "goods", "photo": None}
+
+
+def test_renaming_into_an_existing_card_rebinds_instead_of_a_second_card(world, catalog_lookups):  # noqa: F811
+    """СЦ-10: строку со своим черновиком переименовали в имя карточки, которая уже есть, — второй карточки не будет."""
+    from catalog.candidates import _owner_for
+
+    supply = _api(world["supply"])
+    assert supply.post(_url(world, "start/")).status_code == 200
+    [line_id] = _add(world, supply, [{"name": "болты"}])
+    item = QuoteItem.objects.select_related("quote").get(pk=line_id)
+    draft_id = item.product_id
+    card = Product.objects.create(name="Болт М12", owner_company=_owner_for(item.quote))
+
+    response = supply.patch(_url(world, f"lines/{line_id}/"), {"name": "болт  m12"}, format="json")
+
+    assert response.status_code == 200, response.json()
+    assert QuoteItem.objects.get(pk=line_id).product_id == card.pk
+    assert not Product.objects.filter(pk=draft_id).exists()
+    assert Product.objects.filter(name_key="болт м12").count() == 1

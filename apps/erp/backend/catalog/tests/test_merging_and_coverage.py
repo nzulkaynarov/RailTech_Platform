@@ -125,3 +125,16 @@ def test_coverage_counts_quote_lines_not_cards(world):
     assert report["lines_total"] == 2
     assert report["lines_with_product"] == 1
     assert report["percent"] == 50
+
+
+def test_duplicates_written_with_a_latin_letter_are_one_group(world):
+    """СЦ-10: «Рельс Р65» и «Рельс P65» (латинская P) — одна группа «Похожа на…» по ключу имени."""
+    from catalog.merging import duplicate_suggestions
+
+    first = _card(world, "Рельс Р65")
+    second = _card(world, "Рельс P65")
+
+    [group] = duplicate_suggestions(world["seller"])
+
+    assert group["survivor"]["id"] == first.pk
+    assert [d["id"] for d in group["duplicates"]] == [second.pk]

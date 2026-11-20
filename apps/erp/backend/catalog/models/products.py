@@ -35,6 +35,14 @@ class Product(models.Model):
         verbose_name=_("Наименование"),
         help_text=_("Полное наименование товара"),
     )
+    name_key = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        editable=False,
+        verbose_name=_("Ключ имени"),
+        help_text=_("СЦ-10: имя без регистра, пунктуации и латинских двойников — поиск той же позиции"),
+    )
     sku = models.CharField(
         max_length=50,
         unique=True,
@@ -293,6 +301,7 @@ class Product(models.Model):
         verbose_name = _("Товар (PIM)")
         verbose_name_plural = _("Каталог: Товары (PIM)")
         ordering = ["name"]
+        indexes = [models.Index(fields=["owner_company", "name_key"], name="catalog_prod_owner_namekey")]
         # NOTE: GIN trigram indexes for Smart Match (TrigramSimilarity on name and
         # gost_drawing) are created in migration 0006 via raw SQL, NOT declared here.
         # They depend on the pg_trgm extension; keeping them out of model state means
@@ -342,8 +351,18 @@ class Product(models.Model):
             prefix = self.domain_type.sku_prefix if self.domain_type else "RT"
             self.sku = f"{prefix}-{uuid.uuid4().hex[:8].upper()}"
         self._normalize_fulfillment_policy(kwargs.get("update_fields"))
+        self._refresh_name_key(kwargs)
         self.full_clean()
         super().save(*args, **kwargs)
+
+    def _refresh_name_key(self, kwargs) -> None:
+        """Ключ имени следует за именем (СЦ-10), в том числе при `save(update_fields=["name"])`."""
+        from catalog.naming import name_key
+
+        self.name_key = name_key(self.name)
+        update_fields = kwargs.get("update_fields")
+        if update_fields is not None and "name" in update_fields and "name_key" not in update_fields:
+            kwargs["update_fields"] = [*update_fields, "name_key"]
 
 
 # ────────────────────────────────────────────
