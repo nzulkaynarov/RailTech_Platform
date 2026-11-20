@@ -104,6 +104,26 @@ def deal_request_text(deal: Deal) -> str:
     return (deal.notes or "").strip()
 
 
+def deal_request_files(deal: Deal) -> list[dict]:
+    """Файлы заявки клиента (СЦ-10): исходники заявки на сделке (`kind=SOURCE`) — без подтверждений доставки и
+    доказательств решения клиента, которые лежат там же с `SUPPORTING`."""
+    from sourcing.models import AttachmentKind
+
+    return [
+        {"id": a.id, "name": a.original_filename or "file", "uploaded_at": a.uploaded_at}
+        for a in deal.attachments.filter(kind=AttachmentKind.SOURCE).order_by("uploaded_at", "id")
+    ]
+
+
+def deal_request_file(deal: Deal, file_id: int):
+    """Один файл заявки этой сделки; чужой, не исходник заявки или нет такого — 404."""
+    from django.shortcuts import get_object_or_404
+
+    from sourcing.models import AttachmentKind
+
+    return get_object_or_404(deal.attachments, pk=file_id, kind=AttachmentKind.SOURCE)
+
+
 def _resolve_exact_catalog_matches(request_items) -> dict:
     """Deterministically bind still-unmatched request lines to a catalog Product by EXACT
     identifier (GOST drawing, then MPN) — but ONLY when exactly one PUBLISHED product matches.
