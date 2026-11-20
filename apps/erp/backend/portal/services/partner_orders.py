@@ -326,7 +326,7 @@ def get_partner_order(company, order_id: int) -> Optional[dict]:
         "confirmed_at": order.confirmed_at,
         "received_at": order.received_at,
         "cancelled_at": order.cancelled_at,
-        "note": order.note or "",
+        "note": "",  # internal order note stays with staff (СЦ-10); the key is required by PartnerOrderDetail
         "total_amount": _format_money(total_amount),
         "currency": order.currency.code if order.currency else None,
         "date_change": date_change,
