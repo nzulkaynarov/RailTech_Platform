@@ -152,11 +152,17 @@ def _resolve_exact_catalog_matches(request_items) -> dict:
     preserving the platform's "AI never binds unattended" principle. A line with an ambiguous
     identifier (2+ published matches) is left unmatched rather than guessed.
 
+    СЦ-10: then the same name (`catalog.naming.name_key`) among OUR OWN published cards, again only when exactly one
+    matches — so the draft КП gets the card's offer price and unit at once instead of a duplicate draft card.
+
     Returns {request_item.pk: product_id} for the lines that were resolved.
     """
+    from catalog.candidates import _owner_for
     from catalog.models import Product
+    from catalog.naming import MAX_LENGTH, name_key
 
     resolved: dict[int, int] = {}
+    owner = None
     for src in request_items:
         if src.product_id:
             continue
@@ -175,6 +181,16 @@ def _resolve_exact_catalog_matches(request_items) -> dict:
                     "id", flat=True
                 )[:2]
             )
+        if len(product_ids) != 1:
+            if owner is None:
+                owner = _owner_for(None) or False
+            key = name_key((src.name_canonical or src.imported_raw_name or "")[:MAX_LENGTH])
+            if owner and key:
+                product_ids = list(
+                    Product.objects.filter(status__code="PUBLISHED", owner_company=owner, name_key=key).values_list(
+                        "id", flat=True
+                    )[:2]
+                )
         if len(product_ids) == 1:
             resolved[src.pk] = product_ids[0]
     return resolved

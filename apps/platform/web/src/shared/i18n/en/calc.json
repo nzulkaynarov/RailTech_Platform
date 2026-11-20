@@ -147,7 +147,13 @@
     "releaseLabel": "Release the reservation of line “{{name}}”",
     "markupLabel": "Markup, %: {{name}}",
     "currencyLabel": "Purchase currency for “{{name}}”",
-    "mpn": "Manufacturer part number"
+    "mpn": "Manufacturer part number",
+    "hint": "Looks like: {{name}}",
+    "hintTake": "Use it",
+    "hintTakeLabel": "Use it: “{{name}}”",
+    "hintNew": "New item",
+    "hintNewLabel": "New item: “{{name}}”",
+    "hintFirst": "choose the item first"
   },
   "add": {
     "button": "Add line",

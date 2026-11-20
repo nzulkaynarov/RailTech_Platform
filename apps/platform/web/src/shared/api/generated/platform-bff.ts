@@ -44766,7 +44766,7 @@ export const getSignCalcLineUrl = (number: string, lineId: string) => {
 };
 
 /**
- * ERP `POST /calc/{deal_id}/lines/{item_id}/visa/`. Товар визирует держатель `erp.calc.goods`, услугу — `erp.calc.services` (решает ERP: 403 `details.reason = zone_not_permitted`). Кто визирует — факт визы (имя в `visa.by`): список «сотрудников зоны» в CRM ещё не появился (B-007), поэтому визирует любой держатель права зоны. Строка без закупки или цены клиенту — 409 `details.reason = line_incomplete`. Повтор — без изменений.
+ * ERP `POST /calc/{deal_id}/lines/{item_id}/visa/`. Товар визирует держатель `erp.calc.goods`, услугу — `erp.calc.services` (решает ERP: 403 `details.reason = zone_not_permitted`). Кто визирует — факт визы (имя в `visa.by`): список «сотрудников зоны» в CRM ещё не появился (B-007), поэтому визирует любой держатель права зоны. Строка без закупки или цены клиенту — 409 `details.reason = line_incomplete`. Строка с подсказкой похожей карточки каталога без решения — 409 `details.reason = catalog_match_pending` (СЦ-10). Повтор — без изменений.
  * @summary Расчёт · «Подтвердить» строку (виза по зоне)
  */
 export const signCalcLine = async (

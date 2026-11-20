@@ -21724,6 +21724,16 @@ components:
             $ref: '#/components/schemas/CalcCatalogItem'
       required:
       - results
+    CalcCatalogHint:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+      required:
+      - id
+      - name
     CalcCatalogItem:
       type: object
       properties:
@@ -21911,6 +21921,11 @@ components:
         product_draft:
           type: boolean
           description: Карточка строки — черновик каталога (ADR-0027)
+        catalog_hint:
+          allOf:
+          - $ref: '#/components/schemas/CalcCatalogHint'
+          nullable: true
+          description: 'СЦ-10: похожая карточка каталога — «Выбрать» или «Новая позиция»; иначе null'
         item:
           allOf:
           - $ref: '#/components/schemas/ItemRef'
@@ -21981,6 +21996,7 @@ components:
       required:
       - article
       - can_edit
+      - catalog_hint
       - client_price
       - cost
       - crew_days

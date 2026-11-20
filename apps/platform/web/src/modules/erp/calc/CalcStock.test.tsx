@@ -158,3 +158,51 @@ describe("Расчёт · «Добавить строку» в боковом о
     ).toBeVisible();
   });
 });
+
+describe("Расчёт · похожая позиция каталога (СЦ-10)", () => {
+  async function addLine(name: string) {
+    fireEvent.click(screen.getByRole("button", { name: "Добавить строку" }));
+    const form = await screen.findByRole("region", { name: "Новая строка расчёта" });
+    fireEvent.change(within(form).getByLabelText("Наименование"), { target: { value: name } });
+    fireEvent.click(within(form).getByRole("button", { name: "Добавить" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("region", { name: "Новая строка расчёта" })).toBeNull();
+    });
+    const table = screen.getByRole("table", { name: `Строки расчёта по заявке ${NUMBER}` });
+    await within(table).findByText(name);
+    return lineRow(name);
+  }
+
+  it("строка показывает «Похоже: …», подтвердить нельзя, «Выбрать» берёт позицию каталога", async () => {
+    await openCalc("supply@demo.example");
+    const row = await addLine("Привод СП-6М");
+
+    expect(within(row).getByText(`Похоже: ${DRIVE}`)).toBeVisible();
+    expect(
+      within(row).getByRole("button", { name: "Подтвердить строку «Привод СП-6М»" }),
+    ).toBeDisabled();
+    expect(within(row).getByText("сначала выберите позицию")).toBeVisible();
+    expect(within(row).queryByText("Черновик")).toBeNull();
+
+    fireEvent.click(
+      within(row).getByRole("button", { name: `Выбрать позицию каталога «${DRIVE}»` }),
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByText(`Похоже: ${DRIVE}`)).toBeNull();
+    });
+    expect(screen.getAllByText(DRIVE).length).toBeGreaterThan(1);
+  });
+
+  it("«Новая позиция» заводит черновик, подсказка уходит", async () => {
+    await openCalc("supply@demo.example");
+    const row = await addLine("Привод СП-6М");
+
+    fireEvent.click(within(row).getByRole("button", { name: "Новая позиция: «Привод СП-6М»" }));
+
+    await waitFor(() => {
+      expect(screen.queryByText(`Похоже: ${DRIVE}`)).toBeNull();
+    });
+    expect(within(lineRow("Привод СП-6М")).getByText("Черновик")).toBeVisible();
+  });
+});

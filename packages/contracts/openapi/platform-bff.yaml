@@ -11619,7 +11619,8 @@ paths:
         ERP `POST /calc/{deal_id}/lines/{item_id}/visa/`. Товар визирует держатель `erp.calc.goods`, услугу —
         `erp.calc.services` (решает ERP: 403 `details.reason = zone_not_permitted`). Кто визирует — факт визы (имя в
         `visa.by`): список «сотрудников зоны» в CRM ещё не появился (B-007), поэтому визирует любой держатель права зоны.
-        Строка без закупки или цены клиенту — 409 `details.reason = line_incomplete`. Повтор — без изменений.
+        Строка без закупки или цены клиенту — 409 `details.reason = line_incomplete`. Строка с подсказкой похожей карточки
+        каталога без решения — 409 `details.reason = catalog_match_pending` (СЦ-10). Повтор — без изменений.
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
         - $ref: '#/components/parameters/CalcNumberPath'
@@ -25020,6 +25021,15 @@ components:
         by: {type: string, description: Кто подтвердил строку (факт визы)}
         at: {type: string, format: date-time}
 
+    CalcCatalogHint:
+      type: object
+      additionalProperties: false
+      required: [id, name]
+      description: Похожая карточка каталога для строки расчёта (СЦ-10)
+      properties:
+        id: {type: string, pattern: '^[0-9]+$'}
+        name: {type: string}
+
     CalcLine:
       type: object
       additionalProperties: false
@@ -25030,6 +25040,7 @@ components:
         - product_id
         - product_name
         - product_draft
+        - catalog_hint
         - item
         - kind
         - zone
@@ -25055,6 +25066,13 @@ components:
         product_id: {type: [string, 'null'], pattern: '^[0-9]+$', description: Карточка каталога (сопоставление)}
         product_name: {type: [string, 'null']}
         product_draft: {type: boolean, description: 'Карточка строки — черновик каталога (ADR-0027): строку можно сопоставить с опубликованной позицией'}
+        catalog_hint:
+          description: >-
+            СЦ-10: строка без карточки похожа на карточку каталога и ждёт решения — «Выбрать» (`product_id` карточки)
+            или «Новая позиция» (`product_id: null`); до решения строку не подтвердить. Иначе null.
+          oneOf:
+            - {$ref: '#/components/schemas/CalcCatalogHint'}
+            - {type: 'null'}
         kind: {$ref: '#/components/schemas/CalcLineKind'}
         zone: {$ref: '#/components/schemas/CalcZone'}
         group:

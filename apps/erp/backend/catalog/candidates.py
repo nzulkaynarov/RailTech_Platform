@@ -242,17 +242,21 @@ def link_line(item, owner_company, *, deal=None) -> bool:
     return True
 
 
-def link_quote_lines(quote) -> dict:
+def link_quote_lines(quote, *, hold_hinted: bool = False) -> dict:
     """Каждая строка КП без карточки получает карточку (ADR-0027 п. 1). Идемпотентна: связанные строки не трогает.
 
-    Разделы и примечания не связываются; строка без названия — тоже (её нечем описать).
+    Разделы и примечания не связываются; строка без названия — тоже (её нечем описать). `hold_hinted` — расчёт:
+    строка с подсказкой похожей карточки (`CalcLine.catalog_hint`, СЦ-10) ждёт решения человека и черновик не
+    получает; отправка КП и счёт вызывают без него — в документе клиенту у строки карточка есть всегда.
     """
+    from django.db.models import Q
     from sales.models import QuoteItem
 
     result = {"linked": 0, "skipped": 0}
-    items = list(
-        quote.items.filter(display_type=QuoteItem.DisplayType.ITEM, product__isnull=True).select_related("quote__deal")
-    )
+    rows = quote.items.filter(display_type=QuoteItem.DisplayType.ITEM, product__isnull=True)
+    if hold_hinted:
+        rows = rows.filter(Q(calc__isnull=True) | Q(calc__catalog_hint__isnull=True))
+    items = list(rows.select_related("quote__deal"))
     if not items:
         return result
     owner = _owner_for(quote)
@@ -266,6 +270,49 @@ def link_quote_lines(quote) -> dict:
         else:
             result["skipped"] += 1
     return result
+
+
+def suggest_card(item, owner_company):
+    """Похожая карточка для подсказки человеку (СЦ-10), НЕ для привязки.
+
+    То же первое слово ключа имени и общий код с цифрами без конфликта семьи кодов («Рельс Р65, длина 25 м» →
+    «Рельс Р65 ГОСТ Р 51685», но не «Рельс Р50 …»); в строке нет цифр — имя карточки начинается с имени строки.
+    Видимые: опубликованные и свои, без архива. Порядок: тот же ключ, больше общих кодов, опубликованная, старейшая.
+    """
+    from django.db.models import Q
+
+    from catalog.models import Product
+    from catalog.naming import MAX_LENGTH, code_tokens, codes_conflict, name_key
+
+    key = name_key(_line_title(item)[:MAX_LENGTH])
+    words = key.split()
+    if not words:
+        return None
+    codes = code_tokens(key)
+    visible = Q(status__code="PUBLISHED")
+    if owner_company is not None:
+        visible |= Q(owner_company=owner_company)
+    cards = (
+        Product.objects.filter(visible)
+        .exclude(status__code="ARCHIVED")
+        .filter(Q(name_key=words[0]) | Q(name_key__startswith=words[0] + " "))
+        .select_related("status")
+        .only("id", "name", "name_key", "status__code")[:200]
+    )
+    best, best_rank = None, None
+    for card in cards:
+        if codes:
+            shared = len(codes & set(card.name_key.split()))
+            if not shared or codes_conflict(codes, card.name_key):
+                continue
+        else:
+            shared = 0
+            if not (card.name_key + " ").startswith(key + " "):
+                continue
+        rank = (0 if card.name_key == key else 1, -shared, 0 if card.status.code == "PUBLISHED" else 1, card.pk)
+        if best_rank is None or rank < best_rank:
+            best, best_rank = card, rank
+    return best
 
 
 def is_own_draft(item) -> bool:
