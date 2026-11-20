@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 
 import { loadRequestDraft, requestDraftKey } from '@/lib/requestDraft';
 import { renderApp, signedIn } from '@/test/render';
-import { heading } from '@/test/screens';
+import { captureBody, heading } from '@/test/screens';
 
 const KEY = requestDraftKey({ companyId: 7, contactId: 101 });
 
@@ -105,5 +105,76 @@ describe('«Новый запрос»: черновик переживает у�
     await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
     expect(await heading(/^Заявка ЗВ-/)).toBeInTheDocument();
     vi.restoreAllMocks();
+  });
+
+  // СЦ-10: файлы, приложенные к новой заявке, живут в черновике вместе с текстом.
+  const FILE_FIELD = 'Прикрепить файлы (спецификация, опросные листы, чертежи)';
+
+  it('приложенный файл возвращается после ухода и возврата и уходит с заявкой', async () => {
+    signedIn();
+    const user = userEvent.setup();
+    const body = captureBody('/requests');
+    const { router } = renderApp('/requests/new');
+    await heading('Новая заявка');
+    await user.type(screen.getByLabelText('Что нужно'), 'Подшипники по спецификации');
+    await user.upload(screen.getByLabelText(FILE_FIELD), new File([new Uint8Array(2048)], 'spec.pdf', { type: 'application/pdf' }));
+    expect(await screen.findByText('spec.pdf')).toBeInTheDocument();
+
+    await router.navigate('/requests');
+    await heading('Заявки');
+    await router.navigate('/requests/new');
+    await heading('Новая заявка');
+
+    expect(screen.getByText('spec.pdf')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
+    await heading(/^Заявка ЗВ-/);
+    expect(body.current).toMatchObject({ attachments: [{ upload_id: expect.stringMatching(/^upl_/), name: 'spec.pdf' }] });
+  });
+
+  it('черновик только с файлом не считается пустым', async () => {
+    signedIn();
+    const user = userEvent.setup();
+    renderApp('/requests/new');
+    await heading('Новая заявка');
+    await user.upload(screen.getByLabelText(FILE_FIELD), new File([new Uint8Array(16)], 'drawing.pdf', { type: 'application/pdf' }));
+    expect(await screen.findByText('drawing.pdf')).toBeInTheDocument();
+    expect(loadRequestDraft(KEY)?.attachments).toHaveLength(1);
+  });
+
+  it('черновик старше суток отбрасывается', async () => {
+    window.sessionStorage.setItem(
+      KEY,
+      JSON.stringify({ summary: 'Старое', lines: [], attachments: [], savedAt: Date.now() - 25 * 3600 * 1000 }),
+    );
+    signedIn();
+    renderApp('/requests/new');
+    await heading('Новая заявка');
+    expect(screen.getByLabelText('Что нужно')).toHaveValue('');
+    expect(window.sessionStorage.getItem(KEY)).toBeNull();
+  });
+
+  it('прежний формат без файлов и времени читается', async () => {
+    window.sessionStorage.setItem(KEY, JSON.stringify({ summary: 'Кабель', lines: [{ text: 'Болт', quantity: '', unit: '' }] }));
+    signedIn();
+    renderApp('/requests/new');
+    await heading('Новая заявка');
+    expect(screen.getByLabelText('Что нужно')).toHaveValue('Кабель');
+  });
+
+  it('файл, которого уже нет на сервере: сообщение, файл убран, текст остаётся', async () => {
+    window.sessionStorage.setItem(
+      KEY,
+      JSON.stringify({ summary: 'Кабель', lines: [], attachments: [{ upload_id: 'upl_gone', name: 'old.pdf' }], savedAt: Date.now() }),
+    );
+    signedIn();
+    const user = userEvent.setup();
+    renderApp('/requests/new');
+    await heading('Новая заявка');
+    expect(screen.getByText('old.pdf')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Отправить заявку' }));
+    expect(await screen.findByText('Загруженный файл не найден — загрузите его ещё раз.')).toBeInTheDocument();
+    expect(screen.queryByText('old.pdf')).toBeNull();
+    expect(loadRequestDraft(KEY)?.attachments).toEqual([]);
+    expect(loadRequestDraft(KEY)?.summary).toBe('Кабель');
   });
 });
