@@ -6672,9 +6672,29 @@ export interface paths {
     put?: never;
     /**
      * Склад · Отправить заказ поставщику (черновик → отправлен)
-     * @description ERP `POST /stock/orders/{id}/send/`: письмо поставщику (почта ERP) и запись в журнале заказа. Нет адреса — 409 `details.reason = supplier_email_required` (можно указать `to_email`); письмо не ушло — 409 `details.reason = email_failed`, статус не меняется. Недопустимый переход — 409 `transition_not_allowed`. Раздел `erp.stock` — полный.
+     * @description ERP `POST /stock/orders/{id}/send/`: письмо поставщику (почта ERP) и запись в журнале заказа. Нет адреса — 409 `details.reason = supplier_email_required` (можно указать `to_email`); письмо не ушло — 409 `details.reason = email_failed`, статус не меняется. Недопустимый переход — 409 `transition_not_allowed`. Нет цены у строки или ожидаемой даты — 409 `details.reason = order_incomplete`, `details.missing_prices` (строк без цены), `details.missing_date`; статус не меняется (СЦ-10). Раздел `erp.stock` — полный.
      */
     post: operations["sendSupplierOrder"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/stock/orders/{order_number}/price-request": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Склад · Запросить цену у партнёра из черновика заказа (СЦ-10)
+     * @description ERP `POST /stock/orders/{id}/price-request/`: строки без цены (или `line_ids`) уходят партнёру заказа письмом и в его кабинет; заказ остаётся черновиком, ответ партнёра из кабинета вписывает цены в его строки. Не черновик — 409 `details.reason = order_not_draft`; у всех строк цена — 409 `nothing_to_price`; нет адреса — 409 `supplier_email_required` (можно указать `to_email`). Письмо не ушло — запрос в журнале со статусом `failed`, ответ 200. Раздел `erp.stock` — полный.
+     */
+    post: operations["requestSupplierOrderPrice"];
     delete?: never;
     options?: never;
     head?: never;
@@ -14998,7 +15018,10 @@ export interface components {
     /** @description Что можно сделать с заказом сейчас (статус и права сотрудника) */
     SupplierOrderActions: {
       edit: boolean;
+      /** @description Черновик полный: у всех строк цена и есть ожидаемая дата (СЦ-10) */
       send: boolean;
+      /** @description В черновике есть строки без цены — «Запросить цену» у партнёра (СЦ-10) */
+      request_price: boolean;
       confirm: boolean;
       receive: boolean;
       cancel: boolean;
@@ -15122,6 +15145,12 @@ export interface components {
       state: "queued" | "sent" | "failed";
       reason: string | null;
     };
+    SupplierOrderSendMissing: {
+      /** @description Сколько строк без цены */
+      prices: number;
+      /** @description Нет ожидаемой даты */
+      date: boolean;
+    };
     /** @description Карточка заказа поставщику */
     SupplierOrderDetail: {
       /**
@@ -15157,6 +15186,10 @@ export interface components {
       note: string;
       /** @description Комментарий партнёру: уходит в письме с заказом и в кабинет партнёра */
       partner_note: string;
+      /** @description СЦ-10 — последний запрос цены из этого черновика; не было — null */
+      price_request: components["schemas"]["SupplierOrderPriceRequestState"] | null;
+      /** @description СЦ-10 — чего не хватает черновику для отправки партнёру; полный или не черновик — null */
+      send_missing: components["schemas"]["SupplierOrderSendMissing"] | null;
       /** Format: date-time */
       sent_at: string | null;
       /** @description Адрес, на который ушло письмо */
@@ -15217,6 +15250,28 @@ export interface components {
       partner_note?: string;
       currency?: string | null;
       lines?: components["schemas"]["SupplierOrderLineIn"][];
+    };
+    /** @description «Запросить цену» из черновика заказа (СЦ-10); без `line_ids` — все строки без цены */
+    SupplierOrderPriceRequestIn: {
+      /** @description Строки заказа */
+      line_ids?: string[];
+      /** @description Комментарий партнёру */
+      note?: string;
+      /**
+       * Format: email
+       * @description Адрес письма, если у партнёра почты нет или нужен другой
+       */
+      to_email?: string;
+    };
+    /** @description Последний запрос цены из черновика заказа (СЦ-10) */
+    SupplierOrderPriceRequestState: {
+      id: string;
+      /** Format: date-time */
+      requested_at: string;
+      /** @enum {string} */
+      status: "sent" | "failed";
+      /** Format: date-time */
+      answered_at: string | null;
     };
     SupplierOrderSendIn: {
       /**
@@ -15410,12 +15465,14 @@ export interface components {
       quantity: number;
       unit: string;
     };
-    /** @description Запрос цены у поставщика из расчёта — журнал письма */
+    /** @description Запрос цены у поставщика из расчёта или из черновика заказа — журнал письма */
     PriceRequest: {
       id: string;
       supplier: components["schemas"]["StockSupplierRef"];
       /** @description Номер заявки */
       request: string | null;
+      /** @description Номер заказа партнёру, из черновика которого запрошена цена (СЦ-10) */
+      order: string | null;
       /** Format: date-time */
       requested_at: string;
       /** @description Сотрудник со ссылкой на справочник (СУЩ-3) */
@@ -17257,7 +17314,7 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
-    /** @description 409 `CONFLICT` — склад или заказ не в том состоянии: `details.reason` — код ERP в нижнем регистре (`not_enough_stock` и `details.free`, `below_reserved`, `below_shipped`, `transition_not_allowed`, `order_not_draft`, `order_not_confirmed`, `order_has_receipts`, `expected_date_required`, `supplier_email_required`, `fulfillment_not_ready`, `product_required`, `no_shortage`, `email_failed`, `deal_closed`, `line_not_actual`, `line_not_goods`, `reservation_not_active`, `already_answered`, `serial_exists` и `details.number` — серийный уже принят, `unit_not_available` и `details.number`, `details.max` — единица уже отгружена или партии не хватает) */
+    /** @description 409 `CONFLICT` — склад или заказ не в том состоянии: `details.reason` — код ERP в нижнем регистре (`not_enough_stock` и `details.free`, `below_reserved`, `below_shipped`, `transition_not_allowed`, `order_not_draft`, `order_not_confirmed`, `order_has_receipts`, `expected_date_required`, `supplier_email_required`, `fulfillment_not_ready`, `product_required`, `no_shortage`, `email_failed`, `deal_closed`, `line_not_actual`, `line_not_goods`, `reservation_not_active`, `already_answered`, `serial_exists` и `details.number` — серийный уже принят, `unit_not_available` и `details.number`, `details.max` — единица уже отгружена или партии не хватает, `order_incomplete` и `details.missing_prices`, `details.missing_date` — у заказа нет цены строк или ожидаемой даты, `nothing_to_price` — у всех строк черновика уже есть цена) */
     StockConflict: {
       headers: {
         [name: string]: unknown;
@@ -29363,6 +29420,42 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["SupplierOrderDetail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["StockConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  requestSupplierOrderPrice: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер заказа поставщику `ЗП-ГГГГ-NNN` */
+        order_number: components["parameters"]["StockOrderNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["SupplierOrderPriceRequestIn"];
+      };
+    };
+    responses: {
+      /** @description Запрос цены */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PriceRequest"];
         };
       };
       401: components["responses"]["SessionExpired"];

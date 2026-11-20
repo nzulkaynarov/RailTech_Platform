@@ -62,7 +62,9 @@
     "nothing_to_change": "Nothing to change.",
     "role_not_permitted": "Your role is not allowed to do this.",
     "supplier_not_found": "No such partner.",
-    "product_not_found": "No such item."
+    "product_not_found": "No such item.",
+    "order_incomplete": "Prices or the expected date are missing: add them in “Edit”.",
+    "nothing_to_price": "Every line already has a price."
   },
   "balances": {
     "search": "Find an item by name or article",
@@ -206,7 +208,8 @@
       "confirm": "Partner confirmed",
       "receive": "Receive goods",
       "edit": "Edit",
-      "cancel": "Cancel order"
+      "cancel": "Cancel order",
+      "price": "Request a price"
     },
     "overdueBanner": "Expected by {{date}}, goods not received — {{count}} d. overdue. Contact the partner and update the expected date.",
     "cancelledBanner": "The order is cancelled. Reason: {{reason}}",
@@ -291,14 +294,17 @@
       "quantityLabel": "Quantity, “{{name}}”",
       "remove": "Remove",
       "removeLabel": "Remove line “{{name}}”",
-      "submit": "Save"
+      "submit": "Save",
+      "price": "Price",
+      "priceLabel": "Price, “{{name}}”"
     },
     "notice": {
       "sent": "Order placed. The e-mail to the partner is queued; the result will be on the order card.",
       "confirmed": "Order confirmed",
       "received": "Goods received",
       "cancelled": "Order cancelled",
-      "edited": "Order saved"
+      "edited": "Order saved",
+      "priceRequested": "Price request sent"
     },
     "offer": {
       "label": "Partner price: {{text}}",
@@ -312,6 +318,24 @@
       "sent": "sent",
       "failed": "not sent: {{reason}}",
       "failedUnknown": "not sent"
+    },
+    "missing": {
+      "prices_one": "No price: {{count}} line",
+      "prices_other": "No price: {{count}} lines",
+      "date": "No expected date",
+      "hint": "Add them in “Edit” — the order is not sent to the partner without prices and a date."
+    },
+    "price": {
+      "title": "Request a price · {{number}}",
+      "submit": "Send request",
+      "note": "Comment to the partner",
+      "lines_one": "The partner gets a request for {{count}} line without a price.",
+      "lines_other": "The partner gets a request for {{count}} lines without a price.",
+      "state": {
+        "sent": "Price request sent {{date}} — awaiting the answer.",
+        "answered": "The partner answered {{date}}.",
+        "failed": "The price request was not sent — try again."
+      }
     }
   },
   "receipts": {

@@ -19,7 +19,14 @@ import { LinkButton } from "../../../shared/ui/LinkButton";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { useStateLabels, withUnit } from "./api";
 import { OrderStatusTag } from "./OrdersTab";
-import { CancelModal, ConfirmModal, EditModal, ReceiveModal, SendModal } from "./OrderModals";
+import {
+  CancelModal,
+  ConfirmModal,
+  EditModal,
+  PriceRequestModal,
+  ReceiveModal,
+  SendModal,
+} from "./OrderModals";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { ItemRefCell } from "../../ItemRefCell";
 
@@ -27,7 +34,7 @@ import "../calc/calc.css";
 import "./stock.css";
 import { PersonRefCell } from "../../PersonRefCell";
 
-type Dialog = "send" | "confirm" | "receive" | "cancel" | "edit" | null;
+type Dialog = "send" | "price" | "confirm" | "receive" | "cancel" | "edit" | null;
 
 function OrderLog({ order }: { order: SupplierOrderDetail }) {
   const { t } = useTranslation("stock");
@@ -206,11 +213,13 @@ function Content({ order }: { order: SupplierOrderDetail }) {
   const a = order.actions;
   const primary = a.send
     ? ("send" as const)
-    : a.confirm
-      ? ("confirm" as const)
-      : a.receive
-        ? ("receive" as const)
-        : null;
+    : a.request_price
+      ? ("price" as const)
+      : a.confirm
+        ? ("confirm" as const)
+        : a.receive
+          ? ("receive" as const)
+          : null;
   return (
     <div className="pf-calc pf-stock">
       <PageHeader
@@ -262,6 +271,37 @@ function Content({ order }: { order: SupplierOrderDetail }) {
             date: order.expected_date ? date(order.expected_date) : "",
             count: order.days_overdue,
           })}
+        />
+      ) : null}
+      {order.send_missing ? (
+        // СЦ-10: без цены и даты заказ партнёру не уходит — карточка говорит, чего не хватает.
+        <Alert
+          type="info"
+          showIcon
+          message={[
+            order.send_missing.prices > 0
+              ? t("order.missing.prices", { count: order.send_missing.prices })
+              : null,
+            order.send_missing.date ? t("order.missing.date") : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+          description={[
+            order.price_request
+              ? order.price_request.answered_at
+                ? t("order.price.state.answered", {
+                    date: activity(order.price_request.answered_at),
+                  })
+                : order.price_request.status === "failed"
+                  ? t("order.price.state.failed")
+                  : t("order.price.state.sent", {
+                      date: activity(order.price_request.requested_at),
+                    })
+              : null,
+            order.actions.edit ? t("order.missing.hint") : null,
+          ]
+            .filter(Boolean)
+            .join(" ")}
         />
       ) : null}
       {order.status === "cancelled" ? (
@@ -336,6 +376,7 @@ function Content({ order }: { order: SupplierOrderDetail }) {
         </PanelPortal>
       )}
       {dialog === "send" ? <SendModal order={order} onClose={close} /> : null}
+      {dialog === "price" ? <PriceRequestModal order={order} onClose={close} /> : null}
       {dialog === "confirm" ? <ConfirmModal order={order} onClose={close} /> : null}
       {dialog === "cancel" ? <CancelModal order={order} onClose={close} /> : null}
       {dialog === "edit" ? <EditModal order={order} onClose={close} /> : null}

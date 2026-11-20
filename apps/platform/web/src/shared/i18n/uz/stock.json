@@ -62,7 +62,9 @@
     "nothing_to_change": "O‘zgartirish uchun hech narsa yo‘q.",
     "role_not_permitted": "Bu amal rolingizga ruxsat etilmagan.",
     "supplier_not_found": "Bunday hamkor yo‘q.",
-    "product_not_found": "Bunday tovar yo‘q."
+    "product_not_found": "Bunday tovar yo‘q.",
+    "order_incomplete": "Narx yoki kutilgan sana yöq: «Özgartiriş»da kiriting.",
+    "nothing_to_price": "Barça qatorlarda narx bor."
   },
   "balances": {
     "search": "Tovarni nomi yoki artikuli bo‘yicha toping",
@@ -205,8 +207,9 @@
       "send": "Hamkorga yuborish",
       "confirm": "Hamkor tasdiqladi",
       "receive": "Tovarni qabul qilish",
-      "edit": "O‘zgartirish",
-      "cancel": "Buyurtmani bekor qilish"
+      "edit": "Özgartiriş",
+      "cancel": "Buyurtmani bekor qilish",
+      "price": "Narx söraş"
     },
     "overdueBanner": "{{date}} gacha kutilgan, tovar olinmagan — {{count}} kun kechikish. Hamkor bilan bog‘laning va kutilayotgan sanani yangilang.",
     "cancelledBanner": "Buyurtma bekor qilingan. Sabab: {{reason}}",
@@ -284,21 +287,24 @@
       "submit": "Qabul qilish"
     },
     "edit": {
-      "title": "{{number}} buyurtmasini o‘zgartirish",
+      "title": "{{number}} buyurtmasini özgartiriş",
       "date": "Kutilayotgan sana",
       "note": "Içki izoh",
       "partnerNote": "Hamkorga izoh",
       "quantityLabel": "Miqdor, «{{name}}»",
       "remove": "Olib tashlash",
       "removeLabel": "«{{name}}» qatorini olib tashlash",
-      "submit": "Saqlash"
+      "submit": "Saqlash",
+      "price": "Narx",
+      "priceLabel": "Narx, «{{name}}»"
     },
     "notice": {
       "sent": "Buyurtma rasmiylashtirildi. Hamkorga xat pochta navbatida, natija — buyurtma kartasida.",
       "confirmed": "Buyurtma tasdiqlandi",
       "received": "Tovar qabul qilindi",
       "cancelled": "Buyurtma bekor qilindi",
-      "edited": "Buyurtma saqlandi"
+      "edited": "Buyurtma saqlandi",
+      "priceRequested": "Narx sörovi yuborildi"
     },
     "offer": {
       "label": "Hamkor narxi: {{text}}",
@@ -312,6 +318,24 @@
       "sent": "yuborildi",
       "failed": "yuborilmadi: {{reason}}",
       "failedUnknown": "yuborilmadi"
+    },
+    "missing": {
+      "prices_one": "Narxsiz: {{count}} qator",
+      "prices_other": "Narxsiz: {{count}} qator",
+      "date": "Kutilgan sana yöq",
+      "hint": "«Özgartiriş»da kiriting — narx va sanasiz buyurtma hamkorga yuborilmaydi."
+    },
+    "price": {
+      "title": "Narx söraş · {{number}}",
+      "submit": "Sörovni yuboriş",
+      "note": "Hamkorga izoh",
+      "lines_one": "Hamkor narxsiz {{count}} qator böyiça sörov oladi.",
+      "lines_other": "Hamkor narxsiz {{count}} qator böyiça sörov oladi.",
+      "state": {
+        "sent": "Narx sörovi {{date}} yuborildi — javob kutilmoqda.",
+        "answered": "Hamkor {{date}} javob berdi.",
+        "failed": "Narx sörovi yuborilmadi — qayta urinib köring."
+      }
     }
   },
   "receipts": {

@@ -474,6 +474,11 @@ def _transition(order: SupplierOrder, target: str) -> None:
         raise StockError("TRANSITION_NOT_ALLOWED", 409, current=order.status, target=target)
 
 
+def send_gaps(order: SupplierOrder, lines) -> tuple[int, bool]:
+    """Чего заказу не хватает, чтобы уйти партнёру (СЦ-10): строк без цены и ожидаемой даты."""
+    return sum(1 for line in lines if line.unit_price is None), order.expected_date is None
+
+
 @transaction.atomic
 def send_order(user, order_id: int, *, to_email: str = "") -> SupplierOrder:
     from notifications.emails import EmailDeliveryError, send_templated_email
@@ -484,6 +489,10 @@ def send_order(user, order_id: int, *, to_email: str = "") -> SupplierOrder:
     lines = list(order.lines.select_related("product"))
     if not lines:
         raise StockError("LINES_REQUIRED", 409)
+    # СЦ-10: без цены и даты это запрос цены, а не заказ — партнёру не уходит.
+    missing_prices, missing_date = send_gaps(order, lines)
+    if missing_prices or missing_date:
+        raise StockError("ORDER_INCOMPLETE", 409, missing_prices=missing_prices, missing_date=missing_date)
     recipient = (to_email or "").strip() or supplier_email(order.supplier)
     if not recipient:
         raise StockError("SUPPLIER_EMAIL_REQUIRED", 409)
@@ -505,6 +514,7 @@ def send_order(user, order_id: int, *, to_email: str = "") -> SupplierOrder:
             for line in lines
         ],
         "with_prices": any(line.unit_price is not None for line in lines),
+        "currency": order.currency.code if order.currency_id else "",
     }
     try:
         mail = send_templated_email(
@@ -719,6 +729,19 @@ def _deal_ref(deal) -> Optional[dict]:
     return {"id": deal.pk, "number": deal.number or None, "client_name": deal.company.name if deal.company_id else None}
 
 
+def _price_request_state(order: SupplierOrder) -> Optional[dict]:
+    """Последний запрос цены из этого черновика (СЦ-10): отправлен, не ушёл или партнёр ответил."""
+    latest = order.price_requests.order_by("-requested_at", "-id").first()
+    if latest is None:
+        return None
+    return {
+        "id": latest.pk,
+        "requested_at": latest.requested_at.isoformat(),
+        "status": latest.status,
+        "answered_at": latest.answered_at.isoformat() if latest.answered_at else None,
+    }
+
+
 def present_order(order: SupplierOrder, user, *, detail: bool = False) -> dict:
     prices = can_see_supplier_prices(user)
     manage = can_manage_supply(user)
@@ -730,6 +753,8 @@ def present_order(order: SupplierOrder, user, *, detail: bool = False) -> dict:
         if line.deal_id and line.deal_id not in deals:
             deals[line.deal_id] = line.deal
     status = order.status
+    missing_prices, missing_date = send_gaps(order, lines)
+    complete = not missing_prices and not missing_date
     row = {
         "id": order.pk,
         "number": order.number,
@@ -750,7 +775,8 @@ def present_order(order: SupplierOrder, user, *, detail: bool = False) -> dict:
         "created_by": person_ref(order.created_by) if order.created_by_id else None,
         "actions": {
             "edit": manage and status == OrderStatus.DRAFT,
-            "send": manage and status == OrderStatus.DRAFT,
+            "send": manage and status == OrderStatus.DRAFT and complete,
+            "request_price": manage and status == OrderStatus.DRAFT and missing_prices > 0,
             "confirm": manage and status == OrderStatus.SENT,
             "receive": manage and status == OrderStatus.CONFIRMED,
             "cancel": manage
@@ -770,6 +796,11 @@ def present_order(order: SupplierOrder, user, *, detail: bool = False) -> dict:
             },
             "note": order.note,
             "partner_note": order.partner_note,
+            # СЦ-10: чего не хватает черновику для отправки — число строк без цены (не суммы) и нет ли даты.
+            "send_missing": (
+                None if status != OrderStatus.DRAFT or complete else {"prices": missing_prices, "date": missing_date}
+            ),
+            "price_request": _price_request_state(order),
             "sent_at": order.sent_at.isoformat() if order.sent_at else None,
             "sent_to": order.sent_to or None,
             "mail": _mail_state(order),

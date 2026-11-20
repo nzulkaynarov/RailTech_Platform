@@ -505,6 +505,7 @@ import type {
   SupplierOrderFromRequest,
   SupplierOrderList,
   SupplierOrderPatch,
+  SupplierOrderPriceRequestIn,
   SupplierOrderReceiptIn,
   SupplierOrderSendIn,
   SupplierPage,
@@ -48013,7 +48014,7 @@ export const getSendSupplierOrderUrl = (orderNumber: string) => {
 };
 
 /**
- * ERP `POST /stock/orders/{id}/send/`: письмо поставщику (почта ERP) и запись в журнале заказа. Нет адреса — 409 `details.reason = supplier_email_required` (можно указать `to_email`); письмо не ушло — 409 `details.reason = email_failed`, статус не меняется. Недопустимый переход — 409 `transition_not_allowed`. Раздел `erp.stock` — полный.
+ * ERP `POST /stock/orders/{id}/send/`: письмо поставщику (почта ERP) и запись в журнале заказа. Нет адреса — 409 `details.reason = supplier_email_required` (можно указать `to_email`); письмо не ушло — 409 `details.reason = email_failed`, статус не меняется. Недопустимый переход — 409 `transition_not_allowed`. Нет цены у строки или ожидаемой даты — 409 `details.reason = order_incomplete`, `details.missing_prices` (строк без цены), `details.missing_date`; статус не меняется (СЦ-10). Раздел `erp.stock` — полный.
  * @summary Склад · Отправить заказ поставщику (черновик → отправлен)
  */
 export const sendSupplierOrder = async (
@@ -48141,6 +48142,141 @@ export const useSendSupplierOrder = <
   TContext
 > => {
   return useMutation(getSendSupplierOrderMutationOptions(options), queryClient);
+};
+
+export const getRequestSupplierOrderPriceUrl = (orderNumber: string) => {
+  return `/api/v1/erp/stock/orders/${orderNumber}/price-request`;
+};
+
+/**
+ * ERP `POST /stock/orders/{id}/price-request/`: строки без цены (или `line_ids`) уходят партнёру заказа письмом и в его кабинет; заказ остаётся черновиком, ответ партнёра из кабинета вписывает цены в его строки. Не черновик — 409 `details.reason = order_not_draft`; у всех строк цена — 409 `nothing_to_price`; нет адреса — 409 `supplier_email_required` (можно указать `to_email`). Письмо не ушло — запрос в журнале со статусом `failed`, ответ 200. Раздел `erp.stock` — полный.
+ * @summary Склад · Запросить цену у партнёра из черновика заказа (СЦ-10)
+ */
+export const requestSupplierOrderPrice = async (
+  orderNumber: string,
+  supplierOrderPriceRequestIn?: SupplierOrderPriceRequestIn,
+  options?: Parameters<typeof http>[1],
+): Promise<PriceRequest> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<PriceRequest>(getRequestSupplierOrderPriceUrl(orderNumber), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(supplierOrderPriceRequestIn),
+  });
+};
+
+export const getRequestSupplierOrderPriceMutationKey = () => ["requestSupplierOrderPrice"] as const;
+
+export const getRequestSupplierOrderPriceMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof requestSupplierOrderPrice>>,
+    TError,
+    RequestSupplierOrderPriceMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof requestSupplierOrderPrice>>,
+  TError,
+  RequestSupplierOrderPriceMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRequestSupplierOrderPriceMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof requestSupplierOrderPrice>>,
+    RequestSupplierOrderPriceMutationVariables
+  > = (props) => {
+    const { orderNumber, data } = props ?? {};
+
+    return requestSupplierOrderPrice(orderNumber, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RequestSupplierOrderPriceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof requestSupplierOrderPrice>>
+>;
+export type RequestSupplierOrderPriceMutationBody = SupplierOrderPriceRequestIn | undefined;
+export type RequestSupplierOrderPriceMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | StockConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type RequestSupplierOrderPriceMutationVariables = {
+  orderNumber: string;
+  data?: SupplierOrderPriceRequestIn;
+};
+
+/**
+ * @summary Склад · Запросить цену у партнёра из черновика заказа (СЦ-10)
+ */
+export const useRequestSupplierOrderPrice = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof requestSupplierOrderPrice>>,
+      TError,
+      RequestSupplierOrderPriceMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof requestSupplierOrderPrice>>,
+  TError,
+  RequestSupplierOrderPriceMutationVariables,
+  TContext
+> => {
+  return useMutation(getRequestSupplierOrderPriceMutationOptions(options), queryClient);
 };
 
 export const getConfirmSupplierOrderUrl = (orderNumber: string) => {

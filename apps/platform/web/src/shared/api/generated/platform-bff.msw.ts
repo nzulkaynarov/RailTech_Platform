@@ -384,6 +384,8 @@ import type {
   SupplierOrderLineOffer,
   SupplierOrderList,
   SupplierOrderMail,
+  SupplierOrderPriceRequestState,
+  SupplierOrderSendMissing,
   SupplierPage,
   SystemStatus,
   TechDoc,
@@ -27786,6 +27788,7 @@ export const getListCalcPriceRequestsResponseMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+    order: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
     requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
     requested_by: faker.helpers.arrayElement([
       { ...getListCalcPriceRequestsResponsePersonRefMock() },
@@ -27842,6 +27845,7 @@ export const getCreateCalcPriceRequestResponseMock = (
     email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   },
   request: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  order: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   requested_by: faker.helpers.arrayElement([
     { ...getCreateCalcPriceRequestResponsePersonRefMock() },
@@ -27895,6 +27899,7 @@ export const getAnswerPriceRequestResponseMock = (
     email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   },
   request: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  order: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   requested_by: faker.helpers.arrayElement([
     { ...getAnswerPriceRequestResponsePersonRefMock() },
@@ -27991,6 +27996,7 @@ export const getListSupplierOrdersResponseMock = (
     actions: {
       edit: faker.datatype.boolean(),
       send: faker.datatype.boolean(),
+      request_price: faker.datatype.boolean(),
       confirm: faker.datatype.boolean(),
       receive: faker.datatype.boolean(),
       cancel: faker.datatype.boolean(),
@@ -28013,6 +28019,28 @@ export const getCreateSupplierOrderResponsePersonRefMock = (
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
   },
+  ...overrideResponse,
+});
+
+export const getCreateSupplierOrderResponseSupplierOrderPriceRequestStateMock = (
+  overrideResponse: Partial<SupplierOrderPriceRequestState> = {},
+): SupplierOrderPriceRequestState => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    status: faker.helpers.arrayElement(["sent", "failed"] as const),
+    answered_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateSupplierOrderResponseSupplierOrderSendMissingMock = (
+  overrideResponse: Partial<SupplierOrderSendMissing> = {},
+): SupplierOrderSendMissing => ({
+  ...{ prices: faker.number.int({ min: 0 }), date: faker.datatype.boolean() },
   ...overrideResponse,
 });
 
@@ -28107,6 +28135,7 @@ export const getCreateSupplierOrderResponseMock = (
   actions: {
     edit: faker.datatype.boolean(),
     send: faker.datatype.boolean(),
+    request_price: faker.datatype.boolean(),
     confirm: faker.datatype.boolean(),
     receive: faker.datatype.boolean(),
     cancel: faker.datatype.boolean(),
@@ -28114,6 +28143,14 @@ export const getCreateSupplierOrderResponseMock = (
   path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   partner_note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  price_request: faker.helpers.arrayElement([
+    { ...getCreateSupplierOrderResponseSupplierOrderPriceRequestStateMock() },
+    null,
+  ]),
+  send_missing: faker.helpers.arrayElement([
+    { ...getCreateSupplierOrderResponseSupplierOrderSendMissingMock() },
+    null,
+  ]),
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   mail: faker.helpers.arrayElement([
@@ -28247,6 +28284,28 @@ export const getCreateSupplierOrderFromRequestResponsePersonRefMock = (
   ...overrideResponse,
 });
 
+export const getCreateSupplierOrderFromRequestResponseSupplierOrderPriceRequestStateMock = (
+  overrideResponse: Partial<SupplierOrderPriceRequestState> = {},
+): SupplierOrderPriceRequestState => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    status: faker.helpers.arrayElement(["sent", "failed"] as const),
+    answered_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateSupplierOrderFromRequestResponseSupplierOrderSendMissingMock = (
+  overrideResponse: Partial<SupplierOrderSendMissing> = {},
+): SupplierOrderSendMissing => ({
+  ...{ prices: faker.number.int({ min: 0 }), date: faker.datatype.boolean() },
+  ...overrideResponse,
+});
+
 export const getCreateSupplierOrderFromRequestResponseSupplierOrderMailMock = (
   overrideResponse: Partial<SupplierOrderMail> = {},
 ): SupplierOrderMail => ({
@@ -28338,6 +28397,7 @@ export const getCreateSupplierOrderFromRequestResponseMock = (
   actions: {
     edit: faker.datatype.boolean(),
     send: faker.datatype.boolean(),
+    request_price: faker.datatype.boolean(),
     confirm: faker.datatype.boolean(),
     receive: faker.datatype.boolean(),
     cancel: faker.datatype.boolean(),
@@ -28345,6 +28405,14 @@ export const getCreateSupplierOrderFromRequestResponseMock = (
   path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   partner_note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  price_request: faker.helpers.arrayElement([
+    { ...getCreateSupplierOrderFromRequestResponseSupplierOrderPriceRequestStateMock() },
+    null,
+  ]),
+  send_missing: faker.helpers.arrayElement([
+    { ...getCreateSupplierOrderFromRequestResponseSupplierOrderSendMissingMock() },
+    null,
+  ]),
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   mail: faker.helpers.arrayElement([
@@ -28484,6 +28552,28 @@ export const getGetSupplierOrderResponsePersonRefMock = (
   ...overrideResponse,
 });
 
+export const getGetSupplierOrderResponseSupplierOrderPriceRequestStateMock = (
+  overrideResponse: Partial<SupplierOrderPriceRequestState> = {},
+): SupplierOrderPriceRequestState => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    status: faker.helpers.arrayElement(["sent", "failed"] as const),
+    answered_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getGetSupplierOrderResponseSupplierOrderSendMissingMock = (
+  overrideResponse: Partial<SupplierOrderSendMissing> = {},
+): SupplierOrderSendMissing => ({
+  ...{ prices: faker.number.int({ min: 0 }), date: faker.datatype.boolean() },
+  ...overrideResponse,
+});
+
 export const getGetSupplierOrderResponseSupplierOrderMailMock = (
   overrideResponse: Partial<SupplierOrderMail> = {},
 ): SupplierOrderMail => ({
@@ -28572,6 +28662,7 @@ export const getGetSupplierOrderResponseMock = (
   actions: {
     edit: faker.datatype.boolean(),
     send: faker.datatype.boolean(),
+    request_price: faker.datatype.boolean(),
     confirm: faker.datatype.boolean(),
     receive: faker.datatype.boolean(),
     cancel: faker.datatype.boolean(),
@@ -28579,6 +28670,14 @@ export const getGetSupplierOrderResponseMock = (
   path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   partner_note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  price_request: faker.helpers.arrayElement([
+    { ...getGetSupplierOrderResponseSupplierOrderPriceRequestStateMock() },
+    null,
+  ]),
+  send_missing: faker.helpers.arrayElement([
+    { ...getGetSupplierOrderResponseSupplierOrderSendMissingMock() },
+    null,
+  ]),
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   mail: faker.helpers.arrayElement([
@@ -28712,6 +28811,28 @@ export const getUpdateSupplierOrderResponsePersonRefMock = (
   ...overrideResponse,
 });
 
+export const getUpdateSupplierOrderResponseSupplierOrderPriceRequestStateMock = (
+  overrideResponse: Partial<SupplierOrderPriceRequestState> = {},
+): SupplierOrderPriceRequestState => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    status: faker.helpers.arrayElement(["sent", "failed"] as const),
+    answered_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getUpdateSupplierOrderResponseSupplierOrderSendMissingMock = (
+  overrideResponse: Partial<SupplierOrderSendMissing> = {},
+): SupplierOrderSendMissing => ({
+  ...{ prices: faker.number.int({ min: 0 }), date: faker.datatype.boolean() },
+  ...overrideResponse,
+});
+
 export const getUpdateSupplierOrderResponseSupplierOrderMailMock = (
   overrideResponse: Partial<SupplierOrderMail> = {},
 ): SupplierOrderMail => ({
@@ -28803,6 +28924,7 @@ export const getUpdateSupplierOrderResponseMock = (
   actions: {
     edit: faker.datatype.boolean(),
     send: faker.datatype.boolean(),
+    request_price: faker.datatype.boolean(),
     confirm: faker.datatype.boolean(),
     receive: faker.datatype.boolean(),
     cancel: faker.datatype.boolean(),
@@ -28810,6 +28932,14 @@ export const getUpdateSupplierOrderResponseMock = (
   path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   partner_note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  price_request: faker.helpers.arrayElement([
+    { ...getUpdateSupplierOrderResponseSupplierOrderPriceRequestStateMock() },
+    null,
+  ]),
+  send_missing: faker.helpers.arrayElement([
+    { ...getUpdateSupplierOrderResponseSupplierOrderSendMissingMock() },
+    null,
+  ]),
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   mail: faker.helpers.arrayElement([
@@ -28943,6 +29073,28 @@ export const getSendSupplierOrderResponsePersonRefMock = (
   ...overrideResponse,
 });
 
+export const getSendSupplierOrderResponseSupplierOrderPriceRequestStateMock = (
+  overrideResponse: Partial<SupplierOrderPriceRequestState> = {},
+): SupplierOrderPriceRequestState => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    status: faker.helpers.arrayElement(["sent", "failed"] as const),
+    answered_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getSendSupplierOrderResponseSupplierOrderSendMissingMock = (
+  overrideResponse: Partial<SupplierOrderSendMissing> = {},
+): SupplierOrderSendMissing => ({
+  ...{ prices: faker.number.int({ min: 0 }), date: faker.datatype.boolean() },
+  ...overrideResponse,
+});
+
 export const getSendSupplierOrderResponseSupplierOrderMailMock = (
   overrideResponse: Partial<SupplierOrderMail> = {},
 ): SupplierOrderMail => ({
@@ -29034,6 +29186,7 @@ export const getSendSupplierOrderResponseMock = (
   actions: {
     edit: faker.datatype.boolean(),
     send: faker.datatype.boolean(),
+    request_price: faker.datatype.boolean(),
     confirm: faker.datatype.boolean(),
     receive: faker.datatype.boolean(),
     cancel: faker.datatype.boolean(),
@@ -29041,6 +29194,14 @@ export const getSendSupplierOrderResponseMock = (
   path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   partner_note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  price_request: faker.helpers.arrayElement([
+    { ...getSendSupplierOrderResponseSupplierOrderPriceRequestStateMock() },
+    null,
+  ]),
+  send_missing: faker.helpers.arrayElement([
+    { ...getSendSupplierOrderResponseSupplierOrderSendMissingMock() },
+    null,
+  ]),
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   mail: faker.helpers.arrayElement([
@@ -29163,6 +29324,60 @@ export const getSendSupplierOrderResponseMock = (
   ...overrideResponse,
 });
 
+export const getRequestSupplierOrderPriceResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getRequestSupplierOrderPriceResponseMock = (
+  overrideResponse: Partial<Extract<PriceRequest, object>> = {},
+): PriceRequest => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  supplier: {
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  },
+  request: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  order: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  requested_by: faker.helpers.arrayElement([
+    { ...getRequestSupplierOrderPriceResponsePersonRefMock() },
+    null,
+  ]),
+  to_email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  note: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  status: faker.helpers.arrayElement(["sent", "failed"] as const),
+  error: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  answered_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  answered_by: faker.helpers.arrayElement([
+    { ...getRequestSupplierOrderPriceResponsePersonRefMock() },
+    null,
+  ]),
+  answer_note: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    line_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    article: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
+  ...overrideResponse,
+});
+
 export const getConfirmSupplierOrderResponsePersonRefMock = (
   overrideResponse: Partial<PersonRef> = {},
 ): PersonRef => ({
@@ -29171,6 +29386,28 @@ export const getConfirmSupplierOrderResponsePersonRefMock = (
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
   },
+  ...overrideResponse,
+});
+
+export const getConfirmSupplierOrderResponseSupplierOrderPriceRequestStateMock = (
+  overrideResponse: Partial<SupplierOrderPriceRequestState> = {},
+): SupplierOrderPriceRequestState => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    status: faker.helpers.arrayElement(["sent", "failed"] as const),
+    answered_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getConfirmSupplierOrderResponseSupplierOrderSendMissingMock = (
+  overrideResponse: Partial<SupplierOrderSendMissing> = {},
+): SupplierOrderSendMissing => ({
+  ...{ prices: faker.number.int({ min: 0 }), date: faker.datatype.boolean() },
   ...overrideResponse,
 });
 
@@ -29265,6 +29502,7 @@ export const getConfirmSupplierOrderResponseMock = (
   actions: {
     edit: faker.datatype.boolean(),
     send: faker.datatype.boolean(),
+    request_price: faker.datatype.boolean(),
     confirm: faker.datatype.boolean(),
     receive: faker.datatype.boolean(),
     cancel: faker.datatype.boolean(),
@@ -29272,6 +29510,14 @@ export const getConfirmSupplierOrderResponseMock = (
   path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   partner_note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  price_request: faker.helpers.arrayElement([
+    { ...getConfirmSupplierOrderResponseSupplierOrderPriceRequestStateMock() },
+    null,
+  ]),
+  send_missing: faker.helpers.arrayElement([
+    { ...getConfirmSupplierOrderResponseSupplierOrderSendMissingMock() },
+    null,
+  ]),
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   mail: faker.helpers.arrayElement([
@@ -29405,6 +29651,28 @@ export const getCancelSupplierOrderResponsePersonRefMock = (
   ...overrideResponse,
 });
 
+export const getCancelSupplierOrderResponseSupplierOrderPriceRequestStateMock = (
+  overrideResponse: Partial<SupplierOrderPriceRequestState> = {},
+): SupplierOrderPriceRequestState => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    status: faker.helpers.arrayElement(["sent", "failed"] as const),
+    answered_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getCancelSupplierOrderResponseSupplierOrderSendMissingMock = (
+  overrideResponse: Partial<SupplierOrderSendMissing> = {},
+): SupplierOrderSendMissing => ({
+  ...{ prices: faker.number.int({ min: 0 }), date: faker.datatype.boolean() },
+  ...overrideResponse,
+});
+
 export const getCancelSupplierOrderResponseSupplierOrderMailMock = (
   overrideResponse: Partial<SupplierOrderMail> = {},
 ): SupplierOrderMail => ({
@@ -29496,6 +29764,7 @@ export const getCancelSupplierOrderResponseMock = (
   actions: {
     edit: faker.datatype.boolean(),
     send: faker.datatype.boolean(),
+    request_price: faker.datatype.boolean(),
     confirm: faker.datatype.boolean(),
     receive: faker.datatype.boolean(),
     cancel: faker.datatype.boolean(),
@@ -29503,6 +29772,14 @@ export const getCancelSupplierOrderResponseMock = (
   path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   partner_note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  price_request: faker.helpers.arrayElement([
+    { ...getCancelSupplierOrderResponseSupplierOrderPriceRequestStateMock() },
+    null,
+  ]),
+  send_missing: faker.helpers.arrayElement([
+    { ...getCancelSupplierOrderResponseSupplierOrderSendMissingMock() },
+    null,
+  ]),
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   mail: faker.helpers.arrayElement([
@@ -29636,6 +29913,28 @@ export const getReceiveSupplierOrderResponsePersonRefMock = (
   ...overrideResponse,
 });
 
+export const getReceiveSupplierOrderResponseSupplierOrderPriceRequestStateMock = (
+  overrideResponse: Partial<SupplierOrderPriceRequestState> = {},
+): SupplierOrderPriceRequestState => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    status: faker.helpers.arrayElement(["sent", "failed"] as const),
+    answered_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getReceiveSupplierOrderResponseSupplierOrderSendMissingMock = (
+  overrideResponse: Partial<SupplierOrderSendMissing> = {},
+): SupplierOrderSendMissing => ({
+  ...{ prices: faker.number.int({ min: 0 }), date: faker.datatype.boolean() },
+  ...overrideResponse,
+});
+
 export const getReceiveSupplierOrderResponseSupplierOrderMailMock = (
   overrideResponse: Partial<SupplierOrderMail> = {},
 ): SupplierOrderMail => ({
@@ -29727,6 +30026,7 @@ export const getReceiveSupplierOrderResponseMock = (
   actions: {
     edit: faker.datatype.boolean(),
     send: faker.datatype.boolean(),
+    request_price: faker.datatype.boolean(),
     confirm: faker.datatype.boolean(),
     receive: faker.datatype.boolean(),
     cancel: faker.datatype.boolean(),
@@ -29734,6 +30034,14 @@ export const getReceiveSupplierOrderResponseMock = (
   path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   partner_note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  price_request: faker.helpers.arrayElement([
+    { ...getReceiveSupplierOrderResponseSupplierOrderPriceRequestStateMock() },
+    null,
+  ]),
+  send_missing: faker.helpers.arrayElement([
+    { ...getReceiveSupplierOrderResponseSupplierOrderSendMissingMock() },
+    null,
+  ]),
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   mail: faker.helpers.arrayElement([
@@ -30189,6 +30497,7 @@ export const getListOverdueSupplierOrdersResponseMock = (
     actions: {
       edit: faker.datatype.boolean(),
       send: faker.datatype.boolean(),
+      request_price: faker.datatype.boolean(),
       confirm: faker.datatype.boolean(),
       receive: faker.datatype.boolean(),
       cancel: faker.datatype.boolean(),
@@ -44159,6 +44468,30 @@ export const getSendSupplierOrderMockHandler = (
   );
 };
 
+export const getRequestSupplierOrderPriceMockHandler = (
+  overrideResponse?:
+    | PriceRequest
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<PriceRequest> | PriceRequest),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/stock/orders/:orderNumber/price-request",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRequestSupplierOrderPriceResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getConfirmSupplierOrderMockHandler = (
   overrideResponse?:
     | SupplierOrderDetail
@@ -46629,6 +46962,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getGetSupplierOrderMockHandler(),
   getUpdateSupplierOrderMockHandler(),
   getSendSupplierOrderMockHandler(),
+  getRequestSupplierOrderPriceMockHandler(),
   getConfirmSupplierOrderMockHandler(),
   getCancelSupplierOrderMockHandler(),
   getReceiveSupplierOrderMockHandler(),

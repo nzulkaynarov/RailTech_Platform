@@ -146,3 +146,10 @@
 .pf-stock-multiline {
   white-space: pre-wrap;
 }
+
+/* СЦ-10: «Изменить» — строка с ценой: позиция, количество, цена, удалить; узко — столбцом, как остальные строки. */
+@media (min-width: 768px) {
+  .pf-stock-receive.pf-stock-receive--priced > li {
+    grid-template-columns: minmax(0, 1fr) 120px 140px auto;
+  }
+}

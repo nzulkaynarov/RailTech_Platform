@@ -136,3 +136,20 @@ def make_deal(world: dict, goods: list[tuple[Product, int]], *, approved: bool =
 
         ensure_fulfillment(deal)
     return deal, quote, items
+
+
+def complete_order(order_id: int, price: str = "100.00") -> None:
+    """Черновик заказа партнёру — готов к отправке (СЦ-10): строкам без цены — цена, заказу без даты — завтра.
+
+    Тесты, которые проверяют не полноту заказа, а дальнейший путь (письмо, подтверждение, приёмку), зовут это
+    перед «Отправить партнёру»."""
+    from datetime import timedelta
+
+    from django.utils import timezone
+    from supply.models import SupplierOrder
+
+    order = SupplierOrder.objects.get(pk=order_id)
+    order.lines.filter(unit_price__isnull=True).update(unit_price=Decimal(price))
+    if order.expected_date is None:
+        order.expected_date = timezone.localdate() + timedelta(days=1)
+        order.save(update_fields=["expected_date"])

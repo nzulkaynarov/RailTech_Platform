@@ -23,7 +23,7 @@ from django.core import mail
 from django.db import connection
 from django.utils import timezone
 from inventory.services import stock
-from inventory.tests.support import SUPPLY, api
+from inventory.tests.support import SUPPLY, api, complete_order
 from supply.models import SupplierOrder
 
 from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, CustomUser, WorkspaceRole
@@ -179,6 +179,7 @@ def test_a_line_cannot_be_received_twice_beyond_its_quantity(lab, monkeypatch):
         )
         .json()
     )
+    complete_order(order["id"])
     assert api(lab["supply"]).post(f"{STOCK}orders/{order['id']}/send/", {}, format="json").status_code == 200
     expected = (timezone.localdate() + timedelta(days=3)).isoformat()
     assert (
@@ -219,6 +220,7 @@ def test_double_click_on_send_sends_one_mail_and_one_transition(lab, monkeypatch
     import notifications.emails as emails
 
     _slow(monkeypatch, emails, "send_templated_email")
+    complete_order(order["id"])
     send = (
         lambda: api(lab["supply"]).post(f"{STOCK}orders/{order['id']}/send/", {}, format="json").status_code
     )  # noqa: E731
