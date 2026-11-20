@@ -71,12 +71,25 @@ def find_existing_card(item, owner_company):
     Похожие (а не совпадающие) имена карточек не сливаем — это подсказка человеку, а не
     основание; иначе «подшипник буксовый», который есть у каждого второго, склеил бы разные
     детали.
+
+    СЦ-10: «то же имя» — по ключу `catalog.naming.name_key` (регистр, «ё», пробелы, знаки препинания и латинские
+    буквы-двойники не важны). Архивная карточка (в том числе слитый дубль) строку не принимает; из одинаковых —
+    опубликованная, затем старейшая.
     """
+    from django.db.models import Case, IntegerField, Value, When
+
     from catalog.models import Product
+    from catalog.naming import MAX_LENGTH, name_key
 
     if owner_company is None:
         return None
-    mine = Product.objects.filter(owner_company=owner_company)
+    mine = (
+        Product.objects.filter(owner_company=owner_company)
+        .exclude(status__code="ARCHIVED")
+        .order_by(
+            Case(When(status__code="PUBLISHED", then=Value(0)), default=Value(1), output_field=IntegerField()), "pk"
+        )
+    )
     mpn = _clean(getattr(item, "mpn", ""))
     if mpn:
         found = mine.filter(manufacturer_part_number__iexact=mpn).first()
@@ -87,11 +100,10 @@ def find_existing_card(item, owner_company):
         found = mine.filter(gost_drawing__iexact=gost).first()
         if found:
             return found
-    title = _line_title(item)
-    if title:
-        found = mine.filter(name__iexact=title).first()
-        if found:
-            return found
+    # Карточка хранит name[:255] (`ensure_candidate_for_line`) — ключ строки той же длины.
+    key = name_key(_line_title(item)[:MAX_LENGTH])
+    if key:
+        return mine.filter(name_key=key).first()
     return None
 
 
@@ -216,11 +228,17 @@ def card_for_text(title: str, *, deal=None, quote=None):
 @transaction.atomic
 def link_line(item, owner_company, *, deal=None) -> bool:
     """Связать одну строку без карточки с найденной или новой карточкой-черновиком. True — строка связана."""
-    product, _created = ensure_candidate_for_line(item, owner_company, deal=deal, kind=_line_kind(item))
+    product, created = ensure_candidate_for_line(item, owner_company, deal=deal, kind=_line_kind(item))
     if product is None:
         return False
     item.product = product
-    item.save(update_fields=["product"], skip_recalculate=True)
+    fields = ["product"]
+    # ADR-0027 п. 10: строка без своей единицы берёт единицу найденной карточки.
+    uom = product.uom if product.uom_id else None
+    if not created and uom is not None and len(uom.code) <= 8 and not _clean(item.unit_code) and not _clean(item.unit):
+        item.unit_code, item.unit = uom.code, uom.name[:32]
+        fields += ["unit_code", "unit"]
+    item.save(update_fields=fields, skip_recalculate=True)
     return True
 
 
@@ -295,6 +313,15 @@ def relink_renamed_line(item, old_name: str) -> None:
     if not title:
         return
     if is_own_draft(item):
+        owner = _owner_for(item.quote)
+        other = find_existing_card(item, owner) if owner is not None else None
+        if other is not None and other.pk != product.pk:  # новое имя уже есть в каталоге — второй карточки не будет
+            item.product = other
+            item.save(update_fields=["product"], skip_recalculate=True)
+            other.demand_count = (other.demand_count or 0) + 1
+            other.save(update_fields=["demand_count"])
+            drop_unused_draft(product.pk)
+            return
         product.name = title[:255]
         product.save(update_fields=["name"])
         return

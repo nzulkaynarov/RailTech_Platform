@@ -163,3 +163,100 @@ def test_capture_never_breaks_the_send(world, monkeypatch):
     )
 
     assert capture_quote_lines(world["quote"]) == {"linked": 0, "skipped": 0}
+
+
+# ── СЦ-10: та же позиция, записанная иначе, не заводит вторую карточку ─────────────────────────────
+
+
+@pytest.mark.parametrize(
+    ("a", "b", "same"),
+    [
+        ("Рельс  P65, ГОСТ  Р-51685.", "рельс р65 гост р-51685", True),
+        ("Болт М12х1,5", "болт м12х1.5", True),
+        ("Ёлка", "елка", True),
+        ("«Шпала ЖБ»", "шпала жб", True),
+        ("Болт М12х1.5", "Болт М12х15", False),
+        ("Болт М22", "Болт М24", False),
+        ("Р-65", "Р65", False),
+        ("Кабель -40", "Кабель +40", False),
+    ],
+)
+def test_name_key(a, b, same):
+    from catalog.naming import name_key
+
+    assert (name_key(a) == name_key(b)) is same
+
+
+def test_name_written_otherwise_reuses_the_card(world):
+    card = Product.objects.create(name="Болт М12", owner_company=world["seller"])
+    line = _line(world["quote"], imported_raw_name="болт  m12.")
+
+    product, created = ensure_candidate_for_line(line, world["seller"], deal=world["deal"])
+
+    assert (product, created) == (card, False)
+    product.refresh_from_db()
+    assert product.demand_count == (card.demand_count or 0) + 1
+
+
+def test_archived_card_does_not_take_the_line(world):
+    ProductStatus.objects.get_or_create(code="ARCHIVED", defaults={"name": "Архив", "sort_order": 30})
+    Product.objects.create(
+        name="Шпала", owner_company=world["seller"], status=ProductStatus.objects.get(code="ARCHIVED")
+    )
+    line = _line(world["quote"], imported_raw_name="Шпала")
+
+    _product, created = ensure_candidate_for_line(line, world["seller"], deal=world["deal"])
+
+    assert created is True
+
+
+def test_published_card_wins_over_an_older_draft(world):
+    draft = Product.objects.create(name="Накладка стыковая Р65", owner_company=world["seller"])
+    published = Product.objects.create(
+        name="Накладка стыковая P65",
+        owner_company=world["seller"],
+        status=ProductStatus.objects.get(code="PUBLISHED"),
+    )
+    assert draft.pk < published.pk
+    line = _line(world["quote"], imported_raw_name="накладка стыковая р65")
+
+    assert find_existing_card(line, world["seller"]) == published
+
+
+def test_long_title_finds_its_own_draft(world):
+    title = "Рельс " + "очень длинное наименование " * 12
+    first, created = ensure_candidate_for_line(
+        _line(world["quote"], imported_raw_name=title), world["seller"], deal=world["deal"]
+    )
+    again, created_again = ensure_candidate_for_line(
+        _line(world["quote"], imported_raw_name=title, position=2), world["seller"], deal=world["deal"]
+    )
+
+    assert created is True and created_again is False and again == first
+
+
+def test_name_key_follows_a_rename_with_update_fields(world):
+    card = Product.objects.create(name="Старое", owner_company=world["seller"])
+    card.name = "Новое  Имя"
+    card.save(update_fields=["name"])
+    card.refresh_from_db()
+
+    assert card.name_key == "новое имя"
+
+
+def test_found_card_gives_its_unit_to_a_line_without_one(world):
+    from catalog.candidates import link_line
+    from core.models import UnitOfMeasure
+    from core.seeds.uom import seed_uom
+
+    seed_uom()
+    Product.objects.create(name="Болт М22", owner_company=world["seller"], uom=UnitOfMeasure.objects.get(code="KGM"))
+    bare = _line(world["quote"], imported_raw_name="Болт М22")
+    written = _line(world["quote"], imported_raw_name="болт м22", unit="т", position=2)
+
+    assert link_line(bare, world["seller"]) and link_line(written, world["seller"])
+
+    bare.refresh_from_db()
+    written.refresh_from_db()
+    assert (bare.unit_code, bare.unit) == ("KGM", "кг")
+    assert (written.unit_code, written.unit) == ("", "т")
