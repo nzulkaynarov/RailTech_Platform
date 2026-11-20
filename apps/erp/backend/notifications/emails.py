@@ -237,8 +237,8 @@ def send_templated_email(
         sys_settings = SystemSetting.load()
         if sys_settings.platform_name:
             platform_name = sys_settings.platform_name
-        if sys_settings.support_email:
-            support_email = sys_settings.support_email
+        # СЦ-3: заглушка в базе не перекрывает настоящий адрес из окружения.
+        support_email = real_support_email(sys_settings.support_email) or real_support_email(support_email)
     except Exception:
         pass
 

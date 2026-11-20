@@ -77,3 +77,18 @@ def test_accepted_letter_names_the_next_step_owner_and_links_back():
         assert "Ваш менеджер — Алишер Каримов" in text
         assert "alisher@railtech.uz" in text
         assert "https://erp.example.uz/api/v1/public/quotes/tok/" in text
+
+
+def test_placeholder_in_the_database_does_not_hide_the_real_address_from_the_environment(settings):
+    """СЦ-3: в базе заглушка (её посеяли до настройки), в окружении — настоящий адрес: в письме — он."""
+    settings.SUPPORT_EMAIL = "help@rt.uz"
+    settings_row = SystemSetting.load()
+    settings_row.support_email = "support@example.com"
+    settings_row.save(update_fields=["support_email"])
+    html = _send("quote_sent", {"seller_name": "S", "quote_number": "1"}).alternatives[0][0]
+    assert "mailto:help@rt.uz" in html
+
+    settings_row.support_email = "support@railtech.uz"
+    settings_row.save(update_fields=["support_email"])
+    html = _send("quote_sent", {"seller_name": "S", "quote_number": "1"}).alternatives[0][0]
+    assert "mailto:support@railtech.uz" in html, "настоящий адрес в базе главнее окружения"

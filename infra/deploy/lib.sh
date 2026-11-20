@@ -63,6 +63,19 @@ require_env_var() {
   [[ -n "$value" ]] || die "в $RT_ENV_FILE нет $name (или значение пусто): $hint"
 }
 
+# Адрес-заглушка (…@example.com/.org) или пусто — выкладка останавливается до pull (СЦ-3: адрес поддержки в письмах
+# клиентам). Не в require_env_file: её вызывают rollback.sh и offsite-check.sh, откат блокироваться не должен.
+# require_real_email <ИМЯ> <подсказка>
+require_real_email() {
+  local name="$1" hint="$2" v
+  v="$(env_get "$name" || true)"
+  v="${v//$'\r'/}"
+  v="${v//[[:space:]]/}"
+  if [[ -z "$v" ]] || grep -qiE '@example\.(com|org)$' <<<"$v"; then
+    die "в $RT_ENV_FILE $name пуст или заглушка: $hint"
+  fi
+}
+
 # compose <каталог-релиза> <аргументы...>; тег образов — из окружения (RT_IMAGE_TAG), профили — из RT_PROFILES.
 compose() {
   local rel="$1"; shift
