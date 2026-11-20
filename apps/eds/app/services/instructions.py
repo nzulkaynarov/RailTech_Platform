@@ -26,7 +26,7 @@ from typing import Any
 
 import structlog
 from rt_bus.sqlalchemy import AsyncBus
-from sqlalchemy import and_, exists, select
+from sqlalchemy import and_, exists, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import clock
@@ -453,18 +453,21 @@ async def _finish_if_done(session: AsyncSession, bus: AsyncBus, letter: Letter, 
 
 
 async def _outgoing_by_number(session: AsyncSession, number: str) -> Document:
+    wanted = number.strip()
     stmt = select(Document).where(
-        Document.number == number.strip(), Document.kind == "letter_out", Document.status == "sent"
+        or_(Document.number == wanted, Document.previous_number == wanted),
+        Document.kind == "letter_out",
+        Document.status == "sent",
     )
-    document = (await session.execute(stmt)).scalar_one_or_none()
+    document = (await session.execute(stmt.order_by((Document.number == wanted).desc()).limit(1))).scalar_one_or_none()
     if document is None:
-        raise invalid_fields("Отправленный ИСХ с таким номером не найден.", outgoing_number="not_found")
+        raise invalid_fields("Отправленное исходящее с таким номером не найдено.", outgoing_number="not_found")
     return document
 
 
 async def _link_outgoing(session: AsyncSession, outgoing: Document, letter: Letter, actor_id: int) -> None:
-    """«Исполнено» с номером ИСХ (EDS-REPLY-1): ИСХ «в ответ на» это письмо принимается; ИСХ без связи — тоже, связь
-    записывается; ИСХ в ответ на другое входящее — 409 (Directum, ELMA «В ответ на»: ответ — одному письму)."""
+    """«Исполнено» с номером исходящего (EDS-REPLY-1): исходящее «в ответ на» это письмо принимается; без связи —
+    тоже, связь записывается; в ответ на другое входящее — 409 (Directum, ELMA «В ответ на»: ответ — одному письму)."""
     if outgoing.in_reply_to == letter.id:
         return
     if outgoing.in_reply_to is not None:
@@ -472,7 +475,7 @@ async def _link_outgoing(session: AsyncSession, outgoing: Document, letter: Lett
         raise conflict(
             "outgoing_linked_elsewhere",
             f"{outgoing.number} уже отвечает на {other.number if other else 'другое входящее письмо'}: "
-            "укажите ИСХ этого письма или напишите отчёт.",
+            "укажите исходящее этого письма или напишите отчёт.",
             outgoing_number=outgoing.number,
         )
     outgoing.in_reply_to = letter.id
@@ -528,7 +531,7 @@ async def complete(
         await _link_outgoing(session, outgoing, letter, actor_id)
     handed_to = await _checked_handover(session, data.handed_to, actor_id) if data.handed_to else None
     if report is None and not data.file_ids and outgoing is None and handed_to is None:
-        raise invalid_fields("Напишите отчёт, приложите файл или укажите ИСХ.", report="report_required")
+        raise invalid_fields("Напишите отчёт, приложите файл или укажите исходящее.", report="report_required")
     await files.attach(session, data.file_ids, actor_id=actor_id, instruction_id=instruction.id)
     now = clock.now()
     instruction.status, instruction.report, instruction.executed_at, instruction.updated_at = (

@@ -21,6 +21,11 @@ export interface EdsDocument {
   kind: EdsDocumentKind;
   /** @nullable */
   number: string | null;
+  /**
+   * Номер до перенумерации на латиницу; `null` или нет поля, если номер не менялся
+   * @nullable
+   */
+  previous_number?: string | null;
   status: EdsDocumentStatus;
   /** @minimum 1 */
   version: number;

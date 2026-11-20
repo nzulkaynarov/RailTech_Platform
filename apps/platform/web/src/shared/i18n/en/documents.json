@@ -113,6 +113,7 @@
   "panel": {
     "label": "Document",
     "fields": {
+      "previousNumber": "Previous number",
       "kind": "Type",
       "author": "From",
       "addressee": "To",

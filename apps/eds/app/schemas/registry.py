@@ -32,6 +32,8 @@ class RegistryItem(BaseModel):
     kind: RegistryKind
     id: uuid.UUID
     number: str | None
+    #: Номер до перенумерации (СЦ-5); по нему же находит реестр и старая ссылка
+    previous_number: str | None = None
     title: str
     status: str
     registered_at: dt.datetime

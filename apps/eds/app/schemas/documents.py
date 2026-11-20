@@ -213,6 +213,7 @@ class Document(BaseModel):
     id: uuid.UUID
     kind: DocumentKind
     number: str | None
+    previous_number: str | None
     status: DocumentStatus
     version: int
     subject: str

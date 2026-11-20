@@ -207,7 +207,7 @@ class EdsFake:
             return httpx.Response(200, json=self.page)
         if request.method == "GET" and tail == "registry":
             number = request.url.params.get("number")
-            items = [i for i in self.registry if i["number"] == number]
+            items = [i for i in self.registry if number in (i["number"], i.get("previous_number"))]
             return httpx.Response(200, json={"items": items, "next_cursor": None})
         match = re.fullmatch(r"letters/([0-9a-f-]{36})(?:/(resolution|return|reject))?", tail)
         if match:

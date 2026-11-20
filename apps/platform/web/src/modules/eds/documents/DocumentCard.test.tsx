@@ -130,6 +130,19 @@ describe("EDS · карточка письма: текст блоками, бе�
     expect(card.queryByRole("heading", { level: 4, name: "Решения" })).toBeNull();
   });
 
+  it("прежний номер — строка в реквизитах, только когда он есть (СЦ-5)", async () => {
+    seed({ status: "sent", number: "OUT-045/26", previous_number: "ИСХ-045/26" });
+    const card = await openCard();
+    expect(card.getByText("Прежний номер")).toBeVisible();
+    expect(card.getByText("ИСХ-045/26")).toBeVisible();
+  });
+
+  it("без прежнего номера строки «Прежний номер» нет", async () => {
+    seed({ status: "sent", number: "OUT-045/26" });
+    const card = await openCard();
+    expect(card.queryByText("Прежний номер")).toBeNull();
+  });
+
   it("письмо без бланка (только текст): плоский текст, как раньше", async () => {
     seed({ text: "Короткое письмо без бланка." });
     const state = readEds();

@@ -267,8 +267,10 @@ def test_no_number_is_an_empty_number_and_original_number_is_forgiving() -> None
         assert exact_key("301234567", None, None, empty, date(2026, 10, 20)) is None, empty
     assert ref_key("Н-1") == "н-1"
     assert letter_number(" in-001/26 ") == "IN-001/26"  # нынешнее обозначение — как набрано, регистр не важен
-    assert letter_number(" bx-001/26 ") == letter_number("вх-001/26") == "ВХ-001/26"  # выданные раньше — прежний вид
-    assert letter_number("BХ-001/26") == "ВХ-001/26"  # латинская B, кириллическая Х — прежний вид
+    # СЦ-5: обозначение не разбирается — ни «BX», ни «ВХ» не превращаются друг в друга, номер непрозрачен
+    assert letter_number(" bx-001/26 ") == "BX-001/26"
+    assert letter_number("вх-001/26") == "ВХ-001/26"
+    assert letter_number("BХ-001/26") == "BХ-001/26"
 
 
 async def test_letters_without_a_number_are_not_duplicates(client: httpx.AsyncClient, staff: dict[str, Person]) -> None:

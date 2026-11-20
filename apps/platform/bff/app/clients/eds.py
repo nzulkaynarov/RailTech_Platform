@@ -151,7 +151,8 @@ class EdsLetters:
             if (
                 isinstance(item, dict)
                 and item.get("kind") == "letter_in"
-                and item.get("number") == number
+                and number
+                in (item.get("number"), item.get("previous_number"))  # СЦ-5: старая ссылка
             ):
                 found = item.get("id")
                 return found if isinstance(found, str) else None

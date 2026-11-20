@@ -28,6 +28,8 @@ export interface MockDocument {
   id: string;
   kind: EdsDocumentKind;
   number: string | null;
+  /** СЦ-5: номер до перенумерации на латиницу */
+  previous_number?: string | null;
   status: EdsDocumentStatus;
   version: number;
   subject: string;

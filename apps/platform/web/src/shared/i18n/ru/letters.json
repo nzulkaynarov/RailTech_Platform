@@ -83,6 +83,7 @@
       "addressee": "На чьё имя",
       "contact": "Контактное лицо",
       "received": "Получено",
+      "previousNumber": "Прежний номер",
       "urgency": "Срочность",
       "kind": "Вид документа",
       "receiptMethod": "Способ получения",

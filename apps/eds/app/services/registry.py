@@ -74,6 +74,10 @@ class Filters:
     q: str | None = None
 
 
+def _text_null() -> Any:
+    return cast(null(), String)
+
+
 def _big(value: Any = None) -> Any:
     return cast(null() if value is None else value, BigInteger)
 
@@ -95,6 +99,7 @@ def _union(employee: Employee) -> CompoundSelect[Any]:
         cast(literal_column("'letter_in'"), String).label("kind"),
         Letter.id.label("id"),
         Letter.number.label("number"),
+        Letter.previous_number.label("previous_number"),
         Letter.subject.label("title"),
         Letter.status.label("status"),
         Letter.registered_at.label("registered_at"),
@@ -114,6 +119,7 @@ def _union(employee: Employee) -> CompoundSelect[Any]:
         cast(literal_column("documents.kind"), String).label("kind"),
         Document.id.label("id"),
         Document.number.label("number"),
+        Document.previous_number.label("previous_number"),
         Document.subject.label("title"),
         Document.status.label("status"),
         Document.created_at.label("registered_at"),
@@ -134,6 +140,7 @@ def _union(employee: Employee) -> CompoundSelect[Any]:
         cast(literal_column("'quote'"), String).label("kind"),
         ApprovalRoute.id,
         ApprovalRoute.quote_number,
+        _text_null(),
         ApprovalRoute.title,
         ApprovalRoute.status,
         ApprovalRoute.created_at,
@@ -164,6 +171,7 @@ def _project_documents() -> Select[Any]:
         cast(ProjectDocument.kind, String),
         ProjectDocument.id,
         ProjectDocument.number,
+        _text_null(),
         ProjectDocument.title,
         ProjectDocument.status,
         ProjectDocument.registered_at,
@@ -207,10 +215,14 @@ def _filtered(employee: Employee, filters: Filters) -> Select[Any]:
     if filters.crm_client_id is not None:
         stmt = stmt.where(c.crm_client_id == filters.crm_client_id)
     if filters.number:
-        stmt = stmt.where(c.number == filters.number)
+        stmt = stmt.where((c.number == filters.number) | (c.previous_number == filters.number))
     if filters.q and filters.q.strip():
         like = f"%{escape_like(filters.q.strip())}%"
-        stmt = stmt.where(c.number.ilike(like, escape="\\") | c.title.ilike(like, escape="\\"))
+        stmt = stmt.where(
+            c.number.ilike(like, escape="\\")
+            | c.previous_number.ilike(like, escape="\\")
+            | c.title.ilike(like, escape="\\")
+        )
     return stmt
 
 
@@ -220,6 +232,7 @@ def _item(row: Any, directory: Directory) -> RegistryItem:
         kind=RegistryKind(row.kind),
         id=row.id,
         number=row.number,
+        previous_number=row.previous_number,
         title=row.title,
         status=row.status,
         registered_at=row.registered_at,

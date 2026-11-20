@@ -180,14 +180,20 @@ def _link_values(links: ErpLinksIn | None) -> dict[str, Any]:
 
 
 async def _related(session: AsyncSession, number: str | None) -> dict[str, uuid.UUID | None]:
-    """Связь с предыдущим ВХ или нашим ИСХ по номеру (P8); номера нет в реестре — 422 `related_number`."""
+    """Связь с предыдущим входящим или нашим исходящим по номеру (P8); номера нет в реестре — 422 `related_number`."""
     if number is None:
         return {"related_letter_id": None, "related_document_id": None}
-    letter_id = (await session.execute(select(Letter.id).where(Letter.number == number))).scalar_one_or_none()
+    # Номер ищется и среди прежних (СЦ-5): старый номер, набранный по памяти, находит то же письмо
+    stmt = select(Letter.id).where(or_(Letter.number == number, Letter.previous_number == number))
+    letter_id = (await session.execute(stmt.order_by((Letter.number == number).desc()).limit(1))).scalar_one_or_none()
     if letter_id is not None:
         return {"related_letter_id": letter_id, "related_document_id": None}
-    stmt = select(Document.id).where(Document.number == number, Document.kind == "letter_out")
-    document_id = (await session.execute(stmt)).scalar_one_or_none()
+    stmt = select(Document.id).where(
+        or_(Document.number == number, Document.previous_number == number), Document.kind == "letter_out"
+    )
+    document_id = (
+        await session.execute(stmt.order_by((Document.number == number).desc()).limit(1))
+    ).scalar_one_or_none()
     if document_id is None:
         raise invalid_fields("Документ с таким номером не найден.", related_number="not_found")
     return {"related_letter_id": None, "related_document_id": document_id}
