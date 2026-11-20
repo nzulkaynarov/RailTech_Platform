@@ -135,7 +135,10 @@ class OrderMailSerializer(serializers.Serializer):
 
 
 class OrderDetailSerializer(OrderRowSerializer):
-    note = serializers.CharField(allow_blank=True)
+    note = serializers.CharField(allow_blank=True, help_text="Внутреннее примечание: партнёру не уходит")
+    partner_note = serializers.CharField(
+        allow_blank=True, help_text="Комментарий партнёру: в письме с заказом и в кабинете"
+    )
     sent_at = serializers.DateTimeField(allow_null=True)
     sent_to = serializers.CharField(allow_null=True)
     mail = OrderMailSerializer(allow_null=True)
@@ -277,6 +280,7 @@ class OrderCreateInSerializer(serializers.Serializer):
     supplier_id = serializers.IntegerField(min_value=1)
     expected_date = serializers.DateField(required=False, allow_null=True)
     note = serializers.CharField(required=False, allow_blank=True, max_length=5000, default="")
+    partner_note = serializers.CharField(required=False, allow_blank=True, max_length=5000, default="")
     currency = serializers.CharField(required=False, allow_null=True, allow_blank=True, max_length=3)
     lines = OrderLineInSerializer(many=True, allow_empty=False, max_length=200)
 
@@ -290,6 +294,12 @@ class OrderPatchInSerializer(serializers.Serializer):
     supplier_id = serializers.IntegerField(required=False, min_value=1)
     expected_date = serializers.DateField(required=False, allow_null=True)
     note = serializers.CharField(required=False, allow_blank=True, max_length=5000)
+    partner_note = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=5000,
+        help_text="Только в черновике: отправленный заказ не меняется",
+    )
     currency = serializers.CharField(required=False, allow_null=True, allow_blank=True, max_length=3)
     lines = OrderLineInSerializer(many=True, required=False, allow_empty=False, max_length=200)
 

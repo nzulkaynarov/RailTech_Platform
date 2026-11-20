@@ -47,7 +47,9 @@ def today():
 _seq = iter(range(100, 10_000))
 
 
-def make_order(supplier, status=OrderStatus.SENT, *, expected=None, currency=None, created_by=None, note=""):
+def make_order(
+    supplier, status=OrderStatus.SENT, *, expected=None, currency=None, created_by=None, note="", partner_note=""
+):
     seq = next(_seq)
     order = SupplierOrder.objects.create(
         number=f"ЗП-2026-{seq}",
@@ -59,6 +61,7 @@ def make_order(supplier, status=OrderStatus.SENT, *, expected=None, currency=Non
         currency=currency,
         created_by=created_by,
         note=note,
+        partner_note=partner_note,
     )
     SupplierOrderLine.objects.create(
         order=order, position=1, name="Болт", article="B-1", unit="шт", quantity=10, unit_price=Decimal("5.00")
@@ -523,6 +526,16 @@ def test_order_note_is_internal_even_after_sending(partner_world):
     assert response.status_code == 200
     assert response.json()["note"] == ""
     assert SECRET_NOTE not in response.content.decode()
+
+
+def test_partner_sees_only_the_partner_comment(partner_world):
+    w = partner_world
+    order = make_order(w["a"], OrderStatus.SENT, note=SECRET_NOTE, partner_note="Отгрузка двумя партиями")
+
+    body = w["client_a"].get(f"{PREFIX}/orders/{order.pk}").json()
+
+    assert body["note"] == "Отгрузка двумя партиями"
+    assert SECRET_NOTE not in str(body)
 
 
 def test_order_without_currency_is_not_shown_in_rubles(partner_world):

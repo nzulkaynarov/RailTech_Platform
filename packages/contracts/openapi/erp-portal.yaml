@@ -4461,7 +4461,7 @@ components:
           format: date-time
         note:
           type: string
-          description: Примечание заказа; уходит поставщику и в письме с заказом
+          description: Комментарий партнёру к заказу (он же — в письме с заказом); внутреннее примечание снабжения сюда не попадает
         total_amount:
           type: string
         currency:

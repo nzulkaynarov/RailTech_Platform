@@ -47934,6 +47934,11 @@
                         "default": "",
                         "maxLength": 5000
                     },
+                    "partner_note": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 5000
+                    },
                     "currency": {
                         "type": "string",
                         "nullable": true,
@@ -48032,7 +48037,12 @@
                         "$ref": "#/components/schemas/OrderActions"
                     },
                     "note": {
-                        "type": "string"
+                        "type": "string",
+                        "description": "Внутреннее примечание: партнёру не уходит"
+                    },
+                    "partner_note": {
+                        "type": "string",
+                        "description": "Комментарий партнёру: в письме с заказом и в кабинете"
                     },
                     "sent_at": {
                         "type": "string",
@@ -48111,6 +48121,7 @@
                     "note",
                     "number",
                     "overdue",
+                    "partner_note",
                     "projects",
                     "quantity",
                     "receipt_state",
@@ -51567,6 +51578,11 @@
                     },
                     "note": {
                         "type": "string",
+                        "maxLength": 5000
+                    },
+                    "partner_note": {
+                        "type": "string",
+                        "description": "Только в черновике: отправленный заказ не меняется",
                         "maxLength": 5000
                     },
                     "currency": {

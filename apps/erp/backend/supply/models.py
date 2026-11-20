@@ -42,6 +42,8 @@ class SupplierOrder(models.Model):
     currency = models.ForeignKey("core.Currency", null=True, blank=True, on_delete=models.PROTECT, related_name="+")
     # Internal staff note: never reaches the partner (order e-mail, partner cabinet) — СЦ-10.
     note = models.TextField(blank=True, default="", verbose_name=_("Примечание"))
+    # Text for the partner: goes in the order e-mail and the partner cabinet (СЦ-10); editable while a draft.
+    partner_note = models.TextField(blank=True, default="", verbose_name=_("Комментарий партнёру"))
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )
