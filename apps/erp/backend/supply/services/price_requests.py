@@ -69,7 +69,8 @@ def create(
     recipient = (to_email or "").strip() or supplier_email(supplier)
     if not recipient:
         raise StockError("SUPPLIER_EMAIL_REQUIRED", 409)
-    reference = deal.number or f"№{deal.pk}"
+    # The partner sees what is asked, not our project number (СЦ-10): «Рельс Р65 и ещё 2 позиции».
+    reference = _items_summary(items)
     subject = f"Запрос цены и срока поставки — {reference}"
     with transaction.atomic():
         request = PriceRequest.objects.create(
@@ -155,6 +156,26 @@ def _log_deal(deal, user, request: PriceRequest, supplier_name: str, failed: boo
         event_code="rfq.price_requested",
         event_params={"supplier": supplier_name, "request_id": request.pk, "lines": request.lines.count()},
     )
+
+
+def _items_summary(items) -> str:
+    """Что запрашиваем — для темы письма и списка в кабинете партнёра: первая позиция и сколько ещё."""
+    first = items[0]
+    name = (
+        first.imported_raw_name or (first.product.name if first.product_id else "") or f"Позиция {first.position}"
+    ).strip()
+    if len(name) > 80:
+        name = name[:79].rstrip() + "…"
+    rest = len(items) - 1
+    if rest <= 0:
+        return name
+    tail = rest % 100
+    word = (
+        "позиций"
+        if 11 <= tail <= 14
+        else {1: "позиция", 2: "позиции", 3: "позиции", 4: "позиции"}.get(rest % 10, "позиций")
+    )
+    return f"{name} и ещё {rest} {word}"
 
 
 @transaction.atomic
