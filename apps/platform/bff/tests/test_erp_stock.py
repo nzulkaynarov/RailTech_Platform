@@ -1255,3 +1255,47 @@ async def test_supply_tasks_are_not_asked_for_roles_without_the_stock_section(
         i["kind"] for i in response.json()["items"]
     }
     assert fb.calls(fb.erp["supply_tasks"]) == 0
+
+
+async def test_incomplete_order_is_refused_with_what_is_missing(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    """СЦ-10: заказ без цены или даты партнёру не уходит — BFF передаёт, чего не хватает."""
+    await web.login(["SUPPLY"])
+    erp.post(f"{STOCK}/orders/31/send/").mock(
+        return_value=httpx.Response(
+            409, json={"detail": "ORDER_INCOMPLETE", "missing_prices": 2, "missing_date": True}
+        )
+    )
+
+    response = await call(web, "POST", f"/erp/stock/orders/{ORDER_ENCODED}/send", {})
+
+    assert response.status_code == 409
+    check(response, "/erp/stock/orders/{order_number}/send", "post")
+    details = response.json()["details"]
+    assert (details["reason"], details["missing_prices"], details["missing_date"]) == (
+        "order_incomplete",
+        2,
+        True,
+    )
+    assert response.json()["message"] == "Не хватает цены или ожидаемой даты."
+
+
+async def test_order_card_says_what_the_draft_lacks(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    await web.login(["SUPPLY"])
+    erp.get(f"{STOCK}/orders/31/").mock(
+        return_value=httpx.Response(
+            200,
+            json=order_detail(
+                status="draft", number=ORDER, send_missing={"prices": 1, "date": True}
+            ),
+        )
+    )
+
+    response = await web.client.get(f"/api/v1/erp/stock/orders/{ORDER_ENCODED}")
+
+    assert response.status_code == 200, response.json()
+    check(response, "/erp/stock/orders/{order_number}", "get")
+    assert response.json()["send_missing"] == {"prices": 1, "date": True}

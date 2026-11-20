@@ -6672,7 +6672,7 @@ export interface paths {
     put?: never;
     /**
      * Склад · Отправить заказ поставщику (черновик → отправлен)
-     * @description ERP `POST /stock/orders/{id}/send/`: письмо поставщику (почта ERP) и запись в журнале заказа. Нет адреса — 409 `details.reason = supplier_email_required` (можно указать `to_email`); письмо не ушло — 409 `details.reason = email_failed`, статус не меняется. Недопустимый переход — 409 `transition_not_allowed`. Раздел `erp.stock` — полный.
+     * @description ERP `POST /stock/orders/{id}/send/`: письмо поставщику (почта ERP) и запись в журнале заказа. Нет адреса — 409 `details.reason = supplier_email_required` (можно указать `to_email`); письмо не ушло — 409 `details.reason = email_failed`, статус не меняется. Недопустимый переход — 409 `transition_not_allowed`. Нет цены у строки или ожидаемой даты — 409 `details.reason = order_incomplete`, `details.missing_prices` (строк без цены), `details.missing_date`; статус не меняется (СЦ-10). Раздел `erp.stock` — полный.
      */
     post: operations["sendSupplierOrder"];
     delete?: never;
@@ -14998,6 +14998,7 @@ export interface components {
     /** @description Что можно сделать с заказом сейчас (статус и права сотрудника) */
     SupplierOrderActions: {
       edit: boolean;
+      /** @description Черновик полный: у всех строк цена и есть ожидаемая дата (СЦ-10) */
       send: boolean;
       confirm: boolean;
       receive: boolean;
@@ -15122,6 +15123,12 @@ export interface components {
       state: "queued" | "sent" | "failed";
       reason: string | null;
     };
+    SupplierOrderSendMissing: {
+      /** @description Сколько строк без цены */
+      prices: number;
+      /** @description Нет ожидаемой даты */
+      date: boolean;
+    };
     /** @description Карточка заказа поставщику */
     SupplierOrderDetail: {
       /**
@@ -15157,6 +15164,8 @@ export interface components {
       note: string;
       /** @description Комментарий партнёру: уходит в письме с заказом и в кабинет партнёра */
       partner_note: string;
+      /** @description СЦ-10 — чего не хватает черновику для отправки партнёру; полный или не черновик — null */
+      send_missing: components["schemas"]["SupplierOrderSendMissing"] | null;
       /** Format: date-time */
       sent_at: string | null;
       /** @description Адрес, на который ушло письмо */
@@ -17257,7 +17266,7 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
-    /** @description 409 `CONFLICT` — склад или заказ не в том состоянии: `details.reason` — код ERP в нижнем регистре (`not_enough_stock` и `details.free`, `below_reserved`, `below_shipped`, `transition_not_allowed`, `order_not_draft`, `order_not_confirmed`, `order_has_receipts`, `expected_date_required`, `supplier_email_required`, `fulfillment_not_ready`, `product_required`, `no_shortage`, `email_failed`, `deal_closed`, `line_not_actual`, `line_not_goods`, `reservation_not_active`, `already_answered`, `serial_exists` и `details.number` — серийный уже принят, `unit_not_available` и `details.number`, `details.max` — единица уже отгружена или партии не хватает) */
+    /** @description 409 `CONFLICT` — склад или заказ не в том состоянии: `details.reason` — код ERP в нижнем регистре (`not_enough_stock` и `details.free`, `below_reserved`, `below_shipped`, `transition_not_allowed`, `order_not_draft`, `order_not_confirmed`, `order_has_receipts`, `expected_date_required`, `supplier_email_required`, `fulfillment_not_ready`, `product_required`, `no_shortage`, `email_failed`, `deal_closed`, `line_not_actual`, `line_not_goods`, `reservation_not_active`, `already_answered`, `serial_exists` и `details.number` — серийный уже принят, `unit_not_available` и `details.number`, `details.max` — единица уже отгружена или партии не хватает, `order_incomplete` и `details.missing_prices`, `details.missing_date` — у заказа нет цены строк или ожидаемой даты) */
     StockConflict: {
       headers: {
         [name: string]: unknown;

@@ -1163,6 +1163,7 @@ export * from "./supplierOrderReceiptLine";
 export * from "./supplierOrderRow";
 export * from "./supplierOrderRowReceiptState";
 export * from "./supplierOrderSendIn";
+export * from "./supplierOrderSendMissing";
 export * from "./supplierOrderStatus";
 export * from "./supplierPage";
 export * from "./supplierRow";

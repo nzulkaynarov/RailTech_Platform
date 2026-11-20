@@ -8,6 +8,7 @@
  */
 export interface SupplierOrderActions {
   edit: boolean;
+  /** Черновик полный: у всех строк цена и есть ожидаемая дата (СЦ-10) */
   send: boolean;
   confirm: boolean;
   receive: boolean;

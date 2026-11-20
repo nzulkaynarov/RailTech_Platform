@@ -166,6 +166,8 @@ class StockErrorSerializer(serializers.Serializer):
     reserved = QuantityField(required=False, help_text="`BELOW_RESERVED`: сколько в резервах")
     on_hand = QuantityField(required=False)
     shipped = serializers.IntegerField(required=False, help_text="`BELOW_SHIPPED`: уже отгружено")
+    missing_prices = serializers.IntegerField(required=False, help_text="`ORDER_INCOMPLETE`: строк без цены")
+    missing_date = serializers.BooleanField(required=False, help_text="`ORDER_INCOMPLETE`: нет ожидаемой даты")
     current = serializers.CharField(
         required=False, help_text="`TRANSITION_NOT_ALLOWED`, `ORDER_NOT_CONFIRMED`: текущий статус"
     )

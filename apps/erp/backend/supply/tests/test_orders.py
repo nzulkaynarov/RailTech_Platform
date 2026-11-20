@@ -14,7 +14,7 @@ import pytest
 from django.core import mail
 from django.utils import timezone
 from inventory.models import Reservation, StockBalance, StockMovement
-from inventory.tests.support import api, make_deal
+from inventory.tests.support import api, complete_order, make_deal
 from supply.models import SupplierOrder, SupplierOrderLine
 
 from notifications.models import EmailLog
@@ -49,7 +49,9 @@ def _create(world, lines=None, *, who="supply", supplier="vendor", **extra):
     return api(world[who]).post(f"{STOCK}orders/", body, format="json")
 
 
-def _act(world, order_id, action, body=None, who="supply"):
+def _act(world, order_id, action, body=None, who="supply", *, complete=True):
+    if action == "send" and complete:
+        complete_order(order_id)  # СЦ-10: эти тесты проверяют путь после отправки, а не полноту заказа
     return api(world[who]).post(f"{STOCK}orders/{order_id}/{action}/", body or {}, format="json")
 
 
@@ -319,6 +321,8 @@ def test_only_allowed_transitions_and_the_expected_date_gate(world):
     assert _act(world, order_id, "send").status_code == 200
     again = _act(world, order_id, "send")
     assert again.status_code == 409 and again.json()["detail"] == "TRANSITION_NOT_ALLOWED"
+    # Отправка требует дату (СЦ-10); защита подтверждения без даты — на случай, если дату стёрли после отправки.
+    SupplierOrder.objects.filter(pk=order_id).update(expected_date=None)
     no_date = _act(world, order_id, "confirm")
     assert no_date.status_code == 409 and no_date.json() == {"detail": "EXPECTED_DATE_REQUIRED"}
     confirmed = _act(world, order_id, "confirm", {"expected_date": _tomorrow()})
@@ -605,3 +609,60 @@ def test_editing_a_draft_line_without_a_unit_keeps_its_unit(world):
         url, {"lines": [{"id": line["id"], "product_id": world["rail"].pk, "quantity": 4, "unit": "кг"}]}, format="json"
     )
     assert retyped.json()["lines"][0]["unit"] == "кг", "присланная единица меняет строку"
+
+
+# ── СЦ-10: заказ партнёру не уходит без цены и даты ──────────────────────────────────────────────────────────────────
+
+
+def test_send_refuses_an_order_without_price_and_date(world):
+    order = _create(world, [_line(world["rail"], 2)]).json()
+    url = f"{STOCK}orders/{order['id']}/"
+
+    refused = _act(world, order["id"], "send", complete=False)
+
+    assert refused.status_code == 409
+    assert refused.json() == {"detail": "ORDER_INCOMPLETE", "missing_prices": 1, "missing_date": True}
+    assert SupplierOrder.objects.get(pk=order["id"]).status == "draft"
+    assert mail.outbox == []
+    detail = api(world["supply"]).get(url).json()
+    assert detail["actions"]["send"] is False
+    assert detail["send_missing"] == {"prices": 1, "date": True}
+    assert not [entry for entry in detail["log"] if entry["kind"] == "sent"]
+
+    line_id = detail["lines"][0]["id"]
+    patch = {
+        "expected_date": _tomorrow(),
+        "lines": [{"id": line_id, "product_id": world["rail"].pk, "quantity": 2, "unit_price": "250.00"}],
+    }
+    assert api(world["supply"]).patch(url, patch, format="json").status_code == 200
+    ready = api(world["supply"]).get(url).json()
+    assert ready["actions"]["send"] is True and ready["send_missing"] is None
+    assert _act(world, order["id"], "send", complete=False).status_code == 200
+    assert api(world["supply"]).get(url).json()["send_missing"] is None
+
+
+def test_send_refuses_an_order_with_a_date_but_no_price(world):
+    order = _create(world, [_line(world["rail"], 2)], expected_date=_tomorrow()).json()
+
+    refused = _act(world, order["id"], "send", complete=False)
+
+    assert refused.json() == {"detail": "ORDER_INCOMPLETE", "missing_prices": 1, "missing_date": False}
+
+
+def test_incomplete_order_is_refused_before_the_missing_address(world):
+    order = _create(world, [_line(world["rail"], 1)], supplier="silent").json()
+
+    refused = _act(world, order["id"], "send", complete=False)
+
+    assert refused.json()["detail"] == "ORDER_INCOMPLETE"
+
+
+def test_order_mail_carries_the_currency(world):
+    order = _create(
+        world, [_line(world["rail"], 1, unit_price="100.00")], expected_date=_tomorrow(), currency="UZS"
+    ).json()
+    assert order["currency"] == "UZS", order
+
+    assert _act(world, order["id"], "send").status_code == 200
+
+    assert "100.00 UZS" in mail.outbox[0].body

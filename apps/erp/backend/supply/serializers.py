@@ -28,7 +28,7 @@ class OrderSupplierSerializer(serializers.Serializer):
 
 class OrderActionsSerializer(serializers.Serializer):
     edit = serializers.BooleanField()
-    send = serializers.BooleanField()
+    send = serializers.BooleanField(help_text="Черновик полный: у всех строк цена и есть ожидаемая дата (СЦ-10)")
     confirm = serializers.BooleanField()
     receive = serializers.BooleanField()
     cancel = serializers.BooleanField()
@@ -134,10 +134,19 @@ class OrderMailSerializer(serializers.Serializer):
     )
 
 
+class OrderSendMissingSerializer(serializers.Serializer):
+    prices = serializers.IntegerField(help_text="Сколько строк без цены")
+    date = serializers.BooleanField(help_text="Нет ожидаемой даты")
+
+
 class OrderDetailSerializer(OrderRowSerializer):
     note = serializers.CharField(allow_blank=True, help_text="Внутреннее примечание: партнёру не уходит")
     partner_note = serializers.CharField(
         allow_blank=True, help_text="Комментарий партнёру: в письме с заказом и в кабинете"
+    )
+    send_missing = OrderSendMissingSerializer(
+        allow_null=True,
+        help_text="СЦ-10: чего не хватает черновику для отправки партнёру; полный или не черновик — null",
     )
     sent_at = serializers.DateTimeField(allow_null=True)
     sent_to = serializers.CharField(allow_null=True)

@@ -264,6 +264,22 @@ function Content({ order }: { order: SupplierOrderDetail }) {
           })}
         />
       ) : null}
+      {order.send_missing ? (
+        // СЦ-10: без цены и даты заказ партнёру не уходит — карточка говорит, чего не хватает.
+        <Alert
+          type="info"
+          showIcon
+          message={[
+            order.send_missing.prices > 0
+              ? t("order.missing.prices", { count: order.send_missing.prices })
+              : null,
+            order.send_missing.date ? t("order.missing.date") : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+          description={order.actions.edit ? t("order.missing.hint") : undefined}
+        />
+      ) : null}
       {order.status === "cancelled" ? (
         <Alert
           type="info"

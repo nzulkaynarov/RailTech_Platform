@@ -244,9 +244,17 @@ class SupplierOrderMail(BaseModel):
     reason: str | None
 
 
+class SupplierOrderSendMissing(BaseModel):
+    """СЦ-10: чего не хватает черновику для отправки партнёру."""
+
+    prices: int
+    date: bool
+
+
 class SupplierOrderDetail(SupplierOrderRow):
     note: str
     partner_note: str
+    send_missing: SupplierOrderSendMissing | None = None
     sent_at: dt.datetime | None
     sent_to: str | None
     mail: SupplierOrderMail | None
@@ -765,11 +773,18 @@ def _order_mail(raw: Any) -> SupplierOrderMail | None:
     )
 
 
+def _send_missing(raw: Any) -> SupplierOrderSendMissing | None:
+    if not isinstance(raw, Mapping):
+        return None
+    return SupplierOrderSendMissing(prices=int(raw.get("prices") or 0), date=bool(raw.get("date")))
+
+
 def to_order(raw: Mapping[str, Any], prices: bool) -> SupplierOrderDetail:
     return SupplierOrderDetail(
         **_row_data(raw, prices),
         note=raw.get("note") or "",
         partner_note=raw.get("partner_note") or "",
+        send_missing=_send_missing(raw.get("send_missing")),
         sent_at=raw.get("sent_at"),
         sent_to=raw.get("sent_to"),
         mail=_order_mail(raw.get("mail")),

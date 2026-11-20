@@ -2,7 +2,7 @@
 
 {% blocktranslate %}Направляем заказ {{ number }}.{% endblocktranslate %}{% if expected_date %} {% blocktranslate %}Ожидаемая дата поставки: {{ expected_date }}.{% endblocktranslate %}{% endif %}
 {% for line in lines %}
-{{ forloop.counter }}. {{ line.name }}{% if line.article %} ({{ line.article }}){% endif %} — {{ line.quantity }}{% if line.unit %} {{ line.unit }}{% endif %}{% if line.unit_price %}, {{ line.unit_price }}{% endif %}{% endfor %}
+{{ forloop.counter }}. {{ line.name }}{% if line.article %} ({{ line.article }}){% endif %} — {{ line.quantity }}{% if line.unit %} {{ line.unit }}{% endif %}{% if line.unit_price %}, {{ line.unit_price }}{% if currency %} {{ currency }}{% endif %}{% endif %}{% endfor %}
 {% if note %}
 {{ note }}
 {% endif %}

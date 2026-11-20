@@ -12,7 +12,7 @@ from datetime import timedelta
 import pytest
 from django.core import mail
 from django.utils import timezone
-from inventory.tests.support import api, make_deal, make_world
+from inventory.tests.support import api, complete_order, make_deal, make_world
 
 from core.tests.openapi_fixtures import conforms, sends
 
@@ -188,6 +188,7 @@ def test_orders_receipts_overdue_and_price_requests_conform(world):
     _call(supply, "patch", f"{S}orders/{{order_id}}/", f"{S}orders/{order_id}/", patch, status=200)
     _call(reader, "patch", f"{S}orders/{{order_id}}/", f"{S}orders/{order_id}/", {"note": "x"}, status=403)
     _call(supply, "post", f"{S}orders/{{order_id}}/confirm/", f"{S}orders/{order_id}/confirm/", {}, status=409)
+    complete_order(order_id)
     _call(supply, "post", f"{S}orders/{{order_id}}/send/", f"{S}orders/{order_id}/send/", {"to_email": ""}, status=200)
     _call(
         supply,
@@ -326,6 +327,7 @@ def test_tracked_receipt_shipment_and_trace_search_conform(world):
     deal, _q, (item,) = make_deal(world, [(world["rail"], 1)], approved=True, signed=True)
     line = {"product_id": world["rail"].pk, "quantity": 1, "deal_id": deal.pk, "quote_item_id": item.pk}
     order = supply.post(f"{S}orders/", {"supplier_id": world["vendor"].pk, "lines": [line]}, format="json").json()
+    complete_order(order["id"])
     supply.post(f"{S}orders/{order['id']}/send/", {}, format="json")
     tomorrow = (timezone.localdate() + timedelta(days=1)).isoformat()
     supply.post(f"{S}orders/{order['id']}/confirm/", {"expected_date": tomorrow}, format="json")

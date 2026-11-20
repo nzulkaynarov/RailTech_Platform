@@ -13,6 +13,7 @@ import type { SupplierOrderLine } from "./supplierOrderLine";
 import type { SupplierOrderLogEntry } from "./supplierOrderLogEntry";
 import type { SupplierOrderMail } from "./supplierOrderMail";
 import type { SupplierOrderReceipt } from "./supplierOrderReceipt";
+import type { SupplierOrderSendMissing } from "./supplierOrderSendMissing";
 import type { SupplierOrderStatus } from "./supplierOrderStatus";
 
 /**
@@ -57,6 +58,8 @@ export interface SupplierOrderDetail {
   note: string;
   /** Комментарий партнёру: уходит в письме с заказом и в кабинет партнёра */
   partner_note: string;
+  /** СЦ-10 — чего не хватает черновику для отправки партнёру; полный или не черновик — null */
+  send_missing: SupplierOrderSendMissing | null;
   /** @nullable */
   sent_at: string | null;
   /**
