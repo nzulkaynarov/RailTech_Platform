@@ -23772,6 +23772,7 @@ export const getGetCalcParseResponseMock = (
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     quantity: faker.number.float({ min: 0, fractionDigits: 2 }),
     unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit_code: faker.string.alpha({ length: { min: 10, max: 20 } }),
     article: faker.string.alpha({ length: { min: 10, max: 20 } }),
     note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   })),

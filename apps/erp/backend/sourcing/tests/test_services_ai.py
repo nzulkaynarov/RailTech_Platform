@@ -35,7 +35,11 @@ class NormalizeItemsTest(SimpleTestCase):
     def test_quantity_coercion(self):
         cases = [
             ({"name": "x", "quantity": "5"}, 5),
-            ({"name": "x", "quantity": 3.9}, 3),
+            ({"name": "x", "quantity": 3.9}, 3.9),  # СЦ-10: дробное — как написано, без отбрасывания
+            ({"name": "x", "quantity": "12,5"}, 12.5),
+            ({"name": "x", "quantity": "0.0004"}, 1),
+            ({"name": "x", "quantity": "1e30"}, 1),
+            ({"name": "x", "quantity": "nan"}, 1),
             ({"name": "x", "quantity": 0}, 1),
             ({"name": "x", "quantity": -4}, 1),
             ({"name": "x", "quantity": "не число"}, 1),

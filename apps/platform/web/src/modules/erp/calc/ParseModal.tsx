@@ -112,7 +112,11 @@ export function ParseModal({ sheet, onClose }: { sheet: CalcSheet; onClose: () =
               name: line.name,
               quantity: line.quantity,
               kind: kindOf(index),
-              ...(line.unit ? { unit: line.unit } : {}),
+              ...(line.unit_code
+                ? { unit_code: line.unit_code }
+                : line.unit
+                  ? { unit: line.unit }
+                  : {}),
               ...(line.article ? { article: line.article } : {}),
               ...(line.note ? { note: line.note } : {}),
             })),

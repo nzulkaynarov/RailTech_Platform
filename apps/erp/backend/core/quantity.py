@@ -23,7 +23,10 @@ def as_qty(value) -> int | float | None:
 def to_qty(value) -> Decimal:
     """Ввод количества: число или строка с точкой или запятой → `Decimal` с шагом 0,001."""
     try:
-        return Decimal(str(value).replace(",", ".").replace("\u00a0", "").replace(" ", "")).quantize(QUANTUM)
+        amount = Decimal(str(value).replace(",", ".").replace("\u00a0", "").replace(" ", ""))
+        if not amount.is_finite():  # «nan», «inf» — не количество
+            raise ValueError("quantity")
+        return amount.quantize(QUANTUM)
     except (InvalidOperation, ValueError):
         raise ValueError("quantity") from None
 

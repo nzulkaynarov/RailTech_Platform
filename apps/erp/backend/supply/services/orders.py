@@ -220,6 +220,7 @@ def _resolve_lines(lines: list[LineInput]) -> list[dict]:
                 "unit_price": line.unit_price,
                 "price_given": line.price_given,
                 "link_given": line.link_given,
+                "unit_given": bool((line.unit or "").strip()),
                 "deal_id": deal_id,
                 "quote_item_id": item_id,
                 "quote_item": items.get(item_id) if item_id else None,
@@ -261,6 +262,13 @@ def _write_lines(order: SupplierOrder, rows: list[dict], user) -> None:
             unit=row["unit"],
             quantity=row["quantity"],
         )
+        if (
+            line is not None
+            and not row.get("unit_given")
+            and not row["link_given"]
+            and line.product_id == row["product"].pk
+        ):
+            values.pop("unit")  # правка без единицы оставляет единицу строки (набранную или из строки расчёта)
         if line is None or row["link_given"]:
             values.update(
                 deal_id=row["deal_id"], quote_item_id=row["quote_item_id"]
@@ -640,7 +648,9 @@ def receive(user, order_id: int, lines: list[ReceiptInput], *, supplier_doc: str
         note=note.strip()[:500],
         received_by=user if getattr(user, "pk", None) else None,
     )
-    total = 0
+    from crm.templatetags.document_format import qty as format_qty  # «40 т», «2,5 шт.»; без единицы — число
+
+    received: dict[str, Decimal] = {}  # единица строки заказа → принято (СЦ-10: единица не подменяется на «шт.»)
     for item in lines:
         line = order_lines[item.order_line_id]
         if item.quantity <= 0 or item.quantity > line.left:
@@ -670,12 +680,13 @@ def receive(user, order_id: int, lines: list[ReceiptInput], *, supplier_doc: str
         )
         trace.record_receipt(receipt_line, line.product, tracked)
         _reserve_for_project(line, item.quantity, user)
-        total += item.quantity
+        received[line.unit] = received.get(line.unit, Decimal("0")) + item.quantity
+    amounts = ", ".join(format_qty(quantity, unit) for unit, quantity in received.items())
     _log(
         order,
         OrderLogKind.RECEIPT,
         user,
-        f"{total} шт." + (f" · накладная {receipt.supplier_doc}" if receipt.supplier_doc else ""),
+        amounts + (f" · накладная {receipt.supplier_doc}" if receipt.supplier_doc else ""),
     )
     if all(line.received_quantity >= line.quantity for line in order_lines.values()):
         order.status = OrderStatus.RECEIVED

@@ -80,3 +80,21 @@ def test_written_unit_is_recognised_by_the_dictionary(world, written, code, labe
     assert response.status_code == 201, response.json()
     item = QuoteItem.objects.get(pk=response.json()["created"][0])
     assert (item.unit_code, item.unit) == (code, label)
+
+
+def test_parse_proposal_keeps_fraction_and_unit_code(world, settings):  # noqa: F811
+    """СЦ-10: ИИ-разбор — «12,5 т» остаётся 12.5 и получает код TNE; код из разбора не перетирается."""
+    from unittest import mock
+
+    from core.seeds.uom import seed_uom
+    from crm.services.calculation import parse_proposal
+
+    seed_uom()
+    rows = [
+        {"name": "Рельс Р65", "quantity": 12.5, "unit": "т"},
+        {"name": "Болт М22", "quantity": 400, "unit": "шт.", "unit_code": "H87"},
+        {"name": "Доставка", "quantity": 1, "unit": "рейс"},
+    ]
+    with mock.patch("ai.services.intake.extract_request_items", return_value=rows):
+        proposal = parse_proposal("заявка")["proposal"]
+    assert [(p["quantity"], p["unit_code"]) for p in proposal] == [(12.5, "TNE"), (400, "H87"), (1, "")]
