@@ -426,14 +426,10 @@ test.describe("Первый запуск: банковские реквизит�
       await expect(dialog.getByLabel("Банк", { exact: true })).toHaveValue("АКБ «Демо Банк»");
       await screenShot(page, "company-bank-add");
       await dialog.getByRole("button", { name: "Сохранить" }).click();
-      await expect(
-        page.getByText("Основной счёт в сумах задан."),
-      ).toBeVisible();
+      await expect(page.getByText("Основной счёт в сумах задан.")).toBeVisible();
 
       await spaGoto(page, "/admin/setup");
-      await expect(
-        stepCard(page, "Реквизиты для счетов").getByText("Готово"),
-      ).toBeVisible();
+      await expect(stepCard(page, "Реквизиты для счетов").getByText("Готово")).toBeVisible();
     });
   }
 });
