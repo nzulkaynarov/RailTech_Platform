@@ -206,7 +206,7 @@ class DeskPartnerApplicationCreateIn(serializers.Serializer):
     email = serializers.EmailField(max_length=254)
     phone = serializers.CharField(max_length=32, allow_blank=True, required=False, default="")
     language = serializers.ChoiceField(choices=["ru", "uz", "en"], required=False, default="ru")
-    source_ref = serializers.CharField(max_length=32, help_text="Номер входящего письма (ВХ)")
+    source_ref = serializers.CharField(max_length=32, help_text="Номер входящего письма")
 
 
 class DeskPartnerApplicationListResponse(serializers.Serializer):

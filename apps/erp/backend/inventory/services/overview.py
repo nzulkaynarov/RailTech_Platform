@@ -102,7 +102,10 @@ def balances(user, *, q: str = "", only: str = "") -> dict:
         # Поиск идёт по всей номенклатуре: товар без остатка находится, чтобы его можно было оприходовать.
         for word in [w for w in q.split() if w][:6]:
             products = products.filter(
-                Q(name__icontains=word) | Q(sku__icontains=word) | Q(manufacturer_part_number__icontains=word)
+                Q(name__icontains=word)
+                | Q(sku__icontains=word)
+                | Q(previous_sku__icontains=word)
+                | Q(manufacturer_part_number__icontains=word)
             )
         if only:
             products = products.filter(pk__in=ids)

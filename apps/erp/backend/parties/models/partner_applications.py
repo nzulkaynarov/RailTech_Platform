@@ -138,7 +138,7 @@ class PartnerApplication(models.Model):
         blank=True,
         default="",
         verbose_name=_("Номер входящего письма"),
-        help_text=_("План 1.9: заявку завёл сотрудник по входящему письму (ВХ) — «Передать в работу»"),
+        help_text=_("План 1.9: заявку завёл сотрудник по входящему письму — «Передать в работу»"),
     )
     contract_number = models.CharField(
         max_length=64,

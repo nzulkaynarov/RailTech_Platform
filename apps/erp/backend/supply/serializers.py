@@ -39,7 +39,7 @@ class OrderActionsSerializer(serializers.Serializer):
 
 class OrderRowSerializer(serializers.Serializer):
     id = serializers.IntegerField()
-    number = serializers.CharField(help_text="ЗП-ГГГГ-NNN")
+    number = serializers.CharField(help_text="Номер заказа поставщику (PO-2026-001)")
     status = serializers.ChoiceField(choices=ORDER_STATUSES)
     supplier = OrderSupplierSerializer()
     expected_date = serializers.DateField(allow_null=True)

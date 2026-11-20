@@ -295,7 +295,7 @@ def apply_director_decision(
             quote,
             actor,
             "КП одобрено директором с опозданием" if approved_late else "КП одобрено директором",
-            f"{director}: {quote.outgoing_number or 'без ИСХ-номера'} → «Готово к отправке»"
+            f"{director}: {quote.outgoing_number or 'без исходящего номера'} → «Готово к отправке»"
             + (" (готово позже срока резолюции, опоздание принято)" if approved_late else ""),
             event_code="quote.director_approved",
             event_params={

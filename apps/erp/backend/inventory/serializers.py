@@ -21,7 +21,7 @@ ORDER_STATUSES = ("draft", "sent", "confirmed", "received", "cancelled")
 
 class StockDealRefSerializer(serializers.Serializer):
     id = serializers.IntegerField()
-    number = serializers.CharField(allow_null=True, help_text="Номер ЗВ/ПР (`Deal.number`)")
+    number = serializers.CharField(allow_null=True, help_text="Номер заявки или проекта (`Deal.number`)")
     client_name = serializers.CharField(allow_null=True)
 
 
@@ -126,7 +126,7 @@ class StockShipmentLineSerializer(serializers.Serializer):
 
 class StockShipmentSerializer(serializers.Serializer):
     id = serializers.IntegerField()
-    number = serializers.CharField(help_text="Внутренняя накладная ОТГ-ГГГГ-NNN")
+    number = serializers.CharField(help_text="Номер внутренней накладной (SHP-2026-001)")
     deal = StockDealRefSerializer()
     tracking = serializers.CharField(allow_null=True)
     carrier = serializers.CharField(allow_null=True)

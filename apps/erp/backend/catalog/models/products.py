@@ -1,8 +1,8 @@
-import uuid
 from decimal import Decimal
 
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from catalog.constants import FulfillmentPolicy, PriceVisibility
@@ -12,6 +12,31 @@ from master_data.models import Currency, UnitOfMeasure
 # ────────────────────────────────────────────
 # Справочники модуля Catalog
 # ────────────────────────────────────────────
+
+
+def next_sku(prefix: str) -> str:
+    """Next sequential article `GD-00001` from a locked per-prefix counter (no random part).
+
+    The counter lives in DocumentSequence (doc_type `SKU-<prefix>`, never reset). Candidates that are already
+    taken (imported or hand-typed articles) are skipped, so the unique constraint is never hit.
+    """
+    from django.db import transaction
+    from documents.models import DocumentSequence
+
+    with transaction.atomic():
+        seq = DocumentSequence.objects.select_for_update().get_or_create(
+            company=None,
+            doc_type=f"SKU-{prefix}"[:16],
+            period="ALL",
+            defaults={"year": timezone.now().year},
+        )[0]
+        while True:
+            seq.last_value += 1
+            candidate = f"{prefix}-{seq.last_value:05d}"
+            if not Product.objects.filter(sku=candidate).exists():
+                break
+        seq.save(update_fields=["last_value"])
+    return candidate
 
 
 # ────────────────────────────────────────────
@@ -49,7 +74,16 @@ class Product(models.Model):
         db_index=True,
         blank=True,
         verbose_name=_("Артикул (SKU)"),
-        help_text=_("Внутренний артикул (генерируется автоматически)"),
+        help_text=_("Внутренний артикул (генерируется автоматически: GD-00001)"),
+    )
+    previous_sku = models.CharField(
+        max_length=50,
+        blank=True,
+        default="",
+        db_index=True,
+        editable=False,
+        verbose_name=_("Прежний артикул"),
+        help_text=_("Артикул до перенумерации (СЦ-5): поиск по каталогу находит карточку и по нему"),
     )
     description = models.TextField(
         blank=True,
@@ -349,7 +383,7 @@ class Product(models.Model):
             self.status = ProductStatus.objects.get(code="DRAFT")
         if not self.sku:
             prefix = self.domain_type.sku_prefix if self.domain_type else "RT"
-            self.sku = f"{prefix}-{uuid.uuid4().hex[:8].upper()}"
+            self.sku = next_sku(prefix)
         self._normalize_fulfillment_policy(kwargs.get("update_fields"))
         self._refresh_name_key(kwargs)
         self.full_clean()

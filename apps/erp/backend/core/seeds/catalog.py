@@ -17,8 +17,8 @@ STOCK_STATUSES = [
 ]
 
 DOMAIN_TYPES = [
-    ("GENERAL_GOODS", "Товары", "ТВ", 10),
-    ("SERVICES", "Услуги", "УС", 20),
+    ("GENERAL_GOODS", "Товары", "GD", 10),
+    ("SERVICES", "Услуги", "SV", 20),
 ]
 
 CATEGORIES = {

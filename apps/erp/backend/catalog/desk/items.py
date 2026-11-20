@@ -76,6 +76,7 @@ def list_queryset(params):
         queryset = queryset.filter(
             Q(name__icontains=text)
             | Q(sku__icontains=text)
+            | Q(previous_sku__icontains=text)
             | Q(gost_drawing__icontains=text)
             | Q(manufacturer_part_number__icontains=text)
         )

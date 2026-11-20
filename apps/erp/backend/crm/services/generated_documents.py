@@ -316,8 +316,11 @@ def _demo_context(company, user) -> PlaceholderContext:
     counterparty = SimpleNamespace(name="ООО Пример", inn="301234567")
     deal = SimpleNamespace(id=1024, title="Демо-сделка", company_id=1, company=counterparty)
     contact = SimpleNamespace(name="ООО Пример", company_id=1, company=counterparty)
-    quote = SimpleNamespace(number="КП-2026/042", total_incl_vat="12 500 000 UZS")
-    contract = SimpleNamespace(number="ДОГ-2026/007")
+    from .numbering import sample_numbers
+
+    numbers = sample_numbers(company)
+    quote = SimpleNamespace(number=numbers.get("KP", ""), total_incl_vat="12 500 000 UZS")
+    contract = SimpleNamespace(number=numbers.get("CT", ""))
     return PlaceholderContext(company=company, deal=deal, contact=contact, quote=quote, contract=contract, user=user)
 
 
@@ -334,12 +337,13 @@ def render_document_html_from_body(company, rendered_body_html: str, *, brand: d
     from django.template.loader import render_to_string
 
     from .documents import document_brand_context
+    from .numbering import sample_numbers
 
     if brand is None:
         brand = document_brand_context(company)
     document_stub = SimpleNamespace(
         rendered_html=rendered_body_html,
-        number="ДОК-2026/001",
+        number=sample_numbers(company).get("DOC", ""),
         title="Образец документа",
         created_at=timezone.now(),
     )

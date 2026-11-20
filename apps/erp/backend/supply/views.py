@@ -103,7 +103,7 @@ class OrderListView(RoleGatedViewMixin, APIView):
             ORDER_STATUS_PARAM,
             OpenApiParameter("supplier_id", int),
             OpenApiParameter("q", str, description="Номер, поставщик, название позиции"),
-            OpenApiParameter("number", str, description="Точный номер ЗП-ГГГГ-NNN"),
+            OpenApiParameter("number", str, description="Точный номер заказа поставщику (PO-2026-001)"),
             OpenApiParameter("overdue", bool, description="Только просроченные"),
         ],
         responses={200: OrderListSerializer, 403: ERRORS[403]},

@@ -1697,6 +1697,7 @@ def catalog_search(user, q: str, *, limit: int = 20) -> list[dict]:
         qs = qs.filter(
             Q(name__icontains=word)
             | Q(sku__icontains=word)
+            | Q(previous_sku__icontains=word)
             | Q(manufacturer_part_number__icontains=word)
             | Q(gost_drawing__icontains=word)
         )
