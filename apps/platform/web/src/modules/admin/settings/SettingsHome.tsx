@@ -6,12 +6,12 @@ import { Link, useSearchParams } from "react-router";
 import { canEdit, canSee } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import {
-  STEP_TARGET,
+  type VisibleStep,
   WIZARD_PATH,
   bankDetailsMissing,
-  needsSetup,
+  visibleTitleKey,
 } from "../../../entities/setup/steps";
-import { useSetupChecklist } from "../../../features/first-run/useSetupChecklist";
+import { useSetupProgress } from "../../../features/first-run/useSetupProgress";
 import type {
   IntegrationCardKey,
   IntegrationStatus,
@@ -101,7 +101,17 @@ function SettingCard({
 }
 
 /** Чек-лист первого запуска (Shopify setup guide): пока не завершён — над группами; шаги и их число — из данных BFF. */
-function FirstRunChecklist({ data }: { data: SetupChecklist }) {
+function FirstRunChecklist({
+  data,
+  steps,
+  done,
+  total,
+}: {
+  data: SetupChecklist;
+  steps: readonly VisibleStep[];
+  done: number;
+  total: number;
+}) {
   const { t } = useTranslation("modules");
   const notes = [
     data.company?.required ? t("admin.setup.banner.company") : null,
@@ -111,7 +121,7 @@ function FirstRunChecklist({ data }: { data: SetupChecklist }) {
     <section className="pf-set-setup" aria-labelledby="pf-set-setup-title">
       <div className="pf-set-setup-head">
         <h2 className="pf-set-h2" id="pf-set-setup-title">
-          {t("admin.home.setupTitle", { done: data.done, total: data.total })}
+          {t("admin.home.setupTitle", { done, total })}
         </h2>
         <LinkButton type="primary" to={WIZARD_PATH}>
           {t("admin.setup.banner.open")}
@@ -119,15 +129,15 @@ function FirstRunChecklist({ data }: { data: SetupChecklist }) {
       </div>
       {notes.length > 0 ? <p className="pf-set-setup-note">{notes.join(" ")}</p> : null}
       <ol className="pf-set-steps" aria-label={t("admin.setup.listLabel")}>
-        {data.steps.map((step) => (
+        {steps.map((step) => (
           <li key={step.key} data-state={step.state}>
             <span className="pf-set-step-mark" aria-hidden="true" />
             {step.state === "todo" ? (
-              <Link className="pf-focusable" to={STEP_TARGET[step.key]}>
-                {t(`admin.setup.steps.${step.key}.title`)}
+              <Link className="pf-focusable" to={step.to}>
+                {t(visibleTitleKey(step.key))}
               </Link>
             ) : (
-              <span>{t(`admin.setup.steps.${step.key}.title`)}</span>
+              <span>{t(visibleTitleKey(step.key))}</span>
             )}
             <span className="pf-set-step-state">{t(`admin.setup.state.${step.state}`)}</span>
           </li>
@@ -157,7 +167,8 @@ export function SettingsHome() {
   // «Шаблоны документов» — пункт «Документов», в настройках их нет (NAVIGATION.md)
   const visible = SETTINGS.filter((entry) => entry.key !== "templates" && allowed(entry));
   const admin = canEdit(me, "admin");
-  const checklist = useSetupChecklist(admin);
+  const setup = useSetupProgress(admin);
+  const checklist = setup.checklist;
   const overview = useGetIntegrationsOverview({
     query: { enabled: canSee(me, { resource: "admin" }) },
   });
@@ -244,8 +255,13 @@ export function SettingsHome() {
               </Link>
             </p>
           ) : null}
-          {!focusGroup && admin && checklist.data && needsSetup(checklist.data) ? (
-            <FirstRunChecklist data={checklist.data} />
+          {!focusGroup && admin && checklist.data && setup.next ? (
+            <FirstRunChecklist
+              data={checklist.data}
+              steps={setup.steps}
+              done={setup.done}
+              total={setup.total}
+            />
           ) : null}
           {!focusGroup && canSee(me, { resource: "admin" }) ? (
             <p className="pf-set-tickets">

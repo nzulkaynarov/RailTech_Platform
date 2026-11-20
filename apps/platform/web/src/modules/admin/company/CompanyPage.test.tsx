@@ -158,6 +158,29 @@ describe("Admin · Компания: банк по МФО из справочн�
   });
 });
 
+describe("Admin · Компания: справочник банков ещё пуст (СЦ-3)", () => {
+  it("свежая установка без справочника ЦБ: МФО не найден — предупреждение и банк вписывается вручную", async () => {
+    server.use(http.get("*/dictionaries/banks", () => HttpResponse.json({ items: [] })));
+    updateCompanyMock((state) => {
+      state.bankAccounts = [];
+    });
+    await openTab("details", "admin@demo.example");
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Банковские счета/, expanded: false }),
+    );
+    fireEvent.click(
+      (await screen.findAllByRole("button", { name: "Добавить счёт" }))[0] as HTMLElement,
+    );
+    const dialog = await screen.findByRole("region", { name: "Новый банковский счёт" });
+    const bank = within(dialog).getByLabelText("Банк");
+    fireEvent.change(within(dialog).getByLabelText("МФО"), { target: { value: "00999" } });
+    expect(
+      await within(dialog).findByText("Нет в справочнике ЦБ — проверьте МФО и впишите банк"),
+    ).toBeInTheDocument();
+    expect(bank).not.toHaveAttribute("readonly");
+  });
+});
+
 describe("Admin · Компания: доступ и каркас", () => {
   it("директор и администратор открывают раздел; заголовок «Реквизиты и бланк», подзаголовок — название компании (SET-IA)", async () => {
     await openTab("details", "admin@demo.example");

@@ -84,3 +84,111 @@ export function staysOnCompany(checklist: SetupChecklist): boolean {
     (checklist.company === null && checklist.company_blocker === "erp_unavailable")
   );
 }
+
+/**
+ * Шаги, которые мастер показывает (СЦ-3): счётчик «готово N из M», «Дальше: …» и «Шаг N из M» считаются по этому же
+ * списку, а не по пяти ключам чек-листа BFF — иначе «готово 3 из 5» при пяти «Готово» на экране и «Дальше» к шагу ниже.
+ */
+export type VisibleKey =
+  | "admin"
+  | "erp"
+  | "company"
+  | "bank"
+  | "cabinet"
+  | "bot"
+  | "mail"
+  | "models"
+  | "first_employee"
+  | "signing";
+
+export const VISIBLE_ORDER: readonly VisibleKey[] = [
+  "admin",
+  "erp",
+  "company",
+  "bank",
+  "cabinet",
+  "bot",
+  "mail",
+  "models",
+  "first_employee",
+  "signing",
+];
+
+export interface VisibleStep {
+  key: VisibleKey;
+  state: SetupStep["state"];
+  /** Куда ведёт «Дальше» и строка шага: сам шаг, а не начало мастера */
+  to: string;
+}
+
+export const SIGNING_PATH = "/admin/signing";
+
+/**
+ * Состояние каждого видимого шага. `cabinetUrl` — `undefined`, пока адрес кабинета не загружен; `signing` — `undefined`,
+ * если у сотрудника нет права выдавать полномочия подписи или ответ ещё не пришёл: строки «Права подписи» тогда нет.
+ */
+export function visibleSteps(
+  c: SetupChecklist,
+  extra: { cabinetUrl?: string | null; signing?: boolean },
+): VisibleStep[] {
+  const fromChecklist = (key: SetupStepKey): VisibleStep => ({
+    key,
+    state: c.steps.find((s) => s.key === key)?.state ?? "unknown",
+    to: STEP_TARGET[key],
+  });
+  const company: VisibleStep["state"] =
+    c.company === null ? "unknown" : c.company.required ? "todo" : "done";
+  const bank: VisibleStep["state"] =
+    c.company === null
+      ? "unknown"
+      : c.company.required || !c.company.bank_details_ready
+        ? "todo"
+        : "done";
+  const cabinet: VisibleStep["state"] =
+    extra.cabinetUrl === undefined ? "unknown" : extra.cabinetUrl ? "done" : "todo";
+  const steps: VisibleStep[] = [
+    { key: "admin", state: "done", to: WIZARD_PATH },
+    fromChecklist("erp"),
+    { key: "company", state: company, to: WIZARD_PATH },
+    { key: "bank", state: bank, to: BANK_DETAILS_PATH },
+    { key: "cabinet", state: cabinet, to: WIZARD_PATH },
+    fromChecklist("bot"),
+    fromChecklist("mail"),
+    fromChecklist("models"),
+    fromChecklist("first_employee"),
+  ];
+  if (extra.signing !== undefined) {
+    steps.push({ key: "signing", state: extra.signing ? "done" : "todo", to: SIGNING_PATH });
+  }
+  return steps;
+}
+
+export function progress(steps: readonly VisibleStep[]): {
+  done: number;
+  total: number;
+  next: VisibleStep | undefined;
+} {
+  return {
+    done: steps.filter((s) => s.state === "done").length,
+    total: steps.length,
+    next: steps.find((s) => s.state === "todo"),
+  };
+}
+
+/** Ключ названия видимого шага в словаре `modules` (одно название в баннере, мастере и чек-листе Настроек). */
+export function visibleTitleKey(key: VisibleKey): string {
+  switch (key) {
+    case "admin":
+      return "admin.setup.adminTitle";
+    case "company":
+      return "admin.setup.companyTitle";
+    case "bank":
+      return "admin.setup.bankTitle";
+    case "cabinet":
+      return "admin.setup.cabinetTitle";
+    case "signing":
+      return "admin.setup.signing.title";
+    default:
+      return `admin.setup.steps.${key}.title`;
+  }
+}

@@ -100,9 +100,9 @@ describe("Настройки · индекс «Все настройки» (SET-
       }),
     );
     await openHome("admin@demo.example");
-    const checklist = await screen.findByRole("region", { name: "Первый запуск: готово 1 из 5" });
+    const checklist = await screen.findByRole("region", { name: "Первый запуск: готово 6 из 10" });
     const steps = within(checklist).getByRole("list", { name: "Шаги настройки" });
-    expect(within(steps).getAllByRole("listitem")).toHaveLength(5);
+    expect(within(steps).getAllByRole("listitem")).toHaveLength(10);
     expect(within(steps).getByText("ERP").closest("li")).toHaveTextContent("Готово");
     expect(within(steps).getByRole("link", { name: "Почта" })).toHaveAttribute(
       "href",

@@ -172,7 +172,8 @@ async def test_problems_are_ordered_fail_then_warn_then_setup(
     assert by_key["models"]["status"] == "fail"
     assert by_key["models"]["count"] == 1
     assert (by_key["storage"]["status"], by_key["storage"]["note"]) == ("warn", "backup_stale")
-    assert (by_key["system"]["status"], by_key["system"]["count"]) == ("fail", 1)
+    # СЦ-3: сбой бота уже на карточке «Telegram» — «Состояние системы» его не дублирует.
+    assert (by_key["system"]["status"], by_key["system"]["note"]) == ("ok", "all_ok")
     assert (by_key["spend"]["status"], by_key["spend"]["note"]) == ("warn", "budget_near")
     assert (by_key["services"]["status"], by_key["services"]["count"]) == ("fail", 2)
 
@@ -609,3 +610,44 @@ async def test_wal_archive_is_on_the_storage_card_and_the_bus_row_keeps_its_acti
     bus_row = next(a for a in body["attention"] if a["id"] == "group:bus_dlq:bus_dlq")
     assert bus_row["group"]["action"] == "open_bus"
     assert bus_row["group"]["more_actions"] == ["recheck"]
+
+
+async def test_system_card_counts_what_the_attention_list_shows(
+    web: Web, crm: CrmIntegrationsFake
+) -> None:
+    """СЦ-3: карточка системы считает то же, что «Требует внимания» (без покрытого и стендового)."""
+    status = system_status("ok")
+    status["components"] += [
+        {
+            "key": "external_services",
+            "title": "Внешние сервисы",
+            "status": "fail",
+            "reason": "сводка",
+            "checked_at": "2026-10-26T09:00:00Z",
+            "expected_on_stand": False,
+        },
+        {
+            "key": "disk",
+            "title": "Диск",
+            "status": "warn",
+            "reason": "мало места",
+            "checked_at": "2026-10-26T09:00:00Z",
+            "expected_on_stand": False,
+        },
+        {
+            "key": "smtp_relay",
+            "title": "Почтовый ретранслятор",
+            "status": "fail",
+            "reason": "нет на стенде",
+            "checked_at": "2026-10-26T09:00:00Z",
+            "expected_on_stand": True,
+        },
+    ]
+    crm.answer("GET", "system/status", 200, status)
+    await web.login(["ADMIN"])
+
+    body = (await web.client.get(URL)).json()
+
+    card = cards(body)["system"]
+    assert (card["status"], card["note"], card["count"]) == ("warn", "problems", 1)
+    assert card["count"] == len([i for i in body["attention"] if i["card"] == "system"])

@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 
 import type { SigningAuthority } from "../../../shared/api/generated/model";
 import {
+  getGetSigningSetupHintQueryKey,
   getListSigningAuthoritiesQueryKey,
   useGetSigningSetupHint,
   useListDictionaryItems,
@@ -41,7 +42,8 @@ export function SigningPage() {
   const [filter, setFilter] = useState<Filter>("active");
   const [target, setTarget] = useState<DrawerTarget | null>(null);
   const list = useListSigningAuthorities({ status: filter });
-  const hint = useGetSigningSetupHint();
+  // Баннер настройки держит подсказку в кэше (СЦ-3); на своей странице — всегда свежая.
+  const hint = useGetSigningSetupHint({ query: { refetchOnMount: "always" } });
   const kinds = useListDictionaryItems(
     "signing-kinds",
     { include_hidden: true },
@@ -55,6 +57,8 @@ export function SigningPage() {
   };
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: getListSigningAuthoritiesQueryKey() });
+    // Плашка «никто не вправе подписывать» и строка мастера «Права подписи» обновляются сразу (СЦ-3).
+    void queryClient.invalidateQueries({ queryKey: getGetSigningSetupHintQueryKey() });
   };
   const director = hint.data?.director ?? null;
   const showHint = hint.data !== undefined && !hint.data.has_authorities;

@@ -17,6 +17,7 @@ import {
   useListDictionaryItems,
   useListReferenceItems,
   useUpdateCompanyBankAccount,
+  getGetSetupChecklistQueryKey,
 } from "../../../../shared/api/generated/platform-bff";
 import {
   accountProblem,
@@ -122,7 +123,11 @@ export function BankAccounts() {
   };
   const [removing, setRemoving] = useState<CompanyBankAccount | null>(null);
   const refresh = () =>
-    queryClient.invalidateQueries({ queryKey: getListCompanyBankAccountsQueryKey() });
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: getListCompanyBankAccountsQueryKey() }),
+      // Баннер и мастер «Нет банковских реквизитов» видят счёт сразу (СЦ-3), а не через полминуты.
+      queryClient.invalidateQueries({ queryKey: getGetSetupChecklistQueryKey() }),
+    ]);
   const remove = useDeleteCompanyBankAccount({
     mutation: {
       onSuccess: () => {
@@ -312,7 +317,8 @@ function BankAccountForm({
     };
   });
   const bankByCode = new Map(bankOptions.map((option) => [option.value, option]));
-  const directoryReady = bankOptions.length > 0;
+  // СЦ-3: пустой справочник банков — не повод запирать поле: МФО не найден, название банка вписывается вручную.
+  const directoryReady = !banks.isPending;
   const onMfoChange = (value: string) => {
     const known = bankByCode.get(compact(value));
     const previous = bankOptions.find((option) => option.name === form.getFieldValue("bank_name"));

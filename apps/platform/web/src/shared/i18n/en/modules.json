@@ -452,7 +452,12 @@
       "bankTodo": "Without the bank account and MFO, no invoice can be issued to a client. Enter them in “Settings · Details & letterhead”.",
       "bankWaitCompany": "Create your company first: bank details are entered in its card.",
       "bankUnknown": "No data yet — the bank details state appears once the server answers.",
-      "bankOpen": "Open “Details & letterhead”"
+      "bankOpen": "Open “Details & letterhead”",
+      "signing": {
+        "title": "Signing rights",
+        "text": "Who may sign the company's documents",
+        "action": "Grant"
+      }
     },
     "org": {
       "title": "Employees",

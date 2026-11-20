@@ -355,10 +355,15 @@ def _system_card(parts: Parts) -> IntegrationCard:
     if not parts.system.ok or parts.system.data is None:
         return _blank("system", _access(parts.system))
     data = parts.system.data
-    bad = [c for c in data.components if c.status in ("fail", "warn")]
+    # СЦ-3: карточка считает тот же набор, что список «Требует внимания» — без ожидаемого на стенде
+    # и без показанного своей строкой; иначе «Сбой · требуют внимания: 6» рядом с «Всё в порядке».
+    bad = [c for c in data.components if _listed(c, parts)]
     if bad:
-        return _card("system", data.status, "problems", count=len(bad), last=data.checked_at)
-    return _card("system", data.status, "all_ok", last=data.checked_at)
+        level = worst(["fail" if c.status == "fail" else "warn" for c in bad])
+        return _card("system", level, "problems", count=len(bad), last=data.checked_at)
+    return _card(
+        "system", "unknown" if data.status == "unknown" else "ok", "all_ok", last=data.checked_at
+    )
 
 
 # --- «Требует внимания» -------------------------------------------------------------------
@@ -545,10 +550,18 @@ def _system_items(parts: Parts) -> list[AttentionItem]:
             c.reason,
         )
         for c in data.components
-        if c.status in ("fail", "warn")
+        if _listed(c, parts)
+    ]
+
+
+def _listed(c: Any, parts: Parts) -> bool:
+    """Компонент — своя строка «Требует внимания»: сбой или предупреждение, не ожидаемое на стенде,
+    не покрытое другой строкой."""
+    return (
+        c.status in ("fail", "warn")
         and not c.expected_on_stand
         and not _component_covered(c.key, parts)
-    ]
+    )
 
 
 def _spend_items(parts: Parts) -> list[AttentionItem]:
