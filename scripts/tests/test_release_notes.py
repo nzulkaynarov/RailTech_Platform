@@ -34,6 +34,29 @@ class NotesOf(unittest.TestCase):
         body = "<!--\nДля пользователей (директор): пример из шаблона\n-->"
         self.assertEqual(rn.notes_of({"number": 1, "body": body}), [])
 
+    def test_bold_label_with_a_period_and_heading_with_a_paragraph(self) -> None:
+        """Так строку пишут на деле: точка вместо двоеточия, заголовок с абзацем ниже — бот их терял."""
+        body = (
+            "**Для пользователей (снабжение).** Примечание заказа теперь внутреннее.\n\n"
+            "## Для пользователей (директор, бухгалтер)\n\nВ «Исходящих» видно всё,\nчто ждёт ответа.\n\n"
+            "**Проверки**\n- тесты\n"
+        )
+        self.assertEqual(
+            rn.notes_of({"number": 7, "body": body}),
+            [
+                rn.Note(("Снабжение",), "Примечание заказа теперь внутреннее.", 7),
+                rn.Note(("Директор", "Бухгалтер"), "В «Исходящих» видно всё, что ждёт ответа.", 7),
+            ],
+        )
+
+    def test_nothing_to_say_in_any_form_is_not_a_note(self) -> None:
+        body = (
+            "## Для пользователей\n\nНет: видно только администратору.\n\n"
+            "**Для пользователей.** Пока ничего не меняется: поле появится позже.\n"
+            "Строка «Для пользователей» в описании PR — не пометка.\n"
+        )
+        self.assertEqual(rn.notes_of({"number": 8, "body": body}), [])
+
 
 class Render(unittest.TestCase):
     def test_entry_in_the_format_of_the_whats_new_screen(self) -> None:
