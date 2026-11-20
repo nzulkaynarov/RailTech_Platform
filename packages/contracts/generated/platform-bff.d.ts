@@ -2560,6 +2560,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/admin/integrations/smtp/missed": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Отправить письма, не ушедшие без почты
+     * @description CRM `POST /integrations/smtp/missed` (СЦ-3): свои письма и письма доменов — той же строкой журнала, приглашения в кабинет — перевыпуском. Только администратор.
+     */
+    post: operations["sendMissedMail"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/admin/integrations/smtp/test-send": {
     parameters: {
       query?: never;
@@ -9054,6 +9074,15 @@ export interface components {
       /** @enum {string} */
       security: "starttls" | "ssl" | "none";
       username: string;
+      /**
+       * @description Письма и приглашения в кабинет, не ушедшие, пока почта не была настроена, — их можно отправить сейчас (`POST /admin/integrations/smtp/missed`, СЦ-3). Без почты — 0.
+       * @default 0
+       */
+      missed: number;
+    };
+    /** @description Пропущенные письма снова в очереди (СЦ-3): сколько писем и приглашений принято. */
+    MailMissedQueued: {
+      queued: number;
     };
     /** @description Итог проверки связи с почтовым релеем: приветствие сервера, выполнен ли вход, время ответа. */
     SmtpCheck: {
@@ -21800,6 +21829,35 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["SmtpCheck"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["IntegrationConflict"];
+      429: components["responses"]["TooManyRequests"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  sendMissedMail: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MailMissedQueued"];
         };
       };
       401: components["responses"]["SessionExpired"];

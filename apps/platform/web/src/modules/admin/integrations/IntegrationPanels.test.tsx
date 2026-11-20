@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import { readIntegrations, writeIntegrations } from "../../../mocks/fixtures/integrations";
 import { DEMO_WRONG_PASSWORD } from "../../../mocks/fixtures/users";
 import { openCard, renderAt, signIn, setupIntegrationsTests } from "./testkit";
 
@@ -256,6 +257,27 @@ describe("карточка «Почта»", () => {
       expect(within(side).getByText("•••• 9z1q")).toBeVisible();
     });
     expect(document.body.textContent).not.toContain("new-smtp-secret-9z1q");
+  });
+
+  it("письма, не ушедшие без почты: «Отправить» ставит их в очередь (СЦ-3)", async () => {
+    const state = readIntegrations();
+    writeIntegrations({ ...state, smtp: { ...state.smtp, missed: 3 } });
+    const side = await openPanel("mail");
+    const note = await within(side).findByText("Не ушли, пока почта не была настроена: 3");
+    const alert = note.closest(".ant-alert") as HTMLElement;
+    fireEvent.click(within(alert).getByRole("button", { name: "Отправить" }));
+    expect(await screen.findByText("Отправлено в очередь: 3")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(within(side).queryByText(/Не ушли, пока почта не была настроена/)).toBeNull();
+    });
+  });
+
+  it("пропущенных писем нет или только чтение — предложения нет", async () => {
+    const state = readIntegrations();
+    writeIntegrations({ ...state, smtp: { ...state.smtp, missed: 2 } });
+    const side = await openPanel("mail", "director@demo.example");
+    await within(side).findByText("smtp.demo.example:587");
+    expect(within(side).queryByText(/Не ушли, пока почта не была настроена/)).toBeNull();
   });
 });
 

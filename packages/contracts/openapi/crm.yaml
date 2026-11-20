@@ -9355,6 +9355,17 @@ components:
       - password
       title: SmtpConnectorIn
       type: object
+    SmtpMissedOut:
+      description: 'Пропущенные письма снова в очереди (СЦ-3): сколько писем и приглашений принято.'
+      properties:
+        queued:
+          minimum: 0.0
+          title: Queued
+          type: integer
+      required:
+      - queued
+      title: SmtpMissedOut
+      type: object
     SmtpReadyOut:
       description: 'Почта настроена (D17G-2): только признак, без адреса сервера и логина — любому сотруднику.'
       properties:
@@ -9380,6 +9391,11 @@ components:
         host:
           title: Host
           type: string
+        missed:
+          default: 0
+          minimum: 0.0
+          title: Missed
+          type: integer
         password_configured:
           title: Password Configured
           type: boolean
@@ -14508,6 +14524,32 @@ paths:
       security:
       - HTTPBearer: []
       summary: List Email Log
+      tags:
+      - integrations
+  /api/v1/integrations/smtp/missed:
+    post:
+      description: '«Отправить» письма, не ушедшие, пока почта не была настроена (СЦ-3): свои письма и письма
+
+        ERP — той же строкой журнала (итог уйдёт в шину с исходным ключом), приглашения в кабинет —
+
+        перевыпуском в ERP. Ошибки: `smtp_not_configured` (409).'
+      operationId: send_missed_mail
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SmtpMissedOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Send Missed Mail
       tags:
       - integrations
   /api/v1/integrations/smtp/ready:

@@ -8,6 +8,7 @@ ERP подменена respx. Проверяется: CRM сама генери�
 """
 
 import json
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -76,6 +77,7 @@ def make(
     *,
     grace_s: int = 3600,
     config: Settings | None = None,
+    reprovision: Callable[[], Awaitable[int]] | None = None,
 ) -> tuple[ErpPairingService, connector_svc.ErpConnectorService, FakeStore, FakeSettings]:
     store = store or FakeStore()
     settings = settings or FakeSettings()
@@ -95,6 +97,7 @@ def make(
         HttpxErpPairingClient(timeout_s=0.2),
         connector,
         rotation_grace_s=grace_s,
+        reprovision=reprovision,
     )
     return service, connector, store, settings
 
@@ -878,3 +881,59 @@ async def test_prod_allows_http_inside_the_network(url: str) -> None:
     outcome = await service.pair(ADMIN, base_url=url, code=None, password=PASSWORD)
     assert outcome.status.paired
     assert settings.base_url == url
+
+
+# --- Доступ к ERP сотрудникам после сопряжения (СЦ-3) ----------------------------------------
+
+
+class Reprovision:
+    def __init__(self, fail: bool = False) -> None:
+        self.calls = 0
+        self.fail = fail
+
+    async def __call__(self) -> int:
+        self.calls += 1
+        if self.fail:
+            raise RuntimeError("queue is down")
+        return 2
+
+
+@respx.mock
+async def test_pair_queues_erp_access_for_staff() -> None:
+    """Администратор создан до подключения ERP — доступ ставится заново сразу после сопряжения."""
+    respx.post(ACCEPT).mock(return_value=httpx.Response(200, json=ACCEPTED))
+    respx.get(HEALTH).mock(return_value=httpx.Response(200, json=HEALTHY))
+    reprovision = Reprovision()
+    service, *_ = make(reprovision=reprovision)
+
+    await service.pair(ADMIN, base_url=BASE, code=CODE, password=PASSWORD)
+
+    assert reprovision.calls == 1
+
+
+@respx.mock
+async def test_pair_refused_by_erp_queues_nothing() -> None:
+    respx.post(ACCEPT).mock(
+        return_value=httpx.Response(401, json={"detail": "PAIRING_CODE_INVALID"})
+    )
+    reprovision = Reprovision()
+    service, *_ = make(reprovision=reprovision)
+
+    with pytest.raises(ValidationFailedError):
+        await service.pair(ADMIN, base_url=BASE, code=CODE, password=PASSWORD)
+
+    assert reprovision.calls == 0
+
+
+@respx.mock
+async def test_pair_succeeds_even_if_queueing_access_fails() -> None:
+    respx.post(ACCEPT).mock(return_value=httpx.Response(200, json=ACCEPTED))
+    respx.get(HEALTH).mock(return_value=httpx.Response(200, json=HEALTHY))
+    reprovision = Reprovision(fail=True)
+    service, _, store, _ = make(reprovision=reprovision)
+
+    outcome = await service.pair(ADMIN, base_url=BASE, code=CODE, password=PASSWORD)
+
+    assert reprovision.calls == 1
+    assert outcome.status.configured
+    assert ERP_SERVICE_TOKEN in store.saved

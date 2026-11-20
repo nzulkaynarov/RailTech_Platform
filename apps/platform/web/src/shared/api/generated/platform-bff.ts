@@ -321,6 +321,7 @@ import type {
   LoginIn,
   LogoUpload,
   MailLog,
+  MailMissedQueued,
   MailQueued,
   MailSenderRuleIn,
   MailSenderRuleList,
@@ -18219,6 +18220,92 @@ export const useCheckSmtp = <
   queryClient?: QueryClient,
 ): UseMutationResult<Awaited<ReturnType<typeof checkSmtp>>, TError, void, TContext> => {
   return useMutation(getCheckSmtpMutationOptions(options), queryClient);
+};
+
+export const getSendMissedMailUrl = () => {
+  return `/api/v1/admin/integrations/smtp/missed`;
+};
+
+/**
+ * CRM `POST /integrations/smtp/missed` (СЦ-3): свои письма и письма доменов — той же строкой журнала, приглашения в кабинет — перевыпуском. Только администратор.
+ * @summary Отправить письма, не ушедшие без почты
+ */
+export const sendMissedMail = async (
+  options?: Parameters<typeof http>[1],
+): Promise<MailMissedQueued> => {
+  return http<MailMissedQueued>(getSendMissedMailUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getSendMissedMailMutationKey = () => ["sendMissedMail"] as const;
+
+export const getSendMissedMailMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | IntegrationConflictResponse
+    | TooManyRequestsResponse
+    | IntegrationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof sendMissedMail>>, TError, void, TContext>;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof sendMissedMail>>, TError, void, TContext> => {
+  const mutationKey = getSendMissedMailMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof sendMissedMail>>, void> = () => {
+    return sendMissedMail(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SendMissedMailMutationResult = NonNullable<Awaited<ReturnType<typeof sendMissedMail>>>;
+
+export type SendMissedMailMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | IntegrationConflictResponse
+  | TooManyRequestsResponse
+  | IntegrationFailedResponse
+  | BackendUnavailableResponse
+>;
+
+/**
+ * @summary Отправить письма, не ушедшие без почты
+ */
+export const useSendMissedMail = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | IntegrationConflictResponse
+    | TooManyRequestsResponse
+    | IntegrationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof sendMissedMail>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof sendMissedMail>>, TError, void, TContext> => {
+  return useMutation(getSendMissedMailMutationOptions(options), queryClient);
 };
 
 export const getSendSmtpTestUrl = () => {

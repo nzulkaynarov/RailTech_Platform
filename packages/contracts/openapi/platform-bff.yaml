@@ -4849,6 +4849,35 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /admin/integrations/smtp/missed:
+    post:
+      tags: [integrations]
+      operationId: sendMissedMail
+      summary: 'Отправить письма, не ушедшие без почты'
+      description: >-
+        CRM `POST /integrations/smtp/missed` (СЦ-3): свои письма и письма доменов — той же строкой журнала, приглашения
+        в кабинет — перевыпуском. Только администратор.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MailMissedQueued'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/IntegrationConflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '502':
+          $ref: '#/components/responses/IntegrationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /admin/integrations/smtp/test-send:
     post:
       tags: [integrations]
@@ -16744,8 +16773,20 @@ components:
         secrets_enabled: {type: boolean}
         security: {enum: [starttls, ssl, none], type: string}
         username: {type: string}
+        missed:
+          type: integer
+          default: 0
+          description: >-
+            Письма и приглашения в кабинет, не ушедшие, пока почта не была настроена, — их можно отправить сейчас
+            (`POST /admin/integrations/smtp/missed`, СЦ-3). Без почты — 0.
       required: [configured, from_email, from_name, host, password_configured, password_last4, password_updated_at, port, secrets_enabled,
         security, username]
+      type: object
+      additionalProperties: false
+    MailMissedQueued:
+      description: 'Пропущенные письма снова в очереди (СЦ-3): сколько писем и приглашений принято.'
+      properties: {queued: {type: integer}}
+      required: [queued]
       type: object
       additionalProperties: false
     SmtpCheck:

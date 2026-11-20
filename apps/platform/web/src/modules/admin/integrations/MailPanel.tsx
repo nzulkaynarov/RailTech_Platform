@@ -13,6 +13,7 @@ import {
   useGetSmtpConnector,
   useListMailLog,
   useSaveSmtpConnector,
+  useSendMissedMail,
   useSendSmtpTest,
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
@@ -313,6 +314,17 @@ function MailBody({ smtp, editable }: { smtp: SmtpConnector; editable: boolean }
       },
     },
   });
+  const { message } = App.useApp();
+  // СЦ-3: письма, не ушедшие, пока почта не была настроена, — отправить одной кнопкой
+  const missed = useSendMissedMail({
+    mutation: {
+      onSuccess: (out) => {
+        void message.success(t("mail.missedQueued", { count: out.queued }));
+        refresh();
+      },
+    },
+  });
+  const missedCount = smtp.missed ?? 0;
   return (
     <div className="pf-panel-stack">
       <DefinitionList
@@ -341,6 +353,26 @@ function MailBody({ smtp, editable }: { smtp: SmtpConnector; editable: boolean }
       {!smtp.secrets_enabled ? (
         <Alert type="warning" showIcon message={t("common.secretsOff")} />
       ) : null}
+      {editable && smtp.configured && missedCount > 0 ? (
+        <Alert
+          type="warning"
+          showIcon
+          role="status"
+          message={t("mail.missed", { count: missedCount })}
+          action={
+            <Button
+              size="small"
+              loading={missed.isPending}
+              onClick={() => {
+                missed.mutate();
+              }}
+            >
+              {t("mail.missedSend")}
+            </Button>
+          }
+        />
+      ) : null}
+      <ErrorNote error={missed.error} />
       {editable ? (
         <>
           <div className="pf-int-row">

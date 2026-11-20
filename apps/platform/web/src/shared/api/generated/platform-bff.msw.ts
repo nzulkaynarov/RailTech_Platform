@@ -263,6 +263,7 @@ import type {
   LetterResolution,
   LetterResolutionDraft,
   MailLog,
+  MailMissedQueued,
   MailQueued,
   MailSenderRuleList,
   MailSenderRuleOut,
@@ -11151,6 +11152,7 @@ export const getGetSmtpConnectorResponseMock = (
   secrets_enabled: faker.datatype.boolean(),
   security: faker.helpers.arrayElement(["starttls", "ssl", "none"] as const),
   username: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  missed: faker.number.int(),
   ...overrideResponse,
 });
 
@@ -11174,6 +11176,7 @@ export const getSaveSmtpConnectorResponseMock = (
   secrets_enabled: faker.datatype.boolean(),
   security: faker.helpers.arrayElement(["starttls", "ssl", "none"] as const),
   username: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  missed: faker.number.int(),
   ...overrideResponse,
 });
 
@@ -11185,6 +11188,10 @@ export const getCheckSmtpResponseMock = (
   server: faker.string.alpha({ length: { min: 10, max: 20 } }),
   ...overrideResponse,
 });
+
+export const getSendMissedMailResponseMock = (
+  overrideResponse: Partial<Extract<MailMissedQueued, object>> = {},
+): MailMissedQueued => ({ queued: faker.number.int(), ...overrideResponse });
 
 export const getSendSmtpTestResponseMock = (
   overrideResponse: Partial<Extract<MailQueued, object>> = {},
@@ -38942,6 +38949,30 @@ export const getCheckSmtpMockHandler = (
   );
 };
 
+export const getSendMissedMailMockHandler = (
+  overrideResponse?:
+    | MailMissedQueued
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<MailMissedQueued> | MailMissedQueued),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/integrations/smtp/missed",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSendMissedMailResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getSendSmtpTestMockHandler = (
   overrideResponse?:
     | MailQueued
@@ -46721,6 +46752,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getGetSmtpConnectorMockHandler(),
   getSaveSmtpConnectorMockHandler(),
   getCheckSmtpMockHandler(),
+  getSendMissedMailMockHandler(),
   getSendSmtpTestMockHandler(),
   getListMailLogMockHandler(),
   getGetImapConnectorMockHandler(),
