@@ -92,6 +92,7 @@ def _create_draft(deal, quote, supplier, rows: list[tuple[Any, int, Any]]) -> Su
         created_by=None,
     )
     orders._write_lines(order, resolved, None)
+    orders._expect_by_lead_time(order)  # СЦ-10: дата — сегодня плюс самый долгий срок партнёра, как обещает помощь
     orders._log(order, OrderLogKind.CREATED, None, f"{supplier.name} · автоматически при принятии КП")
     return order
 

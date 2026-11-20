@@ -98,6 +98,12 @@ def test_acceptance_reserves_stock_and_drafts_an_order_for_the_shortage(world):
     (line,) = order.lines.all()
     assert (line.quote_item_id, line.deal_id, line.quantity) == (rail.pk, deal.pk, 25), "дефицит = 40 − 15"
     assert line.unit_price == Decimal("900.00"), "цена — из предложения поставщика"
+    # СЦ-10: ожидаемая дата — сегодня плюс срок партнёра под заказ (10 дней), как обещает помощь.
+    from datetime import timedelta
+
+    from django.utils import timezone
+
+    assert order.expected_date == timezone.localdate() + timedelta(days=10)
     events = set(ActivityLog.objects.filter(deal=deal).values_list("event_code", flat=True))
     assert {"stock.reserved_on_accept", "supply.draft_on_accept", "supply.shortage_without_supplier"} <= events
 
