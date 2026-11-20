@@ -502,6 +502,20 @@ def _take_from_cells(product_id: int, quantity: int, user, shipment_id: int) -> 
     return taken
 
 
+def _shipped_amounts(lines, reservations) -> str:
+    """«2,5 т, 4 шт.» — количество в единице строки расчёта (иначе — карточки), без выдуманных «шт.» (СЦ-10)."""
+    from crm.templatetags.document_format import qty as format_qty
+
+    shipped: dict[str, Any] = {}
+    for line in lines:
+        held = reservations[line.reservation_id]
+        unit = (held.quote_item.unit if held.quote_item_id else "") or (
+            held.product.uom.name if held.product.uom_id else ""
+        )
+        shipped[unit] = shipped.get(unit, 0) + line.quantity
+    return ", ".join(format_qty(amount, unit) for unit, amount in shipped.items())
+
+
 @transaction.atomic
 def ship(
     user,
@@ -537,7 +551,9 @@ def ship(
         if reservation is None or reservation.deal_id != deal_id:
             raise StockError("RESERVATION_NOT_FOUND", 404)
     lock_products([r.product_id for r in peek.values()])
-    locked = Reservation.objects.select_for_update(of=("self",)).select_related("product__category", "quote_item")
+    locked = Reservation.objects.select_for_update(of=("self",)).select_related(
+        "product__category", "product__uom", "quote_item"
+    )
     reservations = {r.pk: r for r in locked.filter(pk__in=wanted)}
     for line in lines:
         if line.reservation_id not in reservations:
@@ -582,7 +598,7 @@ def ship(
         deal,
         user,
         "Отгрузка со склада",
-        f"{number}: {sum(line.quantity for line in lines)} шт.",
+        f"{number}: {_shipped_amounts(lines, reservations)}",
         "stock.shipped",
         {"number": number},
     )

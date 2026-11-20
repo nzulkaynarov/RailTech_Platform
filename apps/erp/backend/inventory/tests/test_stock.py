@@ -305,6 +305,24 @@ def test_shipping_reduces_stock_and_reservation_and_numbers_the_waybill(world):
     assert ActivityLog.objects.filter(deal=deal, event_code="stock.shipped").count() == 2
 
 
+def test_shipment_journal_uses_the_calc_line_unit(world):
+    """СЦ-10: журнал проекта — «2 т» в единице строки расчёта, а не «2 шт.»."""
+    from sales.models import QuoteItem
+
+    _adjust(world, world["rail"], 10)
+    deal, _q, (item,) = make_deal(world, [(world["rail"], 4)], approved=True, signed=True)
+    QuoteItem.objects.filter(pk=item.pk).update(unit="т")
+    reservation = _reserve(world, deal, item, 4).json()
+    shipped = api(world["shipper"]).post(
+        f"{STOCK}shipments/",
+        {"deal_id": deal.pk, "lines": [{"reservation_id": reservation["id"], "quantity": 2}]},
+        format="json",
+    )
+    assert shipped.status_code == 201, shipped.json()
+    entry = ActivityLog.objects.filter(deal=deal, event_code="stock.shipped").latest("pk")
+    assert entry.detail == f"{shipped.json()['number']}: 2\u00a0т"
+
+
 def test_shipment_guards(world):
     _adjust(world, world["rail"], 10)
     deal, _q, (item,) = make_deal(world, [(world["rail"], 4)], approved=True, signed=True)
