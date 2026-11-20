@@ -1,6 +1,6 @@
 {% load i18n %}{% blocktranslate %}Здравствуйте, {{ supplier_name }}!{% endblocktranslate %}
 
-{% blocktranslate %}Просим сообщить цену, срок поставки и наличие по позициям (ссылка на запрос: {{ reference }}):{% endblocktranslate %}
+{% blocktranslate %}Просим сообщить цену, срок поставки и наличие по позициям:{% endblocktranslate %}
 {% for line in lines %}
 {{ forloop.counter }}. {{ line.name }}{% if line.article %} ({{ line.article }}){% endif %} — {{ line.quantity }}{% if line.unit %} {{ line.unit }}{% endif %}{% endfor %}
 {% if note %}

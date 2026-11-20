@@ -279,13 +279,16 @@ def partner_rfq_sent(price_request) -> int:
     _roles, modules = company_access(company.pk)
     if "my_products" not in modules:
         return 0
-    ref = price_request.subject or f"RFQ-{price_request.pk}"
+    # Что запрашиваем — часть темы после «—» (СЦ-10: без номера нашего проекта); длинное — с многоточием.
+    ref = (price_request.subject or "").rsplit(" — ", 1)[-1].strip() or f"RFQ-{price_request.pk}"
+    if len(ref) > 100:
+        ref = ref[:99].rstrip() + "…"
     rows = notify(
         "partner_rfq_sent",
         company=company,
         object_id=price_request.pk,
-        object_number=ref[:100],
-        params={"number": ref[:100]},
+        object_number=ref,
+        params={"number": ref},
         link=f"/partner/orders?view=rfq&rfqId={price_request.pk}",
         dedup=f"{price_request.pk}:sent",
         bot_reaches=False,
