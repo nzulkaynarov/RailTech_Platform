@@ -5,6 +5,7 @@ unchanged. All-or-nothing transactional batch writes that mirror the single-item
 guards and recalc discipline (one cascade via ``pricing.QuoteCalculationService``).
 """
 
+from decimal import Decimal
 from typing import Optional, Tuple
 
 from django.db import transaction
@@ -476,10 +477,14 @@ def import_extracted_lines_into_quote(
     clean = clean[: settings.QUOTE_ITEMS_BULK_MAX_ROWS]
 
     def _qty(value):
+        """Дробное количество как в файле (СЦ-10, ADR-0027 п. 9), в пределах импорта; нечисловое — 1."""
+        from core.quantity import to_qty
+
         try:
-            return max(_IMPORT_QTY_MIN, min(_IMPORT_QTY_MAX, int(value)))
-        except (TypeError, ValueError):
-            return 1
+            amount = to_qty(value)
+        except (ValueError, ArithmeticError):
+            return Decimal("1")
+        return max(Decimal(_IMPORT_QTY_MIN), min(Decimal(_IMPORT_QTY_MAX), amount))
 
     default_currency = quote.cost_currency_default if quote.cost_currency_default_id else None
     with transaction.atomic():

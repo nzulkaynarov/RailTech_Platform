@@ -417,7 +417,7 @@ def test_parse_queues_a_job_and_the_job_only_proposes(world, settings):
         result = FEATURE_HANDLERS["calc_parse_text"](payload)
     extract.assert_called_once()
     assert result["proposal"] == [
-        {"name": "Перевод стрелочный Р65", "quantity": 2, "unit": "шт.", "article": "", "note": ""}
+        {"name": "Перевод стрелочный Р65", "quantity": 2, "unit": "шт.", "unit_code": "H87", "article": "", "note": ""}
     ]
     assert not Quote.objects.filter(deal=world["deal"]).exists(), "предложение ничего не пишет"
 
