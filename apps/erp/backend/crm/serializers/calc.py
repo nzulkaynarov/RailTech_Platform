@@ -8,6 +8,8 @@ from rest_framework import serializers
 from catalog.item_ref import ItemRefSerializer
 from core.quantity import QuantityField
 
+from .request_files import RequestFileSerializer
+
 ZONES = ("goods", "services", "payment_terms")
 LINE_ZONES = ("goods", "services")
 LINE_KINDS = ("goods", "goods_to_order", "service")
@@ -91,6 +93,7 @@ class CalcTaskBriefSerializer(serializers.Serializer):
 class CalcRequestSerializer(serializers.Serializer):
     text = serializers.CharField(allow_blank=True)
     lines = serializers.IntegerField()
+    files = RequestFileSerializer(many=True, help_text="Файлы заявки клиента (СЦ-10)")
 
 
 class CalcTermsSerializer(serializers.Serializer):
