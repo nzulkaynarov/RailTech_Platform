@@ -449,7 +449,8 @@ def send_order(user, order_id: int, *, to_email: str = "") -> SupplierOrder:
         "supplier_name": order.supplier.name,
         "number": order.number,
         "expected_date": order.expected_date.strftime("%d.%m.%Y") if order.expected_date else "",
-        "note": order.note,
+        # The order note is internal (СЦ-10): it never goes to the supplier; partner text gets its own field.
+        "note": "",
         "sender_name": person_name(user),
         "lines": [
             {

@@ -40,6 +40,7 @@ class SupplierOrder(models.Model):
     status = models.CharField(max_length=10, choices=OrderStatus.choices, default=OrderStatus.DRAFT, db_index=True)
     expected_date = models.DateField(null=True, blank=True, db_index=True, verbose_name=_("Ожидаемая дата"))
     currency = models.ForeignKey("core.Currency", null=True, blank=True, on_delete=models.PROTECT, related_name="+")
+    # Internal staff note: never reaches the partner (order e-mail, partner cabinet) — СЦ-10.
     note = models.TextField(blank=True, default="", verbose_name=_("Примечание"))
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
