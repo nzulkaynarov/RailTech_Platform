@@ -264,7 +264,10 @@ EXPECTED: dict[tuple[str, str], tuple[set[str], set[str]]] = {
     # 0.3 (FR-10): вся очередь «Почты» без действий — директор
     ("crm.mail", "read"): ({"mail_inbox:read"}, set()),
     ("company.settings", "read"): NOTHING,
-    ("company.settings", "full"): (set(), {"settings.edit", "settings.charge_templates"}),
+    ("company.settings", "full"): (
+        {"ticket_label:read", "ticket_label:write"},
+        {"settings.edit", "settings.charge_templates"},
+    ),
     ("admin", "read"): (ADMIN_READ, set()),
     (
         "admin",

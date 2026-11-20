@@ -805,6 +805,59 @@ async def test_numbering_patch_sends_the_ticket_label_to_crm_not_erp(
     assert response.json()["type_labels"]["ticket"] == "SR"
 
 
+async def test_numbering_patch_saves_erp_labels_when_the_director_may_not_write_tickets(
+    web: Web, erp: respx.MockRouter, be: Backends
+) -> None:
+    """Директор без права CRM на запись обозначения: `ticket` неизменный, ERP сохраняется."""
+    await web.login(["DIRECTOR"])
+    put = be.router.put(CRM_LABEL_URL).mock(
+        return_value=httpx.Response(403, json={"code": "forbidden", "message": "no"})
+    )
+    scheme_patch = erp.patch(f"{API}/crm/numbering-scheme/").mock(
+        return_value=httpx.Response(200, json=scheme_json())
+    )
+    erp.get(f"{API}/crm/numbering-scheme/").mock(
+        return_value=httpx.Response(200, json=scheme_json())
+    )
+
+    response = await web.send(
+        "PATCH",
+        "/api/v1/admin/company/numbering",
+        json={"type_labels": {"quote": "KP", "ticket": "TK"}},
+    )
+
+    assert response.status_code == 200, response.text
+    assert put.call_count == 0
+    assert scheme_patch.call_count == 1
+
+
+@pytest.mark.parametrize("ticket", ["", "  "])
+async def test_numbering_patch_skips_an_empty_ticket_label(
+    web: Web, erp: respx.MockRouter, be: Backends, ticket: str
+) -> None:
+    """Чтение обозначения не удалось — форма шлёт пустое; CRM не вызывается, ERP сохраняется."""
+    await web.login(["DIRECTOR"])
+    put = be.router.put(CRM_LABEL_URL).mock(
+        return_value=httpx.Response(422, json={"code": "validation_failed", "message": "x"})
+    )
+    scheme_patch = erp.patch(f"{API}/crm/numbering-scheme/").mock(
+        return_value=httpx.Response(200, json=scheme_json())
+    )
+    erp.get(f"{API}/crm/numbering-scheme/").mock(
+        return_value=httpx.Response(200, json=scheme_json())
+    )
+
+    response = await web.send(
+        "PATCH",
+        "/api/v1/admin/company/numbering",
+        json={"type_labels": {"quote": "KP", "ticket": ticket}},
+    )
+
+    assert response.status_code == 200, response.text
+    assert put.call_count == 0
+    assert scheme_patch.call_count == 1
+
+
 async def test_numbering_patch_rejects_a_non_latin_ticket_label(
     web: Web, erp: respx.MockRouter, be: Backends, check: ContractChecker
 ) -> None:

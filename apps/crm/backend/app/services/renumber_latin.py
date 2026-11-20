@@ -5,7 +5,9 @@
 `staff_notifications.object_number` и `.title`, текст сообщений в `erp_event_notices.items`.
 История (шина, журналы, отправленные письма) не трогается. Номер здесь — непрозрачная строка: ничего
 не выводится из префикса, замена идёт только по ключам маппинга. Повтор безопасен: после замены
-старых номеров в данных нет, второй прогон ничего не меняет.
+старых номеров в данных нет, второй прогон ничего не меняет (поэтому цепочки `A→B`, `B→C` в маппинге
+запрещены). Исключение из «только по маппингу» — обращения: их номер собирается из id и обозначения
+(`number_of`), поэтому пары `ОБР-0012 → TK-0012` команда берёт из самих уведомлений.
 """
 
 import json
@@ -17,10 +19,12 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.staff_tickets import number_of
 from app.models.deals import Deal
 from app.models.inbound_mail import InboundMail
 from app.models.integrations import ErpEventNotice
 from app.models.staff_tickets import StaffNotification
+from app.services.staff_tickets import label_in
 
 # Границы номера в тексте: перед и после — не буква, цифра, `-` или `/`, чтобы `ВХ-001/26` не
 # совпал внутри `ВХ-001/260`.
@@ -56,7 +60,15 @@ def parse_mapping(raw: str) -> dict[str, str]:
         if old == new:
             raise ValueError(f"mapping entry does not change the number: {old!r}")
         out[old] = new
+    check_no_chains(out)
     return out
+
+
+def check_no_chains(mapping: Mapping[str, str]) -> None:
+    """Новое значение не может быть старым ключом: иначе второй прогон заменит его ещё раз."""
+    chained = sorted(set(mapping.values()) & set(mapping))
+    if chained:
+        raise ValueError("mapping chains (new value is also an old number): " + ", ".join(chained))
 
 
 def replace_numbers(text: str, mapping: Mapping[str, str]) -> str:
@@ -70,8 +82,34 @@ def replace_numbers(text: str, mapping: Mapping[str, str]) -> str:
     return pattern.sub(lambda m: mapping[m.group(1)], text)
 
 
+async def with_ticket_pairs(session: AsyncSession, mapping: Mapping[str, str]) -> dict[str, str]:
+    """Маппинг плюс пары по обращениям из данных: `object_number` → `number_of(id, обозначение)`.
+
+    Явная пара из маппинга приоритетнее. Актуальные номера пар не дают: повтор ничего не добавляет.
+    """
+    label = await label_in(session)
+    merged = dict(mapping)
+    rows = await session.execute(
+        select(StaffNotification.object_id, StaffNotification.object_number).where(
+            StaffNotification.object_kind == "ticket", StaffNotification.object_number.is_not(None)
+        )
+    )
+    for object_id, number in rows.all():
+        if number is None or object_id is None or not object_id.isdigit() or number in merged:
+            continue
+        current = number_of(int(object_id), label)
+        if number != current:
+            merged[number] = current
+    check_no_chains(merged)
+    return merged
+
+
 async def plan(session: AsyncSession, mapping: Mapping[str, str]) -> list[Change]:
-    """Что изменится: по строке на каждое поле каждой записи."""
+    """Что изменится: по строке на каждое поле каждой записи (с парами по обращениям из данных)."""
+    return await _plan(session, await with_ticket_pairs(session, mapping))
+
+
+async def _plan(session: AsyncSession, mapping: Mapping[str, str]) -> list[Change]:
     changes: list[Change] = []
     keys = list(mapping)
     for deal_id, number in (
@@ -121,7 +159,8 @@ async def plan(session: AsyncSession, mapping: Mapping[str, str]) -> list[Change
 
 async def apply(session: AsyncSession, mapping: Mapping[str, str]) -> int:
     """Применяет маппинг к тем же полям; вызывающий открывает транзакцию (всё или ничего)."""
-    changes = await plan(session, mapping)
+    mapping = await with_ticket_pairs(session, mapping)
+    changes = await _plan(session, mapping)
     keys = list(mapping)
     for deal in (await session.scalars(select(Deal).where(Deal.erp_number.in_(keys)))).all():
         if deal.erp_number is not None and deal.erp_number in mapping:

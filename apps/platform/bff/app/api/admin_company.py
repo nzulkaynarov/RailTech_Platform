@@ -374,12 +374,14 @@ async def update_numbering(body: NumberingUpdate, authed: Writer) -> NumberingSc
     ticket = None
     if "type_labels" in sent:
         labels = sent.pop("type_labels")
-        if (
-            TICKET_KIND in labels
-        ):  # первым: CRM проверяет латиницу, отказ не оставляет полсохранённого
-            ticket = await _ticket_label(
-                authed, "PUT", strict=True, json={"label": labels[TICKET_KIND]}
-            )
+        wanted = str(labels.get(TICKET_KIND) or "").strip()
+        # Пустое и неизменное обозначение в CRM не отправляется: сохранение остальных обозначений
+        # не зависит от права на обращения. Первым: CRM проверяет латиницу, отказ не оставляет
+        # полсохранённого.
+        if wanted:
+            current = await _ticket_label(authed)
+            if current is None or current[0] != wanted.upper():
+                ticket = await _ticket_label(authed, "PUT", strict=True, json={"label": wanted})
         eds_part = {k: v for k, v in labels.items() if k in EDS_KINDS}
         if (
             eds_part

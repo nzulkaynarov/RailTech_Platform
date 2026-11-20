@@ -33,9 +33,13 @@ def test_replace_does_not_touch_longer_numbers() -> None:
     assert replace_numbers(text, MAPPING) == text
 
 
+def test_chained_mapping_is_rejected() -> None:
+    """`A-1→B-1` и `B-1→C-1` дали бы второй замене работу: повтор перестал бы быть безопасным."""
+    with pytest.raises(ValueError, match="B-1"):
+        parse_mapping('{"A-1": "B-1", "B-1": "C-1"}')
+
+
 def test_replace_is_single_pass_and_idempotent() -> None:
-    chained = {"A-1": "B-1", "B-1": "C-1"}
-    assert replace_numbers("A-1 B-1", chained) == "B-1 C-1"
     once = replace_numbers("Письмо ВХ-001/26", MAPPING)
     assert replace_numbers(once, MAPPING) == once
 

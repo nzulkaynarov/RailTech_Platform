@@ -211,6 +211,7 @@
     "prefixHint": "Up to 16 characters: letters, digits, “-” and “_”.",
     "prefixInvalid": "Latin letters, digits, “-” and “_” only",
     "prefixTaken": "The prefix is taken by another company",
+    "ticketLabelInvalid": "Request label: Latin letters and digits, up to 16 characters",
     "format": "Number format",
     "presets": {
       "standard": "Standard",

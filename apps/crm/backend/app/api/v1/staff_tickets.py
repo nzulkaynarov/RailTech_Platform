@@ -33,6 +33,9 @@ mine_router = APIRouter(prefix="/api/v1/me/tickets", tags=["staff-tickets"])
 
 Reader = Annotated[Principal, Depends(require("tickets", "read"))]
 Writer = Annotated[Principal, Depends(require("tickets", "write"))]
+# Обозначение номера — часть редактора «Нумерация» (`company.settings`), не раздела `admin`.
+LabelReader = Annotated[Principal, Depends(require("ticket_label", "read"))]
+LabelWriter = Annotated[Principal, Depends(require("ticket_label", "write"))]
 TicketId = Annotated[int, Path(gt=0)]
 
 
@@ -96,14 +99,16 @@ async def get_my_ticket(ticket_id: TicketId, who: Settled, container: ContainerD
 
 
 @router.get("/label", response_model=TicketLabelOut, operation_id="get_ticket_label")
-async def get_label(_: Reader, container: ContainerDep) -> TicketLabelOut:
+async def get_label(_: LabelReader, container: ContainerDep) -> TicketLabelOut:
     """Обозначение в номере обращения (редактор «Нумерация»)."""
     label = await container.staff_tickets.get_label()
     return TicketLabelOut(label=label, example=number_of(1, label))
 
 
 @router.put("/label", response_model=TicketLabelOut, operation_id="put_ticket_label")
-async def put_label(body: TicketLabelIn, who: Writer, container: ContainerDep) -> TicketLabelOut:
+async def put_label(
+    body: TicketLabelIn, who: LabelWriter, container: ContainerDep
+) -> TicketLabelOut:
     """Латиница и цифры, до 16 знаков; иначе 422 `ticket_label_invalid`."""
     label = await container.staff_tickets.set_label(who.actor, body.label)
     return TicketLabelOut(label=label, example=number_of(1, label))

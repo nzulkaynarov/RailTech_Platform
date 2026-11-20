@@ -1,11 +1,16 @@
 """Перенумерация копий номеров CRM в латиницу на реальной БД (СЦ-5): сухой прогон, запись."""
 
+import argparse
+import json
 import uuid
+from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.cli import renumber_latin as cli
 from app.models.clients import Client
 from app.models.deals import Deal
 from app.models.inbound_mail import InboundMail
@@ -108,3 +113,74 @@ async def test_apply_changes_only_mapped_copies_and_is_idempotent(
         assert await svc.plan(session, MAPPING) == []
     async with sessions() as session, session.begin():
         assert await svc.apply(session, MAPPING) == 0
+
+
+async def test_ticket_pairs_come_from_the_data_not_from_the_mapping(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """Номер обращения = обозначение + id: пара `ОБР-0012 → TK-0012` в маппинге не нужна."""
+    await seed(sessions)
+    only_documents = {"ВХ-001/26": "IN-001/26"}
+    async with sessions() as session:
+        lines = [c.line() for c in await svc.plan(session, only_documents)]
+    assert any(
+        "staff_notifications.object_number" in line and "→ TK-0012" in line for line in lines
+    )
+
+    async with sessions() as session, session.begin():
+        await svc.apply(session, only_documents)
+    async with sessions() as session:
+        notes = {
+            n.object_id: n
+            for n in (await session.scalars(select(StaffNotification))).all()
+            if n.object_id
+        }
+        assert notes["12"].object_number == "TK-0012"
+        assert notes["12"].title == "Новое обращение TK-0012"
+        assert await svc.plan(session, only_documents) == []
+
+
+def _cli_args(path: Path, *, apply: bool) -> argparse.Namespace:
+    return argparse.Namespace(mapping=str(path), apply=apply)
+
+
+async def test_cli_dry_run_prints_changes_and_writes_nothing(
+    sessions: async_sessionmaker[AsyncSession],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    await seed(sessions)
+    mapping = tmp_path / "mapping.json"
+    mapping.write_text(json.dumps(MAPPING), encoding="utf-8")
+
+    async def aclose() -> None:
+        return None
+
+    monkeypatch.setattr(
+        cli, "get_container", lambda: SimpleNamespace(session_factory=sessions, aclose=aclose)
+    )
+
+    assert await cli.run(_cli_args(mapping, apply=False)) == 0
+    out = capsys.readouterr().out
+    assert "ЗВ-2026-002 → PRJ-2026-002" in out
+    assert "Сухой прогон" in out
+    async with sessions() as session:
+        assert (await session.scalars(select(Deal.erp_number))).one() == "ЗВ-2026-002"
+
+    assert await cli.run(_cli_args(mapping, apply=True)) == 0
+    assert "Применено: 7" in capsys.readouterr().out
+    async with sessions() as session:
+        assert (await session.scalars(select(Deal.erp_number))).one() == "PRJ-2026-002"
+
+    assert await cli.run(_cli_args(mapping, apply=True)) == 0
+    assert "Применено: 0" in capsys.readouterr().out
+
+
+async def test_cli_rejects_a_chained_mapping(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    mapping = tmp_path / "chain.json"
+    mapping.write_text('{"A-1": "B-1", "B-1": "C-1"}', encoding="utf-8")
+    assert await cli.run(_cli_args(mapping, apply=True)) == 1
+    assert "B-1" in capsys.readouterr().err
