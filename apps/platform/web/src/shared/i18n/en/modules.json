@@ -428,7 +428,7 @@
         "hide": "Hide until tomorrow",
         "hideLabel": "Hide until tomorrow: setup banner",
         "hidden": "The banner is hidden until tomorrow. Bring it back in the “First-time setup” wizard.",
-        "bank": "No bank details for invoices."
+        "bank": "No invoicing details: tax ID, legal address or bank account."
       },
       "erpTitle": "ERP connection",
       "erpLead": "The company is created in ERP, so ERP is connected first: the \"Connect ERP\" button is enough.",
@@ -447,9 +447,9 @@
       "bannerHidden": "The setup banner is hidden until tomorrow.",
       "bannerReturn": "Bring the banner back",
       "cabinetTitle": "Client cabinet address",
-      "bankTitle": "Bank details for invoices",
-      "bankDone": "Bank account and MFO are set: invoices to clients can be issued.",
-      "bankTodo": "Without the bank account and MFO, no invoice can be issued to a client. Enter them in “Settings · Details & letterhead”.",
+      "bankTitle": "Invoicing details",
+      "bankDone": "Tax ID, legal address and bank account are set: invoices can be issued.",
+      "bankTodo": "Without the tax ID, legal address and bank account an invoice cannot be issued. Enter them in “Settings · Details and letterhead”.",
       "bankWaitCompany": "Create your company first: bank details are entered in its card.",
       "bankUnknown": "No data yet — the bank details state appears once the server answers.",
       "bankOpen": "Open “Details & letterhead”"

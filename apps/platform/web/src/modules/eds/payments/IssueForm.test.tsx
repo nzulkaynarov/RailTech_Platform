@@ -54,7 +54,7 @@ describe("«Выставить счёт» из Платформы (B-D24-4)", ()
 
     const main = await screen.findByRole("main");
     const notice = await within(main).findByText(
-      "Нет банковских реквизитов компании — счёт не выставить.",
+      "Нет реквизитов компании (ИНН, юридический адрес или расчётный счёт) — счёт не выставить.",
     );
     expect(notice).toBeVisible();
     expect(within(main).queryByRole("link", { name: "Открыть «Реквизиты и бланк»" })).toBeNull();
@@ -64,7 +64,9 @@ describe("«Выставить счёт» из Платформы (B-D24-4)", ()
     );
     const form = await within(await panelEl()).findByRole("form", { name: "Выставить счёт" });
     expect(
-      within(form).getByText("Нет банковских реквизитов компании — счёт не выставить."),
+      within(form).getByText(
+        "Нет реквизитов компании (ИНН, юридический адрес или расчётный счёт) — счёт не выставить.",
+      ),
     ).toBeVisible();
     expect(within(form).getByRole("button", { name: "Выставить счёт" })).toBeDisabled();
     expect(findInvoice(143)?.status).toBe("draft");
@@ -75,7 +77,9 @@ describe("«Выставить счёт» из Платформы (B-D24-4)", ()
 
     await within(panel).findByRole("form", { name: "Выставить счёт" });
     expect(
-      screen.queryByText("Нет банковских реквизитов компании — счёт не выставить."),
+      screen.queryByText(
+        "Нет реквизитов компании (ИНН, юридический адрес или расчётный счёт) — счёт не выставить.",
+      ),
     ).toBeNull();
   });
 });

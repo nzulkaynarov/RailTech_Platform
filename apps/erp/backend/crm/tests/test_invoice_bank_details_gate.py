@@ -57,8 +57,7 @@ def test_issue_blocked_without_bank_details(draft_invoice):
 @pytest.mark.django_db
 def test_issue_freezes_bank_details_snapshot(draft_invoice):
     world, invoice = draft_invoice
-    seller = _seller_company(world)
-    set_uzs_account(seller, "20208000900001234567", "00443")
+    seller = _ready_seller(world)  # СЦ-3: продавец с ИНН и адресом — иначе счёт не выйти
 
     result, err = issue_invoice(invoice, world["seller_user"])
     assert err is None, err
@@ -71,3 +70,49 @@ def test_issue_freezes_bank_details_snapshot(draft_invoice):
     set_uzs_account(seller, "20208000999999999999", "00443")
     result.refresh_from_db()
     assert "2020 8000 9000 0123 4567" in result.frozen_bank_details
+
+
+# ── СЦ-3: ИНН и юридический адрес продавца тоже нужны ──────────────────────────────────────────────────────────────
+
+
+def _ready_seller(world):
+    seller = _seller_company(world)
+    set_uzs_account(seller, "20208000900001234567", "00443")
+    seller.inn = seller.inn or "301234567"
+    seller.legal_address = seller.legal_address or "г. Ташкент, ул. Демо, 1"
+    seller.save(update_fields=["inn", "legal_address"])
+    return seller
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("missing", ["inn", "legal_address"])
+def test_issue_blocked_without_seller_inn_or_address(draft_invoice, missing):
+    from accounts.models import CompanyDocumentProfile
+    from crm.services.invoice_lifecycle import invoice_bank_details_ready
+
+    world, invoice = draft_invoice
+    seller = _ready_seller(world)
+    CompanyDocumentProfile.objects.filter(company=seller).update(**{missing: ""})
+    setattr(seller, missing, "")
+    seller.save(update_fields=[missing])
+
+    assert invoice_bank_details_ready(invoice) is False
+    result, err = issue_invoice(invoice, world["seller_user"])
+
+    assert (result, err) == (None, "SELLER_BANK_DETAILS_REQUIRED")
+
+
+@pytest.mark.django_db
+def test_inn_from_the_letterhead_profile_is_enough(draft_invoice):
+    """Печать берёт ИНН из бланка, если в карточке пусто — гейт считает так же."""
+    from accounts.models import CompanyDocumentProfile
+
+    world, invoice = draft_invoice
+    seller = _ready_seller(world)
+    CompanyDocumentProfile.objects.update_or_create(company=seller, defaults={"inn": "301234567"})
+    seller.inn = ""
+    seller.save(update_fields=["inn"])
+
+    result, err = issue_invoice(invoice, world["seller_user"])
+
+    assert err is None, err

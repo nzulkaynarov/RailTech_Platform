@@ -340,7 +340,7 @@ describe("Баннер настройки и мастер", () => {
       "Администратор",
       "Подключение ERP",
       "Ваша компания",
-      "Банковские реквизиты для счетов",
+      "Реквизиты для счетов",
       "Адрес кабинета клиента",
       "Остальные подключения",
     ]);
@@ -821,18 +821,24 @@ describe("Банковские реквизиты для счетов (D26G-6)",
     renderApp("/admin/org");
 
     const banner = await screen.findByRole("region", { name: "Настройка Платформы" });
-    expect(within(banner).getByText(/Нет банковских реквизитов для счетов\./)).toBeVisible();
+    expect(
+      within(banner).getByText(
+        /Нет реквизитов для счетов: ИНН, юридического адреса или расчётного счёта\./,
+      ),
+    ).toBeVisible();
     cleanup();
 
     renderApp("/admin/setup");
     const title = await screen.findByRole("heading", {
       level: 2,
-      name: "Банковские реквизиты для счетов",
+      name: "Реквизиты для счетов",
     });
     const card = title.closest(".ant-card") as HTMLElement;
     expect(within(card).getByText("Не сделано")).toBeVisible();
     expect(
-      within(card).getByText(/Без расчётного счёта и МФО счёт клиенту не выставить/),
+      within(card).getByText(
+        /Без ИНН, юридического адреса и расчётного счёта счёт клиенту не выставить/,
+      ),
     ).toBeVisible();
     expect(within(card).getByRole("link", { name: "Открыть «Реквизиты и бланк»" })).toHaveAttribute(
       "href",
@@ -846,12 +852,14 @@ describe("Банковские реквизиты для счетов (D26G-6)",
 
     const title = await screen.findByRole("heading", {
       level: 2,
-      name: "Банковские реквизиты для счетов",
+      name: "Реквизиты для счетов",
     });
     const card = title.closest(".ant-card") as HTMLElement;
     expect(within(card).getByText("Готово")).toBeVisible();
     expect(
-      within(card).getByText("Расчётный счёт и МФО заданы: счёт клиенту выставится."),
+      within(card).getByText(
+        "ИНН, юридический адрес и расчётный счёт заданы: счёт клиенту выставится.",
+      ),
     ).toBeVisible();
   });
 });

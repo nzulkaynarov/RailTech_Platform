@@ -89,7 +89,7 @@ function type(label: string | RegExp, value: string) {
 }
 
 describe("Admin · Компания: реквизиты для счетов (D26G-6)", () => {
-  it("нет счёта в сумах — предупреждение; добавили счёт — «Реквизиты для счетов заданы» (счета — список, 2026-11-11)", async () => {
+  it("нет счёта в сумах — предупреждение; добавили счёт — «Основной счёт в сумах задан» (счета — список, 2026-11-11)", async () => {
     updateCompanyMock((state) => {
       state.bankAccounts = [];
     });
@@ -113,15 +113,28 @@ describe("Admin · Компания: реквизиты для счетов (D26
     });
     fireEvent.click(within(dialog).getByRole("button", { name: "Сохранить" }));
 
-    expect(
-      await screen.findByText("Реквизиты для счетов заданы: «Выставить счёт» сработает."),
-    ).toBeVisible();
+    expect(await screen.findByText("Основной счёт в сумах задан.")).toBeVisible();
     const [account] = readCompanyMock().bankAccounts;
     expect([account?.account, account?.currency, account?.is_default]).toEqual([
       "20208000900000000001",
       "UZS",
       true,
     ]);
+  });
+});
+
+describe("Admin · Компания: «нет реквизитов для счетов» ведёт туда, где пусто (СЦ-3)", () => {
+  it.each([
+    ["ИНН", { inn: "" }, /Компания/],
+    ["юридического адреса", { legal_address: "" }, /Контакты/],
+    ["расчётного счёта", {}, /Банковские счета/],
+  ])("нет %s — открыта эта секция", async (_what, patch, section) => {
+    updateCompanyMock((state) => {
+      state.company = { ...state.company, ...patch };
+    });
+    signInAs("admin@demo.example");
+    renderApp("/admin/company?section=bank");
+    expect(await screen.findByRole("button", { name: section, expanded: true })).toBeVisible();
   });
 });
 
