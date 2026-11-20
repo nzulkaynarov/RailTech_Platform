@@ -42,7 +42,8 @@ export function SigningPage() {
   const [filter, setFilter] = useState<Filter>("active");
   const [target, setTarget] = useState<DrawerTarget | null>(null);
   const list = useListSigningAuthorities({ status: filter });
-  const hint = useGetSigningSetupHint();
+  // Баннер настройки держит подсказку в кэше (СЦ-3); на своей странице — всегда свежая.
+  const hint = useGetSigningSetupHint({ query: { refetchOnMount: "always" } });
   const kinds = useListDictionaryItems(
     "signing-kinds",
     { include_hidden: true },
