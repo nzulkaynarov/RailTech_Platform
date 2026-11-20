@@ -14804,8 +14804,11 @@ export interface components {
     };
     CalcProposalLine: {
       name: string;
+      /** @description Как в заявке, до трёх знаков после запятой (СЦ-10) */
       quantity: number;
       unit: string;
+      /** @description Код справочника единиц (СЦ-10); пусто — единица не узнана */
+      unit_code: string;
       article: string;
       note: string;
     };

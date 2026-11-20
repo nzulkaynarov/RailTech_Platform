@@ -631,7 +631,15 @@ async def test_parse_returns_job_and_result_is_a_proposal(
                                 "unit": "шт.",
                                 "article": "",
                                 "note": "",
-                            }
+                            },
+                            {
+                                "name": "Рельс Р65",
+                                "quantity": 12.5,
+                                "unit": "т",
+                                "unit_code": "TNE",
+                                "article": "",
+                                "note": "",
+                            },
                         ],
                         "recognized": 1,
                         "truncated": False,
@@ -661,6 +669,12 @@ async def test_parse_returns_job_and_result_is_a_proposal(
     check(done, "/erp/calc-jobs/{job_id}", "get")
     assert done.json()["status"] == "done"
     assert done.json()["lines"][0]["name"] == "Перевод Р65"
+    # СЦ-10: старый ERP без кода — пусто; дробное количество и код единицы доходят как есть.
+    assert done.json()["lines"][0]["unit_code"] == ""
+    assert (done.json()["lines"][1]["quantity"], done.json()["lines"][1]["unit_code"]) == (
+        12.5,
+        "TNE",
+    )
     failed = await web.client.get("/api/v1/erp/calc-jobs/job-1")
     assert failed.json() == {"status": "failed", "lines": [], "reason": "ai_extract_failed"}
     assert status.call_count == 3

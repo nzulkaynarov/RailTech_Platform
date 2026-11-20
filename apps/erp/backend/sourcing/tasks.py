@@ -1,5 +1,6 @@
 import base64
 import logging
+from decimal import Decimal
 from io import BytesIO
 
 import pandas as pd
@@ -200,10 +201,14 @@ def _build_quote_item(
     match_key = canonical or raw_name or mpn or gost_drawing
     domain_code = route_domain(match_key)
     final_product = smart_match_product(match_key, domain_hint=domain_code) if match_key else None
+    from core.quantity import to_qty
+
     try:
-        qty = max(1, int(float(quantity)))
-    except (ValueError, TypeError):
-        qty = 1
+        qty = to_qty(quantity)  # дробное — как в заявке (СЦ-10, ADR-0027 п. 9)
+    except (ValueError, ArithmeticError):
+        qty = Decimal("1")
+    if qty <= 0:
+        qty = Decimal("1")
     return QuoteItem(
         quote=quote,
         product=final_product,

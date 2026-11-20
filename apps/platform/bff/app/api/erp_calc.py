@@ -263,7 +263,10 @@ async def get_parse(
     if "proposal" in result:
         return CalcParseResult(
             status="done",
-            lines=[CalcProposalLine(**row) for row in result["proposal"]],
+            lines=[
+                CalcProposalLine(**{**row, "unit_code": str(row.get("unit_code") or "")})
+                for row in result["proposal"]
+            ],
             recognized=int(result.get("recognized") or 0),
             truncated=bool(result.get("truncated")),
         )

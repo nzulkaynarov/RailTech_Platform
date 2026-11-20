@@ -25337,11 +25337,12 @@ components:
     CalcProposalLine:
       type: object
       additionalProperties: false
-      required: [name, quantity, unit, article, note]
+      required: [name, quantity, unit, unit_code, article, note]
       properties:
         name: {type: string}
-        quantity: {type: number, exclusiveMinimum: 0}
+        quantity: {type: number, exclusiveMinimum: 0, description: 'Как в заявке, до трёх знаков после запятой (СЦ-10)'}
         unit: {type: string}
+        unit_code: {type: string, description: 'Код справочника единиц (СЦ-10); пусто — единица не узнана'}
         article: {type: string}
         note: {type: string}
 

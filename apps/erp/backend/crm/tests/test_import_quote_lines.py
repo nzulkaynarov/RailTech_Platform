@@ -103,3 +103,16 @@ def test_import_truncates_over_limit_and_reports(scene, settings):
 def test_import_no_lines_returns_code(scene):
     added, _t, err = import_extracted_lines_into_quote(scene["quote"], scene["seller_user"], [{"name": ""}, {}])
     assert added == 0 and err == "IMPORT_NO_LINES"
+
+
+@pytest.mark.django_db
+def test_import_keeps_a_fractional_quantity(scene):
+    """СЦ-10: «12,5» из файла остаётся 12,5 (раньше `int()` давал 12); нечисловое — 1."""
+    from decimal import Decimal
+
+    rows = [{"name": "Рельс Р65", "quantity": "12,5"}, {"name": "Накладка", "quantity": "много"}]
+    added, _truncated, err = import_extracted_lines_into_quote(scene["quote"], scene["seller_user"], rows)
+    assert err is None and added == 2
+    items = {i.imported_raw_name: i for i in scene["quote"].items.all()}
+    assert items["Рельс Р65"].quantity == Decimal("12.500")
+    assert items["Накладка"].quantity == Decimal("1.000")
