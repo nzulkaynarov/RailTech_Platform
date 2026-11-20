@@ -25,6 +25,7 @@ from typing import Any, Final, Literal
 
 import structlog
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.errors import (
@@ -255,6 +256,54 @@ class PortalInviteService:
                 after={"channel": channel, "sent_via": sent, "error": error},
             )
             return _out(notice, client, contact, reach, await _mail_state(session, notice))
+
+    async def missed(self) -> list[tuple[int, int | None]]:
+        """Приглашения, письмо которых не ушло, пока почта не была настроена (СЦ-3): последняя
+        попытка клиента с письмом ERP `skipped_no_smtp`. Пары (клиент, контакт)."""
+        async with self._sessions() as session:
+            latest = (
+                await session.scalars(
+                    select(ClientNotice)
+                    .where(ClientNotice.kind == KIND)
+                    .ext(distinct_on(ClientNotice.client_id))
+                    .order_by(ClientNotice.client_id, ClientNotice.id.desc())
+                )
+            ).all()
+            keys = {
+                str(n.detail["email_key"]): n
+                for n in latest
+                if n.detail.get("email_key") and "email" in (n.detail.get("sent_via") or [])
+            }
+            if not keys:
+                return []
+            skipped = set(
+                (
+                    await session.scalars(
+                        select(EmailLog.request_key).where(
+                            EmailLog.source == "erp",
+                            EmailLog.request_key.in_(keys),
+                            EmailLog.status == "skipped_no_smtp",
+                            EmailLog.error == "smtp_not_configured",
+                        )
+                    )
+                ).all()
+            )
+        notices = [keys[k] for k in sorted(k for k in skipped if k is not None)]
+        return [(n.client_id, n.contact_id) for n in notices if n.client_id is not None]
+
+    async def send_missed(self, who: Principal) -> int:
+        """Перевыпустить пропущенные приглашения письмом; сбой одного не останавливает остальных.
+        Считаются принятые ERP (письмо ушло в очередь)."""
+        accepted = 0
+        for client_id, contact_id in await self.missed():
+            try:
+                out = await self.resend(who, client_id, "email", contact_id)
+            except Exception:
+                logger.warning("portal_invite_missed_failed", client_id=client_id, exc_info=True)
+                continue
+            if "email" in out.sent_via:
+                accepted += 1
+        return accepted
 
     async def _ask_erp(
         self, client_id: int, channel: str, contact: ClientContact | None

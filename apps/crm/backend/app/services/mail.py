@@ -218,6 +218,9 @@ class MailService:
         if connection is None or self._cipher is None:
             row.status = "skipped_no_smtp"
             row.error = "smtp_not_configured" if connection is None else "secrets_key_missing"
+            # СЦ-3: письмо без секрета хранится, чтобы уйти после подключения почты («Отправить»).
+            if connection is None and self._cipher is not None and keeps_body(row):
+                row.body_ciphertext = self._cipher.encrypt(rendered.body)
             view = await self._insert(row)
             logger.warning("email_skipped_no_smtp", template=template, email_log_id=view.id)
             if connection is None:
@@ -380,6 +383,44 @@ class MailService:
             await self._enqueue(view.id)
         logger.info("email_resent", email_log_id=view.id, original_id=email_log_id)
         return view
+
+    async def _missed(self, session: AsyncSession) -> list[EmailLog]:
+        """Письма, не ушедшие, пока почта не была настроена, и которые можно отправить сейчас
+        (СЦ-3): текст хранится, секрета нет, ссылки живы. Письма EDS отправляются из документа."""
+        now = datetime.now(UTC)
+        rows = (
+            await session.scalars(
+                select(EmailLog)
+                .where(
+                    EmailLog.status == "skipped_no_smtp",
+                    EmailLog.error == "smtp_not_configured",
+                    EmailLog.source.is_distinct_from("eds"),
+                    EmailLog.body_ciphertext.is_not(None),
+                )
+                .order_by(EmailLog.id)
+            )
+        ).all()
+        return [row for row in rows if can_resend(row, now)]
+
+    async def missed_count(self) -> int:
+        async with self._sessions() as session:
+            return len(await self._missed(session))
+
+    async def send_missed(self, requested_by: int | None) -> int:
+        """«Отправить» пропущенные письма: та же строка журнала снова в очереди — итог уйдёт в шину
+        с исходным ключом запроса. На паузе почты строки ждут `resume_queued`, как у `resend`."""
+        await self.ensure_configured()
+        async with self._sessions() as session, session.begin():
+            rows = await self._missed(session)
+            for row in rows:
+                row.status, row.error, row.attempts = "queued", None, 0
+                row.requested_by = requested_by
+            ids = [row.id for row in rows]
+        if ids and not await self._paused():
+            for email_log_id in ids:
+                await self._enqueue(email_log_id)
+        logger.info("email_missed_requeued", count=len(ids))
+        return len(ids)
 
     async def resume_queued(self) -> int:
         """После паузы: письма `queued` с телом — снова в очередь. Возвращает их число."""

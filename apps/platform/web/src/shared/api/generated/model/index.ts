@@ -701,6 +701,7 @@ export * from "./mailLog";
 export * from "./mailLogItem";
 export * from "./mailLogItemSource";
 export * from "./mailLogItemStatus";
+export * from "./mailMissedQueued";
 export * from "./mailQueued";
 export * from "./mailQueuedStatus";
 export * from "./mailSenderRule";

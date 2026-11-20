@@ -410,7 +410,10 @@
       "trustedNone": "None — the IMAP host is not a known provider, sender rules are not applied",
       "trustedDerived": "From the IMAP host: {{list}}",
       "trustedExplicit": "Set manually: {{list}}"
-    }
+    },
+    "missed": "Not sent while mail was not set up: {{count}}",
+    "missedSend": "Send",
+    "missedQueued": "Queued: {{count}}"
   },
   "services": {
     "summary": "Working: {{ok}} · attention: {{warn}} · failure: {{fail}} · no data: {{unknown}} · not connected: {{off}}",

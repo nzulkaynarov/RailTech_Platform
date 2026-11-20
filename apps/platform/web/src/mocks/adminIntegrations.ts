@@ -731,6 +731,15 @@ export const adminIntegrationsHandlers = [
     });
     return HttpResponse.json({ server: `${smtp.host} ESMTP`, authenticated: true, latency_ms: 85 });
   }),
+  http.post("*/admin/integrations/smtp/missed", () => {
+    const denied = guard("full");
+    if (denied) return denied;
+    const queued = readIntegrations().smtp.missed ?? 0;
+    update((s) => {
+      s.smtp = { ...s.smtp, missed: 0 };
+    });
+    return HttpResponse.json({ queued });
+  }),
   http.post("*/admin/integrations/smtp/test-send", () => {
     const denied = guard("full");
     if (denied) return denied;

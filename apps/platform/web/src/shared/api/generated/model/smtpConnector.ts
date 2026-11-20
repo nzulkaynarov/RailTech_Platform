@@ -21,4 +21,6 @@ export interface SmtpConnector {
   secrets_enabled: boolean;
   security: SmtpConnectorSecurity;
   username: string;
+  /** Письма и приглашения в кабинет, не ушедшие, пока почта не была настроена, — их можно отправить сейчас (`POST /admin/integrations/smtp/missed`, СЦ-3). Без почты — 0. */
+  missed?: number;
 }

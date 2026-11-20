@@ -535,7 +535,14 @@ class Container:
             self.settings,
             HttpxErpPairingClient(http=self.erp_http),
             self.erp_connector,
+            reprovision=self._reprovision_erp_users,
         )
+
+    async def _reprovision_erp_users(self) -> int:
+        """Провижининг всех сотрудников с доступом к ERP (после сопряжения, СЦ-3)."""
+        from app.services.identity_catalog import reprovision_erp_users
+
+        return await reprovision_erp_users(self.session_factory, _enqueue_erp_sync)
 
     @cached_property
     def erp_notices(self) -> "ErpEventNotices":
