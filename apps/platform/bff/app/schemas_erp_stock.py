@@ -149,6 +149,7 @@ class StockSupplierList(BaseModel):
 class SupplierOrderActions(BaseModel):
     edit: bool
     send: bool
+    request_price: bool = False
     confirm: bool
     receive: bool
     cancel: bool
@@ -244,6 +245,13 @@ class SupplierOrderMail(BaseModel):
     reason: str | None
 
 
+class SupplierOrderPriceRequestState(BaseModel):
+    id: str
+    requested_at: dt.datetime
+    status: Literal["sent", "failed"]
+    answered_at: dt.datetime | None
+
+
 class SupplierOrderSendMissing(BaseModel):
     """СЦ-10: чего не хватает черновику для отправки партнёру."""
 
@@ -255,6 +263,7 @@ class SupplierOrderDetail(SupplierOrderRow):
     note: str
     partner_note: str
     send_missing: SupplierOrderSendMissing | None = None
+    price_request: SupplierOrderPriceRequestState | None = None
     sent_at: dt.datetime | None
     sent_to: str | None
     mail: SupplierOrderMail | None
@@ -387,6 +396,7 @@ class PriceRequest(BaseModel):
     id: str
     supplier: StockSupplierRef
     request: str | None
+    order: str | None = None
     requested_at: dt.datetime
     requested_by: PersonRef | None
     to_email: str
@@ -470,6 +480,18 @@ class SupplierOrderPatch(BaseModel):
 class SupplierOrderSendIn(BaseModel):
     model_config = _STRICT
 
+    to_email: str | None = Field(default=None, pattern=EMAIL, max_length=254)
+
+
+class SupplierOrderPriceRequestIn(BaseModel):
+    """«Запросить цену» из черновика заказа (СЦ-10): без `line_ids` — все строки без цены."""
+
+    model_config = _STRICT
+
+    line_ids: list[Annotated[str, Field(pattern=r"^[0-9]+$")]] | None = Field(
+        default=None, min_length=1, max_length=100
+    )
+    note: str | None = Field(default=None, max_length=1000)
     to_email: str | None = Field(default=None, pattern=EMAIL, max_length=254)
 
 
@@ -744,7 +766,9 @@ def _row_data(raw: Mapping[str, Any], prices: bool) -> dict[str, Any]:
         ],
         "created_at": raw["created_at"],
         "created_by": person_of(raw.get("created_by"), raw.get("created_by_name")),
-        "actions": SupplierOrderActions(**raw["actions"]),
+        "actions": SupplierOrderActions(
+            **{**raw["actions"], "request_price": bool(raw["actions"].get("request_price"))}
+        ),
         "path": stock_path(raw["number"]),
     }
 
@@ -779,12 +803,24 @@ def _send_missing(raw: Any) -> SupplierOrderSendMissing | None:
     return SupplierOrderSendMissing(prices=int(raw.get("prices") or 0), date=bool(raw.get("date")))
 
 
+def _price_request_state(raw: Any) -> SupplierOrderPriceRequestState | None:
+    if not isinstance(raw, Mapping):
+        return None
+    return SupplierOrderPriceRequestState(
+        id=str(raw["id"]),
+        requested_at=raw["requested_at"],
+        status=raw["status"],
+        answered_at=raw.get("answered_at"),
+    )
+
+
 def to_order(raw: Mapping[str, Any], prices: bool) -> SupplierOrderDetail:
     return SupplierOrderDetail(
         **_row_data(raw, prices),
         note=raw.get("note") or "",
         partner_note=raw.get("partner_note") or "",
         send_missing=_send_missing(raw.get("send_missing")),
+        price_request=_price_request_state(raw.get("price_request")),
         sent_at=raw.get("sent_at"),
         sent_to=raw.get("sent_to"),
         mail=_order_mail(raw.get("mail")),
@@ -964,6 +1000,7 @@ def to_price_request(raw: Mapping[str, Any]) -> PriceRequest:
         id=str(raw["id"]),
         supplier=StockSupplierRef(id=str(supplier["id"]), name=supplier["name"]),
         request=raw.get("deal_number"),
+        order=raw.get("supplier_order_number"),
         requested_at=raw["requested_at"],
         requested_by=person_of(raw.get("requested_by"), raw.get("requested_by_name")),
         to_email=raw["to_email"],

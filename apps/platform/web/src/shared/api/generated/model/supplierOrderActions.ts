@@ -10,6 +10,8 @@ export interface SupplierOrderActions {
   edit: boolean;
   /** Черновик полный: у всех строк цена и есть ожидаемая дата (СЦ-10) */
   send: boolean;
+  /** В черновике есть строки без цены — «Запросить цену» у партнёра (СЦ-10) */
+  request_price: boolean;
   confirm: boolean;
   receive: boolean;
   cancel: boolean;

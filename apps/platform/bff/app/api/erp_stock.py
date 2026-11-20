@@ -46,6 +46,7 @@ from app.schemas_erp_stock import (
     SupplierOrderLineIn,
     SupplierOrderList,
     SupplierOrderPatch,
+    SupplierOrderPriceRequestIn,
     SupplierOrderReceiptIn,
     SupplierOrderSendIn,
     prices_visible,
@@ -86,6 +87,7 @@ _CONFLICTS = {
     "EXPECTED_DATE_REQUIRED": "Укажите ожидаемую дату поставки.",
     "SUPPLIER_EMAIL_REQUIRED": "У поставщика нет почты: укажите адрес для письма.",
     "ORDER_INCOMPLETE": "Не хватает цены или ожидаемой даты.",
+    "NOTHING_TO_PRICE": "У всех строк уже есть цена.",
     "EMAIL_FAILED": "Письмо поставщику не ушло. Статус заказа не изменён: повторите позже.",
     "FULFILLMENT_NOT_READY": "Проект ещё не подписан: отгрузка возможна после подписания договора.",
     "PRODUCT_REQUIRED": "Сначала сопоставьте строку с карточкой каталога.",
@@ -527,6 +529,31 @@ async def send_order(
 ) -> SupplierOrderDetail:
     email = str(body.to_email) if body is not None and body.to_email else ""
     return await _transition(authed, order_number, "send", {"to_email": email})
+
+
+@router.post(
+    "/stock/orders/{order_number}/price-request",
+    response_model=PriceRequest,
+    operation_id="requestSupplierOrderPrice",
+)
+async def request_order_price(
+    authed: Actor,
+    order_number: OrderNumber,
+    body: Annotated[SupplierOrderPriceRequestIn | None, Body()] = None,
+) -> PriceRequest:
+    """«Запросить цену» из черновика заказа (СЦ-10): строки без цены — партнёру этого заказа."""
+    erp = _erp(authed)
+    order_id = await erp.order_id(order_number)
+    payload: dict[str, Any] = {}
+    if body is not None and body.line_ids:
+        payload["line_ids"] = [int(i) for i in body.line_ids]
+    if body is not None and body.note:
+        payload["note"] = body.note
+    if body is not None and body.to_email:
+        payload["to_email"] = str(body.to_email)
+    return to_price_request(
+        await erp.stock("POST", f"orders/{order_id}/price-request/", json=payload)
+    )
 
 
 @router.post(

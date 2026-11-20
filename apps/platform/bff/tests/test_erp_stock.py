@@ -1299,3 +1299,58 @@ async def test_order_card_says_what_the_draft_lacks(
     assert response.status_code == 200, response.json()
     check(response, "/erp/stock/orders/{order_number}", "get")
     assert response.json()["send_missing"] == {"prices": 1, "date": True}
+
+
+async def test_request_a_price_from_a_draft_order(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    """СЦ-10: «Запросить цену» из черновика — номер → id, строки числами, в ответе номер заказа."""
+    await web.login(["SUPPLY"])
+    route = erp.post(f"{STOCK}/orders/31/price-request/").mock(
+        return_value=httpx.Response(
+            201,
+            json={
+                "id": 9,
+                "supplier": {"id": 5, "name": "ООО Вымышленный Поставщик"},
+                "deal_id": None,
+                "deal_number": None,
+                "supplier_order_id": 31,
+                "supplier_order_number": ORDER,
+                "requested_at": "2026-11-20T09:00:00+00:00",
+                "requested_by_name": None,
+                "requested_by": None,
+                "to_email": "sales@vendor.example",
+                "subject": "Запрос цены и срока поставки — Болт",
+                "note": None,
+                "status": "sent",
+                "error": None,
+                "answered_at": None,
+                "answered_by_name": None,
+                "answered_by": None,
+                "answer_note": None,
+                "lines": [],
+            },
+        )
+    )
+
+    response = await call(
+        web, "POST", f"/erp/stock/orders/{ORDER_ENCODED}/price-request", {"line_ids": ["77"]}
+    )
+
+    assert response.status_code == 200, response.json()
+    check(response, "/erp/stock/orders/{order_number}/price-request", "post")
+    assert json.loads(route.calls.last.request.content) == {"line_ids": [77]}
+    assert response.json()["order"] == ORDER
+
+
+async def test_nothing_to_price_is_a_conflict(web: Web, erp: respx.MockRouter) -> None:
+    await web.login(["SUPPLY"])
+    erp.post(f"{STOCK}/orders/31/price-request/").mock(
+        return_value=httpx.Response(409, json={"detail": "NOTHING_TO_PRICE"})
+    )
+
+    response = await call(web, "POST", f"/erp/stock/orders/{ORDER_ENCODED}/price-request", {})
+
+    assert response.status_code == 409
+    assert response.json()["details"]["reason"] == "nothing_to_price"
+    assert response.json()["message"] == "У всех строк уже есть цена."

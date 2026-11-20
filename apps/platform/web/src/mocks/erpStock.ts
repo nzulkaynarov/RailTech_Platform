@@ -32,6 +32,7 @@ import type {
   SupplierOrderPatch,
   SupplierOrderReceiptIn,
   SupplierOrderRow,
+  SupplierOrderPriceRequestIn,
   SupplierOrderSendIn,
 } from "../shared/api/generated/model";
 import { formatQuantity } from "../shared/lib/money";
@@ -427,6 +428,21 @@ const overdueDays = (order: MockOrder): number | null => {
   return diff > 0 ? diff : null;
 };
 
+/** СЦ-10: последний запрос цены из этого черновика. */
+function priceRequestState(order: MockOrder) {
+  const last = read()
+    .priceRequests.filter((p) => p.order === order.number)
+    .at(-1);
+  return last
+    ? {
+        id: String(last.id),
+        requested_at: last.requestedAt,
+        status: last.status,
+        answered_at: last.answeredAt,
+      }
+    : null;
+}
+
 /** СЦ-10: чего не хватает черновику для отправки — как `send_gaps` ERP. */
 function sendGaps(order: MockOrder): { prices: number; date: boolean } {
   return {
@@ -443,6 +459,7 @@ function actionsOf(order: MockOrder, user: Me) {
     edit: manage && order.status === "draft",
     send:
       manage && order.status === "draft" && sendGaps(order).prices === 0 && !sendGaps(order).date,
+    request_price: manage && order.status === "draft" && sendGaps(order).prices > 0,
     confirm: manage && order.status === "sent",
     receive: manage && order.status === "confirmed",
     cancel: manage && live && !touched,
@@ -492,6 +509,7 @@ function presentOrder(state: MockStock, order: MockOrder, user: Me): SupplierOrd
     supplier: { ...row.supplier, email: supplier?.email ?? null },
     note: order.note,
     partner_note: order.partnerNote ?? "",
+    price_request: priceRequestState(order),
     send_missing:
       order.status === "draft" && (sendGaps(order).prices > 0 || sendGaps(order).date)
         ? sendGaps(order)
@@ -913,6 +931,51 @@ export const erpStockHandlers = [
         article: line?.article ?? "",
         quantity: line?.quantity ?? 1,
         unit: line?.unit ?? "",
+      })),
+    };
+    state.priceRequests.push(entry);
+    write(state);
+    return HttpResponse.json<PriceRequest>(presentPriceRequest(entry));
+  }),
+
+  http.post("*/api/v1/erp/stock/orders/:number/price-request", async ({ params, request }) => {
+    // СЦ-10: «Запросить цену» из черновика — строки без цены уходят партнёру заказа.
+    const held = guard("erp.stock", "full");
+    if ("error" in held) return held.error;
+    const body = (await request.json().catch(() => ({}))) as SupplierOrderPriceRequestIn;
+    const state = read();
+    const order = findOrder(state, String(params["number"]));
+    if (!order) return orderMissing();
+    if (order.status !== "draft")
+      return conflict("order_not_draft", "Запрос цены — только из черновика.");
+    const lines = order.lines.filter((l) => l.unitPrice === null);
+    if (lines.length === 0) return conflict("nothing_to_price", "У всех строк уже есть цена.");
+    const supplier = SUPPLIERS.find((s) => s.id === order.supplierId);
+    const email = body.to_email ?? supplier?.email ?? null;
+    if (!email) {
+      return conflict("supplier_email_required", "У партнёра нет почты: укажите адрес для письма.");
+    }
+    state.nextId += 1;
+    const entry = {
+      id: state.nextId,
+      supplierId: order.supplierId,
+      request: "",
+      order: order.number,
+      requestedAt: new Date().toISOString(),
+      requestedBy: held.user.name,
+      toEmail: email,
+      subject: `Запрос цены и срока поставки — ${lines[0]?.name ?? ""}`,
+      note: body.note ?? null,
+      status: "sent" as const,
+      answeredAt: null,
+      answeredBy: null,
+      answerNote: null,
+      lines: lines.map((l) => ({
+        lineId: l.id,
+        name: l.name,
+        article: l.article,
+        quantity: l.quantity,
+        unit: l.unit,
       })),
     };
     state.priceRequests.push(entry);
@@ -1508,7 +1571,8 @@ function presentPriceRequest(p: ReturnType<typeof read>["priceRequests"][number]
   return {
     id: String(p.id),
     supplier: { id: String(p.supplierId), name: supplier?.name ?? "Партнёр" },
-    request: p.request,
+    request: p.request || null,
+    order: p.order ?? null,
     requested_at: p.requestedAt,
     requested_by: staffRef(p.requestedBy),
     to_email: p.toEmail,

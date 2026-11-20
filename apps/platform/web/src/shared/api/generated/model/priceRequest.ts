@@ -8,7 +8,7 @@ import type { PriceRequestStatus } from "./priceRequestStatus";
 import type { StockSupplierRef } from "./stockSupplierRef";
 
 /**
- * Запрос цены у поставщика из расчёта — журнал письма
+ * Запрос цены у поставщика из расчёта или из черновика заказа — журнал письма
  */
 export interface PriceRequest {
   /** @pattern ^[0-9]+$ */
@@ -19,6 +19,11 @@ export interface PriceRequest {
    * @nullable
    */
   request: string | null;
+  /**
+   * Номер заказа партнёру, из черновика которого запрошена цена (СЦ-10)
+   * @nullable
+   */
+  order: string | null;
   requested_at: string;
   /** Сотрудник со ссылкой на справочник (СУЩ-3) */
   requested_by: PersonRef | null;

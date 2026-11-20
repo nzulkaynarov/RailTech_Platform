@@ -153,7 +153,10 @@ export interface MockShipment {
 export interface MockPriceRequest {
   id: number;
   supplierId: number;
+  /** Номер заявки; запрос из черновика заказа без заявки — пусто (СЦ-10). */
   request: string;
+  /** Номер черновика заказа, из которого запрошена цена (СЦ-10). */
+  order?: string;
   requestedAt: string;
   requestedBy: string;
   toEmail: string;
