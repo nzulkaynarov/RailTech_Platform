@@ -26,6 +26,7 @@ from app.errors import PlatformError, backend_unavailable
 from app.feeds.models import PersonRef, Sources, StepCode
 from app.feeds.numbers import deal_kind, deal_step, outgoing_document_path, request_path
 from app.schemas import initials_of
+from app.schemas_request_files import RequestFile, parse_request_files
 
 LetterStatus = Literal[
     "awaiting_resolution",
@@ -129,6 +130,7 @@ class LetterRequest(BaseModel):
     number: str
     title: str | None
     path: str
+    files: list[RequestFile] | None = None  # ERP не ответил — поля нет (exclude_unset)
 
 
 class LetterAssignee(BaseModel):
@@ -1187,11 +1189,14 @@ def to_card(
         if links.crm_client_id is not None
         else None
     )
+    request_files = parse_request_files(deal.get("request_files")) if deal else None
     request = (
         LetterRequest(
             number=links.deal_number,
             title=_deal_title(deal),
             path=_request_path(links.deal_number, deal),
+            # Файлы клиента к заявке (СЦ-10): ERP ответил — список, нет — поля нет.
+            **({"files": request_files} if request_files is not None else {}),
         )
         if links.deal_number
         else None

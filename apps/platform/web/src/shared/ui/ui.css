@@ -799,3 +799,21 @@ tr > td.pf-col-num {
   color: var(--rt-color-warning-text);
   font-weight: 500;
 }
+
+/* --- FileLinks: список файлов для скачивания (имя-ссылка, под ним подсказка) --- */
+.pf-file-links {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pf-file-links li {
+  display: flex;
+  flex-direction: column;
+}
+.pf-file-link {
+  color: var(--rt-color-primary-text);
+  overflow-wrap: anywhere;
+}

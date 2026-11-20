@@ -76,7 +76,9 @@
     "request": "Request text",
     "requestEmpty": "No request text.",
     "requestPrice": "Request a partner price",
-    "rejectedComment": "The director rejected the quote: “{{comment}}”. The costing is closed."
+    "rejectedComment": "The director rejected the quote: “{{comment}}”. The costing is closed.",
+    "requestFiles": "Request files",
+    "downloadFile": "Download file {{name}}"
   },
   "lines": {
     "title": "Costing lines",
@@ -259,7 +261,8 @@
     "empty": {
       "title": "No request selected",
       "text": "Select a row in the table — the task and sign-offs open here."
-    }
+    },
+    "requestFiles": "Request files"
   },
   "errors": {
     "visas_missing": "Not every line is signed off.",

@@ -172,7 +172,8 @@
         "invalid_state": "Письмо уже отмечено как дубль",
         "letter_has_duplicates": "У этого письма уже есть дубли — отметьте дублем другое письмо пары"
       }
-    }
+    },
+    "requestFiles": "Из заявки {{number}}"
   },
   "panel": {
     "awaitingReadOnly": {

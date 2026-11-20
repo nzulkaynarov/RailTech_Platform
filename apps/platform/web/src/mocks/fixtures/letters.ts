@@ -162,6 +162,8 @@ interface Seed {
   clientId: string;
   urgent?: boolean;
   files?: LetterFile[];
+  /** Файлы клиента к заявке из кабинета (ERP, СЦ-10). */
+  requestFiles?: { id: number; name: string; uploaded_at: string }[];
   title: string;
 }
 
@@ -195,6 +197,7 @@ const SEEDS: readonly Seed[] = [
     client: "ООО «Демо-Сигнал»",
     inn: "300777888",
     clientId: "44",
+    requestFiles: [{ id: 9, name: "spec.pdf", uploaded_at: "2026-10-24T08:50:00Z" }],
     title: "Автоблокировка",
   },
   {
@@ -241,6 +244,7 @@ function awaiting(seed: Seed): LetterCard {
       number: dealNumber,
       title: dealNumber === ERP_DOWN_DEAL_NUMBER ? null : seed.title,
       path: `/erp/requests?request=${encodeURIComponent(dealNumber)}&panel=open&tab=task`,
+      ...(seed.requestFiles ? { files: seed.requestFiles } : {}),
     },
     stage: "RESOLUTION",
     lost_at_step: null,

@@ -27,6 +27,7 @@ import { ParseModal } from "./ParseModal";
 import { PreviousModal } from "./PreviousModal";
 import { PriceRequestForm } from "./PriceRequestForm";
 import { PriceRequests } from "./PriceRequests";
+import { RequestFiles } from "./RequestFiles";
 import { ClientRejection } from "./Rejection";
 import { TaskSlot } from "./TaskPanel";
 import { TermsCard, TermsForm } from "./Terms";
@@ -118,6 +119,9 @@ function NotStarted({ sheet }: { sheet: CalcSheet }) {
         <div>
           <h3 className="pf-calc-subtitle">{t("sheet.request")}</h3>
           <p className="pf-calc-request">{sheet.request.text || t("sheet.requestEmpty")}</p>
+          <div className="pf-calc-request-files">
+            <RequestFiles sheet={sheet} />
+          </div>
         </div>
         {sheet.rights.build ? (
           <>

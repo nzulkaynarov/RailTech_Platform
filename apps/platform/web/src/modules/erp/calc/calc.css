@@ -386,3 +386,8 @@
 .pf-calc-currency {
   width: 72px;
 }
+
+/* Файлы заявки клиента под текстом заявки (СЦ-10) */
+.pf-calc-request-files:not(:empty) {
+  margin-top: 8px;
+}

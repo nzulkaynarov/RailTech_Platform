@@ -172,7 +172,8 @@
         "invalid_state": "Xat allaqachon takror deb belgilangan",
         "letter_has_duplicates": "Bu xatning takrorlari bor — juftlikdagi boshqa xatni belgilang"
       }
-    }
+    },
+    "requestFiles": "{{number}} arizasidan"
   },
   "panel": {
     "awaitingReadOnly": {

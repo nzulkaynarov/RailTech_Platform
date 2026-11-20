@@ -12,9 +12,11 @@ BFF не решает (CONVENTIONS.md §2 п. 2): зону строки, виз�
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Body, Depends, Path, Query, Request, status
+from fastapi.responses import StreamingResponse
 
 from app.clients.erp_company import ErpCompany, erp_error
 from app.deps import Authed, require, require_any
+from app.erp_request_files import stream_request_file
 from app.errors import PlatformError
 from app.feeds.numbers import deal_number, number_query
 from app.schemas_erp_calc import (
@@ -276,6 +278,19 @@ async def get_parse(
 )
 async def get_sheet(authed: Reader, number: Number) -> CalcSheet:
     return await _sheet(authed, number, "GET", "")
+
+
+@router.get(
+    "/calc/{number}/request-files/{file_id}",
+    response_class=StreamingResponse,
+    responses={200: {"content": {"application/octet-stream": {}}}},
+    operation_id="downloadCalcRequestFile",
+)
+async def download_request_file(
+    authed: Reader, number: Number, file_id: Annotated[int, Path(ge=1, le=2**31 - 1)]
+) -> StreamingResponse:
+    """Файл заявки клиента (СЦ-10) потоком, всегда как вложение; права на файл — у ERP."""
+    return await stream_request_file(authed, await _erp(authed).deal_id(number), file_id)
 
 
 @router.post(

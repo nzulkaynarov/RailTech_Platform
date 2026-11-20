@@ -913,3 +913,105 @@ async def test_copy_from_a_request_not_in_the_list_is_404(web: Web, erp: respx.M
     assert response.status_code == 404
     assert response.json()["details"]["reason"] == "previous_not_found"
     assert not copy.called
+
+
+# --- файлы заявки клиента (СЦ-10) -----------------------------------------------------------------
+
+SPEC = {"id": 7, "name": "spec.pdf", "uploaded_at": "2026-11-20T08:00:00Z"}
+
+
+async def test_sheet_lists_the_request_files_and_old_erp_gives_an_empty_list(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    await web.login(["SUPPLY"])
+    request = {"text": "Нужны 2 стрелочных перевода", "lines": 0, "files": [SPEC, {"id": "x"}]}
+    erp.get(f"{CALC}/104/").mock(return_value=httpx.Response(200, json=sheet(request=request)))
+
+    response = await web.client.get(f"/api/v1/erp/calc/{ENCODED}")
+
+    assert response.status_code == 200, response.json()
+    check(response, "/erp/calc/{number}", "get")
+    assert response.json()["request"]["files"] == [
+        {"id": 7, "name": "spec.pdf", "uploaded_at": "2026-11-20T08:00:00Z"}
+    ]
+
+    erp.get(f"{CALC}/104/").mock(return_value=httpx.Response(200, json=sheet()))
+    assert (await web.client.get(f"/api/v1/erp/calc/{ENCODED}")).json()["request"]["files"] == []
+
+
+async def test_request_file_is_streamed_from_the_deal_as_a_download(
+    web: Web, erp: respx.MockRouter
+) -> None:
+    await web.login(["SUPPLY"])
+    route = erp.get(f"{API}/crm/deals/104/request-files/7/").mock(
+        return_value=httpx.Response(
+            200,
+            content=b"%PDF-1.4 spec",
+            headers={"content-disposition": "attachment; filename*=utf-8''spec.pdf"},
+        )
+    )
+
+    response = await web.client.get(f"/api/v1/erp/calc/{ENCODED}/request-files/7")
+
+    assert response.status_code == 200
+    assert route.called
+    assert response.content == b"%PDF-1.4 spec"
+    assert response.headers["content-type"] == "application/octet-stream"
+    assert response.headers["content-disposition"] == "attachment; filename*=utf-8''spec.pdf"
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert "sandbox" in response.headers["content-security-policy"]
+    assert response.headers["cache-control"] == "private, no-store"
+
+
+async def test_inline_disposition_from_erp_becomes_a_plain_attachment(
+    web: Web, erp: respx.MockRouter
+) -> None:
+    await web.login(["SUPPLY"])
+    erp.get(f"{API}/crm/deals/104/request-files/7/").mock(
+        return_value=httpx.Response(
+            200, content=b"<html>", headers={"content-disposition": "inline; filename=x.html"}
+        )
+    )
+
+    response = await web.client.get(f"/api/v1/erp/calc/{ENCODED}/request-files/7")
+
+    assert response.headers["content-disposition"] == "attachment"
+
+
+async def test_request_file_missing_in_erp_is_404(web: Web, erp: respx.MockRouter) -> None:
+    await web.login(["SUPPLY"])
+    erp.get(f"{API}/crm/deals/104/request-files/8/").mock(
+        return_value=httpx.Response(404, json={"detail": "Not found."})
+    )
+
+    response = await web.client.get(f"/api/v1/erp/calc/{ENCODED}/request-files/8")
+
+    assert response.status_code == 404
+    assert response.json()["code"] == "NOT_FOUND"
+
+
+async def test_unknown_number_is_404_without_asking_for_the_file(
+    web: Web, erp: respx.MockRouter
+) -> None:
+    await web.login(["SUPPLY"])
+    erp.get(f"{CALC}/deals/").mock(return_value=httpx.Response(200, json={"results": []}))
+    file_route = erp.get(url__regex=r".*/request-files/.*").mock(
+        return_value=httpx.Response(200, content=b"x")
+    )
+
+    response = await web.client.get("/api/v1/erp/calc/ЗВ-2026-999/request-files/7")
+
+    assert response.status_code == 404
+    assert not file_route.called
+
+
+@pytest.mark.parametrize("role", ["REGISTRAR", "ADMIN"])
+async def test_request_file_needs_the_calc_section(
+    web: Web, erp: respx.MockRouter, role: str
+) -> None:
+    await web.login([role])
+
+    response = await web.client.get(f"/api/v1/erp/calc/{ENCODED}/request-files/7")
+
+    assert response.status_code == 403
+    assert erp_data_calls(erp) == []

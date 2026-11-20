@@ -9895,6 +9895,44 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /eds/letters/{id}/request-files/{file_id}:
+    get:
+      tags: [letters]
+      operationId: downloadLetterRequestFile
+      summary: 'EDS · Скачать файл заявки клиента из карточки письма (СЦ-10)'
+      description: >-
+        Файл, который клиент приложил к заявке в кабинете (ERP, исходник заявки сделки по `erp_deal_id` письма). Доступ к
+        письму решает EDS (как у карточки), к файлу — ERP по правам сотрудника на сделку. Письмо без заявки, нет файла
+        или он не виден — 404 `NOT_FOUND`. Файл отдаётся как вложение (`Content-Disposition: attachment`,
+        `X-Content-Type-Options: nosniff`, `Content-Security-Policy: sandbox`).
+      parameters:
+        - $ref: '#/components/parameters/LetterIdPath'
+        - name: file_id
+          in: path
+          required: true
+          schema: {type: integer, minimum: 1}
+      responses:
+        '200':
+          description: Содержимое файла
+          headers:
+            Content-Disposition:
+              description: '`attachment; filename*=UTF-8''''…`'
+              schema:
+                type: string
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
   /eds/letters/{id}/duplicate:
     post:
       tags: [letters]
@@ -11425,6 +11463,43 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/calc/{number}/request-files/{file_id}:
+    get:
+      tags: [calc]
+      operationId: downloadCalcRequestFile
+      summary: 'Расчёт · Скачать файл заявки клиента (СЦ-10)'
+      description: >-
+        ERP `GET /crm/deals/{deal_id}/request-files/{file_id}/` потоком: исходник заявки под именем, с которым его
+        приложил клиент. Раздел `erp.calc` — чтение. Номера нет среди заявок с заданием или нет такого файла — 404
+        `NOT_FOUND`. Файл отдаётся как вложение (`Content-Disposition: attachment`, `nosniff`, `sandbox`).
+      parameters:
+        - $ref: '#/components/parameters/CalcNumberPath'
+        - name: file_id
+          in: path
+          required: true
+          schema: {type: integer, minimum: 1}
+      responses:
+        '200':
+          description: Содержимое файла
+          headers:
+            Content-Disposition:
+              description: '`attachment; filename*=UTF-8''''…`'
+              schema:
+                type: string
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
 
   /erp/calc/{number}/start:
     post:
@@ -22350,6 +22425,22 @@ components:
         number: {type: string, examples: [ЗВ-2026-104]}
         title: {type: [string, 'null']}
         path: {type: string}
+        files:
+          type: array
+          description: >-
+            Файлы, которые клиент приложил к заявке (ERP, СЦ-10); скачивание — `downloadLetterRequestFile`. ERP не ответил —
+            поля нет.
+          items: {$ref: '#/components/schemas/RequestFile'}
+
+    RequestFile:
+      type: object
+      additionalProperties: false
+      required: [id, name, uploaded_at]
+      description: Файл заявки клиента в ERP (исходник заявки сделки)
+      properties:
+        id: {type: integer, minimum: 1}
+        name: {type: string, description: Имя, с которым файл приложил клиент}
+        uploaded_at: {type: string, format: date-time}
 
     LetterAssignee:
       type: object
@@ -24827,6 +24918,10 @@ components:
       properties:
         text: {type: string, description: Заявка словами (текст клиента или суть из «Создать заявку»)}
         lines: {type: integer, minimum: 0, description: Строк в заявке клиента}
+        files:
+          type: array
+          description: Файлы заявки клиента (СЦ-10); скачивание — `downloadCalcRequestFile`
+          items: {$ref: '#/components/schemas/RequestFile'}
 
     CalcQuote:
       type: object
