@@ -83,6 +83,7 @@ export function AiFillBar({
   onSuggestion,
   onRevert,
   onLinkDeal,
+  noAutoFor = null,
 }: {
   attachments: readonly Attachment[];
   /** Сколько полей заполнено из файла; 0 — предложения нет */
@@ -92,6 +93,8 @@ export function AiFillBar({
   onSuggestion: (suggestion: LetterIntakeSuggestion) => void;
   onRevert: () => void;
   onLinkDeal: (choice: DealChoice) => void;
+  /** Файл восстановлен из черновика (СЦ-10): распознавание уже было или от него отказались — платный вызов не повторять */
+  noAutoFor?: string | null;
 }) {
   const { t } = useTranslation("letters");
   const settings = useGetDocflowSettings({ query: { staleTime: 60_000 } });
@@ -117,7 +120,8 @@ export function AiFillBar({
   const tried = useRef<string | null>(null);
   const fileId = file?.id ?? null;
   useEffect(() => {
-    if (!available || !fileId || applied > 0 || tried.current === fileId) return;
+    if (!available || !fileId || applied > 0 || tried.current === fileId || fileId === noAutoFor)
+      return;
     tried.current = fileId;
     void fill();
     // fill — свежая функция на каждой отрисовке; запуск — по новому файлу

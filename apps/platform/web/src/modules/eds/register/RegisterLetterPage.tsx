@@ -1,4 +1,4 @@
-import { Alert, App, Button, Card, Checkbox, Input, Select } from "antd";
+import { Alert, App, Button, Card, Checkbox, Input, Select, Space } from "antd";
 import {
   type ReactNode,
   createContext,
@@ -51,6 +51,13 @@ import { AiFillBar } from "./AiFillBar";
 import { DuplicateNotice } from "./DuplicateCheck";
 import { type ForceState, duplicateFromError, useDuplicateCheck } from "./duplicates";
 import { type AiField, applySuggestion, decisionOf, revertSuggestion } from "./aiFill";
+import {
+  clearRegisterDraft,
+  DRAFT_FILE_KEY,
+  readRegisterDraft,
+  type RegisterSection,
+  writeRegisterDraft,
+} from "./draft";
 import { useMailPrefill } from "./useMailPrefill";
 
 import "../new/new.css";
@@ -114,7 +121,7 @@ function newKey(): string {
   return `${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`;
 }
 
-type SectionKey = "file" | "sender" | "content" | "route" | "review";
+type SectionKey = RegisterSection;
 
 /** Поле с ошибкой → его секция (форма секциями, platform-frontend.md §4.1a) */
 const SECTION_OF: Record<RegisterField, SectionKey> = {
@@ -187,6 +194,12 @@ export function RegisterLetterPage() {
     setValues(update);
   }, []);
   const fromMail = useMailPrefill(mailId, applyMail);
+  // Черновик (СЦ-10): предлагается, а не подставляется молча; из почты — не предлагается и не пишется.
+  const userId = me.id;
+  const [offer, setOffer] = useState(() =>
+    mailId === null && userId ? readRegisterDraft(userId) : null,
+  );
+  const [restoredFileId, setRestoredFileId] = useState<string | null>(null);
   const refreshMail = useRefreshMail();
   const kinds = useListLetterKinds({ query: { staleTime: 5 * 60_000 } });
   const methods = useLetterDictionary("receipt-methods");
@@ -211,6 +224,15 @@ export function RegisterLetterPage() {
     latest.current = values;
   }, [values]);
   const [ai, setAi] = useState<{ id: string; filled: AiField[]; left: Set<AiField> } | null>(null);
+  useEffect(() => {
+    // Пока на плашке не выбрано «Продолжить» или «Начать заново», прежний черновик не трогаем.
+    if (!userId || mailId !== null || offer) return;
+    writeRegisterDraft(userId, today, {
+      values,
+      active,
+      ai: ai ? { id: ai.id, filled: ai.filled, left: [...ai.left] } : null,
+    });
+  }, [userId, mailId, offer, values, active, ai, today]);
   const touch = (key: keyof RegisterValues) => {
     setAi((prev) => {
       if (!prev?.left.has(key as AiField)) return prev;
@@ -274,6 +296,7 @@ export function RegisterLetterPage() {
       const card = await registerLetter(body, {
         headers: { "Idempotency-Key": idempotency.current.key },
       });
+      clearRegisterDraft(userId);
       void refresh();
       if (ai) report(decisionOf(ai.filled, ai.left));
       if (values.sourceMailId !== null) void refreshMail();
@@ -298,6 +321,10 @@ export function RegisterLetterPage() {
         return;
       }
       const fields = serverFields(error);
+      // Файл из черновика уже не приложить (СЦ-10): убираем восстановленные, просим загрузить заново.
+      if (fields.includes("file_ids")) {
+        setAttachments((prev) => prev.filter((file) => !file.key.startsWith(DRAFT_FILE_KEY)));
+      }
       setErrors(Object.fromEntries(fields.map((field) => [field, true])));
       const reason =
         error instanceof ApiError && error.status === 403
@@ -360,6 +387,50 @@ export function RegisterLetterPage() {
           }
         />
       ) : null}
+      {offer ? (
+        <Alert
+          type="info"
+          showIcon
+          role="status"
+          message={t("letters:register.saved.found", {
+            time: date(offer.savedAt, "datetime"),
+            files: offer.values.attachments.map((file) => file.name).join(", "),
+          })}
+          description={
+            <Space wrap>
+              <Button
+                type="primary"
+                size="small"
+                onClick={() => {
+                  setValues({ ...offer.values, sourceMailId: null });
+                  setAi(
+                    offer.ai
+                      ? { id: offer.ai.id, filled: offer.ai.filled, left: new Set(offer.ai.left) }
+                      : null,
+                  );
+                  setActive(offer.active);
+                  setRestoredFileId(
+                    offer.values.attachments.find((file) => file.status === "done" && file.id)
+                      ?.id ?? null,
+                  );
+                  setOffer(null);
+                }}
+              >
+                {t("letters:register.saved.continue")}
+              </Button>
+              <Button
+                size="small"
+                onClick={() => {
+                  clearRegisterDraft(userId);
+                  setOffer(null);
+                }}
+              >
+                {t("letters:register.saved.restart")}
+              </Button>
+            </Space>
+          }
+        />
+      ) : null}
       <SuggestedFields.Provider
         value={new Set(ai ? [...ai.left].map((key) => AI_FIELD_IDS[key]) : [])}
       >
@@ -409,6 +480,7 @@ export function RegisterLetterPage() {
                         />
                       </Field>
                       <AiFillBar
+                        noAutoFor={restoredFileId}
                         attachments={values.attachments}
                         applied={ai?.left.size ?? 0}
                         linkQuery={
@@ -904,6 +976,7 @@ export function RegisterLetterPage() {
                           htmlType="button"
                           disabled={pending}
                           onClick={() => {
+                            clearRegisterDraft(userId); // «Отмена» — осознанный отказ: черновик стирается
                             void navigate("/eds/inbox");
                           }}
                         >

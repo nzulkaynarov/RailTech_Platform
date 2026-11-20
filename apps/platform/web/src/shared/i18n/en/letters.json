@@ -449,6 +449,11 @@
     "person": {
       "label": "Correspondent’s person",
       "hint": "Optional: from the organization card."
+    },
+    "saved": {
+      "found": "Draft from {{time}}: {{files}}",
+      "continue": "Continue",
+      "restart": "Start over"
     }
   },
   "office": {
