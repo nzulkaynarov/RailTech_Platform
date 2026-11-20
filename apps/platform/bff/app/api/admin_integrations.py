@@ -42,6 +42,7 @@ from app.schemas_integrations import (
     ExternalServiceList,
     IntegrationsOverview,
     MailLog,
+    MailMissedQueued,
     MailQueued,
     MailStatus,
     OffsiteBackup,
@@ -433,6 +434,13 @@ async def send_smtp_test(authed: Admin) -> MailQueued:
         crm.EmailQueuedOut, "POST", f"{API}/integrations/smtp/test-send", probe=True
     )
     return _to(MailQueued, out)
+
+
+@router.post("/smtp/missed", response_model=MailMissedQueued, operation_id="sendMissedMail")
+async def send_missed_mail(authed: Admin) -> MailMissedQueued:
+    """Письма и приглашения, не ушедшие, пока почта не была настроена, — снова в очередь (СЦ-3)."""
+    out = await _crm(authed).get_model(crm.SmtpMissedOut, "POST", f"{API}/integrations/smtp/missed")
+    return _to(MailMissedQueued, out)
 
 
 @router.get("/smtp/log", response_model=MailLog, operation_id="listMailLog")

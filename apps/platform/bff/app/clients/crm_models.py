@@ -1935,6 +1935,14 @@ class SmtpCheckOut(BaseModel):
     server: Annotated[str, Field(title="Server")]
 
 
+class SmtpMissedOut(BaseModel):
+    """
+    Пропущенные письма снова в очереди (СЦ-3): сколько писем и приглашений принято.
+    """
+
+    queued: Annotated[int, Field(ge=0, title="Queued")]
+
+
 class SmtpReadyOut(BaseModel):
     """
     Почта настроена (D17G-2): только признак, без адреса сервера и логина — любому сотруднику.
@@ -1952,6 +1960,7 @@ class SmtpStatusOut(BaseModel):
     from_email: Annotated[str, Field(title="From Email")]
     from_name: Annotated[str, Field(title="From Name")]
     host: Annotated[str, Field(title="Host")]
+    missed: Annotated[int | None, Field(ge=0, title="Missed")] = 0
     password_configured: Annotated[bool, Field(title="Password Configured")]
     password_last4: Annotated[str | None, Field(title="Password Last4")]
     password_source: Annotated[PasswordSource, Field(title="Password Source")]

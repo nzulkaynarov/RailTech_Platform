@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
+from app.domain.errors import ConflictError
 from app.integrations.smtp import SmtpCheck, SmtpConnection, SmtpProbeError
 from app.main import create_app
 from app.models.auth import AuditLog
@@ -237,3 +238,105 @@ async def test_connector_saved_checked_and_letters_flow_through_journal(
     assert {"user.invite", "user.reset_password_email"} <= set(actions)
     assert all(RELAY_PASSWORD not in repr((a.before, a.after)) for a in audits)
     assert all(temporary not in repr((a.before, a.after)) for a in audits)
+
+
+# --- СЦ-3: письма, не ушедшие без почты, уходят после её подключения ----------------------------
+
+
+async def _skipped_bus_row(
+    sessions: async_sessionmaker[AsyncSession], source: str, purpose: str, key: str
+) -> int:
+    """Письмо домена по шине, принятое без почты: тело хранится (без секрета)."""
+    async with sessions() as session, session.begin():
+        row = EmailLog(
+            to_email="client@example.test",
+            subject="Счёт",
+            template=purpose,
+            lang="ru",
+            status="skipped_no_smtp",
+            error="smtp_not_configured",
+            attempts=0,
+            source=source,
+            purpose=purpose,
+            request_key=key,
+            body_ciphertext=SecretCipher(SECRETS_KEY).encrypt("Текст письма"),
+        )
+        session.add(row)
+        await session.flush()
+        return row.id
+
+
+async def test_missed_letters_go_out_after_mail_is_connected(
+    sessions: async_sessionmaker[AsyncSession], client: TestClient, harness: Harness
+) -> None:
+    from app.services.mail_templates import RenderedEmail
+
+    auth = await headers(sessions, client, "admin")
+    container = client.app.state.container  # type: ignore[attr-defined]
+    mail: MailService = container.mail_service
+    text = RenderedEmail(subject="Ответ клиенту", body="Здравствуйте", lang="ru")
+
+    # Без почты: своё письмо без секрета хранит текст, приглашение со входом — нет.
+    with pytest.raises(ConflictError):
+        await mail.send_rendered("client_reply", "client@example.test", text)
+    with pytest.raises(ConflictError):
+        await mail.send_rendered("invite", "staff@example.test", text)
+    erp_id = await _skipped_bus_row(sessions, "erp", "invoice_issued", "erp-key-1")
+    eds_id = await _skipped_bus_row(sessions, "eds", "letter", "eds-key-1")
+    async with sessions() as session:
+        rows = {r.template: r for r in (await session.scalars(select(EmailLog))).all()}
+    own_id = rows["client_reply"].id
+    assert rows["client_reply"].body_ciphertext is not None
+    assert rows["invite"].body_ciphertext is None
+
+    before = client.get(URL, headers=auth).json()
+    assert before["configured"] is False
+    assert before["missed"] == 0, "без почты отправлять нечем — счётчика нет"
+
+    saved = client.put(URL, json=connector_body(), headers=auth)
+    assert saved.json()["missed"] == 2, (
+        "своё письмо и письмо ERP; EDS и приглашение со входом — нет"
+    )
+
+    sent = client.post(f"{URL}/missed", headers=auth)
+    assert sent.status_code == 200, sent.text
+    assert sent.json() == {"queued": 2}
+    assert sorted(harness.queued) == sorted([own_id, erp_id]), "та же строка журнала, не копия"
+    assert client.get(URL, headers=auth).json()["missed"] == 0
+
+    async with sessions() as session:
+        after = {r.id: r for r in (await session.scalars(select(EmailLog))).all()}
+        audits = [a.action for a in (await session.scalars(select(AuditLog))).all()]
+    assert (after[erp_id].status, after[erp_id].error, after[erp_id].request_key) == (
+        "queued",
+        None,
+        "erp-key-1",
+    )
+    assert after[eds_id].status == "skipped_no_smtp", "письма EDS уходят из документа"
+    assert "integrations.smtp.missed_sent" in audits
+
+    assert await mail.deliver(erp_id) is True
+    async with sessions() as session:
+        delivered = await session.get(EmailLog, erp_id)
+    assert delivered is not None
+    assert delivered.status == "sent"
+
+
+async def test_missed_letters_wait_while_mail_is_paused(
+    sessions: async_sessionmaker[AsyncSession], client: TestClient, harness: Harness
+) -> None:
+    auth = await headers(sessions, client, "admin")
+    container = client.app.state.container  # type: ignore[attr-defined]
+    erp_id = await _skipped_bus_row(sessions, "erp", "invoice_issued", "erp-key-2")
+    client.put(URL, json=connector_body(), headers=auth)
+
+    async def paused() -> bool:
+        return True
+
+    container.mail_service._paused = paused  # пауза почты: строки ждут `resume_queued`
+    assert await container.mail_service.send_missed(None) == 1
+    assert harness.queued == []
+    async with sessions() as session:
+        row = await session.get(EmailLog, erp_id)
+    assert row is not None
+    assert row.status == "queued"

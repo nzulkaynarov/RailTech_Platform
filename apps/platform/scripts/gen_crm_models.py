@@ -63,6 +63,7 @@ ROOTS = (
     "OffsiteStatusOut",
     "OffsiteCheckOut",
     "SmtpCheckOut",
+    "SmtpMissedOut",
     "EmailLogItem",
     "EmailQueuedOut",
     "ExternalServicesOut",

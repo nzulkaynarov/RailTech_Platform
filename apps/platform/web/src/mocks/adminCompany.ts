@@ -983,6 +983,11 @@ export const adminCompanyHandlers = [
           updated_at: nowIso(),
         };
       }
+      if (body.support_email !== undefined) {
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(body.support_email))
+          return validation(["support_email"], "invalid_email");
+        s.platform = { ...s.platform, support_email: body.support_email, updated_at: nowIso() };
+      }
       return s.platform;
     }),
   ),

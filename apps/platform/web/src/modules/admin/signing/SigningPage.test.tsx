@@ -181,5 +181,11 @@ describe("Настройки · Права подписи (SIGN-2, ADR-0024)", (
         within(drawer).getAllByText("Демо Директоров", { exact: false }).length,
       ).toBeGreaterThan(0);
     });
+    await chooseOption(within(drawer).getByRole("combobox", { name: "Что подписывает" }), "Счёт");
+    fireEvent.click(within(drawer).getByRole("button", { name: "Сохранить" }));
+    // СЦ-3: после выдачи плашка «никто не вправе» уходит сразу, без перезагрузки
+    await waitFor(() => {
+      expect(screen.queryByText("Пока никто не вправе подписывать документы")).toBeNull();
+    });
   });
 });

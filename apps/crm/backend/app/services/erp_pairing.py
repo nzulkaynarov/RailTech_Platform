@@ -17,6 +17,7 @@
 обращения к ERP.
 """
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any, Final
@@ -75,8 +76,10 @@ class ErpPairingService:
         connector: ErpConnectorService,
         *,
         rotation_grace_s: int = DEFAULT_ROTATION_GRACE_S,
+        reprovision: Callable[[], Awaitable[int]] | None = None,
     ) -> None:
         self._sessions = sessions
+        self._reprovision = reprovision
         self._settings = settings
         self._store = store
         self._config = config
@@ -134,7 +137,22 @@ class ErpPairingService:
             logger.error("erp_pairing_local_save_failed", user_id=who.user_id, exc_info=True)
             raise
         logger.info("erp_paired", user_id=who.user_id, method=method)
+        await self._provision_staff()
         return await self._outcome()
+
+    async def _provision_staff(self) -> None:
+        """Доступ к ERP сотрудникам — сразу после сопряжения (СЦ-3).
+
+        Администратора создали раньше, чем подключили ERP, и его провижининг исчерпал повторы.
+        Сбой постановки сопряжение не отменяет: ключи уже у обеих сторон."""
+        if self._reprovision is None:
+            return
+        try:
+            queued = await self._reprovision()
+        except Exception:
+            logger.warning("erp_pairing_reprovision_failed", exc_info=True)
+        else:
+            logger.info("erp_pairing_reprovisioned", users=queued)
 
     async def _save_paired(
         self,

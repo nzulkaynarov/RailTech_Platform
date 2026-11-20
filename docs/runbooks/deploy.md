@@ -80,6 +80,9 @@ scp /tmp/env.db deploy@<VPS 2>:/opt/rt-db/.env.db && shred -u /tmp/env.db
 infra/deploy/make-env-prod.sh drop-db-only    # убрать с VPS 1 то, что нужно только VPS 2 (суперпользователь, ключи бэкапа)
 ```
 
+`SUPPORT_EMAIL` — запасной адрес поддержки в письмах клиентам (СЦ-3); основной задаётся в Платформе: Настройки · Компания ·
+Налоги и валюты. Пустой или заглушка `…@example.com`/`.org` — предупреждение в журнале `deploy.sh`, выкладка идёт дальше.
+
 `init` даёт обоим Redis разные случайные пароли (`REDIS_BROKER_PASSWORD`, `REDIS_CACHE_PASSWORD`). В `.env.prod`, созданном до S0-2, старая `REDIS_PASSWORD` больше
 не читается: повторный `init` допишет две новые переменные (потом `drop-db-only`, как ниже), строку `REDIS_PASSWORD` можно удалить.
 

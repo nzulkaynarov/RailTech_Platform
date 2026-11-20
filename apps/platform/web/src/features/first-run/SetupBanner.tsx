@@ -4,10 +4,10 @@ import { useLocation } from "react-router";
 
 import { canEdit } from "../../app/access";
 import { useAuth } from "../../app/auth/useAuth";
-import { WIZARD_PATH, bankDetailsMissing, needsSetup, nextStep } from "../../entities/setup/steps";
+import { WIZARD_PATH, bankDetailsMissing, visibleTitleKey } from "../../entities/setup/steps";
 import { LinkButton } from "../../shared/ui/LinkButton";
 import { hideBanner, useBannerHidden } from "./hidden";
-import { useSetupChecklist } from "./useSetupChecklist";
+import { useSetupProgress } from "./useSetupProgress";
 
 import "./first-run.css";
 
@@ -23,32 +23,28 @@ export function SetupBanner() {
   const { me } = useAuth();
   const location = useLocation();
   const allowed = canEdit(me, "admin");
-  const checklist = useSetupChecklist(allowed);
+  const { checklist, done, total, next } = useSetupProgress(allowed);
   const hidden = useBannerHidden(me.id);
 
   // На мастере и на индексе Настроек (там свой чек-лист «Первый запуск», SET-IA) баннер не нужен.
   if (!allowed || hidden || location.pathname === WIZARD_PATH || location.pathname === "/admin")
     return null;
   const data = checklist.data;
-  if (!data || !needsSetup(data)) return null;
+  // Баннер — пока есть несделанный видимый шаг (СЦ-3): тот же список, что считает «готово N из M» и «Дальше».
+  if (!data || !next) return null;
 
-  const next = nextStep(data);
   return (
     <section className="pf-setup-banner" aria-label={t("admin.setup.banner.label")}>
       <div className="pf-setup-banner-text">
-        <p className="pf-setup-banner-title">
-          {t("admin.setup.banner.title", { done: data.done, total: data.total })}
-        </p>
+        <p className="pf-setup-banner-title">{t("admin.setup.banner.title", { done, total })}</p>
         <span className="pf-hint">
           {data.company?.required ? `${t("admin.setup.banner.company")} ` : ""}
           {bankDetailsMissing(data) ? `${t("admin.setup.banner.bank")} ` : ""}
-          {next
-            ? t("admin.setup.banner.next", { step: t(`admin.setup.steps.${next.key}.title`) })
-            : ""}
+          {t("admin.setup.banner.next", { step: t(visibleTitleKey(next.key)) })}
         </span>
       </div>
       <div className="pf-setup-banner-actions">
-        <LinkButton type="primary" to={WIZARD_PATH}>
+        <LinkButton type="primary" to={next.to}>
           {t("admin.setup.banner.open")}
         </LinkButton>
         <Button

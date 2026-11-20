@@ -496,14 +496,14 @@ test.describe("Компания: категории, запросы, платф�
     await openCompany(page, "platform");
     await expect(page.getByText(/1 USD = 12\s650,50 сум/)).toBeVisible();
     await page.getByLabel("Ставка НДС, %").fill("15");
-    await page.getByRole("button", { name: "Сохранить ставку НДС" }).click();
+    await page.getByRole("button", { name: "Сохранить настройки" }).click();
     await expect(toast(page, "Сохранено")).toBeVisible();
     await signOut(page);
 
     await loginAndWait(page, "director@demo.example");
     await openCompany(page, "platform");
     await page.getByLabel("Ставка НДС, %").fill("13");
-    await page.getByRole("button", { name: "Сохранить ставку НДС" }).click();
+    await page.getByRole("button", { name: "Сохранить настройки" }).click();
   });
 });
 

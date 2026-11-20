@@ -452,7 +452,12 @@
       "bankTodo": "Without the tax ID, legal address and bank account an invoice cannot be issued. Enter them in “Settings · Details and letterhead”.",
       "bankWaitCompany": "Create your company first: bank details are entered in its card.",
       "bankUnknown": "No data yet — the bank details state appears once the server answers.",
-      "bankOpen": "Open “Details & letterhead”"
+      "bankOpen": "Open “Details & letterhead”",
+      "signing": {
+        "title": "Signing rights",
+        "text": "Who may sign the company's documents",
+        "action": "Grant"
+      }
     },
     "org": {
       "title": "Employees",

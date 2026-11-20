@@ -63,6 +63,20 @@ require_env_var() {
   [[ -n "$value" ]] || die "в $RT_ENV_FILE нет $name (или значение пусто): $hint"
 }
 
+# Адрес-заглушка (…@example.com/.org) или пусто — предупреждение в журнале выкладки (СЦ-3). Не остановка: настоящий
+# адрес поддержки задаётся в Платформе (Настройки · Компания · Налоги и валюты), переменная — только запасной.
+# warn_placeholder_email <ИМЯ> <подсказка>
+warn_placeholder_email() {
+  local name="$1" hint="$2" v
+  v="$(env_get "$name" || true)"
+  v="${v//$'\r'/}"
+  v="${v//[[:space:]]/}"
+  if [[ -z "$v" ]] || grep -qiE '@example\.(com|org)$' <<<"$v"; then
+    log "внимание: в $RT_ENV_FILE $name пуст или заглушка: $hint"
+  fi
+  return 0
+}
+
 # compose <каталог-релиза> <аргументы...>; тег образов — из окружения (RT_IMAGE_TAG), профили — из RT_PROFILES.
 compose() {
   local rel="$1"; shift

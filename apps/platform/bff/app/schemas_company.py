@@ -1082,14 +1082,25 @@ class PlatformSettings(BaseModel):
     vat_rate: str
     exchange_rate_usd_uzs: str | None
     updated_at: str
+    support_email: str
 
 
 class PlatformSettingsUpdate(Patch):
     vat_rate: str | None = Field(default=None, pattern=_DECIMAL)
+    support_email: str | None = Field(
+        default=None, max_length=254, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+    )
+
+
+def _real_email(value: object) -> str:
+    """Адрес поддержки или пусто: заглушка `…@example.com/.org` — не адрес (как в письмах ERP)."""
+    email = text(value).strip()
+    return "" if email.lower().endswith(("@example.com", "@example.org")) else email
 
 
 def to_platform_settings(raw: Mapping[str, Any]) -> PlatformSettings:
     return PlatformSettings(
+        support_email=_real_email(raw.get("support_email")),
         vat_rate=text(raw.get("vat_rate")) or "0",
         exchange_rate_usd_uzs=dec(raw.get("exchange_rate_usd_uzs")),
         updated_at=text(raw.get("updated_at")),

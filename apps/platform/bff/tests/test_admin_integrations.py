@@ -99,6 +99,7 @@ WRITES: tuple[tuple[str, str, str, dict[str, Any] | None], ...] = (
     ),
     ("POST", f"{BASE}/offsite/check", "/admin/integrations/offsite/check", None),
     ("POST", f"{BASE}/smtp/test-send", "/admin/integrations/smtp/test-send", None),
+    ("POST", f"{BASE}/smtp/missed", "/admin/integrations/smtp/missed", None),
     ("POST", f"{BASE}/services/mail/check", "/admin/integrations/services/{key}/check", None),
     (
         "POST",
@@ -566,6 +567,19 @@ async def test_smtp_test_send_is_queued(web: Web, crm: CrmIntegrationsFake) -> N
         "status": "queued",
         "to_email": "admin@demo.example",
     }
+
+
+async def test_missed_mail_is_queued_and_counted_in_the_connector(
+    web: Web, crm: CrmIntegrationsFake
+) -> None:
+    """СЦ-3: число пропущенных писем — в карточке почты, «Отправить» — прокси CRM."""
+    await web.login(["ADMIN"])
+
+    sent = await web.send("POST", f"{BASE}/smtp/missed")
+    status = await web.client.get(f"{BASE}/smtp")
+
+    assert sent.json() == {"queued": 4}
+    assert status.json()["missed"] == 0
 
 
 # --- внешние сервисы ----------------------------------------------------------------------------

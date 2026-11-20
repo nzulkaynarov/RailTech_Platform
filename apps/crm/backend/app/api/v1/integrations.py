@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Query, Request
 
 from app.api.deps import ContainerDep, PrincipalDep, require
 from app.bot.profile import ProfilePublish
+from app.container import Container
 from app.integrations.erp import ErpRateLimited
 from app.integrations.telegram import AiogramProbe
 from app.schemas.integrations import (
@@ -25,6 +26,7 @@ from app.schemas.integrations import (
     ProfilePublishOut,
     SmtpCheckOut,
     SmtpConnectorIn,
+    SmtpMissedOut,
     SmtpReadyOut,
     SmtpStatusOut,
     TelegramStatusOut,
@@ -32,6 +34,7 @@ from app.schemas.integrations import (
 )
 from app.schemas.leads import ActionResult
 from app.schemas.settings_profile import BotProfileSettings
+from app.security import audit
 from app.security.principal import Principal
 from app.security.reauth import LockoutPolicy
 from app.services.erp_connector import ErpConnectorService, ErpStatus
@@ -39,7 +42,7 @@ from app.services.erp_pairing import ErpPairingService, PairingOutcome
 from app.services.integrations import TelegramIntegrationService
 from app.services.mail import EmailLogView
 from app.services.offsite_connector import OffsiteConnectorService, OffsiteStatus
-from app.services.smtp_connector import SmtpConnectorService
+from app.services.smtp_connector import SmtpConnectorService, SmtpStatus
 
 router = APIRouter(prefix="/api/v1/integrations", tags=["integrations"])
 
@@ -252,13 +255,13 @@ def queued_out(view: EmailLogView) -> EmailQueuedOut:
 
 
 @router.get("/smtp", response_model=SmtpStatusOut)
-async def get_smtp_status(_: Reader, service: SmtpDep) -> SmtpStatusOut:
+async def get_smtp_status(_: Reader, service: SmtpDep, container: ContainerDep) -> SmtpStatusOut:
     """Коннектор «Почта» (M3-CRM-08, ADR-0018): релей SMTP для писем сотрудникам.
 
     Пароль SMTP не возвращается — только «задан», источник и `last4`. Коннектор «настроен» =
     есть хост и адрес отправителя (из «Подключений», иначе `SMTP_*` в `.env`).
     """
-    return SmtpStatusOut(**asdict(await service.status()))
+    return await _smtp_out(await service.status(), container)
 
 
 @router.get("/smtp/ready", response_model=SmtpReadyOut)
@@ -270,7 +273,9 @@ async def get_smtp_ready(_: PrincipalDep, service: SmtpDep) -> SmtpReadyOut:
 
 
 @router.put("/smtp", response_model=SmtpStatusOut)
-async def put_smtp_connector(body: SmtpConnectorIn, who: Writer, service: SmtpDep) -> SmtpStatusOut:
+async def put_smtp_connector(
+    body: SmtpConnectorIn, who: Writer, service: SmtpDep, container: ContainerDep
+) -> SmtpStatusOut:
     """Сохранить релей и секреты (после пароля админа); логин/пароль `null` — оставить прежние.
 
     Ошибки: `smtp_invalid_host` (422, поле `host`), `invalid_email` (422, `from_email`),
@@ -288,7 +293,35 @@ async def put_smtp_connector(body: SmtpConnectorIn, who: Writer, service: SmtpDe
         password=secret,
         admin_password=body.password.get_secret_value(),
     )
-    return SmtpStatusOut(**asdict(status))
+    return await _smtp_out(status, container)
+
+
+async def _smtp_out(status: SmtpStatus, container: Container) -> SmtpStatusOut:
+    """Статус коннектора и число пропущенных писем (СЦ-3): считаются, только когда почта есть."""
+    out = SmtpStatusOut(**asdict(status))
+    if out.configured:
+        mail = await container.mail_service.missed_count()
+        out.missed = mail + len(await container.portal_invites.missed())
+    return out
+
+
+@router.post("/smtp/missed", response_model=SmtpMissedOut)
+async def send_missed_mail(who: Writer, container: ContainerDep) -> SmtpMissedOut:
+    """«Отправить» письма, не ушедшие, пока почта не была настроена (СЦ-3): свои письма и письма
+    ERP — той же строкой журнала (итог уйдёт в шину с исходным ключом), приглашения в кабинет —
+    перевыпуском в ERP. Ошибки: `smtp_not_configured` (409)."""
+    mail = await container.mail_service.send_missed(who.user_id)
+    invites = await container.portal_invites.send_missed(who)
+    async with container.session_factory() as session, session.begin():
+        await audit.record(
+            session,
+            who.actor,
+            "integrations.smtp.missed_sent",
+            "integration",
+            "smtp",
+            after={"mail": mail, "invitations": invites},
+        )
+    return SmtpMissedOut(queued=mail + invites)
 
 
 @router.post("/smtp/check", response_model=SmtpCheckOut)

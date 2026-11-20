@@ -67,7 +67,12 @@ test.describe("Настройки без переброса", () => {
       await shot(page, "banner");
 
       // Мастер: шаг открывается в боковом окне мастера (пункта меню нет — чек-лист на «Все настройки», SET-IA)
-      await banner.getByRole("link", { name: "Продолжить настройку" }).click();
+      // «Продолжить настройку» ведёт на сам следующий шаг (СЦ-3); обзор мастера — по его адресу
+      await expect(banner.getByRole("link", { name: "Продолжить настройку" })).toHaveAttribute(
+        "href",
+        /\/admin\/setup\?step=bot/,
+      );
+      await spaGoto(page, "/admin/setup");
       await expect(page.getByRole("heading", { level: 1, name: "Первый запуск" })).toBeVisible();
       await expect(page.getByRole("complementary", { name: "Боковое окно" })).toHaveCount(0);
       await shot(page, "wizard");
@@ -76,7 +81,7 @@ test.describe("Настройки без переброса", () => {
         .getByRole("link", { name: "Подключить бота" })
         .click();
       await expect(page).toHaveURL(/\/admin\/setup\?step=bot/);
-      const step = page.locator(PANEL).getByRole("region", { name: "Шаг 2 из 5: Telegram-бот" });
+      const step = page.locator(PANEL).getByRole("region", { name: "Шаг 6 из 10: Telegram-бот" });
       await expect(step).toBeVisible();
       await expect(step.getByText("@demo_railtech_bot")).toBeVisible();
       await expect(page.getByRole("heading", { level: 1, name: "Первый запуск" })).toBeVisible();
@@ -93,7 +98,7 @@ test.describe("Настройки без переброса", () => {
       await token.getByRole("button", { name: "Сохранить токен" }).click();
       await expect(page).toHaveURL(/\/admin\/setup\?step=mail/);
       await expect(
-        page.locator(PANEL).getByRole("heading", { level: 3, name: "Шаг 3 из 5: Почта" }),
+        page.locator(PANEL).getByRole("heading", { level: 3, name: "Шаг 7 из 10: Почта" }),
       ).toBeFocused();
 
       // Чек-лист «Первый запуск» на индексе Настроек, пока шаги не завершены (SET-IA)

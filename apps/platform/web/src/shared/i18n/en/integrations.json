@@ -410,7 +410,10 @@
       "trustedNone": "None — the IMAP host is not a known provider, sender rules are not applied",
       "trustedDerived": "From the IMAP host: {{list}}",
       "trustedExplicit": "Set manually: {{list}}"
-    }
+    },
+    "missed": "Not sent while mail was not set up: {{count}}",
+    "missedSend": "Send",
+    "missedQueued": "Queued: {{count}}"
   },
   "services": {
     "summary": "Working: {{ok}} · attention: {{warn}} · failure: {{fail}} · no data: {{unknown}} · not connected: {{off}}",
@@ -935,24 +938,6 @@
     "ownLogin": "Sign in with the service's own key or password.",
     "erp": {
       "name": "database panel"
-    }
-  },
-  "catalog": {
-    "title": "Coming connections",
-    "soon": "Soon",
-    "groups": {
-      "tasks": "Tasks and projects",
-      "chats": "Chats and calls",
-      "calendar": "Calendar and contacts",
-      "files": "Files",
-      "documents": "Documents and money",
-      "other": "Other"
-    },
-    "names": {
-      "caldav": "Any CalDAV",
-      "contacts": "Contacts (CardDAV)",
-      "banks": "Banks",
-      "api": "Webhooks and API"
     }
   }
 }

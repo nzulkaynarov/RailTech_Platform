@@ -20573,9 +20573,10 @@ paths:
           $ref: '#/components/responses/ForbiddenResponse'
     patch:
       operationId: system_settings_partial_update
-      description: 'Partially update platform settings. `vat_rate` — `settings.edit` or administrator; `maintenance_mode`
-        and `is_two_factor_required` — administrator (superuser) only. `platform_name`, `support_email`, `logo_url` and `domain`
-        are shared by the whole ensemble and managed in CRM: a request that contains any of them is rejected with 400 `SHARED_SETTING_READ_ONLY`.'
+      description: 'Partially update platform settings. `vat_rate` and `support_email` (the address clients see in letters)
+        — `settings.edit` or administrator; `maintenance_mode` and `is_two_factor_required` — administrator (superuser) only.
+        `platform_name`, `logo_url` and `domain` are shared by the whole ensemble and managed in CRM: a request that contains
+        any of them is rejected with 400 `SHARED_SETTING_READ_ONLY`.'
       summary: Update system settings
       tags:
       - System
@@ -33563,6 +33564,12 @@ components:
           pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
           title: Ставка НДС (%)
           description: Процент НДС, применяемый к котировкам
+        support_email:
+          type: string
+          format: email
+          minLength: 1
+          title: Email поддержки
+          maxLength: 254
         maintenance_mode:
           type: boolean
           title: Режим обслуживания
@@ -38388,8 +38395,8 @@ components:
         support_email:
           type: string
           format: email
-          readOnly: true
           title: Email поддержки
+          maxLength: 254
         logo_url:
           type: string
           format: uri
@@ -38425,6 +38432,10 @@ components:
       type: object
       properties:
         vat_rate:
+          type: array
+          items:
+            type: string
+        support_email:
           type: array
           items:
             type: string

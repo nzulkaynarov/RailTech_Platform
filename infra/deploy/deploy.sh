@@ -18,6 +18,8 @@ rel="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 require_env_file
 # Домен Платформы (INF-P0-5): без него Caddy не получит сертификат, а compose упал бы на `:?` уже при разборе конфигурации.
 require_env_var PLATFORM_DOMAIN "добавьте строку PLATFORM_DOMAIN=platform.railtech.uz (см. infra/.env.prod.example; A-запись домена на VPS 1 должна уже быть) и запустите деплой снова"
+# Адрес поддержки (СЦ-3): клиенты видят его в письмах; заглушка example.com — не адрес. Основное место — Платформа.
+warn_placeholder_email SUPPORT_EMAIL "задайте адрес поддержки в Платформе (Настройки · Компания · Налоги и валюты) или здесь"
 # Схемы событий и подписки шины rt_bus вшиты в образ ERP (/opt/rt/contracts, B3, L14): файлов контрактов в релизе
 # больше не требуется (общий файл схемы событий снят вместе с вебхуками ERP → CRM).
 export RT_IMAGE_TAG="$tag"

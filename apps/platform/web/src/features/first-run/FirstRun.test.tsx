@@ -179,16 +179,17 @@ describe("Баннер настройки и мастер", () => {
     startFreshSetup();
   });
 
-  it("администратор видит баннер «готово 0 из 5» со ссылкой в мастер", async () => {
+  it("администратор видит баннер «готово 2 из 10»: считаются видимые шаги, ссылка — на сам следующий шаг (СЦ-3)", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin/org");
 
     const banner = await screen.findByRole("region", { name: "Настройка Платформы" });
-    expect(within(banner).getByText("Настройка Платформы: готово 0 из 5")).toBeVisible();
+    // Администратор и права подписи уже готовы; остальные восемь шагов — нет.
+    expect(within(banner).getByText("Настройка Платформы: готово 2 из 10")).toBeVisible();
     expect(within(banner).getByText(/Дальше: ERP/)).toBeVisible();
     expect(within(banner).getByRole("link", { name: "Продолжить настройку" })).toHaveAttribute(
       "href",
-      "/admin/setup",
+      "/admin/setup?step=erp&panel=open",
     );
   });
 
@@ -274,6 +275,39 @@ describe("Баннер настройки и мастер", () => {
     expect(screen.queryByRole("region", { name: "Настройка Платформы" })).toBeNull();
   });
 
+  it("права подписи не выданы — баннер ведёт прямо на «Права подписи» (СЦ-3)", async () => {
+    startFreshSetup();
+    window.localStorage.setItem(
+      "rt-pf-mock-setup",
+      JSON.stringify({
+        ...readSetup(),
+        companyCreated: true,
+        cabinetUrl: "https://cabinet.example.uz",
+        done: { bot: true, erp: true, mail: true, models: true, first_employee: true },
+      }),
+    );
+    server.use(
+      http.get("*/eds/signing/setup-hint", () =>
+        HttpResponse.json({
+          has_authorities: false,
+          signatory_name: null,
+          signatory_position: null,
+          director: null,
+        }),
+      ),
+    );
+    signInAs("admin@demo.example");
+    renderApp("/admin/org");
+
+    const banner = await screen.findByRole("region", { name: "Настройка Платформы" });
+    expect(within(banner).getByText("Настройка Платформы: готово 9 из 10")).toBeVisible();
+    expect(within(banner).getByText(/Дальше: Права подписи/)).toBeVisible();
+    expect(within(banner).getByRole("link", { name: "Продолжить настройку" })).toHaveAttribute(
+      "href",
+      "/admin/signing",
+    );
+  });
+
   it("баннера нет, когда всё сделано и компания создана", async () => {
     startFreshSetup();
     const state = readSetup();
@@ -282,6 +316,7 @@ describe("Баннер настройки и мастер", () => {
       JSON.stringify({
         ...state,
         companyCreated: true,
+        cabinetUrl: "https://cabinet.example.uz",
         done: { bot: true, erp: true, mail: true, models: true, first_employee: true },
       }),
     );
@@ -357,11 +392,13 @@ describe("Баннер настройки и мастер", () => {
       "/admin/setup?step=mail&panel=open",
       "/admin/setup?step=models&panel=open",
       "/admin/setup?step=first_employee&panel=open",
+      "/admin/signing",
     ]);
-    for (const row of within(list).getAllByRole("listitem")) {
+    // Права подписи в демо уже выданы — остальные четыре строки не сделаны (СЦ-3: у карточки свой счётчик).
+    for (const row of within(list).getAllByRole("listitem").slice(0, 4)) {
       expect(within(row).getByText("Не сделано")).toBeVisible();
     }
-    expect(screen.getByText("Готово 0 из 5")).toBeVisible();
+    expect(screen.getByText("Готово 1 из 5")).toBeVisible();
   });
 
   it("адрес кабинета клиента (D17G-3): не задан → проверка доступности → сохранение, шаг «Готово»", async () => {
@@ -649,6 +686,7 @@ describe("Баннер настройки и мастер", () => {
       JSON.stringify({
         ...state,
         companyCreated: true,
+        cabinetUrl: "https://cabinet.example.uz",
         done: { bot: true, erp: true, mail: true, models: true, first_employee: true },
       }),
     );
@@ -698,13 +736,16 @@ describe("Баннер настройки и мастер", () => {
     }
   });
 
-  it("ERP так и не ответила: после нескольких попыток — «Проверить снова», без ожидания", async () => {
+  it("ERP так и не ответила: после быстрых попыток — «Проверить снова», а проверка продолжается реже сама (СЦ-3)", async () => {
     const saved = { ...ERP_RECHECK };
     ERP_RECHECK.everyMs = 20;
     ERP_RECHECK.attempts = 2;
+    ERP_RECHECK.slowMs = 100;
+    let calls = 0;
     server.use(
-      http.get("*/setup/checklist", () =>
-        HttpResponse.json({
+      http.get("*/setup/checklist", () => {
+        calls += 1;
+        return HttpResponse.json({
           steps: [
             { key: "erp", state: "done" },
             { key: "bot", state: "todo" },
@@ -716,8 +757,8 @@ describe("Баннер настройки и мастер", () => {
           total: 5,
           company: null,
           company_blocker: "erp_unavailable",
-        }),
-      ),
+        });
+      }),
     );
     try {
       signInAs("admin@demo.example");
@@ -728,6 +769,13 @@ describe("Баннер настройки и мастер", () => {
       });
       // имя может начинаться с иконки «loading», пока antd не доиграл выход анимации (в jsdom она не кончается)
       expect(await screen.findByRole("button", { name: /Проверить снова/ })).toBeVisible();
+      const afterFast = calls;
+      await waitFor(
+        () => {
+          expect(calls).toBeGreaterThan(afterFast);
+        },
+        { timeout: 2_000 },
+      );
     } finally {
       Object.assign(ERP_RECHECK, saved);
     }
@@ -740,9 +788,9 @@ describe("Баннер настройки и мастер", () => {
 
     const side = await screen.findByRole("complementary", { name: "Боковое окно" });
     expect(
-      await within(side).findByRole("heading", { level: 3, name: "Шаг 2 из 5: Telegram-бот" }),
+      await within(side).findByRole("heading", { level: 3, name: "Шаг 6 из 10: Telegram-бот" }),
     ).toBeVisible();
-    expect(within(side).getByRole("region", { name: "Шаг 2 из 5: Telegram-бот" })).toBeVisible();
+    expect(within(side).getByRole("region", { name: "Шаг 6 из 10: Telegram-бот" })).toBeVisible();
     // главный экран — по-прежнему мастер
     expect(screen.getByRole("heading", { level: 1, name: "Первый запуск" })).toBeVisible();
 
@@ -758,7 +806,7 @@ describe("Баннер настройки и мастер", () => {
 
     // шаг «Telegram-бот» готов — окно само переходит к следующему несделанному: «Почта»
     expect(
-      await within(side).findByRole("region", { name: "Шаг 3 из 5: Почта" }, { timeout: 5_000 }),
+      await within(side).findByRole("region", { name: "Шаг 7 из 10: Почта" }, { timeout: 5_000 }),
     ).toBeVisible();
     expect(screen.getByRole("heading", { level: 1, name: "Первый запуск" })).toBeVisible();
   });
@@ -769,7 +817,7 @@ describe("Баннер настройки и мастер", () => {
     renderApp("/admin/setup?step=first_employee&panel=open");
 
     const side = await screen.findByRole("complementary", { name: "Боковое окно" });
-    const step = await within(side).findByRole("region", { name: "Шаг 5 из 5: Первый сотрудник" });
+    const step = await within(side).findByRole("region", { name: "Шаг 9 из 10: Первый сотрудник" });
     fireEvent.click(within(step).getByRole("radio", { name: "Временным паролем, без почты" }));
     fireEvent.change(within(step).getByLabelText("Имя и фамилия"), {
       target: { value: "Тест Мастеров" },
@@ -791,7 +839,7 @@ describe("Баннер настройки и мастер", () => {
     fireEvent.click(within(side).getByRole("button", { name: "Готово: пароль передан" }));
     const next = await within(side).findByRole(
       "heading",
-      { level: 3, name: "Шаг 2 из 5: Telegram-бот" },
+      { level: 3, name: "Шаг 6 из 10: Telegram-бот" },
       { timeout: 5_000 },
     );
     // фокус — на заголовке нового шага

@@ -67,7 +67,7 @@ async function connectErp(page: Page): Promise<void> {
   await expect(page).toHaveURL(/\/admin\/setup\?step=erp/);
   await expect(page.getByRole("heading", { level: 1, name: "Первый запуск" })).toBeVisible();
   const panel = page.locator(PANEL);
-  await expect(panel.getByRole("region", { name: "Шаг 1 из 5: ERP" })).toBeVisible();
+  await expect(panel.getByRole("region", { name: "Шаг 2 из 10: ERP" })).toBeVisible();
   await expect(panel.getByText("Не подключена")).toBeVisible();
   await panel.getByRole("button", { name: "Подключить ERP" }).click();
   const pair = panel.getByRole("form", { name: "Подключить ERP" });
@@ -149,23 +149,27 @@ test.describe("Первый запуск: полный путь", () => {
     await expect(page.getByText("Компания с таким ИНН уже есть.")).toBeVisible();
     await createCompany(page);
 
-    // Остальные четыре шага (ERP уже сделан); форма каждого — в боковом окне мастера, без перехода (W15-H4)
+    // Остальные шаги и «Права подписи» (СЦ-3); форма каждого — в боковом окне мастера, без перехода (W15-H4)
     const steps = page.getByRole("list", { name: "Шаги настройки" });
-    await expect(steps.getByRole("listitem")).toHaveCount(4);
+    await expect(steps.getByRole("listitem")).toHaveCount(5);
     await expect(page.getByText("Готово 1 из 5", { exact: true })).toBeVisible();
     await steps.getByRole("link", { name: "Подключить бота" }).click();
     await expect(page).toHaveURL(/\/admin\/setup\?step=bot/);
     await expect(page.getByRole("heading", { level: 1, name: "Первый запуск" })).toBeVisible();
     await expect(
-      page.locator(PANEL).getByRole("region", { name: "Шаг 2 из 5: Telegram-бот" }),
+      page.locator(PANEL).getByRole("region", { name: "Шаг 6 из 10: Telegram-бот" }),
     ).toBeVisible();
 
     // Баннер на других экранах Платформы
     await spaGoto(page, "/admin/org");
     const banner = page.getByRole("region", { name: "Настройка Платформы" });
-    await expect(banner).toContainText("Настройка Платформы: готово 1 из 5");
-    await banner.getByRole("link", { name: "Продолжить настройку" }).click();
-    await expect(page).toHaveURL(/\/admin\/setup$/);
+    await expect(banner).toContainText(/Настройка Платформы: готово \d+ из 10/);
+    // «Продолжить настройку» ведёт на сам следующий шаг, а не в начало мастера (СЦ-3)
+    await expect(banner.getByRole("link", { name: "Продолжить настройку" })).not.toHaveAttribute(
+      "href",
+      "/admin/setup",
+    );
+    await spaGoto(page, "/admin/setup");
     await expect(page.getByRole("region", { name: "Настройка Платформы" })).toHaveCount(0);
 
     // Сотрудник без почты: пароль показан один раз, копируется, после «Готово» исчезает
@@ -261,6 +265,7 @@ test.describe("Первый запуск: полный путь", () => {
       code: "",
       fresh: true,
       companyCreated: true,
+      cabinetUrl: "https://cabinet.example.uz",
       done: { bot: true, erp: true, mail: true, models: true, first_employee: true },
     });
     await page.evaluate(

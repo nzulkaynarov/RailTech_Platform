@@ -187,6 +187,15 @@ class SmtpStatusOut(BaseModel):
     password_last4: str | None
     password_updated_at: datetime | None
     secrets_enabled: bool
+    # СЦ-3: письма и приглашения в кабинет, не ушедшие, пока почта не была настроена, — их можно
+    # отправить сейчас (`POST /smtp/missed`).
+    missed: int = Field(default=0, ge=0)
+
+
+class SmtpMissedOut(BaseModel):
+    """Пропущенные письма снова в очереди (СЦ-3): сколько писем и приглашений принято."""
+
+    queued: int = Field(ge=0)
 
 
 class SmtpConnectorIn(BaseModel):

@@ -409,7 +409,12 @@ function seed(): CompanyMock {
         created_at: "2026-10-21T08:00:00.000Z",
       },
     ],
-    platform: { vat_rate: "12.00", exchange_rate_usd_uzs: "12650.5000", updated_at: SEEDED_AT },
+    platform: {
+      vat_rate: "12.00",
+      exchange_rate_usd_uzs: "12650.5000",
+      updated_at: SEEDED_AT,
+      support_email: "",
+    },
     fx: {
       current: { rate_to_uzs: "12650.5", rate_date: "2026-10-26", source: "auto" },
       journal: [

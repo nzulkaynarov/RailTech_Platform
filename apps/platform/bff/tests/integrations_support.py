@@ -537,6 +537,7 @@ class CrmIntegrationsFake:
                 "authenticated": True,
                 "latency_ms": 85,
             },
+            ("POST", "integrations/smtp/missed"): {"queued": 4},
             ("POST", "integrations/smtp/test-send"): {
                 "email_log_id": 31,
                 "to_email": "admin@demo.example",

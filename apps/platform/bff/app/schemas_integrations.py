@@ -245,6 +245,12 @@ class SmtpConnector(_Out):
     secrets_enabled: bool
     security: Literal["starttls", "ssl", "none"]
     username: str
+    # СЦ-3: письма и приглашения, не ушедшие, пока почта не была настроена (`POST /smtp/missed`).
+    missed: int = 0
+
+
+class MailMissedQueued(_Out):
+    queued: int
 
 
 OffsiteReason = Literal[

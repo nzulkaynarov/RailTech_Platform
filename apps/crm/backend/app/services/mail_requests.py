@@ -28,8 +28,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bus import events as bus_events
 from app.models.email import EmailLog
-from app.services.mail import MailService
-from app.services.mail_content import ContentUnreadableError, open_content
+from app.security.secrets_store import SecretCipher
+from app.services.mail import MailService, keeps_body
+from app.services.mail_content import ContentUnreadableError, MailContent, open_content
 
 logger = structlog.get_logger(__name__)
 
@@ -148,6 +149,9 @@ class MailRequestService:
         if connection is None or cipher is None:
             row.status = "skipped_no_smtp"
             row.error = "smtp_not_configured" if connection is None else "secrets_key_missing"
+            # СЦ-3: письмо без секрета хранится, чтобы уйти после подключения почты («Отправить»).
+            if connection is None and cipher is not None and keeps_body(row):
+                await self._keep_missed(row, requester, data, cipher)
             return
         await self._refresh()
         content = data["content"]
@@ -162,6 +166,25 @@ class MailRequestService:
         if len(opened.links) != len(row.attachments or []):
             row.status, row.error = "failed", "attachment_unavailable: links do not match"
             return
+        self._store(row, opened, cipher)
+
+    async def _keep_missed(
+        self, row: EmailLog, requester: str, data: dict[str, Any], cipher: SecretCipher
+    ) -> None:
+        """Тело письма, не ушедшего без почты; не открылось или ссылки не сходятся — без тела."""
+        await self._refresh()
+        content = data["content"]
+        try:
+            opened = open_content(
+                str(content["alg"]), str(content["ciphertext"]), self._secrets(requester, SERVICE)
+            )
+        except ContentUnreadableError:
+            return
+        if len(opened.links) == len(row.attachments or []):
+            self._store(row, opened, cipher)
+
+    @staticmethod
+    def _store(row: EmailLog, opened: MailContent, cipher: SecretCipher) -> None:
         row.body_ciphertext = cipher.encrypt(opened.text)
         if opened.html:
             row.html_ciphertext = cipher.encrypt(opened.html)
