@@ -1781,6 +1781,9 @@ def parse_proposal(text: str, *, content: Optional[bytes] = None, filename: str 
         if reason.startswith("AI_IMPORT_WORD_UNAVAILABLE"):
             return {"error": "WORD_UNAVAILABLE"}
         return {"error": "AI_EXTRACT_FAILED"}
+    from core.units import unit_resolver
+
+    resolve_unit = unit_resolver()
     proposal = []
     for row in rows[:MAX_LINES_PER_CALL]:
         name = str(row.get("name") or "").strip()
@@ -1795,6 +1798,8 @@ def parse_proposal(text: str, *, content: Optional[bytes] = None, filename: str 
                 "name": name[:500],
                 "quantity": quantity,
                 "unit": str(row.get("unit") or "")[:32],
+                # СЦ-10: код справочника — из разбора (уже сверен) или узнанный по написанной единице; пусто — не узнан.
+                "unit_code": str(row.get("unit_code") or "") or (resolve_unit(row.get("unit")) or ("", ""))[0],
                 "article": str(row.get("mpn") or row.get("gost_drawing") or "")[:120],
                 "note": str(row.get("note") or "")[:1000],
             }

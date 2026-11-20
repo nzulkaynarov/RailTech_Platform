@@ -346,11 +346,19 @@ export function seedCalcs(): MockCalc[] {
 
 /** Предложение ИИ-разбора для текста заявки (детерминированно: e2e и снимки не плавают). */
 export const PARSE_PROPOSAL = [
-  { name: "Обследование стрелочного перевода", quantity: 6, unit: "шт.", article: "", note: "" },
+  {
+    name: "Обследование стрелочного перевода",
+    quantity: 6,
+    unit: "шт.",
+    unit_code: "H87",
+    article: "",
+    note: "",
+  },
   {
     name: "Крестовина стрелочная Р65 1/11",
     quantity: 2,
     unit: "шт.",
+    unit_code: "H87",
     article: "КР-Р65-11",
     note: "",
   },
@@ -358,6 +366,7 @@ export const PARSE_PROPOSAL = [
     name: "Остряк стрелочный Р65",
     quantity: 4,
     unit: "шт.",
+    unit_code: "H87",
     article: "",
     note: "по итогам обследования",
   },

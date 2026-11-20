@@ -218,6 +218,8 @@ class CalcProposalLine(BaseModel):
     name: str
     quantity: float
     unit: str
+    #: Код справочника единиц (СЦ-10); пусто — не узнан
+    unit_code: str
     article: str
     note: str
 

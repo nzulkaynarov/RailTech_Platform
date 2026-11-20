@@ -89,6 +89,22 @@ def extract_one(call: JsonCall) -> list[dict] | None:
     return result.data.get("items") or []
 
 
+def ai_quantity(raw) -> int | float:
+    """Количество из ответа модели как написано (СЦ-10, ADR-0027 п. 9): дробное до 0,001 («12,5» → 12.5); пустое,
+    нечисловое, не больше нуля или неправдоподобно большое — 1."""
+    from decimal import Decimal
+
+    from core.quantity import as_qty, to_qty
+
+    try:
+        amount = to_qty(raw if raw not in (None, "") else 1)
+    except (ValueError, ArithmeticError):
+        return 1
+    if not Decimal("0") < amount < Decimal("100000000000"):
+        return 1
+    return as_qty(amount)
+
+
 def normalize_items(items: list[dict], valid_codes: set) -> list[dict]:
     """Сырые позиции модели → чистые строки: количество ≥ 1, код единицы из справочника, длины
     под колонки БД, пустые строки (без имени и без кода) отброшены. Без I/O."""
@@ -100,10 +116,7 @@ def normalize_items(items: list[dict], valid_codes: set) -> list[dict]:
         gost_drawing = str(raw_item.get("gost_drawing", "")).strip()[:120]
         if not (name or mpn or gost_drawing):
             continue
-        try:
-            quantity = max(1, int(float(raw_item.get("quantity") or 1)))
-        except (ValueError, TypeError):
-            quantity = 1
+        quantity = ai_quantity(raw_item.get("quantity"))
         unit_code = str(raw_item.get("unit_code", "")).strip().upper()
         cleaned.append(
             {

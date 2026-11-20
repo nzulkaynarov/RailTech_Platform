@@ -511,3 +511,67 @@ def test_listing_filters(world):
     assert names({"overdue": "1"}) == []
     missing = api(world["reader"]).get(f"{STOCK}orders/999999/")
     assert missing.status_code == 404 and missing.json() == {"detail": "ORDER_NOT_FOUND"}
+
+
+# ── СЦ-10: единица строки заказа не меняется при приёмке и правке ─────────────────────────────────────────────────────
+
+NBSP = " "
+
+
+def _receipt_details(body):
+    return [entry["detail"] for entry in body["log"] if entry["kind"] == "receipt"]
+
+
+def test_receipt_log_keeps_the_order_line_unit(world):
+    """«30 т, 1,5 шт.» — в единице строки заказа, а не «31.500 шт.»; разные единицы не складываются."""
+    order_id = _confirmed(world, [_line(world["rail"], 40, unit="т"), _line(world["bolt"], 4, unit="шт.")])
+    rail_line, bolt_line = [
+        line["id"] for line in api(world["supply"]).get(f"{STOCK}orders/{order_id}/").json()["lines"]
+    ]
+
+    mixed = _act(
+        world,
+        order_id,
+        "receipts",
+        {"lines": [{"order_line_id": rail_line, "quantity": 30}, {"order_line_id": bolt_line, "quantity": "1.5"}]},
+    )
+    assert mixed.status_code == 200, mixed.json()
+    assert _receipt_details(mixed.json()) == [f"30{NBSP}т, 1,5{NBSP}шт."]
+
+    last = _act(
+        world, order_id, "receipts", {"lines": [{"order_line_id": rail_line, "quantity": 10}], "supplier_doc": "НП-1"}
+    )
+    assert _receipt_details(last.json())[-1] == f"10{NBSP}т · накладная НП-1"
+
+
+def test_receipt_log_without_a_unit_shows_the_bare_number(world):
+    order_id = _confirmed(world, [_line(world["rail"], 1), _line(world["bolt"], 2)])
+    ids = [line["id"] for line in api(world["supply"]).get(f"{STOCK}orders/{order_id}/").json()["lines"]]
+    body = _act(
+        world,
+        order_id,
+        "receipts",
+        {"lines": [{"order_line_id": ids[0], "quantity": 1}, {"order_line_id": ids[1], "quantity": 2}]},
+    ).json()
+    assert _receipt_details(body) == ["3"], "одна (пустая) единица — сумма, без выдуманных «шт.»"
+
+
+def test_editing_a_draft_line_without_a_unit_keeps_its_unit(world):
+    from sales.models import QuoteItem
+
+    deal, _q, (item,) = make_deal(world, [(world["rail"], 5)])
+    QuoteItem.objects.filter(pk=item.pk).update(unit="т")
+    created = _create(world, [_line(world["rail"], 5, deal_id=deal.pk, quote_item_id=item.pk)]).json()
+    url, line = f"{STOCK}orders/{created['id']}/", created["lines"][0]
+    assert line["unit"] == "т"
+
+    kept = api(world["supply"]).patch(
+        url, {"lines": [{"id": line["id"], "product_id": world["rail"].pk, "quantity": 4}]}, format="json"
+    )
+    assert kept.status_code == 200, kept.json()
+    assert kept.json()["lines"][0]["unit"] == "т", "Платформа шлёт строку без единицы — единица остаётся"
+
+    retyped = api(world["supply"]).patch(
+        url, {"lines": [{"id": line["id"], "product_id": world["rail"].pk, "quantity": 4, "unit": "кг"}]}, format="json"
+    )
+    assert retyped.json()["lines"][0]["unit"] == "кг", "присланная единица меняет строку"

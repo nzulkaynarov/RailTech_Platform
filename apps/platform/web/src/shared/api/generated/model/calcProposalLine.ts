@@ -5,9 +5,14 @@
 
 export interface CalcProposalLine {
   name: string;
-  /** @exclusiveMinimum 0 */
+  /**
+   * Как в заявке, до трёх знаков после запятой (СЦ-10)
+   * @exclusiveMinimum 0
+   */
   quantity: number;
   unit: string;
+  /** Код справочника единиц (СЦ-10); пусто — единица не узнана */
+  unit_code: string;
   article: string;
   note: string;
 }
