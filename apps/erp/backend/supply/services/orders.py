@@ -142,6 +142,7 @@ class OrderInput:
     expected_date: Optional[date] = None
     expected_given: bool = False
     note: Optional[str] = None
+    partner_note: Optional[str] = None
     currency: Optional[str] = None
     lines: Optional[list[LineInput]] = field(default=None)
 
@@ -302,6 +303,7 @@ def create_order(user, data: OrderInput) -> SupplierOrder:
         expected_date=data.expected_date,
         currency=_currency(data.currency),
         note=(data.note or "")[:5000],
+        partner_note=(data.partner_note or "")[:5000],
         created_by=user if getattr(user, "pk", None) else None,
     )
     _write_lines(order, rows, user)
@@ -377,7 +379,12 @@ def create_from_deal(user, deal_id: int, supplier_id: int) -> SupplierOrder:
 def update_order(user, order_id: int, data: OrderInput) -> SupplierOrder:
     require_supply(user)
     order = _order_or_404(order_id, lock=True)
-    editable_fields = data.lines is not None or data.supplier_id is not None
+    # What the partner receives is fixed once the order is sent: lines, supplier and the partner comment.
+    editable_fields = (
+        data.lines is not None
+        or data.supplier_id is not None
+        or (data.partner_note is not None and data.partner_note != order.partner_note)
+    )
     if order.status != OrderStatus.DRAFT and editable_fields:
         raise StockError("ORDER_NOT_DRAFT", 409)
     if order.status in (OrderStatus.RECEIVED, OrderStatus.CANCELLED):
@@ -396,6 +403,9 @@ def update_order(user, order_id: int, data: OrderInput) -> SupplierOrder:
     if data.note is not None and data.note != order.note:
         order.note = data.note[:5000]
         changed.append("примечание")
+    if data.partner_note is not None and data.partner_note != order.partner_note:
+        order.partner_note = data.partner_note[:5000]
+        changed.append("комментарий партнёру")
     if data.currency is not None:
         order.currency = _currency(data.currency)
         changed.append("валюта")
@@ -449,8 +459,8 @@ def send_order(user, order_id: int, *, to_email: str = "") -> SupplierOrder:
         "supplier_name": order.supplier.name,
         "number": order.number,
         "expected_date": order.expected_date.strftime("%d.%m.%Y") if order.expected_date else "",
-        # The order note is internal (СЦ-10): it never goes to the supplier; partner text gets its own field.
-        "note": "",
+        # The order note is internal (СЦ-10): the supplier gets only the partner comment.
+        "note": order.partner_note,
         "sender_name": person_name(user),
         "lines": [
             {
@@ -724,6 +734,7 @@ def present_order(order: SupplierOrder, user, *, detail: bool = False) -> dict:
                 "email": supplier_email(order.supplier) or None,
             },
             "note": order.note,
+            "partner_note": order.partner_note,
             "sent_at": order.sent_at.isoformat() if order.sent_at else None,
             "sent_to": order.sent_to or None,
             "mail": _mail_state(order),

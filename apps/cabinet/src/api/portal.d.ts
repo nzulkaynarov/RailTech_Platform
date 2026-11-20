@@ -2149,7 +2149,7 @@ export interface components {
             received_at?: string | null;
             /** Format: date-time */
             cancelled_at?: string | null;
-            /** @description Примечание заказа; уходит поставщику и в письме с заказом */
+            /** @description Комментарий партнёру к заказу (он же — в письме с заказом); внутреннее примечание снабжения сюда не попадает */
             note: string;
             total_amount: string;
             /** @description Код валюты заказа; `null` — валюта в заказе не указана */

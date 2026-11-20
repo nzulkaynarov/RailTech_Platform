@@ -232,6 +232,37 @@ def test_internal_note_stays_out_of_the_supplier_mail(world):
     assert "PRJ-2026-001" not in message.alternatives[0][0]
 
 
+def test_partner_comment_goes_in_the_mail_and_internal_note_does_not(world):
+    """СЦ-10: комментарий партнёру — отдельное поле; оно и только оно уходит поставщику."""
+    order = _create(world, note="Дефицит проекта PRJ-2026-001", partner_note="Нужна поставка до станции Сергели").json()
+    assert order["note"] == "Дефицит проекта PRJ-2026-001"
+    assert order["partner_note"] == "Нужна поставка до станции Сергели"
+    assert _act(world, order["id"], "send").status_code == 200
+    (message,) = mail.outbox
+    assert "Нужна поставка до станции Сергели" in message.body
+    assert "Нужна поставка до станции Сергели" in message.alternatives[0][0]
+    assert "PRJ-2026-001" not in message.body
+
+
+def test_partner_comment_is_fixed_once_sent(world):
+    """Что получил партнёр, не меняется после отправки; внутреннее примечание правится."""
+    order = _create(world, partner_note="Первая редакция").json()
+    patched = api(world["supply"]).patch(f"{STOCK}orders/{order['id']}/", {"partner_note": "Черновик"}, format="json")
+    assert patched.status_code == 200 and patched.json()["partner_note"] == "Черновик"
+    assert _act(world, order["id"], "send").status_code == 200
+
+    refused = api(world["supply"]).patch(f"{STOCK}orders/{order['id']}/", {"partner_note": "После"}, format="json")
+    note = api(world["supply"]).patch(f"{STOCK}orders/{order['id']}/", {"note": "Своё"}, format="json")
+
+    assert refused.status_code == 409 and refused.json()["detail"] == "ORDER_NOT_DRAFT"
+    same = api(world["supply"]).patch(
+        f"{STOCK}orders/{order['id']}/", {"partner_note": "Черновик", "note": "С формы"}, format="json"
+    )
+    assert same.status_code == 200, "тот же комментарий в теле — не правка, форма может слать все поля"
+    assert note.status_code == 200 and note.json()["note"] == "Своё"
+    assert SupplierOrder.objects.get(pk=order["id"]).partner_note == "Черновик"
+
+
 def test_order_card_shows_the_real_mail_result_not_sent_in_advance(world):
     """0.10 (FR-12): «отправлено» — только когда почтовый сервис CRM вернул итог; без почты — причина словами."""
     from notifications import mail_bus
