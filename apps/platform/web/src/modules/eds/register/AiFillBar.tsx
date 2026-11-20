@@ -60,7 +60,11 @@ function DealSuggestion({
         <Button
           size="small"
           onClick={() => {
-            onLink({ erp_deal_id: first.erp_deal_id, label });
+            onLink({
+              erp_deal_id: first.erp_deal_id,
+              label,
+              ...(first.number ? { number: first.number } : {}),
+            });
           }}
         >
           {t("register.ai.link")}

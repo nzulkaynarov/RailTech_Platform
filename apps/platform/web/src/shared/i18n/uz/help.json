@@ -58,7 +58,7 @@
         "title": "Menejer",
         "steps": [
           "«Javob kutmoqda»: botdan o‘tkazmalar va mijoz xabarlari — javob bering yoki ishga oling.",
-          "Lidan ariza yarating: mijoz va ЗВ-YYYY-NNN raqami paydo bo‘ladi.",
+          "Lidan ariza yarating: mijoz va ariza raqami (masalan, RQ-2026-104) paydo bo‘ladi.",
           "Ariza bosqichini uning kartochkasida kuzating: rezolyutsiya, hisob-kitob, TT.",
           "Ish uchun biror narsa sotib olish kerak bo‘lsa — xizmat yozuvini rasmiylashtiring."
         ]
@@ -114,7 +114,7 @@
       {
         "title": "Ariza",
         "who": "menejer",
-        "text": "Menejer lidan ariza yaratadi: matn, qatorlar, mijoz xati. Xat ВХ raqami bilan ro‘yxatga olinadi."
+        "text": "Menejer lidan ariza yaratadi: matn, qatorlar, mijoz xati. Xat kiruvchi sifatida raqam bilan ro‘yxatga olinadi."
       },
       {
         "title": "Rezolyutsiya",
@@ -161,15 +161,15 @@
         "text": "Kontaktlari bor kompaniya. Menejer lidan ariza yaratganda paydo bo‘ladi."
       },
       {
-        "term": "Ariza (ЗВ-2026-104)",
+        "term": "Ariza (RQ-2026-104)",
         "text": "Mijoz ehtiyoji: matn, qatorlar, ilovalar, xat. Yetti bosqichdan o‘tadi."
       },
       {
-        "term": "Loyiha (ПР-2026-104)",
+        "term": "Loyiha (PRJ-2026-104)",
         "text": "Mijoz TTni qabul qilgandan keyingi o‘sha ariza; raqami ariza raqamidan olinadi."
       },
       {
-        "term": "Kiruvchi xat (ВХ-104/26)",
+        "term": "Kiruvchi xat (IN-104/26)",
         "text": "Mijozning direktor nomiga rasmiy hujjati; rezolyutsiyani kutadi."
       },
       {
@@ -181,19 +181,19 @@
         "text": "Ombor va hamkor ma’lumotlari hamda mutaxassis vizalari bilan ariza qatorlari."
       },
       {
-        "term": "TT (КП-2026/118)",
+        "term": "TT (QT-2026/118)",
         "text": "Versiyali tijorat taklifi. Mijozga faqat direktor tasdiqlagandan keyin ketadi."
       },
       {
-        "term": "ИСХ (ИСХ-082/26)",
+        "term": "Chiquvchi (OUT-082/26)",
         "text": "TT tasdiqlanganda oladigan chiquvchi raqam."
       },
       {
-        "term": "Shartnoma (ДОГ-2026/104)",
+        "term": "Shartnoma (CT-2026/104)",
         "text": "Qabul qilingan TTdan shartnoma loyihasi; operatorda imzolanadi, skaner biriktiriladi."
       },
       {
-        "term": "Hisob (СЧ-2026/142)",
+        "term": "Hisob (INV-2026/142)",
         "text": "To‘lov uchun hisob: avans, qoldiq yoki bosqich."
       },
       {
@@ -201,15 +201,15 @@
         "text": "Mijozning to‘lov topshiriqnomasi (fayl); buxgalter tasdiqlaydi."
       },
       {
-        "term": "Dalolatnoma (АКТ-2026/058)",
+        "term": "Dalolatnoma (ACT-2026/058)",
         "text": "Bajarilgan ish yoki yetkazib berish dalolatnomasi; imzolangan skaner biriktiriladi."
       },
       {
-        "term": "Xizmat yozuvi (СЗ-2026/031)",
+        "term": "Xizmat yozuvi (MEMO-2026/031)",
         "text": "Xodimning direktor nomiga ichki hujjati: mavzu, matn, summa yoki muddat."
       },
       {
-        "term": "Murojaat (ОБР-0012)",
+        "term": "Murojaat (TK-0012)",
         "text": "Administratorga savolingiz: kirish, bildirishnomalar, shablon, xato. Mijozning loyiha bo‘yicha murojaati bilan adashtirmang."
       }
     ]

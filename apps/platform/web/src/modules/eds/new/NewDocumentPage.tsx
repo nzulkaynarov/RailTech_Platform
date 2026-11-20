@@ -680,7 +680,7 @@ function DocumentForm({
                     value={values.inReplyTo}
                     maxLength={32}
                     autoComplete="off"
-                    placeholder="ВХ-112/26"
+                    placeholder="IN-112/26"
                     disabled={savedId !== null}
                     status={errors.in_reply_to_number ? "error" : undefined}
                     aria-invalid={errors.in_reply_to_number || undefined}

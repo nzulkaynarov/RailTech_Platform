@@ -54,11 +54,11 @@ describe("Карточка письма: подсказка и действия 
     expect(await screen.findByText("Письмо в архиве")).toBeVisible();
   });
 
-  it("«Зарегистрировать как ВХ» открывает форму, заполненную из письма, с вложением и адресатами из копии", async () => {
+  it("«Зарегистрировать как входящее» открывает форму, заполненную из письма, с вложением и адресатами из копии", async () => {
     signIn(REGISTRAR);
     renderAt("/eds/mail/17");
-    // «Документ партнёра»: основная кнопка — «Зарегистрировать как ВХ», остальные действия — в меню
-    const register = await screen.findByRole("link", { name: "Зарегистрировать как ВХ" });
+    // «Документ партнёра»: основная кнопка — «Зарегистрировать как входящее», остальные действия — в меню
+    const register = await screen.findByRole("link", { name: "Зарегистрировать как входящее" });
     expect(register).toHaveAttribute("href", "/eds/register?mail=17");
     expect(register).toHaveClass("ant-btn-primary");
     fireEvent.click(register);
@@ -93,7 +93,7 @@ describe("«В работе»: взять, перехватить, вернут�
     expect(
       await screen.findByText(/Письмо уже в работе у Иванов Демо с \d{2}:\d{2}/),
     ).toBeVisible();
-    expect(screen.queryByRole("link", { name: "Зарегистрировать как ВХ" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Зарегистрировать как входящее" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Создать лид" })).toBeNull();
     expect(screen.queryByLabelText("Текст ответа")).toBeNull();
 
@@ -102,7 +102,9 @@ describe("«В работе»: взять, перехватить, вернут�
     if (!confirm) throw new Error("нет кнопки подтверждения");
     fireEvent.click(confirm);
     expect(await screen.findByText("Письмо в работе у вас")).toBeVisible();
-    expect(await screen.findByRole("link", { name: "Зарегистрировать как ВХ" })).toBeVisible();
+    expect(
+      await screen.findByRole("link", { name: "Зарегистрировать как входящее" }),
+    ).toBeVisible();
   });
 
   it("действие, на которое опередил коллега (409): сообщение словами и «Забрать себе»", async () => {
@@ -281,7 +283,7 @@ describe("Сотрудник без первой линии со своим пи
     renderAt("/eds/my-mail/23");
     expect(await heading("Вопрос по гарантии на стрелочный привод")).toBeVisible();
     expect(screen.getByLabelText("Текст ответа")).toBeVisible();
-    expect(screen.queryByRole("link", { name: "Зарегистрировать как ВХ" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Зарегистрировать как входящее" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Создать лид" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Взять в работу" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Вернуть делопроизводителю" }));

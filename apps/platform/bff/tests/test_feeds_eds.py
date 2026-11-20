@@ -398,9 +398,9 @@ async def test_search_finds_letters_memos_and_documents_in_the_eds_registry(
     assert hits["ИСХ-027/26"]["path"] == f"/eds/documents?box=outgoing&{doc}"
     assert hits["КП-2026/118"]["path"].endswith("tab=approve")
     assert "None" not in hits
-    # EDS получил запрос с латинской раскладкой, исправленной на кириллицу, и токен сотрудника
+    # EDS получил запрос как набран (префикс не переписывается, СЦ-5) и токен сотрудника
     request = fb.eds["registry"].calls.last.request
-    assert request.url.params["q"] == "КП-2026"
+    assert request.url.params["q"] == "kp-2026"
     assert request.headers["authorization"] == "Bearer eds-access-1"
 
 
@@ -675,7 +675,7 @@ async def test_registrar_sees_register_reply_row_and_others_do_not(
     check(response, "/queue", "get")
     [row] = [i for i in response.json()["items"] if i["kind"] == "register_reply"]
     assert row["id"] == f"register_reply:{REG_DOC}"
-    assert row["title"] == "Зарегистрировать ИСХ: ответ на ВХ-112/26"
+    assert row["title"] == "Зарегистрировать исходящее: ответ на ВХ-112/26"
     assert row["subtitle"] == "Пояснения по требованию · Иван Исполнитель"
     assert row["due_label"] == "today"
     assert row["role_id"] == rid("REGISTRAR")
@@ -707,7 +707,7 @@ async def test_register_reply_row_without_letter_and_old_eds_without_the_key(
         for i in (await web.client.get("/api/v1/queue")).json()["items"]
         if i["kind"] == "register_reply"
     ]
-    assert row["title"] == "Зарегистрировать ИСХ"
+    assert row["title"] == "Зарегистрировать исходящее"
     assert row["object"]["number"] == "Пояснения по требованию"
 
     # EDS прежней версии ключа `registrations` не присылает — очередь собирается без этих строк

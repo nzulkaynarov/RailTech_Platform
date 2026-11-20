@@ -75,13 +75,15 @@ export function matchSection(pathname: string, search = ""): SectionMatch | unde
       return id === undefined ? { module, section } : { module, section, objectId: decoded(id) };
     }
   }
-  // Номер документа со «/» без кодирования (`/eds/inbox/ВХ-104/26`): react-router видит два сегмента, но это одна карточка.
+  // Номер документа со «/» без кодирования (`/eds/inbox/IN-104/26`): react-router видит два сегмента, но это одна карточка.
   for (const { module, section } of all) {
     if (!section.detail) continue;
     const prefix = section.detail.replace(/:[A-Za-z]+$/, "");
     if (prefix === section.detail || !pathname.startsWith(prefix)) continue;
     const rest = decoded(pathname.slice(prefix.length));
-    if (rest.includes("/") && isDocNumber(rest)) return { module, section, objectId: rest };
+    // номер несёт не больше одной «/» (`IN-104/26`): третий сегмент — уже не карточка
+    if (rest.split("/").length === 2 && isDocNumber(rest))
+      return { module, section, objectId: rest };
   }
   return undefined;
 }

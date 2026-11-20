@@ -138,7 +138,7 @@ describe("«Заполнить из файла» (EDS-REG)", () => {
     fireEvent.mouseDown(screen.getByLabelText("Способ получения"));
     fireEvent.click(await screen.findByTitle("Почта"));
     fireEvent.click(registerButton("Зарегистрировать"));
-    expect(await screen.findByText(/Зарегистрировано: ВХ-/)).toBeVisible();
+    expect(await screen.findByText(/Зарегистрировано: IN-/)).toBeVisible();
     await waitFor(() => {
       expect(intakeDecisions).toEqual(["edited"]);
     });

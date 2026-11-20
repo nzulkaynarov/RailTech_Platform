@@ -23,6 +23,7 @@ from starlette.types import Send
 
 from app.clients.eds import EdsLetters
 from app.clients.erp_company import counterparty_snapshot
+from app.deal_number_live import live_deal_number
 from app.deps import Authed, Rule, require, require_any
 from app.doc_numbers import DOC_NUMBER_RE as NUMBER_RE
 from app.eds_documents import (
@@ -211,12 +212,17 @@ def _registrar(authed: Authed) -> bool:
 async def _present(
     proxy: EdsProxy, body: Any, authed: Authed, *, registrar: bool | None = None
 ) -> EdsDocument:
+    deal_id = body.get("erp_deal_id") if isinstance(body, dict) else None
+    stored = body.get("deal_number") if isinstance(body, dict) else None
     return await present(
         proxy,
         body,
         me=authed.data.user_id,
         registrar=_registrar(authed) if registrar is None else registrar,
         inbox=_inbox(authed),
+        deal_number=await live_deal_number(
+            authed, deal_id if isinstance(deal_id, int) else None, stored
+        ),
     )
 
 
@@ -232,7 +238,7 @@ def _bad_reply_to(reason: str) -> PlatformError:
         "VALIDATION_FAILED",
         "Входящее письмо с таким номером не найдено."
         if reason == "not_found"
-        else "«В ответ на ВХ» — только у письма.",
+        else "Ответ на входящее — только у письма.",
         status_code=422,
         details={"fields": ["in_reply_to_number"], "reason": reason},
     )

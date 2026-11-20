@@ -518,6 +518,24 @@ describe("Нумерация", () => {
     expect(readCompanyMock().numbering.prefix).toBe("DEMO");
   });
 
+  it("обозначение вида — только латиница и цифры: кириллица не сохраняется (СЦ-5)", async () => {
+    await openTab("numbering");
+    await screen.findByLabelText("Заявка");
+    const before = JSON.stringify(readCompanyMock().numbering.type_labels);
+    type("Заявка", "ЗВ");
+    expect(await screen.findByText("Только латинские буквы A-Z и цифры")).toBeInTheDocument();
+    fireEvent.click(await button("Сохранить нумерацию"));
+    await waitFor(() => {
+      expect(screen.getByText("Только латинские буквы A-Z и цифры")).toBeInTheDocument();
+    });
+    expect(JSON.stringify(readCompanyMock().numbering.type_labels)).toBe(before);
+
+    type("Заявка", "RQ1");
+    await waitFor(() => {
+      expect(screen.queryByText("Только латинские буквы A-Z и цифры")).toBeNull();
+    });
+  });
+
   it("пустой префикс: схема всё равно действует, обозначения всех видов номеров правятся", async () => {
     await openTab("numbering");
     await screen.findByLabelText("Префикс нумерации");

@@ -89,7 +89,7 @@ describe("Клиенты · Клиенты (D1-2b)", () => {
     await waitFor(() => {
       expect(within(requests).queryByRole("button", { name: /Повторить отправку/ })).toBeNull();
     });
-    expect(await within(requests).findByText("ЗВ-2026-040")).toBeVisible();
+    expect(await within(requests).findByText("RQ-2026-040")).toBeVisible();
   });
 
   it("«Отправить ещё раз»: выбранный канал уходит, итог — словами", async () => {

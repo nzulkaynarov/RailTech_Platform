@@ -37,6 +37,7 @@ export function DealField({
     query: { staleTime: 30_000 },
   });
   const unavailable = options.data?.sources.erp === "unavailable";
+  const numbers = new Map((options.data?.items ?? []).map((i) => [i.erp_deal_id, i.number]));
   return (
     <Select<{ value: number; label: string }>
       id={id}
@@ -51,7 +52,12 @@ export function DealField({
       onSearch={setTyped}
       onChange={(choice: { value: number; label: string } | undefined) => {
         setTyped("");
-        onChange(choice ? { erp_deal_id: choice.value, label: choice.label } : null);
+        const number = choice ? (numbers.get(choice.value) ?? value?.number) : undefined;
+        onChange(
+          choice
+            ? { erp_deal_id: choice.value, label: choice.label, ...(number ? { number } : {}) }
+            : null,
+        );
       }}
       notFoundContent={
         options.isFetching

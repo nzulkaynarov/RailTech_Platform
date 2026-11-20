@@ -232,7 +232,7 @@
   },
   "form": {
     "subtitle": "Hujjat direktorga kelishish uchun yuboriladi. Qoralamani saqlab, keyinroq «Hujjatlar»da davom ettirish mumkin.",
-    "subtitleLetter": "Kompaniya blankidagi xat: haqiqiy PDF ni ko‘ring, ИСХ ni ro‘yxatdan o‘tkazing va manzilga yuboring.",
+    "subtitleLetter": "Kompaniya blankidagi xat: haqiqiy PDF ni ko‘ring, chiquvchi xatni ro‘yxatdan o‘tkazing va manzilga yuboring.",
     "subtitleContinue": "{{number}} qoralamasi: o‘zgarishlar saqlanadi, istalgan payt yuborish mumkin.",
     "subtitleReturned": "{{number}} qayta ishlashga qaytarilgan: tuzatib, qayta yuboring.",
     "formLabel": "Yangi hujjat",
@@ -306,7 +306,7 @@
       "plain": "Siz → Direktor",
       "withAmount": "Siz → Direktor → Buxgalter (summa bor)",
       "letter": "Kelishuvsiz: xat darhol ro‘yxatdan o‘tadi",
-      "letterHandover": "Siz → ish yurituvchi: u ИСХ ni ro‘yxatga oladi va manzilga yuboradi",
+      "letterHandover": "Siz → ish yurituvchi: u chiquvchi xatni ro‘yxatga oladi va manzilga yuboradi",
       "approvers": "Kelishuvchilar",
       "approversHint": "Marshrut bosqichlaridan oldin, tanlangan tartibda kelishadi.",
       "watchers": "Nusxa oluvchilar",
@@ -315,35 +315,35 @@
     },
     "consequence": {
       "memo": [
-        "Hujjatga СЗ-2026/031 kabi raqam beriladi va u direktorga kelishish uchun yuboriladi.",
+        "Hujjatga xizmat yozuvi raqami beriladi va u direktorga kelishish uchun yuboriladi.",
         "Direktor kelishadi, qayta ishlashga qaytaradi yoki rad etadi — sizga xabar keladi.",
         "Kelishilgan hujjat viza va sana bilan «Hujjatlar»da qoladi."
       ],
       "memoAmount": [
-        "Hujjatga СЗ-2026/031 kabi raqam beriladi va u direktorga kelishish uchun yuboriladi.",
+        "Hujjatga xizmat yozuvi raqami beriladi va u direktorga kelishish uchun yuboriladi.",
         "Direktor kelishgach, hujjat to‘lov uchun buxgalterga topshiriladi.",
         "Buxgalter to‘lovni tasdiqlaydi: holat «To‘langan» bo‘ladi."
       ],
       "application": [
-        "Arizaga ЗЯ-2026/012 kabi raqam beriladi va u direktorga kelishish uchun yuboriladi.",
+        "Arizaga raqam beriladi va u direktorga kelishish uchun yuboriladi.",
         "Direktor kelishadi, qayta ishlashga qaytaradi yoki rad etadi — sizga xabar keladi.",
         "Qaror va sana «Hujjatlar»da qoladi."
       ],
       "report": [
-        "Hisobotga ОТ-2026/007 kabi raqam beriladi va u direktorga kelishish uchun yuboriladi.",
+        "Hisobotga raqam beriladi va u direktorga kelishish uchun yuboriladi.",
         "Direktor kelishadi, qayta ishlashga qaytaradi yoki rad etadi — sizga xabar keladi.",
         "Qaror va sana «Hujjatlar»da qoladi."
       ],
       "letter": [
-        "Xatga ИСХ-NNN/YY chiquvchi raqami va ro‘yxatga olish sanasi beriladi.",
+        "Xatga chiquvchi raqam (masalan, OUT-014/26) va ro‘yxatga olish sanasi beriladi.",
         "Raqamli blank PDF i e-pochta ko‘rsatilgan bo‘lsa, manzilga yuboriladi.",
-        "«ВХ ga javob» «Javob tayyorlash» topshirig‘ini yopadi; yuborish jurnali — xat kartochkasida."
+        "Kiruvchi xatga javob «Javob tayyorlash» topshirig‘ini yopadi; yuborish jurnali — xat kartochkasida."
       ],
       "draft": "«Qoralamani saqlash» hech narsa yubormaydi: hujjat «Hujjatlar»da «Davom ettirish» tugmasi bilan qoladi.",
       "letterHandover": [
         "Xat qoralamasi ro‘yxatga olish uchun ish yurituvchiga o‘tadi.",
-        "U PDF ni tekshiradi, ИСХ ni ro‘yxatga oladi va manzilga yuboradi.",
-        "ИСХ raqami va yuborish jurnali xat kartochkasida paydo bo‘ladi."
+        "U PDF ni tekshiradi, chiquvchi xatni ro‘yxatga oladi va manzilga yuboradi.",
+        "Chiquvchi raqam va yuborish jurnali xat kartochkasida paydo bo‘ladi."
       ]
     },
     "submit": {
@@ -362,7 +362,7 @@
       "due": "«Muddat» o‘tmishda bo‘lishi mumkin emas.",
       "recipient": "Tashkilotni röyxatdan tanlang yoki yangisini qöşing.",
       "deal": "Loyiha topilmadi — boshqasini tanlang yoki bog‘lashni olib tashlang.",
-      "replyTo": "Bunday raqamli kiruvchi xat yo‘q. ВХ raqamini tekshiring.",
+      "replyTo": "Bunday raqamli kiruvchi xat yo‘q. Kiruvchi xat raqamini tekshiring.",
       "recipientEmail": "Manzil e-pochtasini tekshiring, masalan office@example.uz."
     },
     "toast": {
@@ -408,7 +408,7 @@
     "forbiddenTitle": "Hujjat yaratib bo‘lmaydi",
     "replyTo": {
       "label": "Kiruvchi xatga javoban",
-      "hint": "ВХ raqami, masalan ВХ-112/26: xat ro‘yxatga olinsa, «Javob tayyorlash» topshirig‘i yopiladi."
+      "hint": "Kiruvchi xat raqami, masalan IN-112/26: xat ro‘yxatga olinsa, «Javob tayyorlash» topshirig‘i yopiladi."
     },
     "subtitleLetterHandover": "",
     "attention": {
@@ -493,7 +493,7 @@
     "empty": "«PDF ni ko‘rsatish»ni bosing: xat qoralama sifatida saqlanadi va blankda paydo bo‘ladi.",
     "pending": "PDF tayyorlanmoqda…",
     "ready": "PDF tayyor · {{pages}} bet",
-    "readyFinal": "ИСХ raqamli PDF tayyor · {{pages}} bet",
+    "readyFinal": "Chiquvchi raqamli PDF tayyor · {{pages}} bet",
     "failed": "Xato: {{error}}",
     "failedNoReason": "Xato: PDF qurilmadi",
     "retry": "Qayta urinish",

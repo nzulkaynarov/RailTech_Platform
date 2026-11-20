@@ -237,7 +237,11 @@ describe("formModel", () => {
     });
     expect(values.amount).toBe("1200000");
     expect(values.dueDate).toBe("2026-11-05");
-    expect(values.deal).toEqual({ erp_deal_id: 904, label: "ЗВ-2026-104" });
+    expect(values.deal).toEqual({
+      erp_deal_id: 904,
+      label: "ЗВ-2026-104",
+      number: "ЗВ-2026-104",
+    });
     expect(values.attachments).toEqual([
       { key: "f-1", name: "schet.pdf", size: 10, status: "done", id: "f-1", existing: true },
     ]);

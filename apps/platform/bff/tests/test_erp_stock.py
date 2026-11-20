@@ -330,12 +330,44 @@ async def test_a_project_reservation_links_to_the_project_in_eds(
     await web.login(["SUPPLY"])
     erp.get(f"{STOCK}/reservations/").mock(
         return_value=httpx.Response(
-            200, json={"results": [reservation(deal=ref(number="ПР-2026-104"))]}
+            200,
+            json={
+                "results": [
+                    reservation(deal=ref(number="PRJ-2026-104", stage_code="CONTRACT_SIGNED"))
+                ]
+            },
         )
     )
     response = await web.client.get("/api/v1/erp/stock/reservations")
     check(response, "/erp/stock/reservations", "get")
-    assert response.json()["items"][0]["request"]["path"] == "/eds/projects/%D0%9F%D0%A0-2026-104"
+    assert response.json()["items"][0]["request"]["path"] == "/eds/projects/PRJ-2026-104"
+
+
+async def test_request_kind_comes_from_the_stage_not_from_the_number_prefix(
+    web: Web, erp: respx.MockRouter
+) -> None:
+    """СЦ-5: номер непрозрачен. «ПР-…» без стадии проекта — всё равно заявка, «RQ-…» на стадии
+    проекта — проект."""
+    await web.login(["SUPPLY"])
+    erp.get(f"{STOCK}/reservations/").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "results": [
+                    reservation(deal=ref(number="ПР-2026-104")),
+                    reservation(deal=ref(number="RQ-2026-105", stage_code="CONTRACT_SIGNED")),
+                ]
+            },
+        )
+    )
+    paths = [
+        i["request"]["path"]
+        for i in (await web.client.get("/api/v1/erp/stock/reservations")).json()["items"]
+    ]
+    assert paths == [
+        "/erp/calc/%D0%9F%D0%A0-2026-104",
+        "/eds/projects/RQ-2026-105",
+    ]
 
 
 async def test_reservations_of_a_request_are_found_by_its_number(
@@ -966,7 +998,7 @@ async def test_receipts_suppliers_and_shipments(
     shipment = {
         "id": 12,
         "number": "ОТГ-2026-014",
-        "deal": ref(number="ПР-2026-104"),
+        "deal": ref(number="PRJ-2026-104", stage_code="CONTRACT_SIGNED"),
         "tracking": "TRK-1",
         "carrier": "ООО Перевозка",
         "note": None,
@@ -982,7 +1014,7 @@ async def test_receipts_suppliers_and_shipments(
     shipments = await web.client.get("/api/v1/erp/stock/shipments", params={"request": NUMBER})
     check(shipments, "/erp/stock/shipments", "get")
     assert dict(listing.calls.last.request.url.params) == {"deal_id": "104"}
-    assert shipments.json()["items"][0]["request"]["path"] == "/eds/projects/%D0%9F%D0%A0-2026-104"
+    assert shipments.json()["items"][0]["request"]["path"] == "/eds/projects/PRJ-2026-104"
 
     create = erp.post(f"{STOCK}/shipments/").mock(return_value=httpx.Response(201, json=shipment))
     created = await call(

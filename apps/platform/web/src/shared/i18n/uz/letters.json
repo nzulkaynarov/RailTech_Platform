@@ -369,7 +369,7 @@
     },
     "related": {
       "label": "Bog‘liq hujjat",
-      "hint": "Ixtiyoriy: oldingi kiruvchi (ВХ) yoki bizning chiquvchi (ИСХ) raqami"
+      "hint": "Ixtiyoriy: oldingi kiruvchi yoki bizning chiquvchi xat raqami"
     },
     "duplicate": {
       "exactTitle": "Bu xat allaqachon roʻyxatdan oʻtganga oʻxshaydi",
@@ -402,7 +402,7 @@
       "received_at": "Kelib tushgan sanani kiriting — bugundan kech emas.",
       "subject": "Mavzuni kiriting.",
       "file_ids": "Xat faylini biriktiring va yuklanishini kuting.",
-      "related_number": "Bunday raqamli hujjat yo‘q. ВХ yoki ИСХ raqamini tekshiring.",
+      "related_number": "Bunday raqamli hujjat yo‘q. Kiruvchi yoki chiquvchi raqamni tekshiring.",
       "forbidden": "kiruvchi hujjatlarni ro‘yxatga olish rolingizga berilmagan",
       "server": "server ma’lumotni qabul qilmadi, bir daqiqadan so‘ng qayta urining"
     },
@@ -638,7 +638,7 @@
       "reportHint": "Nima qilindi. Hisobot, fayl yoki chiquvchi xat raqami kerak.",
       "files": "Hisobot fayllari",
       "outgoing": "Javob — bizning chiquvchi xat raqami",
-      "outgoingHint": "Agar xat bilan javob berilgan bo‘lsa: «Hujjatlar»dagi raqam, masalan ИСХ-014/26.",
+      "outgoingHint": "Agar xat bilan javob berilgan bo‘lsa: «Hujjatlar»dagi raqam, masalan OUT-014/26.",
       "submit": "Bajarildi",
       "done": "Topshiriq bajarildi",
       "error": "Hisobot yozing, fayl biriktiring yoki chiquvchi xat raqamini ko‘rsating."

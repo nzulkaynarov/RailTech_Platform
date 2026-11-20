@@ -59,18 +59,18 @@
   },
   "consequence": {
     "lead": "Lid mijozga aylanadi, siz yozishma uchun mas’ul bo‘lasiz; bot bu mijoz bo‘yicha javob berishda davom etadi.",
-    "request": "Bek-ofisda ЗВ raqamli ariza paydo bo‘ladi.",
+    "request": "Bek-ofisda raqamli ariza paydo bo‘ladi.",
     "letter": "Xat direktorga «Hujjatlar · Kiruvchi xatlar»ga boradi{{urgent}}.",
     "urgentSuffix": " «Shoshilinch» belgisi bilan",
     "chat": "Loyiha chati yaratiladi."
   },
-  "clientGets": "Mijoz oladi: «ЗВ-… arizasi qabul qilindi, hisoblayapmiz» va «Kabinetni ochish» tugmasi — Telegramda yoki xat orqali.",
+  "clientGets": "Mijoz oladi: «№ … arizasi qabul qilindi, hisoblayapmiz» va «Kabinetni ochish» tugmasi — Telegramda yoki xat orqali.",
   "submit": "Ariza yaratish",
   "submitting": "Ariza yaratilmoqda…",
   "cancel": "Bekor qilish",
   "done": {
     "title": "Ariza yaratildi",
-    "text": "Ariza bek-ofisga uzatilmoqda; ЗВ raqami mijoz kartasida paydo bo‘ladi.",
+    "text": "Ariza bek-ofisga uzatilmoqda; ariza raqami mijoz kartasida paydo bo‘ladi.",
     "repeated": "Bu ariza allaqachon yaratilgan — uni ko‘rsatamiz.",
     "openClient": "Mijoz kartasini ochish"
   },

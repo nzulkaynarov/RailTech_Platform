@@ -118,7 +118,7 @@ describe("EDS · Зарегистрировать входящее (P8)", () => 
 
     fireEvent.click(registerButton("Зарегистрировать"));
 
-    expect(await screen.findByText("Зарегистрировано: ВХ-109/26")).toBeVisible();
+    expect(await screen.findByText("Зарегистрировано: IN-109/26")).toBeVisible();
     await waitFor(() => {
       expect(body).not.toBeNull();
     });
@@ -211,7 +211,7 @@ describe("EDS · Зарегистрировать входящее (P8)", () => 
     type("Почему это другое письмо", "Повторное письмо с исправлениями");
     fireEvent.click(registerButton(/Зарегистрировать$/));
 
-    expect(await screen.findByText(/Зарегистрировано: ВХ-/)).toBeVisible();
+    expect(await screen.findByText(/Зарегистрировано: IN-/)).toBeVisible();
     expect(bodies[1]).toMatchObject({
       force: true,
       force_reason: "Повторное письмо с исправлениями",
@@ -328,7 +328,7 @@ describe("registerModel", () => {
     });
   });
 
-  it("тело запроса: пустые строки — null, номер заявки из подписи выбора, файлы без повторов", () => {
+  it("тело запроса: пустые строки — null, номер заявки из поля выбора, не из подписи, файлы без повторов", () => {
     const values = {
       ...emptyRegister("2026-11-01"),
       kind: "bank",
@@ -337,7 +337,11 @@ describe("registerModel", () => {
       senderCompanyId: "12",
       senderContactId: "31",
       subject: " Тарифы ",
-      deal: { erp_deal_id: 5, label: "ЗВ-2026-104 · Стрелочные приводы · ООО «Демо-Рейл»" },
+      deal: {
+        erp_deal_id: 5,
+        label: "RQ-2026-104 · Стрелочные приводы · ООО «Демо-Рейл»",
+        number: "RQ-2026-104",
+      },
       attachments: [
         { key: "a", name: "a.pdf", size: 1, status: "done" as const, id: "f1" },
         { key: "b", name: "b.pdf", size: 1, status: "done" as const, id: "f1" },
@@ -355,7 +359,7 @@ describe("registerModel", () => {
       sender_ref_number: null,
       related_number: null,
       erp_deal_id: 5,
-      deal_number: "ЗВ-2026-104",
+      deal_number: "RQ-2026-104",
       file_ids: ["f1"],
     });
   });

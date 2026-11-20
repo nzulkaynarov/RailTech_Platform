@@ -48,8 +48,10 @@ export interface Attachment {
 
 export interface DealChoice {
   erp_deal_id: number;
-  /** Подпись в поле: «ЗВ-2026-104 · Поставка рельсов» */
+  /** Подпись в поле: «RQ-2026-104 · Поставка рельсов» (только для показа) */
   label: string;
+  /** Номер сделки как отдал ERP; из подписи не выделяется */
+  number?: string;
 }
 
 export interface FormValues {
@@ -308,7 +310,11 @@ export function toUpdateBody(
 
 function dealChoice(deal: EdsDealRef | null): DealChoice | null {
   if (!deal) return null;
-  return { erp_deal_id: deal.erp_deal_id, label: deal.number ?? String(deal.erp_deal_id) };
+  return {
+    erp_deal_id: deal.erp_deal_id,
+    label: deal.number ?? String(deal.erp_deal_id),
+    ...(deal.number ? { number: deal.number } : {}),
+  };
 }
 
 /** Форма из сохранённого документа: «Продолжить» открывает черновик с теми же данными. */

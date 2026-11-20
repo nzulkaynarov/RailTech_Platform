@@ -385,7 +385,7 @@ export function letterTaskQueueItems(view: readonly MockRole[]): QueueItem[] {
         id: `register_reply:${doc.id}`,
         role_id: registerRole,
         kind: "register_reply",
-        title: to ? `Зарегистрировать ИСХ: ответ на ${to}` : "Зарегистрировать ИСХ",
+        title: to ? `Зарегистрировать исходящее: ответ на ${to}` : "Зарегистрировать исходящее",
         subtitle: [doc.subject, personOf(doc.ownerId)?.name].filter(Boolean).join(" · "),
         due_label: "today",
         object: {
@@ -917,10 +917,10 @@ export const edsInstructionsHandlers = [
       }
     }
     if (!body.report?.trim() && files.length === 0 && !body.outgoing_number && !handed) {
-      return invalid("report", "report_required", "Нужен отчёт или ИСХ.");
+      return invalid("report", "report_required", "Нужен отчёт или исходящее.");
     }
-    if (body.outgoing_number && !/^ИСХ-\d{3,}\/\d{2}$/.test(body.outgoing_number.trim())) {
-      return invalid("outgoing_number", "not_found", "ИСХ с таким номером не найден.");
+    if (body.outgoing_number && !/^\S*\d\S*$/.test(body.outgoing_number.trim())) {
+      return invalid("outgoing_number", "not_found", "Исходящее с таким номером не найдено.");
     }
     // EDS-REPLY-1: ИСХ «в ответ на» это письмо или без связи (связь записывается); чужой ответ — 409
     if (body.outgoing_number) {

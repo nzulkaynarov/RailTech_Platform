@@ -23,6 +23,8 @@ export interface MockProduct {
 export interface MockRequest {
   number: string;
   client: string;
+  /** Стадия проекта (договор подписан): вид задаёт стадия, не обозначение номера */
+  project?: boolean;
 }
 
 export interface MockSupplier {
@@ -195,7 +197,7 @@ export interface MockStock {
 
 export const REQUESTS: readonly MockRequest[] = [
   { number: "ЗВ-2026-097", client: "АО «Пример Логистик»" },
-  { number: "ПР-2026-099", client: "ООО «Демо-Депо»" },
+  { number: "ПР-2026-099", client: "ООО «Демо-Депо»", project: true },
 ];
 
 export const SUPPLIERS: readonly MockSupplier[] = [
