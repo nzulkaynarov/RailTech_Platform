@@ -28,10 +28,16 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from pathlib import Path
 
+# Строка-пометка: «Для пользователей (роли): текст», а также «**Для пользователей (роли).** текст» и заголовок
+# «## Для пользователей (роли)» с текстом абзацем ниже — так её пишут на деле; без двоеточия бот строку терял.
 LINE = re.compile(
-    r"^\s*(?:[-*]\s+)?(?:\*\*)?Для пользователей(?:\s*\(([^)]*)\))?\s*:(?:\*\*)?\s*(.*?)\s*$",
+    r"^\s*(?:#{1,6}\s*)?(?:[-*]\s+)?(?:\*\*)?Для пользователей(?:\s*\(([^)]*)\))?\s*[:.]?(?:\*\*)?\s*[:.]?\s*(.*?)\s*$",
     re.IGNORECASE,
 )
+# Конец абзаца под заголовком-пометкой: пустая строка после текста, следующий заголовок или жирная подпись раздела.
+SECTION_END = re.compile(r"^\s*(?:#{1,6}\s|\*\*[^*]+\*\*|🤖)")
+# «Нечего сказать» в начале текста: «Нет», «Нет: видно только администратору», «Пока ничего не меняется».
+NOTHING = re.compile(r"^(?:нет(?:\s*[:.,—–-]|$)|пока ничего|ничего не меняется|без изменений)", re.IGNORECASE)
 COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
 MERGE = re.compile(r"^Merge pull request #(\d+) ")
 # Заглушки из шаблона и «нечего сказать»: такие строки в запись не идут.
@@ -57,19 +63,36 @@ def _role(raw: str) -> str:
 def notes_of(pr: dict[str, object]) -> list[Note]:
     """Строки «Для пользователей» одного PR; HTML-комментарии шаблона не считаются."""
     body = COMMENT.sub("", str(pr.get("body") or ""))
+    lines = body.splitlines()
     out: list[Note] = []
-    for line in body.splitlines():
+    for index, line in enumerate(lines):
         match = LINE.match(line)
         if not match:
             continue
         text = match.group(2).strip()
-        if text.lower().rstrip(".") in EMPTY:
+        if not text:
+            text = _paragraph_after(lines, index + 1)
+        if text.lower().rstrip(".") in EMPTY or NOTHING.match(text):
             continue
         roles = tuple(
             _role(r) for r in (match.group(1) or "").split(",") if r.strip() and r.strip().lower() not in ALL
         )
         out.append(Note(roles=roles, text=text[:1].upper() + text[1:], pr=int(str(pr["number"]))))
     return out
+
+
+def _paragraph_after(lines: list[str], start: int) -> str:
+    """Текст под заголовком-пометкой: первый абзац ниже (пустые строки перед ним пропускаются)."""
+    picked: list[str] = []
+    for line in lines[start:]:
+        if SECTION_END.match(line) or LINE.match(line):
+            break
+        if not line.strip():
+            if picked:
+                break
+            continue
+        picked.append(line.strip())
+    return " ".join(picked)
 
 
 def human_date(day: date) -> str:
