@@ -429,7 +429,7 @@ const overdueDays = (order: MockOrder): number | null => {
 /** СЦ-10: чего не хватает черновику для отправки — как `send_gaps` ERP. */
 function sendGaps(order: MockOrder): { prices: number; date: boolean } {
   return {
-    prices: order.lines.filter((l) => l.unitPrice === null || l.unitPrice === undefined).length,
+    prices: order.lines.filter((l) => l.unitPrice === null).length,
     date: !order.expectedDate,
   };
 }
