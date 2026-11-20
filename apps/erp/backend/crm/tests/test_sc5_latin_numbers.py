@@ -199,9 +199,46 @@ def test_emit_mapping_lists_own_numbers_only(old_data):
     mapping = latin_renumber.emit_mapping()
     assert mapping == {
         "ЗВ-2026-001": "RQ-2026-001",
+        "ПР-2026-001": "RQ-2026-001",
         "ЗВ-2026-002": "PRJ-2026-002",
+        "ПР-2026-002": "PRJ-2026-002",
         "ТВ-1A2B3C4D": "GD-00001",
     }
+
+
+def test_emit_mapping_covers_copies_of_an_already_renumbered_or_promoted_deal(old_data, tmp_path):
+    """Prod: the project is PRJ-2026-002 already, EDS and portal copies still say ЗВ-2026-002."""
+    from parties.models import Contact
+    from portal.models import PortalNotice
+    from supply.models import SupplierOrder, SupplierOrderLine
+
+    Deal.objects.filter(pk=old_data["project"].pk).update(number="PRJ-2026-002")
+    Deal.objects.filter(pk=old_data["request"].pk).update(number="RQ-2026-001")  # Latin: never renamed itself
+    company = old_data["notice"].company
+    notice = PortalNotice.objects.create(
+        company=company,
+        contact=Contact.objects.create(company=company, name="C2"),
+        kind="k",
+        group="g",
+        object_type="deal",
+        object_id=old_data["project"].pk,
+        object_number="ЗВ-2026-002",
+        action="a",
+        text_key="t",
+        params={"number": "ЗВ-2026-002"},
+        link="/x",
+        dedup_key="d2",
+    )
+    mapping = latin_renumber.emit_mapping()
+    assert mapping["ЗВ-2026-002"] == "PRJ-2026-002" and mapping["ПР-2026-002"] == "PRJ-2026-002"
+    assert "RQ-2026-001" not in mapping
+    order = SupplierOrder.objects.create(number="PO-2026-001", number_year=2026, number_seq=1, supplier=company)
+    line = SupplierOrderLine.objects.create(order=order, name="L", article="ТВ-1A2B3C4D", quantity=1)
+    _run(mapping, tmp_path, "--apply")
+    notice.refresh_from_db()
+    assert notice.object_number == "PRJ-2026-002" and notice.params == {"number": "PRJ-2026-002"}
+    line.refresh_from_db()
+    assert line.article == "GD-00001"
 
 
 def test_dry_run_prints_changes_and_writes_nothing(old_data, tmp_path):

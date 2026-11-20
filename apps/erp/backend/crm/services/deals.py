@@ -173,7 +173,7 @@ def _publish_stage_events(deal: Deal, prev_code: Optional[str], lost_reason: str
         events.publish_deal_outcome(deal, won=False, lost_reason=lost_reason or "Сделка закрыта со статусом lost")
 
 
-#: Стадии проекта (SPEC-v3 §2.1): с них заявка — проект ПР-ГГГГ-NNN.
+#: Стадии проекта (SPEC-v3 §2.1): с них заявка — проект PRJ-ГГГГ-NNN.
 PROJECT_STAGE_CODES = frozenset({DealStageCode.CONTRACT_SIGNED, DealStageCode.CLOSED_WON})
 
 
@@ -237,7 +237,7 @@ def transition_deal_stage(
     if target_stage_code in PROJECT_STAGE_CODES:
         from sales.services import deal_numbers
 
-        deal_numbers.promote_to_project(deal)  # КП принято: ЗВ-ГГГГ-NNN → ПР-ГГГГ-NNN (ERP-09)
+        deal_numbers.promote_to_project(deal)  # КП принято: RQ-ГГГГ-NNN → PRJ-ГГГГ-NNN (ERP-09)
     deal.stage = target_stage
     deal.save(update_fields=["stage"])
     if target_stage_code == DealStageCode.CLOSED_LOST:

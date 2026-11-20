@@ -3,11 +3,13 @@
 The mapping is one flat `{old number: new number}` shared by all systems. Each system touches ITS OWN tables only:
 
 - `sales_deal.number` — the number of the current stage from the numbering scheme (REQ / PRJ label); deals are found
-  by (year, seq), so no previous number is stored;
+  by (year, seq), so no previous number is stored. Both legacy spellings (ЗВ / ПР) of every deal are mapped to its
+  current number, so copies of a promoted deal's old number are converted too; a Latin number is never renamed;
 - `catalog_product.sku` — a random `ТВ-1A2B3C4D` article becomes sequential `GD-00001`, the old one moves to
   `previous_sku` (catalog search matches it);
 - copies of numbers of other records: `sales_calctask.letter_number` (EDS letter), `portal_portalnotice.object_number`
-  and the exact string values of `portal_portalnotice.params`.
+  and the exact string values of `portal_portalnotice.params`; the article copied into supplier order and price
+  request lines (`supply_supplierorderline.article`, `supply_pricerequestline.article`), exact match.
 
 History (bus inbox/outbox, audit and email logs, issued PDFs) is deliberately not touched.
 `plan()` is read-only; `apply()` writes everything in one transaction and is idempotent (an already renumbered row no
@@ -23,6 +25,7 @@ from django.db import transaction
 _LEGACY_SKU = re.compile(r"^[^\x00-\x7f]+-[0-9A-F]{8}$")
 _LATIN_PREFIX = re.compile(r"^[A-Z0-9]{1,10}$")
 _SEQ_SKU = re.compile(r"^(?P<prefix>[A-Z0-9]+)-(?P<seq>\d+)$")
+_LEGACY_DEAL_LABELS = ("ЗВ", "ПР")
 _FALLBACK_SKU_PREFIX = {"GENERAL_GOODS": "GD", "SERVICES": "SV"}
 
 
@@ -57,7 +60,15 @@ def emit_mapping() -> dict:
     labels = {False: type_label("REQ"), True: type_label("PRJ")}
     for deal in Deal.objects.exclude(number_year__isnull=True).exclude(number_seq__isnull=True).order_by("id"):
         expected = own_format_number(labels[bool(deal.is_project)], deal.number_year, deal.number_seq)
-        if deal.number and deal.number != expected:
+        # Copies elsewhere may hold either legacy spelling even when the deal itself is already renumbered or promoted
+        # (a project promoted from ЗВ-2026-002 is PRJ-2026-002 now, but EDS and portal copies still say ЗВ-2026-002).
+        for legacy in _LEGACY_DEAL_LABELS:
+            old = f"{legacy}-{deal.number_year}-{deal.number_seq:03d}"
+            if old != expected:
+                mapping[old] = expected
+        # The deal's own number is converted only while its label is non-ASCII: Latin numbers issued under an
+        # older label are not touched (this is a one-off Cyrillic-to-Latin conversion).
+        if deal.number and deal.number != expected and not deal.number.isascii():
             mapping[deal.number] = expected
 
     taken = dict.fromkeys(Product.objects.values_list("sku", flat=True))
@@ -87,6 +98,15 @@ def emit_mapping() -> dict:
         taken[candidate] = None
         mapping[product.sku] = candidate
     return mapping
+
+
+def _article_columns():
+    from supply.models import PriceRequestLine, SupplierOrderLine
+
+    return [
+        (SupplierOrderLine, "supply_supplierorderline.article"),
+        (PriceRequestLine, "supply_pricerequestline.article"),
+    ]
 
 
 def _replace_in_json(value, mapping):
@@ -119,6 +139,9 @@ def plan(mapping: dict) -> list:
         changes.append(Change("catalog_product.sku", product.id, product.sku, mapping[product.sku]))
     for task in CalcTask.objects.filter(letter_number__in=olds).order_by("id"):
         changes.append(Change("sales_calctask.letter_number", task.id, task.letter_number, mapping[task.letter_number]))
+    for model, column in _article_columns():
+        for line in model.objects.filter(article__in=olds).order_by("id"):
+            changes.append(Change(column, line.id, line.article, mapping[line.article]))
     for notice in PortalNotice.objects.order_by("id").only("id", "object_number", "params"):
         if notice.object_number in mapping:
             changes.append(
@@ -164,6 +187,9 @@ def apply(mapping: dict) -> list:
                 sequence.save(update_fields=["last_value"])
     for task in CalcTask.objects.filter(letter_number__in=olds):
         CalcTask.objects.filter(pk=task.pk).update(letter_number=mapping[task.letter_number])
+    for model, _ in _article_columns():
+        for line in model.objects.filter(article__in=olds):
+            model.objects.filter(pk=line.pk).update(article=mapping[line.article])
     for notice in PortalNotice.objects.all().only("id", "object_number", "params"):
         fields = {}
         if notice.object_number in mapping:
