@@ -148,11 +148,14 @@ describe("Склад · заказы партнёрам", () => {
     fireEvent.click(within(modal).getByRole("button", { name: "Принять" }));
     expect(await screen.findByText("Товар принят")).toBeVisible();
     expect((await screen.findAllByText(/накладная НП-77/)).length).toBeGreaterThan(0);
+    // СЦ-10: количество — в единице строки заказа, в журнале и в списке приёмок.
+    expect((await screen.findAllByText(/10\sкомпл\. · накладная НП-77/)).length).toBeGreaterThan(0);
+    expect(screen.getByText(/· 10 компл\. \(C-02-1\)/)).toBeVisible();
     expect(screen.getAllByText("Подтверждён").length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole("button", { name: "Принять товар" }));
     modal = await screen.findByRole("dialog");
-    expect(await within(modal).findByText("осталось 20 из 30")).toBeInTheDocument();
+    expect(await within(modal).findByText("осталось 20 из 30 компл.")).toBeInTheDocument();
     fireEvent.click(within(modal).getByRole("button", { name: "Принять" }));
     await waitFor(() => {
       expect(screen.queryByRole("button", { name: "Принять товар" })).not.toBeInTheDocument();
@@ -317,7 +320,7 @@ describe("Склад · приёмка и отгрузки", () => {
       row.getByRole("button", { name: `Принять «Скрепление рельсовое КБ-65» по заказу ${ORDER}` }),
     );
     const modal = await screen.findByRole("dialog");
-    expect(await within(modal).findByText("осталось 30 из 30")).toBeInTheDocument();
+    expect(await within(modal).findByText("осталось 30 из 30 компл.")).toBeInTheDocument();
   });
 
   it("отгрузка по проекту: резервы проекта → накладная ОТГ, резерв и остаток уменьшаются", async () => {

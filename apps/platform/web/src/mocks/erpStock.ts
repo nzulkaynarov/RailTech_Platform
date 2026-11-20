@@ -34,6 +34,7 @@ import type {
   SupplierOrderRow,
   SupplierOrderSendIn,
 } from "../shared/api/generated/model";
+import { formatQuantity } from "../shared/lib/money";
 import { CATALOG } from "./fixtures/calc";
 import {
   type MockOrder,
@@ -1165,7 +1166,7 @@ export const erpStockHandlers = [
       note: body.note ?? null,
       lines: [] as MockReceiptLine[],
     };
-    let total = 0;
+    const received = new Map<string, number>(); // единица строки заказа → принято (как журнал ERP, СЦ-10)
     for (const item of body.lines) {
       const line = order.lines.find((l) => String(l.id) === item.order_line_id);
       if (!line) continue;
@@ -1203,7 +1204,7 @@ export const erpStockHandlers = [
         docNumber: product.requiresDoc ? (item.doc_number?.trim() ?? null) : null,
         docValidUntil: product.requiresDoc ? (item.doc_valid_until ?? null) : null,
       });
-      total += item.quantity;
+      received.set(line.unit, (received.get(line.unit) ?? 0) + item.quantity);
       if (line.request !== null && line.lineId !== null) {
         const held_ = state.reservations.find(
           (r) => r.lineId === line.lineId && r.status === "active",
@@ -1233,7 +1234,7 @@ export const erpStockHandlers = [
       order,
       held.user,
       "receipt",
-      `${String(total)} шт.${body.supplier_doc ? ` · накладная ${body.supplier_doc}` : ""}`,
+      `${[...received].map(([unit, amount]) => (unit ? `${formatQuantity(amount)}\u00a0${unit}` : formatQuantity(amount))).join(", ")}${body.supplier_doc ? ` · накладная ${body.supplier_doc}` : ""}`,
     );
     if (order.lines.every((l) => l.received >= l.quantity)) {
       order.status = "received";

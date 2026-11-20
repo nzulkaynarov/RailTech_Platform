@@ -119,3 +119,8 @@ export function clean(value: string | undefined | null): string | undefined {
   const trimmed = (value ?? "").trim();
   return trimmed === "" ? undefined : trimmed;
 }
+
+/** «10 компл.» — количество в единице строки заказа (СЦ-10); без единицы — число. */
+export function withUnit(amount: string, unit: string | null | undefined): string {
+  return unit ? `${amount} ${unit}` : amount;
+}

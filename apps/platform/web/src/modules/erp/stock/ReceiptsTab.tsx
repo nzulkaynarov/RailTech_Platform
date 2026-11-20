@@ -11,7 +11,7 @@ import { DataTable, type DataColumn } from "../../../shared/ui/DataTable/DataTab
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { QueryState } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
-import { useStateLabels } from "./api";
+import { useStateLabels, withUnit } from "./api";
 import { ReceiveModal } from "./OrderModals";
 
 /** Ширины колонок: заказ, поставщик, позиция (гибкая), осталось, ожидается, действие (UX-1c, S9) */
@@ -33,7 +33,7 @@ function Pending({
   onReceive: (line: StockPendingReceiptLine) => void;
 }) {
   const { t } = useTranslation("stock");
-  const { date } = useFormat();
+  const { date, qty } = useFormat();
   const { mobile } = useViewport();
   const action = (line: StockPendingReceiptLine) =>
     manage ? (
@@ -71,8 +71,8 @@ function Pending({
             <p className="pf-hint">
               {line.supplier} ·{" "}
               {t("receipts.left", {
-                left: line.quantity - line.received_quantity,
-                total: line.quantity,
+                left: qty(line.quantity - line.received_quantity),
+                total: withUnit(qty(line.quantity), line.unit),
               })}
             </p>
             <div className="pf-calc-card-foot">{action(line)}</div>
@@ -123,8 +123,8 @@ function Pending({
       cell: (line) => (
         <>
           {t("receipts.left", {
-            left: line.quantity - line.received_quantity,
-            total: line.quantity,
+            left: qty(line.quantity - line.received_quantity),
+            total: withUnit(qty(line.quantity), line.unit),
           })}
         </>
       ),
