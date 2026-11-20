@@ -321,6 +321,27 @@ def create_order(user, data: OrderInput) -> SupplierOrder:
     return order
 
 
+def _price_from_offers(order: SupplierOrder) -> None:
+    """Черновик на дефицит берёт цену партнёра своих строк, если у всех предложений одна валюта (как
+    `provision._create_draft`, СЦ-10): заказ без цены партнёру не уходит."""
+    lines = list(order.lines.select_related("supplier_offer"))
+    offers = [line.supplier_offer for line in lines if line.supplier_offer_id and line.unit_price is None]
+    currencies = {offer.currency_id for offer in offers}
+    if not offers or len(currencies) != 1 or None in currencies:
+        return
+    currency_id = next(iter(currencies))
+    if order.currency_id not in (None, currency_id):
+        return
+    for line in lines:
+        offer = line.supplier_offer
+        if line.unit_price is None and offer is not None and offer.base_price:
+            line.unit_price = offer.base_price
+            line.save(update_fields=["unit_price"])
+    if order.currency_id is None:
+        order.currency_id = currency_id
+        order.save(update_fields=["currency", "updated_at"])
+
+
 def _expect_by_lead_time(order: SupplierOrder) -> None:
     """Plan 0.6 (FR-15): a new order without a date expects goods after the longest partner lead time of its lines.
 
@@ -378,9 +399,12 @@ def create_from_deal(user, deal_id: int, supplier_id: int) -> SupplierOrder:
             )
     if not lines:
         raise StockError("NO_SHORTAGE", 409)
-    return create_order(
+    order = create_order(
         user, OrderInput(supplier_id=supplier.pk, lines=lines, note=f"Дефицит проекта {deal.number}".strip())
     )
+    # СЦ-10: цену ставит система из цены партнёра, а не сотрудник — поэтому после create_order (без проверки права цен).
+    _price_from_offers(order)
+    return order
 
 
 @transaction.atomic

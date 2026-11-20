@@ -465,6 +465,9 @@ def test_order_for_a_project_keeps_the_calc_unit_and_expects_the_partner_lead_ti
     order = SupplierOrder.objects.get(pk=response.json()["id"])
     assert [line.unit for line in order.lines.all()] == ["компл."]
     assert order.expected_date == timezone.localdate() + timedelta(days=30)
+    # СЦ-10: черновик на дефицит сразу с ценой партнёра и его валютой — без них заказ партнёру не уходит.
+    assert [line.unit_price for line in order.lines.all()] == [Decimal("900.00")]
+    assert order.currency.code == "UZS"
 
     dated = _create(world, [_line(world["rail"], 1)], expected_date=_tomorrow())
     assert dated.json()["expected_date"] == _tomorrow(), "a date the officer typed is kept"
@@ -511,6 +514,33 @@ def test_listing_filters(world):
     assert names({"overdue": "1"}) == []
     missing = api(world["reader"]).get(f"{STOCK}orders/999999/")
     assert missing.status_code == 404 and missing.json() == {"detail": "ORDER_NOT_FOUND"}
+
+
+def test_shortage_draft_with_mixed_currencies_keeps_prices_empty(world):
+    """СЦ-10: предложения в разных валютах — цену не угадываем, заказ ждёт цену от сотрудника."""
+    from catalog.models import SupplierOffer
+    from master_data.models import Currency
+
+    deal, _q, _items = make_deal(world, [(world["rail"], 2), (world["bolt"], 3)])
+    usd, _ = Currency.objects.get_or_create(code="USD", defaults={"name": "USD", "sort_order": 30})
+    for product, currency, price in ((world["rail"], "UZS", "900.00"), (world["bolt"], "USD", "2.50")):
+        SupplierOffer.objects.update_or_create(
+            product=product,
+            supplier=world["vendor"],
+            defaults={
+                "base_price": Decimal(price),
+                "currency": usd if currency == "USD" else Currency.objects.get(code="UZS"),
+                "order_lead_time_days": 5,
+                "is_active": True,
+            },
+        )
+    response = api(world["supply"]).post(
+        f"{STOCK}orders/from-deal/", {"deal_id": deal.pk, "supplier_id": world["vendor"].pk}, format="json"
+    )
+    assert response.status_code == 201, response.json()
+    order = SupplierOrder.objects.get(pk=response.json()["id"])
+    assert [line.unit_price for line in order.lines.all()] == [None, None]
+    assert order.currency_id is None
 
 
 # ── СЦ-10: единица строки заказа не меняется при приёмке и правке ─────────────────────────────────────────────────────
