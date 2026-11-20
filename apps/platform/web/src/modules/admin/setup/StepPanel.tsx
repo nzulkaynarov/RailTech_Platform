@@ -3,7 +3,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { InviteEmployeeForm } from "../../../features/invite-employee/InviteEmployeeForm";
-import { STEP_ORDER } from "../../../entities/setup/steps";
+import { VISIBLE_ORDER } from "../../../entities/setup/steps";
 import type { SetupStepKey, SetupStepState } from "../../../shared/api/generated/model";
 import { ErpPanel } from "../integrations/ErpPanel";
 import { MailPanel } from "../integrations/MailPanel";
@@ -42,7 +42,7 @@ export function StepPanel({
   useEffect(() => {
     heading.current?.focus();
   }, []);
-  const index = STEP_ORDER.indexOf(step) + 1;
+  const index = VISIBLE_ORDER.indexOf(step) + 1;
   let form;
   switch (step) {
     case "erp":
@@ -68,7 +68,7 @@ export function StepPanel({
       );
       break;
   }
-  const stepOf = t("admin.setup.stepOf", { index, total: STEP_ORDER.length });
+  const stepOf = t("admin.setup.stepOf", { index, total: VISIBLE_ORDER.length });
   const title = t(`admin.setup.steps.${step}.title`);
   return (
     <section className="pf-panel-stack" aria-labelledby={headingId}>

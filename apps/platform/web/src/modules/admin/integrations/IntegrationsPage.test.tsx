@@ -79,14 +79,12 @@ describe("Admin · Внешние интеграции: обзор", () => {
     expect(screen.queryByText("Только просмотр")).not.toBeInTheDocument();
   });
 
-  it("сервисы, которых ещё нет, видны в каталоге со словом «Скоро» и без кнопок", async () => {
+  it("пунктов «Скоро» нет: экран показывает только подключённое и то, что можно подключить (СЦ-3)", async () => {
     signIn("admin@demo.example");
     renderAt("/admin/integrations");
-    const catalog = await screen.findByRole("region", { name: "Следующие подключения" });
-    expect(within(catalog).getByText("Яндекс Трекер")).toBeVisible();
-    expect(within(catalog).getByText("Контакты (CardDAV)")).toBeVisible();
-    expect(within(catalog).getAllByText("Скоро").length).toBeGreaterThan(10);
-    expect(within(catalog).queryByRole("button")).toBeNull();
+    expect(await screen.findByRole("heading", { level: 1 })).toBeVisible();
+    expect(screen.queryByRole("region", { name: "Следующие подключения" })).toBeNull();
+    expect(screen.queryByText("Скоро")).toBeNull();
   });
 
   it("«Требует внимания»: сначала сбои, затем предупреждения; одна причина — одна строка с «с …», «Кто исправляет» и действием", async () => {

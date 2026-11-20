@@ -7,7 +7,7 @@ import { useNavigate, useSearchParams } from "react-router";
 import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { resetBannerHidden, useBannerHidden } from "../../../features/first-run/hidden";
-import { useSetupChecklist } from "../../../features/first-run/useSetupChecklist";
+import { useSetupProgress } from "../../../features/first-run/useSetupProgress";
 import { PanelPortal } from "../../../app/shell/PanelSlot";
 import { ERP_RECHECK } from "../../../entities/setup/recheck";
 import {
@@ -129,7 +129,8 @@ export function SetupWizardPage() {
   const editable = canEdit(me, "admin");
   const title = t("admin.setup.title");
   useDocumentTitle(title);
-  const checklist = useSetupChecklist(editable, { fresh: true });
+  const setup = useSetupProgress(editable, { fresh: true });
+  const checklist = setup.checklist;
   const bannerHidden = useBannerHidden(me.id);
   const stepParam = params.get("step");
   const step = editable && isStepKey(stepParam) ? stepParam : null;
@@ -185,13 +186,17 @@ export function SetupWizardPage() {
   // ERP сопряжена, но доступа к данным компании ещё нет: мастер сам перепроверяет несколько раз (W15-G-10).
   const waitingErp =
     editable && data?.company === null && data.company_blocker === "erp_unavailable";
+  // СЦ-3: после быстрых попыток мастер не замолкает, а проверяет реже — доступ ERP может прийти и через минуты.
   const [rechecks, setRechecks] = useState(0);
+  // Ожидание закончилось — следующее начнётся снова с быстрых попыток (сброс при отрисовке, а не в эффекте).
+  if (!waitingErp && rechecks !== 0) setRechecks(0);
   useEffect(() => {
-    if (!waitingErp || rechecks >= ERP_RECHECK.attempts) return;
+    if (!waitingErp) return;
+    const pause = rechecks < ERP_RECHECK.attempts ? ERP_RECHECK.everyMs : ERP_RECHECK.slowMs;
     const timer = window.setTimeout(() => {
       setRechecks((n) => n + 1);
       void refetch();
-    }, ERP_RECHECK.everyMs);
+    }, pause);
     return () => {
       window.clearTimeout(timer);
     };
@@ -228,7 +233,11 @@ export function SetupWizardPage() {
   } else {
     const data = checklist.data;
     const erpStep = data.steps.find((s) => s.key === "erp");
-    const otherSteps = data.steps.filter((s) => s.key !== "erp");
+    // Шестая карточка — свои строки и свой счётчик (СЦ-3): бот, почта, модели, первый сотрудник, права подписи.
+    const otherSteps = setup.steps.filter((s) =>
+      ["bot", "mail", "models", "first_employee", "signing"].includes(s.key),
+    );
+    const otherDone = otherSteps.filter((s) => s.state === "done").length;
     body = (
       <div className="pf-setup-stack">
         <StepCard
@@ -289,12 +298,12 @@ export function SetupWizardPage() {
           title={t("admin.setup.connectionsTitle")}
           status={
             <span className="pf-hint">
-              {t("admin.setup.progress", { done: data.done, total: data.total })}
+              {t("admin.setup.progress", { done: otherDone, total: otherSteps.length })}
             </span>
           }
         >
           <p className="pf-hint" style={{ margin: "0 0 4px" }}>
-            {data.steps.every((s) => s.state === "done")
+            {otherSteps.every((s) => s.state === "done")
               ? t("admin.setup.allDone")
               : t("admin.setup.connectionsLead")}
           </p>
@@ -316,7 +325,7 @@ export function SetupWizardPage() {
         title={title}
         subtitle={
           data
-            ? t("admin.setup.subtitleCount", { done: data.done, total: data.total })
+            ? t("admin.setup.subtitleCount", { done: setup.done, total: setup.total })
             : t("admin.setup.subtitle")
         }
       />

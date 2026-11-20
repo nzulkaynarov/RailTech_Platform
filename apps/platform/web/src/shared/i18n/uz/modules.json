@@ -452,7 +452,12 @@
       "bankTodo": "Hisob raqami va MFOsiz mijozga hisob chiqarib bo‘lmaydi. Ularni «Sozlamalar · Rekvizitlar va blanka»da kiriting.",
       "bankWaitCompany": "Avval kompaniyangizni yarating: rekvizitlar uning kartasida kiritiladi.",
       "bankUnknown": "Hali ma’lumot yo‘q — rekvizitlar holati server javob bergach ko‘rinadi.",
-      "bankOpen": "«Rekvizitlar va blanka»ni ochish"
+      "bankOpen": "«Rekvizitlar va blanka»ni ochish",
+      "signing": {
+        "title": "Imzo huquqi",
+        "text": "Kompaniya hujjatlarini kim imzolaşi mumkin",
+        "action": "Beriş"
+      }
     },
     "org": {
       "title": "Xodimlar",
