@@ -702,3 +702,66 @@ def test_partner_price_untouched_by_order_confirmation(partner_world):
     post(w["client_a"], f"orders/{order.pk}/confirm", {"expected_date": in_days(5)})
     offer.refresh_from_db()
     assert offer.base_price == Decimal("42.00")
+
+
+# ── СЦ-10: ответ на запрос из черновика заказа вписывает цены в черновик ─────────────────────────────────────────────
+
+
+def _rfq_from_draft(w, *, currency=None):
+    from supply.models import PriceRequestLine
+
+    order = make_order(w["a"], status=OrderStatus.DRAFT, currency=currency)
+    line = order.lines.get()
+    line.unit_price = None
+    line.save(update_fields=["unit_price"])
+    product = w["cards"]["b_only"]
+    rfq = make_rfq(w["a"])
+    rfq.supplier_order = order
+    rfq.save(update_fields=["supplier_order"])
+    rq_line = PriceRequestLine.objects.create(
+        request=rfq, order_line=line, product=product, name=line.name, quantity=line.quantity, unit=line.unit
+    )
+    return order, line, rq_line, rfq, product
+
+
+def test_answer_prices_the_draft_order_and_the_manual_product(partner_world):
+    w = partner_world
+    Currency.objects.get_or_create(code="UZS", defaults={"name": "UZS"})
+    order, line, rq_line, rfq, product = _rfq_from_draft(w)
+    body = {"answer_note": "Есть", "currency": "UZS", "lines": [{"id": rq_line.pk, "unit_price": "120.00"}]}
+
+    assert post(w["client_a"], f"price-requests/{rfq.pk}/respond", body).status_code == 200
+
+    line.refresh_from_db()
+    order.refresh_from_db()
+    assert line.unit_price == Decimal("120.00")
+    assert order.currency.code == "UZS"
+    assert order.log.filter(kind="edited", detail="Цены из ответа партнёра: 1 поз.").exists()
+    assert SupplierOffer.objects.get(product=product, supplier=w["a"]).base_price == Decimal("120.00")
+
+
+def test_answer_to_a_cancelled_draft_stays_in_the_request(partner_world):
+    w = partner_world
+    Currency.objects.get_or_create(code="UZS", defaults={"name": "UZS"})
+    order, line, rq_line, rfq, _product = _rfq_from_draft(w)
+    SupplierOrder.objects.filter(pk=order.pk).update(status=OrderStatus.CANCELLED)
+    body = {"answer_note": "Есть", "currency": "UZS", "lines": [{"id": rq_line.pk, "unit_price": "120.00"}]}
+
+    assert post(w["client_a"], f"price-requests/{rfq.pk}/respond", body).status_code == 200
+
+    line.refresh_from_db()
+    rq_line.refresh_from_db()
+    assert line.unit_price is None and rq_line.answer_price == Decimal("120.00")
+
+
+def test_answer_in_another_currency_does_not_price_the_draft(partner_world):
+    w = partner_world
+    usd, _ = Currency.objects.get_or_create(code="USD", defaults={"name": "USD"})
+    Currency.objects.get_or_create(code="UZS", defaults={"name": "UZS"})
+    order, line, rq_line, rfq, _product = _rfq_from_draft(w, currency=usd)
+    body = {"answer_note": "Есть", "currency": "UZS", "lines": [{"id": rq_line.pk, "unit_price": "120.00"}]}
+
+    assert post(w["client_a"], f"price-requests/{rfq.pk}/respond", body).status_code == 200
+
+    line.refresh_from_db()
+    assert line.unit_price is None

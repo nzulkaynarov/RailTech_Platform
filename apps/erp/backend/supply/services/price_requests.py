@@ -57,8 +57,6 @@ def create(
     note: str = "",
     to_email: str = "",
 ) -> PriceRequest:
-    from notifications.emails import send_templated_email
-
     require_supply(user)
     if not item_ids:
         raise StockError("LINES_REQUIRED", 400)
@@ -97,6 +95,15 @@ def create(
             )
             for item in items
         )
+    failed = _dispatch(user, request, supplier, recipient, reference)
+    _log_deal(deal, user, request, supplier.name, failed)
+    return request
+
+
+def _dispatch(user, request: PriceRequest, supplier, recipient: str, reference: str) -> bool:
+    """Письмо партнёру и колокольчик его кабинета; вернуть True, если письмо не ушло (статус FAILED записан)."""
+    from notifications.emails import send_templated_email
+
     context = {
         "supplier_name": supplier.name,
         "reference": reference,
@@ -137,7 +144,66 @@ def create(
             notice_sources.partner_rfq_sent(request)
         except Exception:
             logger.exception("Не удалось отправить уведомление о запросе цены %s", request.pk)
-    _log_deal(deal, user, request, supplier.name, failed)
+    return failed
+
+
+def create_from_order(
+    user, order_id: int, line_ids: Optional[list[int]] = None, *, note: str = "", to_email: str = ""
+) -> PriceRequest:
+    """«Запросить цену» из черновика заказа (СЦ-10): строки без цены уходят партнёру этого заказа; заказ остаётся
+    черновиком, а ответ партнёра из кабинета вписывает цены в его строки (`partner_orders._price_draft`)."""
+    from supply.models import OrderStatus
+    from supply.services import orders
+
+    require_supply(user)
+    order = orders._order_or_404(order_id, lock=True)
+    if order.status != OrderStatus.DRAFT:
+        raise StockError("ORDER_NOT_DRAFT", 409)
+    lines = list(order.lines.select_related("product", "deal"))
+    if line_ids:
+        by_id = {line.pk: line for line in lines}
+        if any(pk not in by_id for pk in line_ids):
+            raise StockError("LINE_NOT_FOUND", 404)
+        chosen = [by_id[pk] for pk in dict.fromkeys(line_ids)]
+    else:
+        chosen = [line for line in lines if line.unit_price is None]
+    if not chosen:
+        raise StockError("NOTHING_TO_PRICE", 409)
+    if len(chosen) > MAX_LINES:
+        raise StockError("TOO_MANY_LINES", 400)
+    recipient = (to_email or "").strip() or supplier_email(order.supplier)
+    if not recipient:
+        raise StockError("SUPPLIER_EMAIL_REQUIRED", 409)
+    deals = {line.deal_id for line in chosen if line.deal_id}
+    deal = chosen[0].deal if len(deals) == 1 and chosen[0].deal_id else None
+    reference = _summary(chosen[0].name, len(chosen) - 1)  # без нашего номера заказа (СЦ-10, #694)
+    with transaction.atomic():
+        request = PriceRequest.objects.create(
+            supplier=order.supplier,
+            deal=deal,
+            supplier_order=order,
+            requested_by=user if getattr(user, "pk", None) else None,
+            to_email=recipient,
+            subject=f"Запрос цены и срока поставки — {reference}",
+            note=(note or "").strip()[:1000],
+            status=PriceRequestStatus.SENT,
+        )
+        PriceRequestLine.objects.bulk_create(
+            PriceRequestLine(
+                request=request,
+                order_line=line,
+                product=line.product,
+                quote_item_id=line.quote_item_id,
+                name=line.name[:500],
+                article=(line.article or "")[:120],
+                quantity=line.quantity,
+                unit=line.unit,
+            )
+            for line in chosen
+        )
+    failed = _dispatch(user, request, order.supplier, recipient, reference)
+    if deal is not None:
+        _log_deal(deal, user, request, order.supplier.name, failed)
     return request
 
 
@@ -161,12 +227,15 @@ def _log_deal(deal, user, request: PriceRequest, supplier_name: str, failed: boo
 def _items_summary(items) -> str:
     """Что запрашиваем — для темы письма и списка в кабинете партнёра: первая позиция и сколько ещё."""
     first = items[0]
-    name = (
-        first.imported_raw_name or (first.product.name if first.product_id else "") or f"Позиция {first.position}"
-    ).strip()
+    name = first.imported_raw_name or (first.product.name if first.product_id else "") or f"Позиция {first.position}"
+    return _summary(name, len(items) - 1)
+
+
+def _summary(name: str, rest: int) -> str:
+    """«Рельс Р65 и ещё 2 позиции»: имя первой позиции (до 80 знаков) и сколько ещё, со склонением."""
+    name = name.strip()
     if len(name) > 80:
         name = name[:79].rstrip() + "…"
-    rest = len(items) - 1
     if rest <= 0:
         return name
     tail = rest % 100
@@ -201,6 +270,8 @@ def present(request: PriceRequest) -> dict:
         "supplier": {"id": request.supplier_id, "name": request.supplier.name},
         "deal_id": request.deal_id,
         "deal_number": request.deal.number if request.deal_id and request.deal.number else None,
+        "supplier_order_id": request.supplier_order_id,
+        "supplier_order_number": request.supplier_order.number if request.supplier_order_id else None,
         "requested_at": request.requested_at.isoformat(),
         "requested_by_name": person_name(request.requested_by) if request.requested_by_id else None,
         "requested_by": person_ref(request.requested_by) if request.requested_by_id else None,
@@ -229,7 +300,7 @@ def present(request: PriceRequest) -> dict:
 def list_requests(user, *, deal_id: Optional[int] = None, supplier_id: Optional[int] = None) -> list[dict]:
     require_staff(user)
     qs = PriceRequest.objects.select_related(
-        "supplier", "deal", "requested_by__crm_user_mapping", "answered_by__crm_user_mapping"
+        "supplier", "deal", "supplier_order", "requested_by__crm_user_mapping", "answered_by__crm_user_mapping"
     ).prefetch_related("lines")
     if deal_id:
         qs = qs.filter(deal_id=deal_id)

@@ -23,6 +23,7 @@ from supply.serializers import (
     OrderFromDealInSerializer,
     OrderListSerializer,
     OrderPatchInSerializer,
+    OrderPriceRequestInSerializer,
     OrderSendInSerializer,
     OverdueListSerializer,
     PriceRequestAnswerInSerializer,
@@ -247,6 +248,42 @@ class OrderSendView(RoleGatedViewMixin, APIView):
         try:
             order = orders.send_order(request.user, order_id, to_email=serializer.validated_data["to_email"])
             return Response(orders.present_detail(request.user, order))
+        except StockError as exc:
+            return fail(exc)
+
+
+class OrderPriceRequestView(RoleGatedViewMixin, APIView):
+    """POST /api/v1/stock/orders/<id>/price-request/ — «Запросить цену» из черновика заказа (СЦ-10)."""
+
+    permission_classes = [IsAuthenticated]
+    required_permissions = {"POST": "supply.manage"}
+
+    @extend_schema(
+        operation_id="stock_order_price_request",
+        summary="Запросить цену у партнёра по строкам черновика без цены",
+        description=(
+            "Строки без цены (или `line_ids`) уходят партнёру заказа письмом и в его кабинет; заказ остаётся "
+            "черновиком, ответ партнёра вписывает цены в его строки. Не черновик — `ORDER_NOT_DRAFT`, у всех строк "
+            "цена — `NOTHING_TO_PRICE`, нет адреса — `SUPPLIER_EMAIL_REQUIRED`."
+        ),
+        tags=TAGS,
+        request=OrderPriceRequestInSerializer,
+        responses={201: PriceRequestSerializer, **ERRORS},
+    )
+    def post(self, request, order_id: int):
+        serializer = OrderPriceRequestInSerializer(data=request.data or {})
+        if not serializer.is_valid():
+            return invalid(serializer)
+        data = serializer.validated_data
+        try:
+            created = price_requests.create_from_order(
+                request.user,
+                order_id,
+                data.get("line_ids"),
+                note=data["note"],
+                to_email=data["to_email"],
+            )
+            return Response(price_requests.present(created), status=status.HTTP_201_CREATED)
         except StockError as exc:
             return fail(exc)
 
