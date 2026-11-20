@@ -25,8 +25,9 @@ function cells(line: string): string[] {
 function asQuantity(value: string): number | null {
   const normalized = value.replace(/\s/g, "").replace(",", ".");
   if (!/^\d+(\.\d+)?$/.test(normalized)) return null;
-  const number = Math.ceil(Number(normalized));
-  return number >= 1 ? number : null;
+  // СЦ-10: количество как в таблице — до трёх знаков после запятой (ADR-0027 п. 9), без округления вверх.
+  const number = Math.round(Number(normalized) * 1000) / 1000;
+  return number > 0 ? number : null;
 }
 
 function headerColumns(row: string[]): Partial<Record<Column, number>> | null {
@@ -96,6 +97,8 @@ export function pastedRows(text: string): CalcProposalLine[] | null {
       name: name.slice(0, 500),
       quantity: asQuantity(pick(row, "quantity")) ?? 1,
       unit: pick(row, "unit").slice(0, 32),
+      // Код справочника узнаёт ERP по написанной единице при «Добавить строку» (СЦ-10).
+      unit_code: "",
       article: pick(row, "article").slice(0, 120),
       note: pick(row, "note").slice(0, 1000),
     });
