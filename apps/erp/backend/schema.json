@@ -58816,6 +58816,7 @@
                     "exchange_rate_usd_uzs",
                     "logo_url",
                     "platform_name",
+                    "support_email",
                     "updated_at"
                 ]
             },

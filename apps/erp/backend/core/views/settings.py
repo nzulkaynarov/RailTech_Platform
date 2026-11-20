@@ -55,6 +55,8 @@ class SystemSettingSerializer(drf_serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = [*SHARED_FIELDS, "updated_at"]
+        # Ответ всегда содержит адрес (схема: обязательное поле); в PATCH он, как и всё, необязателен (partial).
+        extra_kwargs = {"support_email": {"required": True}}
 
 
 class SystemSettingsView(RoleGatedViewMixin, APIView):
