@@ -5,7 +5,7 @@ import { BookOpen, FilePlus2, Inbox, Loader2, Lock, Paperclip, Plus, RotateCw, S
 import { toast } from '@/lib/toast';
 
 import { apiErrorKey } from '@/api/errors';
-import type { AttachmentRef, ClientRequest, RequestLineIn } from '@/api/portal';
+import { isPortalApiError, type AttachmentRef, type ClientRequest, type RequestLineIn } from '@/api/portal';
 import { useCatalog, useCreateRequest, useQuotes, useRequest, useRequests, useUploadFile } from '@/api/queries';
 import { ActionRequiredWidget } from '@/components/ActionRequiredWidget';
 import { OnboardingChecklist } from '@/components/onboarding/OnboardingChecklist';
@@ -428,13 +428,20 @@ function RequestForm() {
         : [blankLine()],
   );
   const [submitted, setSubmitted] = useState(false);
+  // СЦ-10: приложенные файлы живут в черновике вместе с текстом — ссылками на загрузку в ERP.
+  const [attachments, setAttachments] = useState<UploadedFileRef[]>(() => restored?.attachments ?? []);
 
   useEffect(() => {
     if (!draftKey || submitted) return;
-    saveRequestDraft(draftKey, { summary, lines: lines.map(({ text, quantity, unit }) => ({ text, quantity, unit })) });
-  }, [draftKey, submitted, summary, lines]);
+    saveRequestDraft(draftKey, {
+      summary,
+      lines: lines.map(({ text, quantity, unit }) => ({ text, quantity, unit })),
+      attachments: attachments.map(({ upload_id, name, size_bytes }) =>
+        size_bytes === undefined ? { upload_id, name } : { upload_id, name, size_bytes },
+      ),
+    });
+  }, [draftKey, submitted, summary, lines, attachments]);
 
-  const [attachments, setAttachments] = useState<UploadedFileRef[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isCatalogPickerOpen, setIsCatalogPickerOpen] = useState(false);
   const [errors, setErrors] = useState<{ summary?: boolean; quantity: number[] }>({ quantity: [] });
@@ -505,6 +512,10 @@ function RequestForm() {
         if (draftKey) clearRequestDraft(draftKey);
         toast.success(t('pages.requestNew.sent', { number: created.number }));
         navigate(`/requests/${created.id}`, { replace: true });
+      },
+      onError: (error) => {
+        // Файл из старого черновика уже не найден на сервере — убираем вложения, текст остаётся (СЦ-10).
+        if (isPortalApiError(error) && error.code === 'UPLOAD_NOT_FOUND') setAttachments([]);
       },
     });
   };
