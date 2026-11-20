@@ -17,6 +17,7 @@ import pytest
 
 from tests.backends import Backends
 from tests.conftest import ContractChecker, Web
+from tests.consts import ERP_URL
 from tests.eds_letters_support import (
     FILE_ID,
     LETTER_ID,
@@ -876,3 +877,99 @@ async def test_attachment_id_must_be_a_uuid(web: Web, eds: EdsFake) -> None:
 
     assert response.status_code == 422
     assert eds.calls == []
+
+
+# --- файлы заявки клиента (СЦ-10) -----------------------------------------------------------------
+
+SPEC = {"id": 7, "name": "spec.pdf", "uploaded_at": "2026-11-20T08:00:00Z"}
+REQUEST_FILE = f"{BASE}/letters/{LETTER_ID}/request-files/7"
+ERP_FILE = f"{ERP_URL}/api/v1/crm/deals/5/request-files/7/"
+
+
+async def test_card_shows_the_client_files_of_the_request(
+    web: Web, eds: EdsFake, check: ContractChecker
+) -> None:
+    eds.deal = deal(request_files=[SPEC])
+    await _director(web)
+
+    response = await web.client.get(CARD)
+
+    assert response.status_code == 200
+    check(response, "/eds/letters/{ref}", "get")
+    assert response.json()["request"]["files"] == [SPEC]
+
+
+@pytest.mark.parametrize("answer", [deal(), 403], ids=["old_erp", "erp_403"])
+async def test_card_without_erp_files_has_no_files_key(
+    web: Web, eds: EdsFake, answer: dict[str, Any] | int
+) -> None:
+    eds.deal = answer
+    await _director(web)
+
+    response = await web.client.get(CARD)
+
+    assert response.status_code == 200
+    assert "files" not in response.json()["request"]
+
+
+async def test_request_file_is_streamed_from_the_letter_deal(
+    web: Web, eds: EdsFake, be: Backends
+) -> None:
+    route = be.router.get(ERP_FILE).mock(
+        return_value=httpx.Response(
+            200,
+            content=b"%PDF-1.4 spec",
+            headers={"content-disposition": "attachment; filename*=utf-8''spec.pdf"},
+        )
+    )
+    await _director(web)
+
+    response = await web.client.get(REQUEST_FILE)
+
+    assert response.status_code == 200
+    assert route.call_count == 1
+    assert response.content == b"%PDF-1.4 spec"
+    assert response.headers["content-type"] == "application/octet-stream"
+    assert response.headers["content-disposition"] == "attachment; filename*=utf-8''spec.pdf"
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert "sandbox" in response.headers["content-security-policy"]
+
+
+async def test_request_file_of_a_letter_without_a_deal_is_404_without_erp(
+    web: Web, eds: EdsFake, be: Backends
+) -> None:
+    source = letter()
+    eds.letters[LETTER_ID] = {**source, "links": {**source["links"], "erp_deal_id": None}}
+    route = be.router.get(ERP_FILE).mock(return_value=httpx.Response(200, content=b"x"))
+    await _director(web)
+
+    response = await web.client.get(REQUEST_FILE)
+
+    assert response.status_code == 404
+    assert not route.called
+
+
+async def test_request_file_of_an_unseen_letter_is_404_without_erp(
+    web: Web, eds: EdsFake, be: Backends
+) -> None:
+    route = be.router.get(f"{ERP_URL}/api/v1/crm/deals/5/request-files/7/").mock(
+        return_value=httpx.Response(200, content=b"x")
+    )
+    await _director(web)
+
+    response = await web.client.get(
+        f"{BASE}/letters/40000000-0000-4000-8000-000000000009/request-files/7"
+    )
+
+    assert response.status_code == 404
+    assert not route.called
+
+
+async def test_request_file_refused_by_erp_is_404(web: Web, eds: EdsFake, be: Backends) -> None:
+    be.router.get(ERP_FILE).mock(return_value=httpx.Response(404, json={"detail": "Not found."}))
+    await _director(web)
+
+    response = await web.client.get(REQUEST_FILE)
+
+    assert response.status_code == 404
+    assert response.json()["code"] == "NOT_FOUND"

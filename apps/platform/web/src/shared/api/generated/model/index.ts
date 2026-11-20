@@ -923,6 +923,7 @@ export * from "./requestConflictResponse";
 export * from "./requestContactFormIn";
 export * from "./requestCreatedView";
 export * from "./requestCreatedViewTransfer";
+export * from "./requestFile";
 export * from "./requestFileFromMessageIn";
 export * from "./requestFormIn";
 export * from "./requestFormInCompany";

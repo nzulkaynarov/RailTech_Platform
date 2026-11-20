@@ -293,7 +293,7 @@ function present(calc: MockCalc, user: Me): CalcSheet {
       ...(cost ? { min_margin_pct: calc.minMargin } : {}),
       assignees: calc.assignees,
     },
-    request: { text: calc.requestText, lines: calc.requestLines },
+    request: { text: calc.requestText, lines: calc.requestLines, files: calc.requestFiles ?? [] },
     quote: calc.started
       ? {
           number: calc.quoteNumber,
@@ -477,6 +477,20 @@ export const erpCalcHandlers = [
     if ("error" in held) return held.error;
     const calc = find(read(), String(params["number"]));
     return calc ? HttpResponse.json<CalcSheet>(present(calc, held.user)) : notFound();
+  }),
+
+  http.get("*/api/v1/erp/calc/:number/request-files/:fileId", ({ params }) => {
+    const held = guard("erp.calc", "read");
+    if ("error" in held) return held.error;
+    const calc = find(read(), String(params["number"]));
+    const file = calc?.requestFiles?.find((f) => String(f.id) === String(params["fileId"]));
+    if (!file) return notFound();
+    return new HttpResponse("демо-файл заявки", {
+      headers: {
+        "content-type": "application/octet-stream",
+        "content-disposition": `attachment; filename*=UTF-8''${encodeURIComponent(file.name)}`,
+      },
+    });
   }),
 
   http.post("*/api/v1/erp/calc/:number/start", ({ params }) => {

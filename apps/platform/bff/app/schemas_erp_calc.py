@@ -18,6 +18,7 @@ from app.feeds.models import StepCode
 from app.feeds.numbers import deal_number, deal_step, deal_title
 from app.feeds.text import segment
 from app.schemas_item_ref import ItemRef, item_ref
+from app.schemas_request_files import RequestFile, parse_request_files
 
 CalcState = Literal["not_started", "in_progress", "returned", "at_director", "rejected", "approved"]
 VisaState = Literal["none", "waiting", "done"]
@@ -78,6 +79,7 @@ class CalcTask(BaseModel):
 class CalcRequestText(BaseModel):
     text: str
     lines: int
+    files: list[RequestFile] = []
 
 
 class CalcTerms(BaseModel):
@@ -432,7 +434,11 @@ def to_sheet(raw: dict[str, Any], fields: Collection[str], access: Mapping[str, 
         step=deal_step(deal),
         path=calc_path(number),
         task=task_model,
-        request=CalcRequestText(**raw["request"]),
+        request=CalcRequestText(
+            text=raw["request"]["text"],
+            lines=raw["request"]["lines"],
+            files=parse_request_files(raw["request"].get("files")) or [],
+        ),
         quote=None
         if not isinstance(quote, dict)
         else CalcQuote(

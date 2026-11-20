@@ -8004,6 +8004,14 @@ export const getGetQuoteApprovalResponseLetterRequestMock = (
     number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     title: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
     path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -8338,6 +8346,14 @@ export const getDecideQuoteApprovalResponseLetterRequestMock = (
     number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     title: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
     path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -8675,6 +8691,14 @@ export const getSendQuoteByChannelResponseLetterRequestMock = (
     number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     title: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
     path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -9009,6 +9033,14 @@ export const getRecordQuoteClientDecisionResponseLetterRequestMock = (
     number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     title: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
     path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -14997,6 +15029,14 @@ export const getRegisterLetterResponseLetterRequestMock = (
     number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     title: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
     path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -15797,6 +15837,14 @@ export const getGetLetterResponseLetterRequestMock = (
     number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     title: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
     path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -16194,6 +16242,14 @@ export const getResolveLetterResponseLetterRequestMock = (
     number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     title: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
     path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -16597,6 +16653,14 @@ export const getReturnLetterResponseLetterRequestMock = (
     number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     title: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
     path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -17000,6 +17064,14 @@ export const getRejectLetterResponseLetterRequestMock = (
     number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     title: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
     path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -17397,6 +17469,9 @@ export const getListResolutionAssigneesResponseMock = (
 export const getDownloadLetterFileResponseMock = (): Blob =>
   new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
 
+export const getDownloadLetterRequestFileResponseMock = (): Blob =>
+  new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
+
 export const getMarkLetterDuplicateResponsePersonRefMock = (
   overrideResponse: Partial<PersonRef> = {},
 ): PersonRef => ({
@@ -17427,6 +17502,14 @@ export const getMarkLetterDuplicateResponseLetterRequestMock = (
     number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     title: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
     path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -17848,6 +17931,14 @@ export const getSaveResolutionDraftResponseLetterRequestMock = (
     number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     title: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
     path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -18269,6 +18360,14 @@ export const getResolveOfficeLetterResponseLetterRequestMock = (
     number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     title: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
     path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -18690,6 +18789,14 @@ export const getAcknowledgeLetterResponseLetterRequestMock = (
     number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     title: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
     path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -19108,6 +19215,14 @@ export const getAddCoExecutorResponseLetterRequestMock = (
     number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     title: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
     path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -19511,6 +19626,14 @@ export const getCloseLetterWithoutReplyResponseLetterRequestMock = (
     number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     title: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
     path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -19938,6 +20061,14 @@ export const getReopenLetterResponseLetterRequestMock = (
     number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     title: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
     path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -20341,6 +20472,14 @@ export const getReturnInstructionToAuthorResponseLetterRequestMock = (
     number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     title: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
     path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -20768,6 +20907,14 @@ export const getCompleteInstructionResponseLetterRequestMock = (
     number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     title: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
     path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -21189,6 +21336,14 @@ export const getRequestInstructionExtensionResponseLetterRequestMock = (
     number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     title: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
     path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -21616,6 +21771,14 @@ export const getDecideInstructionExtensionResponseLetterRequestMock = (
     number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     title: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
     path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -23751,6 +23914,14 @@ export const getGetCalcSheetResponseMock = (
   request: {
     text: faker.string.alpha({ length: { min: 10, max: 20 } }),
     lines: faker.number.int({ min: 0 }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
   },
   quote: faker.helpers.arrayElement([{ ...getGetCalcSheetResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -23870,6 +24041,9 @@ export const getGetCalcSheetResponseMock = (
   },
   ...overrideResponse,
 });
+
+export const getDownloadCalcRequestFileResponseMock = (): Blob =>
+  new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
 
 export const getStartCalcResponseCalcQuoteMock = (
   overrideResponse: Partial<CalcQuote> = {},
@@ -24002,6 +24176,14 @@ export const getStartCalcResponseMock = (
   request: {
     text: faker.string.alpha({ length: { min: 10, max: 20 } }),
     lines: faker.number.int({ min: 0 }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
   },
   quote: faker.helpers.arrayElement([{ ...getStartCalcResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -24253,6 +24435,14 @@ export const getAddCalcLinesResponseMock = (
   request: {
     text: faker.string.alpha({ length: { min: 10, max: 20 } }),
     lines: faker.number.int({ min: 0 }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
   },
   quote: faker.helpers.arrayElement([{ ...getAddCalcLinesResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -24504,6 +24694,14 @@ export const getUpdateCalcLineResponseMock = (
   request: {
     text: faker.string.alpha({ length: { min: 10, max: 20 } }),
     lines: faker.number.int({ min: 0 }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
   },
   quote: faker.helpers.arrayElement([{ ...getUpdateCalcLineResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -24758,6 +24956,14 @@ export const getDeleteCalcLineResponseMock = (
   request: {
     text: faker.string.alpha({ length: { min: 10, max: 20 } }),
     lines: faker.number.int({ min: 0 }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
   },
   quote: faker.helpers.arrayElement([{ ...getDeleteCalcLineResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -25012,6 +25218,14 @@ export const getSignCalcLineResponseMock = (
   request: {
     text: faker.string.alpha({ length: { min: 10, max: 20 } }),
     lines: faker.number.int({ min: 0 }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
   },
   quote: faker.helpers.arrayElement([{ ...getSignCalcLineResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -25263,6 +25477,14 @@ export const getUpdateCalcTermsResponseMock = (
   request: {
     text: faker.string.alpha({ length: { min: 10, max: 20 } }),
     lines: faker.number.int({ min: 0 }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
   },
   quote: faker.helpers.arrayElement([{ ...getUpdateCalcTermsResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -25517,6 +25739,14 @@ export const getMarkCalcReadyResponseMock = (
   request: {
     text: faker.string.alpha({ length: { min: 10, max: 20 } }),
     lines: faker.number.int({ min: 0 }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
   },
   quote: faker.helpers.arrayElement([{ ...getMarkCalcReadyResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -25768,6 +25998,14 @@ export const getNewCalcQuoteVersionResponseMock = (
   request: {
     text: faker.string.alpha({ length: { min: 10, max: 20 } }),
     lines: faker.number.int({ min: 0 }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
   },
   quote: faker.helpers.arrayElement([{ ...getNewCalcQuoteVersionResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -26025,6 +26263,14 @@ export const getLoseCalcRequestResponseMock = (
   request: {
     text: faker.string.alpha({ length: { min: 10, max: 20 } }),
     lines: faker.number.int({ min: 0 }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
   },
   quote: faker.helpers.arrayElement([{ ...getLoseCalcRequestResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -26312,6 +26558,14 @@ export const getCopyCalcLinesResponseMock = (
     request: {
       text: faker.string.alpha({ length: { min: 10, max: 20 } }),
       lines: faker.number.int({ min: 0 }),
+      files: faker.helpers.arrayElement([
+        Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+          id: faker.number.int({ min: 1 }),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+        })),
+        undefined,
+      ]),
     },
     quote: faker.helpers.arrayElement([{ ...getCopyCalcLinesResponseCalcQuoteMock() }, null]),
     lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
@@ -26918,6 +27172,14 @@ export const getReserveCalcLineResponseMock = (
   request: {
     text: faker.string.alpha({ length: { min: 10, max: 20 } }),
     lines: faker.number.int({ min: 0 }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
   },
   quote: faker.helpers.arrayElement([{ ...getReserveCalcLineResponseCalcQuoteMock() }, null]),
   lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -27172,6 +27434,14 @@ export const getReleaseCalcLineReservationResponseMock = (
   request: {
     text: faker.string.alpha({ length: { min: 10, max: 20 } }),
     lines: faker.number.int({ min: 0 }),
+    files: faker.helpers.arrayElement([
+      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+        id: faker.number.int({ min: 1 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      })),
+      undefined,
+    ]),
   },
   quote: faker.helpers.arrayElement([
     { ...getReleaseCalcLineReservationResponseCalcQuoteMock() },
@@ -41879,6 +42149,29 @@ export const getDownloadLetterFileMockHandler = (
   );
 };
 
+export const getDownloadLetterRequestFileMockHandler = (
+  overrideResponse?:
+    Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/letters/:id/request-files/:fileId",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      const binaryBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDownloadLetterRequestFileResponseMock();
+      return new HttpResponse(binaryBody, {
+        status: 200,
+        headers: { "Content-Type": "application/octet-stream" },
+      });
+    },
+    options,
+  );
+};
+
 export const getMarkLetterDuplicateMockHandler = (
   overrideResponse?:
     | LetterCard
@@ -42956,6 +43249,29 @@ export const getGetCalcSheetMockHandler = (
           : getGetCalcSheetResponseMock(),
         { status: 200 },
       );
+    },
+    options,
+  );
+};
+
+export const getDownloadCalcRequestFileMockHandler = (
+  overrideResponse?:
+    Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/calc/:number/request-files/:fileId",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      const binaryBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDownloadCalcRequestFileResponseMock();
+      return new HttpResponse(binaryBody, {
+        status: 200,
+        headers: { "Content-Type": "application/octet-stream" },
+      });
     },
     options,
   );
@@ -46050,6 +46366,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getRejectLetterMockHandler(),
   getListResolutionAssigneesMockHandler(),
   getDownloadLetterFileMockHandler(),
+  getDownloadLetterRequestFileMockHandler(),
   getMarkLetterDuplicateMockHandler(),
   getSaveResolutionDraftMockHandler(),
   getResolveOfficeLetterMockHandler(),
@@ -46097,6 +46414,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getSearchCalcCatalogMockHandler(),
   getGetCalcParseMockHandler(),
   getGetCalcSheetMockHandler(),
+  getDownloadCalcRequestFileMockHandler(),
   getStartCalcMockHandler(),
   getAddCalcLinesMockHandler(),
   getUpdateCalcLineMockHandler(),

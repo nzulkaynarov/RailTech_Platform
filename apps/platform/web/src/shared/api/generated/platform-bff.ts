@@ -37753,6 +37753,162 @@ export function useDownloadLetterFile<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export const getDownloadLetterRequestFileUrl = (id: string, fileId: number) => {
+  return `/api/v1/eds/letters/${id}/request-files/${fileId}`;
+};
+
+/**
+ * Файл, который клиент приложил к заявке в кабинете (ERP, исходник заявки сделки по `erp_deal_id` письма). Доступ к письму решает EDS (как у карточки), к файлу — ERP по правам сотрудника на сделку. Письмо без заявки, нет файла или он не виден — 404 `NOT_FOUND`. Файл отдаётся как вложение (`Content-Disposition: attachment`, `X-Content-Type-Options: nosniff`, `Content-Security-Policy: sandbox`).
+ * @summary EDS · Скачать файл заявки клиента из карточки письма (СЦ-10)
+ */
+export const downloadLetterRequestFile = async (
+  id: string,
+  fileId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<Blob> => {
+  return http<Blob>(getDownloadLetterRequestFileUrl(id, fileId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getDownloadLetterRequestFileQueryKey = (id: string, fileId: number) => {
+  return [`/api/v1/eds/letters/${id}/request-files/${fileId}`] as const;
+};
+
+export const getDownloadLetterRequestFileQueryOptions = <
+  TData = Awaited<ReturnType<typeof downloadLetterRequestFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  fileId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadLetterRequestFile>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getDownloadLetterRequestFileQueryKey(id, fileId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadLetterRequestFile>>> = ({
+    signal,
+  }) => downloadLetterRequestFile(id, fileId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined && fileId !== null && fileId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof downloadLetterRequestFile>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type DownloadLetterRequestFileQueryResult = NonNullable<
+  Awaited<ReturnType<typeof downloadLetterRequestFile>>
+>;
+export type DownloadLetterRequestFileQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useDownloadLetterRequestFile<
+  TData = Awaited<ReturnType<typeof downloadLetterRequestFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  fileId: number,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadLetterRequestFile>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadLetterRequestFile>>,
+          TError,
+          Awaited<ReturnType<typeof downloadLetterRequestFile>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadLetterRequestFile<
+  TData = Awaited<ReturnType<typeof downloadLetterRequestFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  fileId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadLetterRequestFile>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadLetterRequestFile>>,
+          TError,
+          Awaited<ReturnType<typeof downloadLetterRequestFile>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadLetterRequestFile<
+  TData = Awaited<ReturnType<typeof downloadLetterRequestFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  fileId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadLetterRequestFile>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Скачать файл заявки клиента из карточки письма (СЦ-10)
+ */
+
+export function useDownloadLetterRequestFile<
+  TData = Awaited<ReturnType<typeof downloadLetterRequestFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  fileId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadLetterRequestFile>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getDownloadLetterRequestFileQueryOptions(id, fileId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export const getMarkLetterDuplicateUrl = (id: string) => {
   return `/api/v1/eds/letters/${id}/duplicate`;
 };
@@ -43965,6 +44121,162 @@ export function useGetCalcSheet<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getGetCalcSheetQueryOptions(number, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getDownloadCalcRequestFileUrl = (number: string, fileId: number) => {
+  return `/api/v1/erp/calc/${number}/request-files/${fileId}`;
+};
+
+/**
+ * ERP `GET /crm/deals/{deal_id}/request-files/{file_id}/` потоком: исходник заявки под именем, с которым его приложил клиент. Раздел `erp.calc` — чтение. Номера нет среди заявок с заданием или нет такого файла — 404 `NOT_FOUND`. Файл отдаётся как вложение (`Content-Disposition: attachment`, `nosniff`, `sandbox`).
+ * @summary Расчёт · Скачать файл заявки клиента (СЦ-10)
+ */
+export const downloadCalcRequestFile = async (
+  number: string,
+  fileId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<Blob> => {
+  return http<Blob>(getDownloadCalcRequestFileUrl(number, fileId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getDownloadCalcRequestFileQueryKey = (number: string, fileId: number) => {
+  return [`/api/v1/erp/calc/${number}/request-files/${fileId}`] as const;
+};
+
+export const getDownloadCalcRequestFileQueryOptions = <
+  TData = Awaited<ReturnType<typeof downloadCalcRequestFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  fileId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadCalcRequestFile>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getDownloadCalcRequestFileQueryKey(number, fileId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadCalcRequestFile>>> = ({
+    signal,
+  }) => downloadCalcRequestFile(number, fileId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: number !== null && number !== undefined && fileId !== null && fileId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof downloadCalcRequestFile>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type DownloadCalcRequestFileQueryResult = NonNullable<
+  Awaited<ReturnType<typeof downloadCalcRequestFile>>
+>;
+export type DownloadCalcRequestFileQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useDownloadCalcRequestFile<
+  TData = Awaited<ReturnType<typeof downloadCalcRequestFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  fileId: number,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadCalcRequestFile>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadCalcRequestFile>>,
+          TError,
+          Awaited<ReturnType<typeof downloadCalcRequestFile>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadCalcRequestFile<
+  TData = Awaited<ReturnType<typeof downloadCalcRequestFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  fileId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadCalcRequestFile>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadCalcRequestFile>>,
+          TError,
+          Awaited<ReturnType<typeof downloadCalcRequestFile>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadCalcRequestFile<
+  TData = Awaited<ReturnType<typeof downloadCalcRequestFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  fileId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadCalcRequestFile>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Расчёт · Скачать файл заявки клиента (СЦ-10)
+ */
+
+export function useDownloadCalcRequestFile<
+  TData = Awaited<ReturnType<typeof downloadCalcRequestFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  fileId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadCalcRequestFile>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getDownloadCalcRequestFileQueryOptions(number, fileId, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

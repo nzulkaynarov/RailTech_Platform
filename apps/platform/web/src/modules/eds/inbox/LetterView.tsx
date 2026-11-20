@@ -26,7 +26,7 @@ import { ReplyCard } from "../tasks/ReplyBlock";
 import { InstructionsCard, OfficeDecision } from "./Instructions";
 import { ClosedBanner } from "../tasks/LetterOutcomes";
 import { DuplicateBanner, MarkDuplicateAction } from "./MarkDuplicate";
-import { Attachments } from "./Parts";
+import { Attachments, RequestAttachments } from "./Parts";
 import { ResolutionSlot } from "./ResolutionPanel";
 
 function Decision({ letter }: { letter: LetterCard }) {
@@ -303,11 +303,17 @@ function Content({
             <p className="pf-letters-summary">{letter.summary}</p>
           </Card>
           <Card size="small" title={<h2 className="pf-letters-title">{t("card.files")}</h2>}>
-            {letter.files.length > 0 ? (
-              <Attachments files={letter.files} />
-            ) : (
+            {letter.files.length > 0 ? <Attachments files={letter.files} /> : null}
+            {letter.request?.files?.length ? (
+              <RequestAttachments
+                letterId={letter.id}
+                number={letter.request.number}
+                files={letter.request.files}
+              />
+            ) : null}
+            {letter.files.length === 0 && !letter.request?.files?.length ? (
               <p className="pf-hint">{t("card.noFiles")}</p>
-            )}
+            ) : null}
           </Card>
           <Decision letter={letter} />
           <OfficeDecision letter={letter} />

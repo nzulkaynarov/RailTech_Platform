@@ -76,7 +76,9 @@
     "request": "Ariza matni",
     "requestEmpty": "Ariza matni yo‘q.",
     "requestPrice": "Hamkordan narx so‘rash",
-    "rejectedComment": "Direktor TTni rad etdi: «{{comment}}». Hisob-kitob yopildi."
+    "rejectedComment": "Direktor TTni rad etdi: «{{comment}}». Hisob-kitob yopildi.",
+    "requestFiles": "Ariza fayllari",
+    "downloadFile": "{{name}} faylini yuklab olish"
   },
   "lines": {
     "title": "Hisob-kitob qatorlari",
@@ -259,7 +261,8 @@
     "empty": {
       "title": "Ariza tanlanmagan",
       "text": "Jadvaldagi qatorni tanlang — topshiriq va vizalar shu yerda ochiladi."
-    }
+    },
+    "requestFiles": "Ariza fayllari"
   },
   "errors": {
     "visas_missing": "Barcha qatorlar tasdiqlanmagan.",
