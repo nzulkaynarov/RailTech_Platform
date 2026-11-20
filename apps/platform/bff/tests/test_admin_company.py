@@ -1810,6 +1810,7 @@ async def test_platform_settings_get_and_patch(
                 "vat_rate": "12.00",
                 "exchange_rate_usd_uzs": "12650.5000",
                 "platform_name": "RailTech",
+                "support_email": "support@example.com",
                 "maintenance_mode": False,
                 "updated_at": NOW,
             },
@@ -1817,7 +1818,13 @@ async def test_platform_settings_get_and_patch(
     )
     patch = erp.patch(f"{API}/system-settings/").mock(
         return_value=httpx.Response(
-            200, json={"vat_rate": "15.00", "exchange_rate_usd_uzs": None, "updated_at": NOW}
+            200,
+            json={
+                "vat_rate": "15.00",
+                "exchange_rate_usd_uzs": None,
+                "support_email": "help@rt.uz",
+                "updated_at": NOW,
+            },
         )
     )
 
@@ -1828,17 +1835,26 @@ async def test_platform_settings_get_and_patch(
     bad = await web.send(
         "PATCH", "/api/v1/admin/company/platform-settings", json={"maintenance_mode": True}
     )
+    support = await web.send(
+        "PATCH", "/api/v1/admin/company/platform-settings", json={"support_email": "help@rt.uz"}
+    )
+    not_email = await web.send(
+        "PATCH", "/api/v1/admin/company/platform-settings", json={"support_email": "help"}
+    )
 
     check(got, "/admin/company/platform-settings", "get")
     assert got.json() == {
         "vat_rate": "12.00",
         "exchange_rate_usd_uzs": "12650.5000",
         "updated_at": NOW,
+        "support_email": "",  # заглушка — не адрес (СЦ-3)
     }
     check(changed, "/admin/company/platform-settings", "patch")
     assert changed.json()["exchange_rate_usd_uzs"] is None
-    assert sent(patch) == {"vat_rate": "15"}
+    assert sent(patch) == {"support_email": "help@rt.uz"}
+    assert support.json()["support_email"] == "help@rt.uz"
     assert bad.status_code == 422
+    assert not_email.status_code == 422
 
 
 async def test_platform_settings_erp_forbids_non_superuser(

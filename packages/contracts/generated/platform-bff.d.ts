@@ -12347,6 +12347,8 @@ export interface components {
     PlatformSettings: {
       /** @description Ставка НДС платформы, % */
       vat_rate: components["schemas"]["DecimalString"];
+      /** @description Адрес поддержки в письмах клиентам (СЦ-3); пусто — не задан (заглушка `…@example.com/.org` тоже считается незаданной: в письмах её нет) */
+      support_email: string;
       /** @description Курс USD→UZS на сегодня (только чтение; ввод вручную и журнал — `/admin/company/fx-rate`) */
       exchange_rate_usd_uzs: components["schemas"]["DecimalString"] | null;
       /** Format: date-time */
@@ -12355,6 +12357,11 @@ export interface components {
     PlatformSettingsUpdate: {
       /** @description Ставка НДС платформы, % */
       vat_rate?: components["schemas"]["DecimalString"];
+      /**
+       * Format: email
+       * @description Адрес поддержки в письмах клиентам (СЦ-3)
+       */
+      support_email?: string;
     };
     /** @description Курс 1 USD в сумах на дату. */
     FxRate: {

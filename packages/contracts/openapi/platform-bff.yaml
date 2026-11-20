@@ -21873,10 +21873,16 @@ components:
         - vat_rate
         - exchange_rate_usd_uzs
         - updated_at
+        - support_email
       properties:
         vat_rate:
           $ref: '#/components/schemas/DecimalString'
           description: Ставка НДС платформы, %
+        support_email:
+          type: string
+          description: >-
+            Адрес поддержки в письмах клиентам (СЦ-3); пусто — не задан (заглушка `…@example.com/.org` тоже считается
+            незаданной: в письмах её нет)
         exchange_rate_usd_uzs:
           oneOf:
             - $ref: '#/components/schemas/DecimalString'
@@ -21893,6 +21899,11 @@ components:
         vat_rate:
           $ref: '#/components/schemas/DecimalString'
           description: Ставка НДС платформы, %
+        support_email:
+          type: string
+          format: email
+          maxLength: 254
+          description: Адрес поддержки в письмах клиентам (СЦ-3)
     FxRate:
       type: object
       additionalProperties: false

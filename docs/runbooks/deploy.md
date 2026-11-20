@@ -74,14 +74,14 @@ Docker публикует порты в обход `ufw`: compose поэтому
 ```bash
 infra/deploy/make-env-prod.sh init            # создаёт /opt/rt/.env.prod, секреты — случайные
 nano /opt/rt/.env.prod                         # впишите вручную: APP_INTERNAL_IP, DB_INTERNAL_IP, ACME_EMAIL,
-                                               # домены, TELEGRAM_*, ANTHROPIC_API_KEY/GEMINI_API_KEY, SMTP_*, BACKUP_EXT_*, SUPPORT_EMAIL
+                                               # домены, TELEGRAM_*, ANTHROPIC_API_KEY/GEMINI_API_KEY, SMTP_*, BACKUP_EXT_*
 (umask 077; infra/deploy/make-env-prod.sh extract-db > /tmp/env.db)    # часть для VPS 2 (файл с секретами — только для владельца)
 scp /tmp/env.db deploy@<VPS 2>:/opt/rt-db/.env.db && shred -u /tmp/env.db
 infra/deploy/make-env-prod.sh drop-db-only    # убрать с VPS 1 то, что нужно только VPS 2 (суперпользователь, ключи бэкапа)
 ```
 
-`SUPPORT_EMAIL` — адрес поддержки, который клиенты видят в письмах (СЦ-3): пустой или заглушка `…@example.com`/`.org` останавливает
-`deploy.sh` до pull образов; откат (`rollback.sh`) его не проверяет.
+`SUPPORT_EMAIL` — запасной адрес поддержки в письмах клиентам (СЦ-3); основной задаётся в Платформе: Настройки · Компания ·
+Налоги и валюты. Пустой или заглушка `…@example.com`/`.org` — предупреждение в журнале `deploy.sh`, выкладка идёт дальше.
 
 `init` даёт обоим Redis разные случайные пароли (`REDIS_BROKER_PASSWORD`, `REDIS_CACHE_PASSWORD`). В `.env.prod`, созданном до S0-2, старая `REDIS_PASSWORD` больше
 не читается: повторный `init` допишет две новые переменные (потом `drop-db-only`, как ниже), строку `REDIS_PASSWORD` можно удалить.

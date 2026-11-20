@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { App, Form, InputNumber } from "antd";
+import { App, Form, Input, InputNumber } from "antd";
 import { useTranslation } from "react-i18next";
 
 import type { PlatformSettings } from "../../../../shared/api/generated/model";
@@ -18,9 +18,10 @@ import { unitOf } from "../../../../shared/lib/unit";
 
 interface Values {
   vat_rate: string;
+  support_email: string;
 }
 
-/** Платформенные настройки ERP: ставка НДС (`system-settings`) и курс USD→UZS с ручным вводом на дату (`FxRateSection`). */
+/** Платформенные настройки ERP: ставка НДС и адрес поддержки в письмах клиентам (`system-settings`, СЦ-3) и курс USD→UZS с ручным вводом на дату (`FxRateSection`). */
 export function PlatformTab() {
   const { t } = useTranslation("company");
   const query = useGetPlatformSettings();
@@ -43,8 +44,13 @@ function PlatformForm({ settings }: { settings: PlatformSettings }) {
   const { date } = useFormat();
   const queryClient = useQueryClient();
   const [form] = Form.useForm<Values>();
-  const watched = Form.useWatch("vat_rate", form) as string | undefined;
-  const changed = watched !== undefined && watched !== settings.vat_rate;
+  const watched = Form.useWatch([], form) as Partial<Values> | undefined;
+  // «12» и «12.00» — одна ставка: сравниваем числа, иначе сохранение адреса отправит и ставку
+  const vatChanged =
+    watched?.vat_rate !== undefined && Number(watched.vat_rate) !== Number(settings.vat_rate);
+  const supportChanged =
+    watched?.support_email !== undefined && watched.support_email.trim() !== settings.support_email;
+  const changed = vatChanged || supportChanged;
   const update = useUpdatePlatformSettings({
     mutation: {
       onSuccess: (next) => {
@@ -57,18 +63,27 @@ function PlatformForm({ settings }: { settings: PlatformSettings }) {
     <Form<Values>
       form={form}
       layout="vertical"
-      initialValues={{ vat_rate: settings.vat_rate }}
+      initialValues={{ vat_rate: settings.vat_rate, support_email: settings.support_email }}
 
       onFinish={(values) => {
         update.mutate(
-          { data: { vat_rate: values.vat_rate } },
+          {
+            data: {
+              ...(vatChanged ? { vat_rate: values.vat_rate } : {}),
+              ...(supportChanged ? { support_email: values.support_email.trim() } : {}),
+            },
+          },
           {
             onError: (error) => {
-              form.setFields(
-                errorFields(error)
-                  .filter((name) => name === "vat_rate")
-                  .map(() => ({ name: "vat_rate" as const, errors: [t("platform.invalidVat")] })),
-              );
+              const failed = errorFields(error);
+              form.setFields([
+                ...(failed.includes("vat_rate")
+                  ? [{ name: "vat_rate" as const, errors: [t("platform.invalidVat")] }]
+                  : []),
+                ...(failed.includes("support_email")
+                  ? [{ name: "support_email" as const, errors: [t("platform.invalidSupport")] }]
+                  : []),
+              ]);
             },
           },
         );
@@ -89,6 +104,17 @@ function PlatformForm({ settings }: { settings: PlatformSettings }) {
             step="0.5"
             style={{ width: "100%" }}
           />
+        </Form.Item>
+        <Form.Item
+          name="support_email"
+          label={t("platform.support")}
+          extra={t("platform.supportHint")}
+          rules={[
+            { required: Boolean(settings.support_email), message: t("required") },
+            { type: "email", message: t("platform.invalidSupport") },
+          ]}
+        >
+          <Input type="email" autoComplete="off" placeholder="support@company.uz" />
         </Form.Item>
       </div>
       <DefinitionList

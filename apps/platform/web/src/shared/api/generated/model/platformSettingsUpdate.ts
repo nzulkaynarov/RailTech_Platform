@@ -7,4 +7,9 @@ import type { DecimalString } from "./decimalString";
 export interface PlatformSettingsUpdate {
   /** Ставка НДС платформы, % */
   vat_rate?: DecimalString;
+  /**
+   * Адрес поддержки в письмах клиентам (СЦ-3)
+   * @maxLength 254
+   */
+  support_email?: string;
 }

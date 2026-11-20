@@ -18,7 +18,8 @@ from core.permissions import IsPlatformAdmin, RoleGatedViewMixin
 # ──────────────────────────────────────────────────────────────────────────
 
 #: Общие для ансамбля поля (FIX-42, F-4): ведутся в CRM, в ERP — только просмотр. Запись — 400 с этим кодом.
-SHARED_FIELDS = ("domain", "logo_url", "platform_name", "support_email")
+# Адрес поддержки — не общий: его читают только письма ERP, правит администратор Платформы (СЦ-3).
+SHARED_FIELDS = ("domain", "logo_url", "platform_name")
 SHARED_FIELD_READ_ONLY = "SHARED_SETTING_READ_ONLY"
 
 
@@ -54,12 +55,14 @@ class SystemSettingSerializer(drf_serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = [*SHARED_FIELDS, "updated_at"]
+        # Ответ всегда содержит адрес (схема: обязательное поле); в PATCH он, как и всё, необязателен (partial).
+        extra_kwargs = {"support_email": {"required": True}}
 
 
 class SystemSettingsView(RoleGatedViewMixin, APIView):
     """
     GET  /api/v1/system-settings/ — read current settings (any authenticated user)
-    PATCH /api/v1/system-settings/ — update settings: `vat_rate` — право `settings.edit` (раздел Платформы «Компания»,
+    PATCH /api/v1/system-settings/ — update settings: `vat_rate` и `support_email` — право `settings.edit` (раздел Платформы «Компания»,
     W13-A3) или администратор; остальные поля (`maintenance_mode`, `is_two_factor_required`) — только администратор
     (`is_superuser`): они закрывают вход всем.
     """
@@ -70,7 +73,7 @@ class SystemSettingsView(RoleGatedViewMixin, APIView):
     }
 
     #: Поля, которые вправе менять не администратор, а держатель `settings.edit`.
-    COMPANY_EDITABLE = frozenset({"vat_rate"})
+    COMPANY_EDITABLE = frozenset({"vat_rate", "support_email"})
 
     permission_classes = [IsAuthenticated]
 
@@ -90,9 +93,10 @@ class SystemSettingsView(RoleGatedViewMixin, APIView):
     @extend_schema(
         summary="Update system settings",
         description=(
-            "Partially update platform settings. `vat_rate` — `settings.edit` or administrator; "
+            "Partially update platform settings. `vat_rate` and `support_email` (the address clients see in "
+            "letters) — `settings.edit` or administrator; "
             "`maintenance_mode` and `is_two_factor_required` — administrator (superuser) only. "
-            "`platform_name`, `support_email`, `logo_url` and `domain` are shared by the whole ensemble and "
+            "`platform_name`, `logo_url` and `domain` are shared by the whole ensemble and "
             "managed in CRM: a request that contains any of them is rejected with 400 `SHARED_SETTING_READ_ONLY`."
         ),
         request=SystemSettingSerializer,
@@ -113,7 +117,7 @@ class SystemSettingsView(RoleGatedViewMixin, APIView):
                             "SystemSettingsFieldErrors",
                             fields={
                                 name: drf_serializers.ListField(child=drf_serializers.CharField(), required=False)
-                                for name in ("vat_rate", "maintenance_mode", "is_two_factor_required")
+                                for name in ("vat_rate", "support_email", "maintenance_mode", "is_two_factor_required")
                             },
                         ),
                     ],
