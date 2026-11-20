@@ -47,7 +47,8 @@
     "outgoing": "Outgoing number",
     "memo": "Memo",
     "application": "Application",
-    "report": "Report"
+    "report": "Report",
+    "ticket": "Request"
   },
   "notSet": {
     "title": "Your company has not been created yet",

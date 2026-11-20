@@ -8037,6 +8037,7 @@ components:
       - ticket_reply_empty
       - ticket_reply_too_long
       - ticket_rate_limited
+      - ticket_label_invalid
       - article_title_empty
       - article_title_too_long
       - article_body_empty
@@ -9887,6 +9888,31 @@ components:
       - subject
       - body
       title: TicketIn
+      type: object
+    TicketLabelIn:
+      additionalProperties: false
+      description: Обозначение обращения в номере; латиницу и длину проверяет домен (`ticket_label_invalid`).
+      properties:
+        label:
+          maxLength: 64
+          title: Label
+          type: string
+      required:
+      - label
+      title: TicketLabelIn
+      type: object
+    TicketLabelOut:
+      properties:
+        example:
+          title: Example
+          type: string
+        label:
+          title: Label
+          type: string
+      required:
+      - label
+      - example
+      title: TicketLabelOut
       type: object
     TicketMessageOut:
       properties:
@@ -17961,6 +17987,55 @@ paths:
       security:
       - HTTPBearer: []
       summary: List Tickets
+      tags:
+      - staff-tickets
+  /api/v1/staff-tickets/label:
+    get:
+      description: Обозначение в номере обращения (редактор «Нумерация»).
+      operationId: get_ticket_label
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketLabelOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Get Label
+      tags:
+      - staff-tickets
+    put:
+      description: Латиница и цифры, до 16 знаков; иначе 422 `ticket_label_invalid`.
+      operationId: put_ticket_label
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketLabelIn'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketLabelOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Put Label
       tags:
       - staff-tickets
   /api/v1/staff-tickets/{ticket_id}:

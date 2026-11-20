@@ -13,6 +13,7 @@
 - `create-admin --email ...` — первый администратор CRM;
 - `republish-identity [--user-id N] [--dry-run]` — снимки сотрудников на шину для новых подписчиков;
 - `republish-ai-policy` — политика защиты данных для ИИ на шину заново (воркер делает сам);
+- `renumber-latin MAPPING [--apply]` — копии номеров CRM в латиницу по маппингу (СЦ-5);
 - `reprovision-erp` — права ERP заново всем с доступом к ERP (запасной путь к отпечатку каталога);
 - `litellm-seed` — модели ролей по умолчанию в БД LiteLLM (ADR-0020);
 - `bus status|dead|failed|retry|retry-dead|retry-inbox` — шина rt_bus (runbook `rt-bus-crm`).
@@ -152,6 +153,12 @@ def _parser() -> argparse.ArgumentParser:
     commands.add_parser(
         "republish-ai-policy", help="переопубликовать политику защиты данных для ИИ на шину"
     )
+    renumber = commands.add_parser(
+        "renumber-latin",
+        help="копии номеров CRM в латиницу по маппингу (сухой прогон по умолчанию)",
+    )
+    renumber.add_argument("mapping", help="JSON {старый: новый}: путь к файлу или - для stdin")
+    renumber.add_argument("--apply", action="store_true", help="записать (одна транзакция)")
     commands.add_parser(
         "reprovision-erp", help="провижининг прав ERP заново всем сотрудникам с доступом к ERP"
     )
@@ -212,6 +219,10 @@ async def _run_cli(args: argparse.Namespace) -> int:
         from app.cli import republish_ai_policy
 
         return await republish_ai_policy.run()
+    if args.command == "renumber-latin":
+        from app.cli import renumber_latin
+
+        return await renumber_latin.run(args)
     if args.command == "reprovision-erp":
         from app.cli import reprovision_erp
 

@@ -180,7 +180,7 @@ test.describe("Обращения к администратору", () => {
       await expect(dialog).toBeVisible();
     });
     await dialog.getByRole("button", { name: "Отправить" }).click();
-    const done = page.getByRole("dialog", { name: "Обращение ОБР-0001 отправлено" });
+    const done = page.getByRole("dialog", { name: "Обращение TK-0001 отправлено" });
     await expect(done).toBeVisible();
     await done.getByRole("button", { name: "Закрыть", exact: true }).click();
     await signOut(page);
@@ -188,13 +188,13 @@ test.describe("Обращения к администратору", () => {
     // 2. Администратор находит обращение в «Моих задачах» (SET-IA: в Настройках — только счётчик) и открывает карточку.
     await login(page, "admin@demo.example");
     await expect(page).toHaveURL(/\/dashboard\/queue$/);
-    await expect(page.getByText("Ответить на обращение ОБР-0001")).toBeVisible();
-    await page.goto("/admin/tickets/ОБР-0001?panel=open&tab=card");
+    await expect(page.getByText("Ответить на обращение TK-0001")).toBeVisible();
+    await page.goto("/admin/tickets/TK-0001?panel=open&tab=card");
     await expect(
       page.getByRole("heading", { level: 1, name: "Обращения сотрудников" }),
     ).toBeVisible();
-    await expect(page.getByRole("link", { name: "Открыть обращение ОБР-0001" })).toBeVisible();
-    const card = page.getByRole("heading", { level: 3, name: /ОБР-0001/ });
+    await expect(page.getByRole("link", { name: "Открыть обращение TK-0001" })).toBeVisible();
+    const card = page.getByRole("heading", { level: 3, name: /TK-0001/ });
     await expect(card).toBeVisible();
     await expect(page.getByText("Демо Менеджеров").first()).toBeVisible();
     await shoot(page, "tickets-admin", async () => {
@@ -217,8 +217,8 @@ test.describe("Обращения к администратору", () => {
     await loginAndWait(page, "manager@demo.example");
     await page.getByRole("button", { name: /^Центр уведомлений/ }).click();
     const bell = page.getByRole("dialog", { name: "Центр уведомлений" });
-    await expect(bell.getByText(/Ответ на обращение ОБР-0001/)).toBeVisible();
-    await bell.getByRole("link", { name: /Ответ на обращение ОБР-0001/ }).click();
+    await expect(bell.getByText(/Ответ на обращение TK-0001/)).toBeVisible();
+    await bell.getByRole("link", { name: /Ответ на обращение TK-0001/ }).click();
     await expect(page).toHaveURL(/\/help\/requests\/.+/);
     const answers = page.getByRole("region", { name: "Ответы администратора" });
     await expect(answers.getByText("Доступ выдан: выйдите и войдите заново")).toBeVisible();
@@ -228,7 +228,7 @@ test.describe("Обращения к администратору", () => {
     });
     // директору обращение другого сотрудника не открывается из «Моих обращений»: у каждого — свои
     await page.goto("/help/requests");
-    await expect(page.getByRole("link", { name: "Открыть обращение ОБР-0001" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Открыть обращение TK-0001" })).toBeVisible();
   });
 
   test("старый адрес списка обращений ведёт в «Задачи» (SET-IA)", async ({ page }) => {

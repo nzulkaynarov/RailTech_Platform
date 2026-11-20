@@ -18,7 +18,7 @@ from fastapi import APIRouter, Depends, Path, Query, Request, Response, status
 from app.clients.eds import eds_error
 from app.clients.erp_company import ErpCompany, rows_of
 from app.deps import Authed, require
-from app.errors import PlatformError, backend_unavailable
+from app.errors import PlatformError, backend_reason, backend_unavailable, from_backend
 from app.schemas_company import (
     COST_MARGIN_GROUP,
     EDS_KINDS,
@@ -26,6 +26,7 @@ from app.schemas_company import (
     MARGIN_FIELDS,
     REFERENCE_PATH,
     TEMPLATE_KIND_TO_ERP,
+    TICKET_KIND,
     BrandPreviewIn,
     BrandProfile,
     BrandProfileUpdate,
@@ -82,6 +83,8 @@ from app.schemas_company import (
     foreign_reference_fields,
     labels_to_erp,
     text,
+    ticket_label,
+    ticket_preview,
     to_bank_account,
     to_brand,
     to_category,
@@ -297,8 +300,51 @@ async def _eds_labels(authed: Authed, method: str = "GET", **kw: Any) -> list[An
         raise backend_unavailable("eds", "bad_response") from exc
 
 
-def _with_eds(scheme: NumberingScheme, rows: list[Any]) -> NumberingScheme:
+_CRM_TICKET_LABEL = "/api/v1/staff-tickets/label"
+
+
+async def _ticket_label(
+    authed: Authed, method: str = "GET", *, strict: bool = False, **kw: Any
+) -> tuple[str, str] | None:
+    """Обозначение обращений (CRM, СЦ-5): (обозначение, образец).
+
+    Чтение не ломает редактор: сотруднику без права CRM на обращения или при недоступной CRM поле
+    «Обращение» просто пусто (`None`). Запись (`strict`) отдаёт ошибку CRM, для не-латиницы — 422
+    с понятным текстом.
+    """
+    try:
+        response = await authed.call("crm", method, _CRM_TICKET_LABEL, **kw)
+    except PlatformError:
+        if strict:
+            raise
+        return None
+    if response.status_code == status.HTTP_200_OK:
+        try:
+            return ticket_label(response.json())
+        except ValueError as exc:
+            raise backend_unavailable("crm", "bad_response") from exc
+    if not strict:
+        return None
+    if (
+        response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+        and backend_reason(response) == "ticket_label_invalid"
+    ):
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "Обозначение обращения: латиница и цифры, до 16 знаков.",
+            status_code=422,
+            source="crm",
+            details={"fields": ["type_labels"], "reason": "ticket_label_invalid"},
+        )
+    raise from_backend("crm", response)
+
+
+def _with_eds(
+    scheme: NumberingScheme, rows: list[Any], ticket: tuple[str, str] | None = None
+) -> NumberingScheme:
     scheme.type_labels.update({kind: label for kind, label, _ in rows})
+    if ticket is not None:
+        scheme.type_labels[TICKET_KIND] = ticket[0]
     return scheme
 
 
@@ -307,7 +353,7 @@ def _with_eds(scheme: NumberingScheme, rows: list[Any]) -> NumberingScheme:
 )
 async def get_numbering(authed: Reader) -> NumberingScheme:
     scheme = to_numbering(await _erp(authed).data("GET", "crm/numbering-scheme/"))
-    return _with_eds(scheme, await _eds_labels(authed))
+    return _with_eds(scheme, await _eds_labels(authed), await _ticket_label(authed))
 
 
 @router.patch(
@@ -325,8 +371,15 @@ async def update_numbering(body: NumberingUpdate, authed: Writer) -> NumberingSc
             json={"doc_number_prefix": prefix.strip()},
         )
     eds_rows = None
+    ticket = None
     if "type_labels" in sent:
         labels = sent.pop("type_labels")
+        if (
+            TICKET_KIND in labels
+        ):  # первым: CRM проверяет латиницу, отказ не оставляет полсохранённого
+            ticket = await _ticket_label(
+                authed, "PUT", strict=True, json={"label": labels[TICKET_KIND]}
+            )
         eds_part = {k: v for k, v in labels.items() if k in EDS_KINDS}
         if (
             eds_part
@@ -339,7 +392,9 @@ async def update_numbering(body: NumberingUpdate, authed: Writer) -> NumberingSc
     if scheme is None:
         scheme = await erp.data("GET", "crm/numbering-scheme/")
     return _with_eds(
-        to_numbering(scheme), eds_rows if eds_rows is not None else await _eds_labels(authed)
+        to_numbering(scheme),
+        eds_rows if eds_rows is not None else await _eds_labels(authed),
+        ticket or await _ticket_label(authed),
     )
 
 
@@ -355,6 +410,9 @@ async def preview_numbering(body: NumberingPreviewIn, authed: Reader) -> Numberi
     data = await _erp(authed).data("POST", "crm/numbering-scheme/preview/", json=payload)
     preview = to_numbering_preview(data)
     preview.items.extend(eds_preview(await _eds_labels(authed), body.type_labels))
+    ticket = await _ticket_label(authed)
+    if ticket is not None:
+        preview.items.append(ticket_preview(*ticket, body.type_labels))
     return preview
 
 

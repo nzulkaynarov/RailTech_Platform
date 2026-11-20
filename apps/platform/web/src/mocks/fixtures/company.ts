@@ -153,6 +153,7 @@ function seed(): CompanyMock {
         memo: "MEMO",
         application: "APP",
         report: "REP",
+        ticket: "TK",
       },
     },
     quote: {

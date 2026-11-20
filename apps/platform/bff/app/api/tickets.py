@@ -3,8 +3,9 @@
 «Написать администратору» и раздел «Настройки · Обращения сотрудников». Решения и данные — в CRM
 (ADR-0015), токеном самого сотрудника: автор видит только своё, список всех, ответ и статус — права
 раздела `admin` (директор читает, администратор правит; проверяют и BFF, и CRM). BFF подставляет
-роль автора из сессии, переводит номер `ОБР-0012` в id CRM, а ошибки — в формат `Error`. В текст
-нового обращения BFF дописывает версию Платформы (W-REL), если она известна и помещается в предел.
+роль автора из сессии, переводит номер `TK-0012` (и прежний вид) в id CRM, а ошибки —
+в формат `Error`. В текст нового обращения BFF дописывает версию Платформы (W-REL), если она
+известна и помещается в предел.
 """
 
 from typing import Annotated, Any
@@ -41,7 +42,7 @@ TICKET_TEXT_MAX = 4000
 Author = Annotated[Authed, Depends(require_any_section)]
 AdminRead = Annotated[Authed, Depends(require("admin", "read"))]
 AdminWrite = Annotated[Authed, Depends(require("admin", "full"))]
-Number = Annotated[str, Path(pattern=NUMBER_PATTERN, description="Номер обращения `ОБР-0012`")]
+Number = Annotated[str, Path(pattern=NUMBER_PATTERN, description="Номер обращения `TK-0012`")]
 
 _MESSAGES = {
     "ticket_subject_unknown": "Выберите тему из списка.",

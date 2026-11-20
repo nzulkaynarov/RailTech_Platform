@@ -13,6 +13,7 @@ from app.domain.staff_tickets import (
     after_reply,
     can_move,
     checked_body,
+    checked_label,
     checked_page,
     checked_reply,
     checked_status,
@@ -125,12 +126,12 @@ def test_page_too_long_is_clipped_not_rejected() -> None:
 
 
 def test_telegram_text_without_platform_url_has_no_open_line() -> None:
-    text = telegram_text("ru", "ОБР-0012", "Доступ выдан", "")
+    text = telegram_text("ru", "TK-0012", "Доступ выдан", "")
     assert "Открыть" not in text
     assert "http" not in text
-    assert "ОБР-0012" in text
+    assert "TK-0012" in text
     assert "Доступ выдан" in text
-    assert "Open:" not in telegram_text("en", "ОБР-0012", "ok", "")
+    assert "Open:" not in telegram_text("en", "TK-0012", "ok", "")
 
 
 def test_role_clipped() -> None:
@@ -175,12 +176,32 @@ def test_rate_limit_is_five_per_hour() -> None:
 
 
 def test_number_round_trip() -> None:
-    assert number_of(12) == "ОБР-0012"
-    assert number_of(12345) == "ОБР-12345"
-    assert id_of("ОБР-0012") == 12
-    assert id_of(" ОБР-12345 ") == 12345
-    assert id_of("L-0012") is None
-    assert id_of("ОБР-") is None
+    assert number_of(12) == "TK-0012"
+    assert number_of(12345) == "TK-12345"
+    assert number_of(12, "REQ") == "REQ-0012"
+    assert id_of("TK-0012") == 12
+    assert id_of(" TK-12345 ") == 12345
+    assert id_of("TK-") is None
+    assert id_of("0012") is None
+    assert id_of("TK-0012-7") is None
+
+
+@pytest.mark.parametrize("number", ["ОБР-0012", "TK-0012", "REQ-0012", "x1-0012"])
+def test_id_of_reads_only_the_id_whatever_the_label(number: str) -> None:
+    """Номер непрозрачен: прежнее «ОБР», текущее и любое будущее обозначение дают один id."""
+    assert id_of(number) == 12
+
+
+@pytest.mark.parametrize(("raw", "expected"), [("TK", "TK"), (" tk ", "TK"), ("Req9", "REQ9")])
+def test_label_is_latin_uppercase(raw: str, expected: str) -> None:
+    assert checked_label(raw) == expected
+
+
+@pytest.mark.parametrize("raw", ["", "  ", "ОБР", "TK-", "T K", "A" * 17, "TK/1", "ÖB"])
+def test_label_rejects_non_latin_and_bad_shapes(raw: str) -> None:
+    with pytest.raises(TicketValueError) as caught:
+        checked_label(raw)
+    assert (caught.value.reason, caught.value.field) == ("ticket_label_invalid", "label")
 
 
 def test_snippet_flattens_and_cuts() -> None:
@@ -193,21 +214,21 @@ def test_snippet_flattens_and_cuts() -> None:
 @pytest.mark.parametrize(
     ("language", "title"),
     [
-        ("ru", "Ответ на обращение ОБР-0012"),
-        ("uz", "ОБР-0012 murojaatiga javob"),
-        ("en", "Reply to request ОБР-0012"),
-        (None, "Ответ на обращение ОБР-0012"),
-        ("de", "Ответ на обращение ОБР-0012"),
+        ("ru", "Ответ на обращение TK-0012"),
+        ("uz", "TK-0012 murojaatiga javob"),
+        ("en", "Reply to request TK-0012"),
+        (None, "Ответ на обращение TK-0012"),
+        ("de", "Ответ на обращение TK-0012"),
     ],
 )
 def test_reply_note_language(language: str | None, title: str) -> None:
-    note = reply_note(language, "ОБР-0012", "Доступ выдан")
+    note = reply_note(language, "TK-0012", "Доступ выдан")
     assert note.title == title
     assert note.subtitle == "Доступ выдан"
 
 
 def test_resolved_and_telegram_texts() -> None:
-    assert resolved_note("ru", "ОБР-0012", "ok").title == "Обращение ОБР-0012 решено"
-    text = telegram_text("en", "ОБР-0012", "Access granted", "https://p.example/help?ticket=12")
-    for part in ("ОБР-0012", "Access granted", "https://p.example/help?ticket=12"):
+    assert resolved_note("ru", "TK-0012", "ok").title == "Обращение TK-0012 решено"
+    text = telegram_text("en", "TK-0012", "Access granted", "https://p.example/help?ticket=12")
+    for part in ("TK-0012", "Access granted", "https://p.example/help?ticket=12"):
         assert part in text

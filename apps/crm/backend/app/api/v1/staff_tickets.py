@@ -11,9 +11,12 @@ from fastapi import APIRouter, Depends, Path, Query, status
 
 from app.api.deps import ContainerDep, require
 from app.api.v1.me import Settled
+from app.domain.staff_tickets import number_of
 from app.schemas.staff_tickets import (
     TicketCounts,
     TicketIn,
+    TicketLabelIn,
+    TicketLabelOut,
     TicketMessageOut,
     TicketOut,
     TicketPageOut,
@@ -90,6 +93,20 @@ async def list_my_tickets(who: Settled, container: ContainerDep) -> list[TicketR
 @mine_router.get("/{ticket_id}", response_model=TicketOut)
 async def get_my_ticket(ticket_id: TicketId, who: Settled, container: ContainerDep) -> TicketOut:
     return _detail(await container.staff_tickets.get_own(who.user_id, ticket_id))
+
+
+@router.get("/label", response_model=TicketLabelOut, operation_id="get_ticket_label")
+async def get_label(_: Reader, container: ContainerDep) -> TicketLabelOut:
+    """Обозначение в номере обращения (редактор «Нумерация»)."""
+    label = await container.staff_tickets.get_label()
+    return TicketLabelOut(label=label, example=number_of(1, label))
+
+
+@router.put("/label", response_model=TicketLabelOut, operation_id="put_ticket_label")
+async def put_label(body: TicketLabelIn, who: Writer, container: ContainerDep) -> TicketLabelOut:
+    """Латиница и цифры, до 16 знаков; иначе 422 `ticket_label_invalid`."""
+    label = await container.staff_tickets.set_label(who.actor, body.label)
+    return TicketLabelOut(label=label, example=number_of(1, label))
 
 
 @router.get("", response_model=TicketPageOut)

@@ -47,7 +47,8 @@
     "outgoing": "Chiquvchi raqam",
     "memo": "Xizmat xati",
     "application": "Ariza (ichki)",
-    "report": "Hisobot"
+    "report": "Hisobot",
+    "ticket": "Murojaat"
   },
   "notSet": {
     "title": "Kompaniyangiz hali yaratilmagan",

@@ -35,7 +35,10 @@ NumberingKind = Literal[
     "memo",
     "application",
     "report",
+    "ticket",
 ]
+# Обращение сотрудника: обозначение хранит CRM (`/api/v1/staff-tickets/label`, СЦ-5).
+TICKET_KIND: NumberingKind = "ticket"
 # Виды номеров документооборота (EDS `/api/v1/numbering-labels`, задача «Н2»).
 EDS_KINDS: tuple[NumberingKind, ...] = ("letter_in", "outgoing", "memo", "application", "report")
 ResetPeriod = Literal["never", "yearly", "monthly"]
@@ -425,6 +428,20 @@ def eds_labels(raw: Mapping[str, Any]) -> list[tuple[NumberingKind, str, str]]:
         if kind in EDS_KINDS:
             out.append((kind, text(row.get("label")), text(row.get("example"))))
     return out
+
+
+def ticket_label(raw: Mapping[str, Any]) -> tuple[str, str]:
+    """Ответ CRM `TicketLabelOut` -> (обозначение, образец)."""
+    return text(raw.get("label")), text(raw.get("example"))
+
+
+def ticket_preview(
+    label: str, example: str, draft: Mapping[str, str] | None
+) -> NumberingPreviewItem:
+    """Образец номера обращения (`TK-0001`) с несохранённым обозначением из черновика формы."""
+    wanted = ((draft or {}).get(TICKET_KIND) or "").strip().upper() or label
+    tail = example.rsplit("-", 1)[1] if "-" in example else "0001"
+    return NumberingPreviewItem(kind=TICKET_KIND, label=wanted, number=f"{wanted}-{tail}")
 
 
 def eds_preview(

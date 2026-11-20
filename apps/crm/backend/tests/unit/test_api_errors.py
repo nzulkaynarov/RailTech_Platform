@@ -270,6 +270,7 @@ def test_reason_values_are_a_stable_contract() -> None:
         "ticket_reply_empty",
         "ticket_reply_too_long",
         "ticket_rate_limited",
+        "ticket_label_invalid",
         "article_title_empty",
         "article_title_too_long",
         "article_body_empty",

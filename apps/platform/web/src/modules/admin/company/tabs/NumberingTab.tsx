@@ -39,6 +39,8 @@ const KINDS: NumberingKind[] = [
   "memo",
   "application",
   "report",
+  // обращения сотрудников (CRM, СЦ-5)
+  "ticket",
 ];
 const RESET: NumberingResetPeriod[] = ["never", "yearly", "monthly"];
 // «Стандартный» — умолчание SPEC-v3 §2.2 (`КП-2026/042`); «Через дефис» — прежнее умолчание, его маски у компаний остаются.

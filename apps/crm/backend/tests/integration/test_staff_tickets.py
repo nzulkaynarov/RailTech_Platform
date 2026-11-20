@@ -9,7 +9,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
-from app.domain.errors import ConflictError, NotFoundError, RateLimitedError
+from app.domain.errors import (
+    ConflictError,
+    NotFoundError,
+    RateLimitedError,
+    ValidationFailedError,
+)
 from app.main import create_app
 from app.models.auth import AuditLog, User
 from app.models.staff_tickets import StaffNotification
@@ -89,7 +94,7 @@ async def test_create_keeps_page_role_and_notifies_admins_not_the_author(
         role="Менеджер",
     )
 
-    assert detail.row.number == f"ОБР-{detail.row.id:04d}"
+    assert detail.row.number == f"TK-{detail.row.id:04d}"
     assert (detail.row.status, detail.row.subject) == ("new", "access")
     assert detail.row.page == "/erp/calc?panel=open"
     assert detail.row.author_role == "Менеджер"
@@ -101,7 +106,7 @@ async def test_create_keeps_page_role_and_notifies_admins_not_the_author(
     assert bell[0].object_id == str(detail.row.id)
     assert await StaffNotificationService(sessions).list(author.id) == []
     assert [key for _, key in messenger.alerts] == [f"staff_ticket:{detail.row.id}"]
-    assert "ОБР-" in messenger.alerts[0][0]
+    assert "TK-" in messenger.alerts[0][0]
     async with sessions() as session:
         actions = (await session.scalars(select(AuditLog.action))).all()
     assert "staff_ticket.create" in actions
@@ -438,3 +443,60 @@ async def test_api_too_long_page_is_clipped_not_rejected(
     )
     assert response.status_code == 201, response.text
     assert response.json()["page"] == page[:300]
+
+
+async def test_label_change_renames_numbers_but_not_ids_and_is_audited(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    author, _ = await make_user(sessions, "dilshod@railtech.uz", ["manager"])
+    boss, _ = await make_user(sessions, "boss@railtech.uz", ["admin"])
+    service = svc(sessions)
+    first = await new_ticket(service, author.id)
+    assert (await service.get(first)).row.number == f"TK-{first:04d}"
+
+    assert await service.set_label(Actor(boss.id), " req ") == "REQ"
+
+    assert (await service.get(first)).row.number == f"REQ-{first:04d}"
+    second = await new_ticket(service, author.id)
+    assert (await service.get(second)).row.number == f"REQ-{second:04d}"
+    bell = await StaffNotificationService(sessions).list(boss.id)
+    assert f"Новое обращение REQ-{second:04d}" in [n.title for n in bell]
+    async with sessions() as session:
+        actions = (await session.scalars(select(AuditLog.action))).all()
+    assert "staff_ticket.label" in actions
+
+
+async def test_label_must_be_latin(sessions: async_sessionmaker[AsyncSession]) -> None:
+    boss, _ = await make_user(sessions, "boss@railtech.uz", ["admin"])
+    service = svc(sessions)
+    for bad in ("ОБР", "", "TK-1", "A" * 17):
+        with pytest.raises(ValidationFailedError):
+            await service.set_label(Actor(boss.id), bad)
+    assert await service.get_label() == "TK"
+
+
+async def test_api_label_get_put_and_rights(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    author, author_pw = await make_user(sessions, "dilshod@railtech.uz", ["manager"])
+    boss, boss_pw = await make_user(sessions, "boss@railtech.uz", ["admin"])
+    mine = login(client, author.email, author_pw)
+    admin = login(client, boss.email, boss_pw)
+
+    assert client.get("/api/v1/staff-tickets/label", headers=admin).json() == {
+        "label": "TK",
+        "example": "TK-0001",
+    }
+    assert client.get("/api/v1/staff-tickets/label", headers=mine).status_code == 403
+    assert (
+        client.put("/api/v1/staff-tickets/label", headers=mine, json={"label": "SR"}).status_code
+        == 403
+    )
+
+    bad = client.put("/api/v1/staff-tickets/label", headers=admin, json={"label": "ОБР"})
+    assert bad.status_code == 422
+    assert bad.json()["details"]["reason"] == "ticket_label_invalid"
+
+    ok = client.put("/api/v1/staff-tickets/label", headers=admin, json={"label": "sr"})
+    assert ok.json() == {"label": "SR", "example": "SR-0001"}
+    assert client.get("/api/v1/staff-tickets/label", headers=admin).json()["label"] == "SR"
