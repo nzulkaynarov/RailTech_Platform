@@ -38,7 +38,7 @@ def portal_deal(scene):
     deal = Deal.objects.create(
         title="Запрос из Cabinet", company=scene["buyer"], stage=DealStage.objects.get(code="RFQ_OPEN")
     )
-    PortalRequestLine.objects.create(deal=deal, text="Рельс Р65", quantity=Decimal("12.000"), unit="т", sort_order=1)
+    PortalRequestLine.objects.create(deal=deal, text="Рельс Р65", quantity=Decimal("12.500"), unit="т", sort_order=1)
     PortalRequestLine.objects.create(deal=deal, text="Накладка 4-дырная", quantity=None, sort_order=2)
     return deal
 
@@ -63,15 +63,15 @@ def seller_api(scene):
 
 @pytest.mark.django_db
 def test_portal_request_lines_become_the_quote_lines(scene, portal_deal):
-    """Строки заявки из Cabinet попадают в КП: имя, единица, количество (пусто → 1, дробное → вверх)."""
+    """Строки заявки из Cabinet попадают в КП: имя, единица, количество (пусто → 1, дробное — как написано, СЦ-10)."""
     result, err = take_and_prepare_quote(portal_deal.id, scene["seller_user"])
 
     assert err is None
     assert result["mode"] == "quote"
     items = list(result["quote"].items.order_by("position"))
     assert [item.imported_raw_name for item in items] == ["Рельс Р65", "Накладка 4-дырная"]
-    assert [item.quantity for item in items] == [12, 1]
-    assert items[0].unit == "т"
+    assert [item.quantity for item in items] == [Decimal("12.5"), 1]
+    assert items[0].unit == "т" and items[0].unit_code == "TNE"
     portal_deal.refresh_from_db()
     assert portal_deal.assigned_to_id == scene["seller_user"].id
     assert portal_deal.stage.code == "CALCULATING"
