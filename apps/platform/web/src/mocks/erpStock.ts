@@ -426,13 +426,22 @@ const overdueDays = (order: MockOrder): number | null => {
   return diff > 0 ? diff : null;
 };
 
+/** СЦ-10: чего не хватает черновику для отправки — как `send_gaps` ERP. */
+function sendGaps(order: MockOrder): { prices: number; date: boolean } {
+  return {
+    prices: order.lines.filter((l) => l.unitPrice === null || l.unitPrice === undefined).length,
+    date: !order.expectedDate,
+  };
+}
+
 function actionsOf(order: MockOrder, user: Me) {
   const manage = level(user, "erp.stock") === "full";
   const live = order.status === "draft" || order.status === "sent" || order.status === "confirmed";
   const touched = order.lines.some((l) => l.received > 0);
   return {
     edit: manage && order.status === "draft",
-    send: manage && order.status === "draft",
+    send:
+      manage && order.status === "draft" && sendGaps(order).prices === 0 && !sendGaps(order).date,
     confirm: manage && order.status === "sent",
     receive: manage && order.status === "confirmed",
     cancel: manage && live && !touched,
@@ -482,6 +491,10 @@ function presentOrder(state: MockStock, order: MockOrder, user: Me): SupplierOrd
     supplier: { ...row.supplier, email: supplier?.email ?? null },
     note: order.note,
     partner_note: order.partnerNote ?? "",
+    send_missing:
+      order.status === "draft" && (sendGaps(order).prices > 0 || sendGaps(order).date)
+        ? sendGaps(order)
+        : null,
     sent_at: order.sentAt,
     sent_to: order.sentTo,
     mail: order.sentAt ? (order.mail ?? { state: "sent", reason: null }) : null,
@@ -1076,6 +1089,22 @@ export const erpStockHandlers = [
     const order = findOrder(state, String(params["number"]));
     if (!order) return orderMissing();
     if (order.status !== "draft") return transitionError(order);
+    const gaps = sendGaps(order);
+    if (gaps.prices > 0 || gaps.date) {
+      return HttpResponse.json(
+        {
+          code: "CONFLICT",
+          message: "Не хватает цены или ожидаемой даты.",
+          source: "erp",
+          details: {
+            reason: "order_incomplete",
+            missing_prices: gaps.prices,
+            missing_date: gaps.date,
+          },
+        },
+        { status: 409 },
+      );
+    }
     const supplier = SUPPLIERS.find((s) => s.id === order.supplierId);
     const email = body.to_email ?? supplier?.email ?? null;
     if (!email)

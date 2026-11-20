@@ -7,6 +7,7 @@ import { listSettled } from "../../../test/settled";
 
 setupCalcTests();
 
+const FUTURE = `${String(new Date().getFullYear() + 1)}-01-15`;
 const ORDER = `ЗП-${String(new Date().getFullYear())}-029`;
 const ORDER_PATH = `/erp/stock/${encodeURIComponent(ORDER)}`;
 
@@ -185,6 +186,14 @@ describe("Склад · заказы партнёрам", () => {
     fireEvent.change(within(modal).getByRole("spinbutton", { name: "Количество, строка 1" }), {
       target: { value: "4" },
     });
+    // СЦ-10: без цены и ожидаемой даты заказ партнёру не уходит.
+    fireEvent.change(
+      within(modal).getByRole("textbox", { name: "Цена партнёра за единицу, строка 1" }),
+      {
+        target: { value: "250" },
+      },
+    );
+    fillDate(within(modal).getByLabelText("Ожидаемая дата"), FUTURE);
     fireEvent.click(within(modal).getByRole("button", { name: "Создать черновик" }));
 
     const year = String(new Date().getFullYear());
@@ -209,7 +218,8 @@ describe("Склад · заказы партнёрам", () => {
     fireEvent.click(screen.getByRole("button", { name: "Партнёр подтвердил" }));
     const confirm = await screen.findByRole("dialog");
     const submit = within(confirm).getByRole("button", { name: "Подтвердить" });
-    expect(submit).toBeDisabled();
+    // Ожидаемая дата заказа (без неё он не ушёл бы, СЦ-10) подставлена — партнёр подтвердил её или новую.
+    expect(submit).toBeEnabled();
     fillDate(within(confirm).getByLabelText("Подтверждённая дата поставки"), "2099-01-15");
     fireEvent.click(submit);
     expect(await screen.findByText("Заказ подтверждён")).toBeVisible();
@@ -248,6 +258,14 @@ describe("Склад · заказы партнёрам", () => {
     fireEvent.change(within(page).getByRole("spinbutton", { name: "Количество, строка 1" }), {
       target: { value: "1" },
     });
+    // СЦ-10: без цены и ожидаемой даты заказ партнёру не уходит.
+    fireEvent.change(
+      within(page).getByRole("textbox", { name: "Цена партнёра за единицу, строка 1" }),
+      {
+        target: { value: "250" },
+      },
+    );
+    fillDate(within(page).getByLabelText("Ожидаемая дата"), FUTURE);
     fireEvent.click(within(page).getByRole("button", { name: "Создать черновик" }));
 
     await screen.findByRole("button", { name: "Отправить партнёру" });
@@ -293,6 +311,14 @@ describe("Склад · заказы партнёрам", () => {
     fireEvent.change(within(modal).getByRole("spinbutton", { name: "Количество, строка 1" }), {
       target: { value: "2" },
     });
+    // СЦ-10: без цены и ожидаемой даты заказ партнёру не уходит.
+    fireEvent.change(
+      within(modal).getByRole("textbox", { name: "Цена партнёра за единицу, строка 1" }),
+      {
+        target: { value: "250" },
+      },
+    );
+    fillDate(within(modal).getByLabelText("Ожидаемая дата"), FUTURE);
     fireEvent.click(within(modal).getByRole("button", { name: "Создать черновик" }));
     await screen.findByRole("button", { name: "Отправить партнёру" });
     fireEvent.click(screen.getByRole("button", { name: "Отправить партнёру" }));
@@ -346,5 +372,51 @@ describe("Склад · приёмка и отгрузки", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Найти резервы" }));
     expect(await screen.findByText("Резервов нет")).toBeVisible();
+  });
+});
+
+describe("Склад · заказ без цены и даты не уходит партнёру (СЦ-10)", () => {
+  it("карточка говорит, чего не хватает; цена и дата в «Изменить» открывают отправку", async () => {
+    await openStock("supply@demo.example", "orders");
+    fireEvent.click(await screen.findByRole("link", { name: "Создать заказ" }));
+    await screen.findByRole("heading", { level: 1, name: "Новый заказ партнёру" });
+    const page = document.body;
+    fireEvent.mouseDown(within(page).getByRole("combobox", { name: "Партнёр" }));
+    fireEvent.click(
+      await screen.findByText("ООО «Вымышленная Сталь»", {
+        selector: ".ant-select-item-option-content",
+      }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /^Строки/, expanded: false }));
+    fireEvent.mouseDown(within(page).getByRole("combobox", { name: "Товар, строка 1" }));
+    fireEvent.change(within(page).getByRole("combobox", { name: "Товар, строка 1" }), {
+      target: { value: "перевод" },
+    });
+    fireEvent.click(
+      await screen.findByText(/Перевод стрелочный Р65 марки 1\/11/, {
+        selector: ".ant-select-item-option-content",
+      }),
+    );
+    fireEvent.change(within(page).getByRole("spinbutton", { name: "Количество, строка 1" }), {
+      target: { value: "1" },
+    });
+    fireEvent.click(within(page).getByRole("button", { name: "Создать черновик" }));
+
+    const year = String(new Date().getFullYear());
+    expect(
+      await screen.findByRole("heading", { level: 1, name: `Заказ партнёру ЗП-${year}-030` }),
+    ).toBeVisible();
+    expect(screen.getByText("Без цены: 1 строка · Нет ожидаемой даты")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Отправить партнёру" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Изменить" }));
+    const edit = await screen.findByRole("dialog");
+    const price = within(edit).getByRole("textbox", { name: /^Цена, «Перевод стрелочный/ });
+    fireEvent.change(price, { target: { value: "185000" } });
+    fillDate(within(edit).getByLabelText("Ожидаемая дата"), FUTURE);
+    fireEvent.click(within(edit).getByRole("button", { name: "Сохранить" }));
+
+    expect(await screen.findByRole("button", { name: "Отправить партнёру" })).toBeVisible();
+    expect(screen.queryByText(/Без цены/)).toBeNull();
   });
 });

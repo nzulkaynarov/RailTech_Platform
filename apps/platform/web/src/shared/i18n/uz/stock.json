@@ -62,7 +62,8 @@
     "nothing_to_change": "O‘zgartirish uchun hech narsa yo‘q.",
     "role_not_permitted": "Bu amal rolingizga ruxsat etilmagan.",
     "supplier_not_found": "Bunday hamkor yo‘q.",
-    "product_not_found": "Bunday tovar yo‘q."
+    "product_not_found": "Bunday tovar yo‘q.",
+    "order_incomplete": "Narx yoki kutilgan sana yöq: «Özgartiriş»da kiriting."
   },
   "balances": {
     "search": "Tovarni nomi yoki artikuli bo‘yicha toping",
@@ -205,7 +206,7 @@
       "send": "Hamkorga yuborish",
       "confirm": "Hamkor tasdiqladi",
       "receive": "Tovarni qabul qilish",
-      "edit": "O‘zgartirish",
+      "edit": "Özgartiriş",
       "cancel": "Buyurtmani bekor qilish"
     },
     "overdueBanner": "{{date}} gacha kutilgan, tovar olinmagan — {{count}} kun kechikish. Hamkor bilan bog‘laning va kutilayotgan sanani yangilang.",
@@ -284,14 +285,16 @@
       "submit": "Qabul qilish"
     },
     "edit": {
-      "title": "{{number}} buyurtmasini o‘zgartirish",
+      "title": "{{number}} buyurtmasini özgartiriş",
       "date": "Kutilayotgan sana",
       "note": "Içki izoh",
       "partnerNote": "Hamkorga izoh",
       "quantityLabel": "Miqdor, «{{name}}»",
       "remove": "Olib tashlash",
       "removeLabel": "«{{name}}» qatorini olib tashlash",
-      "submit": "Saqlash"
+      "submit": "Saqlash",
+      "price": "Narx",
+      "priceLabel": "Narx, «{{name}}»"
     },
     "notice": {
       "sent": "Buyurtma rasmiylashtirildi. Hamkorga xat pochta navbatida, natija — buyurtma kartasida.",
@@ -312,6 +315,12 @@
       "sent": "yuborildi",
       "failed": "yuborilmadi: {{reason}}",
       "failedUnknown": "yuborilmadi"
+    },
+    "missing": {
+      "prices_one": "Narxsiz: {{count}} qator",
+      "prices_other": "Narxsiz: {{count}} qator",
+      "date": "Kutilgan sana yöq",
+      "hint": "«Özgartiriş»da kiriting — narx va sanasiz buyurtma hamkorga yuborilmaydi."
     }
   },
   "receipts": {

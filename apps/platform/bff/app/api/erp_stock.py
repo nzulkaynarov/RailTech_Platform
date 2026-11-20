@@ -85,6 +85,7 @@ _CONFLICTS = {
     "ORDER_HAS_RECEIPTS": "По заказу уже есть приёмка: отменить его нельзя.",
     "EXPECTED_DATE_REQUIRED": "Укажите ожидаемую дату поставки.",
     "SUPPLIER_EMAIL_REQUIRED": "У поставщика нет почты: укажите адрес для письма.",
+    "ORDER_INCOMPLETE": "Не хватает цены или ожидаемой даты.",
     "EMAIL_FAILED": "Письмо поставщику не ушло. Статус заказа не изменён: повторите позже.",
     "FULFILLMENT_NOT_READY": "Проект ещё не подписан: отгрузка возможна после подписания договора.",
     "PRODUCT_REQUIRED": "Сначала сопоставьте строку с карточкой каталога.",
@@ -116,9 +117,12 @@ def stock_error(response: Any) -> PlatformError:
         "backend_code": code,
         "reason": code.lower(),
     }
-    for key in ("free", "max", "reserved", "shipped"):
-        if isinstance(body.get(key), int):
-            details[key] = body[key]
+    for key in ("free", "max", "reserved", "shipped", "missing_prices"):
+        value = body.get(key)
+        if isinstance(value, int) and not isinstance(value, bool):
+            details[key] = value
+    if isinstance(body.get("missing_date"), bool):
+        details["missing_date"] = body["missing_date"]  # ORDER_INCOMPLETE (СЦ-10)
     if response.status_code == 400:
         fields = sorted(body["fields"]) if isinstance(body.get("fields"), dict) else []
         if code in _FIELDS:

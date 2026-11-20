@@ -362,7 +362,8 @@ export function ReceiveModal({
   );
 }
 
-/** Правка черновика: ожидаемая дата, внутреннее примечание, комментарий партнёру, количество по строкам и удаление строк. */
+/** Правка черновика: ожидаемая дата, внутреннее примечание, комментарий партнёру, количество и цена по строкам, удаление
+ * строк. Цена уходит только у строк, где её меняли: без права на цены сотрудник видит пустую цену и не стирает чужую. */
 export function EditModal({ order, onClose }: { order: SupplierOrderDetail; onClose: () => void }) {
   const { t } = useTranslation("stock");
   const dateId = useId();
@@ -373,6 +374,7 @@ export function EditModal({ order, onClose }: { order: SupplierOrderDetail; onCl
   const [note, setNote] = useState(order.note);
   const [partnerNote, setPartnerNote] = useState(order.partner_note);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [prices, setPrices] = useState<Record<string, string>>({});
   const [removed, setRemoved] = useState<Set<string>>(new Set());
   const update = useUpdateSupplierOrder({ mutation: action.options(onClose) });
   const kept = order.lines.filter((l) => !removed.has(l.id));
@@ -396,6 +398,7 @@ export function EditModal({ order, onClose }: { order: SupplierOrderDetail; onCl
               id: l.id,
               product_id: l.product_id ?? "",
               quantity: quantities[l.id] ?? l.quantity,
+              ...(l.id in prices ? { unit_price: clean(prices[l.id]) ?? null } : {}),
             })),
           },
         });
@@ -432,7 +435,11 @@ export function EditModal({ order, onClose }: { order: SupplierOrderDetail; onCl
             }}
           />
         </FormField>
-        <ul className="pf-stock-receive">
+        <ul
+          className={
+            order.rights.prices ? "pf-stock-receive pf-stock-receive--priced" : "pf-stock-receive"
+          }
+        >
           {kept.map((l) => (
             <li key={l.id}>
               <strong>{l.name}</strong>
@@ -444,6 +451,17 @@ export function EditModal({ order, onClose }: { order: SupplierOrderDetail; onCl
                   setQuantities((prev) => ({ ...prev, [l.id]: value ?? l.quantity }));
                 }}
               />
+              {order.rights.prices ? (
+                <Input
+                  inputMode="decimal"
+                  placeholder={t("order.edit.price")}
+                  value={prices[l.id] ?? l.unit_price ?? ""}
+                  aria-label={t("order.edit.priceLabel", { name: l.name })}
+                  onChange={(event) => {
+                    setPrices((prev) => ({ ...prev, [l.id]: event.target.value }));
+                  }}
+                />
+              ) : null}
               <Button
                 danger
                 type="text"

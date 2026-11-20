@@ -62,7 +62,8 @@
     "nothing_to_change": "Nothing to change.",
     "role_not_permitted": "Your role is not allowed to do this.",
     "supplier_not_found": "No such partner.",
-    "product_not_found": "No such item."
+    "product_not_found": "No such item.",
+    "order_incomplete": "Prices or the expected date are missing: add them in “Edit”."
   },
   "balances": {
     "search": "Find an item by name or article",
@@ -291,7 +292,9 @@
       "quantityLabel": "Quantity, “{{name}}”",
       "remove": "Remove",
       "removeLabel": "Remove line “{{name}}”",
-      "submit": "Save"
+      "submit": "Save",
+      "price": "Price",
+      "priceLabel": "Price, “{{name}}”"
     },
     "notice": {
       "sent": "Order placed. The e-mail to the partner is queued; the result will be on the order card.",
@@ -312,6 +315,12 @@
       "sent": "sent",
       "failed": "not sent: {{reason}}",
       "failedUnknown": "not sent"
+    },
+    "missing": {
+      "prices_one": "No price: {{count}} line",
+      "prices_other": "No price: {{count}} lines",
+      "date": "No expected date",
+      "hint": "Add them in “Edit” — the order is not sent to the partner without prices and a date."
     }
   },
   "receipts": {

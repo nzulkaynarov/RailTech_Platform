@@ -120,6 +120,9 @@ test.describe("Склад и закупки: снабженец", () => {
     await product.pressSequentially("перевод");
     await page.getByTitle(/Перевод стрелочный Р65 марки 1\/11/).click();
     await create.getByRole("spinbutton", { name: "Количество, строка 1" }).fill("4");
+    // СЦ-10: без цены и ожидаемой даты заказ партнёру не уходит.
+    await create.getByRole("textbox", { name: "Цена партнёра за единицу, строка 1" }).fill("250");
+    await fillDate(create.getByLabel("Ожидаемая дата"), "2099-01-10");
     // СЦ-10: внутреннее примечание остаётся у снабжения, партнёру уходит только комментарий
     await create.getByLabel("Внутреннее примечание").fill("Под проект клиента");
     await create.getByLabel("Комментарий партнёру").fill("Отгрузка до станции Сергели");

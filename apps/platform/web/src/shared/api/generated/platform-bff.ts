@@ -48013,7 +48013,7 @@ export const getSendSupplierOrderUrl = (orderNumber: string) => {
 };
 
 /**
- * ERP `POST /stock/orders/{id}/send/`: письмо поставщику (почта ERP) и запись в журнале заказа. Нет адреса — 409 `details.reason = supplier_email_required` (можно указать `to_email`); письмо не ушло — 409 `details.reason = email_failed`, статус не меняется. Недопустимый переход — 409 `transition_not_allowed`. Раздел `erp.stock` — полный.
+ * ERP `POST /stock/orders/{id}/send/`: письмо поставщику (почта ERP) и запись в журнале заказа. Нет адреса — 409 `details.reason = supplier_email_required` (можно указать `to_email`); письмо не ушло — 409 `details.reason = email_failed`, статус не меняется. Недопустимый переход — 409 `transition_not_allowed`. Нет цены у строки или ожидаемой даты — 409 `details.reason = order_incomplete`, `details.missing_prices` (строк без цены), `details.missing_date`; статус не меняется (СЦ-10). Раздел `erp.stock` — полный.
  * @summary Склад · Отправить заказ поставщику (черновик → отправлен)
  */
 export const sendSupplierOrder = async (

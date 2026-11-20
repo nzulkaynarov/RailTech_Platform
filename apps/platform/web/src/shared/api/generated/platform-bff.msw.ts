@@ -384,6 +384,7 @@ import type {
   SupplierOrderLineOffer,
   SupplierOrderList,
   SupplierOrderMail,
+  SupplierOrderSendMissing,
   SupplierPage,
   SystemStatus,
   TechDoc,
@@ -28016,6 +28017,13 @@ export const getCreateSupplierOrderResponsePersonRefMock = (
   ...overrideResponse,
 });
 
+export const getCreateSupplierOrderResponseSupplierOrderSendMissingMock = (
+  overrideResponse: Partial<SupplierOrderSendMissing> = {},
+): SupplierOrderSendMissing => ({
+  ...{ prices: faker.number.int({ min: 0 }), date: faker.datatype.boolean() },
+  ...overrideResponse,
+});
+
 export const getCreateSupplierOrderResponseSupplierOrderMailMock = (
   overrideResponse: Partial<SupplierOrderMail> = {},
 ): SupplierOrderMail => ({
@@ -28114,6 +28122,10 @@ export const getCreateSupplierOrderResponseMock = (
   path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   partner_note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  send_missing: faker.helpers.arrayElement([
+    { ...getCreateSupplierOrderResponseSupplierOrderSendMissingMock() },
+    null,
+  ]),
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   mail: faker.helpers.arrayElement([
@@ -28247,6 +28259,13 @@ export const getCreateSupplierOrderFromRequestResponsePersonRefMock = (
   ...overrideResponse,
 });
 
+export const getCreateSupplierOrderFromRequestResponseSupplierOrderSendMissingMock = (
+  overrideResponse: Partial<SupplierOrderSendMissing> = {},
+): SupplierOrderSendMissing => ({
+  ...{ prices: faker.number.int({ min: 0 }), date: faker.datatype.boolean() },
+  ...overrideResponse,
+});
+
 export const getCreateSupplierOrderFromRequestResponseSupplierOrderMailMock = (
   overrideResponse: Partial<SupplierOrderMail> = {},
 ): SupplierOrderMail => ({
@@ -28345,6 +28364,10 @@ export const getCreateSupplierOrderFromRequestResponseMock = (
   path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   partner_note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  send_missing: faker.helpers.arrayElement([
+    { ...getCreateSupplierOrderFromRequestResponseSupplierOrderSendMissingMock() },
+    null,
+  ]),
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   mail: faker.helpers.arrayElement([
@@ -28484,6 +28507,13 @@ export const getGetSupplierOrderResponsePersonRefMock = (
   ...overrideResponse,
 });
 
+export const getGetSupplierOrderResponseSupplierOrderSendMissingMock = (
+  overrideResponse: Partial<SupplierOrderSendMissing> = {},
+): SupplierOrderSendMissing => ({
+  ...{ prices: faker.number.int({ min: 0 }), date: faker.datatype.boolean() },
+  ...overrideResponse,
+});
+
 export const getGetSupplierOrderResponseSupplierOrderMailMock = (
   overrideResponse: Partial<SupplierOrderMail> = {},
 ): SupplierOrderMail => ({
@@ -28579,6 +28609,10 @@ export const getGetSupplierOrderResponseMock = (
   path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   partner_note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  send_missing: faker.helpers.arrayElement([
+    { ...getGetSupplierOrderResponseSupplierOrderSendMissingMock() },
+    null,
+  ]),
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   mail: faker.helpers.arrayElement([
@@ -28712,6 +28746,13 @@ export const getUpdateSupplierOrderResponsePersonRefMock = (
   ...overrideResponse,
 });
 
+export const getUpdateSupplierOrderResponseSupplierOrderSendMissingMock = (
+  overrideResponse: Partial<SupplierOrderSendMissing> = {},
+): SupplierOrderSendMissing => ({
+  ...{ prices: faker.number.int({ min: 0 }), date: faker.datatype.boolean() },
+  ...overrideResponse,
+});
+
 export const getUpdateSupplierOrderResponseSupplierOrderMailMock = (
   overrideResponse: Partial<SupplierOrderMail> = {},
 ): SupplierOrderMail => ({
@@ -28810,6 +28851,10 @@ export const getUpdateSupplierOrderResponseMock = (
   path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   partner_note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  send_missing: faker.helpers.arrayElement([
+    { ...getUpdateSupplierOrderResponseSupplierOrderSendMissingMock() },
+    null,
+  ]),
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   mail: faker.helpers.arrayElement([
@@ -28943,6 +28988,13 @@ export const getSendSupplierOrderResponsePersonRefMock = (
   ...overrideResponse,
 });
 
+export const getSendSupplierOrderResponseSupplierOrderSendMissingMock = (
+  overrideResponse: Partial<SupplierOrderSendMissing> = {},
+): SupplierOrderSendMissing => ({
+  ...{ prices: faker.number.int({ min: 0 }), date: faker.datatype.boolean() },
+  ...overrideResponse,
+});
+
 export const getSendSupplierOrderResponseSupplierOrderMailMock = (
   overrideResponse: Partial<SupplierOrderMail> = {},
 ): SupplierOrderMail => ({
@@ -29041,6 +29093,10 @@ export const getSendSupplierOrderResponseMock = (
   path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   partner_note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  send_missing: faker.helpers.arrayElement([
+    { ...getSendSupplierOrderResponseSupplierOrderSendMissingMock() },
+    null,
+  ]),
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   mail: faker.helpers.arrayElement([
@@ -29174,6 +29230,13 @@ export const getConfirmSupplierOrderResponsePersonRefMock = (
   ...overrideResponse,
 });
 
+export const getConfirmSupplierOrderResponseSupplierOrderSendMissingMock = (
+  overrideResponse: Partial<SupplierOrderSendMissing> = {},
+): SupplierOrderSendMissing => ({
+  ...{ prices: faker.number.int({ min: 0 }), date: faker.datatype.boolean() },
+  ...overrideResponse,
+});
+
 export const getConfirmSupplierOrderResponseSupplierOrderMailMock = (
   overrideResponse: Partial<SupplierOrderMail> = {},
 ): SupplierOrderMail => ({
@@ -29272,6 +29335,10 @@ export const getConfirmSupplierOrderResponseMock = (
   path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   partner_note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  send_missing: faker.helpers.arrayElement([
+    { ...getConfirmSupplierOrderResponseSupplierOrderSendMissingMock() },
+    null,
+  ]),
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   mail: faker.helpers.arrayElement([
@@ -29405,6 +29472,13 @@ export const getCancelSupplierOrderResponsePersonRefMock = (
   ...overrideResponse,
 });
 
+export const getCancelSupplierOrderResponseSupplierOrderSendMissingMock = (
+  overrideResponse: Partial<SupplierOrderSendMissing> = {},
+): SupplierOrderSendMissing => ({
+  ...{ prices: faker.number.int({ min: 0 }), date: faker.datatype.boolean() },
+  ...overrideResponse,
+});
+
 export const getCancelSupplierOrderResponseSupplierOrderMailMock = (
   overrideResponse: Partial<SupplierOrderMail> = {},
 ): SupplierOrderMail => ({
@@ -29503,6 +29577,10 @@ export const getCancelSupplierOrderResponseMock = (
   path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   partner_note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  send_missing: faker.helpers.arrayElement([
+    { ...getCancelSupplierOrderResponseSupplierOrderSendMissingMock() },
+    null,
+  ]),
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   mail: faker.helpers.arrayElement([
@@ -29636,6 +29714,13 @@ export const getReceiveSupplierOrderResponsePersonRefMock = (
   ...overrideResponse,
 });
 
+export const getReceiveSupplierOrderResponseSupplierOrderSendMissingMock = (
+  overrideResponse: Partial<SupplierOrderSendMissing> = {},
+): SupplierOrderSendMissing => ({
+  ...{ prices: faker.number.int({ min: 0 }), date: faker.datatype.boolean() },
+  ...overrideResponse,
+});
+
 export const getReceiveSupplierOrderResponseSupplierOrderMailMock = (
   overrideResponse: Partial<SupplierOrderMail> = {},
 ): SupplierOrderMail => ({
@@ -29734,6 +29819,10 @@ export const getReceiveSupplierOrderResponseMock = (
   path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   partner_note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  send_missing: faker.helpers.arrayElement([
+    { ...getReceiveSupplierOrderResponseSupplierOrderSendMissingMock() },
+    null,
+  ]),
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   mail: faker.helpers.arrayElement([
