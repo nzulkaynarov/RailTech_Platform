@@ -10,10 +10,13 @@ from django.core.files.base import ContentFile
 from accounts.models import Company, CompanyType
 from crm.models import Deal, DealStage
 from crm.services.draft_quote import deal_request_files
-from crm.tests.test_calc import _api, _sheet, _staff, world  # noqa: F401 — фикстура мира расчёта
+from crm.tests import test_calc
 from sourcing.models import Attachment, AttachmentKind
 
 pytestmark = pytest.mark.django_db
+
+world = test_calc.world  # мир расчёта: сделка с заданием, снабженец и инженер
+_api, _sheet, _staff = test_calc._api, test_calc._sheet, test_calc._staff
 
 
 def attach(deal, name, content=b"%PDF-1.4 spec", kind=AttachmentKind.SOURCE):
