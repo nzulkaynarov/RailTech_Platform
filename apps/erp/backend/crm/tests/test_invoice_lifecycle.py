@@ -16,7 +16,7 @@ import pytest
 from django.utils import timezone
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
-from accounts.services.bank_accounts import set_uzs_account
+from accounts.tests.requisites import ready_for_invoices
 from crm.models import (
     ActStatus,
     Contract,
@@ -60,7 +60,7 @@ def _company(name, inn, type_code):
         inn=inn,
         # O3: продавец с платёжными реквизитами — иначе `issue_invoice` не выпустит счёт (он неоплатен).
     )
-    set_uzs_account(company, "20208000900001234567", "00443")
+    ready_for_invoices(company)
     company.types.add(CompanyType.objects.get(code=type_code))
     return company
 

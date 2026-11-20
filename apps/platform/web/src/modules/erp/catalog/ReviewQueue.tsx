@@ -21,7 +21,7 @@ import { MoneyText } from "../../../shared/ui/MoneyText";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { FormModal } from "./common";
 import { errorFields } from "./errors";
-import { useRequestsCount } from "./RequestsQueue";
+import { useRequestsCount } from "./useRequestsQueue";
 
 /** Поля замечаний при возврате карточки: перечень ERP (`catalog.models.reviews.ISSUE_FIELDS`), подписи — `catalog:review.issueFields`. */
 const ISSUE_FIELDS: readonly CatalogIssueField[] = [

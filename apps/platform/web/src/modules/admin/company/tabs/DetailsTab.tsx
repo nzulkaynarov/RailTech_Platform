@@ -7,6 +7,7 @@ import { useSearchParams } from "react-router";
 import type { CompanyProfile } from "../../../../shared/api/generated/model";
 import {
   getGetCompanyQueryKey,
+  getGetSetupChecklistQueryKey,
   useDeleteCompanyLogo,
   useGetCompany,
   useListReferenceItems,
@@ -65,9 +66,14 @@ export function DetailsTab() {
   // Открытая секция живёт выше формы: после сохранения форма пересоздаётся, а секция остаётся.
   // `?section=bank` — из мастера и уведомлений «нет реквизитов для счетов».
   const [params] = useSearchParams();
-  const [active, setActive] = useState<SectionKey>(() =>
-    params.get("section") === "bank" ? "bank" : "company",
+  // СЦ-3: «нет реквизитов для счетов» открывает секцию, где пусто: ИНН — «Компания», адрес — «Контакты», иначе счета.
+  const [active, setActive] = useState<SectionKey | null>(() =>
+    params.get("section") === "bank" ? null : "company",
   );
+  const loaded = query.data;
+  if (active === null && loaded) {
+    setActive(!loaded.inn?.trim() ? "company" : !loaded.legal_address.trim() ? "contacts" : "bank");
+  }
   return (
     <div className="pf-co-body">
       <TabHeader title={t("details.title")} hint={t("details.hint")} />
@@ -77,7 +83,7 @@ export function DetailsTab() {
             <DetailsForm
               key={JSON.stringify({ ...company, logo_url: null })}
               company={company}
-              active={active}
+              active={active ?? "company"}
               setActive={setActive}
             />
           )}
@@ -122,6 +128,8 @@ function DetailsForm({
     mutation: {
       onSuccess: (next) => {
         keep(next);
+        // ИНН и адрес — часть готовности к счетам (СЦ-3): баннер и мастер видят их сразу
+        void queryClient.invalidateQueries({ queryKey: getGetSetupChecklistQueryKey() });
         void message.success(t("saved"));
       },
     },
@@ -185,7 +193,7 @@ function DetailsForm({
               key: "company",
               title: t("details.sections.company"),
               summary: [values.name, values.inn].filter(Boolean).join(" · "),
-              complete: Boolean(values.name?.trim()),
+              complete: Boolean(values.name?.trim() && values.inn?.trim()),
               invalid: invalid("company"),
               content: (
                 <>
@@ -259,7 +267,9 @@ function DetailsForm({
               key: "contacts",
               title: t("details.sections.contacts"),
               summary: [values.phone, values.email].filter(Boolean).join(" · "),
-              complete: Boolean(values.phone?.trim() || values.email?.trim()),
+              complete: Boolean(
+                (values.phone?.trim() || values.email?.trim()) && values.legal_address?.trim(),
+              ),
               invalid: invalid("contacts"),
               content: (
                 <div className="pf-co-grid">
