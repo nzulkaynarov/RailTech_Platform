@@ -65,6 +65,26 @@ export function resetCalcMock(): void {
   }
 }
 
+/** Похожая позиция каталога (как `catalog.candidates.suggest_card` в ERP, упрощённо): то же первое слово и общий код с
+ * цифрами, но не то же название. */
+function similarCard(name: string): (typeof CATALOG)[number] | null {
+  const words = (text: string) =>
+    text.toLowerCase().replace(/[.,]/g, " ").split(/\s+/).filter(Boolean);
+  const mine = words(name);
+  const codes = mine.filter((w) => /\d/.test(w));
+  if (mine.length === 0 || codes.length === 0) return null;
+  return (
+    CATALOG.find((product) => {
+      const theirs = words(product.name);
+      return (
+        theirs[0] === mine[0] &&
+        theirs.join(" ") !== mine.join(" ") &&
+        codes.some((code) => theirs.includes(code))
+      );
+    }) ?? null
+  );
+}
+
 export function failure(
   status: number,
   code: string,
@@ -162,7 +182,12 @@ function presentLine(line: MockLine, user: Me, editable: boolean): CalcLine {
     product_id: line.productId === null ? null : String(line.productId),
     product_name: line.productId === null ? null : line.name,
     // ERP заводит строке без позиции каталога карточку-черновик (ADR-0027); мок показывает такую строку черновиком.
-    product_draft: line.productId === null,
+    // Строка с подсказкой похожей позиции (СЦ-10) черновика не получает, пока человек не решит.
+    product_draft: line.productId === null && !line.catalogHint,
+    catalog_hint:
+      line.productId === null && line.catalogHint
+        ? { id: String(line.catalogHint.id), name: line.catalogHint.name }
+        : null,
     item:
       line.productId === null
         ? null
@@ -575,11 +600,14 @@ export const erpCalcHandlers = [
       const product = CATALOG.find((p) => String(p.id) === item.product_id);
       const kind = product ? product.kind : item.kind === "service" ? "service" : "goods";
       nextId += 1;
+      const name = item.name || product?.name || "Позиция";
+      const similar = product ? null : similarCard(name);
       calc.lines.push({
         id: nextId,
-        name: item.name || product?.name || "Позиция",
+        name,
         article: item.article ?? product?.article ?? "",
         productId: product ? product.id : null,
+        catalogHint: similar ? { id: similar.id, name: similar.name } : null,
         kind,
         quantity: item.quantity ?? 1,
         unit: item.unit ?? "",
@@ -646,6 +674,8 @@ export const erpCalcHandlers = [
       line.crewRate = patch.crew_rate === null ? null : Number(patch.crew_rate);
     if (patch.crew_days !== undefined)
       line.crewDays = patch.crew_days === null ? null : Number(patch.crew_days);
+    // «Выбрать» или «Новая позиция» (СЦ-10): решение принято, подсказка снимается.
+    if (patch.product_id !== undefined) line.catalogHint = null;
     if (patch.product_id !== undefined && patch.product_id !== null) {
       const product = CATALOG.find((p) => String(p.id) === patch.product_id);
       if (product) {
@@ -731,6 +761,12 @@ export const erpCalcHandlers = [
         source: "erp",
         reason: "zone_not_permitted",
       });
+    }
+    if (line.productId === null && line.catalogHint) {
+      return conflict(
+        "catalog_match_pending",
+        "Сначала выберите позицию каталога или «Новая позиция».",
+      );
     }
     if (costOf(line) <= 0 || line.client <= 0) {
       return conflict("line_incomplete", "Сначала заполните закупку и цену клиенту.");

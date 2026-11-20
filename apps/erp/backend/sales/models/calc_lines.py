@@ -85,6 +85,22 @@ class CalcLine(models.Model):
             "(цена считается из неё и округляется до сума); пусто — цену ещё не задавали"
         ),
     )
+    catalog_hint = models.ForeignKey(
+        "catalog.Product",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("Похожая карточка каталога"),
+        help_text=_(
+            "СЦ-10: строка без карточки похожа на карточку каталога и ждёт решения человека; черновик не создаётся"
+        ),
+    )
+    catalog_hint_dismissed = models.BooleanField(
+        default=False,
+        verbose_name=_("Решение по карточке принято"),
+        help_text=_("Выбрали карточку или «Новая позиция»: подсказка больше не ставится"),
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

@@ -147,7 +147,13 @@
     "releaseLabel": "«{{name}}» qatori zaxirasini olib tashlash",
     "markupLabel": "Ustama, %: {{name}}",
     "currencyLabel": "«{{name}}» uchun xarid valyutasi",
-    "mpn": "Ishlab chiqaruvchi artikuli"
+    "mpn": "Ishlab chiqaruvchi artikuli",
+    "hint": "Öxşaş: {{name}}",
+    "hintTake": "Tanlaş",
+    "hintTakeLabel": "Tanlaş: «{{name}}»",
+    "hintNew": "Yangi pozitsiya",
+    "hintNewLabel": "Yangi pozitsiya: «{{name}}»",
+    "hintFirst": "avval pozitsiyani tanlang"
   },
   "add": {
     "button": "Qator qo‘shish",

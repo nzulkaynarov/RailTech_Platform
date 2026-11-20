@@ -10,6 +10,8 @@ export interface MockLine {
   name: string;
   article: string;
   productId: number | null;
+  /** СЦ-10: строка без карточки похожа на позицию каталога — «Выбрать» или «Новая позиция». */
+  catalogHint?: { id: number; name: string } | null;
   kind: MockKind;
   quantity: number;
   unit: string;

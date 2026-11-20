@@ -101,6 +101,7 @@ export * from "./busSubscriberQueryParameter";
 export * from "./busSubscriberState";
 export * from "./busTypeQueryParameter";
 export * from "./calcAssignee";
+export * from "./calcCatalogHint";
 export * from "./calcCatalogItem";
 export * from "./calcCatalogItemKind";
 export * from "./calcCatalogPage";

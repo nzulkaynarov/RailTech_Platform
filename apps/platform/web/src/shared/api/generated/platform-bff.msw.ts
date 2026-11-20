@@ -118,6 +118,7 @@ import type {
   BusInboxPage,
   BusJournal,
   BusRetryResult,
+  CalcCatalogHint,
   CalcCatalogPage,
   CalcCopyResult,
   CalcLineVisa,
@@ -23846,6 +23847,16 @@ export const getGetCalcSheetResponseItemRefMock = (
   ...overrideResponse,
 });
 
+export const getGetCalcSheetResponseCalcCatalogHintMock = (
+  overrideResponse: Partial<CalcCatalogHint> = {},
+): CalcCatalogHint => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getGetCalcSheetResponseCalcSupplierMock = (
   overrideResponse: Partial<CalcSupplier> = {},
 ): CalcSupplier => ({
@@ -23935,6 +23946,10 @@ export const getGetCalcSheetResponseMock = (
       null,
     ]),
     product_draft: faker.datatype.boolean(),
+    catalog_hint: faker.helpers.arrayElement([
+      { ...getGetCalcSheetResponseCalcCatalogHintMock() },
+      null,
+    ]),
     kind: faker.helpers.arrayElement(Object.values(CalcLineKind)),
     zone: faker.helpers.arrayElement(Object.values(CalcZone)),
     group: faker.helpers.arrayElement(["stock", "supply", "engineer"] as const),
@@ -24108,6 +24123,16 @@ export const getStartCalcResponseItemRefMock = (
   ...overrideResponse,
 });
 
+export const getStartCalcResponseCalcCatalogHintMock = (
+  overrideResponse: Partial<CalcCatalogHint> = {},
+): CalcCatalogHint => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getStartCalcResponseCalcSupplierMock = (
   overrideResponse: Partial<CalcSupplier> = {},
 ): CalcSupplier => ({
@@ -24197,6 +24222,10 @@ export const getStartCalcResponseMock = (
       null,
     ]),
     product_draft: faker.datatype.boolean(),
+    catalog_hint: faker.helpers.arrayElement([
+      { ...getStartCalcResponseCalcCatalogHintMock() },
+      null,
+    ]),
     kind: faker.helpers.arrayElement(Object.values(CalcLineKind)),
     zone: faker.helpers.arrayElement(Object.values(CalcZone)),
     group: faker.helpers.arrayElement(["stock", "supply", "engineer"] as const),
@@ -24367,6 +24396,16 @@ export const getAddCalcLinesResponseItemRefMock = (
   ...overrideResponse,
 });
 
+export const getAddCalcLinesResponseCalcCatalogHintMock = (
+  overrideResponse: Partial<CalcCatalogHint> = {},
+): CalcCatalogHint => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getAddCalcLinesResponseCalcSupplierMock = (
   overrideResponse: Partial<CalcSupplier> = {},
 ): CalcSupplier => ({
@@ -24456,6 +24495,10 @@ export const getAddCalcLinesResponseMock = (
       null,
     ]),
     product_draft: faker.datatype.boolean(),
+    catalog_hint: faker.helpers.arrayElement([
+      { ...getAddCalcLinesResponseCalcCatalogHintMock() },
+      null,
+    ]),
     kind: faker.helpers.arrayElement(Object.values(CalcLineKind)),
     zone: faker.helpers.arrayElement(Object.values(CalcZone)),
     group: faker.helpers.arrayElement(["stock", "supply", "engineer"] as const),
@@ -24626,6 +24669,16 @@ export const getUpdateCalcLineResponseItemRefMock = (
   ...overrideResponse,
 });
 
+export const getUpdateCalcLineResponseCalcCatalogHintMock = (
+  overrideResponse: Partial<CalcCatalogHint> = {},
+): CalcCatalogHint => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getUpdateCalcLineResponseCalcSupplierMock = (
   overrideResponse: Partial<CalcSupplier> = {},
 ): CalcSupplier => ({
@@ -24715,6 +24768,10 @@ export const getUpdateCalcLineResponseMock = (
       null,
     ]),
     product_draft: faker.datatype.boolean(),
+    catalog_hint: faker.helpers.arrayElement([
+      { ...getUpdateCalcLineResponseCalcCatalogHintMock() },
+      null,
+    ]),
     kind: faker.helpers.arrayElement(Object.values(CalcLineKind)),
     zone: faker.helpers.arrayElement(Object.values(CalcZone)),
     group: faker.helpers.arrayElement(["stock", "supply", "engineer"] as const),
@@ -24888,6 +24945,16 @@ export const getDeleteCalcLineResponseItemRefMock = (
   ...overrideResponse,
 });
 
+export const getDeleteCalcLineResponseCalcCatalogHintMock = (
+  overrideResponse: Partial<CalcCatalogHint> = {},
+): CalcCatalogHint => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getDeleteCalcLineResponseCalcSupplierMock = (
   overrideResponse: Partial<CalcSupplier> = {},
 ): CalcSupplier => ({
@@ -24977,6 +25044,10 @@ export const getDeleteCalcLineResponseMock = (
       null,
     ]),
     product_draft: faker.datatype.boolean(),
+    catalog_hint: faker.helpers.arrayElement([
+      { ...getDeleteCalcLineResponseCalcCatalogHintMock() },
+      null,
+    ]),
     kind: faker.helpers.arrayElement(Object.values(CalcLineKind)),
     zone: faker.helpers.arrayElement(Object.values(CalcZone)),
     group: faker.helpers.arrayElement(["stock", "supply", "engineer"] as const),
@@ -25150,6 +25221,16 @@ export const getSignCalcLineResponseItemRefMock = (
   ...overrideResponse,
 });
 
+export const getSignCalcLineResponseCalcCatalogHintMock = (
+  overrideResponse: Partial<CalcCatalogHint> = {},
+): CalcCatalogHint => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getSignCalcLineResponseCalcSupplierMock = (
   overrideResponse: Partial<CalcSupplier> = {},
 ): CalcSupplier => ({
@@ -25239,6 +25320,10 @@ export const getSignCalcLineResponseMock = (
       null,
     ]),
     product_draft: faker.datatype.boolean(),
+    catalog_hint: faker.helpers.arrayElement([
+      { ...getSignCalcLineResponseCalcCatalogHintMock() },
+      null,
+    ]),
     kind: faker.helpers.arrayElement(Object.values(CalcLineKind)),
     zone: faker.helpers.arrayElement(Object.values(CalcZone)),
     group: faker.helpers.arrayElement(["stock", "supply", "engineer"] as const),
@@ -25409,6 +25494,16 @@ export const getUpdateCalcTermsResponseItemRefMock = (
   ...overrideResponse,
 });
 
+export const getUpdateCalcTermsResponseCalcCatalogHintMock = (
+  overrideResponse: Partial<CalcCatalogHint> = {},
+): CalcCatalogHint => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getUpdateCalcTermsResponseCalcSupplierMock = (
   overrideResponse: Partial<CalcSupplier> = {},
 ): CalcSupplier => ({
@@ -25498,6 +25593,10 @@ export const getUpdateCalcTermsResponseMock = (
       null,
     ]),
     product_draft: faker.datatype.boolean(),
+    catalog_hint: faker.helpers.arrayElement([
+      { ...getUpdateCalcTermsResponseCalcCatalogHintMock() },
+      null,
+    ]),
     kind: faker.helpers.arrayElement(Object.values(CalcLineKind)),
     zone: faker.helpers.arrayElement(Object.values(CalcZone)),
     group: faker.helpers.arrayElement(["stock", "supply", "engineer"] as const),
@@ -25671,6 +25770,16 @@ export const getMarkCalcReadyResponseItemRefMock = (
   ...overrideResponse,
 });
 
+export const getMarkCalcReadyResponseCalcCatalogHintMock = (
+  overrideResponse: Partial<CalcCatalogHint> = {},
+): CalcCatalogHint => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getMarkCalcReadyResponseCalcSupplierMock = (
   overrideResponse: Partial<CalcSupplier> = {},
 ): CalcSupplier => ({
@@ -25760,6 +25869,10 @@ export const getMarkCalcReadyResponseMock = (
       null,
     ]),
     product_draft: faker.datatype.boolean(),
+    catalog_hint: faker.helpers.arrayElement([
+      { ...getMarkCalcReadyResponseCalcCatalogHintMock() },
+      null,
+    ]),
     kind: faker.helpers.arrayElement(Object.values(CalcLineKind)),
     zone: faker.helpers.arrayElement(Object.values(CalcZone)),
     group: faker.helpers.arrayElement(["stock", "supply", "engineer"] as const),
@@ -25930,6 +26043,16 @@ export const getNewCalcQuoteVersionResponseItemRefMock = (
   ...overrideResponse,
 });
 
+export const getNewCalcQuoteVersionResponseCalcCatalogHintMock = (
+  overrideResponse: Partial<CalcCatalogHint> = {},
+): CalcCatalogHint => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getNewCalcQuoteVersionResponseCalcSupplierMock = (
   overrideResponse: Partial<CalcSupplier> = {},
 ): CalcSupplier => ({
@@ -26019,6 +26142,10 @@ export const getNewCalcQuoteVersionResponseMock = (
       null,
     ]),
     product_draft: faker.datatype.boolean(),
+    catalog_hint: faker.helpers.arrayElement([
+      { ...getNewCalcQuoteVersionResponseCalcCatalogHintMock() },
+      null,
+    ]),
     kind: faker.helpers.arrayElement(Object.values(CalcLineKind)),
     zone: faker.helpers.arrayElement(Object.values(CalcZone)),
     group: faker.helpers.arrayElement(["stock", "supply", "engineer"] as const),
@@ -26195,6 +26322,16 @@ export const getLoseCalcRequestResponseItemRefMock = (
   ...overrideResponse,
 });
 
+export const getLoseCalcRequestResponseCalcCatalogHintMock = (
+  overrideResponse: Partial<CalcCatalogHint> = {},
+): CalcCatalogHint => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getLoseCalcRequestResponseCalcSupplierMock = (
   overrideResponse: Partial<CalcSupplier> = {},
 ): CalcSupplier => ({
@@ -26284,6 +26421,10 @@ export const getLoseCalcRequestResponseMock = (
       null,
     ]),
     product_draft: faker.datatype.boolean(),
+    catalog_hint: faker.helpers.arrayElement([
+      { ...getLoseCalcRequestResponseCalcCatalogHintMock() },
+      null,
+    ]),
     kind: faker.helpers.arrayElement(Object.values(CalcLineKind)),
     zone: faker.helpers.arrayElement(Object.values(CalcZone)),
     group: faker.helpers.arrayElement(["stock", "supply", "engineer"] as const),
@@ -26486,6 +26627,16 @@ export const getCopyCalcLinesResponseItemRefMock = (
   ...overrideResponse,
 });
 
+export const getCopyCalcLinesResponseCalcCatalogHintMock = (
+  overrideResponse: Partial<CalcCatalogHint> = {},
+): CalcCatalogHint => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getCopyCalcLinesResponseCalcSupplierMock = (
   overrideResponse: Partial<CalcSupplier> = {},
 ): CalcSupplier => ({
@@ -26580,6 +26731,10 @@ export const getCopyCalcLinesResponseMock = (
           null,
         ]),
         product_draft: faker.datatype.boolean(),
+        catalog_hint: faker.helpers.arrayElement([
+          { ...getCopyCalcLinesResponseCalcCatalogHintMock() },
+          null,
+        ]),
         kind: faker.helpers.arrayElement(Object.values(CalcLineKind)),
         zone: faker.helpers.arrayElement(Object.values(CalcZone)),
         group: faker.helpers.arrayElement(["stock", "supply", "engineer"] as const),
@@ -27104,6 +27259,16 @@ export const getReserveCalcLineResponseItemRefMock = (
   ...overrideResponse,
 });
 
+export const getReserveCalcLineResponseCalcCatalogHintMock = (
+  overrideResponse: Partial<CalcCatalogHint> = {},
+): CalcCatalogHint => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getReserveCalcLineResponseCalcSupplierMock = (
   overrideResponse: Partial<CalcSupplier> = {},
 ): CalcSupplier => ({
@@ -27193,6 +27358,10 @@ export const getReserveCalcLineResponseMock = (
       null,
     ]),
     product_draft: faker.datatype.boolean(),
+    catalog_hint: faker.helpers.arrayElement([
+      { ...getReserveCalcLineResponseCalcCatalogHintMock() },
+      null,
+    ]),
     kind: faker.helpers.arrayElement(Object.values(CalcLineKind)),
     zone: faker.helpers.arrayElement(Object.values(CalcZone)),
     group: faker.helpers.arrayElement(["stock", "supply", "engineer"] as const),
@@ -27366,6 +27535,16 @@ export const getReleaseCalcLineReservationResponseItemRefMock = (
   ...overrideResponse,
 });
 
+export const getReleaseCalcLineReservationResponseCalcCatalogHintMock = (
+  overrideResponse: Partial<CalcCatalogHint> = {},
+): CalcCatalogHint => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getReleaseCalcLineReservationResponseCalcSupplierMock = (
   overrideResponse: Partial<CalcSupplier> = {},
 ): CalcSupplier => ({
@@ -27461,6 +27640,10 @@ export const getReleaseCalcLineReservationResponseMock = (
       null,
     ]),
     product_draft: faker.datatype.boolean(),
+    catalog_hint: faker.helpers.arrayElement([
+      { ...getReleaseCalcLineReservationResponseCalcCatalogHintMock() },
+      null,
+    ]),
     kind: faker.helpers.arrayElement(Object.values(CalcLineKind)),
     zone: faker.helpers.arrayElement(Object.values(CalcZone)),
     group: faker.helpers.arrayElement(["stock", "supply", "engineer"] as const),

@@ -1015,3 +1015,45 @@ async def test_request_file_needs_the_calc_section(
 
     assert response.status_code == 403
     assert erp_data_calls(erp) == []
+
+
+# --- подсказка похожей карточки каталога (СЦ-10) -------------------------------------------------
+
+
+async def test_line_carries_the_catalog_hint(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    await web.login(["SUPPLY"])
+    hinted = line(
+        product_id=None,
+        product_name=None,
+        catalog_hint={"id": 12, "name": "Рельс Р65 ГОСТ Р 51685"},
+    )
+    erp.get(f"{CALC}/104/").mock(
+        return_value=httpx.Response(200, json=sheet(lines=[hinted, service_line()]))
+    )
+
+    response = await web.client.get(f"/api/v1/erp/calc/{ENCODED}")
+
+    assert response.status_code == 200, response.json()
+    check(response, "/erp/calc/{number}", "get")
+    lines = response.json()["lines"]
+    assert lines[0]["catalog_hint"] == {"id": "12", "name": "Рельс Р65 ГОСТ Р 51685"}
+    assert lines[1]["catalog_hint"] is None
+
+
+async def test_sign_before_the_catalog_decision_is_409(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    await web.login(["SUPPLY"])
+    erp.post(f"{CALC}/104/lines/7/visa/").mock(
+        return_value=httpx.Response(409, json={"detail": "CATALOG_MATCH_PENDING"})
+    )
+
+    response = await call(web, "POST", f"/erp/calc/{ENCODED}/lines/7/visa")
+
+    assert response.status_code == 409
+    check(response, "/erp/calc/{number}/lines/{line_id}/visa", "post")
+    body = response.json()
+    assert body["details"]["reason"] == "catalog_match_pending"
+    assert body["message"] == "Сначала выберите позицию каталога или «Новая позиция»."
