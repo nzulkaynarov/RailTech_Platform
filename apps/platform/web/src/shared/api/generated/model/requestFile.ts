@@ -9,7 +9,7 @@
 export interface RequestFile {
   /** @minimum 1 */
   id: number;
-  /** Имя */
+  /** Имя, с которым файл приложил клиент */
   name: string;
   uploaded_at: string;
 }

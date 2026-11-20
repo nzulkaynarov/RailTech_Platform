@@ -22439,7 +22439,7 @@ components:
       description: Файл заявки клиента в ERP (исходник заявки сделки)
       properties:
         id: {type: integer, minimum: 1}
-        name: {type: string, description: Имя, с которым файл приложил клиент}
+        name: {type: string, description: 'Имя, с которым файл приложил клиент'}
         uploaded_at: {type: string, format: date-time}
 
     LetterAssignee:

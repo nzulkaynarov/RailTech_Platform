@@ -899,11 +899,11 @@ async def test_card_shows_the_client_files_of_the_request(
     assert response.json()["request"]["files"] == [SPEC]
 
 
-@pytest.mark.parametrize("answer", ["old_erp", 403])
+@pytest.mark.parametrize("answer", [deal(), 403], ids=["old_erp", "erp_403"])
 async def test_card_without_erp_files_has_no_files_key(
-    web: Web, eds: EdsFake, answer: str | int
+    web: Web, eds: EdsFake, answer: dict[str, Any] | int
 ) -> None:
-    eds.deal = deal() if answer == "old_erp" else answer
+    eds.deal = answer
     await _director(web)
 
     response = await web.client.get(CARD)
