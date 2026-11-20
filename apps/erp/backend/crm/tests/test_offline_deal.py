@@ -86,3 +86,39 @@ def test_outsider_cannot_open_deal_for_the_teams_contact(seller_with_client):
     c.force_authenticate(other)
     resp = c.post("/api/v1/crm/deals/", {"contact_id": contact.id, "title": "x"}, format="json")
     assert resp.status_code == 403  # contact not in this user's book
+
+
+@pytest.mark.django_db
+def test_staff_opens_deal_for_crm_client_contact():
+    """СЦ-12: контакт клиента из CRM (без автора) — в книге: сделка по нему открывается."""
+    from integration.tests.world import make_company
+
+    DealStage.objects.get_or_create(code="DRAFT", defaults={"name": "Черновик", "sort_order": 10})
+    seller = _seller("rep@crm.test", "700000001")
+    company = make_company("CRM Buyer", crm_client_id=7101, inn="305000444")
+    api = APIClient()
+    api.force_authenticate(user=seller)
+
+    response = api.post("/api/v1/crm/deals/", {"contact_id": company.contacts.get().id, "title": "x"}, format="json")
+
+    assert response.status_code == 201, response.content
+    assert Deal.objects.get(pk=response.json()["id"]).company_id == company.id
+
+
+@pytest.mark.django_db
+def test_supplier_contact_is_not_in_the_book():
+    """СЦ-12: контакт поставщика, заведённый сотрудником, не делает поставщика клиентом."""
+    from accounts.models import Contact
+
+    DealStage.objects.get_or_create(code="DRAFT", defaults={"name": "Черновик", "sort_order": 10})
+    seller = _seller("rep@sup.test", "700000002")
+    supplier = Company.objects.create(name="Supplier Co", inn="305000555")
+    supplier.types.add(CompanyType.objects.get(code="SUPPLIER"))
+    contact = Contact.objects.create(company=supplier, name="S", email="s@sup.test", created_by=seller)
+    api = APIClient()
+    api.force_authenticate(user=seller)
+
+    response = api.post("/api/v1/crm/deals/", {"contact_id": contact.id, "title": "x"}, format="json")
+
+    assert response.status_code == 403
+    assert "CONTACT_NOT_IN_YOUR_BOOK" in response.content.decode()

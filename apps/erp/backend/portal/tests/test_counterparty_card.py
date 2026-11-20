@@ -27,7 +27,7 @@ def world():
     Currency.objects.update_or_create(code="UZS", defaults={"name": "Сум", "iso_numeric": "860"})
     staff = world["users"]["supply"]
     supplier = world["supplier"]
-    # та же компания — ещё и клиент: контакт заведён сотрудником, связана с клиентом CRM
+    # та же компания — ещё и клиент: связана с клиентом CRM (СЦ-12: клиент — по фактам, а не по автору контакта)
     Contact.objects.create(
         company=supplier, name="Рустам Ахмедов", position="Снабжение", is_primary=True, created_by=staff, phone="+998"
     )

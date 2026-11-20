@@ -14,6 +14,7 @@ from datetime import timedelta
 import pytest
 from django.core import mail
 from django.utils import timezone
+from integration.models import CrmClientMapping
 from portal.models import MagicLinkToken
 from portal.services.tokens import hash_token
 from rest_framework import status
@@ -267,7 +268,9 @@ class TestContactInvitation:
     def test_invite_contact_of_company_without_client_type_is_refused(
         self, client_contact, client_company, seller_user
     ):
-        """K0: поставщику (компании без типа CLIENT) приглашение не уходит — ни письма, ни токена."""
+        """K0: поставщику (компании без типа CLIENT) приглашение не уходит — ни письма, ни токена. Компания связана с
+        клиентом CRM по ИНН без проверки: она в книге (СЦ-12), но кабинет ей закрыт."""
+        CrmClientMapping.objects.create(crm_client_id=9001, company=client_company, verified_at=None)
         client_company.types.add(CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Поставщик"})[0])
         client_company.types.remove(CompanyType.objects.get(code="CLIENT"))
         mail.outbox.clear()
