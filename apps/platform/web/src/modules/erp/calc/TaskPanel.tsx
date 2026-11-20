@@ -9,6 +9,7 @@ import { useGetCalcSheet } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { EmptyState } from "../../../shared/ui/EmptyState";
+import { RequestFiles } from "./RequestFiles";
 import { QueryState } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { StatusTag } from "../../../shared/ui/StatusTag";
@@ -94,6 +95,14 @@ export function TaskBody({ sheet, brief = false }: { sheet: CalcSheet; brief?: b
           ]}
         />
       </section>
+      {sheet.request.files?.length ? (
+        <section aria-labelledby="pf-calc-task-files">
+          <h3 id="pf-calc-task-files" className="pf-calc-task-title">
+            {t("task.requestFiles")}
+          </h3>
+          <RequestFiles sheet={sheet} />
+        </section>
+      ) : null}
       <section aria-labelledby="pf-calc-task-visas">
         <h3 id="pf-calc-task-visas" className="pf-calc-task-title">
           {t("task.visas")}

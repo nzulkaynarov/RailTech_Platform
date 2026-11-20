@@ -189,3 +189,34 @@ describe("Расчёт по заявке", () => {
     });
   });
 });
+
+describe("Расчёт · файлы заявки клиента (СЦ-10)", () => {
+  it("в задании (боковое окно) — файл клиента со ссылкой на скачивание", async () => {
+    signIn("supply@demo.example");
+    renderAt("/erp/requests");
+    fireEvent.click(
+      await screen.findByRole("link", {
+        name: `Показать задание по заявке ${NUMBER} в боковом окне`,
+      }),
+    );
+    const panel = await panelEl();
+    const link = await within(panel).findByRole("link", { name: "Скачать файл spec.pdf" });
+    expect(link).toHaveAttribute(
+      "href",
+      `/api/v1/erp/calc/${encodeURIComponent(NUMBER)}/request-files/7`,
+    );
+    expect(link).toHaveAttribute("download");
+    expect(within(panel).getByRole("heading", { name: "Файлы заявки" })).toBeVisible();
+  });
+
+  it("до начала расчёта — файл под текстом заявки", async () => {
+    signIn("supply@demo.example");
+    const number = "ЗВ-2026-103";
+    renderAt(`/erp/calc/${encodeURIComponent(number)}`);
+    expect(await screen.findByRole("heading", { name: "Расчёт ещё не начат" })).toBeVisible();
+    const files = screen.getByRole("list", { name: "Файлы заявки" });
+    expect(
+      within(files).getByRole("link", { name: "Скачать файл Ведомость брусьев.xlsx" }),
+    ).toHaveAttribute("href", `/api/v1/erp/calc/${encodeURIComponent(number)}/request-files/8`);
+  });
+});

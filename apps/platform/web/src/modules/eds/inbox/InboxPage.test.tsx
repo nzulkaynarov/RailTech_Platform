@@ -320,3 +320,28 @@ describe("EDS · Входящие письма: карточка", () => {
     expect(screen.queryByRole("table")).toBeNull();
   });
 });
+
+describe("EDS · Входящие письма: файлы заявки клиента (СЦ-10)", () => {
+  it("письмо из кабинета без своих вложений показывает файл заявки, а не «Вложений нет»", async () => {
+    await openInbox("director@demo.example", "/eds/inbox/%D0%92%D0%A5-106%2F26");
+
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Письмо ВХ-106/26" }),
+    ).toBeVisible();
+    const files = screen.getByRole("list", { name: "Из заявки ЗВ-2026-106" });
+    expect(within(files).getByRole("link", { name: "Скачать файл spec.pdf" })).toHaveAttribute(
+      "href",
+      "/api/v1/eds/letters/20000000-0000-4000-8000-000000000106/request-files/9",
+    );
+    expect(screen.queryByText("Вложений нет")).not.toBeInTheDocument();
+  });
+
+  it("письмо без вложений и без файлов заявки — «Вложений нет»", async () => {
+    await openInbox("director@demo.example", "/eds/inbox/%D0%92%D0%A5-107%2F26");
+
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Письмо ВХ-107/26" }),
+    ).toBeVisible();
+    expect(screen.getByText("Вложений нет")).toBeVisible();
+  });
+});

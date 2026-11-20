@@ -341,3 +341,13 @@
 .pf-letters-due--overdue {
   color: var(--rt-color-error-hover);
 }
+
+/* Файлы заявки клиента в «Вложениях» (СЦ-10): подпись над списком, отступ от файлов письма */
+.pf-letters-request-files:not(:first-child) {
+  margin-top: 16px;
+}
+.pf-letters-request-files h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 400;
+}

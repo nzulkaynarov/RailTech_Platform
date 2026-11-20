@@ -172,7 +172,8 @@
         "invalid_state": "The letter is already marked as duplicate",
         "letter_has_duplicates": "This letter already has duplicates — mark the other letter of the pair"
       }
-    }
+    },
+    "requestFiles": "From request {{number}}"
   },
   "panel": {
     "awaitingReadOnly": {

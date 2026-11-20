@@ -49,6 +49,8 @@ export interface MockCalc {
   assignees: { zone: "goods" | "services" | "payment_terms"; name: string | null }[];
   requestText: string;
   requestLines: number;
+  /** Файлы, которые клиент приложил к заявке в кабинете (СЦ-10). */
+  requestFiles?: { id: number; name: string; uploaded_at: string }[];
   started: boolean;
   state: "in_progress" | "returned" | "at_director" | "approved" | "rejected";
   quoteNumber: string | null;
@@ -145,6 +147,7 @@ export function seedCalcs(): MockCalc[] {
       requestText:
         "Просим посчитать 2 стрелочных перевода Р65 марки 1/11, 4 привода СП-6М и монтаж переводов бригадой на станции заказчика.",
       requestLines: 3,
+      requestFiles: [{ id: 7, name: "spec.pdf", uploaded_at: "2026-10-27T05:40:00Z" }],
       started: true,
       state: "in_progress",
       quoteNumber: null,
@@ -283,6 +286,9 @@ export function seedCalcs(): MockCalc[] {
       requestText:
         "Просим обследовать 6 стрелочных переводов на подъездном пути и предложить ремонт с заменой изношенных деталей.",
       requestLines: 0,
+      requestFiles: [
+        { id: 8, name: "Ведомость брусьев.xlsx", uploaded_at: "2026-10-28T07:10:00Z" },
+      ],
       started: false,
       state: "in_progress",
       quoteNumber: null,

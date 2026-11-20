@@ -34,6 +34,7 @@ from app.clients.eds import EdsLetters, eds_error
 from app.clients.erp_company import counterparty_snapshot
 from app.deps import Authed, require, require_any, require_any_section
 from app.doc_numbers import DOC_NUMBER_RE as NUMBER_RE
+from app.erp_request_files import stream_request_file
 from app.errors import PlatformError, backend_unavailable
 from app.feeds.feed import Feed
 from app.rbac import strip_restricted
@@ -307,6 +308,26 @@ async def mark_letter_duplicate(
 ) -> LetterCard:
     """«Это дубль ВХ-…» (EDS-DUP): решает EDS — статус, отмена поручений, журнал."""
     return await _card(authed, await _letters(authed).mark_duplicate(str(id), body.for_eds()))
+
+
+@router.get(
+    "/letters/{id}/request-files/{file_id}",
+    response_class=StreamingResponse,
+    responses={200: {"content": {"application/octet-stream": {}}}},
+    operation_id="downloadLetterRequestFile",
+)
+async def download_letter_request_file(
+    id: LetterId, file_id: Annotated[int, Path(ge=1, le=2**31 - 1)], authed: Participant
+) -> StreamingResponse:
+    """Файл заявки клиента (СЦ-10): письмо видно сотруднику (решает EDS), файл — ERP по сделке
+    письма.
+
+    Объявлен раньше `/letters/{ref:path}`, иначе путь заберёт он."""
+    letter = parse_letter(await _letters(authed).get(str(id)))
+    deal_id = letter.links.erp_deal_id
+    if deal_id is None:
+        raise _not_found()
+    return await stream_request_file(authed, deal_id, file_id)
 
 
 @router.get(

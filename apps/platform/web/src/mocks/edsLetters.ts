@@ -487,6 +487,16 @@ export const edsLettersHandlers = [
     });
   }),
 
+  http.get("*/eds/letters/:id/request-files/:fileId", () => {
+    if (!readSession()) return failure(401, "SESSION_EXPIRED", "Сессия истекла");
+    return new HttpResponse("демо-файл заявки", {
+      headers: {
+        "content-type": "application/octet-stream",
+        "content-disposition": "attachment; filename*=UTF-8''spec.pdf",
+      },
+    });
+  }),
+
   http.get("*/eds/letter-files/:id", () => {
     // Файлы письма и отчётов скачивает и участник поручения без «Входящих» (решает EDS, P8b).
     if (!readSession()) return failure(401, "SESSION_EXPIRED", "Сессия истекла");
