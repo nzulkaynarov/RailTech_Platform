@@ -113,7 +113,10 @@ export interface MockOrder {
   status: OrderStatus;
   supplierId: number;
   expectedDate: string | null;
+  /** Внутреннее примечание снабжения: партнёру не уходит (СЦ-10) */
   note: string;
+  /** Комментарий партнёру: письмо с заказом и кабинет партнёра; правится только в черновике */
+  partnerNote?: string;
   currency: string;
   createdAt: string;
   createdBy: string;

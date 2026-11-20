@@ -217,6 +217,59 @@ describe("Склад · заказы партнёрам", () => {
     expect(screen.queryByRole("button", { name: "Отправить партнёру" })).not.toBeInTheDocument();
   });
 
+  it("внутреннее примечание и комментарий партнёру: разные поля; комментарий правится в черновике (СЦ-10)", async () => {
+    await openStock("supply@demo.example", "orders");
+    fireEvent.click(await screen.findByRole("link", { name: "Создать заказ" }));
+    await screen.findByRole("heading", { level: 1, name: "Новый заказ партнёру" });
+    const page = document.body;
+    fireEvent.mouseDown(within(page).getByRole("combobox", { name: "Партнёр" }));
+    fireEvent.click(
+      await screen.findByText("ООО «Вымышленная Сталь»", {
+        selector: ".ant-select-item-option-content",
+      }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /^Строки/, expanded: false }));
+    expect(screen.getByText("Партнёр его не увидит.")).toBeVisible();
+    fireEvent.change(within(page).getByLabelText("Внутреннее примечание"), {
+      target: { value: "Под проект клиента" },
+    });
+    fireEvent.change(within(page).getByLabelText("Комментарий партнёру"), {
+      target: { value: "Отгрузка до станции Сергели" },
+    });
+    fireEvent.mouseDown(within(page).getByRole("combobox", { name: "Товар, строка 1" }));
+    fireEvent.change(within(page).getByRole("combobox", { name: "Товар, строка 1" }), {
+      target: { value: "перевод" },
+    });
+    fireEvent.click(
+      await screen.findByText(/Перевод стрелочный Р65 марки 1\/11/, {
+        selector: ".ant-select-item-option-content",
+      }),
+    );
+    fireEvent.change(within(page).getByRole("spinbutton", { name: "Количество, строка 1" }), {
+      target: { value: "1" },
+    });
+    fireEvent.click(within(page).getByRole("button", { name: "Создать черновик" }));
+
+    await screen.findByRole("button", { name: "Отправить партнёру" });
+    expect(screen.getByText("Отгрузка до станции Сергели")).toBeVisible();
+    expect(screen.getByText("Под проект клиента")).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "Изменить" }));
+    const edit = await screen.findByRole("dialog");
+    fireEvent.change(within(edit).getByLabelText("Комментарий партнёру"), {
+      target: { value: "Отгрузка двумя партиями" },
+    });
+    fireEvent.click(within(edit).getByRole("button", { name: "Сохранить" }));
+    expect(await screen.findByText("Заказ сохранён")).toBeVisible();
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    expect(
+      screen.getByText("Отгрузка двумя партиями", { selector: ":not(textarea)" }),
+    ).toBeVisible();
+    expect(screen.queryByText("Отгрузка до станции Сергели")).not.toBeInTheDocument();
+  });
+
   it("партнёр без почты: отправка требует адрес", async () => {
     await openStock("supply@demo.example", "orders");
     // новый заказ — страница с секциями (platform-frontend.md §4.1a)

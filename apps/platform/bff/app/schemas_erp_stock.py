@@ -246,6 +246,7 @@ class SupplierOrderMail(BaseModel):
 
 class SupplierOrderDetail(SupplierOrderRow):
     note: str
+    partner_note: str
     sent_at: dt.datetime | None
     sent_to: str | None
     mail: SupplierOrderMail | None
@@ -435,6 +436,7 @@ class SupplierOrderCreate(BaseModel):
     supplier_id: str = Field(pattern=DIGITS, max_length=12)
     expected_date: dt.date | None = None
     note: str | None = Field(default=None, max_length=5000)
+    partner_note: str | None = Field(default=None, max_length=5000)
     currency: str | None = Field(default=None, pattern=r"^[A-Z]{3}$")
     lines: list[SupplierOrderLineIn] = Field(min_length=1, max_length=200)
 
@@ -452,6 +454,7 @@ class SupplierOrderPatch(BaseModel):
     supplier_id: str | None = Field(default=None, pattern=DIGITS, max_length=12)
     expected_date: dt.date | None = None
     note: str | None = Field(default=None, max_length=5000)
+    partner_note: str | None = Field(default=None, max_length=5000)
     currency: str | None = Field(default=None, pattern=r"^[A-Z]{3}$")
     lines: list[SupplierOrderLineIn] | None = Field(default=None, min_length=1, max_length=200)
 
@@ -766,6 +769,7 @@ def to_order(raw: Mapping[str, Any], prices: bool) -> SupplierOrderDetail:
     return SupplierOrderDetail(
         **_row_data(raw, prices),
         note=raw.get("note") or "",
+        partner_note=raw.get("partner_note") or "",
         sent_at=raw.get("sent_at"),
         sent_to=raw.get("sent_to"),
         mail=_order_mail(raw.get("mail")),

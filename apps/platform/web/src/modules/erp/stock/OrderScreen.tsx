@@ -297,6 +297,12 @@ function Content({ order }: { order: SupplierOrderDetail }) {
               label: t("order.createdBy"),
               value: order.created_by ? <PersonRefCell person={order.created_by} /> : null,
             },
+            {
+              label: t("order.partnerNote"),
+              value: order.partner_note ? (
+                <span className="pf-stock-multiline">{order.partner_note}</span>
+              ) : null,
+            },
             { label: t("order.note"), value: order.note },
           ]}
         />

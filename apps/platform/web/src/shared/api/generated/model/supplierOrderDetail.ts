@@ -53,7 +53,10 @@ export interface SupplierOrderDetail {
   created_by: PersonRef | null;
   actions: SupplierOrderActions;
   path: string;
+  /** Внутреннее примечание снабжения: партнёру не уходит */
   note: string;
+  /** Комментарий партнёру: уходит в письме с заказом и в кабинет партнёра */
+  partner_note: string;
   /** @nullable */
   sent_at: string | null;
   /**

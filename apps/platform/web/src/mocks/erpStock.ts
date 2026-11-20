@@ -481,6 +481,7 @@ function presentOrder(state: MockStock, order: MockOrder, user: Me): SupplierOrd
     ...row,
     supplier: { ...row.supplier, email: supplier?.email ?? null },
     note: order.note,
+    partner_note: order.partnerNote ?? "",
     sent_at: order.sentAt,
     sent_to: order.sentTo,
     mail: order.sentAt ? (order.mail ?? { state: "sent", reason: null }) : null,
@@ -1014,6 +1015,7 @@ export const erpStockHandlers = [
       body.note ?? "",
       body.currency ?? "UZS",
       lines.lines,
+      body.partner_note ?? "",
     );
     write(state);
     return HttpResponse.json<SupplierOrderDetail>(presentOrder(state, order, held.user), {
@@ -1041,12 +1043,21 @@ export const erpStockHandlers = [
     if (order.status === "received" || order.status === "cancelled") {
       return conflict("order_closed", "Заказ закрыт: изменить его нельзя.");
     }
-    if ((body.lines !== undefined || body.supplier_id !== undefined) && order.status !== "draft") {
-      return conflict("order_not_draft", "Состав и партнёра можно менять только в черновике.");
+    const partnerNoteChanged =
+      body.partner_note !== undefined && body.partner_note !== (order.partnerNote ?? "");
+    if (
+      (body.lines !== undefined || body.supplier_id !== undefined || partnerNoteChanged) &&
+      order.status !== "draft"
+    ) {
+      return conflict(
+        "order_not_draft",
+        "Состав, партнёра и комментарий партнёру можно менять только в черновике.",
+      );
     }
     if (body.supplier_id !== undefined) order.supplierId = Number(body.supplier_id);
     if ("expected_date" in body) order.expectedDate = body.expected_date ?? null;
     if (body.note !== undefined) order.note = body.note;
+    if (body.partner_note !== undefined) order.partnerNote = body.partner_note;
     if (body.lines) {
       const lines = linesFrom(state, body.lines, held.user, order);
       if ("error" in lines) return lines.error;
@@ -1562,6 +1573,7 @@ function createOrder(
   note: string,
   currency: string,
   lines: NewLine[],
+  partnerNote = "",
 ): MockOrder {
   state.orderSeq += 1;
   state.nextId += 1;
@@ -1573,6 +1585,7 @@ function createOrder(
     supplierId,
     expectedDate,
     note,
+    partnerNote,
     currency,
     createdAt: now,
     createdBy: user.name,

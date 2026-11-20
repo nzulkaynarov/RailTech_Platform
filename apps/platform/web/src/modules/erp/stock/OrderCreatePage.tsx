@@ -29,6 +29,7 @@ interface Values {
   request?: string;
   expected_date?: string;
   note?: string;
+  partner_note?: string;
   lines?: LineValues[];
 }
 
@@ -150,11 +151,13 @@ export function OrderCreatePage() {
               return;
             }
             const note = clean(values.note);
+            const partnerNote = clean(values.partner_note);
             create.mutate({
               data: {
                 supplier_id: values.supplier_id,
                 ...(values.expected_date ? { expected_date: values.expected_date } : {}),
                 ...(note ? { note } : {}),
+                ...(partnerNote ? { partner_note: partnerNote } : {}),
                 lines: (values.lines ?? [])
                   .filter((l) => l.product_id && l.quantity)
                   .map((l) => ({
@@ -248,10 +251,24 @@ export function OrderCreatePage() {
                             <Form.Item name="expected_date" label={t("create.expected")}>
                               <DateField />
                             </Form.Item>
-                            <Form.Item name="note" label={t("create.note")}>
-                              <Input maxLength={5000} />
-                            </Form.Item>
                           </div>
+                          <Form.Item
+                            name="note"
+                            label={t("create.note")}
+                            extra={t("create.noteHint")}
+                          >
+                            <Input maxLength={5000} />
+                          </Form.Item>
+                          <Form.Item
+                            name="partner_note"
+                            label={t("create.partnerNote")}
+                            extra={t("create.partnerNoteHint")}
+                          >
+                            <Input.TextArea
+                              maxLength={5000}
+                              autoSize={{ minRows: 2, maxRows: 6 }}
+                            />
+                          </Form.Item>
                           <Form.List name="lines">
                             {(fields, { add, remove }) => (
                               <div className="pf-calc-stack">

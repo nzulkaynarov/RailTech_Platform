@@ -5,15 +5,23 @@
 import type { SupplierOrderLineIn } from "./supplierOrderLineIn";
 
 /**
- * Состав (`lines`) и поставщик правятся только в черновике; ожидаемая дата и примечание — пока заказ не закрыт
+ * Состав (`lines`), поставщик и комментарий партнёру правятся только в черновике; ожидаемая дата и внутреннее примечание — пока заказ не закрыт
  */
 export interface SupplierOrderPatch {
   /** @pattern ^[0-9]+$ */
   supplier_id?: string;
   /** @nullable */
   expected_date?: string | null;
-  /** @maxLength 5000 */
+  /**
+   * Внутреннее примечание: партнёру не уходит
+   * @maxLength 5000
+   */
   note?: string;
+  /**
+   * Комментарий партнёру; после отправки заказа не меняется
+   * @maxLength 5000
+   */
+  partner_note?: string;
   /**
    * @nullable
    * @pattern ^[A-Z]{3}$
