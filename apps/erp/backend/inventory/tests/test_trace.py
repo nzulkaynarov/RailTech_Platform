@@ -17,7 +17,7 @@ from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
 from django.utils import timezone
 from inventory.models import StockBalance, TraceStatus, TraceUnit
-from inventory.tests.support import api, make_deal
+from inventory.tests.support import api, complete_order, make_deal
 from supply.models import GoodsReceiptLine, SupplierOrderLine
 
 from catalog.models import Category, Manufacturer, SupplierOffer
@@ -66,6 +66,7 @@ def _order(world, lines, who="supply"):
     created = api(world[who]).post(f"{STOCK}orders/", body, format="json")
     assert created.status_code == 201, created.json()
     order_id = created.json()["id"]
+    complete_order(order_id)
     assert api(world[who]).post(f"{STOCK}orders/{order_id}/send/", {}, format="json").status_code == 200
     confirm = {"expected_date": _future(1)}
     assert api(world[who]).post(f"{STOCK}orders/{order_id}/confirm/", confirm, format="json").status_code == 200

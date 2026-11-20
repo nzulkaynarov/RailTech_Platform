@@ -19,7 +19,7 @@
           <td style="border:1px solid #e5e7eb;">{{ line.name }}</td>
           <td style="border:1px solid #e5e7eb;">{{ line.article }}</td>
           <td style="border:1px solid #e5e7eb;">{{ line.quantity }}{% if line.unit %} {{ line.unit }}{% endif %}</td>
-          {% if with_prices %}<td style="border:1px solid #e5e7eb;">{{ line.unit_price }}</td>{% endif %}
+          {% if with_prices %}<td style="border:1px solid #e5e7eb;">{{ line.unit_price }}{% if currency %} {{ currency }}{% endif %}</td>{% endif %}
         </tr>
         {% endfor %}
       </table>

@@ -16,7 +16,7 @@ import pytest
 from django.core import mail
 from inventory.models import Reservation, ReservationStatus
 from inventory.services import stock
-from inventory.tests.support import api, make_deal
+from inventory.tests.support import api, complete_order, make_deal
 from inventory.tests.test_stock import _adjust, _reserve
 from supply.models import OrderStatus, SupplierOrder
 from supply.services.provision import provision_accepted_quote
@@ -245,6 +245,7 @@ def test_release_for_deal_keeps_shipped_part_sent_orders_and_is_repeatable(world
         )
         .json()["id"]
     )
+    complete_order(sent)
     assert api(world["supply"]).post(f"{STOCK}orders/{sent}/send/", {}, format="json").status_code == 200
 
     assert stock.release_for_deal(deal, reason="Проект отменён") == 1

@@ -44,7 +44,8 @@ ERRORS = {
     404: OpenApiResponse(StockErrorSerializer, description="Заказа, строки, поставщика или заявки нет"),
     409: OpenApiResponse(
         StockErrorSerializer,
-        description="Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`, мало товара)",
+        description="Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`, мало товара, "
+        "нет цены или ожидаемой даты — `ORDER_INCOMPLETE`)",
     ),
 }
 READ_ERRORS = {403: ERRORS[403], 404: ERRORS[404]}

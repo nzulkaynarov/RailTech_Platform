@@ -19585,7 +19585,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/StockError'
           description: Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`,
-            мало товара)
+            мало товара, нет цены или ожидаемой даты — `ORDER_INCOMPLETE`)
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/stock/orders/from-deal/:
@@ -19640,7 +19640,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/StockError'
           description: Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`,
-            мало товара)
+            мало товара, нет цены или ожидаемой даты — `ORDER_INCOMPLETE`)
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/stock/orders/{order_id}/:
@@ -19735,7 +19735,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/StockError'
           description: Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`,
-            мало товара)
+            мало товара, нет цены или ожидаемой даты — `ORDER_INCOMPLETE`)
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/stock/orders/{order_id}/cancel/:
@@ -19795,7 +19795,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/StockError'
           description: Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`,
-            мало товара)
+            мало товара, нет цены или ожидаемой даты — `ORDER_INCOMPLETE`)
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/stock/orders/{order_id}/confirm/:
@@ -19856,7 +19856,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/StockError'
           description: Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`,
-            мало товара)
+            мало товара, нет цены или ожидаемой даты — `ORDER_INCOMPLETE`)
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/stock/orders/{order_id}/receipts/:
@@ -19917,7 +19917,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/StockError'
           description: Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`,
-            мало товара)
+            мало товара, нет цены или ожидаемой даты — `ORDER_INCOMPLETE`)
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/stock/orders/{order_id}/send/:
@@ -19977,7 +19977,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/StockError'
           description: Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`,
-            мало товара)
+            мало товара, нет цены или ожидаемой даты — `ORDER_INCOMPLETE`)
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/stock/overdue/:
@@ -20088,7 +20088,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/StockError'
           description: Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`,
-            мало товара)
+            мало товара, нет цены или ожидаемой даты — `ORDER_INCOMPLETE`)
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/stock/price-requests/{request_id}/answer/:
@@ -20148,7 +20148,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/StockError'
           description: Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`,
-            мало товара)
+            мало товара, нет цены или ожидаемой даты — `ORDER_INCOMPLETE`)
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/stock/receipts/:
@@ -30099,6 +30099,7 @@ components:
           type: boolean
         send:
           type: boolean
+          description: 'Черновик полный: у всех строк цена и есть ожидаемая дата (СЦ-10)'
         confirm:
           type: boolean
         receive:
@@ -30218,6 +30219,11 @@ components:
         partner_note:
           type: string
           description: 'Комментарий партнёру: в письме с заказом и в кабинете'
+        send_missing:
+          allOf:
+          - $ref: '#/components/schemas/OrderSendMissing'
+          nullable: true
+          description: 'СЦ-10: чего не хватает черновику для отправки партнёру; полный или не черновик — null'
         sent_at:
           type: string
           format: date-time
@@ -30285,6 +30291,7 @@ components:
       - received_at
       - received_quantity
       - rights
+      - send_missing
       - sent_at
       - sent_to
       - status
@@ -30653,6 +30660,18 @@ components:
             default: ''
           - type: string
             maxLength: 0
+    OrderSendMissing:
+      type: object
+      properties:
+        prices:
+          type: integer
+          description: Сколько строк без цены
+        date:
+          type: boolean
+          description: Нет ожидаемой даты
+      required:
+      - date
+      - prices
     OrderSupplier:
       type: object
       properties:
@@ -37252,6 +37271,12 @@ components:
         shipped:
           type: integer
           description: '`BELOW_SHIPPED`: уже отгружено'
+        missing_prices:
+          type: integer
+          description: '`ORDER_INCOMPLETE`: строк без цены'
+        missing_date:
+          type: boolean
+          description: '`ORDER_INCOMPLETE`: нет ожидаемой даты'
         current:
           type: string
           description: '`TRANSITION_NOT_ALLOWED`, `ORDER_NOT_CONFIRMED`: текущий статус'
