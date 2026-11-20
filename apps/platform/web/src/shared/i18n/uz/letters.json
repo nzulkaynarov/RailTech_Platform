@@ -449,6 +449,11 @@
     "person": {
       "label": "Korrespondent şaxsi",
       "hint": "Majburiy emas: tashkilot kartoçkasidan."
+    },
+    "saved": {
+      "found": "Qoralama {{time}}: {{files}}",
+      "continue": "Davom etiş",
+      "restart": "Qaytadan boşlaş"
     }
   },
   "office": {
