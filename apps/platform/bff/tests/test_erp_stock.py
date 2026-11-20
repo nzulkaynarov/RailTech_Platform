@@ -835,6 +835,61 @@ async def test_patch_needs_something_and_sends_only_what_changed(
     assert json.loads(route.calls.last.request.content) == {"expected_date": None}
 
 
+async def test_internal_note_and_partner_comment_travel_separately(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    """СЦ-10: внутреннее примечание и комментарий партнёру — разные поля в создании и правке."""
+    await web.login(["SUPPLY"])
+    create = erp.post(f"{STOCK}/orders/").mock(
+        return_value=httpx.Response(
+            201,
+            json=order_detail(
+                status="draft",
+                number=ORDER,
+                note="Дефицит проекта PRJ-2026-001",
+                partner_note="Отгрузка до станции Сергели",
+            ),
+        )
+    )
+    created = await call(
+        web,
+        "POST",
+        "/erp/stock/orders",
+        {
+            "supplier_id": "5",
+            "note": "Дефицит проекта PRJ-2026-001",
+            "partner_note": "Отгрузка до станции Сергели",
+            "lines": [{"product_id": "4", "quantity": 1}],
+        },
+    )
+    assert created.status_code == 201, created.json()
+    check(created, "/erp/stock/orders", "post")
+    sent = json.loads(create.calls.last.request.content)
+    assert sent["note"] == "Дефицит проекта PRJ-2026-001"
+    assert sent["partner_note"] == "Отгрузка до станции Сергели"
+    assert created.json()["note"] == "Дефицит проекта PRJ-2026-001"
+    assert created.json()["partner_note"] == "Отгрузка до станции Сергели"
+
+    route = erp.patch(f"{STOCK}/orders/31/").mock(
+        return_value=httpx.Response(200, json=order_detail(partner_note="Две партии"))
+    )
+    patched = await call(
+        web, "PATCH", f"/erp/stock/orders/{ORDER_ENCODED}", {"partner_note": "Две партии"}
+    )
+    assert patched.status_code == 200
+    assert json.loads(route.calls.last.request.content) == {"partner_note": "Две партии"}
+    assert patched.json()["partner_note"] == "Две партии"
+
+    erp.patch(f"{STOCK}/orders/31/").mock(
+        return_value=httpx.Response(409, json={"detail": "ORDER_NOT_DRAFT"})
+    )
+    refused = await call(
+        web, "PATCH", f"/erp/stock/orders/{ORDER_ENCODED}", {"partner_note": "После"}
+    )
+    assert refused.status_code == 409
+    assert refused.json()["details"]["reason"] == "order_not_draft"
+
+
 # --- приёмка, отгрузки, поставщики -------------------------------------------------------------
 
 

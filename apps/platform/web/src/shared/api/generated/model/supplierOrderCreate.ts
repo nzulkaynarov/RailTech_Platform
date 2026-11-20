@@ -9,8 +9,16 @@ export interface SupplierOrderCreate {
   supplier_id: string;
   /** @nullable */
   expected_date?: string | null;
-  /** @maxLength 5000 */
+  /**
+   * Внутреннее примечание: партнёру не уходит
+   * @maxLength 5000
+   */
   note?: string;
+  /**
+   * Комментарий партнёру: в письме с заказом и в его кабинете
+   * @maxLength 5000
+   */
+  partner_note?: string;
   /**
    * @nullable
    * @pattern ^[A-Z]{3}$

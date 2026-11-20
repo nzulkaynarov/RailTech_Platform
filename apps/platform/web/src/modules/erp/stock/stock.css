@@ -142,3 +142,7 @@
     grid-template-columns: 1fr;
   }
 }
+/* Комментарий партнёру — с переносами строк, как в письме партнёру (СЦ-10). */
+.pf-stock-multiline {
+  white-space: pre-wrap;
+}

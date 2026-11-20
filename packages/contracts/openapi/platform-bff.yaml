@@ -25639,7 +25639,7 @@ components:
     SupplierOrderDetail:
       type: object
       additionalProperties: false
-      required: [number, status, supplier, expected_date, overdue, days_overdue, currency, lines_count, quantity, received_quantity, receipt_state, total, requests, created_at, created_by, actions, path, note, sent_at, sent_to, mail, confirmed_at, received_at, cancelled_at, cancel_reason, lines, receipts, log, rights]
+      required: [number, status, supplier, expected_date, overdue, days_overdue, currency, lines_count, quantity, received_quantity, receipt_state, total, requests, created_at, created_by, actions, path, note, partner_note, sent_at, sent_to, mail, confirmed_at, received_at, cancelled_at, cancel_reason, lines, receipts, log, rights]
       description: Карточка заказа поставщику
       properties:
         number: {type: string, examples: [ЗП-2026-031], description: 'Номер заказа поставщику ЗП-ГГГГ-NNN'}
@@ -25668,7 +25668,8 @@ components:
           description: Сотрудник со ссылкой на справочник (СУЩ-3)
         actions: {$ref: '#/components/schemas/SupplierOrderActions'}
         path: {type: string, examples: ['/erp/stock/ЗП-2026-031']}
-        note: {type: string}
+        note: {type: string, description: 'Внутреннее примечание снабжения: партнёру не уходит'}
+        partner_note: {type: string, description: 'Комментарий партнёру: уходит в письме с заказом и в кабинет партнёра'}
         sent_at: {type: [string, 'null'], format: date-time}
         sent_to: {type: [string, 'null'], description: 'Адрес, на который ушло письмо'}
         mail:
@@ -25717,7 +25718,8 @@ components:
       properties:
         supplier_id: {type: string, pattern: '^[0-9]+$'}
         expected_date: {type: [string, 'null'], format: date}
-        note: {type: string, maxLength: 5000}
+        note: {type: string, maxLength: 5000, description: 'Внутреннее примечание: партнёру не уходит'}
+        partner_note: {type: string, maxLength: 5000, description: 'Комментарий партнёру: в письме с заказом и в его кабинете'}
         currency: {type: [string, 'null'], pattern: '^[A-Z]{3}$'}
         lines:
           type: array
@@ -25737,11 +25739,12 @@ components:
       type: object
       additionalProperties: false
       minProperties: 1
-      description: Состав (`lines`) и поставщик правятся только в черновике; ожидаемая дата и примечание — пока заказ не закрыт
+      description: Состав (`lines`), поставщик и комментарий партнёру правятся только в черновике; ожидаемая дата и внутреннее примечание — пока заказ не закрыт
       properties:
         supplier_id: {type: string, pattern: '^[0-9]+$'}
         expected_date: {type: [string, 'null'], format: date}
-        note: {type: string, maxLength: 5000}
+        note: {type: string, maxLength: 5000, description: 'Внутреннее примечание: партнёру не уходит'}
+        partner_note: {type: string, maxLength: 5000, description: 'Комментарий партнёру; после отправки заказа не меняется'}
         currency: {type: [string, 'null'], pattern: '^[A-Z]{3}$'}
         lines:
           type: array

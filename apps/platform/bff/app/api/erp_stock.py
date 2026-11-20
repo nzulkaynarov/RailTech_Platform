@@ -79,7 +79,7 @@ _CONFLICTS = {
     "BELOW_RESERVED": "Остаток не может стать меньше резервов проектов.",
     "BELOW_SHIPPED": "Резерв не может быть меньше уже отгруженного.",
     "TRANSITION_NOT_ALLOWED": "Заказ уже в другом статусе: обновите экран.",
-    "ORDER_NOT_DRAFT": "Состав и поставщика можно менять только в черновике.",
+    "ORDER_NOT_DRAFT": "Состав, поставщика и комментарий партнёру можно менять только в черновике.",
     "ORDER_CLOSED": "Заказ закрыт: изменить его нельзя.",
     "ORDER_NOT_CONFIRMED": "Принять товар можно по подтверждённому заказу.",
     "ORDER_HAS_RECEIPTS": "По заказу уже есть приёмка: отменить его нельзя.",
@@ -440,6 +440,8 @@ async def create_order(authed: Actor, body: SupplierOrderCreate) -> SupplierOrde
         payload["expected_date"] = body.expected_date.isoformat()
     if body.note is not None:
         payload["note"] = body.note
+    if body.partner_note is not None:
+        payload["partner_note"] = body.partner_note
     if body.currency:
         payload["currency"] = body.currency
     return to_order(await erp.stock("POST", "orders/", json=payload), _prices(authed))

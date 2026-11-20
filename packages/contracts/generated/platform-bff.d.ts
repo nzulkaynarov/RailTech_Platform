@@ -15091,7 +15091,10 @@ export interface components {
       actions: components["schemas"]["SupplierOrderActions"];
       /** @example /erp/stock/ЗП-2026-031 */
       path: string;
+      /** @description Внутреннее примечание снабжения: партнёру не уходит */
       note: string;
+      /** @description Комментарий партнёру: уходит в письме с заказом и в кабинет партнёра */
+      partner_note: string;
       /** Format: date-time */
       sent_at: string | null;
       /** @description Адрес, на который ушло письмо */
@@ -15129,7 +15132,10 @@ export interface components {
       supplier_id: string;
       /** Format: date */
       expected_date?: string | null;
+      /** @description Внутреннее примечание: партнёру не уходит */
       note?: string;
+      /** @description Комментарий партнёру: в письме с заказом и в его кабинете */
+      partner_note?: string;
       currency?: string | null;
       lines: components["schemas"]["SupplierOrderLineIn"][];
     };
@@ -15138,12 +15144,15 @@ export interface components {
       request: string;
       supplier_id: string;
     };
-    /** @description Состав (`lines`) и поставщик правятся только в черновике; ожидаемая дата и примечание — пока заказ не закрыт */
+    /** @description Состав (`lines`), поставщик и комментарий партнёру правятся только в черновике; ожидаемая дата и внутреннее примечание — пока заказ не закрыт */
     SupplierOrderPatch: {
       supplier_id?: string;
       /** Format: date */
       expected_date?: string | null;
+      /** @description Внутреннее примечание: партнёру не уходит */
       note?: string;
+      /** @description Комментарий партнёру; после отправки заказа не меняется */
+      partner_note?: string;
       currency?: string | null;
       lines?: components["schemas"]["SupplierOrderLineIn"][];
     };

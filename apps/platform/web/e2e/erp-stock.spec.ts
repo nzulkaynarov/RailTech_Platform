@@ -120,10 +120,16 @@ test.describe("Склад и закупки: снабженец", () => {
     await product.pressSequentially("перевод");
     await page.getByTitle(/Перевод стрелочный Р65 марки 1\/11/).click();
     await create.getByRole("spinbutton", { name: "Количество, строка 1" }).fill("4");
+    // СЦ-10: внутреннее примечание остаётся у снабжения, партнёру уходит только комментарий
+    await create.getByLabel("Внутреннее примечание").fill("Под проект клиента");
+    await create.getByLabel("Комментарий партнёру").fill("Отгрузка до станции Сергели");
+    await settledScreenshot(page, "order-create-notes");
+    await expectNoViolations(page, "новый заказ: примечание и комментарий партнёру");
     await create.getByRole("button", { name: "Создать черновик" }).click();
     await expect(
       page.getByRole("heading", { level: 1, name: `Заказ партнёру ${NEW_ORDER}` }),
     ).toBeVisible();
+    await expect(page.getByText("Отгрузка до станции Сергели")).toBeVisible();
     await expect(page.getByRole("button", { name: "Принять товар" })).toHaveCount(0);
     await settledScreenshot(page, "order-draft");
     await page.getByRole("button", { name: "Отправить партнёру" }).click();
@@ -247,6 +253,15 @@ test.describe("Склад на телефоне @mobile", () => {
     await expect(page.getByRole("heading", { name: "Журнал заказа" })).toBeVisible();
     await settledScreenshot(page, "order-overdue");
     await expectNoViolations(page, "карточка заказа на телефоне");
+
+    await spaGoto(page, "/erp/stock/new");
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Новый заказ партнёру" }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: /^Строки/, expanded: false }).click();
+    await expect(page.getByLabel("Комментарий партнёру")).toBeVisible();
+    await settledScreenshot(page, "order-create-notes");
+    await expectNoViolations(page, "новый заказ на телефоне");
 
     await spaGoto(page, "/erp/stock?view=receipts");
     await expect(

@@ -362,14 +362,16 @@ export function ReceiveModal({
   );
 }
 
-/** Правка черновика: ожидаемая дата, примечание, количество по строкам и удаление строк. */
+/** Правка черновика: ожидаемая дата, внутреннее примечание, комментарий партнёру, количество по строкам и удаление строк. */
 export function EditModal({ order, onClose }: { order: SupplierOrderDetail; onClose: () => void }) {
   const { t } = useTranslation("stock");
   const dateId = useId();
   const noteId = useId();
+  const partnerNoteId = useId();
   const action = useAction("order.notice.edited");
   const [date, setDate] = useState(order.expected_date ?? "");
   const [note, setNote] = useState(order.note);
+  const [partnerNote, setPartnerNote] = useState(order.partner_note);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [removed, setRemoved] = useState<Set<string>>(new Set());
   const update = useUpdateSupplierOrder({ mutation: action.options(onClose) });
@@ -389,6 +391,7 @@ export function EditModal({ order, onClose }: { order: SupplierOrderDetail; onCl
           data: {
             expected_date: date === "" ? null : date,
             note,
+            partner_note: partnerNote,
             lines: kept.map((l) => ({
               id: l.id,
               product_id: l.product_id ?? "",
@@ -402,13 +405,30 @@ export function EditModal({ order, onClose }: { order: SupplierOrderDetail; onCl
         <FormField id={dateId} label={t("order.edit.date")}>
           <DateField id={dateId} value={date} onChange={setDate} />
         </FormField>
-        <FormField id={noteId} label={t("order.edit.note")}>
+        <FormField id={noteId} label={t("order.edit.note")} hint={t("create.noteHint")}>
           <Input
             id={noteId}
             value={note}
             maxLength={5000}
+            aria-describedby={`${noteId}-hint`}
             onChange={(event) => {
               setNote(event.target.value);
+            }}
+          />
+        </FormField>
+        <FormField
+          id={partnerNoteId}
+          label={t("order.edit.partnerNote")}
+          hint={t("create.partnerNoteHint")}
+        >
+          <Input.TextArea
+            id={partnerNoteId}
+            value={partnerNote}
+            maxLength={5000}
+            aria-describedby={`${partnerNoteId}-hint`}
+            autoSize={{ minRows: 2, maxRows: 6 }}
+            onChange={(event) => {
+              setPartnerNote(event.target.value);
             }}
           />
         </FormField>

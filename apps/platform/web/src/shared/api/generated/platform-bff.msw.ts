@@ -27659,6 +27659,7 @@ export const getCreateSupplierOrderResponseMock = (
   },
   path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  partner_note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   mail: faker.helpers.arrayElement([
@@ -27889,6 +27890,7 @@ export const getCreateSupplierOrderFromRequestResponseMock = (
   },
   path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  partner_note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   mail: faker.helpers.arrayElement([
@@ -28122,6 +28124,7 @@ export const getGetSupplierOrderResponseMock = (
   },
   path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  partner_note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   mail: faker.helpers.arrayElement([
@@ -28352,6 +28355,7 @@ export const getUpdateSupplierOrderResponseMock = (
   },
   path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  partner_note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   mail: faker.helpers.arrayElement([
@@ -28582,6 +28586,7 @@ export const getSendSupplierOrderResponseMock = (
   },
   path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  partner_note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   mail: faker.helpers.arrayElement([
@@ -28812,6 +28817,7 @@ export const getConfirmSupplierOrderResponseMock = (
   },
   path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  partner_note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   mail: faker.helpers.arrayElement([
@@ -29042,6 +29048,7 @@ export const getCancelSupplierOrderResponseMock = (
   },
   path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  partner_note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   mail: faker.helpers.arrayElement([
@@ -29272,6 +29279,7 @@ export const getReceiveSupplierOrderResponseMock = (
   },
   path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  partner_note: faker.string.alpha({ length: { min: 10, max: 20 } }),
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   mail: faker.helpers.arrayElement([
