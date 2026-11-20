@@ -62,3 +62,21 @@ def test_unit_comes_from_the_dictionary(world, tonne):  # noqa: F811
     assert (line["unit_code"], line["unit"]) == ("TNE", "т")
     refused = supply.patch(_url(world, f"lines/{line_id}/"), {"unit_code": "XXX"}, format="json")
     assert refused.status_code == 400 and refused.json()["detail"] == "UNIT_NOT_FOUND"
+
+
+@pytest.mark.parametrize(("written", "code", "label"), [("т", "TNE", "т"), ("рейс", "", "рейс")])
+def test_written_unit_is_recognised_by_the_dictionary(world, written, code, label):  # noqa: F811
+    """СЦ-10: «т», набранное текстом, выбирается в справочнике; неизвестная единица остаётся как написана."""
+    from core.seeds.uom import seed_uom
+
+    seed_uom()
+    supply = _api(world["supply"])
+    assert supply.post(_url(world, "start/")).status_code == 200
+    response = supply.post(
+        _url(world, "lines/"),
+        {"lines": [{"name": "Рельс Р65", "quantity": 40, "unit": written}]},
+        format="json",
+    )
+    assert response.status_code == 201, response.json()
+    item = QuoteItem.objects.get(pk=response.json()["created"][0])
+    assert (item.unit_code, item.unit) == (code, label)

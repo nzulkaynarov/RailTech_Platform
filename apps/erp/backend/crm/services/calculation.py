@@ -954,6 +954,9 @@ def add_lines(deal_id: int, user, rows: list[LineInput]) -> dict:
         prepared.append((row, product))
     position = (quote.items.aggregate(top=Max("position"))["top"] or 0) + 1
     max_name = QuoteItem._meta.get_field("imported_raw_name").max_length
+    from core.units import unit_resolver
+
+    resolve_unit = unit_resolver()
     created = []
     for offset, (row, product) in enumerate(prepared):
         name = (row.name or (product.name if product else "")).strip()
@@ -969,10 +972,13 @@ def add_lines(deal_id: int, user, rows: list[LineInput]) -> dict:
             mpn=(row.article or "").strip()[:120],
             note=(row.note or "").strip(),
         )
-        # ADR-0027 п. 10: единица — из справочника; без кода — единица карточки каталога, если в строке её не написали.
+        # ADR-0027 п. 10: единица — из справочника; текст узнаётся по справочнику (СЦ-10); без единицы — единица
+        # карточки каталога.
         if row.unit_code:
             item.unit_code, item.unit = _unit(row.unit_code)
-        elif product is not None and product.uom_id and not item.unit:
+        elif item.unit:
+            item.unit_code, item.unit = resolve_unit(item.unit) or ("", item.unit)
+        elif product is not None and product.uom_id:
             item.unit_code, item.unit = product.uom.code, product.uom.name[:32]
         if quote.cost_currency_default_id:
             item.frozen_currency_id = quote.cost_currency_default_id
