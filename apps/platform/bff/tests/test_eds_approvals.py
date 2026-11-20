@@ -1144,6 +1144,22 @@ async def test_roles_without_memo_sections_get_403_before_eds(web: Web, eds: App
     assert eds.calls == []
 
 
+async def test_memo_card_is_found_by_the_previous_number(
+    web: Web, eds: ApprovalsFake, check: ContractChecker
+) -> None:
+    """After the one-off Latin renumbering an old link still opens the document."""
+    old = "СЗ-2026/014"
+    eds.registry[2] = {**eds.registry[2], "number": "MEMO-2026/014", "previous_number": old}
+    await _director(web)
+
+    response = await web.client.get(f"{BASE}/memo-approvals/{quote(old, safe='')}")
+
+    check(response, "/eds/memo-approvals/{ref}", "get")
+    assert response.json()["id"] == MEMO_DOC
+    [reg] = eds.made("GET", "registry")
+    assert reg.url.params["number"] == old
+
+
 async def test_memo_card_by_id_collects_document_route_and_files(
     web: Web, eds: ApprovalsFake, check: ContractChecker
 ) -> None:

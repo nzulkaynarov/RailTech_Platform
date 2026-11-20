@@ -185,6 +185,7 @@ function initial(): EdsMock {
       }),
       memo(2, {
         number: "СЗ-2026/028",
+        previous_number: "СЗ-028",
         subject: "Командировка в Самарканд",
         text: "Прошу согласовать командировку на переговоры с клиентом на 3 дня.",
         status: "returned",
