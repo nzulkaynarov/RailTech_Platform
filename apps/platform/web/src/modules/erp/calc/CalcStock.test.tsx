@@ -198,9 +198,7 @@ describe("Расчёт · похожая позиция каталога (СЦ-1
     await openCalc("supply@demo.example");
     const row = await addLine("Привод СП-6М");
 
-    fireEvent.click(
-      within(row).getByRole("button", { name: "Новая позиция: «Привод СП-6М»" }),
-    );
+    fireEvent.click(within(row).getByRole("button", { name: "Новая позиция: «Привод СП-6М»" }));
 
     await waitFor(() => {
       expect(screen.queryByText(`Похоже: ${DRIVE}`)).toBeNull();
