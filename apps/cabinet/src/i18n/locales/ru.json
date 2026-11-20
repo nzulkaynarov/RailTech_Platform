@@ -1777,7 +1777,7 @@
       "manager_replied": "Менеджер ответил вам в чате",
       "partner_card_returned": "Карточка «{{number}}» возвращена на доработку",
       "partner_order_sent": "Направлен новый заказ на поставку № {{number}}",
-      "partner_rfq_sent": "Поступил запрос цены по проекту: {{number}}",
+      "partner_rfq_sent": "Поступил запрос цены: {{number}}",
       "partner_goods_received": "Склад принял поставку по заказу № {{number}}",
       "fallback": "Новое уведомление {{number}}",
       "partner_card_published": "Карточка «{{number}}» опубликована в каталоге",

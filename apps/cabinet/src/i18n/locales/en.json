@@ -1742,7 +1742,7 @@
       "manager_replied": "Your manager replied in the chat",
       "partner_card_returned": "Product card «{{number}}» was returned for revision",
       "partner_order_sent": "New purchase order #{{number}} has been sent",
-      "partner_rfq_sent": "New request for quotation received: {{number}}",
+      "partner_rfq_sent": "New price request: {{number}}",
       "partner_goods_received": "Warehouse received goods for order #{{number}}",
       "fallback": "New notification {{number}}",
       "partner_card_published": "Product card «{{number}}» has been published",
