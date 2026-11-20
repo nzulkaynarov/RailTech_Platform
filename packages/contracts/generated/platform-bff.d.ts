@@ -5280,6 +5280,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/eds/letters/{id}/request-files/{file_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Скачать файл заявки клиента из карточки письма (СЦ-10)
+     * @description Файл, который клиент приложил к заявке в кабинете (ERP, исходник заявки сделки по `erp_deal_id` письма). Доступ к письму решает EDS (как у карточки), к файлу — ERP по правам сотрудника на сделку. Письмо без заявки, нет файла или он не виден — 404 `NOT_FOUND`. Файл отдаётся как вложение (`Content-Disposition: attachment`, `X-Content-Type-Options: nosniff`, `Content-Security-Policy: sandbox`).
+     */
+    get: operations["downloadLetterRequestFile"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/eds/letters/{id}/duplicate": {
     parameters: {
       query?: never;
@@ -6113,6 +6133,26 @@ export interface paths {
      * @description ERP `GET /calc/{deal_id}/` (заявку по номеру BFF находит среди заявок с заданием расчёта). Заявка, задание (резолюция директора — проекция события EDS в ERP: текст, дата, кто; исполнители по зонам), КП расчёта, строки (позиция и тип, кол-во, склад, поставщик и срок, закупка и цена клиенту без НДС, наценка, виза), итоги без НДС, визы по трём индикаторам, готовность «Расчёт готов» с причиной и права сотрудника по зонам. Поля с ограничением BFF вырезает (и ERP режет сам): закупку и себестоимость строки (в том числе ставку и дни бригады услуги) видит группа `cost_margin` или держатель зоны этой строки (`erp.calc.goods` — товары, `erp.calc.services` — услуги); наценку, итоги себестоимости и наценки и порог маржи резолюции — только `cost_margin`; цены предложений поставщиков — `supplier_prices` или держатель зоны товаров. Бухгалтер (`totals_only`) — цены клиенту, итоги и НДС. Номера нет среди заявок с заданием — 404. Раздел `erp.calc` — чтение.
      */
     get: operations["getCalcSheet"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/calc/{number}/request-files/{file_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Скачать файл заявки клиента (СЦ-10)
+     * @description ERP `GET /crm/deals/{deal_id}/request-files/{file_id}/` потоком: исходник заявки под именем, с которым его приложил клиент. Раздел `erp.calc` — чтение. Номера нет среди заявок с заданием или нет такого файла — 404 `NOT_FOUND`. Файл отдаётся как вложение (`Content-Disposition: attachment`, `nosniff`, `sandbox`).
+     */
+    get: operations["downloadCalcRequestFile"];
     put?: never;
     post?: never;
     delete?: never;
@@ -12680,6 +12720,16 @@ export interface components {
       number: string;
       title: string | null;
       path: string;
+      /** @description Файлы, которые клиент приложил к заявке (ERP, СЦ-10); скачивание — `downloadLetterRequestFile`. ERP не ответил — поля нет. */
+      files?: components["schemas"]["RequestFile"][];
+    };
+    /** @description Файл заявки клиента в ERP (исходник заявки сделки) */
+    RequestFile: {
+      id: number;
+      /** @description Имя, с которым файл приложил клиент */
+      name: string;
+      /** Format: date-time */
+      uploaded_at: string;
     };
     LetterAssignee: {
       person: components["schemas"]["PersonRef"];
@@ -14471,6 +14521,8 @@ export interface components {
       text: string;
       /** @description Строк в заявке клиента */
       lines: number;
+      /** @description Файлы заявки клиента (СЦ-10); скачивание — `downloadCalcRequestFile` */
+      files?: components["schemas"]["RequestFile"][];
     };
     CalcQuote: {
       /** @description Номер КП появляется при «Расчёт готов» */
@@ -26825,6 +26877,36 @@ export interface operations {
       503: components["responses"]["BackendUnavailable"];
     };
   };
+  downloadLetterRequestFile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description UUID входящего письма (EDS) */
+        id: components["parameters"]["LetterIdPath"];
+        file_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Содержимое файла */
+      200: {
+        headers: {
+          /** @description `attachment; filename*=UTF-8''…` */
+          "Content-Disposition"?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/octet-stream": string;
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
   markLetterDuplicate: {
     parameters: {
       query?: never;
@@ -28265,6 +28347,36 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["CalcSheet"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  downloadCalcRequestFile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Номер заявки `ЗВ-ГГГГ-NNN` (как в списке «Заявки в расчёте») */
+        number: components["parameters"]["CalcNumberPath"];
+        file_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Содержимое файла */
+      200: {
+        headers: {
+          /** @description `attachment; filename*=UTF-8''…` */
+          "Content-Disposition"?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/octet-stream": string;
         };
       };
       401: components["responses"]["SessionExpired"];
