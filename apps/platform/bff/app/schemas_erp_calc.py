@@ -127,6 +127,13 @@ class CalcLineVisa(BaseModel):
     at: dt.datetime
 
 
+class CalcCatalogHint(BaseModel):
+    """Похожая карточка каталога (СЦ-10): строка ждёт «Выбрать» или «Новая позиция»."""
+
+    id: str
+    name: str
+
+
 class CalcLine(BaseModel):
     id: str
     name: str
@@ -134,6 +141,7 @@ class CalcLine(BaseModel):
     product_id: str | None
     product_name: str | None
     product_draft: bool = False
+    catalog_hint: CalcCatalogHint | None = None
     #: Позиция каталога строки (ЕД-4)
     item: ItemRef | None = None
     kind: LineKind
@@ -362,6 +370,7 @@ def _line(raw: dict[str, Any], *, cost: bool, zones: Collection[str], offers: bo
         product_id=_id(raw.get("product_id")),
         product_name=raw.get("product_name"),
         product_draft=bool(raw.get("product_draft")),
+        catalog_hint=_catalog_hint(raw.get("catalog_hint")),
         item=item_ref(raw.get("item")),
         kind=raw["kind"],
         zone=raw["zone"],
@@ -398,6 +407,12 @@ def zones_of(access: Mapping[str, str]) -> set[str]:
 def _terms(raw: Any) -> dict[str, CalcTerms]:
     """Условия КП, если ERP их прислал (старый ERP — без ключа `terms`)."""
     return {"terms": CalcTerms(**raw)} if isinstance(raw, dict) else {}
+
+
+def _catalog_hint(raw: Any) -> CalcCatalogHint | None:
+    if not isinstance(raw, dict) or raw.get("id") is None or not raw.get("name"):
+        return None
+    return CalcCatalogHint(id=str(raw["id"]), name=str(raw["name"]))
 
 
 def to_sheet(raw: dict[str, Any], fields: Collection[str], access: Mapping[str, str]) -> CalcSheet:

@@ -127,8 +127,17 @@ function useLineActions(sheet: CalcSheet) {
 
 type Actions = ReturnType<typeof useLineActions>;
 
-function Position({ line, onMatch }: { line: CalcLine; onMatch: () => void }) {
+function Position({
+  line,
+  onMatch,
+  actions,
+}: {
+  line: CalcLine;
+  onMatch: () => void;
+  actions: Actions;
+}) {
   const { t } = useTranslation("calc");
+  const hint = line.catalog_hint;
   return (
     <div className="pf-calc-position">
       <ItemRefCell
@@ -152,7 +161,37 @@ function Position({ line, onMatch }: { line: CalcLine; onMatch: () => void }) {
           </StatusTag>
         ) : null}
       </span>
-      {(line.product_id === null || line.product_draft) && line.can_edit ? (
+      {hint && line.can_edit ? (
+        // СЦ-10: строка похожа на позицию каталога — решает человек, черновик не заводится сам.
+        <span className="pf-calc-hint">
+          <span>{t("lines.hint", { name: hint.name })}</span>
+          <Button
+            type="link"
+            size="small"
+            className="pf-calc-link"
+            disabled={actions.pending}
+            onClick={() => {
+              actions.patch(line, { product_id: hint.id });
+            }}
+            aria-label={t("lines.hintTakeLabel", { name: hint.name })}
+          >
+            {t("lines.hintTake")}
+          </Button>
+          <Button
+            type="link"
+            size="small"
+            className="pf-calc-link"
+            disabled={actions.pending}
+            onClick={() => {
+              actions.patch(line, { product_id: null });
+            }}
+            aria-label={t("lines.hintNewLabel", { name: line.name })}
+          >
+            {t("lines.hintNew")}
+          </Button>
+        </span>
+      ) : null}
+      {(line.product_id === null || line.product_draft) && line.can_edit && !hint ? (
         <Button
           type="link"
           size="small"
@@ -374,17 +413,21 @@ function Visa({ line, actions }: { line: CalcLine; actions: Actions }) {
     );
   }
   if (line.can_edit) {
+    const pendingMatch = Boolean(line.catalog_hint);
     return (
-      <Button
-        size="small"
-        onClick={() => {
-          actions.sign(line);
-        }}
-        disabled={actions.pending}
-        aria-label={t("lines.confirmLabel", { name: line.name })}
-      >
-        {t("lines.confirm")}
-      </Button>
+      <span className="pf-calc-visa">
+        <Button
+          size="small"
+          onClick={() => {
+            actions.sign(line);
+          }}
+          disabled={actions.pending || pendingMatch}
+          aria-label={t("lines.confirmLabel", { name: line.name })}
+        >
+          {t("lines.confirm")}
+        </Button>
+        {pendingMatch ? <span className="pf-hint">{t("lines.hintFirst")}</span> : null}
+      </span>
     );
   }
   return (
@@ -580,6 +623,7 @@ export function LinesTable({ sheet }: { sheet: CalcSheet }) {
               <div className="pf-calc-card-head">
                 <Position
                   line={line}
+                  actions={actions}
                   onMatch={() => {
                     setMatching(line);
                   }}
@@ -650,6 +694,7 @@ export function LinesTable({ sheet }: { sheet: CalcSheet }) {
                 <td>
                   <Position
                     line={line}
+                    actions={actions}
                     onMatch={() => {
                       setMatching(line);
                     }}

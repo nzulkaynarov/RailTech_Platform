@@ -6236,7 +6236,7 @@ export interface paths {
     put?: never;
     /**
      * Расчёт · «Подтвердить» строку (виза по зоне)
-     * @description ERP `POST /calc/{deal_id}/lines/{item_id}/visa/`. Товар визирует держатель `erp.calc.goods`, услугу — `erp.calc.services` (решает ERP: 403 `details.reason = zone_not_permitted`). Кто визирует — факт визы (имя в `visa.by`): список «сотрудников зоны» в CRM ещё не появился (B-007), поэтому визирует любой держатель права зоны. Строка без закупки или цены клиенту — 409 `details.reason = line_incomplete`. Повтор — без изменений.
+     * @description ERP `POST /calc/{deal_id}/lines/{item_id}/visa/`. Товар визирует держатель `erp.calc.goods`, услугу — `erp.calc.services` (решает ERP: 403 `details.reason = zone_not_permitted`). Кто визирует — факт визы (имя в `visa.by`): список «сотрудников зоны» в CRM ещё не появился (B-007), поэтому визирует любой держатель права зоны. Строка без закупки или цены клиенту — 409 `details.reason = line_incomplete`. Строка с подсказкой похожей карточки каталога без решения — 409 `details.reason = catalog_match_pending` (СЦ-10). Повтор — без изменений.
      */
     post: operations["signCalcLine"];
     delete?: never;
@@ -14606,6 +14606,11 @@ export interface components {
       /** Format: date-time */
       at: string;
     };
+    /** @description Похожая карточка каталога для строки расчёта (СЦ-10) */
+    CalcCatalogHint: {
+      id: string;
+      name: string;
+    };
     CalcLine: {
       /** @description Позиция каталога строки (ЕД-4); `null` — строка без карточки */
       item: components["schemas"]["ItemRef"] | null;
@@ -14617,6 +14622,8 @@ export interface components {
       product_name: string | null;
       /** @description Карточка строки — черновик каталога (ADR-0027): строку можно сопоставить с опубликованной позицией */
       product_draft: boolean;
+      /** @description СЦ-10: строка без карточки похожа на карточку каталога и ждёт решения — «Выбрать» (`product_id` карточки) или «Новая позиция» (`product_id: null`); до решения строку не подтвердить. Иначе null. */
+      catalog_hint: components["schemas"]["CalcCatalogHint"] | null;
       kind: components["schemas"]["CalcLineKind"];
       zone: components["schemas"]["CalcZone"];
       /**

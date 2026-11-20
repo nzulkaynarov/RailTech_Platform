@@ -391,3 +391,16 @@
 .pf-calc-request-files:not(:empty) {
   margin-top: 8px;
 }
+
+/* СЦ-10: «Похоже: …» — строка ждёт выбора позиции каталога */
+.pf-calc-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+  margin-top: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--rt-color-warning-bg);
+  overflow-wrap: anywhere;
+}
