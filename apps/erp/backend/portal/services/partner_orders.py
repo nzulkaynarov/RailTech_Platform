@@ -608,17 +608,45 @@ def _apply_prices(company, user, req: PriceRequest, prices: list[dict], currency
     ids = [row["id"] for row in prices]
     if len(ids) != len(set(ids)):
         raise PortalValidationError("VALIDATION_ERROR")
-    lines = {line.pk: line for line in req.lines.select_related("quote_item").filter(pk__in=ids)}
+    lines = {line.pk: line for line in req.lines.select_related("quote_item", "order_line").filter(pk__in=ids)}
     if len(lines) != len(ids):
         raise PortalValidationError("VALIDATION_ERROR")
     for row in prices:
         line = lines[row["id"]]
         line.answer_price = row["unit_price"]
         line.save(update_fields=["answer_price"])
-        product_id = line.quote_item.product_id if line.quote_item_id else None
+        product_id = line.product_id or (line.quote_item.product_id if line.quote_item_id else None)
         if product_id:
             _update_supplier_price(company, user, product_id, row["unit_price"], currency, valid_until)
+    _price_draft(req, [lines[row["id"]] for row in prices], prices, currency)
     return len(prices)
+
+
+def _price_draft(req: PriceRequest, lines, prices: list[dict], currency) -> int:
+    """СЦ-10: ответ партнёра на запрос из черновика заказа вписывает цены в строки этого черновика. Заказ уже ушёл
+    или отменён, или он в другой валюте — ответ остаётся только в запросе."""
+    from supply.models import OrderLogKind, OrderStatus, SupplierOrder
+    from supply.services import orders
+
+    if not req.supplier_order_id:
+        return 0
+    order = SupplierOrder.objects.select_for_update().filter(pk=req.supplier_order_id, status=OrderStatus.DRAFT).first()
+    if order is None or (order.currency_id and currency is not None and order.currency_id != currency.pk):
+        return 0
+    priced = 0
+    for line, row in zip(lines, prices):
+        target = line.order_line if line.order_line_id else None
+        if target is None or target.order_id != order.pk:
+            continue
+        target.unit_price = row["unit_price"]
+        target.save(update_fields=["unit_price"])
+        priced += 1
+    if priced:
+        if order.currency_id is None and currency is not None:
+            order.currency = currency
+            order.save(update_fields=["currency", "updated_at"])
+        orders._log(order, OrderLogKind.EDITED, None, f"Цены из ответа партнёра: {priced} поз.")
+    return priced
 
 
 def respond_partner_price_request(

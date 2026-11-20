@@ -54,6 +54,7 @@ const KNOWN = new Set([
   "expected_date_required",
   "supplier_email_required",
   "order_incomplete",
+  "nothing_to_price",
   "email_failed",
   "fulfillment_not_ready",
   "product_required",

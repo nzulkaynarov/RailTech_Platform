@@ -378,6 +378,33 @@ describe("Склад · приёмка и отгрузки", () => {
   });
 });
 
+async function createUnpricedDraft() {
+  await openStock("supply@demo.example", "orders");
+  fireEvent.click(await screen.findByRole("link", { name: "Создать заказ" }));
+  await screen.findByRole("heading", { level: 1, name: "Новый заказ партнёру" });
+  const page = document.body;
+  fireEvent.mouseDown(within(page).getByRole("combobox", { name: "Партнёр" }));
+  fireEvent.click(
+    await screen.findByText("ООО «Вымышленная Сталь»", {
+      selector: ".ant-select-item-option-content",
+    }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: /^Строки/, expanded: false }));
+  fireEvent.mouseDown(within(page).getByRole("combobox", { name: "Товар, строка 1" }));
+  fireEvent.change(within(page).getByRole("combobox", { name: "Товар, строка 1" }), {
+    target: { value: "перевод" },
+  });
+  fireEvent.click(
+    await screen.findByText(/Перевод стрелочный Р65 марки 1\/11/, {
+      selector: ".ant-select-item-option-content",
+    }),
+  );
+  fireEvent.change(within(page).getByRole("spinbutton", { name: "Количество, строка 1" }), {
+    target: { value: "1" },
+  });
+  fireEvent.click(within(page).getByRole("button", { name: "Создать черновик" }));
+}
+
 describe("Склад · заказ без цены и даты не уходит партнёру (СЦ-10)", () => {
   it("карточка говорит, чего не хватает; цена и дата в «Изменить» открывают отправку", async () => {
     await openStock("supply@demo.example", "orders");
@@ -421,5 +448,26 @@ describe("Склад · заказ без цены и даты не уходит
 
     expect(await screen.findByRole("button", { name: "Отправить партнёру" })).toBeVisible();
     expect(screen.queryByText(/Без цены/)).toBeNull();
+  });
+
+  it("«Запросить цену»: строки без цены уходят партнёру, карточка показывает, что запрос отправлен", async () => {
+    await createUnpricedDraft();
+    const year = String(new Date().getFullYear());
+    expect(
+      await screen.findByRole("heading", { level: 1, name: `Заказ партнёру ЗП-${year}-030` }),
+    ).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "Запросить цену" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      await within(dialog).findByText("Партнёр получит запрос по 1 строке без цены."),
+    ).toBeInTheDocument();
+    fireEvent.change(within(dialog).getByLabelText("Комментарий партнёру"), {
+      target: { value: "Нужна цена до пятницы" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Отправить запрос" }));
+
+    expect(await screen.findByText(/Запрос цены отправлен .* — ждём ответа\./)).toBeVisible();
+    expect(screen.getByText("Без цены: 1 строка · Нет ожидаемой даты")).toBeVisible();
   });
 });

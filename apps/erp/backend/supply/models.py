@@ -233,14 +233,23 @@ class PriceRequestStatus(models.TextChoices):
 
 
 class PriceRequest(models.Model):
-    """Запрос цены у поставщика из расчёта: письмо и журнал — кто, когда, кому, по каким строкам. Ответ поставщика
-    вносится вручную (цена — в строку расчёта, `answered_at` — отметка здесь)."""
+    """Запрос цены у поставщика из расчёта или из черновика заказа (СЦ-10): письмо и журнал — кто, когда, кому, по каким
+    строкам. Ответ поставщика из кабинета вписывает цены в строки черновика заказа; иначе вносится вручную."""
 
     supplier = models.ForeignKey(
         "parties.Company", on_delete=models.PROTECT, related_name="price_requests", verbose_name=_("Поставщик")
     )
     deal = models.ForeignKey(
         "sales.Deal", null=True, blank=True, on_delete=models.SET_NULL, related_name="price_requests"
+    )
+    supplier_order = models.ForeignKey(
+        "supply.SupplierOrder",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="price_requests",
+        verbose_name=_("Черновик заказа"),
+        help_text=_("СЦ-10: запрос из черновика заказа — ответ партнёра вписывает цены в его строки"),
     )
     requested_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
@@ -270,6 +279,17 @@ class PriceRequestLine(models.Model):
     request = models.ForeignKey(PriceRequest, on_delete=models.CASCADE, related_name="lines")
     quote_item = models.ForeignKey(
         "sales.QuoteItem", null=True, blank=True, on_delete=models.SET_NULL, related_name="price_request_lines"
+    )
+    order_line = models.ForeignKey(
+        "supply.SupplierOrderLine",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="price_request_lines",
+        verbose_name=_("Строка черновика заказа"),
+    )
+    product = models.ForeignKey(
+        "catalog.Product", null=True, blank=True, on_delete=models.SET_NULL, related_name="+", verbose_name=_("Товар")
     )
     name = models.CharField(max_length=500)
     article = models.CharField(max_length=120, blank=True, default="")

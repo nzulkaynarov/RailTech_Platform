@@ -29,6 +29,9 @@ class OrderSupplierSerializer(serializers.Serializer):
 class OrderActionsSerializer(serializers.Serializer):
     edit = serializers.BooleanField()
     send = serializers.BooleanField(help_text="Черновик полный: у всех строк цена и есть ожидаемая дата (СЦ-10)")
+    request_price = serializers.BooleanField(
+        help_text="Черновик с строками без цены: «Запросить цену» у партнёра (СЦ-10)"
+    )
     confirm = serializers.BooleanField()
     receive = serializers.BooleanField()
     cancel = serializers.BooleanField()
@@ -139,6 +142,13 @@ class OrderSendMissingSerializer(serializers.Serializer):
     date = serializers.BooleanField(help_text="Нет ожидаемой даты")
 
 
+class OrderPriceRequestStateSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    requested_at = serializers.DateTimeField()
+    status = serializers.ChoiceField(choices=("sent", "failed"))
+    answered_at = serializers.DateTimeField(allow_null=True)
+
+
 class OrderDetailSerializer(OrderRowSerializer):
     note = serializers.CharField(allow_blank=True, help_text="Внутреннее примечание: партнёру не уходит")
     partner_note = serializers.CharField(
@@ -147,6 +157,9 @@ class OrderDetailSerializer(OrderRowSerializer):
     send_missing = OrderSendMissingSerializer(
         allow_null=True,
         help_text="СЦ-10: чего не хватает черновику для отправки партнёру; полный или не черновик — null",
+    )
+    price_request = OrderPriceRequestStateSerializer(
+        allow_null=True, help_text="СЦ-10: последний запрос цены из этого черновика; не было — null"
     )
     sent_at = serializers.DateTimeField(allow_null=True)
     sent_to = serializers.CharField(allow_null=True)
@@ -210,6 +223,10 @@ class PriceRequestSerializer(serializers.Serializer):
     supplier = OrderSupplierSerializer()
     deal_id = serializers.IntegerField(allow_null=True)
     deal_number = serializers.CharField(allow_null=True)
+    supplier_order_id = serializers.IntegerField(
+        allow_null=True, help_text="Черновик заказа, из которого запрос (СЦ-10)"
+    )
+    supplier_order_number = serializers.CharField(allow_null=True)
     requested_at = serializers.DateTimeField()
     requested_by_name = serializers.CharField(allow_null=True)
     requested_by = PersonRefSerializer(allow_null=True, help_text="Сотрудник со ссылкой на CRM (СУЩ-3)")
@@ -314,6 +331,16 @@ class OrderPatchInSerializer(serializers.Serializer):
 
 
 class OrderSendInSerializer(serializers.Serializer):
+    to_email = serializers.EmailField(required=False, allow_blank=True, default="")
+
+
+class OrderPriceRequestInSerializer(serializers.Serializer):
+    """«Запросить цену» из черновика заказа (СЦ-10): без `line_ids` — все строки без цены."""
+
+    line_ids = serializers.ListField(
+        child=serializers.IntegerField(), required=False, min_length=1, max_length=100, help_text="Строки заказа"
+    )
+    note = serializers.CharField(required=False, allow_blank=True, max_length=1000, default="")
     to_email = serializers.EmailField(required=False, allow_blank=True, default="")
 
 

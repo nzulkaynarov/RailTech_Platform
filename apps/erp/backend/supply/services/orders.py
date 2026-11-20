@@ -729,6 +729,19 @@ def _deal_ref(deal) -> Optional[dict]:
     return {"id": deal.pk, "number": deal.number or None, "client_name": deal.company.name if deal.company_id else None}
 
 
+def _price_request_state(order: SupplierOrder) -> Optional[dict]:
+    """Последний запрос цены из этого черновика (СЦ-10): отправлен, не ушёл или партнёр ответил."""
+    latest = order.price_requests.order_by("-requested_at", "-id").first()
+    if latest is None:
+        return None
+    return {
+        "id": latest.pk,
+        "requested_at": latest.requested_at.isoformat(),
+        "status": latest.status,
+        "answered_at": latest.answered_at.isoformat() if latest.answered_at else None,
+    }
+
+
 def present_order(order: SupplierOrder, user, *, detail: bool = False) -> dict:
     prices = can_see_supplier_prices(user)
     manage = can_manage_supply(user)
@@ -763,6 +776,7 @@ def present_order(order: SupplierOrder, user, *, detail: bool = False) -> dict:
         "actions": {
             "edit": manage and status == OrderStatus.DRAFT,
             "send": manage and status == OrderStatus.DRAFT and complete,
+            "request_price": manage and status == OrderStatus.DRAFT and missing_prices > 0,
             "confirm": manage and status == OrderStatus.SENT,
             "receive": manage and status == OrderStatus.CONFIRMED,
             "cancel": manage
@@ -786,6 +800,7 @@ def present_order(order: SupplierOrder, user, *, detail: bool = False) -> dict:
             "send_missing": (
                 None if status != OrderStatus.DRAFT or complete else {"prices": missing_prices, "date": missing_date}
             ),
+            "price_request": _price_request_state(order),
             "sent_at": order.sent_at.isoformat() if order.sent_at else None,
             "sent_to": order.sent_to or None,
             "mail": _mail_state(order),

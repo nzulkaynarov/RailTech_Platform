@@ -148,3 +148,72 @@ def test_items_summary_counts_in_words(rest, tail):
         SimpleNamespace(imported_raw_name="x", product_id=None, product=None, position=i) for i in range(rest)
     ]
     assert _items_summary(items) == "Рельс Р65" + tail
+
+
+# ── СЦ-10: «Запросить цену» из черновика заказа ──────────────────────────────────────────────────────────────────────
+
+STOCK = "/api/v1/stock/"
+
+
+def _draft(world, lines, supplier="vendor"):
+    body = {"supplier_id": world[supplier].pk, "lines": lines}
+    created = api(world["supply"]).post(f"{STOCK}orders/", body, format="json")
+    assert created.status_code == 201, created.json()
+    return created.json()
+
+
+def test_request_from_an_order_asks_the_unpriced_lines(world):
+    from decimal import Decimal
+
+    from supply.models import SupplierOrder
+
+    draft = _draft(
+        world,
+        [
+            {"product_id": world["rail"].pk, "quantity": 2},
+            {"product_id": world["bolt"].pk, "quantity": 5, "unit_price": "10.00"},
+        ],
+    )
+    order = SupplierOrder.objects.get(pk=draft["id"])
+
+    response = api(world["supply"]).post(f"{STOCK}orders/{order.pk}/price-request/", {}, format="json")
+
+    assert response.status_code == 201, response.json()
+    created = PriceRequest.objects.get(pk=response.json()["id"])
+    assert created.supplier_order_id == order.pk
+    assert response.json()["supplier_order_number"] == order.number
+    [line] = created.lines.all()
+    unpriced = order.lines.get(unit_price__isnull=True)
+    assert (line.order_line_id, line.product_id) == (unpriced.pk, world["rail"].pk)
+    assert created.subject.startswith("Запрос цены и срока поставки — ") and order.number not in created.subject
+    order.refresh_from_db()
+    assert order.status == "draft"
+    detail = api(world["supply"]).get(f"{STOCK}orders/{order.pk}/").json()
+    assert detail["price_request"]["status"] == "sent"
+    assert detail["actions"]["request_price"] is True
+    assert order.lines.get(unit_price__isnull=False).unit_price == Decimal("10.00")
+
+
+def test_request_from_an_order_refusals(world):
+    from supply.models import SupplierOrder
+
+    draft = _draft(world, [{"product_id": world["rail"].pk, "quantity": 2}])
+    other = _draft(world, [{"product_id": world["bolt"].pk, "quantity": 1}])
+    url = f"{STOCK}orders/{draft['id']}/price-request/"
+    foreign_line = SupplierOrder.objects.get(pk=other["id"]).lines.get().pk
+
+    wrong = api(world["supply"]).post(url, {"line_ids": [foreign_line]}, format="json")
+    assert wrong.status_code == 404 and wrong.json()["detail"] == "LINE_NOT_FOUND"
+    assert api(world["reader"]).post(url, {}, format="json").status_code == 403
+
+    silent = _draft(world, [{"product_id": world["rail"].pk, "quantity": 1}], supplier="silent")
+    no_mail = api(world["supply"]).post(f"{STOCK}orders/{silent['id']}/price-request/", {}, format="json")
+    assert no_mail.status_code == 409 and no_mail.json()["detail"] == "SUPPLIER_EMAIL_REQUIRED"
+
+    SupplierOrder.objects.filter(pk=draft["id"]).update(status="sent")
+    sent = api(world["supply"]).post(url, {}, format="json")
+    assert sent.status_code == 409 and sent.json()["detail"] == "ORDER_NOT_DRAFT"
+
+    priced = _draft(world, [{"product_id": world["rail"].pk, "quantity": 1, "unit_price": "5.00"}])
+    nothing = api(world["supply"]).post(f"{STOCK}orders/{priced['id']}/price-request/", {}, format="json")
+    assert nothing.status_code == 409 and nothing.json()["detail"] == "NOTHING_TO_PRICE"

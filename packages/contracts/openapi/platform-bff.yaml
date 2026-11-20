@@ -12269,6 +12269,38 @@ paths:
         '422': {$ref: '#/components/responses/ValidationFailed'}
         '503': {$ref: '#/components/responses/BackendUnavailable'}
 
+  /erp/stock/orders/{order_number}/price-request:
+    post:
+      tags: [stock]
+      operationId: requestSupplierOrderPrice
+      summary: 'Склад · Запросить цену у партнёра из черновика заказа (СЦ-10)'
+      description: >-
+        ERP `POST /stock/orders/{id}/price-request/`: строки без цены (или `line_ids`) уходят партнёру заказа письмом и в
+        его кабинет; заказ остаётся черновиком, ответ партнёра из кабинета вписывает цены в его строки. Не черновик — 409
+        `details.reason = order_not_draft`; у всех строк цена — 409 `nothing_to_price`; нет адреса — 409
+        `supplier_email_required` (можно указать `to_email`). Письмо не ушло — запрос в журнале со статусом `failed`,
+        ответ 200. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {$ref: '#/components/parameters/StockOrderNumberPath'}
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SupplierOrderPriceRequestIn'}
+      responses:
+        '200':
+          description: Запрос цены
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/PriceRequest'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/StockConflict'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
   /erp/stock/orders/{order_number}/confirm:
     post:
       tags: [stock]
@@ -15533,7 +15565,8 @@ components:
         `order_has_receipts`, `expected_date_required`, `supplier_email_required`, `fulfillment_not_ready`, `product_required`,
         `no_shortage`, `email_failed`, `deal_closed`, `line_not_actual`, `line_not_goods`, `reservation_not_active`, `already_answered`, `serial_exists` и `details.number` — серийный уже принят,
         `unit_not_available` и `details.number`, `details.max` — единица уже отгружена или партии не хватает, `order_incomplete` и
-        `details.missing_prices`, `details.missing_date` — у заказа нет цены строк или ожидаемой даты)
+        `details.missing_prices`, `details.missing_date` — у заказа нет цены строк или ожидаемой даты, `nothing_to_price` — у всех
+        строк черновика уже есть цена)
       content:
         application/json:
           schema:
@@ -25600,11 +25633,12 @@ components:
     SupplierOrderActions:
       type: object
       additionalProperties: false
-      required: [edit, send, confirm, receive, cancel]
+      required: [edit, send, request_price, confirm, receive, cancel]
       description: Что можно сделать с заказом сейчас (статус и права сотрудника)
       properties:
         edit: {type: boolean}
         send: {type: boolean, description: 'Черновик полный: у всех строк цена и есть ожидаемая дата (СЦ-10)'}
+        request_price: {type: boolean, description: 'В черновике есть строки без цены — «Запросить цену» у партнёра (СЦ-10)'}
         confirm: {type: boolean}
         receive: {type: boolean}
         cancel: {type: boolean}
@@ -25762,7 +25796,7 @@ components:
     SupplierOrderDetail:
       type: object
       additionalProperties: false
-      required: [number, status, supplier, expected_date, overdue, days_overdue, currency, lines_count, quantity, received_quantity, receipt_state, total, requests, created_at, created_by, actions, path, note, partner_note, send_missing, sent_at, sent_to, mail, confirmed_at, received_at, cancelled_at, cancel_reason, lines, receipts, log, rights]
+      required: [number, status, supplier, expected_date, overdue, days_overdue, currency, lines_count, quantity, received_quantity, receipt_state, total, requests, created_at, created_by, actions, path, note, partner_note, send_missing, price_request, sent_at, sent_to, mail, confirmed_at, received_at, cancelled_at, cancel_reason, lines, receipts, log, rights]
       description: Карточка заказа поставщику
       properties:
         number: {type: string, examples: [ЗП-2026-031], description: 'Номер заказа поставщику ЗП-ГГГГ-NNN'}
@@ -25793,6 +25827,11 @@ components:
         path: {type: string, examples: ['/erp/stock/ЗП-2026-031']}
         note: {type: string, description: 'Внутреннее примечание снабжения: партнёру не уходит'}
         partner_note: {type: string, description: 'Комментарий партнёру: уходит в письме с заказом и в кабинет партнёра'}
+        price_request:
+          description: СЦ-10 — последний запрос цены из этого черновика; не было — null
+          oneOf:
+            - {$ref: '#/components/schemas/SupplierOrderPriceRequestState'}
+            - {type: 'null'}
         send_missing:
           description: СЦ-10 — чего не хватает черновику для отправки партнёру; полный или не черновик — null
           oneOf:
@@ -25879,6 +25918,31 @@ components:
           minItems: 1
           maxItems: 200
           items: {$ref: '#/components/schemas/SupplierOrderLineIn'}
+
+    SupplierOrderPriceRequestIn:
+      type: object
+      additionalProperties: false
+      description: «Запросить цену» из черновика заказа (СЦ-10); без `line_ids` — все строки без цены
+      properties:
+        line_ids:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items: {type: string, pattern: '^[0-9]+$'}
+          description: Строки заказа
+        note: {type: string, maxLength: 1000, description: Комментарий партнёру}
+        to_email: {type: string, format: email, description: 'Адрес письма, если у партнёра почты нет или нужен другой'}
+
+    SupplierOrderPriceRequestState:
+      type: object
+      additionalProperties: false
+      required: [id, requested_at, status, answered_at]
+      description: Последний запрос цены из черновика заказа (СЦ-10)
+      properties:
+        id: {type: string, pattern: '^[0-9]+$'}
+        requested_at: {type: string, format: date-time}
+        status: {type: string, enum: [sent, failed]}
+        answered_at: {type: [string, 'null'], format: date-time}
 
     SupplierOrderSendIn:
       type: object
@@ -26151,12 +26215,13 @@ components:
     PriceRequest:
       type: object
       additionalProperties: false
-      required: [id, supplier, request, requested_at, requested_by, to_email, subject, note, status, error, answered_at, answered_by, answer_note, lines]
-      description: Запрос цены у поставщика из расчёта — журнал письма
+      required: [id, supplier, request, order, requested_at, requested_by, to_email, subject, note, status, error, answered_at, answered_by, answer_note, lines]
+      description: Запрос цены у поставщика из расчёта или из черновика заказа — журнал письма
       properties:
         id: {type: string, pattern: '^[0-9]+$'}
         supplier: {$ref: '#/components/schemas/StockSupplierRef'}
         request: {type: [string, 'null'], description: 'Номер заявки'}
+        order: {type: [string, 'null'], description: 'Номер заказа партнёру, из черновика которого запрошена цена (СЦ-10)'}
         requested_at: {type: string, format: date-time}
         requested_by:
           oneOf: [{$ref: '#/components/schemas/PersonRef'}, {type: 'null'}]

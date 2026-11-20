@@ -10,6 +10,7 @@ import {
   useConfirmSupplierOrder,
   useGetSupplierOrder,
   useReceiveSupplierOrder,
+  useRequestSupplierOrderPrice,
   useSendSupplierOrder,
   useUpdateSupplierOrder,
 } from "../../../shared/api/generated/platform-bff";
@@ -118,6 +119,81 @@ export function SendModal({ order, onClose }: { order: SupplierOrderDetail; onCl
             aria-describedby={`${id}-hint`}
             onChange={(event) => {
               setEmail(event.target.value);
+            }}
+          />
+        </FormField>
+        <ErrorNote message={action.error} />
+      </div>
+    </Dialog>
+  );
+}
+
+/** «Запросить цену» (СЦ-10): строки черновика без цены уходят партнёру этого заказа; ответ впишет цены в черновик. */
+export function PriceRequestModal({
+  order,
+  onClose,
+}: {
+  order: SupplierOrderDetail;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation("stock");
+  const emailId = useId();
+  const noteId = useId();
+  const action = useAction("order.notice.priceRequested");
+  const [email, setEmail] = useState(order.supplier.email ?? "");
+  const [note, setNote] = useState("");
+  const ask = useRequestSupplierOrderPrice({ mutation: action.options(onClose) });
+  const missing = !order.supplier.email && email.trim() === "";
+  const unpriced = order.lines.filter((l) => l.unit_price === null).length;
+  return (
+    <Dialog
+      open
+      title={t("order.price.title", { number: order.number })}
+      onCancel={onClose}
+      footer={Footer({
+        onClose,
+        pending: ask.isPending,
+        disabled: missing,
+        submit: {
+          label: t("order.price.submit"),
+          run: () => {
+            const to = clean(email);
+            const text = clean(note);
+            ask.mutate({
+              orderNumber: ref(order.number),
+              data: {
+                ...(to && to !== order.supplier.email ? { to_email: to } : {}),
+                ...(text ? { note: text } : {}),
+              },
+            });
+          },
+        },
+      })}
+    >
+      <div className="pf-calc-stack">
+        <p className="pf-hint">{t("order.price.lines", { count: unpriced })}</p>
+        {order.supplier.email ? null : (
+          <FormField id={emailId} label={t("order.send.email")} hint={t("order.send.emailMissing")}>
+            <Input
+              id={emailId}
+              type="email"
+              value={email}
+              maxLength={254}
+              aria-describedby={`${emailId}-hint`}
+              onChange={(event) => {
+                setEmail(event.target.value);
+              }}
+            />
+          </FormField>
+        )}
+        <FormField id={noteId} label={t("order.price.note")}>
+          <Input.TextArea
+            id={noteId}
+            value={note}
+            maxLength={1000}
+            autoSize={{ minRows: 2, maxRows: 5 }}
+            onChange={(event) => {
+              setNote(event.target.value);
             }}
           />
         </FormField>
