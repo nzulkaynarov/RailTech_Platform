@@ -65,3 +65,11 @@ def test_member_without_settings_edit_is_denied():
     response = _member("plain@w13.test", ["catalog.manage"]).patch(URL, {"vat_rate": "13.00"}, format="json")
 
     assert response.status_code == 403
+
+
+def test_settings_editor_sets_the_support_address():
+    """СЦ-3: адрес поддержки в письмах клиентам — тот же раздел «Компания», что ставка НДС."""
+    response = _member("editor3@w13.test", ["settings.edit"]).patch(URL, {"support_email": "help@rt.uz"}, format="json")
+
+    assert response.status_code == 200
+    assert SystemSetting.objects.get(pk=1).support_email == "help@rt.uz"

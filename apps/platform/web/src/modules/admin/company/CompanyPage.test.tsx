@@ -928,7 +928,7 @@ describe("Платформенные настройки", () => {
     expect(vat).toHaveDisplayValue(/^12/);
     expect(await screen.findByText(/1 USD = 12\s650,50 сум/)).toBeInTheDocument();
     fireEvent.change(vat, { target: { value: "15" } });
-    fireEvent.click(await button("Сохранить ставку НДС"));
+    fireEvent.click(await button("Сохранить настройки"));
     expect(await screen.findByText("Сохранено")).toBeInTheDocument();
     expect(readCompanyMock().platform.vat_rate).toBe("15.00");
   });
@@ -937,7 +937,25 @@ describe("Платформенные настройки", () => {
     await openTab("platform", "director@demo.example");
     const vat = await screen.findByLabelText("Ставка НДС, %");
     fireEvent.change(vat, { target: { value: "15" } });
-    fireEvent.click(await button("Сохранить ставку НДС"));
+    fireEvent.click(await button("Сохранить настройки"));
+    // дождаться отказа: иначе ответ придёт уже в следующем тесте
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(readCompanyMock().platform.vat_rate).toBe("12.00");
+  });
+
+  it("адрес поддержки задаётся здесь; неверный адрес — сообщение у поля (СЦ-3)", async () => {
+    await openTab("platform", "admin@demo.example");
+    const field = await screen.findByLabelText("Адрес поддержки");
+    expect(field).toHaveValue("");
+    fireEvent.change(field, { target: { value: "help" } });
+    fireEvent.click(await button("Сохранить настройки"));
+    expect(await screen.findByText("Введите адрес почты")).toBeInTheDocument();
+    expect(readCompanyMock().platform.support_email).toBe("");
+
+    fireEvent.change(field, { target: { value: " help@rt.uz " } });
+    fireEvent.click(await button("Сохранить настройки"));
+    expect(await screen.findByText("Сохранено")).toBeInTheDocument();
+    expect(readCompanyMock().platform.support_email).toBe("help@rt.uz");
     expect(readCompanyMock().platform.vat_rate).toBe("12.00");
   });
 });

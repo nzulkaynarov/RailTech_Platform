@@ -14551,6 +14551,7 @@ export const getGetPlatformSettingsResponseMock = (
   overrideResponse: Partial<Extract<PlatformSettings, object>> = {},
 ): PlatformSettings => ({
   vat_rate: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+  support_email: faker.string.alpha({ length: { min: 10, max: 20 } }),
   exchange_rate_usd_uzs: faker.helpers.arrayElement([
     faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
     null,
@@ -14563,6 +14564,7 @@ export const getUpdatePlatformSettingsResponseMock = (
   overrideResponse: Partial<Extract<PlatformSettings, object>> = {},
 ): PlatformSettings => ({
   vat_rate: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+  support_email: faker.string.alpha({ length: { min: 10, max: 20 } }),
   exchange_rate_usd_uzs: faker.helpers.arrayElement([
     faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
     null,

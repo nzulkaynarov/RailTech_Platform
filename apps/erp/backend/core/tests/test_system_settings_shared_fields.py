@@ -1,4 +1,5 @@
-"""FIX-42 (F-4): имя платформы, e-mail поддержки, логотип и домен — общие для ансамбля, ведутся в CRM.
+"""FIX-42 (F-4): имя платформы, логотип и домен — общие для ансамбля, ведутся в CRM. Адрес поддержки — нет: его читают
+только письма ERP, правит администратор Платформы (СЦ-3).
 
 В ERP они только для чтения: PATCH с любым из них — 400 `SHARED_SETTING_READ_ONLY`, остальная часть тела не
 применяется.
@@ -14,7 +15,6 @@ pytestmark = pytest.mark.django_db
 URL = "/api/v1/system-settings/"
 SHARED = {
     "platform_name": "Чужое имя",
-    "support_email": "other@example.test",
     "logo_url": "https://cdn.example.test/logo.png",
     "domain": "other.example.test",
 }
@@ -83,3 +83,21 @@ def test_get_shows_shared_fields_read_only():
 
     assert set(SHARED) <= set(body)  # значения по-прежнему видны для просмотра
     assert "crm_frontend_url" not in body  # адреса старой CRM нет: интерфейс — Платформа
+
+
+def test_support_address_is_set_by_the_company_settings_editor():
+    """СЦ-3: адрес поддержки задаётся в Платформе (раньше — только переменной окружения при первом запуске)."""
+    response = _client().patch(URL, {"support_email": "help@rt.uz"}, format="json")
+
+    assert response.status_code == 200, response.json()
+    assert SystemSetting.objects.get(pk=1).support_email == "help@rt.uz"
+    bad = _client_named("adm2@x.test").patch(URL, {"support_email": "not an address"}, format="json")
+    assert bad.status_code == 400
+    assert "support_email" in bad.json()
+
+
+def _client_named(email):
+    user = CustomUser.objects.create_user(email=email, username=email, password=None, is_active=True, is_superuser=True)
+    client = APIClient()
+    client.force_authenticate(user)
+    return client

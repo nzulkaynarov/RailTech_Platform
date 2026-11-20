@@ -7,6 +7,8 @@ import type { DecimalString } from "./decimalString";
 export interface PlatformSettings {
   /** Ставка НДС платформы, % */
   vat_rate: DecimalString;
+  /** Адрес поддержки в письмах клиентам (СЦ-3); пусто — не задан (заглушка `…@example.com/.org` тоже считается незаданной: в письмах её нет) */
+  support_email: string;
   /** Курс USD→UZS на сегодня (только чтение; ввод вручную и журнал — `/admin/company/fx-rate`) */
   exchange_rate_usd_uzs: DecimalString | null;
   updated_at: string;
