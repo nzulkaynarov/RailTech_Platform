@@ -7,7 +7,6 @@ re-typing the whole КП — cutting time-to-first-КП (the wedge metric). Rule
 """
 
 import logging
-import math
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Optional, Tuple
@@ -48,7 +47,7 @@ class RequestLine:
 
     pk: int
     imported_raw_name: str
-    quantity: int
+    quantity: Decimal
     unit: str = ""
     note: str = ""
     product_id: Optional[int] = None
@@ -60,24 +59,42 @@ class RequestLine:
 
 
 def _portal_request_lines(deal: Deal) -> list:
-    """Строки заявки клиента из портала / передачи CRM. Ничего не выдумываем: количество не указано — 1
-    (в КП оно целое и не меньше единицы), дробное округляется вверх, чтобы не заказать меньше написанного."""
+    """Строки заявки клиента из портала / передачи CRM как написаны (СЦ-10): количество дробное до 0,001 (ADR-0027
+    п. 9), не указано или не больше нуля — 1; единица — код и подпись справочника, если текст узнаётся
+    (`core.units`), иначе текст как есть."""
+    from core.units import unit_resolver
+
+    max_name = QuoteItem._meta.get_field("imported_raw_name").max_length
+    max_unit = QuoteItem._meta.get_field("unit").max_length
+    resolve_unit = unit_resolver(code_max=QuoteItem._meta.get_field("unit_code").max_length, label_max=max_unit)
     lines = []
     for line in deal.portal_lines.all():
         text = (line.text or "").strip()
-        max_name = QuoteItem._meta.get_field("imported_raw_name").max_length
-        quantity = max(1, math.ceil(line.quantity)) if line.quantity else 1
+        written = (line.unit or "").strip()
+        unit_code, unit = resolve_unit(written) or ("", written[:max_unit])
         lines.append(
             RequestLine(
                 pk=line.pk,
                 imported_raw_name=text[:max_name],
                 # Не влезло в наименование — полный текст остаётся в примечании, а не теряется.
                 note=text if len(text) > max_name else "",
-                quantity=quantity,
-                unit=(line.unit or "").strip()[: QuoteItem._meta.get_field("unit").max_length],
+                quantity=line.quantity if line.quantity and line.quantity > 0 else Decimal("1"),
+                unit=unit,
+                unit_code=unit_code,
             )
         )
     return lines
+
+
+def _unit_from_card(data: dict) -> None:
+    """Строка без единицы, сопоставленная с карточкой, берёт единицу карточки (как `calculation.add_lines`)."""
+    if not data.get("product_id") or data.get("unit_code") or (data.get("unit") or "").strip():
+        return
+    from catalog.models import Product
+
+    row = Product.objects.filter(pk=data["product_id"]).values_list("uom__code", "uom__name").first()
+    if row and row[0] and len(row[0]) <= QuoteItem._meta.get_field("unit_code").max_length:
+        data["unit_code"], data["unit"] = row[0], row[1][: QuoteItem._meta.get_field("unit").max_length]
 
 
 def _request_items(deal: Deal):
@@ -331,6 +348,7 @@ def _create_prefilled_quote(
             if resolved_pid:
                 data["product_id"] = resolved_pid
                 auto_matched += 1
+        _unit_from_card(data)
         product_id = data["product_id"]
         offer = pricing.get(product_id) if product_id else None
         if offer:
@@ -390,6 +408,7 @@ def prefill_created_quote(quote: Quote) -> int:
         data["position"] = line_index
         if not data["product_id"]:
             data["product_id"] = resolved_matches.get(src.pk)
+        _unit_from_card(data)
         offer = pricing.get(data["product_id"]) if data["product_id"] else None
         if offer:
             data["frozen_base_price"] = Decimal(offer["base_price"])
