@@ -222,6 +222,16 @@ def test_send_mails_the_supplier_and_writes_the_journal(world):
     assert log.status == "QUEUED" and log.to_emails == ["sales@vendor.example"]
 
 
+def test_internal_note_stays_out_of_the_supplier_mail(world):
+    """СЦ-10: в прогоне примечание «Дефицит проекта …» ушло поставщику письмом."""
+    order = _create(world, note="Дефицит проекта PRJ-2026-001").json()
+    assert order["note"] == "Дефицит проекта PRJ-2026-001", "сотрудник своё примечание видит"
+    assert _act(world, order["id"], "send").status_code == 200
+    (message,) = mail.outbox
+    assert "PRJ-2026-001" not in message.body
+    assert "PRJ-2026-001" not in message.alternatives[0][0]
+
+
 def test_order_card_shows_the_real_mail_result_not_sent_in_advance(world):
     """0.10 (FR-12): «отправлено» — только когда почтовый сервис CRM вернул итог; без почты — причина словами."""
     from notifications import mail_bus

@@ -492,7 +492,7 @@ def test_a_refused_action_notifies_nobody(partner_world):
 
 def test_internal_notes_do_not_reach_the_partner(partner_world):
     w = partner_world
-    order = make_order(w["a"], OrderStatus.CANCELLED)
+    order = make_order(w["a"], OrderStatus.CANCELLED, note=SECRET_NOTE)
     order.cancel_reason = SECRET_NOTE
     order.save(update_fields=["cancel_reason"])
     SupplierOrderLog.objects.create(order=order, kind=OrderLogKind.CANCELLED, detail=SECRET_NOTE)
@@ -507,9 +507,22 @@ def test_internal_notes_do_not_reach_the_partner(partner_world):
     assert SECRET_NOTE not in response.content.decode()
     body = response.json()
     assert "cancel_reason" not in body
+    assert body["note"] == ""
     assert "note" not in body["receipts"][0]
     assert {log["kind"] for log in body["logs"]} == {"cancelled"}
     assert all("detail" not in log for log in body["logs"])
+
+
+def test_order_note_is_internal_even_after_sending(partner_world):
+    """СЦ-10: примечание заказа — внутреннее; партнёр не видит его и в отправленном заказе."""
+    w = partner_world
+    order = make_order(w["a"], OrderStatus.SENT, note=SECRET_NOTE)
+
+    response = w["client_a"].get(f"{PREFIX}/orders/{order.pk}")
+
+    assert response.status_code == 200
+    assert response.json()["note"] == ""
+    assert SECRET_NOTE not in response.content.decode()
 
 
 def test_order_without_currency_is_not_shown_in_rubles(partner_world):

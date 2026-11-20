@@ -170,6 +170,9 @@ def test_receipt_of_the_shortage_order_lands_in_the_project_reservation_and_ship
     order = SupplierOrder.objects.get()
     supply = api(world["supply"])
     assert supply.post(f"{STOCK}orders/{order.pk}/send/", {}, format="json").status_code == 200
+    assert order.note.startswith("Дефицит проекта"), "автотекст остаётся внутренним примечанием"
+    (sent,) = [m for m in mail.outbox if order.number in m.subject]
+    assert "Дефицит проекта" not in sent.body and "Дефицит проекта" not in sent.alternatives[0][0]
     confirmed = supply.post(f"{STOCK}orders/{order.pk}/confirm/", {"expected_date": "2030-01-10"}, format="json")
     assert confirmed.status_code == 200, confirmed.json()
     line = order.lines.get()
