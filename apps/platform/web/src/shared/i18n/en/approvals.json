@@ -199,6 +199,7 @@
     "returnTitle": "Remark",
     "reason": "Reason, visible to the author",
     "done": "Decision saved",
-    "failed": "Could not save the decision"
+    "failed": "Could not save the decision",
+    "failedReason": "Not saved: {{reason}}"
   }
 }

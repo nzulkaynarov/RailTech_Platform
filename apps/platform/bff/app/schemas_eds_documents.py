@@ -50,6 +50,13 @@ class EdsPerson(BaseModel):
     full_name: str
 
 
+class EdsSigningHint(BaseModel):
+    """Почему «Подписать» не предлагается и кто подпишет по реестру полномочий (СЦ-9)."""
+
+    reason: str | None = None
+    signer: EdsPerson | None = None
+
+
 class EdsMoney(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -258,6 +265,7 @@ class EdsDocument(BaseModel):
     verification_url: str | None = None
     dispatch_method: str | None = None
     can_sign: bool = False
+    signing_hint: EdsSigningHint | None = None
 
 
 class EdsDocumentSignIn(BaseModel):

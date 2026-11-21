@@ -75,11 +75,17 @@ class LeadMessenger:
             return message.id
 
     async def send_once(
-        self, lead_id: int, text: str, key: str, *, sent_by_user_id: int
+        self,
+        lead_id: int,
+        text: str,
+        key: str,
+        *,
+        sent_by_user_id: int,
+        on_behalf_of: int | None = None,
     ) -> "Reply | None":
         """Ответ менеджера с ключом повтора — без дубля при параллельном повторе (`ReplyOnce`)."""
         return await ReplyOnce(self._sessions, self._sender).send(
-            lead_id, text, key, sent_by_user_id=sent_by_user_id
+            lead_id, text, key, sent_by_user_id=sent_by_user_id, on_behalf_of=on_behalf_of
         )
 
 
@@ -120,14 +126,20 @@ class ReplyOnce:
         self._sender = sender
 
     async def send(
-        self, lead_id: int, text: str, key: str, *, sent_by_user_id: int
+        self,
+        lead_id: int,
+        text: str,
+        key: str,
+        *,
+        sent_by_user_id: int,
+        on_behalf_of: int | None = None,
     ) -> Reply | None:
         """`Reply` — доставлено (сейчас или раньше), `None` — Telegram отказал (ключ свободен).
 
         409 `reply_in_progress` — отправка с этим ключом идёт; 409 `delivery_unconfirmed` — итог
         прежней отправки так и не узнали (повтор не шлёт, «лид отвечен» не ставится); 502
         `delivery_failed` с `reason = delivery_unknown` — Telegram не ответил вовремя."""
-        reserved = await self._reserve(lead_id, text, key, sent_by_user_id)
+        reserved = await self._reserve(lead_id, text, key, sent_by_user_id, on_behalf_of)
         if reserved is None or isinstance(reserved, Reply):
             return reserved
         message_id, chat_id = reserved
@@ -150,7 +162,12 @@ class ReplyOnce:
         return Reply(message_id, delivered_now=True)
 
     async def _reserve(
-        self, lead_id: int, text: str, key: str, sent_by_user_id: int
+        self,
+        lead_id: int,
+        text: str,
+        key: str,
+        sent_by_user_id: int,
+        on_behalf_of: int | None = None,
     ) -> Reply | tuple[int, int] | None:
         unconfirmed = False
         async with self._sessions() as session, session.begin():
@@ -178,7 +195,12 @@ class ReplyOnce:
                     conversation_id=conversation.id,
                     role="manager",
                     text=text,
-                    meta={"mode": "manager", "client_message_id": key, "delivery": SENDING},
+                    meta={
+                        "mode": "manager",
+                        "client_message_id": key,
+                        "delivery": SENDING,
+                        **({} if on_behalf_of is None else {"on_behalf_of_user_id": on_behalf_of}),
+                    },
                     sent_by_user_id=sent_by_user_id,
                 )
                 return message.id, conversation.tg_chat_id

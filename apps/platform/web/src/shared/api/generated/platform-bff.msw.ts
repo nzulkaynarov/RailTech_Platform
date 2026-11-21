@@ -195,6 +195,7 @@ import type {
   EdsPerson,
   EdsRecipient,
   EdsReplyTo,
+  EdsSigningHint,
   EdsStaffList,
   EdsTemplate,
   EdsTemplateList,
@@ -2322,6 +2323,19 @@ export const getCreateEdsDocumentResponseEdsLetterMock = (
   ...overrideResponse,
 });
 
+export const getCreateEdsDocumentResponseEdsSigningHintMock = (
+  overrideResponse: Partial<EdsSigningHint> = {},
+): EdsSigningHint => ({
+  ...{
+    reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    signer: faker.helpers.arrayElement([{ ...getCreateEdsDocumentResponseEdsPersonMock() }, null]),
+  },
+  ...overrideResponse,
+});
+
 export const getCreateEdsDocumentResponseMock = (
   overrideResponse: Partial<Extract<EdsDocument, object>> = {},
 ): EdsDocument => ({
@@ -2454,6 +2468,10 @@ export const getCreateEdsDocumentResponseMock = (
     null,
   ]),
   can_sign: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  signing_hint: faker.helpers.arrayElement([
+    { ...getCreateEdsDocumentResponseEdsSigningHintMock() },
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -2616,6 +2634,19 @@ export const getGetEdsDocumentResponseEdsLetterMock = (
   ...overrideResponse,
 });
 
+export const getGetEdsDocumentResponseEdsSigningHintMock = (
+  overrideResponse: Partial<EdsSigningHint> = {},
+): EdsSigningHint => ({
+  ...{
+    reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    signer: faker.helpers.arrayElement([{ ...getGetEdsDocumentResponseEdsPersonMock() }, null]),
+  },
+  ...overrideResponse,
+});
+
 export const getGetEdsDocumentResponseMock = (
   overrideResponse: Partial<Extract<EdsDocument, object>> = {},
 ): EdsDocument => ({
@@ -2736,6 +2767,10 @@ export const getGetEdsDocumentResponseMock = (
     null,
   ]),
   can_sign: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  signing_hint: faker.helpers.arrayElement([
+    { ...getGetEdsDocumentResponseEdsSigningHintMock() },
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -2904,6 +2939,19 @@ export const getUpdateEdsDocumentResponseEdsLetterMock = (
   ...overrideResponse,
 });
 
+export const getUpdateEdsDocumentResponseEdsSigningHintMock = (
+  overrideResponse: Partial<EdsSigningHint> = {},
+): EdsSigningHint => ({
+  ...{
+    reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    signer: faker.helpers.arrayElement([{ ...getUpdateEdsDocumentResponseEdsPersonMock() }, null]),
+  },
+  ...overrideResponse,
+});
+
 export const getUpdateEdsDocumentResponseMock = (
   overrideResponse: Partial<Extract<EdsDocument, object>> = {},
 ): EdsDocument => ({
@@ -3036,6 +3084,10 @@ export const getUpdateEdsDocumentResponseMock = (
     null,
   ]),
   can_sign: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  signing_hint: faker.helpers.arrayElement([
+    { ...getUpdateEdsDocumentResponseEdsSigningHintMock() },
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -6910,6 +6962,22 @@ export const getRequestEdsDocumentRegistrationResponseEdsLetterMock = (
   ...overrideResponse,
 });
 
+export const getRequestEdsDocumentRegistrationResponseEdsSigningHintMock = (
+  overrideResponse: Partial<EdsSigningHint> = {},
+): EdsSigningHint => ({
+  ...{
+    reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    signer: faker.helpers.arrayElement([
+      { ...getRequestEdsDocumentRegistrationResponseEdsPersonMock() },
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getRequestEdsDocumentRegistrationResponseMock = (
   overrideResponse: Partial<Extract<EdsDocument, object>> = {},
 ): EdsDocument => ({
@@ -7057,6 +7125,10 @@ export const getRequestEdsDocumentRegistrationResponseMock = (
     null,
   ]),
   can_sign: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  signing_hint: faker.helpers.arrayElement([
+    { ...getRequestEdsDocumentRegistrationResponseEdsSigningHintMock() },
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -7225,6 +7297,22 @@ export const getWaiveEdsDocumentMailResponseEdsLetterMock = (
   ...overrideResponse,
 });
 
+export const getWaiveEdsDocumentMailResponseEdsSigningHintMock = (
+  overrideResponse: Partial<EdsSigningHint> = {},
+): EdsSigningHint => ({
+  ...{
+    reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    signer: faker.helpers.arrayElement([
+      { ...getWaiveEdsDocumentMailResponseEdsPersonMock() },
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getWaiveEdsDocumentMailResponseMock = (
   overrideResponse: Partial<Extract<EdsDocument, object>> = {},
 ): EdsDocument => ({
@@ -7363,6 +7451,10 @@ export const getWaiveEdsDocumentMailResponseMock = (
     null,
   ]),
   can_sign: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  signing_hint: faker.helpers.arrayElement([
+    { ...getWaiveEdsDocumentMailResponseEdsSigningHintMock() },
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -7528,6 +7620,19 @@ export const getSendEdsDocumentResponseEdsLetterMock = (
   ...overrideResponse,
 });
 
+export const getSendEdsDocumentResponseEdsSigningHintMock = (
+  overrideResponse: Partial<EdsSigningHint> = {},
+): EdsSigningHint => ({
+  ...{
+    reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    signer: faker.helpers.arrayElement([{ ...getSendEdsDocumentResponseEdsPersonMock() }, null]),
+  },
+  ...overrideResponse,
+});
+
 export const getSendEdsDocumentResponseMock = (
   overrideResponse: Partial<Extract<EdsDocument, object>> = {},
 ): EdsDocument => ({
@@ -7657,6 +7762,10 @@ export const getSendEdsDocumentResponseMock = (
     null,
   ]),
   can_sign: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  signing_hint: faker.helpers.arrayElement([
+    { ...getSendEdsDocumentResponseEdsSigningHintMock() },
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -7822,6 +7931,19 @@ export const getSignEdsDocumentResponseEdsLetterMock = (
   ...overrideResponse,
 });
 
+export const getSignEdsDocumentResponseEdsSigningHintMock = (
+  overrideResponse: Partial<EdsSigningHint> = {},
+): EdsSigningHint => ({
+  ...{
+    reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    signer: faker.helpers.arrayElement([{ ...getSignEdsDocumentResponseEdsPersonMock() }, null]),
+  },
+  ...overrideResponse,
+});
+
 export const getSignEdsDocumentResponseMock = (
   overrideResponse: Partial<Extract<EdsDocument, object>> = {},
 ): EdsDocument => ({
@@ -7951,6 +8073,10 @@ export const getSignEdsDocumentResponseMock = (
     null,
   ]),
   can_sign: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  signing_hint: faker.helpers.arrayElement([
+    { ...getSignEdsDocumentResponseEdsSigningHintMock() },
+    null,
+  ]),
   ...overrideResponse,
 });
 
