@@ -12,6 +12,7 @@ from app.models import DocumentRender, StoredFile
 from app.services import call_note, renders
 from app.services.call_note import TEXT
 from app.services.storage import TEST_STORAGE
+from app.tasks.renders import on_render_finished
 from tests.domain import Person, deliver_erp, validate
 from tests.test_api_auth import assert_error
 from tests.test_erp_events import _letter, request_created
@@ -47,13 +48,13 @@ def deferred(monkeypatch: pytest.MonkeyPatch) -> list[str]:
 
 
 async def work(container: Container, stub: StubRenderer, render_hash: str) -> str | None:
-    """Задача воркера как в `app/tasks/renders.py`: итог рендера обрабатывает `call_note`."""
+    """Задача воркера: те же хуки итога, что в `render_pdf` (`app/tasks/renders.py`)."""
     return await renders.run(
         container.session_factory,
         TEST_STORAGE,
         stub,
         render_hash,
-        on_finished=call_note.on_render_finished(TEST_STORAGE),
+        on_finished=on_render_finished(container),
     )
 
 
@@ -219,6 +220,23 @@ async def test_failed_render_is_reported_and_repeated_by_the_same_request(
     assert (await client.get(f"{URL}/{ordered.json()['id']}", headers=manager.headers)).json()["status"] == "ready"
 
 
+async def test_new_order_after_failure_is_pending_not_the_old_error(
+    client: httpx.AsyncClient, staff: dict[str, Person], container: Container, deferred: list[str]
+) -> None:
+    manager = staff["manager"]
+    await deliver_letterhead(client, container)
+    ordered = await order(client, manager)
+    assert await work(container, StubRenderer(fail="failed"), deferred[0]) == "failed"
+    again = await order(client, manager, need="Другое содержимое.")
+    assert again.status_code == 202 and again.json()["id"] == ordered.json()["id"]
+    assert len(deferred) == 2 and deferred[1] != deferred[0], "другое содержимое — новый хеш рендера"
+    pending = (await client.get(f"{URL}/{ordered.json()['id']}", headers=manager.headers)).json()
+    assert (pending["status"], pending["error"]) == ("pending", None)
+    assert await work(container, StubRenderer(), deferred[1]) == "ready"
+    ready = (await client.get(f"{URL}/{ordered.json()['id']}", headers=manager.headers)).json()
+    assert (ready["status"], ready["file"] is not None) == ("ready", True)
+
+
 async def test_request_is_validated_and_needs_a_permission(
     client: httpx.AsyncClient, staff: dict[str, Person], container: Container
 ) -> None:
@@ -236,4 +254,5 @@ def test_uzbek_note_is_new_latin_and_all_languages_have_the_same_labels() -> Non
     assert set(TEXT["ru"]) == set(TEXT["en"]) == set(TEXT["uz"])
     uz = " ".join(TEXT["uz"].values())
     assert not re.search(r"[ʻʼ'`’]|oʻ|gʻ|sh|ch|[А-Яа-я]", uz.replace("tomonidan", "")), "старые диграфы и кириллица"
+    assert TEXT["uz"]["title"] == "Qönğiroq haqida yozuv" and "ngğ" not in uz.lower()
     assert "ö" in uz and "ğ" in uz and "ç" in uz, "новый алфавит: Ö Ğ Ş Ç"
