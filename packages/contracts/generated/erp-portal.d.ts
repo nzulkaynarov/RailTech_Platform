@@ -2630,7 +2630,10 @@ export interface components {
         partner_products?: components["schemas"]["NotificationChannelSettingsUpdate"];
       };
     };
-    /** @enum {string} */
+    /**
+     * @description `closed` — запрос проигран либо проект ВЫПОЛНЕН: каждый живой акт принят клиентом в Кабинете или подписан сканом и все выставленные счета оплачены (SPEC-v3 §2.3 шаг 7; единое определение ERP, склада, CRM, Платформы и Кабинета, решение владельца 2026-11-22). Подписанный договор без этого — `in_progress`. Приёмка строк поставки не требуется.
+     * @enum {string}
+     */
     RequestStatus: "new" | "in_progress" | "quoted" | "closed";
     RequestLineIn: {
       text: string;
@@ -2656,7 +2659,7 @@ export interface components {
       number: string;
       status: components["schemas"]["RequestStatus"];
       /**
-       * @description Исход закрытого запроса (B-CABFIX-2); null, пока запрос открыт
+       * @description Исход закрытого запроса (B-CABFIX-2); null, пока запрос открыт. `won` — только когда проект выполнен (акт принят в Кабинете или скан, счета оплачены), а не при подписании договора
        * @enum {string|null}
        */
       outcome?: "won" | "cancelled" | null;

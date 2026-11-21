@@ -156,14 +156,13 @@ describe('Этапы на странице проекта', () => {
     expect(screen.queryByText('Что произойдёт')).not.toBeInTheDocument();
   });
 
-  it('ПР-2026-035: закрытый запрос с исходом won — «Проект успешно завершён», без этапов «в работе» и без «исполнения»', async () => {
+  it('ПР-2026-036: закрытый запрос с исходом won — «Проект успешно завершён», без этапов «в работе»', async () => {
     signedIn();
-    renderApp('/deals/35');
-    await heading('Проект ПР-2026-035');
+    renderApp('/deals/36');
+    await heading('Проект ПР-2026-036');
     const stages = await screen.findByRole('region', { name: 'Этапы проекта' });
     expect(within(stages).getByText('Проект успешно завершён')).toBeInTheDocument();
     expect(within(stages).queryByText(/текущий этап|начато/)).not.toBeInTheDocument();
-    expect(within(stages).queryByText('Поставка и акт')).not.toBeInTheDocument();
   });
 
   it('КП с прошедшим сроком в списке проекта — «Срок истёк», а не «Ждёт решения»', async () => {

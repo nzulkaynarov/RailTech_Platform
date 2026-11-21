@@ -127,7 +127,7 @@ inline и до БД не доходит (§9.2).
 | `delivery.status_changed` / `delivery.eta_changed` | `line_summary, status, eta, tracking?` | бот: статус/сдвиг по политике «сообщать о сдвигах» |
 | `delivery.line_accepted` / `delivery.line_disputed` | `line_no, title, status, remark?, decided_at` (`actor.type=client`; при `disputed` замечание обязательно) | лента; при `disputed` — уведомление ответственному (FIX-37) |
 | `act.issued` / `act.accepted` / `act.returned` | `number, reason?` | бот: «акт ждёт подтверждения» |
-| `deal.won` / `deal.lost` | `amount, lost_reason?` | зеркало сделки → `won/lost`; стадия лида не меняется (CRM ADR-0022) |
+| `deal.won` / `deal.lost` | `amount, lost_reason?` | зеркало сделки → `won/lost`; стадия лида не меняется (CRM ADR-0022). `deal.won` — когда проект выполнен (акт принят в Кабинете или скан, счета оплачены; DECISIONS 2026-11-22), `deal.lost` — при закрытии без продажи |
 | `document.created` | `erp_document_id, kind, number` | индекс документов клиента в CRM (без файла) |
 | `invite.sent` | `channels[]` | лента |
 | `invite.requested` | `channel: telegram, erp_contact_id, crm_contact_id, language?` | бот присылает контакту приглашение с кнопкой «Открыть кабинет» (Mini App; ссылок и токенов нет); итог доставки — в карточке клиента (D1-9, Q-FIX23-1). Inline-обработчик, как у кода акцепта |
@@ -545,7 +545,8 @@ subscribers:
 | События | Сервис |
 |---|---|
 | `request.created` | заявка из Cabinet (`portal/services/requests.py`, `source=cabinet`), передача клиента из CRM (`integration/services/handoff.py` и инструмент `create_request` `erp-mcp`, `source=crm`), сделка сотрудника (`register_new_deal`, `source=erp`) |
-| `deal.stage_changed`, `deal.won`, `deal.lost` | `transition_deal_stage` (смена стадии FSM; стадию контракта даёт `stages.py`) |
+| `deal.stage_changed`, `deal.lost` | `transition_deal_stage` (смена стадии FSM; стадию контракта даёт `stages.py`) |
+| `deal.won` | `projects.log_project_done_once` (один раз, когда проект выполнен И стадия `CLOSED_WON`: с оплаты, акта, скана, отмены счёта или акта либо с перехода в `CLOSED_WON`; не при подписании договора) |
 | `quote.sent`, `quote.viewed`, `quote.accepted`, `quote.rejected`, `quote.acceptance_code_requested` | отправка КП, просмотр публичной страницы, акцепт и отказ (`lifecycle_accept`, принудительное одобрение), код акцепта для Telegram (`portal/services/acceptance.py`) |
 | `contract.signed` | прикрепление скана (`contract_flow.apply_transition`, `by=both`); `sign_contract_by_client` его больше не публикует (согласие клиента — `contract.status_changed`) |
 | `invoice.issued`, `invoice.paid`, `invoice.overdue` | `issue_invoice`, `record_payment`, ежедневное напоминание об оплате (`send_payment_reminders`: одно `invoice.overdue` на просроченный счёт — статуса «просрочен» нет) |

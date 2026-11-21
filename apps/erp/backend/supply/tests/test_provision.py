@@ -156,7 +156,7 @@ def test_a_won_deal_takes_manual_reservations_until_it_is_done(world, monkeypatc
     response = _reserve(world, deal, rail, 4)
     assert response.status_code == 201, response.json()
 
-    monkeypatch.setattr("crm.services.deal_documents.deal_execution_is_complete", lambda _deal: True)
+    monkeypatch.setattr("crm.services.projects.project_is_done", lambda _deal: True)
     done = _reserve(world, deal, rail, 3)
     assert done.status_code == 409 and done.json() == {"detail": "DEAL_CLOSED"}, "выполненная заявка закрыта"
 
