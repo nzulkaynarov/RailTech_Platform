@@ -10621,7 +10621,7 @@ components:
       type: http
 info:
   title: RailTech CRM API
-  version: 0.31.0
+  version: 0.32.0
 openapi: 3.1.0
 paths:
   /api/v1/admin/ai-spend:
