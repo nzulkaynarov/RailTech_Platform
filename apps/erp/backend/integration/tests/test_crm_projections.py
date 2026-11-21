@@ -392,3 +392,24 @@ def test_client_snapshot_keeps_the_crm_owner_for_the_requests_of_the_client(comp
     data["client"]["owner"] = None
     projections.apply_client_snapshot(data)
     assert CrmClientMapping.objects.get(crm_client_id=42).owner_crm_user_id is None
+
+
+def test_republished_snapshot_of_the_same_moment_adds_the_owner_but_older_one_does_not(company):
+    """СЦ-9: снимок того же момента (переотправка CRM) дописывает ответственного; более старый — нет."""
+    from integration.models import CrmClientMapping
+
+    first = client_data()  # применён раньше, когда ERP ответственного не хранила
+    first["client"]["owner"] = None
+    projections.apply_client_snapshot(first)
+    assert CrmClientMapping.objects.get(crm_client_id=42).owner_crm_user_id is None
+
+    again = client_data()
+    again["client"]["owner"] = {"crm_user_id": 77, "full_name": "Дилноза Каримова"}
+    assert projections.apply_client_snapshot(again).status == projections.APPLIED
+    assert CrmClientMapping.objects.get(crm_client_id=42).owner_crm_user_id == 77
+    assert projections.apply_client_snapshot(again).status == projections.SKIPPED_NO_CHANGE
+
+    older = client_data(at=T0 - timedelta(minutes=1))
+    older["client"]["owner"] = {"crm_user_id": 99, "full_name": "Другой"}
+    assert projections.apply_client_snapshot(older).status == projections.SKIPPED_STALE
+    assert CrmClientMapping.objects.get(crm_client_id=42).owner_crm_user_id == 77
