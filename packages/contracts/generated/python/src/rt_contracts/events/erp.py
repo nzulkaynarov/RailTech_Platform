@@ -141,6 +141,10 @@ class Author(BaseModel):
 
 
 class By(StrEnum):
+    """
+    Кто подписал. `both` — подписан скан (оба участника); `company` — подпись компании. `client` ERP больше не публикует (согласие клиента в кабинете — `contract.status_changed`, DECISIONS 2026-11-22); значение оставлено для совместимости и старых событий.
+    """
+
     client = "client"
     company = "company"
     both = "both"
@@ -414,6 +418,9 @@ class ContractSigned(BaseModel):
     erp_contract_id: int
     number: str | None = None
     by: By
+    """
+    Кто подписал. `both` — подписан скан (оба участника); `company` — подпись компании. `client` ERP больше не публикует (согласие клиента в кабинете — `contract.status_changed`, DECISIONS 2026-11-22); значение оставлено для совместимости и старых событий.
+    """
 
 
 class ContractSignedV1(BaseModel):

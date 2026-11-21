@@ -111,16 +111,24 @@ def notify_act_issued(act) -> int:
     )
 
 
-def notify_act_signed(act, signer) -> int:
-    """Обеим сторонам — что акт подписан; себе уведомление не шлём."""
+def notify_act_signed(act, signer, *, accepted_by_client: bool = False) -> int:
+    """Обеим сторонам — что акт принят; себе уведомление не шлём.
+
+    Приёмка клиентом в кабинете — не подпись: в тексте «принят клиентом» (решение владельца 2026-11-22); скан,
+    прикреплённый сотрудником, остаётся «подписан»."""
+    title, message = (
+        ("Акт принят клиентом", f"Акт {act.number} по сделке #{act.deal_id} принят клиентом")
+        if accepted_by_client
+        else ("Акт подписан", f"Акт {act.number} по сделке #{act.deal_id} подписан")
+    )
     deal = act.deal
     recipients = set(buyer_team_user_ids(deal)) | set(seller_team_user_ids(deal))
     recipients.discard(getattr(signer, "id", None))
     return notify_deal_users(
         recipients,
         deal=deal,
-        title="Акт подписан",
-        message=f"Акт {act.number} по сделке #{deal.pk} подписан",
+        title=title,
+        message=message,
         link="",
         type_code="SUCCESS",
         event_code="act.signed",

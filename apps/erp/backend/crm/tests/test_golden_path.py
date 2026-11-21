@@ -308,8 +308,14 @@ def test_contract_and_billing_events_are_structured(deal, buyer, manager):
 
     contract, err = crm_services.sign_contract_by_client(contract.id, manager)
     assert err is None
-    signed_client = ActivityLog.objects.filter(event_code="contract.signed_client", deal=deal).order_by("-id").first()
-    assert signed_client.event_params == {"number": contract.number, "deal_id": deal.id, "manual": True}
+    assert not ActivityLog.objects.filter(event_code="contract.signed_client", deal=deal).exists()
+    agreed = ActivityLog.objects.filter(event_code="contract.client_agreed", deal=deal).order_by("-id").first()
+    assert agreed.event_params == {
+        "number": contract.number,
+        "deal_id": deal.id,
+        "from": "PENDING_CLIENT",
+        "to": "PENDING_MANAGER",
+    }
 
     contract = w.sign_via_scan(contract.id)
     scanned = ActivityLog.objects.filter(event_code="contract.scan_attached", deal=deal).order_by("-id").first()
