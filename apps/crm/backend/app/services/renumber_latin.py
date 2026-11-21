@@ -2,9 +2,10 @@
 
 Маппинг — плоский JSON `{"ВХ-001/26": "IN-001/26", "ЗВ-2026-002": "PRJ-2026-002", ...}`, один на все
 системы. CRM меняет только свои копии: `deals.erp_number`, `inbound_mail.eds_letter_number`,
-`staff_notifications.object_number` и `.title`, текст сообщений в `erp_event_notices.items`.
-История (шина, журналы, отправленные письма) не трогается. Номер здесь — непрозрачная строка: ничего
-не выводится из префикса, замена идёт только по ключам маппинга. Повтор безопасен: после замены
+`staff_notifications.object_number` и `.title`, текст ещё не отправленных сообщений в
+`erp_event_notices.items`. История (шина, журналы, отправленные письма и уже ушедшие сообщения
+Telegram) не трогается. Номер здесь — непрозрачная строка: ничего не выводится из префикса, замена
+идёт только по ключам маппинга. Повтор безопасен: после замены
 старых номеров в данных нет, второй прогон ничего не меняет (поэтому цепочки `A→B`, `B→C` в маппинге
 запрещены). Исключение из «только по маппингу» — обращения: их номер собирается из id и обозначения
 (`number_of`), поэтому пары `ОБР-0012 → TK-0012` команда берёт из самих уведомлений.
@@ -30,6 +31,9 @@ from app.services.staff_tickets import label_in
 # совпал внутри `ВХ-001/260`.
 _EDGE_BEFORE = r"(?<![\w/-])"
 _EDGE_AFTER = r"(?![\w/-])"
+
+# Сообщение уже ушло в Telegram — это история, его текст не переписываем.
+_PENDING = ErpEventNotice.notified_at.is_(None)
 
 
 @dataclass(frozen=True, slots=True)
@@ -143,7 +147,7 @@ async def _plan(session: AsyncSession, mapping: Mapping[str, str]) -> list[Chang
         if renamed != title:
             changes.append(Change("staff_notifications.title", str(note_id), title, renamed))
     for event_id, items in (
-        await session.execute(select(ErpEventNotice.event_id, ErpEventNotice.items))
+        await session.execute(select(ErpEventNotice.event_id, ErpEventNotice.items).where(_PENDING))
     ).all():
         for index, item in enumerate(items):
             text = item.get("text")
@@ -174,7 +178,7 @@ async def apply(session: AsyncSession, mapping: Mapping[str, str]) -> int:
         if note.object_number is not None and note.object_number in mapping:
             note.object_number = mapping[note.object_number]
         note.title = replace_numbers(note.title, mapping)
-    for notice in (await session.scalars(select(ErpEventNotice))).all():
+    for notice in (await session.scalars(select(ErpEventNotice).where(_PENDING))).all():
         notice.items = _items_renamed(notice.items, mapping)
     await session.flush()
     return len(changes)
