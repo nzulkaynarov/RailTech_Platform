@@ -3,6 +3,7 @@
 import argparse
 import json
 import uuid
+from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -22,6 +23,7 @@ from tests.integration.crm_helpers import make_user
 pytestmark = pytest.mark.integration
 MAPPING = {"ВХ-001/26": "IN-001/26", "ЗВ-2026-002": "PRJ-2026-002", "ОБР-0012": "TK-0012"}
 NOTICE_ID = uuid.UUID("00000000-0000-0000-0000-0000000000a1")
+SENT_NOTICE_ID = uuid.UUID("00000000-0000-0000-0000-0000000000a2")
 
 
 async def seed(sessions: async_sessionmaker[AsyncSession]) -> int:
@@ -64,6 +66,13 @@ async def seed(sessions: async_sessionmaker[AsyncSession]) -> int:
                 ],
             )
         )
+        session.add(
+            ErpEventNotice(
+                event_id=SENT_NOTICE_ID,
+                items=[{"kind": "staff", "user_id": user.id, "text": "Заявка ЗВ-2026-002 принята"}],
+                notified_at=datetime(2026, 11, 20, tzinfo=UTC),
+            )
+        )
     return user.id
 
 
@@ -103,11 +112,15 @@ async def test_apply_changes_only_mapped_copies_and_is_idempotent(
             n.object_number: n.title
             for n in (await session.scalars(select(StaffNotification))).all()
         }
-        notice = (await session.scalars(select(ErpEventNotice))).one()
+        notice = await session.get(ErpEventNotice, NOTICE_ID)
+        sent = await session.get(ErpEventNotice, SENT_NOTICE_ID)
+        assert notice is not None
+        assert sent is not None
     assert notes["TK-0012"] == "Новое обращение TK-0012"
     assert notes["IN-001/26"] == "Письмо IN-001/26 зарегистрировано"
     assert notes["ВХ-001/260"] == "Письмо ВХ-001/260"  # чужой номер, не совпал целиком
     assert notice.items[0]["text"] == "Заявка PRJ-2026-002 в работе"
+    assert sent.items[0]["text"] == "Заявка ЗВ-2026-002 принята"  # ушедшее сообщение — история
 
     async with sessions() as session:
         assert await svc.plan(session, MAPPING) == []
