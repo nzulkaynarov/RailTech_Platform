@@ -89,17 +89,13 @@ async def test_reply_path_registration_task_notices_links_and_mail_failure(
     assert (await get(client, registrar, incoming["id"])).json()["replies"] == []
     assert (await tasks_of(client, registrar))["registrations"] == []
 
-    # «Передать на регистрацию»: уведомление держателям letters.register (не автору) и задача в «Моих задачах».
+    # «Передать на регистрацию»: делопроизводителям «Зарегистрируйте ответ» не шлётся (это действие сервер отклоняет);
     handed = await client.post(f"/api/v1/documents/{doc['id']}/registration-request", headers=manager.headers)
     assert handed.status_code == 200, handed.text
-    notice = (await notices(container))[-1]
-    assert (notice["kind"], notice["recipients"]) == ("instruction_assigned", [3, 4])
-    assert notice["title"] == f"Зарегистрируйте ответ на {incoming['number']}"
-    assert notice["document"] == {"eds_document_id": doc["id"], "number": None, "subject": doc["subject"]}
-    assert notice["letter"]["eds_letter_id"] == incoming["id"]
+    assert not [n for n in await notices(container) if "Зарегистрируйте" in n["title"]]
     again = await client.post(f"/api/v1/documents/{doc['id']}/registration-request", headers=manager.headers)
     assert again.status_code == 200
-    assert len([n for n in await notices(container) if n.get("document")]) == 1  # повтор — без второго уведомления
+    assert not [n for n in await notices(container) if n.get("document")]  # на регистрацию никому уведомлений нет
 
     # Без подписанта по реестру задачи «Подписать» ни у кого нет, а «Зарегистрировать» больше не существует.
     for who in (registrar, director, manager):

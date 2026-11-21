@@ -2,8 +2,9 @@
 
 Исполнитель поручения «Подготовить ответ» создаёт письмо `letter_out` с `in_reply_to` (ВХ); дальше путь не обрывается:
 
-* «Передать на регистрацию» — уведомление держателям `letters.register` и строка подписанту в `GET /letter-tasks`
-  (`signatures`; `registrations` пуст с 2026-11-21: письмо без подписи не регистрируется);
+* «Передать на регистрацию» — подписанту уходит «Подпишите исходящее» (`document_notices.letter_handed_over`) и строка в
+  `GET /letter-tasks` (`signatures`; `registrations` пуст с 2026-11-21: письмо без подписи не регистрируется,
+  делопроизводителям «Зарегистрируйте ответ» не шлётся — выполнить это действие сервер не даст);
 * регистрация ИСХ закрывает поручение (`instructions.close_by_outgoing`) и сообщает исполнителю и автору ответа;
 * письмо не ушло адресату (`crm.mail.failed`, «почта не настроена») — уведомление автору и делопроизводителям;
 * карточка ВХ показывает ответы (`replies`: черновик → передан → ИСХ → итог отправки), карточка ИСХ — «в ответ на ВХ-…».
@@ -232,26 +233,6 @@ async def _notice(
 async def _letter_number(session: AsyncSession, document: Document) -> str:
     row = await session.execute(select(Letter.number).where(Letter.id == document.in_reply_to))
     return row.scalar_one_or_none() or ""
-
-
-async def notify_registration_requested(
-    session: AsyncSession, bus: AsyncBus, document: Document, *, actor_id: int
-) -> list[int]:
-    """«Передать на регистрацию»: делопроизводители узнают сразу, а не из журнала. Возвращает, кому уже сообщили
-    (ответ на входящее; письмо без входящего уведомлений по поручениям не порождает — пусто)."""
-    directory = await load_directory(session, [actor_id])
-    recipients = [uid for uid in await registrar_ids(session) if uid != actor_id]
-    await _notice(
-        session,
-        bus,
-        document,
-        key=f"document:{document.id}:registration",
-        recipients=recipients,
-        title=f"Зарегистрируйте ответ на {await _letter_number(session, document)}",
-        subtitle=f"{document.subject} · {directory.name(actor_id)}"[:200],
-        actor_id=actor_id,
-    )
-    return recipients if document.in_reply_to is not None else []
 
 
 async def notify_registered(

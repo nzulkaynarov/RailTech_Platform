@@ -1,13 +1,13 @@
 """Документы EDS: служебная записка, заявление, отчёт, исходящее письмо (SPEC-v3 §3.2; eds.yaml, тег `documents`).
 
 `memo`/`application`/`report`: номер (`СЗ|ЗЯ|ОТ-ГГГГ/NNN`) — при создании, `document.registered`; отправка открывает
-круг маршрута (`approval.requested`), после возврата версия растёт. `letter_out`: номер `ИСХ-NNN/ГГ` — при регистрации,
-затем архив.
+круг маршрута (`approval.requested`), после возврата версия растёт. `letter_out`: номер `ИСХ-NNN/ГГ` выдаёт только
+подписание (`sign`, в том числе бумажное: `dispatch_method=paper`), затем архив;
+`submit` без подписи — 409 `signature_required`.
 
 Письмо на бланке (P4): тело блоками (`letter`), PDF — фоновый рендер (`services/renders.py`), «Отправить адресату» —
 `services/letter_mail.py`. Черновик письма создаёт любой с `memos.create` (исполнитель «Подготовить ответ», B-P8B-4) и
-передаёт делопроизводителю (`request_registration`); регистрирует только `letters.register` — автор или, если черновик
-передан, любой держатель права.
+передаёт на подпись (`request_registration`); подписывает вычисленный подписант (`services/signing`).
 """
 
 import secrets
@@ -74,7 +74,7 @@ APPROVER = "Согласующий"
 
 
 def required_permission(kind: DocumentKind) -> P:
-    """Отправка: `letter_out` регистрирует регистратор писем, остальное отправляет любой с `memos.create`."""
+    """Отправка: `letter_out` — держатель `letters.register` (номер даёт `sign`), прочее — любой с `memos.create`."""
     return P.LETTERS_REGISTER if kind is DocumentKind.LETTER_OUT else P.MEMOS_CREATE
 
 
@@ -252,7 +252,7 @@ async def _publish_signed(
 
 
 async def create(session: AsyncSession, bus: AsyncBus, *, employee: Employee, data: DocumentCreate) -> Document:
-    """Черновик документа. `memo`/`application`/`report` получают номер сразу, `letter_out` — при отправке."""
+    """Черновик документа. `memo`/`application`/`report` получают номер сразу, `letter_out` — в `sign`."""
     require_draft_permission(employee, data.kind)
     is_letter = data.kind is DocumentKind.LETTER_OUT
     if not is_letter and (data.recipient is not None or data.in_reply_to is not None or data.letter is not None):
@@ -613,13 +613,11 @@ async def request_registration(
         await journal.record(
             session, "document.registration_requested", by=employee.crm_user_id, document_id=document.id
         )
-        told = await reply.notify_registration_requested(session, bus, document, actor_id=employee.crm_user_id)
         await document_notices.letter_handed_over(
             session,
             bus,
             document,
             today=clock.company_date(now),
-            already_told=told,
             actor_id=employee.crm_user_id,
         )
     return document
