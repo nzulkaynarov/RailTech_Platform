@@ -21,7 +21,7 @@ import { ManagerButton } from '@/components/TelegramLinkButton';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { groupDeliveries } from '@/lib/deliveries';
+import { doneDealIdsOf, groupDeliveries } from '@/lib/deliveries';
 import { aboutDealKey, dealLabelKey } from '@/lib/dealStage';
 import { DOCUMENT_KINDS, isDocumentKind } from '@/lib/documents';
 import { saveBlob } from '@/lib/download';
@@ -44,9 +44,7 @@ export function DeliveriesPage() {
   const accept = useAcceptDelivery();
   const dispute = useDisputeDelivery();
   const requests = useRequests();
-  const doneDealIds = new Set(
-    (requests.data ?? []).filter((request) => request.status === 'closed' && request.outcome === 'won' && request.deal).map((request) => request.deal!.id),
-  );
+  const doneDealIds = doneDealIdsOf(requests.data);
   const [disputeTarget, setDisputeTarget] = useState<DeliveryLine | null>(null);
   const [acceptingId, setAcceptingId] = useState<number | null>(null);
 

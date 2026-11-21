@@ -123,3 +123,74 @@ def test_deal_won_is_published_when_the_project_becomes_done_not_at_contract_sig
 
     assert projects.log_project_done_once(pw.deal) is False
     assert len(_deal_won_events()) == 1, "повтор проверки событие не дублирует"
+
+
+# ── Каждый путь, на котором проект становится выполненным, публикует `deal.won` ровно один раз ───────────────
+
+
+def _closed_won(pw):  # noqa: F811
+    from crm.constants import DealStageCode
+    from crm.models import DealStage
+
+    pw.deal.stage = DealStage.objects.get(code=DealStageCode.CLOSED_WON)
+    pw.deal.save(update_fields=["stage"])
+
+
+def test_cancelling_the_last_unpaid_invoice_completes_the_project_and_publishes_deal_won_once(pw):  # noqa: F811
+    from integration.tests import world as w
+
+    from crm.constants import ContractStatusCode
+    from crm.services.invoice_lifecycle import cancel_invoice
+
+    contract = w.add_contract(pw.deal, pw.quote, ContractStatusCode.SIGNED)
+    w.add_invoice(pw.deal, I.PAID, total="5000000", paid="5000000", contract=contract)
+    stray = w.add_invoice(pw.deal, I.ISSUED, total="100", paid="0", contract=contract)
+    w.add_act(pw.deal, A.SIGNED, contract=contract, signed_file=scan())
+    _closed_won(pw)
+    assert not projects.project_is_done(Deal.objects.get(pk=pw.deal.pk)) and _deal_won_events() == []
+
+    _, error = cancel_invoice(stray, pw.accountant)
+
+    assert error is None and projects.project_is_done(Deal.objects.get(pk=pw.deal.pk))
+    assert len(_deal_won_events()) == 1
+    assert ActivityLog.objects.filter(event_code="project.done", deal=pw.deal).count() == 1
+
+
+def test_voiding_the_last_open_act_completes_the_project_and_publishes_deal_won_once(pw):  # noqa: F811
+    from integration.tests import world as w
+
+    from crm.constants import ContractStatusCode
+    from crm.services.billing import cancel_act
+
+    contract = w.add_contract(pw.deal, pw.quote, ContractStatusCode.SIGNED)
+    invoice = w.add_invoice(pw.deal, I.PAID, total="5000000", paid="5000000", contract=contract)
+    w.add_act(pw.deal, A.SIGNED, contract=contract, invoice=invoice, signed_file=scan())
+    open_act = w.add_act(pw.deal, A.ISSUED, contract=contract, invoice=invoice)
+    _closed_won(pw)
+    assert _deal_won_events() == []
+
+    _, error = cancel_act(open_act.id, pw.accountant, reason="duplicate")
+
+    assert error is None and projects.project_is_done(Deal.objects.get(pk=pw.deal.pk))
+    assert len(_deal_won_events()) == 1
+
+
+def test_project_done_before_contract_won_publishes_deal_won_at_the_transition_once(pw):  # noqa: F811
+    from integration.tests import world as w
+
+    from crm.constants import ContractStatusCode, DealStageCode
+    from crm.services.deals import transition_deal_stage
+
+    contract = w.add_contract(pw.deal, pw.quote, ContractStatusCode.SIGNED)
+    invoice = w.add_invoice(pw.deal, I.PAID, total="5000000", paid="5000000", contract=contract)
+    w.add_act(pw.deal, A.SIGNED, contract=contract, invoice=invoice, signed_file=scan())
+    deal = Deal.objects.get(pk=pw.deal.pk)
+    assert projects.project_is_done(deal) and deal.stage.code == DealStageCode.CONTRACT_SIGNED
+    assert projects.log_project_done_once(deal) is True and _deal_won_events() == [], "стадия ещё не won"
+
+    _, error = transition_deal_stage(deal, DealStageCode.CLOSED_WON, pw.admin, validate_fsm=False)
+
+    assert error is None
+    bus_support.assert_matches_contract(bus_support.only("deal.won"))
+    assert projects.log_project_done_once(Deal.objects.get(pk=pw.deal.pk)) is False
+    assert len(_deal_won_events()) == 1

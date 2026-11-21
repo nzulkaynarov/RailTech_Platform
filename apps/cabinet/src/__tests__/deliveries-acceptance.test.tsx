@@ -1,22 +1,9 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
-
-import * as fixtures from '@/mocks/fixtures';
-import { portalServer } from '@/mocks/server';
-
 import { renderApp, signedIn } from '@/test/render';
 import { captureBody, expectNoAxeViolations, failWith, heading, requestLog } from '@/test/screens';
 
 const LINE = 'Редуктор червячный NMRV 063';
-
-/** Проект ПР-2026-035 в исполнении: договор подписан, акт не принят или счёт не оплачен — запрос `in_progress`. */
-function projectInProgress() {
-  const requests = fixtures.requests.map((request) =>
-    request.id === 504 ? { ...request, status: 'in_progress' as const, outcome: null } : request,
-  );
-  portalServer.use(http.get('*/api/portal/v1/requests', () => HttpResponse.json(requests)));
-}
 
 async function openDeliveries() {
   renderApp('/deliveries');
@@ -27,7 +14,6 @@ async function openDeliveries() {
 describe('Приёмка поставки по строкам', () => {
   it('кнопки только у строки в статусе «Доставлено»; принятые и оспоренные показаны со статусом, датой и замечанием', async () => {
     signedIn();
-    projectInProgress();
     await openDeliveries();
 
     expect(screen.getAllByRole('button', { name: /^Принять позицию / })).toHaveLength(1);
@@ -47,7 +33,6 @@ describe('Приёмка поставки по строкам', () => {
     signedIn();
     const user = userEvent.setup();
     const log = requestLog();
-    projectInProgress();
     await openDeliveries();
     expect(screen.queryByText(`Позиция «${LINE}» принята`)).not.toBeInTheDocument();
     expect(log.filter((entry) => entry.startsWith('POST'))).toEqual([]);
@@ -67,7 +52,6 @@ describe('Приёмка поставки по строкам', () => {
     const user = userEvent.setup();
     const log = requestLog();
     const body = captureBody('/deliveries/105/dispute');
-    projectInProgress();
     await openDeliveries();
 
     await user.click(screen.getByRole('button', { name: `Есть замечания по позиции ${LINE}` }));
@@ -102,7 +86,6 @@ describe('Приёмка поставки по строкам', () => {
     signedIn();
     failWith('post', '/deliveries/105/accept', status, code);
     const user = userEvent.setup();
-    projectInProgress();
     await openDeliveries();
     await user.click(screen.getByRole('button', { name: `Принять позицию ${LINE}` }));
     expect(await screen.findByText(text)).toBeInTheDocument();
@@ -114,7 +97,6 @@ describe('Приёмка поставки по строкам', () => {
     signedIn();
     failWith('post', '/deliveries/105/dispute', 409, 'DELIVERY_LINE_NOT_ACCEPTABLE');
     const user = userEvent.setup();
-    projectInProgress();
     await openDeliveries();
     await user.click(screen.getByRole('button', { name: `Есть замечания по позиции ${LINE}` }));
     const dialog = await screen.findByRole('dialog');
@@ -124,13 +106,15 @@ describe('Приёмка поставки по строкам', () => {
     expect(screen.queryByText('Замечание передано менеджеру')).not.toBeInTheDocument();
   });
 
-  it('выполненный проект (запрос закрыт с исходом won): «Принять» и «Есть замечания» у строк скрыты, статус строки виден', async () => {
+  it('выполненный проект (ПР-2026-036: запрос закрыт с исходом won, акт принят, счёт оплачен): «Принять» и «Есть замечания» у его строк скрыты, статус виден', async () => {
     signedIn();
     await openDeliveries();
 
-    expect(screen.queryByRole('button', { name: /^Принять позицию / })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Есть замечания по позиции/ })).not.toBeInTheDocument();
-    expect(screen.getByText('Доставлено')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Принять позицию Фильтр гидравлический HF-40' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Есть замечания по позиции Фильтр гидравлический HF-40' })).not.toBeInTheDocument();
+    expect(screen.getAllByText('Доставлено').length).toBeGreaterThan(1);
+    // проект в исполнении (ПР-2026-035) кнопки сохраняет
+    expect(screen.getByRole('button', { name: `Принять позицию ${LINE}` })).toBeInTheDocument();
   });
 
   it('can_act=false: кнопок приёмки нет, статусы видны', async () => {
@@ -140,7 +124,7 @@ describe('Приёмка поставки по строкам', () => {
     await openDeliveries();
     expect(screen.queryByRole('button', { name: /^Принять позицию / })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Есть замечания по позиции/ })).not.toBeInTheDocument();
-    expect(screen.getByText('Доставлено')).toBeInTheDocument();
+    expect(screen.getAllByText('Доставлено').length).toBeGreaterThan(0);
     expect(log.filter((entry) => entry.startsWith('POST'))).toEqual([]);
   });
 });

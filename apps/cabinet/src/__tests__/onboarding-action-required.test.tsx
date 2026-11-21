@@ -93,6 +93,8 @@ describe('чек-лист «Первые шаги» и расширенный в
         '/deliveries',
       );
       expect(within(region).getByText('Поставка')).toBeInTheDocument();
+      // Строка выполненного проекта ПР-2026-036 решения не требует: кнопок приёмки у неё нет.
+      expect(within(region).queryByRole('link', { name: 'Фильтр гидравлический HF-40' })).not.toBeInTheDocument();
     });
 
     it('включает проект партнёрского договора к согласованию при статусе contract_sent', async () => {

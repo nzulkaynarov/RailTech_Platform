@@ -238,6 +238,10 @@ def cancel_invoice(invoice, user) -> Tuple[Optional[object], Optional[str]]:
         deal=invoice.deal,
         company_id=invoice.deal.company_id,
     )
+    # Отмена последнего неоплаченного счёта может сделать проект выполненным (акт подписан, остальное оплачено).
+    from .projects import log_project_done_once
+
+    log_project_done_once(invoice.deal, user)
     return invoice, None
 
 

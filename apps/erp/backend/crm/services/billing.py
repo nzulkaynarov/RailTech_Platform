@@ -1081,6 +1081,10 @@ def cancel_act(act_id: int, actor: CustomUser, reason: str = "") -> Tuple[Option
     from .deal_notifications import notify_act_cancelled
 
     transaction.on_commit(lambda: notify_act_cancelled(act, actor, clean_reason))
+    # Аннулирование последнего открытого акта (остальные подписаны, счета оплачены) закрывает проект.
+    from .projects import log_project_done_once
+
+    log_project_done_once(act.deal, actor)
     return act, None
 
 

@@ -546,7 +546,7 @@ subscribers:
 |---|---|
 | `request.created` | заявка из Cabinet (`portal/services/requests.py`, `source=cabinet`), передача клиента из CRM (`integration/services/handoff.py` и инструмент `create_request` `erp-mcp`, `source=crm`), сделка сотрудника (`register_new_deal`, `source=erp`) |
 | `deal.stage_changed`, `deal.lost` | `transition_deal_stage` (смена стадии FSM; стадию контракта даёт `stages.py`) |
-| `deal.won` | `projects.log_project_done_once` (один раз, когда проект выполнен; не при подписании договора) |
+| `deal.won` | `projects.log_project_done_once` (один раз, когда проект выполнен И стадия `CLOSED_WON`: с оплаты, акта, скана, отмены счёта или акта либо с перехода в `CLOSED_WON`; не при подписании договора) |
 | `quote.sent`, `quote.viewed`, `quote.accepted`, `quote.rejected`, `quote.acceptance_code_requested` | отправка КП, просмотр публичной страницы, акцепт и отказ (`lifecycle_accept`, принудительное одобрение), код акцепта для Telegram (`portal/services/acceptance.py`) |
 | `contract.signed` | `sign_contract_by_client` / `sign_contract_by_manager` |
 | `invoice.issued`, `invoice.paid`, `invoice.overdue` | `issue_invoice`, `record_payment`, ежедневное напоминание об оплате (`send_payment_reminders`: одно `invoice.overdue` на просроченный счёт — статуса «просрочен» нет) |
