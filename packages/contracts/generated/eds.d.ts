@@ -1659,6 +1659,52 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/call-notes": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Записка о звонке (основание заявки по звонку)
+     * @description Одностраничный PDF «Кто звонил / Что просил» на бланке компании (макет `internal`, итоговый, без «ПРОЕКТ»): рендер идёт в
+     *     воркере (очередь `renders`), поэтому ответ 202; готовый PDF становится файлом вызывающего сотрудника — тем, что он
+     *     прикрепляет к письму по заявке (`letter_file_id`). Идемпотентно по `(request_key, сотрудник)`: повтор с тем же ключом
+     *     отдаёт тот же файл (первое содержимое остаётся), новый ключ — новая записка. Лид — готовая строка вида `L-0001`,
+     *     без лида записка «составлена по звонку». Язык записки — `lang`. Нет бланка — 409 `letterhead_missing` (форма просит
+     *     приложить файл). Прогресс — `getCallNote`; неудавшийся рендер повторяется тем же запросом.
+     */
+    post: operations["createCallNote"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/call-notes/{note_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Состояние записки о звонке
+     * @description Готова (`ready`) — `file` — `FileRef` непривязанного файла автора; строится (`pending`) или не удалась (`failed`, текст
+     *     в `error`). Чужая и неизвестная записка — 404.
+     */
+    get: operations["getCallNote"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/files/{file_id}": {
     parameters: {
       query?: never;
@@ -3125,6 +3171,31 @@ export interface components {
     };
     TemplatePreviewIn: {
       body: components["schemas"]["DocumentBody"];
+    };
+    CallNoteIn: {
+      /** @description Ключ формы заявки; с сотрудником даёт идентификатор файла записки */
+      request_key: string;
+      /** @description Номер лида как есть (например `L-0001`); нет — записка составлена по звонку без лида */
+      lead?: string | null;
+      caller_name: string;
+      company?: string | null;
+      phone?: string | null;
+      email?: string | null;
+      /** Format: date-time */
+      called_at: string;
+      /** @description Кто принял звонок; пусто — вызывающий сотрудник */
+      taken_by?: string | null;
+      /** @description Что просил клиент */
+      need?: string | null;
+      /** @enum {string} */
+      lang: "ru" | "uz" | "en";
+    };
+    CallNote: {
+      id: components["schemas"]["Uuid"];
+      /** @enum {string} */
+      status: "pending" | "ready" | "failed";
+      error: string | null;
+      file: components["schemas"]["FileRef"] | null;
     };
     TemplatePreview: {
       hash: string;
@@ -6158,6 +6229,59 @@ export interface operations {
         };
       };
       422: components["responses"]["ValidationFailed"];
+    };
+  };
+  createCallNote: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CallNoteIn"];
+      };
+    };
+    responses: {
+      /** @description Записка строится или уже готова (`status`, `file`) */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CallNote"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  getCallNote: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        note_id: components["schemas"]["Uuid"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Состояние */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CallNote"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
     };
   };
   downloadFile: {
