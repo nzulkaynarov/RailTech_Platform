@@ -106,6 +106,8 @@ export function OfficeResolutionForm({
   const resolve = useResolveOfficeLetter(handlers("resolve"));
   const approve = useResolveOfficeLetter(handlers("approve"));
   const saveDraft = useSaveResolutionDraft(handlers("draft"));
+  // Вернуть некому (письма принял не делопроизводитель, регистратора нет) — кнопки нет (СЦ-9)
+  const canReturn = letter.registered_by !== null;
   const sendBack = useReturnLetter(handlers("return"));
   const reject = useRejectLetter(handlers("reject"));
   const busy =
@@ -376,7 +378,7 @@ export function OfficeResolutionForm({
               }}
             />
           </FormField>
-          <p className="pf-hint">{t("office.other.returnHelp")}</p>
+          {canReturn ? <p className="pf-hint">{t("office.other.returnHelp")}</p> : null}
           <p className="pf-hint">{t("office.other.rejectHelp")}</p>
         </fieldset>
       ) : null}
@@ -396,18 +398,20 @@ export function OfficeResolutionForm({
         {mode === "resolve" ? (
           <>
             <div className="pf-res-secondary">
-              <Button
-                block
-                loading={sendBack.isPending}
-                disabled={busy || trimmed === ""}
-                aria-describedby={trimmed === "" ? id("disabled") : undefined}
-                onClick={() => {
-                  setFailure(null);
-                  sendBack.mutate({ id: letter.id, data: { comment: trimmed } });
-                }}
-              >
-                {t("office.other.return")}
-              </Button>
+              {canReturn ? (
+                <Button
+                  block
+                  loading={sendBack.isPending}
+                  disabled={busy || trimmed === ""}
+                  aria-describedby={trimmed === "" ? id("disabled") : undefined}
+                  onClick={() => {
+                    setFailure(null);
+                    sendBack.mutate({ id: letter.id, data: { comment: trimmed } });
+                  }}
+                >
+                  {t("office.other.return")}
+                </Button>
+              ) : null}
               <Button
                 block
                 danger

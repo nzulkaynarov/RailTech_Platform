@@ -134,14 +134,37 @@ async def test_roles_without_the_drafts_section_get_403_before_eds(
     assert eds.exchange.call_count == 0
 
 
-async def test_manager_cannot_decide_a_quote(web: Web, eds: ApprovalsFake) -> None:
+def _eds_forbids(eds: ApprovalsFake, route_id: str) -> None:
+    """EDS не пускает не-заместителя на чужой шаг: 403 `forbidden` (`access.acting_on_behalf`)."""
+    eds.overrides[("POST", f"approvals/{route_id}/decision")] = lambda _r: httpx.Response(
+        403, json={"code": "FORBIDDEN", "message": "Не ваш шаг.", "source": "eds", "details": {}}
+    )
+
+
+async def test_deputy_manager_decides_the_quote_step_of_the_replaced_director(
+    web: Web, eds: ApprovalsFake, check: ContractChecker
+) -> None:
+    """СЦ-9: у менеджера `eds.drafts` только на чтение, но шаг замещаемого он решает: BFF не режет
+    по разделу, право и замещение проверяет EDS."""
+    assert (await web.login(["MANAGER"])).status_code == 200
+
+    response = await web.send("POST", f"{QUOTE}/decision", json={"decision": "approve"})
+
+    assert response.status_code == 200
+    check(response, "/eds/quotes/{id}/decision", "post")
+    assert len(eds.made("POST", f"approvals/{QUOTE_ROUTE}/decision")) == 1
+
+
+async def test_manager_who_is_not_a_deputy_gets_eds_403_on_a_quote_step(
+    web: Web, eds: ApprovalsFake
+) -> None:
+    _eds_forbids(eds, QUOTE_ROUTE)
     assert (await web.login(["MANAGER"])).status_code == 200
 
     response = await web.send("POST", f"{QUOTE}/decision", json={"decision": "approve"})
 
     assert response.status_code == 403
-    assert response.json()["details"] == {"resource": "eds.drafts", "need": "full"}
-    assert eds.made("POST", f"approvals/{QUOTE_ROUTE}/decision") == []
+    assert response.json()["source"] == "eds"
 
 
 async def test_quote_routes_need_a_session(web: Web, eds: ApprovalsFake) -> None:
@@ -1104,6 +1127,20 @@ async def test_memo_list_survives_a_missing_document(web: Web, eds: ApprovalsFak
     assert row["subject"] == "Оплата аренды склада за ноябрь"
 
 
+async def test_deputy_manager_decides_the_memo_step_of_the_replaced_director(
+    web: Web, eds: ApprovalsFake, check: ContractChecker
+) -> None:
+    assert (await web.login(["MANAGER"])).status_code == 200
+
+    response = await web.send(
+        "POST", f"{BASE}/memo-approvals/{MEMO_ROUTE}/decision", json={"decision": "approve"}
+    )
+
+    assert response.status_code == 200
+    check(response, "/eds/memo-approvals/{id}/decision", "post")
+    assert len(eds.made("POST", f"approvals/{MEMO_ROUTE}/decision")) == 1
+
+
 async def test_author_reads_own_memos_but_cannot_decide(
     web: Web, eds: ApprovalsFake, check: ContractChecker
 ) -> None:
@@ -1113,6 +1150,7 @@ async def test_author_reads_own_memos_but_cannot_decide(
 
     listing = await web.client.get(f"{BASE}/memo-approvals", params={"scope": "all"})
     card = await web.client.get(MEMO)
+    _eds_forbids(eds, MEMO_ROUTE)
     decision = await web.send(
         "POST", f"{BASE}/memo-approvals/{MEMO_ROUTE}/decision", json={"decision": "approve"}
     )
@@ -1121,9 +1159,9 @@ async def test_author_reads_own_memos_but_cannot_decide(
     assert card.status_code == 200
     check(card, "/eds/memo-approvals/{ref}", "get")
     assert card.json()["can_decide"] is False
+    # BFF пропускает автора до EDS (замещение, СЦ-9); чужой шаг EDS закрывает 403
     assert decision.status_code == 403
-    assert decision.json()["details"] == {"resource": "eds.memo.approve", "need": "full"}
-    assert eds.made("POST", f"approvals/{MEMO_ROUTE}/decision") == []
+    assert decision.json()["source"] == "eds"
     assert eds.made("GET", "approvals")[0].url.params["mine"] == "false"
 
 
@@ -1479,3 +1517,26 @@ async def test_memo_card_keeps_the_stored_deal_number_when_erp_is_down(
     card = (await web.client.get(MEMO)).json()
 
     assert card["deal"] == {"erp_deal_id": 5, "number": "ЗВ-2026-104"}
+
+
+async def test_cards_carry_the_replaced_person_when_the_deputy_decides(
+    web: Web, eds: ApprovalsFake, check: ContractChecker
+) -> None:
+    """СЦ-9: EDS отдал заместителю шаг замещаемого (`acting_for`) — карточки КП и служебки несут его
+    имя («Согласовать за {имя}»); свой шаг — `null`."""
+    madina = {"crm_user_id": 12, "full_name": "Мадина Р."}
+    eds.routes[MEMO_ROUTE] = memo_route(acting_for=madina)
+    eds.routes[QUOTE_ROUTE] = quote_route(acting_for=madina)
+    await _director(web)
+
+    memo = await web.client.get(MEMO)
+    quote = await web.client.get(QUOTE)
+
+    check(memo, "/eds/memo-approvals/{ref}", "get")
+    check(quote, "/eds/quotes/{ref}", "get")
+    assert memo.json()["acting_for"] == madina
+    assert quote.json()["acting_for"] == madina
+
+    eds.routes[MEMO_ROUTE] = memo_route()
+    own = await web.client.get(MEMO)
+    assert own.json()["acting_for"] is None

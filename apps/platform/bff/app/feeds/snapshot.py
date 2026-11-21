@@ -33,6 +33,13 @@ QUOTE_PARAMS: dict[str, Any] = {
 QUOTE_DETAILS_MAX = 20
 QUOTE_DETAILS_PARALLEL = 8
 # Служебные записки, заявления и отчёты на моём шаге маршрута (`mine` — по умолчанию).
+# Подпись договора, счёта, акта и КП (маршрут `signing`, SIGN-4) на моём шаге: задача подписанта.
+SIGNING_PARAMS: dict[str, Any] = {
+    "mine": "true",
+    "status": "open",
+    "template": ["signing"],
+    "limit": APPROVALS_PAGE_SIZE,
+}
 MEMO_PARAMS: dict[str, Any] = {
     "mine": "true",
     "status": "open",
@@ -91,6 +98,12 @@ class Snapshot:
     # P8b: мои поручения, переносы на решение и ознакомления (EDS `GET /letter-tasks`); `None` —
     # EDS не читали или он не ответил (строк нет).
     letter_tasks: dict[str, list[dict[str, Any]]] | None = None
+    # Открытые шаги подписи коммерческих документов (EDS `/approvals?template=signing`, СЦ-9);
+    # `None` — не читали или EDS не ответил.
+    signing: list[dict[str, Any]] | None = None
+    # Сотрудник сегодня заместитель (CRM `/me/covering` не пуст): строки замещаемого из EDS
+    # (`acting_for`) нужны, даже если по роли заместителя вида работы нет — решает EDS.
+    deputy: bool = False
     # D2-8, работа ERP: мои задания на расчёт (`GET /calc/tasks/?mine=1`); `None` — не читали или
     # ERP не ответил (строк и бейджа «Мои расчёты» нет).
     calc_tasks: list[dict[str, Any]] | None = None
@@ -129,8 +142,14 @@ def wants_memos(view: View) -> bool:
     return view.wants("approve_memo") or view.wants("pay_memo")
 
 
+def wants_signing(view: View) -> bool:
+    return view.wants("sign_document")
+
+
 # Виды работы по входящим делопроизводства (P8b): поручение, перенос срока, ознакомление.
-LETTER_TASK_KINDS = ("instruction", "instruction_extension", "acquaint", "register_reply")
+# `sign_document` — переданный на подпись ИСХ (письмо) и подпись коммерческого документа; обе
+# задачи вычисляет EDS (подписант), BFF ролью их не фильтрует.
+LETTER_TASK_KINDS = ("instruction", "instruction_extension", "acquaint", "sign_document")
 LETTER_TASKS_PATH = "/api/v1/letter-tasks"
 
 
@@ -210,16 +229,20 @@ async def _inbox(
     return {key: rows(payload.get(key)) for key in ("escalations", "mine", "unassigned")}
 
 
-async def _covered(feed: Feed) -> list[Covered]:
-    """За кого сотрудник сегодня заместитель и их очереди. Права — свои: CRM отдаёт очередь
-    замещаемого только назначенному заместителю в период и только по правам заместителя; сбой
-    любого шага даёт пустой список (замещение — добавка к очереди, не её условие)."""
+async def _covering_people(feed: Feed) -> list[dict[str, Any]]:
+    """За кого сотрудник сегодня заместитель (CRM `/me/covering`); сбой — пустой список."""
     payload = await feed.get("crm", "/api/v1/me/covering", ttl=SNAPSHOT_TTL_SECONDS)
-    people = [
+    return [
         row
         for row in rows(payload)
         if isinstance(row.get("user_id"), int) and isinstance(row.get("full_name"), str)
     ][:MAX_COVERED]
+
+
+async def _covered(feed: Feed, people: list[dict[str, Any]]) -> list[Covered]:
+    """Очереди тех, за кого сотрудник заместитель. Права — свои: CRM отдаёт очередь замещаемого
+    только назначенному заместителю в период и только по правам заместителя; сбой любого шага даёт
+    пустой список (замещение — добавка к очереди, не её условие)."""
 
     async def one(row: dict[str, Any]) -> Covered | None:
         inbox = await _inbox(feed, {"on_behalf_of": row["user_id"]})
@@ -272,12 +295,17 @@ async def load_snapshot(
     сделки нужны и для подписей к очереди и уведомлениям, поэтому их читает тот, кто их просит."""
     snap = Snapshot()
 
+    # Замещение читается всегда, где читают очередь: строки замещаемого из EDS приходят и тому, у
+    # кого по роли таких видов работы нет (подписывает и решает EDS по токену заместителя).
+    people = await _covering_people(feed) if inbox and eds and feed.usable("crm") else []
+    snap.deputy = bool(people)
+
     async def load_inbox() -> None:
         if inbox and wants_inbox(view):
-            snap.inbox, snap.covered = await asyncio.gather(_inbox(feed), _covered(feed))
+            snap.inbox, snap.covered = await asyncio.gather(_inbox(feed), _covered(feed, people))
 
     async def load_approvals() -> None:
-        if approvals and eds and wants_approvals(view):
+        if approvals and eds and (wants_approvals(view) or snap.deputy):
             payload = await feed.get("eds", APPROVALS_PATH, QUOTE_PARAMS, ttl=SNAPSHOT_TTL_SECONDS)
             if payload is not None:
                 snap.quotes = [r for r in rows(payload) if r.get("template") == "quote"]
@@ -292,20 +320,28 @@ async def load_snapshot(
                 snap.letters_more = _has_more(payload)
 
     async def load_memos() -> None:
-        if eds and wants_memos(view):
+        if eds and (wants_memos(view) or snap.deputy):
             payload = await feed.get("eds", APPROVALS_PATH, MEMO_PARAMS, ttl=SNAPSHOT_TTL_SECONDS)
             if payload is not None:
                 snap.memos = rows(payload)
                 snap.memos_more = _has_more(payload)
 
     async def load_letter_tasks() -> None:
-        if eds and wants_letter_tasks(view):
+        if eds and (wants_letter_tasks(view) or snap.deputy):
             payload = await feed.get("eds", LETTER_TASKS_PATH, ttl=SNAPSHOT_TTL_SECONDS)
             if isinstance(payload, dict):
                 snap.letter_tasks = {
                     key: rows(payload.get(key))
-                    for key in ("instructions", "extensions", "acquaintances", "registrations")
+                    for key in ("instructions", "extensions", "acquaintances", "signatures")
                 }
+
+    async def load_signing() -> None:
+        if eds and (wants_signing(view) or snap.deputy):
+            payload = await feed.get(
+                "eds", APPROVALS_PATH, SIGNING_PARAMS, ttl=SNAPSHOT_TTL_SECONDS
+            )
+            if payload is not None:
+                snap.signing = rows(payload)
 
     async def load_deals() -> None:
         if deals:
@@ -394,5 +430,6 @@ async def load_snapshot(
         load_returned(),
         load_stock(),
         load_letter_tasks(),
+        load_signing(),
     )
     return snap

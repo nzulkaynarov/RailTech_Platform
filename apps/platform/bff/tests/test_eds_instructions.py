@@ -273,12 +273,6 @@ async def test_resolution_and_draft_need_their_sections_before_eds(web: Web, eds
         "POST", f"{CARD}/office-resolution", json={"kind": "info", "text": "К сведению."}
     )
     assert resolve.status_code == 403
-    decide = await web.send(
-        "POST",
-        f"{BASE}/instructions/{INSTRUCTION_ID}/extension/decision",
-        json={"decision": "approve"},
-    )
-    assert decide.status_code == 403
 
     assert (await web.login(["MANAGER"])).status_code == 200
     draft = await web.send("PUT", f"{CARD}/resolution-draft", json={"kind": None})
@@ -377,6 +371,27 @@ async def test_eds_refusals_of_the_executor_are_passed_through(web: Web, eds: Ed
     assert urgent.status_code == 409
     assert urgent.json()["details"]["reason"] == "urgent_not_extendable"
     assert urgent.json()["message"] == "Срочное поручение не продлевается."
+
+
+async def test_deputy_manager_decides_the_extension_and_eds_refuses_a_stranger(
+    web: Web, eds: EdsFake, check: ContractChecker
+) -> None:
+    """СЦ-9: перенос срока за замещаемого решает заместитель без `eds.inbox: full` (решает EDS)."""
+    decision = f"instructions/{INSTRUCTION_ID}/extension/decision"
+    assert (await web.login(["MANAGER"])).status_code == 200
+    eds.answer("POST", decision, httpx.Response(200, json=office_letter()))
+    ok = await web.send("POST", f"{BASE}/{decision}", json={"decision": "approve"})
+    assert ok.status_code == 200
+    check(ok, "/eds/instructions/{id}/extension/decision", "post")
+
+    eds.answer(
+        "POST",
+        decision,
+        httpx.Response(403, json=eds_error_body("FORBIDDEN", "Не ваш перенос.", reason="x")),
+    )
+    refused = await web.send("POST", f"{BASE}/{decision}", json={"decision": "approve"})
+    assert refused.status_code == 403
+    assert len(eds.made("POST", decision)) == 2
 
 
 async def test_director_decides_the_extension_and_the_employee_acknowledges(

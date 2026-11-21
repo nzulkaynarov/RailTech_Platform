@@ -24,6 +24,18 @@ async function directorForm(path = TAX) {
 }
 
 describe("Резолюция делопроизводства (P8b, SPEC-v3 §3.2a п. 2)", () => {
+  it("СЦ-9: «Вернуть делопроизводителю» есть, пока есть кому вернуть; нет регистратора — нет и кнопки", async () => {
+    patchLetter("ВХ-108/26", { registered_by: person("u-demo-registrar", "Демо Канцелярова") });
+    const form = await directorForm();
+    expect(within(form).getByRole("button", { name: "Вернуть делопроизводителю" })).toBeVisible();
+    cleanup();
+
+    patchLetter("ВХ-108/26", { registered_by: null });
+    const without = await directorForm();
+    expect(within(without).queryByRole("button", { name: "Вернуть делопроизводителю" })).toBeNull();
+    expect(within(without).getByRole("button", { name: "Отклонить" })).toBeVisible();
+  });
+
   it("письмо по заявке клиента — по-прежнему «расчёт по зонам»", async () => {
     signIn("director@demo.example");
     renderAt("/eds/inbox/%D0%92%D0%A5-104%2F26?panel=open&tab=resolution");

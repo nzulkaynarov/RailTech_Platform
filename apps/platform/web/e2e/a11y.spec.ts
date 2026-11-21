@@ -44,7 +44,7 @@ test.describe("axe и скриншоты", () => {
         await expect(page.getByRole("navigation", { name: "Разделы модуля" })).toBeVisible();
         await expectNoViolations(page, "menu drawer 390");
         await settledScreenshot(page, "dashboard-menu-drawer");
-        await page.getByRole("link", { name: "Задачи 8, требует действия" }).click();
+        await page.getByRole("link", { name: "Задачи 10, требует действия" }).click();
         await page.getByRole("button", { name: "Показать панель" }).click();
         await expect(page.getByRole("tab", { name: "Сегодня" })).toBeVisible();
         await expectNoViolations(page, "panel drawer 390");

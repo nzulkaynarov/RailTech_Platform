@@ -149,7 +149,8 @@
       "invoice": "Hisob {{number}}",
       "act": "Dalolatnoma {{number}}"
     },
-    "contextLabel": "Hujjat sahifasidan yozdi: {{label}}"
+    "contextLabel": "Hujjat sahifasidan yozdi: {{label}}",
+    "authorFor": "{{name}}, {{owner}} uçun"
   },
   "composer": {
     "mode": "Kimga yozamiz",

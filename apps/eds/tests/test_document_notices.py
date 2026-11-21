@@ -169,7 +169,7 @@ async def test_holder_without_letters_register_is_not_asked_to_sign(
     assert notice["kind"] == "letter_signer_missing" and 6 not in notice["recipients"]
 
 
-async def test_reply_letter_does_not_double_the_registration_notice(
+async def test_reply_letter_signer_gets_sign_notice_even_if_holds_letters_register(
     client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
 ) -> None:
     await deliver_letterhead(client, container)
@@ -178,7 +178,9 @@ async def test_reply_letter_does_not_double_the_registration_notice(
     doc = await reply_draft(client, staff["manager"], incoming["id"])
     handed = await client.post(f"/api/v1/documents/{doc['id']}/registration-request", headers=staff["manager"].headers)
     assert handed.status_code == 200, handed.text
-    assert await notices(container) == []  # директор уже получил «Зарегистрируйте ответ» (notice.requested)
+    [notice] = await notices(container)  # директор держит letters.register, но просят его подписать, не регистрировать
+    assert (notice["kind"], notice["title"]) == ("letter_sign_requested", "Подпишите исходящее")
+    assert notice["recipients"] == [staff["director"].id]
 
 
 async def test_author_learns_that_someone_else_signed_the_letter(
@@ -224,7 +226,7 @@ async def test_author_with_authority_hands_the_draft_to_another_signer(
     assert (notice["kind"], notice["recipients"]) == ("letter_sign_requested", [3])
 
 
-async def test_signed_reply_is_announced_by_the_reply_notice_not_twice(
+async def test_signed_reply_is_announced_by_the_sign_request_only(
     client: httpx.AsyncClient, container: Container, staff: dict[str, Person], deferred: list[str]
 ) -> None:
     await deliver_letterhead(client, container)
@@ -236,4 +238,4 @@ async def test_signed_reply_is_announced_by_the_reply_notice_not_twice(
         f"/api/v1/documents/{doc['id']}/sign", json={"send": False}, headers=staff["director"].headers
     )
     assert signed.status_code == 200, signed.text
-    assert await notices(container) == []
+    assert [n["kind"] for n in await notices(container)] == ["letter_sign_requested"]  # «Зарегистрируйте» больше нет

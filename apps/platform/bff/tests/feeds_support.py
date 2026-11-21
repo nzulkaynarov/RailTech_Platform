@@ -84,9 +84,16 @@ class FeedBackends:
             # EDS (D1-6): письма «Ждут резолюции», маршруты на моём шаге, реестр для поиска
             "letters": {"items": [], "next_cursor": None},
             "memos": {"items": [], "next_cursor": None},
+            # EDS (СЦ-9): открытые шаги подписи договора, счёта, акта на мне (`template=signing`)
+            "signing": {"items": [], "next_cursor": None},
             "registry": {"items": [], "next_cursor": None},
             # EDS (P8b): мои поручения, переносы на решение и ознакомления
-            "letter_tasks": {"instructions": [], "extensions": [], "acquaintances": []},
+            "letter_tasks": {
+                "instructions": [],
+                "extensions": [],
+                "acquaintances": [],
+                "signatures": [],
+            },
             # D2-8, работа ERP: мои задания на расчёт, доска счетов по вкладкам, проекты по шагам
             "calc_tasks": {"results": []},
             "receivables": {"proofs": [], "to_issue": []},
@@ -174,6 +181,8 @@ class FeedBackends:
 
     def _approvals(self, request: httpx.Request) -> httpx.Response:
         """EDS `GET /approvals`: КП (`template=quote`) — из `state["approvals"]`, иначе служебки."""
+        if "signing" in request.url.params.get_list("template"):
+            return self._respond("signing", self.eds_down)
         if "quote" not in request.url.params.get_list("template"):
             return self._respond("memos", self.eds_down)
         if self.eds_down is not None:

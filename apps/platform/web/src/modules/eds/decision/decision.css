@@ -123,6 +123,11 @@
   justify-content: space-between;
   gap: 8px;
 }
+/* Заголовок и подпись карточки — слова без пробелов (номер, этап, сумма из домена) переносятся, а не раздвигают экран на 390 */
+.pf-dec-card-head > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .pf-dec-card-subject {
   margin: 4px 0 0;
   overflow-wrap: anywhere;

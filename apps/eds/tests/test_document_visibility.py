@@ -17,6 +17,7 @@ from app.container import Container
 from app.models import ApprovalRoute, ApprovalStep
 from tests.domain import Person
 from tests.helpers import seed_employee
+from tests.signing import sign_out
 from tests.test_api_auth import assert_error
 from tests.test_documents import WITH_AMOUNT, create, decide, submit
 from tests.test_files import upload
@@ -47,7 +48,7 @@ async def make(client: httpx.AsyncClient, staff: dict[str, Person]) -> Made:
     recipient = {"name": "ООО «Пример»"}
     await new("registrar", "Черновик письма", kind="letter_out", recipient=recipient, with_file=True)
     sent = await new("registrar", "Отправленное письмо", kind="letter_out", recipient=recipient, with_file=True)
-    assert (await submit(client, staff["registrar"], sent["id"])).status_code == 200
+    assert (await sign_out(client, staff, sent["id"])).status_code == 200
     await new("manager", "Черновик служебки", with_file=True)
     to_pay = await new("manager", "Служебка к оплате", amount=WITH_AMOUNT["amount"], due_date=WITH_AMOUNT["due_date"])
     route = (await submit(client, staff["manager"], to_pay["id"])).json()["approval_id"]
@@ -140,7 +141,7 @@ async def sent_letter_route(client: httpx.AsyncClient, container: Container, sta
         subject="Письмо на согласовании",
         recipient={"name": "ООО «Пример»"},
     )
-    assert (await submit(client, staff["registrar"], letter["id"])).status_code == 200
+    assert (await sign_out(client, staff, letter["id"])).status_code == 200
     route_id = uuid.uuid4()
     async with container.session_factory() as session, session.begin():
         session.add(

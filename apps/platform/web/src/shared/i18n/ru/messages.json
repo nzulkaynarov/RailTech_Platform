@@ -149,7 +149,8 @@
       "invoice": "Счёт {{number}}",
       "act": "Акт {{number}}"
     },
-    "contextLabel": "Написал со страницы документа: {{label}}"
+    "contextLabel": "Написал со страницы документа: {{label}}",
+    "authorFor": "{{name}} за {{owner}}"
   },
   "composer": {
     "mode": "Кому пишем",

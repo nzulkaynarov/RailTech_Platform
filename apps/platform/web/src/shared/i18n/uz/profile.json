@@ -92,7 +92,7 @@
   },
   "deputy": {
     "title": "O‘rinbosarlik",
-    "lead": "Yo‘qligingiz vaqtida hamkasbni tanlang: u sizning vazifalaringizni «Vazifalar»da ko‘radi. Obyektlarga huquqlari o‘zinikicha qoladi.",
+    "lead": "Yöqligingiz vaqtida hamkasbni tanlang: u vazifalaringizni «Vazifalar»da köradi va kelişuvlar, topşiriqlar hamda muddatlarni siz uçun hal qiladi. Imzoni faqat öz vakolati bilan qöyadi, tölovni ötkazmaydi.",
     "sentence": "Yo‘qligim vaqtida vazifalarimni {{name}} {{from}} dan {{to}} gacha ko‘radi.",
     "none": "O‘rinbosar tayinlanmagan.",
     "who": "Kim o‘rnimda",

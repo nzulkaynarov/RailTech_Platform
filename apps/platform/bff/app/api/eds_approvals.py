@@ -51,7 +51,10 @@ from app.schemas_eds_approvals import (
 router = APIRouter(prefix="/eds", tags=["eds-approvals"])
 
 QuoteReader = Annotated[Authed, Depends(require("eds.drafts", "read"))]
-QuoteDecider = Annotated[Authed, Depends(require("eds.drafts", "full"))]
+# Решает директор (`eds.drafts: full`) или заместитель на шаге замещаемого (СЦ-9, DECISIONS
+# 2026-11-21 п. 2): у заместителя-менеджера раздел только на чтение. Каталог отсекает лишь роли
+# без раздела; чей шаг и есть ли замещение, решает EDS (`access.acting_on_behalf`), чужому — 403.
+QuoteDecider = QuoteReader
 # Отправляет КП клиенту тот, у кого `quote.send` ERP — раздел «Клиенты» полный (C1-G-4, D17G-2);
 # кому из них можно именно это КП (своя заявка или `quote.review`), решает ERP.
 QuoteSender = Annotated[Authed, Depends(require("crm.clients", "full"))]
@@ -61,11 +64,10 @@ QuoteClientRecorder = QuoteSender
 MemoReader = Annotated[
     Authed, Depends(require_any(("eds.memo.approve", "read"), ("eds.memo.create", "read")))
 ]
-# Решает директор (`eds.memo.approve`) или бухгалтер на своём шаге (`eds.payments` — полный);
-# чей шаг, знает EDS.
-MemoDecider = Annotated[
-    Authed, Depends(require_any(("eds.memo.approve", "full"), ("eds.payments", "full")))
-]
+# Решает директор (`eds.memo.approve`), бухгалтер на своём шаге (`eds.payments`) или заместитель
+# на шаге замещаемого (СЦ-9): этих разделов у него может не быть. Чей шаг и есть ли замещение,
+# знает EDS (чужому — 403).
+MemoDecider = MemoReader
 ApprovalId = Annotated[UUID, Path()]
 Scope = Literal["mine", "all"]
 Status = Annotated[list[RouteStatus] | None, Query(max_length=4)]

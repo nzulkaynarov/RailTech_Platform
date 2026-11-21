@@ -110,8 +110,14 @@ test.describe("A2: «Согласован клиентом» с каналом �
       await expect(side.getByLabel("Как клиент сообщил")).toBeVisible();
 
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
-      if (width === 390) await spaGoto(page, `${project}?sheet=contract`);
       const panel = width === 390 ? page.getByRole("dialog") : side;
+      if (width === 390) {
+        // Смена ширины перестраивает экран: переход к листу, сделанный в этот момент, теряется — открываем до появления (Х-19).
+        await expect(async () => {
+          await spaGoto(page, `${project}?sheet=contract`);
+          await expect(panel.getByLabel("Как клиент сообщил")).toBeVisible({ timeout: 3_000 });
+        }).toPass({ timeout: 30_000 });
+      }
 
       await chooseOption(panel.getByLabel("Как клиент сообщил"), "бумага");
       await panel.getByLabel("Кто со стороны клиента").fill("Юсупова Н., юрист");

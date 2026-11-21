@@ -74,7 +74,13 @@
         "title": "The queue loaded only in part",
         "text": "Some tasks are hidden because a source did not respond. Try again in a moment."
       },
-      "onBehalf": "for {{name}}"
+      "onBehalf": "for {{name}}",
+      "covering": {
+        "banner": "You are covering for {{name}} until {{date}}",
+        "filterAll": "All",
+        "filterFor": "For {{name}}",
+        "filterLabel": "Whose tasks"
+      }
     },
     "activity": {
       "label": "Today's events",

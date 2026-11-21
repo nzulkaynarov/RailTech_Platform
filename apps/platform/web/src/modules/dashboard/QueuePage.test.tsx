@@ -84,7 +84,7 @@ describe("Dashboard · Моя очередь", () => {
 
     // D2-8: в очереди директора только решения — строк исполнения (договор, счета, расчёт) нет
     // D26G-4: «Одобрить КП» — все КП на шаге директора в EDS (четыре в демо «КП на одобрение»)
-    expect(await within(page).findByText(/^[^·]+ · 8 решений$/)).toBeVisible();
+    expect(await within(page).findByText(/^[^·]+ · 10 решений$/)).toBeVisible();
     const cards = within(page).getByRole("region", { name: "Счётчики очереди" });
     expect(within(cards).getAllByRole("link")).toHaveLength(4);
     expect(within(cards).getByRole("link", { name: /Входящие без резолюции/ })).toHaveAttribute(
@@ -94,14 +94,17 @@ describe("Dashboard · Моя очередь", () => {
 
     const queue = await within(page).findByRole("region", { name: "Что сделать сейчас" });
     const rows = within(queue).getAllByRole("listitem");
-    expect(rows).toHaveLength(8);
+    expect(rows).toHaveLength(10);
     // D2-2: просроченный заказ партнёру (erp.stock: полный) — первым, он уже просрочен.
     expect(within(rows[0] as HTMLElement).getByText(/Просрочен заказ ЗП-\d{4}-029/)).toBeVisible();
     expect(within(rows[1] as HTMLElement).getByText("срок сегодня")).toBeVisible();
     // P8: требование ГНК, зарегистрированное делопроизводителем, — «срочно», тоже сегодня
     expect(within(rows[2] as HTMLElement).getByText(/ВХ-108\/26/)).toBeVisible();
     expect(within(rows[3] as HTMLElement).getByText("служебка")).toBeVisible();
-    expect(within(rows[4] as HTMLElement).getByText("Одобрить КП-2026/115")).toBeVisible();
+    expect(within(queue).getByText("Одобрить КП-2026/115")).toBeVisible();
+    // СЦ-9: подпись договора и счёта на мне — строки «Подписать …»
+    expect(within(queue).getByText("Подписать договор CT-2026-014")).toBeVisible();
+    expect(within(queue).getByText("Подписать счёт INV-2026-031")).toBeVisible();
     expect(within(cards).getByRole("link", { name: /КП на одобрение/ })).toHaveTextContent("4");
     const open = within(rows[1] as HTMLElement).getByRole("link", { name: /Открыть/ });
     expect(open).toHaveAttribute(
@@ -208,6 +211,142 @@ describe("Dashboard · Моя очередь", () => {
       "href",
       `/erp/stock?view=shipments&request=${number}`,
     );
+  });
+
+  it("СЦ-9: директору — строки «Подписать» (договор, счёт; письмо), «Открыть» ведёт к своему шагу подписи", async () => {
+    signInAs("director@demo.example");
+    renderApp("/dashboard/queue");
+    const page = await main();
+
+    const contract = (await within(page).findByText("Подписать договор CT-2026-014")).closest("li");
+    expect(within(page).getByText("Подписать счёт INV-2026-031")).toBeVisible();
+    if (!contract) throw new Error("нет строки подписи");
+    // блок «Визы и подписи» под списком тоже на месте: «Подписать» делается там, строка на него наводит
+    const link = within(contract).getByRole("link", { name: /Открыть/ });
+    expect(link.getAttribute("href")).toMatch(/^\/dashboard\/queue\?signing=/);
+  });
+
+  it("СЦ-9: «Открыть» у строки подписи выделяет нужный шаг в блоке «Визы и подписи»", async () => {
+    signInAs("director@demo.example");
+    renderApp("/dashboard/queue?signing=d1a00000-0000-4000-8000-000000000002");
+    const page = await main();
+
+    const block = await within(page).findByRole("list", { name: "Визы и подписи" });
+    const current = block.querySelector('[aria-current="true"]');
+    expect(current).not.toBeNull();
+    expect(current).toHaveTextContent("Счёт на предоплату");
+  });
+
+  it("СЦ-9: замещающий — плашка «Вы замещаете … до …», строки «за …» и фильтр «За …»", async () => {
+    server.use(
+      http.get("*/me/profile", () =>
+        HttpResponse.json({
+          name: "Демо Менеджер",
+          email: "manager@demo.example",
+          language: "ru",
+          timezone: "Asia/Tashkent",
+          telegram: { linked: false, username: null, pending: false },
+          covering: [
+            { user_id: "12", name: "Мадина Р.", date_from: "2026-11-20", date_to: "2026-12-03" },
+          ],
+        }),
+      ),
+      http.get("*/queue", () =>
+        HttpResponse.json({
+          items: [
+            {
+              id: "memo:own",
+              role_id: ROLE_ID.MANAGER,
+              kind: "approve_memo",
+              title: "Согласовать СЗ-2026/031",
+              subtitle: "Директор",
+              due_label: "memo",
+              object: { kind: "memo", number: "СЗ-2026/031", path: "/eds/approvals/СЗ-2026%2F031" },
+            },
+            {
+              id: "memo:other:for:12",
+              role_id: ROLE_ID.MANAGER,
+              kind: "approve_memo",
+              title: "Согласовать СЗ-2026/041",
+              subtitle: "Директор",
+              due_label: "memo",
+              object: { kind: "memo", number: "СЗ-2026/041", path: "/eds/approvals/СЗ-2026%2F041" },
+              on_behalf_of: { id: "12", name: "Мадина Р." },
+            },
+          ],
+          sources: { crm: "ok", erp: "ok" },
+        }),
+      ),
+    );
+    signInAs("manager@demo.example");
+    renderApp("/dashboard/queue");
+    const page = await main();
+
+    expect(await within(page).findByText(/Вы замещаете Мадина Р\. до/)).toBeVisible();
+    expect(within(page).getByText(/за Мадина Р\. · Директор/)).toBeVisible();
+    expect(within(page).getByText("Согласовать СЗ-2026/031")).toBeVisible();
+
+    fireEvent.click(within(page).getByText("За Мадина Р."));
+    expect(within(page).queryByText("Согласовать СЗ-2026/031")).toBeNull();
+    expect(within(page).getByText("Согласовать СЗ-2026/041")).toBeVisible();
+    fireEvent.click(within(page).getByText("Все"));
+    expect(within(page).getByText("Согласовать СЗ-2026/031")).toBeVisible();
+  });
+
+  it("СЦ-9: фильтр «За …» сбрасывается, когда строк замещаемого в очереди больше нет", async () => {
+    let deputyRows = true;
+    const row = (id: string, number: string, over: object = {}) => ({
+      id,
+      role_id: ROLE_ID.MANAGER,
+      kind: "approve_memo",
+      title: `Согласовать ${number}`,
+      subtitle: "Директор",
+      due_label: "memo",
+      object: { kind: "memo", number, path: `/eds/approvals/${encodeURIComponent(number)}` },
+      ...over,
+    });
+    server.use(
+      http.get("*/me/profile", () =>
+        HttpResponse.json({
+          name: "Демо Менеджер",
+          email: "manager@demo.example",
+          language: "ru",
+          timezone: "Asia/Tashkent",
+          telegram: { linked: false, username: null, pending: false },
+          covering: [
+            { user_id: "12", name: "Мадина Р.", date_from: "2026-11-20", date_to: "2026-12-03" },
+          ],
+        }),
+      ),
+      http.get("*/queue", () =>
+        HttpResponse.json({
+          items: [
+            row("memo:own", "СЗ-2026/031"),
+            ...(deputyRows
+              ? [
+                  row("memo:o:for:12", "СЗ-2026/041", {
+                    on_behalf_of: { id: "12", name: "Мадина Р." },
+                  }),
+                ]
+              : []),
+          ],
+          sources: { crm: "ok", erp: "ok" },
+        }),
+      ),
+    );
+    signInAs("manager@demo.example");
+    const { queryClient } = renderApp("/dashboard/queue");
+    const page = await main();
+    fireEvent.click(await within(page).findByText("За Мадина Р."));
+    expect(within(page).queryByText("Согласовать СЗ-2026/031")).toBeNull();
+
+    deputyRows = false;
+    await act(async () => {
+      await queryClient.invalidateQueries();
+    });
+
+    expect(await within(page).findByText("Согласовать СЗ-2026/031")).toBeVisible();
+    expect(within(page).queryByText("За Мадина Р.")).toBeNull();
   });
 
   it("менеджер (склад — только чтение) строки о просроченных заказах не получает", async () => {

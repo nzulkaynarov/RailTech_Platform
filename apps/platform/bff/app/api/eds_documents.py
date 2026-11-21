@@ -205,20 +205,13 @@ async def _payload(body: EdsDocumentIn | EdsDocumentUpdateIn, authed: Authed) ->
     return edits
 
 
-def _registrar(authed: Authed) -> bool:
-    return allows(authed.access, "eds.inbox.register", "full")
-
-
-async def _present(
-    proxy: EdsProxy, body: Any, authed: Authed, *, registrar: bool | None = None
-) -> EdsDocument:
+async def _present(proxy: EdsProxy, body: Any, authed: Authed) -> EdsDocument:
     deal_id = body.get("erp_deal_id") if isinstance(body, dict) else None
     stored = body.get("deal_number") if isinstance(body, dict) else None
     return await present(
         proxy,
         body,
         me=authed.data.user_id,
-        registrar=_registrar(authed) if registrar is None else registrar,
         inbox=_inbox(authed),
         deal_number=await live_deal_number(
             authed, deal_id if isinstance(deal_id, int) else None, stored
@@ -391,7 +384,7 @@ async def request_registration(id: DocumentId, authed: Writer) -> EdsDocument:
 async def send_document(id: DocumentId, authed: Registrar) -> EdsDocument:
     proxy = _proxy(authed)
     body = await proxy.request("POST", f"{API}/documents/{id}/send")
-    return await _present(proxy, body, authed, registrar=True)
+    return await _present(proxy, body, authed)
 
 
 @router.post(
@@ -403,7 +396,7 @@ async def waive_document_mail(id: DocumentId, authed: Registrar) -> EdsDocument:
     """«Вручено иначе» (СЦ-1): письмо передано адресату не почтой — уходит в «Архив»."""
     proxy = _proxy(authed)
     body = await proxy.request("POST", f"{API}/documents/{id}/mail-waive")
-    return await _present(proxy, body, authed, registrar=True)
+    return await _present(proxy, body, authed)
 
 
 @router.post(

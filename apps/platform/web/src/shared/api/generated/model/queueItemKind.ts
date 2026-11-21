@@ -42,4 +42,5 @@ export const QueueItemKind = {
   inbound_mail: "inbound_mail",
   inbound_mail_mine: "inbound_mail_mine",
   register_reply: "register_reply",
+  sign_document: "sign_document",
 } as const;

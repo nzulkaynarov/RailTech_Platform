@@ -92,7 +92,7 @@
   },
   "deputy": {
     "title": "Cover",
-    "lead": "While you are away, choose a colleague: they will see your tasks in Tasks. Their access to objects stays their own.",
+    "lead": "While you are away, choose a colleague: they will see your tasks in Tasks and decide approvals, instructions and deadlines for you. They sign only with their own authority and do not make payments.",
     "sentence": "While I am away, {{name}} sees my tasks from {{from}} to {{to}}.",
     "none": "No cover is set.",
     "who": "Who covers",

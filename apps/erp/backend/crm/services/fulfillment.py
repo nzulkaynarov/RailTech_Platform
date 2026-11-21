@@ -205,6 +205,11 @@ def update_fulfillment_status(
             if key in extra and extra[key] is not None:
                 setattr(obj, key, extra[key])
         obj.save()
+    # Строки поставки идут за исполнением в той же транзакции (создаются, если их ещё нет): иначе карточка проекта
+    # показывает «Комплектуется» у уже отгруженного, пока клиент не откроет портал.
+    from sales.services.delivery_lines import sync_delivery_lines
+
+    sync_delivery_lines([obj])
     # События шины (rt_bus) о ходе поставки — в транзакции изменения. Приёмку делает клиент (`client_contact`): лицо события —
     # клиент, а не «система». В контракте у статуса поставки нет `accepted`, поэтому CRM видит «доставлено», а то, что
     # принято, говорит `line_summary`.

@@ -118,6 +118,8 @@ export function ResolutionForm({ letter, variant = "panel", onDone }: Resolution
       onError: failed("resolve"),
     },
   });
+  // Вернуть некому (заявка из кабинета без менеджера) — кнопки нет: письмо ушло бы в никуда (СЦ-9)
+  const canReturn = letter.manager !== null;
   const sendBack = useReturnLetter({
     mutation: {
       onSuccess: () => {
@@ -389,7 +391,7 @@ export function ResolutionForm({ letter, variant = "panel", onDone }: Resolution
             }}
           />
         </FormField>
-        <p className="pf-hint">{t("form.other.returnHelp")}</p>
+        {canReturn ? <p className="pf-hint">{t("form.other.returnHelp")}</p> : null}
         <p className="pf-hint">{t("form.other.rejectHelp")}</p>
       </fieldset>
 
@@ -406,18 +408,20 @@ export function ResolutionForm({ letter, variant = "panel", onDone }: Resolution
           {t("form.submit")}
         </Button>
         <div className="pf-res-secondary">
-          <Button
-            block
-            loading={sendBack.isPending}
-            disabled={busy || comment === ""}
-            aria-describedby={comment === "" ? id("disabled") : undefined}
-            onClick={() => {
-              setFailure(null);
-              sendBack.mutate({ id: letter.id, data: { comment } });
-            }}
-          >
-            {t("form.other.return")}
-          </Button>
+          {canReturn ? (
+            <Button
+              block
+              loading={sendBack.isPending}
+              disabled={busy || comment === ""}
+              aria-describedby={comment === "" ? id("disabled") : undefined}
+              onClick={() => {
+                setFailure(null);
+                sendBack.mutate({ id: letter.id, data: { comment } });
+              }}
+            >
+              {t("form.other.return")}
+            </Button>
+          ) : null}
           <Button
             block
             danger

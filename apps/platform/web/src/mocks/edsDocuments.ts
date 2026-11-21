@@ -294,13 +294,13 @@ function replyToOf(doc: MockDocument): EdsDocument["in_reply_to"] {
 /** Поля письма на бланке (P4) и права на регистрацию — как считает BFF: раздел `eds.inbox.register` (полный). */
 function letterFields(doc: MockDocument, me: string): Partial<EdsDocument> {
   if (doc.kind !== "letter_out") return {};
-  const register = canRegister();
   const letter = doc.letter;
   const draft = doc.status === "draft";
   // Как EDS: «подписать можно» и «кто подпишет» приходят из его проверки полномочий
-  // Демо: подписывает директор, держатель полномочия и делопроизводитель (как «уполномоченный» в стенде)
+  // Демо: подписывает директор и держатель полномочия, но не автор письма (EDS: автор ≠ подписант)
   const can =
-    doc.can_sign ?? (me === "u-demo-director" || Boolean(doc.signing_authority_id) || register);
+    doc.can_sign ??
+    ((me === "u-demo-director" || Boolean(doc.signing_authority_id)) && doc.ownerId !== me);
   const signing = doc.signing ?? {
     can_sign: can,
     reason: can ? null : "no_authority",
@@ -328,7 +328,8 @@ function letterFields(doc: MockDocument, me: string): Partial<EdsDocument> {
       : null,
     // Как BFF: исходящее письмо выходит только через «Подписать» (решение владельца 2026-11-21 (3))
     can_register: false,
-    can_request_registration: draft && !register && doc.ownerId === me,
+    can_request_registration:
+      draft && doc.ownerId === me && !signing.can_sign && !letter?.registration_requested,
     can_sign: draft && signing.can_sign,
     signing_hint: draft
       ? { reason: signing.reason, signer: signing.signer_id ? personOf(signing.signer_id) : null }
@@ -643,10 +644,10 @@ export const edsDocumentsHandlers = [
     if (!held) return sessionExpired();
     if (rank(held["eds.memo.create"]) < 2) return forbidden("eds.memo.create", "full");
     const body = (await request.json()) as EdsDocumentIn;
-    // P4 (B-P8B-4): черновик письма готовит любой, регистрирует — раздел `eds.inbox.register`.
-    if (body.kind === "letter_out" && body.submit && !canRegister()) {
-      return fail(403, "FORBIDDEN", "Действие не положено вашей роли.", {
-        permission: "letters.register",
+    // СЦ-9 (решение владельца 2026-11-21 (3)): письмо на бланке выходит только через «Подписать» — как EDS
+    if (body.kind === "letter_out" && body.submit) {
+      return fail(409, "CONFLICT", "Письмо получает номер только при подписании.", {
+        reason: "signature_required",
       });
     }
     const invalid = validationError(body, body.kind === "letter_out", true);
@@ -744,10 +745,10 @@ export const edsDocumentsHandlers = [
         writeEds(state);
         return backendDown(doc, false);
       }
-      if (doc.kind === "letter_out" && !canRegister()) {
+      if (doc.kind === "letter_out") {
         writeEds(state);
-        return fail(403, "FORBIDDEN", "Действие не положено вашей роли.", {
-          permission: "letters.register",
+        return fail(409, "CONFLICT", "Письмо получает номер только при подписании.", {
+          reason: "signature_required",
           document_id: doc.id,
           saved: true,
           created: false,

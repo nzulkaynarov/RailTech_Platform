@@ -215,6 +215,8 @@ class QuoteApprovalCard(BaseModel):
     status: RouteStatus
     stage: StepCode
     can_decide: bool
+    # СЦ-9: шаг замещаемого решает заместитель — «Согласовать за {имя}»; свой шаг — `None`
+    acting_for: EdsPerson | None = None
     allowed_decisions: list[Decision]
     approved_late: bool
     outgoing_number: str | None
@@ -283,6 +285,7 @@ class MemoApprovalCard(BaseModel):
     accountant_step: bool
     decisions: list[EdsDecision]
     can_decide: bool
+    acting_for: EdsPerson | None = None
     allowed_decisions: list[Decision]
     created_at: dt.datetime
     updated_at: dt.datetime
@@ -455,6 +458,7 @@ class RawApproval(BaseModel):
     quote: RawSnapshot | None = None
     can_decide: bool = False
     allowed_decisions: list[Decision] = []
+    acting_for: RawPerson | None = None
     outgoing_number: str | None = None
     approved_late: bool = False
     created_at: dt.datetime

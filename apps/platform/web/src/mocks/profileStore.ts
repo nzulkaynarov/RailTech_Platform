@@ -1,4 +1,5 @@
 import type { QueueItem } from "../shared/api/generated/model";
+import { readMemos } from "./fixtures/approvals";
 import { readEmployees } from "./fixtures/employees";
 import { allUsers, findUserById } from "./fixtures/users";
 
@@ -114,9 +115,34 @@ export function coveringFor(userId: string, today = todayIso()): MockCovering[] 
     });
 }
 
-/** Строки очереди замещаемых коллег («за {имя}»): по одному ответу лиду на человека. */
+/**
+ * Строки очереди замещаемых коллег («за {имя}»): по одному ответу лиду на человека и, как у EDS (`acting_for`), одно их
+ * согласование служебки (СЦ-9) — без `role_id` права на него у заместителя: роль строки — первая роль «вида».
+ */
 export function coveredQueueItems(userId: string, roleId: string): QueueItem[] {
-  return coveringFor(userId).map((c, index) => {
+  const memo = readMemos().find((m) => m.status === "open" && m.number !== null);
+  const decisions = coveringFor(userId).flatMap((c): QueueItem[] =>
+    memo?.number
+      ? [
+          {
+            id: `memo:${memo.approval_id}:for:${c.user_id}`,
+            role_id: roleId,
+            kind: "approve_memo" as const,
+            title: `Согласовать ${memo.number} · ${memo.subject}`,
+            subtitle: "Директор · вчера",
+            due_label: "memo" as const,
+            object: {
+              kind: "memo" as const,
+              number: memo.number,
+              title: memo.subject,
+              path: `/eds/approvals/${encodeURIComponent(memo.number)}?panel=open&tab=agree`,
+            },
+            on_behalf_of: { id: c.user_id, name: c.name },
+          },
+        ]
+      : [],
+  );
+  const leads = coveringFor(userId).map((c, index): QueueItem => {
     const number = 9100 + index;
     return {
       id: `lead:${String(number)}:answer:for:${c.user_id}`,
@@ -134,4 +160,5 @@ export function coveredQueueItems(userId: string, roleId: string): QueueItem[] {
       on_behalf_of: { id: c.user_id, name: c.name },
     };
   });
+  return [...leads, ...decisions];
 }
