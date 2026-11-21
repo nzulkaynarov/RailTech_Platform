@@ -142,6 +142,31 @@ class StaffDeputyService:
         raise ForbiddenError("you are not covering this colleague now", reason=Reason.NOT_A_DEPUTY)
 
 
+async def acts_for(
+    session: AsyncSession, who_user_id: int, owner_user_id: int, now: datetime | None = None
+) -> bool:
+    """Может ли `who` сейчас действовать за `owner` (СЦ-9, решение владельца 2026-11-21 п. 2):
+    он назначен заместителем, период замещения активен по календарю замещаемого, оба активны.
+    Сам владелец сюда не относится — это проверяет вызывающий. Подписание и оплата не проходят
+    через заместителя; здесь — только работа с лидом."""
+    if who_user_id == owner_user_id:
+        return False
+    owner = await repo.get(session, owner_user_id)
+    if (
+        owner is None
+        or not owner.is_active
+        or owner.deputy_user_id != who_user_id
+        or owner.deputy_from is None
+        or owner.deputy_to is None
+    ):
+        return False
+    deputy = await repo.get(session, who_user_id)
+    if deputy is None or not deputy.is_active:
+        return False
+    period = rules.DeputyPeriod(who_user_id, owner.deputy_from, owner.deputy_to)
+    return period.active_on(rules.local_today(owner.timezone, now or datetime.now(UTC)))
+
+
 def _audit_of(user: User) -> dict[str, object]:
     return {
         "deputy_user_id": user.deputy_user_id,
