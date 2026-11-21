@@ -602,3 +602,50 @@ async def test_route_people_are_active_employees_and_not_the_author(
     refused = await submit(client, staff["manager"], doc["id"], body)
     assert refused.status_code == 422
     assert reason in {f["message"] for f in refused.json()["details"]["fields"]}
+
+
+# --- статус следует за действием шага, а не за числом шагов ------------------------------------------------------
+
+
+async def _status(client: httpx.AsyncClient, who: Person, doc_id: str) -> tuple[str, bool]:
+    doc = (await client.get(f"/api/v1/documents/{doc_id}", headers=who.headers)).json()
+    return doc["status"], doc["archived_at"] is not None
+
+
+@pytest.mark.parametrize("kind", ["application", "report"])
+async def test_author_approver_does_not_make_document_paid(
+    client: httpx.AsyncClient, staff: dict[str, Person], kind: str
+) -> None:
+    doc = await create(client, staff["manager"], kind=kind)
+    sent = await submit(client, staff["manager"], doc["id"], {"approvers": [staff["lawyer"].id]})
+    approval_id = sent.json()["approval_id"]
+
+    first = await decide(client, staff["lawyer"], approval_id, "approve")
+    assert first.status_code == 200, first.text
+    assert await _status(client, staff["manager"], doc["id"]) == ("on_approval", False)
+
+    assert (await decide(client, staff["director"], approval_id, "approve")).status_code == 200
+    assert await _status(client, staff["manager"], doc["id"]) == ("approved", True)
+
+
+async def test_memo_with_amount_and_author_approver_reaches_accountant_only_after_director(
+    client: httpx.AsyncClient, staff: dict[str, Person]
+) -> None:
+    doc = await create(client, staff["manager"], **WITH_AMOUNT)
+    sent = await submit(client, staff["manager"], doc["id"], {"approvers": [staff["lawyer"].id]})
+    approval_id = sent.json()["approval_id"]
+
+    first = await decide(client, staff["lawyer"], approval_id, "approve")
+    assert first.status_code == 200, first.text
+    assert await _status(client, staff["manager"], doc["id"]) == ("on_approval", False)
+
+    assert (await decide(client, staff["director"], approval_id, "approve")).status_code == 200
+    assert await _status(client, staff["manager"], doc["id"]) == ("to_accountant", False)
+
+    paid = await client.post(
+        f"/api/v1/documents/{doc['id']}/payment",
+        json={"paid_on": "2026-10-20", "amount": {"amount": "1500000.00", "currency": "UZS"}},
+        headers=staff["accountant"].headers,
+    )
+    assert paid.status_code == 200, paid.text
+    assert await _status(client, staff["manager"], doc["id"]) == ("paid", True)

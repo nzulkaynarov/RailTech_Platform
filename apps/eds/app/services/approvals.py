@@ -301,7 +301,8 @@ async def _apply(
             document,
             decision=decision,
             last_step=following is None,
-            with_accountant=len(steps) > 1,
+            payment_step=current.assignee_permission == P.PAYMENTS_CONFIRM.value,
+            next_is_payment=following is not None and following.assignee_permission == P.PAYMENTS_CONFIRM.value,
             actor_id=employee.crm_user_id,
         )
     return route

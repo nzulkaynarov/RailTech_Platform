@@ -46,10 +46,15 @@ async def apply_decision(
     *,
     decision: Decision,
     last_step: bool,
-    with_accountant: bool,
+    payment_step: bool,
+    next_is_payment: bool,
     actor_id: int,
 ) -> None:
-    """Статус документа после решения на шаге: `approved`/`paid`/`to_accountant`/`returned`/`rejected` (+ архив)."""
+    """Статус документа после решения на шаге: `approved`/`paid`/`to_accountant`/`returned`/`rejected` (+ архив).
+
+    Статус следует за действием шага, а не за числом шагов: `payment_step` — решённый шаг бухгалтера (платёж),
+    `next_is_payment` — следующий шаг платёжный. Визы согласующих автора оставляют `on_approval`.
+    """
     document.updated_at = clock.now()
     if decision is Decision.RETURN:
         document.status = DocumentStatus.RETURNED.value
@@ -57,7 +62,7 @@ async def apply_decision(
         document.status = DocumentStatus.REJECTED.value
         await archive(session, bus, document, actor_id=actor_id, reason=document.status)
     elif not last_step:
-        document.status = DocumentStatus.TO_ACCOUNTANT.value
+        document.status = (DocumentStatus.TO_ACCOUNTANT if next_is_payment else DocumentStatus.ON_APPROVAL).value
     else:
-        document.status = (DocumentStatus.PAID if with_accountant else DocumentStatus.APPROVED).value
+        document.status = (DocumentStatus.PAID if payment_step else DocumentStatus.APPROVED).value
         await archive(session, bus, document, actor_id=actor_id, reason=document.status)
