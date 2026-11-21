@@ -1,7 +1,7 @@
 import { App, Button, Card, Form, Input, InputNumber, Radio, Select } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 
 import {
   useCreateSupplierOrder,
@@ -96,6 +96,13 @@ export function OrderCreatePage() {
   const refresh = useRefreshStock();
   const errorText = useErrorText();
   const [form] = Form.useForm<Values>();
+  // Строка «Мои задачи» «Заказать недостающее» открывает страницу с `?mode=shortage&request=ПР-…` (СЦ-9).
+  const [params] = useSearchParams();
+  const requestFromUrl = params.get("request")?.trim().slice(0, 40) ?? "";
+  const initialValues: Partial<Values> =
+    params.get("mode") === "shortage"
+      ? { mode: "shortage", lines: [{}], ...(requestFromUrl ? { request: requestFromUrl } : {}) }
+      : { mode: "manual", lines: [{}] };
   const mode = Form.useWatch("mode", form);
   const suppliers = useListStockSuppliers();
   const done = (number: string) => {
@@ -138,7 +145,7 @@ export function OrderCreatePage() {
         <Form<Values>
           form={form}
           layout="vertical"
-          initialValues={{ mode: "manual", lines: [{}] }}
+          initialValues={initialValues}
           onFinishFailed={({ errorFields }) => {
             // Ошибка открывает свою секцию (§4.1a): строки — во второй
             setActive(errorFields.some((f) => f.name[0] === "lines") ? "lines" : "supplier");

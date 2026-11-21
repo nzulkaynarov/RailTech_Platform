@@ -1,7 +1,7 @@
 import { App, Button, Card, Input, InputNumber } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 
 import { useViewport } from "../../../app/shell/useViewport";
 import type { StockReservation, StockShipment } from "../../../shared/api/generated/model";
@@ -37,8 +37,11 @@ function NewShipment({ manage }: { manage: boolean }) {
   const { message } = App.useApp();
   const refresh = useRefreshStock();
   const errorText = useErrorText();
-  const [input, setInput] = useState("");
-  const [request, setRequest] = useState<string | null>(null);
+  // «Мои задачи» открывают отгрузку с `?request=ПР-…` (СЦ-9): проект уже найден, остаётся нажать «Отгрузить».
+  const [params] = useSearchParams();
+  const fromUrl = params.get("request")?.trim().slice(0, 40) ?? "";
+  const [input, setInput] = useState(fromUrl);
+  const [request, setRequest] = useState<string | null>(fromUrl === "" ? null : fromUrl);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   // Серийные и партии по резерву (ADR-0021): единица → сколько из неё.
   const [units, setUnits] = useState<Record<string, Record<string, number>>>({});

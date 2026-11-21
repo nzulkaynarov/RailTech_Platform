@@ -72,6 +72,7 @@ from app.feeds.text import (
     now_utc,
     parse_deadline,
     parse_dt,
+    segment,
     short,
 )
 from app.feeds.work_roles import wants_work, work_role_id
@@ -686,6 +687,32 @@ def _supply_task_item(task: dict[str, Any], kind: QueueItemKind, role_id: str) -
         )
     if number is None:
         return None
+    if kind in ("order_shortage", "ship_project"):
+        # СЦ-9: номер — проект (ПР-…), заказа ещё нет; клиент и состав — в `client_name` и `note`.
+        subtitle = join(_text(task.get("client_name")), note)
+        if kind == "order_shortage":
+            title, due, path = (
+                f"Заказать недостающее по {number}",
+                "today",
+                f"/erp/stock/new?mode=shortage&request={segment(number)}",
+            )
+        else:
+            title, due, path = (
+                f"Отгрузить товар по {number}",
+                "later",
+                f"/erp/stock?view=shipments&request={segment(number)}",
+            )
+        return QueueItem(
+            id=f"{kind}:{task.get('id')}",
+            role_id=role_id,
+            kind=kind,
+            title=title,
+            subtitle=subtitle,
+            due_label=due,
+            object=ObjectRef(
+                kind="project", number=number, title=_text(task.get("client_name")), path=path
+            ),
+        )
     if kind == "send_supplier_order":
         title, subtitle = f"Отправить заказ {number} партнёру", supplier or ""
     elif kind == "partner_date_change":
@@ -716,7 +743,7 @@ def supply_task_rows(snap: Snapshot, view: View) -> list[Row]:
     out: list[Row] = []
     for task in snap.supply_tasks:
         kind = SUPPLY_TASK_KINDS.get(str(task.get("kind")))
-        if kind is None or not view.wants(kind):
+        if kind is None or not wants_work(view, kind):
             continue
         item = _supply_task_item(task, kind, _role_id(view, kind))
         if item is not None:

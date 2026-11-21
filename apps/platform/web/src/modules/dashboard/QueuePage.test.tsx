@@ -189,6 +189,27 @@ describe("Dashboard · Моя очередь", () => {
     );
   });
 
+  it("снабженец: строки по проекту «Заказать недостающее» и «Отгрузить товар» ведут на предзаполненные экраны (СЦ-9)", async () => {
+    signInAs("supply@demo.example");
+    renderApp("/dashboard/queue");
+    const page = await main();
+
+    const short = (await within(page).findByText("Заказать недостающее по ПР-2026-099")).closest(
+      "li",
+    );
+    const ship = (await within(page).findByText("Отгрузить товар по ПР-2026-099")).closest("li");
+    if (!short || !ship) throw new Error("нет строк очереди");
+    const number = encodeURIComponent("ПР-2026-099");
+    expect(within(short).getByRole("link", { name: /Открыть/ })).toHaveAttribute(
+      "href",
+      `/erp/stock/new?mode=shortage&request=${number}`,
+    );
+    expect(within(ship).getByRole("link", { name: /Открыть/ })).toHaveAttribute(
+      "href",
+      `/erp/stock?view=shipments&request=${number}`,
+    );
+  });
+
   it("менеджер (склад — только чтение) строки о просроченных заказах не получает", async () => {
     signInAs("manager@demo.example");
     renderApp("/dashboard/queue");

@@ -933,6 +933,10 @@ export interface paths {
      *     подписанного договора, `issue_act` — выпустить акт (счета оплачены, акта нет) или выпустить заново (заказчик вернул)
      *     (ERP `GET /crm/projects/?step=CONTRACT|PAYMENT`); строка открывает проект `/eds/projects/{ПР}` на вкладке «Договор» или
      *     «Акт». Один объект — одна строка: у роли, совмещающей несколько видов, дублей нет.
+     *     Дела снабжения (СЦ-9; ERP `GET /stock/tasks/`, строки вычисляются в ERP и уже отфильтрованы по человеку):
+     *     `order_shortage` — «Заказать недостающее по ПР-…» (по проекту не заказано всё нужное), строка открывает новый заказ
+     *     `/erp/stock/new?mode=shortage&request=ПР`; `ship_project` — «Отгрузить товар по ПР-…» (товар в резерве проекта),
+     *     строка открывает отгрузки `/erp/stock?view=shipments&request=ПР`. Системному директору эти виды не приходят.
      */
     get: operations["getQueue"];
     put?: never;
@@ -10041,6 +10045,8 @@ export interface components {
       | "partner_date_change"
       | "receive_goods"
       | "partner_application"
+      | "order_shortage"
+      | "ship_project"
       | "confirm_payment"
       | "issue_invoice"
       | "issue_contract"

@@ -424,6 +424,14 @@ export const QUEUE = {
     resource: "erp.stock",
     level: "full",
   },
+  order_shortage: {
+    resource: "erp.stock",
+    level: "full",
+  },
+  ship_project: {
+    resource: "erp.stock",
+    level: "full",
+  },
   confirm_payment: {
     resource: "eds.payments",
     level: "full",

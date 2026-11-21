@@ -162,6 +162,8 @@ SUPPLY_TASK_KINDS: dict[str, QueueItemKind] = {
     "partner_date_change": "partner_date_change",
     "receive_goods": "receive_goods",
     "partner_application": "partner_application",
+    "order_shortage": "order_shortage",
+    "ship_project": "ship_project",
 }
 
 
