@@ -1,7 +1,7 @@
 import { Alert, App, Button, Card, Input, Select, Skeleton } from "antd";
 import { type ReactNode, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useSearchParams } from "react-router";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
 
 import { canEdit, canSee } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
@@ -28,7 +28,13 @@ import { EmptyState } from "../../../shared/ui/EmptyState";
 import { ErrorNote } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { PageHeader } from "../../../shared/ui/PageHeader";
-import { type StepSection, StepSections } from "../../../shared/ui/StepSections/StepSections";
+import {
+  type RemainingItem,
+  StepRemaining,
+  type StepSection,
+  StepSections,
+} from "../../../shared/ui/StepSections/StepSections";
+import { useLeftSteps } from "../../../shared/ui/StepSections/useLeftSteps";
 import {
   type FieldKey,
   fieldText,
@@ -56,6 +62,7 @@ import {
   routeKind,
   type SubmitMode,
   todayInCompanyZone,
+  validateDraft,
   toCreateBody,
   toUpdateBody,
   validate,
@@ -111,6 +118,11 @@ function describedBy(id: string, hasHint: boolean, hasError: boolean): string | 
   return parts.length > 0 ? parts.join(" ") : undefined;
 }
 
+/** Поле → шаг формы: текст — на шаге «Текст», остальное — на шаге «О документе». */
+function sectionOf(field: string): SectionKey {
+  return field === "text" ? "body" : "about";
+}
+
 function focusField(field: FieldKey): void {
   window.setTimeout(() => {
     document.getElementById(fieldElementId(field))?.focus();
@@ -163,9 +175,12 @@ function DocumentForm({
   const people = (staff.data?.items ?? [])
     .filter((p) => p.id !== me.id)
     .map((p) => ({ value: p.id, label: p.position ? `${p.name} · ${p.position}` : p.name }));
-  const [errors, setErrors] = useState<FormErrors>({});
+  // Отказ сервера по полям: проверить заранее нельзя; снимается правкой формы. Клиентские ошибки — живые, ниже.
+  const [serverErrors, setServerErrors] = useState<FormErrors>({});
   // Секции по шагам (platform-frontend.md §4.1a): новый документ — с первой, черновик — с проверки.
   const [active, setActive] = useState<SectionKey>(draft ? "check" : "about");
+  // Шаги, которые человек уже покидал: требования и ошибки полей видны на них; открытый черновик — все шаги пройдены.
+  const { left, markLeft } = useLeftSteps(active, draft ? ["about", "body", "route"] : []);
   const [note, setNote] = useState<ServerNote | null>(null);
   const [savedId, setSavedId] = useState<string | null>(draft?.id ?? null);
   // Id сохранённого черновика без ожидания перерисовки: «Показать PDF» сразу после создания идёт по тому же документу.
@@ -191,7 +206,32 @@ function DocumentForm({
   const mailConnected = letterhead.data?.mail_connected !== false;
   const sendToRecipient = letter && values.recipientEmail.trim() !== "" && mailConnected;
 
+  // Один валидатор на всё: галочка шага, «Осталось» и отправка. Ошибка у поля видна, когда шаг уже покидали.
+  const allErrors = validate(values, today);
+  const errors: FormErrors = {
+    ...Object.fromEntries(
+      FIELD_ORDER.filter((field) => allErrors[field] && left.has(sectionOf(field))).map((field) => [
+        field,
+        true,
+      ]),
+    ),
+    ...serverErrors,
+  };
+  // Для черновика контракт требует тему и текст; форматы суммы, срока и почты проверяет само нажатие «Сохранить черновик».
+  const draftReady =
+    values.subject.trim() !== "" && (letter ? !isBlank(values.body) : values.text.trim() !== "");
+  // A refusal from the server marks its step until the field is edited (`set` clears serverErrors).
+  const serverInvalid = (key: SectionKey) =>
+    Object.keys(serverErrors).some((field) => sectionOf(field) === key);
+  const needs = (key: SectionKey): string[] => [
+    ...FIELD_ORDER.filter((field) => allErrors[field] && sectionOf(field) === key).map((field) =>
+      fieldText(t, field),
+    ),
+    ...(key === "body" && uploading ? [t("documents:form.validation.uploading")] : []),
+  ];
+
   const set = <K extends keyof FormValues>(key: K, value: FormValues[K]) => {
+    setServerErrors({});
     setValues((prev) => ({ ...prev, [key]: value }));
   };
   const setAttachments = (updater: (prev: Attachment[]) => Attachment[]) => {
@@ -221,14 +261,15 @@ function DocumentForm({
     }
   };
 
-  const check = (): boolean => {
-    const found = validate(values, today);
-    setErrors(found);
+  /** `draftOnly` — «Сохранить черновик»: достаточно темы, текста и верных форматов, остальное нужно к отправке. */
+  const check = (draftOnly = false): boolean => {
+    const found = draftOnly ? validateDraft(values, today) : validate(values, today);
     setNote(null);
     const first = FIELD_ORDER.find((field) => found[field]);
     if (first) {
-      // Ошибка открывает свою секцию (platform-frontend.md §4.1a), фокус — после отрисовки.
-      setActive(first === "text" ? "body" : "about");
+      // Явное действие («Показать PDF», «Сохранить черновик») открывает шаг с недостающим, фокус — после отрисовки.
+      markLeft([sectionOf(first)]);
+      setActive(sectionOf(first));
       focusField(first);
       return false;
     }
@@ -243,8 +284,11 @@ function DocumentForm({
     }
     if (id || savedRef.current) refresh();
     const fields = serverFields(error);
-    setErrors(Object.fromEntries(fields.map((field) => [field, true])));
-    if (fields.length > 0) setActive(fields.every((field) => field === "text") ? "body" : "about");
+    setServerErrors(Object.fromEntries(fields.map((field) => [field, true])));
+    if (fields.length > 0) {
+      markLeft(fields.map(sectionOf));
+      setActive(fields.every((field) => field === "text") ? "body" : "about");
+    }
     setNote({
       text: t(submit ? "documents:form.error.send" : "documents:form.error.save", {
         reason: reasonText(t, error),
@@ -256,7 +300,7 @@ function DocumentForm({
   };
 
   const run = async (action: Action) => {
-    if (!check()) return;
+    if (!check(action === "draft")) return;
     const submit = action !== "draft";
     try {
       let doc = await persist(
@@ -434,10 +478,6 @@ function DocumentForm({
     </Field>
   );
 
-  const sectionOf = (field: string): SectionKey => (field === "text" ? "body" : "about");
-  const invalid = (key: SectionKey) =>
-    Object.keys(errors).some((field) => sectionOf(field) === key);
-
   const aboutSummary = letter
     ? [
         values.recipientName,
@@ -461,9 +501,9 @@ function DocumentForm({
   ]
     .filter(Boolean)
     .join(" · ");
-  const aboutDone = values.subject.trim() !== "" && (!letter || values.recipientCompanyId !== "");
 
-  const draftButton = (
+  // Черновик сохраняется, когда есть тема и текст (так требует контракт); пока их нет — подсказка вместо кнопки.
+  const draftButton = draftReady ? (
     <Button
       htmlType="button"
       disabled={pending || uploading}
@@ -473,6 +513,8 @@ function DocumentForm({
     >
       {t("documents:form.submit.draft")}
     </Button>
+  ) : (
+    <span className="pf-hint">{t("documents:form.draftHint")}</span>
   );
 
   const reviewRows: { key: SectionKey; title: string; summary: string }[] = [
@@ -489,13 +531,19 @@ function DocumentForm({
     },
   ];
 
+  const remaining: RemainingItem[] = reviewRows.flatMap((row) =>
+    needs(row.key).map((text) => ({ step: row.key, title: row.title, text })),
+  );
+
   const sections: StepSection[] = [
     {
       key: "about",
       title: t(letter ? "documents:form.steps.aboutLetter" : "documents:form.steps.aboutInternal"),
       summary: aboutSummary,
-      complete: aboutDone,
-      invalid: invalid("about"),
+      complete: true,
+      invalid: serverInvalid("about"),
+      requirements: needs("about"),
+      showRequirements: left.has("about"),
       footer: draftButton,
       content: (
         <div className="pf-fp-form">
@@ -519,7 +567,6 @@ function DocumentForm({
                   label: t(`documents:kinds.${kind}`),
                 }))}
                 onChange={(kind) => {
-                  setErrors({});
                   set("kind", kind);
                 }}
               />
@@ -782,8 +829,10 @@ function DocumentForm({
       key: "body",
       title: t("documents:form.steps.body"),
       summary: bodySummary,
-      complete: bodyFilled,
-      invalid: invalid("body"),
+      complete: true,
+      invalid: serverInvalid("body"),
+      requirements: needs("body"),
+      showRequirements: left.has("body"),
       footer: draftButton,
       content: (
         <div className="pf-fp-form">
@@ -802,7 +851,8 @@ function DocumentForm({
       key: "route",
       title: t(letter ? "documents:form.steps.routeLetter" : "documents:form.steps.routeInternal"),
       summary: routeText,
-      complete: true,
+      // Нет обязательных полей: галочка — когда шаг пройден, а не раньше человека
+      complete: left.has("route"),
       footer: draftButton,
       content: (
         <div className="pf-fp-form">
@@ -914,9 +964,13 @@ function DocumentForm({
           </dl>
           <p className="pf-hint">{t("documents:form.consequence.draft")}</p>
           <div className="pf-newdoc-actions">
-            {Object.keys(errors).length > 0 && !note ? (
-              <ErrorNote message={t("documents:form.validation.summary")} />
-            ) : null}
+            <StepRemaining
+              id="doc-remaining"
+              items={remaining}
+              onGo={(step) => {
+                setActive(step as SectionKey);
+              }}
+            />
             {note ? (
               <ErrorNote
                 message={
@@ -929,8 +983,8 @@ function DocumentForm({
                 type="primary"
                 htmlType="submit"
                 loading={pending}
-                disabled={uploading}
-                title={uploading ? t("documents:form.submit.uploadWait") : undefined}
+                disabled={remaining.length > 0}
+                aria-describedby={remaining.length > 0 ? "doc-remaining" : undefined}
               >
                 {primaryLabel}
               </Button>
@@ -948,7 +1002,10 @@ function DocumentForm({
       noValidate
       onSubmit={(event) => {
         event.preventDefault();
-        if (!pending && !uploading) void run(handover ? "handover" : "submit");
+        if (pending) return;
+        // Enter в поле при незаполненном: на «Проверку» со списком «Осталось», а не на пройденный шаг
+        if (remaining.length > 0) setActive("check");
+        else void run(handover ? "handover" : "submit");
       }}
     >
       <StepSections
@@ -1092,6 +1149,16 @@ function ContinueDraft({ id }: { id: string }) {
  */
 export function NewDocumentPage() {
   const [params] = useSearchParams();
+  const location = useLocation();
+  // The «Create» menu sends a one-off `fresh` mark: only it resets the form. Other address changes on this page
+  // (side panel, its tabs) keep what is typed; they replace the URL and drop `state`, so the mark is remembered here.
+  const fresh = (location.state as { fresh?: number } | null)?.fresh;
+  const [seenFresh, setSeenFresh] = useState(fresh);
+  const [generation, setGeneration] = useState(0);
+  if (fresh !== undefined && fresh !== seenFresh) {
+    setSeenFresh(fresh);
+    setGeneration((value) => value + 1);
+  }
   const draft = parseDocumentId(params.get("draft"));
   if (draft) return <ContinueDraft id={draft} />;
   const replyId = parseDocumentId(params.get("reply_id"));
@@ -1105,7 +1172,7 @@ export function NewDocumentPage() {
     : null;
   return (
     <DocumentForm
-      key={params.get("type") ?? "memo"}
+      key={`${params.get("type") ?? "memo"}:${String(generation)}`}
       initial={{
         ...EMPTY_FORM,
         kind: kindFromParam(params.get("type")),

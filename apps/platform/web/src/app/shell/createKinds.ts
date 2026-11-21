@@ -97,6 +97,14 @@ export const CREATE_KINDS: readonly CreateKind[] = [
   },
 ];
 
+let freshCounter = 0;
+
+/** One-off mark for the navigation state: opening a kind from «Create» resets an already open form of that kind. */
+export function freshMark(): number {
+  freshCounter += 1;
+  return freshCounter;
+}
+
 /** Виды, которые сотруднику положены по ролям; чего нельзя — того нет вовсе. */
 export function createKindsFor(me: Me | null | undefined): CreateKind[] {
   if (!me) return [];

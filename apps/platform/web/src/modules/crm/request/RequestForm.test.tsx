@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -9,6 +9,7 @@ import { server } from "../../../test/server";
 import { setViewportWidth } from "../../../test/viewport";
 import type { Me, RequestFormIn } from "../../../shared/api/generated/model";
 import { canCreateFromLead } from "../common/access";
+import { requestDraftScope } from "./draft";
 import {
   type RequestContext,
   emptyRequestForm,
@@ -53,6 +54,22 @@ async function attach(panel: HTMLElement, name = "pismo.pdf"): Promise<void> {
     target: { files: [new File(["%PDF-1.4"], name, { type: "application/pdf" })] },
   });
   expect(await within(panel).findByText(`Загружено: ${name}`)).toBeVisible();
+}
+
+/** Заголовок шага (кнопка раскрытия), а не ссылка с тем же словом в списке «Осталось». */
+function stepHead(panel: HTMLElement, title: string): HTMLElement {
+  const head = within(panel)
+    .getAllByRole("button", { name: new RegExp(`^${title}`) })
+    .find((button) => button.hasAttribute("aria-controls"));
+  if (!head) throw new Error(`нет шага ${title}`);
+  return head;
+}
+
+/** Список «Осталось» на шаге «Проверка и отправка» — причина, по которой «Создать заявку» недоступна. */
+function remainingList(panel: HTMLElement): HTMLElement {
+  const list = panel.querySelector<HTMLElement>(".pf-fstep-remaining");
+  if (!list) throw new Error("нет списка «Осталось»");
+  return list;
 }
 
 function requestsOf(clientName: string): number {
@@ -238,34 +255,67 @@ describe("«Создать заявку» из лида и из клиента (
     expect(requestsOf("ООО Демо-Строй")).toBe(1);
   });
 
-  it("ошибки у полей: без компании и сути заявка не уходит", async () => {
+  it("шаг готов по тому же валидатору: требования видны на шаге после ухода с него, «Осталось» — на проверке, кнопка недоступна", async () => {
     const panel = await openForm("/crm/leads?lead=L-2044&create=1&panel=open&tab=card");
     fireEvent.change(within(panel).getByLabelText("Название компании"), { target: { value: "" } });
     fireEvent.change(within(panel).getByLabelText("Суть запроса"), { target: { value: " " } });
-    fireEvent.click(submitButton(panel));
-    expect(
-      await within(panel).findByText("Выберите клиента или впишите название компании"),
-    ).toBeVisible();
-    // ошибка открыла первую секцию с ошибкой; у второй — отметка «нужно исправить» и текст у поля
-    expect(within(panel).getByText("Опишите суть запроса")).toBeInTheDocument();
-    expect(within(panel).getByRole("button", { name: /^Запрос.*нужно исправить/i })).toBeVisible();
+    // пока с шага не уходили, он не пестрит требованиями
+    expect(within(panel).queryByText("Чтобы шаг был готов:")).toBeNull();
+    open(panel, "Запрос");
+    // «Клиент» покинут с невыполненным: отметка у заголовка, требование на самом шаге, поле помечено
+    expect(within(panel).getByRole("button", { name: /^Клиент.*нужно исправить/i })).toBeVisible();
     expect(within(panel).getByLabelText("Название компании")).toHaveAttribute(
       "aria-invalid",
       "true",
     );
+    // шаг «Запрос» открыт впервые: его требования не показаны, галочки у него нет
+    expect(within(panel).queryByText("Опишите суть запроса")).toBeNull();
+
+    const submit = submitButton(panel);
+    expect(submit).toBeDisabled();
+    const list = remainingList(panel);
+    expect(within(list).getByText(/Выберите клиента или впишите название компании/)).toBeVisible();
+    expect(within(list).getByText(/Опишите суть запроса/)).toBeVisible();
+    expect(within(list).getByText(/Приложите письмо клиента или файл запроса/)).toBeVisible();
+    expect(submit).toHaveAttribute("aria-describedby", list.id);
+    // ссылка из списка ведёт на шаг, где это исправить
+    fireEvent.click(within(list).getByRole("button", { name: "Клиент" }));
+    expect(within(panel).getByLabelText("Название компании")).toBeVisible();
     expect(readLeads().clients.some((c) => c.name === "ООО Демо-Строй")).toBe(false);
   });
 
-  it("лид без согласия (звонок): без отметки — отказ у поля, с отметкой «по телефону» — заявка", async () => {
+  it("шаг с выполненным ставит галочку только тем же валидатором: «Запрос» без файла и «Контакт» без согласия не готовы", async () => {
     const panel = await openForm("/crm/leads?lead=L-2077&create=1&panel=open&tab=card");
+    open(panel, "Контакт");
     open(panel, "Запрос");
+    open(panel, "Проверка и отправка");
+    // суть из лида есть, но основания нет — шаг «Запрос» не получил галочку и показывает требование
+    expect(stepHead(panel, "Запрос")).toHaveTextContent(/нужно исправить/i);
+    // согласия нет — то же у «Контакта»
+    expect(stepHead(panel, "Контакт")).toHaveTextContent(/нужно исправить/i);
+    expect(within(panel).getByRole("button", { name: "Создать заявку" })).toBeDisabled();
+  });
+
+  it("лид без согласия (звонок): согласие — на шаге «Контакт»; без отметки кнопка недоступна, с отметкой «по телефону» — заявка", async () => {
+    const panel = await openForm("/crm/leads?lead=L-2077&create=1&panel=open&tab=card");
+    open(panel, "Контакт");
     expect(within(panel).getByText("Клиент ещё не дал согласие.")).toBeVisible();
     await attach(panel);
-    fireEvent.click(submitButton(panel));
-    expect(await within(panel).findByText("Без согласия клиента заявку не создать")).toBeVisible();
+    // в «Запросе» согласия больше нет
+    open(panel, "Запрос");
+    expect(within(panel).queryByText("Клиент ещё не дал согласие.")).not.toBeVisible();
 
+    const blocked = submitButton(panel);
+    expect(blocked).toBeDisabled();
+    expect(
+      within(remainingList(panel)).getByText(/Без согласия клиента заявку не создать/),
+    ).toBeVisible();
+
+    open(panel, "Контакт");
     fireEvent.click(within(panel).getByRole("checkbox", { name: "Согласие получено" }));
-    fireEvent.click(submitButton(panel));
+    const submit = submitButton(panel);
+    expect(submit).toBeEnabled();
+    fireEvent.click(submit);
     expect(await within(panel).findByText("Заявка создана")).toBeVisible();
   });
 
@@ -338,10 +388,10 @@ describe("письмо директору: из переписки и при с�
 
   it("без основания и со сбоем загрузки заявка не уходит (план 0.4, FR-9)", async () => {
     const panel = await openForm("/crm/leads?lead=L-2044&create=1&panel=open&tab=card");
-    fireEvent.click(submitButton(panel));
+    expect(submitButton(panel)).toBeDisabled();
     expect(
-      await within(panel).findByText("Приложите письмо клиента или файл запроса"),
-    ).toBeInTheDocument();
+      within(remainingList(panel)).getByText(/Приложите письмо клиента или файл запроса/),
+    ).toBeVisible();
     expect(requestsOf("ООО Демо-Строй")).toBe(0);
 
     open(panel, "Запрос");
@@ -351,8 +401,8 @@ describe("письмо директору: из переписки и при с�
     expect(
       await within(panel).findByText("Подходит PDF, изображение или документ Office"),
     ).toBeVisible();
-    fireEvent.click(submitButton(panel));
-    expect(await within(panel).findByText(/Файл не загрузился — выберите/)).toBeVisible();
+    expect(submitButton(panel)).toBeDisabled();
+    expect(within(remainingList(panel)).getByText(/Файл не загрузился — выберите/)).toBeVisible();
     expect(requestsOf("ООО Демо-Строй")).toBe(0);
 
     open(panel, "Запрос");
@@ -360,6 +410,73 @@ describe("письмо директору: из переписки и при с�
     await attach(panel, "zapros.pdf");
     fireEvent.click(submitButton(panel));
     expect(await within(panel).findByText("Заявка создана")).toBeVisible();
+  });
+});
+
+describe("черновик заявки и лид из Telegram без согласия (СЦ-6)", () => {
+  const PATH = "/crm/leads?lead=L-2044&create=1&panel=open&tab=card";
+
+  it("закрыли форму — при открытии «Продолжить / Начать заново»; молча ничего не подставляется; ключ формы и файл те же", async () => {
+    const panel = await openForm(PATH);
+    open(panel, "Запрос");
+    fireEvent.change(within(panel).getByLabelText("Суть запроса"), {
+      target: { value: "Шпалы, 300 шт, до конца месяца" },
+    });
+    await attach(panel, "zapros.pdf");
+    const stored = window.sessionStorage.getItem(
+      Object.keys(window.sessionStorage).find((k) => k.includes("request-draft")) ?? "",
+    );
+    const draftKey = (JSON.parse(stored ?? "{}") as { requestKey?: string }).requestKey;
+    expect(draftKey).toBeTruthy();
+
+    cleanup();
+    const again = await openForm(PATH);
+    expect(within(again).getByText(/Есть черновик заявки от/)).toBeVisible();
+    open(again, "Запрос");
+    expect(within(again).getByLabelText("Суть запроса")).not.toHaveValue(
+      "Шпалы, 300 шт, до конца месяца",
+    );
+
+    fireEvent.click(within(again).getByRole("button", { name: "Продолжить" }));
+    expect(within(again).queryByText(/Есть черновик заявки от/)).toBeNull();
+    expect(within(again).getByLabelText("Суть запроса")).toHaveValue(
+      "Шпалы, 300 шт, до конца месяца",
+    );
+    expect(within(again).getByText("Загружено: zapros.pdf")).toBeVisible();
+    fireEvent.click(submitButton(again));
+    expect(await within(again).findByText("Заявка создана")).toBeVisible();
+    // ключ из черновика: повтор после потерянного ответа вернёт ту же заявку; созданная заявка стирает черновик
+    expect(Object.keys(readLeads().keys)).toContain(draftKey);
+    expect(Object.keys(window.sessionStorage).some((k) => k.includes("request-draft"))).toBe(false);
+  });
+
+  it("«Начать заново» стирает черновик, форма — с данными лида", async () => {
+    const panel = await openForm(PATH);
+    open(panel, "Запрос");
+    fireEvent.change(within(panel).getByLabelText("Суть запроса"), { target: { value: "Другое" } });
+    cleanup();
+    const again = await openForm(PATH);
+    fireEvent.click(within(again).getByRole("button", { name: "Начать заново" }));
+    expect(within(again).queryByText(/Есть черновик заявки от/)).toBeNull();
+    open(again, "Запрос");
+    expect(within(again).getByLabelText("Суть запроса")).not.toHaveValue("Другое");
+    cleanup();
+    const third = await openForm(PATH);
+    // форму не меняли — черновика нет
+    expect(within(third).queryByText(/Есть черновик заявки от/)).toBeNull();
+  });
+
+  it("лид из Telegram без согласия: вместо формы причина — отметить согласие здесь нельзя", async () => {
+    const state = readLeads();
+    const lead = state.leads.find((l) => l.row.lead === "L-2041");
+    if (!lead) throw new Error("нет L-2041");
+    lead.card.consent = { given_at: null, method: null };
+    writeLeads(state);
+    signIn("manager@demo.example");
+    renderAt("/crm/leads?lead=L-2041&create=1&panel=open&tab=card");
+    const panel = await panelEl();
+    expect(await within(panel).findByText(/Лид из Telegram даёт согласие в боте/)).toBeVisible();
+    expect(within(panel).queryByRole("form", { name: "Создать заявку" })).toBeNull();
   });
 });
 
@@ -390,5 +507,15 @@ describe("«Создать заявку» на телефоне", () => {
     expect(actions).toHaveAttribute("data-sheet", "true");
     open(sheet, "Проверка и отправка");
     expect(within(sheet).getByRole("button", { name: "Отмена" })).toBeVisible();
+  });
+});
+
+describe("ключ черновика заявки по месту открытия (СЦ-6)", () => {
+  it("форма из входящего с файлом ВХ ведёт свой черновик, не общий «new» из «Создать → Заявка»", () => {
+    expect(requestDraftScope(null, null)).toBe("new");
+    expect(requestDraftScope(null, null, "doc-7")).toBe("letter:doc-7");
+    expect(requestDraftScope(null, null, "doc-7")).not.toBe(requestDraftScope(null, null));
+    expect(requestDraftScope("L-2044", null)).toBe("L-2044");
+    expect(requestDraftScope(null, 5)).toBe("client:5");
   });
 });

@@ -46,7 +46,12 @@ import {
   toRegisterBody,
   validateRegister,
 } from "./registerModel";
-import { StepSections } from "../../../shared/ui/StepSections/StepSections";
+import {
+  type RemainingItem,
+  StepRemaining,
+  StepSections,
+} from "../../../shared/ui/StepSections/StepSections";
+import { useLeftSteps } from "../../../shared/ui/StepSections/useLeftSteps";
 import { AiFillBar } from "./AiFillBar";
 import { DuplicateNotice } from "./DuplicateCheck";
 import { type ForceState, duplicateFromError, useDuplicateCheck } from "./duplicates";
@@ -164,8 +169,11 @@ export function RegisterLetterPage() {
   const refresh = useRefreshLetters();
   const today = todayInCompanyZone();
   const [values, setValues] = useState<RegisterValues>(() => emptyRegister(today));
-  const [errors, setErrors] = useState<RegisterErrors>({});
+  // Отказ сервера по полям (номер входящего не найден, файл отвергнут): заранее не проверить; снимается правкой формы.
+  const [serverErrors, setServerErrors] = useState<RegisterErrors>({});
   const [active, setActive] = useState<SectionKey>("file");
+  // Шаги, которые человек уже покидал: требования и ошибки полей видны на них, а не на только что открытом шаге.
+  const { left, markLeft } = useLeftSteps(active);
   const [note, setNote] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const idempotency = useRef<{ body: string; key: string } | null>(null);
@@ -242,6 +250,7 @@ export function RegisterLetterPage() {
     });
   };
   const set = <K extends keyof RegisterValues>(key: K, value: RegisterValues[K]) => {
+    setServerErrors({});
     setValues((prev) => ({ ...prev, [key]: value }));
     touch(key);
   };
@@ -249,10 +258,39 @@ export function RegisterLetterPage() {
     if (ai) void decideAiSuggestion(ai.id, { decision }).catch(() => undefined);
   };
   const setAttachments = (updater: (prev: Attachment[]) => Attachment[]) => {
+    setServerErrors({});
     setValues((prev) => ({ ...prev, attachments: updater(prev.attachments) }));
   };
-  const sectionInvalid = (key: SectionKey) =>
-    (Object.keys(errors) as RegisterField[]).some((field) => SECTION_OF[field] === key);
+  // Один валидатор на всё: галочка шага, «Осталось» и отправка. Ошибка у поля видна, когда шаг уже покидали.
+  const all = validateRegister(values, today);
+  const errors: RegisterErrors = {
+    ...Object.fromEntries(
+      REGISTER_ORDER.filter((field) => all[field] && left.has(SECTION_OF[field])).map((field) => [
+        field,
+        true,
+      ]),
+    ),
+    ...serverErrors,
+  };
+  const serverInvalid = (key: SectionKey) =>
+    (Object.keys(serverErrors) as RegisterField[]).some((field) => SECTION_OF[field] === key);
+  const needs = (key: SectionKey): string[] => [
+    ...REGISTER_ORDER.filter((field) => all[field] && SECTION_OF[field] === key).map((field) =>
+      t(`letters:register.errors.${field}`),
+    ),
+    ...(key === "file" && uploading ? [t("documents:form.validation.uploading")] : []),
+  ];
+  const stepTitles: Record<SectionKey, string> = {
+    file: t("letters:register.sections.file"),
+    sender: t("letters:register.sections.sender"),
+    content: t("letters:register.sections.content"),
+    route: t("letters:register.sections.route"),
+    review: t("letters:register.sections.review"),
+  };
+  // Порядок шагов; сводку входящего на «Проверке» добавляет СЦ-11, здесь только «Осталось»
+  const remaining: RemainingItem[] = (["file", "sender", "content", "route"] as const).flatMap(
+    (key) => needs(key).map((text) => ({ step: key, title: stepTitles[key], text })),
+  );
   const doneFiles = values.attachments.filter((a) => a.status === "done");
   const fileSummary = [
     doneFiles.map((a) => a.name).join(", "),
@@ -271,12 +309,10 @@ export function RegisterLetterPage() {
   };
 
   const submit = async () => {
-    const found = validateRegister(values, today);
-    setErrors(found);
     setNote(null);
-    const first = REGISTER_ORDER.find((field) => found[field]);
-    if (first) {
-      focus(first);
+    // Главная кнопка при незаполненном недоступна; сюда доходит Enter в поле — на «Проверку» со списком «Осталось»
+    if (remaining.length > 0) {
+      setActive("review");
       return;
     }
     if (forcing && !force.reason.trim()) {
@@ -325,7 +361,8 @@ export function RegisterLetterPage() {
       if (fields.includes("file_ids")) {
         setAttachments((prev) => prev.filter((file) => !file.key.startsWith(DRAFT_FILE_KEY)));
       }
-      setErrors(Object.fromEntries(fields.map((field) => [field, true])));
+      setServerErrors(Object.fromEntries(fields.map((field) => [field, true])));
+      markLeft(fields.map((field) => SECTION_OF[field]));
       const reason =
         error instanceof ApiError && error.status === 403
           ? t("letters:register.errors.forbidden")
@@ -408,6 +445,12 @@ export function RegisterLetterPage() {
                       ? { id: offer.ai.id, filled: offer.ai.filled, left: new Set(offer.ai.left) }
                       : null,
                   );
+                  markLeft(
+                    (["file", "sender", "content", "route", "review"] as const).slice(
+                      0,
+                      ["file", "sender", "content", "route", "review"].indexOf(offer.active),
+                    ),
+                  );
                   setActive(offer.active);
                   setRestoredFileId(
                     offer.values.attachments.find((file) => file.status === "done" && file.id)
@@ -439,7 +482,7 @@ export function RegisterLetterPage() {
           noValidate
           onSubmit={(event) => {
             event.preventDefault();
-            if (!pending && !uploading) void submit();
+            if (!pending) void submit();
           }}
         >
           <Card>
@@ -463,8 +506,10 @@ export function RegisterLetterPage() {
                   key: "file",
                   title: t("letters:register.sections.file"),
                   summary: fileSummary,
-                  complete: values.attachments.some((a) => a.status === "done"),
-                  invalid: sectionInvalid("file"),
+                  complete: true,
+                  requirements: needs("file"),
+                  showRequirements: left.has("file"),
+                  invalid: serverInvalid("file"),
                   content: (
                     <div className="pf-fp-form">
                       <Field
@@ -521,8 +566,10 @@ export function RegisterLetterPage() {
                   summary: [values.senderName.trim(), values.refNumber.trim()]
                     .filter(Boolean)
                     .join(" · "),
-                  complete: values.senderCompanyId !== "" && values.kind !== "",
-                  invalid: sectionInvalid("sender"),
+                  complete: true,
+                  requirements: needs("sender"),
+                  showRequirements: left.has("sender"),
+                  invalid: serverInvalid("sender"),
                   content: (
                     <div className="pf-fp-form">
                       <div className="pf-newdoc-row">
@@ -711,8 +758,10 @@ export function RegisterLetterPage() {
                   key: "content",
                   title: t("letters:register.sections.content"),
                   summary: values.subject.trim(),
-                  complete: values.subject.trim() !== "",
-                  invalid: sectionInvalid("content"),
+                  complete: true,
+                  requirements: needs("content"),
+                  showRequirements: left.has("content"),
+                  invalid: serverInvalid("content"),
                   content: (
                     <div className="pf-fp-form">
                       <Field
@@ -759,7 +808,9 @@ export function RegisterLetterPage() {
                 {
                   key: "route",
                   title: t("letters:register.sections.route"),
-                  invalid: sectionInvalid("route"),
+                  // Обязательных полей нет: галочка — когда шаг пройден, а не раньше человека
+                  complete: left.has("route"),
+                  invalid: serverInvalid("route"),
                   content: (
                     <div className="pf-fp-form">
                       <div className="pf-newdoc-row">
@@ -958,17 +1009,21 @@ export function RegisterLetterPage() {
                   title: t("letters:register.sections.review"),
                   content: (
                     <div className="pf-newdoc-actions">
-                      {Object.keys(errors).length > 0 && !note ? (
-                        <ErrorNote message={t("letters:register.summaryError")} />
-                      ) : null}
+                      <StepRemaining
+                        id="reg-remaining"
+                        items={remaining}
+                        onGo={(step) => {
+                          setActive(step as SectionKey);
+                        }}
+                      />
                       {note ? <ErrorNote message={note} /> : null}
                       <div className="pf-fp-row">
                         <Button
                           type="primary"
                           htmlType="submit"
                           loading={pending}
-                          disabled={uploading}
-                          title={uploading ? t("documents:form.submit.uploadWait") : undefined}
+                          disabled={remaining.length > 0}
+                          aria-describedby={remaining.length > 0 ? "reg-remaining" : undefined}
                         >
                           {t("letters:register.submit")}
                         </Button>

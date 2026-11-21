@@ -1,7 +1,8 @@
-import { Button, Checkbox, Input, Radio, Select, Skeleton } from "antd";
+import { Alert, Button, Checkbox, Input, Radio, Select, Skeleton, Space } from "antd";
 import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useAuth } from "../../../app/auth/useAuth";
 import { useViewport } from "../../../app/shell/useViewport";
 import type {
   ClientContactView,
@@ -17,9 +18,22 @@ import {
 import { useFormat } from "../../../shared/lib/useFormat";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
-import { StepSections } from "../../../shared/ui/StepSections/StepSections";
+import {
+  type RemainingItem,
+  StepRemaining,
+  StepSections,
+} from "../../../shared/ui/StepSections/StepSections";
+import { useLeftSteps } from "../../../shared/ui/StepSections/useLeftSteps";
 import { reasonError } from "../common/errors";
 import { clientPath, useRefreshCrm } from "../common/params";
+import {
+  clearRequestDraft,
+  REQUEST_SECTIONS,
+  type RequestDraft,
+  readRequestDraft,
+  requestDraftScope,
+  writeRequestDraft,
+} from "./draft";
 import {
   type RequestContext,
   type RequestErrors,
@@ -108,8 +122,19 @@ const SECTION_OF: Record<keyof RequestErrors, SectionKey> = {
   channel: "contact",
   summary: "request",
   letter: "request",
-  consent: "request",
+  // Согласие — там же, где вводятся персональные данные клиента
+  consent: "contact",
 };
+
+const FIELD_ORDER: readonly (keyof RequestErrors)[] = [
+  "company",
+  "inn",
+  "contact",
+  "channel",
+  "consent",
+  "summary",
+  "letter",
+];
 
 /** Вложение сообщения лида, которое станет письмом директору */
 export interface LetterSource {
@@ -146,11 +171,12 @@ export function RequestForm({
   onCancel,
 }: RequestFormProps) {
   const { t } = useTranslation(["request", "clients"]);
+  const { me } = useAuth();
   const { mobile } = useViewport();
   const fmt = useFormat();
   const ids = useId();
   const id = (name: string) => `${ids}-${name}`;
-  const [requestKey] = useState(newKey);
+  const [requestKey, setRequestKey] = useState(newKey);
   const [state, setState] = useState<RequestFormState>(() => ({
     ...initialState(lead, clientId),
     ...(letterFrom && lead ? { letter: { name: "", status: "uploading" as const } } : {}),
@@ -182,10 +208,11 @@ export function RequestForm({
         }));
       });
   }, [letterFrom, lead, copy, t]);
-  const [tried, setTried] = useState(false);
   const [active, setActive] = useState<SectionKey>(() =>
     clientId !== null || lead?.client != null ? "contact" : "client",
   );
+  // Шаги, которые человек уже покидал: требования и ошибки полей показываются на них, а не на только что открытом шаге.
+  const { left, markLeft } = useLeftSteps(active);
   const [serverError, setServerError] = useState<string | null>(null);
   const [done, setDone] = useState<RequestCreatedView | null>(null);
   const create = useCreateCrmRequest();
@@ -203,6 +230,35 @@ export function RequestForm({
     ? state
     : { ...state, contactId: primary ? primary.id : null };
 
+  // Черновик: предлагается кнопками, а не подставляется молча; пока выбор не сделан, прежний не перезаписывается.
+  const userId = me.id;
+  const scope = requestDraftScope(lead?.lead ?? null, clientId, letterFile?.id ?? null);
+  const [baseline] = useState(() => initialState(lead, clientId));
+  const [offer, setOffer] = useState<RequestDraft | null>(() =>
+    userId ? readRequestDraft(userId, scope) : null,
+  );
+  const incomingLetter = Boolean(letterFrom || letterFile);
+  useEffect(() => {
+    if (!userId || offer || done) return;
+    writeRequestDraft(userId, scope, baseline, incomingLetter, {
+      state,
+      active,
+      contactTouched,
+      requestKey,
+    });
+  }, [
+    userId,
+    scope,
+    baseline,
+    incomingLetter,
+    offer,
+    done,
+    state,
+    active,
+    contactTouched,
+    requestKey,
+  ]);
+
   const ctx: RequestContext = {
     lead: lead?.lead ?? null,
     leadChannel: lead?.channel ?? null,
@@ -210,14 +266,33 @@ export function RequestForm({
     consentGiven: lead === null || lead.consent.given_at !== null,
     contacts,
   };
-  const errors: RequestErrors = tried ? validateRequest(form, ctx) : {};
+  // Один валидатор на всё: галочка шага, список «Осталось» и отправка. Ошибка у поля видна, когда шаг уже покидали.
+  const all = validateRequest(form, ctx);
+  const errors: RequestErrors = Object.fromEntries(
+    (Object.keys(all) as (keyof RequestErrors)[])
+      .filter((field) => left.has(SECTION_OF[field]))
+      .map((field) => [field, all[field]]),
+  );
+  const sectionTitle: Record<SectionKey, string> = {
+    client: t("request:client.legend"),
+    contact: t("request:contact.legend"),
+    request: t("request:sections.request"),
+    review: t("request:sections.review"),
+  };
+  const needs = (key: SectionKey): string[] =>
+    FIELD_ORDER.filter((field) => all[field] && SECTION_OF[field] === key).map((field) =>
+      t(`request:errors.${all[field] ?? field}`),
+    );
+  const remaining: RemainingItem[] = FIELD_ORDER.filter((field) => all[field]).map((field) => ({
+    step: SECTION_OF[field],
+    title: sectionTitle[SECTION_OF[field]],
+    text: t(`request:errors.${all[field] ?? field}`),
+  }));
   const err = (field: keyof RequestErrors) =>
     errors[field] ? t(`request:errors.${errors[field]}`) : undefined;
   const set = (change: Partial<RequestFormState>) => {
     setState((prev) => ({ ...prev, ...change }));
   };
-  const sectionInvalid = (key: SectionKey) =>
-    (Object.keys(errors) as (keyof RequestErrors)[]).some((field) => SECTION_OF[field] === key);
   const clientSummary =
     state.clientId !== null
       ? (state.clientName ?? client.data?.name ?? "")
@@ -248,22 +323,24 @@ export function RequestForm({
     );
   }
 
+  const cancel = () => {
+    if (userId) clearRequestDraft(userId, scope);
+    onCancel();
+  };
+
   const submit = () => {
     if (create.isPending) return;
-    setTried(true);
     setServerError(null);
-    const found = validateRequest(form, ctx);
-    // Ошибка открывает свою секцию (platform-frontend.md §4.1a)
-    const first = (Object.keys(found) as (keyof RequestErrors)[])[0];
-    if (first) {
-      setActive(SECTION_OF[first]);
+    // Главная кнопка при незаполненном недоступна; Enter в поле ведёт на «Проверку» со списком «Осталось», а не на пройденный шаг
+    if (remaining.length > 0) {
+      setActive("review");
       return;
     }
-    if (state.letter?.status === "uploading") return;
     create.mutate(
       { data: toRequestPayload(form, ctx, requestKey) },
       {
         onSuccess: (result) => {
+          if (userId) clearRequestDraft(userId, scope);
           refresh();
           setDone(result);
           onCreated?.(result);
@@ -296,6 +373,45 @@ export function RequestForm({
         <p className="pf-fp-sub">{t("request:intro")}</p>
       </div>
 
+      {offer ? (
+        <Alert
+          type="info"
+          showIcon
+          role="status"
+          message={t("request:draft.found", { time: fmt.date(offer.savedAt, "datetime") })}
+          description={
+            <Space wrap>
+              <Button
+                type="primary"
+                size="small"
+                onClick={() => {
+                  setState((prev) => ({
+                    ...offer.state,
+                    letter: incomingLetter ? prev.letter : offer.state.letter,
+                  }));
+                  setContactTouched(offer.contactTouched);
+                  setRequestKey(offer.requestKey);
+                  markLeft(REQUEST_SECTIONS.slice(0, REQUEST_SECTIONS.indexOf(offer.active)));
+                  setActive(offer.active);
+                  setOffer(null);
+                }}
+              >
+                {t("request:draft.continue")}
+              </Button>
+              <Button
+                size="small"
+                onClick={() => {
+                  if (userId) clearRequestDraft(userId, scope);
+                  setOffer(null);
+                }}
+              >
+                {t("request:draft.restart")}
+              </Button>
+            </Space>
+          }
+        />
+      ) : null}
+
       <StepSections
         headingLevel={4}
         active={active}
@@ -307,8 +423,9 @@ export function RequestForm({
             key: "client",
             title: t("request:client.legend"),
             summary: clientSummary,
-            complete: state.clientId !== null || state.companyName.trim() !== "",
-            invalid: sectionInvalid("client"),
+            complete: true,
+            requirements: needs("client"),
+            showRequirements: left.has("client"),
             content: (
               <div className="pf-fp-stack">
                 {state.clientId !== null ? (
@@ -381,8 +498,9 @@ export function RequestForm({
             key: "contact",
             title: t("request:contact.legend"),
             summary: contactSummary,
-            complete: form.contactId !== null || state.fullName.trim() !== "",
-            invalid: sectionInvalid("contact"),
+            complete: true,
+            requirements: needs("contact"),
+            showRequirements: left.has("contact"),
             content: (
               <div className="pf-fp-stack">
                 {state.clientId !== null && client.isPending ? (
@@ -471,62 +589,6 @@ export function RequestForm({
                   </>
                 ) : null}
                 <FieldError id={`${id("channel")}-error`} text={err("channel")} />
-              </div>
-            ),
-          },
-          {
-            key: "request",
-            title: t("request:sections.request"),
-            summary: state.summary.trim().slice(0, 80),
-            complete: state.summary.trim() !== "",
-            invalid: sectionInvalid("request"),
-            content: (
-              <div className="pf-fp-stack">
-                <FormField
-                  id={id("summary")}
-                  label={t("request:summary.label")}
-                  hint={t("request:summary.hint")}
-                >
-                  <Input.TextArea
-                    id={id("summary")}
-                    value={state.summary}
-                    maxLength={5000}
-                    autoSize={{ minRows: 3, maxRows: 8 }}
-                    aria-invalid={errors.summary ? true : undefined}
-                    aria-describedby={describedBy("summary", true)}
-                    onChange={(event) => {
-                      set({ summary: event.target.value });
-                    }}
-                  />
-                  <FieldError id={`${id("summary")}-error`} text={err("summary")} />
-                </FormField>
-                <FormField
-                  id={id("letter")}
-                  label={t("request:letter.label")}
-                  hint={t("request:letter.hint")}
-                >
-                  <LetterField
-                    id={id("letter")}
-                    value={state.letter}
-                    onChange={(letter) => {
-                      set({ letter });
-                    }}
-                  />
-                  <FieldError id={`${id("letter")}-error`} text={err("letter")} />
-                </FormField>
-                <fieldset className="pf-req-group">
-                  <legend>{t("request:urgency.legend")}</legend>
-                  <Radio.Group
-                    value={state.urgency}
-                    onChange={(event) => {
-                      set({ urgency: event.target.value as RequestFormState["urgency"] });
-                    }}
-                    options={[
-                      { value: "normal", label: t("request:urgency.normal") },
-                      { value: "urgent", label: t("request:urgency.urgent") },
-                    ]}
-                  />
-                </fieldset>
                 {lead ? (
                   <fieldset className="pf-req-group">
                     <legend>{t("request:consent.legend")}</legend>
@@ -603,11 +665,75 @@ export function RequestForm({
             ),
           },
           {
+            key: "request",
+            title: t("request:sections.request"),
+            summary: state.summary.trim().slice(0, 80),
+            complete: true,
+            requirements: needs("request"),
+            showRequirements: left.has("request"),
+            content: (
+              <div className="pf-fp-stack">
+                <FormField
+                  id={id("summary")}
+                  label={t("request:summary.label")}
+                  hint={t("request:summary.hint")}
+                >
+                  <Input.TextArea
+                    id={id("summary")}
+                    value={state.summary}
+                    maxLength={5000}
+                    autoSize={{ minRows: 3, maxRows: 8 }}
+                    aria-invalid={errors.summary ? true : undefined}
+                    aria-describedby={describedBy("summary", true)}
+                    onChange={(event) => {
+                      set({ summary: event.target.value });
+                    }}
+                  />
+                  <FieldError id={`${id("summary")}-error`} text={err("summary")} />
+                </FormField>
+                <FormField
+                  id={id("letter")}
+                  label={t("request:letter.label")}
+                  hint={t("request:letter.hint")}
+                >
+                  <LetterField
+                    id={id("letter")}
+                    value={state.letter}
+                    onChange={(letter) => {
+                      set({ letter });
+                    }}
+                  />
+                  <FieldError id={`${id("letter")}-error`} text={err("letter")} />
+                </FormField>
+                <fieldset className="pf-req-group">
+                  <legend>{t("request:urgency.legend")}</legend>
+                  <Radio.Group
+                    value={state.urgency}
+                    onChange={(event) => {
+                      set({ urgency: event.target.value as RequestFormState["urgency"] });
+                    }}
+                    options={[
+                      { value: "normal", label: t("request:urgency.normal") },
+                      { value: "urgent", label: t("request:urgency.urgent") },
+                    ]}
+                  />
+                </fieldset>
+              </div>
+            ),
+          },
+          {
             key: "review",
             title: t("request:sections.review"),
             content: (
               <div className="pf-fp-stack">
                 <p className="pf-fp-sub">{t("request:clientGets")}</p>
+                <StepRemaining
+                  id={id("remaining")}
+                  items={remaining}
+                  onGo={(step) => {
+                    setActive(step as SectionKey);
+                  }}
+                />
                 <ErrorNote message={serverError} />
 
                 <div className="pf-crm-actions" data-sheet={mobile}>
@@ -615,11 +741,12 @@ export function RequestForm({
                     type="primary"
                     htmlType="submit"
                     loading={create.isPending}
-                    disabled={state.letter?.status === "uploading"}
+                    disabled={remaining.length > 0}
+                    aria-describedby={remaining.length > 0 ? id("remaining") : undefined}
                   >
                     {create.isPending ? t("request:submitting") : t("request:submit")}
                   </Button>
-                  <Button onClick={onCancel}>{t("request:cancel")}</Button>
+                  <Button onClick={cancel}>{t("request:cancel")}</Button>
                 </div>
               </div>
             ),

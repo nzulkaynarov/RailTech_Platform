@@ -10,6 +10,7 @@ import {
   type CreateKind,
   countFrequent,
   createKindsFor,
+  freshMark,
   frequentKinds,
 } from "./createKinds";
 import { useViewport } from "./useViewport";
@@ -111,6 +112,7 @@ function CreateWindow({ kinds, onClose }: { kinds: CreateKind[]; onClose: () => 
               <Link
                 key={kind.key}
                 to={kind.to ?? "#"}
+                state={{ fresh: freshMark() }}
                 className="pf-create-chip pf-focusable"
                 onClick={() => {
                   opened(kind);
@@ -166,6 +168,7 @@ function KindRow({ kind, onOpen }: { kind: CreateKind; onOpen: (kind: CreateKind
   return (
     <Link
       to={kind.to}
+      state={{ fresh: freshMark() }}
       className="pf-create-kind pf-focusable"
       onClick={() => {
         onOpen(kind);

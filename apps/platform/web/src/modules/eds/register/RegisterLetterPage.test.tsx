@@ -64,7 +64,7 @@ describe("EDS · Зарегистрировать входящее (P8)", () => 
     );
   });
 
-  it("без обязательных полей запрос не уходит: тексты у полей", async () => {
+  it("без обязательных полей запрос не уходит: «Осталось» названо по шагам, кнопка недоступна, поля помечены после ухода с шага", async () => {
     let sent = false;
     server.use(
       http.post("*/eds/letters", () => {
@@ -74,20 +74,43 @@ describe("EDS · Зарегистрировать входящее (P8)", () => 
     );
     await openForm();
 
-    fireEvent.click(registerButton("Зарегистрировать"));
-
-    expect(await screen.findByText("Выберите вид документа.")).toBeVisible();
-    expect(screen.getByText("Выберите, как получено письмо.")).toBeVisible();
-    expect(
-      screen.getByText("Выберите корреспондента из контрагентов или заведите организацию."),
-    ).toBeVisible();
-    // открыта первая секция с ошибкой («Отправитель»); в остальных — текст у поля и отметка у заголовка
-    expect(screen.getByText("Укажите тему.")).toBeInTheDocument();
-    expect(screen.getByText("Приложите файл письма и дождитесь загрузки.")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /^Тема и содержание.*нужно исправить/i }),
-    ).toBeVisible();
+    const button = registerButton("Зарегистрировать");
+    expect(button).toBeDisabled();
+    const list = document.getElementById("reg-remaining") as HTMLElement;
+    expect(button).toHaveAttribute("aria-describedby", "reg-remaining");
+    for (const text of [
+      /Выберите вид документа\./,
+      /Выберите, как получено письмо\./,
+      /Выберите корреспондента из контрагентов или заведите организацию\./,
+      /Укажите тему\./,
+      /Приложите файл письма и дождитесь загрузки\./,
+    ]) {
+      expect(within(list).getByText(text)).toBeVisible();
+    }
+    // пункт ведёт на шаг; уйдя с него, человек видит отметку и требование на самом шаге
+    fireEvent.click(within(list).getAllByRole("button", { name: "Отправитель" })[0] as HTMLElement);
+    openStep("Тема и содержание");
+    expect(screen.getByRole("button", { name: /^Отправитель.*нужно исправить/i })).toBeVisible();
     expect(sent).toBe(false);
+  });
+
+  it("галочка «Отправитель» — по валидатору: без способа получения и даты её нет, «Маршрут» — только после прохода", async () => {
+    await openForm();
+    await addSender("ГНИ Демо района");
+    await chooseOption(reveal(screen.getByLabelText("Вид документа")), "Письмо банка");
+    openStep("Тема и содержание");
+    const sender = screen.getByRole("button", { name: /^Отправитель/ });
+    // способа получения нет — шаг не готов, хотя корреспондент и вид есть
+    expect(sender.querySelector(".lucide-check")).toBeNull();
+    const route = screen.getByRole("button", { name: /^Срок, адресат и резолюция/ });
+    expect(route.querySelector(".lucide-check")).toBeNull();
+    openStep("Срок, адресат и резолюция");
+    openStep("Тема и содержание");
+    expect(
+      screen
+        .getByRole("button", { name: /^Срок, адресат и резолюция/ })
+        .querySelector(".lucide-check"),
+    ).not.toBeNull();
   });
 
   it("требование ГНК: «срочно» и кабинет налогоплательщика подставляются; ВХ-номер и переход во «Входящие»", async () => {
@@ -150,7 +173,11 @@ describe("EDS · Зарегистрировать входящее (P8)", () => 
       "/eds/inbox/%D0%92%D0%A5-108%2F26",
     );
     expect(screen.getByText(/тот же исх\. №/)).toBeVisible();
-    expect(registerButton("Зарегистрировать")).toBeEnabled();
+    // «похожее» не запрещает регистрацию: «Осталось» — только незаполненные поля, про дубль там нет ни слова
+    registerButton("Зарегистрировать");
+    const rest = document.getElementById("reg-remaining") as HTMLElement;
+    expect(rest.textContent).not.toMatch(/похож|дубл/i);
+    expect(screen.queryByLabelText(/Почему это другое письмо/)).toBeNull();
   });
 
   it("то же письмо (409): блок с ВХ, «Это другое письмо» требует причину и уходит с force", async () => {
