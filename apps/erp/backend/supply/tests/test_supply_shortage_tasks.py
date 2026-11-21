@@ -134,16 +134,41 @@ def test_goods_assignee_without_an_erp_account_falls_back_to_all(world):
     assert len(_rows(world["engineer"], "order_shortage")) == 1
 
 
+def test_deactivated_or_unauthorised_assignee_does_not_hide_the_row(world):
+    """Mutation: counting every stored assignee as «named» leaves the project without any recipient."""
+    deal, _quote, _items = _approved(world, [(world["rail"], 4)])
+    task = _task(deal, (504, world["supply"]))
+    world["supply"].is_active = False
+    world["supply"].save(update_fields=["is_active"])
+    assert len(_rows(world["engineer"], "order_shortage")) == 1, "назначенный деактивирован"
+
+    world["supply"].is_active = True
+    world["supply"].save(update_fields=["is_active"])
+    assert _rows(world["engineer"], "order_shortage") == []
+    CalcTaskAssignee.objects.filter(task=task).update(user=world["shipper"])  # назначен, но без supply.manage
+    assert len(_rows(world["supply"], "order_shortage")) == 1
+    assert len(_rows(world["engineer"], "order_shortage")) == 1
+
+
+def _closed_won(deal):
+    deal.stage = DealStage.objects.get(code=DealStageCode.CLOSED_WON)
+    deal.save(update_fields=["stage"])
+
+
 def test_number_of_queries_does_not_grow_with_projects(world):
-    _approved(world, [(world["rail"], 4)])
+    """CLOSED_WON projects: `deal_closed_for_stock` reads invoices, acts and fulfillment — none of it per project."""
+    deal, _q, _i = _approved(world, [(world["rail"], 4)])
+    _closed_won(deal)
+    _task(deal, (503, world["supply"]))
     with CaptureQueriesContext(connection) as one:
-        _rows(world["supply"])
-    for _ in range(3):
+        assert len(_rows(world["supply"], "order_shortage")) == 1
+    for _ in range(5):
         deal, _q, _i = _approved(world, [(world["rail"], 4), (world["bolt"], 2)])
+        _closed_won(deal)
         _task(deal, (503, world["supply"]))
     with CaptureQueriesContext(connection) as many:
-        assert len(_rows(world["supply"], "order_shortage")) == 4
-    assert len(many) <= len(one) + 3, (len(one), len(many))
+        assert len(_rows(world["supply"], "order_shortage")) == 6
+    assert len(many) <= len(one), (len(one), len(many))
 
 
 # ── ship_project ────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -165,6 +190,41 @@ def test_reserved_goods_with_fulfillment_wait_for_the_shipper(world):
     assert _rows(world["shipper"], "ship_project")[0]["note"] == "в резерве 6", "остаток после частичной отгрузки"
     _ship(world, reservation, 6)
     assert _rows(world["shipper"], "ship_project") == [], "отгружено всё — задачи нет"
+
+
+def test_shipment_row_goes_to_the_goods_assignee_else_to_every_shipper(world):
+    _adjust(world, world["rail"], 10)
+    deal, _quote, (rail,) = _approved(world, [(world["rail"], 10)])
+    assert _reserve(world, deal, rail, 10).status_code == 201
+    for account in ("supply", "engineer", "shipper"):
+        assert len(_rows(world[account], "ship_project")) == 1, "исполнителя нет — все держатели права"
+
+    _task(deal, (505, world["supply"]))
+
+    assert len(_rows(world["supply"], "ship_project")) == 1
+    assert _rows(world["engineer"], "ship_project") == [] and _rows(world["shipper"], "ship_project") == []
+
+    world["supply"].is_active = False
+    world["supply"].save(update_fields=["is_active"])
+    assert len(_rows(world["shipper"], "ship_project")) == 1, "назначенный деактивирован — все держатели права"
+
+
+def test_shipment_query_count_does_not_grow_with_projects(world):
+    def project():
+        deal, _q, (rail,) = _approved(world, [(world["rail"], 2)])
+        _adjust(world, world["rail"], 2)
+        assert _reserve(world, deal, rail, 2).status_code == 201
+        _closed_won(deal)
+        _task(deal, (506, world["shipper"]))
+
+    project()
+    with CaptureQueriesContext(connection) as one:
+        assert len(_rows(world["shipper"], "ship_project")) == 1
+    for _ in range(5):
+        project()
+    with CaptureQueriesContext(connection) as many:
+        assert len(_rows(world["shipper"], "ship_project")) == 6
+    assert len(many) <= len(one), (len(one), len(many))
 
 
 def test_no_shipment_row_without_a_fulfillment(world):

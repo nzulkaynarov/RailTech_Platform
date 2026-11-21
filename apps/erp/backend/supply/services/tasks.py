@@ -8,8 +8,9 @@ One row per action the officer owes, oldest first:
 * ``partner_application`` — a partnership application waits for the contract or the approval;
 * ``order_shortage`` — a project's goods are still not covered (not shipped, not reserved, not ordered): one row per project,
   the note lists «item: quantity» (СЦ-9). The row goes to the goods-zone assignee of the project's calculation task, and
-  to every holder of `supply.manage` when the task names nobody;
-* ``ship_project`` — goods reserved for a project are waiting for the shipment (СЦ-9); for holders of `fulfillment.manage`.
+  to every holder of `supply.manage` when nobody named can act on it (no ERP account, deactivated, no right);
+* ``ship_project`` — goods reserved for a project are waiting for the shipment (СЦ-9); the same assignee rule with
+  `fulfillment.manage` as the right.
 
 ERP decides what is owed; the BFF only shows it. Overdue orders stay in `/stock/overdue/`.
 """
@@ -48,11 +49,12 @@ def _order_row(order: SupplierOrder, kind: str, since, **extra: Any) -> dict:
     }
 
 
-def _goods_assignees(deal_ids: list[int]) -> dict[int, set[int]]:
-    """Project → ERP users who are goods-zone assignees of its latest calculation task (as `visa_assignees`, but for all
-    projects at once). A project whose task names nobody resolvable is absent."""
+def _goods_assignees(deal_ids: list[int]) -> dict[int, set]:
+    """Project → active ERP users who are goods-zone assignees of its latest calculation task (as `visa_assignees`, but
+    for all projects at once). A project whose task names nobody resolvable is absent."""
     from sales.models import CalcTask, CalcTaskAssignee
 
+    from accounts.models import CustomUser
     from crm.models import CalcZone
     from crm.services.calc_tasks import _users_by_crm_id
 
@@ -68,37 +70,73 @@ def _goods_assignees(deal_ids: list[int]) -> dict[int, set[int]]:
         )
     )
     found = _users_by_crm_id({crm_id for _task, crm_id, user_id in rows if user_id is None})
-    result: dict[int, set[int]] = {}
-    for task_id, crm_id, user_id in rows:
-        resolved = user_id or found.get(crm_id)
-        if resolved:
-            result.setdefault(task_deal[task_id], set()).add(resolved)
+    resolved_rows = [(task_id, user_id or found.get(crm_id)) for task_id, crm_id, user_id in rows]
+    active = {
+        account.pk: account
+        for account in CustomUser.objects.filter(pk__in={uid for _t, uid in resolved_rows if uid}, is_active=True)
+    }
+    result: dict[int, set] = {}
+    for task_id, user_id in resolved_rows:
+        if user_id in active:
+            result.setdefault(task_deal[task_id], set()).add(active[user_id])
     return result
+
+
+class _Audience:
+    """Who sees a project row: the named goods assignees who hold the row's right, else every holder of the right.
+    The right is checked once per distinct person (a small set), not once per project."""
+
+    def __init__(self, user, right, assignees: dict[int, set]) -> None:
+        self.user, self.right, self.assignees = user, right, assignees
+        self._can: dict[int, bool] = {}
+
+    def _holds(self, account) -> bool:
+        if account.pk not in self._can:
+            self._can[account.pk] = self.right(account)
+        return self._can[account.pk]
+
+    def sees(self, deal_id: int) -> bool:
+        capable = {account.pk for account in self.assignees.get(deal_id, ()) if self._holds(account)}
+        return not capable or self.user.pk in capable
+
+
+def _deals_with_execution_facts(queryset):
+    """Deals with everything `stock.deal_closed_for_stock` reads, so the check makes no query per project."""
+    from django.db.models import Prefetch
+
+    from crm.models import Act, Invoice
+
+    return queryset.select_related("stage", "company", "fulfillment__status").prefetch_related(
+        Prefetch("invoices", queryset=Invoice.objects.select_related("status")),
+        Prefetch("acts", queryset=Act.objects.select_related("status")),
+    )
 
 
 def _shortage_rows(user) -> list[dict]:
     """`order_shortage`: one row per project that still has uncovered goods in its last approved quote."""
-    from sales.models import Quote
+    from sales.models import Deal, Quote
 
     from crm.constants import QuoteStatusCode
     from crm.services.projects import PROJECT_STAGES
 
     quotes = list(
         Quote.objects.filter(deal__stage__code__in=PROJECT_STAGES, status__code=QuoteStatusCode.APPROVED)
-        .select_related("deal__company", "deal__stage")
         .order_by("deal_id", "-version")
         .distinct("deal_id")
     )
     by_quote = shortage.goods_items(quote.pk for quote in quotes)
     missing = shortage.shortage_by_item([item for items in by_quote.values() for item in items])
     candidates = [quote for quote in quotes if any(item.pk in missing for item in by_quote.get(quote.pk, []))]
-    candidates = [quote for quote in candidates if not stock.deal_closed_for_stock(quote.deal)]
-    assignees = _goods_assignees([quote.deal_id for quote in candidates])
+    if not candidates:
+        return []
+    deals = _deals_with_execution_facts(Deal.objects.filter(pk__in=[quote.deal_id for quote in candidates])).in_bulk()
+    candidates = [quote for quote in candidates if not stock.deal_closed_for_stock(deals[quote.deal_id])]
+    audience = _Audience(user, can_manage_supply, _goods_assignees([quote.deal_id for quote in candidates]))
     rows = []
     for quote in candidates:
-        named = assignees.get(quote.deal_id)
-        if named and user.pk not in named:
-            continue  # somebody is named for this project and it is not the viewer
+        if not audience.sees(quote.deal_id):
+            continue  # somebody who can act is named for this project and it is not the viewer
+        deal = deals[quote.deal_id]
         lines = [
             f"{item.imported_raw_name or item.product.name}: {qty_text(missing[item.pk])}"
             for item in by_quote[quote.pk]
@@ -108,9 +146,9 @@ def _shortage_rows(user) -> list[dict]:
             {
                 "kind": "order_shortage",
                 "id": quote.deal_id,
-                "number": quote.deal.number,
+                "number": deal.number,
                 "supplier_name": "",
-                "client_name": quote.deal.company.name if quote.deal.company_id else "",
+                "client_name": deal.company.name if deal.company_id else "",
                 "since": _iso(quote.approved_at or quote.updated_at),
                 "note": "; ".join(lines),
             }
@@ -118,7 +156,7 @@ def _shortage_rows(user) -> list[dict]:
     return rows
 
 
-def _shipment_rows() -> list[dict]:
+def _shipment_rows(user) -> list[dict]:
     """`ship_project`: a project with a fulfillment and an active reservation that is not shipped out yet."""
     from sales.models import Deal
 
@@ -142,9 +180,15 @@ def _shipment_rows() -> list[dict]:
         .values("order_line__deal_id")
         .annotate(last=Max("receipt__received_at"))
     }
+    deals = [
+        deal
+        for deal in _deals_with_execution_facts(Deal.objects.filter(pk__in=list(left)))
+        if not stock.deal_closed_for_stock(deal)
+    ]
+    audience = _Audience(user, can_manage_fulfillment, _goods_assignees([deal.pk for deal in deals]))
     rows = []
-    for deal in Deal.objects.filter(pk__in=list(left)).select_related("company", "fulfillment", "stage"):
-        if stock.deal_closed_for_stock(deal):
+    for deal in deals:
+        if not audience.sees(deal.pk):
             continue
         since = max(filter(None, [last_receipt.get(deal.pk), deal.fulfillment.created_at]))
         rows.append(
@@ -173,7 +217,7 @@ def supply_tasks(user) -> list[dict]:
         rows.extend(_supply_rows())
         rows.extend(_shortage_rows(user))
     if ship:
-        rows.extend(_shipment_rows())
+        rows.extend(_shipment_rows(user))
     rows.sort(key=lambda row: (row["since"] or "", row["kind"], row["id"]))
     return rows[:MAX_ROWS]
 
