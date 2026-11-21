@@ -298,7 +298,12 @@ def test_search_by_serial_shows_where_it_came_from_and_where_it_went(world, clas
     assert origin["deal"]["id"] == deal.pk
     [dest] = row["destinations"]
     assert dest["shipment_number"] == shipped.json()["number"] and dest["quantity"] == 1
-    assert dest["deal"] == {"id": deal.pk, "number": deal.number or None, "client_name": world["client"].name}
+    assert dest["deal"] == {
+        "id": deal.pk,
+        "number": deal.number or None,
+        "client_name": world["client"].name,
+        "stage_code": deal.stage.code,
+    }
 
     partial = api(world["reader"]).get(f"{STOCK}trace/", {"q": "ENG-000"}).json()["results"]
     assert [r["number"] for r in partial] == ["ENG-0001", "ENG-0002"]

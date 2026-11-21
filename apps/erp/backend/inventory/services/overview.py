@@ -29,7 +29,12 @@ def rights(user) -> dict:
 def _deal_ref(deal) -> Optional[dict]:
     if deal is None:
         return None
-    return {"id": deal.pk, "number": deal.number or None, "client_name": deal.company.name if deal.company_id else None}
+    return {
+        "id": deal.pk,
+        "number": deal.number or None,
+        "client_name": deal.company.name if deal.company_id else None,
+        "stage_code": deal.stage.code if deal.stage_id else None,
+    }
 
 
 def _incoming(product_ids: Iterable[int]) -> dict[int, dict]:
@@ -146,9 +151,11 @@ def reservations(
     user, *, deal_id: Optional[int] = None, product_id: Optional[int] = None, status: str = "active"
 ) -> list[dict]:
     require_staff(user)
-    qs = Reservation.objects.select_related("product", "deal__company", "created_by__crm_user_mapping")
+    qs = Reservation.objects.select_related("product", "deal__company", "deal__stage", "created_by__crm_user_mapping")
     if status == "active":
-        qs = stock.active_reservations().select_related("product", "deal__company", "created_by__crm_user_mapping")
+        qs = stock.active_reservations().select_related(
+            "product", "deal__company", "deal__stage", "created_by__crm_user_mapping"
+        )
     elif status:
         qs = qs.filter(status=status)
     if deal_id:
@@ -234,9 +241,9 @@ def present_shipment(shipment: Shipment) -> dict:
 
 def shipments(user, *, deal_id: Optional[int] = None) -> dict:
     require_staff(user)
-    qs = Shipment.objects.select_related("deal__company", "shipped_by__crm_user_mapping").prefetch_related(
-        "lines__product", "lines__trace_allocations__unit"
-    )
+    qs = Shipment.objects.select_related(
+        "deal__company", "deal__stage", "shipped_by__crm_user_mapping"
+    ).prefetch_related("lines__product", "lines__trace_allocations__unit")
     if deal_id:
         qs = qs.filter(deal_id=deal_id)
     return {"results": [present_shipment(s) for s in qs[:MAX_ROWS]], "rights": rights(user)}
@@ -263,7 +270,7 @@ def pending_receipts(user) -> dict:
     require_staff(user)
     lines = (
         SupplierOrderLine.objects.filter(order__status=OrderStatus.CONFIRMED, received_quantity__lt=F("quantity"))
-        .select_related("order__supplier", "deal__company", "product__category")
+        .select_related("order__supplier", "deal__company", "deal__stage", "product__category")
         .order_by("order__expected_date", "order_id", "position")[:MAX_ROWS]
     )
     receipts = GoodsReceipt.objects.select_related("order__supplier", "received_by").prefetch_related(

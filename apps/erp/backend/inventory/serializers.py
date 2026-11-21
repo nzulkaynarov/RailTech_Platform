@@ -23,6 +23,9 @@ class StockDealRefSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     number = serializers.CharField(allow_null=True, help_text="Номер заявки или проекта (`Deal.number`)")
     client_name = serializers.CharField(allow_null=True)
+    stage_code = serializers.CharField(
+        allow_null=True, help_text="Стадия сделки (`DealStage.code`): вид — заявка или проект — по ней, не по номеру"
+    )
 
 
 class StockRightsSerializer(serializers.Serializer):

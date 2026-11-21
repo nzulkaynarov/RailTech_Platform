@@ -37373,10 +37373,15 @@ components:
         client_name:
           type: string
           nullable: true
+        stage_code:
+          type: string
+          nullable: true
+          description: 'Стадия сделки (`DealStage.code`): вид — заявка или проект — по ней, не по номеру'
       required:
       - client_name
       - id
       - number
+      - stage_code
     StockError:
       type: object
       properties:
