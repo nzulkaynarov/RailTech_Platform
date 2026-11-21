@@ -298,7 +298,9 @@ function letterFields(doc: MockDocument, me: string): Partial<EdsDocument> {
   const letter = doc.letter;
   const draft = doc.status === "draft";
   // Как EDS: «подписать можно» и «кто подпишет» приходят из его проверки полномочий
-  const can = doc.can_sign ?? (me === "u-demo-director" || Boolean(doc.signing_authority_id));
+  // Демо: подписывает директор, держатель полномочия и делопроизводитель (как «уполномоченный» в стенде)
+  const can =
+    doc.can_sign ?? (me === "u-demo-director" || Boolean(doc.signing_authority_id) || register);
   const signing = doc.signing ?? {
     can_sign: can,
     reason: can ? null : "no_authority",
@@ -324,8 +326,8 @@ function letterFields(doc: MockDocument, me: string): Partial<EdsDocument> {
             : null,
         }
       : null,
-    can_register:
-      draft && register && (doc.ownerId === me || Boolean(letter?.registration_requested)),
+    // Как BFF: исходящее письмо выходит только через «Подписать» (решение владельца 2026-11-21 (3))
+    can_register: false,
     can_request_registration: draft && !register && doc.ownerId === me,
     can_sign: draft && signing.can_sign,
     signing_hint: draft

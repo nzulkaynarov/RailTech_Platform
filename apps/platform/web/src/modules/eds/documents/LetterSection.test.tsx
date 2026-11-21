@@ -75,25 +75,17 @@ async function openCard(email: string) {
 }
 
 describe("EDS · карточка письма на бланке (P4)", () => {
-  it("делопроизводитель видит переданный черновик, регистрирует и отправляет: исходящий номер и журнал отправки", async () => {
-    seed({});
+  it("делопроизводитель видит переданный черновик, но регистрации без подписи нет: ни «Зарегистрировать», ни «Подписать»", async () => {
+    seed({ can_sign: false });
     const card = await openCard("registrar@demo.example");
 
     expect(card.getByText(/Передано на регистрацию: Демо Широков/)).toBeVisible();
     expect(card.getByText("Начальнику ГНИ")).toBeVisible();
     expect(card.getByText("по бланку (директор)")).toBeVisible();
     expect(card.getByText("Адресату ещё не отправляли.")).toBeVisible();
-    fireEvent.click(card.getByRole("button", { name: "Зарегистрировать и отправить" }));
-
-    expect(await screen.findByText(/Письмо зарегистрировано: OUT-\d{3}\/26/)).toBeVisible();
-    const saved = readEds().documents.find((d) => d.id === ID);
-    expect(saved?.status).toBe("sent");
-    expect(saved?.letter?.pdf?.final).toBe(true);
-    expect(saved?.letter?.mailings[0]?.to).toEqual(["gni@example.uz"]);
-    // Адрес — и в реквизитах письма, и в строке журнала отправки (она может появиться позже): хватает любого видимого.
-    const shown = await card.findAllByText(/gni@example\.uz/);
-    expect(shown.length).toBeGreaterThan(0);
-    expect(shown[0]).toBeVisible();
+    expect(card.queryByRole("button", { name: /Зарегистрировать/ })).toBeNull();
+    expect(card.queryByRole("button", { name: "Подписать" })).toBeNull();
+    expect(readEds().documents.find((d) => d.id === ID)?.status).toBe("draft");
   });
 
   it("адресат текстом из писем до СУЩ-2.6: просьба сопоставить, регистрация закрыта", async () => {
@@ -103,7 +95,7 @@ describe("EDS · карточка письма на бланке (P4)", () => {
     const card = await openCard("registrar@demo.example");
 
     expect(card.getByText(/Адресат вписан текстом/)).toBeVisible();
-    expect(card.getByRole("button", { name: "Зарегистрировать и отправить" })).toBeDisabled();
+    expect(card.queryByRole("button", { name: /Зарегистрировать/ })).toBeNull();
   });
 
   it("отправка не удалась — причина словами; «Отправить адресату ещё раз» добавляет строку журнала", async () => {

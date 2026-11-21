@@ -418,7 +418,8 @@ def _letter_flags(raw: "_RawDocument", *, me: int, registrar: bool) -> dict[str,
     signing = raw.signing
     return {
         "letter": letter,
-        "can_register": draft and registrar and (mine or handed),
+        # Решение владельца 2026-11-21 (3): исходящее письмо выходит только через «Подписать»
+        "can_register": False,
         "can_request_registration": draft and mine and not registrar and has_body and not handed,
         # Подпись предлагается, только если EDS её разрешает (СЦ-9); поля нет — не предлагается
         "can_sign": draft and signing is not None and signing.can_sign,
