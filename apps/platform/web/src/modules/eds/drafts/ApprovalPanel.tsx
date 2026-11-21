@@ -59,7 +59,8 @@ function PanelBody({
 }) {
   const { t } = useTranslation("quotes");
   const { me } = useAuth();
-  const mayDecide = canEdit(me, "eds.drafts");
+  // Заместитель решает шаг замещаемого и с разделом «только чтение» (СЦ-9): право и замещение проверяет EDS
+  const mayDecide = canEdit(me, "eds.drafts") || Boolean(quote.acting_for);
   // КП уже решено (в том числе другим) или заменено новой версией: черновик ему не нужен.
   useEffect(() => {
     if (quote.status !== "open") clearDraft(me.id, quote.id);

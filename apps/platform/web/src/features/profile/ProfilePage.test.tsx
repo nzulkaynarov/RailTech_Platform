@@ -404,10 +404,13 @@ describe("«Моя очередь» заместителя", () => {
     renderApp("/dashboard/queue");
 
     const queue = await screen.findByRole("region", { name: "Что сделать сейчас" });
-    const covered = await within(queue).findByText(/^за Демо Директоров · /);
-    expect(covered).toBeInTheDocument();
+    // у замещающего — ответ лиду и согласование служебки замещаемого (EDS `acting_for`, СЦ-9), обе строки с «за …»
+    await within(queue).findAllByText(/^за Демо Директоров · /);
     const rows = within(queue).getAllByRole("listitem");
-    expect(rows.filter((row) => /за Демо Директоров/.test(row.textContent))).toHaveLength(1);
-    expect(rows.length).toBeGreaterThan(1);
+    expect(rows.filter((row) => /за Демо Директоров/.test(row.textContent))).toHaveLength(2);
+    expect(rows.length).toBeGreaterThan(2);
+    // плашка и фильтр над списком: «Вы замещаете … до …», «За …»
+    expect(screen.getByText(/Вы замещаете Демо Директоров до/)).toBeVisible();
+    expect(screen.getByText("За Демо Директоров")).toBeVisible();
   });
 });

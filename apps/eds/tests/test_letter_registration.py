@@ -8,6 +8,7 @@ import pytest
 
 from app.container import Container
 from tests.domain import Person, outbox, validate
+from tests.signing import sign_out
 from tests.test_api_auth import assert_error
 
 pytestmark = pytest.mark.pg
@@ -92,7 +93,7 @@ async def test_related_number_links_a_previous_letter_or_our_outgoing(
         json={"kind": "letter_out", "subject": "Пояснения", "text": "Направляем", "recipient": {"name": "ГНИ"}},
         headers=staff["registrar"].headers,
     )
-    sent = await client.post(f"/api/v1/documents/{outgoing.json()['id']}/submit", headers=staff["registrar"].headers)
+    sent = await sign_out(client, staff, outgoing.json()["id"])
     number = sent.json()["number"]
     third = await register(client, staff["registrar"], related_number=number, sender_ref={"number": "04-12/3600"})
     assert third.status_code == 201, third.text

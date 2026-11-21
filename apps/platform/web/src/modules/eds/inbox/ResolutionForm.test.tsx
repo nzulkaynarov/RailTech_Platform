@@ -2,6 +2,7 @@ import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/re
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 
+import { readLetters, writeLetters } from "../../../mocks/fixtures/letters";
 import { chooseOption, fillDate, selectedLabel } from "../../../test/fields";
 import { server } from "../../../test/server";
 import { companyDate } from "./api";
@@ -64,6 +65,17 @@ describe("Резолюция: форма", () => {
     );
     expect(within(form).getByLabelText("Маржа не ниже, %")).toBeVisible();
     expect(within(form).getByRole("button", { name: "Утвердить резолюцию" })).toBeEnabled();
+  });
+
+  it("вернуть некому (у письма нет менеджера) — «Вернуть менеджеру» и подсказки о ней нет, «Отклонить» остаётся (СЦ-9)", async () => {
+    writeLetters(
+      readLetters().map((l) => (l.number === "ВХ-104/26" ? { ...l, manager: null } : l)),
+    );
+    const { form } = await openForm();
+
+    expect(within(form).queryByRole("button", { name: "Вернуть менеджеру" })).toBeNull();
+    expect(within(form).queryByText(/письмо вернётся менеджеру/)).toBeNull();
+    expect(within(form).getByRole("button", { name: "Отклонить" })).toBeVisible();
   });
 
   it("«Вернуть менеджеру» и «Отклонить» неактивны с подписью, пока нет комментария", async () => {

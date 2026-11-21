@@ -321,6 +321,7 @@
       "unknown": "что-то пошло не так, введённое осталось в форме"
     },
     "submitNoChannels": "Одобрить КП",
+    "submitFor": "Одобрить КП за {{name}}",
     "confirmVerb": "Одобрить"
   },
   "superseded": "Заменена версией {{version}}"

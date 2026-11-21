@@ -70,8 +70,10 @@ QueueItemKind = Literal[
     # W18A-P2: письмо общего ящика ждёт разбора — ВХ, лид или архив
     "inbound_mail",
     "inbound_mail_mine",
-    # EDS-REPLY-1: исполнитель передал ответ на входящее на регистрацию — «Зарегистрировать ИСХ»
+    # EDS-REPLY-1: устарел с СЦ-9 (исходящее не регистрируется без подписи; EDS строки не отдаёт)
     "register_reply",
+    # СЦ-9: «Подписать» — исходящее письмо и договор, счёт, акт, КП на моём шаге подписи
+    "sign_document",
 ]
 DueLabel = Literal["overdue", "today", "tomorrow", "later", "memo"]
 NotificationTab = Literal["all", "decisions", "clients", "system"]

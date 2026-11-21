@@ -14,6 +14,7 @@ from app.services import registry
 from tests.conftest import FakeClock
 from tests.domain import Person, deliver_erp, erp_event, validate
 from tests.helpers import seed_employee
+from tests.signing import sign_out
 from tests.test_api_auth import assert_error
 from tests.test_documents import create, submit
 from tests.test_letters import NEW_LETTER
@@ -46,7 +47,7 @@ async def fill(client: httpx.AsyncClient, container: Container, staff: dict[str,
     out = await create(
         client, staff["registrar"], kind="letter_out", subject="Ответ клиенту", recipient={"name": "ООО «Пример»"}
     )
-    await submit(client, staff["registrar"], out["id"])
+    await sign_out(client, staff, out["id"])
     await deliver_erp(client, container, erp_event("erp/quote.ready_for_approval.v1"))
     return made
 
@@ -252,7 +253,7 @@ async def fill_visibility(client: httpx.AsyncClient, container: Container, staff
     out = await create(
         client, staff["registrar"], kind="letter_out", subject="Ответ клиенту", recipient={"name": "ООО «Пример»"}
     )
-    await submit(client, staff["registrar"], out["id"])
+    await sign_out(client, staff, out["id"])
     memo = await create(client, staff["manager"], subject="Закупка канцтоваров")
     await submit(client, staff["manager"], memo["id"])
     report = await create(client, staff["supplier"], kind="report", subject="Отчёт по складу")

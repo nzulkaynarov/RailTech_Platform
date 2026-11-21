@@ -109,7 +109,7 @@ function Content({ memo, refKey }: { memo: MemoApprovalCard; refKey: string }) {
   const { date } = useFormat();
   const { wide, mobile } = useViewport();
   const [, setParams] = useSearchParams();
-  const mayDecide = mayDecideMemos(me);
+  const mayDecide = mayDecideMemos(me) || Boolean(memo.acting_for);
   const waiting = memo.status === "open" && memo.can_decide && mayDecide;
   const number = memo.number ?? t(`kinds.${memo.kind}`);
 

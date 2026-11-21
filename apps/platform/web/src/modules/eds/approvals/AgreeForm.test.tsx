@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import type { MemoApprovalCard } from "../../../shared/api/generated/model";
 import { server } from "../../../test/server";
 import { panelEl, renderAt, setupApprovalTests, signIn } from "../../../test/approvalsKit";
+import { readMemos, writeMemos } from "../../../mocks/fixtures/approvals";
 import { nextStepLabel } from "./model";
 import { confirmDialog } from "../../../test/confirmDialog";
 
@@ -25,6 +26,41 @@ describe("Согласование: форма", () => {
     const { form } = await openForm();
 
     expect(within(form).getByRole("button", { name: "Согласовать" })).toBeEnabled();
+  });
+
+  it("СЦ-9: шаг замещаемого — кнопка «Согласовать за {имя}», у своего шага — «Согласовать»", async () => {
+    writeMemos(
+      readMemos().map((m) =>
+        m.number === "СЗ-2026/014"
+          ? { ...m, acting_for: { crm_user_id: 12, full_name: "Мадина Р." } }
+          : m,
+      ),
+    );
+    const { form } = await openForm();
+
+    expect(within(form).getByRole("button", { name: "Согласовать за Мадина Р." })).toBeEnabled();
+    expect(within(form).queryByRole("button", { name: "Согласовать" })).toBeNull();
+  });
+
+  it("СЦ-9: заместитель-менеджер без раздела согласования получает форму; без замещения — только чтение", async () => {
+    const memos = readMemos();
+    writeMemos(
+      memos.map((m) =>
+        m.number === "СЗ-2026/014"
+          ? { ...m, acting_for: { crm_user_id: 12, full_name: "Мадина Р." } }
+          : m,
+      ),
+    );
+    const { form } = await openForm("СЗ-2026/014", "manager@demo.example");
+    expect(within(form).getByRole("button", { name: "Согласовать за Мадина Р." })).toBeEnabled();
+    cleanup();
+
+    writeMemos(memos);
+    signIn("manager@demo.example");
+    renderAt(MEMO("СЗ-2026/014"));
+    const panel = await panelEl();
+    await within(panel).findByText(/Решение принимает согласующий/);
+    expect(within(panel).queryByRole("form", { name: "Согласование документа" })).toBeNull();
   });
 
   it("заявление без суммы: шага бухгалтера нет", async () => {

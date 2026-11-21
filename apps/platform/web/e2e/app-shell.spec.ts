@@ -153,7 +153,7 @@ test.describe("панели", () => {
       "page",
     );
     // D26G-4: четыре «Одобрить КП» из «КП на одобрение» (EDS) входят в число «Моих задач»
-    await expect(menu.getByRole("link", { name: "Задачи 8, требует действия" })).toBeVisible();
+    await expect(menu.getByRole("link", { name: "Задачи 10, требует действия" })).toBeVisible();
     await expect(menu.getByRole("link", { name: /^Проекты 4/ })).toBeVisible();
     await expect(page.getByRole("button", { name: /^Центр уведомлений, 3 новых/ })).toBeVisible();
   });

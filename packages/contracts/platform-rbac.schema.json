@@ -181,7 +181,8 @@
         "acquaint",
         "inbound_mail",
         "inbound_mail_mine",
-        "register_reply"
+        "register_reply",
+        "sign_document"
       ]
     },
     "resourceKey": {

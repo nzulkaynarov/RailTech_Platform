@@ -34,7 +34,7 @@ def _type(code):
 
 
 def _company(name, inn, *codes):
-    """Компания с заданными типами; CLIENT, которого нет в `codes`, снимается (типов-то хоть один остаётся)."""
+    """Компания с заданными типами; CLIENT, которого нет в `codes`, снимается (CLIENT не появляется сам)."""
     company = Company.objects.create(name=name, inn=inn)
     for code in codes:
         company.types.add(_type(code))
@@ -44,7 +44,7 @@ def _company(name, inn, *codes):
 
 
 def _strip_client(company):
-    """Снять с компании CLIENT, оставив другой тип (иначе сигнал вернёт CLIENT как «тип по умолчанию»)."""
+    """Снять с компании CLIENT, оставив другой тип."""
     company.types.add(_type("SUPPLIER"))
     company.types.remove(_type("CLIENT"))
     assert not company.types.filter(code="CLIENT").exists()

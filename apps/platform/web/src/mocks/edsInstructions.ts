@@ -257,7 +257,10 @@ function notifyDocument(
   }
 }
 
-/** Держатели раздела регистрации (`letters.register` EDS): им уходит «Зарегистрируйте ответ» и «Не отправлено». */
+/** Подписант в демо (EDS вычисляет его по реестру полномочий): директор; автор письма не подписывает своё. */
+const SIGNER_ID = "u-demo-director";
+
+/** Держатели раздела регистрации (`letters.register` EDS): им уходит «Не отправлено» (регистрации без подписи нет). */
 function registrarIds(): string[] {
   return DEMO_USERS.filter(
     (u) =>
@@ -315,7 +318,7 @@ function tasksPath(letterId: string): string {
 export function letterTaskQueueItems(view: readonly MockRole[]): QueueItem[] {
   const user = me();
   if (!user) return [];
-  const roleFor = (kind: "instruction" | "instruction_extension" | "acquaint" | "register_reply") =>
+  const roleFor = (kind: "instruction" | "instruction_extension" | "acquaint" | "sign_document") =>
     view.find((r) => allows(r.access, QUEUE[kind].resource, QUEUE[kind].level))?.id;
   const items: QueueItem[] = [];
   const now = today();
@@ -374,19 +377,22 @@ export function letterTaskQueueItems(view: readonly MockRole[]): QueueItem[] {
       });
     }
   }
-  // EDS-REPLY-1: «Зарегистрировать ИСХ» — ответы, переданные на регистрацию (держателю раздела регистрации)
-  const registerRole = roleFor("register_reply");
-  if (registerRole) {
+  // СЦ-9: «Подписать исходящее» — письмо, переданное на подпись, у вычисленного подписанта (в демо — директор, не автор)
+  const signRole = roleFor("sign_document");
+  if (signRole && user.id === SIGNER_ID) {
     for (const doc of readEds().documents) {
       const requested = doc.letter?.registration_requested;
       if (doc.kind !== "letter_out" || doc.status !== "draft" || !requested) continue;
+      if (doc.ownerId === user.id) continue;
       const to = doc.replyTo;
       items.push({
-        id: `register_reply:${doc.id}`,
-        role_id: registerRole,
-        kind: "register_reply",
-        title: to ? `Зарегистрировать исходящее: ответ на ${to}` : "Зарегистрировать исходящее",
-        subtitle: [doc.subject, personOf(doc.ownerId)?.name].filter(Boolean).join(" · "),
+        id: `sign_document:${doc.id}`,
+        role_id: signRole,
+        kind: "sign_document",
+        title: to ? `Подписать исходящее: ответ на ${to}` : `Подписать исходящее: ${doc.subject}`,
+        subtitle: [to ? doc.subject : null, personOf(doc.ownerId)?.name]
+          .filter(Boolean)
+          .join(" · "),
         due_label: "today",
         object: {
           kind: "memo",
@@ -529,14 +535,14 @@ export function closeReplyInstructions(letterNumber: string, outgoingNumber: str
   return closed;
 }
 
-/** «Передать на регистрацию»: делопроизводители узнают сразу (кроме того, кто передал). */
+/** «Передать на подпись»: подписант узнаёт сразу (кроме автора, если он сам подписант). */
 export function noticeRegistrationRequested(doc: MockDocument): void {
   const letter = doc.replyTo ? readLetters().find((l) => l.number === doc.replyTo) : undefined;
   if (!letter) return;
   const author = personOf(doc.ownerId);
   notifyDocument(
-    registrarIds().filter((id) => id !== doc.ownerId),
-    `Зарегистрируйте ответ на ${letter.number}`,
+    [SIGNER_ID].filter((id) => id !== doc.ownerId),
+    `Подпишите ответ на ${letter.number}`,
     [doc.subject, author?.name].filter(Boolean).join(" · "),
     letter,
     doc.id,
@@ -544,14 +550,14 @@ export function noticeRegistrationRequested(doc: MockDocument): void {
   );
 }
 
-/** ИСХ зарегистрирован: исполнителю закрытого поручения и автору ответа (кроме того, кто зарегистрировал). */
+/** ИСХ подписан и получил номер: исполнителю закрытого поручения и автору ответа (кроме подписавшего). */
 export function noticeReplyRegistered(doc: MockDocument, closedExecutors: readonly string[]): void {
   const letter = doc.replyTo ? readLetters().find((l) => l.number === doc.replyTo) : undefined;
   const actor = me()?.id;
   if (!letter || !doc.number) return;
   notifyDocument(
     [...closedExecutors, doc.ownerId].filter((id) => id !== actor),
-    `Ответ зарегистрирован: ${doc.number}`,
+    `Ответ подписан: ${doc.number}`,
     `На ${letter.number} · ${closedExecutors.length > 0 ? "поручение исполнено" : doc.subject}`,
     letter,
     doc.id,

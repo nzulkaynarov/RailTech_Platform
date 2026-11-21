@@ -44,6 +44,23 @@ def _line_status(fulfillment: Fulfillment) -> str:
     return FULFILLMENT_TO_LINE_STATUS.get(code, DeliveryLineStatus.ASSEMBLING)
 
 
+def _shipped_from_stock(deal_ids: list[int]) -> dict[int, tuple]:
+    """Отгруженное со склада по строкам заказа: `{quote_item_id: (количество, время последней отгрузки)}`.
+
+    Факт, из которого строка становится «Отгружено», пока исполнение сделки целиком ещё «Собирается» (частичная
+    отгрузка): статус исполнения ставится только когда ушёл весь товар, а склад уже отдал часть строк.
+    """
+    from django.db.models import Max, Sum
+    from inventory.models import ShipmentLine
+
+    rows = (
+        ShipmentLine.objects.filter(shipment__deal_id__in=deal_ids, quote_item__isnull=False)
+        .values("quote_item_id")
+        .annotate(total=Sum("quantity"), last=Max("shipment__shipped_at"))
+    )
+    return {row["quote_item_id"]: (row["total"], row["last"]) for row in rows}
+
+
 def _unit_name(item: QuoteItem) -> str:
     if item.unit:
         return item.unit
@@ -86,10 +103,13 @@ def sync_delivery_lines(fulfillments: Iterable[Fulfillment]) -> int:
         return 0
     deal_ids = [f.deal_id for f in fulfillments]
     quotes = _approved_quotes_by_deal(deal_ids)
+    # Строки читаются ДО факта склада: параллельная отгрузка между двумя чтениями может дать лишь «ещё не отгружено»
+    # по устаревшему снимку строк, но не откатит строку назад (факт склада читается позже и не старее строк).
     existing: dict[int, DeliveryLine] = {
         line.quote_item_id: line
         for line in DeliveryLine.objects.filter(deal_id__in=deal_ids).select_related("quote_item")
     }
+    shipped_from_stock = _shipped_from_stock(deal_ids)
 
     to_create: list[DeliveryLine] = []
     to_update: list[tuple[list[int], dict]] = []  # (id строк, новые значения) — по сделке
@@ -116,6 +136,15 @@ def sync_delivery_lines(fulfillments: Iterable[Fulfillment]) -> int:
         changed_ids: list[int] = []
         for number, item in enumerate(quote.order_items, start=1):
             line = existing.get(item.pk)
+            line_wanted = wanted
+            shipped_qty, shipped_last = shipped_from_stock.get(item.pk, (0, None))
+            if item.quantity is not None and shipped_qty and shipped_qty >= item.quantity:
+                # Склад отдал строку целиком: дата отгрузки — факт склада, а не момент, когда ушло всё исполнение
+                # (при отгрузке в разные дни дата ушедшей раньше строки не должна сдвигаться).
+                line_wanted = {**wanted, "shipped_at": shipped_last}
+                if wanted["status"] == DeliveryLineStatus.ASSEMBLING:
+                    # Исполнение ещё «Собирается» (ушла часть заказа), а эта строка отгружена целиком.
+                    line_wanted["status"] = DeliveryLineStatus.SHIPPED
             if line is None:
                 to_create.append(
                     DeliveryLine(
@@ -125,13 +154,16 @@ def sync_delivery_lines(fulfillments: Iterable[Fulfillment]) -> int:
                         title=_title(item),
                         quantity=item.quantity,
                         unit=_unit_name(item),
-                        **wanted,
+                        **line_wanted,
                     )
                 )
             elif line.status not in CLIENT_FINAL_STATUSES and any(
-                getattr(line, field) != value for field, value in wanted.items()
+                getattr(line, field) != value for field, value in line_wanted.items()
             ):
-                changed_ids.append(line.pk)
+                if line_wanted is wanted:
+                    changed_ids.append(line.pk)
+                else:
+                    to_update.append(([line.pk], line_wanted))
         if changed_ids:
             to_update.append((changed_ids, wanted))
 

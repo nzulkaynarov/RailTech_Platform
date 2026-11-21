@@ -326,15 +326,13 @@ async def present(
     body: Any,
     *,
     me: int,
-    registrar: bool = False,
     inbox: bool = False,
     deal_number: str | None = None,
 ) -> EdsDocument:
     """Карточка документа: ответ EDS и шаги маршрута текущего круга (если документ отправлялся).
 
     Маршрут недоступен (нет права читать маршрут, не найден) — карточка без шагов, решения остаются.
-    `registrar` — у сотрудника раздел `eds.inbox.register` (полный): регистрирует исходящие
-    (P4, B-P8B-4). `deal_number` — текущий номер сделки из ERP; нет — копия, сохранённая в EDS.
+    `deal_number` — текущий номер сделки из ERP; нет — копия, сохранённая в EDS.
     """
     raw = _parse(_RawDocument, body, f"{API}/documents")
     steps: list[EdsRouteStep] = []
@@ -394,14 +392,15 @@ async def present(
             "verification_code": raw.verification_code,
             "verification_url": raw.verification_url,
             "dispatch_method": raw.dispatch_method,
-            **_letter_flags(raw, me=me, registrar=registrar),
+            **_letter_flags(raw, me=me),
         }
     )
 
 
-def _letter_flags(raw: "_RawDocument", *, me: int, registrar: bool) -> dict[str, Any]:
-    """Письмо на бланке (P4, SIGN-3): регистрировать черновик может делопроизводитель — свой или
-    переданный ему; автор без права регистрации — «Передать на регистрацию»."""
+def _letter_flags(raw: "_RawDocument", *, me: int) -> dict[str, Any]:
+    """Письмо на бланке (P4, SIGN-3, СЦ-9): регистрации без подписи нет. Автор, который не может
+    подписать сам (EDS: `Document.signing`), — «Передать на подпись», в том числе делопроизводитель;
+    кто может — «Подписать»."""
     if raw.kind != "letter_out":
         return {
             "letter": None,
@@ -416,13 +415,14 @@ def _letter_flags(raw: "_RawDocument", *, me: int, registrar: bool) -> dict[str,
     handed = letter is not None and letter.registration_requested is not None
     has_body = letter is not None and letter.body is not None
     signing = raw.signing
+    can_sign = draft and signing is not None and signing.can_sign
     return {
         "letter": letter,
         # Решение владельца 2026-11-21 (3): исходящее письмо выходит только через «Подписать»
         "can_register": False,
-        "can_request_registration": draft and mine and not registrar and has_body and not handed,
+        "can_request_registration": draft and mine and has_body and not handed and not can_sign,
         # Подпись предлагается, только если EDS её разрешает (СЦ-9); поля нет — не предлагается
-        "can_sign": draft and signing is not None and signing.can_sign,
+        "can_sign": can_sign,
         "signing_hint": EdsSigningHint(reason=signing.reason, signer=signing.signer)
         if draft and signing is not None
         else None,

@@ -8,6 +8,7 @@ import pytest
 
 from app.container import Container
 from tests.domain import Person, outbox
+from tests.signing import ensure_signer, sign_out
 from tests.test_documents import MEMO, create, submit
 from tests.test_letters import NEW_LETTER, RESOLUTION
 
@@ -52,7 +53,9 @@ async def test_parallel_outgoing_numbers_are_shared_by_letters_and_quotes(
         await create(client, staff["registrar"], kind="letter_out", recipient={"name": f"Адресат {n}"})
         for n in range(10)
     ]
-    responses = await asyncio.gather(*(submit(client, staff["registrar"], d["id"]) for d in drafts))
+    await ensure_signer(client, staff)
+    responses = await asyncio.gather(*(sign_out(client, staff, d["id"]) for d in drafts))
+    assert {r.status_code for r in responses} == {200}
     assert sorted(r.json()["number"] for r in responses) == [f"OUT-{n:03d}/26" for n in range(1, 11)]
 
 

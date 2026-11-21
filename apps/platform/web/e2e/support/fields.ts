@@ -38,6 +38,8 @@ export async function pickFiles(field: Locator, files: FilePayload): Promise<voi
  */
 export async function chooseOption(field: Locator, label: string): Promise<void> {
   const page = field.page();
+  // Поля нет на экране — понятный отказ сразу, а не зависание цикла ниже до его общего таймаута.
+  await expect(field).toBeVisible();
   const selected = field
     .locator("xpath=ancestor::div[contains(concat(' ', @class, ' '), ' ant-select ')][1]")
     .locator(".ant-select-selection-item");

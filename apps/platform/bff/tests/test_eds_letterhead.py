@@ -161,6 +161,28 @@ async def test_card_flags_for_executor_and_registrar(
     assert (seen.json()["can_register"], seen.json()["can_request_registration"]) == (False, False)
 
 
+async def test_author_registrar_can_hand_over_unless_he_can_sign_himself(
+    web: Web, eds: EdsFake, check: ContractChecker
+) -> None:
+    """СЦ-9: делопроизводитель-автор без полномочия подписи передаёт письмо на подпись (раньше ни
+    этого, ни «Подписать» у него не было); автор с полномочием (EDS `signing.can_sign`) подписывает
+    сам, а «передать» ему не предлагается."""
+    eds.answer("GET", f"documents/{DOC_ID}", 200, letter_doc())
+    await web.login(["REGISTRAR"])
+    seen = await web.client.get(f"{BASE}/documents/{DOC_ID}")
+    check(seen, "/eds/documents/{id}", "get")
+    flags = seen.json()
+    assert (flags["can_sign"], flags["can_request_registration"]) == (False, True)
+
+    signer = letter_doc(signing={"can_sign": True, "reason": None, "signer": None})
+    eds.answer("GET", f"documents/{DOC_ID}", 200, signer)
+    web.clock.advance(10)
+    seen = await web.client.get(f"{BASE}/documents/{DOC_ID}")
+    check(seen, "/eds/documents/{id}", "get")
+    flags = seen.json()
+    assert (flags["can_sign"], flags["can_request_registration"]) == (True, False)
+
+
 async def test_pdf_request_status_and_stream(
     web: Web, eds: EdsFake, check: ContractChecker
 ) -> None:
