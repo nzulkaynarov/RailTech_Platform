@@ -479,6 +479,7 @@ class InstructionTask(BaseModel):
     due: dt.date
     overdue: bool
     extension_pending: bool
+    acting_for: PersonRef | None = None  # СЦ-9 P11: поручение замещаемого, заместитель исполняет «за» него
     created_at: dt.datetime
 
 
@@ -490,6 +491,7 @@ class ExtensionTask(BaseModel):
     old_due: dt.date
     new_due: dt.date
     reason: str
+    acting_for: PersonRef | None = None  # СЦ-9 P11: решение автора резолюции, которого замещают
     requested_at: dt.datetime
 
 

@@ -82,6 +82,7 @@ class JournalEntry(BaseModel):
     at: dt.datetime
     action: str
     by: PersonRef | None
+    on_behalf_of: PersonRef | None = None
     comment: str | None = None
     file_id: uuid.UUID | None = None
     version: int | None = None

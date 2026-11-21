@@ -114,6 +114,7 @@ async def test_file_attached_to_document_follows_document_visibility_and_is_jour
         "at": doc["journal"][-1]["at"],
         "action": "file.attached",
         "by": {"crm_user_id": 9, "full_name": "Админ Админов"},
+        "on_behalf_of": None,
         "comment": None,
         "file_id": ref["id"],
         "version": 1,

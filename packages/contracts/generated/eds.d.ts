@@ -2178,6 +2178,8 @@ export interface components {
       action: string;
       /** @description `null` — система */
       by: components["schemas"]["PersonRef"] | null;
+      /** @description СЦ-9: «за <имя>» — действие заместителя за замещаемого (`by` — заместитель); `null` — за себя */
+      on_behalf_of?: components["schemas"]["PersonRef"] | null;
       comment?: string | null;
       file_id?: components["schemas"]["Uuid"] | null;
       version?: number | null;
@@ -3054,6 +3056,8 @@ export interface components {
       due: string;
       overdue: boolean;
       extension_pending: boolean;
+      /** @description СЦ-9: пометка «за <имя>» — шаг решает действующий заместитель за замещаемого (подпись и оплата не переходят); `null` — свой шаг */
+      acting_for?: components["schemas"]["PersonRef"] | null;
       /** Format: date-time */
       created_at: string;
     };
@@ -3067,6 +3071,8 @@ export interface components {
       /** Format: date */
       new_due: string;
       reason: string;
+      /** @description СЦ-9: пометка «за <имя>» — шаг решает действующий заместитель за замещаемого (подпись и оплата не переходят); `null` — свой шаг */
+      acting_for?: components["schemas"]["PersonRef"] | null;
       /** Format: date-time */
       requested_at: string;
     };
@@ -3687,6 +3693,8 @@ export interface components {
       round: number;
       /** @description `null` — маршрут закрыт */
       current_step: components["schemas"]["ApprovalStep"] | null;
+      /** @description СЦ-9: пометка «за <имя>» — шаг решает действующий заместитель за замещаемого (подпись и оплата не переходят); `null` — свой шаг */
+      acting_for?: components["schemas"]["PersonRef"] | null;
       /** Format: date-time */
       created_at: string;
     };
@@ -3708,6 +3716,8 @@ export interface components {
       quote: components["schemas"]["QuoteSnapshot"] | null;
       /** @description Текущий шаг ждёт этого сотрудника */
       can_decide: boolean;
+      /** @description СЦ-9: пометка «за <имя>» — шаг решает действующий заместитель за замещаемого (подпись и оплата не переходят); `null` — свой шаг */
+      acting_for?: components["schemas"]["PersonRef"] | null;
       /** @description Что можно сейчас (`approve` нет, пока красна хотя бы одна блокирующая строка чек-листа КП) */
       allowed_decisions: components["schemas"]["Decision"][];
       /** @description ИСХ-номер одобренного КП */
