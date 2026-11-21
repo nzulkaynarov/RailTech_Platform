@@ -384,8 +384,9 @@ def sign_contract_by_client(
         allowed_statuses = {ContractStatusCode.DRAFT, ContractStatusCode.PENDING_CLIENT}
     if contract.status_code not in allowed_statuses:
         return None, "CONTRACT_CLIENT_SIGN_NOT_ALLOWED"
-    from integration.services import document_events, events
+    from integration.services import document_events
 
+    before = contract.status_code
     with document_events.watch_document_issue("contract", contract):  # document.created на выпуске (шина rt_bus)
         contract.client_signer = client_user
         contract.client_signed_at = timezone.now()
@@ -394,20 +395,34 @@ def sign_contract_by_client(
         # подписи продавца статус сразу становился SIGNED — в обход «выставлен у оператора → скан».
         contract.status = _cstatus(ContractStatusCode.PENDING_MANAGER)
         contract.save(update_fields=["client_signer", "client_signed_at", "status", "updated_at"])
-    events.publish_contract_signed(contract, by="client")
+    # Клиент в кабинете лишь СОГЛАСИЛ редакцию — это «Согласован клиентом», а не подпись: `contract.signed` по нему
+    # не публикуется (решение владельца 2026-11-22), `contract.status_changed` (client_agreed) уходит ниже.
     publish_current_status(
         contract, client_user
     )  # статус «Согласован клиентом» / «Подписан» — проекция реестра EDS (D2-5)
-    event_params = {"number": contract.number, "deal_id": contract.deal_id, "manual": True}
+    from .contract_flow import TRANSITIONS
+
+    agreed = TRANSITIONS["client_agreed"]  # тот же текст и код, что у отметки сотрудника, без [MANUAL_MODE]
+    event_params = {
+        "number": contract.number,
+        "deal_id": contract.deal_id,
+        "from": before,
+        "to": ContractStatusCode.PENDING_MANAGER,
+    }
     if portal_contact is not None:
-        event_params.update({"channel": "portal", "contact_id": portal_contact.pk})
+        event_params.update(
+            {"channel": "portal", "contact_id": portal_contact.pk, "contact_name": (portal_contact.name or "").strip()}
+        )
     ActivityLog.objects.create(
-        action="[MANUAL_MODE] Подписан договор (сторона клиента)",
+        action=agreed.title,
         detail=f"Договор {contract.number} / сделка #{contract.deal_id}",
-        event_code="contract.signed_client",
+        event_code=agreed.event_code,
         event_params=event_params,
         user=client_user,
+        contact=portal_contact,
         level="INFO",
+        entity_type="contract",
+        entity_id=contract.id,
         deal=contract.deal,
         company_id=contract.deal.company_id,
     )

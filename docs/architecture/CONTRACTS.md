@@ -122,7 +122,7 @@ inline и до БД не доходит (§9.2).
 | `quote.sent` | `version, public_url, valid_until`; `channels?` (ERP-11: каналы автоотправки по решению директора) | бот: «КП готово» с кнопками — если `channels` нет или в них есть `telegram` |
 | `quote.viewed` / `quote.accepted` / `quote.rejected` | `version, reason?, erp_contact_id?, crm_contact_id?, recorded_by_staff?` | лента; при accepted — уведомление ответственному. `recorded_by_staff {staff_name, channel, counterparty_person, occurred_on}` — решение клиента записал сотрудник по подтверждению клиента (A1 волны 18a; `actor.type = staff`); нет поля — клиент решил онлайн |
 | `quote.acceptance_code_requested` | `version, erp_contact_id, crm_contact_id, code, expires_at` | бот присылает код контакту в Telegram; `code` не хранится и не логируется (Q-FIX22-1) |
-| `contract.signed` | `by: client|company|both` | лента |
+| `contract.signed` | `by: client|company|both` | лента. ERP публикует `both` (скан) и `company`; `client` — только в старых событиях: согласие клиента в кабинете — `contract.status_changed` (`client_agreed`), DECISIONS 2026-11-22 |
 | `invoice.issued` / `invoice.paid` / `invoice.overdue` | `number, amount, due_date, link` | бот: «счёт выставлен»; напоминание — только ERP-письмо, бот дублирует по политике |
 | `delivery.status_changed` / `delivery.eta_changed` | `line_summary, status, eta, tracking?` | бот: статус/сдвиг по политике «сообщать о сдвигах» |
 | `delivery.line_accepted` / `delivery.line_disputed` | `line_no, title, status, remark?, decided_at` (`actor.type=client`; при `disputed` замечание обязательно) | лента; при `disputed` — уведомление ответственному (FIX-37) |
@@ -548,7 +548,7 @@ subscribers:
 | `deal.stage_changed`, `deal.lost` | `transition_deal_stage` (смена стадии FSM; стадию контракта даёт `stages.py`) |
 | `deal.won` | `projects.log_project_done_once` (один раз, когда проект выполнен И стадия `CLOSED_WON`: с оплаты, акта, скана, отмены счёта или акта либо с перехода в `CLOSED_WON`; не при подписании договора) |
 | `quote.sent`, `quote.viewed`, `quote.accepted`, `quote.rejected`, `quote.acceptance_code_requested` | отправка КП, просмотр публичной страницы, акцепт и отказ (`lifecycle_accept`, принудительное одобрение), код акцепта для Telegram (`portal/services/acceptance.py`) |
-| `contract.signed` | `sign_contract_by_client` / `sign_contract_by_manager` |
+| `contract.signed` | прикрепление скана (`contract_flow.apply_transition`, `by=both`); `sign_contract_by_client` его больше не публикует (согласие клиента — `contract.status_changed`) |
 | `invoice.issued`, `invoice.paid`, `invoice.overdue` | `issue_invoice`, `record_payment`, ежедневное напоминание об оплате (`send_payment_reminders`: одно `invoice.overdue` на просроченный счёт — статуса «просрочен» нет) |
 | `act.issued`, `act.accepted`, `act.returned` | `generate_act` и `reissue_act`, `sign_act`, `reject_act` |
 | `delivery.status_changed`, `delivery.eta_changed` | `ensure_fulfillment` (создание исполнения), `update_fulfillment_status` |

@@ -632,7 +632,10 @@ export interface components {
       valid_until?: string | null;
       total?: components["schemas"]["Money"];
     };
-    /** @enum {string} */
+    /**
+     * @description `signed_by_client` — клиент согласовал редакцию в кабинете («Согласован клиентом»), это не подпись; `signed` — договор подписан (скан). Значения не переименованы ради совместимости.
+     * @enum {string}
+     */
     ContractStatus:
       | "draft"
       | "sent"

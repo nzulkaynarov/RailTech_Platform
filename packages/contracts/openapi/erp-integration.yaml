@@ -1229,6 +1229,9 @@ components:
 
     ContractStatus:
       type: string
+      description: >-
+        `signed_by_client` — клиент согласовал редакцию в кабинете («Согласован клиентом»), это не подпись; `signed` —
+        договор подписан (скан). Значения не переименованы ради совместимости.
       enum: [draft, sent, signed_by_client, signed_by_company, signed, cancelled]
 
     ContractSummary:

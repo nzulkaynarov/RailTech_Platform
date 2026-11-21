@@ -86,10 +86,13 @@ def test_golden_path_publishes_the_events_of_the_whole_chain_in_the_same_transac
     assert error is None
     contract, error = crm_services.sign_contract_by_client(contract.id, manager)
     assert error is None
-    signed = bus_support.published("contract.signed")
-    assert [e["data"]["payload"]["by"] for e in signed] == ["client"]
+    # Согласие клиента — не подпись: `contract.signed` нет, статус уходит событием `contract.status_changed`.
+    assert not bus_support.published("contract.signed")
+    assert [e["data"]["payload"]["status"] for e in bus_support.published("contract.status_changed")][
+        -1
+    ] == "client_agreed"
     contract = w.sign_via_scan(contract.id)  # подпись кликом закрыта (D2-5): оператор → скан
-    assert [e["data"]["payload"]["by"] for e in bus_support.published("contract.signed")] == ["client", "both"]
+    assert [e["data"]["payload"]["by"] for e in bus_support.published("contract.signed")] == ["both"]
     assert not bus_support.published("deal.won"), "подпись договора — не «проект выполнен»: deal.won ждёт акта и оплаты"
 
     invoice, error = crm_services.generate_invoice_from_contract(contract.id, actor=manager)

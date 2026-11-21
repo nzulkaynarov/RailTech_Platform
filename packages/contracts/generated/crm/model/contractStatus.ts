@@ -3,6 +3,9 @@
  * RailTech Platform ERP — Integration API (CRM → ERP)
  */
 
+/**
+ * `signed_by_client` — клиент согласовал редакцию в кабинете («Согласован клиентом»), это не подпись; `signed` — договор подписан (скан). Значения не переименованы ради совместимости.
+ */
 export type ContractStatus = (typeof ContractStatus)[keyof typeof ContractStatus];
 
 export const ContractStatus = {

@@ -584,6 +584,18 @@ def generate_act(
     from integration.services import document_events, events
 
     events.publish_act_event("act.issued", act)
+    ActivityLog.objects.create(
+        action="Акт выпущен",
+        detail=f"Акт {act.number} по сделке #{act.deal_id}",
+        event_code="act.issued",
+        event_params={"number": act.number, "deal_id": act.deal_id},
+        user=actor,
+        level="INFO",
+        entity_type="act",
+        entity_id=act.id,
+        deal=act.deal,
+        company_id=act.deal.company_id,
+    )
     document_events.publish_document_issued("act", act, was_issued=False)
     # Render off the request thread, after commit (F1.6 — avoids orphan PDFs on
     # rollback). The download endpoint renders lazily if a download races ahead.
@@ -760,6 +772,13 @@ def _locked_act(act_id: int):
     return Act.objects.select_for_update(of=("self",)).select_related("status", "deal").get(pk=act_id)
 
 
+def _portal_contact_params(portal_contact) -> dict:
+    """Лицо клиента для журнала: канал, контакт и его имя (чтобы история показывала клиента, а не «система»)."""
+    if portal_contact is None:
+        return {}
+    return {"channel": "portal", "contact_id": portal_contact.pk, "contact_name": (portal_contact.name or "").strip()}
+
+
 @transaction.atomic
 def sign_act(
     act_id: int, actor: Optional[CustomUser] = None, signed_file=None, *, portal_contact=None
@@ -816,16 +835,17 @@ def sign_act(
             "number": act.number,
             "deal_id": act.deal_id,
             "manual": True,
-            **({"channel": "portal", "contact_id": portal_contact.pk} if portal_contact is not None else {}),
+            **_portal_contact_params(portal_contact),
         },
         user=actor,
+        contact=portal_contact,
         level="SUCCESS",
         deal=act.deal,
         company_id=act.deal.company_id,
     )
     from .deal_notifications import notify_act_signed
 
-    transaction.on_commit(lambda: notify_act_signed(act, actor))
+    transaction.on_commit(lambda: notify_act_signed(act, actor, accepted_by_client=True))
     from .projects import log_project_done_once
 
     log_project_done_once(act.deal, actor)  # приёмка заказчиком в портале может закрыть проект (оплата уже была)
@@ -892,9 +912,10 @@ def apply_act_return(act, actor, reason: str, *, portal_contact=None):
             "number": act.number,
             "deal_id": act.deal_id,
             "reason": reason,
-            **({"channel": "portal", "contact_id": portal_contact.pk} if portal_contact is not None else {}),
+            **_portal_contact_params(portal_contact),
         },
         user=actor,
+        contact=portal_contact,
         level="WARNING",
         entity_type="act",
         entity_id=act.id,

@@ -83,8 +83,13 @@ def test_sign_goes_through_the_service_and_waits_for_the_company_signature(
     contract.refresh_from_db()
     assert contract.status.code == ContractStatusCode.PENDING_MANAGER  # ждёт подписи продавца, а не «подписан»
     assert contract.client_signer is None  # клиентских пользователей в ERP нет; кто подписал — в журнале
-    event = ActivityLog.objects.get(event_code="contract.signed_client", deal=contract.deal)
+    # Факт: клиент согласовал редакцию. В журнале — «согласовано клиентом» с именем контакта, а не «подписан».
+    assert not ActivityLog.objects.filter(event_code="contract.signed_client", deal=contract.deal).exists()
+    event = ActivityLog.objects.get(event_code="contract.client_agreed", deal=contract.deal)
+    assert event.action == "Редакция договора согласована клиентом" and "MANUAL_MODE" not in event.action
     assert event.event_params["contact_id"] == client_contact.pk and event.event_params["channel"] == "portal"
+    assert event.event_params["contact_name"] == client_contact.name
+    assert event.contact_id == client_contact.pk and event.user_id is None
     contract.deal.refresh_from_db()
     assert contract.deal.stage.code == stage_before  # сделку двигает сервис по двусторонней подписи, не портал
 
