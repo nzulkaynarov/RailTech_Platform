@@ -111,35 +111,28 @@ async def test_client_id_limits_and_unknown_id_publishes_nothing(
     assert (missing.clients, missing.published) == (0, 0)
 
 
-async def test_republished_snapshot_is_strictly_newer_for_untouched_clients(
+async def test_republish_keeps_rows_and_repeats_the_last_published_snapshot(
     sessions: async_sessionmaker[AsyncSession], bus: Any
 ) -> None:
-    """ERP skips a snapshot whose `updated_at` is not newer than the applied one."""
+    """The client row is not changed: the snapshot equals the last published one (ERP applies the
+    same moment for the owner it did not store before, #763), a repeat gives the same snapshot."""
     ids = await _clients(sessions)
     async with sessions() as session, session.begin():  # the normal path: last published state
         for cid in ids:
             client = await session.get(Client, cid)
             assert client is not None
             await bus_events.client_updated(session, client, Actor.system())
-    last = {
-        row["subject"]: row["envelope"]["data"]["client"]["updated_at"]
-        for row in await _outbox(sessions)
-    }
+    last = {row["subject"]: row["envelope"]["data"]["client"] for row in await _outbox(sessions)}
     await _clear_outbox(sessions)
 
     await republish_clients(sessions)
-    first = {
-        row["subject"]: row["envelope"]["data"]["client"]["updated_at"]
-        for row in await _outbox(sessions)
-    }
-    await republish_clients(sessions)  # a repeat moves forward again, content unchanged
+    first = {row["subject"]: row["envelope"]["data"]["client"] for row in await _outbox(sessions)}
+    await republish_clients(sessions)
     rows = await _outbox(sessions)
 
-    assert set(first) == set(last)
-    assert len(rows) == 6
-    assert all(first[s] > last[s] for s in last)
-    latest = {r["subject"]: r["envelope"]["data"]["client"]["updated_at"] for r in rows}
-    assert all(latest[s] >= first[s] for s in first)
+    assert first == last
+    assert len(rows) == 2 * len(ids)
+    assert all(r["envelope"]["data"]["client"] == last[r["subject"]] for r in rows)
 
 
 def test_cli_arguments() -> None:

@@ -9,18 +9,15 @@ Consent: `client.updated` has no consent gate on any path (create, edit, handoff
 unconditionally; consent is checked only when a lead is handed over to ERP), so every client row
 is republished, exactly as the normal path would publish an update for it.
 
-Why the row is touched first: ERP applies a client snapshot only when it is strictly newer than
-the one it already applied (equal `updated_at` -> `skipped_duplicate`), so a snapshot with the
-unchanged `updated_at` would do nothing for clients already handed over and not edited since. The
-command therefore bumps `updated_at` (the `set_updated_at` trigger) in the same transaction and
-publishes the snapshot built after it. Repeats stay idempotent by content: a snapshot replaces the
-projection, only `updated_at` and the event id are new.
+Idempotent for consumers: the client row is not changed (`updated_at` stays); ERP applies a
+snapshot of the same moment for the fields it did not store before (the CRM owner, СЦ-9) and skips
+older ones, so a repeat only gives a new event id.
 """
 
 from dataclasses import dataclass
 
 import structlog
-from sqlalchemy import func, select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bus import events as bus_events
@@ -62,17 +59,8 @@ async def republish_clients(
     for start in range(0, len(ids), batch_size):
         async with sessions() as session, session.begin():
             for cid in ids[start : start + batch_size]:
-                touched_id = await session.scalar(
-                    update(Client)
-                    .where(Client.id == cid)
-                    .values(updated_at=func.now())
-                    .returning(Client.id)
-                    .execution_options(synchronize_session=False)
-                )
-                if touched_id is None:  # deleted between the selection and the batch
-                    continue
-                client = await session.get(Client, cid, populate_existing=True)
-                if client is None:
+                client = await session.get(Client, cid)
+                if client is None:  # deleted between the selection and the batch
                     continue
                 await bus_events.client_updated(session, client, actor)
                 published += 1
