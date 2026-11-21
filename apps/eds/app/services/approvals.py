@@ -188,6 +188,14 @@ async def decide(
     current = next(s for s in steps if s.index == route.current_step)
     if not await may_decide(session, employee, route.id, current.index):
         raise forbidden_reason("not_your_step", "Сейчас решение за другим сотрудником.")
+    acting = await access.acting_on_behalf(
+        session,
+        employee,
+        owner=current.assignee_crm_user_id,
+        permission=current.assignee_permission,
+        template=route.template,
+    )
+    on_behalf = acting.on_behalf_of.crm_user_id if acting.on_behalf_of else None
     if is_payment_step(route, current) and body.decision is Decision.APPROVE:
         # Деньги записывает «Оплачено» (дата, сумма, платёжка), а не голое «согласовано» (D2-4, SPEC-v3 §3.2 п. 5).
         raise conflict(
@@ -203,7 +211,7 @@ async def decide(
         )
 
         return await commercial_signing.decide(session, bus, employee, route, steps, current, body)
-    return await _apply(session, bus, employee, route, steps, current, body, late=late)
+    return await _apply(session, bus, employee, route, steps, current, body, late=late, on_behalf=on_behalf)
 
 
 def is_payment_step(route: ApprovalRoute, step: ApprovalStep) -> bool:
@@ -244,8 +252,10 @@ async def _apply(
     body: DecisionIn,
     *,
     late: str | None = None,
+    on_behalf: int | None = None,
 ) -> ApprovalRoute:
-    """`late` — значение красной строки «срок», если КП одобряется с опозданием (только для `approve` КП)."""
+    """`late` — значение красной строки «срок», если КП одобряется с опозданием (только для `approve` КП);
+    `on_behalf` — замещаемый (СЦ-9 P11): в журнале решение заместителя «за» него."""
     now = clock.now()
     decision = body.decision
     current.status, current.decided_by, current.decided_at, current.comment = (
@@ -279,6 +289,7 @@ async def _apply(
         document_id=route.document_id,
         comment=body.comment,
         version=route.round,
+        on_behalf_of=on_behalf,
     )
     if route.approved_late:
         await journal.record(

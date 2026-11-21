@@ -140,6 +140,8 @@ class ApprovalListItem(BaseModel):
     status: RouteStatus
     round: int
     current_step: ApprovalStep | None
+    # СЦ-9 P11: шаг замещаемого — «за <имя>»; пусто, если шаг свой
+    acting_for: PersonRef | None = None
     created_at: dt.datetime
 
 
@@ -159,6 +161,7 @@ class Approval(BaseModel):
     checklist: list[ChecklistItem]
     quote: QuoteSnapshot | None
     can_decide: bool
+    acting_for: PersonRef | None = None  # СЦ-9 P11: текущий шаг решается за замещаемого
     allowed_decisions: list[Decision]
     outgoing_number: str | None
     approved_late: bool

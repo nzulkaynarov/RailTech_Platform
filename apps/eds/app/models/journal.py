@@ -26,6 +26,8 @@ class JournalEntry(Base):
     at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     action: Mapped[str] = mapped_column(String(64))
     by_crm_user_id: Mapped[int | None] = mapped_column(BigInteger)
+    # СЦ-9 P11: действие заместителя «за» этого сотрудника (`by_crm_user_id` — заместитель)
+    on_behalf_of_crm_user_id: Mapped[int | None] = mapped_column(BigInteger)
     comment: Mapped[str | None] = mapped_column(Text)
     file_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
     version: Mapped[int | None] = mapped_column(Integer)

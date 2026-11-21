@@ -30,6 +30,7 @@ async def record(
     comment: str | None = None,
     file_id: uuid.UUID | None = None,
     version: int | None = None,
+    on_behalf_of: int | None = None,
 ) -> None:
     """Добавить строку журнала. `by=None` — действие системы. Текст комментария — только человеческий, без секретов."""
     session.add(
@@ -37,6 +38,7 @@ async def record(
             at=clock.now(),
             action=action,
             by_crm_user_id=by,
+            on_behalf_of_crm_user_id=on_behalf_of,
             comment=comment,
             file_id=file_id,
             version=version,
@@ -57,12 +59,15 @@ async def entries(
         .scalars()
         .all()
     )
-    names = directory or await load_directory(session, (r.by_crm_user_id for r in rows))
+    names = directory or await load_directory(
+        session, (i for r in rows for i in (r.by_crm_user_id, r.on_behalf_of_crm_user_id))
+    )
     return [
         JournalOut(
             at=r.at,
             action=r.action,
             by=names.person_or_none(r.by_crm_user_id),
+            on_behalf_of=names.person_or_none(r.on_behalf_of_crm_user_id),
             comment=r.comment,
             file_id=r.file_id,
             version=r.version,

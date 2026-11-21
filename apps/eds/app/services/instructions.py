@@ -32,6 +32,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import clock
 from app.errors import EdsError, conflict, forbidden, forbidden_reason, invalid_fields, not_found
 from app.models import Acquaintance, Document, Employee, Instruction, InstructionExtension, Letter
+from app.schemas.common import PersonRef
 from app.schemas.letters import (
     AcquaintanceTask,
     CoExecutorIn,
@@ -178,6 +179,20 @@ async def _instruction_for_update(session: AsyncSession, instruction_id: uuid.UU
         await session.execute(select(Instruction).where(Instruction.id == instruction_id).with_for_update())
     ).scalar_one()
     return instruction, letter
+
+
+async def _acting(session: AsyncSession, actor_id: int, owner_id: int | None) -> tuple[bool, int | None]:
+    """Вправе ли `actor_id` действовать как `owner_id` и за кого (СЦ-9 P11, `access.acting_on_behalf`): сам — да, без
+    «за»; действующий заместитель владельца — да, «за» владельца; иначе — нет."""
+    if owner_id is None:
+        return False, None
+    if owner_id == actor_id:
+        return True, None
+    employee = await session.get(Employee, actor_id)
+    if employee is None:
+        return False, None
+    acting = await access.acting_on_behalf(session, employee, owner=owner_id, template=access.INSTRUCTION)
+    return acting.allowed, acting.on_behalf_of.crm_user_id if acting.on_behalf_of else None
 
 
 def _require_office(letter: Letter) -> None:
@@ -518,7 +533,8 @@ async def complete(
 ) -> Letter:
     """«Исполнено» исполнителем: отчёт (текст, файлы), отправленный ИСХ или «Передать в работу» — объект из письма."""
     instruction, letter = await _instruction_for_update(session, instruction_id)
-    if instruction.crm_user_id != actor_id:
+    allowed, behalf = await _acting(session, actor_id, instruction.crm_user_id)
+    if not allowed:
         raise forbidden_reason("not_executor", "Отметить исполнение может только исполнитель поручения.")
     if instruction.status != IN_WORK:
         raise conflict("invalid_state", "Поручение уже исполнено.", status=instruction.status, expected=IN_WORK)
@@ -546,7 +562,9 @@ async def complete(
     if handed_to is not None:
         moved = f"Передано в работу: {HANDOVER_LABELS[handed_to.kind]} {handed_to.number}"
         comment = moved + (f". {comment}" if comment else "")
-    await journal.record(session, "instruction.executed", by=actor_id, letter_id=letter.id, comment=comment)
+    await journal.record(
+        session, "instruction.executed", by=actor_id, on_behalf_of=behalf, letter_id=letter.id, comment=comment
+    )
     if instruction.role == "co_executor" and instruction.created_by != letter.resolution_decided_by:
         # План 1.9: соисполнитель, которого привлёк ответственный, отчитывается ему, а не автору резолюции
         await notify(
@@ -743,9 +761,10 @@ async def return_to_author(
     """«Вернуть автору резолюции»: письмо снова ждёт резолюции, поручения сняты (история — в журнале). Нельзя, если
     кто-то уже исполнил своё поручение: отчёт пропал бы."""
     instruction, letter = await _instruction_for_update(session, instruction_id)
-    await _responsible(session, letter, actor_id)
-    if instruction.crm_user_id != actor_id:
+    allowed, behalf = await _acting(session, actor_id, instruction.crm_user_id)
+    if not allowed:
         raise forbidden_reason("not_responsible", "Вернуть письмо может ответственный исполнитель.")
+    await _responsible(session, letter, instruction.crm_user_id)
     rows = list(
         (
             await session.execute(select(Instruction).where(Instruction.letter_id == letter.id).with_for_update())
@@ -764,7 +783,9 @@ async def return_to_author(
     letter.resolution_due = None
     letter.resolution_decided_by = letter.resolution_decided_at = None
     reason = data.reason.strip()
-    await journal.record(session, "letter.returned_to_author", by=actor_id, letter_id=letter.id, comment=reason)
+    await journal.record(
+        session, "letter.returned_to_author", by=actor_id, on_behalf_of=behalf, letter_id=letter.id, comment=reason
+    )
     await notify(
         session,
         bus,
@@ -832,7 +853,8 @@ async def request_extension(
 ) -> Letter:
     """Запрос переноса срока исполнителем: строка запроса, задача и уведомление автору резолюции."""
     instruction, letter = await _instruction_for_update(session, instruction_id)
-    if instruction.crm_user_id != actor_id:
+    allowed, behalf = await _acting(session, actor_id, instruction.crm_user_id)
+    if not allowed:
         raise forbidden_reason("not_executor", "Перенос срока просит исполнитель поручения.")
     if instruction.status != IN_WORK:
         raise conflict("invalid_state", "Поручение уже исполнено.", status=instruction.status, expected=IN_WORK)
@@ -848,7 +870,7 @@ async def request_extension(
         new_due=data.new_due,
         reason=data.reason,
         status="pending",
-        requested_by=actor_id,
+        requested_by=instruction.crm_user_id,
         requested_at=now,
     )
     session.add(extension)
@@ -857,10 +879,11 @@ async def request_extension(
         session,
         "instruction.extension_requested",
         by=actor_id,
+        on_behalf_of=behalf,
         letter_id=letter.id,
         comment=f"{_fmt(instruction.due)} → {_fmt(data.new_due)}: {data.reason}",
     )
-    directory = await load_directory(session, [actor_id])
+    directory = await load_directory(session, [instruction.crm_user_id])
     await notify(
         session,
         bus,
@@ -869,7 +892,7 @@ async def request_extension(
         key=f"extension:{extension.id}:requested",
         recipients=[letter.resolution_decided_by],
         title=f"Запрос переноса срока по письму {letter.number}",
-        subtitle=f"{directory.name(actor_id)}: до {_fmt(data.new_due)} · {data.reason}",
+        subtitle=f"{directory.name(instruction.crm_user_id)}: до {_fmt(data.new_due)} · {data.reason}",
         due=data.new_due,
         actor_id=actor_id,
     )
@@ -881,7 +904,8 @@ async def decide_extension(
 ) -> Letter:
     """Решение автора резолюции по переносу. Одобрено — новый срок, напоминания заново; срочное — только отклонить."""
     instruction, letter = await _instruction_for_update(session, instruction_id)
-    if letter.resolution_decided_by != actor_id:
+    allowed, behalf = await _acting(session, actor_id, letter.resolution_decided_by)
+    if not allowed:
         raise forbidden_reason("not_resolution_author", "Перенос срока решает автор резолюции.")
     pending = await _pending(session, instruction.id)
     if pending is None:
@@ -898,7 +922,9 @@ async def decide_extension(
             letter.resolution_due = pending.new_due
         letter.updated_at = now
     action = "instruction.extension_approved" if approve else "instruction.extension_rejected"
-    await journal.record(session, action, by=actor_id, letter_id=letter.id, comment=pending.comment)
+    await journal.record(
+        session, action, by=actor_id, on_behalf_of=behalf, letter_id=letter.id, comment=pending.comment
+    )
     verdict = "одобрен" if approve else "отклонён"
     await notify(
         session,
@@ -956,6 +982,10 @@ async def require_readable(session: AsyncSession, employee: Employee, letter: Le
         return
     if await is_participant(session, employee.crm_user_id, letter):
         return
+    # СЦ-9 P11: заместитель видит письма замещаемого — то, что должен решить за него
+    for replaced in await access.covered_employees(session, employee):
+        if await is_participant(session, replaced.crm_user_id, letter):
+            return
     raise forbidden((P.LETTERS_READ.value,))
 
 
@@ -971,6 +1001,15 @@ def _task_letter(letter: Letter) -> LetterTaskLetter:
 async def my_tasks(session: AsyncSession, *, crm_user_id: int, today: date | None = None) -> LetterTasks:
     """Поручения в работе (я исполнитель), переносы на моё решение (я автор резолюции), ознакомления без отметки."""
     day = today or _today()
+    me = await session.get(Employee, crm_user_id)
+    # СЦ-9 P11: поручения и переносы замещаемого — в списке заместителя с пометкой «за <имя>»; ознакомления не переходят
+    replaced = {e.crm_user_id: e for e in await access.covered_employees(session, me, day)} if me else {}
+    owners = [crm_user_id, *replaced]
+
+    def behind(owner: int | None) -> PersonRef | None:
+        who = replaced.get(owner) if owner is not None else None
+        return PersonRef(crm_user_id=who.crm_user_id, full_name=who.full_name) if who else None
+
     pending_ext = exists().where(
         InstructionExtension.instruction_id == Instruction.id, InstructionExtension.status == "pending"
     )
@@ -978,7 +1017,7 @@ async def my_tasks(session: AsyncSession, *, crm_user_id: int, today: date | Non
         await session.execute(
             select(Instruction, Letter, pending_ext.label("pending"))
             .join(Letter, Letter.id == Instruction.letter_id)
-            .where(Instruction.crm_user_id == crm_user_id, Instruction.status == IN_WORK)
+            .where(Instruction.crm_user_id.in_(owners), Instruction.status == IN_WORK)
             .order_by(Instruction.due, Instruction.created_at)
             .limit(TASKS_LIMIT)
         )
@@ -992,6 +1031,7 @@ async def my_tasks(session: AsyncSession, *, crm_user_id: int, today: date | Non
             due=i.due,
             overdue=i.due < day,
             extension_pending=bool(pending),
+            acting_for=behind(i.crm_user_id),
             created_at=i.created_at,
         )
         for i, letter, pending in rows
@@ -1003,7 +1043,7 @@ async def my_tasks(session: AsyncSession, *, crm_user_id: int, today: date | Non
             .join(Letter, Letter.id == Instruction.letter_id)
             .where(
                 InstructionExtension.status == "pending",
-                Letter.resolution_decided_by == crm_user_id,
+                Letter.resolution_decided_by.in_(owners),
                 Instruction.status == IN_WORK,  # письмо закрыли без ответа — перенос решать уже не нужно
             )
             .order_by(InstructionExtension.requested_at)
@@ -1020,6 +1060,7 @@ async def my_tasks(session: AsyncSession, *, crm_user_id: int, today: date | Non
             old_due=e.old_due,
             new_due=e.new_due,
             reason=e.reason,
+            acting_for=behind(letter.resolution_decided_by),
             requested_at=e.requested_at,
         )
         for e, i, letter in ext_rows

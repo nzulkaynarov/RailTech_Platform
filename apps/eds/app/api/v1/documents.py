@@ -37,7 +37,8 @@ router = APIRouter(prefix="/api/v1", tags=["documents"])
 IdemKey = Annotated[str | None, Header(alias="Idempotency-Key", min_length=8, max_length=128)]
 # Операции над документом: любое из прав (eds.yaml, x-rt-permissions); право на тип документа — внутри операции.
 Reader = Annotated[
-    Employee, Depends(require_permission(P.MEMOS_CREATE, P.MEMOS_APPROVE, P.APPROVALS_DECIDE, P.REGISTRY_READ))
+    Employee,
+    Depends(require_permission(P.MEMOS_CREATE, P.MEMOS_APPROVE, P.APPROVALS_DECIDE, P.REGISTRY_READ, deputy=True)),
 ]
 Author = Annotated[Employee, Depends(require_permission(P.MEMOS_CREATE, P.LETTERS_REGISTER))]
 Signer = Annotated[Employee, Depends(require_permission(P.LETTERS_REGISTER, P.MEMOS_APPROVE))]

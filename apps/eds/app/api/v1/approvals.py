@@ -27,6 +27,7 @@ Reader = Annotated[
             P.REGISTRY_READ,
             P.APPROVALS_VISA_FINANCE,
             P.APPROVALS_VISA_LEGAL,
+            deputy=True,
         )
     ),
 ]
@@ -35,7 +36,12 @@ Decider = Annotated[
     Employee,
     Depends(
         require_permission(
-            P.MEMOS_APPROVE, P.APPROVALS_DECIDE, P.PAYMENTS_CONFIRM, P.APPROVALS_VISA_FINANCE, P.APPROVALS_VISA_LEGAL
+            P.MEMOS_APPROVE,
+            P.APPROVALS_DECIDE,
+            P.PAYMENTS_CONFIRM,
+            P.APPROVALS_VISA_FINANCE,
+            P.APPROVALS_VISA_LEGAL,
+            deputy=True,
         )
     ),
 ]
