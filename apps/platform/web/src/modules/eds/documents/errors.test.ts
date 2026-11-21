@@ -24,6 +24,32 @@ describe("ошибки документов", () => {
     expect(serverFields(error(500, "X"))).toEqual([]);
   });
 
+  it("отказ подписи: настоящая причина EDS, а не «не положено вашей роли»", () => {
+    for (const reason of [
+      "no_authority",
+      "author_cannot_sign",
+      "authority_mismatch",
+      "revoked",
+      "not_started",
+      "expired",
+      "limit_exceeded",
+      "currency_mismatch",
+      "holder_inactive",
+      "absent",
+      "deputy_without_authority",
+      "deputy_loop",
+      "no_permission",
+      "no_signing_authority",
+    ]) {
+      const text = reasonText(t, error(403, "FORBIDDEN", { reason }));
+      expect(text, reason).not.toBe("действие не положено вашей роли");
+      expect(text, reason).not.toBe(reasonText(t, error(500, "X")));
+    }
+    expect(reasonText(t, error(403, "FORBIDDEN", { reason: "no_authority" }))).toBe(
+      "полномочие подписи никому не выдано",
+    );
+  });
+
   it("причина: подкод важнее поля, поле важнее кода; своего текста нет — общий", () => {
     expect(reasonText(t, error(409, "CONFLICT", { reason: "invalid_state" }))).toBe(
       "документ уже отправлен или закрыт, обновите страницу",

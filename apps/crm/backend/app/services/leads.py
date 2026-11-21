@@ -40,7 +40,15 @@ from app.repositories import users as users_repo
 from app.schemas.settings import Language
 from app.security import audit
 from app.security.principal import Principal
-from app.services import cabinet_chat, deals, lead_parts, lead_snooze, staff_notifications, stages
+from app.services import (
+    cabinet_chat,
+    deals,
+    lead_parts,
+    lead_snooze,
+    staff_deputy,
+    staff_notifications,
+    stages,
+)
 from app.services import team as team_service
 from app.services.escalation import OPEN_STATUSES, open_escalation
 from app.services.lead_messenger import DeliveryError, LeadMessenger
@@ -92,10 +100,19 @@ class LeadService:
             lead = await _lead(session, lead_id)
             if lead.owner_mode == OwnerMode.HUMAN and lead.assigned_user_id == who.user_id:
                 return
+            on_behalf: int | None = None
             if (
                 lead.owner_mode == OwnerMode.HUMAN
                 and lead.assigned_user_id is not None
                 and not who.is_admin
+                and await staff_deputy.acts_for(session, who.user_id, lead.assigned_user_id)
+            ):
+                on_behalf = lead.assigned_user_id  # заместитель забирает лид замещаемого
+            if (
+                lead.owner_mode == OwnerMode.HUMAN
+                and lead.assigned_user_id is not None
+                and not who.is_admin
+                and on_behalf is None
             ):
                 raise ConflictError(
                     "lead is already taken",
@@ -104,7 +121,7 @@ class LeadService:
                     assigned_user_name=await lead_parts.user_name(session, lead.assigned_user_id),
                 )
             escalation = await _active_escalation(session, lead_id)
-            if _handed_to_other(lead, escalation, who):
+            if on_behalf is None and _handed_to_other(lead, escalation, who):
                 # Передача первой линии адресована ответственному (D17G-1): забирает только он.
                 raise ConflictError(
                     "lead is handed over to a colleague",
@@ -123,7 +140,9 @@ class LeadService:
                 escalation.status = "taken"
                 escalation.taken_by_user_id = who.user_id
                 escalation.taken_at = datetime.now(UTC)
-            changed = await self._finish(session, who, lead, "lead.take", before, escalation)
+            changed = await self._finish(
+                session, who, lead, "lead.take", before, escalation, on_behalf_of=on_behalf
+            )
             language = LANGUAGES.get(lead.language, "ru")
         text = cfg.texts.manager_joined.get(language, manager=staff_name(who.full_name, language))
         await self._messenger.send(lead_id, text, {"notice": "manager_joined"})
@@ -132,7 +151,7 @@ class LeadService:
     async def return_to_bot(self, who: Principal, lead_id: int, note: str | None) -> None:
         async with self._sessions() as session, session.begin():
             lead = await _lead(session, lead_id)
-            _require_owner(lead, who)
+            on_behalf = await _require_owner(session, lead, who)
             if lead.owner_mode == OwnerMode.BOT:
                 raise ConflictError(
                     "lead is already handled by the bot", reason=Reason.ALREADY_WITH_BOT
@@ -153,7 +172,7 @@ class LeadService:
                 escalation.status, escalation.resolved_at = "returned", datetime.now(UTC)
                 escalation.outcome = "returned_to_bot"
             changed = await self._finish(
-                session, who, lead, "lead.return_to_bot", before, escalation
+                session, who, lead, "lead.return_to_bot", before, escalation, on_behalf_of=on_behalf
             )
             language = LANGUAGES.get(lead.language, "ru")
         cfg = await self._settings.get()
@@ -283,7 +302,7 @@ class LeadService:
                 raise ConflictError(
                     "take the lead before handing it over", reason=Reason.TAKE_FIRST
                 )
-            _require_owner(lead, who)
+            on_behalf = await _require_owner(session, lead, who)
             target = await users_repo.get(session, user_id)
             roles = await users_repo.roles_of(session, user_id) if target else []
             if target is None or not target.is_active or not {"manager", "admin"} & set(roles):
@@ -294,7 +313,9 @@ class LeadService:
                 )
             before = lead_parts.snapshot(lead)
             lead.assigned_user_id = user_id
-            changed = await self._finish(session, who, lead, "lead.assign", before, None)
+            changed = await self._finish(
+                session, who, lead, "lead.assign", before, None, on_behalf_of=on_behalf
+            )
             language = LANGUAGES.get(lead.language, "ru")
             name = staff_name(target.full_name, language)
         text = cfg.texts.manager_joined.get(language, manager=name)
@@ -368,7 +389,7 @@ class LeadService:
         mode = await self._backoffice_mode() if self._backoffice_mode else BackofficeMode.LOCAL
         async with self._sessions() as session, session.begin():
             lead = await _lead(session, lead_id)
-            _require_owner(lead, who)
+            on_behalf = await _require_owner(session, lead, who)
             if not may_close_locally(mode, outcome):
                 # ADR-0022: с коннектором ERP выигрыш решает бэк-офис (`deal.won`), не кнопка CRM.
                 raise ConflictError(
@@ -403,7 +424,13 @@ class LeadService:
             if reason and reason.strip():
                 lead_parts.add_note(session, lead, who, reason, visible_to_bot=False)
             changed = await self._finish(
-                session, who, lead, f"lead.close_{outcome}", before, escalation
+                session,
+                who,
+                lead,
+                f"lead.close_{outcome}",
+                before,
+                escalation,
+                on_behalf_of=on_behalf,
             )
         await self._notify(changed)
 
@@ -443,28 +470,48 @@ class LeadService:
             lead = await _lead(session, lead_id)
             if lead.owner_mode != OwnerMode.HUMAN:
                 raise ConflictError("take the lead before replying", reason=Reason.TAKE_FIRST)
-            _require_owner(lead, who)
+            on_behalf = await _require_owner(session, lead, who)
             # Ответ — в канал последнего сообщения клиента (CHAT-1): кабинет или Telegram.
             channel = await cabinet_repo.last_inbound_channel(session, lead_id)
             if lead.consent_given_at is None and channel != cabinet_repo.CABINET:
                 # Без согласия на обработку данных писать лиду в Telegram нельзя (аудит P2); в
                 # кабинет компания написала сама, по договору — ответ в её же канал.
                 raise ConflictError("lead has not given consent", reason=Reason.NO_CONSENT)
-            await audit.record(session, who.actor, "lead.reply", "lead", lead_id)
+            await audit.record(
+                session,
+                who.actor,
+                "lead.reply",
+                "lead",
+                lead_id,
+                after={"on_behalf_of_user_id": on_behalf} if on_behalf is not None else None,
+            )
         if channel == cabinet_repo.CABINET:
             cabinet_id, _ = await cabinet_chat.send_reply(
-                self._sessions, lead_id, body, client_message_id, sent_by_user_id=who.user_id
+                self._sessions,
+                lead_id,
+                body,
+                client_message_id,
+                sent_by_user_id=who.user_id,
+                on_behalf_of=on_behalf,
             )
             return cabinet_id
         if client_message_id is not None:
             reply = await self._messenger.send_once(
-                lead_id, body, client_message_id, sent_by_user_id=who.user_id
+                lead_id,
+                body,
+                client_message_id,
+                sent_by_user_id=who.user_id,
+                on_behalf_of=on_behalf,
             )
             message_id = reply.message_id if reply is not None else None
             delivered_now = reply is not None and reply.delivered_now
         else:
             message_id = await self._messenger.send(
-                lead_id, body, {"mode": "manager"}, role="manager", sent_by_user_id=who.user_id
+                lead_id,
+                body,
+                {"mode": "manager", **_behalf_meta(on_behalf)},
+                role="manager",
+                sent_by_user_id=who.user_id,
             )
             delivered_now = message_id is not None
         if message_id is None:
@@ -484,16 +531,13 @@ class LeadService:
         action: str,
         before: dict[str, Any],
         escalation: Escalation | None,
+        *,
+        on_behalf_of: int | None = None,
     ) -> _Changed:
-        await audit.record(
-            session,
-            who.actor,
-            action,
-            "lead",
-            lead.id,
-            before=before,
-            after=lead_parts.snapshot(lead),
-        )
+        after = lead_parts.snapshot(lead)
+        if on_behalf_of is not None:  # заместитель за владельца (СЦ-9 P12)
+            after = {**after, "on_behalf_of_user_id": on_behalf_of}
+        await audit.record(session, who.actor, action, "lead", lead.id, before=before, after=after)
         await events.publish(session, "lead.updated", lead_id=lead.id, owner_mode=lead.owner_mode)
         if before.get("assigned_user_id") != lead.assigned_user_id:
             await bus_events.lead_updated(session, lead, who.actor, ["assigned_user"])
@@ -551,13 +595,24 @@ def _handed_to_other(lead: Lead, escalation: Escalation | None, who: Principal) 
     return escalation.status in OPEN_STATUSES and HANDED_OVER in (escalation.reason_codes or [])
 
 
-def _require_owner(lead: Lead, who: Principal) -> None:
+def _behalf_meta(owner_id: int | None) -> dict[str, int]:
+    return {} if owner_id is None else {"on_behalf_of_user_id": owner_id}
+
+
+async def _require_owner(session: AsyncSession, lead: Lead, who: Principal) -> int | None:
+    """Владелец, админ или действующий заместитель владельца (СЦ-9 P12). Возвращает id замещаемого
+    владельца, если `who` действует за него, иначе `None`: действие пишется «заместитель за
+    владельца»."""
     if who.is_admin:
-        return
+        return None
     if lead.owner_mode == OwnerMode.HUMAN and lead.assigned_user_id != who.user_id:
+        owner_id = lead.assigned_user_id
+        if owner_id is not None and await staff_deputy.acts_for(session, who.user_id, owner_id):
+            return owner_id
         raise ForbiddenError(
             "only the lead owner or an admin can do this", reason=Reason.NOT_LEAD_OWNER
         )
+    return None
 
 
 async def _move(

@@ -221,6 +221,7 @@ async def send_reply(
     key: str | None,
     *,
     sent_by_user_id: int,
+    on_behalf_of: int | None = None,
 ) -> tuple[int, bool]:
     """Ответ менеджера в кабинет: сообщение и `cabinet.message_sent` одной транзакцией.
 
@@ -240,6 +241,8 @@ async def send_reply(
         meta: dict[str, Any] = {"mode": "manager", "channel": CABINET_SOURCE, "delivery": "sent"}
         if key is not None:
             meta["client_message_id"] = key
+        if on_behalf_of is not None:
+            meta["on_behalf_of_user_id"] = on_behalf_of
         message = await message_log.add(
             session,
             conversation,

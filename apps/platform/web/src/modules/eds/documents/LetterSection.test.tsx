@@ -75,25 +75,17 @@ async function openCard(email: string) {
 }
 
 describe("EDS · карточка письма на бланке (P4)", () => {
-  it("делопроизводитель видит переданный черновик, регистрирует и отправляет: исходящий номер и журнал отправки", async () => {
-    seed({});
+  it("делопроизводитель видит переданный черновик, но регистрации без подписи нет: ни «Зарегистрировать», ни «Подписать»", async () => {
+    seed({ can_sign: false });
     const card = await openCard("registrar@demo.example");
 
     expect(card.getByText(/Передано на регистрацию: Демо Широков/)).toBeVisible();
     expect(card.getByText("Начальнику ГНИ")).toBeVisible();
     expect(card.getByText("по бланку (директор)")).toBeVisible();
     expect(card.getByText("Адресату ещё не отправляли.")).toBeVisible();
-    fireEvent.click(card.getByRole("button", { name: "Зарегистрировать и отправить" }));
-
-    expect(await screen.findByText(/Письмо зарегистрировано: OUT-\d{3}\/26/)).toBeVisible();
-    const saved = readEds().documents.find((d) => d.id === ID);
-    expect(saved?.status).toBe("sent");
-    expect(saved?.letter?.pdf?.final).toBe(true);
-    expect(saved?.letter?.mailings[0]?.to).toEqual(["gni@example.uz"]);
-    // Адрес — и в реквизитах письма, и в строке журнала отправки (она может появиться позже): хватает любого видимого.
-    const shown = await card.findAllByText(/gni@example\.uz/);
-    expect(shown.length).toBeGreaterThan(0);
-    expect(shown[0]).toBeVisible();
+    expect(card.queryByRole("button", { name: /Зарегистрировать/ })).toBeNull();
+    expect(card.queryByRole("button", { name: "Подписать" })).toBeNull();
+    expect(readEds().documents.find((d) => d.id === ID)?.status).toBe("draft");
   });
 
   it("адресат текстом из писем до СУЩ-2.6: просьба сопоставить, регистрация закрыта", async () => {
@@ -103,7 +95,7 @@ describe("EDS · карточка письма на бланке (P4)", () => {
     const card = await openCard("registrar@demo.example");
 
     expect(card.getByText(/Адресат вписан текстом/)).toBeVisible();
-    expect(card.getByRole("button", { name: "Зарегистрировать и отправить" })).toBeDisabled();
+    expect(card.queryByRole("button", { name: /Зарегистрировать/ })).toBeNull();
   });
 
   it("отправка не удалась — причина словами; «Отправить адресату ещё раз» добавляет строку журнала", async () => {
@@ -191,5 +183,33 @@ describe("EDS · карточка письма на бланке (P4)", () => {
     expect(saved?.status).toBe("sent");
     expect(saved?.signed_at).not.toBeNull();
     expect(saved?.verification_code).toMatch(/^RT-26-/);
+  });
+
+  it("подписать некому: вместо «Подписать» — подсказка, ссылка на права подписи только у администратора", async () => {
+    seed({ signing: { can_sign: false, reason: "no_authority", signer_id: null } });
+    const director = await openCard("director@demo.example");
+    expect(director.queryByRole("button", { name: "Подписать" })).toBeNull();
+    expect(director.getByText(/Подписать некому — полномочие выдаёт администратор/)).toBeVisible();
+    expect(director.queryByRole("link", { name: "Настройки · Права подписи" })).toBeNull();
+  });
+
+  it("подписать некому у администратора: есть ссылка «Настройки · Права подписи»", async () => {
+    seed({
+      ownerId: "u-demo-admin",
+      signing: { can_sign: false, reason: "no_authority", signer_id: null },
+    });
+    const admin = await openCard("admin@demo.example");
+    const link = admin.getByRole("link", { name: "Настройки · Права подписи" });
+    expect(link).toHaveAttribute("href", "/admin/signing");
+  });
+
+  it("подписант по реестру известен: «Подпишет: имя», кнопки «Подписать» нет", async () => {
+    seed({
+      signing: { can_sign: false, reason: "author_cannot_sign", signer_id: "u-demo-director" },
+    });
+    const card = await openCard("universal@demo.example");
+    expect(card.queryByRole("button", { name: "Подписать" })).toBeNull();
+    expect(card.getByText(/Подпишет: /)).toBeVisible();
+    expect(card.queryByText(/Подписать некому/)).toBeNull();
   });
 });
