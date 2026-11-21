@@ -212,6 +212,11 @@ def _pending(session: AsyncSession) -> list[str]:
     return pending
 
 
+def queue_after_commit(session: AsyncSession, render_hash: str) -> None:
+    """Поставить рендер в очередь после коммита транзакции `session` (вызывающий — `take_pending` → `defer_render`)."""
+    _pending(session).append(render_hash)
+
+
 def take_pending(session: AsyncSession) -> list[str]:
     """Хеши рендеров, которые нужно поставить в очередь после коммита транзакции `session`."""
     return list(dict.fromkeys(session.info.pop(_PENDING_KEY, [])))
