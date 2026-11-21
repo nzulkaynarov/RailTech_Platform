@@ -321,6 +321,7 @@ def _handoff(data: Dict[str, Any], crm_client_id: int) -> Tuple[Dict[str, Any], 
         company=company,
         verified_at=None if linked_by_inn else timezone.now(),
         crm_name=str(data["company"].get("name") or "").strip()[:255],
+        owner_crm_user_id=(data.get("owner") or {}).get("crm_user_id"),
     )
     _consent(company, data["consent"])
 

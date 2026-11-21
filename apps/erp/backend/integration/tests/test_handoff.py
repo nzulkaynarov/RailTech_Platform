@@ -528,3 +528,11 @@ def test_two_parallel_handoffs_of_different_clients_with_same_inn_one_wins_other
     assert Company.objects.filter(inn="777888999").count() == 1
     assert CrmClientMapping.objects.count() == 1
     assert Deal.objects.count() == 1
+
+
+@pytest.mark.django_db
+def test_handoff_remembers_the_crm_owner_of_the_client_for_cabinet_requests(api):
+    """СЦ-9: заявки клиента из Cabinet ведёт ответственный за клиента в CRM — передача его запоминает."""
+    response = handoff(api, payload(crm_client_id=2002))
+    assert response.status_code == 201
+    assert CrmClientMapping.objects.get(crm_client_id=2002).owner_crm_user_id == 101

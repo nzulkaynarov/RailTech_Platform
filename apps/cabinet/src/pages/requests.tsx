@@ -267,6 +267,7 @@ export function RequestDetailPage() {
                 request.source
                   ? { label: t('pages.requestDetail.source'), value: t(requestSourceKey(request.source)) }
                   : null,
+                request.manager_name ? { label: t('pages.requestDetail.manager'), value: request.manager_name } : null,
                 { label: t('pages.requestDetail.deal'), value: <DealLink deal={request.deal} showTitle /> },
               ]}
             />
