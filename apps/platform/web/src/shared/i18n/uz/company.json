@@ -211,7 +211,7 @@
     "prefixHint": "16 belgigacha: harf, raqam, «-» va «_».",
     "prefixInvalid": "Faqat lotin harflari, raqamlar, «-» va «_»",
     "prefixTaken": "Prefiks boshqa kompaniyada band",
-    "ticketLabelInvalid": "Murojaat belgisi: faqat lotin harflari va raqamlar, 16 belgigacha",
+    "ticketLabelInvalid": "Murojaat belgisi: faqat lotin harflari va raqamlar, 16 belgigaça",
     "format": "Raqam formati",
     "presets": {
       "standard": "Standart",
