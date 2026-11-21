@@ -46461,6 +46461,10 @@
                         },
                         "description": "Отметки доставки, доступные этому сотруднику сейчас (статус исполнения и право `fulfillment.manage`)"
                     },
+                    "goods_not_shipped": {
+                        "type": "boolean",
+                        "description": "Товар с карточкой каталога ещё не отгружен со склада: отметки доставки не предлагаются (`actions` пуст)"
+                    },
                     "proof_attachment_id": {
                         "type": "integer",
                         "nullable": true,
@@ -46478,6 +46482,7 @@
                     "carrier",
                     "delivered_at",
                     "expected_delivery_date",
+                    "goods_not_shipped",
                     "proof_attachment_id",
                     "proof_name",
                     "shipped_at",
@@ -54134,6 +54139,22 @@
                             "$ref": "#/components/schemas/ProblemsEnum"
                         }
                     },
+                    "act_blocker": {
+                        "nullable": true,
+                        "description": "Почему акт выпустить нельзя: нет счёта, акт уже есть, нет права `fulfillment.act`; `null` — можно\n\n* `no_invoice` - no_invoice\n* `act_exists` - act_exists\n* `forbidden` - forbidden",
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/ActBlockerEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
+                    "act_needs_delivery": {
+                        "type": "boolean",
+                        "description": "Акт иначе можно выпустить, но товар ещё не доставлен: акт — после доставки или приёмки клиентом (СЦ-9). Выпуск раньше — 409 `ACT_NOT_DELIVERED`"
+                    },
                     "quote": {
                         "allOf": [
                             {
@@ -54167,18 +54188,6 @@
                             }
                         ],
                         "nullable": true
-                    },
-                    "act_blocker": {
-                        "nullable": true,
-                        "description": "Почему акт сейчас выпустить нельзя: нет счёта, акт уже есть, нет права `fulfillment.act`\n\n* `no_invoice` - no_invoice\n* `act_exists` - act_exists\n* `forbidden` - forbidden",
-                        "oneOf": [
-                            {
-                                "$ref": "#/components/schemas/ActBlockerEnum"
-                            },
-                            {
-                                "$ref": "#/components/schemas/NullEnum"
-                            }
-                        ]
                     },
                     "fulfillment": {
                         "allOf": [
@@ -54463,9 +54472,26 @@
                         "items": {
                             "$ref": "#/components/schemas/ProblemsEnum"
                         }
+                    },
+                    "act_blocker": {
+                        "nullable": true,
+                        "description": "Почему акт выпустить нельзя: нет счёта, акт уже есть, нет права `fulfillment.act`; `null` — можно\n\n* `no_invoice` - no_invoice\n* `act_exists` - act_exists\n* `forbidden` - forbidden",
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/ActBlockerEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
+                    "act_needs_delivery": {
+                        "type": "boolean",
+                        "description": "Акт иначе можно выпустить, но товар ещё не доставлен: акт — после доставки или приёмки клиентом (СЦ-9). Выпуск раньше — 409 `ACT_NOT_DELIVERED`"
                     }
                 },
                 "required": [
+                    "act_blocker",
                     "client_status",
                     "company_id",
                     "company_name",

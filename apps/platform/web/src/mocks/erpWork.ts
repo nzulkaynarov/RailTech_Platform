@@ -9,7 +9,7 @@ import type {
 import { QUEUE, allows } from "../app/rbac.generated";
 import { type MockCalcRow, myCalcRows } from "./erpCalc";
 import { companyToday, readInvoices } from "./fixtures/payments";
-import { readProjects, toRow } from "./fixtures/projects";
+import { actDelivered, readProjects, toRow } from "./fixtures/projects";
 import type { MockRole } from "./fixtures/roles";
 import { readSession, sessionRoles } from "./mockSession";
 
@@ -212,19 +212,21 @@ function contractStep(row: ProjectRow): [Kind, string, string] | null {
   return null;
 }
 
-function actStep(row: ProjectRow): [string, string] | null {
+function actStep(row: ProjectRow, delivered: boolean): [string, string] | null {
   const { act, invoice } = row.documents;
   if (act?.status === "returned")
     return [`Выпустить заново акт ${act.number} по`, "заказчик вернул акт"];
-  if (!act && row.client_status === "fulfilling" && invoice?.status === "paid") {
-    return ["Выпустить акт по", "счета оплачены"];
+  // Акт — после доставки (СЦ-9): до неё строки нет.
+  if (!act && delivered && row.client_status === "fulfilling" && invoice?.status === "paid") {
+    return ["Выпустить акт по", "товар доставлен, счета оплачены"];
   }
   return null;
 }
 
 function projectItems(view: readonly MockRole[]): QueueItem[] {
   const items: QueueItem[] = [];
-  for (const row of readProjects().map(toRow)) {
+  for (const project of readProjects()) {
+    const row = toRow(project);
     const path = (tab: "contract" | "act") =>
       `/eds/projects/${seg(row.number)}?panel=open&tab=${tab}`;
     if (row.step === "CONTRACT") {
@@ -248,7 +250,7 @@ function projectItems(view: readonly MockRole[]): QueueItem[] {
         });
       }
     }
-    const act = row.step === "PAYMENT" ? actStep(row) : null;
+    const act = row.step === "PAYMENT" ? actStep(row, actDelivered(project)) : null;
     const actRole = roleFor(view, "issue_act");
     if (act && actRole) {
       const a = row.documents.act;

@@ -45,6 +45,11 @@ function NoAct({
       <EmptyState level={3} compact title={t("act.none.title")} text={t("act.none.noInvoice")} />
     );
   }
+  if (blocker === "not_delivered") {
+    return (
+      <EmptyState level={3} compact title={t("act.none.title")} text={t("act.none.notDelivered")} />
+    );
+  }
   return (
     <div className="pf-dec-panel">
       <EmptyState level={3} compact title={t("act.none.title")} text={t("act.none.ready")} />

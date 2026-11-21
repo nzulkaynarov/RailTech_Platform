@@ -23,7 +23,7 @@ from core.currency import BASE_CURRENCY
 
 from ..constants import ActStatusCode, ContractStatusCode, DealStageCode, InvoiceStatusCode, QuoteStatusCode
 from ..models import ActivityLog, Deal
-from . import act_flow, contract_flow
+from . import act_flow, billing, contract_flow
 from .numbering import number_search_q
 
 #: Сделки-проекты: КП принято клиентом (FSM `CONTRACT_SIGNED`) и дальше. Проигранные в срез не входят.
@@ -333,6 +333,8 @@ def project_row(deal) -> dict:
             "act": _act_ref(act),
         },
         "problems": project_problems(deal),
+        "act_blocker": act_blocker_for(deal, acts),
+        "act_needs_delivery": act_blocker_for(deal, acts) is None and billing.act_not_delivered(deal),
     }
 
 
@@ -442,6 +444,7 @@ def _fulfillment_card(deal, user) -> Optional[dict]:
         "carrier": fulfillment.carrier,
         # L0-1: отметки «В пути» / «Доставлено», доступные этому сотруднику сейчас, и файл подтверждения доставки.
         "actions": delivery_progress.available_actions(fulfillment, user),
+        "goods_not_shipped": delivery_progress.goods_not_shipped(fulfillment),
         "proof_attachment_id": proof.pk if proof else None,
         "proof_name": proof.original_filename if proof else None,
     }
@@ -463,16 +466,22 @@ def _delivery_lines(deal) -> list:
     ]
 
 
-def _act_blocker(deal, user, acts: list) -> Optional[str]:
-    """Почему нельзя выпустить акт сейчас: `no_invoice`, `act_exists`, `forbidden`; `None` — можно."""
-    if not act_flow.may_issue_acts(user):
-        return "forbidden"
+def act_blocker_for(deal, acts: list) -> Optional[str]:
+    """Часть блокера акта без пользователя (строка списка и очередь): `act_exists`, `no_invoice`. Доставку блокером не
+    называем (значение enum осталось прежним): её отдаёт `act_needs_delivery`."""
     if acts:
         return "act_exists"
     issuable = (InvoiceStatusCode.ISSUED, InvoiceStatusCode.PARTIAL, InvoiceStatusCode.PAID)
     if not any(i.status_code in issuable for i in deal.invoices.all()):
         return "no_invoice"
     return None
+
+
+def _act_blocker(deal, user, acts: list) -> Optional[str]:
+    """Почему нельзя выпустить акт сейчас: `forbidden`, `act_exists`, `no_invoice`; `None` — можно (доставку смотрит `act_needs_delivery`)."""
+    if not act_flow.may_issue_acts(user):
+        return "forbidden"
+    return act_blocker_for(deal, acts)
 
 
 def project_card(deal, user) -> dict:

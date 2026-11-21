@@ -8,6 +8,7 @@ import type {
   ProjectStage,
 } from "../shared/api/generated/model";
 import {
+  actDelivered,
   DELIVERY_FROM,
   MOCK_STAFF_ID,
   type ProjectState,
@@ -399,6 +400,9 @@ export const edsProjectsHandlers = [
           "no_invoice",
           "Акт можно выпустить по выставленному счёту: счёта пока нет.",
         );
+      }
+      if (!actDelivered(p)) {
+        return conflict("not_delivered", "Акт выпускается после доставки: товар ещё не доставлен.");
       }
       const number = `АКТ-${String(p.year)}/${String(p.id).padStart(3, "0")}`;
       const next = logged(

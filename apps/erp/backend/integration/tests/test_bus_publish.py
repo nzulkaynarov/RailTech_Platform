@@ -27,6 +27,7 @@ from rt_bus import EventValidationError
 from crm import services as crm_services
 from crm.models import Act, ActStatus, Deal, DealStage, Invoice, Quote, QuoteStatus
 from crm.services.quotes import QuoteCalculationService, QuoteLifecycleService
+from crm.tests.delivery_support import mark_delivered
 from crm.tests.test_act_issuer_actions import world  # noqa: F401
 from crm.tests.test_golden_path import _build_quote_with_items, buyer, deal, lookups, manager  # noqa: F401
 
@@ -273,6 +274,7 @@ def test_every_event_type_is_published_by_its_service(deal, buyer, manager, mapp
     )
     assert error is None
     # act.issued, act.returned, act.accepted
+    mark_delivered(invoice.deal)
     act, error = generate_act(invoice.id, manager)
     assert error is None, error
     assert reject_act(act.id, None, "Не совпадает количество", portal_contact=contact)[1] is None

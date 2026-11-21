@@ -218,8 +218,10 @@ def _act_step(row: RawRow) -> tuple[str, str] | None:
     act, invoice = row.documents.act, row.documents.invoice
     if act is not None and act.status == "returned":
         return f"Выпустить заново акт {act.number} по", "заказчик вернул акт"
-    if act is None and row.client_status == "fulfilling" and invoice and invoice.status == "paid":
-        return "Выпустить акт по", "счета оплачены"
+    # Акт — после доставки: блокер считает ERP (`not_delivered`), своего правила у очереди нет.
+    paid = row.client_status == "fulfilling" and invoice is not None and invoice.status == "paid"
+    if act is None and paid and row.act_blocker is None:
+        return "Выпустить акт по", "товар доставлен, счета оплачены"
     return None
 
 

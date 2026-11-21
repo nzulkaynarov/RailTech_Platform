@@ -24,6 +24,7 @@ from accounts.models import Company, CompanyMember, CompanyType, CustomUser, Sys
 from accounts.testing import make_cashier
 from crm.models import ActStatus, Contract, ContractStatus, Deal, DealStage, InvoiceStatus, Quote, QuoteStatus
 from crm.services.billing import generate_act, generate_invoice_from_contract
+from crm.tests.delivery_support import mark_delivered
 
 #: Посторонний не должен отличать «нет доступа» от «нет объекта» — оба ответа скрывают
 #: существование чужого документа.
@@ -118,6 +119,7 @@ def _signed_act(world):
     assert error is None, error
     invoice.status = InvoiceStatus.objects.get(code="ISSUED")
     invoice.save(update_fields=["status"])
+    mark_delivered(invoice.deal)
     act, error = generate_act(invoice.id, actor=world["seller"])
     assert error is None, error
     return invoice, act

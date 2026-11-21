@@ -84,6 +84,7 @@ def project(
     invoice: dict[str, Any] | None = None,
     act: dict[str, Any] | None = None,
     problems: list[str] | None = None,
+    act_needs_delivery: bool = False,
 ) -> dict[str, Any]:
     """Строка ERP `GET /crm/projects/` (`ProjectRow`)."""
     return {
@@ -105,6 +106,8 @@ def project(
             "act": act,
         },
         "problems": problems or [],
+        "act_blocker": None,
+        "act_needs_delivery": act_needs_delivery,
     }
 
 
@@ -399,6 +402,14 @@ async def test_act_is_issued_after_payment_and_reissued_after_a_return(
                 contract=contract("signed"),
                 invoice=paid,
             ),
+            project(
+                101,
+                step="PAYMENT",
+                client_status="fulfilling",
+                contract=contract("signed"),
+                invoice=paid,
+                act_needs_delivery=True,
+            ),  # оплачен, но товар не доставлен — акт после доставки (СЦ-9)
             project(
                 98,
                 step="PAYMENT",

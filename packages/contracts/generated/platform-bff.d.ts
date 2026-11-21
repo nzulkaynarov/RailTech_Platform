@@ -10461,8 +10461,10 @@ export interface components {
       /** @description № накладной перевозчика или трек */
       tracking_number: string | null;
       carrier: string | null;
-      /** @description Отметки доставки, доступные этому сотруднику сейчас (считает ERP по статусу исполнения и праву `fulfillment.manage`): `in_transit` — из «Ожидает отгрузки» и «Отгружено», `delivered` — из них же и из «В пути» */
+      /** @description Отметки доставки, доступные этому сотруднику сейчас (считает ERP по статусу исполнения и праву `fulfillment.manage`): `in_transit` — из «Ожидает отгрузки» и «Отгружено», `delivered` — из них же и из «В пути»; пусто, пока товар с карточкой каталога не отгружен со склада (`goods_not_shipped`) */
       actions: components["schemas"]["ProjectDeliveryAction"][];
+      /** @description Товар с карточкой каталога ещё не отгружен со склада — отметки доставки не предлагаются; ручной путь остаётся у товара без карточки */
+      goods_not_shipped: boolean;
       /** @description Имя файла подтверждения доставки; `null` — файла нет */
       proof_name: string | null;
       /** @description Ссылка BFF на файл подтверждения доставки (`/api/v1/eds/projects/{ref}/delivery/proof`); `null` — файла нет */
@@ -10531,10 +10533,10 @@ export interface components {
       invoices: components["schemas"]["ProjectInvoice"][];
       act: components["schemas"]["ProjectAct"] | null;
       /**
-       * @description Почему акт сейчас выпустить нельзя: no_invoice — нет выставленного счёта, act_exists — акт уже есть, forbidden — нет права; null — можно
+       * @description Почему акт сейчас выпустить нельзя: no_invoice — нет выставленного счёта, act_exists — акт уже есть, forbidden — нет права, not_delivered — товар ещё не доставлен (акт — после доставки или приёмки клиентом); null — можно
        * @enum {string|null}
        */
-      act_blocker: "no_invoice" | "act_exists" | "forbidden" | null;
+      act_blocker: "no_invoice" | "act_exists" | "forbidden" | "not_delivered" | null;
       /** @description Исполнение из ERP — только чтение */
       fulfillment: components["schemas"]["ProjectFulfillment"] | null;
       /** @description Строки поставки из ERP — только чтение */

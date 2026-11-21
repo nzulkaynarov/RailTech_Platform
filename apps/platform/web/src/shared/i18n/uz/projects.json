@@ -120,6 +120,7 @@
       "contractMissing": "Shartnoma loyihasi hali yo‘q: uni buxgalter qabul qilingan TT dan shakllantiradi.",
       "invoiceMissing": "Hisob shartnoma imzolangandan keyin paydo bo‘ladi: ERP oldindan to‘lov hisobining qoralamasini yaratadi.",
       "actMissing": "Dalolatnoma rasmiylashtirilgan hisob bo‘yicha chiqariladi.",
+      "actAfterDelivery": "Dalolatnoma — yetkazilgandan keyin",
       "invoiceDue": "muddat {{date}}",
       "invoiceCount": "hisoblar: {{count}}",
       "openContract": "Shartnoma",
@@ -145,6 +146,7 @@
       "hint": "Ombordan jo‘natish — «Ombor · Jo‘natmalar»da. Bu yerda tovar yo‘lda va yetkazilgani belgilanadi.",
       "shipment": "Jo‘natma",
       "none": "Jo‘natma hali yo‘q: u shartnoma imzolangandan keyin yaratiladi.",
+      "awaitingShipment": "Yetkazib berish belgilari tovar ombordan jo‘natilgach paydo bo‘ladi.",
       "status": "Holat",
       "expected": "Kutilayotgan sana",
       "shipped": "Jo‘natilgan",
@@ -324,6 +326,7 @@
     "none": {
       "title": "Dalolatnoma hali yo‘q",
       "noInvoice": "Dalolatnoma rasmiylashtirilgan hisob bo‘yicha chiqariladi. Hisob hali rasmiylashtirilmagan — uni «Moliya» bo‘limida rasmiylashtiring.",
+      "notDelivered": "Dalolatnoma yetkazib berilgandan keyin: tovar mijozga yetkazilgach chiqariladi.",
       "forbidden": "Ruxsat yetarli emas.",
       "ready": "Hisob rasmiylashtirilgan: dalolatnoma chiqarish mumkin.",
       "issue": "Dalolatnoma chiqarish"
@@ -388,6 +391,8 @@
     "contract_transition_not_allowed": "Shartnoma allaqachon boshqa holatda. Sahifani yangilang.",
     "act_sign_not_allowed": "Dalolatnoma allaqachon boshqa holatda. Sahifani yangilang.",
     "act_already_exists": "Loyihada dalolatnoma allaqachon bor.",
+    "not_delivered": "Dalolatnoma yetkazib berilgandan keyin chiqariladi: tovar hali yetkazilmagan.",
+    "goods_not_shipped": "Tovar ombordan hali jo‘natilmagan: yetkazib berish belgilari jo‘natilgandan keyin mavjud.",
     "no_invoice": "Dalolatnoma rasmiylashtirilgan hisob bo‘yicha chiqariladi: hisob hali yo‘q.",
     "contract_exists": "Shartnoma loyihasi allaqachon shakllantirilgan.",
     "contract_create_not_allowed": "Ruxsat yetarli emas.",

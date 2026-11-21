@@ -16,6 +16,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import Deal, DealStage, Invoice, InvoiceItem, InvoiceStatus, Quote, QuoteItem, QuoteStatus
 from crm.services.billing import generate_act
+from crm.tests.delivery_support import mark_delivered
 
 ACTS_URL = "/api/v1/crm/acts/"
 
@@ -111,6 +112,7 @@ def act_on_manual_invoice(lookups):
         source_quote_item=quote_item,
     )
 
+    mark_delivered(invoice.deal)
     act, error = generate_act(invoice.id, actor=winner_user)
     assert error is None, f"акт не выпустился: {error}"
     return {"act": act, "invoice": invoice, "staff_user": winner_user, "outsider_user": loser_user, "deal": deal}

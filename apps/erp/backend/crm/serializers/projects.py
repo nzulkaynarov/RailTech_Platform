@@ -90,6 +90,18 @@ class ProjectRowSerializer(serializers.Serializer):
     due_date = serializers.DateField(allow_null=True)
     documents = ProjectDocumentsSerializer()
     problems = serializers.ListField(child=serializers.ChoiceField(choices=PROBLEMS))
+    act_blocker = serializers.ChoiceField(
+        choices=ACT_BLOCKERS,
+        allow_null=True,
+        help_text="Почему акт выпустить нельзя: нет счёта, акт уже есть, нет права `fulfillment.act`; `null` — можно",
+    )
+    act_needs_delivery = serializers.BooleanField(
+        required=False,
+        help_text=(
+            "Акт иначе можно выпустить, но товар ещё не доставлен: акт — после доставки или приёмки клиентом (СЦ-9). "
+            "Выпуск раньше — 409 `ACT_NOT_DELIVERED`"
+        ),
+    )
 
 
 class ProjectPageSerializer(serializers.Serializer):
@@ -172,6 +184,9 @@ class FulfillmentCardSerializer(serializers.Serializer):
         child=serializers.ChoiceField(choices=["in_transit", "delivered"]),
         help_text="Отметки доставки, доступные этому сотруднику сейчас (статус исполнения и право `fulfillment.manage`)",
     )
+    goods_not_shipped = serializers.BooleanField(
+        help_text="Товар с карточкой каталога ещё не отгружен со склада: отметки доставки не предлагаются (`actions` пуст)"
+    )
     proof_attachment_id = serializers.IntegerField(
         allow_null=True, help_text="Вложение подтверждения доставки (`/sourcing/attachments/{id}/download/`)"
     )
@@ -208,11 +223,6 @@ class ProjectCardSerializer(ProjectRowSerializer):
     )
     invoices = InvoiceCardSerializer(many=True)
     act = ActCardSerializer(allow_null=True)
-    act_blocker = serializers.ChoiceField(
-        choices=ACT_BLOCKERS,
-        allow_null=True,
-        help_text="Почему акт сейчас выпустить нельзя: нет счёта, акт уже есть, нет права `fulfillment.act`",
-    )
     fulfillment = FulfillmentCardSerializer(allow_null=True)
     delivery_lines = DeliveryLineCardSerializer(many=True)
     journal = ProjectJournalEntrySerializer(many=True)

@@ -120,6 +120,7 @@
       "contractMissing": "No contract draft yet: the accountant creates it from the accepted quote.",
       "invoiceMissing": "The invoice appears after the contract is signed: ERP creates a draft prepayment invoice.",
       "actMissing": "The act is issued against an issued invoice.",
+      "actAfterDelivery": "Act — after delivery",
       "invoiceDue": "due {{date}}",
       "invoiceCount": "invoices: {{count}}",
       "openContract": "Contract",
@@ -145,6 +146,7 @@
       "hint": "Stock shipments are in Stock · Shipments. Here you mark goods in transit and delivered.",
       "shipment": "Shipment",
       "none": "No shipment yet: it is created after the contract is signed.",
+      "awaitingShipment": "Delivery marks appear once the goods are shipped from the warehouse.",
       "status": "Status",
       "expected": "Expected date",
       "shipped": "Shipped",
@@ -324,6 +326,7 @@
     "none": {
       "title": "No act yet",
       "noInvoice": "The act is issued against an issued invoice. No invoice has been issued yet — issue it in “Finance”.",
+      "notDelivered": "The act comes after delivery: it can be issued once the goods are delivered to the client.",
       "forbidden": "Insufficient permissions.",
       "ready": "The invoice is issued: you can issue the act.",
       "issue": "Issue the act"
@@ -388,6 +391,8 @@
     "contract_transition_not_allowed": "The contract is already in another status. Refresh the page.",
     "act_sign_not_allowed": "The act is already in another status. Refresh the page.",
     "act_already_exists": "The project already has an act.",
+    "not_delivered": "The act is issued after delivery: the goods are not delivered yet.",
+    "goods_not_shipped": "The goods are not shipped from the warehouse yet: delivery marks are available after shipping.",
     "no_invoice": "The act is issued against an issued invoice: there is none yet.",
     "contract_exists": "The contract draft is already created.",
     "contract_create_not_allowed": "Insufficient permissions.",
